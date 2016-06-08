@@ -58,7 +58,9 @@ type Blob struct {
 	Metadata   BlobMetadata   `xml:"Metadata"`
 }
 
-// BlobMetadata contains various mtadata properties of the blob
+// BlobMetadata is a set of custom name/value pairs.
+//
+// See https://msdn.microsoft.com/en-us/library/azure/dd179404.aspx
 type BlobMetadata map[string]string
 
 type blobMetadataEntries struct {
@@ -84,6 +86,22 @@ func (bm *BlobMetadata) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 	return nil
 }
 
+// MarshalXML implements the xml.Marshaler interface. It encodes
+// metadata name/value pairs as they would appear in an Azure
+// ListBlobs response.
+func (bm BlobMetadata) MarshalXML(enc *xml.Encoder, start xml.StartElement) error {
+	entries := make([]blobMetadataEntry, 0, len(bm))
+	for k, v := range bm {
+		entries = append(entries, blobMetadataEntry{
+			XMLName: xml.Name{Local: http.CanonicalHeaderKey(k)},
+			Value:   v,
+		})
+	}
+	return enc.EncodeElement(blobMetadataEntries{
+		Entries: entries,
+	}, start)
+}
+
 // BlobProperties contains various properties of a blob
 // returned in various endpoints like ListBlobs or GetBlobProperties.
 type BlobProperties struct {
@@ -101,6 +119,7 @@ type BlobProperties struct {
 	CopyProgress          string   `xml:"CopyProgress"`
 	CopyCompletionTime    string   `xml:"CopyCompletionTime"`
 	CopyStatusDescription string   `xml:"CopyStatusDescription"`
+	LeaseStatus           string   `xml:"LeaseStatus"`
 }
 
 // BlobListResponse contains the response fields from ListBlobs call.
@@ -579,6 +598,7 @@ func (b BlobStorageClient) GetBlobProperties(container, name string) (*BlobPrope
 		CopySource:            resp.headers.Get("x-ms-copy-source"),
 		CopyStatus:            resp.headers.Get("x-ms-copy-status"),
 		BlobType:              BlobType(resp.headers.Get("x-ms-blob-type")),
+		LeaseStatus:           resp.headers.Get("x-ms-lease-status"),
 	}, nil
 }
 
@@ -590,12 +610,16 @@ func (b BlobStorageClient) GetBlobProperties(container, name string) (*BlobPrope
 // applications either.
 //
 // See https://msdn.microsoft.com/en-us/library/azure/dd179414.aspx
-func (b BlobStorageClient) SetBlobMetadata(container, name string, metadata map[string]string) error {
+func (b BlobStorageClient) SetBlobMetadata(container, name string, metadata map[string]string, extraHeaders map[string]string) error {
 	params := url.Values{"comp": {"metadata"}}
 	uri := b.client.getEndpoint(blobServiceName, pathForBlob(container, name), params)
 	headers := b.client.getStandardHeaders()
 	for k, v := range metadata {
 		headers[userDefinedMetadataHeaderPrefix+k] = v
+	}
+
+	for k, v := range extraHeaders {
+		headers[k] = v
 	}
 
 	resp, err := b.client.exec("PUT", uri, headers, nil)

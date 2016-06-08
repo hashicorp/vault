@@ -136,6 +136,10 @@ func getApacheCassandraType(class string) Type {
 		return TypeFloat
 	case "Int32Type":
 		return TypeInt
+	case "ShortType":
+		return TypeSmallInt
+	case "ByteType":
+		return TypeTinyInt
 	case "DateType", "TimestampType":
 		return TypeTimestamp
 	case "UUIDType", "LexicalUUIDType":

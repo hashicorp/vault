@@ -1124,6 +1124,36 @@ func (c *S3) ListObjectsPages(input *ListObjectsInput, fn func(p *ListObjectsOut
 	})
 }
 
+const opListObjectsV2 = "ListObjectsV2"
+
+// ListObjectsV2Request generates a request for the ListObjectsV2 operation.
+func (c *S3) ListObjectsV2Request(input *ListObjectsV2Input) (req *request.Request, output *ListObjectsV2Output) {
+	op := &request.Operation{
+		Name:       opListObjectsV2,
+		HTTPMethod: "GET",
+		HTTPPath:   "/{Bucket}?list-type=2",
+	}
+
+	if input == nil {
+		input = &ListObjectsV2Input{}
+	}
+
+	req = c.newRequest(op, input, output)
+	output = &ListObjectsV2Output{}
+	req.Data = output
+	return
+}
+
+// Returns some or all (up to 1000) of the objects in a bucket. You can use
+// the request parameters as selection criteria to return a subset of the objects
+// in a bucket. Note: ListObjectsV2 is the revised List Objects API and we recommend
+// you use this revised API for new application development.
+func (c *S3) ListObjectsV2(input *ListObjectsV2Input) (*ListObjectsV2Output, error) {
+	req, out := c.ListObjectsV2Request(input)
+	err := req.Send()
+	return out, err
+}
+
 const opListParts = "ListParts"
 
 // ListPartsRequest generates a request for the ListParts operation.
@@ -5250,6 +5280,124 @@ func (s ListObjectsOutput) String() string {
 
 // GoString returns the string representation
 func (s ListObjectsOutput) GoString() string {
+	return s.String()
+}
+
+type ListObjectsV2Input struct {
+	_ struct{} `type:"structure"`
+
+	// Name of the bucket to list.
+	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
+
+	// ContinuationToken indicates Amazon S3 that the list is being continued on
+	// this bucket with a token. ContinuationToken is obfuscated and is not a real
+	// key
+	ContinuationToken *string `location:"querystring" locationName:"continuation-token" type:"string"`
+
+	// A delimiter is a character you use to group keys.
+	Delimiter *string `location:"querystring" locationName:"delimiter" type:"string"`
+
+	// Encoding type used by Amazon S3 to encode object keys in the response.
+	EncodingType *string `location:"querystring" locationName:"encoding-type" type:"string" enum:"EncodingType"`
+
+	// The owner field is not present in listV2 by default, if you want to return
+	// owner field with each key in the result then set the fetch owner field to
+	// true
+	FetchOwner *bool `location:"querystring" locationName:"fetch-owner" type:"boolean"`
+
+	// Sets the maximum number of keys returned in the response. The response might
+	// contain fewer keys but will never contain more.
+	MaxKeys *int64 `location:"querystring" locationName:"max-keys" type:"integer"`
+
+	// Limits the response to keys that begin with the specified prefix.
+	Prefix *string `location:"querystring" locationName:"prefix" type:"string"`
+
+	// StartAfter is where you want Amazon S3 to start listing from. Amazon S3 starts
+	// listing after this specified key. StartAfter can be any key in the bucket
+	StartAfter *string `location:"querystring" locationName:"start-key" type:"string"`
+}
+
+// String returns the string representation
+func (s ListObjectsV2Input) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListObjectsV2Input) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *ListObjectsV2Input) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "ListObjectsV2Input"}
+	if s.Bucket == nil {
+		invalidParams.Add(request.NewErrParamRequired("Bucket"))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+type ListObjectsV2Output struct {
+	_ struct{} `type:"structure"`
+
+	// CommonPrefixes contains all (if there are any) keys between Prefix and the
+	// next occurrence of the string specified by delimiter
+	CommonPrefixes []*CommonPrefix `type:"list" flattened:"true"`
+
+	// Metadata about each object returned.
+	Contents []*Object `type:"list" flattened:"true"`
+
+	// ContinuationToken indicates Amazon S3 that the list is being continued on
+	// this bucket with a token. ContinuationToken is obfuscated and is not a real
+	// key
+	ContinuationToken *string `type:"string"`
+
+	// A delimiter is a character you use to group keys.
+	Delimiter *string `type:"string"`
+
+	// Encoding type used by Amazon S3 to encode object keys in the response.
+	EncodingType *string `type:"string" enum:"EncodingType"`
+
+	// A flag that indicates whether or not Amazon S3 returned all of the results
+	// that satisfied the search criteria.
+	IsTruncated *bool `type:"boolean"`
+
+	// KeyCount is the number of keys returned with this request. KeyCount will
+	// always be less than equals to MaxKeys field. Say you ask for 50 keys, your
+	// result will include less than equals 50 keys
+	KeyCount *int64 `type:"integer"`
+
+	// Sets the maximum number of keys returned in the response. The response might
+	// contain fewer keys but will never contain more.
+	MaxKeys *int64 `type:"integer"`
+
+	// Name of the bucket to list.
+	Name *string `type:"string"`
+
+	// NextContinuationToken is sent when isTruncated is true which means there
+	// are more keys in the bucket that can be listed. The next list requests to
+	// Amazon S3 can be continued with this NextContinuationToken. NextContinuationToken
+	// is obfuscated and is not a real key
+	NextContinuationToken *string `type:"string"`
+
+	// Limits the response to keys that begin with the specified prefix.
+	Prefix *string `type:"string"`
+
+	// StartAfter is where you want Amazon S3 to start listing from. Amazon S3 starts
+	// listing after this specified key. StartAfter can be any key in the bucket
+	StartAfter *string `type:"string"`
+}
+
+// String returns the string representation
+func (s ListObjectsV2Output) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s ListObjectsV2Output) GoString() string {
 	return s.String()
 }
 

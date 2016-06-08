@@ -145,7 +145,7 @@ type Config struct {
 // NewConfig returns a new Config pointer that can be chained with builder methods to
 // set multiple configuration values inline without using pointers.
 //
-//     svc := s3.New(aws.NewConfig().WithRegion("us-west-2").WithMaxRetries(10))
+//     sess := session.New(aws.NewConfig().WithRegion("us-west-2").WithMaxRetries(10))
 //
 func NewConfig() *Config {
 	return &Config{}

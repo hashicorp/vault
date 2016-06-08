@@ -9,7 +9,7 @@
 //
 // References:
 //  [PROTOCOL.agent]:    http://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.agent?rev=HEAD
-package agent
+package agent // import "golang.org/x/crypto/ssh/agent"
 
 import (
 	"bytes"
@@ -25,6 +25,7 @@ import (
 	"math/big"
 	"sync"
 
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -188,7 +189,7 @@ func (k *Key) Marshal() []byte {
 func (k *Key) Verify(data []byte, sig *ssh.Signature) error {
 	pubKey, err := ssh.ParsePublicKey(k.Blob)
 	if err != nil {
-		return fmt.Errorf("agent: bad public key")
+		return fmt.Errorf("agent: bad public key: %v", err)
 	}
 	return pubKey.Verify(data, sig)
 }
@@ -423,6 +424,14 @@ type ecdsaKeyMsg struct {
 	Constraints []byte `ssh:"rest"`
 }
 
+type ed25519KeyMsg struct {
+	Type        string `sshtype:"17|25"`
+	Pub         []byte
+	Priv        []byte
+	Comments    string
+	Constraints []byte `ssh:"rest"`
+}
+
 // Insert adds a private key to the agent.
 func (c *client) insertKey(s interface{}, comment string, constraints []byte) error {
 	var req []byte
@@ -461,6 +470,14 @@ func (c *client) insertKey(s interface{}, comment string, constraints []byte) er
 			Curve:       nistID,
 			KeyBytes:    elliptic.Marshal(k.Curve, k.X, k.Y),
 			D:           k.D,
+			Comments:    comment,
+			Constraints: constraints,
+		})
+	case *ed25519.PrivateKey:
+		req = ssh.Marshal(ed25519KeyMsg{
+			Type:        ssh.KeyAlgoED25519,
+			Pub:         []byte(*k)[32:],
+			Priv:        []byte(*k),
 			Comments:    comment,
 			Constraints: constraints,
 		})
@@ -510,6 +527,15 @@ type ecdsaCertMsg struct {
 	Constraints []byte `ssh:"rest"`
 }
 
+type ed25519CertMsg struct {
+	Type        string `sshtype:"17|25"`
+	CertBytes   []byte
+	Pub         []byte
+	Priv        []byte
+	Comments    string
+	Constraints []byte `ssh:"rest"`
+}
+
 // Insert adds a private key to the agent. If a certificate is given,
 // that certificate is added instead as public key.
 func (c *client) Add(key AddedKey) error {
@@ -554,17 +580,28 @@ func (c *client) insertCert(s interface{}, cert *ssh.Certificate, comment string
 		})
 	case *dsa.PrivateKey:
 		req = ssh.Marshal(dsaCertMsg{
-			Type:      cert.Type(),
-			CertBytes: cert.Marshal(),
-			X:         k.X,
-			Comments:  comment,
+			Type:        cert.Type(),
+			CertBytes:   cert.Marshal(),
+			X:           k.X,
+			Comments:    comment,
+			Constraints: constraints,
 		})
 	case *ecdsa.PrivateKey:
 		req = ssh.Marshal(ecdsaCertMsg{
-			Type:      cert.Type(),
-			CertBytes: cert.Marshal(),
-			D:         k.D,
-			Comments:  comment,
+			Type:        cert.Type(),
+			CertBytes:   cert.Marshal(),
+			D:           k.D,
+			Comments:    comment,
+			Constraints: constraints,
+		})
+	case ed25519.PrivateKey:
+		req = ssh.Marshal(ed25519CertMsg{
+			Type:        cert.Type(),
+			CertBytes:   cert.Marshal(),
+			Pub:         []byte(k)[32:],
+			Priv:        []byte(k),
+			Comments:    comment,
+			Constraints: constraints,
 		})
 	default:
 		return fmt.Errorf("agent: unsupported key type %T", s)

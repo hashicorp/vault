@@ -36,7 +36,7 @@ func (c *IAM) AddClientIDToOpenIDConnectProviderRequest(input *AddClientIDToOpen
 }
 
 // Adds a new client ID (also known as audience) to the list of client IDs already
-// registered for the specified IAM OpenID Connect provider.
+// registered for the specified IAM OpenID Connect (OIDC) provider resource.
 //
 // This action is idempotent; it does not fail or return an error if you add
 // an existing client ID to the provider.
@@ -68,8 +68,12 @@ func (c *IAM) AddRoleToInstanceProfileRequest(input *AddRoleToInstanceProfileInp
 	return
 }
 
-// Adds the specified role to the specified instance profile. For more information
-// about roles, go to Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
+// Adds the specified IAM role to the specified instance profile.
+//
+//  The caller of this API must be granted the PassRole permission on the IAM
+// role by a permission policy.
+//
+//  For more information about roles, go to Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
 // For more information about instance profiles, go to About Instance Profiles
 // (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html).
 func (c *IAM) AddRoleToInstanceProfile(input *AddRoleToInstanceProfileInput) (*AddRoleToInstanceProfileOutput, error) {
@@ -129,13 +133,13 @@ func (c *IAM) AttachGroupPolicyRequest(input *AttachGroupPolicyInput) (req *requ
 	return
 }
 
-// Attaches the specified managed policy to the specified group.
+// Attaches the specified managed policy to the specified IAM group.
 //
 // You use this API to attach a managed policy to a group. To embed an inline
 // policy in a group, use PutGroupPolicy.
 //
-// For more information about policies, refer to Managed Policies and Inline
-// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about policies, see Managed Policies and Inline Policies
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) AttachGroupPolicy(input *AttachGroupPolicyInput) (*AttachGroupPolicyOutput, error) {
 	req, out := c.AttachGroupPolicyRequest(input)
@@ -165,17 +169,17 @@ func (c *IAM) AttachRolePolicyRequest(input *AttachRolePolicyInput) (req *reques
 	return
 }
 
-// Attaches the specified managed policy to the specified role.
+// Attaches the specified managed policy to the specified IAM role.
 //
-// When you attach a managed policy to a role, the managed policy is used as
-// the role's access (permissions) policy. You cannot use a managed policy as
-// the role's trust policy. The role's trust policy is created at the same time
-// as the role, using CreateRole. You can update a role's trust policy using
-// UpdateAssumeRolePolicy.
+// When you attach a managed policy to a role, the managed policy becomes part
+// of the role's permission (access) policy. You cannot use a managed policy
+// as the role's trust policy. The role's trust policy is created at the same
+// time as the role, using CreateRole. You can update a role's trust policy
+// using UpdateAssumeRolePolicy.
 //
 // Use this API to attach a managed policy to a role. To embed an inline policy
-// in a role, use PutRolePolicy. For more information about policies, refer
-// to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// in a role, use PutRolePolicy. For more information about policies, see Managed
+// Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) AttachRolePolicy(input *AttachRolePolicyInput) (*AttachRolePolicyOutput, error) {
 	req, out := c.AttachRolePolicyRequest(input)
@@ -210,8 +214,8 @@ func (c *IAM) AttachUserPolicyRequest(input *AttachUserPolicyInput) (req *reques
 // You use this API to attach a managed policy to a user. To embed an inline
 // policy in a user, use PutUserPolicy.
 //
-// For more information about policies, refer to Managed Policies and Inline
-// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about policies, see Managed Policies and Inline Policies
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) AttachUserPolicy(input *AttachUserPolicyInput) (*AttachUserPolicyOutput, error) {
 	req, out := c.AttachUserPolicyRequest(input)
@@ -276,7 +280,7 @@ func (c *IAM) CreateAccessKeyRequest(input *CreateAccessKeyInput) (req *request.
 // Creates a new AWS secret access key and corresponding AWS access key ID for
 // the specified user. The default status for new keys is Active.
 //
-//  If you do not specify a user name, IAM determines the user name implicitly
+// If you do not specify a user name, IAM determines the user name implicitly
 // based on the AWS access key ID signing the request. Because this action works
 // for access keys under the AWS account, you can use this action to manage
 // root credentials even if the AWS account has no associated users.
@@ -413,7 +417,7 @@ func (c *IAM) CreateLoginProfileRequest(input *CreateLoginProfileInput) (req *re
 // Creates a password for the specified user, giving the user the ability to
 // access AWS services through the AWS Management Console. For more information
 // about managing passwords, see Managing Passwords (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_ManagingLogins.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) CreateLoginProfile(input *CreateLoginProfileInput) (*CreateLoginProfileOutput, error) {
 	req, out := c.CreateLoginProfileRequest(input)
 	err := req.Send()
@@ -454,9 +458,9 @@ func (c *IAM) CreateOpenIDConnectProviderRequest(input *CreateOpenIDConnectProvi
 // that the IdP uses. You get all of this information from the OIDC IdP that
 // you want to use for access to AWS.
 //
-// Because trust for the OIDC provider is ultimately derived from the IAM provider
-// that this action creates, it is a best practice to limit access to the CreateOpenIDConnectProvider
-// action to highly-privileged users.
+//  Because trust for the OIDC provider is ultimately derived from the IAM
+// provider that this action creates, it is a best practice to limit access
+// to the CreateOpenIDConnectProvider action to highly-privileged users.
 func (c *IAM) CreateOpenIDConnectProvider(input *CreateOpenIDConnectProviderInput) (*CreateOpenIDConnectProviderOutput, error) {
 	req, out := c.CreateOpenIDConnectProviderRequest(input)
 	err := req.Send()
@@ -490,8 +494,8 @@ func (c *IAM) CreatePolicyRequest(input *CreatePolicyInput) (req *request.Reques
 // versions, see Versioning for Managed Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
 // in the IAM User Guide.
 //
-// For more information about managed policies in general, refer to Managed
-// Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about managed policies in general, see Managed Policies
+// and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) CreatePolicy(input *CreatePolicyInput) (*CreatePolicyOutput, error) {
 	req, out := c.CreatePolicyRequest(input)
@@ -525,9 +529,8 @@ func (c *IAM) CreatePolicyVersionRequest(input *CreatePolicyVersionInput) (req *
 // version using DeletePolicyVersion before you create a new version.
 //
 // Optionally, you can set the new version as the policy's default version.
-// The default version is the operative version; that is, the version that is
-// in effect for the IAM users, groups, and roles that the policy is attached
-// to.
+// The default version is the version that is in effect for the IAM users, groups,
+// and roles to which the policy is attached.
 //
 // For more information about managed policy versions, see Versioning for Managed
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
@@ -589,25 +592,26 @@ func (c *IAM) CreateSAMLProviderRequest(input *CreateSAMLProviderInput) (req *re
 	return
 }
 
-// Creates an IAM entity to describe an identity provider (IdP) that supports
+// Creates an IAM resource that describes an identity provider (IdP) that supports
 // SAML 2.0.
 //
-//  The SAML provider that you create with this operation can be used as a
-// principal in a role's trust policy to establish a trust relationship between
-// AWS and a SAML identity provider. You can create an IAM role that supports
-// Web-based single sign-on (SSO) to the AWS Management Console or one that
-// supports API access to AWS.
+// The SAML provider resource that you create with this operation can be used
+// as a principal in an IAM role's trust policy to enable federated users who
+// sign-in using the SAML IdP to assume the role. You can create an IAM role
+// that supports Web-based single sign-on (SSO) to the AWS Management Console
+// or one that supports API access to AWS.
 //
-//  When you create the SAML provider, you upload an a SAML metadata document
-// that you get from your IdP and that includes the issuer's name, expiration
-// information, and keys that can be used to validate the SAML authentication
-// response (assertions) that are received from the IdP. You must generate the
-// metadata document using the identity management software that is used as
-// your organization's IdP.
+// When you create the SAML provider resource, you upload an a SAML metadata
+// document that you get from your IdP and that includes the issuer's name,
+// expiration information, and keys that can be used to validate the SAML authentication
+// response (assertions) that the IdP sends. You must generate the metadata
+// document using the identity management software that is used as your organization's
+// IdP.
 //
-//  This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
-//   For more information, see Enabling SAML 2.0 Federated Users to Access the
-// AWS Management Console (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-saml.html)
+//   This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
+//
+//   For more information, see Enabling SAML 2.0 Federated Users to Access
+// the AWS Management Console (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_enable-console-saml.html)
 // and About SAML 2.0-based Federation (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_saml.html)
 // in the IAM User Guide.
 func (c *IAM) CreateSAMLProvider(input *CreateSAMLProviderInput) (*CreateSAMLProviderOutput, error) {
@@ -636,9 +640,9 @@ func (c *IAM) CreateUserRequest(input *CreateUserInput) (req *request.Request, o
 	return
 }
 
-// Creates a new user for your AWS account.
+// Creates a new IAM user for your AWS account.
 //
-//  For information about limitations on the number of users you can create,
+//  For information about limitations on the number of IAM users you can create,
 // see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
 // in the IAM User Guide.
 func (c *IAM) CreateUser(input *CreateUserInput) (*CreateUserOutput, error) {
@@ -671,13 +675,13 @@ func (c *IAM) CreateVirtualMFADeviceRequest(input *CreateVirtualMFADeviceInput) 
 // virtual MFA, use EnableMFADevice to attach the MFA device to an IAM user.
 // For more information about creating and working with virtual MFA devices,
 // go to Using a Virtual MFA Device (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_VirtualMFA.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
 // For information about limits on the number of MFA devices you can create,
 // see Limitations on Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 //
-// The seed information contained in the QR code and the Base32 string should
+//  The seed information contained in the QR code and the Base32 string should
 // be treated like any other secret access information, such as your AWS access
 // keys or your passwords. After you provision your virtual device, you should
 // ensure that the information is destroyed following secure procedures.
@@ -714,7 +718,7 @@ func (c *IAM) DeactivateMFADeviceRequest(input *DeactivateMFADeviceInput) (req *
 //
 // For more information about creating and working with virtual MFA devices,
 // go to Using a Virtual MFA Device (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_VirtualMFA.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) DeactivateMFADevice(input *DeactivateMFADeviceInput) (*DeactivateMFADeviceOutput, error) {
 	req, out := c.DeactivateMFADeviceRequest(input)
 	err := req.Send()
@@ -743,9 +747,9 @@ func (c *IAM) DeleteAccessKeyRequest(input *DeleteAccessKeyInput) (req *request.
 	return
 }
 
-// Deletes the access key associated with the specified user.
+// Deletes the access key pair associated with the specified IAM user.
 //
-//  If you do not specify a user name, IAM determines the user name implicitly
+// If you do not specify a user name, IAM determines the user name implicitly
 // based on the AWS access key ID signing the request. Because this action works
 // for access keys under the AWS account, you can use this action to manage
 // root credentials even if the AWS account has no associated users.
@@ -808,7 +812,7 @@ func (c *IAM) DeleteAccountPasswordPolicyRequest(input *DeleteAccountPasswordPol
 	return
 }
 
-// Deletes the password policy for the AWS account.
+// Deletes the password policy for the AWS account. There are no parameters.
 func (c *IAM) DeleteAccountPasswordPolicy(input *DeleteAccountPasswordPolicyInput) (*DeleteAccountPasswordPolicyOutput, error) {
 	req, out := c.DeleteAccountPasswordPolicyRequest(input)
 	err := req.Send()
@@ -837,8 +841,8 @@ func (c *IAM) DeleteGroupRequest(input *DeleteGroupInput) (req *request.Request,
 	return
 }
 
-// Deletes the specified group. The group must not contain any users or have
-// any attached policies.
+// Deletes the specified IAM group. The group must not contain any users or
+// have any attached policies.
 func (c *IAM) DeleteGroup(input *DeleteGroupInput) (*DeleteGroupOutput, error) {
 	req, out := c.DeleteGroupRequest(input)
 	err := req.Send()
@@ -867,7 +871,8 @@ func (c *IAM) DeleteGroupPolicyRequest(input *DeleteGroupPolicyInput) (req *requ
 	return
 }
 
-// Deletes the specified inline policy that is embedded in the specified group.
+// Deletes the specified inline policy that is embedded in the specified IAM
+// group.
 //
 // A group can also have managed policies attached to it. To detach a managed
 // policy from a group, use DetachGroupPolicy. For more information about policies,
@@ -907,8 +912,10 @@ func (c *IAM) DeleteInstanceProfileRequest(input *DeleteInstanceProfileInput) (r
 //  Make sure you do not have any Amazon EC2 instances running with the instance
 // profile you are about to delete. Deleting a role or instance profile that
 // is associated with a running instance will break any applications running
-// on the instance.  For more information about instance profiles, go to About
-// Instance Profiles (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html).
+// on the instance.
+//
+//  For more information about instance profiles, go to About Instance Profiles
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html).
 func (c *IAM) DeleteInstanceProfile(input *DeleteInstanceProfileInput) (*DeleteInstanceProfileOutput, error) {
 	req, out := c.DeleteInstanceProfileRequest(input)
 	err := req.Send()
@@ -937,13 +944,14 @@ func (c *IAM) DeleteLoginProfileRequest(input *DeleteLoginProfileInput) (req *re
 	return
 }
 
-// Deletes the password for the specified user, which terminates the user's
+// Deletes the password for the specified IAM user, which terminates the user's
 // ability to access AWS services through the AWS Management Console.
 //
-//  Deleting a user's password does not prevent a user from accessing IAM through
-// the command line interface or the API. To prevent all user access you must
-// also either make the access key inactive or delete it. For more information
-// about making keys inactive or deleting them, see UpdateAccessKey and DeleteAccessKey.
+//   Deleting a user's password does not prevent a user from accessing AWS
+// through the command line interface or the API. To prevent all user access
+// you must also either make any access keys inactive or delete them. For more
+// information about making keys inactive or deleting them, see UpdateAccessKey
+// and DeleteAccessKey.
 func (c *IAM) DeleteLoginProfile(input *DeleteLoginProfileInput) (*DeleteLoginProfileOutput, error) {
 	req, out := c.DeleteLoginProfileRequest(input)
 	err := req.Send()
@@ -972,14 +980,14 @@ func (c *IAM) DeleteOpenIDConnectProviderRequest(input *DeleteOpenIDConnectProvi
 	return
 }
 
-// Deletes an IAM OpenID Connect identity provider.
+// Deletes an OpenID Connect identity provider (IdP) resource object in IAM.
 //
-// Deleting an OIDC provider does not update any roles that reference the provider
-// as a principal in their trust policies. Any attempt to assume a role that
-// references a provider that has been deleted will fail.
+// Deleting an IAM OIDC provider resource does not update any roles that reference
+// the provider as a principal in their trust policies. Any attempt to assume
+// a role that references a deleted provider fails.
 //
 // This action is idempotent; it does not fail or return an error if you call
-// the action for a provider that was already deleted.
+// the action for a provider that does not exist.
 func (c *IAM) DeleteOpenIDConnectProvider(input *DeleteOpenIDConnectProviderInput) (*DeleteOpenIDConnectProviderOutput, error) {
 	req, out := c.DeleteOpenIDConnectProviderRequest(input)
 	err := req.Send()
@@ -1010,20 +1018,25 @@ func (c *IAM) DeletePolicyRequest(input *DeletePolicyInput) (req *request.Reques
 
 // Deletes the specified managed policy.
 //
-// Before you can delete a managed policy, you must detach the policy from
-// all users, groups, and roles that it is attached to, and you must delete
+// Before you can delete a managed policy, you must first detach the policy
+// from all users, groups, and roles that it is attached to, and you must delete
 // all of the policy's versions. The following steps describe the process for
-// deleting a managed policy:  Detach the policy from all users, groups, and
-// roles that the policy is attached to, using the DetachUserPolicy, DetachGroupPolicy,
-// or DetachRolePolicy APIs. To list all the users, groups, and roles that a
-// policy is attached to, use ListEntitiesForPolicy.  Delete all versions of
-// the policy using DeletePolicyVersion. To list the policy's versions, use
-// ListPolicyVersions. You cannot use DeletePolicyVersion to delete the version
-// that is marked as the default version. You delete the policy's default version
-// in the next step of the process.  Delete the policy (this automatically deletes
-// the policy's default version) using this API.
+// deleting a managed policy:
 //
-// For information about managed policies, refer to Managed Policies and Inline
+//   Detach the policy from all users, groups, and roles that the policy is
+// attached to, using the DetachUserPolicy, DetachGroupPolicy, or DetachRolePolicy
+// APIs. To list all the users, groups, and roles that a policy is attached
+// to, use ListEntitiesForPolicy.
+//
+//   Delete all versions of the policy using DeletePolicyVersion. To list the
+// policy's versions, use ListPolicyVersions. You cannot use DeletePolicyVersion
+// to delete the version that is marked as the default version. You delete the
+// policy's default version in the next step of the process.
+//
+//   Delete the policy (this automatically deletes the policy's default version)
+// using this API.
+//
+//   For information about managed policies, see Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) DeletePolicy(input *DeletePolicyInput) (*DeletePolicyOutput, error) {
@@ -1054,14 +1067,14 @@ func (c *IAM) DeletePolicyVersionRequest(input *DeletePolicyVersionInput) (req *
 	return
 }
 
-// Deletes the specified version of the specified managed policy.
+// Deletes the specified version from the specified managed policy.
 //
-// You cannot delete the default version of a policy using this API. To delete
-// the default version of a policy, use DeletePolicy. To find out which version
+// You cannot delete the default version from a policy using this API. To delete
+// the default version from a policy, use DeletePolicy. To find out which version
 // of a policy is marked as the default version, use ListPolicyVersions.
 //
-// For information about versions for managed policies, refer to Versioning
-// for Managed Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
+// For information about versions for managed policies, see Versioning for
+// Managed Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
 // in the IAM User Guide.
 func (c *IAM) DeletePolicyVersion(input *DeletePolicyVersionInput) (*DeletePolicyVersionOutput, error) {
 	req, out := c.DeletePolicyVersionRequest(input)
@@ -1094,7 +1107,7 @@ func (c *IAM) DeleteRoleRequest(input *DeleteRoleInput) (req *request.Request, o
 // Deletes the specified role. The role must not have any policies attached.
 // For more information about roles, go to Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
 //
-// Make sure you do not have any Amazon EC2 instances running with the role
+//  Make sure you do not have any Amazon EC2 instances running with the role
 // you are about to delete. Deleting a role or instance profile that is associated
 // with a running instance will break any applications running on the instance.
 func (c *IAM) DeleteRole(input *DeleteRoleInput) (*DeleteRoleOutput, error) {
@@ -1125,7 +1138,8 @@ func (c *IAM) DeleteRolePolicyRequest(input *DeleteRolePolicyInput) (req *reques
 	return
 }
 
-// Deletes the specified inline policy that is embedded in the specified role.
+// Deletes the specified inline policy that is embedded in the specified IAM
+// role.
 //
 // A role can also have managed policies attached to it. To detach a managed
 // policy from a role, use DetachRolePolicy. For more information about policies,
@@ -1159,13 +1173,14 @@ func (c *IAM) DeleteSAMLProviderRequest(input *DeleteSAMLProviderInput) (req *re
 	return
 }
 
-// Deletes a SAML provider.
+// Deletes a SAML provider resource in IAM.
 //
-//  Deleting the provider does not update any roles that reference the SAML
-// provider as a principal in their trust policies. Any attempt to assume a
-// role that references a SAML provider that has been deleted will fail.
+// Deleting the provider resource from IAM does not update any roles that reference
+// the SAML provider resource's ARN as a principal in their trust policies.
+// Any attempt to assume a role that references a non-existent provider resource
+// ARN fails.
 //
-//  This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
+//   This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
 func (c *IAM) DeleteSAMLProvider(input *DeleteSAMLProviderInput) (*DeleteSAMLProviderOutput, error) {
 	req, out := c.DeleteSAMLProviderRequest(input)
 	err := req.Send()
@@ -1236,7 +1251,7 @@ func (c *IAM) DeleteServerCertificateRequest(input *DeleteServerCertificateInput
 // with IAM, go to Working with Server Certificates (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs.html)
 // in the IAM User Guide.
 //
-//  If you are using a server certificate with Elastic Load Balancing, deleting
+//   If you are using a server certificate with Elastic Load Balancing, deleting
 // the certificate could have implications for your application. If Elastic
 // Load Balancing doesn't detect the deletion of bound certificates, it may
 // continue to use the certificates. This could cause Elastic Load Balancing
@@ -1273,12 +1288,12 @@ func (c *IAM) DeleteSigningCertificateRequest(input *DeleteSigningCertificateInp
 	return
 }
 
-// Deletes the specified signing certificate associated with the specified user.
+// Deletes a signing certificate associated with the specified IAM user.
 //
 // If you do not specify a user name, IAM determines the user name implicitly
 // based on the AWS access key ID signing the request. Because this action works
 // for access keys under the AWS account, you can use this action to manage
-// root credentials even if the AWS account has no associated users.
+// root credentials even if the AWS account has no associated IAM users.
 func (c *IAM) DeleteSigningCertificate(input *DeleteSigningCertificateInput) (*DeleteSigningCertificateOutput, error) {
 	req, out := c.DeleteSigningCertificateRequest(input)
 	err := req.Send()
@@ -1307,8 +1322,8 @@ func (c *IAM) DeleteUserRequest(input *DeleteUserInput) (req *request.Request, o
 	return
 }
 
-// Deletes the specified user. The user must not belong to any groups, have
-// any keys or signing certificates, or have any attached policies.
+// Deletes the specified IAM user. The user must not belong to any groups or
+// have any access keys, signing certificates, or attached policies.
 func (c *IAM) DeleteUser(input *DeleteUserInput) (*DeleteUserOutput, error) {
 	req, out := c.DeleteUserRequest(input)
 	err := req.Send()
@@ -1337,7 +1352,8 @@ func (c *IAM) DeleteUserPolicyRequest(input *DeleteUserPolicyInput) (req *reques
 	return
 }
 
-// Deletes the specified inline policy that is embedded in the specified user.
+// Deletes the specified inline policy that is embedded in the specified IAM
+// user.
 //
 // A user can also have managed policies attached to it. To detach a managed
 // policy from a user, use DetachUserPolicy. For more information about policies,
@@ -1373,8 +1389,8 @@ func (c *IAM) DeleteVirtualMFADeviceRequest(input *DeleteVirtualMFADeviceInput) 
 
 // Deletes a virtual MFA device.
 //
-//  You must deactivate a user's virtual MFA device before you can delete it.
-// For information about deactivating MFA devices, see DeactivateMFADevice.
+//   You must deactivate a user's virtual MFA device before you can delete
+// it. For information about deactivating MFA devices, see DeactivateMFADevice.
 func (c *IAM) DeleteVirtualMFADevice(input *DeleteVirtualMFADeviceInput) (*DeleteVirtualMFADeviceOutput, error) {
 	req, out := c.DeleteVirtualMFADeviceRequest(input)
 	err := req.Send()
@@ -1403,11 +1419,11 @@ func (c *IAM) DetachGroupPolicyRequest(input *DetachGroupPolicyInput) (req *requ
 	return
 }
 
-// Removes the specified managed policy from the specified group.
+// Removes the specified managed policy from the specified IAM group.
 //
 // A group can also have inline policies embedded with it. To delete an inline
-// policy, use the DeleteGroupPolicy API. For information about policies, refer
-// to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// policy, use the DeleteGroupPolicy API. For information about policies, see
+// Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) DetachGroupPolicy(input *DetachGroupPolicyInput) (*DetachGroupPolicyOutput, error) {
 	req, out := c.DetachGroupPolicyRequest(input)
@@ -1440,8 +1456,8 @@ func (c *IAM) DetachRolePolicyRequest(input *DetachRolePolicyInput) (req *reques
 // Removes the specified managed policy from the specified role.
 //
 // A role can also have inline policies embedded with it. To delete an inline
-// policy, use the DeleteRolePolicy API. For information about policies, refer
-// to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// policy, use the DeleteRolePolicy API. For information about policies, see
+// Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) DetachRolePolicy(input *DetachRolePolicyInput) (*DetachRolePolicyOutput, error) {
 	req, out := c.DetachRolePolicyRequest(input)
@@ -1474,8 +1490,8 @@ func (c *IAM) DetachUserPolicyRequest(input *DetachUserPolicyInput) (req *reques
 // Removes the specified managed policy from the specified user.
 //
 // A user can also have inline policies embedded with it. To delete an inline
-// policy, use the DeleteUserPolicy API. For information about policies, refer
-// to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// policy, use the DeleteUserPolicy API. For information about policies, see
+// Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) DetachUserPolicy(input *DetachUserPolicyInput) (*DetachUserPolicyOutput, error) {
 	req, out := c.DetachUserPolicyRequest(input)
@@ -1505,9 +1521,9 @@ func (c *IAM) EnableMFADeviceRequest(input *EnableMFADeviceInput) (req *request.
 	return
 }
 
-// Enables the specified MFA device and associates it with the specified user
-// name. When enabled, the MFA device is required for every subsequent login
-// by the user name associated with the device.
+// Enables the specified MFA device and associates it with the specified IAM
+// user. When enabled, the MFA device is required for every subsequent login
+// by the IAM user associated with the device.
 func (c *IAM) EnableMFADevice(input *EnableMFADeviceInput) (*EnableMFADeviceOutput, error) {
 	req, out := c.EnableMFADeviceRequest(input)
 	err := req.Send()
@@ -1600,9 +1616,9 @@ func (c *IAM) GetAccountAuthorizationDetailsRequest(input *GetAccountAuthorizati
 }
 
 // Retrieves information about all IAM users, groups, roles, and policies in
-// your account, including their relationships to one another. Use this API
-// to obtain a snapshot of the configuration of IAM permissions (users, groups,
-// roles, and policies) in your account.
+// your AWS account, including their relationships to one another. Use this
+// API to obtain a snapshot of the configuration of IAM permissions (users,
+// groups, roles, and policies) in your account.
 //
 // You can optionally filter the results using the Filter parameter. You can
 // paginate the results using the MaxItems and Marker parameters.
@@ -1699,14 +1715,13 @@ func (c *IAM) GetContextKeysForCustomPolicyRequest(input *GetContextKeysForCusto
 	return
 }
 
-// Gets a list of all of the context keys referenced in Condition elements in
-// the input policies. The policies are supplied as a list of one or more strings.
-// To get the context keys from policies associated with an IAM user, group,
-// or role, use GetContextKeysForPrincipalPolicy.
+// Gets a list of all of the context keys referenced in the input policies.
+// The policies are supplied as a list of one or more strings. To get the context
+// keys from policies associated with an IAM user, group, or role, use GetContextKeysForPrincipalPolicy.
 //
 // Context keys are variables maintained by AWS and its services that provide
 // details about the context of an API query request, and can be evaluated by
-// using the Condition element of an IAM policy. Use GetContextKeysForCustomPolicy
+// testing against a value specified in an IAM policy. Use GetContextKeysForCustomPolicy
 // to understand what key names and values you must supply when you call SimulateCustomPolicy.
 // Note that all parameters are shown in unencoded form here for clarity, but
 // must be URL encoded to be included as a part of a real HTML request.
@@ -1736,23 +1751,22 @@ func (c *IAM) GetContextKeysForPrincipalPolicyRequest(input *GetContextKeysForPr
 	return
 }
 
-// Gets a list of all of the context keys referenced in Condition elements in
-// all of the IAM policies attached to the specified IAM entity. The entity
-// can be an IAM user, group, or role. If you specify a user, then the request
-// also includes all of the policies attached to groups that the user is a member
-// of.
+// Gets a list of all of the context keys referenced in all of the IAM policies
+// attached to the specified IAM entity. The entity can be an IAM user, group,
+// or role. If you specify a user, then the request also includes all of the
+// policies attached to groups that the user is a member of.
 //
 // You can optionally include a list of one or more additional policies, specified
 // as strings. If you want to include only a list of policies by string, use
 // GetContextKeysForCustomPolicy instead.
 //
-// Note: This API discloses information about the permissions granted to other
+//  Note: This API discloses information about the permissions granted to other
 // users. If you do not want users to see other user's permissions, then consider
 // allowing them to use GetContextKeysForCustomPolicy instead.
 //
 // Context keys are variables maintained by AWS and its services that provide
 // details about the context of an API query request, and can be evaluated by
-// using the Condition element of an IAM policy. Use GetContextKeysForPrincipalPolicy
+// testing against a value in an IAM policy. Use GetContextKeysForPrincipalPolicy
 // to understand what key names and values you must supply when you call SimulatePrincipalPolicy.
 func (c *IAM) GetContextKeysForPrincipalPolicy(input *GetContextKeysForPrincipalPolicyInput) (*GetContextKeysForPolicyResponse, error) {
 	req, out := c.GetContextKeysForPrincipalPolicyRequest(input)
@@ -1815,8 +1829,8 @@ func (c *IAM) GetGroupRequest(input *GetGroupInput) (req *request.Request, outpu
 	return
 }
 
-// Returns a list of users that are in the specified group. You can paginate
-// the results using the MaxItems and Marker parameters.
+// Returns a list of IAM users that are in the specified IAM group. You can
+// paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) GetGroup(input *GetGroupInput) (*GetGroupOutput, error) {
 	req, out := c.GetGroupRequest(input)
 	err := req.Send()
@@ -1852,15 +1866,15 @@ func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *request.Re
 }
 
 // Retrieves the specified inline policy document that is embedded in the specified
-// group.
+// IAM group.
 //
-// A group can also have managed policies attached to it. To retrieve a managed
-// policy document that is attached to a group, use GetPolicy to determine the
-// policy's default version, then use GetPolicyVersion to retrieve the policy
+// An IAM group can also have managed policies attached to it. To retrieve
+// a managed policy document that is attached to a group, use GetPolicy to determine
+// the policy's default version, then use GetPolicyVersion to retrieve the policy
 // document.
 //
-// For more information about policies, refer to Managed Policies and Inline
-// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about policies, see Managed Policies and Inline Policies
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) GetGroupPolicy(input *GetGroupPolicyInput) (*GetGroupPolicyOutput, error) {
 	req, out := c.GetGroupPolicyRequest(input)
@@ -1890,8 +1904,8 @@ func (c *IAM) GetInstanceProfileRequest(input *GetInstanceProfileInput) (req *re
 
 // Retrieves information about the specified instance profile, including the
 // instance profile's path, GUID, ARN, and role. For more information about
-// instance profiles, go to About Instance Profiles (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html).
-// For more information about ARNs, go to ARNs (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html#Identifiers_ARNs).
+// instance profiles, see About Instance Profiles (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html)
+// in the IAM User Guide.
 func (c *IAM) GetInstanceProfile(input *GetInstanceProfileInput) (*GetInstanceProfileOutput, error) {
 	req, out := c.GetInstanceProfileRequest(input)
 	err := req.Send()
@@ -1918,9 +1932,9 @@ func (c *IAM) GetLoginProfileRequest(input *GetLoginProfileInput) (req *request.
 	return
 }
 
-// Retrieves the user name and password-creation date for the specified user.
-// If the user has not been assigned a password, the action returns a 404 (NoSuchEntity)
-// error.
+// Retrieves the user name and password-creation date for the specified IAM
+// user. If the user has not been assigned a password, the action returns a
+// 404 (NoSuchEntity) error.
 func (c *IAM) GetLoginProfile(input *GetLoginProfileInput) (*GetLoginProfileOutput, error) {
 	req, out := c.GetLoginProfileRequest(input)
 	err := req.Send()
@@ -1947,7 +1961,8 @@ func (c *IAM) GetOpenIDConnectProviderRequest(input *GetOpenIDConnectProviderInp
 	return
 }
 
-// Returns information about the specified OpenID Connect provider.
+// Returns information about the specified OpenID Connect (OIDC) provider resource
+// object in IAM.
 func (c *IAM) GetOpenIDConnectProvider(input *GetOpenIDConnectProviderInput) (*GetOpenIDConnectProviderOutput, error) {
 	req, out := c.GetOpenIDConnectProviderRequest(input)
 	err := req.Send()
@@ -1975,18 +1990,18 @@ func (c *IAM) GetPolicyRequest(input *GetPolicyInput) (req *request.Request, out
 }
 
 // Retrieves information about the specified managed policy, including the policy's
-// default version and the total number of users, groups, and roles that the
-// policy is attached to. For a list of the specific users, groups, and roles
-// that the policy is attached to, use the ListEntitiesForPolicy API. This API
-// returns metadata about the policy. To retrieve the policy document for a
-// specific version of the policy, use GetPolicyVersion.
+// default version and the total number of IAM users, groups, and roles to which
+// the policy is attached. To retrieve the list of the specific users, groups,
+// and roles that the policy is attached to, use the ListEntitiesForPolicy API.
+// This API returns metadata about the policy. To retrieve the actual policy
+// document for a specific version of the policy, use GetPolicyVersion.
 //
 // This API retrieves information about managed policies. To retrieve information
-// about an inline policy that is embedded with a user, group, or role, use
-// the GetUserPolicy, GetGroupPolicy, or GetRolePolicy API.
+// about an inline policy that is embedded with an IAM user, group, or role,
+// use the GetUserPolicy, GetGroupPolicy, or GetRolePolicy API.
 //
-// For more information about policies, refer to Managed Policies and Inline
-// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about policies, see Managed Policies and Inline Policies
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) GetPolicy(input *GetPolicyInput) (*GetPolicyOutput, error) {
 	req, out := c.GetPolicyRequest(input)
@@ -2023,8 +2038,12 @@ func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *reques
 // about an inline policy that is embedded in a user, group, or role, use the
 // GetUserPolicy, GetGroupPolicy, or GetRolePolicy API.
 //
-// For more information about the types of policies, refer to Managed Policies
-// and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about the types of policies, see Managed Policies and
+// Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// in the IAM User Guide.
+//
+// For more information about managed policy versions, see Versioning for Managed
+// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
 // in the IAM User Guide.
 func (c *IAM) GetPolicyVersion(input *GetPolicyVersionInput) (*GetPolicyVersionOutput, error) {
 	req, out := c.GetPolicyVersionRequest(input)
@@ -2053,9 +2072,8 @@ func (c *IAM) GetRoleRequest(input *GetRoleInput) (req *request.Request, output 
 }
 
 // Retrieves information about the specified role, including the role's path,
-// GUID, ARN, and the policy granting permission to assume the role. For more
-// information about ARNs, go to ARNs (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html#Identifiers_ARNs).
-// For more information about roles, go to Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
+// GUID, ARN, and the role's trust policy that grants permission to assume the
+// role. For more information about roles, see Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
 func (c *IAM) GetRole(input *GetRoleInput) (*GetRoleOutput, error) {
 	req, out := c.GetRoleRequest(input)
 	err := req.Send()
@@ -2083,18 +2101,18 @@ func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *request.Requ
 }
 
 // Retrieves the specified inline policy document that is embedded with the
-// specified role.
+// specified IAM role.
 //
-// A role can also have managed policies attached to it. To retrieve a managed
-// policy document that is attached to a role, use GetPolicy to determine the
-// policy's default version, then use GetPolicyVersion to retrieve the policy
+// An IAM role can also have managed policies attached to it. To retrieve a
+// managed policy document that is attached to a role, use GetPolicy to determine
+// the policy's default version, then use GetPolicyVersion to retrieve the policy
 // document.
 //
-// For more information about policies, refer to Managed Policies and Inline
-// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about policies, see Managed Policies and Inline Policies
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
-// For more information about roles, go to Using Roles to Delegate Permissions
+// For more information about roles, see Using Roles to Delegate Permissions
 // and Federate Identities (http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-toplevel.html).
 func (c *IAM) GetRolePolicy(input *GetRolePolicyInput) (*GetRolePolicyOutput, error) {
 	req, out := c.GetRolePolicyRequest(input)
@@ -2122,10 +2140,10 @@ func (c *IAM) GetSAMLProviderRequest(input *GetSAMLProviderInput) (req *request.
 	return
 }
 
-// Returns the SAML provider metadocument that was uploaded when the provider
-// was created or updated.
+// Returns the SAML provider metadocument that was uploaded when the IAM SAML
+// provider resource object was created or updated.
 //
-// This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
+//  This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
 func (c *IAM) GetSAMLProvider(input *GetSAMLProviderInput) (*GetSAMLProviderOutput, error) {
 	req, out := c.GetSAMLProviderRequest(input)
 	err := req.Send()
@@ -2185,7 +2203,7 @@ func (c *IAM) GetServerCertificateRequest(input *GetServerCertificateInput) (req
 	return
 }
 
-// Retrieves information about the specified server certificate.
+// Retrieves information about the specified server certificate stored in IAM.
 //
 // For more information about working with server certificates, including a
 // list of AWS services that can use the server certificates that you manage
@@ -2217,11 +2235,11 @@ func (c *IAM) GetUserRequest(input *GetUserInput) (req *request.Request, output 
 	return
 }
 
-// Retrieves information about the specified user, including the user's creation
-// date, path, unique ID, and ARN.
+// Retrieves information about the specified IAM user, including the user's
+// creation date, path, unique ID, and ARN.
 //
 // If you do not specify a user name, IAM determines the user name implicitly
-// based on the AWS access key ID used to sign the request.
+// based on the AWS access key ID used to sign the request to this API.
 func (c *IAM) GetUser(input *GetUserInput) (*GetUserOutput, error) {
 	req, out := c.GetUserRequest(input)
 	err := req.Send()
@@ -2249,15 +2267,15 @@ func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *request.Requ
 }
 
 // Retrieves the specified inline policy document that is embedded in the specified
-// user.
+// IAM user.
 //
-// A user can also have managed policies attached to it. To retrieve a managed
-// policy document that is attached to a user, use GetPolicy to determine the
-// policy's default version, then use GetPolicyVersion to retrieve the policy
+// An IAM user can also have managed policies attached to it. To retrieve a
+// managed policy document that is attached to a user, use GetPolicy to determine
+// the policy's default version, then use GetPolicyVersion to retrieve the policy
 // document.
 //
-// For more information about policies, refer to Managed Policies and Inline
-// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about policies, see Managed Policies and Inline Policies
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) GetUserPolicy(input *GetUserPolicyInput) (*GetUserPolicyOutput, error) {
 	req, out := c.GetUserPolicyRequest(input)
@@ -2292,7 +2310,7 @@ func (c *IAM) ListAccessKeysRequest(input *ListAccessKeysInput) (req *request.Re
 }
 
 // Returns information about the access key IDs associated with the specified
-// user. If there are none, the action returns an empty list.
+// IAM user. If there are none, the action returns an empty list.
 //
 // Although each user is limited to a small number of keys, you can still paginate
 // the results using the MaxItems and Marker parameters.
@@ -2302,7 +2320,7 @@ func (c *IAM) ListAccessKeysRequest(input *ListAccessKeysInput) (req *request.Re
 // works for access keys under the AWS account, you can use this action to manage
 // root credentials even if the AWS account has no associated users.
 //
-// To ensure the security of your AWS account, the secret access key is accessible
+//  To ensure the security of your AWS account, the secret access key is accessible
 // only during key and user creation.
 func (c *IAM) ListAccessKeys(input *ListAccessKeysInput) (*ListAccessKeysOutput, error) {
 	req, out := c.ListAccessKeysRequest(input)
@@ -2344,9 +2362,9 @@ func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *re
 	return
 }
 
-// Lists the account alias associated with the account (Note: you can have only
-// one). For information about using an AWS account alias, see Using an Alias
-// for Your AWS Account ID (http://docs.aws.amazon.com/IAM/latest/UserGuide/AccountAlias.html)
+// Lists the account alias associated with the AWS account (Note: you can have
+// only one). For information about using an AWS account alias, see Using an
+// Alias for Your AWS Account ID (http://docs.aws.amazon.com/IAM/latest/UserGuide/AccountAlias.html)
 // in the IAM User Guide.
 func (c *IAM) ListAccountAliases(input *ListAccountAliasesInput) (*ListAccountAliasesOutput, error) {
 	req, out := c.ListAccountAliasesRequest(input)
@@ -2388,11 +2406,11 @@ func (c *IAM) ListAttachedGroupPoliciesRequest(input *ListAttachedGroupPoliciesI
 	return
 }
 
-// Lists all managed policies that are attached to the specified group.
+// Lists all managed policies that are attached to the specified IAM group.
 //
-// A group can also have inline policies embedded with it. To list the inline
-// policies for a group, use the ListGroupPolicies API. For information about
-// policies, refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// An IAM group can also have inline policies embedded with it. To list the
+// inline policies for a group, use the ListGroupPolicies API. For information
+// about policies, see Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. You
@@ -2440,11 +2458,11 @@ func (c *IAM) ListAttachedRolePoliciesRequest(input *ListAttachedRolePoliciesInp
 	return
 }
 
-// Lists all managed policies that are attached to the specified role.
+// Lists all managed policies that are attached to the specified IAM role.
 //
-// A role can also have inline policies embedded with it. To list the inline
-// policies for a role, use the ListRolePolicies API. For information about
-// policies, refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// An IAM role can also have inline policies embedded with it. To list the
+// inline policies for a role, use the ListRolePolicies API. For information
+// about policies, see Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. You
@@ -2492,11 +2510,11 @@ func (c *IAM) ListAttachedUserPoliciesRequest(input *ListAttachedUserPoliciesInp
 	return
 }
 
-// Lists all managed policies that are attached to the specified user.
+// Lists all managed policies that are attached to the specified IAM user.
 //
-// A user can also have inline policies embedded with it. To list the inline
-// policies for a user, use the ListUserPolicies API. For information about
-// policies, refer to Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// An IAM user can also have inline policies embedded with it. To list the
+// inline policies for a user, use the ListUserPolicies API. For information
+// about policies, see Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. You
@@ -2544,8 +2562,8 @@ func (c *IAM) ListEntitiesForPolicyRequest(input *ListEntitiesForPolicyInput) (r
 	return
 }
 
-// Lists all users, groups, and roles that the specified managed policy is attached
-// to.
+// Lists all IAM users, groups, and roles that the specified managed policy
+// is attached to.
 //
 // You can use the optional EntityFilter parameter to limit the results to
 // a particular type of entity (users, groups, or roles). For example, to list
@@ -2594,11 +2612,11 @@ func (c *IAM) ListGroupPoliciesRequest(input *ListGroupPoliciesInput) (req *requ
 }
 
 // Lists the names of the inline policies that are embedded in the specified
-// group.
+// IAM group.
 //
-// A group can also have managed policies attached to it. To list the managed
-// policies that are attached to a group, use ListAttachedGroupPolicies. For
-// more information about policies, refer to Managed Policies and Inline Policies
+// An IAM group can also have managed policies attached to it. To list the
+// managed policies that are attached to a group, use ListAttachedGroupPolicies.
+// For more information about policies, see Managed Policies and Inline Policies
 // (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
@@ -2645,7 +2663,7 @@ func (c *IAM) ListGroupsRequest(input *ListGroupsInput) (req *request.Request, o
 	return
 }
 
-// Lists the groups that have the specified path prefix.
+// Lists the IAM groups that have the specified path prefix.
 //
 //  You can paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) ListGroups(input *ListGroupsInput) (*ListGroupsOutput, error) {
@@ -2688,7 +2706,7 @@ func (c *IAM) ListGroupsForUserRequest(input *ListGroupsForUserInput) (req *requ
 	return
 }
 
-// Lists the groups the specified user belongs to.
+// Lists the IAM groups that the specified IAM user belongs to.
 //
 // You can paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) ListGroupsForUser(input *ListGroupsForUserInput) (*ListGroupsForUserOutput, error) {
@@ -2776,9 +2794,9 @@ func (c *IAM) ListInstanceProfilesForRoleRequest(input *ListInstanceProfilesForR
 	return
 }
 
-// Lists the instance profiles that have the specified associated role. If there
-// are none, the action returns an empty list. For more information about instance
-// profiles, go to About Instance Profiles (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html).
+// Lists the instance profiles that have the specified associated IAM role.
+// If there are none, the action returns an empty list. For more information
+// about instance profiles, go to About Instance Profiles (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html).
 //
 // You can paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) ListInstanceProfilesForRole(input *ListInstanceProfilesForRoleInput) (*ListInstanceProfilesForRoleOutput, error) {
@@ -2821,10 +2839,10 @@ func (c *IAM) ListMFADevicesRequest(input *ListMFADevicesInput) (req *request.Re
 	return
 }
 
-// Lists the MFA devices. If the request includes the user name, then this action
-// lists all the MFA devices associated with the specified user name. If you
-// do not specify a user name, IAM determines the user name implicitly based
-// on the AWS access key ID signing the request.
+// Lists the MFA devices for an IAM user. If the request includes a IAM user
+// name, then this action lists all the MFA devices associated with the specified
+// user. If you do not specify a user name, IAM determines the user name implicitly
+// based on the AWS access key ID signing the request for this API.
 //
 // You can paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) ListMFADevices(input *ListMFADevicesInput) (*ListMFADevicesOutput, error) {
@@ -2861,7 +2879,8 @@ func (c *IAM) ListOpenIDConnectProvidersRequest(input *ListOpenIDConnectProvider
 	return
 }
 
-// Lists information about the OpenID Connect providers in the AWS account.
+// Lists information about the IAM OpenID Connect (OIDC) provider resource objects
+// defined in the AWS account.
 func (c *IAM) ListOpenIDConnectProviders(input *ListOpenIDConnectProvidersInput) (*ListOpenIDConnectProvidersOutput, error) {
 	req, out := c.ListOpenIDConnectProvidersRequest(input)
 	err := req.Send()
@@ -2894,8 +2913,8 @@ func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *request.Reques
 	return
 }
 
-// Lists all the managed policies that are available to your account, including
-// your own customer managed policies and all AWS managed policies.
+// Lists all the managed policies that are available in your AWS account, including
+// your own customer-defined managed policies and all AWS managed policies.
 //
 // You can filter the list of policies that is returned using the optional
 // OnlyAttached, Scope, and PathPrefix parameters. For example, to list only
@@ -2904,8 +2923,8 @@ func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *request.Reques
 //
 // You can paginate the results using the MaxItems and Marker parameters.
 //
-// For more information about managed policies, refer to Managed Policies and
-// Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about managed policies, see Managed Policies and Inline
+// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) ListPolicies(input *ListPoliciesInput) (*ListPoliciesOutput, error) {
 	req, out := c.ListPoliciesRequest(input)
@@ -2948,10 +2967,10 @@ func (c *IAM) ListPolicyVersionsRequest(input *ListPolicyVersionsInput) (req *re
 }
 
 // Lists information about the versions of the specified managed policy, including
-// the version that is set as the policy's default version.
+// the version that is currently set as the policy's default version.
 //
-// For more information about managed policies, refer to Managed Policies and
-// Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// For more information about managed policies, see Managed Policies and Inline
+// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) ListPolicyVersions(input *ListPolicyVersionsInput) (*ListPolicyVersionsOutput, error) {
 	req, out := c.ListPolicyVersionsRequest(input)
@@ -2994,12 +3013,11 @@ func (c *IAM) ListRolePoliciesRequest(input *ListRolePoliciesInput) (req *reques
 }
 
 // Lists the names of the inline policies that are embedded in the specified
-// role.
+// IAM role.
 //
-// A role can also have managed policies attached to it. To list the managed
+// An IAM role can also have managed policies attached to it. To list the managed
 // policies that are attached to a role, use ListAttachedRolePolicies. For more
-// information about policies, refer to Managed Policies and Inline Policies
-// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// information about policies, see Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. If
@@ -3045,9 +3063,9 @@ func (c *IAM) ListRolesRequest(input *ListRolesInput) (req *request.Request, out
 	return
 }
 
-// Lists the roles that have the specified path prefix. If there are none, the
-// action returns an empty list. For more information about roles, go to Working
-// with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
+// Lists the IAM roles that have the specified path prefix. If there are none,
+// the action returns an empty list. For more information about roles, go to
+// Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
 //
 // You can paginate the results using the MaxItems and Marker parameters.
 func (c *IAM) ListRoles(input *ListRolesInput) (*ListRolesOutput, error) {
@@ -3084,9 +3102,9 @@ func (c *IAM) ListSAMLProvidersRequest(input *ListSAMLProvidersInput) (req *requ
 	return
 }
 
-// Lists the SAML providers in the account.
+// Lists the SAML provider resource objects defined in IAM in the account.
 //
-//  This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
+//   This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
 func (c *IAM) ListSAMLProviders(input *ListSAMLProvidersInput) (*ListSAMLProvidersOutput, error) {
 	req, out := c.ListSAMLProvidersRequest(input)
 	err := req.Send()
@@ -3156,8 +3174,8 @@ func (c *IAM) ListServerCertificatesRequest(input *ListServerCertificatesInput) 
 	return
 }
 
-// Lists the server certificates that have the specified path prefix. If none
-// exist, the action returns an empty list.
+// Lists the server certificates stored in IAM that have the specified path
+// prefix. If none exist, the action returns an empty list.
 //
 //  You can paginate the results using the MaxItems and Marker parameters.
 //
@@ -3206,15 +3224,16 @@ func (c *IAM) ListSigningCertificatesRequest(input *ListSigningCertificatesInput
 }
 
 // Returns information about the signing certificates associated with the specified
-// user. If there are none, the action returns an empty list.
+// IAM user. If there are none, the action returns an empty list.
 //
 // Although each user is limited to a small number of signing certificates,
 // you can still paginate the results using the MaxItems and Marker parameters.
 //
 // If the UserName field is not specified, the user name is determined implicitly
-// based on the AWS access key ID used to sign the request. Because this action
-// works for access keys under the AWS account, you can use this action to manage
-// root credentials even if the AWS account has no associated users.
+// based on the AWS access key ID used to sign the request for this API. Because
+// this action works for access keys under the AWS account, you can use this
+// action to manage root credentials even if the AWS account has no associated
+// users.
 func (c *IAM) ListSigningCertificates(input *ListSigningCertificatesInput) (*ListSigningCertificatesOutput, error) {
 	req, out := c.ListSigningCertificatesRequest(input)
 	err := req.Send()
@@ -3255,12 +3274,11 @@ func (c *IAM) ListUserPoliciesRequest(input *ListUserPoliciesInput) (req *reques
 	return
 }
 
-// Lists the names of the inline policies embedded in the specified user.
+// Lists the names of the inline policies embedded in the specified IAM user.
 //
-// A user can also have managed policies attached to it. To list the managed
+// An IAM user can also have managed policies attached to it. To list the managed
 // policies that are attached to a user, use ListAttachedUserPolicies. For more
-// information about policies, refer to Managed Policies and Inline Policies
-// (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// information about policies, see Managed Policies and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // You can paginate the results using the MaxItems and Marker parameters. If
@@ -3351,7 +3369,7 @@ func (c *IAM) ListVirtualMFADevicesRequest(input *ListVirtualMFADevicesInput) (r
 	return
 }
 
-// Lists the virtual MFA devices under the AWS account by assignment status.
+// Lists the virtual MFA devices defined in the AWS account by assignment status.
 // If you do not specify an assignment status, the action returns a list of
 // all virtual MFA devices. Assignment status can be Assigned, Unassigned, or
 // Any.
@@ -3393,23 +3411,23 @@ func (c *IAM) PutGroupPolicyRequest(input *PutGroupPolicyInput) (req *request.Re
 	return
 }
 
-// Adds (or updates) an inline policy document that is embedded in the specified
-// group.
+// Adds or updates an inline policy document that is embedded in the specified
+// IAM group.
 //
 // A user can also have managed policies attached to it. To attach a managed
 // policy to a group, use AttachGroupPolicy. To create a new managed policy,
-// use CreatePolicy. For information about policies, refer to Managed Policies
-// and Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// use CreatePolicy. For information about policies, see Managed Policies and
+// Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // For information about limits on the number of inline policies that you can
 // embed in a group, see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
 // in the IAM User Guide.
 //
-// Because policy documents can be large, you should use POST rather than GET
-// when calling PutGroupPolicy. For general information about using the Query
-// API with IAM, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html)
-// in the Using IAM guide.
+//  Because policy documents can be large, you should use POST rather than
+// GET when calling PutGroupPolicy. For general information about using the
+// Query API with IAM, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html)
+// in the IAM User Guide.
 func (c *IAM) PutGroupPolicy(input *PutGroupPolicyInput) (*PutGroupPolicyOutput, error) {
 	req, out := c.PutGroupPolicyRequest(input)
 	err := req.Send()
@@ -3438,29 +3456,30 @@ func (c *IAM) PutRolePolicyRequest(input *PutRolePolicyInput) (req *request.Requ
 	return
 }
 
-// Adds (or updates) an inline policy document that is embedded in the specified
-// role.
+// Adds or updates an inline policy document that is embedded in the specified
+// IAM role.
 //
 // When you embed an inline policy in a role, the inline policy is used as
-// the role's access (permissions) policy. The role's trust policy is created
-// at the same time as the role, using CreateRole. You can update a role's trust
-// policy using UpdateAssumeRolePolicy. For more information about roles, go
-// to Using Roles to Delegate Permissions and Federate Identities (http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-toplevel.html).
+// part of the role's access (permissions) policy. The role's trust policy is
+// created at the same time as the role, using CreateRole. You can update a
+// role's trust policy using UpdateAssumeRolePolicy. For more information about
+// IAM roles, go to Using Roles to Delegate Permissions and Federate Identities
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-toplevel.html).
 //
 // A role can also have a managed policy attached to it. To attach a managed
 // policy to a role, use AttachRolePolicy. To create a new managed policy, use
-// CreatePolicy. For information about policies, refer to Managed Policies and
-// Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// CreatePolicy. For information about policies, see Managed Policies and Inline
+// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // For information about limits on the number of inline policies that you can
 // embed with a role, see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
 // in the IAM User Guide.
 //
-// Because policy documents can be large, you should use POST rather than GET
-// when calling PutRolePolicy. For general information about using the Query
+//  Because policy documents can be large, you should use POST rather than
+// GET when calling PutRolePolicy. For general information about using the Query
 // API with IAM, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) PutRolePolicy(input *PutRolePolicyInput) (*PutRolePolicyOutput, error) {
 	req, out := c.PutRolePolicyRequest(input)
 	err := req.Send()
@@ -3489,23 +3508,23 @@ func (c *IAM) PutUserPolicyRequest(input *PutUserPolicyInput) (req *request.Requ
 	return
 }
 
-// Adds (or updates) an inline policy document that is embedded in the specified
-// user.
+// Adds or updates an inline policy document that is embedded in the specified
+// IAM user.
 //
-// A user can also have a managed policy attached to it. To attach a managed
+// An IAM user can also have a managed policy attached to it. To attach a managed
 // policy to a user, use AttachUserPolicy. To create a new managed policy, use
-// CreatePolicy. For information about policies, refer to Managed Policies and
-// Inline Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// CreatePolicy. For information about policies, see Managed Policies and Inline
+// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 //
 // For information about limits on the number of inline policies that you can
 // embed in a user, see Limitations on IAM Entities (http://docs.aws.amazon.com/IAM/latest/UserGuide/LimitationsOnEntities.html)
 // in the IAM User Guide.
 //
-// Because policy documents can be large, you should use POST rather than GET
-// when calling PutUserPolicy. For general information about using the Query
+//  Because policy documents can be large, you should use POST rather than
+// GET when calling PutUserPolicy. For general information about using the Query
 // API with IAM, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) PutUserPolicy(input *PutUserPolicyInput) (*PutUserPolicyOutput, error) {
 	req, out := c.PutUserPolicyRequest(input)
 	err := req.Send()
@@ -3535,10 +3554,11 @@ func (c *IAM) RemoveClientIDFromOpenIDConnectProviderRequest(input *RemoveClient
 }
 
 // Removes the specified client ID (also known as audience) from the list of
-// client IDs registered for the specified IAM OpenID Connect provider.
+// client IDs registered for the specified IAM OpenID Connect (OIDC) provider
+// resource object.
 //
 // This action is idempotent; it does not fail or return an error if you try
-// to remove a client ID that was removed previously.
+// to remove a client ID that does not exist.
 func (c *IAM) RemoveClientIDFromOpenIDConnectProvider(input *RemoveClientIDFromOpenIDConnectProviderInput) (*RemoveClientIDFromOpenIDConnectProviderOutput, error) {
 	req, out := c.RemoveClientIDFromOpenIDConnectProviderRequest(input)
 	err := req.Send()
@@ -3567,13 +3587,14 @@ func (c *IAM) RemoveRoleFromInstanceProfileRequest(input *RemoveRoleFromInstance
 	return
 }
 
-// Removes the specified role from the specified instance profile.
+// Removes the specified IAM role from the specified EC2 instance profile.
 //
 //  Make sure you do not have any Amazon EC2 instances running with the role
 // you are about to remove from the instance profile. Removing a role from an
-// instance profile that is associated with a running instance will break any
-// applications running on the instance.   For more information about roles,
-// go to Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
+// instance profile that is associated with a running instance break any applications
+// running on the instance.
+//
+//   For more information about IAM roles, go to Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
 // For more information about instance profiles, go to About Instance Profiles
 // (http://docs.aws.amazon.com/IAM/latest/UserGuide/AboutInstanceProfiles.html).
 func (c *IAM) RemoveRoleFromInstanceProfile(input *RemoveRoleFromInstanceProfileInput) (*RemoveRoleFromInstanceProfileOutput, error) {
@@ -3633,11 +3654,12 @@ func (c *IAM) ResyncMFADeviceRequest(input *ResyncMFADeviceInput) (req *request.
 	return
 }
 
-// Synchronizes the specified MFA device with AWS servers.
+// Synchronizes the specified MFA device with its IAM resource object on the
+// AWS servers.
 //
 // For more information about creating and working with virtual MFA devices,
 // go to Using a Virtual MFA Device (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_VirtualMFA.html)
-// in the Using IAM guide.
+// in the IAM User Guide.
 func (c *IAM) ResyncMFADevice(input *ResyncMFADeviceInput) (*ResyncMFADeviceOutput, error) {
 	req, out := c.ResyncMFADeviceRequest(input)
 	err := req.Send()
@@ -3673,7 +3695,7 @@ func (c *IAM) SetDefaultPolicyVersionRequest(input *SetDefaultPolicyVersionInput
 // to. To list the users, groups, and roles that the policy is attached to,
 // use the ListEntitiesForPolicy API.
 //
-// For information about managed policies, refer to Managed Policies and Inline
+// For information about managed policies, see Managed Policies and Inline
 // Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 func (c *IAM) SetDefaultPolicyVersion(input *SetDefaultPolicyVersionInput) (*SetDefaultPolicyVersionOutput, error) {
@@ -3761,7 +3783,7 @@ func (c *IAM) SimulatePrincipalPolicyRequest(input *SimulatePrincipalPolicyInput
 // The simulation does not perform the API actions, it only checks the authorization
 // to determine if the simulated policies allow or deny the actions.
 //
-// Note: This API discloses information about the permissions granted to other
+//  Note: This API discloses information about the permissions granted to other
 // users. If you do not want users to see other user's permissions, then consider
 // allowing them to use SimulateCustomPolicy instead.
 //
@@ -3878,9 +3900,10 @@ func (c *IAM) UpdateAssumeRolePolicyRequest(input *UpdateAssumeRolePolicyInput) 
 	return
 }
 
-// Updates the policy that grants an entity permission to assume a role. For
-// more information about roles, go to Using Roles to Delegate Permissions and
-// Federate Identities (http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-toplevel.html).
+// Updates the policy that grants an IAM entity permission to assume a role.
+// This is typically referred to as the "role trust policy". For more information
+// about roles, go to Using Roles to Delegate Permissions and Federate Identities
+// (http://docs.aws.amazon.com/IAM/latest/UserGuide/roles-toplevel.html).
 func (c *IAM) UpdateAssumeRolePolicy(input *UpdateAssumeRolePolicyInput) (*UpdateAssumeRolePolicyOutput, error) {
 	req, out := c.UpdateAssumeRolePolicyRequest(input)
 	err := req.Send()
@@ -3909,16 +3932,17 @@ func (c *IAM) UpdateGroupRequest(input *UpdateGroupInput) (req *request.Request,
 	return
 }
 
-// Updates the name and/or the path of the specified group.
+// Updates the name and/or the path of the specified IAM group.
 //
-//  You should understand the implications of changing a group's path or name.
+//   You should understand the implications of changing a group's path or name.
 // For more information, see Renaming Users and Groups (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_WorkingWithGroupsAndUsers.html)
-// in the IAM User Guide.  To change a group name the requester must have appropriate
-// permissions on both the source object and the target object. For example,
-// to change Managers to MGRs, the entity making the request must have permission
-// on Managers and MGRs, or must have permission on all (*). For more information
-// about permissions, see Permissions and Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/PermissionsAndPolicies.html"
-// target="blank).
+// in the IAM User Guide.
+//
+//   To change an IAM group name the requester must have appropriate permissions
+// on both the source object and the target object. For example, to change "Managers"
+// to "MGRs", the entity making the request must have permission on both "Managers"
+// and "MGRs", or must have permission on all (*). For more information about
+// permissions, see Permissions and Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/PermissionsAndPolicies.html).
 func (c *IAM) UpdateGroup(input *UpdateGroupInput) (*UpdateGroupOutput, error) {
 	req, out := c.UpdateGroupRequest(input)
 	err := req.Send()
@@ -3947,10 +3971,10 @@ func (c *IAM) UpdateLoginProfileRequest(input *UpdateLoginProfileInput) (req *re
 	return
 }
 
-// Changes the password for the specified user.
+// Changes the password for the specified IAM user.
 //
-// Users can change their own passwords by calling ChangePassword. For more
-// information about modifying passwords, see Managing Passwords (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_ManagingLogins.html)
+// IAM users can change their own passwords by calling ChangePassword. For
+// more information about modifying passwords, see Managing Passwords (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_ManagingLogins.html)
 // in the IAM User Guide.
 func (c *IAM) UpdateLoginProfile(input *UpdateLoginProfileInput) (*UpdateLoginProfileOutput, error) {
 	req, out := c.UpdateLoginProfileRequest(input)
@@ -3980,7 +4004,8 @@ func (c *IAM) UpdateOpenIDConnectProviderThumbprintRequest(input *UpdateOpenIDCo
 	return
 }
 
-// Replaces the existing list of server certificate thumbprints with a new list.
+// Replaces the existing list of server certificate thumbprints associated with
+// an OpenID Connect (OIDC) provider resource object with a new list of thumbprints.
 //
 // The list that you pass with this action completely replaces the existing
 // list of thumbprints. (The lists are not merged.)
@@ -3988,12 +4013,12 @@ func (c *IAM) UpdateOpenIDConnectProviderThumbprintRequest(input *UpdateOpenIDCo
 // Typically, you need to update a thumbprint only when the identity provider's
 // certificate changes, which occurs rarely. However, if the provider's certificate
 // does change, any attempt to assume an IAM role that specifies the OIDC provider
-// as a principal will fail until the certificate thumbprint is updated.
+// as a principal fails until the certificate thumbprint is updated.
 //
-// Because trust for the OpenID Connect provider is ultimately derived from
-// the provider's certificate and is validated by the thumbprint, it is a best
-// practice to limit access to the UpdateOpenIDConnectProviderThumbprint action
-// to highly-privileged users.
+//  Because trust for the OIDC provider is ultimately derived from the provider's
+// certificate and is validated by the thumbprint, it is a best practice to
+// limit access to the UpdateOpenIDConnectProviderThumbprint action to highly-privileged
+// users.
 func (c *IAM) UpdateOpenIDConnectProviderThumbprint(input *UpdateOpenIDConnectProviderThumbprintInput) (*UpdateOpenIDConnectProviderThumbprintOutput, error) {
 	req, out := c.UpdateOpenIDConnectProviderThumbprintRequest(input)
 	err := req.Send()
@@ -4020,9 +4045,9 @@ func (c *IAM) UpdateSAMLProviderRequest(input *UpdateSAMLProviderInput) (req *re
 	return
 }
 
-// Updates the metadata document for an existing SAML provider.
+// Updates the metadata document for an existing SAML provider resource object.
 //
-// This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
+//  This operation requires Signature Version 4 (http://docs.aws.amazon.com/general/latest/gr/signature-version-4.html).
 func (c *IAM) UpdateSAMLProvider(input *UpdateSAMLProviderInput) (*UpdateSAMLProviderOutput, error) {
 	req, out := c.UpdateSAMLProviderRequest(input)
 	err := req.Send()
@@ -4051,7 +4076,7 @@ func (c *IAM) UpdateSSHPublicKeyRequest(input *UpdateSSHPublicKeyInput) (req *re
 	return
 }
 
-// Sets the status of the specified SSH public key to active or inactive. SSH
+// Sets the status of an IAM user's SSH public key to active or inactive. SSH
 // public keys that are inactive cannot be used for authentication. This action
 // can be used to disable a user's SSH public key as part of a key rotation
 // work flow.
@@ -4089,21 +4114,24 @@ func (c *IAM) UpdateServerCertificateRequest(input *UpdateServerCertificateInput
 	return
 }
 
-// Updates the name and/or the path of the specified server certificate.
+// Updates the name and/or the path of the specified server certificate stored
+// in IAM.
 //
 // For more information about working with server certificates, including a
 // list of AWS services that can use the server certificates that you manage
 // with IAM, go to Working with Server Certificates (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs.html)
 // in the IAM User Guide.
 //
-// You should understand the implications of changing a server certificate's
+//  You should understand the implications of changing a server certificate's
 // path or name. For more information, see Renaming a Server Certificate (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs_manage.html#RenamingServerCerts)
-// in the IAM User Guide. To change a server certificate name the requester
-// must have appropriate permissions on both the source object and the target
-// object. For example, to change the name from ProductionCert to ProdCert,
-// the entity making the request must have permission on ProductionCert and
-// ProdCert, or must have permission on all (*). For more information about
-// permissions, see Access Management (http://docs.aws.amazon.com/IAM/latest/UserGuide/access.html)
+// in the IAM User Guide.
+//
+//   To change a server certificate name the requester must have appropriate
+// permissions on both the source object and the target object. For example,
+// to change the name from "ProductionCert" to "ProdCert", the entity making
+// the request must have permission on "ProductionCert" and "ProdCert", or must
+// have permission on all (*). For more information about permissions, see Access
+// Management (http://docs.aws.amazon.com/IAM/latest/UserGuide/access.html)
 // in the IAM User Guide.
 func (c *IAM) UpdateServerCertificate(input *UpdateServerCertificateInput) (*UpdateServerCertificateOutput, error) {
 	req, out := c.UpdateServerCertificateRequest(input)
@@ -4133,9 +4161,9 @@ func (c *IAM) UpdateSigningCertificateRequest(input *UpdateSigningCertificateInp
 	return
 }
 
-// Changes the status of the specified signing certificate from active to disabled,
-// or vice versa. This action can be used to disable a user's signing certificate
-// as part of a certificate rotation work flow.
+// Changes the status of the specified user signing certificate from active
+// to disabled, or vice versa. This action can be used to disable an IAM user's
+// signing certificate as part of a certificate rotation work flow.
 //
 // If the UserName field is not specified, the UserName is determined implicitly
 // based on the AWS access key ID used to sign the request. Because this action
@@ -4169,17 +4197,18 @@ func (c *IAM) UpdateUserRequest(input *UpdateUserInput) (req *request.Request, o
 	return
 }
 
-// Updates the name and/or the path of the specified user.
+// Updates the name and/or the path of the specified IAM user.
 //
-//  You should understand the implications of changing a user's path or name.
-// For more information, see Renaming an IAM User (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_manage.html#id_users_renaming)
+//   You should understand the implications of changing an IAM user's path
+// or name. For more information, see Renaming an IAM User (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_manage.html#id_users_renaming)
 // and Renaming an IAM Group (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_groups_manage_rename.html)
-// in the IAM User Guide.   To change a user name the requester must have appropriate
-// permissions on both the source object and the target object. For example,
-// to change Bob to Robert, the entity making the request must have permission
-// on Bob and Robert, or must have permission on all (*). For more information
-// about permissions, see Permissions and Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/PermissionsAndPolicies.html"
-// target="blank).
+// in the IAM User Guide.
+//
+//    To change a user name the requester must have appropriate permissions
+// on both the source object and the target object. For example, to change Bob
+// to Robert, the entity making the request must have permission on Bob and
+// Robert, or must have permission on all (*). For more information about permissions,
+// see Permissions and Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/PermissionsAndPolicies.html).
 func (c *IAM) UpdateUser(input *UpdateUserInput) (*UpdateUserOutput, error) {
 	req, out := c.UpdateUserRequest(input)
 	err := req.Send()
@@ -4252,7 +4281,7 @@ func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput
 // see Limitations on IAM Entities and Objects (http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-limits.html)
 // in the IAM User Guide.
 //
-// Because the body of the public key certificate, private key, and the certificate
+//  Because the body of the public key certificate, private key, and the certificate
 // chain can be large, you should use POST rather than GET when calling UploadServerCertificate.
 // For information about setting up signatures and authorization through the
 // API, go to Signing AWS API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html)
@@ -4286,22 +4315,23 @@ func (c *IAM) UploadSigningCertificateRequest(input *UploadSigningCertificateInp
 }
 
 // Uploads an X.509 signing certificate and associates it with the specified
-// user. Some AWS services use X.509 signing certificates to validate requests
+// IAM user. Some AWS services use X.509 signing certificates to validate requests
 // that are signed with a corresponding private key. When you upload the certificate,
 // its default status is Active.
 //
-// If the UserName field is not specified, the user name is determined implicitly
-// based on the AWS access key ID used to sign the request. Because this action
-// works for access keys under the AWS account, you can use this action to manage
-// root credentials even if the AWS account has no associated users.
+// If the UserName field is not specified, the IAM user name is determined
+// implicitly based on the AWS access key ID used to sign the request. Because
+// this action works for access keys under the AWS account, you can use this
+// action to manage root credentials even if the AWS account has no associated
+// users.
 //
-// Because the body of a X.509 certificate can be large, you should use POST
+//  Because the body of a X.509 certificate can be large, you should use POST
 // rather than GET when calling UploadSigningCertificate. For information about
 // setting up signatures and authorization through the API, go to Signing AWS
 // API Requests (http://docs.aws.amazon.com/general/latest/gr/signing_aws_api_requests.html)
 // in the AWS General Reference. For general information about using the Query
 // API with IAM, go to Making Query Requests (http://docs.aws.amazon.com/IAM/latest/UserGuide/IAM_UsingQueryAPI.html)
-// in the Using IAMguide.
+// in the IAM User Guide.
 func (c *IAM) UploadSigningCertificate(input *UploadSigningCertificateInput) (*UploadSigningCertificateOutput, error) {
 	req, out := c.UploadSigningCertificateRequest(input)
 	err := req.Send()
@@ -4313,7 +4343,7 @@ func (c *IAM) UploadSigningCertificate(input *UploadSigningCertificateInput) (*U
 //  This data type is used as a response element in the CreateAccessKey and
 // ListAccessKeys actions.
 //
-// The SecretAccessKey value is returned only in response to CreateAccessKey.
+//  The SecretAccessKey value is returned only in response to CreateAccessKey.
 // You can get a secret access key only when you first create an access key;
 // you cannot recover the secret access key later. If you lose a secret access
 // key, you must create a new access key.
@@ -4434,12 +4464,13 @@ func (s AccessKeyMetadata) GoString() string {
 type AddClientIDToOpenIDConnectProviderInput struct {
 	_ struct{} `type:"structure"`
 
-	// The client ID (also known as audience) to add to the IAM OpenID Connect provider.
+	// The client ID (also known as audience) to add to the IAM OpenID Connect provider
+	// resource.
 	ClientID *string `min:"1" type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
-	// to add the client ID to. You can get a list of OIDC provider ARNs by using
-	// the ListOpenIDConnectProviders action.
+	// resource to add the client ID to. You can get a list of OIDC provider ARNs
+	// by using the ListOpenIDConnectProviders action.
 	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 }
 
@@ -4493,9 +4524,17 @@ type AddRoleToInstanceProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the instance profile to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role to add.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -4549,9 +4588,17 @@ type AddUserToGroupInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the group to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user to add.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -4605,12 +4652,16 @@ type AttachGroupPolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name (friendly name, not ARN) of the group to attach the policy to.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy you want to attach.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 }
@@ -4664,14 +4715,18 @@ func (s AttachGroupPolicyOutput) GoString() string {
 type AttachRolePolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy you want to attach.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) of the role to attach the policy to.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -4724,14 +4779,18 @@ func (s AttachRolePolicyOutput) GoString() string {
 type AttachUserPolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy you want to attach.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
-	// The name (friendly name, not ARN) of the user to attach the policy to.
+	// The name (friendly name, not ARN) of the IAM user to attach the policy to.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -4820,6 +4879,15 @@ type ChangePasswordInput struct {
 
 	// The new password. The new password must conform to the AWS account's password
 	// policy, if one exists.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of almost any printable ASCII character
+	// from the space (\u0020) through the end of the ASCII character range (\u00FF).
+	// You can also include the tab (\u0009), line feed (\u000A), and carriage return
+	// (\u000D) characters. Although any of these characters are valid in a password,
+	// note that many tools, such as the AWS Management Console, might restrict
+	// the ability to enter certain characters because they have special meaning
+	// within that tool.
 	NewPassword *string `min:"1" type:"string" required:"true"`
 
 	// The IAM user's current password.
@@ -4877,7 +4945,8 @@ func (s ChangePasswordOutput) GoString() string {
 // multiple values) to use in the simulation. This information is used when
 // evaluating the Condition elements of the input policies.
 //
-// This data type is used as an input parameter to SimulatePolicy.
+// This data type is used as an input parameter to  SimulateCustomPolicy  and
+//  SimulateCustomPolicy .
 type ContextEntry struct {
 	_ struct{} `type:"structure"`
 
@@ -4921,7 +4990,11 @@ func (s *ContextEntry) Validate() error {
 type CreateAccessKeyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The user name that the new key will belong to.
+	// The name of the IAM user that the new key will belong to.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -4952,7 +5025,7 @@ func (s *CreateAccessKeyInput) Validate() error {
 type CreateAccessKeyOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the access key.
+	// A structure with details about the access key.
 	AccessKey *AccessKey `type:"structure" required:"true"`
 }
 
@@ -4970,6 +5043,11 @@ type CreateAccountAliasInput struct {
 	_ struct{} `type:"structure"`
 
 	// The account alias to create.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of lowercase letters, digits, and dashes.
+	// You cannot start or finish with a dash, nor can you have two dashes in a
+	// row.
 	AccountAlias *string `min:"3" type:"string" required:"true"`
 }
 
@@ -5017,14 +5095,24 @@ type CreateGroupInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the group to create. Do not include the path in this value.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The path to the group. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	Path *string `min:"1" type:"string"`
 }
 
@@ -5061,7 +5149,7 @@ func (s *CreateGroupInput) Validate() error {
 type CreateGroupOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the group.
+	// A structure containing details about the new group.
 	Group *Group `type:"structure" required:"true"`
 }
 
@@ -5079,14 +5167,24 @@ type CreateInstanceProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the instance profile to create.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	// The path to the instance profile. For more information about paths, see IAM
 	// Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	Path *string `min:"1" type:"string"`
 }
 
@@ -5123,7 +5221,7 @@ func (s *CreateInstanceProfileInput) Validate() error {
 type CreateInstanceProfileOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the instance profile.
+	// A structure containing details about the new instance profile.
 	InstanceProfile *InstanceProfile `type:"structure" required:"true"`
 }
 
@@ -5141,12 +5239,26 @@ type CreateLoginProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The new password for the user.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of almost any printable ASCII character
+	// from the space (\u0020) through the end of the ASCII character range (\u00FF).
+	// You can also include the tab (\u0009), line feed (\u000A), and carriage return
+	// (\u000D) characters. Although any of these characters are valid in a password,
+	// note that many tools, such as the AWS Management Console, might restrict
+	// the ability to enter certain characters because they have special meaning
+	// within that tool.
 	Password *string `min:"1" type:"string" required:"true"`
 
 	// Specifies whether the user is required to set a new password on next sign-in.
 	PasswordResetRequired *bool `type:"boolean"`
 
-	// The name of the user to create a password for.
+	// The name of the IAM user to create a password for. The user must already
+	// exist.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -5186,7 +5298,7 @@ func (s *CreateLoginProfileInput) Validate() error {
 type CreateLoginProfileOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The user name and password create date.
+	// A structure containing the user name and password create date.
 	LoginProfile *LoginProfile `type:"structure" required:"true"`
 }
 
@@ -5282,8 +5394,8 @@ func (s *CreateOpenIDConnectProviderInput) Validate() error {
 type CreateOpenIDConnectProviderOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the IAM OpenID Connect provider that was
-	// created. For more information, see OpenIDConnectProviderListEntry.
+	// The Amazon Resource Name (ARN) of the new IAM OpenID Connect provider that
+	// is created. For more information, see OpenIDConnectProviderListEntry.
 	OpenIDConnectProviderArn *string `min:"20" type:"string"`
 }
 
@@ -5316,12 +5428,29 @@ type CreatePolicyInput struct {
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	Path *string `type:"string"`
 
-	// The policy document.
+	// The JSON policy document that you want to use as the content for the new
+	// policy.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
-	// The name of the policy document.
+	// The friendly name of the policy.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -5361,7 +5490,7 @@ func (s *CreatePolicyInput) Validate() error {
 type CreatePolicyOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the policy.
+	// A structure containing details about the new policy.
 	Policy *Policy `type:"structure"`
 }
 
@@ -5378,14 +5507,22 @@ func (s CreatePolicyOutput) GoString() string {
 type CreatePolicyVersionInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy to which you want to add
+	// a new version.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
-	// The policy document.
+	// The JSON policy document that you want to use as the content for this new
+	// version of the policy.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// Specifies whether to set this version as the policy's default version.
@@ -5436,7 +5573,7 @@ func (s *CreatePolicyVersionInput) Validate() error {
 type CreatePolicyVersionOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the policy version.
+	// A structure containing details about the new policy version.
 	PolicyVersion *PolicyVersion `type:"structure"`
 }
 
@@ -5455,17 +5592,33 @@ type CreateRoleInput struct {
 
 	// The trust relationship policy document that grants an entity permission to
 	// assume the role.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	AssumeRolePolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The path to the role. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	Path *string `min:"1" type:"string"`
 
 	// The name of the role to create.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -5508,7 +5661,7 @@ func (s *CreateRoleInput) Validate() error {
 type CreateRoleOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the role.
+	// A structure containing details about the new role.
 	Role *Role `type:"structure" required:"true"`
 }
 
@@ -5526,6 +5679,10 @@ type CreateSAMLProviderInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the provider to create.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	Name *string `min:"1" type:"string" required:"true"`
 
 	// An XML document generated by an identity provider (IdP) that supports SAML
@@ -5575,7 +5732,7 @@ func (s *CreateSAMLProviderInput) Validate() error {
 type CreateSAMLProviderOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the SAML provider.
+	// The Amazon Resource Name (ARN) of the new SAML provider resource in IAM.
 	SAMLProviderArn *string `min:"20" type:"string"`
 }
 
@@ -5594,13 +5751,23 @@ type CreateUserInput struct {
 
 	// The path for the user name. For more information about paths, see IAM Identifiers
 	// (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	Path *string `min:"1" type:"string"`
 
 	// The name of the user to create.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -5637,7 +5804,7 @@ func (s *CreateUserInput) Validate() error {
 type CreateUserOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the user.
+	// A structure with details about the new IAM user.
 	User *User `type:"structure"`
 }
 
@@ -5656,14 +5823,24 @@ type CreateVirtualMFADeviceInput struct {
 
 	// The path for the virtual MFA device. For more information about paths, see
 	// IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
 	// (/).
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	Path *string `min:"1" type:"string"`
 
 	// The name of the virtual MFA device. Use with path to uniquely identify a
 	// virtual MFA device.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	VirtualMFADeviceName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -5700,7 +5877,7 @@ func (s *CreateVirtualMFADeviceInput) Validate() error {
 type CreateVirtualMFADeviceOutput struct {
 	_ struct{} `type:"structure"`
 
-	// A newly created virtual MFA device.
+	// A structure containing details about the new virtual MFA device.
 	VirtualMFADevice *VirtualMFADevice `type:"structure" required:"true"`
 }
 
@@ -5719,9 +5896,17 @@ type DeactivateMFADeviceInput struct {
 
 	// The serial number that uniquely identifies the MFA device. For virtual MFA
 	// devices, the serial number is the device ARN.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =/:,.@-
 	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	// The name of the user whose MFA device you want to deactivate.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -5776,9 +5961,17 @@ type DeleteAccessKeyInput struct {
 
 	// The access key ID for the access key ID and secret access key you want to
 	// delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that can consist of any upper or lowercased letter
+	// or digit.
 	AccessKeyId *string `min:"16" type:"string" required:"true"`
 
-	// The name of the user whose key you want to delete.
+	// The name of the user whose access key pair you want to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -5829,6 +6022,11 @@ type DeleteAccountAliasInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the account alias to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of lowercase letters, digits, and dashes.
+	// You cannot start or finish with a dash, nor can you have two dashes in a
+	// row.
 	AccountAlias *string `min:"3" type:"string" required:"true"`
 }
 
@@ -5903,7 +6101,11 @@ func (s DeleteAccountPasswordPolicyOutput) GoString() string {
 type DeleteGroupInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the group to delete.
+	// The name of the IAM group to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -5952,9 +6154,17 @@ type DeleteGroupPolicyInput struct {
 
 	// The name (friendly name, not ARN) identifying the group that the policy is
 	// embedded in.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name identifying the policy document to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6008,6 +6218,10 @@ type DeleteInstanceProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the instance profile to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6055,6 +6269,10 @@ type DeleteLoginProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the user whose password you want to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6101,9 +6319,9 @@ func (s DeleteLoginProfileOutput) GoString() string {
 type DeleteOpenIDConnectProviderInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the IAM OpenID Connect provider to delete.
-	// You can get a list of OpenID Connect provider ARNs by using the ListOpenIDConnectProviders
-	// action.
+	// The Amazon Resource Name (ARN) of the IAM OpenID Connect provider resource
+	// object to delete. You can get a list of OpenID Connect provider resource
+	// ARNs by using the ListOpenIDConnectProviders action.
 	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 }
 
@@ -6150,10 +6368,10 @@ func (s DeleteOpenIDConnectProviderOutput) GoString() string {
 type DeletePolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy you want to delete.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 }
@@ -6201,14 +6419,20 @@ func (s DeletePolicyOutput) GoString() string {
 type DeletePolicyVersionInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy from which you want to delete
+	// a version.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// The policy version to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that consists of the lowercase letter 'v' followed
+	// by one or two digits, and optionally followed by a period '.' and a string
+	// of letters and digits.
 	//
 	// For more information about managed policy versions, see Versioning for Managed
 	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
@@ -6263,6 +6487,10 @@ type DeleteRoleInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the role to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6309,11 +6537,19 @@ func (s DeleteRoleOutput) GoString() string {
 type DeleteRolePolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name identifying the policy document to delete.
+	// The name of the inline policy to delete from the specified IAM role.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) identifying the role that the policy is
 	// embedded in.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6414,9 +6650,17 @@ type DeleteSSHPublicKeyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The unique identifier for the SSH public key.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that can consist of any upper or lowercased letter
+	// or digit.
 	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The name of the IAM user associated with the SSH public key.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6470,6 +6714,10 @@ type DeleteServerCertificateInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the server certificate you want to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6517,9 +6765,17 @@ type DeleteSigningCertificateInput struct {
 	_ struct{} `type:"structure"`
 
 	// The ID of the signing certificate to delete.
+	//
+	// The format of this parameter, as described by its regex (http://wikipedia.org/wiki/regex)
+	// pattern, is a string of characters that can be upper- or lower-cased letters
+	// or digits.
 	CertificateId *string `min:"24" type:"string" required:"true"`
 
 	// The name of the user the signing certificate belongs to.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -6570,6 +6826,10 @@ type DeleteUserInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the user to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6617,10 +6877,18 @@ type DeleteUserPolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name identifying the policy document to delete.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name (friendly name, not ARN) identifying the user that the policy is
 	// embedded in.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6675,6 +6943,10 @@ type DeleteVirtualMFADeviceInput struct {
 
 	// The serial number that uniquely identifies the MFA device. For virtual MFA
 	// devices, the serial number is the same as the ARN.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =/:,.@-
 	SerialNumber *string `min:"9" type:"string" required:"true"`
 }
 
@@ -6721,13 +6993,17 @@ func (s DeleteVirtualMFADeviceOutput) GoString() string {
 type DetachGroupPolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name (friendly name, not ARN) of the group to detach the policy from.
+	// The name (friendly name, not ARN) of the IAM group to detach the policy from.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy you want to detach.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 }
@@ -6781,14 +7057,18 @@ func (s DetachGroupPolicyOutput) GoString() string {
 type DetachRolePolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy you want to detach.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
-	// The name (friendly name, not ARN) of the role to detach the policy from.
+	// The name (friendly name, not ARN) of the IAM role to detach the policy from.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6841,14 +7121,18 @@ func (s DetachRolePolicyOutput) GoString() string {
 type DetachUserPolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy you want to detach.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
-	// The name (friendly name, not ARN) of the user to detach the policy from.
+	// The name (friendly name, not ARN) of the IAM user to detach the policy from.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6902,16 +7186,28 @@ type EnableMFADeviceInput struct {
 	_ struct{} `type:"structure"`
 
 	// An authentication code emitted by the device.
+	//
+	// The format for this parameter is a string of 6 digits.
 	AuthenticationCode1 *string `min:"6" type:"string" required:"true"`
 
 	// A subsequent authentication code emitted by the device.
+	//
+	// The format for this parameter is a string of 6 digits.
 	AuthenticationCode2 *string `min:"6" type:"string" required:"true"`
 
 	// The serial number that uniquely identifies the MFA device. For virtual MFA
 	// devices, the serial number is the device ARN.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =/:,.@-
 	SerialNumber *string `min:"9" type:"string" required:"true"`
 
-	// The name of the user for whom you want to enable the MFA device.
+	// The name of the IAM user for whom you want to enable the MFA device.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -6975,7 +7271,8 @@ func (s EnableMFADeviceOutput) GoString() string {
 
 // Contains the results of a simulation.
 //
-// This data type is used by the return parameter of SimulatePolicy.
+// This data type is used by the return parameter of  SimulateCustomPolicy
+//  and  SimulatePrincipalPolicy .
 type EvaluationResult struct {
 	_ struct{} `type:"structure"`
 
@@ -7010,11 +7307,6 @@ type EvaluationResult struct {
 	// missing context values are instead included under the ResourceSpecificResults
 	// section. To discover the context keys used by a set of policies, you can
 	// call GetContextKeysForCustomPolicy or GetContextKeysForPrincipalPolicy.
-	//
-	//  If the response includes any keys in this list, then the reported results
-	// might be untrustworthy because the simulation could not completely evaluate
-	// all of the conditions specified in the policies that would occur in a real
-	// world request.
 	MissingContextValues []*string `type:"list"`
 
 	// The individual results of the simulation of the API action specified in EvalActionName
@@ -7071,6 +7363,10 @@ type GetAccessKeyLastUsedInput struct {
 	_ struct{} `type:"structure"`
 
 	// The identifier of an access key.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that can consist of any upper or lowercased letter
+	// or digit.
 	AccessKeyId *string `min:"16" type:"string" required:"true"`
 }
 
@@ -7128,6 +7424,10 @@ type GetAccountAuthorizationDetailsInput struct {
 
 	// A list of entity types (user, group, role, local managed policy, or AWS managed
 	// policy) for filtering the results.
+	//
+	// The format for this parameter is a comma-separated (if more than one) list
+	// of strings. Each string value in the list must be one of the valid values
+	// listed below.
 	Filter []*string `type:"list"`
 
 	// Use this parameter only when paginating results and only after you receive
@@ -7268,147 +7568,6 @@ type GetAccountSummaryOutput struct {
 
 	// A set of key value pairs containing information about IAM entity usage and
 	// IAM quotas.
-	//
-	//  SummaryMap contains the following keys:   AccessKeysPerUserQuota
-	//
-	// The maximum number of active access keys allowed for each IAM user.
-	//
-	//   AccountAccessKeysPresent
-	//
-	// This value is 1 if the AWS account (root) has an access key, otherwise it
-	// is 0.
-	//
-	//   AccountMFAEnabled
-	//
-	// This value is 1 if the AWS account (root) has an MFA device assigned, otherwise
-	// it is 0.
-	//
-	//   AccountSigningCertificatesPresent
-	//
-	// This value is 1 if the AWS account (root) has a signing certificate, otherwise
-	// it is 0.
-	//
-	//   AssumeRolePolicySizeQuota
-	//
-	// The maximum allowed size for assume role policy documents (trust policies),
-	// in non-whitespace characters.
-	//
-	//   AttachedPoliciesPerGroupQuota
-	//
-	// The maximum number of managed policies that can be attached to an IAM group.
-	//
-	//   AttachedPoliciesPerRoleQuota
-	//
-	// The maximum number of managed policies that can be attached to an IAM role.
-	//
-	//   AttachedPoliciesPerUserQuota
-	//
-	// The maximum number of managed policies that can be attached to an IAM user.
-	//
-	//   GroupPolicySizeQuota
-	//
-	// The maximum allowed size for the aggregate of all inline policies embedded
-	// in an IAM group, in non-whitespace characters.
-	//
-	//   Groups
-	//
-	// The number of IAM groups in the AWS account.
-	//
-	//   GroupsPerUserQuota
-	//
-	// The maximum number of IAM groups each IAM user can belong to.
-	//
-	//   GroupsQuota
-	//
-	// The maximum number of IAM groups allowed in the AWS account.
-	//
-	//   InstanceProfiles
-	//
-	// The number of instance profiles in the AWS account.
-	//
-	//   InstanceProfilesQuota
-	//
-	// The maximum number of instance profiles allowed in the AWS account.
-	//
-	//   MFADevices
-	//
-	// The number of MFA devices in the AWS account, including those assigned and
-	// unassigned.
-	//
-	//   MFADevicesInUse
-	//
-	// The number of MFA devices that have been assigned to an IAM user or to the
-	// AWS account (root).
-	//
-	//   Policies
-	//
-	// The number of customer managed policies in the AWS account.
-	//
-	//   PoliciesQuota
-	//
-	// The maximum number of customer managed policies allowed in the AWS account.
-	//
-	//   PolicySizeQuota
-	//
-	// The maximum allowed size of a customer managed policy, in non-whitespace
-	// characters.
-	//
-	//   PolicyVersionsInUse
-	//
-	// The number of managed policies that are attached to IAM users, groups, or
-	// roles in the AWS account.
-	//
-	//   PolicyVersionsInUseQuota
-	//
-	// The maximum number of managed policies that can be attached to IAM users,
-	// groups, or roles in the AWS account.
-	//
-	//   Providers
-	//
-	// The number of identity providers in the AWS account.
-	//
-	//   RolePolicySizeQuota
-	//
-	// The maximum allowed size for the aggregate of all inline policies (access
-	// policies, not the trust policy) embedded in an IAM role, in non-whitespace
-	// characters.
-	//
-	//   Roles
-	//
-	// The number of IAM roles in the AWS account.
-	//
-	//   RolesQuota
-	//
-	// The maximum number of IAM roles allowed in the AWS account.
-	//
-	//   ServerCertificates
-	//
-	// The number of server certificates in the AWS account.
-	//
-	//   ServerCertificatesQuota
-	//
-	// The maximum number of server certificates allowed in the AWS account.
-	//
-	//   SigningCertificatesPerUserQuota
-	//
-	// The maximum number of X.509 signing certificates allowed for each IAM user.
-	//
-	//   UserPolicySizeQuota
-	//
-	// The maximum allowed size for the aggregate of all inline policies embedded
-	// in an IAM user, in non-whitespace characters.
-	//
-	//   Users
-	//
-	// The number of IAM users in the AWS account.
-	//
-	//   UsersQuota
-	//
-	// The maximum number of IAM users allowed in the AWS account.
-	//
-	//   VersionsPerPolicyQuota
-	//
-	// The maximum number of policy versions allowed for each managed policy.
 	SummaryMap map[string]*int64 `type:"map"`
 }
 
@@ -7425,9 +7584,15 @@ func (s GetAccountSummaryOutput) GoString() string {
 type GetContextKeysForCustomPolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// A list of policies for which you want list of context keys used in Condition
-	// elements. Each document is specified as a string containing the complete,
-	// valid JSON text of an IAM policy.
+	// A list of policies for which you want the list of context keys referenced
+	// in those policies. Each document is specified as a string containing the
+	// complete, valid JSON text of an IAM policy.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyInputList []*string `type:"list" required:"true"`
 }
 
@@ -7459,8 +7624,7 @@ func (s *GetContextKeysForCustomPolicyInput) Validate() error {
 type GetContextKeysForPolicyResponse struct {
 	_ struct{} `type:"structure"`
 
-	// The list of context keys that are used in the Condition elements of the input
-	// policies.
+	// The list of context keys that are referenced in the input policies.
 	ContextKeyNames []*string `type:"list"`
 }
 
@@ -7477,8 +7641,14 @@ func (s GetContextKeysForPolicyResponse) GoString() string {
 type GetContextKeysForPrincipalPolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// A optional list of additional policies for which you want list of context
-	// keys used in Condition elements.
+	// An optional list of additional policies for which you want the list of context
+	// keys that are referenced.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyInputList []*string `type:"list"`
 
 	// The ARN of a user, group, or role whose policies contain the context keys
@@ -7488,6 +7658,10 @@ type GetContextKeysForPrincipalPolicyInput struct {
 	// only those context keys that are found in policies attached to that entity.
 	// Note that all parameters are shown in unencoded form here for clarity, but
 	// must be URL encoded to be included as a part of a real HTML request.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	PolicySourceArn *string `min:"20" type:"string" required:"true"`
 }
 
@@ -7562,6 +7736,10 @@ type GetGroupInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the group.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// Use this parameter only when paginating results and only after you receive
@@ -7618,7 +7796,7 @@ func (s *GetGroupInput) Validate() error {
 type GetGroupOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the group.
+	// A structure that contains details about the group.
 	Group *Group `type:"structure" required:"true"`
 
 	// A flag that indicates whether there are more items to return. If your results
@@ -7651,9 +7829,17 @@ type GetGroupPolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the group the policy is associated with.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document to get.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -7717,6 +7903,10 @@ type GetInstanceProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the instance profile to get information about.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -7750,7 +7940,7 @@ func (s *GetInstanceProfileInput) Validate() error {
 type GetInstanceProfileOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the instance profile.
+	// A structure containing details about the instance profile.
 	InstanceProfile *InstanceProfile `type:"structure" required:"true"`
 }
 
@@ -7768,6 +7958,10 @@ type GetLoginProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the user whose login profile you want to retrieve.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -7801,7 +7995,7 @@ func (s *GetLoginProfileInput) Validate() error {
 type GetLoginProfileOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The user name and password create date for the user.
+	// A structure containing the user name and password create date for the user.
 	LoginProfile *LoginProfile `type:"structure" required:"true"`
 }
 
@@ -7818,9 +8012,13 @@ func (s GetLoginProfileOutput) GoString() string {
 type GetOpenIDConnectProviderInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
-	// to get information for. You can get a list of OIDC provider ARNs by using
-	// the ListOpenIDConnectProviders action.
+	// The Amazon Resource Name (ARN) of the OIDC provider resource object in IAM
+	// to get information for. You can get a list of OIDC provider resource ARNs
+	// by using the ListOpenIDConnectProviders action.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 }
 
@@ -7855,19 +8053,19 @@ type GetOpenIDConnectProviderOutput struct {
 	_ struct{} `type:"structure"`
 
 	// A list of client IDs (also known as audiences) that are associated with the
-	// specified IAM OpenID Connect provider. For more information, see CreateOpenIDConnectProvider.
+	// specified IAM OIDC provider resource object. For more information, see CreateOpenIDConnectProvider.
 	ClientIDList []*string `type:"list"`
 
-	// The date and time when the IAM OpenID Connect provider entity was created
+	// The date and time when the IAM OIDC provider resource object was created
 	// in the AWS account.
 	CreateDate *time.Time `type:"timestamp" timestampFormat:"iso8601"`
 
 	// A list of certificate thumbprints that are associated with the specified
-	// IAM OpenID Connect provider. For more information, see CreateOpenIDConnectProvider.
+	// IAM OIDC provider resource object. For more information, see CreateOpenIDConnectProvider.
 	ThumbprintList []*string `type:"list"`
 
-	// The URL that the IAM OpenID Connect provider is associated with. For more
-	// information, see CreateOpenIDConnectProvider.
+	// The URL that the IAM OIDC provider resource object is associated with. For
+	// more information, see CreateOpenIDConnectProvider.
 	Url *string `min:"1" type:"string"`
 }
 
@@ -7884,10 +8082,11 @@ func (s GetOpenIDConnectProviderOutput) GoString() string {
 type GetPolicyInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the managed policy that you want information
+	// about.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 }
@@ -7922,7 +8121,7 @@ func (s *GetPolicyInput) Validate() error {
 type GetPolicyOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the policy.
+	// A structure containing details about the policy.
 	Policy *Policy `type:"structure"`
 }
 
@@ -7939,14 +8138,20 @@ func (s GetPolicyOutput) GoString() string {
 type GetPolicyVersionInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the managed policy that you want information
+	// about.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
 	// Identifies the policy version to retrieve.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that consists of the lowercase letter 'v' followed
+	// by one or two digits, and optionally followed by a period '.' and a string
+	// of letters and digits.
 	VersionId *string `type:"string" required:"true"`
 }
 
@@ -7983,11 +8188,7 @@ func (s *GetPolicyVersionInput) Validate() error {
 type GetPolicyVersionOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the policy version.
-	//
-	// For more information about managed policy versions, see Versioning for Managed
-	// Policies (http://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-versions.html)
-	// in the IAM User Guide.
+	// A structure containing details about the policy version.
 	PolicyVersion *PolicyVersion `type:"structure"`
 }
 
@@ -8004,7 +8205,11 @@ func (s GetPolicyVersionOutput) GoString() string {
 type GetRoleInput struct {
 	_ struct{} `type:"structure"`
 
-	// The name of the role to get information about.
+	// The name of the IAM role to get information about.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -8038,7 +8243,7 @@ func (s *GetRoleInput) Validate() error {
 type GetRoleOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the role.
+	// A structure containing details about the IAM role.
 	Role *Role `type:"structure" required:"true"`
 }
 
@@ -8056,9 +8261,17 @@ type GetRolePolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the policy document to get.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role associated with the policy.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -8121,7 +8334,12 @@ func (s GetRolePolicyOutput) GoString() string {
 type GetSAMLProviderInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the SAML provider to get information about.
+	// The Amazon Resource Name (ARN) of the SAML provider resource object in IAM
+	// to get information about.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	SAMLProviderArn *string `min:"20" type:"string" required:"true"`
 }
 
@@ -8184,9 +8402,17 @@ type GetSSHPublicKeyInput struct {
 	Encoding *string `type:"string" required:"true" enum:"encodingType"`
 
 	// The unique identifier for the SSH public key.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that can consist of any upper or lowercased letter
+	// or digit.
 	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The name of the IAM user associated with the SSH public key.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -8229,7 +8455,7 @@ func (s *GetSSHPublicKeyInput) Validate() error {
 type GetSSHPublicKeyOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the SSH public key.
+	// A structure containing details about the SSH public key.
 	SSHPublicKey *SSHPublicKey `type:"structure"`
 }
 
@@ -8247,6 +8473,10 @@ type GetServerCertificateInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the server certificate you want to retrieve information about.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -8280,7 +8510,7 @@ func (s *GetServerCertificateInput) Validate() error {
 type GetServerCertificateOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the server certificate.
+	// A structure containing details about the server certificate.
 	ServerCertificate *ServerCertificate `type:"structure" required:"true"`
 }
 
@@ -8300,7 +8530,10 @@ type GetUserInput struct {
 	// The name of the user to get information about.
 	//
 	// This parameter is optional. If it is not included, it defaults to the user
-	// making the request.
+	// making the request. The regex pattern (http://wikipedia.org/wiki/regex) for
+	// this parameter is a string of characters consisting of upper and lowercase
+	// alphanumeric characters with no spaces. You can also include any of the following
+	// characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -8331,7 +8564,7 @@ func (s *GetUserInput) Validate() error {
 type GetUserOutput struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the user.
+	// A structure containing details about the IAM user.
 	User *User `type:"structure" required:"true"`
 }
 
@@ -8349,9 +8582,17 @@ type GetUserPolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the policy document to get.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user who the policy is associated with.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -8413,9 +8654,13 @@ func (s GetUserPolicyOutput) GoString() string {
 
 // Contains information about an IAM group entity.
 //
-//  This data type is used as a response element in the following actions:
+// This data type is used as a response element in the following actions:
 //
-//   CreateGroup   GetGroup   ListGroups
+//    CreateGroup
+//
+//    GetGroup
+//
+//    ListGroups
 type Group struct {
 	_ struct{} `type:"structure"`
 
@@ -8571,6 +8816,10 @@ type ListAccessKeysInput struct {
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -8607,7 +8856,7 @@ func (s *ListAccessKeysInput) Validate() error {
 type ListAccessKeysOutput struct {
 	_ struct{} `type:"structure"`
 
-	// A list of access key metadata.
+	// A list of objects containing metadata about the access keys.
 	AccessKeyMetadata []*AccessKeyMetadata `type:"list" required:"true"`
 
 	// A flag that indicates whether there are more items to return. If your results
@@ -8716,6 +8965,10 @@ type ListAttachedGroupPoliciesInput struct {
 
 	// The name (friendly name, not ARN) of the group to list attached policies
 	// for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// Use this parameter only when paginating results and only after you receive
@@ -8737,6 +8990,12 @@ type ListAttachedGroupPoliciesInput struct {
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all policies.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	PathPrefix *string `type:"string"`
 }
 
@@ -8824,9 +9083,19 @@ type ListAttachedRolePoliciesInput struct {
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all policies.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	PathPrefix *string `type:"string"`
 
 	// The name (friendly name, not ARN) of the role to list attached policies for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -8914,9 +9183,19 @@ type ListAttachedUserPoliciesInput struct {
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all policies.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	PathPrefix *string `type:"string"`
 
 	// The name (friendly name, not ARN) of the user to list attached policies for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -8990,6 +9269,7 @@ type ListEntitiesForPolicyInput struct {
 	// For example, when EntityFilter is Role, only the roles that are attached
 	// to the specified policy are returned. This parameter is optional. If it is
 	// not included, all attached entities (users, groups, and roles) are returned.
+	// The argument for this parameter must be one of the valid values listed below.
 	EntityFilter *string `type:"string" enum:"EntityType"`
 
 	// Use this parameter only when paginating results and only after you receive
@@ -9011,12 +9291,18 @@ type ListEntitiesForPolicyInput struct {
 
 	// The path prefix for filtering the results. This parameter is optional. If
 	// it is not included, it defaults to a slash (/), listing all entities.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	PathPrefix *string `min:"1" type:"string"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy for which you want the versions.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 }
@@ -9072,13 +9358,13 @@ type ListEntitiesForPolicyOutput struct {
 	// to use for the Marker parameter in a subsequent pagination request.
 	Marker *string `min:"1" type:"string"`
 
-	// A list of groups that the policy is attached to.
+	// A list of IAM groups that the policy is attached to.
 	PolicyGroups []*PolicyGroup `type:"list"`
 
-	// A list of roles that the policy is attached to.
+	// A list of IAM roles that the policy is attached to.
 	PolicyRoles []*PolicyRole `type:"list"`
 
-	// A list of users that the policy is attached to.
+	// A list of IAM users that the policy is attached to.
 	PolicyUsers []*PolicyUser `type:"list"`
 }
 
@@ -9096,6 +9382,10 @@ type ListGroupPoliciesInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the group to list policies for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// Use this parameter only when paginating results and only after you receive
@@ -9199,6 +9489,10 @@ type ListGroupsForUserInput struct {
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user to list groups for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -9287,8 +9581,13 @@ type ListGroupsInput struct {
 	// The path prefix for filtering the results. For example, the prefix /division_abc/subdivision_xyz/
 	// gets all groups whose path starts with /division_abc/subdivision_xyz/.
 	//
-	//  This parameter is optional. If it is not included, it defaults to a slash
-	// (/), listing all groups.
+	// This parameter is optional. If it is not included, it defaults to a slash
+	// (/), listing all groups. The regex pattern (http://wikipedia.org/wiki/regex)
+	// for this parameter is a string of characters consisting of either a forward
+	// slash (/) by itself or a string that must begin and end with forward slashes,
+	// containing any ASCII character from the ! (\u0021) thru the DEL character
+	// (\u007F), including most punctuation characters, digits, and upper and lowercased
+	// letters.
 	PathPrefix *string `min:"1" type:"string"`
 }
 
@@ -9372,6 +9671,10 @@ type ListInstanceProfilesForRoleInput struct {
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the role to list instance profiles for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -9460,8 +9763,13 @@ type ListInstanceProfilesInput struct {
 	// The path prefix for filtering the results. For example, the prefix /application_abc/component_xyz/
 	// gets all instance profiles whose path starts with /application_abc/component_xyz/.
 	//
-	//  This parameter is optional. If it is not included, it defaults to a slash
-	// (/), listing all instance profiles.
+	// This parameter is optional. If it is not included, it defaults to a slash
+	// (/), listing all instance profiles. The regex pattern (http://wikipedia.org/wiki/regex)
+	// for this parameter is a string of characters consisting of either a forward
+	// slash (/) by itself or a string that must begin and end with forward slashes,
+	// containing any ASCII character from the ! (\u0021) thru the DEL character
+	// (\u007F), including most punctuation characters, digits, and upper and lowercased
+	// letters.
 	PathPrefix *string `min:"1" type:"string"`
 }
 
@@ -9545,6 +9853,10 @@ type ListMFADevicesInput struct {
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user whose MFA devices you want to list.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -9625,7 +9937,7 @@ func (s ListOpenIDConnectProvidersInput) GoString() string {
 type ListOpenIDConnectProvidersOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The list of IAM OpenID Connect providers in the AWS account.
+	// The list of IAM OIDC provider resource objects defined in the AWS account.
 	OpenIDConnectProviderList []*OpenIDConnectProviderListEntry `type:"list"`
 }
 
@@ -9662,12 +9974,17 @@ type ListPoliciesInput struct {
 	// A flag to filter the results to only the attached policies.
 	//
 	// When OnlyAttached is true, the returned list contains only the policies
-	// that are attached to a user, group, or role. When OnlyAttached is false,
+	// that are attached to an IAM user, group, or role. When OnlyAttached is false,
 	// or when the parameter is not included, all policies are returned.
 	OnlyAttached *bool `type:"boolean"`
 
 	// The path prefix for filtering the results. This parameter is optional. If
-	// it is not included, it defaults to a slash (/), listing all policies.
+	// it is not included, it defaults to a slash (/), listing all policies. The
+	// regex pattern (http://wikipedia.org/wiki/regex) for this parameter is a string
+	// of characters consisting of either a forward slash (/) by itself or a string
+	// that must begin and end with forward slashes, containing any ASCII character
+	// from the ! (\u0021) thru the DEL character (\u007F), including most punctuation
+	// characters, digits, and upper and lowercased letters.
 	PathPrefix *string `type:"string"`
 
 	// The scope to use for filtering the results.
@@ -9756,10 +10073,10 @@ type ListPolicyVersionsInput struct {
 	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy for which you want the versions.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 }
@@ -9851,6 +10168,10 @@ type ListRolePoliciesInput struct {
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the role to list policies for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -9939,8 +10260,13 @@ type ListRolesInput struct {
 	// The path prefix for filtering the results. For example, the prefix /application_abc/component_xyz/
 	// gets all roles whose path starts with /application_abc/component_xyz/.
 	//
-	//  This parameter is optional. If it is not included, it defaults to a slash
-	// (/), listing all roles.
+	// This parameter is optional. If it is not included, it defaults to a slash
+	// (/), listing all roles. The regex pattern (http://wikipedia.org/wiki/regex)
+	// for this parameter is a string of characters consisting of either a forward
+	// slash (/) by itself or a string that must begin and end with forward slashes,
+	// containing any ASCII character from the ! (\u0021) thru the DEL character
+	// (\u007F), including most punctuation characters, digits, and upper and lowercased
+	// letters.
 	PathPrefix *string `min:"1" type:"string"`
 }
 
@@ -10021,7 +10347,7 @@ func (s ListSAMLProvidersInput) GoString() string {
 type ListSAMLProvidersOutput struct {
 	_ struct{} `type:"structure"`
 
-	// The list of SAML providers for this account.
+	// The list of SAML provider resource objects defined in IAM for this AWS account.
 	SAMLProviderList []*SAMLProviderListEntry `type:"list"`
 }
 
@@ -10058,6 +10384,10 @@ type ListSSHPublicKeysInput struct {
 	// The name of the IAM user to list SSH public keys for. If none is specified,
 	// the UserName field is determined implicitly based on the AWS access key used
 	// to sign the request.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -10106,7 +10436,7 @@ type ListSSHPublicKeysOutput struct {
 	// to use for the Marker parameter in a subsequent pagination request.
 	Marker *string `min:"1" type:"string"`
 
-	// A list of SSH public keys.
+	// A list of the SSH public keys assigned to IAM user.
 	SSHPublicKeys []*SSHPublicKeyMetadata `type:"list"`
 }
 
@@ -10143,8 +10473,13 @@ type ListServerCertificatesInput struct {
 	// The path prefix for filtering the results. For example: /company/servercerts
 	// would get all server certificates for which the path starts with /company/servercerts.
 	//
-	//  This parameter is optional. If it is not included, it defaults to a slash
-	// (/), listing all server certificates.
+	// This parameter is optional. If it is not included, it defaults to a slash
+	// (/), listing all server certificates. The regex pattern (http://wikipedia.org/wiki/regex)
+	// for this parameter is a string of characters consisting of either a forward
+	// slash (/) by itself or a string that must begin and end with forward slashes,
+	// containing any ASCII character from the ! (\u0021) thru the DEL character
+	// (\u007F), including most punctuation characters, digits, and upper and lowercased
+	// letters.
 	PathPrefix *string `min:"1" type:"string"`
 }
 
@@ -10227,7 +10562,11 @@ type ListSigningCertificatesInput struct {
 	// service where to continue from.
 	MaxItems *int64 `min:"1" type:"integer"`
 
-	// The name of the user.
+	// The name of the IAM user whose signing certificates you want to examine.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -10311,6 +10650,10 @@ type ListUserPoliciesInput struct {
 	MaxItems *int64 `min:"1" type:"integer"`
 
 	// The name of the user to list policies for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -10399,8 +10742,13 @@ type ListUsersInput struct {
 	// The path prefix for filtering the results. For example: /division_abc/subdivision_xyz/,
 	// which would get all user names whose path starts with /division_abc/subdivision_xyz/.
 	//
-	//  This parameter is optional. If it is not included, it defaults to a slash
-	// (/), listing all user names.
+	// This parameter is optional. If it is not included, it defaults to a slash
+	// (/), listing all user names. The regex pattern (http://wikipedia.org/wiki/regex)
+	// for this parameter is a string of characters consisting of either a forward
+	// slash (/) by itself or a string that must begin and end with forward slashes,
+	// containing any ASCII character from the ! (\u0021) thru the DEL character
+	// (\u007F), including most punctuation characters, digits, and upper and lowercased
+	// letters.
 	PathPrefix *string `min:"1" type:"string"`
 }
 
@@ -10466,7 +10814,7 @@ func (s ListUsersOutput) GoString() string {
 type ListVirtualMFADevicesInput struct {
 	_ struct{} `type:"structure"`
 
-	// The status (unassigned or assigned) of the devices to list. If you do not
+	// The status (Unassigned or Assigned) of the devices to list. If you do not
 	// specify an AssignmentStatus, the action defaults to Any which lists both
 	// assigned and unassigned virtual MFA devices.
 	AssignmentStatus *string `type:"string" enum:"assignmentStatusType"`
@@ -10988,7 +11336,7 @@ func (s PolicyVersion) GoString() string {
 // Contains the row and column of a location of a Statement element in a policy
 // document.
 //
-// This data type is used as a member of the Statement type.
+// This data type is used as a member of the  Statement  type.
 type Position struct {
 	_ struct{} `type:"structure"`
 
@@ -11013,12 +11361,26 @@ type PutGroupPolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the group to associate the policy with.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The policy document.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -11078,12 +11440,26 @@ type PutRolePolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The policy document.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role to associate the policy with.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -11143,12 +11519,26 @@ type PutUserPolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The policy document.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
 	// The name of the policy document.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	PolicyName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user to associate the policy with.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -11207,13 +11597,17 @@ func (s PutUserPolicyOutput) GoString() string {
 type RemoveClientIDFromOpenIDConnectProviderInput struct {
 	_ struct{} `type:"structure"`
 
-	// The client ID (also known as audience) to remove from the IAM OpenID Connect
-	// provider. For more information about client IDs, see CreateOpenIDConnectProvider.
+	// The client ID (also known as audience) to remove from the IAM OIDC provider
+	// resource. For more information about client IDs, see CreateOpenIDConnectProvider.
 	ClientID *string `min:"1" type:"string" required:"true"`
 
-	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
-	// to remove the client ID from. You can get a list of OIDC provider ARNs by
-	// using the ListOpenIDConnectProviders action.
+	// The Amazon Resource Name (ARN) of the IAM OIDC provider resource to remove
+	// the client ID from. You can get a list of OIDC provider ARNs by using the
+	// ListOpenIDConnectProviders action.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 }
 
@@ -11267,9 +11661,17 @@ type RemoveRoleFromInstanceProfileInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the instance profile to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	InstanceProfileName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the role to remove.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -11323,9 +11725,17 @@ type RemoveUserFromGroupInput struct {
 	_ struct{} `type:"structure"`
 
 	// The name of the group to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user to remove.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -11428,15 +11838,27 @@ type ResyncMFADeviceInput struct {
 	_ struct{} `type:"structure"`
 
 	// An authentication code emitted by the device.
+	//
+	// The format for this parameter is a sequence of six digits.
 	AuthenticationCode1 *string `min:"6" type:"string" required:"true"`
 
 	// A subsequent authentication code emitted by the device.
+	//
+	// The format for this parameter is a sequence of six digits.
 	AuthenticationCode2 *string `min:"6" type:"string" required:"true"`
 
 	// Serial number that uniquely identifies the MFA device.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	SerialNumber *string `min:"9" type:"string" required:"true"`
 
 	// The name of the user whose MFA device you want to resynchronize.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -11500,7 +11922,7 @@ func (s ResyncMFADeviceOutput) GoString() string {
 
 // Contains information about an IAM role.
 //
-//  This data type is used as a response element in the following actions:
+// This data type is used as a response element in the following actions:
 //
 //    CreateRole
 //
@@ -11770,10 +12192,11 @@ func (s ServerCertificateMetadata) GoString() string {
 type SetDefaultPolicyVersionInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for AWS resources.
+	// The Amazon Resource Name (ARN) of the IAM policy whose default version you
+	// want to set.
 	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) and
-	// AWS Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the AWS General Reference.
 	PolicyArn *string `min:"20" type:"string" required:"true"`
 
@@ -11870,8 +12293,8 @@ type SimulateCustomPolicyInput struct {
 	// identifier, such as iam:CreateUser.
 	ActionNames []*string `type:"list" required:"true"`
 
-	// The ARN of the user that you want to use as the simulated caller of the APIs.
-	// CallerArn is required if you include a ResourcePolicy so that the policy's
+	// The ARN of the IAM user that you want to use as the simulated caller of the
+	// APIs. CallerArn is required if you include a ResourcePolicy so that the policy's
 	// Principal element has a value to use in evaluating the policy.
 	//
 	// You can specify only the ARN of an IAM user. You cannot specify the ARN
@@ -11879,8 +12302,8 @@ type SimulateCustomPolicyInput struct {
 	CallerArn *string `min:"1" type:"string"`
 
 	// A list of context keys and corresponding values for the simulation to use.
-	// Whenever a context key is evaluated by a Condition element in one of the
-	// simulated IAM permission policies, the corresponding value is supplied.
+	// Whenever a context key is evaluated in one of the simulated IAM permission
+	// policies, the corresponding value is supplied.
 	ContextEntries []*ContextEntry `type:"list"`
 
 	// Use this parameter only when paginating results and only after you receive
@@ -11908,6 +12331,12 @@ type SimulateCustomPolicyInput struct {
 	// a call to GetFederationToken (http://docs.aws.amazon.com/IAM/latest/APIReference/API_GetFederationToken.html)
 	// or one of the AssumeRole (http://docs.aws.amazon.com/IAM/latest/APIReference/API_AssumeRole.html)
 	// APIs to restrict what a user can do while using the temporary credentials.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyInputList []*string `type:"list" required:"true"`
 
 	// A list of ARNs of AWS resources to include in the simulation. If this parameter
@@ -11922,6 +12351,10 @@ type SimulateCustomPolicyInput struct {
 	//
 	// If you include a ResourcePolicy, then it must be applicable to all of the
 	// resources included in the simulation or you receive an invalid input error.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	ResourceArns []*string `type:"list"`
 
 	// Specifies the type of simulation to run. Different APIs that support resource-based
@@ -11940,27 +12373,27 @@ type SimulateCustomPolicyInput struct {
 	// the EC2 scenario options, see Supported Platforms (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-supported-platforms.html)
 	// in the AWS EC2 User Guide.
 	//
-	//  EC2-Classic-InstanceStore
+	//    EC2-Classic-InstanceStore
 	//
 	// instance, image, security-group
 	//
-	//  EC2-Classic-EBS
+	//    EC2-Classic-EBS
 	//
 	// instance, image, security-group, volume
 	//
-	//  EC2-VPC-InstanceStore
+	//    EC2-VPC-InstanceStore
 	//
 	// instance, image, security-group, network-interface
 	//
-	//  EC2-VPC-InstanceStore-Subnet
+	//    EC2-VPC-InstanceStore-Subnet
 	//
 	// instance, image, security-group, network-interface, subnet
 	//
-	//  EC2-VPC-EBS
+	//    EC2-VPC-EBS
 	//
 	// instance, image, security-group, network-interface, volume
 	//
-	//  EC2-VPC-EBS-Subnet
+	//    EC2-VPC-EBS-Subnet
 	//
 	// instance, image, security-group, network-interface, subnet, volume
 	ResourceHandlingOption *string `min:"1" type:"string"`
@@ -11979,6 +12412,12 @@ type SimulateCustomPolicyInput struct {
 	// A resource-based policy to include in the simulation provided as a string.
 	// Each resource in the simulation is treated as if it had this policy attached.
 	// You can include only one resource-based policy in a simulation.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	ResourcePolicy *string `min:"1" type:"string"`
 }
 
@@ -12075,24 +12514,28 @@ type SimulatePrincipalPolicyInput struct {
 	// such as iam:CreateUser.
 	ActionNames []*string `type:"list" required:"true"`
 
-	// The ARN of the user that you want to specify as the simulated caller of the
-	// APIs. If you do not specify a CallerArn, it defaults to the ARN of the user
-	// that you specify in PolicySourceArn, if you specified a user. If you include
-	// both a PolicySourceArn (for example, arn:aws:iam::123456789012:user/David)
+	// The ARN of the IAM user that you want to specify as the simulated caller
+	// of the APIs. If you do not specify a CallerArn, it defaults to the ARN of
+	// the user that you specify in PolicySourceArn, if you specified a user. If
+	// you include both a PolicySourceArn (for example, arn:aws:iam::123456789012:user/David)
 	// and a CallerArn (for example, arn:aws:iam::123456789012:user/Bob), the result
 	// is that you simulate calling the APIs as Bob, as if Bob had David's policies.
 	//
 	// You can specify only the ARN of an IAM user. You cannot specify the ARN
 	// of an assumed role, federated user, or a service principal.
 	//
-	// CallerArn is required if you include a ResourcePolicy and the PolicySourceArn
+	//  CallerArn is required if you include a ResourcePolicy and the PolicySourceArn
 	// is not the ARN for an IAM user. This is required so that the resource-based
 	// policy's Principal element has a value to use in evaluating the policy.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	CallerArn *string `min:"1" type:"string"`
 
 	// A list of context keys and corresponding values for the simulation to use.
-	// Whenever a context key is evaluated by a Condition element in one of the
-	// simulated policies, the corresponding value is supplied.
+	// Whenever a context key is evaluated in one of the simulated IAM permission
+	// policies, the corresponding value is supplied.
 	ContextEntries []*ContextEntry `type:"list"`
 
 	// Use this parameter only when paginating results and only after you receive
@@ -12115,6 +12558,12 @@ type SimulatePrincipalPolicyInput struct {
 	// An optional list of additional policy documents to include in the simulation.
 	// Each document is specified as a string containing the complete, valid JSON
 	// text of an IAM policy.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyInputList []*string `type:"list"`
 
 	// The Amazon Resource Name (ARN) of a user, group, or role whose policies you
@@ -12122,6 +12571,10 @@ type SimulatePrincipalPolicyInput struct {
 	// the simulation includes all policies that are associated with that entity.
 	// If you specify a user, the simulation also includes all policies that are
 	// attached to any groups the user belongs to.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	PolicySourceArn *string `min:"20" type:"string" required:"true"`
 
 	// A list of ARNs of AWS resources to include in the simulation. If this parameter
@@ -12133,6 +12586,10 @@ type SimulatePrincipalPolicyInput struct {
 	// The simulation does not automatically retrieve policies for the specified
 	// resources. If you want to include a resource policy in the simulation, then
 	// you must include the policy as a string in the ResourcePolicy parameter.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	ResourceArns []*string `type:"list"`
 
 	// Specifies the type of simulation to run. Different APIs that support resource-based
@@ -12151,27 +12608,27 @@ type SimulatePrincipalPolicyInput struct {
 	// the EC2 scenario options, see Supported Platforms (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-supported-platforms.html)
 	// in the AWS EC2 User Guide.
 	//
-	//  EC2-Classic-InstanceStore
+	//    EC2-Classic-InstanceStore
 	//
 	// instance, image, security-group
 	//
-	//  EC2-Classic-EBS
+	//    EC2-Classic-EBS
 	//
 	// instance, image, security-group, volume
 	//
-	//  EC2-VPC-InstanceStore
+	//    EC2-VPC-InstanceStore
 	//
 	// instance, image, security-group, network-interface
 	//
-	//  EC2-VPC-InstanceStore-Subnet
+	//    EC2-VPC-InstanceStore-Subnet
 	//
 	// instance, image, security-group, network-interface, subnet
 	//
-	//  EC2-VPC-EBS
+	//    EC2-VPC-EBS
 	//
 	// instance, image, security-group, network-interface, volume
 	//
-	//  EC2-VPC-EBS-Subnet
+	//    EC2-VPC-EBS-Subnet
 	//
 	// instance, image, security-group, network-interface, subnet, volume
 	ResourceHandlingOption *string `min:"1" type:"string"`
@@ -12190,6 +12647,12 @@ type SimulatePrincipalPolicyInput struct {
 	// A resource-based policy to include in the simulation provided as a string.
 	// Each resource in the simulation is treated as if it had this policy attached.
 	// You can include only one resource-based policy in a simulation.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	ResourcePolicy *string `min:"1" type:"string"`
 }
 
@@ -12253,8 +12716,8 @@ func (s *SimulatePrincipalPolicyInput) Validate() error {
 // Contains a reference to a Statement element in a policy document that determines
 // the result of the simulation.
 //
-// This data type is used by the MatchedStatements member of the EvaluationResult
-// type.
+// This data type is used by the MatchedStatements member of the  EvaluationResult
+//  type.
 type Statement struct {
 	_ struct{} `type:"structure"`
 
@@ -12285,6 +12748,10 @@ type UpdateAccessKeyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The access key ID of the secret access key you want to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that can consist of any upper or lowercased letter
+	// or digit.
 	AccessKeyId *string `min:"16" type:"string" required:"true"`
 
 	// The status you want to assign to the secret access key. Active means the
@@ -12293,6 +12760,10 @@ type UpdateAccessKeyInput struct {
 	Status *string `type:"string" required:"true" enum:"statusType"`
 
 	// The name of the user whose key you want to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -12450,9 +12921,19 @@ type UpdateAssumeRolePolicyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The policy that grants an entity permission to assume the role.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PolicyDocument *string `min:"1" type:"string" required:"true"`
 
-	// The name of the role to update.
+	// The name of the role to update with the new policy.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	RoleName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -12505,14 +12986,28 @@ func (s UpdateAssumeRolePolicyOutput) GoString() string {
 type UpdateGroupInput struct {
 	_ struct{} `type:"structure"`
 
-	// Name of the group to update. If you're changing the name of the group, this
-	// is the original name.
+	// Name of the IAM group to update. If you're changing the name of the group,
+	// this is the original name.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	GroupName *string `min:"1" type:"string" required:"true"`
 
-	// New name for the group. Only include this if changing the group's name.
+	// New name for the IAM group. Only include this if changing the group's name.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	NewGroupName *string `min:"1" type:"string"`
 
-	// New path for the group. Only include this if changing the group's path.
+	// New path for the IAM group. Only include this if changing the group's path.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	NewPath *string `min:"1" type:"string"`
 }
 
@@ -12565,13 +13060,26 @@ func (s UpdateGroupOutput) GoString() string {
 type UpdateLoginProfileInput struct {
 	_ struct{} `type:"structure"`
 
-	// The new password for the specified user.
+	// The new password for the specified IAM user.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D). However, the format can be further
+	// restricted by the account administrator by setting a password policy on the
+	// AWS account. For more information, see UpdateAccountPasswordPolicy.
 	Password *string `min:"1" type:"string"`
 
-	// Require the specified user to set a new password on next sign-in.
+	// Allows this new password to be used only once by requiring the specified
+	// IAM user to set a new password on next sign-in.
 	PasswordResetRequired *bool `type:"boolean"`
 
 	// The name of the user whose password you want to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -12621,9 +13129,13 @@ func (s UpdateLoginProfileOutput) GoString() string {
 type UpdateOpenIDConnectProviderThumbprintInput struct {
 	_ struct{} `type:"structure"`
 
-	// The Amazon Resource Name (ARN) of the IAM OpenID Connect (OIDC) provider
-	// to update the thumbprint for. You can get a list of OIDC provider ARNs by
-	// using the ListOpenIDConnectProviders action.
+	// The Amazon Resource Name (ARN) of the IAM OIDC provider resource object for
+	// which you want to update the thumbprint. You can get a list of OIDC provider
+	// ARNs by using the ListOpenIDConnectProviders action.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	OpenIDConnectProviderArn *string `min:"20" type:"string" required:"true"`
 
 	// A list of certificate thumbprints that are associated with the specified
@@ -12685,6 +13197,10 @@ type UpdateSAMLProviderInput struct {
 	SAMLMetadataDocument *string `min:"1000" type:"string" required:"true"`
 
 	// The Amazon Resource Name (ARN) of the SAML provider to update.
+	//
+	// For more information about ARNs, see Amazon Resource Names (ARNs) and AWS
+	// Service Namespaces (http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the AWS General Reference.
 	SAMLProviderArn *string `min:"20" type:"string" required:"true"`
 }
 
@@ -12742,6 +13258,10 @@ type UpdateSSHPublicKeyInput struct {
 	_ struct{} `type:"structure"`
 
 	// The unique identifier for the SSH public key.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that can consist of any upper or lowercased letter
+	// or digit.
 	SSHPublicKeyId *string `min:"20" type:"string" required:"true"`
 
 	// The status to assign to the SSH public key. Active means the key can be used
@@ -12750,6 +13270,10 @@ type UpdateSSHPublicKeyInput struct {
 	Status *string `type:"string" required:"true" enum:"statusType"`
 
 	// The name of the IAM user associated with the SSH public key.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -12807,14 +13331,28 @@ type UpdateServerCertificateInput struct {
 
 	// The new path for the server certificate. Include this only if you are updating
 	// the server certificate's path.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	NewPath *string `min:"1" type:"string"`
 
 	// The new name for the server certificate. Include this only if you are updating
 	// the server certificate's name. The name of the certificate cannot contain
 	// any spaces.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	NewServerCertificateName *string `min:"1" type:"string"`
 
 	// The name of the server certificate that you want to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -12868,6 +13406,10 @@ type UpdateSigningCertificateInput struct {
 	_ struct{} `type:"structure"`
 
 	// The ID of the signing certificate you want to update.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters that can consist of any upper or lowercased letter
+	// or digit.
 	CertificateId *string `min:"24" type:"string" required:"true"`
 
 	// The status you want to assign to the certificate. Active means the certificate
@@ -12875,7 +13417,11 @@ type UpdateSigningCertificateInput struct {
 	// be used.
 	Status *string `type:"string" required:"true" enum:"statusType"`
 
-	// The name of the user the signing certificate belongs to.
+	// The name of the IAM user the signing certificate belongs to.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -12928,16 +13474,30 @@ func (s UpdateSigningCertificateOutput) GoString() string {
 type UpdateUserInput struct {
 	_ struct{} `type:"structure"`
 
-	// New path for the user. Include this parameter only if you're changing the
-	// user's path.
+	// New path for the IAM user. Include this parameter only if you're changing
+	// the user's path.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	NewPath *string `min:"1" type:"string"`
 
 	// New name for the user. Include this parameter only if you're changing the
 	// user's name.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	NewUserName *string `min:"1" type:"string"`
 
 	// Name of the user to update. If you're changing the name of the user, this
 	// is the original user name.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -12992,9 +13552,19 @@ type UploadSSHPublicKeyInput struct {
 
 	// The SSH public key. The public key must be encoded in ssh-rsa format or PEM
 	// format.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	SSHPublicKeyBody *string `min:"1" type:"string" required:"true"`
 
 	// The name of the IAM user to associate the SSH public key with.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -13052,30 +13622,56 @@ type UploadServerCertificateInput struct {
 	_ struct{} `type:"structure"`
 
 	// The contents of the public key certificate in PEM-encoded format.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	CertificateBody *string `min:"1" type:"string" required:"true"`
 
 	// The contents of the certificate chain. This is typically a concatenation
 	// of the PEM-encoded public key certificates of the chain.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	CertificateChain *string `min:"1" type:"string"`
 
 	// The path for the server certificate. For more information about paths, see
 	// IAM Identifiers (http://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
-	// in the Using IAM guide.
+	// in the IAM User Guide.
 	//
 	// This parameter is optional. If it is not included, it defaults to a slash
-	// (/).
+	// (/). The regex pattern (http://wikipedia.org/wiki/regex) for this parameter
+	// is a string of characters consisting of either a forward slash (/) by itself
+	// or a string that must begin and end with forward slashes, containing any
+	// ASCII character from the ! (\u0021) thru the DEL character (\u007F), including
+	// most punctuation characters, digits, and upper and lowercased letters.
 	//
-	//  If you are uploading a server certificate specifically for use with Amazon
+	//   If you are uploading a server certificate specifically for use with Amazon
 	// CloudFront distributions, you must specify a path using the --path option.
 	// The path must begin with /cloudfront and must include a trailing slash (for
 	// example, /cloudfront/test/).
 	Path *string `min:"1" type:"string"`
 
 	// The contents of the private key in PEM-encoded format.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	PrivateKey *string `min:"1" type:"string" required:"true"`
 
 	// The name for the server certificate. Do not include the path in this value.
 	// The name of the certificate cannot contain any spaces.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	ServerCertificateName *string `min:"1" type:"string" required:"true"`
 }
 
@@ -13146,9 +13742,19 @@ type UploadSigningCertificateInput struct {
 	_ struct{} `type:"structure"`
 
 	// The contents of the signing certificate.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of any printable ASCII character ranging
+	// from the space character (\u0020) through end of the ASCII character range
+	// (\u00FF). It also includes the special characters tab (\u0009), line feed
+	// (\u000A), and carriage return (\u000D).
 	CertificateBody *string `min:"1" type:"string" required:"true"`
 
 	// The name of the user the signing certificate is for.
+	//
+	// The regex pattern (http://wikipedia.org/wiki/regex) for this parameter is
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: =,.@-
 	UserName *string `min:"1" type:"string"`
 }
 
@@ -13201,7 +13807,7 @@ func (s UploadSigningCertificateOutput) GoString() string {
 
 // Contains information about an IAM user entity.
 //
-//  This data type is used as a response element in the following actions:
+// This data type is used as a response element in the following actions:
 //
 //    CreateUser
 //
@@ -13340,7 +13946,7 @@ type VirtualMFADevice struct {
 
 	// Contains information about an IAM user entity.
 	//
-	//  This data type is used as a response element in the following actions:
+	// This data type is used as a response element in the following actions:
 	//
 	//    CreateUser
 	//

@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package md4 implements the MD4 hash algorithm as defined in RFC 1320.
-package md4
+package md4 // import "golang.org/x/crypto/md4"
 
 import (
 	"crypto"

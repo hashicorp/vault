@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package errors contains common error types for the OpenPGP packages.
-package errors
+package errors // import "golang.org/x/crypto/openpgp/errors"
 
 import (
 	"strconv"

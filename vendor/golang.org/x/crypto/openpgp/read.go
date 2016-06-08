@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // Package openpgp implements high level operations on OpenPGP messages.
-package openpgp
+package openpgp // import "golang.org/x/crypto/openpgp"
 
 import (
 	"crypto"

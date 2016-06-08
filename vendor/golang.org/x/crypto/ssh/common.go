@@ -48,6 +48,8 @@ var supportedHostKeyAlgos = []string{
 
 	KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521,
 	KeyAlgoRSA, KeyAlgoDSA,
+
+	KeyAlgoED25519,
 }
 
 // supportedMACs specifies a default set of MAC algorithms in preference order.

@@ -192,12 +192,6 @@ func (s *connection) serverHandshake(config *ServerConfig) (*Permissions, error)
 		return nil, err
 	}
 
-	if packet, err := s.transport.readPacket(); err != nil {
-		return nil, err
-	} else if packet[0] != msgNewKeys {
-		return nil, unexpectedMessageError(msgNewKeys, packet[0])
-	}
-
 	// We just did the key change, so the session ID is established.
 	s.sessionID = s.transport.getSessionID()
 
@@ -230,7 +224,7 @@ func (s *connection) serverHandshake(config *ServerConfig) (*Permissions, error)
 
 func isAcceptableAlgo(algo string) bool {
 	switch algo {
-	case KeyAlgoRSA, KeyAlgoDSA, KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521,
+	case KeyAlgoRSA, KeyAlgoDSA, KeyAlgoECDSA256, KeyAlgoECDSA384, KeyAlgoECDSA521, KeyAlgoED25519,
 		CertAlgoRSAv01, CertAlgoDSAv01, CertAlgoECDSA256v01, CertAlgoECDSA384v01, CertAlgoECDSA521v01:
 		return true
 	}

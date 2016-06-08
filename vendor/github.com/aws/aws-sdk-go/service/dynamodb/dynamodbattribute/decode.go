@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"time"
 
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 )
@@ -452,6 +453,17 @@ func (d *Decoder) decodeNull(v reflect.Value) error {
 func (d *Decoder) decodeString(s *string, v reflect.Value, fieldTag tag) error {
 	if fieldTag.AsString {
 		return d.decodeNumber(s, v)
+	}
+
+	// To maintain backwards compatibility with ConvertFrom family of methods which
+	// converted strings to time.Time structs
+	if _, ok := v.Interface().(time.Time); ok {
+		t, err := time.Parse(time.RFC3339, *s)
+		if err != nil {
+			return err
+		}
+		v.Set(reflect.ValueOf(t))
+		return nil
 	}
 
 	switch v.Kind() {

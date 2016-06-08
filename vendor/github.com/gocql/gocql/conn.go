@@ -113,7 +113,7 @@ func (fn connErrorHandlerFn) HandleError(conn *Conn, err error, closed bool) {
 	fn(conn, err, closed)
 }
 
-// How many timeouts we will allow to occur before the connection is closed
+// If not zero, how many timeouts we will allow to occur before the connection is closed
 // and restarted. This is to prevent a single query timeout from killing a connection
 // which may be serving more queries just fine.
 // Default is 10, should not be changed concurrently with queries.
@@ -522,7 +522,7 @@ func (c *Conn) releaseStream(stream int) {
 }
 
 func (c *Conn) handleTimeout() {
-	if atomic.AddInt64(&c.timeouts, 1) > TimeoutLimit {
+	if TimeoutLimit > 0 && atomic.AddInt64(&c.timeouts, 1) > TimeoutLimit {
 		c.closeWithError(ErrTooManyTimeouts)
 	}
 }
@@ -794,7 +794,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 			// TODO: handle query binding names
 		}
 
-		params.skipMeta = !qry.disableSkipMetadata
+		params.skipMeta = !(c.session.cfg.DisableSkipMetadata || qry.disableSkipMetadata)
 
 		frame = &writeExecuteFrame{
 			preparedID: info.id,

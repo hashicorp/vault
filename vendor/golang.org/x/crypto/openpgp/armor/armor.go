@@ -4,7 +4,7 @@
 
 // Package armor implements OpenPGP ASCII Armor, see RFC 4880. OpenPGP Armor is
 // very similar to PEM except that it has an additional CRC checksum.
-package armor
+package armor // import "golang.org/x/crypto/openpgp/armor"
 
 import (
 	"bufio"

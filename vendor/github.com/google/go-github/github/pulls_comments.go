@@ -22,6 +22,7 @@ type PullRequestComment struct {
 	CommitID         *string    `json:"commit_id,omitempty"`
 	OriginalCommitID *string    `json:"original_commit_id,omitempty"`
 	User             *User      `json:"user,omitempty"`
+	Reactions        *Reactions `json:"reactions,omitempty"`
 	CreatedAt        *time.Time `json:"created_at,omitempty"`
 	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
 	URL              *string    `json:"url,omitempty"`
@@ -70,6 +71,9 @@ func (s *PullRequestsService) ListComments(owner string, repo string, number int
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
+
 	comments := new([]PullRequestComment)
 	resp, err := s.client.Do(req, comments)
 	if err != nil {
@@ -88,6 +92,9 @@ func (s *PullRequestsService) GetComment(owner string, repo string, number int) 
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	comment := new(PullRequestComment)
 	resp, err := s.client.Do(req, comment)

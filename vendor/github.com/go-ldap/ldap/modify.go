@@ -43,15 +43,15 @@ const (
 )
 
 type PartialAttribute struct {
-	attrType string
-	attrVals []string
+	Type string
+	Vals []string
 }
 
 func (p *PartialAttribute) encode() *ber.Packet {
 	seq := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "PartialAttribute")
-	seq.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, p.attrType, "Type"))
+	seq.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, p.Type, "Type"))
 	set := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSet, nil, "AttributeValue")
-	for _, value := range p.attrVals {
+	for _, value := range p.Vals {
 		set.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, value, "Vals"))
 	}
 	seq.AppendChild(set)
@@ -59,41 +59,41 @@ func (p *PartialAttribute) encode() *ber.Packet {
 }
 
 type ModifyRequest struct {
-	dn                string
-	addAttributes     []PartialAttribute
-	deleteAttributes  []PartialAttribute
-	replaceAttributes []PartialAttribute
+	DN                string
+	AddAttributes     []PartialAttribute
+	DeleteAttributes  []PartialAttribute
+	ReplaceAttributes []PartialAttribute
 }
 
 func (m *ModifyRequest) Add(attrType string, attrVals []string) {
-	m.addAttributes = append(m.addAttributes, PartialAttribute{attrType: attrType, attrVals: attrVals})
+	m.AddAttributes = append(m.AddAttributes, PartialAttribute{Type: attrType, Vals: attrVals})
 }
 
 func (m *ModifyRequest) Delete(attrType string, attrVals []string) {
-	m.deleteAttributes = append(m.deleteAttributes, PartialAttribute{attrType: attrType, attrVals: attrVals})
+	m.DeleteAttributes = append(m.DeleteAttributes, PartialAttribute{Type: attrType, Vals: attrVals})
 }
 
 func (m *ModifyRequest) Replace(attrType string, attrVals []string) {
-	m.replaceAttributes = append(m.replaceAttributes, PartialAttribute{attrType: attrType, attrVals: attrVals})
+	m.ReplaceAttributes = append(m.ReplaceAttributes, PartialAttribute{Type: attrType, Vals: attrVals})
 }
 
 func (m ModifyRequest) encode() *ber.Packet {
 	request := ber.Encode(ber.ClassApplication, ber.TypeConstructed, ApplicationModifyRequest, nil, "Modify Request")
-	request.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, m.dn, "DN"))
+	request.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, m.DN, "DN"))
 	changes := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "Changes")
-	for _, attribute := range m.addAttributes {
+	for _, attribute := range m.AddAttributes {
 		change := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "Change")
 		change.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagEnumerated, uint64(AddAttribute), "Operation"))
 		change.AppendChild(attribute.encode())
 		changes.AppendChild(change)
 	}
-	for _, attribute := range m.deleteAttributes {
+	for _, attribute := range m.DeleteAttributes {
 		change := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "Change")
 		change.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagEnumerated, uint64(DeleteAttribute), "Operation"))
 		change.AppendChild(attribute.encode())
 		changes.AppendChild(change)
 	}
-	for _, attribute := range m.replaceAttributes {
+	for _, attribute := range m.ReplaceAttributes {
 		change := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "Change")
 		change.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagEnumerated, uint64(ReplaceAttribute), "Operation"))
 		change.AppendChild(attribute.encode())
@@ -107,7 +107,7 @@ func NewModifyRequest(
 	dn string,
 ) *ModifyRequest {
 	return &ModifyRequest{
-		dn: dn,
+		DN: dn,
 	}
 }
 

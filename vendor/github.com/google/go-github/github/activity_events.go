@@ -27,12 +27,54 @@ func (e Event) String() string {
 	return Stringify(e)
 }
 
-// Payload returns the parsed event payload. For recognized event types
-// (PushEvent), a value of the corresponding struct type will be returned.
+// Payload returns the parsed event payload. For recognized event types,
+// a value of the corresponding struct type will be returned.
 func (e *Event) Payload() (payload interface{}) {
 	switch *e.Type {
+	case "CommitCommentEvent":
+		payload = &CommitCommentEvent{}
+	case "CreateEvent":
+		payload = &CreateEvent{}
+	case "DeleteEvent":
+		payload = &DeleteEvent{}
+	case "DeploymentEvent":
+		payload = &DeploymentEvent{}
+	case "DeploymentStatusEvent":
+		payload = &DeploymentStatusEvent{}
+	case "ForkEvent":
+		payload = &ForkEvent{}
+	case "GollumEvent":
+		payload = &GollumEvent{}
+	case "IssueActivityEvent":
+		payload = &IssueActivityEvent{}
+	case "IssueCommentEvent":
+		payload = &IssueCommentEvent{}
+	case "IssuesEvent":
+		payload = &IssuesEvent{}
+	case "MemberEvent":
+		payload = &MemberEvent{}
+	case "MembershipEvent":
+		payload = &MembershipEvent{}
+	case "PageBuildEvent":
+		payload = &PageBuildEvent{}
+	case "PublicEvent":
+		payload = &PublicEvent{}
+	case "PullRequestEvent":
+		payload = &PullRequestEvent{}
+	case "PullRequestReviewCommentEvent":
+		payload = &PullRequestReviewCommentEvent{}
 	case "PushEvent":
 		payload = &PushEvent{}
+	case "ReleaseEvent":
+		payload = &ReleaseEvent{}
+	case "RepositoryEvent":
+		payload = &RepositoryEvent{}
+	case "StatusEvent":
+		payload = &StatusEvent{}
+	case "TeamAddEvent":
+		payload = &TeamAddEvent{}
+	case "WatchEvent":
+		payload = &WatchEvent{}
 	}
 	if err := json.Unmarshal(*e.RawPayload, &payload); err != nil {
 		panic(err.Error())

@@ -53,7 +53,7 @@ func getInstances(address string) (map[string]map[string]string, error) {
 		return nil, err
 	}
 	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(5*time.Second))
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
 	_, err = conn.Write([]byte{3})
 	if err != nil {
 		return nil, err
@@ -823,10 +823,11 @@ func dialConnection(p *connectParams) (conn net.Conn, err error) {
 		//Try Dials in parallel to avoid waiting for timeouts.
 		connChan := make(chan net.Conn, len(ips))
 		errChan := make(chan error, len(ips))
+		portStr := strconv.Itoa(int(p.port))
 		for _, ip := range ips {
 			go func(ip net.IP) {
 				d := createDialer(p)
-				addr := net.JoinHostPort(ip.String(), strconv.Itoa(int(p.port)))
+				addr := net.JoinHostPort(ip.String(), portStr)
 				conn, err := d.Dial("tcp", addr)
 				if err == nil {
 					connChan <- conn

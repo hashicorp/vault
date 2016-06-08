@@ -17,6 +17,7 @@ type RepositoryComment struct {
 	ID        *int       `json:"id,omitempty"`
 	CommitID  *string    `json:"commit_id,omitempty"`
 	User      *User      `json:"user,omitempty"`
+	Reactions *Reactions `json:"reactions,omitempty"`
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 
@@ -46,6 +47,9 @@ func (s *RepositoriesService) ListComments(owner, repo string, opt *ListOptions)
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
+
 	comments := new([]RepositoryComment)
 	resp, err := s.client.Do(req, comments)
 	if err != nil {
@@ -69,6 +73,9 @@ func (s *RepositoriesService) ListCommitComments(owner, repo, sha string, opt *L
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	comments := new([]RepositoryComment)
 	resp, err := s.client.Do(req, comments)
@@ -108,6 +115,9 @@ func (s *RepositoriesService) GetComment(owner, repo string, id int) (*Repositor
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
 	c := new(RepositoryComment)
 	resp, err := s.client.Do(req, c)

@@ -66,6 +66,12 @@ const (
 
 	// https://developer.github.com/changes/2016-04-06-deployment-and-deployment-status-enhancements/
 	mediaTypeDeploymentStatusPreview = "application/vnd.github.ant-man-preview+json"
+
+	// https://developer.github.com/changes/2016-02-19-source-import-preview-api/
+	mediaTypeImportPreview = "application/vnd.github.barred-rock-preview"
+
+	// https://developer.github.com/changes/2016-05-12-reactions-api-preview/
+	mediaTypeReactionsPreview = "application/vnd.github.squirrel-girl-preview"
 )
 
 // A Client manages communication with the GitHub API.
@@ -86,8 +92,9 @@ type Client struct {
 	// User agent used when communicating with the GitHub API.
 	UserAgent string
 
-	rateMu sync.Mutex
-	rate   Rate // Rate limit for the client as determined by the most recent API call.
+	rateMu     sync.Mutex
+	rateLimits [categories]Rate // Rate limits for the client as determined by the most recent API calls.
+	mostRecent rateLimitCategory
 
 	// Services used for talking to different parts of the GitHub API.
 	Activity       *ActivityService
@@ -103,6 +110,7 @@ type Client struct {
 	Users          *UsersService
 	Licenses       *LicensesService
 	Migrations     *MigrationService
+	Reactions      *ReactionsService
 }
 
 // ListOptions specifies the optional parameters to various List methods that
@@ -167,6 +175,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Users = &UsersService{client: c}
 	c.Licenses = &LicensesService{client: c}
 	c.Migrations = &MigrationService{client: c}
+	c.Reactions = &ReactionsService{client: c}
 	return c
 }
 
@@ -319,11 +328,13 @@ func parseRate(r *http.Response) Rate {
 
 // Rate specifies the current rate limit for the client as determined by the
 // most recent API call.  If the client is used in a multi-user application,
-// this rate may not always be up-to-date.  Call RateLimits() to check the
-// current rate.
+// this rate may not always be up-to-date.
+//
+// Deprecated: Use the Response.Rate returned from most recent API call instead.
+// Call RateLimits() to check the current rate.
 func (c *Client) Rate() Rate {
 	c.rateMu.Lock()
-	rate := c.rate
+	rate := c.rateLimits[c.mostRecent]
 	c.rateMu.Unlock()
 	return rate
 }
@@ -332,8 +343,16 @@ func (c *Client) Rate() Rate {
 // JSON decoded and stored in the value pointed to by v, or returned as an
 // error if an API error has occurred.  If v implements the io.Writer
 // interface, the raw response body will be written to v, without attempting to
-// first decode it.
+// first decode it.  If rate limit is exceeded and reset time is in the future,
+// Do returns *RateLimitError immediately without making a network API call.
 func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
+	rateLimitCategory := category(req.URL.Path)
+
+	// If we've hit rate limit, don't make further requests before Reset time.
+	if err := c.checkRateLimitBeforeDo(req, rateLimitCategory); err != nil {
+		return nil, err
+	}
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -348,7 +367,8 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	response := newResponse(resp)
 
 	c.rateMu.Lock()
-	c.rate = response.Rate
+	c.rateLimits[rateLimitCategory] = response.Rate
+	c.mostRecent = rateLimitCategory
 	c.rateMu.Unlock()
 
 	err = CheckResponse(resp)
@@ -370,6 +390,33 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	}
 
 	return response, err
+}
+
+// checkRateLimitBeforeDo does not make any network calls, but uses existing knowledge from
+// current client state in order to quickly check if *RateLimitError can be immediately returned
+// from Client.Do, and if so, returns it so that Client.Do can skip making a network API call unneccessarily.
+// Otherwise it returns nil, and Client.Do should proceed normally.
+func (c *Client) checkRateLimitBeforeDo(req *http.Request, rateLimitCategory rateLimitCategory) error {
+	c.rateMu.Lock()
+	rate := c.rateLimits[rateLimitCategory]
+	c.rateMu.Unlock()
+	if !rate.Reset.Time.IsZero() && rate.Remaining == 0 && time.Now().Before(rate.Reset.Time) {
+		// Create a fake response.
+		resp := &http.Response{
+			Status:     http.StatusText(http.StatusForbidden),
+			StatusCode: http.StatusForbidden,
+			Request:    req,
+			Header:     make(http.Header),
+			Body:       ioutil.NopCloser(strings.NewReader("")),
+		}
+		return &RateLimitError{
+			Rate:     rate,
+			Response: resp,
+			Message:  fmt.Sprintf("API rate limit of %v still exceeded until %v, not making remote request.", rate.Limit, rate.Reset.Time),
+		}
+	}
+
+	return nil
 }
 
 /*
@@ -528,6 +575,8 @@ type RateLimits struct {
 	// The rate limit for non-search API requests.  Unauthenticated
 	// requests are limited to 60 per hour.  Authenticated requests are
 	// limited to 5,000 per hour.
+	//
+	// GitHub API docs: https://developer.github.com/v3/#rate-limiting
 	Core *Rate `json:"core"`
 
 	// The rate limit for search API requests.  Unauthenticated requests
@@ -540,6 +589,25 @@ type RateLimits struct {
 
 func (r RateLimits) String() string {
 	return Stringify(r)
+}
+
+type rateLimitCategory uint8
+
+const (
+	coreCategory rateLimitCategory = iota
+	searchCategory
+
+	categories // An array of this length will be able to contain all rate limit categories.
+)
+
+// category returns the rate limit category of the endpoint, determined by Request.URL.Path.
+func category(path string) rateLimitCategory {
+	switch {
+	default:
+		return coreCategory
+	case strings.HasPrefix(path, "/search/"):
+		return searchCategory
+	}
 }
 
 // Deprecated: RateLimit is deprecated, use RateLimits instead.
@@ -565,6 +633,17 @@ func (c *Client) RateLimits() (*RateLimits, *Response, error) {
 	resp, err := c.Do(req, response)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if response.Resources != nil {
+		c.rateMu.Lock()
+		if response.Resources.Core != nil {
+			c.rateLimits[coreCategory] = *response.Resources.Core
+		}
+		if response.Resources.Search != nil {
+			c.rateLimits[searchCategory] = *response.Resources.Search
+		}
+		c.rateMu.Unlock()
 	}
 
 	return response.Resources, resp, err
@@ -689,25 +768,12 @@ func cloneRequest(r *http.Request) *http.Request {
 
 // Bool is a helper routine that allocates a new bool value
 // to store v and returns a pointer to it.
-func Bool(v bool) *bool {
-	p := new(bool)
-	*p = v
-	return p
-}
+func Bool(v bool) *bool { return &v }
 
-// Int is a helper routine that allocates a new int32 value
-// to store v and returns a pointer to it, but unlike Int32
-// its argument value is an int.
-func Int(v int) *int {
-	p := new(int)
-	*p = v
-	return p
-}
+// Int is a helper routine that allocates a new int value
+// to store v and returns a pointer to it.
+func Int(v int) *int { return &v }
 
 // String is a helper routine that allocates a new string value
 // to store v and returns a pointer to it.
-func String(v string) *string {
-	p := new(string)
-	*p = v
-	return p
-}
+func String(v string) *string { return &v }

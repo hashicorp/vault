@@ -388,6 +388,12 @@ CLONE_URL = https://%(IMPORT_PATH)s
 cfg.Section("package.sub").Key("CLONE_URL").String()	// https://gopkg.in/ini.v1
 ```
 
+#### 获取上级父分区下的所有键名
+
+```go
+cfg.Section("package.sub").ParentKeys() // ["CLONE_URL"]
+```
+
 #### 读取自增键名
 
 如果数据源中的键名为 `-`，则认为该键使用了自增键名的特殊语法。计数器从 1 开始，并且分区之间是相互独立的。
