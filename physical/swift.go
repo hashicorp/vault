@@ -5,19 +5,23 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/ncw/swift"
 )
 
 // SwiftBackend is a physical backend that stores data
 // within an OpenStack Swift container.
 type SwiftBackend struct {
-	container string
-	client    *swift.Connection
-	logger    *log.Logger
+	container  string
+	client     *swift.Connection
+	logger     *log.Logger
+	permitPool *PermitPool
 }
 
 // newSwiftBackend constructs a Swift backend using a pre-existing
@@ -59,10 +63,11 @@ func newSwiftBackend(conf map[string]string, logger *log.Logger) (Backend, error
 	}
 
 	c := swift.Connection{
-		UserName: username,
-		ApiKey:   password,
-		AuthUrl:  authUrl,
-		Tenant:   tenant,
+		UserName:  username,
+		ApiKey:    password,
+		AuthUrl:   authUrl,
+		Tenant:    tenant,
+		Transport: cleanhttp.DefaultPooledTransport(),
 	}
 
 	err := c.Authenticate()
@@ -75,10 +80,21 @@ func newSwiftBackend(conf map[string]string, logger *log.Logger) (Backend, error
 		return nil, fmt.Errorf("Unable to access container '%s': %v", container, err)
 	}
 
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		logger.Printf("[DEBUG]: swift: max_parallel set to %d", maxParInt)
+	}
+
 	s := &SwiftBackend{
-		client:    &c,
-		container: container,
-		logger:    logger,
+		client:     &c,
+		container:  container,
+		logger:     logger,
+		permitPool: NewPermitPool(maxParInt),
 	}
 	return s, nil
 }
@@ -86,6 +102,9 @@ func newSwiftBackend(conf map[string]string, logger *log.Logger) (Backend, error
 // Put is used to insert or update an entry
 func (s *SwiftBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"swift", "put"}, time.Now())
+
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
 
 	err := s.client.ObjectPutBytes(s.container, entry.Key, entry.Value, "")
 
@@ -99,6 +118,9 @@ func (s *SwiftBackend) Put(entry *Entry) error {
 // Get is used to fetch an entry
 func (s *SwiftBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"swift", "get"}, time.Now())
+
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
 
 	//Do a list of names with the key first since eventual consistency means
 	//it might be deleted, but a node might return a read of bytes which fails
@@ -129,6 +151,9 @@ func (s *SwiftBackend) Get(key string) (*Entry, error) {
 func (s *SwiftBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"swift", "delete"}, time.Now())
 
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
+
 	err := s.client.ObjectDelete(s.container, key)
 
 	if err != nil && err != swift.ObjectNotFound {
@@ -142,6 +167,9 @@ func (s *SwiftBackend) Delete(key string) error {
 // prefix, up to the next prefix.
 func (s *SwiftBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"swift", "list"}, time.Now())
+
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
 
 	list, err := s.client.ObjectNamesAll(s.container, &swift.ObjectsOpts{Prefix: prefix})
 	if nil != err {

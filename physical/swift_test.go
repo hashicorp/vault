@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/ncw/swift"
 )
 
@@ -24,10 +25,11 @@ func TestSwiftBackend(t *testing.T) {
 	container := fmt.Sprintf("vault-test-%d", ts)
 
 	cleaner := swift.Connection{
-		UserName: username,
-		ApiKey:   password,
-		AuthUrl:  authUrl,
-		Tenant:   tenant,
+		UserName:  username,
+		ApiKey:    password,
+		AuthUrl:   authUrl,
+		Tenant:    tenant,
+		Transport: cleanhttp.DefaultPooledTransport(),
 	}
 
 	err := cleaner.Authenticate()
