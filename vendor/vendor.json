@@ -501,12 +501,6 @@
 			"revisionTime": "2016-06-07T21:27:01Z"
 		},
 		{
-			"checksumSHA1": "IIwwZsObPGUTpSV8iWrcMLy3+3Y=",
-			"path": "github.com/hashicorp/uuid",
-			"revision": "ebb0a03e909c9c642a36d2527729104324c44fdb",
-			"revisionTime": "2016-03-11T17:04:51Z"
-		},
-		{
 			"checksumSHA1": "xvxetwF2G1XHScrmo8EM3yisjBc=",
 			"path": "github.com/hashicorp/yamux",
 			"revision": "172cde3b6ca5c154ff4e6e2ef96b7451332a9946",

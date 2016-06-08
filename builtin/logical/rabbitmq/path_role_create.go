@@ -3,7 +3,7 @@ package rabbitmq
 import (
 	"fmt"
 
-	"github.com/hashicorp/uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/michaelklishin/rabbit-hole"
@@ -45,8 +45,16 @@ func (b *backend) pathCredsRead(req *logical.Request, d *framework.FieldData) (*
 	}
 
 	// Ensure username is unique
-	username := fmt.Sprintf("%s-%s", req.DisplayName, uuid.GenerateUUID())
-	password := uuid.GenerateUUID()
+	uuidVal, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	username := fmt.Sprintf("%s-%s", req.DisplayName, uuidVal)
+
+	password, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
 
 	// Get the client configuration
 	client, err := b.Client(req.Storage)
