@@ -1706,8 +1706,11 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 	req.Operation = logical.UpdateOperation
 	req.Path = "auth/token/create/test"
 	resp, err = core.HandleRequest(req)
-	if err == nil {
+	if err != nil {
 		t.Fatalf("expected an error")
+	}
+	if len(resp.Warnings()) == 0 {
+		t.Fatalf("expected a warning")
 	}
 
 	// Reset to a good explicit max

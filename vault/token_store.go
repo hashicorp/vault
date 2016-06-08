@@ -1111,9 +1111,10 @@ func (ts *TokenStore) handleCreateCommon(
 	if te.ExplicitMaxTTL > 0 {
 		// Limit the lease duration
 		if sysView.MaxLeaseTTL() != 0 && te.ExplicitMaxTTL > sysView.MaxLeaseTTL() {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"explicit max TTL of %d seconds is greater than system/mount allowed value of %d seconds",
-				int64(te.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds()))), logical.ErrInvalidRequest
+			resp.AddWarning(fmt.Sprintf(
+				"Explicit max TTL of %d seconds is greater than system/mount allowed value; value is being capped to %d seconds",
+				int64(te.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
+			te.ExplicitMaxTTL = sysView.MaxLeaseTTL()
 		}
 
 		if te.TTL == 0 {
