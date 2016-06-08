@@ -13,6 +13,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// Set the following env vars for the below test case to work.
+//
+// RABBITMQ_CONNECTION_URI
+// RABBITMQ_USERNAME
+// RABBITMQ_PASSWORD
 func TestBackend_basic(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
 		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
@@ -33,15 +38,10 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
 	b, _ := Factory(logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		PreCheck: func() { testAccPreCheck(t) },
-		Backend:  b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepRole(t),
@@ -53,24 +53,20 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 const (
-	uriEnv      = "RABBITMQ_CONNECTION_URI"
-	usernameEnv = "RABBITMQ_USERNAME"
-	passwordEnv = "RABBITMQ_PASSWORD"
+	envRabbitMQConnectionURI = "RABBITMQ_CONNECTION_URI"
+	envRabbitMQUsername      = "RABBITMQ_USERNAME"
+	envRabbitMQPassword      = "RABBITMQ_PASSWORD"
 )
 
-func mustSet(name string) string {
-	return fmt.Sprintf("%s must be set for acceptance tests", name)
-}
-
 func testAccPreCheck(t *testing.T) {
-	if uri := os.Getenv(uriEnv); uri == "" {
-		t.Fatal(mustSet(uriEnv))
+	if uri := os.Getenv(envRabbitMQConnectionURI); uri == "" {
+		t.Fatal(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQConnectionURI))
 	}
-	if username := os.Getenv(usernameEnv); username == "" {
-		t.Fatal(mustSet(usernameEnv))
+	if username := os.Getenv(envRabbitMQUsername); username == "" {
+		t.Fatal(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQUsername))
 	}
-	if password := os.Getenv(passwordEnv); password == "" {
-		t.Fatal(mustSet(passwordEnv))
+	if password := os.Getenv(envRabbitMQPassword); password == "" {
+		t.Fatal(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQPassword))
 	}
 }
 
@@ -79,9 +75,9 @@ func testAccStepConfig(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
-			"connection_uri": os.Getenv(uriEnv),
-			"username":       os.Getenv(usernameEnv),
-			"password":       os.Getenv(passwordEnv),
+			"connection_uri": os.Getenv(envRabbitMQConnectionURI),
+			"username":       os.Getenv(envRabbitMQUsername),
+			"password":       os.Getenv(envRabbitMQPassword),
 		},
 	}
 }
@@ -118,7 +114,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string) logicalt
 			}
 			log.Printf("[WARN] Generated credentials: %v", d)
 
-			uri := os.Getenv(uriEnv)
+			uri := os.Getenv(envRabbitMQConnectionURI)
 
 			client, err := rabbithole.NewClient(uri, d.Username, d.Password)
 			if err != nil {
