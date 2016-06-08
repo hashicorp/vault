@@ -173,4 +173,5 @@ type TokenCreateRequest struct {
 	NoDefaultPolicy bool              `json:"no_default_policy,omitempty"`
 	DisplayName     string            `json:"display_name"`
 	NumUses         int               `json:"num_uses"`
+	Renewable       *bool             `json:"renewable,omitempty"`
 }
