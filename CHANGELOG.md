@@ -65,12 +65,15 @@ FEATURES:
    standby nodes are `standby.vault.service.consul`. Sealed vaults are marked
    critical and are not listed by default in Consul's service discovery.  See
    the documentation for details. [GH-1349]
- * **Explicit Maximum Token TTLs using Token Roles**: If using token roles, you
-   can now set explicit maximum TTLs on tokens that do not honor changes in the
-   system- or mount-set values. This is useful, for instance, when the max TTL
-   of the system or the `auth/token` mount must be set high to accommodate
-   certain needs but you want more granular restrictions on tokens being issued
-   directly from the Token authentication backend at `auth/token`. [GH-1399]
+ * **Explicit Maximum Token TTLs**: You can now set explicit maximum TTLs on
+   tokens that do not honor changes in the system- or mount-set values. This is
+   useful, for instance, when the max TTL of the system or the `auth/token`
+   mount must be set high to accommodate certain needs but you want more
+   granular restrictions on tokens being issued directly from the Token
+   authentication backend at `auth/token`. [GH-1399]
+ * **Non-Renewable Tokens**: When creating tokens directly through the token
+   authentication backend, you can now specify in both token store roles and
+   the API whether or not a token should be renewable, defaulting to `true`.
  * **RabbitMQ Secret Backend**: Vault can now generate credentials for
    RabbitMQ. Vhosts and tags can be defined within roles. [GH-788]
 
