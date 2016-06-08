@@ -99,6 +99,13 @@ of the header should be "X-Vault-Token" and the value should be the token.
         policy set.
       </li>
       <li>
+        <span class="param">renewable</span>
+        <span class="param-flags">optional</span>
+        Set to `false` to disable the ability of the token to be renewed past
+        its initial TTL. Specifying `true`, or omitting this option, will allow
+        the token to be renewable up to the system/mount maximum TTL.
+      </li>
+      <li>
         <span class="param">lease</span>
         <span class="param-flags">optional</span>
         DEPRECATED; use "ttl" instead.
@@ -110,6 +117,15 @@ of the header should be "X-Vault-Token" and the value should be the token.
         the largest suffix. If not provided, the token is valid for the
         [default lease TTL](/docs/config/index.html), or
         indefinitely if the root policy is used.
+      </li>
+      <li>
+        <span class="param">explicit_max_ttl</span>
+        <span class="param-flags">optional</span>
+        If set, the token will have an explicit max TTL set upon it. This
+        maximum token TTL *cannot* be changed later, and unlike with normal
+        tokens, updates to the system/mount max TTL value will have no effect
+        at renewal time -- the token will never be able to be renewed or used
+        past the value set at issue time. 
       </li>
       <li>
         <span class="param">display_name</span>

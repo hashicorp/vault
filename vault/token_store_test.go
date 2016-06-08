@@ -1650,7 +1650,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		}
 		ttl := resp.Data["ttl"].(int64)
 		if ttl < 299 {
-			t.Fatalf("TTL too small")
+			t.Fatalf("TTL too small (expected %d, got %d", 299, ttl)
 		}
 
 		// Let the TTL go down a bit to 3 seconds
@@ -1674,7 +1674,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl < 299 {
-			t.Fatalf("TTL too small")
+			t.Fatalf("TTL too small (expected %d, got %d", 299, ttl)
 		}
 	}
 }
