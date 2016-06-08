@@ -217,8 +217,8 @@ For Consul, the following options are supported:
 
   * `token` (optional) - An access token to use to write data to Consul.
 
-  * `max_parallel` (optional) - The maximum number of concurrent connections to Consul;
-    defaults to "128".
+  * `max_parallel` (optional) - The maximum number of concurrent connections to Consul.
+    Defaults to "128".
 
   * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
     will be disabled for Consul communication.  Defaults to false.
@@ -485,7 +485,7 @@ For Swift, the following options are supported:
 
   * `tenant` (optional) - The name of Tenant to use. It can be sourced from the `OS_TENANT_NAME` environment variable and will default to default tenant of for the username if not specified.
 
-  * `max_parallel` (optional) - The maximum number of concurrent connections to Swift; defaults to "128".
+  * `max_parallel` (optional) - The maximum number of concurrent connections to Swift. Defaults to "128".
 
 #### Backend Reference: MySQL (Community-Supported)
 
