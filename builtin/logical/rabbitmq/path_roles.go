@@ -153,7 +153,7 @@ type roleEntry struct {
 type vhostPermission struct {
 	Configure string `json:"configure" structs:"configure" mapstructure:"configure"`
 	Write     string `json:"write" structs:"write" mapstructure:"write"`
-	Read      string `json:"read" structs:"write" mapstructure:"read"`
+	Read      string `json:"read" structs:"read" mapstructure:"read"`
 }
 
 const pathRoleHelpSyn = `

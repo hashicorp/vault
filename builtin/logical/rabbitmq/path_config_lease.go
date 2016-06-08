@@ -18,7 +18,7 @@ func pathConfigLease(b *backend) *framework.Path {
 			},
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
-				Description: `Duration after which the issued credentials shoulw not be allowed to be renewed`,
+				Description: `Duration after which the issued credentials should not be allowed to be renewed`,
 			},
 		},
 
@@ -76,5 +76,6 @@ var pathConfigLeaseHelpSyn = "Configure the lease parameters for generated crede
 
 var pathConfigLeaseHelpDesc = `
 Sets the ttl and max_ttl values for the secrets to be issued by this backend.
-Both ttl and max_ttl takes in an integet input as well as inputs like "1h".
+Both ttl and max_ttl takes in an integer number of seconds as input as well as
+inputs like "1h".
 `
