@@ -208,7 +208,7 @@ func (r *Request) Build() error {
 	return r.Error
 }
 
-// Sign will sign the request retuning error if errors are encountered.
+// Sign will sign the request returning error if errors are encountered.
 //
 // Send will build the request prior to signing. All Sign Handlers will
 // be executed in the order they were set.

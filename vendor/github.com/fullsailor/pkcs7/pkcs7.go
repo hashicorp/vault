@@ -655,22 +655,34 @@ func marshalCertificates(certs []*x509.Certificate) rawCertificates {
 	for _, cert := range certs {
 		buf.Write(cert.Raw)
 	}
-	// Even though, the tag & length are stripped out during marshalling the
-	// RawContent, we have to encode it into the RawContent. If its missing,
-	// then `asn1.Marshal()` will strip out the certificate wrapper instead.
-	var val = asn1.RawValue{Bytes: buf.Bytes(), Class: 2, Tag: 0, IsCompound: true}
-	b, _ := asn1.Marshal(val)
-	return rawCertificates{Raw: b}
+	rawCerts, _ := marshalCertificateBytes(buf.Bytes())
+	return rawCerts
+}
+
+// Even though, the tag & length are stripped out during marshalling the
+// RawContent, we have to encode it into the RawContent. If its missing,
+// then `asn1.Marshal()` will strip out the certificate wrapper instead.
+func marshalCertificateBytes(certs []byte) (rawCertificates, error) {
+	var val = asn1.RawValue{Bytes: certs, Class: 2, Tag: 0, IsCompound: true}
+	b, err := asn1.Marshal(val)
+	if err != nil {
+		return rawCertificates{}, err
+	}
+	return rawCertificates{Raw: b}, nil
 }
 
 // DegenerateCertificate creates a signed data structure containing only the
-// provided certificate
+// provided certificate or certificate chain.
 func DegenerateCertificate(cert []byte) ([]byte, error) {
+	rawCert, err := marshalCertificateBytes(cert)
+	if err != nil {
+		return nil, err
+	}
 	emptyContent := contentInfo{ContentType: oidData}
 	sd := signedData{
 		Version:      1,
 		ContentInfo:  emptyContent,
-		Certificates: rawCertificates{Raw: cert},
+		Certificates: rawCert,
 		CRLs:         []pkix.CertificateList{},
 	}
 	content, err := asn1.Marshal(sd)

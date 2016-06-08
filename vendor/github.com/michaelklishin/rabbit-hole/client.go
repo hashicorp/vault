@@ -14,9 +14,9 @@ type Client struct {
 	// Username to use. This RabbitMQ user must have the "management" tag.
 	Username string
 	// Password to use.
-	Password   string
-	host       string
-	transport  *http.Transport
+	Password  string
+	host      string
+	transport *http.Transport
 }
 
 func NewClient(uri string, username string, password string) (me *Client, err error) {
@@ -62,6 +62,8 @@ func newGETRequest(client *Client, path string) (*http.Request, error) {
 	s := client.Endpoint + "/api/" + path
 
 	req, err := http.NewRequest("GET", s, nil)
+
+	req.Close = true
 	req.SetBasicAuth(client.Username, client.Password)
 	// set Opaque to preserve percent-encoded path. MK.
 	req.URL.Opaque = "//" + client.host + "/api/" + path
@@ -73,6 +75,8 @@ func newRequestWithBody(client *Client, method string, path string, body []byte)
 	s := client.Endpoint + "/api/" + path
 
 	req, err := http.NewRequest(method, s, bytes.NewReader(body))
+
+	req.Close = true
 	req.SetBasicAuth(client.Username, client.Password)
 	// set Opaque to preserve percent-encoded path. MK.
 	req.URL.Opaque = "//" + client.host + "/api/" + path
@@ -90,6 +94,7 @@ func executeRequest(client *Client, req *http.Request) (res *http.Response, err 
 		httpc = &http.Client{}
 	}
 	res, err = httpc.Do(req)
+
 	if err != nil {
 		return nil, err
 	}
@@ -108,12 +113,11 @@ func executeAndParseRequest(client *Client, req *http.Request, rec interface{}) 
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close() // always close body
 
 	if isNotFound(res) {
 		return errors.New("not found")
 	}
-
-	defer res.Body.Close()
 
 	err = json.NewDecoder(res.Body).Decode(&rec)
 	if err != nil {

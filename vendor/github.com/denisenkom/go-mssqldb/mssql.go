@@ -33,11 +33,13 @@ func CheckBadConn(err error) error {
 	if err == io.EOF {
 		return driver.ErrBadConn
 	}
-	neterr, ok := err.(net.Error)
-	if !ok || (!neterr.Timeout() && neterr.Temporary()) {
+
+	switch err.(type) {
+	case net.Error:
+		return driver.ErrBadConn
+	default:
 		return err
 	}
-	return driver.ErrBadConn
 }
 
 type MssqlConn struct {
@@ -289,7 +291,7 @@ loop:
 		// set nocount on; select 1
 		// see TestIgnoreEmptyResults test
 		//case doneStruct:
-			//break loop
+		//break loop
 		case []columnStruct:
 			cols = make([]string, len(token))
 			for i, col := range token {

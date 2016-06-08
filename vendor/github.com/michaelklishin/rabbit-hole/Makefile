@@ -22,3 +22,5 @@ install-dependencies:
 	go get github.com/onsi/ginkgo
 	go get github.com/onsi/gomega
 	go get github.com/streadway/amqp
+        # to get Ginkgo CLI
+	go install github.com/onsi/ginkgo/ginkgo

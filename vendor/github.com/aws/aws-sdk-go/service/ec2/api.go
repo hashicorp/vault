@@ -4249,6 +4249,12 @@ func (c *EC2) DescribeSpotFleetRequestsRequest(input *DescribeSpotFleetRequestsI
 		Name:       opDescribeSpotFleetRequests,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"NextToken"},
+			OutputTokens:    []string{"NextToken"},
+			LimitToken:      "MaxResults",
+			TruncationToken: "",
+		},
 	}
 
 	if input == nil {
@@ -4266,6 +4272,14 @@ func (c *EC2) DescribeSpotFleetRequests(input *DescribeSpotFleetRequestsInput) (
 	req, out := c.DescribeSpotFleetRequestsRequest(input)
 	err := req.Send()
 	return out, err
+}
+
+func (c *EC2) DescribeSpotFleetRequestsPages(input *DescribeSpotFleetRequestsInput, fn func(p *DescribeSpotFleetRequestsOutput, lastPage bool) (shouldContinue bool)) error {
+	page, _ := c.DescribeSpotFleetRequestsRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
+	return page.EachPage(func(p interface{}, lastPage bool) bool {
+		return fn(p.(*DescribeSpotFleetRequestsOutput), lastPage)
+	})
 }
 
 const opDescribeSpotInstanceRequests = "DescribeSpotInstanceRequests"

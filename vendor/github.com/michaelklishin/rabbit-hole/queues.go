@@ -8,32 +8,32 @@ import (
 
 // Information about backing queue (queue storage engine).
 type BackingQueueStatus struct {
-	Q1                    int     `json:"q1"`
-	Q2                    int     `json:"q2"`
-	Q3                    int     `json:"q3"`
-	Q4                    int     `json:"q4"`
+	Q1 int `json:"q1"`
+	Q2 int `json:"q2"`
+	Q3 int `json:"q3"`
+	Q4 int `json:"q4"`
 	// Total queue length
-	Length                int64   `json:"len"`
+	Length int64 `json:"len"`
 	// Number of pending acks from consumers
-	PendingAcks           int64   `json:"pending_acks"`
+	PendingAcks int64 `json:"pending_acks"`
 	// Number of messages held in RAM
-	RAMMessageCount       int64   `json:"ram_msg_count"`
+	RAMMessageCount int64 `json:"ram_msg_count"`
 	// Number of outstanding acks held in RAM
-	RAMAckCount           int64   `json:"ram_ack_count"`
+	RAMAckCount int64 `json:"ram_ack_count"`
 	// Number of persistent messages in the store
-	PersistentCount       int64   `json:"persistent_count"`
+	PersistentCount int64 `json:"persistent_count"`
 	// Average ingress (inbound) rate, not including messages
 	// that straight through to auto-acking consumers.
-	AverageIngressRate    float64 `json:"avg_ingress_rate"`
+	AverageIngressRate float64 `json:"avg_ingress_rate"`
 	// Average egress (outbound) rate, not including messages
 	// that straight through to auto-acking consumers.
-	AverageEgressRate     float64 `json:"avg_egress_rate"`
+	AverageEgressRate float64 `json:"avg_egress_rate"`
 	// rate at which unacknowledged message records enter RAM,
 	// e.g. because messages are delivered requiring acknowledgement
 	AverageAckIngressRate float32 `json:"avg_ack_ingress_rate"`
 	// rate at which unacknowledged message records leave RAM,
 	// e.g. because acks arrive or unacked messages are paged out
-	AverageAckEgressRate  float32 `json:"avg_ack_egress_rate"`
+	AverageAckEgressRate float32 `json:"avg_ack_egress_rate"`
 }
 
 type OwnerPidDetails struct {
@@ -44,34 +44,41 @@ type OwnerPidDetails struct {
 
 type QueueInfo struct {
 	// Queue name
-	Name       string                 `json:"name"`
+	Name string `json:"name"`
 	// Virtual host this queue belongs to
-	Vhost      string                 `json:"vhost"`
+	Vhost string `json:"vhost"`
 	// Is this queue durable?
-	Durable    bool                   `json:"durable"`
+	Durable bool `json:"durable"`
 	// Is this queue auto-delted?
-	AutoDelete bool                   `json:"auto_delete"`
+	AutoDelete bool `json:"auto_delete"`
 	// Extra queue arguments
-	Arguments  map[string]interface{} `json:"arguments"`
+	Arguments map[string]interface{} `json:"arguments"`
 
 	// RabbitMQ node that hosts master for this queue
-	Node   string `json:"node"`
+	Node string `json:"node"`
 	// Queue status
 	Status string `json:"status"`
 
 	// Total amount of RAM used by this queue
-	Memory               int64  `json:"memory"`
+	Memory int64 `json:"memory"`
 	// How many consumers this queue has
-	Consumers            int    `json:"consumers"`
+	Consumers int `json:"consumers"`
 	// If there is an exclusive consumer, its consumer tag
 	ExclusiveConsumerTag string `json:"exclusive_consumer_tag"`
 
 	// Policy applied to this queue, if any
 	Policy string `json:"policy"`
 
+	// Total bytes of messages in this queues
+	MessagesBytes           int64 `json:"message_bytes"`
+	MessagesBytesPersistent int64 `json:"message_bytes_persistent"`
+	MessagesBytesRAM        int64 `json:"message_bytes_ram"`
+
 	// Total number of messages in this queue
-	Messages        int         `json:"messages"`
-	MessagesDetails RateDetails `json:"messages_details"`
+	Messages           int         `json:"messages"`
+	MessagesDetails    RateDetails `json:"messages_details"`
+	MessagesPersistent int         `json:"messages_persistent"`
+	MessagesRAM        int         `json:"messages_ram"`
 
 	// Number of messages ready to be delivered
 	MessagesReady        int         `json:"messages_ready"`

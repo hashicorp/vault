@@ -1,24 +1,25 @@
 # Rabbit Hole, a RabbitMQ HTTP API Client for Go
 
-This library is a [RabbitMQ HTTP API](http://hg.rabbitmq.com/rabbitmq-management/raw-file/450b7ea22cfd/priv/www/api/index.html) client for the Go language.
+This library is a [RabbitMQ HTTP API](https://raw.githack.com/rabbitmq/rabbitmq-management/rabbitmq_v3_6_0/priv/www/api/index.html) client for the Go language.
 
 ## Supported Go Versions
 
-Rabbit Hole requires Go 1.1+.
+Rabbit Hole requires Go 1.3+.
 
 
 ## Supported RabbitMQ Versions
 
  * RabbitMQ 3.x
- * RabbitMQ 2.x
 
 All versions require [RabbitMQ Management UI plugin](http://www.rabbitmq.com/management.html) to be installed and enabled.
 
 
 ## Project Maturity
 
-Rabbit Hole is a young project designed after a couple of other RabbitMQ HTTP API clients with stable APIs.
-However, breaking API changes are not out of the question.
+Rabbit Hole is a fairly mature library (started in October 2013)
+designed after a couple of other RabbitMQ HTTP API clients with stable
+APIs. Breaking API changes are not out of the question but not without
+a reasonable version bump.
 
 It is largely (80-90%) feature complete and decently documented.
 
@@ -274,20 +275,18 @@ rmqc.SetTransport(transport)
 ```
 
 
+## CI Status
+
+[![Build Status](https://travis-ci.org/michaelklishin/rabbit-hole.svg?branch=master)](https://travis-ci.org/michaelklishin/rabbit-hole)
+
+
 ## Contributing
 
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push -u origin my-new-feature`)
-5. Create new Pull Request
+See [CONTRIBUTING.md](https://github.com/michaelklishin/rabbit-hole/blob/master/CONTRIBUTING.md)
 
 
 ## License & Copyright
 
 2-clause BSD license.
 
-(c) Michael S. Klishin, 2013-2014.
-
-
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/michaelklishin/rabbit-hole/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+(c) Michael S. Klishin, 2013-2016.

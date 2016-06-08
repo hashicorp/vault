@@ -580,25 +580,28 @@ func (c *client) insertCert(s interface{}, cert *ssh.Certificate, comment string
 		})
 	case *dsa.PrivateKey:
 		req = ssh.Marshal(dsaCertMsg{
-			Type:      cert.Type(),
-			CertBytes: cert.Marshal(),
-			X:         k.X,
-			Comments:  comment,
+			Type:        cert.Type(),
+			CertBytes:   cert.Marshal(),
+			X:           k.X,
+			Comments:    comment,
+			Constraints: constraints,
 		})
 	case *ecdsa.PrivateKey:
 		req = ssh.Marshal(ecdsaCertMsg{
-			Type:      cert.Type(),
-			CertBytes: cert.Marshal(),
-			D:         k.D,
-			Comments:  comment,
+			Type:        cert.Type(),
+			CertBytes:   cert.Marshal(),
+			D:           k.D,
+			Comments:    comment,
+			Constraints: constraints,
 		})
 	case ed25519.PrivateKey:
 		req = ssh.Marshal(ed25519CertMsg{
-			Type:      cert.Type(),
-			CertBytes: cert.Marshal(),
-			Pub:       []byte(k)[32:],
-			Priv:      []byte(k),
-			Comments:  comment,
+			Type:        cert.Type(),
+			CertBytes:   cert.Marshal(),
+			Pub:         []byte(k)[32:],
+			Priv:        []byte(k),
+			Comments:    comment,
+			Constraints: constraints,
 		})
 	default:
 		return fmt.Errorf("agent: unsupported key type %T", s)

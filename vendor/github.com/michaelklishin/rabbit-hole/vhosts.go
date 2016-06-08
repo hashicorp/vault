@@ -51,9 +51,9 @@ import (
 
 type VhostInfo struct {
 	// Virtual host name
-	Name    string `json:"name"`
+	Name string `json:"name"`
 	// True if tracing is enabled for this virtual host
-	Tracing bool   `json:"tracing"`
+	Tracing bool `json:"tracing"`
 
 	// Total number of messages in queues of this virtual host
 	Messages        int         `json:"messages"`
@@ -68,7 +68,7 @@ type VhostInfo struct {
 	MessagesUnacknowledgedDetails RateDetails `json:"messages_unacknowledged_details"`
 
 	// Octets received
-	RecvOct        uint64      `json:"recv_oct"`
+	RecvOct uint64 `json:"recv_oct"`
 	// Octets sent
 	SendOct        uint64      `json:"send_oct"`
 	RecvCount      uint64      `json:"recv_cnt"`
@@ -80,7 +80,7 @@ type VhostInfo struct {
 
 // Returns a list of virtual hosts.
 func (c *Client) ListVhosts() (rec []VhostInfo, err error) {
-	req, err := newGETRequest(c, "vhosts/")
+	req, err := newGETRequest(c, "vhosts")
 	if err != nil {
 		return []VhostInfo{}, err
 	}
