@@ -1854,21 +1854,26 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// issue a couple of certs
-	certData := map[string]interface{}{
-		"common_name": "example.test.com",
-	}
-	resp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "issue/test-example",
-		Storage:   storage,
-		Data:      certData,
-	})
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to issue a cert, %#v", resp)
-	}
-	if err != nil {
-		t.Fatal(err)
+	// issue some certs
+	i := 1
+	for i < 10 {
+		certData := map[string]interface{}{
+			"common_name": "example.test.com",
+		}
+		resp, err = b.HandleRequest(&logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "issue/test-example",
+			Storage:   storage,
+			Data:      certData,
+		})
+		if resp != nil && resp.IsError() {
+			t.Fatalf("failed to issue a cert, %#v", resp)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		i = i + 1
 	}
 
 	// list certs
@@ -1882,6 +1887,27 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatal(err)
+	}
+	// check that the root and 9 additional certs are all listed
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 certs")
+	}
+
+	// list certs/
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "certs/",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list certs, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	// check that the root and 9 additional certs are all listed
+	if len(resp.Data["keys"].([]string)) != 10 {
+		t.Fatalf("failed to list all 10 certs")
 	}
 }
 
