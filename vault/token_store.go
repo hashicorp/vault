@@ -935,6 +935,7 @@ func (ts *TokenStore) handleCreateCommon(
 		NoDefaultPolicy bool              `mapstructure:"no_default_policy"`
 		Lease           string
 		TTL             string
+		Renewable       *bool
 		DisplayName     string `mapstructure:"display_name"`
 		NumUses         int    `mapstructure:"num_uses"`
 	}
@@ -962,6 +963,11 @@ func (ts *TokenStore) handleCreateCommon(
 		DisplayName:  "token",
 		NumUses:      data.NumUses,
 		CreationTime: time.Now().Unix(),
+	}
+
+	renewable := true
+	if data.Renewable != nil {
+		renewable = *data.Renewable
 	}
 
 	// If the role is not nil, we add the role name as part of the token's
@@ -1122,7 +1128,7 @@ func (ts *TokenStore) handleCreateCommon(
 		Metadata:    te.Meta,
 		LeaseOptions: logical.LeaseOptions{
 			TTL:       te.TTL,
-			Renewable: true,
+			Renewable: renewable,
 		},
 		ClientToken: te.ID,
 		Accessor:    te.Accessor,

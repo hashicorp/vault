@@ -18,7 +18,7 @@ type TokenCreateCommand struct {
 func (c *TokenCreateCommand) Run(args []string) int {
 	var format string
 	var id, displayName, lease, ttl, role string
-	var orphan, noDefaultPolicy bool
+	var orphan, noDefaultPolicy, renewable bool
 	var metadata map[string]string
 	var numUses int
 	var policies []string
@@ -30,6 +30,7 @@ func (c *TokenCreateCommand) Run(args []string) int {
 	flags.StringVar(&ttl, "ttl", "", "")
 	flags.StringVar(&role, "role", "", "")
 	flags.BoolVar(&orphan, "orphan", false, "")
+	flags.BoolVar(&renewable, "renewable", true, "")
 	flags.BoolVar(&noDefaultPolicy, "no-default-policy", false, "")
 	flags.IntVar(&numUses, "use-limit", 0, "")
 	flags.Var((*kvFlag.Flag)(&metadata), "metadata", "")
@@ -67,7 +68,9 @@ func (c *TokenCreateCommand) Run(args []string) int {
 		NoDefaultPolicy: noDefaultPolicy,
 		DisplayName:     displayName,
 		NumUses:         numUses,
+		Renewable:       new(bool),
 	}
+	*tcr.Renewable = renewable
 
 	var secret *api.Secret
 	if role != "" {
@@ -121,10 +124,13 @@ Token Options:
                           is a non-security sensitive value used to help
                           identify created secrets, i.e. prefixes.
 
-  -lease="1h"             Deprecated; use "-ttl" instead.
-
   -ttl="1h"               Initial TTL to associate with the token; renewals can
                           extend this value.
+
+  -renewable=true         Whether or not the token is renewable to extend its
+                          TTL up to Vault's configured maximum TTL for tokens.
+                          This defaults to true; set to false to disable
+                          renewal of this token.
 
   -metadata="key=value"   Metadata to associate with the token. This shows
                           up in the audit log. This can be specified multiple

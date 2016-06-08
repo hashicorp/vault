@@ -163,6 +163,9 @@ to help you, but may refer you to the backend author.
   * `azure` - Store data in an Azure Storage container [Azure](https://azure.microsoft.com/en-us/services/storage/).
     This backend does not support HA. This is a community-supported backend.
 
+  * `swift` - Store data within an OpenStack Swift container [Swift](http://docs.openstack.org/developer/swift/).
+    This backend does not support HA. This is a community-supported backend.
+
   * `mysql` - Store data within MySQL. This backend does not support HA. This
     is a community-supported backend.
 
@@ -214,8 +217,8 @@ For Consul, the following options are supported:
 
   * `token` (optional) - An access token to use to write data to Consul.
 
-  * `max_parallel` (optional) - The maximum number of connections to Consul;
-    defaults to "128".
+  * `max_parallel` (optional) - The maximum number of concurrent connections to Consul.
+    Defaults to "128".
 
   * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
     will be disabled for Consul communication.  Defaults to false.
@@ -463,10 +466,30 @@ profile enabled. Vault will handle renewing profile credentials as they rotate.
 #### Backend Reference: Azure (Community-Supported)
 
   * `accountName` (required) - The Azure Storage account name
+
   * `accountKey`  (required) - The Azure Storage account key
+
   * `container`   (required) - The Azure Storage Blob container name
 
+  * `max_parallel` (optional) - The maximum number of concurrent connections to Azure. Defaults to "128".
+
 The current implementation is limited to a maximum of 4 MBytes per blob/file. 
+
+#### Backend Reference: Swift (Community-Supported)
+
+For Swift, the following options are supported:
+
+  * `container` (required) - The name of the Swift container to use. It must be provided, but it can also be sourced from the `OS_CONTAINER` environment variable.
+
+  * `username` - (required) The OpenStack account/username. It must be provided, but it can also be sourced from the `OS_USERNAME` environment variable.
+
+  * `password` - (required) The OpenStack password. It must be provided, but it can also be sourced from the `OS_PASSWORD` environment variable.
+
+  * `auth_url` - (required) Then OpenStack auth endpoint to use. It can also be sourced from the `OS_AUTH_URL` environment variable.
+
+  * `tenant` (optional) - The name of Tenant to use. It can be sourced from the `OS_TENANT_NAME` environment variable and will default to default tenant of for the username if not specified.
+
+  * `max_parallel` (optional) - The maximum number of concurrent connections to Swift. Defaults to "128".
 
 #### Backend Reference: MySQL (Community-Supported)
 
