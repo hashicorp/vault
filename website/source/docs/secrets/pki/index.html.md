@@ -436,7 +436,7 @@ subpath for interactive help output.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/certs/?list=true`</dd>
+  <dd>`/pki/certs/?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
