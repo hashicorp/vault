@@ -2,40 +2,19 @@ package rabbitmq
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func rolesFields() map[string]*framework.FieldSchema {
-	return map[string]*framework.FieldSchema{
-		"name": &framework.FieldSchema{
-			Type:        framework.TypeString,
-			Description: "Name of the role.",
-		},
-
-		"tags": &framework.FieldSchema{
-			Type:        framework.TypeString,
-			Description: "Comma-separated list of tags for this role.",
-		},
-
-		"vhosts": &framework.FieldSchema{
-			Type:        framework.TypeString,
-			Description: "A map of virtual hosts to permissions.",
-		},
-	}
-}
-
 func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
-
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
 		},
-
 		HelpSynopsis:    pathRoleHelpSyn,
 		HelpDescription: pathRoleHelpDesc,
 	}
@@ -44,19 +23,31 @@ func pathListRoles(b *backend) *framework.Path {
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
-		Fields:  rolesFields(),
-
+		Fields: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the role.",
+			},
+			"tags": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Comma-separated list of tags for this role.",
+			},
+			"vhosts": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "A map of virtual hosts to permissions.",
+			},
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathRoleRead,
 			logical.UpdateOperation: b.pathRoleUpdate,
 			logical.DeleteOperation: b.pathRoleDelete,
 		},
-
 		HelpSynopsis:    pathRoleHelpSyn,
 		HelpDescription: pathRoleHelpDesc,
 	}
 }
 
+// Reads the role configuration from the storage
 func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 	entry, err := s.Get("role/" + n)
 	if err != nil {
@@ -74,28 +65,21 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathRoleDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	name, err := validateName(data)
-	if err != nil {
-		return nil, err
+// Deletes an existing role
+func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
 	}
 
-	err = req.Storage.Delete("role/" + name)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, req.Storage.Delete("role/" + name)
 }
 
-func (b *backend) pathRoleRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-	name, err := validateName(data)
-	if err != nil {
-		return nil, err
+// Reads an existing role
+func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
 	}
 
 	role, err := b.Role(req.Storage, name)
@@ -107,31 +91,34 @@ func (b *backend) pathRoleRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"tags":   role.Tags,
-			"vhosts": role.VHosts,
-		},
+		Data: structs.New(role).Map(),
 	}, nil
 }
 
+// Lists all the roles registered with the backend
 func (b *backend) pathRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	roles, err := req.Storage.List("role/")
 	if err != nil {
 		return nil, err
 	}
 
-	return logical.ListResponse(entries), nil
+	return logical.ListResponse(roles), nil
 }
 
-func (b *backend) pathRoleUpdate(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name, err := validateName(data)
-	if err != nil {
-		return nil, err
+// Registers a new role with the backend
+func (b *backend) pathRoleUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
 	}
-	tags := data.Get("tags").(string)
-	rawVHosts := data.Get("vhosts").(string)
+
+	tags := d.Get("tags").(string)
+	rawVHosts := d.Get("vhosts").(string)
+
+	if tags == "" && rawVHosts == "" {
+		return logical.ErrorResponse("both tags and vhosts not specified"), nil
+	}
 
 	var vhosts map[string]vhostPermission
 	if len(rawVHosts) > 0 {
@@ -156,24 +143,17 @@ func (b *backend) pathRoleUpdate(
 	return nil, nil
 }
 
+// Role that defines the capabilities of the credentials issued against it
 type roleEntry struct {
-	Tags   string                     `json:"tags"`
-	VHosts map[string]vhostPermission `json:"vhosts"`
+	Tags   string                     `json:"tags" structs:"tags" mapstructure:"tags"`
+	VHosts map[string]vhostPermission `json:"vhosts" structs:"vhosts" mapstructure:"vhosts"`
 }
 
+// Structure representing the permissions of a vhost
 type vhostPermission struct {
-	Configure string `json:"configure"`
-	Write     string `json:"write"`
-	Read      string `json:"read"`
-}
-
-func validateName(data *framework.FieldData) (string, error) {
-	name := data.Get("name").(string)
-	if len(name) == 0 {
-		return "", errors.New("name is required")
-	}
-
-	return name, nil
+	Configure string `json:"configure" structs:"configure" mapstructure:"configure"`
+	Write     string `json:"write" structs:"write" mapstructure:"write"`
+	Read      string `json:"read" structs:"write" mapstructure:"read"`
 }
 
 const pathRoleHelpSyn = `

@@ -42,22 +42,18 @@ func pathConfigConnection(b *backend) *framework.Path {
 
 func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	uri := data.Get("connection_uri").(string)
-	username := data.Get("username").(string)
-	password := data.Get("password").(string)
-
 	if uri == "" {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"'connection_uri' is a required parameter.")), nil
+		return logical.ErrorResponse("missing connection_uri"), nil
 	}
 
+	username := data.Get("username").(string)
 	if username == "" {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"'username' is a required parameter.")), nil
+		return logical.ErrorResponse("missing username"), nil
 	}
 
+	password := data.Get("password").(string)
 	if password == "" {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"'password' is a required parameter.")), nil
+		return logical.ErrorResponse("missing password"), nil
 	}
 
 	// Don't check the connection_url if verification is disabled
@@ -66,15 +62,12 @@ func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.Fie
 		// Create RabbitMQ management client
 		client, err := rabbithole.NewClient(uri, username, password)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Error  info: %s", err)), nil
+			return nil, fmt.Errorf("failed to create client: %s", err)
 		}
 
-		// Verify provided user is able to list users
-		_, err = client.ListUsers()
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Error validating connection info by listing users: %s", err)), nil
+		// Verify that configured credentials is capable of listing
+		if _, err = client.ListUsers(); err != nil {
+			return nil, fmt.Errorf("failed to validate the connection: %s", err)
 		}
 	}
 
@@ -92,16 +85,21 @@ func (b *backend) pathConnectionUpdate(req *logical.Request, data *framework.Fie
 	}
 
 	// Reset the client connection
-	b.ResetClient()
+	b.resetClient()
 
 	return nil, nil
 }
 
+// connectionConfig contains the information required to make a connection to a RabbitMQ node
 type connectionConfig struct {
-	URI       string `json:"connection_uri"`
-	VerifyURI string `json:"verify_connection"`
-	Username  string `json:"username"`
-	Password  string `json:"password"`
+	// URI of the RabbitMQ server
+	URI string `json:"connection_uri"`
+
+	// Username which has 'administrator' tag attached to it
+	Username string `json:"username"`
+
+	// Password for the Username
+	Password string `json:"password"`
 }
 
 const pathConfigConnectionHelpSyn = `

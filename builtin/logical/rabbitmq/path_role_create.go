@@ -9,7 +9,7 @@ import (
 	"github.com/michaelklishin/rabbit-hole"
 )
 
-func pathRoleCreate(b *backend) *framework.Path {
+func pathCreds(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -20,7 +20,7 @@ func pathRoleCreate(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathRoleCreateRead,
+			logical.ReadOperation: b.pathCredsRead,
 		},
 
 		HelpSynopsis:    pathRoleCreateReadHelpSyn,
@@ -28,12 +28,11 @@ func pathRoleCreate(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathRoleCreateRead(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// Validate name
-	name, err := validateName(data)
-	if err != nil {
-		return nil, err
+// Issues the credential based on the role name
+func (b *backend) pathCredsRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
 	}
 
 	// Get the role
@@ -45,53 +44,40 @@ func (b *backend) pathRoleCreateRead(
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 	}
 
-	// Determine if we have a lease
-	lease, err := b.Lease(req.Storage)
-	if err != nil {
-		return nil, err
-	}
-	if lease == nil {
-		lease = &configLease{}
-	}
-
 	// Ensure username is unique
 	username := fmt.Sprintf("%s-%s", req.DisplayName, uuid.GenerateUUID())
 	password := uuid.GenerateUUID()
 
-	// Get our connection
+	// Get the client configuration
 	client, err := b.Client(req.Storage)
 	if err != nil {
 		return nil, err
 	}
-
 	if client == nil {
-		return logical.ErrorResponse("unable to get client"), nil
+		return logical.ErrorResponse("failed to get the client"), nil
 	}
 
-	// Create the user
-	_, err = client.PutUser(username, rabbithole.UserSettings{
+	// Register the generated credentials in the backend, with the RabbitMQ server
+	if _, err = client.PutUser(username, rabbithole.UserSettings{
 		Password: password,
 		Tags:     role.Tags,
-	})
-
-	if err != nil {
-		return nil, err
+	}); err != nil {
+		return nil, fmt.Errorf("failed to create a new user with the generated credentials")
 	}
 
+	// If the role had vhost permissions specified, assign those permissions
+	// to the created username for respective vhosts.
 	for vhost, permission := range role.VHosts {
-		_, err := client.UpdatePermissionsIn(vhost, username, rabbithole.Permissions{
+		if _, err := client.UpdatePermissionsIn(vhost, username, rabbithole.Permissions{
 			Configure: permission.Configure,
 			Write:     permission.Write,
 			Read:      permission.Read,
-		})
-
-		if err != nil {
+		}); err != nil {
 			// Delete the user because it's in an unknown state
-			_, rmErr := client.DeleteUser(username)
-			if rmErr != nil {
-				return logical.ErrorResponse(fmt.Sprintf("failed to update user: %s, failed to delete user: %s, user: %s", err, rmErr, username)), rmErr
+			if _, rmErr := client.DeleteUser(username); rmErr != nil {
+				return nil, fmt.Errorf("failed to delete user:%s, err: %s. %s", username, err, rmErr)
 			}
-			return logical.ErrorResponse(fmt.Sprintf("failed to update user: %s, 	  user: %s", err, username)), err
+			return nil, fmt.Errorf("failed to update permissions to the %s user. err:%s", username, err)
 		}
 	}
 
@@ -102,7 +88,16 @@ func (b *backend) pathRoleCreateRead(
 	}, map[string]interface{}{
 		"username": username,
 	})
-	resp.Secret.TTL = lease.Lease
+
+	// Determine if we have a lease
+	lease, err := b.Lease(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if lease != nil {
+		resp.Secret.TTL = lease.TTL
+	}
+
 	return resp, nil
 }
 

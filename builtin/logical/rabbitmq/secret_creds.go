@@ -16,20 +16,19 @@ func secretCreds(b *backend) *framework.Secret {
 		Fields: map[string]*framework.FieldSchema{
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Username",
+				Description: "RabbitMQ username",
 			},
-
 			"password": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Password",
+				Description: "Password for the RabbitMQ username",
 			},
 		},
-
 		Renew:  b.secretCredsRenew,
 		Revoke: b.secretCredsRevoke,
 	}
 }
 
+// Renew the previously issued secret
 func (b *backend) secretCredsRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the lease information
@@ -41,15 +40,10 @@ func (b *backend) secretCredsRenew(
 		lease = &configLease{}
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
-	resp, err := f(req, d)
-	if err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return framework.LeaseExtend(lease.TTL, lease.MaxTTL, b.System())(req, d)
 }
 
+// Revoke the previously issued secret
 func (b *backend) secretCredsRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// Get the username from the internal data
@@ -65,9 +59,8 @@ func (b *backend) secretCredsRevoke(
 		return nil, err
 	}
 
-	_, err = client.DeleteUser(username)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("could not delete user: %s", err)), nil
+	if _, err = client.DeleteUser(username); err != nil {
+		return nil, fmt.Errorf("could not delete user: %s", err)
 	}
 
 	return nil, nil
