@@ -5,6 +5,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/michaelklishin/rabbit-hole"
@@ -84,6 +85,8 @@ func (b *backend) Client(s logical.Storage) (*rabbithole.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Use a default pooled transport so there would be no leaked file descriptors
+	b.client.SetTransport(cleanhttp.DefaultPooledTransport())
 
 	return b.client, nil
 }

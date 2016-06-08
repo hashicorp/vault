@@ -36,7 +36,7 @@ func pathConfigLease(b *backend) *framework.Path {
 func (b *backend) pathLeaseUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
 		TTL:    time.Second * time.Duration(d.Get("ttl").(int)),
-		MaxTTL: time.Second * time.Duration(d.Get("ttl").(int)),
+		MaxTTL: time.Second * time.Duration(d.Get("max_ttl").(int)),
 	})
 	if err != nil {
 		return nil, err
@@ -57,6 +57,9 @@ func (b *backend) pathLeaseRead(req *logical.Request, data *framework.FieldData)
 	if lease == nil {
 		return nil, nil
 	}
+
+	lease.TTL = lease.TTL / time.Second
+	lease.MaxTTL = lease.MaxTTL / time.Second
 
 	return &logical.Response{
 		Data: structs.New(lease).Map(),
