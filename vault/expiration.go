@@ -510,6 +510,16 @@ func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error)
 		ExpireTime:      le.ExpireTime,
 		LastRenewalTime: le.LastRenewalTime,
 	}
+	if le.Secret != nil {
+		ret.Secret = &logical.Secret{}
+		ret.Secret.Renewable = le.Secret.Renewable
+		ret.Secret.TTL = le.Secret.TTL
+	}
+	if le.Auth != nil {
+		ret.Auth = &logical.Auth{}
+		ret.Auth.Renewable = le.Auth.Renewable
+		ret.Auth.TTL = le.Auth.TTL
+	}
 
 	return ret, nil
 }
