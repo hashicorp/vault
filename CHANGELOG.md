@@ -113,10 +113,11 @@ IMPROVEMENTS:
  * secret/aws: Use chain credentials to allow environment/EC2 instance/shared
    providers [GH-307]
  * secret/aws: Support for STS AssumeRole functionality [GH-1318]
- * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
-   DNS or Email Subject Alternate Names [GH-1220]
  * secret/consul: Reading consul access configuration supported. The response
    will contain non-sensitive information only [GH-1445]
+ * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
+   DNS or Email Subject Alternate Names [GH-1220]
+ * secret/pki: Added list support for certificates [GH-1466]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
    of a token on a given path [GH-1221]
 
