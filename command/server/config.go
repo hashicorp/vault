@@ -449,17 +449,17 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 		if lnType == "atlas" {
 			if foundAtlas {
 				return multierror.Prefix(fmt.Errorf("only one listener of type 'atlas' is permitted"), fmt.Sprintf("listeners.%s", key))
-			} else {
-				foundAtlas = true
-				if m["token"] == "" {
-					return multierror.Prefix(fmt.Errorf("'token' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-				}
-				if m["infrastructure"] == "" {
-					return multierror.Prefix(fmt.Errorf("'infrastructure' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-				}
-				if m["node_id"] == "" {
-					return multierror.Prefix(fmt.Errorf("'node_id' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-				}
+			}
+
+			foundAtlas = true
+			if m["token"] == "" {
+				return multierror.Prefix(fmt.Errorf("'token' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
+			}
+			if m["infrastructure"] == "" {
+				return multierror.Prefix(fmt.Errorf("'infrastructure' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
+			}
+			if m["node_id"] == "" {
+				return multierror.Prefix(fmt.Errorf("'node_id' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
 			}
 		}
 
