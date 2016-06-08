@@ -57,6 +57,8 @@ FEATURES:
    secret distribution easier and more secure, including secure introduction.
  * **Azure Physical Backend**: You can now use Azure blob object storage as
    your Vault physical data store [GH-1266]
+ * **Swift Physical Backend**: You can now use Swift blob object storage as
+   your Vault physical data store [GH-1425]
  * **Consul Backend Health Checks**: The Consul backend will automatically
    register a `vault` service and perform its own health checking. By default
    the active node can be found at `active.vault.service.consul` and all with
