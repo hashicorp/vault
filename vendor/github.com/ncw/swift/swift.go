@@ -97,6 +97,7 @@ type Connection struct {
 	Internal       bool              // Set this to true to use the the internal / service network
 	Tenant         string            // Name of the tenant (v2,v3 auth only)
 	TenantId       string            // Id of the tenant (v2,v3 auth only)
+	EndpointType   EndpointType      // Endpoint type (v2,v3 auth only) (default is public URL unless Internal is set)
 	TenantDomain   string            // Name of the tenant's domain (v3 auth only), only needed if it differs from the user domain
 	TenantDomainId string            // Id of the tenant's domain (v3 auth only), only needed if it differs the from user domain
 	TrustId        string            // Id of the trust (v3 auth only)
@@ -330,7 +331,11 @@ again:
 			return
 		}
 	}
-	c.StorageUrl = c.Auth.StorageUrl(c.Internal)
+	if customAuth, isCustom := c.Auth.(CustomEndpointAuthenticator); isCustom && c.EndpointType != "" {
+		c.StorageUrl = customAuth.StorageUrlForEndpoint(c.EndpointType)
+	} else {
+		c.StorageUrl = c.Auth.StorageUrl(c.Internal)
+	}
 	c.AuthToken = c.Auth.Token()
 	if !c.authenticated() {
 		err = newError(0, "Response didn't have storage url and auth token")

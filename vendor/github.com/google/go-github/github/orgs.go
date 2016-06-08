@@ -73,6 +73,8 @@ func (p Plan) String() string {
 type OrganizationsListOptions struct {
 	// Since filters Organizations by ID.
 	Since int `url:"since,omitempty"`
+
+	ListOptions
 }
 
 // ListAll lists all organizations, in the order that they were created on GitHub.

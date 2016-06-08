@@ -42,6 +42,8 @@ type NotificationListOptions struct {
 	Participating bool      `url:"participating,omitempty"`
 	Since         time.Time `url:"since,omitempty"`
 	Before        time.Time `url:"before,omitempty"`
+
+	ListOptions
 }
 
 // ListNotifications lists all notifications for the authenticated user.

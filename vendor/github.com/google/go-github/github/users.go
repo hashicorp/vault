@@ -138,6 +138,8 @@ func (s *UsersService) Edit(user *User) (*User, *Response, error) {
 type UserListOptions struct {
 	// ID of the last user seen
 	Since int `url:"since,omitempty"`
+
+	ListOptions
 }
 
 // ListAll lists all GitHub users.

@@ -135,3 +135,5 @@ Contributors
 - Arturo Reuschenbach Puncernau <reuschenbach@gmail.com>
 - Petr Kotek <petr.kotek@bigcommerce.com>
 - Stefan Majewsky <stefan.majewsky@sap.com>
+- Cezar Sa Espinola <cezarsa@gmail.com>
+- Sam Gunaratne <samgzeit@gmail.com>

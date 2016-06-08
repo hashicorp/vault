@@ -47,6 +47,8 @@ type MilestoneListOptions struct {
 	// Direction in which to sort milestones. Possible values are: asc, desc.
 	// Default is "asc".
 	Direction string `url:"direction,omitempty"`
+
+	ListOptions
 }
 
 // ListMilestones lists all milestones for a repository.

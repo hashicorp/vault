@@ -221,32 +221,32 @@
 		{
 			"checksumSHA1": "Fa/Hw0ByZgcIDU5iG+Jt0MdeYYg=",
 			"path": "github.com/coreos/etcd/client",
-			"revision": "3e057129e2ad9deac4b8dffb65af6e6f980dcd58",
-			"revisionTime": "2016-06-08T05:25:57Z"
+			"revision": "87d105c0364315d82430fd82826cdd26e3d86535",
+			"revisionTime": "2016-06-08T20:07:13Z"
 		},
 		{
 			"checksumSHA1": "mKIXx1kDwmVmdIpZ3pJtRBuUKso=",
 			"path": "github.com/coreos/etcd/pkg/pathutil",
-			"revision": "3e057129e2ad9deac4b8dffb65af6e6f980dcd58",
-			"revisionTime": "2016-06-08T05:25:57Z"
+			"revision": "87d105c0364315d82430fd82826cdd26e3d86535",
+			"revisionTime": "2016-06-08T20:07:13Z"
 		},
 		{
 			"checksumSHA1": "rMyIh9PsSvPs6Yd+YgKITQzQJx8=",
 			"path": "github.com/coreos/etcd/pkg/tlsutil",
-			"revision": "3e057129e2ad9deac4b8dffb65af6e6f980dcd58",
-			"revisionTime": "2016-06-08T05:25:57Z"
+			"revision": "87d105c0364315d82430fd82826cdd26e3d86535",
+			"revisionTime": "2016-06-08T20:07:13Z"
 		},
 		{
 			"checksumSHA1": "+rHx+d1sRhZGCJtp6DovJhQkHZw=",
 			"path": "github.com/coreos/etcd/pkg/transport",
-			"revision": "3e057129e2ad9deac4b8dffb65af6e6f980dcd58",
-			"revisionTime": "2016-06-08T05:25:57Z"
+			"revision": "87d105c0364315d82430fd82826cdd26e3d86535",
+			"revisionTime": "2016-06-08T20:07:13Z"
 		},
 		{
 			"checksumSHA1": "kGLbveUJwLvoqg9yeWAnY0BQXtA=",
 			"path": "github.com/coreos/etcd/pkg/types",
-			"revision": "3e057129e2ad9deac4b8dffb65af6e6f980dcd58",
-			"revisionTime": "2016-06-08T05:25:57Z"
+			"revision": "87d105c0364315d82430fd82826cdd26e3d86535",
+			"revisionTime": "2016-06-08T20:07:13Z"
 		},
 		{
 			"checksumSHA1": "mKQRWIjLivgiH7Bhf6Ry7EM1KKs=",
@@ -333,10 +333,10 @@
 			"revisionTime": "2016-05-29T05:00:41Z"
 		},
 		{
-			"checksumSHA1": "D0XN/mcGIua2WyaEXA1I54jRfgY=",
+			"checksumSHA1": "CoUPw362AeCNcqNUl8yE7ONmNBw=",
 			"path": "github.com/google/go-github/github",
-			"revision": "7ec4e45f77474b3a7b7d9b7ef233a0cc8339ddf3",
-			"revisionTime": "2016-05-18T00:00:10Z"
+			"revision": "c2beba44cffbb17740cc3ad8d54f2b303060027b",
+			"revisionTime": "2016-05-09T10:48:33Z"
 		},
 		{
 			"checksumSHA1": "yyAzHoiVLu+xywYI2BDyRq6sOqE=",
@@ -565,6 +565,12 @@
 			"path": "github.com/mitchellh/reflectwalk",
 			"revision": "eecf4c70c626c7cfbb95c90195bc34d386c74ac6",
 			"revisionTime": "2015-05-27T15:31:53Z"
+		},
+		{
+			"checksumSHA1": "r5/dmXspz60lznTPjeEgE6UbIF8=",
+			"path": "github.com/ncw/swift",
+			"revision": "ce444d6d47c51d4dda9202cd38f5094dd8e27e86",
+			"revisionTime": "2016-05-19T16:21:37Z"
 		},
 		{
 			"checksumSHA1": "kH9SzL77hzya1KSvkkVfGmbBtmM=",

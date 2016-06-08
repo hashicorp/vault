@@ -18,8 +18,8 @@ type ReactionsService struct {
 // Reaction represents a GitHub reaction.
 type Reaction struct {
 	// ID is the Reaction ID.
-	ID     *int `json:"id,omitempty"`
-	UserID *int `json:"user_id,omitempty"`
+	ID   *int  `json:"id,omitempty"`
+	User *User `json:"user,omitempty"`
 	// Content is the type of reaction.
 	// Possible values are:
 	//     "+1", "-1", "laugh", "confused", "heart", "hooray".
