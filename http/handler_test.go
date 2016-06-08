@@ -1,10 +1,12 @@
 package http
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -61,6 +63,33 @@ func TestSysMounts_headerAuth(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
+	}
+}
+
+// We use this test to verify header auth wrapping
+func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/mounts", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(WrapTTLHeaderName, "60s")
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	testResponseStatus(t, resp, 200)
+	buf := bytes.NewBuffer(nil)
+	buf.ReadFrom(resp.Body)
+	if strings.TrimSpace(buf.String()) != "null" {
+		t.Fatalf("bad: %v", buf.String())
 	}
 }
 

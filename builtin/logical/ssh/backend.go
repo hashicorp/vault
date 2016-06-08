@@ -21,7 +21,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return b.Setup(conf)
 }
 
-func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
+func Backend(conf *logical.BackendConfig) (*backend, error) {
 	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
 		HashFunc: salt.SHA256Hash,
 	})
@@ -35,10 +35,6 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-				"keys/*",
-			},
 			Unauthenticated: []string{
 				"verify",
 			},
@@ -59,7 +55,7 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 			secretOTP(&b),
 		},
 	}
-	return b.Backend, nil
+	return &b, nil
 }
 
 const backendHelp = `

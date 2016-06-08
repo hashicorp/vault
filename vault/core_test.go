@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
@@ -384,7 +385,7 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 		},
 	}
 	resp, err := c.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
+	if err == nil || !errwrap.Contains(err, logical.ErrInvalidRequest.Error()) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != "missing client token" {
@@ -405,7 +406,7 @@ func TestCore_HandleRequest_InvalidToken(t *testing.T) {
 		ClientToken: "foobarbaz",
 	}
 	resp, err := c.HandleRequest(req)
-	if err != logical.ErrPermissionDenied {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp.Data["error"] != "permission denied" {
@@ -442,7 +443,7 @@ func TestCore_HandleRequest_RootPath(t *testing.T) {
 		ClientToken: "child",
 	}
 	resp, err := c.HandleRequest(req)
-	if err != logical.ErrPermissionDenied {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
 }
@@ -499,7 +500,7 @@ func TestCore_HandleRequest_PermissionDenied(t *testing.T) {
 		ClientToken: "child",
 	}
 	resp, err := c.HandleRequest(req)
-	if err != logical.ErrPermissionDenied {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
 }
@@ -947,7 +948,7 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 	// Second operation should fail
 	_, err = c.HandleRequest(req)
-	if err != logical.ErrPermissionDenied {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -1147,8 +1148,13 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
+	req := &logical.Request{
+		ClientToken: root,
+		Path:        "sys/step-down",
+	}
+
 	// Step down core
-	err = core.StepDown(root)
+	err = core.StepDown(req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}
@@ -1190,7 +1196,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Step down core2
-	err = core2.StepDown(root)
+	err = core2.StepDown(req)
 	if err != nil {
 		t.Fatal("error stepping down core 1")
 	}

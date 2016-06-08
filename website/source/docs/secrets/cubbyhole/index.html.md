@@ -21,11 +21,42 @@ cubbyhole, whether to read, write, list, or for any other operation. When the
 token expires, its cubbyhole is destroyed.
 
 Also unlike the `generic` backend, because the cubbyhole's lifetime is linked
-to that of an authentication token, there is no concept of a TTL for values
-contained in the token's cubbyhole.
+to that of an authentication token, there is no concept of a TTL or refresh
+interval for values contained in the token's cubbyhole.
 
 Writing to a key in the `cubbyhole` backend will replace the old value;
 the sub-fields are not merged together.
+
+## Response Wrapping
+
+Starting in Vault 0.6, almost any response (except those from `sys/` endpoints)
+from Vault can be wrapped (see the [Response
+Wrapping](https://www.vaultproject.io/docs/concepts/response-wrapping.html)
+concept page for details).
+
+The TTL for the token is set by the client using the `X-Vault-Wrap-TTL` header
+and can be either an integer number of seconds or a string duration of seconds
+(`15s`), minutes (`20m`), or hours (`25h`). When using the Vault CLI, you can
+set this via the `-wrap-ttl` parameter. Response wrapping is per-request; it is
+the presence of a value in this header that activates wrapping of the response.
+
+If a client requests wrapping:
+
+1. The original response is serialized to JSON
+2. A new single-use token is generated with a TTL as supplied by the client
+3. The original response JSON is stored in `cubbyhole/response` under the key
+   `"response"`
+4. A new response is generated, with the token ID and the token TTL stored in
+   the new response's `wrap_info` dict
+5. The new response is returned to the caller
+
+To get the original value, if using the API, simply perform a read on
+`cubbyhole/response`. In the `data` dict in the Secret response, the value of
+the `response` key can be directly unmarshaled as JSON into a new API Secret.
+
+If using the CLI, passing the wrapping token's ID to the `vault unwrap` command
+will return the original value; `-format` and `-field` can be set like with
+`vault read`.
 
 ## Quick Start
 

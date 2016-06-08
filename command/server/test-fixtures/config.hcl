@@ -3,6 +3,13 @@ disable_mlock = true
 statsd_addr = "bar"
 statsite_addr = "foo"
 
+listener "atlas" {
+    token = "foobar"
+    infrastructure = "foo/bar"
+    endpoint = "https://foo.bar:1111"
+    node_id = "foo_node"
+}
+
 listener "tcp" {
     address = "127.0.0.1:443"
 }

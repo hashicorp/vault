@@ -124,7 +124,7 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 	if !policyutil.EquivalentPolicies(mapPolicies, req.Auth.Policies) {
-		return logical.ErrorResponse("policies do not match"), nil
+		return nil, fmt.Errorf("policies do not match")
 	}
 
 	return framework.LeaseExtend(0, 0, b.System())(req, d)

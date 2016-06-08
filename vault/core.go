@@ -7,8 +7,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
@@ -18,7 +16,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/mlock"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -378,303 +375,6 @@ func (c *Core) Shutdown() error {
 	return c.sealInternal()
 }
 
-// HandleRequest is used to handle a new incoming request
-func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
-	if c.sealed {
-		return nil, ErrSealed
-	}
-	if c.standby {
-		return nil, ErrStandby
-	}
-
-	// Allowing writing to a path ending in / makes it extremely difficult to
-	// understand user intent for the filesystem-like backends (generic,
-	// cubbyhole) -- did they want a key named foo/ or did they want to write
-	// to a directory foo/ with no (or forgotten) key, or...? It also affects
-	// lookup, because paths ending in / are considered prefixes by some
-	// backends. Basically, it's all just terrible, so don't allow it.
-	if strings.HasSuffix(req.Path, "/") &&
-		(req.Operation == logical.UpdateOperation ||
-			req.Operation == logical.CreateOperation) {
-		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
-	}
-
-	var auth *logical.Auth
-	if c.router.LoginPath(req.Path) {
-		resp, auth, err = c.handleLoginRequest(req)
-	} else {
-		resp, auth, err = c.handleRequest(req)
-	}
-
-	// Ensure we don't leak internal data
-	if resp != nil {
-		if resp.Secret != nil {
-			resp.Secret.InternalData = nil
-		}
-		if resp.Auth != nil {
-			resp.Auth.InternalData = nil
-		}
-	}
-
-	// Create an audit trail of the response
-	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit response (request path: %s): %v",
-			req.Path, err)
-		return nil, ErrInternalError
-	}
-
-	return
-}
-
-func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
-	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
-
-	// Validate the token
-	auth, te, err := c.checkToken(req)
-	if te != nil {
-		defer func() {
-			// Attempt to use the token (decrement num_uses)
-			// If a secret was generated and num_uses is currently 1, it will be
-			// immediately revoked; in that case, don't return the leased
-			// credentials as they are now invalid.
-			if retResp != nil &&
-				te != nil && te.NumUses == 1 &&
-				retResp.Secret != nil &&
-				// Some backends return a TTL even without a Lease ID
-				retResp.Secret.LeaseID != "" {
-				retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
-			}
-			if err := c.tokenStore.UseToken(te); err != nil {
-				c.logger.Printf("[ERR] core: failed to use token: %v", err)
-				retResp = nil
-				retAuth = nil
-				retErr = ErrInternalError
-			}
-		}()
-	}
-	if err != nil {
-		// If it is an internal error we return that, otherwise we
-		// return invalid request so that the status codes can be correct
-		var errType error
-		switch err {
-		case ErrInternalError, logical.ErrPermissionDenied:
-			errType = err
-		default:
-			errType = logical.ErrInvalidRequest
-		}
-
-		if err := c.auditBroker.LogRequest(auth, req, err); err != nil {
-			c.logger.Printf("[ERR] core: failed to audit request with path (%s): %v",
-				req.Path, err)
-		}
-
-		return logical.ErrorResponse(err.Error()), nil, errType
-	}
-
-	// Attach the display name
-	req.DisplayName = auth.DisplayName
-
-	// Create an audit trail of the request
-	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request with path (%s): %v",
-			req.Path, err)
-		return nil, auth, ErrInternalError
-	}
-
-	// Route the request
-	resp, err := c.router.Route(req)
-
-	// If there is a secret, we must register it with the expiration manager.
-	// We exclude renewal of a lease, since it does not need to be re-registered
-	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
-		// Get the SystemView for the mount
-		sysView := c.router.MatchingSystemView(req.Path)
-		if sysView == nil {
-			c.logger.Println("[ERR] core: unable to retrieve system view from router")
-			return nil, auth, ErrInternalError
-		}
-
-		// Apply the default lease if none given
-		if resp.Secret.TTL == 0 {
-			resp.Secret.TTL = sysView.DefaultLeaseTTL()
-		}
-
-		// Limit the lease duration
-		maxTTL := sysView.MaxLeaseTTL()
-		if resp.Secret.TTL > maxTTL {
-			resp.Secret.TTL = maxTTL
-		}
-
-		// Generic mounts should return the TTL but not register
-		// for a lease as this provides a massive slowdown
-		registerLease := true
-		matchingBackend := c.router.MatchingBackend(req.Path)
-		if matchingBackend == nil {
-			c.logger.Println("[ERR] core: unable to retrieve generic backend from router")
-			return nil, auth, ErrInternalError
-		}
-		if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
-			if !ptbe.GeneratesLeases() {
-				registerLease = false
-				resp.Secret.Renewable = false
-			}
-		}
-
-		if registerLease {
-			leaseID, err := c.expiration.Register(req, resp)
-			if err != nil {
-				c.logger.Printf(
-					"[ERR] core: failed to register lease "+
-						"(request path: %s): %v", req.Path, err)
-				return nil, auth, ErrInternalError
-			}
-			resp.Secret.LeaseID = leaseID
-		}
-	}
-
-	// Only the token store is allowed to return an auth block, for any
-	// other request this is an internal error. We exclude renewal of a token,
-	// since it does not need to be re-registered
-	if resp != nil && resp.Auth != nil && !strings.HasPrefix(req.Path, "auth/token/renew") {
-		if !strings.HasPrefix(req.Path, "auth/token/") {
-			c.logger.Printf(
-				"[ERR] core: unexpected Auth response for non-token backend "+
-					"(request path: %s)", req.Path)
-			return nil, auth, ErrInternalError
-		}
-
-		// Register with the expiration manager. We use the token's actual path
-		// here because roles allow suffixes.
-		te, err := c.tokenStore.Lookup(resp.Auth.ClientToken)
-		if err != nil {
-			c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
-			return nil, nil, ErrInternalError
-		}
-
-		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
-			c.logger.Printf("[ERR] core: failed to register token lease "+
-				"(request path: %s): %v", req.Path, err)
-			return nil, auth, ErrInternalError
-		}
-	}
-
-	// Return the response and error
-	return resp, auth, err
-}
-
-// handleLoginRequest is used to handle a login request, which is an
-// unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
-	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
-
-	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
-			req.Path, err)
-		return nil, nil, ErrInternalError
-	}
-
-	// Route the request
-	resp, err := c.router.Route(req)
-
-	// A login request should never return a secret!
-	if resp != nil && resp.Secret != nil {
-		c.logger.Printf("[ERR] core: unexpected Secret response for login path"+
-			"(request path: %s)", req.Path)
-		return nil, nil, ErrInternalError
-	}
-
-	// If the response generated an authentication, then generate the token
-	var auth *logical.Auth
-	if resp != nil && resp.Auth != nil {
-		auth = resp.Auth
-
-		// Determine the source of the login
-		source := c.router.MatchingMount(req.Path)
-		source = strings.TrimPrefix(source, credentialRoutePrefix)
-		source = strings.Replace(source, "/", "-", -1)
-
-		// Prepend the source to the display name
-		auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
-
-		sysView := c.router.MatchingSystemView(req.Path)
-		if sysView == nil {
-			c.logger.Printf("[ERR] core: unable to look up sys view for login path"+
-				"(request path: %s)", req.Path)
-			return nil, nil, ErrInternalError
-		}
-
-		// Set the default lease if non-provided, root tokens are exempt
-		if auth.TTL == 0 && !strutil.StrListContains(auth.Policies, "root") {
-			auth.TTL = sysView.DefaultLeaseTTL()
-		}
-
-		// Limit the lease duration
-		if auth.TTL > sysView.MaxLeaseTTL() {
-			auth.TTL = sysView.MaxLeaseTTL()
-		}
-
-		// Generate a token
-		te := TokenEntry{
-			Path:         req.Path,
-			Policies:     auth.Policies,
-			Meta:         auth.Metadata,
-			DisplayName:  auth.DisplayName,
-			CreationTime: time.Now().Unix(),
-			TTL:          auth.TTL,
-		}
-
-		if strutil.StrListSubset(te.Policies, []string{"root"}) {
-			te.Policies = []string{"root"}
-		} else {
-			// Use a map to filter out/prevent duplicates
-			policyMap := map[string]bool{}
-			for _, policy := range te.Policies {
-				if policy == "" {
-					// Don't allow a policy with no name, even though it is a valid
-					// slice member
-					continue
-				}
-				policyMap[policy] = true
-			}
-
-			// Add the default policy
-			policyMap["default"] = true
-
-			te.Policies = []string{}
-			for k, _ := range policyMap {
-				te.Policies = append(te.Policies, k)
-			}
-
-			sort.Strings(te.Policies)
-		}
-
-		if err := c.tokenStore.create(&te); err != nil {
-			c.logger.Printf("[ERR] core: failed to create token: %v", err)
-			return nil, auth, ErrInternalError
-		}
-
-		// Populate the client token and accessor
-		auth.ClientToken = te.ID
-		auth.Accessor = te.Accessor
-		auth.Policies = te.Policies
-
-		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
-			c.logger.Printf("[ERR] core: failed to register token lease "+
-				"(request path: %s): %v", req.Path, err)
-			return nil, auth, ErrInternalError
-		}
-
-		// Attach the display name, might be used by audit backends
-		req.DisplayName = auth.DisplayName
-	}
-
-	return resp, auth, err
-}
-
 func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
 
@@ -715,7 +415,7 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, te, err
 	}
 
 	// Check if this is a root protected path
@@ -754,13 +454,14 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 		}
 	}
 
-	// Check the standard non-root ACLs
+	// Check the standard non-root ACLs. Return the token entry if it's not
+	// allowed so we can decrement the use count.
 	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
-		return nil, nil, logical.ErrPermissionDenied
+		return nil, te, logical.ErrPermissionDenied
 	}
 	if rootPath && !rootPrivs {
-		return nil, nil, logical.ErrPermissionDenied
+		return nil, te, logical.ErrPermissionDenied
 	}
 
 	// Create the auth response
@@ -957,24 +658,54 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	return true, nil
 }
 
-// Seal is used to re-seal the Vault. This requires the Vault to
-// be unsealed again to perform any further operations.
-func (c *Core) Seal(token string) (retErr error) {
-	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
+// SealWithRequest takes in a logical.Request, acquires the lock, and passes
+// through to sealInternal
+func (c *Core) SealWithRequest(req *logical.Request) error {
+	defer metrics.MeasureSince([]string{"core", "seal-with-request"}, time.Now())
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
+
 	if c.sealed {
 		return nil
 	}
 
-	// Validate the token is a root token
+	return c.sealInitCommon(req)
+}
+
+// Seal takes in a token and creates a logical.Request, acquires the lock, and
+// passes through to sealInternal
+func (c *Core) Seal(token string) error {
+	defer metrics.MeasureSince([]string{"core", "seal"}, time.Now())
+
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+
+	if c.sealed {
+		return nil
+	}
+
 	req := &logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/seal",
 		ClientToken: token,
 	}
 
+	return c.sealInitCommon(req)
+}
+
+// sealInitCommon is common logic for Seal and SealWithRequest and is used to
+// re-seal the Vault. This requires the Vault to be unsealed again to perform
+// any further operations.
+func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
+	defer metrics.MeasureSince([]string{"core", "seal-internal"}, time.Now())
+
+	if req == nil {
+		retErr = multierror.Append(retErr, errors.New("nil request to seal"))
+		return retErr
+	}
+
+	// Validate the token is a root token
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {
 		// Since there is no token store in standby nodes, sealing cannot
@@ -984,45 +715,84 @@ func (c *Core) Seal(token string) (retErr error) {
 		// essentially does the same thing.
 		if c.standby {
 			c.logger.Printf("[ERR] core: vault cannot seal when in standby mode; please restart instead")
-			return errors.New("vault cannot seal when in standby mode; please restart instead")
+			retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
+			return retErr
 		}
-		return err
+		retErr = multierror.Append(retErr, err)
+		return retErr
 	}
+
+	// Audit-log the request before going any further
+	auth := &logical.Auth{
+		ClientToken: req.ClientToken,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+		DisplayName: te.DisplayName,
+	}
+
+	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
+			req.Path, err)
+		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
+		return retErr
+	}
+
 	// Attempt to use the token (decrement num_uses)
-	// If we can't, we still continue attempting the seal, so long as the token
-	// has appropriate permissions
+	// On error bail out; if the token has been revoked, bail out too
 	if te != nil {
-		if err := c.tokenStore.UseToken(te); err != nil {
+		te, err = c.tokenStore.UseToken(te)
+		if err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
-			retErr = ErrInternalError
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return retErr
+		}
+		if te == nil {
+			// Token is no longer valid
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			return retErr
+		}
+		if te.NumUses == -1 {
+			// Token needs to be revoked
+			defer func(id string) {
+				err = c.tokenStore.Revoke(id)
+				if err != nil {
+					c.logger.Printf("[ERR] core: token needed revocation after seal but failed to revoke: %v", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+				}
+			}(te.ID)
 		}
 	}
 
 	// Verify that this operation is allowed
 	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	// We always require root privileges for this operation
 	if !rootPrivs {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	//Seal the Vault
 	err = c.sealInternal()
-	if err == nil && retErr == ErrInternalError {
-		c.logger.Printf("[ERR] core: core is successfully sealed but another error occurred during the operation")
-	} else {
-		retErr = err
+	if err != nil {
+		retErr = multierror.Append(retErr, err)
 	}
 
-	return
+	return retErr
 }
 
 // StepDown is used to step down from leadership
-func (c *Core) StepDown(token string) error {
+func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	defer metrics.MeasureSince([]string{"core", "step_down"}, time.Now())
+
+	if req == nil {
+		retErr = multierror.Append(retErr, errors.New("nil request to step-down"))
+		return retErr
+	}
 
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
@@ -1033,34 +803,63 @@ func (c *Core) StepDown(token string) error {
 		return nil
 	}
 
-	// Validate the token is a root token
-	req := &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "sys/step-down",
-		ClientToken: token,
-	}
-
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {
-		return err
+		retErr = multierror.Append(retErr, err)
+		return retErr
 	}
+
+	// Audit-log the request before going any further
+	auth := &logical.Auth{
+		ClientToken: req.ClientToken,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+		DisplayName: te.DisplayName,
+	}
+
+	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
+		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
+			req.Path, err)
+		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
+		return retErr
+	}
+
 	// Attempt to use the token (decrement num_uses)
 	if te != nil {
-		if err := c.tokenStore.UseToken(te); err != nil {
+		te, err = c.tokenStore.UseToken(te)
+		if err != nil {
 			c.logger.Printf("[ERR] core: failed to use token: %v", err)
-			return err
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return retErr
+		}
+		if te == nil {
+			// Token has been revoked
+			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			return retErr
+		}
+		if te.NumUses == -1 {
+			// Token needs to be revoked
+			defer func(id string) {
+				err = c.tokenStore.Revoke(id)
+				if err != nil {
+					c.logger.Printf("[ERR] core: token needed revocation after step-down but failed to revoke: %v", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+				}
+			}(te.ID)
 		}
 	}
 
 	// Verify that this operation is allowed
 	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
 	if !allowed {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	// We always require root privileges for this operation
 	if !rootPrivs {
-		return logical.ErrPermissionDenied
+		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		return retErr
 	}
 
 	select {
@@ -1069,7 +868,7 @@ func (c *Core) StepDown(token string) error {
 		c.logger.Printf("[WARN] core: manual step-down operation already queued")
 	}
 
-	return nil
+	return retErr
 }
 
 // sealInternal is an internal method used to seal the vault.  It does not do

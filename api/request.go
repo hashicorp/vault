@@ -15,6 +15,7 @@ type Request struct {
 	URL         *url.URL
 	Params      url.Values
 	ClientToken string
+	WrapTTL     string
 	Obj         interface{}
 	Body        io.Reader
 	BodySize    int64
@@ -60,6 +61,10 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 
 	if len(r.ClientToken) != 0 {
 		req.Header.Set("X-Vault-Token", r.ClientToken)
+	}
+
+	if len(r.WrapTTL) != 0 {
+		req.Header.Set("X-Vault-Wrap-TTL", r.WrapTTL)
 	}
 
 	return req, nil

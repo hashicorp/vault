@@ -1,13 +1,14 @@
 package logical
 
 import (
-	"strings"
 	"sync"
+
+	"github.com/hashicorp/vault/physical"
 )
 
 // InmemStorage implements Storage and stores all data in memory.
 type InmemStorage struct {
-	Data map[string]*StorageEntry
+	phys *physical.InmemBackend
 
 	once sync.Once
 }
@@ -15,33 +16,38 @@ type InmemStorage struct {
 func (s *InmemStorage) List(prefix string) ([]string, error) {
 	s.once.Do(s.init)
 
-	var result []string
-	for k, _ := range s.Data {
-		if strings.HasPrefix(k, prefix) {
-			result = append(result, k)
-		}
-	}
-
-	return result, nil
+	return s.phys.List(prefix)
 }
 
 func (s *InmemStorage) Get(key string) (*StorageEntry, error) {
 	s.once.Do(s.init)
-	return s.Data[key], nil
+	entry, err := s.phys.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
+	}
+	return &StorageEntry{
+		Key:   entry.Key,
+		Value: entry.Value,
+	}, nil
 }
 
 func (s *InmemStorage) Put(entry *StorageEntry) error {
 	s.once.Do(s.init)
-	s.Data[entry.Key] = entry
-	return nil
+	physEntry := &physical.Entry{
+		Key:   entry.Key,
+		Value: entry.Value,
+	}
+	return s.phys.Put(physEntry)
 }
 
 func (s *InmemStorage) Delete(k string) error {
 	s.once.Do(s.init)
-	delete(s.Data, k)
-	return nil
+	return s.phys.Delete(k)
 }
 
 func (s *InmemStorage) init() {
-	s.Data = make(map[string]*StorageEntry)
+	s.phys = physical.NewInmem(nil)
 }

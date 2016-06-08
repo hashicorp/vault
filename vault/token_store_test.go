@@ -244,9 +244,12 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Root is an unlimited use token, should be a no-op
-	err = ts.UseToken(ent)
+	te, err := ts.UseToken(ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if te == nil {
+		t.Fatalf("token entry after use was nil")
 	}
 
 	// Lookup the root token again
@@ -266,9 +269,12 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Use the token
-	err = ts.UseToken(ent)
+	te, err = ts.UseToken(ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+	if te == nil {
+		t.Fatalf("token entry for use #1 was nil")
 	}
 
 	// Lookup the token
@@ -283,10 +289,17 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	// Use the token
-	err = ts.UseToken(ent)
+	te, err = ts.UseToken(ent)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	if te == nil {
+		t.Fatalf("token entry for use #2 was nil")
+	}
+	if te.NumUses != -1 {
+		t.Fatalf("token entry after use #2 did not have revoke flag")
+	}
+	ts.Revoke(te.ID)
 
 	// Lookup the token
 	ent2, err = ts.Lookup(ent.ID)
@@ -1003,6 +1016,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"ttl":              int64(3600),
 		"role":             "",
 		"explicit_max_ttl": int64(0),
+		"renewable":        true,
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1045,6 +1059,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"ttl":              int64(3600),
 		"role":             "",
 		"explicit_max_ttl": int64(0),
+		"renewable":        true,
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1257,7 +1272,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"name":             "test",
 		"orphan":           true,
 		"period":           int64(259200),
-		"allowed_policies": []string{"test1", "test2"},
+		"allowed_policies": []string{"default", "test1", "test2"},
 		"path_suffix":      "happenin",
 		"explicit_max_ttl": int64(0),
 	}
@@ -1298,7 +1313,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"name":             "test",
 		"orphan":           true,
 		"period":           int64(284400),
-		"allowed_policies": []string{"test3"},
+		"allowed_policies": []string{"default", "test3"},
 		"path_suffix":      "happenin",
 		"explicit_max_ttl": int64(0),
 	}
@@ -1345,7 +1360,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"name":             "test",
 		"orphan":           true,
 		"explicit_max_ttl": int64(5),
-		"allowed_policies": []string{"test3"},
+		"allowed_policies": []string{"default", "test3"},
 		"path_suffix":      "happenin",
 		"period":           int64(0),
 	}

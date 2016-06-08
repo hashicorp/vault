@@ -510,6 +510,16 @@ func (m *ExpirationManager) FetchLeaseTimes(leaseID string) (*leaseEntry, error)
 		ExpireTime:      le.ExpireTime,
 		LastRenewalTime: le.LastRenewalTime,
 	}
+	if le.Secret != nil {
+		ret.Secret = &logical.Secret{}
+		ret.Secret.Renewable = le.Secret.Renewable
+		ret.Secret.TTL = le.Secret.TTL
+	}
+	if le.Auth != nil {
+		ret.Auth = &logical.Auth{}
+		ret.Auth.Renewable = le.Auth.Renewable
+		ret.Auth.TTL = le.Auth.TTL
+	}
 
 	return ret, nil
 }
@@ -576,10 +586,10 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	}
 
 	// Handle standard revocation via backends
-	_, err := m.router.Route(logical.RevokeRequest(
+	resp, err := m.router.Route(logical.RevokeRequest(
 		le.Path, le.Secret, le.Data))
-	if err != nil {
-		return fmt.Errorf("failed to revoke entry: %v", err)
+	if err != nil || (resp != nil && resp.IsError()) {
+		return fmt.Errorf("failed to revoke entry: resp:%#v err:%s", resp, err)
 	}
 	return nil
 }
@@ -593,8 +603,8 @@ func (m *ExpirationManager) renewEntry(le *leaseEntry, increment time.Duration) 
 
 	req := logical.RenewRequest(le.Path, &secret, le.Data)
 	resp, err := m.router.Route(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to renew entry: %v", err)
+	if err != nil || (resp != nil && resp.IsError()) {
+		return nil, fmt.Errorf("failed to renew entry: resp:%#v err:%s", resp, err)
 	}
 	return resp, nil
 }

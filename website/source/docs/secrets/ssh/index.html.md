@@ -79,7 +79,7 @@ Success! Data written to: ssh/roles/otp_key_role
 
 ### Create a Credential
 
-Create an OTP credential for an IP that belongs to `otp_key_role`.
+Create an OTP credential for an IP of the remote host that belongs to `otp_key_role`.
 
 ```text
 $ vault write ssh/creds/otp_key_role ip=x.x.x.x
@@ -117,9 +117,12 @@ Password: <Enter OTP>
 The OTP will be entered automatically using `sshpass` if it is installed.
 
 ```text
-$ vault ssh -role otp_key_role username@x.x.x.x
-username@ip:~$
+$ vault ssh -role otp_key_role -strict-host-key-checking=no username@x.x.x.x
+username@<IP of remote host>:~$
 ```
+
+Note: `sshpass` cannot handle host key checking. Host key checking can be
+disabled by setting `-strict-host-key-checking=no`.
 
 ----------------------------------------------------
 ## II. Dynamic Key Type
@@ -222,7 +225,7 @@ To see the default, see [linux_install_script.go](https://github.com/hashicorp/v
 
 ### Create a credential
 
-Create a dynamic key for an IP that is covered by `dynamic_key_role`'s CIDR
+Create a dynamic key for an IP of the remote host that is covered by `dynamic_key_role`'s CIDR
 list.
 
 ```text
@@ -270,8 +273,8 @@ Save the key to a file (e.g. `dyn_key.pem`) and then use it to establish an
 SSH session.
 
 ```text
-$ ssh -i dyn_key.pem username@ip
-username@ip:~$
+$ ssh -i dyn_key.pem username@<IP of remote host>
+username@<IP of remote host>:~$
 ```
 
 ### Automate it!
@@ -280,8 +283,8 @@ Creation of new key, saving to a file, and using it to establish an SSH session
 can all be done with a single Vault CLI command.
 
 ```text
-$ vault ssh -role dynamic_key_role username@ip
-username@ip:~$
+$ vault ssh -role dynamic_key_role username@<IP of remote host>
+username@<IP of remote host>:~$
 ```
 
 ----------------------------------------------------
@@ -437,10 +440,11 @@ username@ip:~$
         <span class="param">allowed_users</span>
         <span class="param-flags">optional for both types</span>
 	      (String)
-	      If this option is not specified, a client can request credentials
-        to log into any valid user at the remote host, including the admin
-        user. If this field is set, credentials can only be created for
-        the values in this list and the value of the `default_user` field.
+	      If this option is not specified, credentials can be created only for
+              `default_user` at the remote host. If this field is set, credentials
+              can be created only for the users in this list and for the `default_user`.
+              If this option is explicitly set to `*`, then credentials can be created
+              for any username.
       </li>
       <li>
         <span class="param">key_option_specs</span>

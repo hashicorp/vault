@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"io"
+	"time"
 )
 
 // Secret is the structure returned for every secret within Vault.
@@ -23,6 +24,18 @@ type Secret struct {
 	// Auth, if non-nil, means that there was authentication information
 	// attached to this response.
 	Auth *SecretAuth `json:"auth,omitempty"`
+
+	// WrapInfo, if non-nil, means that the initial response was wrapped in the
+	// cubbyhole of the given token (which has a TTL of the given number of
+	// seconds)
+	WrapInfo *SecretWrapInfo `json:"wrap_info,omitempty"`
+}
+
+// SecretWrapInfo contains wrapping information if we have it.
+type SecretWrapInfo struct {
+	Token        string    `json:"token"`
+	TTL          int       `json:"ttl"`
+	CreationTime time.Time `json:"creation_time"`
 }
 
 // SecretAuth is the structure containing auth information if we have it.

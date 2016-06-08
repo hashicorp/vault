@@ -1,4 +1,4 @@
-## 0.5.3 (Unreleased)
+## 0.6.0 (Unreleased)
 
 SECURITY:
 
@@ -38,13 +38,23 @@ DEPRECATIONS/BREAKING CHANGES:
 
 FEATURES:
 
- * **AWS EC2 Auth Backend**: Provides a recure introduction mechanism for AWS EC2
-   instances allowing automated retrieval of Vault tokens. Unlike most Vault
-   authentication backends, this backend does not require first-deploying,
+ * **AWS EC2 Auth Backend**: Provides a secure introduction mechanism for AWS
+   EC2 instances allowing automated retrieval of Vault tokens. Unlike most
+   Vault authentication backends, this backend does not require first deploying
    or provisioning security-sensitive credentials (tokens, username/password,
-   client certificates,etc). Instead, it treats AWS as a Trusted Third Party
+   client certificates, etc). Instead, it treats AWS as a Trusted Third Party
    and uses the cryptographically signed dynamic metadata information that
-   uniquely represents each EC2 instance.
+   uniquely represents each EC2 instance. [Vault
+   Enterprise](https://www.hashicorp.com/vault.html) customers have access to a
+   turnkey client that speaks the backend API and makes access to a Vault token
+   easy.
+ * **Response Wrapping**: Nearly any response within Vault can now be wrapped
+   inside a single-use, time-limited token's cubbyhole, taking the [Cubbyhole
+   Authentication
+   Principles](https://www.hashicorp.com/blog/vault-cubbyhole-principles.html)
+   mechanism to its logical conclusion. Retrieving the original response is as
+   simple as a single API command or the new `vault unwrap` command. This makes
+   secret distribution easier and more secure, including secure introduction.
  * **Azure Physical Backend**: You can now use Azure blob object storage as
    your Vault physical data store [GH-1266]
  * **Consul Backend Health Checks**: The Consul backend will automatically
@@ -58,12 +68,18 @@ FEATURES:
    system- or mount-set values. This is useful, for instance, when the max TTL
    of the system or the `auth/token` mount must be set high to accommodate
    certain needs but you want more granular restrictions on tokens being issued
-   directly from `auth/token`. [GH-1399]
+   directly from the Token authentication backend at `auth/token`. [GH-1399]
+ * **RabbitMQ Secret Backend**: Vault can now generate credentials for
+   RabbitMQ. Vhosts and tags can be defined within roles. [GH-788]
 
 IMPROVEMENTS:
 
  * audit: Add the DisplayName value to the copy of the Request object embedded
    in the associated Response, to match the original Request object [GH-1387]
+ * audit: Enable auditing of the `seal` and `step-down` commands [GH-1435]
+ * backends: Remove most `root`/`sudo` paths in favor of normal ACL mechanisms.
+   A particular exception are any current MFA paths. A few paths in `token` and
+   `sys` also require `root` or `sudo`. [GH-1478]
  * command/auth: Restore the previous authenticated token if the `auth` command
    fails to authenticate the provided token [GH-1233]
  * command/write: `-format` and `-field` can now be used with the `write`
@@ -78,13 +94,21 @@ IMPROVEMENTS:
    backend [GH-1404]
  * credential/ldap: If `groupdn` is not configured, skip searching LDAP and
    only return policies for local groups, plus a warning [GH-1283]
+ * credential/ldap: `vault list` support for users and groups [GH-1270]
+ * credential/ldap: Support for the `memberOf` attribute for group membership
+   searching [GH-1245]
  * credential/userpass: Add list support for users [GH-911]
  * credential/userpass: Remove user configuration paths from requiring sudo, in
    favor of normal ACL mechanisms [GH-1312]
+ * credential/token: Sanitize policies and add `default` policies in appropriate
+   places [GH-1235]
  * secret/aws: Use chain credentials to allow environment/EC2 instance/shared
    providers [GH-307]
+ * secret/aws: Support for STS AssumeRole functionality [GH-1318]
  * secret/pki: Added `exclude_cn_from_sans` field to prevent adding the CN to
    DNS or Email Subject Alternate Names [GH-1220]
+ * secret/consul: Reading consul access configuration supported. The response
+   will contain non-sensitive information only [GH-1445]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
    of a token on a given path [GH-1221]
 
@@ -97,6 +121,11 @@ BUG FIXES:
  * command/various: Tell the JSON decoder to not convert all numbers to floats;
    fixes some various places where numbers were showing up in scientific
    notation
+ * command/server: Prioritized `devRootTokenID` and `devListenAddress` flags
+   over their respective env vars [GH-1480]
+ * command/ssh: Provided option to disable host key checking. The automated
+   variant of `vault ssh` command uses `sshpass` which was failing to handle
+   host key checking presented by the `ssh` binary. [GH-1473]
  * core: Properly persist mount-tuned TTLs for auth backends [GH-1371]
  * core: Don't accidentally crosswire SIGINT to the reload handler [GH-1372]
  * credential/github: Make organization comparison case-insensitive during
@@ -114,8 +143,50 @@ BUG FIXES:
  * credential/various: Fix renewal conditions when `default` policy is not
    contained in the backend config [GH-1256]
  * physical/s3: Don't panic in certain error cases from bad S3 responses [GH-1353]
+ * secret/consul: Use non-pooled Consul API client to avoid leaving files open
+   [GH-1428]
  * secret/pki: Don't check whether a certificate is destined to be a CA
    certificate if sign-verbatim endpoint is used [GH-1250]
+
+## 0.5.3 (May 27th, 2016)
+
+SECURITY:
+
+ * Consul ACL Token Revocation: An issue was reported to us indicating that
+   generated Consul ACL tokens were not being properly revoked. Upon
+   investigation, we found that this behavior was reproducible in a specific
+   scenario: when a generated lease for a Consul ACL token had been renewed
+   prior to revocation. In this case, the generated token was not being
+   properly persisted internally through the renewal function, leading to an
+   error during revocation due to the missing token. Unfortunately, this was
+   coded as a user error rather than an internal error, and the revocation
+   logic was expecting internal errors if revocation failed. As a result, the
+   revocation logic believed the revocation to have succeeded when it in fact
+   failed, causing the lease to be dropped while the token was still valid
+   within Consul. In this release, the Consul backend properly persists the
+   token through renewals, and the revocation logic has been changed to
+   consider any error type to have been a failure to revoke, causing the lease
+   to persist and attempt to be revoked later.
+
+We have written an example shell script that searches through Consul's ACL
+tokens and looks for those generated by Vault, which can be used as a template
+for a revocation script as deemed necessary for any particular security
+response. The script is available at
+https://gist.github.com/jefferai/6233c2963f9407a858d84f9c27d725c0
+
+Please note that any outstanding leases for Consul tokens produced prior to
+0.5.3 that have been renewed will continue to exhibit this behavior. As a
+result, we recommend either revoking all tokens produced by the backend and
+issuing new ones, or if needed, a more advanced variant of the provided example
+could use the timestamp embedded in each generated token's name to decide which
+tokens are too old and should be deleted. This could then be run periodically
+up until the maximum lease time for any outstanding pre-0.5.3 tokens has
+expired.
+
+This is a security-only release. There are no other code changes since 0.5.2.
+The binaries have one additional change: they are built against Go 1.6.1 rather
+than Go 1.6, as Go 1.6.1 contains two security fixes to the Go programming
+language itself.
 
 ## 0.5.2 (March 16th, 2016)
 

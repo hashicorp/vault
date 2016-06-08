@@ -610,8 +610,8 @@ func TestSystemBackend_policyList(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"cubbyhole-response-wrapping", "default", "root"},
+		"policies": []string{"cubbyhole-response-wrapping", "default", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -663,8 +663,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "foo", "root"},
-		"policies": []string{"default", "foo", "root"},
+		"keys":     []string{"cubbyhole-response-wrapping", "default", "foo", "root"},
+		"policies": []string{"cubbyhole-response-wrapping", "default", "foo", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -698,8 +698,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"cubbyhole-response-wrapping", "default", "root"},
+		"policies": []string{"cubbyhole-response-wrapping", "default", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)

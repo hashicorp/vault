@@ -19,12 +19,6 @@ func Backend() *framework.Backend {
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
-		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-			},
-		},
-
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
 			pathConfigLease(&b),

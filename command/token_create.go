@@ -123,8 +123,8 @@ Token Options:
 
   -lease="1h"             Deprecated; use "-ttl" instead.
 
-  -ttl="1h"               TTL to associate with the token. This option enables
-                          the tokens to be renewable.
+  -ttl="1h"               Initial TTL to associate with the token; renewals can
+                          extend this value.
 
   -metadata="key=value"   Metadata to associate with the token. This shows
                           up in the audit log. This can be specified multiple

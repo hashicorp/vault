@@ -47,8 +47,11 @@ func (b *backend) pathTokenRead(
 	}
 
 	// Get the consul client
-	c, err := client(req.Storage)
-	if err != nil {
+	c, userErr, intErr := client(req.Storage)
+	if intErr != nil {
+		return nil, intErr
+	}
+	if userErr != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
@@ -67,7 +70,9 @@ func (b *backend) pathTokenRead(
 	// Use the helper to create the secret
 	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
 		"token": token,
-	}, nil)
+	}, map[string]interface{}{
+		"token": token,
+	})
 	s.Secret.TTL = result.Lease
 
 	return s, nil

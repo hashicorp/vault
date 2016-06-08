@@ -2,6 +2,21 @@ package policyutil
 
 import "testing"
 
+func TestSanitizePolicies(t *testing.T) {
+	expected := []string{"foo", "bar"}
+	actual := SanitizePolicies([]string{"foo", "bar"}, false)
+	if !EquivalentPolicies(expected, actual) {
+		t.Fatal("bad: expected:%s\ngot:%s\n", expected, actual)
+	}
+
+	// If 'default' is already added, do not remove it.
+	expected = []string{"foo", "bar", "default"}
+	actual = SanitizePolicies([]string{"foo", "bar", "default"}, false)
+	if !EquivalentPolicies(expected, actual) {
+		t.Fatal("bad: expected:%s\ngot:%s\n", expected, actual)
+	}
+}
+
 func TestParsePolicies(t *testing.T) {
 	expected := []string{"foo", "bar", "default"}
 	actual := ParsePolicies("foo,bar")

@@ -210,7 +210,7 @@ For Consul, the following options are supported:
     information to Consul.  Defaults to "5s".
 
   * `disable_registration` (optional) - If true, then Vault will not register
-    itself with Vault.  Defaults to "false".
+    itself with Consul.  Defaults to "false".
 
   * `service` (optional) - The name of the service to register with Consul.
     Defaults to "vault".

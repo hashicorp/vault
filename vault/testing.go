@@ -167,6 +167,7 @@ func TestCoreWithTokenStore(t *testing.T) (*Core, *TokenStore, []byte, string) {
 	c, key, root := TestCoreUnsealed(t)
 
 	me := &MountEntry{
+		Table:       credentialTableType,
 		Path:        "token/",
 		Type:        "token",
 		Description: "token based credentials",
@@ -184,7 +185,7 @@ func TestCoreWithTokenStore(t *testing.T) (*Core, *TokenStore, []byte, string) {
 	ts := tokenstore.(*TokenStore)
 
 	router := NewRouter()
-	router.Mount(ts, "auth/token/", &MountEntry{UUID: ""}, ts.view)
+	router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: ""}, ts.view)
 
 	subview := c.systemBarrierView.SubView(expirationSubPath)
 	logger := log.New(os.Stderr, "", log.LstdFlags)

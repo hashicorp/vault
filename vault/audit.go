@@ -26,6 +26,10 @@ const (
 	// auditBarrierPrefix is the prefix to the UUID used in the
 	// barrier view for the audit backends.
 	auditBarrierPrefix = "audit/"
+
+	// auditTableType is the value we expect to find for the audit table and
+	// corresponding entries
+	auditTableType = "audit"
 )
 
 var (
@@ -146,6 +150,26 @@ func (c *Core) loadAudits() error {
 
 	// Done if we have restored the audit table
 	if c.audit != nil {
+		needPersist := false
+
+		// Upgrade to typed auth table
+		if c.audit.Type == "" {
+			c.audit.Type = auditTableType
+			needPersist = true
+		}
+
+		// Upgrade to table-scoped entries
+		for _, entry := range c.audit.Entries {
+			if entry.Table == "" {
+				entry.Table = c.audit.Type
+				needPersist = true
+			}
+		}
+
+		if needPersist {
+			return c.persistAudit(c.audit)
+		}
+
 		return nil
 	}
 
@@ -159,6 +183,25 @@ func (c *Core) loadAudits() error {
 
 // persistAudit is used to persist the audit table after modification
 func (c *Core) persistAudit(table *MountTable) error {
+	if table.Type != auditTableType {
+		c.logger.Printf(
+			"[ERR] core: given table to persist has type %s but need type %s",
+			table.Type,
+			auditTableType)
+		return fmt.Errorf("invalid table type given, not persisting")
+	}
+
+	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Printf(
+				"[ERR] core: entry in audit table with path %s has table value %s but is in table %s, refusing to persist",
+				entry.Path,
+				entry.Table,
+				table.Type)
+			return fmt.Errorf("invalid audit entry found, not persisting")
+		}
+	}
+
 	// Marshal the table
 	raw, err := json.Marshal(table)
 	if err != nil {
@@ -240,7 +283,9 @@ func (c *Core) newAuditBackend(t string, view logical.Storage, conf map[string]s
 
 // defaultAuditTable creates a default audit table
 func defaultAuditTable() *MountTable {
-	table := &MountTable{}
+	table := &MountTable{
+		Type: auditTableType,
+	}
 	return table
 }
 

@@ -23,5 +23,4 @@ RUN go get github.com/mitchellh/gox
 
 RUN mkdir -p /gopath/src/github.com/hashicorp/vault
 WORKDIR /gopath/src/github.com/hashicorp/vault
-ENV CGO_ENABLED=0
 CMD make bin

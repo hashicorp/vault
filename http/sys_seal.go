@@ -13,19 +13,21 @@ import (
 
 func handleSysSeal(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "PUT":
-		case "POST":
+		req, statusCode, err := buildLogicalRequest(w, r)
+		if err != nil || statusCode != 0 {
+			respondError(w, statusCode, err)
+			return
+		}
+
+		switch req.Operation {
+		case logical.UpdateOperation:
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
 
-		// Get the auth for the request so we can access the token directly
-		req := requestAuth(r, &logical.Request{})
-
 		// Seal with the token above
-		if err := core.Seal(req.ClientToken); err != nil {
+		if err := core.SealWithRequest(req); err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -36,19 +38,21 @@ func handleSysSeal(core *vault.Core) http.Handler {
 
 func handleSysStepDown(core *vault.Core) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case "PUT":
-		case "POST":
+		req, statusCode, err := buildLogicalRequest(w, r)
+		if err != nil || statusCode != 0 {
+			respondError(w, statusCode, err)
+			return
+		}
+
+		switch req.Operation {
+		case logical.UpdateOperation:
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 			return
 		}
 
-		// Get the auth for the request so we can access the token directly
-		req := requestAuth(r, &logical.Request{})
-
 		// Seal with the token above
-		if err := core.StepDown(req.ClientToken); err != nil {
+		if err := core.StepDown(req); err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}

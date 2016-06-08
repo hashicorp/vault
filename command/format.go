@@ -129,12 +129,17 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 
 	input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
 
+	input = append(input, fmt.Sprintf("--- %s -----", config.Delim))
+
 	if s.LeaseDuration > 0 {
 		if s.LeaseID != "" {
 			input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
+			input = append(input, fmt.Sprintf(
+				"lease_duration %s %d", config.Delim, s.LeaseDuration))
+		} else {
+			input = append(input, fmt.Sprintf(
+				"refresh_interval %s %d", config.Delim, s.LeaseDuration))
 		}
-		input = append(input, fmt.Sprintf(
-			"lease_duration %s %d", config.Delim, s.LeaseDuration))
 		if s.LeaseID != "" {
 			input = append(input, fmt.Sprintf(
 				"lease_renewable %s %s", config.Delim, strconv.FormatBool(s.Renewable)))
@@ -150,6 +155,12 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		for k, v := range s.Auth.Metadata {
 			input = append(input, fmt.Sprintf("token_meta_%s %s %#v", k, config.Delim, v))
 		}
+	}
+
+	if s.WrapInfo != nil {
+		input = append(input, fmt.Sprintf("wrapping_token: %s %s", config.Delim, s.WrapInfo.Token))
+		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %d", config.Delim, s.WrapInfo.TTL))
+		input = append(input, fmt.Sprintf("wrapping_token_creation_time: %s %s", config.Delim, s.WrapInfo.CreationTime.String()))
 	}
 
 	keys := make([]string, 0, len(s.Data))

@@ -32,14 +32,27 @@ func (b *backend) secretTokenRenew(
 
 func secretTokenRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	c, err := client(req.Storage)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+	c, userErr, intErr := client(req.Storage)
+	if intErr != nil {
+		return nil, intErr
+	}
+	if userErr != nil {
+		// Returning logical.ErrorResponse from revocation function is risky
+		return nil, userErr
 	}
 
-	_, err = c.ACL().Destroy(d.Get("token").(string), nil)
+	tokenRaw, ok := req.Secret.InternalData["token"]
+	if !ok {
+		// We return nil here because this is a pre-0.5.3 problem and there is
+		// nothing we can do about it. We already can't revoke the lease
+		// properly if it has been renewed and this is documented pre-0.5.3
+		// behavior with a security bulletin about it.
+		return nil, nil
+	}
+
+	_, err := c.ACL().Destroy(tokenRaw.(string), nil)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 
 	return nil, nil

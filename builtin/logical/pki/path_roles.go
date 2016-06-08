@@ -271,6 +271,15 @@ func (b *backend) pathRoleRead(
 		Data: structs.New(role).Map(),
 	}
 
+	if resp.Data == nil {
+		return nil, fmt.Errorf("error converting role data to response")
+	}
+
+	// These values are deprecated and the entries are migrated on read
+	delete(resp.Data, "lease")
+	delete(resp.Data, "lease_max")
+	delete(resp.Data, "allowed_base_domain")
+
 	return resp, nil
 }
 

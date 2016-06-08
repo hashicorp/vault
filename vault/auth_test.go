@@ -1,11 +1,72 @@
 package vault
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
 )
+
+func TestAuth_UpgradeAWSEC2Auth(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// create a no-op backend in the name of "aws"
+	c.credentialBackends["aws"] = func(*logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+
+	// create a mount entry and create an entry in the mount table
+	me := &MountEntry{
+		Table: credentialTableType,
+		Path:  "aws",
+		Type:  "aws",
+	}
+	err := c.enableCredential(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// save the mount table with an auth entry for "aws"
+	mt := c.auth
+	before, err := json.Marshal(mt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := &Entry{
+		Key:   coreAuthConfigPath,
+		Value: before,
+	}
+	if err := c.barrier.Put(entry); err != nil {
+		t.Fatal(err)
+	}
+
+	// create an expected value
+	var expectedMt MountTable
+	expectedMt = *c.auth
+
+	for _, entry := range expectedMt.Entries {
+		if entry.Type == "aws" {
+			entry.Type = "aws-ec2"
+		}
+	}
+	expected, err := json.Marshal(&expectedMt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// loadCredentials should upgrade the mount table and the entry should now be "aws-ec2"
+	err = c.loadCredentials()
+
+	// read the entry back again and compare it with the expected value
+	actual, err := c.barrier.Get(coreAuthConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual.Value) {
+		t.Fatalf("bad: expected\n%s\ngot\n%s\n", string(expected), string(entry.Value))
+	}
+}
 
 func TestCore_DefaultAuthTable(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
@@ -41,8 +102,9 @@ func TestCore_EnableCredential(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err := c.enableCredential(me)
 	if err != nil {
@@ -86,8 +148,9 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err := c.enableCredential(me)
 	if err != nil {
@@ -109,8 +172,9 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 func TestCore_EnableCredential_Token(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
-		Path: "foo",
-		Type: "token",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "token",
 	}
 	err := c.enableCredential(me)
 	if err.Error() != "token credential backend cannot be instantiated" {
@@ -130,8 +194,9 @@ func TestCore_DisableCredential(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err = c.enableCredential(me)
 	if err != nil {
@@ -188,8 +253,9 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	me := &MountEntry{
-		Path: "foo",
-		Type: "noop",
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
 	}
 	err := c.enableCredential(me)
 	if err != nil {
@@ -259,6 +325,9 @@ func TestDefaultAuthTable(t *testing.T) {
 func verifyDefaultAuthTable(t *testing.T, table *MountTable) {
 	if len(table.Entries) != 1 {
 		t.Fatalf("bad: %v", table.Entries)
+	}
+	if table.Type != credentialTableType {
+		t.Fatalf("bad: %v", *table)
 	}
 	for idx, entry := range table.Entries {
 		switch idx {

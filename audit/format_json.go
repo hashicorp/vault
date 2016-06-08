@@ -46,6 +46,7 @@ func (f *FormatJSON) FormatRequest(
 			Path:        req.Path,
 			Data:        req.Data,
 			RemoteAddr:  getRemoteAddr(req),
+			WrapTTL:     int(req.WrapTTL / time.Second),
 		},
 	})
 }
@@ -86,6 +87,15 @@ func (f *FormatJSON) FormatResponse(
 		}
 	}
 
+	var respWrapInfo *JSONWrapInfo
+	if resp.WrapInfo != nil {
+		respWrapInfo = &JSONWrapInfo{
+			TTL:          int(resp.WrapInfo.TTL / time.Second),
+			Token:        resp.WrapInfo.Token,
+			CreationTime: resp.WrapInfo.CreationTime,
+		}
+	}
+
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
@@ -104,6 +114,7 @@ func (f *FormatJSON) FormatResponse(
 			Path:       req.Path,
 			Data:       req.Data,
 			RemoteAddr: getRemoteAddr(req),
+			WrapTTL:    int(req.WrapTTL / time.Second),
 		},
 
 		Response: JSONResponse{
@@ -111,6 +122,7 @@ func (f *FormatJSON) FormatResponse(
 			Secret:   respSecret,
 			Data:     resp.Data,
 			Redirect: resp.Redirect,
+			WrapInfo: respWrapInfo,
 		},
 	})
 }
@@ -140,6 +152,7 @@ type JSONRequest struct {
 	Path        string                 `json:"path"`
 	Data        map[string]interface{} `json:"data"`
 	RemoteAddr  string                 `json:"remote_address"`
+	WrapTTL     int                    `json:"wrap_ttl"`
 }
 
 type JSONResponse struct {
@@ -147,6 +160,7 @@ type JSONResponse struct {
 	Secret   *JSONSecret            `json:"secret,emitempty"`
 	Data     map[string]interface{} `json:"data"`
 	Redirect string                 `json:"redirect"`
+	WrapInfo *JSONWrapInfo          `json:"wrap_info,omitempty"`
 }
 
 type JSONAuth struct {
@@ -159,6 +173,12 @@ type JSONAuth struct {
 
 type JSONSecret struct {
 	LeaseID string `json:"lease_id"`
+}
+
+type JSONWrapInfo struct {
+	TTL          int       `json:"ttl"`
+	Token        string    `json:"token"`
+	CreationTime time.Time `json:"creation_time"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

@@ -3,6 +3,7 @@ package logical
 import (
 	"errors"
 	"fmt"
+	"time"
 )
 
 // Request is a struct that stores the parameters and context
@@ -52,6 +53,10 @@ type Request struct {
 	// paths relative to itself. The `Path` is effectively the client
 	// request path with the MountPoint trimmed off.
 	MountPoint string
+
+	// WrapTTL contains the requested TTL of the token used to wrap the
+	// response in a cubbyhole.
+	WrapTTL time.Duration
 }
 
 // Get returns a data field and guards for nil Data

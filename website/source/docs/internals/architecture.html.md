@@ -55,7 +55,7 @@ clarify what is being discussed:
 * **Client Token** - A client token is a conceptually similar to a session cookie on a web site.
   Once a user authenticates, Vault returns a client token which is used for future requests.
   The token is used by Vault to verify the identity of the client and to enforce the applicable
-  ACL policies. Unlike a cookie on a web site, this token is passed via HTTP headers.
+  ACL policies. This token is passed via HTTP headers.
 
 * **Secret** - A secret is the term for anything returned by Vault which contains confidential
   or cryptographic material. Not everything returned by Vault is a secret, for example
@@ -76,7 +76,7 @@ clarify what is being discussed:
 
 A very high level overview of Vault looks like this:
 
-![Architecture Overview](/assets/images/layers.png)
+[![Architecture Overview](/assets/images/layers.png)](/assets/images/layers.png)
 
 Let's begin to break down this picture. There is a clear separation of components
 that are inside or outside of the security barrier. Only the storage backend and

@@ -9,15 +9,9 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return Backend().Setup(conf)
 }
 
-func Backend() *framework.Backend {
+func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
-		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"config/*",
-			},
-		},
-
 		Paths: []*framework.Path{
 			pathConfigAccess(),
 			pathRoles(),
@@ -29,7 +23,7 @@ func Backend() *framework.Backend {
 		},
 	}
 
-	return b.Backend
+	return &b
 }
 
 type backend struct {

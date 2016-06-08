@@ -112,8 +112,12 @@ func (m *RollbackManager) triggerRollbacks() {
 	backends := m.backends()
 
 	for _, e := range backends {
-		if _, ok := m.inflight[e.Path]; !ok {
-			m.startRollback(e.Path)
+		path := e.Path
+		if e.Table == credentialTableType {
+			path = "auth/" + path
+		}
+		if _, ok := m.inflight[path]; !ok {
+			m.startRollback(path)
 		}
 	}
 }
@@ -194,9 +198,6 @@ func (c *Core) startRollback() error {
 		c.authLock.RLock()
 		defer c.authLock.RUnlock()
 		for _, entry := range c.auth.Entries {
-			if !strings.HasPrefix(entry.Path, "auth/") {
-				entry.Path = "auth/" + entry.Path
-			}
 			ret = append(ret, entry)
 		}
 		return ret

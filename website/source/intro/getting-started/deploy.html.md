@@ -19,8 +19,8 @@ seal/unseal process, and scaling Vault.
 ## Configuring Vault
 
 Vault is configured using [HCL](https://github.com/hashicorp/hcl) files.
-As a reminder, these files are also JSON-compatible. The configuration
-file for Vault is relatively simple. An example is shown below:
+As a reminder, JSON files are also fully HCL-compatible; HCL is a superset of JSON.
+The configuration file for Vault is relatively simple. An example is shown below:
 
 ```javascript
 backend "consul" {
@@ -120,15 +120,7 @@ Key 5: b47fdeb7dda82dbe92d88d3c860f605005
 Initial Root Token: eaf5cc32-b48f-7785-5c94-90b5ce300e9b
 
 Vault initialized with 5 keys and a key threshold of 3!
-
-Please securely distribute the above keys. Whenever a Vault server
-is started, it must be unsealed with 3 (the threshold)
-of the keys above (any of the keys, as long as the total number equals
-the threshold).
-
-Vault does not store the original master key. If you lose the keys
-above such that you no longer have the minimum number (the
-threshold), then your Vault will not be able to be unsealed.
+...
 ```
 
 Initialization outputs two incredibly important pieces of information:
@@ -136,9 +128,13 @@ the _unseal keys_ and the _initial root token_. This is the
 **only time ever** that all of this data is known by Vault, and also the
 only time that the unseal keys should ever be so close together.
 
-For the purpose of this getting started guide, save all these keys
+For the purpose of this getting started guide, save all of these keys
 somewhere, and continue. In a real deployment scenario, you would never
-save these keys together.
+save these keys together. Instead, you would likely use Vault's PGP and
+Keybase.io support to encrypt each of these keys with the users' PGP keys.
+This prevents one single person from having all the unseal keys. Please
+see the documentation on [using PGP keys with Vault](/docs/concepts/pgp-gpg-keybase-integration.html)
+for more information.
 
 ## Seal/Unseal
 

@@ -1,10 +1,12 @@
 package vault
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -38,8 +40,9 @@ func TestCore_DefaultMountTable(t *testing.T) {
 func TestCore_Mount(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
-		Path: "foo",
-		Type: "generic",
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
 	}
 	err := c.mount(me)
 	if err != nil {
@@ -116,8 +119,9 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 
 	// Mount the noop backend
 	me := &MountEntry{
-		Path: "test/",
-		Type: "noop",
+		Table: mountTableType,
+		Path:  "test/",
+		Type:  "noop",
 	}
 	if err := c.mount(me); err != nil {
 		t.Fatalf("err: %v", err)
@@ -233,8 +237,9 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 	// Mount the noop backend
 	me := &MountEntry{
-		Path: "test/",
-		Type: "noop",
+		Table: mountTableType,
+		Path:  "test/",
+		Type:  "noop",
 	}
 	if err := c.mount(me); err != nil {
 		t.Fatalf("err: %v", err)
@@ -320,6 +325,143 @@ func TestDefaultMountTable(t *testing.T) {
 	verifyDefaultTable(t, table)
 }
 
+func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
+	}
+
+	me := &MountEntry{
+		Table: auditTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err := c.enableAudit(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
+		return &NoopBackend{}, nil
+	}
+
+	me = &MountEntry{
+		Table: credentialTableType,
+		Path:  "foo",
+		Type:  "noop",
+	}
+	err = c.enableCredential(me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	testCore_MountTable_UpgradeToTyped_Common(t, c, "mounts")
+	testCore_MountTable_UpgradeToTyped_Common(t, c, "audits")
+	testCore_MountTable_UpgradeToTyped_Common(t, c, "credentials")
+}
+
+func testCore_MountTable_UpgradeToTyped_Common(
+	t *testing.T,
+	c *Core,
+	testType string) {
+
+	var path string
+	var mt *MountTable
+	switch testType {
+	case "mounts":
+		path = coreMountConfigPath
+		mt = c.mounts
+	case "audits":
+		path = coreAuditConfigPath
+		mt = c.audit
+	case "credentials":
+		path = coreAuthConfigPath
+		mt = c.auth
+	}
+
+	// Save the expected table
+	goodJson, err := json.Marshal(mt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a pre-typed version
+	mt.Type = ""
+	for _, entry := range mt.Entries {
+		entry.Table = ""
+	}
+
+	raw, err := json.Marshal(mt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if reflect.DeepEqual(raw, goodJson) {
+		t.Fatalf("bad: values here should be different")
+	}
+
+	entry := &Entry{
+		Key:   path,
+		Value: raw,
+	}
+	if err := c.barrier.Put(entry); err != nil {
+		t.Fatal(err)
+	}
+
+	var persistFunc func(*MountTable) error
+
+	// It should load successfully and be upgraded and persisted
+	switch testType {
+	case "mounts":
+		err = c.loadMounts()
+		persistFunc = c.persistMounts
+		mt = c.mounts
+	case "credentials":
+		err = c.loadCredentials()
+		persistFunc = c.persistAuth
+		mt = c.auth
+	case "audits":
+		err = c.loadAudits()
+		persistFunc = c.persistAudit
+		mt = c.audit
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entry, err = c.barrier.Get(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(entry.Value, goodJson) {
+		t.Fatalf("bad: expected\n%s\ngot\n%s\n", string(goodJson), string(entry.Value))
+	}
+
+	// Now try saving invalid versions
+	origTableType := mt.Type
+	mt.Type = "foo"
+	if err := persistFunc(mt); err == nil {
+		t.Fatal("expected error")
+	}
+
+	if len(mt.Entries) > 0 {
+		mt.Type = origTableType
+		mt.Entries[0].Table = "bar"
+		if err := persistFunc(mt); err == nil {
+			t.Fatal("expected error")
+		}
+
+		mt.Entries[0].Table = mt.Type
+		if err := persistFunc(mt); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func verifyDefaultTable(t *testing.T, table *MountTable) {
 	if len(table.Entries) != 3 {
 		t.Fatalf("bad: %v", table.Entries)
@@ -347,6 +489,9 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
 			}
+		}
+		if entry.Table != mountTableType {
+			t.Fatalf("bad: %v", entry)
 		}
 		if entry.Description == "" {
 			t.Fatalf("bad: %v", entry)
