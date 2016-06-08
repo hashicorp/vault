@@ -69,6 +69,8 @@ FEATURES:
    of the system or the `auth/token` mount must be set high to accommodate
    certain needs but you want more granular restrictions on tokens being issued
    directly from the Token authentication backend at `auth/token`. [GH-1399]
+ * **RabbitMQ Secret Backend**: Vault can now generate credentials for
+   RabbitMQ. Vhosts and tags can be defined within roles. [GH-788]
 
 IMPROVEMENTS:
 
