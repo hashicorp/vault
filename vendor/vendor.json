@@ -3,10 +3,35 @@
 	"ignore": "test appengine go1.7",
 	"package": [
 		{
-			"checksumSHA1": "Ths2rUHl+MYcso9yOnmv4LQDKj8=",
-			"path": "github.com/Azure/azure-sdk-for-go/storage",
+			"checksumSHA1": "Q+0Zz0iylSKMck4JhYc8XR83i8M=",
+			"path": "github.com/Azure/azure-sdk-for-go/core/http",
 			"revision": "ca4d906d1c0973ae3022588df7dfa13d53b5b476",
 			"revisionTime": "2016-05-31T07:18:06Z"
+		},
+		{
+			"checksumSHA1": "F2fqk+OPM3drSkK0G6So5ASayyA=",
+			"path": "github.com/Azure/azure-sdk-for-go/core/tls",
+			"revision": "ca4d906d1c0973ae3022588df7dfa13d53b5b476",
+			"revisionTime": "2016-05-31T07:18:06Z"
+		},
+		{
+			"checksumSHA1": "SGOuRzxuQpJChBvq6SsNojKvcKw=",
+			"path": "github.com/Azure/azure-sdk-for-go/management",
+			"revision": "ca4d906d1c0973ae3022588df7dfa13d53b5b476",
+			"revisionTime": "2016-05-31T07:18:06Z"
+		},
+		{
+			"checksumSHA1": "hzwziaU5QlMlFcFPdbEmW18oV3Y=",
+			"path": "github.com/Azure/azure-sdk-for-go/management/sql",
+			"revision": "ca4d906d1c0973ae3022588df7dfa13d53b5b476",
+			"revisionTime": "2016-05-31T07:18:06Z"
+		},
+		{
+			"checksumSHA1": "Ths2rUHl+MYcso9yOnmv4LQDKj8=",
+			"origin": "github.com/hashicorp/vault/vendor/github.com/Azure/azure-sdk-for-go/storage",
+			"path": "github.com/Azure/azure-sdk-for-go/storage",
+			"revision": "ddd365ff4bcf400700733f3c0575be173be3841d",
+			"revisionTime": "2016-06-03T23:38:51Z"
 		},
 		{
 			"checksumSHA1": "d6798KSc0jDg2MHNxKdgyNfMK7A=",
@@ -653,6 +678,18 @@
 		{
 			"checksumSHA1": "s2qT4UwvzBSkzXuiuMkowif1Olw=",
 			"path": "golang.org/x/crypto/openpgp/s2k",
+			"revision": "5bcd134fee4dd1475da17714aac19c0aa0142e2f",
+			"revisionTime": "2016-05-16T23:05:56Z"
+		},
+		{
+			"checksumSHA1": "KeaQhXgb4KlZWJM7aIgcJwCKNOg=",
+			"path": "golang.org/x/crypto/pkcs12",
+			"revision": "5bcd134fee4dd1475da17714aac19c0aa0142e2f",
+			"revisionTime": "2016-05-16T23:05:56Z"
+		},
+		{
+			"checksumSHA1": "iVJcif9M9uefvvqHCNR9VQrjc/s=",
+			"path": "golang.org/x/crypto/pkcs12/internal/rc2",
 			"revision": "5bcd134fee4dd1475da17714aac19c0aa0142e2f",
 			"revisionTime": "2016-05-16T23:05:56Z"
 		},
