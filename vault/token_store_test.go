@@ -1275,6 +1275,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies": []string{"default", "test1", "test2"},
 		"path_suffix":      "happenin",
 		"explicit_max_ttl": int64(0),
+		"renewable":        true,
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -1288,6 +1289,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"period":           "79h",
 		"allowed_policies": "test3",
 		"path_suffix":      "happenin",
+		"renewable":        false,
 	}
 
 	resp, err = core.HandleRequest(req)
@@ -1316,6 +1318,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies": []string{"default", "test3"},
 		"path_suffix":      "happenin",
 		"explicit_max_ttl": int64(0),
+		"renewable":        false,
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -1363,6 +1366,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		"allowed_policies": []string{"default", "test3"},
 		"path_suffix":      "happenin",
 		"period":           int64(0),
+		"renewable":        false,
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {

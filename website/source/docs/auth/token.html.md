@@ -604,6 +604,13 @@ of the header should be "X-Vault-Token" and the value should be the token.
         renew. This cannot be used in conjunction with `explicit_max_ttl`.
       </li>
       <li>
+        <span class="param">renewable</span>
+        <span class="param-flags">optional</span>
+        Set to `false` to disable the ability of token created against this
+        role to be renewed past their initial TTL. Defaults to `true`, which
+        allows tokens to be renewed up to the system/mount maximum TTL.
+      </li>
+      <li>
         <span class="param">path_suffix</span>
         <span class="param-flags">optional</span>
         If set, tokens created against this role will have the given suffix as
