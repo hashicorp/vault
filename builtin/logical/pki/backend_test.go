@@ -1784,6 +1784,107 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	return ret
 }
 
+func TestBackend_PathFetchCertList(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend()
+	_, err := b.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"ttl":         "6h",
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// config urls
+	urlsData := map[string]interface{}{
+		"issuing_certificates":    "http://127.0.0.1:8200/v1/pki/ca",
+		"crl_distribution_points": "http://127.0.0.1:8200/v1/pki/crl",
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/urls",
+		Storage:   storage,
+		Data:      urlsData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to config urls, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a role entry
+	roleData := map[string]interface{}{
+		"allowed_domains":  "test.com",
+		"allow_subdomains": "true",
+		"max_ttl":          "4h",
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test-example",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// issue a couple of certs
+	certData := map[string]interface{}{
+		"common_name": "example.test.com",
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/test-example",
+		Storage:   storage,
+		Data:      certData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to issue a cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// list certs
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "certs",
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to list certs, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 const (
 	rsaCAKey string = `-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA1eKB2nFbRqTFs7KyZjbzB5VRCBbnLZfEXVP1c3bHe+YGjlfl

@@ -73,6 +73,29 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	}
 }
 
+// This returns the list of serial numbers for certs
+func pathFetchListCerts(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "certs/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathFetchCertList,
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
+func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
+	entries, err := req.Storage.List("certs/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
+}
+
 func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	var serial, pemType, contentType string
 	var certEntry, revokedEntry *logical.StorageEntry
