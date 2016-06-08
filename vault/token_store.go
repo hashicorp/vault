@@ -156,6 +156,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 						Default:     0,
 						Description: tokenExplicitMaxTTLHelp,
 					},
+
+					"renewable": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     true,
+						Description: tokenRenewableHelp,
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -443,6 +449,9 @@ type tsRoleEntry struct {
 	// If set, a suffix will be set on the token path, making it easier to
 	// revoke using 'revoke-prefix'
 	PathSuffix string `json:"path_suffix" mapstructure:"path_suffix" structs:"path_suffix"`
+
+	// If set, controls whether created tokens are marked as being renewable
+	Renewable bool `json:"renewable" mapstructure:"renewable" structs:"renewable"`
 
 	// If set, the token entry will have an explicit maximum TTL set, rather
 	// than deferring to role/mount values
@@ -979,6 +988,12 @@ func (ts *TokenStore) handleCreateCommon(
 	if role != nil {
 		te.Role = role.Name
 
+		// If renewable hasn't been disabled in the call and the role has
+		// renewability disabled, set renewable false
+		if renewable && !role.Renewable {
+			renewable = false
+		}
+
 		if role.PathSuffix != "" {
 			te.Path = fmt.Sprintf("%s/%s", te.Path, role.PathSuffix)
 		}
@@ -1480,6 +1495,7 @@ func (ts *TokenStore) tokenStoreRoleRead(
 			"name":             role.Name,
 			"orphan":           role.Orphan,
 			"path_suffix":      role.PathSuffix,
+			"renewable":        role.Renewable,
 		},
 	}
 
@@ -1534,6 +1550,13 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 		entry.Period = time.Second * time.Duration(periodInt.(int))
 	} else if req.Operation == logical.CreateOperation {
 		entry.Period = time.Second * time.Duration(data.Get("period").(int))
+	}
+
+	renewableInt, ok := data.GetOk("renewable")
+	if ok {
+		entry.Renewable = renewableInt.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		entry.Renewable = data.Get("renewable").(bool)
 	}
 
 	var resp *logical.Response
@@ -1641,4 +1664,7 @@ the current maximum TTL values of the role
 and the mount are not checked for changes,
 and any updates to these values will have
 no effect on the token being renewed.`
+	tokenRenewableHelp = `Tokens created via this role will be
+renewable or not according to this value.
+Defaults to "true".`
 )
