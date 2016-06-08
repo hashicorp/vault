@@ -423,6 +423,50 @@ subpath for interactive help output.
   </dd>
 </dl>
 
+### /pki/certs/
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of the current certificates by serial number only.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/certs/?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id":"",
+      "renewable":false,
+      "lease_duration":0,
+      "data":{
+        "keys":[
+          "17:67:16:b0:b9:45:58:c0:3a:29:e3:cb:d6:98:33:7a:a6:3b:66:c1",
+          "26:0f:76:93:73:cb:3f:a0:7a:ff:97:85:42:48:3a:aa:e5:96:03:21"
+        ]
+      },
+      "wrap_info":null,
+      "warnings":null,
+      "auth":null
+    }
+    ...
+    ```
+
+  </dd>
+</dl>
+
 ### /pki/config/ca
 #### POST
 
