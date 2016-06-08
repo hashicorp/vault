@@ -48,6 +48,7 @@ func Backend() *framework.Backend {
 			pathFetchCRL(&b),
 			pathFetchCRLViaCertPath(&b),
 			pathFetchValid(&b),
+			pathFetchListCerts(&b),
 			pathRevoke(&b),
 			pathTidy(&b),
 		},
