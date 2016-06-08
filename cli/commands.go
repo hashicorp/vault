@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/mysql"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/builtin/logical/postgresql"
+	"github.com/hashicorp/vault/builtin/logical/rabbitmq"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 
@@ -80,6 +81,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"mssql":      mssql.Factory,
 					"mysql":      mysql.Factory,
 					"ssh":        ssh.Factory,
+					"rabbitmq":   rabbitmq.Factory,
 				},
 				ShutdownCh:  command.MakeShutdownCh(),
 				SighupCh:    command.MakeSighupCh(),
