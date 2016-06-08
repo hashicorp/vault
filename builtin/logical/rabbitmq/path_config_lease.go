@@ -14,10 +14,12 @@ func pathConfigLease(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
+				Default:     0,
 				Description: "Duration before which the issued credentials needs renewal",
 			},
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
+				Default:     0,
 				Description: `Duration after which the issued credentials should not be allowed to be renewed`,
 			},
 		},
