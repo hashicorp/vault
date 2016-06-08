@@ -463,8 +463,12 @@ profile enabled. Vault will handle renewing profile credentials as they rotate.
 #### Backend Reference: Azure (Community-Supported)
 
   * `accountName` (required) - The Azure Storage account name
+
   * `accountKey`  (required) - The Azure Storage account key
+
   * `container`   (required) - The Azure Storage Blob container name
+
+  * `max_parallel` (optional) - The maximum number of concurrent connections to Azure. Defaults to "128".
 
 The current implementation is limited to a maximum of 4 MBytes per blob/file. 
 
