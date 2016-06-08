@@ -102,6 +102,9 @@ IMPROVEMENTS:
    favor of normal ACL mechanisms [GH-1312]
  * credential/token: Sanitize policies and add `default` policies in appropriate
    places [GH-1235]
+ * credential/token: Setting the renewable status of a token is now possible
+   via `vault token-create` and the API. The default is true, but tokens can be
+   specified as non-renewable. [GH-1499]
  * secret/aws: Use chain credentials to allow environment/EC2 instance/shared
    providers [GH-307]
  * secret/aws: Support for STS AssumeRole functionality [GH-1318]
