@@ -38,6 +38,10 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
 	b, _ := Factory(logical.TestBackendConfig())
 
 	logicaltest.Test(t, logicaltest.TestCase{
