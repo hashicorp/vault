@@ -28,9 +28,6 @@ go get github.com/kardianos/govendor
 ## Init
 govendor init
 
-## Filter out tags in testing packages
-sed -i -e 's/test/test appengine go1.7/' vendor/vendor.json
-
 ## Fetch deps
 echo "Fetching deps, will take some time..."
 govendor fetch +missing
