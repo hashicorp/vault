@@ -2,6 +2,7 @@ package github
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -17,7 +18,9 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	token, ok := m["token"]
 	if !ok {
-		return "", fmt.Errorf("'token' var must be set")
+		if token = os.Getenv("VAULT_GITHUB_AUTH_TOKEN"); token == "" {
+			return "", fmt.Errorf("GitHub token should be provided either as 'value' for 'token' key,\nor via an env var VAULT_GITHUB_AUTH_TOKEN")
+		}
 	}
 
 	path := fmt.Sprintf("auth/%s/login", mount)
