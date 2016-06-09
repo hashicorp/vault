@@ -14,6 +14,8 @@ func handleSysHealth(core *vault.Core) http.Handler {
 		switch r.Method {
 		case "GET":
 			handleSysHealthGet(core, w, r)
+		case "HEAD":
+			handleSysHealthHead(core, w, r)
 		default:
 			respondError(w, http.StatusMethodNotAllowed, nil)
 		}
@@ -34,7 +36,38 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 }
 
 func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	code, body, err := getSysHealth(core, r)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, nil)
+		return
+	}
 
+	if body == nil {
+		respondError(w, code, nil)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(code)
+
+	// Generate the response
+	enc := json.NewEncoder(w)
+	enc.Encode(body)
+}
+
+func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	code, body, err := getSysHealth(core, r)
+	if err != nil {
+		code = http.StatusInternalServerError
+	}
+
+	if body != nil {
+		w.Header().Add("Content-Type", "application/json")
+	}
+	w.WriteHeader(code)
+}
+
+func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, error) {
 	// Check if being a standby is allowed for the purpose of a 200 OK
 	_, standbyOK := r.URL.Query()["standbyok"]
 
@@ -42,24 +75,21 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	// point
 	sealedCode := http.StatusInternalServerError
 	if code, found, ok := fetchStatusCode(r, "sealedcode"); !ok {
-		respondError(w, http.StatusBadRequest, nil)
-		return
+		return http.StatusBadRequest, nil, nil
 	} else if found {
 		sealedCode = code
 	}
 
 	standbyCode := http.StatusTooManyRequests // Consul warning code
 	if code, found, ok := fetchStatusCode(r, "standbycode"); !ok {
-		respondError(w, http.StatusBadRequest, nil)
-		return
+		return http.StatusBadRequest, nil, nil
 	} else if found {
 		standbyCode = code
 	}
 
 	activeCode := http.StatusOK
 	if code, found, ok := fetchStatusCode(r, "activecode"); !ok {
-		respondError(w, http.StatusBadRequest, nil)
-		return
+		return http.StatusBadRequest, nil, nil
 	} else if found {
 		activeCode = code
 	}
@@ -69,8 +99,7 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	standby, _ := core.Standby()
 	init, err := core.Initialized()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
-		return
+		return http.StatusInternalServerError, nil, err
 	}
 
 	// Determine the status code
@@ -91,12 +120,7 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 		Standby:       standby,
 		ServerTimeUTC: time.Now().UTC().Unix(),
 	}
-
-	// Generate the response
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(code)
-	enc := json.NewEncoder(w)
-	enc.Encode(body)
+	return code, body, nil
 }
 
 type HealthResponse struct {
