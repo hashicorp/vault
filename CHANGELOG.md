@@ -140,6 +140,10 @@ BUG FIXES:
  * core: Don't accidentally crosswire SIGINT to the reload handler [GH-1372]
  * credential/github: Make organization comparison case-insensitive during
    login [GH-1359]
+ * credential/github: Fix panic when renewing a token created with some earlier
+   versions of Vault [GH-1510]
+ * credential/github: The token used to log in via `vault auth` can now be
+   specified in the `VAULT_AUTH_GITHUB_TOKEN` environment variable [GH-1511]
  * credential/ldap: Fix problem where certain error conditions when configuring
    or opening LDAP connections would cause a panic instead of return a useful
    error message [GH-1262]
