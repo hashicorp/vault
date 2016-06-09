@@ -77,11 +77,11 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("request auth was nil")
 	}
 
-	tokenInt, ok := req.Auth.InternalData["token"]
+	tokenRaw, ok := req.Auth.InternalData["token"]
 	if !ok {
 		return nil, fmt.Errorf("token created in previous version of Vault cannot be validated properly at renewal time")
 	}
-	token := tokenInt.(string)
+	token := tokenRaw.(string)
 
 	var verifyResp *verifyCredentialsResp
 	if verifyResponse, resp, err := b.verifyCredentials(req, token); err != nil {
