@@ -28,7 +28,8 @@ $ vault auth -method=github token=<api token>
 
 The endpoint for the GitHub login is `auth/github/login`. 
 
-The `github` mountpoint value in the url is the default mountpoint value. If you have mounted the `github` backend with a different mountpoint, use that value.
+The `github` mountpoint value in the url is the default mountpoint value.
+If you have mounted the `github` backend with a different mountpoint, use that value.
 
 The `token` should be sent in the POST body encoded as JSON.
 
@@ -116,6 +117,8 @@ The above would make anyone in the "admins" team a root user in Vault
 (not recommended).
 
 You can then auth with a user that is a member of the "admins" team using a Personal Access Token with the `read:org` scope.
+
+GitHub token can also be supplied from the env variable `VAULT_GITHUB_AUTH_TOKEN`.
 
 ```
 $ vault auth -method=github token=000000905b381e723b3d6a7d52f148a5d43c4b45
