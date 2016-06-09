@@ -18,8 +18,8 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	token, ok := m["token"]
 	if !ok {
-		if token = os.Getenv("VAULT_GITHUB_AUTH_TOKEN"); token == "" {
-			return "", fmt.Errorf("GitHub token should be provided either as 'value' for 'token' key,\nor via an env var VAULT_GITHUB_AUTH_TOKEN")
+		if token = os.Getenv("VAULT_AUTH_GITHUB_TOKEN"); token == "" {
+			return "", fmt.Errorf("GitHub token should be provided either as 'value' for 'token' key,\nor via an env var VAULT_AUTH_GITHUB_TOKEN")
 		}
 	}
 
