@@ -120,6 +120,7 @@ IMPROVEMENTS:
  * secret/pki: Added list support for certificates [GH-1466]
  * sys/capabilities: Enforce ACL checks for requests that query the capabilities
    of a token on a given path [GH-1221]
+ * sys/health: Status information can now be retrieved with `HEAD` [GH-1509]
 
 BUG FIXES:
 
