@@ -9,18 +9,18 @@ description: |-
 # /sys/health
 
 <dl>
-	<dt>Description</dt>
-	<dd>
+    <dt>Description</dt>
+    <dd>
         Returns the health status of Vault. This matches the semantics of a
         Consul HTTP health check and provides a simple way to monitor the
         health of a Vault instance.
-	</dd>
+    </dd>
 
-	<dt>Method</dt>
-	<dd>GET</dd>
+    <dt>Method</dt>
+    <dd>GET/HEAD</dd>
 
-	<dt>Parameters</dt>
-	<dd>
+    <dt>Parameters</dt>
+    <dd>
         <ul>
           <li>
             <span class="param">standbyok</span>
@@ -47,10 +47,10 @@ description: |-
             be returned for a sealed node instead of the default of `500`
           </li>
         </ul>
-	</dd>
+    </dd>
 
-	<dt>Returns</dt>
-	<dd>
+    <dt>Returns (only with GET)</dt>
+    <dd>
 
     ```javascript
     {
@@ -60,7 +60,7 @@ description: |-
     }
     ```
 
-    Default Status Codes:
+    Default Status Codes (GET/HEAD):
 
  * `200` if initialized, unsealed, and active.
  * `429` if unsealed and standby.
