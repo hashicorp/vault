@@ -34,12 +34,6 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (
 		Paths: []*framework.Path{
 			&framework.Path{
 				Pattern: ".*",
-				Fields: map[string]*framework.FieldSchema{
-					"ttl": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "TTL time for this key when read. Ex: 1h",
-					},
-				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation:   b.handleRead,
