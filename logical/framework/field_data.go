@@ -63,6 +63,18 @@ func (d *FieldData) Get(k string) interface{} {
 	return value
 }
 
+// GetDefaultOrZero gets the default value set on the schema for the given
+// field. If there is no default value set, the zero value of the type
+// will be returned.
+func (d *FieldData) GetDefaultOrZero(k string) interface{} {
+	schema, ok := d.Schema[k]
+	if !ok {
+		panic(fmt.Sprintf("field %s not in the schema", k))
+	}
+
+	return schema.DefaultOrZero()
+}
+
 // GetOk gets the value for the given field. The second return value
 // will be false if the key is invalid or the key is not set at all.
 func (d *FieldData) GetOk(k string) (interface{}, bool) {
