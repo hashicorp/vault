@@ -265,7 +265,7 @@ instance fails to renew the token on time.
 #### Enable AWS EC2 authentication in Vault.
 
 ```
-$ vault auth-enable aws
+$ vault auth-enable aws-ec2
 ```
 
 #### Configure the credentials required to make AWS API calls
