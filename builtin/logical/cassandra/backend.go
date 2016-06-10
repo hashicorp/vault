@@ -16,7 +16,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 }
 
 // Backend contains the base information for the backend's functionality
-func Backend() *framework.Backend {
+func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
@@ -32,7 +32,7 @@ func Backend() *framework.Backend {
 		},
 	}
 
-	return b.Backend
+	return &b
 }
 
 type backend struct {
