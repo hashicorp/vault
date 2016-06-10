@@ -610,8 +610,8 @@ func TestSystemBackend_policyList(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"keys":     []string{"response-wrapping", "default", "root"},
-		"policies": []string{"response-wrapping", "default", "root"},
+		"keys":     []string{"default", "response-wrapping", "root"},
+		"policies": []string{"default", "response-wrapping", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -663,8 +663,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"response-wrapping", "default", "foo", "root"},
-		"policies": []string{"response-wrapping", "default", "foo", "root"},
+		"keys":     []string{"default", "foo", "response-wrapping", "root"},
+		"policies": []string{"default", "foo", "response-wrapping", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -698,8 +698,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"response-wrapping", "default", "root"},
-		"policies": []string{"response-wrapping", "default", "root"},
+		"keys":     []string{"default", "response-wrapping", "root"},
+		"policies": []string{"default", "response-wrapping", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)

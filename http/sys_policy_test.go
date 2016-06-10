@@ -17,8 +17,8 @@ func TestSysPolicies(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"response-wrapping", "default", "root"},
-		"keys":     []interface{}{"response-wrapping", "default", "root"},
+		"policies": []interface{}{"default", "response-wrapping", "root"},
+		"keys":     []interface{}{"default", "response-wrapping", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -62,8 +62,8 @@ func TestSysWritePolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"response-wrapping", "default", "foo", "root"},
-		"keys":     []interface{}{"response-wrapping", "default", "foo", "root"},
+		"policies": []interface{}{"default", "foo", "response-wrapping", "root"},
+		"keys":     []interface{}{"default", "foo", "response-wrapping", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -100,8 +100,8 @@ func TestSysDeletePolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"response-wrapping", "default", "root"},
-		"keys":     []interface{}{"response-wrapping", "default", "root"},
+		"policies": []interface{}{"default", "response-wrapping", "root"},
+		"keys":     []interface{}{"default", "response-wrapping", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
