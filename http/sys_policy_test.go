@@ -17,8 +17,8 @@ func TestSysPolicies(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"cubbyhole-response-wrapping", "default", "root"},
-		"keys":     []interface{}{"cubbyhole-response-wrapping", "default", "root"},
+		"policies": []interface{}{"response-wrapping", "default", "root"},
+		"keys":     []interface{}{"response-wrapping", "default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -62,8 +62,8 @@ func TestSysWritePolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"cubbyhole-response-wrapping", "default", "foo", "root"},
-		"keys":     []interface{}{"cubbyhole-response-wrapping", "default", "foo", "root"},
+		"policies": []interface{}{"response-wrapping", "default", "foo", "root"},
+		"keys":     []interface{}{"response-wrapping", "default", "foo", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -71,7 +71,7 @@ func TestSysWritePolicy(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	resp = testHttpPost(t, token, addr+"/v1/sys/policy/cubbyhole-response-wrapping", map[string]interface{}{
+	resp = testHttpPost(t, token, addr+"/v1/sys/policy/response-wrapping", map[string]interface{}{
 		"rules": ``,
 	})
 	testResponseStatus(t, resp, 400)
@@ -94,14 +94,14 @@ func TestSysDeletePolicy(t *testing.T) {
 	// Also attempt to delete these since they should not be allowed (ignore
 	// responses, if they exist later that's sufficient)
 	resp = testHttpDelete(t, token, addr+"/v1/sys/policy/default")
-	resp = testHttpDelete(t, token, addr+"/v1/sys/policy/cubbyhole-response-wrapping")
+	resp = testHttpDelete(t, token, addr+"/v1/sys/policy/response-wrapping")
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/policy")
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"policies": []interface{}{"cubbyhole-response-wrapping", "default", "root"},
-		"keys":     []interface{}{"cubbyhole-response-wrapping", "default", "root"},
+		"policies": []interface{}{"response-wrapping", "default", "root"},
+		"keys":     []interface{}{"response-wrapping", "default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

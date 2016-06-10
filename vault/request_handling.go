@@ -378,7 +378,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	creationTime := time.Now()
 	te := TokenEntry{
 		Path:           req.Path,
-		Policies:       []string{"cubbyhole-response-wrapping"},
+		Policies:       []string{"response-wrapping"},
 		CreationTime:   creationTime.Unix(),
 		TTL:            resp.WrapInfo.TTL,
 		NumUses:        1,
@@ -432,7 +432,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 
 	auth := &logical.Auth{
 		ClientToken: te.ID,
-		Policies:    []string{"cubbyhole-response-wrapping"},
+		Policies:    []string{"response-wrapping"},
 		LeaseOptions: logical.LeaseOptions{
 			TTL:       te.TTL,
 			Renewable: false,

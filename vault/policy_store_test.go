@@ -138,11 +138,11 @@ func TestPolicyStore_Predefined(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(out) != 2 || out[0] != "cubbyhole-response-wrapping" || out[1] != "default" {
+	if len(out) != 2 || out[0] != "response-wrapping" || out[1] != "default" {
 		t.Fatalf("bad: %v", out)
 	}
 
-	pCubby, err := core.policyStore.GetPolicy("cubbyhole-response-wrapping")
+	pCubby, err := core.policyStore.GetPolicy("response-wrapping")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

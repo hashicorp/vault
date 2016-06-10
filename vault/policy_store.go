@@ -20,7 +20,7 @@ const (
 	policyCacheSize = 1024
 
 	// cubbyholeResponseWrappingPolicyName is the name of the fixed policy
-	cubbyholeResponseWrappingPolicyName = "cubbyhole-response-wrapping"
+	cubbyholeResponseWrappingPolicyName = "response-wrapping"
 
 	// cubbyholeResponseWrappingPolicy is the policy that ensures cubbyhole
 	// response wrapping can always succeed
