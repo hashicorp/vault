@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	_ "github.com/lib/pq"
@@ -47,11 +48,31 @@ reduced to the same size.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathConnectionWrite,
+			logical.ReadOperation:   b.pathConnectionRead,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
 		HelpDescription: pathConfigConnectionHelpDesc,
 	}
+}
+
+// pathConnectionRead reads out the connection configuration
+func (b *backend) pathConnectionRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entry, err := req.Storage.Get("config/connection")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read connection configuration")
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var config connectionConfig
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: structs.New(config).Map(),
+	}, nil
 }
 
 func (b *backend) pathConnectionWrite(
@@ -97,10 +118,10 @@ func (b *backend) pathConnectionWrite(
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
-		ConnectionString:   connValue,
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
 		MaxIdleConnections: maxIdleConns,
+		VerifyConnection:   verifyConnection,
 	})
 	if err != nil {
 		return nil, err
@@ -116,11 +137,10 @@ func (b *backend) pathConnectionWrite(
 }
 
 type connectionConfig struct {
-	ConnectionURL string `json:"connection_url"`
-	// Deprecate "value" in coming releases
-	ConnectionString   string `json:"value"`
-	MaxOpenConnections int    `json:"max_open_connections"`
-	MaxIdleConnections int    `json:"max_idle_connections"`
+	ConnectionURL      string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
+	MaxIdleConnections int    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
+	VerifyConnection   bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }
 
 const pathConfigConnectionHelpSyn = `

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/fatih/structs"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -16,12 +17,6 @@ func pathConfigConnection(b *backend) *framework.Path {
 			"connection_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "DB connection string",
-			},
-			"value": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `
-				DB connection string. Use 'connection_url' instead.
-This name is deprecated.`,
 			},
 			"max_open_connections": &framework.FieldSchema{
 				Type:        framework.TypeInt,
@@ -36,6 +31,7 @@ This name is deprecated.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathConnectionWrite,
+			logical.ReadOperation:   b.pathConnectionRead,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -43,16 +39,30 @@ This name is deprecated.`,
 	}
 }
 
+// pathConnectionRead reads out the connection configuration
+func (b *backend) pathConnectionRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entry, err := req.Storage.Get("config/connection")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read connection configuration")
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var config connectionConfig
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: structs.New(config).Map(),
+	}, nil
+}
+
 func (b *backend) pathConnectionWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	connValue := data.Get("value").(string)
 	connURL := data.Get("connection_url").(string)
 	if connURL == "" {
-		if connValue == "" {
-			return logical.ErrorResponse("the connection_url parameter must be supplied"), nil
-		} else {
-			connURL = connValue
-		}
+		return logical.ErrorResponse("the connection_url parameter must be supplied"), nil
 	}
 
 	maxOpenConns := data.Get("max_open_connections").(int)
@@ -81,6 +91,7 @@ func (b *backend) pathConnectionWrite(
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
+		VerifyConnection:   verifyConnection,
 	})
 	if err != nil {
 		return nil, err
@@ -95,10 +106,9 @@ func (b *backend) pathConnectionWrite(
 }
 
 type connectionConfig struct {
-	ConnectionURL string `json:"connection_url"`
-	// Deprecate "value" in coming releases
-	ConnectionString   string `json:"value"`
-	MaxOpenConnections int    `json:"max_open_connections"`
+	ConnectionURL      string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
+	VerifyConnection   bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }
 
 const pathConfigConnectionHelpSyn = `
