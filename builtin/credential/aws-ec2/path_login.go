@@ -244,6 +244,13 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("role entry not found"), nil
 	}
 
+	// Only 'bound_ami_id' constraint is supported on the role currently.
+	// Check if the AMI ID of the instance trying to login matches the
+	// AMI ID specified as a constraint on the role.
+	if identityDoc.AmiID != roleEntry.BoundAmiID {
+		return logical.ErrorResponse(fmt.Sprintf("AMI ID %s does not belong to role %s", identityDoc.AmiID, roleName)), nil
+	}
+
 	// Get the entry from the identity whitelist, if there is one.
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDoc.InstanceID)
 	if err != nil {
