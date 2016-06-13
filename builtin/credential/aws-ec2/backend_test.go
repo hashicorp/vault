@@ -1125,15 +1125,17 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	data := map[string]interface{}{
 		"policies":     "root",
 		"max_ttl":      "120s",
-		"bound_ami_id": amiID,
+		"bound_ami_id": "wrong_ami_id",
 	}
 
-	resp, err := b.HandleRequest(&logical.Request{
+	roleReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "role/" + roleName,
 		Storage:   storage,
 		Data:      data,
-	})
+	}
+
+	resp, err := b.HandleRequest(roleReq)
 	if resp != nil && resp.IsError() {
 		t.Fatalf("failed to create role")
 	}
@@ -1146,13 +1148,27 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		"nonce": "vault-client-nonce",
 	}
 
-	// perform the login operation.
+	// Perform the login operation with a AMI ID that is not matching
+	// the bound on the role.
 	loginRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
 		Storage:   storage,
 		Data:      loginInput,
 	}
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Place the correct AMI ID on the role
+	data["bound_ami_id"] = amiID
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Try to login after the role has a matching AMI ID
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil {
 		t.Fatal(err)
