@@ -163,9 +163,10 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 		if resp.WrapInfo != nil && resp.WrapInfo.Token != "" {
 			httpResp = logical.HTTPResponse{
 				WrapInfo: &logical.HTTPWrapInfo{
-					Token:        resp.WrapInfo.Token,
-					TTL:          int(resp.WrapInfo.TTL.Seconds()),
-					CreationTime: resp.WrapInfo.CreationTime,
+					Token:           resp.WrapInfo.Token,
+					TTL:             int(resp.WrapInfo.TTL.Seconds()),
+					CreationTime:    resp.WrapInfo.CreationTime,
+					WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 				},
 			}
 		} else {

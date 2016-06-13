@@ -68,9 +68,10 @@ func TestCopy_response(t *testing.T) {
 			"foo": "bar",
 		},
 		WrapInfo: &logical.WrapInfo{
-			TTL:          60,
-			Token:        "foo",
-			CreationTime: time.Now(),
+			TTL:             60,
+			Token:           "foo",
+			CreationTime:    time.Now(),
+			WrappedAccessor: "abcd1234",
 		},
 	}
 	arg := expected
@@ -138,9 +139,10 @@ func TestHash(t *testing.T) {
 					"foo": "bar",
 				},
 				WrapInfo: &logical.WrapInfo{
-					TTL:          60,
-					Token:        "bar",
-					CreationTime: now,
+					TTL:             60,
+					Token:           "bar",
+					CreationTime:    now,
+					WrappedAccessor: "bar",
 				},
 			},
 			&logical.Response{
@@ -148,9 +150,10 @@ func TestHash(t *testing.T) {
 					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 				},
 				WrapInfo: &logical.WrapInfo{
-					TTL:          60,
-					Token:        "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
-					CreationTime: now,
+					TTL:             60,
+					Token:           "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					CreationTime:    now,
+					WrappedAccessor: "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 				},
 			},
 		},

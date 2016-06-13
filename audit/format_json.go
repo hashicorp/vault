@@ -90,9 +90,10 @@ func (f *FormatJSON) FormatResponse(
 	var respWrapInfo *JSONWrapInfo
 	if resp.WrapInfo != nil {
 		respWrapInfo = &JSONWrapInfo{
-			TTL:          int(resp.WrapInfo.TTL / time.Second),
-			Token:        resp.WrapInfo.Token,
-			CreationTime: resp.WrapInfo.CreationTime,
+			TTL:             int(resp.WrapInfo.TTL / time.Second),
+			Token:           resp.WrapInfo.Token,
+			CreationTime:    resp.WrapInfo.CreationTime,
+			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 		}
 	}
 
@@ -110,11 +111,12 @@ func (f *FormatJSON) FormatResponse(
 		},
 
 		Request: JSONRequest{
-			Operation:  req.Operation,
-			Path:       req.Path,
-			Data:       req.Data,
-			RemoteAddr: getRemoteAddr(req),
-			WrapTTL:    int(req.WrapTTL / time.Second),
+			ClientToken: req.ClientToken,
+			Operation:   req.Operation,
+			Path:        req.Path,
+			Data:        req.Data,
+			RemoteAddr:  getRemoteAddr(req),
+			WrapTTL:     int(req.WrapTTL / time.Second),
 		},
 
 		Response: JSONResponse{
@@ -176,9 +178,10 @@ type JSONSecret struct {
 }
 
 type JSONWrapInfo struct {
-	TTL          int       `json:"ttl"`
-	Token        string    `json:"token"`
-	CreationTime time.Time `json:"creation_time"`
+	TTL             int       `json:"ttl"`
+	Token           string    `json:"token"`
+	CreationTime    time.Time `json:"creation_time"`
+	WrappedAccessor string    `json:"wrapped_accessor,omitempty"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

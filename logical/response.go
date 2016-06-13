@@ -38,6 +38,10 @@ type WrapInfo struct {
 	// The creation time. This can be used with the TTL to figure out an
 	// expected expiration.
 	CreationTime time.Time
+
+	// If the contained response is the output of a token creation call, the
+	// created token's accessor will be accessible here
+	WrappedAccessor string
 }
 
 // Response is a struct that stores the response of a request.

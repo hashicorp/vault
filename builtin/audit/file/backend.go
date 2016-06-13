@@ -167,7 +167,7 @@ func (b *Backend) LogResponse(
 		// Hash any sensitive information
 
 		// Cache and restore accessor in the auth
-		var accessor string
+		var accessor, wrappedAccessor string
 		if !b.hmacAccessor && auth != nil && auth.Accessor != "" {
 			accessor = auth.Accessor
 		}
@@ -187,11 +187,17 @@ func (b *Backend) LogResponse(
 		if !b.hmacAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
 			accessor = resp.Auth.Accessor
 		}
+		if !b.hmacAccessor && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
+			wrappedAccessor = resp.WrapInfo.WrappedAccessor
+		}
 		if err := audit.Hash(b.salt, resp); err != nil {
 			return err
 		}
 		if accessor != "" {
 			resp.Auth.Accessor = accessor
+		}
+		if wrappedAccessor != "" {
+			resp.WrapInfo.WrappedAccessor = wrappedAccessor
 		}
 	}
 
