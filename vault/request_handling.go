@@ -393,6 +393,8 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	resp.WrapInfo.Token = te.ID
 	resp.WrapInfo.CreationTime = creationTime
 
+	// This will only be non-nil if this response contains a token, so in that
+	// case put the accessor in the wrap info.
 	if resp.Auth != nil {
 		resp.WrapInfo.WrappedAccessor = resp.Auth.Accessor
 	}
