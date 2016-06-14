@@ -252,12 +252,12 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Check if the IAM Role ARN of the instance trying to login matches the
-  // IAM Role ARN specified as a constraint on the role.
-  iamRoleArn := ""
-  iamRoleArn = *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
-  if roleEntry.BoundIamARN != "" && iamRoleArn != roleEntry.BoundIamARN {
-  	return logical.ErrorResponse(fmt.Sprintf("IAM Role ARN %s does not belong to role %s", iamRoleArn, roleName)), nil
-  }
+	// IAM Role ARN specified as a constraint on the role.
+	iamRoleArn := ""
+	iamRoleArn = *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
+	if roleEntry.BoundIamARN != "" && iamRoleArn != roleEntry.BoundIamARN {
+		return logical.ErrorResponse(fmt.Sprintf("IAM Role ARN %s does not belong to role %s", iamRoleArn, roleName)), nil
+	}
 
 	// Get the entry from the identity whitelist, if there is one.
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDoc.InstanceID)
