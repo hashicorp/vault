@@ -34,7 +34,7 @@ fi
 # Tag, unless told not to
 if [ -z $NOTAG ]; then
   echo "==> Tagging..."
-  git commit --allow-empty -a --gpg-sign=348FFC4C -m "Cut version $VERSION"
+  git commit --allow-empty --gpg-sign=348FFC4C -m "Cut version $VERSION"
   git tag -a -m "Version $VERSION" -s -u 348FFC4C "v${VERSION}" $RELBRANCH
 fi
 
