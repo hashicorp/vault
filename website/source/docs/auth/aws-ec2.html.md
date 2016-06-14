@@ -790,11 +790,11 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Registers a role in the backend. Only those instances which are using the role registered using this endpoint,
-    will be able to perform the login operation. Contraints can be specified on the role, that are applied on the
-    instances attempting to login. Currently only one constraint is supported which is 'bound_ami_id', which must
-    be specified. Going forward, when more than one constraint is supported, the requirement will be to specify at
-    least one constraint, but not necessarily 'bound_ami_id'.
+    Registers a role in the backend. Only those instances which are using
+the role registered using this endpoint, will be able to perform the login
+operation. Contraints can be specified on the role, that are applied on the
+instances attempting to login. At least one constraint should be specified
+on the role.
   </dd>
 
   <dt>Method</dt>
@@ -815,8 +815,17 @@ The response will be in JSON. For example:
     <ul>
       <li>
         <span class="param">bound_ami_id</span>
-        <span class="param-flags">required</span>
-        If set, defines a constraint on the EC2 instances that they should be using the AMI ID specified by this parameter.
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instances that they
+should be using the AMI ID specified by this parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">bound_account_id</span>
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instances that the account ID
+in its identity document to match the one specified by this parameter.
       </li>
     </ul>
     <ul>

@@ -1056,9 +1056,16 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 }
 
 // This is an acceptance test.
-// Requires TEST_AWS_EC2_PKCS7, TEST_AWS_EC2_AMI_ID to be set.
-// If the test is not being run on an EC2 instance that has access to credentials using EC2RoleProvider,
-// then TEST_AWS_SECRET_KEY and TEST_AWS_ACCESS_KEY env vars are also required.
+// Requires the following env vars:
+// TEST_AWS_EC2_PKCS7
+// TEST_AWS_EC2_AMI_ID
+// TEST_AWS_EC2_ACCOUNT_ID
+//
+// If the test is not being run on an EC2 instance that has access to
+// credentials using EC2RoleProvider, on top of the above vars, following
+// needs to be set:
+// TEST_AWS_SECRET_KEY
+// TEST_AWS_ACCESS_KEY
 func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	// This test case should be run only when certain env vars are set and
 	// executed as an acceptance test.
@@ -1075,6 +1082,11 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
 	if amiID == "" {
 		t.Fatalf("env var TEST_AWS_EC2_AMI_ID not set")
+	}
+
+	accountID := os.Getenv("TEST_AWS_EC2_ACCOUNT_ID")
+	if accountID == "" {
+		t.Fatalf("env var TEST_AWS_EC2_ACCOUNT_ID not set")
 	}
 
 	roleName := amiID
@@ -1123,9 +1135,10 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 
 	// create an entry for the role. This is required for login to work.
 	data := map[string]interface{}{
-		"policies":     "root",
-		"max_ttl":      "120s",
-		"bound_ami_id": "wrong_ami_id",
+		"policies":         "root",
+		"max_ttl":          "120s",
+		"bound_ami_id":     "wrong_ami_id",
+		"bound_account_id": accountID,
 	}
 
 	roleReq := &logical.Request{
@@ -1136,11 +1149,8 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	}
 
 	resp, err := b.HandleRequest(roleReq)
-	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to create role")
-	}
-	if err != nil {
-		t.Fatal(err)
+	if err != nil && (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
 	}
 
 	loginInput := map[string]interface{}{
@@ -1163,18 +1173,29 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 
 	// Place the correct AMI ID on the role
 	data["bound_ami_id"] = amiID
+	// Place incorrect AccountID on the role
+	data["bound_account_id"] = "wrong-account-id"
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Try to login after the role has a matching AMI ID
+	// Try to login with incorrect AccountID
 	resp, err = b.HandleRequest(loginRequest)
-	if err != nil {
-		t.Fatal(err)
+	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
-	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Fatalf("first login attempt failed")
+
+	data["bound_account_id"] = accountID
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Try to login after the role has a matching AMI ID and AccountID
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil || resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("bad: first login attempt failed: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// Attempt to login again and see if it succeeds

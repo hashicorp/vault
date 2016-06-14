@@ -244,11 +244,18 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("role entry not found"), nil
 	}
 
-	// Only 'bound_ami_id' constraint is supported on the role currently.
-	// Check if the AMI ID of the instance trying to login matches the
+	//log.Printf("\nrole:%#v\n", roleEntry)
+	//log.Printf("\nidentityDoc:%#v\n", identityDoc)
+	// Verify that the AMI ID of the instance trying to login matches the
 	// AMI ID specified as a constraint on the role.
-	if identityDoc.AmiID != roleEntry.BoundAmiID {
-		return logical.ErrorResponse(fmt.Sprintf("AMI ID %s does not belong to role %s", identityDoc.AmiID, roleName)), nil
+	if roleEntry.BoundAmiID != "" && identityDoc.AmiID != roleEntry.BoundAmiID {
+		return logical.ErrorResponse(fmt.Sprintf("AMI ID '%s' does not belong to role '%s'", identityDoc.AmiID, roleName)), nil
+	}
+
+	// Verify that the AccountID of the instance trying to login matches the
+	// AccountID specified as a constraint on the role.
+	if roleEntry.BoundAccountID != "" && identityDoc.AccountID != roleEntry.BoundAccountID {
+		return logical.ErrorResponse(fmt.Sprintf("Account ID '%s' does not belong to role '%s'", identityDoc.AccountID, roleName)), nil
 	}
 
 	// Get the entry from the identity whitelist, if there is one.
@@ -543,6 +550,7 @@ type identityDocument struct {
 	Tags        map[string]interface{} `json:"tags,omitempty" structs:"tags" mapstructure:"tags"`
 	InstanceID  string                 `json:"instanceId,omitempty" structs:"instanceId" mapstructure:"instanceId"`
 	AmiID       string                 `json:"imageId,omitempty" structs:"imageId" mapstructure:"imageId"`
+	AccountID   string                 `json:"accountId,omitempty" structs:"accountId" mapstructure:"accountId"`
 	Region      string                 `json:"region,omitempty" structs:"region" mapstructure:"region"`
 	PendingTime string                 `json:"pendingTime,omitempty" structs:"pendingTime" mapstructure:"pendingTime"`
 }
