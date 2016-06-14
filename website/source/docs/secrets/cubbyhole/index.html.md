@@ -58,6 +58,11 @@ If using the CLI, passing the wrapping token's ID to the `vault unwrap` command
 will return the original value; `-format` and `-field` can be set like with
 `vault read`.
 
+If the original response is an authentication response containing a token, the
+token's accessor will be made available to the caller. This allows a privileged
+caller to generate tokens for clients and be able to manage the tokens'
+lifecycle while not being exposed to the actual client token IDs.
+
 ## Quick Start
 
 The `cubbyhole` backend allows for writing keys with arbitrary values.

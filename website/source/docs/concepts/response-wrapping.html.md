@@ -51,3 +51,9 @@ trusted third party simply to ensure that the private key corresponding to the
 eventual certificate remains private. The end service can be assured that only
 it will see the generated private key and that any malfeasance is detected.
 This can significantly reduce the complexity of any relaying third party.
+
+One final note: if the wrapped response is an authentication response
+containing a Vault token, the token's accessor will be made available in the
+returned wrap information. This allows privileged callers to generate tokens
+for clients and revoke these tokens (and their created leases) at an
+appropriate time, while never being exposed to the actual generated token IDs.
