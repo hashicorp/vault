@@ -161,6 +161,9 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		input = append(input, fmt.Sprintf("wrapping_token: %s %s", config.Delim, s.WrapInfo.Token))
 		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %d", config.Delim, s.WrapInfo.TTL))
 		input = append(input, fmt.Sprintf("wrapping_token_creation_time: %s %s", config.Delim, s.WrapInfo.CreationTime.String()))
+		if s.WrapInfo.WrappedAccessor != "" {
+			input = append(input, fmt.Sprintf("wrapped_accessor: %s %s", config.Delim, s.WrapInfo.WrappedAccessor))
+		}
 	}
 
 	keys := make([]string, 0, len(s.Data))

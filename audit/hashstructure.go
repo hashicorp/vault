@@ -86,6 +86,10 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		}
 
 		s.Token = fn(s.Token)
+
+		if s.WrappedAccessor != "" {
+			s.WrappedAccessor = fn(s.WrappedAccessor)
+		}
 	}
 
 	return nil
