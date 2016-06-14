@@ -244,8 +244,6 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("role entry not found"), nil
 	}
 
-	//log.Printf("\nrole:%#v\n", roleEntry)
-	//log.Printf("\nidentityDoc:%#v\n", identityDoc)
 	// Verify that the AMI ID of the instance trying to login matches the
 	// AMI ID specified as a constraint on the role.
 	if roleEntry.BoundAmiID != "" && identityDoc.AmiID != roleEntry.BoundAmiID {
@@ -256,6 +254,22 @@ func (b *backend) pathLoginUpdate(
 	// AccountID specified as a constraint on the role.
 	if roleEntry.BoundAccountID != "" && identityDoc.AccountID != roleEntry.BoundAccountID {
 		return logical.ErrorResponse(fmt.Sprintf("Account ID '%s' does not belong to role '%s'", identityDoc.AccountID, roleName)), nil
+	}
+
+	// Check if the IAM Role ARN of the instance trying to login matches the
+	// IAM Role ARN specified as a constraint on the role.
+	if roleEntry.BoundIamARN != "" {
+		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
+			return nil, fmt.Errorf("IamInstanceProfile in the instance description is nil")
+		}
+		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
+			return nil, fmt.Errorf("Arn in the instance description is nil")
+		}
+		iamRoleArn := ""
+		iamRoleArn = *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
+		if iamRoleArn != roleEntry.BoundIamARN {
+			return logical.ErrorResponse(fmt.Sprintf("IAM Role ARN %s does not belong to role %s", iamRoleArn, roleName)), nil
+		}
 	}
 
 	// Get the entry from the identity whitelist, if there is one.

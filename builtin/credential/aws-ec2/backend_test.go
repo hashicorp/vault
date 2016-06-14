@@ -1060,6 +1060,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 // TEST_AWS_EC2_PKCS7
 // TEST_AWS_EC2_AMI_ID
 // TEST_AWS_EC2_ACCOUNT_ID
+// TEST_AWS_EC2_IAM_ROLE_ARN
 //
 // If the test is not being run on an EC2 instance that has access to
 // credentials using EC2RoleProvider, on top of the above vars, following
@@ -1082,6 +1083,11 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
 	if amiID == "" {
 		t.Fatalf("env var TEST_AWS_EC2_AMI_ID not set")
+	}
+
+	iamARN := os.Getenv("TEST_AWS_EC2_IAM_ROLE_ARN")
+	if iamARN == "" {
+		t.Fatalf("env var TEST_AWS_EC2_IAM_ROLE_ARN not set")
 	}
 
 	accountID := os.Getenv("TEST_AWS_EC2_ACCOUNT_ID")
@@ -1133,26 +1139,6 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		}
 	}
 
-	// create an entry for the role. This is required for login to work.
-	data := map[string]interface{}{
-		"policies":         "root",
-		"max_ttl":          "120s",
-		"bound_ami_id":     "wrong_ami_id",
-		"bound_account_id": accountID,
-	}
-
-	roleReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "role/" + roleName,
-		Storage:   storage,
-		Data:      data,
-	}
-
-	resp, err := b.HandleRequest(roleReq)
-	if err != nil && (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
-	}
-
 	loginInput := map[string]interface{}{
 		"pkcs7": pkcs7,
 		"nonce": "vault-client-nonce",
@@ -1166,45 +1152,77 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginInput,
 	}
+
+	// Place the wrong AMI ID in the role data.
+	data := map[string]interface{}{
+		"policies":           "root",
+		"max_ttl":            "120s",
+		"bound_ami_id":       "wrong_ami_id",
+		"bound_account_id":   accountID,
+		"bound_iam_role_arn": iamARN,
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/" + roleName,
+		Storage:   storage,
+		Data:      data,
+	}
+
+	// Save the role with wrong AMI ID
+	resp, err := b.HandleRequest(roleReq)
+	if err != nil && (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: resp: %#v\nerr:%v", resp, err)
+	}
+
+	// Expect failure when tried to login with wrong AMI ID
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Place the correct AMI ID on the role
+	// Place the correct AMI ID, but make the AccountID wrong
 	data["bound_ami_id"] = amiID
-	// Place incorrect AccountID on the role
 	data["bound_account_id"] = "wrong-account-id"
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Try to login with incorrect AccountID
+	// Expect failure when tried to login with incorrect AccountID
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
+	// Place the correct AccountID, but make the wrong IAMRoleARN
 	data["bound_account_id"] = accountID
+	data["bound_iam_role_arn"] = "wrong_iam_role_arn"
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Try to login after the role has a matching AMI ID and AccountID
+	// Attempt to login and expect a fail because IAM Role ARN is wrong
 	resp, err = b.HandleRequest(loginRequest)
-	if err != nil || resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Fatalf("bad: first login attempt failed: resp:%#v\nerr:%v", resp, err)
+	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Attempt to login again and see if it succeeds
+	// Place the correct IAM Role ARN
+	data["bound_iam_role_arn"] = iamARN
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Now, the login attempt should succeed
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Fatalf("second login attempt failed")
+		t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// verify the presence of instance_id in the response object.

@@ -30,6 +30,10 @@ using the AMI ID specified by this parameter.`,
 				Description: `If set, defines a constraint on the EC2 instances that the account ID
 in its identity document to match the one specified by this parameter.`,
 			},
+			"bound_iam_role_arn": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that they should be using the IAM Role ARN specified by this parameter.`,
+			},
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
@@ -213,8 +217,12 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundAccountID = boundAccountIDRaw.(string)
 	}
 
+	if boundIamARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
+		roleEntry.BoundIamARN = boundIamARNRaw.(string)
+	}
+
 	// Ensure that at least one bound is set on the role
-	if roleEntry.BoundAccountID == "" && roleEntry.BoundAmiID == "" {
+	if roleEntry.BoundAccountID == "" && roleEntry.BoundAmiID == "" && roleEntry.BoundIamARN == "" {
 		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
 	}
 
@@ -297,6 +305,7 @@ func (b *backend) pathRoleCreateUpdate(
 type awsRoleEntry struct {
 	BoundAmiID               string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
 	BoundAccountID           string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
+	BoundIamARN              string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	RoleTag                  string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
