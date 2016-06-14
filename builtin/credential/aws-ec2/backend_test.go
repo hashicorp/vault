@@ -1131,7 +1131,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		"policies":     "root",
 		"max_ttl":      "120s",
 		"bound_ami_id": "wrong_ami_id",
-		"bound_iam_role_arn" : "wront_iam_role_arn",
+		"bound_iam_role_arn" : iamARN,
 	}
 
 	roleReq := &logical.Request{
@@ -1169,8 +1169,6 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 
 	// Place the correct AMI ID on the role
 	data["bound_ami_id"] = amiID
-	// Place the correct IAM Role ARN on the role
-	data["bound_iam_role_arn"] = iamARN
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1183,6 +1181,26 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	}
 	if resp == nil || resp.Auth == nil || resp.IsError() {
 		t.Fatalf("first login attempt failed")
+	}
+
+	// Place the wrong IAM Role ARN on the role
+	data["bound_iam_role_arn"] = "wrong_iam_role_arn"
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Attempt to login and expect a fail because IAM Role ARN is wrong
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
+	}
+
+	// Place the correct IAM Role ARN
+	data["bound_iam_role_arn"] = iamARN
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// Attempt to login again and see if it succeeds
