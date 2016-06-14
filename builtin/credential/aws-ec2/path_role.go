@@ -27,6 +27,11 @@ func pathRole(b *backend) *framework.Path {
 using the AMI ID specified by this parameter.`,
 			},
 
+			"bound_iam_role_arn": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that they should be using the IAM Role ARN specified by this parameter.`,
+			},
+
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
@@ -211,10 +216,18 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundAmiID = boundAmiIDStr.(string)
 	}
 
+	boundIamARNStr, ok := data.GetOk("bound_iam_role_arn")
+	if ok {
+		roleEntry.BoundIamARN = boundIamARNStr.(string)
+	}
+
 	// At least one bound parameter should be set. Currently, only
-	// 'bound_ami_id' is supported. Check if that is set.
+	// 'bound_ami_id' and 'bound_iam_role_arn' are supported. Check if one of them is set.
 	if roleEntry.BoundAmiID == "" {
-		return logical.ErrorResponse("role is not bounded to any resource; set bound_ami_id"), nil
+		// check if an IAM Role ARN was provided instead of an AMI ID
+		if roleEntry.BoundIamARN == "" {
+			return logical.ErrorResponse("role is not bounded to any resource; set bound_ami_id or bount_iam_role_arn"), nil
+		}
 	}
 
 	policiesStr, ok := data.GetOk("policies")
@@ -295,6 +308,7 @@ func (b *backend) pathRoleCreateUpdate(
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsRoleEntry struct {
 	BoundAmiID               string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
+	BoundIamARN              string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	RoleTag                  string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`

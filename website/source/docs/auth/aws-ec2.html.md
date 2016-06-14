@@ -92,7 +92,7 @@ Subsequent authentication attempts by the client require the nonce to match;
 since only the original client knows the nonce, only the original client is
 allowed to reauthenticate. (This is the reason that this is a whitelist rather
 than a blacklist; by default, it's keeping track of clients allowed to
-reauthenticate, rather than those that are not.) 
+reauthenticate, rather than those that are not.)
 
 It is up to the client to behave correctly with respect to the nonce; if the
 client stores the nonce on disk it can survive reboots, but could also give
@@ -405,7 +405,7 @@ The response will be in JSON. For example:
   <dt>Description</dt>
     Returns the previously configured AWS access credentials.
   <dd>
-    
+
   </dd>
 
   <dt>Method</dt>
@@ -817,6 +817,11 @@ The response will be in JSON. For example:
         <span class="param">bound_ami_id</span>
         <span class="param-flags">required</span>
         If set, defines a constraint on the EC2 instances that they should be using the AMI ID specified by this parameter.
+      </li>
+      <li>
+        <span class="param">bound_iam_role_arn</span>
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instances that they should be using the IAM Role ARN specified by this parameter.
       </li>
     </ul>
     <ul>
