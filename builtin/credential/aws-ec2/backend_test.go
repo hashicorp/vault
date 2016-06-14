@@ -1056,7 +1056,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 }
 
 // This is an acceptance test.
-// Requires TEST_AWS_EC2_PKCS7, TEST_AWS_EC2_AMI_ID to be set.
+// Requires TEST_AWS_EC2_PKCS7, TEST_AWS_EC2_AMI_ID, TEST_AWS_EC2_IAM_ROLE_ARN to be set.
 // If the test is not being run on an EC2 instance that has access to credentials using EC2RoleProvider,
 // then TEST_AWS_SECRET_KEY and TEST_AWS_ACCESS_KEY env vars are also required.
 func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
@@ -1075,6 +1075,11 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	amiID := os.Getenv("TEST_AWS_EC2_AMI_ID")
 	if amiID == "" {
 		t.Fatalf("env var TEST_AWS_EC2_AMI_ID not set")
+	}
+
+	iamARN := os.Getenv("TEST_AWS_EC2_IAM_ROLE_ARN")
+	if iamARN == "" {
+		t.Fatalf("env var TEST_AWS_EC2_IAM_ROLE_ARN not set")
 	}
 
 	roleName := amiID
@@ -1126,6 +1131,7 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 		"policies":     "root",
 		"max_ttl":      "120s",
 		"bound_ami_id": "wrong_ami_id",
+		"bound_iam_role_arn" : "wront_iam_role_arn",
 	}
 
 	roleReq := &logical.Request{
@@ -1163,12 +1169,14 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 
 	// Place the correct AMI ID on the role
 	data["bound_ami_id"] = amiID
+	// Place the correct IAM Role ARN on the role
+	data["bound_iam_role_arn"] = iamARN
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// Try to login after the role has a matching AMI ID
+	// Try to login after the role has a matching AMI ID and matching IAM Role ARN
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil {
 		t.Fatal(err)
