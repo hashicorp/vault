@@ -147,6 +147,30 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 			},
 
 			&framework.Path{
+				Pattern: "auth/(?P<path>.+?)/tune$",
+				Fields: map[string]*framework.FieldSchema{
+					"path": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_tune"][0]),
+					},
+					"default_lease_ttl": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["tune_default_lease_ttl"][0]),
+					},
+					"max_lease_ttl": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["tune_max_lease_ttl"][0]),
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleAuthTuneRead,
+					logical.UpdateOperation: b.handleAuthTuneWrite,
+				},
+				HelpSynopsis:    strings.TrimSpace(sysHelp["auth_tune"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["auth_tune"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "mounts/(?P<path>.+?)/tune$",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -790,6 +814,18 @@ func (b *SystemBackend) handleRemount(
 	return nil, nil
 }
 
+// handleAuthTuneRead is used to get config settings on a auth path
+func (b *SystemBackend) handleAuthTuneRead(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse(
+				"path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+	return b.handleTuneReadCommon("auth/" + path)
+}
+
 // handleMountTuneRead is used to get config settings on a backend
 func (b *SystemBackend) handleMountTuneRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -800,6 +836,14 @@ func (b *SystemBackend) handleMountTuneRead(
 			logical.ErrInvalidRequest
 	}
 
+	// This call will read both logical backend's configuration as well as auth backends'.
+	// Retaining this behavior for backward compatibility. If this behavior is not desired,
+	// an error can be returned if path has a prefix of "auth/".
+	return b.handleTuneReadCommon(path)
+}
+
+// handleTuneReadCommon returns the config settings of a path
+func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, error) {
 	path = sanitizeMountPath(path)
 
 	sysView := b.Core.router.MatchingSystemView(path)
@@ -819,16 +863,34 @@ func (b *SystemBackend) handleMountTuneRead(
 	return resp, nil
 }
 
+// handleAuthTuneWrite is used to set config settings on an auth path
+func (b *SystemBackend) handleAuthTuneWrite(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	path := data.Get("path").(string)
+	if path == "" {
+		return logical.ErrorResponse("path must be specified as a string"),
+			logical.ErrInvalidRequest
+	}
+	return b.handleTuneWriteCommon("auth/"+path, data)
+}
+
 // handleMountTuneWrite is used to set config settings on a backend
 func (b *SystemBackend) handleMountTuneWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	path := data.Get("path").(string)
 	if path == "" {
-		return logical.ErrorResponse(
-				"path must be specified as a string"),
+		return logical.ErrorResponse("path must be specified as a string"),
 			logical.ErrInvalidRequest
 	}
+	// This call will write both logical backend's configuration as well as auth backends'.
+	// Retaining this behavior for backward compatibility. If this behavior is not desired,
+	// an error can be returned if path has a prefix of "auth/".
+	return b.handleTuneWriteCommon(path, data)
+}
 
+// handleTuneWriteCommon is used to set config settings on a path
+func (b *SystemBackend) handleTuneWriteCommon(
+	path string, data *framework.FieldData) (*logical.Response, error) {
 	path = sanitizeMountPath(path)
 
 	// Prevent protected paths from being changed
@@ -975,9 +1037,13 @@ func (b *SystemBackend) handleAuthTable(
 		Data: make(map[string]interface{}),
 	}
 	for _, entry := range b.Core.auth.Entries {
-		info := map[string]string{
+		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
+			"config": map[string]interface{}{
+				"default_lease_ttl": int(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int(entry.Config.MaxLeaseTTL.Seconds()),
+			},
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -1467,8 +1533,16 @@ This path responds to the following HTTP methods.
 		`,
 	},
 
+	"auth_tune": {
+		"Tune the configuration parameters for an auth path.",
+		`Read and write the 'default-lease-ttl' and 'max-lease-ttl' values of
+the auth path.`,
+	},
+
 	"mount_tune": {
 		"Tune backend configuration parameters for this mount.",
+		`Read and write the 'default-lease-ttl' and 'max-lease-ttl' values of
+the mount.`,
 	},
 
 	"renew": {

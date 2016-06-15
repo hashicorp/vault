@@ -57,38 +57,6 @@ description: |-
   </dd>
 </dl>
 
-<dl>
-  <dt>Description</dt>
-  <dd>
-    List the given mount's configuration. Unlike the `mounts`
-    endpoint, this will return the current time in seconds for each
-    TTL, which may be the system default or a mount-specific value.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/sys/mounts/<mount point>/tune`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "default_lease_ttl": 3600,
-      "max_lease_ttl": 7200
-    }
-    ```
-
-  </dd>
-</dl>
-
 ## POST
 
 <dl>
@@ -134,6 +102,67 @@ description: |-
   </dd>
 </dl>
 
+## DELETE
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Unmount the mount point specified in the URL.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/sys/mounts/<mount point>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+# /sys/mounts/<mount point>/tune
+
+## GET
+
+<dl>
+  <dt>Description</dt>
+  <dd>
+    Read the given mount's configuration. Unlike the `mounts`
+    endpoint, this will return the current time in seconds for each
+    TTL, which may be the system default or a mount-specific value.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/sys/mounts/<mount point>/tune`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "default_lease_ttl": 3600,
+      "max_lease_ttl": 7200
+    }
+    ```
+
+  </dd>
+</dl>
+
+## POST
+
 <dl>
   <dt>Description</dt>
   <dd>
@@ -164,29 +193,6 @@ description: |-
         are equivalent and set to the system max TTL.
       </li>
     </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>`204` response code.
-  </dd>
-</dl>
-
-## DELETE
-
-<dl>
-  <dt>Description</dt>
-  <dd>
-    Unmount the mount point specified in the URL.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/sys/mounts/<mount point>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>None
   </dd>
 
   <dt>Returns</dt>
