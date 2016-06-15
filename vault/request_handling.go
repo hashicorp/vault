@@ -57,19 +57,24 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	wrapping := resp != nil && resp.WrapInfo != nil && resp.WrapInfo.TTL != 0
 
 	if wrapping {
-		cubbyResp, err := c.wrapInCubbyhole(req, resp)
+		cubbyResp, wrapErr := c.wrapInCubbyhole(req, resp)
 		// If not successful, returns either an error response from the
 		// cubbyhole backend or an error; if either is set, return
-		if cubbyResp != nil || err != nil {
+		if cubbyResp != nil || wrapErr != nil {
+			err = multierror.Append(err, wrapErr)
 			return cubbyResp, err
 		}
 	}
 
 	// Create an audit trail of the response
-	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
+	if auditErr := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
 		c.logger.Printf("[ERR] core: failed to audit response (request path: %s): %v",
-			req.Path, err)
-		return nil, ErrInternalError
+			req.Path, auditErr)
+		// Append the audit error and an internal error to previous errors
+		// before returning
+		err = multierror.Append(err, auditErr)
+		err = multierror.Append(err, ErrInternalError)
+		return nil, err
 	}
 
 	// If we are wrapping, now is when we create a new response object with the
