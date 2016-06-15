@@ -149,8 +149,23 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		// This command is split into two, 'policy-list' and 'policy-read'.
+		// Retaining the command for backward compatibitity, for now.
+		// This command will be deprecated in favor of the new commands.
 		"policies": func() (cli.Command, error) {
 			return &command.PolicyListCommand{
+				Meta: *metaPtr,
+			}, nil
+		},
+
+		"policy-list": func() (cli.Command, error) {
+			return &command.PolicyListCommand{
+				Meta: *metaPtr,
+			}, nil
+		},
+
+		"policy-read": func() (cli.Command, error) {
+			return &command.PolicyReadCommand{
 				Meta: *metaPtr,
 			}, nil
 		},
