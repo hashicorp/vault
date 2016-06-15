@@ -1162,6 +1162,13 @@ func (ts *TokenStore) handleCreateCommon(
 		}
 	}
 
+	// If the token being generated is not an orphan token and if the parent token's
+	// TTL is shorter than its child token, add a warning that the child token will
+	// be revoked if the parent token is revoked.
+	if te.Parent != "" && parent != nil && parent.TTL != 0 && parent.TTL < te.TTL {
+		resp.AddWarning("parent token's TTL is shorter; token will be revoked if the parent token expires due to non-renewal")
+	}
+
 	// Create the token
 	if err := ts.create(&te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
