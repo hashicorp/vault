@@ -18,6 +18,11 @@ func pathConfigConnection(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "DB connection string",
 			},
+			"value": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `DB connection string. Use 'connection_url' instead.
+This name is deprecated.`,
+			},
 			"max_open_connections": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Description: "Maximum number of open connections to database",
@@ -60,9 +65,14 @@ func (b *backend) pathConnectionRead(req *logical.Request, data *framework.Field
 
 func (b *backend) pathConnectionWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	connValue := data.Get("value").(string)
 	connURL := data.Get("connection_url").(string)
 	if connURL == "" {
-		return logical.ErrorResponse("the connection_url parameter must be supplied"), nil
+		if connValue == "" {
+			return logical.ErrorResponse("the connection_url parameter must be supplied"), nil
+		} else {
+			connURL = connValue
+		}
 	}
 
 	maxOpenConns := data.Get("max_open_connections").(int)
@@ -106,7 +116,9 @@ func (b *backend) pathConnectionWrite(
 }
 
 type connectionConfig struct {
-	ConnectionURL      string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+	// Deprecate "value" in coming releases
+	ConnectionString   string `json:"value" structs:"value" mapstructure:"value"`
 	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	VerifyConnection   bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }

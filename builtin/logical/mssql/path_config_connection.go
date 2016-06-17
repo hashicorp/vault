@@ -38,7 +38,7 @@ func pathConfigConnection(b *backend) *framework.Path {
 	}
 }
 
-// pathConnectionWrite reads out the connection configuration
+// pathConnectionRead reads out the connection configuration
 func (b *backend) pathConnectionRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	entry, err := req.Storage.Get("config/connection")
 	if err != nil {
