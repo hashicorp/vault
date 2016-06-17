@@ -222,7 +222,12 @@ func (b *backend) pathRoleCreateUpdate(
 	}
 
 	// Ensure that at least one bound is set on the role
-	if roleEntry.BoundAccountID == "" && roleEntry.BoundAmiID == "" && roleEntry.BoundIamARN == "" {
+	switch {
+	case roleEntry.BoundAccountID != "":
+	case roleEntry.BoundAmiID != "":
+	case roleEntry.BoundIamARN != "":
+	default:
+
 		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
 	}
 

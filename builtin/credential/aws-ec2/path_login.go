@@ -265,8 +265,7 @@ func (b *backend) pathLoginUpdate(
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
 			return nil, fmt.Errorf("Arn in the instance description is nil")
 		}
-		iamRoleArn := ""
-		iamRoleArn = *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
+		iamRoleArn := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
 		if iamRoleArn != roleEntry.BoundIamARN {
 			return logical.ErrorResponse(fmt.Sprintf("IAM Role ARN %s does not belong to role %s", iamRoleArn, roleName)), nil
 		}
