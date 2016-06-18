@@ -167,11 +167,15 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		if result != nil {
 			resp.Complete = true
 			resp.Nonce = req.Nonce
-
 			// Encode the keys
 			keys := make([]string, 0, len(result.SecretShares))
 			for _, k := range result.SecretShares {
-				keys = append(keys, hex.EncodeToString(k))
+				if result.PGPFingerprints == nil {
+					keys = append(keys, hex.EncodeToString(k))
+				} else {
+					// PGP encoded keys are armored, so just use the plain string.
+					keys = append(keys, string(k))
+				}
 			}
 			resp.Keys = keys
 
