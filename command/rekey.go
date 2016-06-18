@@ -160,7 +160,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	// Provide the keys
 	for i, key := range result.Keys {
 		if len(result.PGPFingerprints) > 0 {
-			c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value: %s", i+1, result.PGPFingerprints[i], key))
+			c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s:\n%s", i+1, result.PGPFingerprints[i], key))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Key %d: %s", i+1, key))
 		}

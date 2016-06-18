@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
 	"golang.org/x/crypto/openpgp/packet"
 )
 
@@ -17,7 +18,7 @@ import (
 // thoroughly tested in the init and rekey command unit tests
 func EncryptShares(input [][]byte, pgpKeys []string) ([]string, [][]byte, error) {
 	if len(input) != len(pgpKeys) {
-		return nil, nil, fmt.Errorf("Mismatch between number items to encrypt and number of PGP keys")
+		return nil, nil, fmt.Errorf("Mismatch between number of items to encrypt and number of PGP keys")
 	}
 	encryptedShares := make([][]byte, 0, len(pgpKeys))
 	entities, err := GetEntities(pgpKeys)
@@ -26,7 +27,11 @@ func EncryptShares(input [][]byte, pgpKeys []string) ([]string, [][]byte, error)
 	}
 	for i, entity := range entities {
 		ctBuf := bytes.NewBuffer(nil)
-		pt, err := openpgp.Encrypt(ctBuf, []*openpgp.Entity{entity}, nil, nil, nil)
+		armorBuf, err := armor.Encode(ctBuf, "PGP MESSAGE", nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Error setting up ciphertext armorer: %s", err)
+		}
+		pt, err := openpgp.Encrypt(armorBuf, []*openpgp.Entity{entity}, nil, nil, nil)
 		if err != nil {
 			return nil, nil, fmt.Errorf("Error setting up encryption for PGP message: %s", err)
 		}
@@ -35,6 +40,7 @@ func EncryptShares(input [][]byte, pgpKeys []string) ([]string, [][]byte, error)
 			return nil, nil, fmt.Errorf("Error encrypting PGP message: %s", err)
 		}
 		pt.Close()
+		armorBuf.Close()
 		encryptedShares = append(encryptedShares, ctBuf.Bytes())
 	}
 

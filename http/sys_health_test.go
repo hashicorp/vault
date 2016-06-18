@@ -113,7 +113,7 @@ func TestSysHealth_head(t *testing.T) {
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	testData := []struct{
+	testData := []struct {
 		uri  string
 		code int
 	}{
