@@ -44,7 +44,7 @@ and the user's password.
 
 ```text
 $ vault write rabbitmq/config/connection \
-    uri="http://localhost:15672" \
+    connection_uri="http://localhost:15672" \
     username="admin" \
     password="password"
 ```
