@@ -501,12 +501,15 @@ func (b *backend) pathLoginRenew(
 	// Cross check that the instance is still in 'running' state
 	_, err := b.validateInstance(req.Storage, instanceID, region)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify instance ID: %s", err)
+		return nil, fmt.Errorf("failed to verify instance ID '%s': %s", instanceID, err)
 	}
 
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, instanceID)
 	if err != nil {
 		return nil, err
+	}
+	if storedIdentity == nil {
+		return nil, fmt.Errorf("failed to verify the whitelist identity entry for instance ID: %s", instanceID)
 	}
 
 	// Ensure that role entry is not deleted.
