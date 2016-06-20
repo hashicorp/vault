@@ -15,7 +15,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 }
 
 // Backend returns a new Backend framework struct
-func Backend() *framework.Backend {
+func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
@@ -60,7 +60,7 @@ func Backend() *framework.Backend {
 
 	b.crlLifetime = time.Hour * 72
 
-	return b.Backend
+	return &b
 }
 
 type backend struct {
