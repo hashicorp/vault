@@ -1,3 +1,15 @@
+## 0.6.1 (Unreleased)
+
+FEATURES:
+
+ * **Convergent Encryption in Transit**: The `transit` backend now supports a
+   convergent encryption mode where the same plaintext will produce the same
+   ciphertext. Although very useful in some situations, this has security
+   implications, which are mostly mitigated by requiring the use of key
+   derivation when convergent encryption is enabled. See [the `transit`
+   documentation](https://www.vaultproject.io/docs/secrets/transit/index.html)
+   for more details. [GH-1537]
+
 ## 0.6.0 (June 14th, 2016)
 
 SECURITY:
