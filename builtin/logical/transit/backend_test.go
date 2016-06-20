@@ -228,13 +228,14 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				return nil
 			}
 			var d struct {
-				Name            string           `mapstructure:"name"`
-				Key             []byte           `mapstructure:"key"`
-				Keys            map[string]int64 `mapstructure:"keys"`
-				CipherMode      string           `mapstructure:"cipher_mode"`
-				Derived         bool             `mapstructure:"derived"`
-				KDFMode         string           `mapstructure:"kdf_mode"`
-				DeletionAllowed bool             `mapstructure:"deletion_allowed"`
+				Name                 string           `mapstructure:"name"`
+				Key                  []byte           `mapstructure:"key"`
+				Keys                 map[string]int64 `mapstructure:"keys"`
+				CipherMode           string           `mapstructure:"cipher_mode"`
+				Derived              bool             `mapstructure:"derived"`
+				KDFMode              string           `mapstructure:"kdf_mode"`
+				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
+				ConvergentEncryption bool             `mapstructure:"convergent_encryption"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -550,6 +551,124 @@ func TestKeyUpgrade(t *testing.T) {
 		string(p.Keys[1].Key) != testPlaintext {
 		t.Errorf("bad key migration, result is %#v", p.Keys)
 	}
+}
+
+func TestConvergentEncryption(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/testkeynonderived",
+		Data: map[string]interface{}{
+			"derived":               false,
+			"convergent_encryption": true,
+		},
+	}
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("bad: expected error response, got %#v", *resp)
+	}
+
+	req.Path = "keys/testkey"
+	req.Data = map[string]interface{}{
+		"derived":               true,
+		"convergent_encryption": true,
+	}
+
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: got resp %#v", *resp)
+	}
+
+	// First, test using an invalid length of nonce
+	req.Path = "encrypt/testkey"
+	req.Data = map[string]interface{}{
+		"plaintext": "emlwIHphcA==", // "zip zap"
+		"context":   "Zm9vIGJhcg==", // "foo bar"
+	}
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error response, got %#v", *resp)
+	}
+
+	// Now test encrypting the same value twice
+	req.Data = map[string]interface{}{
+		"plaintext": "emlwIHphcA==",     // "zip zap"
+		"context":   "b25ldHdvdGhyZWVl", // "onetwothreee"
+	}
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error response: %#v", *resp)
+	}
+	ciphertext1 := resp.Data["ciphertext"].(string)
+
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error response: %#v", *resp)
+	}
+	ciphertext2 := resp.Data["ciphertext"].(string)
+
+	if ciphertext1 != ciphertext2 {
+		t.Fatalf("expected the same ciphertext but got %s and %s", ciphertext1, ciphertext2)
+	}
+
+	// For sanity, also check a different value
+	req.Data = map[string]interface{}{
+		"plaintext": "emlwIHphcA==",     // "zip zap"
+		"context":   "dHdvdGhyZWVmb3Vy", // "twothreefour"
+	}
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error response: %#v", *resp)
+	}
+	ciphertext3 := resp.Data["ciphertext"].(string)
+
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error response: %#v", *resp)
+	}
+	ciphertext4 := resp.Data["ciphertext"].(string)
+
+	if ciphertext3 != ciphertext4 {
+		t.Fatalf("expected the same ciphertext but got %s and %s", ciphertext1, ciphertext2)
+	}
+	if ciphertext1 == ciphertext3 {
+		t.Fatalf("expected different ciphertexts")
+	}
+
 }
 
 func TestPolicyFuzzing(t *testing.T) {

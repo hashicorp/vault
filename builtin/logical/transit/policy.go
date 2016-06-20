@@ -66,10 +66,12 @@ type Policy struct {
 	Keys       KeyEntryMap `json:"keys"`
 	CipherMode string      `json:"cipher"`
 
-	// Derived keys MUST provide a context and the
-	// master underlying key is never used.
-	Derived bool   `json:"derived"`
-	KDFMode string `json:"kdf_mode"`
+	// Derived keys MUST provide a context and the master underlying key is
+	// never used. If convergent encryption is true, the context will be used
+	// as the nonce as well.
+	Derived              bool   `json:"derived"`
+	KDFMode              string `json:"kdf_mode"`
+	ConvergentEncryption bool   `json:"convergent_encryption"`
 
 	// The minimum version of the key allowed to be used
 	// for decryption
@@ -365,11 +367,20 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 		return "", certutil.InternalError{Err: err.Error()}
 	}
 
+	if p.ConvergentEncryption && len(context) != gcm.NonceSize() {
+		return "", certutil.UserError{Err: fmt.Sprintf("base64-decoded context must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
+	}
+
 	// Compute random nonce
-	nonce := make([]byte, gcm.NonceSize())
-	_, err = rand.Read(nonce)
-	if err != nil {
-		return "", certutil.InternalError{Err: err.Error()}
+	var nonce []byte
+	if p.ConvergentEncryption {
+		nonce = context
+	} else {
+		nonce = make([]byte, gcm.NonceSize())
+		_, err = rand.Read(nonce)
+		if err != nil {
+			return "", certutil.InternalError{Err: err.Error()}
+		}
 	}
 
 	// Encrypt and tag with GCM

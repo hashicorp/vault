@@ -104,6 +104,10 @@ func (b *backend) pathConfigWrite(
 		return nil, nil
 	}
 
+	if len(resp.Warnings()) == 0 {
+		return nil, p.Persist(req.Storage)
+	}
+
 	return resp, p.Persist(req.Storage)
 }
 
