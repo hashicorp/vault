@@ -329,6 +329,9 @@ Auth Options:
   -no-verify        Do not verify the token after creation; avoids a use count
                     decrement.
 
+  -path             The path at which the auth backend is enabled. If an auth
+                    backend is mounted at multiple paths, this option can be
+                    used to authenticate against specific paths.
 `
 	return strings.TrimSpace(helpText)
 }
