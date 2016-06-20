@@ -176,14 +176,23 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, s.Data[k]))
 	}
 
+	tableOutputStr := columnize.Format(input, config)
+
+	// Print the warning separately because the length of first
+	// column in the output will be increased by the length of
+	// the longest warning string making the output look bad.
+	warningsInput := make([]string, 0, 5)
 	if len(s.Warnings) != 0 {
-		input = append(input, "")
-		input = append(input, "The following warnings were returned from the Vault server:")
+		warningsInput = append(warningsInput, "")
+		warningsInput = append(warningsInput, "The following warnings were returned from the Vault server:")
 		for _, warning := range s.Warnings {
-			input = append(input, fmt.Sprintf("* %s", warning))
+			warningsInput = append(warningsInput, fmt.Sprintf("* %s", warning))
 		}
 	}
 
-	ui.Output(columnize.Format(input, config))
+	warningsOutputStr := columnize.Format(warningsInput, config)
+
+	ui.Output(fmt.Sprintf("%s\n%s", tableOutputStr, warningsOutputStr))
+
 	return nil
 }
