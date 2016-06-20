@@ -6,10 +6,24 @@ import (
 	"fmt"
 
 	"errors"
+	"strings"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
 )
+
+func pathListRoles(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "roles/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathRoleList,
+		},
+
+		HelpSynopsis:    pathListRolesHelpSyn,
+		HelpDescription: pathListRolesHelpDesc,
+	}
+}
 
 func pathRoles() *framework.Path {
 	return &framework.Path{
@@ -34,12 +48,21 @@ func pathRoles() *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: pathRolesDelete,
 			logical.ReadOperation:   pathRolesRead,
-			logical.UpdateOperation:  pathRolesWrite,
+			logical.UpdateOperation: pathRolesWrite,
 		},
 
 		HelpSynopsis:    pathRolesHelpSyn,
 		HelpDescription: pathRolesHelpDesc,
 	}
+}
+
+func (b *backend) pathRoleList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("policy/")
+	if err != nil {
+		return nil, err
+	}
+	return logical.ListResponse(entries), nil
 }
 
 func pathRolesDelete(
@@ -125,6 +148,10 @@ func pathRolesWrite(
 
 	return nil, nil
 }
+
+const pathListRolesHelpSyn = `List the existing roles in this backend`
+
+const pathListRolesHelpDesc = `Roles will be listed by the role name.`
 
 const pathRolesHelpSyn = `
 Read, write and reference IAM policies that access keys can be made for.
