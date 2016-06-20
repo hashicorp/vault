@@ -176,7 +176,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, s.Data[k]))
 	}
 
-	ui.Output(columnize.Format(input, config))
+	tableOutputStr := columnize.Format(input, config)
 
 	// Print the warning separately because the length of first
 	// column in the output will be increased by the length of
@@ -190,7 +190,9 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		}
 	}
 
-	ui.Output(columnize.Format(warningsInput, config))
+	warningsOutputStr := columnize.Format(warningsInput, config)
+
+	ui.Output(fmt.Sprintf("%s\n%s", tableOutputStr, warningsOutputStr))
 
 	return nil
 }

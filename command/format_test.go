@@ -77,6 +77,6 @@ func TestTableFormatter(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(output, "something") {
-		t.Fatal("did not find something")
+		t.Fatal("did not find 'something'")
 	}
 }
