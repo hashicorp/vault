@@ -525,9 +525,13 @@ func TestSystemBackend_authTable(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"token/": map[string]string{
+		"token/": map[string]interface{}{
 			"type":        "token",
 			"description": "token based credentials",
+			"config": map[string]interface{}{
+				"default_lease_ttl": int(0),
+				"max_lease_ttl":     int(0),
+			},
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
