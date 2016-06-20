@@ -22,7 +22,7 @@ func Test_KeyUpgrade(t *testing.T) {
 
 func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
 	storage := &logical.InmemStorage{}
-	p, lock, upserted, err := lm.GetPolicyUpsert(storage, "test", false)
+	p, lock, upserted, err := lm.GetPolicyUpsert(storage, "test", false, false)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -68,7 +68,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
 
 	storage := &logical.InmemStorage{}
 
-	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false)
+	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +198,7 @@ func testArchivingCommon(t *testing.T, lm *lockManager) {
 
 	storage := &logical.InmemStorage{}
 
-	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false)
+	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false, false)
 	if lock != nil {
 		defer lock.RUnlock()
 	}

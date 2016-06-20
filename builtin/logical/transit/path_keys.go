@@ -21,6 +21,21 @@ func (b *backend) pathKeys() *framework.Path {
 				Type:        framework.TypeBool,
 				Description: "Enables key derivation mode. This allows for per-transaction unique keys",
 			},
+
+			"convergent_encryption": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Whether to use convergent encryption.
+This is only supported when using a key with
+key derivation enabled and will require all
+context values to be 96 bits (12 bytes) when
+base64-decoded. This mode ensures that when
+the same context is supplied, the same
+ciphertext is emitted from the encryption
+function. It is *very important* when using
+this mode that you ensure that all contexts
+are *globally unique*. Failing to do so will
+severely impact the security of the key.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -38,8 +53,13 @@ func (b *backend) pathPolicyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
+	convergent := d.Get("convergent_encryption").(bool)
 
-	p, lock, upserted, err := b.lm.GetPolicyUpsert(req.Storage, name, derived)
+	if !derived && convergent {
+		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
+	}
+
+	p, lock, upserted, err := b.lm.GetPolicyUpsert(req.Storage, name, derived, convergent)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -86,6 +106,7 @@ func (b *backend) pathPolicyRead(
 	}
 	if p.Derived {
 		resp.Data["kdf_mode"] = p.KDFMode
+		resp.Data["convergent_encryption"] = p.ConvergentEncryption
 	}
 
 	retKeys := map[string]int64{}

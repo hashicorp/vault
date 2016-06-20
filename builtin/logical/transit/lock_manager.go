@@ -105,42 +105,42 @@ func (lm *lockManager) UnlockPolicy(lock *sync.RWMutex, lockType bool) {
 // is needed (for instance, for an upgrade/migration), give up the read lock,
 // call again with an exclusive lock, then swap back out for a read lock.
 func (lm *lockManager) GetPolicyShared(storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
-	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, shared)
+	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, false, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {
 		return p, lock, err
 	}
 
 	// Try again while asking for an exlusive lock
-	p, lock, _, err = lm.getPolicyCommon(storage, name, false, false, exclusive)
+	p, lock, _, err = lm.getPolicyCommon(storage, name, false, false, false, exclusive)
 	if err != nil || p == nil || lock == nil {
 		return p, lock, err
 	}
 
 	lock.Unlock()
 
-	p, lock, _, err = lm.getPolicyCommon(storage, name, false, false, shared)
+	p, lock, _, err = lm.getPolicyCommon(storage, name, false, false, false, shared)
 	return p, lock, err
 }
 
 // Get the policy with an exclusive lock
 func (lm *lockManager) GetPolicyExclusive(storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
-	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, exclusive)
+	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, false, exclusive)
 	return p, lock, err
 }
 
 // Get the policy with a read lock; if it returns that an exclusive lock is
 // needed, retry. If successful, call one more time to get a read lock and
 // return the value.
-func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, derived bool) (*Policy, *sync.RWMutex, bool, error) {
-	p, lock, _, err := lm.getPolicyCommon(storage, name, true, derived, shared)
+func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, derived bool, convergent bool) (*Policy, *sync.RWMutex, bool, error) {
+	p, lock, _, err := lm.getPolicyCommon(storage, name, true, derived, convergent, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {
 		return p, lock, false, err
 	}
 
 	// Try again while asking for an exlusive lock
-	p, lock, upserted, err := lm.getPolicyCommon(storage, name, true, derived, exclusive)
+	p, lock, upserted, err := lm.getPolicyCommon(storage, name, true, derived, convergent, exclusive)
 	if err != nil || p == nil || lock == nil {
 		return p, lock, upserted, err
 	}
@@ -148,14 +148,14 @@ func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, der
 	lock.Unlock()
 
 	// Now get a shared lock for the return, but preserve the value of upsert
-	p, lock, _, err = lm.getPolicyCommon(storage, name, true, derived, shared)
+	p, lock, _, err = lm.getPolicyCommon(storage, name, true, derived, convergent, shared)
 
 	return p, lock, upserted, err
 }
 
 // When the function returns, a lock will be held on the policy if err == nil.
 // It is the caller's responsibility to unlock.
-func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, upsert, derived, lockType bool) (*Policy, *sync.RWMutex, bool, error) {
+func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, upsert, derived, convergent, lockType bool) (*Policy, *sync.RWMutex, bool, error) {
 	lock := lm.policyLock(name, lockType)
 
 	var p *Policy
@@ -192,6 +192,10 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 			return nil, nil, false, errNeedExclusiveLock
 		}
 
+		if !derived && convergent {
+			return nil, nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")
+		}
+
 		p = &Policy{
 			Name:       name,
 			CipherMode: "aes-gcm",
@@ -199,6 +203,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 		}
 		if derived {
 			p.KDFMode = kdfMode
+			p.ConvergentEncryption = convergent
 		}
 
 		err = p.rotate(storage)

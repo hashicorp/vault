@@ -79,7 +79,7 @@ func (b *backend) pathEncryptWrite(
 	var lock *sync.RWMutex
 	var upserted bool
 	if req.Operation == logical.CreateOperation {
-		p, lock, upserted, err = b.lm.GetPolicyUpsert(req.Storage, name, len(context) != 0)
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(req.Storage, name, len(context) != 0, false)
 	} else {
 		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
 	}
