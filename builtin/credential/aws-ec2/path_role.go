@@ -20,42 +20,40 @@ func pathRole(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-
 			"bound_ami_id": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that they should be
 using the AMI ID specified by this parameter.`,
 			},
-
-			"bound_iam_role_arn": &framework.FieldSchema{
+			"bound_account_id": &framework.FieldSchema{
 				Type: framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that the account ID
+in its identity document to match the one specified by this parameter.`,
+			},
+			"bound_iam_role_arn": &framework.FieldSchema{
+				Type:        framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that they should be using the IAM Role ARN specified by this parameter.`,
 			},
-
 			"role_tag": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "If set, enables the role tags for this role. The value set for this field should be the 'key' of the tag on the EC2 instance. The 'value' of the tag should be generated using 'role/<role>/tag' endpoint. Defaults to an empty string, meaning that role tags are disabled.",
 			},
-
 			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     0,
 				Description: "The maximum allowed lifetime of tokens issued using this role.",
 			},
-
 			"policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "default",
 				Description: "Policies to be set on tokens issued using this role.",
 			},
-
 			"allow_instance_migration": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution.",
 			},
-
 			"disallow_reauthentication": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
@@ -209,25 +207,28 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry = &awsRoleEntry{}
 	}
 
-	// Set the bound parameters only if they are supplied.
-	// There are no default values for bound parameters.
-	boundAmiIDStr, ok := data.GetOk("bound_ami_id")
-	if ok {
-		roleEntry.BoundAmiID = boundAmiIDStr.(string)
+	// Set BoundAmiID only if it is supplied. There can't be a default value.
+	if boundAmiIDRaw, ok := data.GetOk("bound_ami_id"); ok {
+		roleEntry.BoundAmiID = boundAmiIDRaw.(string)
 	}
 
-	boundIamARNStr, ok := data.GetOk("bound_iam_role_arn")
-	if ok {
-		roleEntry.BoundIamARN = boundIamARNStr.(string)
+	// Set BoundAccountID only if it is supplied. There can't be a default value.
+	if boundAccountIDRaw, ok := data.GetOk("bound_account_id"); ok {
+		roleEntry.BoundAccountID = boundAccountIDRaw.(string)
 	}
 
-	// At least one bound parameter should be set. Currently, only
-	// 'bound_ami_id' and 'bound_iam_role_arn' are supported. Check if one of them is set.
-	if roleEntry.BoundAmiID == "" {
-		// check if an IAM Role ARN was provided instead of an AMI ID
-		if roleEntry.BoundIamARN == "" {
-			return logical.ErrorResponse("role is not bounded to any resource; set bound_ami_id or bount_iam_role_arn"), nil
-		}
+	if boundIamARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
+		roleEntry.BoundIamARN = boundIamARNRaw.(string)
+	}
+
+	// Ensure that at least one bound is set on the role
+	switch {
+	case roleEntry.BoundAccountID != "":
+	case roleEntry.BoundAmiID != "":
+	case roleEntry.BoundIamARN != "":
+	default:
+
+		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
 	}
 
 	policiesStr, ok := data.GetOk("policies")
@@ -308,6 +309,7 @@ func (b *backend) pathRoleCreateUpdate(
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsRoleEntry struct {
 	BoundAmiID               string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
+	BoundAccountID           string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
 	BoundIamARN              string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	RoleTag                  string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
