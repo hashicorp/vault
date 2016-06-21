@@ -10,6 +10,21 @@ FEATURES:
    documentation](https://www.vaultproject.io/docs/secrets/transit/index.html)
    for more details. [GH-1537]
 
+IMPROVEMENTS:
+ * cli: Output formatting in the presence of warnings in the response object
+   [GH-1533]
+ * cli: `vault auth` command supports a `-path` option to take in the path at
+   which the auth backend is enabled, thereby allowing authenticating against
+   different paths using the command options [GH-1532]
+ * secret/aws: Listing of roles is supported now  [GH-1546]
+ * cli: `vault auth -methods` will now display the config settings of the mount
+   [GH-1531]
+
+BUG FIXES:
+
+ * credential/aws-ec2: Added a nil check for stored whitelist identity object
+   during renewal [GH-1542]
+
 ## 0.6.0 (June 14th, 2016)
 
 SECURITY:
