@@ -51,6 +51,12 @@ func (c *Sys) DisableAuth(path string) error {
 // documentation. Please refer to that documentation for more details.
 
 type AuthMount struct {
-	Type        string
-	Description string
+	Type        string           `json:"type" structs:"type" mapstructure:"type"`
+	Description string           `json:"description" structs:"description" mapstructure:"description"`
+	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
+}
+
+type AuthConfigOutput struct {
+	DefaultLeaseTTL int `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     int `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 }

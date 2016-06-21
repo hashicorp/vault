@@ -20,12 +20,16 @@ func TestSysAuth(t *testing.T) {
 		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 }
 
@@ -48,16 +52,24 @@ func TestSysEnableAuth(t *testing.T) {
 		"foo/": map[string]interface{}{
 			"description": "foo",
 			"type":        "noop",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 		},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 }
 
@@ -81,6 +93,10 @@ func TestSysDisableAuth(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"token/": map[string]interface{}{
+			"config": map[string]interface{}{
+				"default_lease_ttl": float64(0),
+				"max_lease_ttl":     float64(0),
+			},
 			"description": "token based credentials",
 			"type":        "token",
 		},
@@ -88,6 +104,6 @@ func TestSysDisableAuth(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 }

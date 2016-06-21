@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -271,11 +272,19 @@ func (c *AuthCommand) listMethods() int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Description"}
-	for _, k := range paths {
-		a := auth[k]
+	columns := []string{"Path | Type | Default TTL | Max TTL | Description"}
+	for _, path := range paths {
+		auth := auth[path]
+		defTTL := "system"
+		if auth.Config.DefaultLeaseTTL != 0 {
+			defTTL = strconv.Itoa(auth.Config.DefaultLeaseTTL)
+		}
+		maxTTL := "system"
+		if auth.Config.MaxLeaseTTL != 0 {
+			maxTTL = strconv.Itoa(auth.Config.MaxLeaseTTL)
+		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s", k, a.Type, a.Description))
+			"%s | %s | %s | %s | %s", path, auth.Type, defTTL, maxTTL, auth.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))
