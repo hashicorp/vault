@@ -11,7 +11,9 @@ FEATURES:
    for more details. [GH-1537]
 
 IMPROVEMENTS:
- * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role.
+ * secret/mssql,mysql,postgresql: Reading of connection settings is supported
+   in all the sql backends [GH-1515]
+ * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role
    [GH-1523]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
