@@ -661,8 +661,8 @@ func (b *SystemBackend) handleMountTable(
 			"type":        entry.Type,
 			"description": entry.Description,
 			"config": map[string]interface{}{
-				"default_lease_ttl": int(entry.Config.DefaultLeaseTTL.Seconds()),
-				"max_lease_ttl":     int(entry.Config.MaxLeaseTTL.Seconds()),
+				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 			},
 		}
 
@@ -1041,8 +1041,8 @@ func (b *SystemBackend) handleAuthTable(
 			"type":        entry.Type,
 			"description": entry.Description,
 			"config": map[string]interface{}{
-				"default_lease_ttl": int(entry.Config.DefaultLeaseTTL.Seconds()),
-				"max_lease_ttl":     int(entry.Config.MaxLeaseTTL.Seconds()),
+				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 			},
 		}
 		resp.Data[entry.Path] = info
