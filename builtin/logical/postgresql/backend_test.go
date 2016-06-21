@@ -42,9 +42,6 @@ func TestBackend_config_connection(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
-	if resp != nil {
-		t.Fatalf("expected a nil response")
-	}
 
 	configReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(configReq)

@@ -112,7 +112,11 @@ func (b *backend) pathConnectionWrite(
 
 	// Reset the DB connection
 	b.ResetDB()
-	return nil, nil
+
+	resp := &logical.Response{}
+	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection URL as it is, including passwords, if any.")
+
+	return resp, nil
 }
 
 type connectionConfig struct {
