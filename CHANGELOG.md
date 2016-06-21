@@ -11,6 +11,8 @@ FEATURES:
    for more details. [GH-1537]
 
 IMPROVEMENTS:
+ * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role.
+   [GH-1523]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
