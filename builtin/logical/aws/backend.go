@@ -21,6 +21,7 @@ func Backend() *backend {
 			pathConfigRoot(),
 			pathConfigLease(&b),
 			pathRoles(),
+			pathListRoles(&b),
 			pathUser(&b),
 			pathSTS(&b),
 		},

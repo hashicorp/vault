@@ -18,8 +18,8 @@ func pathListRoles(b *backend) *framework.Path {
 			logical.ListOperation: b.pathRoleList,
 		},
 
-		HelpSynopsis:    pathRoleHelpSyn,
-		HelpDescription: pathRoleHelpDesc,
+		HelpSynopsis:    pathListRolesHelpSyn,
+		HelpDescription: pathListRolesHelpDesc,
 	}
 }
 
@@ -401,10 +401,10 @@ type roleEntry struct {
 	MaxPathLength         *int   `json:",omitempty" structs:",omitempty"`
 }
 
-const pathRoleHelpSyn = `
-Manage the roles that can be created with this backend.
-`
+const pathListRolesHelpSyn = `List the existing roles in this backend`
 
-const pathRoleHelpDesc = `
-This path lets you manage the roles that can be created with this backend.
-`
+const pathListRolesHelpDesc = `Roles will be listed by the role name.`
+
+const pathRoleHelpSyn = `Manage the roles that can be created with this backend.`
+
+const pathRoleHelpDesc = `This path lets you manage the roles that can be created with this backend.`

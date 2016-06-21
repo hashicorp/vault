@@ -545,6 +545,49 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of existing roles in the backend
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/roles/?list=true`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "wrap_info": null,
+  "data": {
+    "keys": [
+      "devrole",
+      "prodrole",
+      "testrole"
+    ]
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+    ```
+
+  </dd>
+</dl>
+
 
 ### /aws/creds/
 #### GET
