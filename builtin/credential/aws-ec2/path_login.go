@@ -260,10 +260,10 @@ func (b *backend) pathLoginUpdate(
 	// IAM Role ARN specified as a constraint on the role.
 	if roleEntry.BoundIamARN != "" {
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
-			return nil, fmt.Errorf("IamInstanceProfile in the instance description is nil")
+			return nil, fmt.Errorf("IAM Instance Profile in the instance description is nil")
 		}
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
-			return nil, fmt.Errorf("Arn in the instance description is nil")
+			return nil, fmt.Errorf("ARN in the instance description is nil")
 		}
 		iamRoleArn := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
 		if iamRoleArn != roleEntry.BoundIamARN {
