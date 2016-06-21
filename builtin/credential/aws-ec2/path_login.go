@@ -241,7 +241,7 @@ func (b *backend) pathLoginUpdate(
 		return nil, err
 	}
 	if roleEntry == nil {
-		return logical.ErrorResponse("entry for role '%s' not found", roleName), nil
+		return logical.ErrorResponse(fmt.Sprintf("entry for role '%s' not found", roleName)), nil
 	}
 
 	// Verify that the AMI ID of the instance trying to login matches the
