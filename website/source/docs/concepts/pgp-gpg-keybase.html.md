@@ -113,8 +113,9 @@ to disk as either base64 or binary key files. For example:
 $ gpg --export 348FFC4C | base64 > seth.asc
 ```
 
-These key files must exist on disk in base64 or binary. Once saved to disk, the
-path to these files can be specified as an argument to the `-pgp-keys` flag.
+These key files must exist on disk in base64 (the "standard" base64 character set,
+without ASCII armoring) or binary. Once saved to disk, the path to these files
+can be specified as an argument to the `-pgp-keys` flag.
 
 ```
 $ vault init -key-shares=3 -key-threshold=2 \
@@ -147,7 +148,9 @@ initializer. To get the plain-text value, run the following command:
 $ echo "c1c0..." | xxd -r -p | gpg -d
 ```
 
-And replace `c1c0...` with the encrypted key.
+And replace `c1c0...` with the encrypted key. (Vault's API and command line client
+return the encrypted keys as ASCII hexdumps of the binary data, which can be
+converted back to binary with the ``xxd`` tool.)
 
 If you encrypted your private PGP key with a passphrase, you may be prompted to
 enter it.  After you enter your password, the output will be the plain-text
