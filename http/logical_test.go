@@ -30,8 +30,11 @@ func TestLogical(t *testing.T) {
 	testResponseStatus(t, resp, 204)
 
 	// READ
-	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
+	// Bad token should return a 403
+	resp = testHttpGet(t, token+"bad", addr+"/v1/secret/foo")
+	testResponseStatus(t, resp, 403)
 
+	resp = testHttpGet(t, token, addr+"/v1/secret/foo")
 	var actual map[string]interface{}
 	var nilWarnings interface{}
 	expected := map[string]interface{}{
