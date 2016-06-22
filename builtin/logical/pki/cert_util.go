@@ -23,10 +23,10 @@ import (
 type certUsage int
 
 const (
-	serverUsage certUsage = 1 << iota
-	clientUsage
-	codeSigningUsage
-	emailProtectionUsage
+	serverExtUsage certUsage = 1 << iota
+	clientExtUsage
+	codeSigningExtUsage
+	emailProtectionExtUsage
 	caUsage
 )
 
@@ -682,16 +682,16 @@ func generateCreationBundle(b *backend,
 	var usage certUsage
 	{
 		if role.ServerFlag {
-			usage = usage | serverUsage
+			usage = usage | serverExtUsage
 		}
 		if role.ClientFlag {
-			usage = usage | clientUsage
+			usage = usage | clientExtUsage
 		}
 		if role.CodeSigningFlag {
-			usage = usage | codeSigningUsage
+			usage = usage | codeSigningExtUsage
 		}
 		if role.EmailProtectionFlag {
-			usage = usage | emailProtectionUsage
+			usage = usage | emailProtectionExtUsage
 		}
 	}
 
@@ -747,16 +747,16 @@ func addKeyUsages(creationInfo *creationBundle, certTemplate *x509.Certificate) 
 		return
 	}
 
-	if creationInfo.Usage&serverUsage != 0 {
+	if creationInfo.Usage&serverExtUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
 	}
-	if creationInfo.Usage&clientUsage != 0 {
+	if creationInfo.Usage&clientExtUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
 	}
-	if creationInfo.Usage&codeSigningUsage != 0 {
+	if creationInfo.Usage&codeSigningExtUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
 	}
-	if creationInfo.Usage&emailProtectionUsage != 0 {
+	if creationInfo.Usage&emailProtectionExtUsage != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
 	}
 }
