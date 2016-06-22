@@ -20,16 +20,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-type certUsage int
-
-const (
-	serverExtUsage certUsage = 1 << iota
-	clientExtUsage
-	codeSigningExtUsage
-	emailProtectionExtUsage
-	caUsage
-)
-
 type creationBundle struct {
 	CommonName     string
 	DNSNames       []string
@@ -40,7 +30,8 @@ type creationBundle struct {
 	KeyBits        int
 	SigningBundle  *caInfoBundle
 	TTL            time.Duration
-	Usage          certUsage
+	KeyUsage       x509.KeyUsage
+	ExtKeyUsage    x509.ExtKeyUsage
 
 	// Only used when signing a CA cert
 	UseCSRValues bool
@@ -679,19 +670,19 @@ func generateCreationBundle(b *backend,
 	}
 
 	// Build up usages
-	var usage certUsage
+	var usage x509.ExtKeyUsage
 	{
 		if role.ServerFlag {
-			usage = usage | serverExtUsage
+			usage = usage | x509.ExtKeyUsageServerAuth
 		}
 		if role.ClientFlag {
-			usage = usage | clientExtUsage
+			usage = usage | x509.ExtKeyUsageClientAuth
 		}
 		if role.CodeSigningFlag {
-			usage = usage | codeSigningExtUsage
+			usage = usage | x509.ExtKeyUsageCodeSigning
 		}
 		if role.EmailProtectionFlag {
-			usage = usage | emailProtectionExtUsage
+			usage = usage | x509.ExtKeyUsageEmailProtection
 		}
 	}
 
@@ -704,7 +695,7 @@ func generateCreationBundle(b *backend,
 		KeyBits:        role.KeyBits,
 		SigningBundle:  signingBundle,
 		TTL:            ttl,
-		Usage:          usage,
+		ExtKeyUsage:    usage,
 	}
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
@@ -747,16 +738,16 @@ func addKeyUsages(creationInfo *creationBundle, certTemplate *x509.Certificate) 
 		return
 	}
 
-	if creationInfo.Usage&serverExtUsage != 0 {
+	if creationInfo.ExtKeyUsage&x509.ExtKeyUsageServerAuth != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageServerAuth)
 	}
-	if creationInfo.Usage&clientExtUsage != 0 {
+	if creationInfo.ExtKeyUsage&x509.ExtKeyUsageClientAuth != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageClientAuth)
 	}
-	if creationInfo.Usage&codeSigningExtUsage != 0 {
+	if creationInfo.ExtKeyUsage&x509.ExtKeyUsageCodeSigning != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageCodeSigning)
 	}
-	if creationInfo.Usage&emailProtectionExtUsage != 0 {
+	if creationInfo.ExtKeyUsage&x509.ExtKeyUsageEmailProtection != 0 {
 		certTemplate.ExtKeyUsage = append(certTemplate.ExtKeyUsage, x509.ExtKeyUsageEmailProtection)
 	}
 }
