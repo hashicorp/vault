@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"crypto/x509"
 	"fmt"
 	"strings"
 	"time"
@@ -145,6 +146,17 @@ and "ec" are the only valid values.`,
 				Description: `The number of bits to use. You will almost
 certainly want to change this if you adjust
 the key_type.`,
+			},
+
+			"key_usage": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "DigitalSignature,KeyAgreement,KeyEncipherment",
+				Description: `A comma-separated set of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty string.`,
 			},
 
 			"use_csr_common_name": &framework.FieldSchema{
@@ -315,6 +327,7 @@ func (b *backend) pathRoleCreate(
 		KeyType:             data.Get("key_type").(string),
 		KeyBits:             data.Get("key_bits").(int),
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
+		KeyUsage:            data.Get("key_usage").(string),
 	}
 
 	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
@@ -364,6 +377,9 @@ func (b *backend) pathRoleCreate(
 		return errResp, nil
 	}
 
+	// Parse key usages
+	entry.ParsedKeyUsage = parseKeyUsages(entry.KeyUsage)
+
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
 	if err != nil {
@@ -374,6 +390,35 @@ func (b *backend) pathRoleCreate(
 	}
 
 	return nil, nil
+}
+
+func parseKeyUsages(input string) int {
+	var parsedKeyUsages x509.KeyUsage
+	splitKeyUsage := strings.Split(input, ",")
+	for _, k := range splitKeyUsage {
+		switch strings.ToLower(k) {
+		case "digitalsignature":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageDigitalSignature
+		case "contentcommitment":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageContentCommitment
+		case "keyencipherment":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageKeyEncipherment
+		case "dataencipherment":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageDataEncipherment
+		case "keyagreement":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageKeyAgreement
+		case "certsign":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageCertSign
+		case "crlsign":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageCRLSign
+		case "encipheronly":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageEncipherOnly
+		case "decipheronly":
+			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageDecipherOnly
+		}
+	}
+
+	return int(parsedKeyUsages)
 }
 
 type roleEntry struct {
@@ -399,6 +444,8 @@ type roleEntry struct {
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 	MaxPathLength         *int   `json:",omitempty" structs:",omitempty"`
+	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
+	ParsedKeyUsage        int    `json:"parsed_key_usage" structs:"parsed_key_usage" mapstructure:"parsed_key_usage"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
