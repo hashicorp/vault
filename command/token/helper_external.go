@@ -30,10 +30,10 @@ func ExternalTokenHelperPath(path string) (string, error) {
 	}
 
 	if _, err := os.Stat(path); err != nil {
-		return path, nil
+		return "", fmt.Errorf("unknown error getting the external helper path")
 	}
 
-	return "", fmt.Errorf("unknown error getting the external helper path")
+	return path, nil
 }
 
 // ExternalTokenHelper is the struct that has all the logic for storing and retrieving
