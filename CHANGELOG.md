@@ -11,23 +11,25 @@ FEATURES:
    for more details. [GH-1537]
 
 IMPROVEMENTS:
- * secret/mssql,mysql,postgresql: Reading of connection settings is supported
-   in all the sql backends [GH-1515]
- * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role
-   [GH-1523]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
    which the auth backend is enabled, thereby allowing authenticating against
    different paths using the command options [GH-1532]
- * secret/aws: Listing of roles is supported now  [GH-1546]
  * cli: `vault auth -methods` will now display the config settings of the mount
    [GH-1531]
+ * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role
+   [GH-1523]
+ * secret/aws: Listing of roles is supported now  [GH-1546]
+ * secret/mssql,mysql,postgresql: Reading of connection settings is supported
+   in all the sql backends [GH-1515]
 
 BUG FIXES:
 
  * credential/aws-ec2: Added a nil check for stored whitelist identity object
    during renewal [GH-1542]
+ * core: Fix regression causing status codes to be `400` in most non-5xx error
+   cases [GH-1553]
 
 ## 0.6.0 (June 14th, 2016)
 
