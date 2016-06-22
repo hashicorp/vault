@@ -47,7 +47,7 @@ $ vault init -key-shares=3 -key-threshold=2 \
     -pgp-keys="keybase:jefferai,keybase:vishalnayak,keybase:sethvargo"
 ```
 
-This requires far fewer steps that traditional PGP (e.g. with `gpg`) because
+This requires far fewer steps than traditional PGP (e.g. with `gpg`) because
 Keybase handles a few of the tedious steps. The output will be the similar to
 the following:
 
