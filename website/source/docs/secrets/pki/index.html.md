@@ -106,19 +106,6 @@ servers manually using the `config/urls` endpoint. It is supported to have more
 than one of each of these by passing in the multiple URLs as a comma-separated
 string parameter.
 
-### No OCSP support, yet
-
-Vault's architecture does not currently allow for a binary protocol such as
-OCSP to be supported by a backend. As such, you should configure your software
-to use CRLs for revocation information, with a caching lifetime that feels good
-to you. Since you are following the advice above about keeping lifetimes short
-(right?), CRLs should not grow too large, however, you can configure alternate
-CRL and/or OCSP servers using `config/urls` if you wish.
-
-If you are using issued certificates for client authentication to Vault, note
-that as of 0.4, the `cert` authentication endpoint supports being pushed CRLs,
-but it cannot read CRLs directly from this backend.
-
 ### Safe Minimums
 
 Since its inception, this backend has enforced SHA256 for signature hashes
@@ -1141,6 +1128,16 @@ subpath for interactive help output.
         Defaults to `2048`; this will need to be changed for
         `ec` keys. See https://golang.org/pkg/crypto/elliptic/#Curve
         for an overview of allowed bit lengths for `ec`.
+      </li>
+      <li>
+        <span class="param">key_usage</span>
+        <span class="param-flags">optional</span>
+        This sets the allowed key usage constraint on issued certificates. This
+        is a comma-separated string; valid values can be found at
+        https://golang.org/pkg/crypto/x509/#KeyUsage -- simply drop the
+        `KeyUsage` part of the value. Values are not case-sensitive. To specify
+        no key usage constraints, set this to an empty string. Defaults to
+        `DigitalSignature,KeyAgreement,KeyEncipherment`.
       </li>
       <li>
         <span class="param">use_csr_common_name</span>
