@@ -704,7 +704,7 @@ func generateCreationBundle(b *backend,
 		KeyBits:        role.KeyBits,
 		SigningBundle:  signingBundle,
 		TTL:            ttl,
-		KeyUsage:       x509.KeyUsage(role.ParsedKeyUsage),
+		KeyUsage:       x509.KeyUsage(parseKeyUsages(role.KeyUsage)),
 		ExtKeyUsage:    extUsage,
 	}
 

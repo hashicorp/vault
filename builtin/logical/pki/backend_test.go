@@ -1605,6 +1605,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 			roleVals.KeyUsage = usage
 			parsedKeyUsage := parseKeyUsages(roleVals.KeyUsage)
+			if parsedKeyUsage == 0 && usage != "" {
+				panic("parsed key usages was zero")
+			}
 			parsedKeyUsageUnderTest = parsedKeyUsage
 
 			var extUsage x509.ExtKeyUsage

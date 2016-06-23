@@ -377,9 +377,6 @@ func (b *backend) pathRoleCreate(
 		return errResp, nil
 	}
 
-	// Parse key usages
-	entry.ParsedKeyUsage = parseKeyUsages(entry.KeyUsage)
-
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON("role/"+name, entry)
 	if err != nil {
@@ -445,7 +442,6 @@ type roleEntry struct {
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 	MaxPathLength         *int   `json:",omitempty" structs:",omitempty"`
 	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
-	ParsedKeyUsage        int    `json:"parsed_key_usage" structs:"parsed_key_usage" mapstructure:"parsed_key_usage"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
