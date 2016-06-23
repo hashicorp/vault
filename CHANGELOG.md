@@ -1,14 +1,22 @@
 ## 0.6.1 (Unreleased)
 
+DEPRECATIONS/BREAKING CHANGES:
+
+ * Issued certificates from the `pki` backend against new roles created after upgrading will contain a set of default key usages. 
+
 FEATURES:
 
- * **Convergent Encryption in Transit**: The `transit` backend now supports a
+ * **Convergent Encryption in `Transit`**: The `transit` backend now supports a
    convergent encryption mode where the same plaintext will produce the same
    ciphertext. Although very useful in some situations, this has security
    implications, which are mostly mitigated by requiring the use of key
    derivation when convergent encryption is enabled. See [the `transit`
    documentation](https://www.vaultproject.io/docs/secrets/transit/index.html)
    for more details. [GH-1537]
+ * **Key Usage Control in `PKI`**: Issued certificates from roles created or
+   modified after upgrading contain a set of default key usages for increased
+   compatibility with OpenVPN and some other software. This set can be changed
+   when writing a role definition. Existing roles are unaffected. [GH-1552]
 
 IMPROVEMENTS:
  * cli: Output formatting in the presence of warnings in the response object
