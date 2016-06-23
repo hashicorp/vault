@@ -393,25 +393,25 @@ func parseKeyUsages(input string) int {
 	var parsedKeyUsages x509.KeyUsage
 	splitKeyUsage := strings.Split(input, ",")
 	for _, k := range splitKeyUsage {
-		switch strings.ToLower(k) {
+		switch strings.ToLower(strings.TrimSpace(k)) {
 		case "digitalsignature":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageDigitalSignature
+			parsedKeyUsages |= x509.KeyUsageDigitalSignature
 		case "contentcommitment":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageContentCommitment
+			parsedKeyUsages |= x509.KeyUsageContentCommitment
 		case "keyencipherment":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageKeyEncipherment
+			parsedKeyUsages |= x509.KeyUsageKeyEncipherment
 		case "dataencipherment":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageDataEncipherment
+			parsedKeyUsages |= x509.KeyUsageDataEncipherment
 		case "keyagreement":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageKeyAgreement
+			parsedKeyUsages |= x509.KeyUsageKeyAgreement
 		case "certsign":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageCertSign
+			parsedKeyUsages |= x509.KeyUsageCertSign
 		case "crlsign":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageCRLSign
+			parsedKeyUsages |= x509.KeyUsageCRLSign
 		case "encipheronly":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageEncipherOnly
+			parsedKeyUsages |= x509.KeyUsageEncipherOnly
 		case "decipheronly":
-			parsedKeyUsages = parsedKeyUsages | x509.KeyUsageDecipherOnly
+			parsedKeyUsages |= x509.KeyUsageDecipherOnly
 		}
 	}
 

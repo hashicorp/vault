@@ -416,7 +416,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 	// There should only be one ext usage type, because only one is requested
 	// in the tests
 	if len(cert.ExtKeyUsage) != 1 {
-		return nil, fmt.Errorf("Got wrong size key usage in generated cert; values are %#v", cert.ExtKeyUsage)
+		return nil, fmt.Errorf("Got wrong size key usage in generated cert; expected 1, values are %#v", cert.ExtKeyUsage)
 	}
 	switch extUsage {
 	case x509.ExtKeyUsageEmailProtection:
