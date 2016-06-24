@@ -31,6 +31,8 @@ func pathRoleCreate(b *backend) *framework.Path {
 
 func (b *backend) pathRoleCreateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.logger.Println("[WARN] postgres/pathRoleCreateRead: enter")
+	defer b.logger.Println("[WARN] postgres/pathRoleCreateRead: exit")
 	name := data.Get("name").(string)
 
 	// Get the role
