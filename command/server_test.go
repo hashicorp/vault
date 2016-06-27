@@ -230,7 +230,7 @@ func TestServer_ReloadListener(t *testing.T) {
 	}
 
 	checkFinished()
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 	checkFinished()
 
 	if err := testCertificateName("foo.example.com"); err != nil {
