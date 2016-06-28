@@ -26,6 +26,10 @@ IMPROVEMENTS:
    different paths using the command options [GH-1532]
  * cli: `vault auth -methods` will now display the config settings of the mount
    [GH-1531]
+ * cli: `vault read/write/unwrap -field` now allows selecting token response
+   fields [GH-1567]
+ * cli: `vault write -field` now allows selecting wrapped response fields
+   [GH-1567]
  * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role
    [GH-1523]
  * secret/aws: Listing of roles is supported now  [GH-1546]
