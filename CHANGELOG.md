@@ -38,6 +38,8 @@ BUG FIXES:
    during renewal [GH-1542]
  * core: Fix regression causing status codes to be `400` in most non-5xx error
    cases [GH-1553]
+ * physical/postgres: Remove use of prepared statements as this causes
+   connection multiplexing software to break [GH-1548]
 
 ## 0.6.0 (June 14th, 2016)
 
