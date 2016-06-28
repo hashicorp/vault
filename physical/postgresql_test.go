@@ -32,7 +32,7 @@ func TestPostgreSQLBackend(t *testing.T) {
 
 	defer func() {
 		pg := b.(*PostgreSQLBackend)
-		_, err := pg.client.Exec("DROP TABLE " + pg.table)
+		_, err := pg.client.Exec("TRUNCATE TABLE " + pg.table)
 		if err != nil {
 			t.Fatalf("Failed to drop table: %v", err)
 		}
