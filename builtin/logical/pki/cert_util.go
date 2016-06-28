@@ -87,7 +87,6 @@ func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 	switch keyType {
 	case "rsa":
 		switch keyBits {
-		case 1024:
 		case 2048:
 		case 4096:
 		case 8192:
