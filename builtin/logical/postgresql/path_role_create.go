@@ -36,6 +36,8 @@ func (b *backend) pathRoleCreateRead(
 	name := data.Get("name").(string)
 
 	// Get the role
+
+	b.logger.Println("[WARN] postgres/pathRoleCreateRead: getting role")
 	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -45,6 +47,7 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Determine if we have a lease
+	b.logger.Println("[WARN] postgres/pathRoleCreateRead: getting lease")
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
 		return nil, err
@@ -80,20 +83,28 @@ func (b *backend) pathRoleCreateRead(
 		Format("2006-01-02 15:04:05-0700")
 
 	// Get our connection
+
+	b.logger.Println("[WARN] postgres/pathRoleCreateRead: getting database")
 	db, err := b.DB(req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Start a transaction
+	b.logger.Println("[WARN] postgres/pathRoleCreateRead: starting transaction")
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		b.logger.Println("[WARN] postgres/pathRoleCreateRead: rolling back transaction")
+		tx.Rollback()
+	}()
 
 	// Execute each query
 	for _, query := range SplitSQL(role.SQL) {
+
+		b.logger.Println("[WARN] postgres/pathRoleCreateRead: preparing statement")
 		stmt, err := db.Prepare(Query(query, map[string]string{
 			"name":       username,
 			"password":   password,
@@ -102,17 +113,23 @@ func (b *backend) pathRoleCreateRead(
 		if err != nil {
 			return nil, err
 		}
+
+		b.logger.Println("[WARN] postgres/pathRoleCreateRead: executing statement")
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err
 		}
 	}
 
 	// Commit the transaction
+
+	b.logger.Println("[WARN] postgres/pathRoleCreateRead: committing transaction")
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
 	// Return the secret
+
+	b.logger.Println("[WARN] postgres/pathRoleCreateRead: generating secret")
 	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
 		"username": username,
 		"password": password,
