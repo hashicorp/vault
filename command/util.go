@@ -31,27 +31,44 @@ func DefaultTokenHelper() (token.TokenHelper, error) {
 
 func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 	var val interface{}
-	switch field {
-	case "wrapping_token":
-		if secret.WrapInfo != nil {
+	switch {
+	case secret.Auth != nil:
+		switch field {
+		case "token":
+			val = secret.Auth.ClientToken
+		case "token_accessor":
+			val = secret.Auth.Accessor
+		case "token_duration":
+			val = secret.Auth.LeaseDuration
+		case "token_renewable":
+			val = secret.Auth.Renewable
+		case "token_policies":
+			val = secret.Auth.Policies
+		default:
+			val = secret.Data[field]
+		}
+
+	case secret.WrapInfo != nil:
+		switch field {
+		case "wrapping_token":
 			val = secret.WrapInfo.Token
-		}
-	case "wrapping_token_ttl":
-		if secret.WrapInfo != nil {
+		case "wrapping_token_ttl":
 			val = secret.WrapInfo.TTL
-		}
-	case "wrapping_token_creation_time":
-		if secret.WrapInfo != nil {
+		case "wrapping_token_creation_time":
 			val = secret.WrapInfo.CreationTime.String()
-		}
-	case "wrapped_accessor":
-		if secret.WrapInfo != nil {
+		case "wrapped_accessor":
 			val = secret.WrapInfo.WrappedAccessor
+		default:
+			val = secret.Data[field]
 		}
-	case "refresh_interval":
-		val = secret.LeaseDuration
+
 	default:
-		val = secret.Data[field]
+		switch field {
+		case "refresh_interval":
+			val = secret.LeaseDuration
+		default:
+			val = secret.Data[field]
+		}
 	}
 
 	if val != nil {
