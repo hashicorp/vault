@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/kv-builder"
@@ -75,23 +74,7 @@ func (c *WriteCommand) Run(args []string) int {
 
 	// Handle single field output
 	if field != "" {
-		if val, ok := secret.Data[field]; ok {
-			// c.Ui.Output() prints a CR character which in this case is
-			// not desired. Since Vault CLI currently only uses BasicUi,
-			// which writes to standard output, os.Stdout is used here to
-			// directly print the message. If mitchellh/cli exposes method
-			// to print without CR, this check needs to be removed.
-			if reflect.TypeOf(c.Ui).String() == "*cli.BasicUi" {
-				fmt.Fprintf(os.Stdout, fmt.Sprintf("%v", val))
-			} else {
-				c.Ui.Output(fmt.Sprintf("%v", val))
-			}
-			return 0
-		} else {
-			c.Ui.Error(fmt.Sprintf(
-				"Field %s not present in secret", field))
-			return 1
-		}
+		return PrintRawField(c.Ui, secret, field)
 	}
 
 	return OutputSecret(c.Ui, format, secret)
