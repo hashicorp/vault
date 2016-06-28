@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -92,8 +91,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	t.tokenLocks = map[string]*sync.RWMutex{}
 	for i := int64(0); i < 256; i++ {
-		t.tokenLocks[fmt.Sprintf("%2x",
-			strconv.FormatInt(i, 16))] = &sync.RWMutex{}
+		t.tokenLocks[fmt.Sprintf("%02x", i)] = &sync.RWMutex{}
 	}
 	t.tokenLocks["custom"] = &sync.RWMutex{}
 
