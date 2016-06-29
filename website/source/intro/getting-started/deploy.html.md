@@ -115,7 +115,7 @@ The vault client defaults to using `https` scheme, if you are running vault loca
 ```
 export VAULT_ADDR=http://127.0.0.1:8200
 ```
-prior to intializing the vault server.
+prior to initializing the vault server.
 
 ```
 $ vault init
