@@ -36,7 +36,6 @@ func (b *backend) pathRoleCreateRead(
 	name := data.Get("name").(string)
 
 	// Get the role
-
 	b.logger.Println("[WARN] postgres/pathRoleCreateRead: getting role")
 	role, err := b.Role(req.Storage, name)
 	if err != nil {
@@ -82,8 +81,7 @@ func (b *backend) pathRoleCreateRead(
 		Add(lease.Lease).
 		Format("2006-01-02 15:04:05-0700")
 
-	// Get our connection
-
+	// Get our handle
 	b.logger.Println("[WARN] postgres/pathRoleCreateRead: getting database")
 	db, err := b.DB(req.Storage)
 	if err != nil {
@@ -105,7 +103,7 @@ func (b *backend) pathRoleCreateRead(
 	for _, query := range SplitSQL(role.SQL) {
 
 		b.logger.Println("[WARN] postgres/pathRoleCreateRead: preparing statement")
-		stmt, err := db.Prepare(Query(query, map[string]string{
+		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":       username,
 			"password":   password,
 			"expiration": expiration,
