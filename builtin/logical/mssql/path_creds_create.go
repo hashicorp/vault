@@ -90,6 +90,7 @@ func (b *backend) pathCredsCreateRead(
 		if err != nil {
 			return nil, err
 		}
+		defer stmt.Close()
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err
 		}

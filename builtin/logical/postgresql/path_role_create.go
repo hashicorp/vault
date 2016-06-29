@@ -101,7 +101,6 @@ func (b *backend) pathRoleCreateRead(
 
 	// Execute each query
 	for _, query := range SplitSQL(role.SQL) {
-
 		b.logger.Println("[WARN] postgres/pathRoleCreateRead: preparing statement")
 		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":       username,
@@ -111,7 +110,7 @@ func (b *backend) pathRoleCreateRead(
 		if err != nil {
 			return nil, err
 		}
-
+		defer stmt.Close()
 		b.logger.Println("[WARN] postgres/pathRoleCreateRead: executing statement")
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err

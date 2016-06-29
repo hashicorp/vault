@@ -133,6 +133,7 @@ func (b *backend) secretCredsRevoke(
 			lastStmtError = err
 			continue
 		}
+		defer stmt.Close()
 		_, err = stmt.Exec()
 		if err != nil {
 			lastStmtError = err

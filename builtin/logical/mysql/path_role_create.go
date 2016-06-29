@@ -90,6 +90,7 @@ func (b *backend) pathRoleCreateRead(
 		if err != nil {
 			return nil, err
 		}
+		defer stmt.Close()
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err
 		}
