@@ -14,9 +14,7 @@ import (
 // in the GitHub API.
 //
 // GitHub API docs: http://developer.github.com/v3/orgs/
-type OrganizationsService struct {
-	client *Client
-}
+type OrganizationsService service
 
 // Organization represents a GitHub organization account.
 type Organization struct {
@@ -84,7 +82,7 @@ type OrganizationsListOptions struct {
 // as the opts.Since parameter for the next call.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/#list-all-organizations
-func (s *OrganizationsService) ListAll(opt *OrganizationsListOptions) ([]Organization, *Response, error) {
+func (s *OrganizationsService) ListAll(opt *OrganizationsListOptions) ([]*Organization, *Response, error) {
 	u, err := addOptions("organizations", opt)
 	if err != nil {
 		return nil, nil, err
@@ -95,7 +93,7 @@ func (s *OrganizationsService) ListAll(opt *OrganizationsListOptions) ([]Organiz
 		return nil, nil, err
 	}
 
-	orgs := []Organization{}
+	orgs := []*Organization{}
 	resp, err := s.client.Do(req, &orgs)
 	if err != nil {
 		return nil, resp, err
@@ -107,7 +105,7 @@ func (s *OrganizationsService) ListAll(opt *OrganizationsListOptions) ([]Organiz
 // organizations for the authenticated user.
 //
 // GitHub API docs: http://developer.github.com/v3/orgs/#list-user-organizations
-func (s *OrganizationsService) List(user string, opt *ListOptions) ([]Organization, *Response, error) {
+func (s *OrganizationsService) List(user string, opt *ListOptions) ([]*Organization, *Response, error) {
 	var u string
 	if user != "" {
 		u = fmt.Sprintf("users/%v/orgs", user)
@@ -124,7 +122,7 @@ func (s *OrganizationsService) List(user string, opt *ListOptions) ([]Organizati
 		return nil, nil, err
 	}
 
-	orgs := new([]Organization)
+	orgs := new([]*Organization)
 	resp, err := s.client.Do(req, orgs)
 	if err != nil {
 		return nil, resp, err

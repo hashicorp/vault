@@ -11,9 +11,7 @@ import "fmt"
 // methods of the GitHub API.
 //
 // GitHub API docs: http://developer.github.com/v3/pulls/
-type LicensesService struct {
-	client *Client
-}
+type LicensesService service
 
 // License represents an open source license.
 type License struct {
@@ -39,7 +37,7 @@ func (l License) String() string {
 // List popular open source licenses.
 //
 // GitHub API docs: https://developer.github.com/v3/licenses/#list-all-licenses
-func (s *LicensesService) List() ([]License, *Response, error) {
+func (s *LicensesService) List() ([]*License, *Response, error) {
 	req, err := s.client.NewRequest("GET", "licenses", nil)
 	if err != nil {
 		return nil, nil, err
@@ -48,7 +46,7 @@ func (s *LicensesService) List() ([]License, *Response, error) {
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
-	licenses := new([]License)
+	licenses := new([]*License)
 	resp, err := s.client.Do(req, licenses)
 	if err != nil {
 		return nil, resp, err

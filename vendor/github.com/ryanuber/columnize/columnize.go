@@ -1,6 +1,7 @@
 package columnize
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 )
@@ -31,13 +32,14 @@ func DefaultConfig() *Config {
 // Returns a list of elements, each representing a single item which will
 // belong to a column of output.
 func getElementsFromLine(config *Config, line string) []interface{} {
-	elements := make([]interface{}, 0)
-	for _, field := range strings.Split(line, config.Delim) {
+	seperated := strings.Split(line, config.Delim)
+	elements := make([]interface{}, len(seperated))
+	for i, field := range seperated {
 		value := strings.TrimSpace(field)
 		if value == "" && config.Empty != "" {
 			value = config.Empty
 		}
-		elements = append(elements, value)
+		elements[i] = value
 	}
 	return elements
 }
@@ -45,7 +47,7 @@ func getElementsFromLine(config *Config, line string) []interface{} {
 // Examines a list of strings and determines how wide each column should be
 // considering all of the elements that need to be printed within it.
 func getWidthsFromLines(config *Config, lines []string) []int {
-	var widths []int
+	widths := make([]int, 0, 8)
 
 	for _, line := range lines {
 		elems := getElementsFromLine(config, line)
@@ -65,18 +67,22 @@ func getWidthsFromLines(config *Config, lines []string) []int {
 // returns a sprintf-style format string which can be used to print output
 // aligned properly with other lines using the same widths set.
 func (c *Config) getStringFormat(widths []int, columns int) string {
-	// Start with the prefix, if any was given.
-	stringfmt := c.Prefix
+	// Create the buffer with an estimate of the length
+	buf := bytes.NewBuffer(make([]byte, 0, (6+len(c.Glue))*columns))
+
+	// Start with the prefix, if any was given. The buffer will not return an
+	// error so it does not need to be handled
+	buf.WriteString(c.Prefix)
 
 	// Create the format string from the discovered widths
 	for i := 0; i < columns && i < len(widths); i++ {
 		if i == columns-1 {
-			stringfmt += "%s\n"
+			buf.WriteString("%s\n")
 		} else {
-			stringfmt += fmt.Sprintf("%%-%ds%s", widths[i], c.Glue)
+			fmt.Fprintf(buf, "%%-%ds%s", widths[i], c.Glue)
 		}
 	}
-	return stringfmt
+	return buf.String()
 }
 
 // MergeConfig merges two config objects together and returns the resulting
@@ -108,17 +114,40 @@ func MergeConfig(a, b *Config) *Config {
 // Format is the public-facing interface that takes either a plain string
 // or a list of strings and returns nicely aligned output.
 func Format(lines []string, config *Config) string {
-	var result string
-
 	conf := MergeConfig(DefaultConfig(), config)
 	widths := getWidthsFromLines(conf, lines)
+
+	// Estimate the buffer size
+	glueSize := len(conf.Glue)
+	var size int
+	for _, w := range widths {
+		size += w + glueSize
+	}
+	size *= len(lines)
+
+	// Create the buffer
+	buf := bytes.NewBuffer(make([]byte, 0, size))
+
+	// Create a cache for the string formats
+	fmtCache := make(map[int]string, 16)
 
 	// Create the formatted output using the format string
 	for _, line := range lines {
 		elems := getElementsFromLine(conf, line)
-		stringfmt := conf.getStringFormat(widths, len(elems))
-		result += fmt.Sprintf(stringfmt, elems...)
+
+		// Get the string format using cache
+		numElems := len(elems)
+		stringfmt, ok := fmtCache[numElems]
+		if !ok {
+			stringfmt = conf.getStringFormat(widths, numElems)
+			fmtCache[numElems] = stringfmt
+		}
+
+		fmt.Fprintf(buf, stringfmt, elems...)
 	}
+
+	// Get the string result
+	result := buf.String()
 
 	// Remove trailing newline without removing leading/trailing space
 	if n := len(result); n > 0 && result[n-1] == '\n' {

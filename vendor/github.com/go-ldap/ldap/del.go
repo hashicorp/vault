@@ -32,9 +32,8 @@ func NewDelRequest(DN string,
 }
 
 func (l *Conn) Del(delRequest *DelRequest) error {
-	messageID := l.nextMessageID()
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
-	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, messageID, "MessageID"))
+	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
 	packet.AppendChild(delRequest.encode())
 	if delRequest.Controls != nil {
 		packet.AppendChild(encodeControls(delRequest.Controls))
@@ -42,22 +41,19 @@ func (l *Conn) Del(delRequest *DelRequest) error {
 
 	l.Debug.PrintPacket(packet)
 
-	channel, err := l.sendMessage(packet)
+	msgCtx, err := l.sendMessage(packet)
 	if err != nil {
 		return err
 	}
-	if channel == nil {
-		return NewError(ErrorNetwork, errors.New("ldap: could not send message"))
-	}
-	defer l.finishMessage(messageID)
+	defer l.finishMessage(msgCtx)
 
-	l.Debug.Printf("%d: waiting for response", messageID)
-	packetResponse, ok := <-channel
+	l.Debug.Printf("%d: waiting for response", msgCtx.id)
+	packetResponse, ok := <-msgCtx.responses
 	if !ok {
-		return NewError(ErrorNetwork, errors.New("ldap: channel closed"))
+		return NewError(ErrorNetwork, errors.New("ldap: response channel closed"))
 	}
 	packet, err = packetResponse.ReadPacket()
-	l.Debug.Printf("%d: got response %p", messageID, packet)
+	l.Debug.Printf("%d: got response %p", msgCtx.id, packet)
 	if err != nil {
 		return err
 	}
@@ -78,6 +74,6 @@ func (l *Conn) Del(delRequest *DelRequest) error {
 		log.Printf("Unexpected Response: %d", packet.Children[1].Tag)
 	}
 
-	l.Debug.Printf("%d: returning", messageID)
+	l.Debug.Printf("%d: returning", msgCtx.id)
 	return nil
 }

@@ -25,7 +25,7 @@ type Subscription struct {
 // ListWatchers lists watchers of a particular repo.
 //
 // GitHub API Docs: http://developer.github.com/v3/activity/watching/#list-watchers
-func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]User, *Response, error) {
+func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]*User, *Response, error) {
 	u := fmt.Sprintf("repos/%s/%s/subscribers", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -37,7 +37,7 @@ func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]
 		return nil, nil, err
 	}
 
-	watchers := new([]User)
+	watchers := new([]*User)
 	resp, err := s.client.Do(req, watchers)
 	if err != nil {
 		return nil, resp, err
@@ -50,7 +50,7 @@ func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]
 // the empty string will fetch watched repos for the authenticated user.
 //
 // GitHub API Docs: https://developer.github.com/v3/activity/watching/#list-repositories-being-watched
-func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]Repository, *Response, error) {
+func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]*Repository, *Response, error) {
 	var u string
 	if user != "" {
 		u = fmt.Sprintf("users/%v/subscriptions", user)
@@ -67,7 +67,7 @@ func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]Reposito
 		return nil, nil, err
 	}
 
-	watched := new([]Repository)
+	watched := new([]*Repository)
 	resp, err := s.client.Do(req, watched)
 	if err != nil {
 		return nil, resp, err
