@@ -50,8 +50,8 @@ type backend struct {
 
 // DB returns the database connection.
 func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
-	b.logger.Println("[WARN] postgres/db: enter")
-	defer b.logger.Println("[WARN] postgres/db: exit")
+	b.logger.Println("[TRACE] postgres/db: enter")
+	defer b.logger.Println("[TRACE] postgres/db: exit")
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -106,8 +106,8 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 
 // ResetDB forces a connection next time DB() is called.
 func (b *backend) ResetDB() {
-	b.logger.Println("[WARN] postgres/resetdb: enter")
-	defer b.logger.Println("[WARN] postgres/resetdb: exit")
+	b.logger.Println("[TRACE] postgres/resetdb: enter")
+	defer b.logger.Println("[TRACE] postgres/resetdb: exit")
 
 	b.lock.Lock()
 	defer b.lock.Unlock()
