@@ -97,6 +97,18 @@ func (b *backend) secretCredsRevoke(
 		return nil, err
 	}
 
+	// Check if the role exists
+	var exists bool
+	query := fmt.Sprintf("SELECT exists (SELECT rolname FROM pg_roles WHERE rolname='%s');", username)
+	err = db.QueryRow(query).Scan(&exists)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	if exists == false {
+		return nil, nil
+	}
+
 	// Query for permissions; we need to revoke permissions before we can drop
 	// the role
 	// This isn't done in a transaction because even if we fail along the way,

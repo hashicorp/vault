@@ -19,6 +19,12 @@
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "ZjT4/uxN8N5WXikTtY1LdmMtL9Q=",
+			"path": "camlistore.org/pkg/netutil",
+			"revision": "c332b2881d09003e01491f2658ccf1dbbb006169",
+			"revisionTime": "2016-06-29T15:04:51Z"
+		},
+		{
 			"path": "context",
 			"revision": ""
 		},
@@ -627,6 +633,12 @@
 			"path": "github.com/ory-am/common/env",
 			"revision": "930cc805232909c38f2e68310b1e21f71b056d59",
 			"revisionTime": "2016-01-09T14:21:19Z"
+		},
+		{
+			"checksumSHA1": "CXJIw4GNmwqc+c4ZCeVj2mMm1Uw=",
+			"path": "github.com/ory-am/dockertest",
+			"revision": "293f0a0aac817a67dcf656af315a43f2db140c2a",
+			"revisionTime": "2016-06-21T08:39:56Z"
 		},
 		{
 			"checksumSHA1": "xN14ZoFcgefABp24aowYtQVMDsc=",
