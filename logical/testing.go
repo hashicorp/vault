@@ -1,6 +1,8 @@
 package logical
 
 import (
+	"log"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -72,7 +74,7 @@ func TestSystemView() *StaticSystemView {
 
 func TestBackendConfig() *BackendConfig {
 	return &BackendConfig{
-		Logger: nil,
+		Logger: log.New(os.Stdout, "", log.LstdFlags),
 		System: TestSystemView(),
 	}
 }
