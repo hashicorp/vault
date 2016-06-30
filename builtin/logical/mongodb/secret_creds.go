@@ -39,7 +39,7 @@ func (b *backend) secretCredsRenew(req *logical.Request, d *framework.FieldData)
 		leaseConfig = &configLease{}
 	}
 
-	f := framework.LeaseExtend(leaseConfig.TTL, leaseConfig.TTLMax, b.System())
+	f := framework.LeaseExtend(leaseConfig.TTL, leaseConfig.MaxTTL, b.System())
 	return f(req, d)
 }
 

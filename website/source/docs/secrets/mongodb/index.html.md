@@ -56,7 +56,7 @@ Optionally, we can configure the lease settings for the credentials generated
 by Vault. This is done by writing to the `config/lease` key:
 
 ```
-$ vault write mongodb/config/lease ttl=1h ttl_max=24h
+$ vault write mongodb/config/lease ttl=1h max_ttl=24h
 Success! Data written to: mongodb/config/lease
 ```
 
@@ -184,7 +184,7 @@ applications are restricted in the credentials they are allowed to read.
         with time suffix. Hour is the largest suffix.
       </li>
       <li>
-        <span class="param">ttl_max</span>
+        <span class="param">max_ttl</span>
         <span class="param-flags">required</span>
         The maximum ttl value provided as a string duration
         with time suffix. Hour is the largest suffix.
