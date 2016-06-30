@@ -101,7 +101,7 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_configConnection(t *testing.T) {
-	b := Backend()
+	b, _ := Factory(logical.TestBackendConfig())
 	d1 := map[string]interface{}{
 		"value": os.Getenv("PG_URL"),
 	}
