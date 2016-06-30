@@ -3,6 +3,7 @@ package postgresql
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -11,10 +12,10 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	return Backend(conf).Setup(conf)
 }
 
-func Backend() *backend {
+func Backend(conf *logical.BackendConfig) *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
@@ -34,6 +35,7 @@ func Backend() *backend {
 		Clean: b.ResetDB,
 	}
 
+	b.logger = conf.Logger
 	return &b
 }
 
@@ -42,10 +44,14 @@ type backend struct {
 
 	db   *sql.DB
 	lock sync.Mutex
+
+	logger *log.Logger
 }
 
 // DB returns the database connection.
 func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
+	b.logger.Println("[WARN] postgres/db: enter")
+	defer b.logger.Println("[WARN] postgres/db: exit")
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -100,6 +106,9 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 
 // ResetDB forces a connection next time DB() is called.
 func (b *backend) ResetDB() {
+	b.logger.Println("[WARN] postgres/resetdb: enter")
+	defer b.logger.Println("[WARN] postgres/resetdb: exit")
+
 	b.lock.Lock()
 	defer b.lock.Unlock()
 

@@ -2,7 +2,8 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
- * Issued certificates from the `pki` backend against new roles created after upgrading will contain a set of default key usages. 
+ * Issued certificates from the `pki` backend against new roles created or
+   modified after upgrading will contain a set of default key usages. 
 
 FEATURES:
 
@@ -42,6 +43,8 @@ BUG FIXES:
    during renewal [GH-1542]
  * core: Fix regression causing status codes to be `400` in most non-5xx error
    cases [GH-1553]
+ * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
+   transaction object which could lead to connection exhaustion [GH-1572]
  * physical/postgres: Remove use of prepared statements as this causes
    connection multiplexing software to break [GH-1548]
 

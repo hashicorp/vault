@@ -68,7 +68,7 @@ func (b *backend) pathRoleCreateRead(
 		return nil, err
 	}
 
-	// Get our connection
+	// Get our handle
 	db, err := b.DB(req.Storage)
 	if err != nil {
 		return nil, err
@@ -83,13 +83,14 @@ func (b *backend) pathRoleCreateRead(
 
 	// Execute each query
 	for _, query := range SplitSQL(role.SQL) {
-		stmt, err := db.Prepare(Query(query, map[string]string{
+		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":     username,
 			"password": password,
 		}))
 		if err != nil {
 			return nil, err
 		}
+		defer stmt.Close()
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err
 		}
