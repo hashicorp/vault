@@ -26,6 +26,9 @@ func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (c
 		return "", os.Getenv("PG_URL")
 	}
 
+	// Without this the checks for whether the container has started seem to
+	// never actually pass. There's really no reason to expose the test
+	// containers, so don't.
 	dockertest.BindDockerToLocalhost = "yep"
 
 	testImagePull.Do(func() {
