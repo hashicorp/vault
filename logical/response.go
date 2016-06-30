@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -152,6 +153,19 @@ func (r *Response) CloneWarnings(other *Response) {
 // IsError returns true if this response seems to indicate an error.
 func (r *Response) IsError() bool {
 	return r != nil && len(r.Data) == 1 && r.Data["error"] != nil
+}
+
+func (r *Response) Error() error {
+	if !r.IsError() {
+		return nil
+	}
+	switch r.Data["error"].(type) {
+	case string:
+		return errors.New(r.Data["error"].(string))
+	case error:
+		return r.Data["error"].(error)
+	}
+	return nil
 }
 
 // HelpResponse is used to format a help response

@@ -599,6 +599,12 @@
 			"revisionTime": "2016-05-19T16:21:37Z"
 		},
 		{
+			"checksumSHA1": "CXJIw4GNmwqc+c4ZCeVj2mMm1Uw=",
+			"path": "github.com/ory-am/dockertest",
+			"revision": "293f0a0aac817a67dcf656af315a43f2db140c2a",
+			"revisionTime": "2016-06-21T08:39:56Z"
+		},
+		{
 			"checksumSHA1": "kH9SzL77hzya1KSvkkVfGmbBtmM=",
 			"path": "github.com/ryanuber/columnize",
 			"revision": "983d3a5fab1bf04d1b412465d2d9f8430e2e917e",
