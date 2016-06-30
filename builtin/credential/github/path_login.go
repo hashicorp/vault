@@ -138,7 +138,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 		PerPage: 100,
 	}
 
-	var allOrgs []github.Organization
+	var allOrgs []*github.Organization
 	for {
 		orgs, resp, err := client.Organizations.List("", orgOpt)
 		if err != nil {
@@ -153,7 +153,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 
 	for _, o := range allOrgs {
 		if strings.ToLower(*o.Login) == strings.ToLower(config.Org) {
-			org = &o
+			org = o
 			break
 		}
 	}
@@ -168,7 +168,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 		PerPage: 100,
 	}
 
-	var allTeams []github.Team
+	var allTeams []*github.Team
 	for {
 		teams, resp, err := client.Organizations.ListUserTeams(teamOpt)
 		if err != nil {
