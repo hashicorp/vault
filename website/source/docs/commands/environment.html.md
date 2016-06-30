@@ -9,7 +9,7 @@ description: |-
 # Environment variables
 
 The Vault CLI will read the following environment variables to set
-behavioral defaults.  These can be overridden in all cases using
+behavioral defaults. These can be overridden in all cases using
 command-line arguments; see the command-line help for details.
 
 The following table describes them:

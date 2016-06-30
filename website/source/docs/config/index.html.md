@@ -331,7 +331,8 @@ For etcd, the following options are supported:
 
   * `address` (optional) - The address(es) of the etcd instance(s) to talk to.
     Can be comma separated list (protocol://host:port) of many etcd instances.
-    Defaults to "http://localhost:2379" if not specified.
+    Defaults to "http://localhost:2379" if not specified. May also be specified
+    via the ETCD_ADDR environment variable.
 
   * `sync` (optional) - Should we synchronize the list of available etcd
     servers on startup?  This is a **string** value to allow for auto-sync to
@@ -473,7 +474,7 @@ profile enabled. Vault will handle renewing profile credentials as they rotate.
 
   * `max_parallel` (optional) - The maximum number of concurrent connections to Azure. Defaults to "128".
 
-The current implementation is limited to a maximum of 4 MBytes per blob/file. 
+The current implementation is limited to a maximum of 4 MBytes per blob/file.
 
 #### Backend Reference: Swift (Community-Supported)
 
