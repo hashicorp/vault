@@ -19,6 +19,12 @@
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "ZjT4/uxN8N5WXikTtY1LdmMtL9Q=",
+			"path": "camlistore.org/pkg/netutil",
+			"revision": "c332b2881d09003e01491f2658ccf1dbbb006169",
+			"revisionTime": "2016-06-29T15:04:51Z"
+		},
+		{
 			"path": "context",
 			"revision": ""
 		},
