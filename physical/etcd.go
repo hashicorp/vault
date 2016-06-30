@@ -89,7 +89,7 @@ func newEtcdBackend(conf map[string]string, logger *log.Logger) (Backend, error)
 	if address, ok := conf["address"]; ok {
 		machines = address
 	}
-	machinesEnv := os.GetEnv("ETCD_ADDR")
+	machinesEnv := os.Getenv("ETCD_ADDR")
 	if machinesEnv != "" {
 		machines = machinesEnv
 	}
