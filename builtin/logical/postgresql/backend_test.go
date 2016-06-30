@@ -131,7 +131,7 @@ func TestBackend_basic(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepRole(t),
+			testAccStepCreateRole(t, "web", testRole),
 			testAccStepReadCreds(t, b, config.StorageView, "web", connURL),
 		},
 	})
@@ -157,10 +157,45 @@ func TestBackend_roleCrud(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepRole(t),
+			testAccStepCreateRole(t, "web", testRole),
 			testAccStepReadRole(t, "web", testRole),
 			testAccStepDeleteRole(t, "web"),
 			testAccStepReadRole(t, "web", ""),
+		},
+	})
+}
+
+func TestBackend_roleReadOnly(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		Backend:        b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, connData, false),
+			testAccStepCreateRole(t, "web", testRole),
+			testAccStepCreateRole(t, "web-readonly", testReadOnlyRole),
+			testAccStepReadRole(t, "web-readonly", testReadOnlyRole),
+			testAccStepCreateTable(t, b, "web"),
+			testAccStepReadCreds(t, b, "web-readonly"),
+			testAccStepDropTable(t, b, "web"),
+			testAccStepDeleteRole(t, "web-readonly"),
+			testAccStepDeleteRole(t, "web"),
+			testAccStepReadRole(t, "web-readonly", ""),
 		},
 	})
 }
@@ -194,12 +229,12 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 	}
 }
 
-func testAccStepRole(t *testing.T) logicaltest.TestStep {
+func testAccStepCreateRole(t *testing.T, n string, sql string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      "roles/web",
+		Path:      "roles/" + n,
 		Data: map[string]interface{}{
-			"sql": testRole,
+			"sql": sql,
 		},
 	}
 }
@@ -226,6 +261,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			log.Printf("[WARN] Generated credentials: %v", d)
 
 			conn, err := pq.ParseURL(connURL)
+
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -258,7 +294,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 
 			userRows := returnedRows()
-			if userRows != 2 {
+			if userRows < 2 {
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
 			}
 
@@ -285,6 +321,112 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			// User shouldn't exist so returnedRows() should encounter an error and exit with -1
 			if userRows != -1 {
 				t.Fatalf("did not get expected number of rows, got %d", userRows)
+			}
+
+			return nil
+		},
+	}
+}
+
+func testAccStepCreateTable(t *testing.T, b logical.Backend, name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "creds/" + name,
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Username string `mapstructure:"username"`
+				Password string `mapstructure:"password"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			log.Printf("[WARN] Generated credentials: %v", d)
+			conn, err := pq.ParseURL(os.Getenv("PG_URL"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			conn += " timezone=utc"
+
+			db, err := sql.Open("postgres", conn)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = db.Exec("CREATE TABLE test (id SERIAL PRIMARY KEY);")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resp, err = b.HandleRequest(&logical.Request{
+				Operation: logical.RevokeOperation,
+				Secret: &logical.Secret{
+					InternalData: map[string]interface{}{
+						"secret_type": "creds",
+						"username":    d.Username,
+					},
+				},
+			})
+			if err != nil {
+				return err
+			}
+			if resp != nil {
+				if resp.IsError() {
+					return fmt.Errorf("Error on resp: %#v", *resp)
+				}
+			}
+
+			return nil
+		},
+	}
+}
+
+func testAccStepDropTable(t *testing.T, b logical.Backend, name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "creds/" + name,
+		Check: func(resp *logical.Response) error {
+			var d struct {
+				Username string `mapstructure:"username"`
+				Password string `mapstructure:"password"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			log.Printf("[WARN] Generated credentials: %v", d)
+			conn, err := pq.ParseURL(os.Getenv("PG_URL"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			conn += " timezone=utc"
+
+			db, err := sql.Open("postgres", conn)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = db.Exec("DROP TABLE test;")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			resp, err = b.HandleRequest(&logical.Request{
+				Operation: logical.RevokeOperation,
+				Secret: &logical.Secret{
+					InternalData: map[string]interface{}{
+						"secret_type": "creds",
+						"username":    d.Username,
+					},
+				},
+			})
+			if err != nil {
+				return err
+			}
+			if resp != nil {
+				if resp.IsError() {
+					return fmt.Errorf("Error on resp: %#v", *resp)
+				}
 			}
 
 			return nil
@@ -327,4 +469,13 @@ CREATE ROLE "{{name}}" WITH
   PASSWORD '{{password}}'
   VALID UNTIL '{{expiration}}';
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+`
+
+const testReadOnlyRole = `
+CREATE ROLE "{{name}}" WITH
+  LOGIN
+  PASSWORD '{{password}}'
+  VALID UNTIL '{{expiration}}';
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";
 `
