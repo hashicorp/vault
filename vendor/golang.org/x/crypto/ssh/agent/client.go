@@ -536,7 +536,7 @@ type ed25519CertMsg struct {
 	Constraints []byte `ssh:"rest"`
 }
 
-// Insert adds a private key to the agent. If a certificate is given,
+// Add adds a private key to the agent. If a certificate is given,
 // that certificate is added instead as public key.
 func (c *client) Add(key AddedKey) error {
 	var constraints []byte
@@ -594,12 +594,12 @@ func (c *client) insertCert(s interface{}, cert *ssh.Certificate, comment string
 			Comments:    comment,
 			Constraints: constraints,
 		})
-	case ed25519.PrivateKey:
+	case *ed25519.PrivateKey:
 		req = ssh.Marshal(ed25519CertMsg{
 			Type:        cert.Type(),
 			CertBytes:   cert.Marshal(),
-			Pub:         []byte(k)[32:],
-			Priv:        []byte(k),
+			Pub:         []byte(*k)[32:],
+			Priv:        []byte(*k),
 			Comments:    comment,
 			Constraints: constraints,
 		})

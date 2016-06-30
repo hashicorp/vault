@@ -59,6 +59,7 @@ func (hp *DNSHostProvider) Init(servers []string) error {
 	return nil
 }
 
+// Len returns the number of servers available
 func (hp *DNSHostProvider) Len() int {
 	hp.mu.Lock()
 	defer hp.mu.Unlock()
@@ -79,7 +80,7 @@ func (hp *DNSHostProvider) Next() (server string, retryStart bool) {
 	return hp.servers[hp.curr], retryStart
 }
 
-// Notify the HostProvider of a successful connection.
+// Connected notifies the HostProvider of a successful connection.
 func (hp *DNSHostProvider) Connected() {
 	hp.mu.Lock()
 	defer hp.mu.Unlock()

@@ -85,7 +85,7 @@ func (e *Event) Payload() (payload interface{}) {
 // ListEvents drinks from the firehose of all public events across GitHub.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-public-events
-func (s *ActivityService) ListEvents(opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListEvents(opt *ListOptions) ([]*Event, *Response, error) {
 	u, err := addOptions("events", opt)
 	if err != nil {
 		return nil, nil, err
@@ -96,7 +96,7 @@ func (s *ActivityService) ListEvents(opt *ListOptions) ([]Event, *Response, erro
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err
@@ -108,7 +108,7 @@ func (s *ActivityService) ListEvents(opt *ListOptions) ([]Event, *Response, erro
 // ListRepositoryEvents lists events for a repository.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-repository-events
-func (s *ActivityService) ListRepositoryEvents(owner, repo string, opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListRepositoryEvents(owner, repo string, opt *ListOptions) ([]*Event, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/events", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -120,7 +120,7 @@ func (s *ActivityService) ListRepositoryEvents(owner, repo string, opt *ListOpti
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err
@@ -132,7 +132,7 @@ func (s *ActivityService) ListRepositoryEvents(owner, repo string, opt *ListOpti
 // ListIssueEventsForRepository lists issue events for a repository.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-issue-events-for-a-repository
-func (s *ActivityService) ListIssueEventsForRepository(owner, repo string, opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListIssueEventsForRepository(owner, repo string, opt *ListOptions) ([]*Event, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/issues/events", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -144,7 +144,7 @@ func (s *ActivityService) ListIssueEventsForRepository(owner, repo string, opt *
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err
@@ -156,7 +156,7 @@ func (s *ActivityService) ListIssueEventsForRepository(owner, repo string, opt *
 // ListEventsForRepoNetwork lists public events for a network of repositories.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-public-events-for-a-network-of-repositories
-func (s *ActivityService) ListEventsForRepoNetwork(owner, repo string, opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListEventsForRepoNetwork(owner, repo string, opt *ListOptions) ([]*Event, *Response, error) {
 	u := fmt.Sprintf("networks/%v/%v/events", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -168,7 +168,7 @@ func (s *ActivityService) ListEventsForRepoNetwork(owner, repo string, opt *List
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err
@@ -180,7 +180,7 @@ func (s *ActivityService) ListEventsForRepoNetwork(owner, repo string, opt *List
 // ListEventsForOrganization lists public events for an organization.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-public-events-for-an-organization
-func (s *ActivityService) ListEventsForOrganization(org string, opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListEventsForOrganization(org string, opt *ListOptions) ([]*Event, *Response, error) {
 	u := fmt.Sprintf("orgs/%v/events", org)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -192,7 +192,7 @@ func (s *ActivityService) ListEventsForOrganization(org string, opt *ListOptions
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err
@@ -205,7 +205,7 @@ func (s *ActivityService) ListEventsForOrganization(org string, opt *ListOptions
 // true, only public events will be returned.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-events-performed-by-a-user
-func (s *ActivityService) ListEventsPerformedByUser(user string, publicOnly bool, opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListEventsPerformedByUser(user string, publicOnly bool, opt *ListOptions) ([]*Event, *Response, error) {
 	var u string
 	if publicOnly {
 		u = fmt.Sprintf("users/%v/events/public", user)
@@ -222,7 +222,7 @@ func (s *ActivityService) ListEventsPerformedByUser(user string, publicOnly bool
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err
@@ -235,7 +235,7 @@ func (s *ActivityService) ListEventsPerformedByUser(user string, publicOnly bool
 // true, only public events will be returned.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-events-that-a-user-has-received
-func (s *ActivityService) ListEventsReceivedByUser(user string, publicOnly bool, opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListEventsReceivedByUser(user string, publicOnly bool, opt *ListOptions) ([]*Event, *Response, error) {
 	var u string
 	if publicOnly {
 		u = fmt.Sprintf("users/%v/received_events/public", user)
@@ -252,7 +252,7 @@ func (s *ActivityService) ListEventsReceivedByUser(user string, publicOnly bool,
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err
@@ -265,7 +265,7 @@ func (s *ActivityService) ListEventsReceivedByUser(user string, publicOnly bool,
 // must be authenticated as the user to view this.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/#list-events-for-an-organization
-func (s *ActivityService) ListUserEventsForOrganization(org, user string, opt *ListOptions) ([]Event, *Response, error) {
+func (s *ActivityService) ListUserEventsForOrganization(org, user string, opt *ListOptions) ([]*Event, *Response, error) {
 	u := fmt.Sprintf("users/%v/events/orgs/%v", user, org)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -277,7 +277,7 @@ func (s *ActivityService) ListUserEventsForOrganization(org, user string, opt *L
 		return nil, nil, err
 	}
 
-	events := new([]Event)
+	events := new([]*Event)
 	resp, err := s.client.Do(req, events)
 	if err != nil {
 		return nil, resp, err

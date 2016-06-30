@@ -111,16 +111,12 @@ func (w *walker) Map(m reflect.Value) error {
 		return nil
 	}
 
-	// Get the type for the map
-	t := m.Type()
-	mapType := reflect.MapOf(t.Key(), t.Elem())
-
 	// Create the map. If the map itself is nil, then just make a nil map
 	var newMap reflect.Value
 	if m.IsNil() {
-		newMap = reflect.Indirect(reflect.New(mapType))
+		newMap = reflect.Indirect(reflect.New(m.Type()))
 	} else {
-		newMap = reflect.MakeMap(reflect.MapOf(t.Key(), t.Elem()))
+		newMap = reflect.MakeMap(m.Type())
 	}
 
 	w.cs = append(w.cs, newMap)

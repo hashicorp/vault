@@ -112,6 +112,7 @@ func NewDuoApi(ikey string,
 	certPool.AppendCertsFromPEM([]byte(duoPinnedCert))
 
 	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
 		TLSClientConfig: &tls.Config{
 			RootCAs:            certPool,
 			InsecureSkipVerify: opts.insecure,

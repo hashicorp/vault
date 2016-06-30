@@ -54,14 +54,14 @@ func (s *RepositoriesService) GetPagesInfo(owner string, repo string) (*Pages, *
 // ListPagesBuilds lists the builds for a GitHub Pages site.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/pages/#list-pages-builds
-func (s *RepositoriesService) ListPagesBuilds(owner string, repo string) ([]PagesBuild, *Response, error) {
+func (s *RepositoriesService) ListPagesBuilds(owner string, repo string) ([]*PagesBuild, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pages/builds", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var pages []PagesBuild
+	var pages []*PagesBuild
 	resp, err := s.client.Do(req, &pages)
 	if err != nil {
 		return nil, resp, err

@@ -1,4 +1,4 @@
-ini [![Build Status](https://drone.io/github.com/go-ini/ini/status.png)](https://drone.io/github.com/go-ini/ini/latest) [![](http://gocover.io/_badge/github.com/go-ini/ini)](http://gocover.io/github.com/go-ini/ini)
+INI [![Build Status](https://travis-ci.org/go-ini/ini.svg?branch=master)](https://travis-ci.org/go-ini/ini)
 ===
 
 ![](https://avatars0.githubusercontent.com/u/10216035?v=3&s=200)
@@ -66,6 +66,21 @@ If you have a list of files with possibilities that some of them may not availab
 
 ```go
 cfg, err := ini.LooseLoad("filename", "filename_404")
+```
+
+When you do not care about cases of section and key names, you can use `InsensitiveLoad` to force all names to be lowercased while parsing.
+
+```go
+cfg, err := ini.InsensitiveLoad("filename")
+//...
+
+// sec1 and sec2 are the exactly same section object
+sec1, err := cfg.GetSection("Section")
+sec2, err := cfg.GetSection("SecTIOn")
+
+// key1 and key2 are the exactly same key object
+key1, err := cfg.GetKey("Key")
+key2, err := cfg.GetKey("KeY")
 ```
 
 The cool thing is, whenever the file is available to load while you're calling `Reload` method, it will be counted as usual.
@@ -141,7 +156,7 @@ names := cfg.Section("").KeyStrings()
 To get a clone hash of keys and corresponding values:
 
 ```go
-hash := cfg.GetSection("").KeysHash()
+hash := cfg.Section("").KeysHash()
 ```
 
 ### Working with values

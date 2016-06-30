@@ -1746,10 +1746,15 @@ func (c *Connection) Object(container string, objectName string) (info Object, h
 			return
 		}
 	}
-	info.ServerLastModified = resp.Header.Get("Last-Modified")
-	if info.LastModified, err = time.Parse(http.TimeFormat, info.ServerLastModified); err != nil {
-		return
+	// Currently ceph doesn't return a Last-Modified header for DLO manifests without any segments
+	// See ceph http://tracker.ceph.com/issues/15812
+	if resp.Header.Get("Last-Modified") != "" {
+		info.ServerLastModified = resp.Header.Get("Last-Modified")
+		if info.LastModified, err = time.Parse(http.TimeFormat, info.ServerLastModified); err != nil {
+			return
+		}
 	}
+
 	info.Hash = resp.Header.Get("Etag")
 	return
 }

@@ -45,14 +45,14 @@ func (w WeeklyStats) String() string {
 // delay of a second or so, should result in a successful request.
 //
 // GitHub API Docs: https://developer.github.com/v3/repos/statistics/#contributors
-func (s *RepositoriesService) ListContributorsStats(owner, repo string) ([]ContributorStats, *Response, error) {
+func (s *RepositoriesService) ListContributorsStats(owner, repo string) ([]*ContributorStats, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/contributors", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var contributorStats []ContributorStats
+	var contributorStats []*ContributorStats
 	resp, err := s.client.Do(req, &contributorStats)
 	if err != nil {
 		return nil, resp, err
@@ -84,14 +84,14 @@ func (w WeeklyCommitActivity) String() string {
 // delay of a second or so, should result in a successful request.
 //
 // GitHub API Docs: https://developer.github.com/v3/repos/statistics/#commit-activity
-func (s *RepositoriesService) ListCommitActivity(owner, repo string) ([]WeeklyCommitActivity, *Response, error) {
+func (s *RepositoriesService) ListCommitActivity(owner, repo string) ([]*WeeklyCommitActivity, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/commit_activity", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var weeklyCommitActivity []WeeklyCommitActivity
+	var weeklyCommitActivity []*WeeklyCommitActivity
 	resp, err := s.client.Do(req, &weeklyCommitActivity)
 	if err != nil {
 		return nil, resp, err
@@ -105,7 +105,7 @@ func (s *RepositoriesService) ListCommitActivity(owner, repo string) ([]WeeklyCo
 // additions and deletions, but not total commits.
 //
 // GitHub API Docs: https://developer.github.com/v3/repos/statistics/#code-frequency
-func (s *RepositoriesService) ListCodeFrequency(owner, repo string) ([]WeeklyStats, *Response, error) {
+func (s *RepositoriesService) ListCodeFrequency(owner, repo string) ([]*WeeklyStats, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/code_frequency", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -116,12 +116,12 @@ func (s *RepositoriesService) ListCodeFrequency(owner, repo string) ([]WeeklySta
 	resp, err := s.client.Do(req, &weeks)
 
 	// convert int slices into WeeklyStats
-	var stats []WeeklyStats
+	var stats []*WeeklyStats
 	for _, week := range weeks {
 		if len(week) != 3 {
 			continue
 		}
-		stat := WeeklyStats{
+		stat := &WeeklyStats{
 			Week:      &Timestamp{time.Unix(int64(week[0]), 0)},
 			Additions: Int(week[1]),
 			Deletions: Int(week[2]),
@@ -186,7 +186,7 @@ type PunchCard struct {
 // ListPunchCard returns the number of commits per hour in each day.
 //
 // GitHub API Docs: https://developer.github.com/v3/repos/statistics/#punch-card
-func (s *RepositoriesService) ListPunchCard(owner, repo string) ([]PunchCard, *Response, error) {
+func (s *RepositoriesService) ListPunchCard(owner, repo string) ([]*PunchCard, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/punch_card", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -197,12 +197,12 @@ func (s *RepositoriesService) ListPunchCard(owner, repo string) ([]PunchCard, *R
 	resp, err := s.client.Do(req, &results)
 
 	// convert int slices into Punchcards
-	var cards []PunchCard
+	var cards []*PunchCard
 	for _, result := range results {
 		if len(result) != 3 {
 			continue
 		}
-		card := PunchCard{
+		card := &PunchCard{
 			Day:     Int(result[0]),
 			Hour:    Int(result[1]),
 			Commits: Int(result[2]),

@@ -46,7 +46,7 @@ type IssueListCommentsOptions struct {
 // number of 0 will return all comments on all issues for the repository.
 //
 // GitHub API docs: http://developer.github.com/v3/issues/comments/#list-comments-on-an-issue
-func (s *IssuesService) ListComments(owner string, repo string, number int, opt *IssueListCommentsOptions) ([]IssueComment, *Response, error) {
+func (s *IssuesService) ListComments(owner string, repo string, number int, opt *IssueListCommentsOptions) ([]*IssueComment, *Response, error) {
 	var u string
 	if number == 0 {
 		u = fmt.Sprintf("repos/%v/%v/issues/comments", owner, repo)
@@ -66,7 +66,7 @@ func (s *IssuesService) ListComments(owner string, repo string, number int, opt 
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	comments := new([]IssueComment)
+	comments := new([]*IssueComment)
 	resp, err := s.client.Do(req, comments)
 	if err != nil {
 		return nil, resp, err

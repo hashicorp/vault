@@ -342,9 +342,8 @@ func (l *Conn) SearchWithPaging(searchRequest *SearchRequest, pagingSize uint32)
 }
 
 func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
-	messageID := l.nextMessageID()
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
-	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, messageID, "MessageID"))
+	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
 	// encode search request
 	encodedSearchRequest, err := searchRequest.encode()
 	if err != nil {
@@ -358,14 +357,11 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 
 	l.Debug.PrintPacket(packet)
 
-	channel, err := l.sendMessage(packet)
+	msgCtx, err := l.sendMessage(packet)
 	if err != nil {
 		return nil, err
 	}
-	if channel == nil {
-		return nil, NewError(ErrorNetwork, errors.New("ldap: could not send message"))
-	}
-	defer l.finishMessage(messageID)
+	defer l.finishMessage(msgCtx)
 
 	result := &SearchResult{
 		Entries:   make([]*Entry, 0),
@@ -374,13 +370,13 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 
 	foundSearchResultDone := false
 	for !foundSearchResultDone {
-		l.Debug.Printf("%d: waiting for response", messageID)
-		packetResponse, ok := <-channel
+		l.Debug.Printf("%d: waiting for response", msgCtx.id)
+		packetResponse, ok := <-msgCtx.responses
 		if !ok {
-			return nil, NewError(ErrorNetwork, errors.New("ldap: channel closed"))
+			return nil, NewError(ErrorNetwork, errors.New("ldap: response channel closed"))
 		}
 		packet, err = packetResponse.ReadPacket()
-		l.Debug.Printf("%d: got response %p", messageID, packet)
+		l.Debug.Printf("%d: got response %p", msgCtx.id, packet)
 		if err != nil {
 			return nil, err
 		}
@@ -421,6 +417,6 @@ func (l *Conn) Search(searchRequest *SearchRequest) (*SearchResult, error) {
 			result.Referrals = append(result.Referrals, packet.Children[1].Children[0].Value.(string))
 		}
 	}
-	l.Debug.Printf("%d: returning", messageID)
+	l.Debug.Printf("%d: returning", msgCtx.id)
 	return result, nil
 }

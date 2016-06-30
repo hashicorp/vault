@@ -16,9 +16,7 @@ import (
 // in the GitHub API.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/
-type MigrationService struct {
-	client *Client
-}
+type MigrationService service
 
 // Migration represents a GitHub migration (archival).
 type Migration struct {

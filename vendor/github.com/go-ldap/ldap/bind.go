@@ -40,10 +40,8 @@ func (bindRequest *SimpleBindRequest) encode() *ber.Packet {
 }
 
 func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResult, error) {
-	messageID := l.nextMessageID()
-
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
-	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, messageID, "MessageID"))
+	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
 	encodedBindRequest := simpleBindRequest.encode()
 	packet.AppendChild(encodedBindRequest)
 
@@ -51,21 +49,18 @@ func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResu
 		ber.PrintPacket(packet)
 	}
 
-	channel, err := l.sendMessage(packet)
+	msgCtx, err := l.sendMessage(packet)
 	if err != nil {
 		return nil, err
 	}
-	if channel == nil {
-		return nil, NewError(ErrorNetwork, errors.New("ldap: could not send message"))
-	}
-	defer l.finishMessage(messageID)
+	defer l.finishMessage(msgCtx)
 
-	packetResponse, ok := <-channel
+	packetResponse, ok := <-msgCtx.responses
 	if !ok {
-		return nil, NewError(ErrorNetwork, errors.New("ldap: channel closed"))
+		return nil, NewError(ErrorNetwork, errors.New("ldap: response channel closed"))
 	}
 	packet, err = packetResponse.ReadPacket()
-	l.Debug.Printf("%d: got response %p", messageID, packet)
+	l.Debug.Printf("%d: got response %p", msgCtx.id, packet)
 	if err != nil {
 		return nil, err
 	}
@@ -96,10 +91,8 @@ func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResu
 }
 
 func (l *Conn) Bind(username, password string) error {
-	messageID := l.nextMessageID()
-
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
-	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, messageID, "MessageID"))
+	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
 	bindRequest := ber.Encode(ber.ClassApplication, ber.TypeConstructed, ApplicationBindRequest, nil, "Bind Request")
 	bindRequest.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, 3, "Version"))
 	bindRequest.AppendChild(ber.NewString(ber.ClassUniversal, ber.TypePrimitive, ber.TagOctetString, username, "User Name"))
@@ -110,21 +103,18 @@ func (l *Conn) Bind(username, password string) error {
 		ber.PrintPacket(packet)
 	}
 
-	channel, err := l.sendMessage(packet)
+	msgCtx, err := l.sendMessage(packet)
 	if err != nil {
 		return err
 	}
-	if channel == nil {
-		return NewError(ErrorNetwork, errors.New("ldap: could not send message"))
-	}
-	defer l.finishMessage(messageID)
+	defer l.finishMessage(msgCtx)
 
-	packetResponse, ok := <-channel
+	packetResponse, ok := <-msgCtx.responses
 	if !ok {
-		return NewError(ErrorNetwork, errors.New("ldap: channel closed"))
+		return NewError(ErrorNetwork, errors.New("ldap: response channel closed"))
 	}
 	packet, err = packetResponse.ReadPacket()
-	l.Debug.Printf("%d: got response %p", messageID, packet)
+	l.Debug.Printf("%d: got response %p", msgCtx.id, packet)
 	if err != nil {
 		return err
 	}
