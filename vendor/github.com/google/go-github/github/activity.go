@@ -9,9 +9,7 @@ package github
 // methods of the GitHub API.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/
-type ActivityService struct {
-	client *Client
-}
+type ActivityService service
 
 // FeedLink represents a link to a related resource.
 type FeedLink struct {

@@ -11,9 +11,7 @@ import "fmt"
 // methods of the GitHub API.
 //
 // GitHub API docs: http://developer.github.com/v3/users/
-type UsersService struct {
-	client *Client
-}
+type UsersService service
 
 // User represents a GitHub user.
 type User struct {
@@ -144,8 +142,10 @@ type UserListOptions struct {
 
 // ListAll lists all GitHub users.
 //
+// To paginate through all users, populate 'Since' with the ID of the last user.
+//
 // GitHub API docs: http://developer.github.com/v3/users/#get-all-users
-func (s *UsersService) ListAll(opt *UserListOptions) ([]User, *Response, error) {
+func (s *UsersService) ListAll(opt *UserListOptions) ([]*User, *Response, error) {
 	u, err := addOptions("users", opt)
 	if err != nil {
 		return nil, nil, err
@@ -156,11 +156,67 @@ func (s *UsersService) ListAll(opt *UserListOptions) ([]User, *Response, error) 
 		return nil, nil, err
 	}
 
-	users := new([]User)
+	users := new([]*User)
 	resp, err := s.client.Do(req, users)
 	if err != nil {
 		return nil, resp, err
 	}
 
 	return *users, resp, err
+}
+
+// ListInvitations lists all currently-open repository invitations for the
+// authenticated user.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/invitations/#list-a-users-repository-invitations
+func (s *UsersService) ListInvitations() ([]*RepositoryInvitation, *Response, error) {
+	req, err := s.client.NewRequest("GET", "user/repository_invitations", nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeRepositoryInvitationsPreview)
+
+	invites := []*RepositoryInvitation{}
+	resp, err := s.client.Do(req, &invites)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return invites, resp, err
+}
+
+// AcceptInvitation accepts the currently-open repository invitation for the
+// authenticated user.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/invitations/#accept-a-repository-invitation
+func (s *UsersService) AcceptInvitation(invitationID int) (*Response, error) {
+	u := fmt.Sprintf("user/repository_invitations/%v", invitationID)
+	req, err := s.client.NewRequest("PATCH", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeRepositoryInvitationsPreview)
+
+	return s.client.Do(req, nil)
+}
+
+// DeclineInvitation declines the currently-open repository invitation for the
+// authenticated user.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/invitations/#decline-a-repository-invitation
+func (s *UsersService) DeclineInvitation(invitationID int) (*Response, error) {
+	u := fmt.Sprintf("user/repository_invitations/%v", invitationID)
+	req, err := s.client.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeRepositoryInvitationsPreview)
+
+	return s.client.Do(req, nil)
 }

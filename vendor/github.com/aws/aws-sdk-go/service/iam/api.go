@@ -15,7 +15,28 @@ import (
 
 const opAddClientIDToOpenIDConnectProvider = "AddClientIDToOpenIDConnectProvider"
 
-// AddClientIDToOpenIDConnectProviderRequest generates a request for the AddClientIDToOpenIDConnectProvider operation.
+// AddClientIDToOpenIDConnectProviderRequest generates a "aws/request.Request" representing the
+// client's request for the AddClientIDToOpenIDConnectProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the AddClientIDToOpenIDConnectProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the AddClientIDToOpenIDConnectProviderRequest method.
+//    req, resp := client.AddClientIDToOpenIDConnectProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) AddClientIDToOpenIDConnectProviderRequest(input *AddClientIDToOpenIDConnectProviderInput) (req *request.Request, output *AddClientIDToOpenIDConnectProviderOutput) {
 	op := &request.Operation{
 		Name:       opAddClientIDToOpenIDConnectProvider,
@@ -48,7 +69,28 @@ func (c *IAM) AddClientIDToOpenIDConnectProvider(input *AddClientIDToOpenIDConne
 
 const opAddRoleToInstanceProfile = "AddRoleToInstanceProfile"
 
-// AddRoleToInstanceProfileRequest generates a request for the AddRoleToInstanceProfile operation.
+// AddRoleToInstanceProfileRequest generates a "aws/request.Request" representing the
+// client's request for the AddRoleToInstanceProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the AddRoleToInstanceProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the AddRoleToInstanceProfileRequest method.
+//    req, resp := client.AddRoleToInstanceProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) AddRoleToInstanceProfileRequest(input *AddRoleToInstanceProfileInput) (req *request.Request, output *AddRoleToInstanceProfileOutput) {
 	op := &request.Operation{
 		Name:       opAddRoleToInstanceProfile,
@@ -84,7 +126,28 @@ func (c *IAM) AddRoleToInstanceProfile(input *AddRoleToInstanceProfileInput) (*A
 
 const opAddUserToGroup = "AddUserToGroup"
 
-// AddUserToGroupRequest generates a request for the AddUserToGroup operation.
+// AddUserToGroupRequest generates a "aws/request.Request" representing the
+// client's request for the AddUserToGroup operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the AddUserToGroup method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the AddUserToGroupRequest method.
+//    req, resp := client.AddUserToGroupRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) AddUserToGroupRequest(input *AddUserToGroupInput) (req *request.Request, output *AddUserToGroupOutput) {
 	op := &request.Operation{
 		Name:       opAddUserToGroup,
@@ -113,7 +176,28 @@ func (c *IAM) AddUserToGroup(input *AddUserToGroupInput) (*AddUserToGroupOutput,
 
 const opAttachGroupPolicy = "AttachGroupPolicy"
 
-// AttachGroupPolicyRequest generates a request for the AttachGroupPolicy operation.
+// AttachGroupPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the AttachGroupPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the AttachGroupPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the AttachGroupPolicyRequest method.
+//    req, resp := client.AttachGroupPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) AttachGroupPolicyRequest(input *AttachGroupPolicyInput) (req *request.Request, output *AttachGroupPolicyOutput) {
 	op := &request.Operation{
 		Name:       opAttachGroupPolicy,
@@ -149,7 +233,28 @@ func (c *IAM) AttachGroupPolicy(input *AttachGroupPolicyInput) (*AttachGroupPoli
 
 const opAttachRolePolicy = "AttachRolePolicy"
 
-// AttachRolePolicyRequest generates a request for the AttachRolePolicy operation.
+// AttachRolePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the AttachRolePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the AttachRolePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the AttachRolePolicyRequest method.
+//    req, resp := client.AttachRolePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) AttachRolePolicyRequest(input *AttachRolePolicyInput) (req *request.Request, output *AttachRolePolicyOutput) {
 	op := &request.Operation{
 		Name:       opAttachRolePolicy,
@@ -189,7 +294,28 @@ func (c *IAM) AttachRolePolicy(input *AttachRolePolicyInput) (*AttachRolePolicyO
 
 const opAttachUserPolicy = "AttachUserPolicy"
 
-// AttachUserPolicyRequest generates a request for the AttachUserPolicy operation.
+// AttachUserPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the AttachUserPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the AttachUserPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the AttachUserPolicyRequest method.
+//    req, resp := client.AttachUserPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) AttachUserPolicyRequest(input *AttachUserPolicyInput) (req *request.Request, output *AttachUserPolicyOutput) {
 	op := &request.Operation{
 		Name:       opAttachUserPolicy,
@@ -225,7 +351,28 @@ func (c *IAM) AttachUserPolicy(input *AttachUserPolicyInput) (*AttachUserPolicyO
 
 const opChangePassword = "ChangePassword"
 
-// ChangePasswordRequest generates a request for the ChangePassword operation.
+// ChangePasswordRequest generates a "aws/request.Request" representing the
+// client's request for the ChangePassword operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ChangePassword method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ChangePasswordRequest method.
+//    req, resp := client.ChangePasswordRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ChangePasswordRequest(input *ChangePasswordInput) (req *request.Request, output *ChangePasswordOutput) {
 	op := &request.Operation{
 		Name:       opChangePassword,
@@ -259,7 +406,28 @@ func (c *IAM) ChangePassword(input *ChangePasswordInput) (*ChangePasswordOutput,
 
 const opCreateAccessKey = "CreateAccessKey"
 
-// CreateAccessKeyRequest generates a request for the CreateAccessKey operation.
+// CreateAccessKeyRequest generates a "aws/request.Request" representing the
+// client's request for the CreateAccessKey operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateAccessKey method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateAccessKeyRequest method.
+//    req, resp := client.CreateAccessKeyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateAccessKeyRequest(input *CreateAccessKeyInput) (req *request.Request, output *CreateAccessKeyOutput) {
 	op := &request.Operation{
 		Name:       opCreateAccessKey,
@@ -302,7 +470,28 @@ func (c *IAM) CreateAccessKey(input *CreateAccessKeyInput) (*CreateAccessKeyOutp
 
 const opCreateAccountAlias = "CreateAccountAlias"
 
-// CreateAccountAliasRequest generates a request for the CreateAccountAlias operation.
+// CreateAccountAliasRequest generates a "aws/request.Request" representing the
+// client's request for the CreateAccountAlias operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateAccountAlias method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateAccountAliasRequest method.
+//    req, resp := client.CreateAccountAliasRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateAccountAliasRequest(input *CreateAccountAliasInput) (req *request.Request, output *CreateAccountAliasOutput) {
 	op := &request.Operation{
 		Name:       opCreateAccountAlias,
@@ -333,7 +522,28 @@ func (c *IAM) CreateAccountAlias(input *CreateAccountAliasInput) (*CreateAccount
 
 const opCreateGroup = "CreateGroup"
 
-// CreateGroupRequest generates a request for the CreateGroup operation.
+// CreateGroupRequest generates a "aws/request.Request" representing the
+// client's request for the CreateGroup operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateGroup method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateGroupRequest method.
+//    req, resp := client.CreateGroupRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateGroupRequest(input *CreateGroupInput) (req *request.Request, output *CreateGroupOutput) {
 	op := &request.Operation{
 		Name:       opCreateGroup,
@@ -364,7 +574,28 @@ func (c *IAM) CreateGroup(input *CreateGroupInput) (*CreateGroupOutput, error) {
 
 const opCreateInstanceProfile = "CreateInstanceProfile"
 
-// CreateInstanceProfileRequest generates a request for the CreateInstanceProfile operation.
+// CreateInstanceProfileRequest generates a "aws/request.Request" representing the
+// client's request for the CreateInstanceProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateInstanceProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateInstanceProfileRequest method.
+//    req, resp := client.CreateInstanceProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateInstanceProfileRequest(input *CreateInstanceProfileInput) (req *request.Request, output *CreateInstanceProfileOutput) {
 	op := &request.Operation{
 		Name:       opCreateInstanceProfile,
@@ -396,7 +627,28 @@ func (c *IAM) CreateInstanceProfile(input *CreateInstanceProfileInput) (*CreateI
 
 const opCreateLoginProfile = "CreateLoginProfile"
 
-// CreateLoginProfileRequest generates a request for the CreateLoginProfile operation.
+// CreateLoginProfileRequest generates a "aws/request.Request" representing the
+// client's request for the CreateLoginProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateLoginProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateLoginProfileRequest method.
+//    req, resp := client.CreateLoginProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateLoginProfileRequest(input *CreateLoginProfileInput) (req *request.Request, output *CreateLoginProfileOutput) {
 	op := &request.Operation{
 		Name:       opCreateLoginProfile,
@@ -426,7 +678,28 @@ func (c *IAM) CreateLoginProfile(input *CreateLoginProfileInput) (*CreateLoginPr
 
 const opCreateOpenIDConnectProvider = "CreateOpenIDConnectProvider"
 
-// CreateOpenIDConnectProviderRequest generates a request for the CreateOpenIDConnectProvider operation.
+// CreateOpenIDConnectProviderRequest generates a "aws/request.Request" representing the
+// client's request for the CreateOpenIDConnectProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateOpenIDConnectProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateOpenIDConnectProviderRequest method.
+//    req, resp := client.CreateOpenIDConnectProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateOpenIDConnectProviderRequest(input *CreateOpenIDConnectProviderInput) (req *request.Request, output *CreateOpenIDConnectProviderOutput) {
 	op := &request.Operation{
 		Name:       opCreateOpenIDConnectProvider,
@@ -469,7 +742,28 @@ func (c *IAM) CreateOpenIDConnectProvider(input *CreateOpenIDConnectProviderInpu
 
 const opCreatePolicy = "CreatePolicy"
 
-// CreatePolicyRequest generates a request for the CreatePolicy operation.
+// CreatePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the CreatePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreatePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreatePolicyRequest method.
+//    req, resp := client.CreatePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreatePolicyRequest(input *CreatePolicyInput) (req *request.Request, output *CreatePolicyOutput) {
 	op := &request.Operation{
 		Name:       opCreatePolicy,
@@ -505,7 +799,28 @@ func (c *IAM) CreatePolicy(input *CreatePolicyInput) (*CreatePolicyOutput, error
 
 const opCreatePolicyVersion = "CreatePolicyVersion"
 
-// CreatePolicyVersionRequest generates a request for the CreatePolicyVersion operation.
+// CreatePolicyVersionRequest generates a "aws/request.Request" representing the
+// client's request for the CreatePolicyVersion operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreatePolicyVersion method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreatePolicyVersionRequest method.
+//    req, resp := client.CreatePolicyVersionRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreatePolicyVersionRequest(input *CreatePolicyVersionInput) (req *request.Request, output *CreatePolicyVersionOutput) {
 	op := &request.Operation{
 		Name:       opCreatePolicyVersion,
@@ -543,7 +858,28 @@ func (c *IAM) CreatePolicyVersion(input *CreatePolicyVersionInput) (*CreatePolic
 
 const opCreateRole = "CreateRole"
 
-// CreateRoleRequest generates a request for the CreateRole operation.
+// CreateRoleRequest generates a "aws/request.Request" representing the
+// client's request for the CreateRole operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateRole method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateRoleRequest method.
+//    req, resp := client.CreateRoleRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateRoleRequest(input *CreateRoleInput) (req *request.Request, output *CreateRoleOutput) {
 	op := &request.Operation{
 		Name:       opCreateRole,
@@ -574,7 +910,28 @@ func (c *IAM) CreateRole(input *CreateRoleInput) (*CreateRoleOutput, error) {
 
 const opCreateSAMLProvider = "CreateSAMLProvider"
 
-// CreateSAMLProviderRequest generates a request for the CreateSAMLProvider operation.
+// CreateSAMLProviderRequest generates a "aws/request.Request" representing the
+// client's request for the CreateSAMLProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateSAMLProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateSAMLProviderRequest method.
+//    req, resp := client.CreateSAMLProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateSAMLProviderRequest(input *CreateSAMLProviderInput) (req *request.Request, output *CreateSAMLProviderOutput) {
 	op := &request.Operation{
 		Name:       opCreateSAMLProvider,
@@ -622,7 +979,28 @@ func (c *IAM) CreateSAMLProvider(input *CreateSAMLProviderInput) (*CreateSAMLPro
 
 const opCreateUser = "CreateUser"
 
-// CreateUserRequest generates a request for the CreateUser operation.
+// CreateUserRequest generates a "aws/request.Request" representing the
+// client's request for the CreateUser operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateUser method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateUserRequest method.
+//    req, resp := client.CreateUserRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateUserRequest(input *CreateUserInput) (req *request.Request, output *CreateUserOutput) {
 	op := &request.Operation{
 		Name:       opCreateUser,
@@ -653,7 +1031,28 @@ func (c *IAM) CreateUser(input *CreateUserInput) (*CreateUserOutput, error) {
 
 const opCreateVirtualMFADevice = "CreateVirtualMFADevice"
 
-// CreateVirtualMFADeviceRequest generates a request for the CreateVirtualMFADevice operation.
+// CreateVirtualMFADeviceRequest generates a "aws/request.Request" representing the
+// client's request for the CreateVirtualMFADevice operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the CreateVirtualMFADevice method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the CreateVirtualMFADeviceRequest method.
+//    req, resp := client.CreateVirtualMFADeviceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) CreateVirtualMFADeviceRequest(input *CreateVirtualMFADeviceInput) (req *request.Request, output *CreateVirtualMFADeviceOutput) {
 	op := &request.Operation{
 		Name:       opCreateVirtualMFADevice,
@@ -693,7 +1092,28 @@ func (c *IAM) CreateVirtualMFADevice(input *CreateVirtualMFADeviceInput) (*Creat
 
 const opDeactivateMFADevice = "DeactivateMFADevice"
 
-// DeactivateMFADeviceRequest generates a request for the DeactivateMFADevice operation.
+// DeactivateMFADeviceRequest generates a "aws/request.Request" representing the
+// client's request for the DeactivateMFADevice operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeactivateMFADevice method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeactivateMFADeviceRequest method.
+//    req, resp := client.DeactivateMFADeviceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeactivateMFADeviceRequest(input *DeactivateMFADeviceInput) (req *request.Request, output *DeactivateMFADeviceOutput) {
 	op := &request.Operation{
 		Name:       opDeactivateMFADevice,
@@ -727,7 +1147,28 @@ func (c *IAM) DeactivateMFADevice(input *DeactivateMFADeviceInput) (*DeactivateM
 
 const opDeleteAccessKey = "DeleteAccessKey"
 
-// DeleteAccessKeyRequest generates a request for the DeleteAccessKey operation.
+// DeleteAccessKeyRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteAccessKey operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteAccessKey method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteAccessKeyRequest method.
+//    req, resp := client.DeleteAccessKeyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteAccessKeyRequest(input *DeleteAccessKeyInput) (req *request.Request, output *DeleteAccessKeyOutput) {
 	op := &request.Operation{
 		Name:       opDeleteAccessKey,
@@ -761,7 +1202,28 @@ func (c *IAM) DeleteAccessKey(input *DeleteAccessKeyInput) (*DeleteAccessKeyOutp
 
 const opDeleteAccountAlias = "DeleteAccountAlias"
 
-// DeleteAccountAliasRequest generates a request for the DeleteAccountAlias operation.
+// DeleteAccountAliasRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteAccountAlias operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteAccountAlias method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteAccountAliasRequest method.
+//    req, resp := client.DeleteAccountAliasRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteAccountAliasRequest(input *DeleteAccountAliasInput) (req *request.Request, output *DeleteAccountAliasOutput) {
 	op := &request.Operation{
 		Name:       opDeleteAccountAlias,
@@ -792,7 +1254,28 @@ func (c *IAM) DeleteAccountAlias(input *DeleteAccountAliasInput) (*DeleteAccount
 
 const opDeleteAccountPasswordPolicy = "DeleteAccountPasswordPolicy"
 
-// DeleteAccountPasswordPolicyRequest generates a request for the DeleteAccountPasswordPolicy operation.
+// DeleteAccountPasswordPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteAccountPasswordPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteAccountPasswordPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteAccountPasswordPolicyRequest method.
+//    req, resp := client.DeleteAccountPasswordPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteAccountPasswordPolicyRequest(input *DeleteAccountPasswordPolicyInput) (req *request.Request, output *DeleteAccountPasswordPolicyOutput) {
 	op := &request.Operation{
 		Name:       opDeleteAccountPasswordPolicy,
@@ -821,7 +1304,28 @@ func (c *IAM) DeleteAccountPasswordPolicy(input *DeleteAccountPasswordPolicyInpu
 
 const opDeleteGroup = "DeleteGroup"
 
-// DeleteGroupRequest generates a request for the DeleteGroup operation.
+// DeleteGroupRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteGroup operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteGroup method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteGroupRequest method.
+//    req, resp := client.DeleteGroupRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteGroupRequest(input *DeleteGroupInput) (req *request.Request, output *DeleteGroupOutput) {
 	op := &request.Operation{
 		Name:       opDeleteGroup,
@@ -851,7 +1355,28 @@ func (c *IAM) DeleteGroup(input *DeleteGroupInput) (*DeleteGroupOutput, error) {
 
 const opDeleteGroupPolicy = "DeleteGroupPolicy"
 
-// DeleteGroupPolicyRequest generates a request for the DeleteGroupPolicy operation.
+// DeleteGroupPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteGroupPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteGroupPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteGroupPolicyRequest method.
+//    req, resp := client.DeleteGroupPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteGroupPolicyRequest(input *DeleteGroupPolicyInput) (req *request.Request, output *DeleteGroupPolicyOutput) {
 	op := &request.Operation{
 		Name:       opDeleteGroupPolicy,
@@ -886,7 +1411,28 @@ func (c *IAM) DeleteGroupPolicy(input *DeleteGroupPolicyInput) (*DeleteGroupPoli
 
 const opDeleteInstanceProfile = "DeleteInstanceProfile"
 
-// DeleteInstanceProfileRequest generates a request for the DeleteInstanceProfile operation.
+// DeleteInstanceProfileRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteInstanceProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteInstanceProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteInstanceProfileRequest method.
+//    req, resp := client.DeleteInstanceProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteInstanceProfileRequest(input *DeleteInstanceProfileInput) (req *request.Request, output *DeleteInstanceProfileOutput) {
 	op := &request.Operation{
 		Name:       opDeleteInstanceProfile,
@@ -924,7 +1470,28 @@ func (c *IAM) DeleteInstanceProfile(input *DeleteInstanceProfileInput) (*DeleteI
 
 const opDeleteLoginProfile = "DeleteLoginProfile"
 
-// DeleteLoginProfileRequest generates a request for the DeleteLoginProfile operation.
+// DeleteLoginProfileRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteLoginProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteLoginProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteLoginProfileRequest method.
+//    req, resp := client.DeleteLoginProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteLoginProfileRequest(input *DeleteLoginProfileInput) (req *request.Request, output *DeleteLoginProfileOutput) {
 	op := &request.Operation{
 		Name:       opDeleteLoginProfile,
@@ -960,7 +1527,28 @@ func (c *IAM) DeleteLoginProfile(input *DeleteLoginProfileInput) (*DeleteLoginPr
 
 const opDeleteOpenIDConnectProvider = "DeleteOpenIDConnectProvider"
 
-// DeleteOpenIDConnectProviderRequest generates a request for the DeleteOpenIDConnectProvider operation.
+// DeleteOpenIDConnectProviderRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteOpenIDConnectProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteOpenIDConnectProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteOpenIDConnectProviderRequest method.
+//    req, resp := client.DeleteOpenIDConnectProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteOpenIDConnectProviderRequest(input *DeleteOpenIDConnectProviderInput) (req *request.Request, output *DeleteOpenIDConnectProviderOutput) {
 	op := &request.Operation{
 		Name:       opDeleteOpenIDConnectProvider,
@@ -996,7 +1584,28 @@ func (c *IAM) DeleteOpenIDConnectProvider(input *DeleteOpenIDConnectProviderInpu
 
 const opDeletePolicy = "DeletePolicy"
 
-// DeletePolicyRequest generates a request for the DeletePolicy operation.
+// DeletePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DeletePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeletePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeletePolicyRequest method.
+//    req, resp := client.DeletePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeletePolicyRequest(input *DeletePolicyInput) (req *request.Request, output *DeletePolicyOutput) {
 	op := &request.Operation{
 		Name:       opDeletePolicy,
@@ -1047,7 +1656,28 @@ func (c *IAM) DeletePolicy(input *DeletePolicyInput) (*DeletePolicyOutput, error
 
 const opDeletePolicyVersion = "DeletePolicyVersion"
 
-// DeletePolicyVersionRequest generates a request for the DeletePolicyVersion operation.
+// DeletePolicyVersionRequest generates a "aws/request.Request" representing the
+// client's request for the DeletePolicyVersion operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeletePolicyVersion method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeletePolicyVersionRequest method.
+//    req, resp := client.DeletePolicyVersionRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeletePolicyVersionRequest(input *DeletePolicyVersionInput) (req *request.Request, output *DeletePolicyVersionOutput) {
 	op := &request.Operation{
 		Name:       opDeletePolicyVersion,
@@ -1084,7 +1714,28 @@ func (c *IAM) DeletePolicyVersion(input *DeletePolicyVersionInput) (*DeletePolic
 
 const opDeleteRole = "DeleteRole"
 
-// DeleteRoleRequest generates a request for the DeleteRole operation.
+// DeleteRoleRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteRole operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteRole method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteRoleRequest method.
+//    req, resp := client.DeleteRoleRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteRoleRequest(input *DeleteRoleInput) (req *request.Request, output *DeleteRoleOutput) {
 	op := &request.Operation{
 		Name:       opDeleteRole,
@@ -1118,7 +1769,28 @@ func (c *IAM) DeleteRole(input *DeleteRoleInput) (*DeleteRoleOutput, error) {
 
 const opDeleteRolePolicy = "DeleteRolePolicy"
 
-// DeleteRolePolicyRequest generates a request for the DeleteRolePolicy operation.
+// DeleteRolePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteRolePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteRolePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteRolePolicyRequest method.
+//    req, resp := client.DeleteRolePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteRolePolicyRequest(input *DeleteRolePolicyInput) (req *request.Request, output *DeleteRolePolicyOutput) {
 	op := &request.Operation{
 		Name:       opDeleteRolePolicy,
@@ -1153,7 +1825,28 @@ func (c *IAM) DeleteRolePolicy(input *DeleteRolePolicyInput) (*DeleteRolePolicyO
 
 const opDeleteSAMLProvider = "DeleteSAMLProvider"
 
-// DeleteSAMLProviderRequest generates a request for the DeleteSAMLProvider operation.
+// DeleteSAMLProviderRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteSAMLProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteSAMLProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteSAMLProviderRequest method.
+//    req, resp := client.DeleteSAMLProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteSAMLProviderRequest(input *DeleteSAMLProviderInput) (req *request.Request, output *DeleteSAMLProviderOutput) {
 	op := &request.Operation{
 		Name:       opDeleteSAMLProvider,
@@ -1189,7 +1882,28 @@ func (c *IAM) DeleteSAMLProvider(input *DeleteSAMLProviderInput) (*DeleteSAMLPro
 
 const opDeleteSSHPublicKey = "DeleteSSHPublicKey"
 
-// DeleteSSHPublicKeyRequest generates a request for the DeleteSSHPublicKey operation.
+// DeleteSSHPublicKeyRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteSSHPublicKey operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteSSHPublicKey method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteSSHPublicKeyRequest method.
+//    req, resp := client.DeleteSSHPublicKeyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteSSHPublicKeyRequest(input *DeleteSSHPublicKeyInput) (req *request.Request, output *DeleteSSHPublicKeyOutput) {
 	op := &request.Operation{
 		Name:       opDeleteSSHPublicKey,
@@ -1224,7 +1938,28 @@ func (c *IAM) DeleteSSHPublicKey(input *DeleteSSHPublicKeyInput) (*DeleteSSHPubl
 
 const opDeleteServerCertificate = "DeleteServerCertificate"
 
-// DeleteServerCertificateRequest generates a request for the DeleteServerCertificate operation.
+// DeleteServerCertificateRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteServerCertificate operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteServerCertificate method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteServerCertificateRequest method.
+//    req, resp := client.DeleteServerCertificateRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteServerCertificateRequest(input *DeleteServerCertificateInput) (req *request.Request, output *DeleteServerCertificateOutput) {
 	op := &request.Operation{
 		Name:       opDeleteServerCertificate,
@@ -1268,7 +2003,28 @@ func (c *IAM) DeleteServerCertificate(input *DeleteServerCertificateInput) (*Del
 
 const opDeleteSigningCertificate = "DeleteSigningCertificate"
 
-// DeleteSigningCertificateRequest generates a request for the DeleteSigningCertificate operation.
+// DeleteSigningCertificateRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteSigningCertificate operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteSigningCertificate method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteSigningCertificateRequest method.
+//    req, resp := client.DeleteSigningCertificateRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteSigningCertificateRequest(input *DeleteSigningCertificateInput) (req *request.Request, output *DeleteSigningCertificateOutput) {
 	op := &request.Operation{
 		Name:       opDeleteSigningCertificate,
@@ -1302,7 +2058,28 @@ func (c *IAM) DeleteSigningCertificate(input *DeleteSigningCertificateInput) (*D
 
 const opDeleteUser = "DeleteUser"
 
-// DeleteUserRequest generates a request for the DeleteUser operation.
+// DeleteUserRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteUser operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteUser method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteUserRequest method.
+//    req, resp := client.DeleteUserRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteUserRequest(input *DeleteUserInput) (req *request.Request, output *DeleteUserOutput) {
 	op := &request.Operation{
 		Name:       opDeleteUser,
@@ -1332,7 +2109,28 @@ func (c *IAM) DeleteUser(input *DeleteUserInput) (*DeleteUserOutput, error) {
 
 const opDeleteUserPolicy = "DeleteUserPolicy"
 
-// DeleteUserPolicyRequest generates a request for the DeleteUserPolicy operation.
+// DeleteUserPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteUserPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteUserPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteUserPolicyRequest method.
+//    req, resp := client.DeleteUserPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteUserPolicyRequest(input *DeleteUserPolicyInput) (req *request.Request, output *DeleteUserPolicyOutput) {
 	op := &request.Operation{
 		Name:       opDeleteUserPolicy,
@@ -1367,7 +2165,28 @@ func (c *IAM) DeleteUserPolicy(input *DeleteUserPolicyInput) (*DeleteUserPolicyO
 
 const opDeleteVirtualMFADevice = "DeleteVirtualMFADevice"
 
-// DeleteVirtualMFADeviceRequest generates a request for the DeleteVirtualMFADevice operation.
+// DeleteVirtualMFADeviceRequest generates a "aws/request.Request" representing the
+// client's request for the DeleteVirtualMFADevice operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DeleteVirtualMFADevice method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DeleteVirtualMFADeviceRequest method.
+//    req, resp := client.DeleteVirtualMFADeviceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DeleteVirtualMFADeviceRequest(input *DeleteVirtualMFADeviceInput) (req *request.Request, output *DeleteVirtualMFADeviceOutput) {
 	op := &request.Operation{
 		Name:       opDeleteVirtualMFADevice,
@@ -1399,7 +2218,28 @@ func (c *IAM) DeleteVirtualMFADevice(input *DeleteVirtualMFADeviceInput) (*Delet
 
 const opDetachGroupPolicy = "DetachGroupPolicy"
 
-// DetachGroupPolicyRequest generates a request for the DetachGroupPolicy operation.
+// DetachGroupPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DetachGroupPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DetachGroupPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DetachGroupPolicyRequest method.
+//    req, resp := client.DetachGroupPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DetachGroupPolicyRequest(input *DetachGroupPolicyInput) (req *request.Request, output *DetachGroupPolicyOutput) {
 	op := &request.Operation{
 		Name:       opDetachGroupPolicy,
@@ -1433,7 +2273,28 @@ func (c *IAM) DetachGroupPolicy(input *DetachGroupPolicyInput) (*DetachGroupPoli
 
 const opDetachRolePolicy = "DetachRolePolicy"
 
-// DetachRolePolicyRequest generates a request for the DetachRolePolicy operation.
+// DetachRolePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DetachRolePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DetachRolePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DetachRolePolicyRequest method.
+//    req, resp := client.DetachRolePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DetachRolePolicyRequest(input *DetachRolePolicyInput) (req *request.Request, output *DetachRolePolicyOutput) {
 	op := &request.Operation{
 		Name:       opDetachRolePolicy,
@@ -1467,7 +2328,28 @@ func (c *IAM) DetachRolePolicy(input *DetachRolePolicyInput) (*DetachRolePolicyO
 
 const opDetachUserPolicy = "DetachUserPolicy"
 
-// DetachUserPolicyRequest generates a request for the DetachUserPolicy operation.
+// DetachUserPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the DetachUserPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DetachUserPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DetachUserPolicyRequest method.
+//    req, resp := client.DetachUserPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) DetachUserPolicyRequest(input *DetachUserPolicyInput) (req *request.Request, output *DetachUserPolicyOutput) {
 	op := &request.Operation{
 		Name:       opDetachUserPolicy,
@@ -1501,7 +2383,28 @@ func (c *IAM) DetachUserPolicy(input *DetachUserPolicyInput) (*DetachUserPolicyO
 
 const opEnableMFADevice = "EnableMFADevice"
 
-// EnableMFADeviceRequest generates a request for the EnableMFADevice operation.
+// EnableMFADeviceRequest generates a "aws/request.Request" representing the
+// client's request for the EnableMFADevice operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the EnableMFADevice method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the EnableMFADeviceRequest method.
+//    req, resp := client.EnableMFADeviceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) EnableMFADeviceRequest(input *EnableMFADeviceInput) (req *request.Request, output *EnableMFADeviceOutput) {
 	op := &request.Operation{
 		Name:       opEnableMFADevice,
@@ -1532,7 +2435,28 @@ func (c *IAM) EnableMFADevice(input *EnableMFADeviceInput) (*EnableMFADeviceOutp
 
 const opGenerateCredentialReport = "GenerateCredentialReport"
 
-// GenerateCredentialReportRequest generates a request for the GenerateCredentialReport operation.
+// GenerateCredentialReportRequest generates a "aws/request.Request" representing the
+// client's request for the GenerateCredentialReport operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GenerateCredentialReport method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GenerateCredentialReportRequest method.
+//    req, resp := client.GenerateCredentialReportRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GenerateCredentialReportRequest(input *GenerateCredentialReportInput) (req *request.Request, output *GenerateCredentialReportOutput) {
 	op := &request.Operation{
 		Name:       opGenerateCredentialReport,
@@ -1561,7 +2485,28 @@ func (c *IAM) GenerateCredentialReport(input *GenerateCredentialReportInput) (*G
 
 const opGetAccessKeyLastUsed = "GetAccessKeyLastUsed"
 
-// GetAccessKeyLastUsedRequest generates a request for the GetAccessKeyLastUsed operation.
+// GetAccessKeyLastUsedRequest generates a "aws/request.Request" representing the
+// client's request for the GetAccessKeyLastUsed operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetAccessKeyLastUsed method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetAccessKeyLastUsedRequest method.
+//    req, resp := client.GetAccessKeyLastUsedRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetAccessKeyLastUsedRequest(input *GetAccessKeyLastUsedInput) (req *request.Request, output *GetAccessKeyLastUsedOutput) {
 	op := &request.Operation{
 		Name:       opGetAccessKeyLastUsed,
@@ -1591,7 +2536,28 @@ func (c *IAM) GetAccessKeyLastUsed(input *GetAccessKeyLastUsedInput) (*GetAccess
 
 const opGetAccountAuthorizationDetails = "GetAccountAuthorizationDetails"
 
-// GetAccountAuthorizationDetailsRequest generates a request for the GetAccountAuthorizationDetails operation.
+// GetAccountAuthorizationDetailsRequest generates a "aws/request.Request" representing the
+// client's request for the GetAccountAuthorizationDetails operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetAccountAuthorizationDetails method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetAccountAuthorizationDetailsRequest method.
+//    req, resp := client.GetAccountAuthorizationDetailsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetAccountAuthorizationDetailsRequest(input *GetAccountAuthorizationDetailsInput) (req *request.Request, output *GetAccountAuthorizationDetailsOutput) {
 	op := &request.Operation{
 		Name:       opGetAccountAuthorizationDetails,
@@ -1628,6 +2594,23 @@ func (c *IAM) GetAccountAuthorizationDetails(input *GetAccountAuthorizationDetai
 	return out, err
 }
 
+// GetAccountAuthorizationDetailsPages iterates over the pages of a GetAccountAuthorizationDetails operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See GetAccountAuthorizationDetails method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a GetAccountAuthorizationDetails operation.
+//    pageNum := 0
+//    err := client.GetAccountAuthorizationDetailsPages(params,
+//        func(page *GetAccountAuthorizationDetailsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) GetAccountAuthorizationDetailsPages(input *GetAccountAuthorizationDetailsInput, fn func(p *GetAccountAuthorizationDetailsOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.GetAccountAuthorizationDetailsRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -1638,7 +2621,28 @@ func (c *IAM) GetAccountAuthorizationDetailsPages(input *GetAccountAuthorization
 
 const opGetAccountPasswordPolicy = "GetAccountPasswordPolicy"
 
-// GetAccountPasswordPolicyRequest generates a request for the GetAccountPasswordPolicy operation.
+// GetAccountPasswordPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the GetAccountPasswordPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetAccountPasswordPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetAccountPasswordPolicyRequest method.
+//    req, resp := client.GetAccountPasswordPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetAccountPasswordPolicyRequest(input *GetAccountPasswordPolicyInput) (req *request.Request, output *GetAccountPasswordPolicyOutput) {
 	op := &request.Operation{
 		Name:       opGetAccountPasswordPolicy,
@@ -1666,7 +2670,28 @@ func (c *IAM) GetAccountPasswordPolicy(input *GetAccountPasswordPolicyInput) (*G
 
 const opGetAccountSummary = "GetAccountSummary"
 
-// GetAccountSummaryRequest generates a request for the GetAccountSummary operation.
+// GetAccountSummaryRequest generates a "aws/request.Request" representing the
+// client's request for the GetAccountSummary operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetAccountSummary method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetAccountSummaryRequest method.
+//    req, resp := client.GetAccountSummaryRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetAccountSummaryRequest(input *GetAccountSummaryInput) (req *request.Request, output *GetAccountSummaryOutput) {
 	op := &request.Operation{
 		Name:       opGetAccountSummary,
@@ -1697,7 +2722,28 @@ func (c *IAM) GetAccountSummary(input *GetAccountSummaryInput) (*GetAccountSumma
 
 const opGetContextKeysForCustomPolicy = "GetContextKeysForCustomPolicy"
 
-// GetContextKeysForCustomPolicyRequest generates a request for the GetContextKeysForCustomPolicy operation.
+// GetContextKeysForCustomPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the GetContextKeysForCustomPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetContextKeysForCustomPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetContextKeysForCustomPolicyRequest method.
+//    req, resp := client.GetContextKeysForCustomPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetContextKeysForCustomPolicyRequest(input *GetContextKeysForCustomPolicyInput) (req *request.Request, output *GetContextKeysForPolicyResponse) {
 	op := &request.Operation{
 		Name:       opGetContextKeysForCustomPolicy,
@@ -1733,7 +2779,28 @@ func (c *IAM) GetContextKeysForCustomPolicy(input *GetContextKeysForCustomPolicy
 
 const opGetContextKeysForPrincipalPolicy = "GetContextKeysForPrincipalPolicy"
 
-// GetContextKeysForPrincipalPolicyRequest generates a request for the GetContextKeysForPrincipalPolicy operation.
+// GetContextKeysForPrincipalPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the GetContextKeysForPrincipalPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetContextKeysForPrincipalPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetContextKeysForPrincipalPolicyRequest method.
+//    req, resp := client.GetContextKeysForPrincipalPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetContextKeysForPrincipalPolicyRequest(input *GetContextKeysForPrincipalPolicyInput) (req *request.Request, output *GetContextKeysForPolicyResponse) {
 	op := &request.Operation{
 		Name:       opGetContextKeysForPrincipalPolicy,
@@ -1776,7 +2843,28 @@ func (c *IAM) GetContextKeysForPrincipalPolicy(input *GetContextKeysForPrincipal
 
 const opGetCredentialReport = "GetCredentialReport"
 
-// GetCredentialReportRequest generates a request for the GetCredentialReport operation.
+// GetCredentialReportRequest generates a "aws/request.Request" representing the
+// client's request for the GetCredentialReport operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetCredentialReport method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetCredentialReportRequest method.
+//    req, resp := client.GetCredentialReportRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetCredentialReportRequest(input *GetCredentialReportInput) (req *request.Request, output *GetCredentialReportOutput) {
 	op := &request.Operation{
 		Name:       opGetCredentialReport,
@@ -1805,7 +2893,28 @@ func (c *IAM) GetCredentialReport(input *GetCredentialReportInput) (*GetCredenti
 
 const opGetGroup = "GetGroup"
 
-// GetGroupRequest generates a request for the GetGroup operation.
+// GetGroupRequest generates a "aws/request.Request" representing the
+// client's request for the GetGroup operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetGroup method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetGroupRequest method.
+//    req, resp := client.GetGroupRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetGroupRequest(input *GetGroupInput) (req *request.Request, output *GetGroupOutput) {
 	op := &request.Operation{
 		Name:       opGetGroup,
@@ -1837,6 +2946,23 @@ func (c *IAM) GetGroup(input *GetGroupInput) (*GetGroupOutput, error) {
 	return out, err
 }
 
+// GetGroupPages iterates over the pages of a GetGroup operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See GetGroup method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a GetGroup operation.
+//    pageNum := 0
+//    err := client.GetGroupPages(params,
+//        func(page *GetGroupOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) GetGroupPages(input *GetGroupInput, fn func(p *GetGroupOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.GetGroupRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -1847,7 +2973,28 @@ func (c *IAM) GetGroupPages(input *GetGroupInput, fn func(p *GetGroupOutput, las
 
 const opGetGroupPolicy = "GetGroupPolicy"
 
-// GetGroupPolicyRequest generates a request for the GetGroupPolicy operation.
+// GetGroupPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the GetGroupPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetGroupPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetGroupPolicyRequest method.
+//    req, resp := client.GetGroupPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *request.Request, output *GetGroupPolicyOutput) {
 	op := &request.Operation{
 		Name:       opGetGroupPolicy,
@@ -1884,7 +3031,28 @@ func (c *IAM) GetGroupPolicy(input *GetGroupPolicyInput) (*GetGroupPolicyOutput,
 
 const opGetInstanceProfile = "GetInstanceProfile"
 
-// GetInstanceProfileRequest generates a request for the GetInstanceProfile operation.
+// GetInstanceProfileRequest generates a "aws/request.Request" representing the
+// client's request for the GetInstanceProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetInstanceProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetInstanceProfileRequest method.
+//    req, resp := client.GetInstanceProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetInstanceProfileRequest(input *GetInstanceProfileInput) (req *request.Request, output *GetInstanceProfileOutput) {
 	op := &request.Operation{
 		Name:       opGetInstanceProfile,
@@ -1914,7 +3082,28 @@ func (c *IAM) GetInstanceProfile(input *GetInstanceProfileInput) (*GetInstancePr
 
 const opGetLoginProfile = "GetLoginProfile"
 
-// GetLoginProfileRequest generates a request for the GetLoginProfile operation.
+// GetLoginProfileRequest generates a "aws/request.Request" representing the
+// client's request for the GetLoginProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetLoginProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetLoginProfileRequest method.
+//    req, resp := client.GetLoginProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetLoginProfileRequest(input *GetLoginProfileInput) (req *request.Request, output *GetLoginProfileOutput) {
 	op := &request.Operation{
 		Name:       opGetLoginProfile,
@@ -1943,7 +3132,28 @@ func (c *IAM) GetLoginProfile(input *GetLoginProfileInput) (*GetLoginProfileOutp
 
 const opGetOpenIDConnectProvider = "GetOpenIDConnectProvider"
 
-// GetOpenIDConnectProviderRequest generates a request for the GetOpenIDConnectProvider operation.
+// GetOpenIDConnectProviderRequest generates a "aws/request.Request" representing the
+// client's request for the GetOpenIDConnectProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetOpenIDConnectProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetOpenIDConnectProviderRequest method.
+//    req, resp := client.GetOpenIDConnectProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetOpenIDConnectProviderRequest(input *GetOpenIDConnectProviderInput) (req *request.Request, output *GetOpenIDConnectProviderOutput) {
 	op := &request.Operation{
 		Name:       opGetOpenIDConnectProvider,
@@ -1971,7 +3181,28 @@ func (c *IAM) GetOpenIDConnectProvider(input *GetOpenIDConnectProviderInput) (*G
 
 const opGetPolicy = "GetPolicy"
 
-// GetPolicyRequest generates a request for the GetPolicy operation.
+// GetPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the GetPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetPolicyRequest method.
+//    req, resp := client.GetPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetPolicyRequest(input *GetPolicyInput) (req *request.Request, output *GetPolicyOutput) {
 	op := &request.Operation{
 		Name:       opGetPolicy,
@@ -2011,7 +3242,28 @@ func (c *IAM) GetPolicy(input *GetPolicyInput) (*GetPolicyOutput, error) {
 
 const opGetPolicyVersion = "GetPolicyVersion"
 
-// GetPolicyVersionRequest generates a request for the GetPolicyVersion operation.
+// GetPolicyVersionRequest generates a "aws/request.Request" representing the
+// client's request for the GetPolicyVersion operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetPolicyVersion method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetPolicyVersionRequest method.
+//    req, resp := client.GetPolicyVersionRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *request.Request, output *GetPolicyVersionOutput) {
 	op := &request.Operation{
 		Name:       opGetPolicyVersion,
@@ -2053,7 +3305,28 @@ func (c *IAM) GetPolicyVersion(input *GetPolicyVersionInput) (*GetPolicyVersionO
 
 const opGetRole = "GetRole"
 
-// GetRoleRequest generates a request for the GetRole operation.
+// GetRoleRequest generates a "aws/request.Request" representing the
+// client's request for the GetRole operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetRole method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetRoleRequest method.
+//    req, resp := client.GetRoleRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetRoleRequest(input *GetRoleInput) (req *request.Request, output *GetRoleOutput) {
 	op := &request.Operation{
 		Name:       opGetRole,
@@ -2082,7 +3355,28 @@ func (c *IAM) GetRole(input *GetRoleInput) (*GetRoleOutput, error) {
 
 const opGetRolePolicy = "GetRolePolicy"
 
-// GetRolePolicyRequest generates a request for the GetRolePolicy operation.
+// GetRolePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the GetRolePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetRolePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetRolePolicyRequest method.
+//    req, resp := client.GetRolePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *request.Request, output *GetRolePolicyOutput) {
 	op := &request.Operation{
 		Name:       opGetRolePolicy,
@@ -2122,7 +3416,28 @@ func (c *IAM) GetRolePolicy(input *GetRolePolicyInput) (*GetRolePolicyOutput, er
 
 const opGetSAMLProvider = "GetSAMLProvider"
 
-// GetSAMLProviderRequest generates a request for the GetSAMLProvider operation.
+// GetSAMLProviderRequest generates a "aws/request.Request" representing the
+// client's request for the GetSAMLProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetSAMLProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetSAMLProviderRequest method.
+//    req, resp := client.GetSAMLProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetSAMLProviderRequest(input *GetSAMLProviderInput) (req *request.Request, output *GetSAMLProviderOutput) {
 	op := &request.Operation{
 		Name:       opGetSAMLProvider,
@@ -2152,7 +3467,28 @@ func (c *IAM) GetSAMLProvider(input *GetSAMLProviderInput) (*GetSAMLProviderOutp
 
 const opGetSSHPublicKey = "GetSSHPublicKey"
 
-// GetSSHPublicKeyRequest generates a request for the GetSSHPublicKey operation.
+// GetSSHPublicKeyRequest generates a "aws/request.Request" representing the
+// client's request for the GetSSHPublicKey operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetSSHPublicKey method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetSSHPublicKeyRequest method.
+//    req, resp := client.GetSSHPublicKeyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetSSHPublicKeyRequest(input *GetSSHPublicKeyInput) (req *request.Request, output *GetSSHPublicKeyOutput) {
 	op := &request.Operation{
 		Name:       opGetSSHPublicKey,
@@ -2185,7 +3521,28 @@ func (c *IAM) GetSSHPublicKey(input *GetSSHPublicKeyInput) (*GetSSHPublicKeyOutp
 
 const opGetServerCertificate = "GetServerCertificate"
 
-// GetServerCertificateRequest generates a request for the GetServerCertificate operation.
+// GetServerCertificateRequest generates a "aws/request.Request" representing the
+// client's request for the GetServerCertificate operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetServerCertificate method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetServerCertificateRequest method.
+//    req, resp := client.GetServerCertificateRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetServerCertificateRequest(input *GetServerCertificateInput) (req *request.Request, output *GetServerCertificateOutput) {
 	op := &request.Operation{
 		Name:       opGetServerCertificate,
@@ -2217,7 +3574,28 @@ func (c *IAM) GetServerCertificate(input *GetServerCertificateInput) (*GetServer
 
 const opGetUser = "GetUser"
 
-// GetUserRequest generates a request for the GetUser operation.
+// GetUserRequest generates a "aws/request.Request" representing the
+// client's request for the GetUser operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetUser method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetUserRequest method.
+//    req, resp := client.GetUserRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetUserRequest(input *GetUserInput) (req *request.Request, output *GetUserOutput) {
 	op := &request.Operation{
 		Name:       opGetUser,
@@ -2248,7 +3626,28 @@ func (c *IAM) GetUser(input *GetUserInput) (*GetUserOutput, error) {
 
 const opGetUserPolicy = "GetUserPolicy"
 
-// GetUserPolicyRequest generates a request for the GetUserPolicy operation.
+// GetUserPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the GetUserPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the GetUserPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the GetUserPolicyRequest method.
+//    req, resp := client.GetUserPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *request.Request, output *GetUserPolicyOutput) {
 	op := &request.Operation{
 		Name:       opGetUserPolicy,
@@ -2285,7 +3684,28 @@ func (c *IAM) GetUserPolicy(input *GetUserPolicyInput) (*GetUserPolicyOutput, er
 
 const opListAccessKeys = "ListAccessKeys"
 
-// ListAccessKeysRequest generates a request for the ListAccessKeys operation.
+// ListAccessKeysRequest generates a "aws/request.Request" representing the
+// client's request for the ListAccessKeys operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListAccessKeys method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListAccessKeysRequest method.
+//    req, resp := client.ListAccessKeysRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListAccessKeysRequest(input *ListAccessKeysInput) (req *request.Request, output *ListAccessKeysOutput) {
 	op := &request.Operation{
 		Name:       opListAccessKeys,
@@ -2328,6 +3748,23 @@ func (c *IAM) ListAccessKeys(input *ListAccessKeysInput) (*ListAccessKeysOutput,
 	return out, err
 }
 
+// ListAccessKeysPages iterates over the pages of a ListAccessKeys operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListAccessKeys method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListAccessKeys operation.
+//    pageNum := 0
+//    err := client.ListAccessKeysPages(params,
+//        func(page *ListAccessKeysOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListAccessKeysPages(input *ListAccessKeysInput, fn func(p *ListAccessKeysOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListAccessKeysRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2338,7 +3775,28 @@ func (c *IAM) ListAccessKeysPages(input *ListAccessKeysInput, fn func(p *ListAcc
 
 const opListAccountAliases = "ListAccountAliases"
 
-// ListAccountAliasesRequest generates a request for the ListAccountAliases operation.
+// ListAccountAliasesRequest generates a "aws/request.Request" representing the
+// client's request for the ListAccountAliases operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListAccountAliases method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListAccountAliasesRequest method.
+//    req, resp := client.ListAccountAliasesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListAccountAliasesRequest(input *ListAccountAliasesInput) (req *request.Request, output *ListAccountAliasesOutput) {
 	op := &request.Operation{
 		Name:       opListAccountAliases,
@@ -2372,6 +3830,23 @@ func (c *IAM) ListAccountAliases(input *ListAccountAliasesInput) (*ListAccountAl
 	return out, err
 }
 
+// ListAccountAliasesPages iterates over the pages of a ListAccountAliases operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListAccountAliases method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListAccountAliases operation.
+//    pageNum := 0
+//    err := client.ListAccountAliasesPages(params,
+//        func(page *ListAccountAliasesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListAccountAliasesPages(input *ListAccountAliasesInput, fn func(p *ListAccountAliasesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListAccountAliasesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2382,7 +3857,28 @@ func (c *IAM) ListAccountAliasesPages(input *ListAccountAliasesInput, fn func(p 
 
 const opListAttachedGroupPolicies = "ListAttachedGroupPolicies"
 
-// ListAttachedGroupPoliciesRequest generates a request for the ListAttachedGroupPolicies operation.
+// ListAttachedGroupPoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the ListAttachedGroupPolicies operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListAttachedGroupPolicies method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListAttachedGroupPoliciesRequest method.
+//    req, resp := client.ListAttachedGroupPoliciesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListAttachedGroupPoliciesRequest(input *ListAttachedGroupPoliciesInput) (req *request.Request, output *ListAttachedGroupPoliciesOutput) {
 	op := &request.Operation{
 		Name:       opListAttachedGroupPolicies,
@@ -2424,6 +3920,23 @@ func (c *IAM) ListAttachedGroupPolicies(input *ListAttachedGroupPoliciesInput) (
 	return out, err
 }
 
+// ListAttachedGroupPoliciesPages iterates over the pages of a ListAttachedGroupPolicies operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListAttachedGroupPolicies method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListAttachedGroupPolicies operation.
+//    pageNum := 0
+//    err := client.ListAttachedGroupPoliciesPages(params,
+//        func(page *ListAttachedGroupPoliciesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListAttachedGroupPoliciesPages(input *ListAttachedGroupPoliciesInput, fn func(p *ListAttachedGroupPoliciesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListAttachedGroupPoliciesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2434,7 +3947,28 @@ func (c *IAM) ListAttachedGroupPoliciesPages(input *ListAttachedGroupPoliciesInp
 
 const opListAttachedRolePolicies = "ListAttachedRolePolicies"
 
-// ListAttachedRolePoliciesRequest generates a request for the ListAttachedRolePolicies operation.
+// ListAttachedRolePoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the ListAttachedRolePolicies operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListAttachedRolePolicies method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListAttachedRolePoliciesRequest method.
+//    req, resp := client.ListAttachedRolePoliciesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListAttachedRolePoliciesRequest(input *ListAttachedRolePoliciesInput) (req *request.Request, output *ListAttachedRolePoliciesOutput) {
 	op := &request.Operation{
 		Name:       opListAttachedRolePolicies,
@@ -2476,6 +4010,23 @@ func (c *IAM) ListAttachedRolePolicies(input *ListAttachedRolePoliciesInput) (*L
 	return out, err
 }
 
+// ListAttachedRolePoliciesPages iterates over the pages of a ListAttachedRolePolicies operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListAttachedRolePolicies method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListAttachedRolePolicies operation.
+//    pageNum := 0
+//    err := client.ListAttachedRolePoliciesPages(params,
+//        func(page *ListAttachedRolePoliciesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListAttachedRolePoliciesPages(input *ListAttachedRolePoliciesInput, fn func(p *ListAttachedRolePoliciesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListAttachedRolePoliciesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2486,7 +4037,28 @@ func (c *IAM) ListAttachedRolePoliciesPages(input *ListAttachedRolePoliciesInput
 
 const opListAttachedUserPolicies = "ListAttachedUserPolicies"
 
-// ListAttachedUserPoliciesRequest generates a request for the ListAttachedUserPolicies operation.
+// ListAttachedUserPoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the ListAttachedUserPolicies operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListAttachedUserPolicies method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListAttachedUserPoliciesRequest method.
+//    req, resp := client.ListAttachedUserPoliciesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListAttachedUserPoliciesRequest(input *ListAttachedUserPoliciesInput) (req *request.Request, output *ListAttachedUserPoliciesOutput) {
 	op := &request.Operation{
 		Name:       opListAttachedUserPolicies,
@@ -2528,6 +4100,23 @@ func (c *IAM) ListAttachedUserPolicies(input *ListAttachedUserPoliciesInput) (*L
 	return out, err
 }
 
+// ListAttachedUserPoliciesPages iterates over the pages of a ListAttachedUserPolicies operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListAttachedUserPolicies method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListAttachedUserPolicies operation.
+//    pageNum := 0
+//    err := client.ListAttachedUserPoliciesPages(params,
+//        func(page *ListAttachedUserPoliciesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListAttachedUserPoliciesPages(input *ListAttachedUserPoliciesInput, fn func(p *ListAttachedUserPoliciesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListAttachedUserPoliciesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2538,7 +4127,28 @@ func (c *IAM) ListAttachedUserPoliciesPages(input *ListAttachedUserPoliciesInput
 
 const opListEntitiesForPolicy = "ListEntitiesForPolicy"
 
-// ListEntitiesForPolicyRequest generates a request for the ListEntitiesForPolicy operation.
+// ListEntitiesForPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the ListEntitiesForPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListEntitiesForPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListEntitiesForPolicyRequest method.
+//    req, resp := client.ListEntitiesForPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListEntitiesForPolicyRequest(input *ListEntitiesForPolicyInput) (req *request.Request, output *ListEntitiesForPolicyOutput) {
 	op := &request.Operation{
 		Name:       opListEntitiesForPolicy,
@@ -2577,6 +4187,23 @@ func (c *IAM) ListEntitiesForPolicy(input *ListEntitiesForPolicyInput) (*ListEnt
 	return out, err
 }
 
+// ListEntitiesForPolicyPages iterates over the pages of a ListEntitiesForPolicy operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListEntitiesForPolicy method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListEntitiesForPolicy operation.
+//    pageNum := 0
+//    err := client.ListEntitiesForPolicyPages(params,
+//        func(page *ListEntitiesForPolicyOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListEntitiesForPolicyPages(input *ListEntitiesForPolicyInput, fn func(p *ListEntitiesForPolicyOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListEntitiesForPolicyRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2587,7 +4214,28 @@ func (c *IAM) ListEntitiesForPolicyPages(input *ListEntitiesForPolicyInput, fn f
 
 const opListGroupPolicies = "ListGroupPolicies"
 
-// ListGroupPoliciesRequest generates a request for the ListGroupPolicies operation.
+// ListGroupPoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the ListGroupPolicies operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListGroupPolicies method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListGroupPoliciesRequest method.
+//    req, resp := client.ListGroupPoliciesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListGroupPoliciesRequest(input *ListGroupPoliciesInput) (req *request.Request, output *ListGroupPoliciesOutput) {
 	op := &request.Operation{
 		Name:       opListGroupPolicies,
@@ -2629,6 +4277,23 @@ func (c *IAM) ListGroupPolicies(input *ListGroupPoliciesInput) (*ListGroupPolici
 	return out, err
 }
 
+// ListGroupPoliciesPages iterates over the pages of a ListGroupPolicies operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListGroupPolicies method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListGroupPolicies operation.
+//    pageNum := 0
+//    err := client.ListGroupPoliciesPages(params,
+//        func(page *ListGroupPoliciesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListGroupPoliciesPages(input *ListGroupPoliciesInput, fn func(p *ListGroupPoliciesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListGroupPoliciesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2639,7 +4304,28 @@ func (c *IAM) ListGroupPoliciesPages(input *ListGroupPoliciesInput, fn func(p *L
 
 const opListGroups = "ListGroups"
 
-// ListGroupsRequest generates a request for the ListGroups operation.
+// ListGroupsRequest generates a "aws/request.Request" representing the
+// client's request for the ListGroups operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListGroups method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListGroupsRequest method.
+//    req, resp := client.ListGroupsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListGroupsRequest(input *ListGroupsInput) (req *request.Request, output *ListGroupsOutput) {
 	op := &request.Operation{
 		Name:       opListGroups,
@@ -2672,6 +4358,23 @@ func (c *IAM) ListGroups(input *ListGroupsInput) (*ListGroupsOutput, error) {
 	return out, err
 }
 
+// ListGroupsPages iterates over the pages of a ListGroups operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListGroups method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListGroups operation.
+//    pageNum := 0
+//    err := client.ListGroupsPages(params,
+//        func(page *ListGroupsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListGroupsPages(input *ListGroupsInput, fn func(p *ListGroupsOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListGroupsRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2682,7 +4385,28 @@ func (c *IAM) ListGroupsPages(input *ListGroupsInput, fn func(p *ListGroupsOutpu
 
 const opListGroupsForUser = "ListGroupsForUser"
 
-// ListGroupsForUserRequest generates a request for the ListGroupsForUser operation.
+// ListGroupsForUserRequest generates a "aws/request.Request" representing the
+// client's request for the ListGroupsForUser operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListGroupsForUser method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListGroupsForUserRequest method.
+//    req, resp := client.ListGroupsForUserRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListGroupsForUserRequest(input *ListGroupsForUserInput) (req *request.Request, output *ListGroupsForUserOutput) {
 	op := &request.Operation{
 		Name:       opListGroupsForUser,
@@ -2715,6 +4439,23 @@ func (c *IAM) ListGroupsForUser(input *ListGroupsForUserInput) (*ListGroupsForUs
 	return out, err
 }
 
+// ListGroupsForUserPages iterates over the pages of a ListGroupsForUser operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListGroupsForUser method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListGroupsForUser operation.
+//    pageNum := 0
+//    err := client.ListGroupsForUserPages(params,
+//        func(page *ListGroupsForUserOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListGroupsForUserPages(input *ListGroupsForUserInput, fn func(p *ListGroupsForUserOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListGroupsForUserRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2725,7 +4466,28 @@ func (c *IAM) ListGroupsForUserPages(input *ListGroupsForUserInput, fn func(p *L
 
 const opListInstanceProfiles = "ListInstanceProfiles"
 
-// ListInstanceProfilesRequest generates a request for the ListInstanceProfiles operation.
+// ListInstanceProfilesRequest generates a "aws/request.Request" representing the
+// client's request for the ListInstanceProfiles operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListInstanceProfiles method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListInstanceProfilesRequest method.
+//    req, resp := client.ListInstanceProfilesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListInstanceProfilesRequest(input *ListInstanceProfilesInput) (req *request.Request, output *ListInstanceProfilesOutput) {
 	op := &request.Operation{
 		Name:       opListInstanceProfiles,
@@ -2760,6 +4522,23 @@ func (c *IAM) ListInstanceProfiles(input *ListInstanceProfilesInput) (*ListInsta
 	return out, err
 }
 
+// ListInstanceProfilesPages iterates over the pages of a ListInstanceProfiles operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListInstanceProfiles method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListInstanceProfiles operation.
+//    pageNum := 0
+//    err := client.ListInstanceProfilesPages(params,
+//        func(page *ListInstanceProfilesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListInstanceProfilesPages(input *ListInstanceProfilesInput, fn func(p *ListInstanceProfilesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListInstanceProfilesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2770,7 +4549,28 @@ func (c *IAM) ListInstanceProfilesPages(input *ListInstanceProfilesInput, fn fun
 
 const opListInstanceProfilesForRole = "ListInstanceProfilesForRole"
 
-// ListInstanceProfilesForRoleRequest generates a request for the ListInstanceProfilesForRole operation.
+// ListInstanceProfilesForRoleRequest generates a "aws/request.Request" representing the
+// client's request for the ListInstanceProfilesForRole operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListInstanceProfilesForRole method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListInstanceProfilesForRoleRequest method.
+//    req, resp := client.ListInstanceProfilesForRoleRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListInstanceProfilesForRoleRequest(input *ListInstanceProfilesForRoleInput) (req *request.Request, output *ListInstanceProfilesForRoleOutput) {
 	op := &request.Operation{
 		Name:       opListInstanceProfilesForRole,
@@ -2805,6 +4605,23 @@ func (c *IAM) ListInstanceProfilesForRole(input *ListInstanceProfilesForRoleInpu
 	return out, err
 }
 
+// ListInstanceProfilesForRolePages iterates over the pages of a ListInstanceProfilesForRole operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListInstanceProfilesForRole method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListInstanceProfilesForRole operation.
+//    pageNum := 0
+//    err := client.ListInstanceProfilesForRolePages(params,
+//        func(page *ListInstanceProfilesForRoleOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListInstanceProfilesForRolePages(input *ListInstanceProfilesForRoleInput, fn func(p *ListInstanceProfilesForRoleOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListInstanceProfilesForRoleRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2815,7 +4632,28 @@ func (c *IAM) ListInstanceProfilesForRolePages(input *ListInstanceProfilesForRol
 
 const opListMFADevices = "ListMFADevices"
 
-// ListMFADevicesRequest generates a request for the ListMFADevices operation.
+// ListMFADevicesRequest generates a "aws/request.Request" representing the
+// client's request for the ListMFADevices operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListMFADevices method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListMFADevicesRequest method.
+//    req, resp := client.ListMFADevicesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListMFADevicesRequest(input *ListMFADevicesInput) (req *request.Request, output *ListMFADevicesOutput) {
 	op := &request.Operation{
 		Name:       opListMFADevices,
@@ -2851,6 +4689,23 @@ func (c *IAM) ListMFADevices(input *ListMFADevicesInput) (*ListMFADevicesOutput,
 	return out, err
 }
 
+// ListMFADevicesPages iterates over the pages of a ListMFADevices operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListMFADevices method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListMFADevices operation.
+//    pageNum := 0
+//    err := client.ListMFADevicesPages(params,
+//        func(page *ListMFADevicesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListMFADevicesPages(input *ListMFADevicesInput, fn func(p *ListMFADevicesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListMFADevicesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2861,7 +4716,28 @@ func (c *IAM) ListMFADevicesPages(input *ListMFADevicesInput, fn func(p *ListMFA
 
 const opListOpenIDConnectProviders = "ListOpenIDConnectProviders"
 
-// ListOpenIDConnectProvidersRequest generates a request for the ListOpenIDConnectProviders operation.
+// ListOpenIDConnectProvidersRequest generates a "aws/request.Request" representing the
+// client's request for the ListOpenIDConnectProviders operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListOpenIDConnectProviders method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListOpenIDConnectProvidersRequest method.
+//    req, resp := client.ListOpenIDConnectProvidersRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListOpenIDConnectProvidersRequest(input *ListOpenIDConnectProvidersInput) (req *request.Request, output *ListOpenIDConnectProvidersOutput) {
 	op := &request.Operation{
 		Name:       opListOpenIDConnectProviders,
@@ -2889,7 +4765,28 @@ func (c *IAM) ListOpenIDConnectProviders(input *ListOpenIDConnectProvidersInput)
 
 const opListPolicies = "ListPolicies"
 
-// ListPoliciesRequest generates a request for the ListPolicies operation.
+// ListPoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the ListPolicies operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListPolicies method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListPoliciesRequest method.
+//    req, resp := client.ListPoliciesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListPoliciesRequest(input *ListPoliciesInput) (req *request.Request, output *ListPoliciesOutput) {
 	op := &request.Operation{
 		Name:       opListPolicies,
@@ -2932,6 +4829,23 @@ func (c *IAM) ListPolicies(input *ListPoliciesInput) (*ListPoliciesOutput, error
 	return out, err
 }
 
+// ListPoliciesPages iterates over the pages of a ListPolicies operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListPolicies method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListPolicies operation.
+//    pageNum := 0
+//    err := client.ListPoliciesPages(params,
+//        func(page *ListPoliciesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListPoliciesPages(input *ListPoliciesInput, fn func(p *ListPoliciesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListPoliciesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2942,7 +4856,28 @@ func (c *IAM) ListPoliciesPages(input *ListPoliciesInput, fn func(p *ListPolicie
 
 const opListPolicyVersions = "ListPolicyVersions"
 
-// ListPolicyVersionsRequest generates a request for the ListPolicyVersions operation.
+// ListPolicyVersionsRequest generates a "aws/request.Request" representing the
+// client's request for the ListPolicyVersions operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListPolicyVersions method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListPolicyVersionsRequest method.
+//    req, resp := client.ListPolicyVersionsRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListPolicyVersionsRequest(input *ListPolicyVersionsInput) (req *request.Request, output *ListPolicyVersionsOutput) {
 	op := &request.Operation{
 		Name:       opListPolicyVersions,
@@ -2978,6 +4913,23 @@ func (c *IAM) ListPolicyVersions(input *ListPolicyVersionsInput) (*ListPolicyVer
 	return out, err
 }
 
+// ListPolicyVersionsPages iterates over the pages of a ListPolicyVersions operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListPolicyVersions method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListPolicyVersions operation.
+//    pageNum := 0
+//    err := client.ListPolicyVersionsPages(params,
+//        func(page *ListPolicyVersionsOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListPolicyVersionsPages(input *ListPolicyVersionsInput, fn func(p *ListPolicyVersionsOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListPolicyVersionsRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -2988,7 +4940,28 @@ func (c *IAM) ListPolicyVersionsPages(input *ListPolicyVersionsInput, fn func(p 
 
 const opListRolePolicies = "ListRolePolicies"
 
-// ListRolePoliciesRequest generates a request for the ListRolePolicies operation.
+// ListRolePoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the ListRolePolicies operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListRolePolicies method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListRolePoliciesRequest method.
+//    req, resp := client.ListRolePoliciesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListRolePoliciesRequest(input *ListRolePoliciesInput) (req *request.Request, output *ListRolePoliciesOutput) {
 	op := &request.Operation{
 		Name:       opListRolePolicies,
@@ -3029,6 +5002,23 @@ func (c *IAM) ListRolePolicies(input *ListRolePoliciesInput) (*ListRolePoliciesO
 	return out, err
 }
 
+// ListRolePoliciesPages iterates over the pages of a ListRolePolicies operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListRolePolicies method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListRolePolicies operation.
+//    pageNum := 0
+//    err := client.ListRolePoliciesPages(params,
+//        func(page *ListRolePoliciesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListRolePoliciesPages(input *ListRolePoliciesInput, fn func(p *ListRolePoliciesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListRolePoliciesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -3039,7 +5029,28 @@ func (c *IAM) ListRolePoliciesPages(input *ListRolePoliciesInput, fn func(p *Lis
 
 const opListRoles = "ListRoles"
 
-// ListRolesRequest generates a request for the ListRoles operation.
+// ListRolesRequest generates a "aws/request.Request" representing the
+// client's request for the ListRoles operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListRoles method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListRolesRequest method.
+//    req, resp := client.ListRolesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListRolesRequest(input *ListRolesInput) (req *request.Request, output *ListRolesOutput) {
 	op := &request.Operation{
 		Name:       opListRoles,
@@ -3074,6 +5085,23 @@ func (c *IAM) ListRoles(input *ListRolesInput) (*ListRolesOutput, error) {
 	return out, err
 }
 
+// ListRolesPages iterates over the pages of a ListRoles operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListRoles method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListRoles operation.
+//    pageNum := 0
+//    err := client.ListRolesPages(params,
+//        func(page *ListRolesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListRolesPages(input *ListRolesInput, fn func(p *ListRolesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListRolesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -3084,7 +5112,28 @@ func (c *IAM) ListRolesPages(input *ListRolesInput, fn func(p *ListRolesOutput, 
 
 const opListSAMLProviders = "ListSAMLProviders"
 
-// ListSAMLProvidersRequest generates a request for the ListSAMLProviders operation.
+// ListSAMLProvidersRequest generates a "aws/request.Request" representing the
+// client's request for the ListSAMLProviders operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListSAMLProviders method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListSAMLProvidersRequest method.
+//    req, resp := client.ListSAMLProvidersRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListSAMLProvidersRequest(input *ListSAMLProvidersInput) (req *request.Request, output *ListSAMLProvidersOutput) {
 	op := &request.Operation{
 		Name:       opListSAMLProviders,
@@ -3113,7 +5162,28 @@ func (c *IAM) ListSAMLProviders(input *ListSAMLProvidersInput) (*ListSAMLProvide
 
 const opListSSHPublicKeys = "ListSSHPublicKeys"
 
-// ListSSHPublicKeysRequest generates a request for the ListSSHPublicKeys operation.
+// ListSSHPublicKeysRequest generates a "aws/request.Request" representing the
+// client's request for the ListSSHPublicKeys operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListSSHPublicKeys method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListSSHPublicKeysRequest method.
+//    req, resp := client.ListSSHPublicKeysRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListSSHPublicKeysRequest(input *ListSSHPublicKeysInput) (req *request.Request, output *ListSSHPublicKeysOutput) {
 	op := &request.Operation{
 		Name:       opListSSHPublicKeys,
@@ -3150,7 +5220,28 @@ func (c *IAM) ListSSHPublicKeys(input *ListSSHPublicKeysInput) (*ListSSHPublicKe
 
 const opListServerCertificates = "ListServerCertificates"
 
-// ListServerCertificatesRequest generates a request for the ListServerCertificates operation.
+// ListServerCertificatesRequest generates a "aws/request.Request" representing the
+// client's request for the ListServerCertificates operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListServerCertificates method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListServerCertificatesRequest method.
+//    req, resp := client.ListServerCertificatesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListServerCertificatesRequest(input *ListServerCertificatesInput) (req *request.Request, output *ListServerCertificatesOutput) {
 	op := &request.Operation{
 		Name:       opListServerCertificates,
@@ -3189,6 +5280,23 @@ func (c *IAM) ListServerCertificates(input *ListServerCertificatesInput) (*ListS
 	return out, err
 }
 
+// ListServerCertificatesPages iterates over the pages of a ListServerCertificates operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListServerCertificates method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListServerCertificates operation.
+//    pageNum := 0
+//    err := client.ListServerCertificatesPages(params,
+//        func(page *ListServerCertificatesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListServerCertificatesPages(input *ListServerCertificatesInput, fn func(p *ListServerCertificatesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListServerCertificatesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -3199,7 +5307,28 @@ func (c *IAM) ListServerCertificatesPages(input *ListServerCertificatesInput, fn
 
 const opListSigningCertificates = "ListSigningCertificates"
 
-// ListSigningCertificatesRequest generates a request for the ListSigningCertificates operation.
+// ListSigningCertificatesRequest generates a "aws/request.Request" representing the
+// client's request for the ListSigningCertificates operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListSigningCertificates method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListSigningCertificatesRequest method.
+//    req, resp := client.ListSigningCertificatesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListSigningCertificatesRequest(input *ListSigningCertificatesInput) (req *request.Request, output *ListSigningCertificatesOutput) {
 	op := &request.Operation{
 		Name:       opListSigningCertificates,
@@ -3240,6 +5369,23 @@ func (c *IAM) ListSigningCertificates(input *ListSigningCertificatesInput) (*Lis
 	return out, err
 }
 
+// ListSigningCertificatesPages iterates over the pages of a ListSigningCertificates operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListSigningCertificates method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListSigningCertificates operation.
+//    pageNum := 0
+//    err := client.ListSigningCertificatesPages(params,
+//        func(page *ListSigningCertificatesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListSigningCertificatesPages(input *ListSigningCertificatesInput, fn func(p *ListSigningCertificatesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListSigningCertificatesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -3250,7 +5396,28 @@ func (c *IAM) ListSigningCertificatesPages(input *ListSigningCertificatesInput, 
 
 const opListUserPolicies = "ListUserPolicies"
 
-// ListUserPoliciesRequest generates a request for the ListUserPolicies operation.
+// ListUserPoliciesRequest generates a "aws/request.Request" representing the
+// client's request for the ListUserPolicies operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListUserPolicies method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListUserPoliciesRequest method.
+//    req, resp := client.ListUserPoliciesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListUserPoliciesRequest(input *ListUserPoliciesInput) (req *request.Request, output *ListUserPoliciesOutput) {
 	op := &request.Operation{
 		Name:       opListUserPolicies,
@@ -3290,6 +5457,23 @@ func (c *IAM) ListUserPolicies(input *ListUserPoliciesInput) (*ListUserPoliciesO
 	return out, err
 }
 
+// ListUserPoliciesPages iterates over the pages of a ListUserPolicies operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListUserPolicies method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListUserPolicies operation.
+//    pageNum := 0
+//    err := client.ListUserPoliciesPages(params,
+//        func(page *ListUserPoliciesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListUserPoliciesPages(input *ListUserPoliciesInput, fn func(p *ListUserPoliciesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListUserPoliciesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -3300,7 +5484,28 @@ func (c *IAM) ListUserPoliciesPages(input *ListUserPoliciesInput, fn func(p *Lis
 
 const opListUsers = "ListUsers"
 
-// ListUsersRequest generates a request for the ListUsers operation.
+// ListUsersRequest generates a "aws/request.Request" representing the
+// client's request for the ListUsers operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListUsers method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListUsersRequest method.
+//    req, resp := client.ListUsersRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListUsersRequest(input *ListUsersInput) (req *request.Request, output *ListUsersOutput) {
 	op := &request.Operation{
 		Name:       opListUsers,
@@ -3335,6 +5540,23 @@ func (c *IAM) ListUsers(input *ListUsersInput) (*ListUsersOutput, error) {
 	return out, err
 }
 
+// ListUsersPages iterates over the pages of a ListUsers operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListUsers method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListUsers operation.
+//    pageNum := 0
+//    err := client.ListUsersPages(params,
+//        func(page *ListUsersOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListUsersPages(input *ListUsersInput, fn func(p *ListUsersOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListUsersRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -3345,7 +5567,28 @@ func (c *IAM) ListUsersPages(input *ListUsersInput, fn func(p *ListUsersOutput, 
 
 const opListVirtualMFADevices = "ListVirtualMFADevices"
 
-// ListVirtualMFADevicesRequest generates a request for the ListVirtualMFADevices operation.
+// ListVirtualMFADevicesRequest generates a "aws/request.Request" representing the
+// client's request for the ListVirtualMFADevices operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ListVirtualMFADevices method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ListVirtualMFADevicesRequest method.
+//    req, resp := client.ListVirtualMFADevicesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ListVirtualMFADevicesRequest(input *ListVirtualMFADevicesInput) (req *request.Request, output *ListVirtualMFADevicesOutput) {
 	op := &request.Operation{
 		Name:       opListVirtualMFADevices,
@@ -3381,6 +5624,23 @@ func (c *IAM) ListVirtualMFADevices(input *ListVirtualMFADevicesInput) (*ListVir
 	return out, err
 }
 
+// ListVirtualMFADevicesPages iterates over the pages of a ListVirtualMFADevices operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListVirtualMFADevices method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListVirtualMFADevices operation.
+//    pageNum := 0
+//    err := client.ListVirtualMFADevicesPages(params,
+//        func(page *ListVirtualMFADevicesOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
 func (c *IAM) ListVirtualMFADevicesPages(input *ListVirtualMFADevicesInput, fn func(p *ListVirtualMFADevicesOutput, lastPage bool) (shouldContinue bool)) error {
 	page, _ := c.ListVirtualMFADevicesRequest(input)
 	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
@@ -3391,7 +5651,28 @@ func (c *IAM) ListVirtualMFADevicesPages(input *ListVirtualMFADevicesInput, fn f
 
 const opPutGroupPolicy = "PutGroupPolicy"
 
-// PutGroupPolicyRequest generates a request for the PutGroupPolicy operation.
+// PutGroupPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the PutGroupPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the PutGroupPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the PutGroupPolicyRequest method.
+//    req, resp := client.PutGroupPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) PutGroupPolicyRequest(input *PutGroupPolicyInput) (req *request.Request, output *PutGroupPolicyOutput) {
 	op := &request.Operation{
 		Name:       opPutGroupPolicy,
@@ -3436,7 +5717,28 @@ func (c *IAM) PutGroupPolicy(input *PutGroupPolicyInput) (*PutGroupPolicyOutput,
 
 const opPutRolePolicy = "PutRolePolicy"
 
-// PutRolePolicyRequest generates a request for the PutRolePolicy operation.
+// PutRolePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the PutRolePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the PutRolePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the PutRolePolicyRequest method.
+//    req, resp := client.PutRolePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) PutRolePolicyRequest(input *PutRolePolicyInput) (req *request.Request, output *PutRolePolicyOutput) {
 	op := &request.Operation{
 		Name:       opPutRolePolicy,
@@ -3488,7 +5790,28 @@ func (c *IAM) PutRolePolicy(input *PutRolePolicyInput) (*PutRolePolicyOutput, er
 
 const opPutUserPolicy = "PutUserPolicy"
 
-// PutUserPolicyRequest generates a request for the PutUserPolicy operation.
+// PutUserPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the PutUserPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the PutUserPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the PutUserPolicyRequest method.
+//    req, resp := client.PutUserPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) PutUserPolicyRequest(input *PutUserPolicyInput) (req *request.Request, output *PutUserPolicyOutput) {
 	op := &request.Operation{
 		Name:       opPutUserPolicy,
@@ -3533,7 +5856,28 @@ func (c *IAM) PutUserPolicy(input *PutUserPolicyInput) (*PutUserPolicyOutput, er
 
 const opRemoveClientIDFromOpenIDConnectProvider = "RemoveClientIDFromOpenIDConnectProvider"
 
-// RemoveClientIDFromOpenIDConnectProviderRequest generates a request for the RemoveClientIDFromOpenIDConnectProvider operation.
+// RemoveClientIDFromOpenIDConnectProviderRequest generates a "aws/request.Request" representing the
+// client's request for the RemoveClientIDFromOpenIDConnectProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the RemoveClientIDFromOpenIDConnectProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the RemoveClientIDFromOpenIDConnectProviderRequest method.
+//    req, resp := client.RemoveClientIDFromOpenIDConnectProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) RemoveClientIDFromOpenIDConnectProviderRequest(input *RemoveClientIDFromOpenIDConnectProviderInput) (req *request.Request, output *RemoveClientIDFromOpenIDConnectProviderOutput) {
 	op := &request.Operation{
 		Name:       opRemoveClientIDFromOpenIDConnectProvider,
@@ -3567,7 +5911,28 @@ func (c *IAM) RemoveClientIDFromOpenIDConnectProvider(input *RemoveClientIDFromO
 
 const opRemoveRoleFromInstanceProfile = "RemoveRoleFromInstanceProfile"
 
-// RemoveRoleFromInstanceProfileRequest generates a request for the RemoveRoleFromInstanceProfile operation.
+// RemoveRoleFromInstanceProfileRequest generates a "aws/request.Request" representing the
+// client's request for the RemoveRoleFromInstanceProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the RemoveRoleFromInstanceProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the RemoveRoleFromInstanceProfileRequest method.
+//    req, resp := client.RemoveRoleFromInstanceProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) RemoveRoleFromInstanceProfileRequest(input *RemoveRoleFromInstanceProfileInput) (req *request.Request, output *RemoveRoleFromInstanceProfileOutput) {
 	op := &request.Operation{
 		Name:       opRemoveRoleFromInstanceProfile,
@@ -3605,7 +5970,28 @@ func (c *IAM) RemoveRoleFromInstanceProfile(input *RemoveRoleFromInstanceProfile
 
 const opRemoveUserFromGroup = "RemoveUserFromGroup"
 
-// RemoveUserFromGroupRequest generates a request for the RemoveUserFromGroup operation.
+// RemoveUserFromGroupRequest generates a "aws/request.Request" representing the
+// client's request for the RemoveUserFromGroup operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the RemoveUserFromGroup method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the RemoveUserFromGroupRequest method.
+//    req, resp := client.RemoveUserFromGroupRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) RemoveUserFromGroupRequest(input *RemoveUserFromGroupInput) (req *request.Request, output *RemoveUserFromGroupOutput) {
 	op := &request.Operation{
 		Name:       opRemoveUserFromGroup,
@@ -3634,7 +6020,28 @@ func (c *IAM) RemoveUserFromGroup(input *RemoveUserFromGroupInput) (*RemoveUserF
 
 const opResyncMFADevice = "ResyncMFADevice"
 
-// ResyncMFADeviceRequest generates a request for the ResyncMFADevice operation.
+// ResyncMFADeviceRequest generates a "aws/request.Request" representing the
+// client's request for the ResyncMFADevice operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the ResyncMFADevice method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the ResyncMFADeviceRequest method.
+//    req, resp := client.ResyncMFADeviceRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) ResyncMFADeviceRequest(input *ResyncMFADeviceInput) (req *request.Request, output *ResyncMFADeviceOutput) {
 	op := &request.Operation{
 		Name:       opResyncMFADevice,
@@ -3668,7 +6075,28 @@ func (c *IAM) ResyncMFADevice(input *ResyncMFADeviceInput) (*ResyncMFADeviceOutp
 
 const opSetDefaultPolicyVersion = "SetDefaultPolicyVersion"
 
-// SetDefaultPolicyVersionRequest generates a request for the SetDefaultPolicyVersion operation.
+// SetDefaultPolicyVersionRequest generates a "aws/request.Request" representing the
+// client's request for the SetDefaultPolicyVersion operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the SetDefaultPolicyVersion method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the SetDefaultPolicyVersionRequest method.
+//    req, resp := client.SetDefaultPolicyVersionRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) SetDefaultPolicyVersionRequest(input *SetDefaultPolicyVersionInput) (req *request.Request, output *SetDefaultPolicyVersionOutput) {
 	op := &request.Operation{
 		Name:       opSetDefaultPolicyVersion,
@@ -3706,7 +6134,28 @@ func (c *IAM) SetDefaultPolicyVersion(input *SetDefaultPolicyVersionInput) (*Set
 
 const opSimulateCustomPolicy = "SimulateCustomPolicy"
 
-// SimulateCustomPolicyRequest generates a request for the SimulateCustomPolicy operation.
+// SimulateCustomPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the SimulateCustomPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the SimulateCustomPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the SimulateCustomPolicyRequest method.
+//    req, resp := client.SimulateCustomPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) SimulateCustomPolicyRequest(input *SimulateCustomPolicyInput) (req *request.Request, output *SimulatePolicyResponse) {
 	op := &request.Operation{
 		Name:       opSimulateCustomPolicy,
@@ -3749,7 +6198,28 @@ func (c *IAM) SimulateCustomPolicy(input *SimulateCustomPolicyInput) (*SimulateP
 
 const opSimulatePrincipalPolicy = "SimulatePrincipalPolicy"
 
-// SimulatePrincipalPolicyRequest generates a request for the SimulatePrincipalPolicy operation.
+// SimulatePrincipalPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the SimulatePrincipalPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the SimulatePrincipalPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the SimulatePrincipalPolicyRequest method.
+//    req, resp := client.SimulatePrincipalPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) SimulatePrincipalPolicyRequest(input *SimulatePrincipalPolicyInput) (req *request.Request, output *SimulatePolicyResponse) {
 	op := &request.Operation{
 		Name:       opSimulatePrincipalPolicy,
@@ -3802,7 +6272,28 @@ func (c *IAM) SimulatePrincipalPolicy(input *SimulatePrincipalPolicyInput) (*Sim
 
 const opUpdateAccessKey = "UpdateAccessKey"
 
-// UpdateAccessKeyRequest generates a request for the UpdateAccessKey operation.
+// UpdateAccessKeyRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateAccessKey operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateAccessKey method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateAccessKeyRequest method.
+//    req, resp := client.UpdateAccessKeyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateAccessKeyRequest(input *UpdateAccessKeyInput) (req *request.Request, output *UpdateAccessKeyOutput) {
 	op := &request.Operation{
 		Name:       opUpdateAccessKey,
@@ -3842,7 +6333,28 @@ func (c *IAM) UpdateAccessKey(input *UpdateAccessKeyInput) (*UpdateAccessKeyOutp
 
 const opUpdateAccountPasswordPolicy = "UpdateAccountPasswordPolicy"
 
-// UpdateAccountPasswordPolicyRequest generates a request for the UpdateAccountPasswordPolicy operation.
+// UpdateAccountPasswordPolicyRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateAccountPasswordPolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateAccountPasswordPolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateAccountPasswordPolicyRequest method.
+//    req, resp := client.UpdateAccountPasswordPolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateAccountPasswordPolicyRequest(input *UpdateAccountPasswordPolicyInput) (req *request.Request, output *UpdateAccountPasswordPolicyOutput) {
 	op := &request.Operation{
 		Name:       opUpdateAccountPasswordPolicy,
@@ -3880,7 +6392,28 @@ func (c *IAM) UpdateAccountPasswordPolicy(input *UpdateAccountPasswordPolicyInpu
 
 const opUpdateAssumeRolePolicy = "UpdateAssumeRolePolicy"
 
-// UpdateAssumeRolePolicyRequest generates a request for the UpdateAssumeRolePolicy operation.
+// UpdateAssumeRolePolicyRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateAssumeRolePolicy operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateAssumeRolePolicy method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateAssumeRolePolicyRequest method.
+//    req, resp := client.UpdateAssumeRolePolicyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateAssumeRolePolicyRequest(input *UpdateAssumeRolePolicyInput) (req *request.Request, output *UpdateAssumeRolePolicyOutput) {
 	op := &request.Operation{
 		Name:       opUpdateAssumeRolePolicy,
@@ -3912,7 +6445,28 @@ func (c *IAM) UpdateAssumeRolePolicy(input *UpdateAssumeRolePolicyInput) (*Updat
 
 const opUpdateGroup = "UpdateGroup"
 
-// UpdateGroupRequest generates a request for the UpdateGroup operation.
+// UpdateGroupRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateGroup operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateGroup method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateGroupRequest method.
+//    req, resp := client.UpdateGroupRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateGroupRequest(input *UpdateGroupInput) (req *request.Request, output *UpdateGroupOutput) {
 	op := &request.Operation{
 		Name:       opUpdateGroup,
@@ -3951,7 +6505,28 @@ func (c *IAM) UpdateGroup(input *UpdateGroupInput) (*UpdateGroupOutput, error) {
 
 const opUpdateLoginProfile = "UpdateLoginProfile"
 
-// UpdateLoginProfileRequest generates a request for the UpdateLoginProfile operation.
+// UpdateLoginProfileRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateLoginProfile operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateLoginProfile method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateLoginProfileRequest method.
+//    req, resp := client.UpdateLoginProfileRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateLoginProfileRequest(input *UpdateLoginProfileInput) (req *request.Request, output *UpdateLoginProfileOutput) {
 	op := &request.Operation{
 		Name:       opUpdateLoginProfile,
@@ -3984,7 +6559,28 @@ func (c *IAM) UpdateLoginProfile(input *UpdateLoginProfileInput) (*UpdateLoginPr
 
 const opUpdateOpenIDConnectProviderThumbprint = "UpdateOpenIDConnectProviderThumbprint"
 
-// UpdateOpenIDConnectProviderThumbprintRequest generates a request for the UpdateOpenIDConnectProviderThumbprint operation.
+// UpdateOpenIDConnectProviderThumbprintRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateOpenIDConnectProviderThumbprint operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateOpenIDConnectProviderThumbprint method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateOpenIDConnectProviderThumbprintRequest method.
+//    req, resp := client.UpdateOpenIDConnectProviderThumbprintRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateOpenIDConnectProviderThumbprintRequest(input *UpdateOpenIDConnectProviderThumbprintInput) (req *request.Request, output *UpdateOpenIDConnectProviderThumbprintOutput) {
 	op := &request.Operation{
 		Name:       opUpdateOpenIDConnectProviderThumbprint,
@@ -4027,7 +6623,28 @@ func (c *IAM) UpdateOpenIDConnectProviderThumbprint(input *UpdateOpenIDConnectPr
 
 const opUpdateSAMLProvider = "UpdateSAMLProvider"
 
-// UpdateSAMLProviderRequest generates a request for the UpdateSAMLProvider operation.
+// UpdateSAMLProviderRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateSAMLProvider operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateSAMLProvider method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateSAMLProviderRequest method.
+//    req, resp := client.UpdateSAMLProviderRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateSAMLProviderRequest(input *UpdateSAMLProviderInput) (req *request.Request, output *UpdateSAMLProviderOutput) {
 	op := &request.Operation{
 		Name:       opUpdateSAMLProvider,
@@ -4056,7 +6673,28 @@ func (c *IAM) UpdateSAMLProvider(input *UpdateSAMLProviderInput) (*UpdateSAMLPro
 
 const opUpdateSSHPublicKey = "UpdateSSHPublicKey"
 
-// UpdateSSHPublicKeyRequest generates a request for the UpdateSSHPublicKey operation.
+// UpdateSSHPublicKeyRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateSSHPublicKey operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateSSHPublicKey method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateSSHPublicKeyRequest method.
+//    req, resp := client.UpdateSSHPublicKeyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateSSHPublicKeyRequest(input *UpdateSSHPublicKeyInput) (req *request.Request, output *UpdateSSHPublicKeyOutput) {
 	op := &request.Operation{
 		Name:       opUpdateSSHPublicKey,
@@ -4094,7 +6732,28 @@ func (c *IAM) UpdateSSHPublicKey(input *UpdateSSHPublicKeyInput) (*UpdateSSHPubl
 
 const opUpdateServerCertificate = "UpdateServerCertificate"
 
-// UpdateServerCertificateRequest generates a request for the UpdateServerCertificate operation.
+// UpdateServerCertificateRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateServerCertificate operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateServerCertificate method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateServerCertificateRequest method.
+//    req, resp := client.UpdateServerCertificateRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateServerCertificateRequest(input *UpdateServerCertificateInput) (req *request.Request, output *UpdateServerCertificateOutput) {
 	op := &request.Operation{
 		Name:       opUpdateServerCertificate,
@@ -4141,7 +6800,28 @@ func (c *IAM) UpdateServerCertificate(input *UpdateServerCertificateInput) (*Upd
 
 const opUpdateSigningCertificate = "UpdateSigningCertificate"
 
-// UpdateSigningCertificateRequest generates a request for the UpdateSigningCertificate operation.
+// UpdateSigningCertificateRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateSigningCertificate operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateSigningCertificate method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateSigningCertificateRequest method.
+//    req, resp := client.UpdateSigningCertificateRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateSigningCertificateRequest(input *UpdateSigningCertificateInput) (req *request.Request, output *UpdateSigningCertificateOutput) {
 	op := &request.Operation{
 		Name:       opUpdateSigningCertificate,
@@ -4177,7 +6857,28 @@ func (c *IAM) UpdateSigningCertificate(input *UpdateSigningCertificateInput) (*U
 
 const opUpdateUser = "UpdateUser"
 
-// UpdateUserRequest generates a request for the UpdateUser operation.
+// UpdateUserRequest generates a "aws/request.Request" representing the
+// client's request for the UpdateUser operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UpdateUser method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UpdateUserRequest method.
+//    req, resp := client.UpdateUserRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UpdateUserRequest(input *UpdateUserInput) (req *request.Request, output *UpdateUserOutput) {
 	op := &request.Operation{
 		Name:       opUpdateUser,
@@ -4217,7 +6918,28 @@ func (c *IAM) UpdateUser(input *UpdateUserInput) (*UpdateUserOutput, error) {
 
 const opUploadSSHPublicKey = "UploadSSHPublicKey"
 
-// UploadSSHPublicKeyRequest generates a request for the UploadSSHPublicKey operation.
+// UploadSSHPublicKeyRequest generates a "aws/request.Request" representing the
+// client's request for the UploadSSHPublicKey operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UploadSSHPublicKey method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UploadSSHPublicKeyRequest method.
+//    req, resp := client.UploadSSHPublicKeyRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UploadSSHPublicKeyRequest(input *UploadSSHPublicKeyInput) (req *request.Request, output *UploadSSHPublicKeyOutput) {
 	op := &request.Operation{
 		Name:       opUploadSSHPublicKey,
@@ -4250,7 +6972,28 @@ func (c *IAM) UploadSSHPublicKey(input *UploadSSHPublicKeyInput) (*UploadSSHPubl
 
 const opUploadServerCertificate = "UploadServerCertificate"
 
-// UploadServerCertificateRequest generates a request for the UploadServerCertificate operation.
+// UploadServerCertificateRequest generates a "aws/request.Request" representing the
+// client's request for the UploadServerCertificate operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UploadServerCertificate method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UploadServerCertificateRequest method.
+//    req, resp := client.UploadServerCertificateRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UploadServerCertificateRequest(input *UploadServerCertificateInput) (req *request.Request, output *UploadServerCertificateOutput) {
 	op := &request.Operation{
 		Name:       opUploadServerCertificate,
@@ -4296,7 +7039,28 @@ func (c *IAM) UploadServerCertificate(input *UploadServerCertificateInput) (*Upl
 
 const opUploadSigningCertificate = "UploadSigningCertificate"
 
-// UploadSigningCertificateRequest generates a request for the UploadSigningCertificate operation.
+// UploadSigningCertificateRequest generates a "aws/request.Request" representing the
+// client's request for the UploadSigningCertificate operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the UploadSigningCertificate method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the UploadSigningCertificateRequest method.
+//    req, resp := client.UploadSigningCertificateRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
 func (c *IAM) UploadSigningCertificateRequest(input *UploadSigningCertificateInput) (req *request.Request, output *UploadSigningCertificateOutput) {
 	op := &request.Operation{
 		Name:       opUploadSigningCertificate,
@@ -7422,8 +10186,9 @@ func (s GetAccessKeyLastUsedOutput) GoString() string {
 type GetAccountAuthorizationDetailsInput struct {
 	_ struct{} `type:"structure"`
 
-	// A list of entity types (user, group, role, local managed policy, or AWS managed
-	// policy) for filtering the results.
+	// A list of entity types used to filter the results. Only the entities that
+	// match the types you specify are included in the output. Use the value LocalManagedPolicy
+	// to include customer managed policies.
 	//
 	// The format for this parameter is a comma-separated (if more than one) list
 	// of strings. Each string value in the list must be one of the valid values

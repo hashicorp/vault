@@ -15,9 +15,7 @@ import (
 // in the GitHub API.
 //
 // GitHub API docs: http://developer.github.com/v3/search/
-type SearchService struct {
-	client *Client
-}
+type SearchService service
 
 // SearchOptions specifies optional parameters to the SearchService methods.
 type SearchOptions struct {

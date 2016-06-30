@@ -22,7 +22,7 @@ Each field is described below:
 
 ## Version Field
 
-The version field is used for future backwards compatibily. At the
+The version field is used for future backward compatibility. At the
 current time, the field is always set to 0, to indicate the initial
 version.
 
@@ -138,4 +138,3 @@ provide an error code:
 * 0x0 Normal termination
 * 0x1 Protocol error
 * 0x2 Internal error
-

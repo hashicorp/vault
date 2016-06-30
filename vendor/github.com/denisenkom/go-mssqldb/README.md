@@ -17,7 +17,7 @@ Example:
 
 * "server" - host or host\instance (default localhost)
 * "port" - used only when there is no instance in server (default 1433)
-* "failoverpartner" - host or host\instance (default is no partner). Used only until a successful connection has been made; thereafter, the partner provided in the first successful connection is used.
+* "failoverpartner" - host or host\instance (default is no partner). 
 * "failoverport" - used only when there is no instance in failoverpartner (default 1433)
 * "user id" - enter the SQL Server Authentication user id or the Windows Authentication user id in the DOMAIN\User format. On Windows, if user id is empty or missing Single-Sign-On is used.
 * "password"

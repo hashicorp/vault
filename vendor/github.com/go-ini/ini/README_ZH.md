@@ -61,6 +61,21 @@ err := cfg.Append("other file", []byte("other raw data"))
 cfg, err := ini.LooseLoad("filename", "filename_404")
 ```
 
+有时候分区和键的名称大小写混合非常烦人，这个时候就可以通过 `InsensitiveLoad` 将所有分区和键名在读取里强制转换为小写：
+
+```go
+cfg, err := ini.InsensitiveLoad("filename")
+//...
+
+// sec1 和 sec2 指向同一个分区对象
+sec1, err := cfg.GetSection("Section")
+sec2, err := cfg.GetSection("SecTIOn")
+
+// key1 和 key2 指向同一个键对象
+key1, err := cfg.GetKey("Key")
+key2, err := cfg.GetKey("KeY")
+```
+
 更牛逼的是，当那些之前不存在的文件在重新调用 `Reload` 方法的时候突然出现了，那么它们会被正常加载。
 
 ### 操作分区（Section）
@@ -134,7 +149,7 @@ names := cfg.Section("").KeyStrings()
 获取分区下的所有键值对的克隆：
 
 ```go
-hash := cfg.GetSection("").KeysHash()
+hash := cfg.Section("").KeysHash()
 ```
 
 ### 操作键值（Value）

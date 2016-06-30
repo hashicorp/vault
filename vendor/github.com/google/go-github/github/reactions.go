@@ -11,9 +11,7 @@ import "fmt"
 // GitHub API.
 //
 // GitHub API docs: https://developer.github.com/v3/reactions/
-type ReactionsService struct {
-	client *Client
-}
+type ReactionsService service
 
 // Reaction represents a GitHub reaction.
 type Reaction struct {
@@ -258,7 +256,7 @@ func (s ReactionsService) CreatePullRequestCommentReaction(owner, repo string, i
 //
 // GitHub API docs: https://developer.github.com/v3/reaction/reactions/#delete-a-reaction-archive
 func (s *ReactionsService) DeleteReaction(id int) (*Response, error) {
-	u := fmt.Sprintf("/reactions/%v", id)
+	u := fmt.Sprintf("reactions/%v", id)
 
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
