@@ -32,6 +32,8 @@ import (
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
+
+	prometheus_client "github.com/prometheus/client_golang/prometheus"
 )
 
 // ServerCommand is a Command that starts the Vault server.
@@ -595,12 +597,22 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 	}
 
 	// Configure the prometheus sink
-	if telConfig.EnablePrometheus {
+	if telConfig.PrometheusEnabled {
 		sink, err := prometheus.NewPrometheusSink()
 		if err != nil {
 			return err
 		}
 		fanout = append(fanout, sink)
+
+		if telConfig.PrometheusBindAddr == "" {
+			telConfig.PrometheusBindAddr = ":8201" // TODO: Really default like this?
+		}
+
+		metricMux := http.NewServeMux()
+		metricMux.Handle("/metrics", prometheus_client.Handler())
+		go func() {
+			log.Printf("[ERROR] Error serving prometheus metrics: %v\n", http.ListenAndServe(telConfig.PrometheusBindAddr, metricMux))
+		}()
 	}
 
 	// Initialize the global sink
