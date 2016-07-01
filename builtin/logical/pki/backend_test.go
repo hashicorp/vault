@@ -37,11 +37,6 @@ var (
 // Performs basic tests on CA functionality
 // Uses the RSA CA key
 func TestBackend_RSAKey(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -56,9 +51,8 @@ func TestBackend_RSAKey(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
-		Steps:          []logicaltest.TestStep{},
+		Backend: b,
+		Steps:   []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -73,11 +67,6 @@ func TestBackend_RSAKey(t *testing.T) {
 // Performs basic tests on CA functionality
 // Uses the EC CA key
 func TestBackend_ECKey(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -92,9 +81,8 @@ func TestBackend_ECKey(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
-		Steps:          []logicaltest.TestStep{},
+		Backend: b,
+		Steps:   []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -107,11 +95,6 @@ func TestBackend_ECKey(t *testing.T) {
 }
 
 func TestBackend_CSRValues(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -126,9 +109,8 @@ func TestBackend_CSRValues(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
-		Steps:          []logicaltest.TestStep{},
+		Backend: b,
+		Steps:   []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -141,11 +123,6 @@ func TestBackend_CSRValues(t *testing.T) {
 }
 
 func TestBackend_URLsCRUD(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -160,9 +137,8 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
-		Steps:          []logicaltest.TestStep{},
+		Backend: b,
+		Steps:   []logicaltest.TestStep{},
 	}
 
 	stepCount = len(testCase.Steps)
@@ -178,11 +154,6 @@ func TestBackend_URLsCRUD(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
 func TestBackend_RSARoles(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -197,8 +168,7 @@ func TestBackend_RSARoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -226,11 +196,6 @@ func TestBackend_RSARoles(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
 func TestBackend_RSARoles_CSR(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -245,8 +210,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -274,11 +238,6 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the EC CA key
 func TestBackend_ECRoles(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -293,8 +252,7 @@ func TestBackend_ECRoles(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -322,11 +280,6 @@ func TestBackend_ECRoles(t *testing.T) {
 // of role flags to ensure that they are properly restricted
 // Uses the EC CA key
 func TestBackend_ECRoles_CSR(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
 	defaultLeaseTTLVal := time.Hour * 24
 	maxLeaseTTLVal := time.Hour * 24 * 30
 	b, err := Factory(&logical.BackendConfig{
@@ -341,8 +294,7 @@ func TestBackend_ECRoles_CSR(t *testing.T) {
 	}
 
 	testCase := logicaltest.TestCase{
-		AcceptanceTest: true,
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
@@ -1452,6 +1404,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	generatedRSAKeys := map[int]crypto.Signer{}
+	generatedECKeys := map[int]crypto.Signer{}
+
 	/*
 		// For the number of tests being run, a seed of 1 has been tested
 		// to hit all of the various values below. However, for normal
@@ -1646,6 +1601,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				ecKeyBits := []int{224, 256, 384, 521}
 
 				var privKey crypto.Signer
+				var ok bool
 				switch roleVals.KeyType {
 				case "rsa":
 					roleVals.KeyBits = rsaKeyBits[mathRand.Int()%2]
@@ -1662,7 +1618,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 						issueTestStep.ErrorOk = true
 					}
 
-					privKey, _ = rsa.GenerateKey(rand.Reader, testBitSize)
+					privKey, ok = generatedRSAKeys[testBitSize]
+					if !ok {
+						privKey, _ = rsa.GenerateKey(rand.Reader, testBitSize)
+						generatedRSAKeys[testBitSize] = privKey
+					}
 
 				case "ec":
 					roleVals.KeyBits = ecKeyBits[mathRand.Int()%4]
@@ -1692,7 +1652,11 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 						issueTestStep.ErrorOk = true
 					}
 
-					privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
+					privKey, ok = generatedECKeys[testBitSize]
+					if !ok {
+						privKey, _ = ecdsa.GenerateKey(curve, rand.Reader)
+						generatedECKeys[testBitSize] = privKey
+					}
 				}
 				templ := &x509.CertificateRequest{
 					Subject: pkix.Name{
