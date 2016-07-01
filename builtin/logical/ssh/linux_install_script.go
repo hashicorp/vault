@@ -10,7 +10,7 @@ const (
 # authoried_keys file in a typical linux machine. 
 # 
 # If the platform differs or if the binaries used in this script are not available
-# in targer machine, use the 'install_script' parameter with 'roles/' endpoint to
+# in target machine, use the 'install_script' parameter with 'roles/' endpoint to
 # register a custom script (applicable for Dynamic type only).
 #
 # Vault server runs this script on the target machine with the following params:
