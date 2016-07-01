@@ -89,6 +89,10 @@ func newEtcdBackend(conf map[string]string, logger *log.Logger) (Backend, error)
 	if address, ok := conf["address"]; ok {
 		machines = address
 	}
+	machinesEnv := os.Getenv("ETCD_ADDR")
+	if machinesEnv != "" {
+		machines = machinesEnv
+	}
 	machinesParsed := strings.Split(machines, EtcdMachineDelimiter)
 
 	// Verify that the machines are valid URLs
