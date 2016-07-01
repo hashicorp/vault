@@ -132,7 +132,7 @@ func TestBackend_basic(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepRole(t),
-			testAccStepReadCreds(t, b, "web", connURL),
+			testAccStepReadCreds(t, b, config.StorageView, "web", connURL),
 		},
 	})
 }
@@ -211,7 +211,7 @@ func testAccStepDeleteRole(t *testing.T, n string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, b logical.Backend, name string, connURL string) logicaltest.TestStep {
+func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, connURL string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -266,6 +266,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, name string, connURL 
 
 			resp, err = b.HandleRequest(&logical.Request{
 				Operation: logical.RevokeOperation,
+				Storage:   s,
 				Secret: &logical.Secret{
 					InternalData: map[string]interface{}{
 						"secret_type": "creds",

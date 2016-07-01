@@ -51,7 +51,12 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 
 	// If we already have a DB, we got it!
 	if b.db != nil {
-		return b.db, nil
+		if err := b.db.Ping(); err == nil {
+			return b.db, nil
+		}
+		// If the ping was unsuccessful, close it and ignore errors as we'll be
+		// reestablishing anyways
+		b.db.Close()
 	}
 
 	// Otherwise, attempt to make connection
