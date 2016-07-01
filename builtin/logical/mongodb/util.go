@@ -55,7 +55,11 @@ func parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
 			}
 			info.PoolLimit = poolLimit
 		case "ssl":
-			if value == "true" {
+			ssl, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, errors.New("bad value for ssl: " + value)
+			}
+			if ssl {
 				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
 					return tls.Dial("tcp", addr.String(), &tls.Config{})
 				}
