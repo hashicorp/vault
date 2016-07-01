@@ -53,10 +53,8 @@ func DefaultConsulLocalConfig() (string, error) {
 func SetupConsulContainer() (c ContainerID, ip string, port int, err error) {
 	port = RandomPort()
 	forward := fmt.Sprintf("%d:%d", port, 8500)
-	advertise := ip
 	if BindDockerToLocalhost != "" {
-		advertise = "127.0.0.1"
-		forward = advertise + ":" + forward
+		forward = "127.0.0.1:" + forward
 	}
 	localConfig, err := ConsulLocalConfigGen()
 	if err != nil {
@@ -70,9 +68,7 @@ func SetupConsulContainer() (c ContainerID, ip string, port int, err error) {
 			"-e", fmt.Sprintf("CONSUL_LOCAL_CONFIG=%s", localConfig),
 			ConsulImageName,
 			"agent",
-			"-server",                // Run in server mode
-			"-bootstrap-expect", "1", // Only a single server
-			"-advertise", advertise,
+			"-dev",               // Run in dev mode
 			"-client", "0.0.0.0", // Allow clients from any IP, otherwise the bridge IP will be where clients come from and it will be rejected
 		)
 	})
