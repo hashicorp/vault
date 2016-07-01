@@ -35,6 +35,8 @@ IMPROVEMENTS:
    [GH-1523]
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * secret/aws: Listing of roles is supported now  [GH-1546]
+ * secret/cassandra: Add `connect_timeout` value for Cassandra connection
+   configuration [GH-1581]
  * secret/mssql,mysql,postgresql: Reading of connection settings is supported
    in all the sql backends [GH-1515]
 
