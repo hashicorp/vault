@@ -3,7 +3,9 @@ package cassandra
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/certutil"
@@ -32,7 +34,7 @@ func substQuery(tpl string, data map[string]string) string {
 	return tpl
 }
 
-func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error) {
+func createSession(cfg *sessionConfig, s logical.Storage, logger *log.Logger) (*gocql.Session, error) {
 	clusterConfig := gocql.NewCluster(strings.Split(cfg.Hosts, ",")...)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
 		Username: cfg.Username,
@@ -42,6 +44,22 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 	clusterConfig.ProtoVersion = cfg.ProtocolVersion
 	if clusterConfig.ProtoVersion == 0 {
 		clusterConfig.ProtoVersion = 2
+	}
+
+	if len(cfg.ConnectTimeout) != 0 {
+		d, err := time.ParseDuration(cfg.ConnectTimeout)
+		if err != nil {
+			return nil, err
+		}
+
+		if d < 1 {
+			return nil, fmt.Errorf("Cassandra connect_timeout must be greater than 0")
+		}
+
+		clusterConfig.Timeout = d
+		logger.Printf("[DEBUG]: cassandra: config connect_timeout set to %v", d)
+	} else {
+		clusterConfig.Timeout = 5 * time.Second
 	}
 
 	if cfg.TLS {

@@ -55,6 +55,7 @@ type sessionConfig struct {
 	PrivateKey      string `json:"private_key" structs:"private_key"`
 	IssuingCA       string `json:"issuing_ca" structs:"issuing_ca"`
 	ProtocolVersion int    `json:"protocol_version" structs:"protocol_version"`
+	ConnectTimeout  string `json:"connect_timeout" structs:"connect_timeout"`
 }
 
 // DB returns the database connection.
@@ -81,7 +82,7 @@ func (b *backend) DB(s logical.Storage) (*gocql.Session, error) {
 		return nil, err
 	}
 
-	return createSession(config, s)
+	return createSession(config, s, b.Logger())
 }
 
 // ResetDB forces a connection next time DB() is called.
