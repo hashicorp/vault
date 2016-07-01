@@ -182,6 +182,11 @@ subpath for interactive help output.
         <span class="param-flags">optional</span>
         The CQL protocol version to use. Defaults to 2.
       </li>
+      <li>
+        <span class="param">connect_timeout</span>
+        <span class="param-flags">optional</span>
+        The connection timeout to use. Defaults to 5 seconds.
+      </li>
     </ul>
   </dd>
 

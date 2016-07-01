@@ -55,6 +55,7 @@ type sessionConfig struct {
 	PrivateKey      string `json:"private_key" structs:"private_key"`
 	IssuingCA       string `json:"issuing_ca" structs:"issuing_ca"`
 	ProtocolVersion int    `json:"protocol_version" structs:"protocol_version"`
+	ConnectTimeout  int    `json:"connect_timeout" structs:"connect_timeout"`
 }
 
 // DB returns the database connection.

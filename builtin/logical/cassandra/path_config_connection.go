@@ -60,6 +60,12 @@ take precedence.`,
 				Type:        framework.TypeInt,
 				Description: `The protocol version to use. Defaults to 2.`,
 			},
+
+			"connect_timeout": &framework.FieldSchema{
+				Type:        framework.TypeDurationSecond,
+				Default:     5,
+				Description: `The connection timeout to use. Defaults to 5.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -119,6 +125,7 @@ func (b *backend) pathConnectionWrite(
 		TLS:             data.Get("tls").(bool),
 		InsecureTLS:     data.Get("insecure_tls").(bool),
 		ProtocolVersion: data.Get("protocol_version").(int),
+		ConnectTimeout:  data.Get("connect_timeout").(int),
 	}
 
 	if config.InsecureTLS {

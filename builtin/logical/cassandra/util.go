@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/certutil"
@@ -43,6 +44,8 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 	if clusterConfig.ProtoVersion == 0 {
 		clusterConfig.ProtoVersion = 2
 	}
+
+	clusterConfig.Timeout = time.Duration(cfg.ConnectTimeout) * time.Second
 
 	if cfg.TLS {
 		tlsConfig := &tls.Config{
