@@ -50,11 +50,16 @@ func (b *backend) pathCredsCreateRead(req *logical.Request, data *framework.Fiel
 
 	// Generate the username and password
 	displayName := req.DisplayName
+	if displayName != "" {
+		displayName += "-"
+	}
+
 	userUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err
 	}
-	username := fmt.Sprintf("%s-%s", displayName, userUUID)
+
+	username := fmt.Sprintf("vault-%s%s", displayName, userUUID)
 
 	password, err := uuid.GenerateUUID()
 	if err != nil {

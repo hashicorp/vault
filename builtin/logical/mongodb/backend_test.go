@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
+	"strings"
 )
 
 func TestBackend_basic(t *testing.T) {
@@ -111,6 +112,9 @@ func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 			if d.Username == "" {
+				return fmt.Errorf("bad: %#v", resp)
+			}
+			if !strings.HasPrefix(d.Username, "vault-root-") {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 			if d.Password == "" {
