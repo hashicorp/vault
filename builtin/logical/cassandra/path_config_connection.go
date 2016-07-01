@@ -62,8 +62,9 @@ take precedence.`,
 			},
 
 			"connect_timeout": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `The connection timeout to use. Defaults to 5s.`,
+				Type:        framework.TypeDurationSecond,
+				Default:     5,
+				Description: `The connection timeout to use. Defaults to 5.`,
 			},
 		},
 
@@ -124,7 +125,7 @@ func (b *backend) pathConnectionWrite(
 		TLS:             data.Get("tls").(bool),
 		InsecureTLS:     data.Get("insecure_tls").(bool),
 		ProtocolVersion: data.Get("protocol_version").(int),
-		ConnectTimeout:  data.Get("connect_timeout").(string),
+		ConnectTimeout:  data.Get("connect_timeout").(int),
 	}
 
 	if config.InsecureTLS {
@@ -168,7 +169,7 @@ func (b *backend) pathConnectionWrite(
 		config.TLS = true
 	}
 
-	session, err := createSession(config, req.Storage, b.Logger())
+	session, err := createSession(config, req.Storage)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}

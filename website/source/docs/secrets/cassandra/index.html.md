@@ -185,7 +185,7 @@ subpath for interactive help output.
       <li>
         <span class="param">connect_timeout</span>
         <span class="param-flags">optional</span>
-        The connection timeout to use. Defaults to 5s.
+        The connection timeout to use. Defaults to 5 seconds.
       </li>
     </ul>
   </dd>
