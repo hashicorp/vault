@@ -5,12 +5,69 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
+	"github.com/ory-am/dockertest"
 )
+
+var (
+	testImagePull sync.Once
+)
+
+func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cid dockertest.ContainerID, retURL string) {
+	if os.Getenv("MYSQL_DSN") != "" {
+		return "", os.Getenv("MYSQL_DSN")
+	}
+
+	// Without this the checks for whether the container has started seem to
+	// never actually pass. There's really no reason to expose the test
+	// containers, so don't.
+	dockertest.BindDockerToLocalhost = "yep"
+
+	testImagePull.Do(func() {
+		dockertest.Pull("mysql")
+	})
+
+	cid, connErr := dockertest.ConnectToMySQL(60, 500*time.Millisecond, func(connURL string) bool {
+		// This will cause a validation to run
+		resp, err := b.HandleRequest(&logical.Request{
+			Storage:   s,
+			Operation: logical.UpdateOperation,
+			Path:      "config/connection",
+			Data: map[string]interface{}{
+				"connection_url": connURL,
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			// It's likely not up and running yet, so return false and try again
+			return false
+		}
+		if resp == nil {
+			t.Fatal("expected warning")
+		}
+
+		retURL = connURL
+		return true
+	})
+
+	if connErr != nil {
+		t.Fatalf("could not connect to database: %v", connErr)
+	}
+
+	return
+}
+
+func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
+	err := cid.KillRemove()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
@@ -52,68 +109,51 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	b, _ := Factory(logical.TestBackendConfig())
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	d1 := map[string]interface{}{
-		"connection_url": os.Getenv("MYSQL_DSN"),
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
 	}
-	d2 := map[string]interface{}{
-		"value": os.Getenv("MYSQL_DSN"),
+	connData := map[string]interface{}{
+		"connection_url": connURL,
 	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
-		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, d1, false),
-			testAccStepRole(t),
-			testAccStepReadCreds(t, "web"),
-			testAccStepConfig(t, d2, false),
-			testAccStepRole(t),
-			testAccStepReadCreds(t, "web"),
-		},
-	})
-}
-
-func TestBackend_configConnection(t *testing.T) {
-	b := Backend()
-	d1 := map[string]interface{}{
-		"value": os.Getenv("MYSQL_DSN"),
-	}
-	d2 := map[string]interface{}{
-		"connection_url": os.Getenv("MYSQL_DSN"),
-	}
-	d3 := map[string]interface{}{
-		"value":          os.Getenv("MYSQL_DSN"),
-		"connection_url": os.Getenv("MYSQL_DSN"),
-	}
-	d4 := map[string]interface{}{}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, d1, false),
-			testAccStepConfig(t, d2, false),
-			testAccStepConfig(t, d3, false),
-			testAccStepConfig(t, d4, true),
+			testAccStepConfig(t, connData, false),
+			testAccStepRole(t),
+			testAccStepReadCreds(t, "web"),
 		},
 	})
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	b := Backend()
-
-	d := map[string]interface{}{
-		"connection_url": os.Getenv("MYSQL_DSN"),
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, d, false),
+			testAccStepConfig(t, connData, false),
 			testAccStepRole(t),
 			testAccStepReadRole(t, "web", testRole),
 			testAccStepDeleteRole(t, "web"),
@@ -123,28 +163,30 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_leaseWriteRead(t *testing.T) {
-	b := Backend()
-	d := map[string]interface{}{
-		"connection_url": os.Getenv("MYSQL_DSN"),
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"connection_url": connURL,
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, d, false),
+			testAccStepConfig(t, connData, false),
 			testAccStepWriteLease(t),
 			testAccStepReadLease(t),
 		},
 	})
 
-}
-
-func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("MYSQL_DSN"); v == "" {
-		t.Fatal("MYSQL_DSN must be set for acceptance tests")
-	}
 }
 
 func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
@@ -168,8 +210,8 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 					return fmt.Errorf("expected error, but write succeeded.")
 				}
 				return nil
-			} else if resp != nil {
-				return fmt.Errorf("response should be nil")
+			} else if resp != nil && resp.IsError() {
+				return fmt.Errorf("got an error response: %v", resp.Error())
 			}
 			return nil
 		},
