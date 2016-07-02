@@ -1,48 +1,106 @@
 package consul
 
 import (
-	"bufio"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
-	"os/exec"
 	"reflect"
-	"strings"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul/api"
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
+	"github.com/ory-am/dockertest"
 )
 
-func TestBackend_config_access(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
+var (
+	testImagePull sync.Once
+)
+
+func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cid dockertest.ContainerID, retAddress string) {
+	if os.Getenv("CONSUL_ADDR") != "" {
+		return "", os.Getenv("CONSUL_ADDR")
 	}
 
-	accessConfig, process := testStartConsulServer(t)
-	defer testStopConsulServer(t, process)
+	// Without this the checks for whether the container has started seem to
+	// never actually pass. There's really no reason to expose the test
+	// containers, so don't.
+	dockertest.BindDockerToLocalhost = "yep"
 
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+	testImagePull.Do(func() {
+		dockertest.Pull(dockertest.ConsulImageName)
+	})
 
-	b := Backend()
-	_, err := b.Setup(config)
+	try := 0
+	cid, connErr := dockertest.ConnectToConsul(60, 500*time.Millisecond, func(connAddress string) bool {
+		try += 1
+		// Build a client and verify that the credentials work
+		config := consulapi.DefaultConfig()
+		config.Address = connAddress
+		config.Token = dockertest.ConsulACLMasterToken
+		client, err := consulapi.NewClient(config)
+		if err != nil {
+			if try > 50 {
+				panic(err)
+			}
+			return false
+		}
+
+		_, err = client.KV().Put(&consulapi.KVPair{
+			Key:   "setuptest",
+			Value: []byte("setuptest"),
+		}, nil)
+		if err != nil {
+			if try > 50 {
+				panic(err)
+			}
+			return false
+		}
+
+		retAddress = connAddress
+		return true
+	})
+
+	if connErr != nil {
+		t.Fatalf("could not connect to consul: %v", connErr)
+	}
+
+	return
+}
+
+func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
+	err := cid.KillRemove()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestBackend_config_access(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"address": connURL,
+		"token":   dockertest.ConsulACLMasterToken,
 	}
 
 	confReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config/access",
-		Storage:   storage,
-		Data:      accessConfig,
+		Storage:   config.StorageView,
+		Data:      connData,
 	}
 
 	resp, err := b.HandleRequest(confReq)
@@ -57,7 +115,7 @@ func TestBackend_config_access(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"address": "127.0.0.1:8500",
+		"address": connData["address"].(string),
 		"scheme":  "http",
 	}
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -69,45 +127,54 @@ func TestBackend_config_access(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	config, process := testStartConsulServer(t)
-	defer testStopConsulServer(t, process)
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"address": connURL,
+		"token":   dockertest.ConsulACLMasterToken,
+	}
 
-	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, config),
+			testAccStepConfig(t, connData),
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
-			testAccStepReadToken(t, "test", config),
+			testAccStepReadToken(t, "test", connData),
 		},
 	})
 }
 
 func TestBackend_renew_revoke(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	config, process := testStartConsulServer(t)
-	defer testStopConsulServer(t, process)
-
-	beConfig := logical.TestBackendConfig()
-	beConfig.StorageView = &logical.InmemStorage{}
-	b, _ := Factory(beConfig)
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"address": connURL,
+		"token":   dockertest.ConsulACLMasterToken,
+	}
 
 	req := &logical.Request{
-		Storage:   beConfig.StorageView,
+		Storage:   config.StorageView,
 		Operation: logical.UpdateOperation,
 		Path:      "config/access",
-		Data:      config,
+		Data:      connData,
 	}
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -130,8 +197,11 @@ func TestBackend_renew_revoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp == nil || resp.IsError() {
-		t.Fatal("resp nil or error")
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
 	}
 
 	generatedSecret := resp.Secret
@@ -147,16 +217,16 @@ func TestBackend_renew_revoke(t *testing.T) {
 	log.Printf("[WARN] Generated token: %s", d.Token)
 
 	// Build a client and verify that the credentials work
-	apiConfig := api.DefaultConfig()
-	apiConfig.Address = config["address"].(string)
-	apiConfig.Token = d.Token
-	client, err := api.NewClient(apiConfig)
+	consulapiConfig := consulapi.DefaultConfig()
+	consulapiConfig.Address = connData["address"].(string)
+	consulapiConfig.Token = d.Token
+	client, err := consulapi.NewClient(consulapiConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	log.Printf("[WARN] Verifying that the generated token works...")
-	_, err = client.KV().Put(&api.KVPair{
+	_, err = client.KV().Put(&consulapi.KVPair{
 		Key:   "foo",
 		Value: []byte("bar"),
 	}, nil)
@@ -181,7 +251,7 @@ func TestBackend_renew_revoke(t *testing.T) {
 	}
 
 	log.Printf("[WARN] Verifying that the generated token does not work...")
-	_, err = client.KV().Put(&api.KVPair{
+	_, err = client.KV().Put(&consulapi.KVPair{
 		Key:   "foo",
 		Value: []byte("bar"),
 	}, nil)
@@ -191,41 +261,36 @@ func TestBackend_renew_revoke(t *testing.T) {
 }
 
 func TestBackend_management(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	config, process := testStartConsulServer(t)
-	defer testStopConsulServer(t, process)
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"address": connURL,
+		"token":   dockertest.ConsulACLMasterToken,
+	}
 
-	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, config),
+			testAccStepConfig(t, connData),
 			testAccStepWriteManagementPolicy(t, "test", ""),
-			testAccStepReadManagementToken(t, "test", config),
+			testAccStepReadManagementToken(t, "test", connData),
 		},
 	})
 }
 
 func TestBackend_crud(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
-	_, process := testStartConsulServer(t)
-	defer testStopConsulServer(t, process)
-
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
 			testAccStepReadPolicy(t, "test", testPolicy, 0),
@@ -235,93 +300,15 @@ func TestBackend_crud(t *testing.T) {
 }
 
 func TestBackend_role_lease(t *testing.T) {
-	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
-		return
-	}
-
-	_, process := testStartConsulServer(t)
-	defer testStopConsulServer(t, process)
-
 	b, _ := Factory(logical.TestBackendConfig())
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, "6h"),
 			testAccStepReadPolicy(t, "test", testPolicy, 6*time.Hour),
 			testAccStepDeletePolicy(t, "test"),
 		},
 	})
-}
-
-func testStartConsulServer(t *testing.T) (map[string]interface{}, *os.Process) {
-	if _, err := exec.LookPath("consul"); err != nil {
-		t.Errorf("consul not found: %s", err)
-	}
-
-	td, err := ioutil.TempDir("", "vault")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	tf, err := ioutil.TempFile("", "vault")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	if _, err := tf.Write([]byte(strings.TrimSpace(testConsulConfig))); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	tf.Close()
-
-	cmd := exec.Command(
-		"consul", "agent",
-		"-server",
-		"-bootstrap",
-		"-advertise", "127.0.0.1",
-		"-config-file", tf.Name(),
-		"-data-dir", td)
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
-	stdoutScanner := bufio.NewScanner(stdout)
-	stderrScanner := bufio.NewScanner(stderr)
-	stdoutScanFunc := func() {
-		for stdoutScanner.Scan() {
-			t.Logf("Consul stdout: %s\n", stdoutScanner.Text())
-		}
-	}
-	stderrScanFunc := func() {
-		for stderrScanner.Scan() {
-			t.Logf("Consul stderr: %s\n", stderrScanner.Text())
-		}
-	}
-	if os.Getenv("VAULT_VERBOSE_ACC_TESTS") != "" {
-		go stdoutScanFunc()
-		go stderrScanFunc()
-	}
-
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("error starting Consul: %s", err)
-	}
-	// Give Consul time to startup
-	time.Sleep(2 * time.Second)
-
-	config := map[string]interface{}{
-		"address": "127.0.0.1:8500",
-		"token":   "test",
-	}
-	return config, cmd.Process
-}
-
-func testStopConsulServer(t *testing.T, p *os.Process) {
-	p.Kill()
-}
-
-func testAccPreCheck(t *testing.T) {
-	if _, err := exec.LookPath("consul"); err != nil {
-		t.Fatal("consul must be on PATH")
-	}
 }
 
 func testAccStepConfig(
@@ -348,16 +335,16 @@ func testAccStepReadToken(
 			log.Printf("[WARN] Generated token: %s", d.Token)
 
 			// Build a client and verify that the credentials work
-			config := api.DefaultConfig()
+			config := consulapi.DefaultConfig()
 			config.Address = conf["address"].(string)
 			config.Token = d.Token
-			client, err := api.NewClient(config)
+			client, err := consulapi.NewClient(config)
 			if err != nil {
 				return err
 			}
 
 			log.Printf("[WARN] Verifying that the generated token works...")
-			_, err = client.KV().Put(&api.KVPair{
+			_, err = client.KV().Put(&consulapi.KVPair{
 				Key:   "foo",
 				Value: []byte("bar"),
 			}, nil)
@@ -385,16 +372,16 @@ func testAccStepReadManagementToken(
 			log.Printf("[WARN] Generated token: %s", d.Token)
 
 			// Build a client and verify that the credentials work
-			config := api.DefaultConfig()
+			config := consulapi.DefaultConfig()
 			config.Address = conf["address"].(string)
 			config.Token = d.Token
-			client, err := api.NewClient(config)
+			client, err := consulapi.NewClient(config)
 			if err != nil {
 				return err
 			}
 
 			log.Printf("[WARN] Verifying that the generated token works...")
-			_, _, err = client.ACL().Create(&api.ACLEntry{
+			_, _, err = client.ACL().Create(&consulapi.ACLEntry{
 				Type: "management",
 				Name: "test2",
 			}, nil)
@@ -466,13 +453,5 @@ func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 const testPolicy = `
 key "" {
 	policy = "write"
-}
-`
-
-const testConsulConfig = `
-{
-	"datacenter": "test",
-	"acl_datacenter": "test",
-	"acl_master_token": "test"
 }
 `

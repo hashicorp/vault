@@ -1533,8 +1533,8 @@ func TestTokenStore_RolePathSuffix(t *testing.T) {
 func TestTokenStore_RolePeriod(t *testing.T) {
 	core, _, _, root := TestCoreWithTokenStore(t)
 
-	core.defaultLeaseTTL = 5 * time.Second
-	core.maxLeaseTTL = 5 * time.Second
+	core.defaultLeaseTTL = 10 * time.Second
+	core.maxLeaseTTL = 10 * time.Second
 
 	// Note: these requests are sent to Core since Core handles registration
 	// with the expiration manager and we need the storage to be consistent
@@ -1554,7 +1554,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 	}
 
 	// This first set of logic is to verify that a normal non-root token will
-	// be given a TTL of 5 seconds, and that renewing will not cause the TTL to
+	// be given a TTL of 10 seconds, and that renewing will not cause the TTL to
 	// increase since that's the configured backend max. Then we verify that
 	// increment works.
 	{
@@ -1578,11 +1578,11 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		ttl := resp.Data["ttl"].(int64)
-		if ttl > 5 {
+		if ttl > 10 {
 			t.Fatalf("TTL too large")
 		}
 
-		// Let the TTL go down a bit to 3 seconds
+		// Let the TTL go down a bit to 8 seconds
 		time.Sleep(2 * time.Second)
 
 		req.Operation = logical.UpdateOperation
@@ -1599,10 +1599,12 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		ttl = resp.Data["ttl"].(int64)
-		if ttl > 3 {
+		if ttl > 8 {
 			t.Fatalf("TTL too large")
 		}
 
+		// Renewing should not have the increment increase since we've hit the
+		// max
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"
 		req.Data = map[string]interface{}{
@@ -1620,7 +1622,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		ttl = resp.Data["ttl"].(int64)
-		if ttl > 1 {
+		if ttl > 8 {
 			t.Fatalf("TTL too large")
 		}
 	}
@@ -1721,7 +1723,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
 	req.ClientToken = root
 	req.Data = map[string]interface{}{
-		"explicit_max_ttl": "6s",
+		"explicit_max_ttl": "10s",
 	}
 
 	resp, err = core.HandleRequest(req)
@@ -1810,15 +1812,15 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		ttl := resp.Data["ttl"].(int64)
-		if ttl > 6 {
+		if ttl > 10 {
 			t.Fatalf("TTL too big")
 		}
 		maxTTL := resp.Data["explicit_max_ttl"].(int64)
-		if maxTTL != 6 {
+		if maxTTL != 10 {
 			t.Fatalf("expected 6 for explicit max TTL, got %d", maxTTL)
 		}
 
-		// Let the TTL go down a bit to 3 seconds (4 against explicit max)
+		// Let the TTL go down a bit to ~7 seconds (8 against explicit max)
 		time.Sleep(2 * time.Second)
 
 		req.Operation = logical.UpdateOperation
@@ -1838,11 +1840,11 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		ttl = resp.Data["ttl"].(int64)
-		if ttl > 4 {
+		if ttl > 8 {
 			t.Fatalf("TTL too big")
 		}
 
-		// Let the TTL go down a bit more to 2 seconds (2 against explicit max)
+		// Let the TTL go down a bit more to ~5 seconds (6 against explicit max)
 		time.Sleep(2 * time.Second)
 
 		req.Operation = logical.UpdateOperation
@@ -1862,12 +1864,12 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 		ttl = resp.Data["ttl"].(int64)
-		if ttl > 2 {
+		if ttl > 6 {
 			t.Fatalf("TTL too big")
 		}
 
 		// It should expire
-		time.Sleep(3 * time.Second)
+		time.Sleep(8 * time.Second)
 
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"

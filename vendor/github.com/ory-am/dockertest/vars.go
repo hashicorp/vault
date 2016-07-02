@@ -54,6 +54,9 @@ var (
 
 	// MockserverImageName name is the Mockserver image name on dockerhub.
 	MockserverImageName = env.Getenv("DOCKERTEST_MOCKSERVER_IMAGE_NAME", "jamesdbloom/mockserver")
+
+	// ConsulImageName is the Consul image name on dockerhub.
+	ConsulImageName = env.Getenv("DOCKERTEST_CONSUL_IMAGE_NAME", "consul")
 )
 
 // Username and password configuration
