@@ -30,9 +30,9 @@ programs to perform this wrapping (and by extension, those programs need to be
 trusted).
 
 Starting in 0.6, this concept is taken to its logical conclusion: almost every
-response that Vault generates can be automatically wrapped inside a single-use,
-limited-time-to-live token's cubbyhole. Details can be found in the
-[`cubbyhole` backend
+response that Vault generates, except the `auth/` endpoints, can be automatically 
+wrapped inside a single-use, limited-time-to-live token's cubbyhole. Details can 
+be found in the [`cubbyhole` backend
 documentation](https://www.vaultproject.io/docs/secrets/cubbyhole/index.html).
 
 This capability should be carefully considered when planning your security
