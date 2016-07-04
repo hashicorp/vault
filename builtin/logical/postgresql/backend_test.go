@@ -238,15 +238,13 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 
 			returnedRows := func() int {
-				stmt, err := db.Prepare(fmt.Sprintf(
-					"SELECT DISTINCT schemaname FROM pg_tables WHERE has_table_privilege('%s', 'information_schema.role_column_grants', 'select');",
-					d.Username))
+				stmt, err := db.Prepare("SELECT DISTINCT schemaname FROM pg_tables WHERE has_table_privilege($1, 'information_schema.role_column_grants', 'select');")
 				if err != nil {
 					return -1
 				}
 				defer stmt.Close()
 
-				rows, err := stmt.Query()
+				rows, err := stmt.Query(d.Username)
 				if err != nil {
 					return -1
 				}
