@@ -63,7 +63,7 @@ fi
 
 # Upload
 if [ ! -z $HC_RELEASE ]; then
-  hc-releases -upload $DIR/pkg/dist --publish --purge
+  hc-releases upload $DIR/pkg/dist --publish --purge
 
   curl -X PURGE https://releases.hashicorp.com/vault/${VERSION}
   for FILENAME in $(find $DIR/pkg/dist -type f); do
