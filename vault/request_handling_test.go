@@ -100,6 +100,24 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 	}
 
 	req = &logical.Request{
+		Path:    "auth/userpass/login/test",
+		WrapTTL: time.Duration(15 * time.Second),
+		Data: map[string]interface{}{
+			"password": "foo",
+		},
+	}
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+	if resp.WrapInfo != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	req = &logical.Request{
 		Path:      "auth/userpass/login/test",
 		Operation: logical.UpdateOperation,
 		WrapTTL:   time.Duration(15 * time.Second),
