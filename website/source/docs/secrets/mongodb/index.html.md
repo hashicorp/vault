@@ -155,7 +155,65 @@ applications are restricted in the credentials they are allowed to read.
 
   <dt>Returns</dt>
   <dd>
-    A `204` response code.
+    A `200` response code.
+  </dd>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": null,
+      "wrap_info": null,
+      "warnings": [
+        "Read access to this endpoint should be controlled via ACLs as it will return the connection URI as it is, including passwords, if any."
+      ],
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Queries the connection configuration. Access to this endpoint should be controlled via ACLs as it will return the
+    connection URI as it is, including passwords, if any.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/mongodb/config/connection`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": {
+        "uri": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true",
+        "verify_connection": true
+      },
+      "wrap_info": null,
+      "warnings": null,
+      "auth": null
+    }
+    ```
+
   </dd>
 </dl>
 
@@ -374,7 +432,7 @@ applications are restricted in the credentials they are allowed to read.
       "data": {
         "db": "foo",
         "password": "de0f7b50-d700-54e5-4e81-5c3724283999",
-        "username": "token-b32098cb-7ff2-dcf5-83cd-d5887cedf81b"
+        "username": "vault-token-b32098cb-7ff2-dcf5-83cd-d5887cedf81b"
       },
       "wrap_info": null,
       "warnings": null,
