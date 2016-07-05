@@ -273,6 +273,16 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 	// Route the request
 	resp, err := c.router.Route(req)
+	if resp != nil {
+		// We don't allow backends to specify this, so ensure it's not set
+		resp.WrapInfo = nil
+
+		if req.WrapTTL != 0 {
+			resp.WrapInfo = &logical.WrapInfo{
+				TTL: req.WrapTTL,
+			}
+		}
+	}
 
 	// A login request should never return a secret!
 	if resp != nil && resp.Secret != nil {
