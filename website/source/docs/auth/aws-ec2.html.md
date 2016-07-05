@@ -242,10 +242,11 @@ endpoints.
 
 ### Varying Public Certificates
 
-The AWS public certificate which contains the public key used to verify the
-PKCS#7 signature varies for groups of regions. The default public certificate
-provided with the backend is applicable for many regions. Instances whose PKCS#7
-signatures cannot be verified by the default public certificate, can register a
+The AWS public certificate, which contains the public key used to verify the 
+PKCS#7 signature, varies for different AWS regions.  The primary AWS public 
+certificate, which covers most AWS regions, is already included in Vault and 
+does not need to be added.  Instances whose PKCS#7 signatures cannot be 
+verified by the default public certificate included in Vault, can register a 
 different public certificate which can be found [here]
 (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
 via the `auth/aws-ec2/config/certificate/<cert_name>` endpoint.
