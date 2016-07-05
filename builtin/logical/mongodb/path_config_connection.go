@@ -3,6 +3,7 @@ package mongodb
 import (
 	"fmt"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"gopkg.in/mgo.v2"
@@ -23,11 +24,31 @@ func pathConfigConnection(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:   b.pathConnectionRead,
 			logical.UpdateOperation: b.pathConnectionWrite,
 		},
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
 		HelpDescription: pathConfigConnectionHelpDesc,
 	}
+}
+
+// pathConnectionRead reads out the connection configuration
+func (b *backend) pathConnectionRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	entry, err := req.Storage.Get("config/connection")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read connection configuration")
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var config connectionConfig
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+	return &logical.Response{
+		Data: structs.New(config).Map(),
+	}, nil
 }
 
 func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -72,12 +93,15 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 	// Reset the Session
 	b.ResetSession()
 
-	return nil, nil
+	resp := &logical.Response{}
+	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection URI as it is, including passwords, if any.")
+
+	return resp, nil
 }
 
 type connectionConfig struct {
-	URI              string `json:"uri"`
-	VerifyConnection bool   `json:"verifyConnection"`
+	URI              string `json:"uri" structs:"uri" mapstructure:"uri"`
+	VerifyConnection bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }
 
 const pathConfigConnectionHelpSyn = `

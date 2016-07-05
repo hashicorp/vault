@@ -4,23 +4,130 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	"strings"
+	"github.com/ory-am/dockertest"
+	"time"
+	"reflect"
 )
 
+var (
+	testImagePull sync.Once
+)
+
+func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cid dockertest.ContainerID, retURI string) {
+	if os.Getenv("MONGODB_URI") != "" {
+		return "", os.Getenv("MONGODB_URI")
+	}
+
+	// Without this the checks for whether the container has started seem to
+	// never actually pass. There's really no reason to expose the test
+	// containers, so don't.
+	dockertest.BindDockerToLocalhost = "yep"
+
+	testImagePull.Do(func() {
+		dockertest.Pull(dockertest.MongoDBImageName)
+	})
+
+	cid, connErr := dockertest.ConnectToMongoDB(60, 500*time.Millisecond, func(connURI string) bool {
+		connURI = "mongodb://" + connURI
+		// This will cause a validation to run
+		resp, err := b.HandleRequest(&logical.Request{
+			Storage:   s,
+			Operation: logical.UpdateOperation,
+			Path:      "config/connection",
+			Data: map[string]interface{}{
+				"uri": connURI,
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			// It's likely not up and running yet, so return false and try again
+			return false
+		}
+		if resp == nil {
+			t.Fatal("expected warning")
+		}
+
+		retURI = connURI
+		return true
+	})
+
+	if connErr != nil {
+		t.Fatalf("could not connect to database: %v", connErr)
+	}
+
+	return
+}
+
+func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
+	err := cid.KillRemove()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackend_config_connection(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"uri":               "sample_connection_uri",
+		"verify_connection": false,
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/connection",
+		Storage:   config.StorageView,
+		Data:      configData,
+	}
+	resp, err = b.HandleRequest(configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	configReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	if !reflect.DeepEqual(configData, resp.Data) {
+		t.Fatalf("bad: expected:%#v\nactual:%#v\n", configData, resp.Data)
+	}
+}
+
 func TestBackend_basic(t *testing.T) {
-	b, _ := Factory(logical.TestBackendConfig())
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURI := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"uri": connURI,
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, connData, false),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, "web"),
 		},
@@ -28,14 +135,25 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	b := Backend()
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURI := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"uri": connURI,
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, connData, false),
 			testAccStepRole(t),
 			testAccStepReadRole(t, "web", testDb, testMongoDBRoles),
 			testAccStepDeleteRole(t, "web"),
@@ -45,14 +163,25 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 
 func TestBackend_leaseWriteRead(t *testing.T) {
-	b := Backend()
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURI := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"uri": connURI,
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, connData, false),
 			testAccStepWriteLease(t),
 			testAccStepReadLease(t),
 		},
@@ -60,18 +189,31 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 
 }
 
-func testAccPreCheck(t *testing.T) {
-	if v := os.Getenv("MONGODB_URI"); v == "" {
-		t.Fatal("MONGODB_URI must be set for acceptance tests")
-	}
-}
-
-func testAccStepConfig(t *testing.T) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
-		Data: map[string]interface{}{
-			"uri": os.Getenv("MONGODB_URI"),
+		Data:      d,
+		ErrorOk:   true,
+		Check: func(resp *logical.Response) error {
+			if expectError {
+				if resp.Data == nil {
+					return fmt.Errorf("data is nil")
+				}
+				var e struct {
+					Error string `mapstructure:"error"`
+				}
+				if err := mapstructure.Decode(resp.Data, &e); err != nil {
+					return err
+				}
+				if len(e.Error) == 0 {
+					return fmt.Errorf("expected error, but write succeeded.")
+				}
+				return nil
+			} else if resp != nil && resp.IsError() {
+				return fmt.Errorf("got an error response: %v", resp.Error())
+			}
+			return nil
 		},
 	}
 }
