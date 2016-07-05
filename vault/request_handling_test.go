@@ -100,8 +100,8 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 	}
 
 	req = &logical.Request{
-		Path:    "auth/userpass/login/test",
-		WrapTTL: time.Duration(15 * time.Second),
+		Path:      "auth/userpass/login/test",
+		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
 			"password": "foo",
 		},
