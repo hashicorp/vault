@@ -60,7 +60,7 @@ func SetupConsulContainer() (c ContainerID, ip string, port int, err error) {
 	if err != nil {
 		return "", "", 0, err
 	}
-	c, ip, err = SetupContainer(ConsulImageName, port, 10*time.Second, func() (string, error) {
+	c, ip, err = SetupContainer(ConsulImageName, port, 15*time.Second, func() (string, error) {
 		return run(
 			"--name", GenerateContainerID(),
 			"-d",

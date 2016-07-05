@@ -635,10 +635,10 @@
 			"revisionTime": "2016-01-09T14:21:19Z"
 		},
 		{
-			"checksumSHA1": "CXJIw4GNmwqc+c4ZCeVj2mMm1Uw=",
+			"checksumSHA1": "UjJW3hP+29qXIFetdGW19RVVCf8=",
 			"path": "github.com/ory-am/dockertest",
-			"revision": "293f0a0aac817a67dcf656af315a43f2db140c2a",
-			"revisionTime": "2016-06-21T08:39:56Z"
+			"revision": "5e15d5d025f35aed8b7c39e8aba1df66c32b89aa",
+			"revisionTime": "2016-07-05T17:48:36Z"
 		},
 		{
 			"checksumSHA1": "xN14ZoFcgefABp24aowYtQVMDsc=",
