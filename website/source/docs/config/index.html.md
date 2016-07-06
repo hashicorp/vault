@@ -75,7 +75,7 @@ Disabling `mlock` is not recommended unless the systems running Vault only
 use encrypted swap or do not use swap at all.  Vault only supports memory
 locking on UNIX-like systems (Linux, FreeBSD, Darwin, etc).  Non-UNIX like
 systems (e.g. Windows, NaCL, Android) lack the primitives to keep a process's
-entire memory address space from spilling disk and is therefore automatically
+entire memory address space from spilling to disk and is therefore automatically
 disabled on unsupported platforms.
 
 On Linux, to give the Vault executable the ability to use the `mlock` syscall
