@@ -363,7 +363,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	// Check if the lease is renewable. Note that this also checks for a nil
 	// lease and errors in that case as well.
 	if err := le.renewable(); err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Attempt to renew the auth entry
