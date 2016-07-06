@@ -9,13 +9,13 @@ import (
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -84,14 +84,14 @@ func ParsePKIMap(data map[string]interface{}) (*ParsedCertBundle, error) {
 // JSON not coming from the PKI backend.
 func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 	result := &CertBundle{}
-	err := json.Unmarshal(input, &result)
+	err := jsonutil.DecodeJSON(input, &result)
 
 	if err == nil {
 		return result.ToParsedCertBundle()
 	}
 
 	var secret Secret
-	err = json.Unmarshal(input, &secret)
+	err = jsonutil.DecodeJSON(input, &secret)
 
 	if err == nil {
 		return ParsePKIMap(secret.Data)

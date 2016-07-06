@@ -1,12 +1,12 @@
 package command
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 var output string
@@ -43,7 +43,7 @@ func TestJsonFormatter(t *testing.T) {
 		t.Fatal(err)
 	}
 	var newUi mockUi
-	if err := json.Unmarshal([]byte(output), &newUi); err != nil {
+	if err := jsonutil.DecodeJSON([]byte(output), &newUi); err != nil {
 		t.Fatal(err)
 	}
 	if newUi.SampleData != ui.SampleData {

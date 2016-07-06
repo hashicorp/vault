@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -108,7 +109,8 @@ func (b *PassthroughBackend) handleRead(
 
 	// Decode the data
 	var rawData map[string]interface{}
-	if err := json.Unmarshal(out.Value, &rawData); err != nil {
+
+	if err := jsonutil.DecodeJSON(out.Value, &rawData); err != nil {
 		return nil, fmt.Errorf("json decoding failed: %v", err)
 	}
 

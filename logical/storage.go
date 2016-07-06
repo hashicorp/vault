@@ -1,8 +1,9 @@
 package logical
 
 import (
-	"bytes"
-	"encoding/json"
+	"fmt"
+
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 // Storage is the way that logical backends are able read/write data.
@@ -19,20 +20,20 @@ type StorageEntry struct {
 	Value []byte
 }
 
+// DecodeJSON decodes the 'Value' present in StorageEntry.
 func (e *StorageEntry) DecodeJSON(out interface{}) error {
-	return json.Unmarshal(e.Value, out)
+	return jsonutil.DecodeJSON(e.Value, out)
 }
 
 // StorageEntryJSON creates a StorageEntry with a JSON-encoded value.
 func StorageEntryJSON(k string, v interface{}) (*StorageEntry, error) {
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	if err := enc.Encode(v); err != nil {
-		return nil, err
+	encodedBytes, err := jsonutil.EncodeJSON(v)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode storage entry: %v", err)
 	}
 
 	return &StorageEntry{
 		Key:   k,
-		Value: buf.Bytes(),
+		Value: encodedBytes,
 	}, nil
 }

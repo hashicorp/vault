@@ -9,6 +9,7 @@ import (
 
 	"errors"
 
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -42,12 +43,12 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		}
 
 		var expectedjson = new(JSONRequestEntry)
-		if err := json.Unmarshal([]byte(tc.Result), &expectedjson); err != nil {
+		if err := jsonutil.DecodeJSON([]byte(tc.Result), &expectedjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
 
 		var actualjson = new(JSONRequestEntry)
-		if err := json.Unmarshal([]byte(buf.String()), &actualjson); err != nil {
+		if err := jsonutil.DecodeJSON([]byte(buf.String()), &actualjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
 

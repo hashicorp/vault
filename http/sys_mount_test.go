@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -22,24 +23,24 @@ func TestSysMounts(t *testing.T) {
 			"description": "generic secret storage",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -70,32 +71,32 @@ func TestSysMount(t *testing.T) {
 			"description": "foo",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -148,32 +149,32 @@ func TestSysRemount(t *testing.T) {
 			"description": "foo",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -207,24 +208,24 @@ func TestSysUnmount(t *testing.T) {
 			"description": "generic secret storage",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -255,32 +256,32 @@ func TestSysTuneMount(t *testing.T) {
 			"description": "foo",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -332,32 +333,32 @@ func TestSysTuneMount(t *testing.T) {
 			"description": "foo",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(259196400),
-				"max_lease_ttl":     float64(259200000),
+				"default_lease_ttl": json.Number("259196400"),
+				"max_lease_ttl":     json.Number("259200000"),
 			},
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -373,8 +374,8 @@ func TestSysTuneMount(t *testing.T) {
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/foo/tune")
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"default_lease_ttl": float64(259196400),
-		"max_lease_ttl":     float64(259200000),
+		"default_lease_ttl": json.Number("259196400"),
+		"max_lease_ttl":     json.Number("259200000"),
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -393,8 +394,8 @@ func TestSysTuneMount(t *testing.T) {
 	resp = testHttpGet(t, token, addr+"/v1/sys/mounts/secret/tune")
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
-		"default_lease_ttl": float64(40),
-		"max_lease_ttl":     float64(80),
+		"default_lease_ttl": json.Number("40"),
+		"max_lease_ttl":     json.Number("80"),
 	}
 
 	testResponseStatus(t, resp, 200)

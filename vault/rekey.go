@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -634,7 +635,7 @@ func (c *Core) RekeyRetrieveBackup(recovery bool) (*RekeyBackup, error) {
 	}
 
 	ret := &RekeyBackup{}
-	err = json.Unmarshal(entry.Value, ret)
+	err = jsonutil.DecodeJSON(entry.Value, ret)
 	if err != nil {
 		return nil, err
 	}

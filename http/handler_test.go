@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -38,24 +39,24 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"description": "generic secret storage",
 			"type":        "generic",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
 			"type":        "system",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
