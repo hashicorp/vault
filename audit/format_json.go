@@ -30,7 +30,7 @@ func (f *FormatJSON) FormatRequest(
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONRequestEntry{
-		Time:  time.Now().UTC().Format(time.RFC3339),
+		Time:  time.Now().Format(time.RFC3339),
 		Type:  "request",
 		Error: errString,
 
@@ -100,7 +100,7 @@ func (f *FormatJSON) FormatResponse(
 	// Encode!
 	enc := json.NewEncoder(w)
 	return enc.Encode(&JSONResponseEntry{
-		Time:  time.Now().UTC().Format(time.RFC3339),
+		Time:  time.Now().Format(time.RFC3339),
 		Type:  "response",
 		Error: errString,
 

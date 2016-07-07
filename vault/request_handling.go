@@ -327,7 +327,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			Policies:     auth.Policies,
 			Meta:         auth.Metadata,
 			DisplayName:  auth.DisplayName,
-			CreationTime: time.Now().Unix(),
+			CreationTime: time.Now(),
 			TTL:          auth.TTL,
 		}
 
@@ -389,7 +389,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	te := TokenEntry{
 		Path:           req.Path,
 		Policies:       []string{"response-wrapping"},
-		CreationTime:   creationTime.Unix(),
+		CreationTime:   creationTime,
 		TTL:            resp.WrapInfo.TTL,
 		NumUses:        1,
 		ExplicitMaxTTL: resp.WrapInfo.TTL,

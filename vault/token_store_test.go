@@ -156,7 +156,7 @@ func TestTokenStore_RootToken(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if !reflect.DeepEqual(out, te) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", te, out)
 	}
 }
 
@@ -175,8 +175,9 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	ent.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
 	}
 
 	// New store should share the salt
@@ -191,7 +192,7 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
 	}
 }
 
@@ -207,15 +208,16 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if ent.ID != "foobarbaz" {
-		t.Fatalf("bad: %#v", ent)
+		t.Fatalf("bad: ent.ID: expected:\"foobarbaz\"\n actual:%s", ent.ID)
 	}
 
 	out, err := ts.Lookup(ent.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	ent.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
 	}
 
 	// New store should share the salt
@@ -230,7 +232,7 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if !reflect.DeepEqual(out, ent) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
 	}
 }
 
@@ -259,7 +261,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(ent, ent2) {
-		t.Fatalf("bad: %#v %#v", ent, ent2)
+		t.Fatalf("bad: ent:%#v ent2:%#v", ent, ent2)
 	}
 
 	// Create a retstricted token
@@ -411,8 +413,9 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	ent2.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, ent2) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", ent2, out)
 	}
 }
 
@@ -530,7 +533,7 @@ func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	}
 	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
-		t.Fatalf("bad:\ngot:\n%#v\nexpected:\n%#v\n", out, expected)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
 }
 
@@ -562,7 +565,7 @@ func TestTokenStore_HandleRequest_CreateToken_NumUses(t *testing.T) {
 	}
 	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
 }
 
@@ -625,7 +628,7 @@ func TestTokenStore_HandleRequest_CreateToken_NoPolicy(t *testing.T) {
 	}
 	expected.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, expected) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, out)
 	}
 }
 
@@ -812,7 +815,7 @@ func TestTokenStore_HandleRequest_CreateToken_Metadata(t *testing.T) {
 
 	out, _ := ts.Lookup(resp.Auth.ClientToken)
 	if !reflect.DeepEqual(out.Meta, meta) {
-		t.Fatalf("bad: %#v", out)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", meta, out.Meta)
 	}
 }
 
@@ -982,13 +985,13 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"explicit_max_ttl": int64(0),
 	}
 
-	if resp.Data["creation_time"].(int64) == 0 {
+	if (resp.Data["creation_time"].(time.Time)).IsZero() {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
 
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 
 	testCoreMakeToken(t, c, root, "client", "3600s", []string{"foo"})
@@ -1019,7 +1022,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"renewable":        true,
 	}
 
-	if resp.Data["creation_time"].(int64) == 0 {
+	if (resp.Data["creation_time"].(time.Time)).IsZero() {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
@@ -1030,7 +1033,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 
 	// Test via POST
@@ -1062,7 +1065,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"renewable":        true,
 	}
 
-	if resp.Data["creation_time"].(int64) == 0 {
+	if (resp.Data["creation_time"].(time.Time)).IsZero() {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
@@ -1073,7 +1076,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad:\n%#v\nexp:\n%#v\n", resp.Data, exp)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 
 	// Test last_renewal_time functionality
@@ -1095,7 +1098,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	if resp.Data["last_renewal_time"].(int64) == 0 {
+	if (resp.Data["last_renewal_time"].(time.Time)).IsZero() {
 		t.Fatalf("last_renewal_time was zero")
 	}
 }
@@ -1127,13 +1130,13 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"explicit_max_ttl": int64(0),
 	}
 
-	if resp.Data["creation_time"].(int64) == 0 {
+	if (resp.Data["creation_time"].(time.Time)).IsZero() {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
 
 	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("bad:\ngot %#v\nexpected: %#v\n", resp.Data, exp)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)
 	}
 }
 
@@ -1163,7 +1166,7 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	// Get the original expire time to compare
 	originalExpire := auth.ExpirationTime()
 
-	beforeRenew := time.Now().UTC()
+	beforeRenew := time.Now()
 	req := logical.TestRequest(t, logical.UpdateOperation, "renew/"+root.ID)
 	req.Data["increment"] = "3600s"
 	resp, err := ts.HandleRequest(req)
@@ -1207,7 +1210,7 @@ func TestTokenStore_HandleRequest_RenewSelf(t *testing.T) {
 	// Get the original expire time to compare
 	originalExpire := auth.ExpirationTime()
 
-	beforeRenew := time.Now().UTC()
+	beforeRenew := time.Now()
 	req := logical.TestRequest(t, logical.UpdateOperation, "renew-self")
 	req.ClientToken = auth.ClientToken
 	req.Data["increment"] = "3600s"
@@ -1279,7 +1282,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
 	}
 
 	// Now test updating; this should be set to an UpdateOperation
@@ -1322,7 +1325,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
 	}
 
 	// Now test setting explicit max ttl at the same time as period, which
@@ -1370,7 +1373,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
-		t.Fatalf("expected:\n%v\nactual:\n%v\n", expected, resp.Data)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
 	}
 
 	req.Operation = logical.ListOperation

@@ -41,7 +41,7 @@ func TestLeaseOptionsExpirationTime(t *testing.T) {
 	var l LeaseOptions
 	l.TTL = 1 * time.Hour
 
-	limit := time.Now().UTC().Add(time.Hour)
+	limit := time.Now().Add(time.Hour)
 	exp := l.ExpirationTime()
 	if exp.Before(limit) {
 		t.Fatalf("bad: %s", exp)

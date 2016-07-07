@@ -3,6 +3,7 @@ package transit
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -109,7 +110,7 @@ func (b *backend) pathPolicyRead(
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption
 	}
 
-	retKeys := map[string]int64{}
+	retKeys := map[string]time.Time{}
 	for k, v := range p.Keys {
 		retKeys[strconv.Itoa(k)] = v.CreationTime
 	}

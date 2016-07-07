@@ -357,7 +357,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Save the login attempt in the identity whitelist.
-	currentTime := time.Now().UTC()
+	currentTime := time.Now()
 	if storedIdentity == nil {
 		// Role, ClientNonce and CreationTime of the identity entry,
 		// once set, should never change.
@@ -550,7 +550,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	// Only LastUpdatedTime and ExpirationTime change and all other fields remain the same.
-	currentTime := time.Now().UTC()
+	currentTime := time.Now()
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 

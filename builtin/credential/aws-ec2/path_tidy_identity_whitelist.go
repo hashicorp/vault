@@ -65,7 +65,7 @@ func (b *backend) tidyWhitelistIdentity(s logical.Storage, safety_buffer int) er
 			return err
 		}
 
-		if time.Now().UTC().After(result.ExpirationTime.Add(bufferDuration)) {
+		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
 			if err := s.Delete("whitelist/identity" + instanceID); err != nil {
 				return fmt.Errorf("error deleting identity of instanceID %s from storage: %s", instanceID, err)
 			}

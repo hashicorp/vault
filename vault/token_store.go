@@ -414,18 +414,41 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
-	ID             string            // ID of this entry, generally a random UUID
-	Accessor       string            // Accessor for this token, a random UUID
-	Parent         string            // Parent token, used for revocation trees
-	Policies       []string          // Which named policies should be used
-	Path           string            // Used for audit trails, this is something like "auth/user/login"
-	Meta           map[string]string // Used for auditing. This could include things like "source", "user", "ip"
-	DisplayName    string            // Used for operators to be able to associate with the source
-	NumUses        int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
-	CreationTime   int64             // Time of token creation
-	TTL            time.Duration     // Duration set when token was created
-	ExplicitMaxTTL time.Duration     // Explicit maximum TTL on the token
-	Role           string            // If set, the role that was used for parameters at creation time
+	// ID of this entry, generally a random UUID
+	ID string `json:"id" mapstructure:"id" structs:"id"`
+
+	// Accessor for this token, a random UUID
+	Accessor string `json:"accessor" mapstructure:"accessor" structs:"accessor"`
+
+	// Parent token, used for revocation trees
+	Parent string `json:"parent" mapstructure:"parent" structs:"parent"`
+
+	// Which named policies should be used
+	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
+
+	// Used for audit trails, this is something like "auth/user/login"
+	Path string `json:"path" mapstructure:"path" structs:"path"`
+
+	// Used for auditing. This could include things like "source", "user", "ip"
+	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta"`
+
+	// Used for operators to be able to associate with the source
+	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`
+
+	// Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
+
+	// Time of token creation
+	CreationTime time.Time `json:"creation_time" mapstructure:"creation_time" structs:"creation_time"`
+
+	// Duration set when token was created
+	TTL time.Duration `json:"ttl" mapstructure:"ttl" structs:"ttl"`
+
+	// Explicit maximum TTL on the token
+	ExplicitMaxTTL time.Duration `json:"" mapstructure:"" structs:""`
+
+	// If set, the role that was used for parameters at creation time
+	Role string `json:"role" mapstructure:"role" structs:"role"`
 }
 
 // tsRoleEntry contains token store role information
@@ -474,7 +497,7 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",
-		CreationTime: time.Now().Unix(),
+		CreationTime: time.Now(),
 	}
 	if err := ts.create(te); err != nil {
 		return nil, err
@@ -970,7 +993,7 @@ func (ts *TokenStore) handleCreateCommon(
 		Meta:         data.Metadata,
 		DisplayName:  "token",
 		NumUses:      data.NumUses,
-		CreationTime: time.Now().Unix(),
+		CreationTime: time.Now(),
 	}
 
 	renewable := true
@@ -1306,7 +1329,7 @@ func (ts *TokenStore) handleLookup(
 			"display_name":     out.DisplayName,
 			"num_uses":         out.NumUses,
 			"orphan":           false,
-			"creation_time":    int64(out.CreationTime),
+			"creation_time":    out.CreationTime,
 			"creation_ttl":     int64(out.TTL.Seconds()),
 			"ttl":              int64(0),
 			"role":             out.Role,
@@ -1325,7 +1348,7 @@ func (ts *TokenStore) handleLookup(
 	}
 	if leaseTimes != nil {
 		if !leaseTimes.LastRenewalTime.IsZero() {
-			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime
 		}
 		if !leaseTimes.ExpireTime.IsZero() {
 			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
