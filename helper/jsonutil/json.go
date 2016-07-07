@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"reflect"
 )
 
 // Encodes/Marshals the given object into JSON
@@ -37,12 +36,6 @@ func DecodeJSONFromReader(r io.Reader, out interface{}) error {
 	}
 	if out == nil {
 		return fmt.Errorf("output parameter 'out' is nil")
-	}
-
-	// Decoding requires a pointer type to be supplied
-	value := reflect.ValueOf(out)
-	if value.Kind() != reflect.Ptr {
-		return fmt.Errorf("decoding the value into a non-pointer type: %v", reflect.TypeOf(out))
 	}
 
 	dec := json.NewDecoder(r)
