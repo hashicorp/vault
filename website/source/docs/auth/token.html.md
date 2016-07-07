@@ -486,7 +486,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>DELETE</dd>
 
   <dt>URL</dt>
   <dd>`/auth/token/roles/<role_name>`</dd>
