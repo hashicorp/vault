@@ -43,13 +43,11 @@ func (kem KeyEntryMap) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON implements JSON unmarshaling
-func (kem KeyEntryMap) DecodeJSON(data []byte) error {
+func (kem KeyEntryMap) UnmarshalJSON(data []byte) error {
 	intermediate := map[string]KeyEntry{}
-
 	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
 		return err
 	}
-
 	for k, v := range intermediate {
 		keyval, err := strconv.Atoi(k)
 		if err != nil {
