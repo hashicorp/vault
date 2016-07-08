@@ -97,6 +97,10 @@ func (s *Telemetry) GoString() string {
 
 // Merge merges two configurations.
 func (c *Config) Merge(c2 *Config) *Config {
+	if c2 == nil {
+		return c
+	}
+
 	result := new(Config)
 	for _, l := range c.Listeners {
 		result.Listeners = append(result.Listeners, l)
