@@ -18,6 +18,8 @@ FEATURES:
    modified after upgrading contain a set of default key usages for increased
    compatibility with OpenVPN and some other software. This set can be changed
    when writing a role definition. Existing roles are unaffected. [GH-1552]
+ * **MongoDB Secret Backend**: Generate dynamic unique MongoDB database credentials based
+   on configured roles. Sponsored by [CommerceHub](http://www.commercehub.com/). [GH-1414]
 
 IMPROVEMENTS:
  * cli: Output formatting in the presence of warnings in the response object
