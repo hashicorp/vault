@@ -159,11 +159,11 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 
 	// Should not be able to renew, no expiration
 	resp, err := exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
+	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease not found or lease is not renewable")) {
+		t.Fatalf("err: %v", err)
+	}
 	if resp == nil {
 		t.Fatal("expected a response")
-	}
-	if err != logical.ErrInvalidRequest || resp.Error().Error() != "lease not found or lease is not renewable" {
-		t.Fatalf("err: %v", err)
 	}
 
 	// Wait and check token is not invalidated
