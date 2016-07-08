@@ -42,7 +42,11 @@ a standard connection string (URI):
 
 ```
 $ vault write mongodb/config/connection uri="mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
-Success! Data written to: mongodb/config/connection
+Key	Value
+---	-----
+
+The following warnings were returned from the Vault server:
+* Read access to this endpoint should be controlled via ACLs as it will return the connection URI as it is, including passwords, if any.
 ```
 
 In this case, we've configured Vault with the username `admin` and password
@@ -103,7 +107,7 @@ lease_duration 	3600
 lease_renewable	true
 db             	foo
 password       	c3faa86d-0f93-9649-de91-c431765e62dd
-username       	token-48729def-b0ca-2b17-d7b9-3ca7cb86f0ae
+username       	vault-token-48729def-b0ca-2b17-d7b9-3ca7cb86f0ae
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new set of
@@ -281,7 +285,7 @@ applications are restricted in the credentials they are allowed to read.
       </li>
       <li>
         <span class="param">roles</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">optional</span>
         MongoDB roles to assign to the users generated for this role.
       </li>
     </ul>

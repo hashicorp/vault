@@ -54,7 +54,7 @@ func (b *backend) pathConnectionRead(req *logical.Request, data *framework.Field
 func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	uri := data.Get("uri").(string)
 	if uri == "" {
-		return logical.ErrorResponse("uri parameter must be supplied"), nil
+		return logical.ErrorResponse("uri parameter is required"), nil
 	}
 
 	dialInfo, err := parseMongoURI(uri)

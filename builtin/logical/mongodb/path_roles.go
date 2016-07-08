@@ -119,7 +119,7 @@ func (b *backend) pathRoleCreate(
 
 	roleDB := data.Get("db").(string)
 	if roleDB == "" {
-		return logical.ErrorResponse("Missing db"), nil
+		return logical.ErrorResponse("db parameter is required"), nil
 	}
 
 	// Example roles JSON: [ "readWrite", { "role": "readWrite", "db": "test" } ]
