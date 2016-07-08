@@ -28,8 +28,7 @@ func parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
 
 	if uri.User != nil {
 		info.Username = uri.User.Username()
-		password, _ := uri.User.Password()
-		info.Password = password
+		info.Password, _ = uri.User.Password()
 	}
 
 	query := uri.Query()
