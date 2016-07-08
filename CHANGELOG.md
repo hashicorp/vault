@@ -4,6 +4,7 @@ DEPRECATIONS/BREAKING CHANGES:
 
  * Issued certificates from the `pki` backend against new roles created or
    modified after upgrading will contain a set of default key usages. 
+ * In the Go API, the function signature for `Request.ToHTTP()` has changed.
 
 FEATURES:
 
@@ -18,6 +19,13 @@ FEATURES:
    modified after upgrading contain a set of default key usages for increased
    compatibility with OpenVPN and some other software. This set can be changed
    when writing a role definition. Existing roles are unaffected. [GH-1552]
+ * **Request Retrying in the CLI and Go API**: Requests that fail with a `5xx`
+   error code will now retry after a backoff. The minimum and maximum backoff
+   times, as well as the maximum total number of retries (including disabling
+   this functionality) can be set with environment variables. See the
+   [environment variable
+   documentation](https://www.vaultproject.io/docs/commands/environment.html)
+   for more details. [GH-1594]
 
 IMPROVEMENTS:
  * cli: Output formatting in the presence of warnings in the response object
