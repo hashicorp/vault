@@ -75,7 +75,7 @@ users created for that Vault role.
 For example, let's create a "readonly" role:
 
 ```
-$ vault write mongodb/roles/readonly db=foo roles="[ \"readWrite\", { \"role\": \"read\", \"db\": \"bar\" } ]"
+$ vault write mongodb/roles/readonly db=foo roles='[ "readWrite", { "role": "read", "db": "bar" } ]'
 Success! Data written to: mongodb/roles/readonly
 ```
 
