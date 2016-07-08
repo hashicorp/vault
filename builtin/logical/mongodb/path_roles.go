@@ -30,7 +30,7 @@ func pathRoles(b *backend) *framework.Path {
 			},
 			"db": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the database users should be created in for this role.",
+				Description: "Name of the authentication database for users generated for this role.",
 			},
 			"roles": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -177,13 +177,21 @@ Manage the roles used to generate MongoDB credentials.
 const pathRoleHelpDesc = `
 This path lets you manage the roles used to generate MongoDB credentials.
 
-The "db" parameter specifies which database users should be created in
-for a given role.
+The "db" parameter specifies the authentication database for users
+generated for a given role.
 
 The "roles" parameter specifies the MongoDB roles that should be assigned
 to users created for a given role. Just like when creating a user directly
 using db.createUser, the roles JSON array can specify both built-in roles
 and user-defined roles for both the database the user is created in and
-for other databases. Please consult the MongoDB documentation for more
+for other databases.
+
+For example, the following roles JSON array grants the "readWrite"
+permission on both the user's authentication database and the "test"
+database:
+
+[ "readWrite", { "role": "readWrite", "db": "test" } ]
+
+Please consult the MongoDB documentation for more
 details on Role-Based Access Control in MongoDB.
 `
