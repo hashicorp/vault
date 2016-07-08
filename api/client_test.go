@@ -107,16 +107,25 @@ func TestClientEnvSettings(t *testing.T) {
 	oldClientCert := os.Getenv(EnvVaultClientCert)
 	oldClientKey := os.Getenv(EnvVaultClientKey)
 	oldSkipVerify := os.Getenv(EnvVaultInsecure)
-	os.Setenv("VAULT_CACERT", cwd+"/test-fixtures/keys/cert.pem")
-	os.Setenv("VAULT_CAPATH", cwd+"/test-fixtures/keys")
-	os.Setenv("VAULT_CLIENT_CERT", cwd+"/test-fixtures/keys/cert.pem")
-	os.Setenv("VAULT_CLIENT_KEY", cwd+"/test-fixtures/keys/key.pem")
-	os.Setenv("VAULT_SKIP_VERIFY", "true")
-	defer os.Setenv("VAULT_CACERT", oldCACert)
-	defer os.Setenv("VAULT_CAPATH", oldCAPath)
-	defer os.Setenv("VAULT_CLIENT_CERT", oldClientCert)
-	defer os.Setenv("VAULT_CLIENT_KEY", oldClientKey)
-	defer os.Setenv("VAULT_SKIP_VERIFY", oldSkipVerify)
+	oldRetryWaitMin := os.Getenv(EnvVaultRetryWaitMin)
+	oldRetryWaitMax := os.Getenv(EnvVaultRetryWaitMax)
+	oldRetryMax := os.Getenv(EnvVaultRetryMax)
+	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
+	os.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
+	os.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
+	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
+	os.Setenv(EnvVaultInsecure, "true")
+	os.Setenv(EnvVaultRetryWaitMin, "20s")
+	os.Setenv(EnvVaultRetryWaitMax, "25s")
+	os.Setenv(EnvVaultRetryMax, "20")
+	defer os.Setenv(EnvVaultCACert, oldCACert)
+	defer os.Setenv(EnvVaultCAPath, oldCAPath)
+	defer os.Setenv(EnvVaultClientCert, oldClientCert)
+	defer os.Setenv(EnvVaultClientKey, oldClientKey)
+	defer os.Setenv(EnvVaultInsecure, oldSkipVerify)
+	defer os.Setenv(EnvVaultRetryWaitMin, oldRetryWaitMin)
+	defer os.Setenv(EnvVaultRetryWaitMax, oldRetryWaitMax)
+	defer os.Setenv(EnvVaultRetryMax, oldRetryMax)
 
 	config := DefaultConfig()
 	if err := config.ReadEnvironment(); err != nil {
@@ -132,5 +141,10 @@ func TestClientEnvSettings(t *testing.T) {
 	}
 	if tlsConfig.InsecureSkipVerify != true {
 		t.Fatalf("bad: %v", tlsConfig.InsecureSkipVerify)
+	}
+
+	os.Setenv(EnvVaultRetryWaitMax, "15s")
+	if err := config.ReadEnvironment(); err == nil {
+		t.Fatal("expected error due to max retry time being less than min")
 	}
 }
