@@ -50,12 +50,13 @@ func (b *backend) Session(s logical.Storage) (*mgo.Session, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	// If we already have a Session, we got it!
 	if b.session != nil {
-		return b.session, nil
+		if err := b.session.Ping(); err == nil {
+			return b.session, nil
+		}
+		b.session.Close()
 	}
 
-	// Otherwise, attempt to make connection
 	connConfigJSON, err := s.Get("config/connection")
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (b *backend) Session(s logical.Storage) (*mgo.Session, error) {
 	return b.session, nil
 }
 
-// ResetSession forces a connection next time Session() is called.
+// ResetSession forces creation of a new connection next time Session() is called.
 func (b *backend) ResetSession() {
 	b.lock.Lock()
 	defer b.lock.Unlock()
