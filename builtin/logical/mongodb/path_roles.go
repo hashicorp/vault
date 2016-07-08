@@ -30,7 +30,6 @@ func pathRoles(b *backend) *framework.Path {
 			},
 			"db": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Default:     "admin",
 				Description: "Name of the database users should be created in for this role.",
 			},
 			"roles": &framework.FieldSchema{
@@ -112,8 +111,16 @@ func (b *backend) pathRoleList(
 
 func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+
 	name := data.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("Missing name"), nil
+	}
+
 	roleDB := data.Get("db").(string)
+	if roleDB == "" {
+		return logical.ErrorResponse("Missing db"), nil
+	}
 
 	// Example roles JSON: [ "readWrite", { "role": "readWrite", "db": "test" } ]
 	var roles []interface{}
