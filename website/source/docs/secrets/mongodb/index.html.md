@@ -237,13 +237,13 @@ applications are restricted in the credentials they are allowed to read.
     <ul>
       <li>
         <span class="param">ttl</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">optional</span>
         The ttl value provided as a string duration
         with time suffix. Hour is the largest suffix.
       </li>
       <li>
         <span class="param">max_ttl</span>
-        <span class="param-flags">required</span>
+        <span class="param-flags">optional</span>
         The maximum ttl value provided as a string duration
         with time suffix. Hour is the largest suffix.
       </li>
