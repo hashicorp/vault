@@ -12,8 +12,8 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory-am/dockertest"
-	"time"
 	"reflect"
+	"time"
 )
 
 var (
@@ -223,7 +223,7 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
 		Data: map[string]interface{}{
-			"db": testDb,
+			"db":    testDb,
 			"roles": testMongoDBRoles,
 		},
 	}

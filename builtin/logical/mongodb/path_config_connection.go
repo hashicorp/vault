@@ -80,7 +80,7 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
-		URI: uri,
+		URI:              uri,
 		VerifyConnection: verifyConnection,
 	})
 	if err != nil {

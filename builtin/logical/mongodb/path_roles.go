@@ -93,7 +93,7 @@ func (b *backend) pathRoleRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"db": role.DB,
+			"db":    role.DB,
 			"roles": string(rolesJsonBytes),
 		},
 	}, nil
@@ -147,7 +147,7 @@ func (b *backend) pathRoleCreate(
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		DB:    roleDB,
+		DB:           roleDB,
 		MongoDBRoles: roles,
 	})
 	if err != nil {

@@ -87,7 +87,7 @@ func (b *backend) pathCredsCreateRead(req *logical.Request, data *framework.Fiel
 
 	// Return the secret
 	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
-		"db": role.DB,
+		"db":       role.DB,
 		"username": username,
 		"password": password,
 	}, map[string]interface{}{
