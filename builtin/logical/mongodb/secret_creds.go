@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"gopkg.in/mgo.v2"
 )
 
 const SecretCredsType = "creds"
@@ -66,7 +67,7 @@ func (b *backend) secretCredsRevoke(req *logical.Request, d *framework.FieldData
 
 	// Drop the user
 	err = session.DB(db).RemoveUser(username)
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
 	}
 
