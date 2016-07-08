@@ -1,7 +1,6 @@
 package mongodb
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
@@ -13,12 +12,12 @@ func pathConfigLease(b *backend) *framework.Path {
 		Pattern: "config/lease",
 		Fields: map[string]*framework.FieldSchema{
 			"ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: "Default ttl for credentials.",
 			},
 
 			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: "Maximum time a set of credentials can be valid for.",
 			},
 		},
@@ -35,24 +34,10 @@ func pathConfigLease(b *backend) *framework.Path {
 
 func (b *backend) pathConfigLeaseWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	ttlRaw := d.Get("ttl").(string)
-	maxTTLRaw := d.Get("max_ttl").(string)
 
-	ttl, err := time.ParseDuration(ttlRaw)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid ttl: %s", err)), nil
-	}
-	maxTTL, err := time.ParseDuration(maxTTLRaw)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid max_ttl: %s", err)), nil
-	}
-
-	// Store it
 	entry, err := logical.StorageEntryJSON("config/lease", &configLease{
-		TTL:    ttl,
-		MaxTTL: maxTTL,
+		TTL:    time.Second * time.Duration(d.Get("ttl").(int)),
+		MaxTTL: time.Second * time.Duration(d.Get("max_ttl").(int)),
 	})
 	if err != nil {
 		return nil, err
