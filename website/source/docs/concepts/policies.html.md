@@ -125,14 +125,13 @@ For tokens, they are associated at creation time with `vault token-create`
 and the `-policy` flags. Child tokens can be associated with a subset of
 a parent's policies. Root users can assign any policies.
 
-There is no way to modify the policies associated with an active
-identity. The identity must be revoked and reauthenticated to receive
-the new policy list.
+There is no way to modify which policies are associated with an active
+identity. In order to associate new policies or remove policies associated
+with an active identity, the identity must be revoked and reauthenticated 
+to receive the new policy list.
 
 If an _existing_ policy is modified, the modifications propagate
-to all associated users instantly. The above paragraph is more specifically
-stating that you can't add new or remove policies associated with an
-active identity.
+to all associated users instantly.
 
 ## Changes from 0.1
 
