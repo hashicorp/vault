@@ -34,6 +34,11 @@ func pathRoles(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "SQL string to create a user. See help for more info.",
 			},
+
+			"displayname": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Displayname to prepend to the generated username. Optional.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -105,6 +110,7 @@ func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	sql := data.Get("sql").(string)
+	displayname := data.Get("displayname").(string)
 
 	// Get our connection
 	db, err := b.DB(req.Storage)
@@ -128,6 +134,7 @@ func (b *backend) pathRoleCreate(
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
 		SQL: sql,
+		DISPLAYNAME: displayname,
 	})
 	if err != nil {
 		return nil, err
@@ -139,7 +146,8 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	SQL string `json:"sql"`
+	SQL         string `json:"sql"`
+	DISPLAYNAME string `json:"displayname"`
 }
 
 const pathRoleHelpSyn = `
@@ -165,4 +173,9 @@ Example of a decent SQL query to use:
 
 Note the above user would be able to access anything in db1. Please see the MySQL
 manual on the GRANT command to learn how to do more fine grained access.
+
+The optional "displayname" parameter customizes the construction of the DB user
+inserted into the {{name}} variable: by default the displayname associated
+with the requestor is used, but if the displayname parameter is set in this
+path, that is used preferentially.
 `

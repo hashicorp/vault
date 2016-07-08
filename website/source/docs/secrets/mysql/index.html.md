@@ -84,6 +84,17 @@ to tables in the database. More complex `GRANT` queries can be used to
 customize the privileges of the role. See the [MySQL manual](https://dev.mysql.com/doc/refman/5.7/en/grant.html)
 for more information.
 
+By default, the `{{name}}` variable is prepended with the displayname of
+the user creating role.  To override this, provide a `displayname` parameter
+when creating it:
+
+```
+$ vault write mysql/roles/readonly \
+    sql="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
+    displayname="rouser"
+Success! Data written to: mysql/roles/readonly
+```
+
 To generate a new set of credentials, we simply read from that role:
 
 ```
@@ -234,6 +245,12 @@ allowed to read.
         Must be semi-colon separated. The '{{name}}' and '{{password}}'
         values will be substituted.
       </li>
+      <li>
+        <span class="param">displayname</span>
+        <span class="param-flags">optional</span>
+        Manually specify the displayname that will be used to generate
+        the '{{name}}' value when the SQL statement is interpolated.
+      </li>
     </ul>
   </dd>
 
@@ -268,7 +285,8 @@ allowed to read.
     ```javascript
     {
       "data": {
-        "sql": "CREATE USER..."
+        "sql": "CREATE USER...",
+        "displayname": "USERNAME"
       }
     }
     ```
