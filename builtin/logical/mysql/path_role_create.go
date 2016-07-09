@@ -30,6 +30,7 @@ func pathRoleCreate(b *backend) *framework.Path {
 
 func (b *backend) pathRoleCreateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var displayName string;
 	name := data.Get("name").(string)
 
 	// Get the role
@@ -50,8 +51,15 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{}
 	}
 
-	// Generate our username and password. MySQL limits user to 16 characters
-	displayName := req.DisplayName
+	// Generate our username and password. MySQL limits user to 16 characters.
+	// If a `displayname` attribute is set, use that; otherwise
+	// default to the displayname of the requestor.
+	dn, ok := data.GetOk("displayname")
+	if ok == true {
+	        displayName = dn.(string)
+	} else {
+	        displayName = req.DisplayName
+	}
 	if len(displayName) > 10 {
 		displayName = displayName[:10]
 	}
