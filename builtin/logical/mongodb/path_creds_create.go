@@ -70,7 +70,7 @@ func (b *backend) pathCredsCreateRead(req *logical.Request, data *framework.Fiel
 	createUserCmd := createUserCommand{
 		Username: username,
 		Password: password,
-		Roles:    role.MongoDBRoles,
+		Roles:    role.MongoDBRoles.toStandardRolesArray(),
 	}
 
 	// Get our connection

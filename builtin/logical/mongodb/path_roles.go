@@ -49,7 +49,7 @@ func pathRoles(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
+func (b *backend) Role(s logical.Storage, n string) (*roleStorageEntry, error) {
 	entry, err := s.Get("role/" + n)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 		return nil, nil
 	}
 
-	var result roleEntry
+	var result roleStorageEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
-	rolesJsonBytes, err := json.Marshal(role.MongoDBRoles)
+	rolesJsonBytes, err := json.Marshal(role.MongoDBRoles.toStandardRolesArray())
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +122,15 @@ func (b *backend) pathRoleCreate(
 		return logical.ErrorResponse("db parameter is required"), nil
 	}
 
-	// Example roles JSON: [ "readWrite", { "role": "readWrite", "db": "test" } ]
-	var roles []interface{}
+	// Example roles JSON:
+	//
+	// [ "readWrite", { "role": "readWrite", "db": "test" } ]
+	//
+	// For storage, we convert such an array into a homogeneous array of role documents like:
+	//
+	// [ { "role": "readWrite" }, { "role": "readWrite", "db": "test" } ]
+	//
+	var roles []mongodbRole
 	rolesJson := []byte(data.Get("roles").(string))
 	if len(rolesJson) > 0 {
 		var rolesArray []interface{}
@@ -131,14 +138,14 @@ func (b *backend) pathRoleCreate(
 		if err != nil {
 			return nil, err
 		}
-		for _, rawItem := range rolesArray {
-			switch item := rawItem.(type) {
+		for _, rawRole := range rolesArray {
+			switch role := rawRole.(type) {
 			case string:
-				roles = append(roles, item)
+				roles = append(roles, mongodbRole{Role: role})
 			case map[string]interface{}:
-				if db, ok := item["db"].(string); ok {
-					if r, ok := item["role"].(string); ok {
-						roles = append(roles, mongodbRole{Role: r, DB: db})
+				if db, ok := role["db"].(string); ok {
+					if roleName, ok := role["role"].(string); ok {
+						roles = append(roles, mongodbRole{Role: roleName, DB: db})
 					}
 				}
 			}
@@ -146,7 +153,7 @@ func (b *backend) pathRoleCreate(
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
+	entry, err := logical.StorageEntryJSON("role/"+name, &roleStorageEntry{
 		DB:           roleDB,
 		MongoDBRoles: roles,
 	})
@@ -160,15 +167,39 @@ func (b *backend) pathRoleCreate(
 	return nil, nil
 }
 
-type roleEntry struct {
-	DB           string        `json:"db"`
-	MongoDBRoles []interface{} `json:"roles"`
+func (roles mongodbRoles) toStandardRolesArray() []interface{} {
+	// Convert array of role documents like:
+	//
+	// [ { "role": "readWrite" }, { "role": "readWrite", "db": "test" } ]
+	//
+	// into a "standard" MongoDB roles array containing both strings and role documents:
+	//
+	// [ "readWrite", { "role": "readWrite", "db": "test" } ]
+	//
+	// MongoDB's createUser command accepts the latter.
+	//
+	var standardRolesArray []interface{}
+	for _, role := range roles {
+		if role.DB == "" {
+			standardRolesArray = append(standardRolesArray, role.Role)
+		} else {
+			standardRolesArray = append(standardRolesArray, role)
+		}
+	}
+	return standardRolesArray
+}
+
+type roleStorageEntry struct {
+	DB           string       `json:"db"`
+	MongoDBRoles mongodbRoles `json:"roles"`
 }
 
 type mongodbRole struct {
 	Role string `json:"role" bson:"role"`
 	DB   string `json:"db"   bson:"db"`
 }
+
+type mongodbRoles []mongodbRole
 
 const pathRoleHelpSyn = `
 Manage the roles used to generate MongoDB credentials.

@@ -329,4 +329,4 @@ func testAccStepReadLease(t *testing.T) logicaltest.TestStep {
 }
 
 const testDb = "foo"
-const testMongoDBRoles = `["readWrite",{"db":"bar","role":"read"}]`
+const testMongoDBRoles = `["readWrite",{"role":"read","db":"bar"}]`
