@@ -443,6 +443,12 @@
 			"revisionTime": "2015-09-16T20:57:42Z"
 		},
 		{
+			"checksumSHA1": "9xZ1B0JppYRwKYtkT3PqQ255wqs=",
+			"path": "github.com/hashicorp/go-retryablehttp",
+			"revision": "0ef03300cde2dd0e2604ecc4e95ee7c76751be89",
+			"revisionTime": "2016-05-09T16:28:51Z"
+		},
+		{
 			"checksumSHA1": "A1PcINvF3UiwHRKn8UcgARgvGRs=",
 			"path": "github.com/hashicorp/go-rootcerts",
 			"revision": "6bb64b370b90e7ef1fa532be9e591a81c3493e00",
