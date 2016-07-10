@@ -51,7 +51,7 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Generate our username and password. MySQL limits user to 16 characters
-	displayName := req.DisplayName
+	displayName := name
 	if len(displayName) > 10 {
 		displayName = displayName[:10]
 	}
