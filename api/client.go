@@ -53,7 +53,7 @@ type Config struct {
 	redirectSetup sync.Once
 
 	// MaxRetries controls the maximum number of times to retry when a 5xx error
-	// occurs. Set to 1 or less to disable retrying.
+	// occurs. Set to 0 or less to disable retrying.
 	MaxRetries int
 }
 
@@ -164,7 +164,7 @@ func (c *Config) ReadEnvironment() error {
 	}
 
 	if envMaxRetries != nil {
-		c.MaxRetries = int(*envMaxRetries)
+		c.MaxRetries = int(*envMaxRetries) + 1
 	}
 
 	if foundInsecure {

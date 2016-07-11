@@ -48,7 +48,7 @@ The following table describes them:
   </tr>
   <tr>
     <td><tt>VAULT_MAX_RETRIES</tt></td>
-    <td>The maximum number of retries when a `5xx` error code is encountered. Default is `3`; set to `1` or less to disable retrying.</td>
+    <td>The maximum number of retries when a `5xx` error code is encountered. Default is `2`, for three total tries; set to `0` or less to disable retrying.</td>
   </tr>
   <tr>
     <td><tt>VAULT_SKIP_VERIFY</tt></td>
