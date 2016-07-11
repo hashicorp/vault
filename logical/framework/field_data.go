@@ -2,10 +2,8 @@ package framework
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
-	"time"
 
+	"github.com/hashicorp/vault/helper/duration"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -152,6 +150,7 @@ func (d *FieldData) getPrimitive(
 
 	case TypeDurationSecond:
 		var result int
+		var err error
 		switch inp := raw.(type) {
 		case nil:
 			return nil, false, nil
@@ -162,20 +161,9 @@ func (d *FieldData) getPrimitive(
 		case float64:
 			result = int(inp)
 		case string:
-			// Look for a suffix otherwise its a plain second value
-			if strings.HasSuffix(inp, "s") || strings.HasSuffix(inp, "m") || strings.HasSuffix(inp, "h") {
-				dur, err := time.ParseDuration(inp)
-				if err != nil {
-					return nil, true, err
-				}
-				result = int(dur.Seconds())
-			} else {
-				// Plain integer
-				val, err := strconv.ParseInt(inp, 10, 64)
-				if err != nil {
-					return nil, true, err
-				}
-				result = int(val)
+			result, err = duration.ParseDurationSecond(inp)
+			if err != nil {
+				return nil, true, err
 			}
 
 		default:

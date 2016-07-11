@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -702,26 +703,26 @@ func (b *SystemBackend) handleMount(
 	case "":
 	case "system":
 	default:
-		tmpDef, err := time.ParseDuration(apiConfig.DefaultLeaseTTL)
+		tmpDef, err := duration.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
 				logical.ErrInvalidRequest
 		}
-		config.DefaultLeaseTTL = tmpDef
+		config.DefaultLeaseTTL = time.Duration(tmpDef) * time.Second
 	}
 
 	switch apiConfig.MaxLeaseTTL {
 	case "":
 	case "system":
 	default:
-		tmpMax, err := time.ParseDuration(apiConfig.MaxLeaseTTL)
+		tmpMax, err := duration.ParseDurationSecond(apiConfig.MaxLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
 				logical.ErrInvalidRequest
 		}
-		config.MaxLeaseTTL = tmpMax
+		config.MaxLeaseTTL = time.Duration(tmpMax) * time.Second
 	}
 
 	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
@@ -927,11 +928,12 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			tmpDef := time.Duration(0)
 			newDefault = &tmpDef
 		default:
-			tmpDef, err := time.ParseDuration(defTTL)
+			tmpDef, err := duration.ParseDurationSecond(defTTL)
 			if err != nil {
 				return handleError(err)
 			}
-			newDefault = &tmpDef
+			tmpDurDef := time.Duration(tmpDef) * time.Second
+			newDefault = &tmpDurDef
 		}
 
 		maxTTL := data.Get("max_lease_ttl").(string)
@@ -941,11 +943,12 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			tmpMax := time.Duration(0)
 			newMax = &tmpMax
 		default:
-			tmpMax, err := time.ParseDuration(maxTTL)
+			tmpMax, err := duration.ParseDurationSecond(maxTTL)
 			if err != nil {
 				return handleError(err)
 			}
-			newMax = &tmpMax
+			tmpDurMax := time.Duration(tmpMax) * time.Second
+			newMax = &tmpDurMax
 		}
 
 		if newDefault != nil || newMax != nil {
