@@ -709,7 +709,7 @@ func (b *SystemBackend) handleMount(
 					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
 				logical.ErrInvalidRequest
 		}
-		config.DefaultLeaseTTL = time.Duration(tmpDef) * time.Second
+		config.DefaultLeaseTTL = tmpDef
 	}
 
 	switch apiConfig.MaxLeaseTTL {
@@ -722,7 +722,7 @@ func (b *SystemBackend) handleMount(
 					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
 				logical.ErrInvalidRequest
 		}
-		config.MaxLeaseTTL = time.Duration(tmpMax) * time.Second
+		config.MaxLeaseTTL = tmpMax
 	}
 
 	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
@@ -932,8 +932,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			if err != nil {
 				return handleError(err)
 			}
-			tmpDurDef := time.Duration(tmpDef) * time.Second
-			newDefault = &tmpDurDef
+			newDefault = &tmpDef
 		}
 
 		maxTTL := data.Get("max_lease_ttl").(string)
@@ -947,8 +946,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			if err != nil {
 				return handleError(err)
 			}
-			tmpDurMax := time.Duration(tmpMax) * time.Second
-			newMax = &tmpDurMax
+			newMax = &tmpMax
 		}
 
 		if newDefault != nil || newMax != nil {

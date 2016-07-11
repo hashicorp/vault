@@ -150,7 +150,6 @@ func (d *FieldData) getPrimitive(
 
 	case TypeDurationSecond:
 		var result int
-		var err error
 		switch inp := raw.(type) {
 		case nil:
 			return nil, false, nil
@@ -161,10 +160,11 @@ func (d *FieldData) getPrimitive(
 		case float64:
 			result = int(inp)
 		case string:
-			result, err = duration.ParseDurationSecond(inp)
+			dur, err := duration.ParseDurationSecond(inp)
 			if err != nil {
 				return nil, true, err
 			}
+			result = int(dur.Seconds())
 
 		default:
 			return nil, false, fmt.Errorf("invalid input '%v'", raw)
