@@ -575,6 +575,12 @@
 			"revisionTime": "2016-02-02T18:50:14Z"
 		},
 		{
+			"checksumSHA1": "bQfc4zGh8WUri465COdQNhJJTw4=",
+			"path": "github.com/kardianos/govendor",
+			"revision": "7a0d30eab9e67b3ff60f13cdc483f003c01e04c1",
+			"revisionTime": "2016-07-09T17:43:04Z"
+		},
+		{
 			"checksumSHA1": "QK3MNUdQwUBuznCHZcPijU/3DyI=",
 			"path": "github.com/lib/pq",
 			"revision": "4dd446efc17690bc53e154025146f73203b18309",

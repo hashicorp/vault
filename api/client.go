@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/sethgrid/pester"
 )
 
 const EnvVaultAddress = "VAULT_ADDR"
@@ -25,9 +25,7 @@ const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
-const EnvVaultRetryWaitMin = "VAULT_RETRY_WAIT_MIN"
-const EnvVaultRetryWaitMax = "VAULT_RETRY_WAIT_MAX"
-const EnvVaultRetryMax = "VAULT_RETRY_MAX"
+const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 
 var (
 	errRedirect = errors.New("redirect")
@@ -54,17 +52,9 @@ type Config struct {
 
 	redirectSetup sync.Once
 
-	// RetryWaitMin controls the minimum amount of time to wait between retries
-	// when a 5xx error occurs
-	RetryWaitMin time.Duration
-
-	// RetryWaitMax controls the maximum amount of time to wait between retries
-	// when a 5xx error occurs
-	RetryWaitMax time.Duration
-
-	// RetryMax controls the maximum number of times to retry when a 5xx error
-	// occurs. Set to 0 to disable retrying.
-	RetryMax int
+	// MaxRetries controls the maximum number of times to retry when a 5xx error
+	// occurs. Set to 1 or less to disable retrying.
+	MaxRetries int
 }
 
 // DefaultConfig returns a default configuration for the client. It is
@@ -89,9 +79,7 @@ func DefaultConfig() *Config {
 		config.Address = v
 	}
 
-	config.RetryWaitMin = 1 * time.Second
-	config.RetryWaitMax = 30 * time.Second
-	config.RetryMax = 15
+	config.MaxRetries = pester.DefaultClient.MaxRetries
 
 	return config
 }
@@ -109,9 +97,7 @@ func (c *Config) ReadEnvironment() error {
 	var foundInsecure bool
 	var envTLSServerName string
 
-	var envRetryWaitMin *time.Duration
-	var envRetryWaitMax *time.Duration
-	var envRetryMax *uint64
+	var envMaxRetries *uint64
 
 	var clientCert tls.Certificate
 	var foundClientCert bool
@@ -120,44 +106,13 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
-
-	// Handle retry parameters
-	{
-		if v := os.Getenv(EnvVaultRetryWaitMin); v != "" {
-			waitMin, err := time.ParseDuration(v)
-			if err != nil {
-				return err
-			}
-			envRetryWaitMin = &waitMin
+	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
+		maxRetries, err := strconv.ParseUint(v, 10, 32)
+		if err != nil {
+			return err
 		}
-		if v := os.Getenv(EnvVaultRetryWaitMax); v != "" {
-			waitMax, err := time.ParseDuration(v)
-			if err != nil {
-				return err
-			}
-			envRetryWaitMax = &waitMax
-		}
-		if v := os.Getenv(EnvVaultRetryMax); v != "" {
-			retryMax, err := strconv.ParseUint(v, 10, 32)
-			if err != nil {
-				return err
-			}
-			envRetryMax = &retryMax
-		}
-
-		min := c.RetryWaitMin
-		if envRetryWaitMin != nil {
-			min = *envRetryWaitMin
-		}
-		max := c.RetryWaitMax
-		if envRetryWaitMax != nil {
-			max = *envRetryWaitMax
-		}
-		if min > max {
-			return fmt.Errorf("Maximum retry delay is less than minimum retry delay")
-		}
+		envMaxRetries = &maxRetries
 	}
-
 	if v := os.Getenv(EnvVaultCACert); v != "" {
 		envCACert = v
 	}
@@ -208,14 +163,8 @@ func (c *Config) ReadEnvironment() error {
 		c.Address = envAddress
 	}
 
-	if envRetryWaitMin != nil {
-		c.RetryWaitMin = *envRetryWaitMin
-	}
-	if envRetryWaitMax != nil {
-		c.RetryWaitMax = *envRetryWaitMax
-	}
-	if envRetryMax != nil {
-		c.RetryMax = int(*envRetryMax)
+	if envMaxRetries != nil {
+		c.MaxRetries = int(*envMaxRetries)
 	}
 
 	if foundInsecure {
@@ -345,11 +294,9 @@ START:
 		return nil, err
 	}
 
-	client := retryablehttp.NewClient()
-	client.HTTPClient = c.config.HttpClient
-	client.RetryWaitMax = c.config.RetryWaitMax
-	client.RetryWaitMin = c.config.RetryWaitMin
-	client.RetryMax = c.config.RetryMax
+	client := pester.NewExtendedClient(c.config.HttpClient)
+	client.Backoff = pester.LinearJitterBackoff
+	client.MaxRetries = c.config.MaxRetries
 
 	var result *Response
 	resp, err := client.Do(req)

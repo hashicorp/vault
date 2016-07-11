@@ -345,7 +345,7 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 	// Derive the key that should be used
 	key, err := p.DeriveKey(context, p.LatestVersion)
 	if err != nil {
-		return "", certutil.InternalError{Err: err.Error()}
+		return "", err
 	}
 
 	// Guard against a potentially invalid cipher-mode
