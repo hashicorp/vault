@@ -98,7 +98,7 @@ func (b *backend) pathCAGenerateRoot(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"expiration":    parsedBundle.Certificate.NotAfter,
+			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
 		},
 	}
@@ -234,7 +234,7 @@ func (b *backend) pathCASignIntermediate(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"expiration":    parsedBundle.Certificate.NotAfter,
+			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
 			"serial_number": cb.SerialNumber,
 		},
 	}

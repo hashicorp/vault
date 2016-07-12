@@ -3,7 +3,6 @@ package pki
 import (
 	"encoding/pem"
 	"fmt"
-	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
@@ -102,7 +101,7 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 	var certEntry, revokedEntry *logical.StorageEntry
 	var funcErr error
 	var certificate []byte
-	var revocationTime time.Time
+	var revocationTime int64
 	response = &logical.Response{
 		Data: map[string]interface{}{},
 	}

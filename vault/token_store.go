@@ -439,7 +439,7 @@ type TokenEntry struct {
 	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
 
 	// Time of token creation
-	CreationTime time.Time `json:"creation_time" mapstructure:"creation_time" structs:"creation_time"`
+	CreationTime int64 `json:"creation_time" mapstructure:"creation_time" structs:"creation_time"`
 
 	// Duration set when token was created
 	TTL time.Duration `json:"ttl" mapstructure:"ttl" structs:"ttl"`
@@ -497,7 +497,7 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 		Policies:     []string{"root"},
 		Path:         "auth/token/root",
 		DisplayName:  "root",
-		CreationTime: time.Now(),
+		CreationTime: time.Now().Unix(),
 	}
 	if err := ts.create(te); err != nil {
 		return nil, err
@@ -993,7 +993,7 @@ func (ts *TokenStore) handleCreateCommon(
 		Meta:         data.Metadata,
 		DisplayName:  "token",
 		NumUses:      data.NumUses,
-		CreationTime: time.Now(),
+		CreationTime: time.Now().Unix(),
 	}
 
 	renewable := true
@@ -1329,7 +1329,7 @@ func (ts *TokenStore) handleLookup(
 			"display_name":     out.DisplayName,
 			"num_uses":         out.NumUses,
 			"orphan":           false,
-			"creation_time":    out.CreationTime,
+			"creation_time":    int64(out.CreationTime),
 			"creation_ttl":     int64(out.TTL.Seconds()),
 			"ttl":              int64(0),
 			"role":             out.Role,
@@ -1348,7 +1348,7 @@ func (ts *TokenStore) handleLookup(
 	}
 	if leaseTimes != nil {
 		if !leaseTimes.LastRenewalTime.IsZero() {
-			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime
+			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
 		}
 		if !leaseTimes.ExpireTime.IsZero() {
 			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())

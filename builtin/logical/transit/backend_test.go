@@ -222,14 +222,14 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				return nil
 			}
 			var d struct {
-				Name                 string               `mapstructure:"name"`
-				Key                  []byte               `mapstructure:"key"`
-				Keys                 map[string]time.Time `mapstructure:"keys"`
-				CipherMode           string               `mapstructure:"cipher_mode"`
-				Derived              bool                 `mapstructure:"derived"`
-				KDFMode              string               `mapstructure:"kdf_mode"`
-				DeletionAllowed      bool                 `mapstructure:"deletion_allowed"`
-				ConvergentEncryption bool                 `mapstructure:"convergent_encryption"`
+				Name                 string           `mapstructure:"name"`
+				Key                  []byte           `mapstructure:"key"`
+				Keys                 map[string]int64 `mapstructure:"keys"`
+				CipherMode           string           `mapstructure:"cipher_mode"`
+				Derived              bool             `mapstructure:"derived"`
+				KDFMode              string           `mapstructure:"kdf_mode"`
+				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
+				ConvergentEncryption bool             `mapstructure:"convergent_encryption"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err

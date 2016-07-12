@@ -115,17 +115,17 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 
 	// Format the body
 	body := &HealthResponse{
-		Initialized: init,
-		Sealed:      sealed,
-		Standby:     standby,
-		ServerTime:  time.Now(),
+		Initialized:   init,
+		Sealed:        sealed,
+		Standby:       standby,
+		ServerTimeUTC: time.Now().UTC().Unix(),
 	}
 	return code, body, nil
 }
 
 type HealthResponse struct {
-	Initialized bool      `json:"initialized"`
-	Sealed      bool      `json:"sealed"`
-	Standby     bool      `json:"standby"`
-	ServerTime  time.Time `json:"server_time"`
+	Initialized   bool  `json:"initialized"`
+	Sealed        bool  `json:"sealed"`
+	Standby       bool  `json:"standby"`
+	ServerTimeUTC int64 `json:"server_time_utc"`
 }

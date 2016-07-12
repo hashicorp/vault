@@ -466,7 +466,7 @@ func (b *Backend) handleWALRollback(
 		}
 
 		// If the entry isn't old enough, then don't roll it back
-		if !entry.CreatedAt.Before(minAge) {
+		if !time.Unix(entry.CreatedAt, 0).Before(minAge) {
 			continue
 		}
 

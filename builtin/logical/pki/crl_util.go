@@ -12,8 +12,8 @@ import (
 )
 
 type revocationInfo struct {
-	CertificateBytes []byte    `json:"certificate_bytes"`
-	RevocationTime   time.Time `json:"revocation_time"`
+	CertificateBytes []byte `json:"certificate_bytes"`
+	RevocationTime   int64  `json:"revocation_time"`
 }
 
 // Revokes a cert, and tries to be smart about error recovery
@@ -87,7 +87,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		}
 
 		revInfo.CertificateBytes = certEntry.Value
-		revInfo.RevocationTime = time.Now()
+		revInfo.RevocationTime = time.Now().Unix()
 
 		certEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
 		if err != nil {
@@ -153,7 +153,7 @@ func buildCRL(b *backend, req *logical.Request) error {
 
 		revokedCerts = append(revokedCerts, pkix.RevokedCertificate{
 			SerialNumber:   revokedCert.SerialNumber,
-			RevocationTime: revInfo.RevocationTime,
+			RevocationTime: time.Unix(revInfo.RevocationTime, 0),
 		})
 	}
 

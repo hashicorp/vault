@@ -15,7 +15,7 @@ type WALEntry struct {
 	ID        string      `json:"-"`
 	Kind      string      `json:"type"`
 	Data      interface{} `json:"data"`
-	CreatedAt time.Time   `json:"created_at"`
+	CreatedAt int64       `json:"created_at"`
 }
 
 // PutWAL writes some data to the WAL.
@@ -37,7 +37,7 @@ func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
 	value, err := json.Marshal(&WALEntry{
 		Kind:      kind,
 		Data:      data,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC().Unix(),
 	})
 	if err != nil {
 		return "", err

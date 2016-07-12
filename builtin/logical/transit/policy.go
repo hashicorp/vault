@@ -25,8 +25,8 @@ const (
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
-	Key          []byte    `json:"key"`
-	CreationTime time.Time `json:"creation_time"`
+	Key          []byte `json:"key"`
+	CreationTime int64  `json:"creation_time"`
 }
 
 // KeyEntryMap is used to allow JSON marshal/unmarshal
@@ -491,7 +491,7 @@ func (p *Policy) rotate(storage logical.Storage) error {
 
 	p.Keys[p.LatestVersion] = KeyEntry{
 		Key:          newKey,
-		CreationTime: time.Now(),
+		CreationTime: time.Now().Unix(),
 	}
 
 	// This ensures that with new key creations min decryption version is set
@@ -510,7 +510,7 @@ func (p *Policy) migrateKeyToKeysMap() {
 	p.Keys = KeyEntryMap{
 		1: KeyEntry{
 			Key:          p.Key,
-			CreationTime: time.Now(),
+			CreationTime: time.Now().Unix(),
 		},
 	}
 	p.Key = nil

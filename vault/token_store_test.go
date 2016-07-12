@@ -175,7 +175,6 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	ent.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, ent) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
 	}
@@ -215,7 +214,6 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	ent.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, ent) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", ent, out)
 	}
@@ -413,7 +411,6 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	ent2.CreationTime = out.CreationTime
 	if !reflect.DeepEqual(out, ent2) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", ent2, out)
 	}
@@ -985,7 +982,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"explicit_max_ttl": int64(0),
 	}
 
-	if (resp.Data["creation_time"].(time.Time)).IsZero() {
+	if resp.Data["creation_time"].(int64) == 0 {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
@@ -1022,7 +1019,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"renewable":        true,
 	}
 
-	if (resp.Data["creation_time"].(time.Time)).IsZero() {
+	if resp.Data["creation_time"].(int64) == 0 {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
@@ -1065,7 +1062,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"renewable":        true,
 	}
 
-	if (resp.Data["creation_time"].(time.Time)).IsZero() {
+	if resp.Data["creation_time"].(int64) == 0 {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
@@ -1098,7 +1095,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	if (resp.Data["last_renewal_time"].(time.Time)).IsZero() {
+	if resp.Data["last_renewal_time"].(int64) == 0 {
 		t.Fatalf("last_renewal_time was zero")
 	}
 }
@@ -1130,7 +1127,7 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"explicit_max_ttl": int64(0),
 	}
 
-	if (resp.Data["creation_time"].(time.Time)).IsZero() {
+	if resp.Data["creation_time"].(int64) == 0 {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")

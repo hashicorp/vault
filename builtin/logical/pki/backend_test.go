@@ -958,7 +958,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
-				if !(resp.Data["revocation_time"].(time.Time)).IsZero() {
+				if resp.Data["revocation_time"].(int64) != 0 {
 					return fmt.Errorf("expected a zero revocation time")
 				}
 
@@ -1115,7 +1115,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
-				if !(resp.Data["revocation_time"].(time.Time)).IsZero() {
+				if resp.Data["revocation_time"].(int64) != 0 {
 					return fmt.Errorf("expected a zero revocation time")
 				}
 
@@ -1169,7 +1169,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
-				if (resp.Data["revocation_time"].(time.Time)).IsZero() {
+				if resp.Data["revocation_time"].(int64) == 0 {
 					return fmt.Errorf("expected a non-zero revocation time")
 				}
 
@@ -1187,7 +1187,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 					return fmt.Errorf("got an error: %s", resp.Data["error"].(string))
 				}
 
-				if (resp.Data["revocation_time"].(time.Time)).IsZero() {
+				if resp.Data["revocation_time"].(int64) == 0 {
 					return fmt.Errorf("expected a non-zero revocation time")
 				}
 
