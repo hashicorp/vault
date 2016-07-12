@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -38,6 +39,12 @@ set, this is automatically set to true`,
 				Type: framework.TypeBool,
 				Description: `Whether to use TLS but skip verification; has no
 effect if a CA certificate is provided`,
+			},
+
+			"tls_min_version": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "tls12",
+				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
 
 			"pem_bundle": &framework.FieldSchema{
@@ -98,8 +105,9 @@ func (b *backend) pathConnectionRead(
 		config.PrivateKey = "**********"
 	}
 
+	d := structs.New(config).Map()
 	return &logical.Response{
-		Data: structs.New(config).Map(),
+		Data: d,
 	}, nil
 }
 
@@ -126,6 +134,15 @@ func (b *backend) pathConnectionWrite(
 		InsecureTLS:     data.Get("insecure_tls").(bool),
 		ProtocolVersion: data.Get("protocol_version").(int),
 		ConnectTimeout:  data.Get("connect_timeout").(int),
+	}
+
+	tlsMinVersion := data.Get("tls_min_version").(string)
+	if tlsMinVersion != "" {
+		var ok bool
+		config.TLSMinVersion, ok = tlsutil.TLSLookup[tlsMinVersion]
+		if !ok {
+			return logical.ErrorResponse("failed to set 'tls_min_version'"), nil
+		}
 	}
 
 	if config.InsecureTLS {

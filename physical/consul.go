@@ -191,7 +191,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	}
 
 	tlsClientConfig := &tls.Config{
-		MinVersion:         VersionTLS12,
+		MinVersion:         tls.VersionTLS12,
 		InsecureSkipVerify: insecureSkipVerify,
 		ServerName:         serverName[0],
 	}
