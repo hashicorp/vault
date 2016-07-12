@@ -124,6 +124,7 @@ func (b *backend) pathConfigRead(
 	// Convert the integer representing the TLS version into string of
 	// the form 'tls10', 'tls11' or 'tls12'
 	data["tls_min_version"] = tlsutil.TLSReverseLookup[data["tls_min_version"].(uint16)]
+
 	return &logical.Response{
 		Data: data,
 	}, nil
@@ -162,13 +163,16 @@ func (b *backend) pathConfigWrite(
 		cfg.InsecureTLS = insecureTLS
 	}
 	tlsMinVersion := d.Get("tls_min_version").(string)
-	if tlsMinVersion != "" {
-		var ok bool
-		cfg.TLSMinVersion, ok = tlsutil.TLSLookup[tlsMinVersion]
-		if !ok {
-			return logical.ErrorResponse("failed to set 'tls_min_version'"), nil
-		}
+	if tlsMinVersion == "" {
+		return logical.ErrorResponse("failed to get 'tls_min_version' value"), nil
 	}
+
+	var ok bool
+	cfg.TLSMinVersion, ok = tlsutil.TLSLookup[tlsMinVersion]
+	if !ok {
+		return logical.ErrorResponse("invalid 'tls_min_version'"), nil
+	}
+
 	startTLS := d.Get("starttls").(bool)
 	if startTLS {
 		cfg.StartTLS = startTLS
