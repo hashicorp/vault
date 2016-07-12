@@ -215,6 +215,7 @@ type ConfigEntry struct {
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
+		MinVersion: VersionTLS12,
 		ServerName: host,
 	}
 	if c.InsecureTLS {

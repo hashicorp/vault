@@ -50,6 +50,7 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 	if cfg.TLS {
 		tlsConfig := &tls.Config{
 			InsecureSkipVerify: cfg.InsecureTLS,
+			MinVersion:         VersionTLS12,
 		}
 
 		if len(cfg.Certificate) > 0 || len(cfg.IssuingCA) > 0 {
