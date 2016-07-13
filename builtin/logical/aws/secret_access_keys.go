@@ -60,12 +60,7 @@ func genUsername(displayName, policyName, userType string) (ret string, warning 
 		// with, so don't insert display name or policy name at all
 	}
 
-	ret = fmt.Sprintf(
-		"vault-%s%d-%d",
-		midString,
-		time.Now().Unix(),
-		rand.Int31n(10000))
-
+	ret = fmt.Sprintf("vault-%s%d-%d", midString, time.Now().Unix(), rand.Int31n(10000))
 	return
 }
 

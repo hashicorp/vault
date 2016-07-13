@@ -450,9 +450,9 @@ func (b *Backend) handleWALRollback(
 	if age == 0 {
 		age = 10 * time.Minute
 	}
-	minAge := time.Now().UTC().Add(-1 * age)
+	minAge := time.Now().Add(-1 * age)
 	if _, ok := req.Data["immediate"]; ok {
-		minAge = time.Now().UTC().Add(1000 * time.Hour)
+		minAge = time.Now().Add(1000 * time.Hour)
 	}
 
 	for _, k := range keys {

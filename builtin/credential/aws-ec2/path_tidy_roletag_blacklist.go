@@ -64,7 +64,7 @@ func (b *backend) tidyBlacklistRoleTag(s logical.Storage, safety_buffer int) err
 			return err
 		}
 
-		if time.Now().UTC().After(result.ExpirationTime.Add(bufferDuration)) {
+		if time.Now().After(result.ExpirationTime.Add(bufferDuration)) {
 			if err := s.Delete("blacklist/roletag" + tag); err != nil {
 				return fmt.Errorf("error deleting tag %s from storage: %s", tag, err)
 			}

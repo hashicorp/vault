@@ -45,10 +45,10 @@ func LeaseExtend(backendIncrement, backendMax time.Duration, systemView logical.
 		}
 
 		// We cannot go past this time
-		maxValidTime := leaseOpts.IssueTime.UTC().Add(max)
+		maxValidTime := leaseOpts.IssueTime.Add(max)
 
 		// Get the current time
-		now := time.Now().UTC()
+		now := time.Now()
 
 		// If we are past the max TTL, we shouldn't be in this function...but
 		// fast path out if we are

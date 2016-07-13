@@ -140,8 +140,8 @@ func TestKeyring_Serialize(t *testing.T) {
 
 	testKey := []byte("testing")
 	testSecond := []byte("second")
-	k, _ = k.AddKey(&Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now().UTC()})
-	k, _ = k.AddKey(&Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now().UTC()})
+	k, _ = k.AddKey(&Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now()})
+	k, _ = k.AddKey(&Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now()})
 
 	buf, err := k.Serialize()
 	if err != nil {
@@ -177,7 +177,7 @@ func TestKey_Serialize(t *testing.T) {
 		Term:        10,
 		Version:     1,
 		Value:       []byte("foobarbaz"),
-		InstallTime: time.Now().UTC(),
+		InstallTime: time.Now(),
 	}
 
 	buf, err := k.Serialize()

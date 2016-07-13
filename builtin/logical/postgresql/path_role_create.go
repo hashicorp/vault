@@ -77,7 +77,7 @@ func (b *backend) pathRoleCreateRead(
 	if err != nil {
 		return nil, err
 	}
-	expiration := time.Now().UTC().
+	expiration := time.Now().
 		Add(lease.Lease).
 		Format("2006-01-02 15:04:05-0700")
 
