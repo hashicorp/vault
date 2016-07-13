@@ -46,6 +46,8 @@ IMPROVEMENTS:
    configuration [GH-1581]
  * secret/mssql,mysql,postgresql: Reading of connection settings is supported
    in all the sql backends [GH-1515]
+ * credential/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
+   will have `MinVersion` set to TLS 1.2 by default.
 
 BUG FIXES:
 
