@@ -222,15 +222,18 @@ type ConfigEntry struct {
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
-	tlsMinVersion, ok := tlsutil.TLSLookup[c.TLSMinVersion]
-	if !ok {
-		return nil, fmt.Errorf("invalid 'tls_min_version' in config")
-	}
-
 	tlsConfig := &tls.Config{
-		MinVersion: tlsMinVersion,
 		ServerName: host,
 	}
+
+	if c.TLSMinVersion != "" {
+		tlsMinVersion, ok := tlsutil.TLSLookup[c.TLSMinVersion]
+		if !ok {
+			return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+		}
+		tlsConfig.MinVersion = tlsMinVersion
+	}
+
 	if c.InsecureTLS {
 		tlsConfig.InsecureSkipVerify = true
 	}

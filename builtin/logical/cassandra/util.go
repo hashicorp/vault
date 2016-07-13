@@ -75,12 +75,17 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 			}
 			tlsConfig.InsecureSkipVerify = cfg.InsecureTLS
 
-			var ok bool
-			tlsConfig.MinVersion, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
-			if !ok {
-				return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+			if cfg.TLSMinVersion != "" {
+				var ok bool
+				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
+				if !ok {
+					return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+				}
+			} else {
+				// MinVersion was not being set earlier. Reset it to
+				// zero to gracefully handle upgrades.
+				tlsConfig.MinVersion = 0
 			}
-
 		}
 
 		clusterConfig.SslOpts = &gocql.SslOptions{
