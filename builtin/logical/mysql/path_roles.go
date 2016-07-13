@@ -34,6 +34,11 @@ func pathRoles(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "SQL string to create a user. See help for more info.",
 			},
+
+			"username_length": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "number of characters to truncate generated mysql usernames to (default 10)",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -105,6 +110,7 @@ func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	sql := data.Get("sql").(string)
+	username_length := data.Get("username_length").(int)
 
 	// Get our connection
 	db, err := b.DB(req.Storage)
@@ -127,7 +133,8 @@ func (b *backend) pathRoleCreate(
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		SQL: sql,
+		SQL:             sql,
+		USERNAME_LENGTH: username_length,
 	})
 	if err != nil {
 		return nil, err
@@ -139,7 +146,8 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	SQL string `json:"sql"`
+	SQL             string `json:"sql"`
+	USERNAME_LENGTH int    `json:"username_length"`
 }
 
 const pathRoleHelpSyn = `
@@ -165,4 +173,9 @@ Example of a decent SQL query to use:
 
 Note the above user would be able to access anything in db1. Please see the MySQL
 manual on the GRANT command to learn how to do more fine grained access.
+
+The "username_length" parameter determines how many characters of the
+role name will be used in creating the generated mysql username; the
+default is 10.  Note that mysql versions prior to 5.8 have a 16 character
+total limit on usernames.
 `

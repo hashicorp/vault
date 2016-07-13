@@ -105,6 +105,13 @@ that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
 
+Optionally, you may configure the number of character from the role
+name that are truncated to form the mysql usernamed interpolated into
+the `{{name}}` field: the default is 10.  Note that versions of
+mysql prior to 5.8 have a 16 character total limit on user names, so
+it is probably not safe to increase this above the default on versions
+prior to that.
+
 ## API
 
 ### /mysql/config/connection
@@ -233,6 +240,13 @@ allowed to read.
         The SQL statements executed to create and configure the role.
         Must be semi-colon separated. The '{{name}}' and '{{password}}'
         values will be substituted.
+      </li>
+      <li>
+        <span class="param">username_length</span>
+        <span class="param-flags">optional</span>
+        Determines how many characters from the role name will be used
+        to form the mysql username interpolated into the '{{name}}' field
+        of the sql parameter.
       </li>
     </ul>
   </dd>
