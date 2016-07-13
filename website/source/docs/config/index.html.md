@@ -223,6 +223,9 @@ For Consul, the following options are supported:
   * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
     will be disabled for Consul communication.  Defaults to false.
 
+  * `tls_min_version` (optional) - Minimum TLS version to use. Accepted values
+    are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.
+
 The following settings should be set according to your [Consul encryption
 settings](https://www.consul.io/docs/agent/encryption.html):
 
