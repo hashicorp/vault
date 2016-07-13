@@ -8,6 +8,7 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -69,11 +70,17 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 			}
 
 			tlsConfig, err = parsedCertBundle.GetTLSConfig(certutil.TLSClient)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get TLS configuration: %s", err)
+			if err != nil || tlsConfig == nil {
+				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%v", tlsConfig, err)
 			}
 			tlsConfig.InsecureSkipVerify = cfg.InsecureTLS
-			tlsConfig.MinVersion = cfg.TLSMinVersion
+
+			var ok bool
+			tlsConfig.MinVersion, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
+			if !ok {
+				return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+			}
+
 		}
 
 		clusterConfig.SslOpts = &gocql.SslOptions{

@@ -105,15 +105,8 @@ func (b *backend) pathConnectionRead(
 		config.PrivateKey = "**********"
 	}
 
-	// Convert the struct into a map
-	d := structs.New(config).Map()
-
-	// Convert the integer representing the TLS version into string of
-	// the form 'tls10', 'tls11' or 'tls12'
-	d["tls_min_version"] = tlsutil.TLSReverseLookup[d["tls_min_version"].(uint16)]
-
 	return &logical.Response{
-		Data: d,
+		Data: structs.New(config).Map(),
 	}, nil
 }
 
@@ -142,13 +135,13 @@ func (b *backend) pathConnectionWrite(
 		ConnectTimeout:  data.Get("connect_timeout").(int),
 	}
 
-	tlsMinVersion := data.Get("tls_min_version").(string)
-	if tlsMinVersion == "" {
+	config.TLSMinVersion = data.Get("tls_min_version").(string)
+	if config.TLSMinVersion == "" {
 		return logical.ErrorResponse("failed to get 'tls_min_version' value"), nil
 	}
 
 	var ok bool
-	config.TLSMinVersion, ok = tlsutil.TLSLookup[tlsMinVersion]
+	_, ok = tlsutil.TLSLookup[config.TLSMinVersion]
 	if !ok {
 		return logical.ErrorResponse("invalid 'tls_min_version'"), nil
 	}

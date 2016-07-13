@@ -118,15 +118,8 @@ func (b *backend) pathConfigRead(
 		return nil, nil
 	}
 
-	// Convert the struct into a map
-	data := structs.New(cfg).Map()
-
-	// Convert the integer representing the TLS version into string of
-	// the form 'tls10', 'tls11' or 'tls12'
-	data["tls_min_version"] = tlsutil.TLSReverseLookup[data["tls_min_version"].(uint16)]
-
 	return &logical.Response{
-		Data: data,
+		Data: structs.New(cfg).Map(),
 	}, nil
 }
 
@@ -162,13 +155,13 @@ func (b *backend) pathConfigWrite(
 	if insecureTLS {
 		cfg.InsecureTLS = insecureTLS
 	}
-	tlsMinVersion := d.Get("tls_min_version").(string)
-	if tlsMinVersion == "" {
+	cfg.TLSMinVersion = d.Get("tls_min_version").(string)
+	if cfg.TLSMinVersion == "" {
 		return logical.ErrorResponse("failed to get 'tls_min_version' value"), nil
 	}
 
 	var ok bool
-	cfg.TLSMinVersion, ok = tlsutil.TLSLookup[tlsMinVersion]
+	_, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
 	if !ok {
 		return logical.ErrorResponse("invalid 'tls_min_version'"), nil
 	}
@@ -225,12 +218,17 @@ type ConfigEntry struct {
 	BindDN        string `json:"binddn" structs:"binddn" mapstructure:"binddn"`
 	BindPassword  string `json:"bindpass" structs:"bindpass" mapstructure:"bindpass"`
 	DiscoverDN    bool   `json:"discoverdn" structs:"discoverdn" mapstructure:"discoverdn"`
-	TLSMinVersion uint16 `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
+	TLSMinVersion string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
+	tlsMinVersion, ok := tlsutil.TLSLookup[c.TLSMinVersion]
+	if !ok {
+		return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+	}
+
 	tlsConfig := &tls.Config{
-		MinVersion: c.TLSMinVersion,
+		MinVersion: tlsMinVersion,
 		ServerName: host,
 	}
 	if c.InsecureTLS {

@@ -56,7 +56,7 @@ type sessionConfig struct {
 	IssuingCA       string `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
 	ProtocolVersion int    `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
 	ConnectTimeout  int    `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
-	TLSMinVersion   uint16 `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
+	TLSMinVersion   string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 }
 
 // DB returns the database connection.
