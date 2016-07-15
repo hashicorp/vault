@@ -3,11 +3,11 @@ package pgpkeys
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"golang.org/x/crypto/openpgp"
 )
 
@@ -70,8 +70,7 @@ func FetchKeybasePubkeys(input []string) (map[string]string, error) {
 		Them: []them{},
 	}
 
-	dec := json.NewDecoder(resp.Body)
-	if err := dec.Decode(out); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(resp.Body, out); err != nil {
 		return nil, err
 	}
 

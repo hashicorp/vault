@@ -1,7 +1,6 @@
 package awsec2
 
 import (
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/fullsailor/pkcs7"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -191,8 +191,7 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 	}
 
 	var identityDoc identityDocument
-	err = json.Unmarshal(pkcs7Data.Content, &identityDoc)
-	if err != nil {
+	if err := jsonutil.DecodeJSON(pkcs7Data.Content, &identityDoc); err != nil {
 		return nil, err
 	}
 

@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/duration"
@@ -165,7 +166,12 @@ func (d *FieldData) getPrimitive(
 				return nil, true, err
 			}
 			result = int(dur.Seconds())
-
+		case json.Number:
+			valInt64, err := inp.Int64()
+			if err != nil {
+				return nil, true, err
+			}
+			result = int(valInt64)
 		default:
 			return nil, false, fmt.Errorf("invalid input '%v'", raw)
 		}

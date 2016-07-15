@@ -1,11 +1,11 @@
 package transit
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -321,7 +321,7 @@ func (lm *lockManager) getStoredPolicy(storage logical.Storage, name string) (*P
 	policy := &Policy{
 		Keys: KeyEntryMap{},
 	}
-	err = json.Unmarshal(raw.Value, policy)
+	err = jsonutil.DecodeJSON(raw.Value, policy)
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/physical"
 
 	"golang.org/x/crypto/openpgp"
@@ -117,7 +118,7 @@ func (d *DefaultSeal) BarrierConfig() (*SealConfig, error) {
 	var conf SealConfig
 
 	// Decode the barrier entry
-	if err := json.Unmarshal(pe.Value, &conf); err != nil {
+	if err := jsonutil.DecodeJSON(pe.Value, &conf); err != nil {
 		d.core.logger.Printf("[ERR] core: failed to decode seal configuration: %v", err)
 		return nil, fmt.Errorf("failed to decode seal configuration: %v", err)
 	}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -779,5 +780,5 @@ func (le *leaseEntry) renewable() error {
 // decodeLeaseEntry is used to reverse encode and return a new entry
 func decodeLeaseEntry(buf []byte) (*leaseEntry, error) {
 	out := new(leaseEntry)
-	return out, json.Unmarshal(buf, out)
+	return out, jsonutil.DecodeJSON(buf, out)
 }

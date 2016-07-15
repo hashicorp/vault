@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 // FileBackend is a physical backend that stores data on disk
@@ -68,8 +70,7 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 	defer f.Close()
 
 	var entry Entry
-	dec := json.NewDecoder(f)
-	if err := dec.Decode(&entry); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(f, &entry); err != nil {
 		return nil, err
 	}
 

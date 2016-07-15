@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -69,7 +70,7 @@ func GetWAL(s logical.Storage, id string) (*WALEntry, error) {
 	}
 
 	var raw WALEntry
-	if err := json.Unmarshal(entry.Value, &raw); err != nil {
+	if err := jsonutil.DecodeJSON(entry.Value, &raw); err != nil {
 		return nil, err
 	}
 	raw.ID = id

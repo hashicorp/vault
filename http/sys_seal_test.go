@@ -2,8 +2,11 @@ package http
 
 import (
 	"encoding/hex"
+	"encoding/json"
+	"log"
 	"net/http"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
@@ -24,9 +27,9 @@ func TestSysSealStatus(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"sealed":   true,
-		"t":        float64(1),
-		"n":        float64(1),
-		"progress": float64(0),
+		"t":        json.Number("1"),
+		"n":        json.Number("1"),
+		"progress": json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -96,9 +99,9 @@ func TestSysUnseal(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"sealed":   false,
-		"t":        float64(1),
-		"n":        float64(1),
-		"progress": float64(0),
+		"t":        json.Number("1"),
+		"n":        json.Number("1"),
+		"progress": json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -120,9 +123,9 @@ func TestSysUnseal_badKey(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"sealed":   true,
-		"t":        float64(1),
-		"n":        float64(1),
-		"progress": float64(0),
+		"t":        json.Number("1"),
+		"n":        json.Number("1"),
+		"progress": json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -161,15 +164,16 @@ func TestSysUnseal_Reset(t *testing.T) {
 		var actual map[string]interface{}
 		expected := map[string]interface{}{
 			"sealed":   true,
-			"t":        float64(3),
-			"n":        float64(5),
-			"progress": float64(i + 1),
+			"t":        json.Number("3"),
+			"n":        json.Number("5"),
+			"progress": json.Number(strconv.Itoa(i + 1)),
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
 		}
+		log.Printf("reached here\n")
 	}
 
 	resp = testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
@@ -179,9 +183,9 @@ func TestSysUnseal_Reset(t *testing.T) {
 	actual = map[string]interface{}{}
 	expected := map[string]interface{}{
 		"sealed":   true,
-		"t":        float64(3),
-		"n":        float64(5),
-		"progress": float64(0),
+		"t":        json.Number("3"),
+		"n":        json.Number("5"),
+		"progress": json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

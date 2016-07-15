@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -80,8 +81,7 @@ func stripPrefix(prefix, path string) (string, bool) {
 }
 
 func parseRequest(r *http.Request, out interface{}) error {
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(out)
+	err := jsonutil.DecodeJSONFromReader(r.Body, out)
 	if err != nil && err != io.EOF {
 		return fmt.Errorf("Failed to parse JSON input: %s", err)
 	}

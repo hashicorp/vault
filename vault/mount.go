@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -404,7 +405,7 @@ func (c *Core) loadMounts() error {
 	defer c.mountsLock.Unlock()
 
 	if raw != nil {
-		if err := json.Unmarshal(raw.Value, mountTable); err != nil {
+		if err := jsonutil.DecodeJSON(raw.Value, mountTable); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode mount table: %v", err)
 			return errLoadMountsFailed
 		}

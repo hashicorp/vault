@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -205,7 +206,7 @@ func (c *Core) loadCredentials() error {
 	defer c.authLock.Unlock()
 
 	if raw != nil {
-		if err := json.Unmarshal(raw.Value, authTable); err != nil {
+		if err := jsonutil.DecodeJSON(raw.Value, authTable); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode auth table: %v", err)
 			return errLoadAuthFailed
 		}

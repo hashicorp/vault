@@ -10,6 +10,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -710,7 +711,7 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 
 	// Unmarshal the token
 	entry := new(TokenEntry)
-	if err := json.Unmarshal(raw.Value, entry); err != nil {
+	if err := jsonutil.DecodeJSON(raw.Value, entry); err != nil {
 		return nil, fmt.Errorf("failed to decode entry: %v", err)
 	}
 
