@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/sethgrid/pester"
 )
 
 const EnvVaultAddress = "VAULT_ADDR"
@@ -24,6 +25,7 @@ const EnvVaultClientKey = "VAULT_CLIENT_KEY"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
+const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
 
 var (
 	errRedirect = errors.New("redirect")
@@ -49,6 +51,10 @@ type Config struct {
 	HttpClient *http.Client
 
 	redirectSetup sync.Once
+
+	// MaxRetries controls the maximum number of times to retry when a 5xx error
+	// occurs. Set to 0 or less to disable retrying.
+	MaxRetries int
 }
 
 // DefaultConfig returns a default configuration for the client. It is
@@ -73,6 +79,8 @@ func DefaultConfig() *Config {
 		config.Address = v
 	}
 
+	config.MaxRetries = pester.DefaultClient.MaxRetries
+
 	return config
 }
 
@@ -89,12 +97,21 @@ func (c *Config) ReadEnvironment() error {
 	var foundInsecure bool
 	var envTLSServerName string
 
+	var envMaxRetries *uint64
+
 	var clientCert tls.Certificate
 	var foundClientCert bool
 	var err error
 
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
+	}
+	if v := os.Getenv(EnvVaultMaxRetries); v != "" {
+		maxRetries, err := strconv.ParseUint(v, 10, 32)
+		if err != nil {
+			return err
+		}
+		envMaxRetries = &maxRetries
 	}
 	if v := os.Getenv(EnvVaultCACert); v != "" {
 		envCACert = v
@@ -132,11 +149,24 @@ func (c *Config) ReadEnvironment() error {
 		}
 	}
 
+	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
+	rootConfig := &rootcerts.Config{
+		CAFile: envCACert,
+		CAPath: envCAPath,
+	}
+	err = rootcerts.ConfigureTLS(clientTLSConfig, rootConfig)
+	if err != nil {
+		return err
+	}
+
 	if envAddress != "" {
 		c.Address = envAddress
 	}
 
-	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
+	if envMaxRetries != nil {
+		c.MaxRetries = int(*envMaxRetries) + 1
+	}
+
 	if foundInsecure {
 		clientTLSConfig.InsecureSkipVerify = envInsecure
 	}
@@ -146,15 +176,6 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if envTLSServerName != "" {
 		clientTLSConfig.ServerName = envTLSServerName
-	}
-
-	rootConfig := &rootcerts.Config{
-		CAFile: envCACert,
-		CAPath: envCAPath,
-	}
-	err = rootcerts.ConfigureTLS(clientTLSConfig, rootConfig)
-	if err != nil {
-		return err
 	}
 
 	return nil
@@ -273,8 +294,12 @@ START:
 		return nil, err
 	}
 
+	client := pester.NewExtendedClient(c.config.HttpClient)
+	client.Backoff = pester.LinearJitterBackoff
+	client.MaxRetries = c.config.MaxRetries
+
 	var result *Response
-	resp, err := c.config.HttpClient.Do(req)
+	resp, err := client.Do(req)
 	if resp != nil {
 		result = &Response{Response: resp}
 	}

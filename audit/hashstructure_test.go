@@ -18,7 +18,7 @@ func TestCopy_auth(t *testing.T) {
 	expected := logical.Auth{
 		LeaseOptions: logical.LeaseOptions{
 			TTL:       1 * time.Hour,
-			IssueTime: time.Now().UTC(),
+			IssueTime: time.Now(),
 		},
 
 		ClientToken: "foo",
@@ -109,7 +109,7 @@ func TestHashString(t *testing.T) {
 }
 
 func TestHash(t *testing.T) {
-	now := time.Now().UTC()
+	now := time.Now()
 
 	cases := []struct {
 		Input  interface{}

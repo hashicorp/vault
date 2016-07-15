@@ -75,7 +75,7 @@ Disabling `mlock` is not recommended unless the systems running Vault only
 use encrypted swap or do not use swap at all.  Vault only supports memory
 locking on UNIX-like systems (Linux, FreeBSD, Darwin, etc).  Non-UNIX like
 systems (e.g. Windows, NaCL, Android) lack the primitives to keep a process's
-entire memory address space from spilling disk and is therefore automatically
+entire memory address space from spilling to disk and is therefore automatically
 disabled on unsupported platforms.
 
 On Linux, to give the Vault executable the ability to use the `mlock` syscall
@@ -222,6 +222,9 @@ For Consul, the following options are supported:
 
   * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
     will be disabled for Consul communication.  Defaults to false.
+
+  * `tls_min_version` (optional) - Minimum TLS version to use. Accepted values
+    are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.
 
 The following settings should be set according to your [Consul encryption
 settings](https://www.consul.io/docs/agent/encryption.html):

@@ -158,9 +158,12 @@ func TestExpiration_RegisterAuth_NoLease(t *testing.T) {
 	}
 
 	// Should not be able to renew, no expiration
-	_, err = exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
-	if err.Error() != "lease not found or lease is not renewable" {
-		t.Fatalf("err: %v", err)
+	resp, err := exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
+	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease not found or lease is not renewable")) {
+		t.Fatalf("bad: err:%v resp:%#v", err, resp)
+	}
+	if resp == nil {
+		t.Fatal("expected a response")
 	}
 
 	// Wait and check token is not invalidated
@@ -455,10 +458,14 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 	}
 
 	// Attempt to renew the token
-	_, err = exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
-	if err.Error() != "lease is not renewable" {
-		t.Fatalf("err: %v", err)
+	resp, err := exp.RenewToken(&logical.Request{}, "auth/github/login", root.ID, 0)
+	if err != nil && (err != logical.ErrInvalidRequest || (resp != nil && resp.IsError() && resp.Error().Error() != "lease is not renewable")) {
+		t.Fatalf("bad: err:%v resp:%#v", err, resp)
 	}
+	if resp == nil {
+		t.Fatal("expected a response")
+	}
+
 }
 
 func TestExpiration_Renew(t *testing.T) {
@@ -899,9 +906,9 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 				TTL: time.Minute,
 			},
 		},
-		IssueTime:       time.Now().UTC(),
-		ExpireTime:      time.Now().UTC(),
-		LastRenewalTime: time.Time{}.UTC(),
+		IssueTime:       time.Now(),
+		ExpireTime:      time.Now(),
+		LastRenewalTime: time.Time{},
 	}
 	if err := exp.persistEntry(le); err != nil {
 		t.Fatalf("err: %v", err)
@@ -911,8 +918,9 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	le.LastRenewalTime = out.LastRenewalTime
 	if !reflect.DeepEqual(out, le) {
-		t.Fatalf("\nout: %#v\nexpect: %#v\n", out, le)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", le, out)
 	}
 
 	err = exp.deleteEntry("foo/bar/1234")
@@ -941,8 +949,8 @@ func TestLeaseEntry(t *testing.T) {
 				TTL: time.Minute,
 			},
 		},
-		IssueTime:  time.Now().UTC(),
-		ExpireTime: time.Now().UTC(),
+		IssueTime:  time.Now(),
+		ExpireTime: time.Now(),
 	}
 
 	enc, err := le.encode()

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -44,7 +45,7 @@ func PutWAL(s logical.Storage, kind string, data interface{}) (string, error) {
 		return "", err
 	}
 
-	id, err := logical.UUID()
+	id, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", err
 	}

@@ -142,7 +142,7 @@ func (m *ExpirationManager) Restore() error {
 		}
 
 		// Determine the remaining time to expiration
-		expires := le.ExpireTime.Sub(time.Now().UTC())
+		expires := le.ExpireTime.Sub(time.Now())
 		if expires <= 0 {
 			expires = minRevokeDelay
 		}
@@ -335,7 +335,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	le.Data = resp.Data
 	le.Secret = resp.Secret
 	le.ExpireTime = resp.Secret.ExpirationTime()
-	le.LastRenewalTime = time.Now().UTC()
+	le.LastRenewalTime = time.Now()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -364,7 +364,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	// Check if the lease is renewable. Note that this also checks for a nil
 	// lease and errors in that case as well.
 	if err := le.renewable(); err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Attempt to renew the auth entry
@@ -396,7 +396,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	// Update the lease entry
 	le.Auth = resp.Auth
 	le.ExpireTime = resp.Auth.ExpirationTime()
-	le.LastRenewalTime = time.Now().UTC()
+	le.LastRenewalTime = time.Now()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -434,7 +434,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		Path:        req.Path,
 		Data:        resp.Data,
 		Secret:      resp.Secret,
-		IssueTime:   time.Now().UTC(),
+		IssueTime:   time.Now(),
 		ExpireTime:  resp.Secret.ExpirationTime(),
 	}
 
@@ -467,7 +467,7 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        source,
-		IssueTime:   time.Now().UTC(),
+		IssueTime:   time.Now(),
 		ExpireTime:  auth.ExpirationTime(),
 	}
 
@@ -763,7 +763,7 @@ func (le *leaseEntry) renewable() error {
 	}
 
 	// Determine if the lease is expired
-	if le.ExpireTime.Before(time.Now().UTC()) {
+	if le.ExpireTime.Before(time.Now()) {
 		return fmt.Errorf("lease expired")
 	}
 

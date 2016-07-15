@@ -47,6 +47,10 @@ The following table describes them:
     <td>Path to an unencrypted PEM-encoded private key matching the client certificate.</td>
   </tr>
   <tr>
+    <td><tt>VAULT_MAX_RETRIES</tt></td>
+    <td>The maximum number of retries when a `5xx` error code is encountered. Default is `2`, for three total tries; set to `0` or less to disable retrying.</td>
+  </tr>
+  <tr>
     <td><tt>VAULT_SKIP_VERIFY</tt></td>
     <td>If set, do not verify Vault's presented certificate before communicating with it.  Setting this variable is not recommended except during testing.</td>
   </tr>

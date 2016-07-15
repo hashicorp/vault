@@ -56,7 +56,7 @@ The key features of Vault are:
   having to design their own encryption methods.
 
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
-  with it. At the end of the lease, Vault will automatically revoke that
+  with them. At the end of the lease, Vault will automatically revoke that
   secret. Clients are able to renew leases via built-in renew APIs.
 
 * **Revocation**: Vault has built-in support for secret revocation. Vault

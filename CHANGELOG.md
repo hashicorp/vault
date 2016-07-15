@@ -18,6 +18,12 @@ FEATURES:
    modified after upgrading contain a set of default key usages for increased
    compatibility with OpenVPN and some other software. This set can be changed
    when writing a role definition. Existing roles are unaffected. [GH-1552]
+ * **Request Retrying in the CLI and Go API**: Requests that fail with a `5xx`
+   error code will now retry after a backoff. The maximum total number of
+   retries (including disabling this functionality) can be set with an
+   environment variable. See the [environment variable
+   documentation](https://www.vaultproject.io/docs/commands/environment.html)
+   for more details. [GH-1594]
 
 IMPROVEMENTS:
  * cli: Output formatting in the presence of warnings in the response object
@@ -40,6 +46,8 @@ IMPROVEMENTS:
    configuration [GH-1581]
  * secret/mssql,mysql,postgresql: Reading of connection settings is supported
    in all the sql backends [GH-1515]
+ * credential/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
+   will have `MinVersion` set to TLS 1.2 by default.
 
 BUG FIXES:
 
