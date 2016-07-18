@@ -458,20 +458,20 @@ The DynamoDB backend has the following options:
     `AWS_DEFAULT_REGION` environment variable and will default to `us-east-1`
     if not specified.
 
-  * `ha_enabled` (optional) - Setting this to `"1"` will enable HA mode. Please
-    ensure you have read the documentation for the `recovery_mode` option
-    before enabling this. This option can also be provided via the environment
-    variable `DYNAMODB_HA_ENABLED`.
+  * `ha_enabled` (optional) - Setting this to `"1"`, `"t"`, or `"true"` will
+    enable HA mode. Please ensure you have read the documentation for the
+    `recovery_mode` option before enabling this. This option can also be
+    provided via the environment variable `DYNAMODB_HA_ENABLED`.
 
   * `recovery_mode` (optional) - When the Vault leader crashes or is killed
     without being able to shut down properly, no other node can become the new
     leader because the DynamoDB table still holds the old leader's lock record.
     To recover from this situation, one can start a single Vault node with this
-    option set to `"1"` and the node will remove the old lock from DynamoDB. It
-    is important that only one node is running in recovery mode! After this
-    node has become the leader, other nodes can be started with regular
-    configuration. This option can also be provided via the environment
-    variable `RECOVERY_MODE`.
+    option set to `"1"`, `"t"`, or `"true"` and the node will remove the old
+    lock from DynamoDB. It is important that only one node is running in
+    recovery mode! After this node has become the leader, other nodes can be
+    started with regular configuration. This option can also be provided via
+    the environment variable `RECOVERY_MODE`.
 
 For more information about the read/write capacity of DynamoDB tables, see the
 [official AWS DynamoDB

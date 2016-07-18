@@ -176,17 +176,19 @@ func newDynamoDBBackend(conf map[string]string, logger *log.Logger) (Backend, er
 	if haEnabled == "" {
 		haEnabled = conf["ha_enabled"]
 	}
+	haEnabledBool, _ := strconv.ParseBool(haEnabled)
 
 	recoveryMode := os.Getenv("RECOVERY_MODE")
 	if recoveryMode == "" {
 		recoveryMode = conf["recovery_mode"]
 	}
+	recoveryModeBool, _ := strconv.ParseBool(recoveryMode)
 
 	return &DynamoDBBackend{
 		table:     table,
 		client:    client,
-		recovery:  recoveryMode == "1",
-		haEnabled: haEnabled == "1",
+		recovery:  recoveryModeBool,
+		haEnabled: haEnabledBool,
 		logger:    logger,
 	}, nil
 }
