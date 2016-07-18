@@ -260,6 +260,12 @@ func (c *ZookeeperBackend) LockWith(key, value string) (Lock, error) {
 	return l, nil
 }
 
+// HAEnabled indicates whether the HA functionality should be exposed.
+// Currently always returns true.
+func (c *ZookeeperBackend) HAEnabled() bool {
+	return true
+}
+
 // ZookeeperHALock is a Zookeeper Lock implementation for the HABackend
 type ZookeeperHALock struct {
 	in    *ZookeeperBackend

@@ -41,6 +41,12 @@ func (i *InmemHABackend) LockMapSize() int {
 	return len(i.locks)
 }
 
+// HAEnabled indicates whether the HA functionality should be exposed.
+// Currently always returns true.
+func (i *InmemHABackend) HAEnabled() bool {
+	return true
+}
+
 // InmemLock is an in-memory Lock implementation for the HABackend
 type InmemLock struct {
 	in    *InmemHABackend

@@ -330,6 +330,12 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 	return cl, nil
 }
 
+// HAEnabled indicates whether the HA functionality should be exposed.
+// Currently always returns true.
+func (c *ConsulBackend) HAEnabled() bool {
+	return true
+}
+
 // DetectHostAddr is used to detect the host address by asking the Consul agent
 func (c *ConsulBackend) DetectHostAddr() (string, error) {
 	agent := c.client.Agent()

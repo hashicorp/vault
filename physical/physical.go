@@ -38,6 +38,9 @@ type Backend interface {
 type HABackend interface {
 	// LockWith is used for mutual exclusion based on the given key.
 	LockWith(key, value string) (Lock, error)
+
+	// Whether or not HA functionality is enabled
+	HAEnabled() bool
 }
 
 // AdvertiseDetect is an optional interface that an HABackend
