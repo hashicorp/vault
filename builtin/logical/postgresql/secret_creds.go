@@ -91,6 +91,7 @@ func (b *backend) secretCredsRevoke(
 	}
 	username, ok := usernameRaw.(string)
 
+
 	// Get our connection
 	db, err := b.DB(req.Storage)
 	if err != nil {
@@ -150,7 +151,11 @@ func (b *backend) secretCredsRevoke(
 		pq.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
-		`REVOKE USAGE ON SCHEMA public FROM %s;`,
+		"REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM %s;",
+		pq.QuoteIdentifier(username)))
+
+	revocationStmts = append(revocationStmts, fmt.Sprintf(
+		"REVOKE USAGE ON SCHEMA public FROM %s;",
 		pq.QuoteIdentifier(username)))
 
 	// get the current database name so we can issue a REVOKE CONNECT for
