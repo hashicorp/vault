@@ -272,7 +272,7 @@ $ vault auth-enable aws-ec2
 #### Configure the credentials required to make AWS API calls
 
 Note: the client uses the official AWS SDK and will use environment variable or
-IAM role-provided credentials if available.
+IAM role-provided credentials if available. The AWS credentials used require the IAM action `ec2:DescribeInstance` to be allowed.
 
 ```
 $ vault write auth/aws-ec2/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
