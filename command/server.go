@@ -204,6 +204,12 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Error("Specified HA backend does not support HA")
 			return 1
 		}
+
+		if !coreConfig.HAPhysical.HAEnabled() {
+			c.Ui.Error("Specified HA backend has HA support disabled; please consult documentation")
+			return 1
+		}
+
 		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
 	} else {
 		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
@@ -217,7 +223,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Attempt to detect the advertise address, if possible
 	var detect physical.AdvertiseDetect
-	if coreConfig.HAPhysical != nil {
+	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
 		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
 	} else {
 		detect, ok = coreConfig.Physical.(physical.AdvertiseDetect)
@@ -290,14 +296,18 @@ func (c *ServerCommand) Run(args []string) int {
 	} else {
 		// If the backend supports HA, then note it
 		if coreConfig.HAPhysical != nil {
-			info["backend"] += " (HA available)"
-			info["advertise address"] = coreConfig.AdvertiseAddr
-			infoKeys = append(infoKeys, "advertise address")
+			if coreConfig.HAPhysical.HAEnabled() {
+				info["backend"] += " (HA available)"
+				info["advertise address"] = coreConfig.AdvertiseAddr
+				infoKeys = append(infoKeys, "advertise address")
+			} else {
+				info["backend"] += " (HA disabled)"
+			}
 		}
 	}
 
 	// If the backend supports service discovery, run service discovery
-	if coreConfig.HAPhysical != nil {
+	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
 		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
 		if ok {
 			activeFunc := func() bool {

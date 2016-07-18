@@ -61,10 +61,11 @@ const (
 // a DynamoDB table. It can be run in high-availability mode
 // as DynamoDB has locking capabilities.
 type DynamoDBBackend struct {
-	table    string
-	client   *dynamodb.DynamoDB
-	recovery bool
-	logger   *log.Logger
+	table     string
+	client    *dynamodb.DynamoDB
+	recovery  bool
+	logger    *log.Logger
+	haEnabled bool
 }
 
 // DynamoDBRecord is the representation of a vault entry in
@@ -171,16 +172,22 @@ func newDynamoDBBackend(conf map[string]string, logger *log.Logger) (Backend, er
 		return nil, err
 	}
 
+	haEnabled := os.Getenv("DYNAMODB_HA_ENABLED")
+	if haEnabled == "" {
+		haEnabled = conf["ha_enabled"]
+	}
+
 	recoveryMode := os.Getenv("RECOVERY_MODE")
 	if recoveryMode == "" {
 		recoveryMode = conf["recovery_mode"]
 	}
 
 	return &DynamoDBBackend{
-		table:    table,
-		client:   client,
-		recovery: recoveryMode == "1",
-		logger:   logger,
+		table:     table,
+		client:    client,
+		recovery:  recoveryMode == "1",
+		haEnabled: haEnabled == "1",
+		logger:    logger,
 	}, nil
 }
 
@@ -334,6 +341,10 @@ func (d *DynamoDBBackend) LockWith(key, value string) (Lock, error) {
 		value:    value,
 		recovery: d.recovery,
 	}, nil
+}
+
+func (d *DynamoDBBackend) HAEnabled() bool {
+	return d.haEnabled
 }
 
 // batchWriteRequests takes a list of write requests and executes them in badges

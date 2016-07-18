@@ -239,7 +239,7 @@ type CoreConfig struct {
 
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
-	if conf.HAPhysical != nil && conf.AdvertiseAddr == "" {
+	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() && conf.AdvertiseAddr == "" {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
@@ -304,7 +304,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:              conf.HAPhysical,
 		advertiseAddr:   conf.AdvertiseAddr,
 		physical:        conf.Physical,
 		seal:            conf.Seal,
@@ -316,6 +315,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		defaultLeaseTTL: conf.DefaultLeaseTTL,
 		maxLeaseTTL:     conf.MaxLeaseTTL,
 		cachingDisabled: conf.DisableCache,
+	}
+
+	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
+		c.ha = conf.HAPhysical
 	}
 
 	// Setup the backends

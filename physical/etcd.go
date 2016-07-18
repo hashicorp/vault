@@ -313,6 +313,12 @@ func (c *EtcdBackend) LockWith(key, value string) (Lock, error) {
 	}, nil
 }
 
+// HAEnabled indicates whether the HA functionality should be exposed.
+// Currently always returns true.
+func (e *EtcdBackend) HAEnabled() bool {
+	return true
+}
+
 // EtcdLock emplements a lock using and etcd backend.
 type EtcdLock struct {
 	kAPI                                 client.KeysAPI
