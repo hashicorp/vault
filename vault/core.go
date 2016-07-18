@@ -1061,10 +1061,15 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		}
 		c.logger.Printf("[INFO] core: acquired lock, enabling active operation")
 
+		// This is used later to log a metrics event; this can be helpful to
+		// detect flapping
+		activeTime := time.Now()
+
 		// Advertise ourself as leader
 		if err := c.advertiseLeader(uuid, leaderLostCh); err != nil {
 			c.logger.Printf("[ERR] core: leader advertisement setup failed: %v", err)
 			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
 		}
 
@@ -1080,6 +1085,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		if err != nil {
 			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
 		}
 
@@ -1094,6 +1100,8 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 			c.logger.Printf("[WARN] core: stepping down from active operation to standby")
 			manualStepDown = true
 		}
+
+		metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
 
 		// Clear ourself as leader
 		if err := c.clearLeader(uuid); err != nil {
