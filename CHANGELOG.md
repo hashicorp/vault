@@ -26,6 +26,7 @@ FEATURES:
    for more details. [GH-1594]
 
 IMPROVEMENTS:
+
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
@@ -55,6 +56,8 @@ BUG FIXES:
    during renewal [GH-1542]
  * core: Fix regression causing status codes to be `400` in most non-5xx error
    cases [GH-1553]
+ * secret/postgresql: Handle revoking roles that have privileges on sequences
+   [GH-1573]
  * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
    transaction object which could lead to connection exhaustion [GH-1572]
  * physical/postgres: Remove use of prepared statements as this causes
