@@ -39,6 +39,8 @@ IMPROVEMENTS:
  * cli: `vault write -field` now allows selecting wrapped response fields
    [GH-1567]
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
+ * core: The duration of leadership is now exported via events through
+   telemetry [GH-1625]
  * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role
    [GH-1523]
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
