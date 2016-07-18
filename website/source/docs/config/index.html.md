@@ -461,7 +461,9 @@ The DynamoDB backend has the following options:
   * `ha_enabled` (optional) - Setting this to `"1"`, `"t"`, or `"true"` will
     enable HA mode. Please ensure you have read the documentation for the
     `recovery_mode` option before enabling this. This option can also be
-    provided via the environment variable `DYNAMODB_HA_ENABLED`.
+    provided via the environment variable `DYNAMODB_HA_ENABLED`. If you are
+    upgrading from a version of Vault where HA support was enabled by default,
+    it is _very important_ that you set this parameter _before_ upgrading!
 
   * `recovery_mode` (optional) - When the Vault leader crashes or is killed
     without being able to shut down properly, no other node can become the new

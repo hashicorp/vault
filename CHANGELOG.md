@@ -4,6 +4,10 @@ DEPRECATIONS/BREAKING CHANGES:
 
  * Issued certificates from the `pki` backend against new roles created or
    modified after upgrading will contain a set of default key usages. 
+ * The `dynamodb` physical data store no longer supports HA by default. It has
+   some non-ideal behavior around failover that was causing confusion. See the
+   [documentation] for information on enabling HA mode. It is very important
+   that this configuration is added _before upgrading_.
 
 FEATURES:
 
