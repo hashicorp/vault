@@ -28,8 +28,9 @@ FEATURES:
    environment variable. See the [environment variable
    documentation](https://www.vaultproject.io/docs/commands/environment.html)
    for more details. [GH-1594]
-* **MongoDB Secret Backend**: Generate dynamic unique MongoDB database credentials based
-   on configured roles. Sponsored by [CommerceHub](http://www.commercehub.com/). [GH-1414]
+ * **MongoDB Secret Backend**: Generate dynamic unique MongoDB database
+   credentials based on configured roles. Sponsored by
+   [CommerceHub](http://www.commercehub.com/). [GH-1414]
 
 IMPROVEMENTS:
 
