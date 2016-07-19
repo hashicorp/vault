@@ -192,13 +192,21 @@ func (c *Core) startRollback() error {
 		ret := []*MountEntry{}
 		c.mountsLock.RLock()
 		defer c.mountsLock.RUnlock()
-		for _, entry := range c.mounts.Entries {
-			ret = append(ret, entry)
+		// During teardown/setup after a leader change or unseal there could be
+		// something racy here so make sure the table isn't nil
+		if c.mounts != nil {
+			for _, entry := range c.mounts.Entries {
+				ret = append(ret, entry)
+			}
 		}
 		c.authLock.RLock()
 		defer c.authLock.RUnlock()
-		for _, entry := range c.auth.Entries {
-			ret = append(ret, entry)
+		// During teardown/setup after a leader change or unseal there could be
+		// something racy here so make sure the table isn't nil
+		if c.auth != nil {
+			for _, entry := range c.auth.Entries {
+				ret = append(ret, entry)
+			}
 		}
 		return ret
 	}
