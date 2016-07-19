@@ -29,7 +29,7 @@ secret's path.
 ## Quick Start
 
 The generic backend allows for writing keys with arbitrary values. When data is
-returned, the `lease_duration` field (in the API JSON) or `refresh_interval`
+returned, the `refresh_interval` field (in the API JSON) or `refresh_interval`
 field (on the CLI) gives a hint as to how often a reader should look for a new
 value. This comes from the value of the `default_lease_ttl` set on the mount,
 or the system value.
@@ -38,7 +38,7 @@ There is one piece of special data handling: if a `ttl` key is provided, it
 will be treated as normal data, but on read the backend will attempt to parse
 it as a duration (either as a string like `1h` or an integer number of seconds
 like `3600`). If successful, the backend will use this value in place of the
-normal `lease_duration`. However, the given value will also still be returned
+normal `refresh_interval`. However, the given value will also still be returned
 exactly as specified, so you are free to use that key in any way that you like
 if it fits your input data.
 
@@ -98,7 +98,7 @@ seconds (one hour) as specified.
     "data": {
       "foo": "bar"
     },
-    "lease_duration": 2592000,
+    "refresh_interval": 2592000,
     "lease_id": "",
     "renewable": false
   }
@@ -142,7 +142,7 @@ seconds (one hour) as specified.
     "data": {
       "keys": ["foo", "foo/"]
     },
-    "lease_duration": 2592000,
+    "refresh_interval": 2592000,
     "lease_id": "",
     "renewable": false
   }
