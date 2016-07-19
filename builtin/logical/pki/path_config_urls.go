@@ -35,7 +35,7 @@ for the OCSP servers attribute`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathWriteURL,
-			logical.ReadOperation:  b.pathReadURL,
+			logical.ReadOperation:   b.pathReadURL,
 		},
 
 		HelpSynopsis:    pathConfigURLsHelpSyn,
@@ -121,25 +121,25 @@ func (b *backend) pathWriteURL(
 	if urlsInt, ok := data.GetOk("issuing_certificates"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.IssuingCertificates = splitURLs
-		if badUrl := validateURLs(entries.IssuingCertificates); badUrl != "" {
+		if badURL := validateURLs(entries.IssuingCertificates); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in issuing certificates: %s", badUrl)), nil
+				"invalid URL found in issuing certificates: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("crl_distribution_points"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.CRLDistributionPoints = splitURLs
-		if badUrl := validateURLs(entries.CRLDistributionPoints); badUrl != "" {
+		if badURL := validateURLs(entries.CRLDistributionPoints); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in CRL distribution points: %s", badUrl)), nil
+				"invalid URL found in CRL distribution points: %s", badURL)), nil
 		}
 	}
 	if urlsInt, ok := data.GetOk("ocsp_servers"); ok {
 		splitURLs := strings.Split(urlsInt.(string), ",")
 		entries.OCSPServers = splitURLs
-		if badUrl := validateURLs(entries.OCSPServers); badUrl != "" {
+		if badURL := validateURLs(entries.OCSPServers); badURL != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid URL found in OCSP servers: %s", badUrl)), nil
+				"invalid URL found in OCSP servers: %s", badURL)), nil
 		}
 	}
 

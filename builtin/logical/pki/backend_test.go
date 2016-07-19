@@ -1438,9 +1438,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 	// Adds tests with the currently configured issue/role information
 	addTests := func(testCheck logicaltest.TestCheckFunc) {
-		stepCount += 1
+		stepCount++
 		//t.Logf("test step %d\nrole vals: %#v\n", stepCount, roleVals)
-		stepCount += 1
+		stepCount++
 		//t.Logf("test step %d\nissue vals: %#v\n", stepCount, issueTestStep)
 		roleTestStep.Data = structs.New(roleVals).Map()
 		ret = append(ret, roleTestStep)
