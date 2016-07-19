@@ -62,8 +62,8 @@ func (b *backend) pathConfigLeaseRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"ttl":     leaseConfig.TTL.String(),
-			"max_ttl": leaseConfig.MaxTTL.String(),
+			"ttl":     leaseConfig.TTL.Seconds(),
+			"max_ttl": leaseConfig.MaxTTL.Seconds(),
 		},
 	}, nil
 }
