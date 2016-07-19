@@ -13,11 +13,11 @@ func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
 		Fields: map[string]*framework.FieldSchema{
-			"uri": &framework.FieldSchema{
+			"uri": {
 				Type:        framework.TypeString,
 				Description: "MongoDB standard connection string (URI)",
 			},
-			"verify_connection": &framework.FieldSchema{
+			"verify_connection": {
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set, uri is verified by actually connecting to the database`,

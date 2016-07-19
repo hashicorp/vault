@@ -24,15 +24,15 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-			"db": &framework.FieldSchema{
+			"db": {
 				Type:        framework.TypeString,
 				Description: "Name of the authentication database for users generated for this role.",
 			},
-			"roles": &framework.FieldSchema{
+			"roles": {
 				Type:        framework.TypeString,
 				Description: "MongoDB roles to assign to the users generated for this role.",
 			},

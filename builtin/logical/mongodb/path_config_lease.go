@@ -11,12 +11,12 @@ func pathConfigLease(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/lease",
 		Fields: map[string]*framework.FieldSchema{
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Default ttl for credentials.",
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Maximum time a set of credentials can be valid for.",
 			},
