@@ -124,7 +124,6 @@ func (b *backend) pathConnectionWrite(
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
 		MaxIdleConnections: maxIdleConns,
-		VerifyConnection:   verifyConnection,
 	})
 	if err != nil {
 		return nil, err
@@ -148,7 +147,6 @@ type connectionConfig struct {
 	ConnectionString   string `json:"value" structs:"value" mapstructure:"value"`
 	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	MaxIdleConnections int    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
-	VerifyConnection   bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }
 
 const pathConfigConnectionHelpSyn = `

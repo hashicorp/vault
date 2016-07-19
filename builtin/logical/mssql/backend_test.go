@@ -45,6 +45,7 @@ func TestBackend_config_connection(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
+	delete(configData, "verify_connection")
 	if !reflect.DeepEqual(configData, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", configData, resp.Data)
 	}
