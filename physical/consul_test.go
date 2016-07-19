@@ -295,13 +295,6 @@ func TestConsul_NotifySealedStateChange(t *testing.T) {
 	}
 }
 
-func TestConsul_checkID(t *testing.T) {
-	c := testConsulBackend(t)
-	if c.checkID() != "vault-sealed-check" {
-		t.Errorf("bad")
-	}
-}
-
 func TestConsul_serviceID(t *testing.T) {
 	passingTests := []struct {
 		name          string
