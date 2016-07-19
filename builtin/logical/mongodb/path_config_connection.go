@@ -81,7 +81,6 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 	// Store it
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
 		URI:              uri,
-		VerifyConnection: verifyConnection,
 	})
 	if err != nil {
 		return nil, err
@@ -101,7 +100,6 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 
 type connectionConfig struct {
 	URI              string `json:"uri" structs:"uri" mapstructure:"uri"`
-	VerifyConnection bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }
 
 const pathConfigConnectionHelpSyn = `
