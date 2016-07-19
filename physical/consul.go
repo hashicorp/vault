@@ -539,7 +539,7 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc a
 
 	// Get the current state of Vault from Consul
 	var currentVaultService *api.CatalogService
-	if services, _, err := catalog.Service("vault", "", nil); err == nil {
+	if services, _, err := catalog.Service(c.serviceName, "", &api.QueryOptions{AllowStale: true}); err == nil {
 		for _, service := range services {
 			if serviceID == service.ServiceID {
 				currentVaultService = service
