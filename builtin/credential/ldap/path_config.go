@@ -8,7 +8,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/fatih/structs"
 	"github.com/go-ldap/ldap"
+	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -71,6 +73,12 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeBool,
 				Description: "Issue a StartTLS command after establishing unencrypted connection (optional)",
 			},
+
+			"tls_min_version": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "tls12",
+				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -111,19 +119,7 @@ func (b *backend) pathConfigRead(
 	}
 
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"url":          cfg.Url,
-			"userdn":       cfg.UserDN,
-			"groupdn":      cfg.GroupDN,
-			"upndomain":    cfg.UPNDomain,
-			"userattr":     cfg.UserAttr,
-			"certificate":  cfg.Certificate,
-			"insecure_tls": cfg.InsecureTLS,
-			"starttls":     cfg.StartTLS,
-			"binddn":       cfg.BindDN,
-			"bindpass":     cfg.BindPassword,
-			"discoverdn":   cfg.DiscoverDN,
-		},
+		Data: structs.New(cfg).Map(),
 	}, nil
 }
 
@@ -159,6 +155,17 @@ func (b *backend) pathConfigWrite(
 	if insecureTLS {
 		cfg.InsecureTLS = insecureTLS
 	}
+	cfg.TLSMinVersion = d.Get("tls_min_version").(string)
+	if cfg.TLSMinVersion == "" {
+		return logical.ErrorResponse("failed to get 'tls_min_version' value"), nil
+	}
+
+	var ok bool
+	_, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
+	if !ok {
+		return logical.ErrorResponse("invalid 'tls_min_version'"), nil
+	}
+
 	startTLS := d.Get("starttls").(bool)
 	if startTLS {
 		cfg.StartTLS = startTLS
@@ -200,23 +207,33 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Url          string
-	UserDN       string
-	GroupDN      string
-	UPNDomain    string
-	UserAttr     string
-	Certificate  string
-	InsecureTLS  bool
-	StartTLS     bool
-	BindDN       string
-	BindPassword string
-	DiscoverDN   bool
+	Url           string `json:"url" structs:"url" mapstructure:"url"`
+	UserDN        string `json:"userdn" structs:"userdn" mapstructure:"userdn"`
+	GroupDN       string `json:"groupdn" structs:"groupdn" mapstructure:"groupdn"`
+	UPNDomain     string `json:"upndomain" structs:"upndomain" mapstructure:"upndomain"`
+	UserAttr      string `json:"userattr" structs:"userattr" mapstructure:"userattr"`
+	Certificate   string `json:"certificate" structs:"certificate" mapstructure:"certificate"`
+	InsecureTLS   bool   `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
+	StartTLS      bool   `json:"starttls" structs:"starttls" mapstructure:"starttls"`
+	BindDN        string `json:"binddn" structs:"binddn" mapstructure:"binddn"`
+	BindPassword  string `json:"bindpass" structs:"bindpass" mapstructure:"bindpass"`
+	DiscoverDN    bool   `json:"discoverdn" structs:"discoverdn" mapstructure:"discoverdn"`
+	TLSMinVersion string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{
 		ServerName: host,
 	}
+
+	if c.TLSMinVersion != "" {
+		tlsMinVersion, ok := tlsutil.TLSLookup[c.TLSMinVersion]
+		if !ok {
+			return nil, fmt.Errorf("invalid 'tls_min_version' in config")
+		}
+		tlsConfig.MinVersion = tlsMinVersion
+	}
+
 	if c.InsecureTLS {
 		tlsConfig.InsecureSkipVerify = true
 	}

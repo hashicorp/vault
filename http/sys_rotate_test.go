@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestSysRotate(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"term": float64(2),
+		"term": json.Number("2"),
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)

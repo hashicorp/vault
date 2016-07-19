@@ -1,9 +1,9 @@
 package http
 
 import (
-	"encoding/json"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -25,8 +25,7 @@ func TestSysRenew(t *testing.T) {
 	var result struct {
 		LeaseId string `json:"lease_id"`
 	}
-	dec := json.NewDecoder(resp.Body)
-	if err := dec.Decode(&result); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(resp.Body, &result); err != nil {
 		t.Fatalf("bad: %s", err)
 	}
 

@@ -20,7 +20,7 @@ type LeaseOptions struct {
 	// IssueTime is the time of issue for the original lease. This is
 	// only available on a Renew operation and has no effect when returning
 	// a response. It can be used to enforce maximum lease periods by
-	// a logical backend. This time will always be in UTC.
+	// a logical backend.
 	IssueTime time.Time `json:"-"`
 }
 
@@ -42,7 +42,7 @@ func (l *LeaseOptions) LeaseTotal() time.Duration {
 func (l *LeaseOptions) ExpirationTime() time.Time {
 	var expireTime time.Time
 	if l.LeaseEnabled() {
-		expireTime = time.Now().UTC().Add(l.LeaseTotal())
+		expireTime = time.Now().Add(l.LeaseTotal())
 	}
 	return expireTime
 }

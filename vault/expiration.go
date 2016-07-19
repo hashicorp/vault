@@ -12,6 +12,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -141,7 +142,7 @@ func (m *ExpirationManager) Restore() error {
 		}
 
 		// Determine the remaining time to expiration
-		expires := le.ExpireTime.Sub(time.Now().UTC())
+		expires := le.ExpireTime.Sub(time.Now())
 		if expires <= 0 {
 			expires = minRevokeDelay
 		}
@@ -334,7 +335,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	le.Data = resp.Data
 	le.Secret = resp.Secret
 	le.ExpireTime = resp.Secret.ExpirationTime()
-	le.LastRenewalTime = time.Now().UTC()
+	le.LastRenewalTime = time.Now()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -395,7 +396,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	// Update the lease entry
 	le.Auth = resp.Auth
 	le.ExpireTime = resp.Auth.ExpirationTime()
-	le.LastRenewalTime = time.Now().UTC()
+	le.LastRenewalTime = time.Now()
 	if err := m.persistEntry(le); err != nil {
 		return nil, err
 	}
@@ -433,7 +434,7 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		Path:        req.Path,
 		Data:        resp.Data,
 		Secret:      resp.Secret,
-		IssueTime:   time.Now().UTC(),
+		IssueTime:   time.Now(),
 		ExpireTime:  resp.Secret.ExpirationTime(),
 	}
 
@@ -466,7 +467,7 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        source,
-		IssueTime:   time.Now().UTC(),
+		IssueTime:   time.Now(),
 		ExpireTime:  auth.ExpirationTime(),
 	}
 
@@ -762,7 +763,7 @@ func (le *leaseEntry) renewable() error {
 	}
 
 	// Determine if the lease is expired
-	if le.ExpireTime.Before(time.Now().UTC()) {
+	if le.ExpireTime.Before(time.Now()) {
 		return fmt.Errorf("lease expired")
 	}
 
@@ -779,5 +780,5 @@ func (le *leaseEntry) renewable() error {
 // decodeLeaseEntry is used to reverse encode and return a new entry
 func decodeLeaseEntry(buf []byte) (*leaseEntry, error) {
 	out := new(leaseEntry)
-	return out, json.Unmarshal(buf, out)
+	return out, jsonutil.DecodeJSON(buf, out)
 }

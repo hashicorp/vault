@@ -186,7 +186,7 @@ func (b *backend) pathRoletagBlacklistUpdate(
 		blEntry = &roleTagBlacklistEntry{}
 	}
 
-	currentTime := time.Now().UTC()
+	currentTime := time.Now()
 
 	// Check if this is a creation of blacklist entry.
 	if blEntry.CreationTime.IsZero() {

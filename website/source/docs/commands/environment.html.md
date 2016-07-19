@@ -47,16 +47,8 @@ The following table describes them:
     <td>Path to an unencrypted PEM-encoded private key matching the client certificate.</td>
   </tr>
   <tr>
-    <td><tt>VAULT_RETRY_MAX</tt></td>
-    <td>The maximum number of retries when a `5xx` error code is encountered. Default is `15`; set to `0` to disable retrying.</td>
-  </tr>
-  <tr>
-    <td><tt>VAULT_RETRY_WAIT_MIN</tt></td>
-    <td>The minimum amount of time to wait between retries when a `5xx` error code is encountered. Default is `1s`.</td>
-  </tr>
-  <tr>
-    <td><tt>VAULT_RETRY_WAIT_MAX</tt></td>
-    <td>The maximum amount of time to wait between retries when a `5xx` error code is encountered. Default is `30s`.</td>
+    <td><tt>VAULT_MAX_RETRIES</tt></td>
+    <td>The maximum number of retries when a `5xx` error code is encountered. Default is `2`, for three total tries; set to `0` or less to disable retrying.</td>
   </tr>
   <tr>
     <td><tt>VAULT_SKIP_VERIFY</tt></td>

@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/tlsutil"
 )
 
 const (
@@ -190,7 +191,19 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 		insecureSkipVerify = true
 	}
 
+	tlsMinVersionStr, ok := conf["tls_min_version"]
+	if !ok {
+		// Set the default value
+		tlsMinVersionStr = "tls12"
+	}
+
+	tlsMinVersion, ok := tlsutil.TLSLookup[tlsMinVersionStr]
+	if !ok {
+		return nil, fmt.Errorf("invalid 'tls_min_version'")
+	}
+
 	tlsClientConfig := &tls.Config{
+		MinVersion:         tlsMinVersion,
 		InsecureSkipVerify: insecureSkipVerify,
 		ServerName:         serverName[0],
 	}
@@ -315,6 +328,12 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 		lock:   lock,
 	}
 	return cl, nil
+}
+
+// HAEnabled indicates whether the HA functionality should be exposed.
+// Currently always returns true.
+func (c *ConsulBackend) HAEnabled() bool {
+	return true
 }
 
 // DetectHostAddr is used to detect the host address by asking the Consul agent

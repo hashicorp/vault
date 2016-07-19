@@ -6,11 +6,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -81,8 +81,7 @@ func stripPrefix(prefix, path string) (string, bool) {
 }
 
 func parseRequest(r *http.Request, out interface{}) error {
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(out)
+	err := jsonutil.DecodeJSONFromReader(r.Body, out)
 	if err != nil && err != io.EOF {
 		return fmt.Errorf("Failed to parse JSON input: %s", err)
 	}
@@ -167,23 +166,14 @@ func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, er
 	}
 
 	// If it has an allowed suffix parse as a duration string
-	if strings.HasSuffix(wrapTTL, "s") || strings.HasSuffix(wrapTTL, "m") || strings.HasSuffix(wrapTTL, "h") {
-		dur, err := time.ParseDuration(wrapTTL)
-		if err != nil {
-			return req, err
-		}
-		req.WrapTTL = dur
-	} else {
-		// Parse as a straight number of seconds
-		seconds, err := strconv.ParseInt(wrapTTL, 10, 64)
-		if err != nil {
-			return req, err
-		}
-		req.WrapTTL = time.Duration(seconds) * time.Second
+	dur, err := duration.ParseDurationSecond(wrapTTL)
+	if err != nil {
+		return req, err
 	}
-	if int64(req.WrapTTL) < 0 {
+	if int64(dur) < 0 {
 		return req, fmt.Errorf("requested wrap ttl cannot be negative")
 	}
+	req.WrapTTL = dur
 
 	return req, nil
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
@@ -141,7 +142,7 @@ func (c *Core) loadAudits() error {
 	defer c.auditLock.Unlock()
 
 	if raw != nil {
-		if err := json.Unmarshal(raw.Value, auditTable); err != nil {
+		if err := jsonutil.DecodeJSON(raw.Value, auditTable); err != nil {
 			c.logger.Printf("[ERR] core: failed to decode audit table: %v", err)
 			return errLoadAuditFailed
 		}

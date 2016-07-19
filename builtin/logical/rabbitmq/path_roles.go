@@ -1,10 +1,10 @@
 package rabbitmq
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -122,8 +122,7 @@ func (b *backend) pathRoleUpdate(req *logical.Request, d *framework.FieldData) (
 
 	var vhosts map[string]vhostPermission
 	if len(rawVHosts) > 0 {
-		err := json.Unmarshal([]byte(rawVHosts), &vhosts)
-		if err != nil {
+		if err := jsonutil.DecodeJSON([]byte(rawVHosts), &vhosts); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to unmarshal vhosts: %s", err)), nil
 		}
 	}

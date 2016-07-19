@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -21,8 +22,8 @@ func TestSysAuth(t *testing.T) {
 			"description": "token based credentials",
 			"type":        "token",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -53,16 +54,16 @@ func TestSysEnableAuth(t *testing.T) {
 			"description": "foo",
 			"type":        "noop",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 		"token/": map[string]interface{}{
 			"description": "token based credentials",
 			"type":        "token",
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 		},
 	}
@@ -94,8 +95,8 @@ func TestSysDisableAuth(t *testing.T) {
 	expected := map[string]interface{}{
 		"token/": map[string]interface{}{
 			"config": map[string]interface{}{
-				"default_lease_ttl": float64(0),
-				"max_lease_ttl":     float64(0),
+				"default_lease_ttl": json.Number("0"),
+				"max_lease_ttl":     json.Number("0"),
 			},
 			"description": "token based credentials",
 			"type":        "token",

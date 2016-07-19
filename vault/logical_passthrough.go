@@ -3,10 +3,10 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
-	"time"
 
+	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -108,7 +108,8 @@ func (b *PassthroughBackend) handleRead(
 
 	// Decode the data
 	var rawData map[string]interface{}
-	if err := json.Unmarshal(out.Value, &rawData); err != nil {
+
+	if err := jsonutil.DecodeJSON(out.Value, &rawData); err != nil {
 		return nil, fmt.Errorf("json decoding failed: %v", err)
 	}
 
@@ -132,19 +133,9 @@ func (b *PassthroughBackend) handleRead(
 	}
 	ttlDuration := b.System().DefaultLeaseTTL()
 	if len(ttl) != 0 {
-
-		// Parse as a duration string if it has an appropriate suffix
-		if strings.HasSuffix(ttl, "s") || strings.HasSuffix(ttl, "m") || strings.HasSuffix(ttl, "h") {
-			dur, err := time.ParseDuration(ttl)
-			if err == nil {
-				ttlDuration = dur
-			}
-		} else {
-			// Parse as a straight number of seconds
-			seconds, err := strconv.ParseInt(ttl, 10, 64)
-			if err == nil {
-				ttlDuration = time.Duration(seconds) * time.Second
-			}
+		dur, err := duration.ParseDurationSecond(ttl)
+		if err == nil {
+			ttlDuration = dur
 		}
 
 		if b.generateLeases {

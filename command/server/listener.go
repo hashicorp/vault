@@ -10,6 +10,8 @@ import (
 	"net"
 	"strconv"
 	"sync"
+
+	"github.com/hashicorp/vault/helper/tlsutil"
 )
 
 // ListenerFactory is the factory function to create a listener.
@@ -19,13 +21,6 @@ type ListenerFactory func(map[string]string, io.Writer) (net.Listener, map[strin
 var BuiltinListeners = map[string]ListenerFactory{
 	"tcp":   tcpListenerFactory,
 	"atlas": atlasListenerFactory,
-}
-
-// tlsLookup maps the tls_min_version configuration to the internal value
-var tlsLookup = map[string]uint16{
-	"tls10": tls.VersionTLS10,
-	"tls11": tls.VersionTLS11,
-	"tls12": tls.VersionTLS12,
 }
 
 // NewListener creates a new listener of the given type with the given
@@ -81,7 +76,7 @@ func listenerWrapTLS(
 	tlsConf := &tls.Config{}
 	tlsConf.GetCertificate = cg.getCertificate
 	tlsConf.NextProtos = []string{"http/1.1"}
-	tlsConf.MinVersion, ok = tlsLookup[tlsvers]
+	tlsConf.MinVersion, ok = tlsutil.TLSLookup[tlsvers]
 	if !ok {
 		return nil, nil, nil, fmt.Errorf("'tls_min_version' value %s not supported, please specify one of [tls10,tls11,tls12]", tlsvers)
 	}

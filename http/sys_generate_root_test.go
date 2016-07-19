@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -27,8 +28,8 @@ func TestSysGenerateRootAttempt_Status(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"started":            false,
-		"progress":           float64(0),
-		"required":           float64(1),
+		"progress":           json.Number("0"),
+		"required":           json.Number("1"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -61,8 +62,8 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"started":            true,
-		"progress":           float64(0),
-		"required":           float64(1),
+		"progress":           json.Number("0"),
+		"required":           json.Number("1"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -82,8 +83,8 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
 		"started":            true,
-		"progress":           float64(0),
-		"required":           float64(1),
+		"progress":           json.Number("0"),
+		"required":           json.Number("1"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -115,8 +116,8 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"started":            true,
-		"progress":           float64(0),
-		"required":           float64(1),
+		"progress":           json.Number("0"),
+		"required":           json.Number("1"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "816938b8a29146fbe245dd29e7cbaf8e011db793",
@@ -151,8 +152,8 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"started":            true,
-		"progress":           float64(0),
-		"required":           float64(1),
+		"progress":           json.Number("0"),
+		"required":           json.Number("1"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -178,8 +179,8 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
 		"started":            false,
-		"progress":           float64(0),
-		"required":           float64(1),
+		"progress":           json.Number("0"),
+		"required":           json.Number("1"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -265,8 +266,8 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 	expected := map[string]interface{}{
 		"complete":        true,
 		"nonce":           rootGenerationStatus["nonce"].(string),
-		"progress":        float64(1),
-		"required":        float64(1),
+		"progress":        json.Number("1"),
+		"required":        json.Number("1"),
 		"started":         true,
 		"pgp_fingerprint": "",
 	}
@@ -296,14 +297,14 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		"id":               newRootToken,
 		"display_name":     "root",
 		"meta":             interface{}(nil),
-		"num_uses":         float64(0),
+		"num_uses":         json.Number("0"),
 		"policies":         []interface{}{"root"},
 		"orphan":           true,
-		"creation_ttl":     float64(0),
-		"ttl":              float64(0),
+		"creation_ttl":     json.Number("0"),
+		"ttl":              json.Number("0"),
 		"path":             "auth/token/root",
 		"role":             "",
-		"explicit_max_ttl": float64(0),
+		"explicit_max_ttl": json.Number("0"),
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
@@ -347,8 +348,8 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 	expected := map[string]interface{}{
 		"complete":        true,
 		"nonce":           rootGenerationStatus["nonce"].(string),
-		"progress":        float64(1),
-		"required":        float64(1),
+		"progress":        json.Number("1"),
+		"required":        json.Number("1"),
 		"started":         true,
 		"pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
 	}
@@ -379,14 +380,14 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		"id":               newRootToken,
 		"display_name":     "root",
 		"meta":             interface{}(nil),
-		"num_uses":         float64(0),
+		"num_uses":         json.Number("0"),
 		"policies":         []interface{}{"root"},
 		"orphan":           true,
-		"creation_ttl":     float64(0),
-		"ttl":              float64(0),
+		"creation_ttl":     json.Number("0"),
+		"ttl":              json.Number("0"),
 		"path":             "auth/token/root",
 		"role":             "",
-		"explicit_max_ttl": float64(0),
+		"explicit_max_ttl": json.Number("0"),
 	}
 
 	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")

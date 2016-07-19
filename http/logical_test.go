@@ -2,10 +2,12 @@ package http
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"log"
 	"os"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -39,7 +41,7 @@ func TestLogical(t *testing.T) {
 	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"renewable":      false,
-		"lease_duration": float64((30 * 24 * time.Hour) / time.Second),
+		"lease_duration": json.Number(strconv.Itoa(int((30 * 24 * time.Hour) / time.Second))),
 		"data": map[string]interface{}{
 			"data": "bar",
 		},
@@ -130,19 +132,19 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"renewable":      false,
-		"lease_duration": float64(0),
+		"lease_duration": json.Number("0"),
 		"data": map[string]interface{}{
 			"meta":             nil,
-			"num_uses":         float64(0),
+			"num_uses":         json.Number("0"),
 			"path":             "auth/token/root",
 			"policies":         []interface{}{"root"},
 			"display_name":     "root",
 			"orphan":           true,
 			"id":               root,
-			"ttl":              float64(0),
-			"creation_ttl":     float64(0),
+			"ttl":              json.Number("0"),
+			"creation_ttl":     json.Number("0"),
 			"role":             "",
-			"explicit_max_ttl": float64(0),
+			"explicit_max_ttl": json.Number("0"),
 		},
 		"warnings":  nilWarnings,
 		"wrap_info": nil,
@@ -181,13 +183,13 @@ func TestLogical_CreateToken(t *testing.T) {
 	expected := map[string]interface{}{
 		"lease_id":       "",
 		"renewable":      false,
-		"lease_duration": float64(0),
+		"lease_duration": json.Number("0"),
 		"data":           nil,
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
 			"policies":       []interface{}{"root"},
 			"metadata":       nil,
-			"lease_duration": float64(0),
+			"lease_duration": json.Number("0"),
 			"renewable":      true,
 		},
 		"warnings": nilWarnings,

@@ -14,7 +14,7 @@ func TestLeaseExtend(t *testing.T) {
 		MaxLeaseTTLVal:     30 * time.Hour,
 	}
 
-	now := time.Now().UTC().Round(time.Hour)
+	now := time.Now().Round(time.Hour)
 
 	cases := map[string]struct {
 		BackendDefault time.Duration

@@ -110,7 +110,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 func (b *backend) periodicFunc(req *logical.Request) error {
 	// Run the tidy operations for the first time. Then run it when current
 	// time matches the nextTidyTime.
-	if b.nextTidyTime.IsZero() || !time.Now().UTC().Before(b.nextTidyTime) {
+	if b.nextTidyTime.IsZero() || !time.Now().Before(b.nextTidyTime) {
 		// safety_buffer defaults to 180 days for roletag blacklist
 		safety_buffer := 15552000
 		tidyBlacklistConfigEntry, err := b.lockedConfigTidyRoleTags(req.Storage)
@@ -154,7 +154,7 @@ func (b *backend) periodicFunc(req *logical.Request) error {
 		}
 
 		// Update the time at which to run the tidy functions again.
-		b.nextTidyTime = time.Now().UTC().Add(b.tidyCooldownPeriod)
+		b.nextTidyTime = time.Now().Add(b.tidyCooldownPeriod)
 	}
 	return nil
 }

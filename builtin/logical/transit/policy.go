@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/kdf"
 	"github.com/hashicorp/vault/logical"
 )
@@ -44,8 +45,7 @@ func (kem KeyEntryMap) MarshalJSON() ([]byte, error) {
 // MarshalJSON implements JSON unmarshaling
 func (kem KeyEntryMap) UnmarshalJSON(data []byte) error {
 	intermediate := map[string]KeyEntry{}
-	err := json.Unmarshal(data, &intermediate)
-	if err != nil {
+	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
 		return err
 	}
 	for k, v := range intermediate {
@@ -106,7 +106,7 @@ func (p *Policy) loadArchive(storage logical.Storage) (*ArchivedKeys, error) {
 		return archive, nil
 	}
 
-	if err := json.Unmarshal(raw.Value, archive); err != nil {
+	if err := jsonutil.DecodeJSON(raw.Value, archive); err != nil {
 		return nil, err
 	}
 
@@ -345,7 +345,7 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 	// Derive the key that should be used
 	key, err := p.DeriveKey(context, p.LatestVersion)
 	if err != nil {
-		return "", certutil.InternalError{Err: err.Error()}
+		return "", err
 	}
 
 	// Guard against a potentially invalid cipher-mode

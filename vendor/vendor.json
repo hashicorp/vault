@@ -665,6 +665,12 @@
 			"revisionTime": "2016-06-16T02:49:54Z"
 		},
 		{
+			"checksumSHA1": "8Lm8nsMCFz4+gr9EvQLqK8+w+Ks=",
+			"path": "github.com/sethgrid/pester",
+			"revision": "8053687f99650573b28fb75cddf3f295082704d7",
+			"revisionTime": "2016-04-29T17:20:22Z"
+		},
+		{
 			"checksumSHA1": "UADS3X1kxl+/qqeGcmTo0rBiXlQ=",
 			"path": "github.com/ugorji/go/codec",
 			"revision": "b94837a2404ab90efe9289e77a70694c355739cb",

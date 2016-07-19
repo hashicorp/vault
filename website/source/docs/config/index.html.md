@@ -155,7 +155,7 @@ to help you, but may refer you to the backend author.
     This backend supports HA. This is a community-supported backend.
 
   * `dynamodb` - Store data in a [DynamoDB](https://aws.amazon.com/dynamodb/) table.
-    This backend supports HA. This is a community-supported backend.
+    This backend optionally supports HA. This is a community-supported backend.
 
   * `s3` - Store data within an S3 bucket [S3](https://aws.amazon.com/s3/).
     This backend does not support HA. This is a community-supported backend.
@@ -222,6 +222,9 @@ For Consul, the following options are supported:
 
   * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
     will be disabled for Consul communication.  Defaults to false.
+
+  * `tls_min_version` (optional) - Minimum TLS version to use. Accepted values
+    are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.
 
 The following settings should be set according to your [Consul encryption
 settings](https://www.consul.io/docs/agent/encryption.html):
@@ -414,32 +417,72 @@ ACL check.
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
+The DynamoDB optionally supports HA. Because Dynamo does not support session
+lifetimes on its locks, a Vault node that has failed, rather than shut down in
+an orderly fashion, will require manual cleanup rather than failing over
+automatically. See the documentation of `recovery_mode` to better understand
+this process. To enable HA, set the `ha_enabled` option.
+
 The DynamoDB backend has the following options:
 
-  * `table` (optional) - The name of the DynamoDB table to store data in. The default table name is `vault-dynamodb-backend`. This option can also be provided via the environment variable `AWS_DYNAMODB_TABLE`. If the specified table does not yet exist, it will be created during initialization.
+  * `table` (optional) - The name of the DynamoDB table to store data in. The
+    default table name is `vault-dynamodb-backend`. This option can also be
+    provided via the environment variable `AWS_DYNAMODB_TABLE`. If the
+    specified table does not yet exist, it will be created during
+    initialization.
 
-  * `read_capacity` (optional) - The read capacity to provision when creating the DynamoDB table. This is the maximum number of reads consumed per second on the table. The default value is 5. This option can also be provided via the environment variable `AWS_DYNAMODB_READ_CAPACITY`.
+  * `read_capacity` (optional) - The read capacity to provision when creating
+    the DynamoDB table. This is the maximum number of reads consumed per second
+    on the table. The default value is 5. This option can also be provided via
+    the environment variable `AWS_DYNAMODB_READ_CAPACITY`.
 
-  * `write_capacity` (optional) - The write capacity to provision when creating the DynamoDB table. This is the maximum number of writes performed per second on the table. The default value is 5. This option can also be provided via the environment variable `AWS_DYNAMODB_WRITE_CAPACITY`.
+  * `write_capacity` (optional) - The write capacity to provision when creating
+    the DynamoDB table. This is the maximum number of writes performed per
+    second on the table. The default value is 5. This option can also be
+    provided via the environment variable `AWS_DYNAMODB_WRITE_CAPACITY`.
 
-  * `access_key` - (required) The AWS access key. It must be provided, but it can also be sourced from the `AWS_ACCESS_KEY_ID` environment variable.
+  * `access_key` - (required) The AWS access key. It must be provided, but it
+    can also be sourced from the `AWS_ACCESS_KEY_ID` environment variable.
 
-  * `secret_key` - (required) The AWS secret key. It must be provided, but it can also be sourced from the `AWS_SECRET_ACCESS_KEY` environment variable.
+  * `secret_key` - (required) The AWS secret key. It must be provided, but it
+    can also be sourced from the `AWS_SECRET_ACCESS_KEY` environment variable.
 
-  * `session_token` - (optional) The AWS session token. It can also be sourced from the `AWS_SESSION_TOKEN` environment variable.
+  * `session_token` - (optional) The AWS session token. It can also be sourced
+    from the `AWS_SESSION_TOKEN` environment variable.
 
-  * `endpoint` - (optional) An alternative (AWS compatible) DynamoDB endpoint to use. It can also be sourced from the `AWS_DYNAMODB_ENDPOINT` environment variable.
+  * `endpoint` - (optional) An alternative (AWS compatible) DynamoDB endpoint
+    to use. It can also be sourced from the `AWS_DYNAMODB_ENDPOINT` environment
+    variable.
 
-  * `region` (optional) - The AWS region. It can be sourced from the `AWS_DEFAULT_REGION` environment variable and will default to `us-east-1` if not specified.
+  * `region` (optional) - The AWS region. It can be sourced from the
+    `AWS_DEFAULT_REGION` environment variable and will default to `us-east-1`
+    if not specified.
 
-  * `recovery_mode` (optional) - When the Vault leader crashes or is killed without being able to shut down properly, no other node can become the new leader because the DynamoDB table still holds the old leader's lock record. To recover from this situation, one can start a single Vault node with this option set to `1` and the node will remove the old lock from DynamoDB. It is important that only one node is running in recovery mode! After this node has become the leader, other nodes can be started with regular configuration.
-    This option can also be provided via the environment variable `RECOVERY_MODE`.
+  * `ha_enabled` (optional) - Setting this to `"1"`, `"t"`, or `"true"` will
+    enable HA mode. Please ensure you have read the documentation for the
+    `recovery_mode` option before enabling this. This option can also be
+    provided via the environment variable `DYNAMODB_HA_ENABLED`. If you are
+    upgrading from a version of Vault where HA support was enabled by default,
+    it is _very important_ that you set this parameter _before_ upgrading!
 
-For more information about the read/write capacity of DynamoDB tables, see the [official AWS DynamoDB docs](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#ProvisionedThroughput).
+  * `recovery_mode` (optional) - When the Vault leader crashes or is killed
+    without being able to shut down properly, no other node can become the new
+    leader because the DynamoDB table still holds the old leader's lock record.
+    To recover from this situation, one can start a single Vault node with this
+    option set to `"1"`, `"t"`, or `"true"` and the node will remove the old
+    lock from DynamoDB. It is important that only one node is running in
+    recovery mode! After this node has become the leader, other nodes can be
+    started with regular configuration. This option can also be provided via
+    the environment variable `RECOVERY_MODE`.
+
+For more information about the read/write capacity of DynamoDB tables, see the
+[official AWS DynamoDB
+docs](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/WorkingWithTables.html#ProvisionedThroughput).
 If you are running your Vault server on an EC2 instance, you can also make use
-of the EC2 instance profile service to provide the credentials Vault will use to
-make DynamoDB API calls. Leaving the `access_key` and `secret_key` fields empty
-will cause Vault to attempt to retrieve credentials from the metadata service.
+of the EC2 instance profile service to provide the credentials Vault will use
+to make DynamoDB API calls. Leaving the `access_key` and `secret_key` fields
+empty will cause Vault to attempt to retrieve credentials from the metadata
+service.
 
 #### Backend Reference: S3 (Community-Supported)
 

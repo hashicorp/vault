@@ -2,8 +2,9 @@ package api
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 const (
@@ -113,9 +114,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 
 	wrappedSecret := new(Secret)
 	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	dec := json.NewDecoder(buf)
-	dec.UseNumber()
-	if err := dec.Decode(wrappedSecret); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
 		return nil, fmt.Errorf("error unmarshaling wrapped secret: %s", err)
 	}
 

@@ -1,9 +1,10 @@
 package api
 
 import (
-	"encoding/json"
 	"io"
 	"time"
+
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 // Secret is the structure returned for every secret within Vault.
@@ -56,9 +57,7 @@ type SecretAuth struct {
 func ParseSecret(r io.Reader) (*Secret, error) {
 	// First decode the JSON into a map[string]interface{}
 	var secret Secret
-	dec := json.NewDecoder(r)
-	dec.UseNumber()
-	if err := dec.Decode(&secret); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(r, &secret); err != nil {
 		return nil, err
 	}
 

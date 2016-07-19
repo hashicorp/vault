@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -702,7 +703,7 @@ func (b *SystemBackend) handleMount(
 	case "":
 	case "system":
 	default:
-		tmpDef, err := time.ParseDuration(apiConfig.DefaultLeaseTTL)
+		tmpDef, err := duration.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
@@ -715,7 +716,7 @@ func (b *SystemBackend) handleMount(
 	case "":
 	case "system":
 	default:
-		tmpMax, err := time.ParseDuration(apiConfig.MaxLeaseTTL)
+		tmpMax, err := duration.ParseDurationSecond(apiConfig.MaxLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
@@ -927,7 +928,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			tmpDef := time.Duration(0)
 			newDefault = &tmpDef
 		default:
-			tmpDef, err := time.ParseDuration(defTTL)
+			tmpDef, err := duration.ParseDurationSecond(defTTL)
 			if err != nil {
 				return handleError(err)
 			}
@@ -941,7 +942,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			tmpMax := time.Duration(0)
 			newMax = &tmpMax
 		default:
-			tmpMax, err := time.ParseDuration(maxTTL)
+			tmpMax, err := duration.ParseDurationSecond(maxTTL)
 			if err != nil {
 				return handleError(err)
 			}

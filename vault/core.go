@@ -239,7 +239,7 @@ type CoreConfig struct {
 
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
-	if conf.HAPhysical != nil && conf.AdvertiseAddr == "" {
+	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() && conf.AdvertiseAddr == "" {
 		return nil, fmt.Errorf("missing advertisement address")
 	}
 
@@ -304,7 +304,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		ha:              conf.HAPhysical,
 		advertiseAddr:   conf.AdvertiseAddr,
 		physical:        conf.Physical,
 		seal:            conf.Seal,
@@ -316,6 +315,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		defaultLeaseTTL: conf.DefaultLeaseTTL,
 		maxLeaseTTL:     conf.MaxLeaseTTL,
 		cachingDisabled: conf.DisableCache,
+	}
+
+	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
+		c.ha = conf.HAPhysical
 	}
 
 	// Setup the backends
@@ -1061,10 +1064,15 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		}
 		c.logger.Printf("[INFO] core: acquired lock, enabling active operation")
 
+		// This is used later to log a metrics event; this can be helpful to
+		// detect flapping
+		activeTime := time.Now()
+
 		// Advertise ourself as leader
 		if err := c.advertiseLeader(uuid, leaderLostCh); err != nil {
 			c.logger.Printf("[ERR] core: leader advertisement setup failed: %v", err)
 			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
 		}
 
@@ -1080,6 +1088,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		if err != nil {
 			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
 		}
 
@@ -1094,6 +1103,8 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 			c.logger.Printf("[WARN] core: stepping down from active operation to standby")
 			manualStepDown = true
 		}
+
+		metrics.MeasureSince([]string{"core", "leadership_lost"}, activeTime)
 
 		// Clear ourself as leader
 		if err := c.clearLeader(uuid); err != nil {

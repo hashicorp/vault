@@ -27,7 +27,7 @@ variable "ami" {
 
 variable "availability-zones" {
     default = "us-east-1a,us-east-1b"
-    description = "Availabilizy zones for launcing the Vault instances"
+    description = "Availability zones for launching the Vault instances"
 }
 
 variable "elb-health-check" {

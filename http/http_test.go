@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
 func testHttpGet(t *testing.T, token string, addr string) *http.Response {
@@ -93,8 +94,7 @@ func testResponseStatus(t *testing.T, resp *http.Response, code int) {
 func testResponseBody(t *testing.T, resp *http.Response, out interface{}) {
 	defer resp.Body.Close()
 
-	dec := json.NewDecoder(resp.Body)
-	if err := dec.Decode(out); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(resp.Body, out); err != nil {
 		t.Fatalf("err: %s", err)
 	}
 }

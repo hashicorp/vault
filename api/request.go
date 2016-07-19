@@ -3,11 +3,9 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
+	"net/http"
 	"net/url"
-
-	"github.com/hashicorp/go-retryablehttp"
 )
 
 // Request is a raw request configuration structure used to initiate
@@ -45,23 +43,14 @@ func (r *Request) ResetJSONBody() error {
 	return r.SetJSONBody(r.Obj)
 }
 
-// ToHTTP turns this request into a *retryablehttp.Request
-func (r *Request) ToHTTP() (*retryablehttp.Request, error) {
+// ToHTTP turns this request into a valid *http.Request for use with the
+// net/http package.
+func (r *Request) ToHTTP() (*http.Request, error) {
 	// Encode the query parameters
 	r.URL.RawQuery = r.Params.Encode()
 
-	// Create the HTTP request; retryable needs a ReadSeeker
-	body := bytes.NewBuffer(nil)
-	if r.Body != nil {
-		n, err := body.ReadFrom(r.Body)
-		if err != nil {
-			return nil, err
-		}
-		if n != r.BodySize {
-			return nil, fmt.Errorf("Could not read full body size from Request")
-		}
-	}
-	req, err := retryablehttp.NewRequest(r.Method, r.URL.RequestURI(), bytes.NewReader(body.Bytes()))
+	// Create the HTTP request
+	req, err := http.NewRequest(r.Method, r.URL.RequestURI(), r.Body)
 	if err != nil {
 		return nil, err
 	}

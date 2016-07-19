@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"testing"
@@ -23,10 +24,10 @@ func TestSysRekeyInit_Status(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"started":          false,
-		"t":                float64(0),
-		"n":                float64(0),
-		"progress":         float64(0),
-		"required":         float64(1),
+		"t":                json.Number("0"),
+		"n":                json.Number("0"),
+		"progress":         json.Number("0"),
+		"required":         json.Number("1"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
@@ -53,10 +54,10 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"started":          true,
-		"t":                float64(3),
-		"n":                float64(5),
-		"progress":         float64(0),
-		"required":         float64(1),
+		"t":                json.Number("3"),
+		"n":                json.Number("5"),
+		"progress":         json.Number("0"),
+		"required":         json.Number("1"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 	}
@@ -75,10 +76,10 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
 		"started":          true,
-		"t":                float64(3),
-		"n":                float64(5),
-		"progress":         float64(0),
-		"required":         float64(1),
+		"t":                json.Number("3"),
+		"n":                json.Number("5"),
+		"progress":         json.Number("0"),
+		"required":         json.Number("1"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 	}
@@ -119,10 +120,10 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"started":          false,
-		"t":                float64(0),
-		"n":                float64(0),
-		"progress":         float64(0),
-		"required":         float64(1),
+		"t":                json.Number("0"),
+		"n":                json.Number("0"),
+		"progress":         json.Number("0"),
+		"required":         json.Number("1"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
