@@ -62,6 +62,7 @@ BUG FIXES:
    during renewal [GH-1542]
  * core: Fix regression causing status codes to be `400` in most non-5xx error
    cases [GH-1553]
+ * core: Fix panic that could occur during a leadership transition [GH-1627]
  * secret/postgresql: Handle revoking roles that have privileges on sequences
    [GH-1573]
  * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
