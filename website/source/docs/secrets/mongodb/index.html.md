@@ -209,8 +209,7 @@ applications are restricted in the credentials they are allowed to read.
       "renewable": false,
       "lease_duration": 0,
       "data": {
-        "uri": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true",
-        "verify_connection": true
+        "uri": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
       },
       "wrap_info": null,
       "warnings": null,
@@ -257,6 +256,46 @@ applications are restricted in the credentials they are allowed to read.
   <dt>Returns</dt>
   <dd>
     A `204` response code.
+  </dd>
+</dl>
+
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Queries the lease configuration.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/mongodb/config/lease`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": {
+        "max_ttl": 60,
+        "ttl": 60
+      },
+      "wrap_info": null,
+      "warnings": null,
+      "auth": null
+    }
+    ```
+
   </dd>
 </dl>
 
