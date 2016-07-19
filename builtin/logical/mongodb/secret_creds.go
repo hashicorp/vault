@@ -51,6 +51,9 @@ func (b *backend) secretCredsRevoke(req *logical.Request, d *framework.FieldData
 		return nil, fmt.Errorf("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("username internal data is not a string")
+	}
 
 	// Get the db from the internal data
 	dbRaw, ok := req.Secret.InternalData["db"]
@@ -58,6 +61,9 @@ func (b *backend) secretCredsRevoke(req *logical.Request, d *framework.FieldData
 		return nil, fmt.Errorf("secret is missing db internal data")
 	}
 	db, ok := dbRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("db internal data is not a string")
+	}
 
 	// Get our connection
 	session, err := b.Session(req.Storage)
