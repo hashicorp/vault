@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/vault/api"
@@ -135,10 +136,10 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		if s.LeaseID != "" {
 			input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
 			input = append(input, fmt.Sprintf(
-				"lease_duration %s %d", config.Delim, s.LeaseDuration))
+				"lease_duration %s %s", config.Delim, (time.Second*time.Duration(s.LeaseDuration)).String()))
 		} else {
 			input = append(input, fmt.Sprintf(
-				"refresh_interval %s %d", config.Delim, s.LeaseDuration))
+				"refresh_interval %s %s", config.Delim, (time.Second*time.Duration(s.LeaseDuration)).String()))
 		}
 		if s.LeaseID != "" {
 			input = append(input, fmt.Sprintf(
@@ -149,7 +150,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 	if s.Auth != nil {
 		input = append(input, fmt.Sprintf("token %s %s", config.Delim, s.Auth.ClientToken))
 		input = append(input, fmt.Sprintf("token_accessor %s %s", config.Delim, s.Auth.Accessor))
-		input = append(input, fmt.Sprintf("token_duration %s %d", config.Delim, s.Auth.LeaseDuration))
+		input = append(input, fmt.Sprintf("token_duration %s %s", config.Delim, (time.Second*time.Duration(s.Auth.LeaseDuration)).String()))
 		input = append(input, fmt.Sprintf("token_renewable %s %v", config.Delim, s.Auth.Renewable))
 		input = append(input, fmt.Sprintf("token_policies %s %v", config.Delim, s.Auth.Policies))
 		for k, v := range s.Auth.Metadata {
@@ -159,7 +160,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 
 	if s.WrapInfo != nil {
 		input = append(input, fmt.Sprintf("wrapping_token: %s %s", config.Delim, s.WrapInfo.Token))
-		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %d", config.Delim, s.WrapInfo.TTL))
+		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %s", config.Delim, (time.Second*time.Duration(s.WrapInfo.TTL)).String()))
 		input = append(input, fmt.Sprintf("wrapping_token_creation_time: %s %s", config.Delim, s.WrapInfo.CreationTime.String()))
 		if s.WrapInfo.WrappedAccessor != "" {
 			input = append(input, fmt.Sprintf("wrapped_accessor: %s %s", config.Delim, s.WrapInfo.WrappedAccessor))

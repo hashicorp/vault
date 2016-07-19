@@ -77,8 +77,9 @@ func (b *backend) pathVerifyWrite(req *logical.Request, d *framework.FieldData) 
 	// Return username and IP only if there were no problems uptill this point.
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"username": otpEntry.Username,
-			"ip":       otpEntry.IP,
+			"username":  otpEntry.Username,
+			"ip":        otpEntry.IP,
+			"role_name": otpEntry.RoleName,
 		},
 	}, nil
 }

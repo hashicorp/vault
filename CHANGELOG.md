@@ -57,6 +57,8 @@ IMPROVEMENTS:
    in all the sql backends [GH-1515]
  * credential/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
    will have `MinVersion` set to TLS 1.2 by default.
+ * logical/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
+   role name as part of response of `verify` API.
 
 BUG FIXES:
 

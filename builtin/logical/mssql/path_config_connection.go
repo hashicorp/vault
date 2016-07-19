@@ -87,7 +87,6 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
 		ConnectionString:   connString,
 		MaxOpenConnections: maxOpenConns,
-		VerifyConnection:   verifyConnection,
 	})
 	if err != nil {
 		return nil, err
@@ -108,7 +107,6 @@ func (b *backend) pathConnectionWrite(req *logical.Request, data *framework.Fiel
 type connectionConfig struct {
 	ConnectionString   string `json:"connection_string" structs:"connection_string" mapstructure:"connection_string"`
 	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
-	VerifyConnection   bool   `json:"verify_connection" structs:"verify_connection" mapstructure:"verify_connection"`
 }
 
 const pathConfigConnectionHelpSyn = `

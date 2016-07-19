@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
-	"path"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -107,6 +107,7 @@ func TestBackend_config_connection(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
+	delete(configData, "verify_connection")
 	if !reflect.DeepEqual(configData, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", configData, resp.Data)
 	}
@@ -183,7 +184,7 @@ func TestBackend_roleReadOnly(t *testing.T) {
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepCreateRole(t, "web", testRole),
@@ -328,7 +329,6 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 		},
 	}
 }
-
 
 func testAccStepCreateTable(t *testing.T, b logical.Backend, s logical.Storage, name string, connURL string) logicaltest.TestStep {
 	return logicaltest.TestStep{

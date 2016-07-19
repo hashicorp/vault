@@ -11,8 +11,9 @@ import (
 )
 
 type sshOTP struct {
-	Username string `json:"username"`
-	IP       string `json:"ip"`
+	Username string `json:"username" structs:"username" mapstructure:"username"`
+	IP       string `json:"ip" structs:"ip" mapstructure:"ip"`
+	RoleName string `json:"role_name" structs:"role_name" mapstructure:"role_name"`
 }
 
 func pathCredsCreate(b *backend) *framework.Path {
@@ -111,7 +112,11 @@ func (b *backend) pathCredsCreateWrite(
 	var result *logical.Response
 	if role.KeyType == KeyTypeOTP {
 		// Generate an OTP
-		otp, err := b.GenerateOTPCredential(req, username, ip)
+		otp, err := b.GenerateOTPCredential(req, &sshOTP{
+			Username: username,
+			IP:       ip,
+			RoleName: roleName,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +211,7 @@ func (b *backend) GenerateSaltedOTP() (string, string, error) {
 }
 
 // Generates an UUID OTP and creates an entry for the same in storage backend with its salted string.
-func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip string) (string, error) {
+func (b *backend) GenerateOTPCredential(req *logical.Request, sshOTPEntry *sshOTP) (string, error) {
 	otp, otpSalted, err := b.GenerateSaltedOTP()
 	if err != nil {
 		return "", err
@@ -231,10 +236,7 @@ func (b *backend) GenerateOTPCredential(req *logical.Request, username, ip strin
 	}
 
 	// Store an entry for the salt of OTP.
-	newEntry, err := logical.StorageEntryJSON("otp/"+otpSalted, sshOTP{
-		Username: username,
-		IP:       ip,
-	})
+	newEntry, err := logical.StorageEntryJSON("otp/"+otpSalted, sshOTPEntry)
 	if err != nil {
 		return "", err
 	}
