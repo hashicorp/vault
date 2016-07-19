@@ -27,6 +27,10 @@ This name is deprecated.`,
 				Type:        framework.TypeInt,
 				Description: "Maximum number of open connections to database",
 			},
+			"max_idle_connections": &framework.FieldSchema{
+				Type: framework.TypeInt,
+                Description: 'Maximum number of idle connections to the database; a zero uses the value of max_open_connections and a negative value disables idle connections. If larger than max_open_connections it will be reduced to the same size.',
+			},
 			"verify_connection": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
