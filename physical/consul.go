@@ -513,7 +513,7 @@ shutdown:
 // checkID returns the ID used for a Consul Check.  Assume at least a read
 // lock is held.
 func (c *ConsulBackend) checkID() string {
-	return fmt.Sprintf("vault-sealed-check:%s:%d", c.advertiseHost, c.advertisePort)
+	return fmt.Sprintf("%s:vault-sealed-check", c.serviceID())
 }
 
 // serviceID returns the Vault ServiceID for use in Consul.  Assume at least
