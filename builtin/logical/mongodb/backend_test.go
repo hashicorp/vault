@@ -12,7 +12,6 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
 	"github.com/ory-am/dockertest"
-	"reflect"
 	"time"
 )
 
@@ -103,8 +102,8 @@ func TestBackend_config_connection(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	if !reflect.DeepEqual(configData, resp.Data) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v\n", configData, resp.Data)
+	if resp.Data["uri"] != configData["uri"] {
+		t.Fatalf("bad: %#v", resp)
 	}
 }
 
@@ -127,9 +126,9 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, connData, false),
-			testAccStepRole(t),
-			testAccStepReadCreds(t, "web"),
+			testAccStepConfig(connData, false),
+			testAccStepRole(),
+			testAccStepReadCreds("web"),
 		},
 	})
 }
@@ -153,11 +152,11 @@ func TestBackend_roleCrud(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, connData, false),
-			testAccStepRole(t),
-			testAccStepReadRole(t, "web", testDb, testMongoDBRoles),
-			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", "", ""),
+			testAccStepConfig(connData, false),
+			testAccStepRole(),
+			testAccStepReadRole("web", testDb, testMongoDBRoles),
+			testAccStepDeleteRole("web"),
+			testAccStepReadRole("web", "", ""),
 		},
 	})
 }
@@ -181,15 +180,15 @@ func TestBackend_leaseWriteRead(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, connData, false),
-			testAccStepWriteLease(t),
-			testAccStepReadLease(t),
+			testAccStepConfig(connData, false),
+			testAccStepWriteLease(),
+			testAccStepReadLease(),
 		},
 	})
 
 }
 
-func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
+func testAccStepConfig(d map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
@@ -218,7 +217,7 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 	}
 }
 
-func testAccStepRole(t *testing.T) logicaltest.TestStep {
+func testAccStepRole() logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
@@ -229,14 +228,14 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testAccStepDeleteRole(t *testing.T, n string) logicaltest.TestStep {
+func testAccStepDeleteRole(n string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
 		Path:      "roles/" + n,
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepReadCreds(name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -270,7 +269,7 @@ func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadRole(t *testing.T, name, db, mongoDBRoles string) logicaltest.TestStep {
+func testAccStepReadRole(name, db, mongoDBRoles string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
@@ -303,7 +302,7 @@ func testAccStepReadRole(t *testing.T, name, db, mongoDBRoles string) logicaltes
 	}
 }
 
-func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
+func testAccStepWriteLease() logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/lease",
@@ -314,12 +313,12 @@ func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadLease(t *testing.T) logicaltest.TestStep {
+func testAccStepReadLease() logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "config/lease",
 		Check: func(resp *logical.Response) error {
-			if resp.Data["ttl"] != "1h5m0s" || resp.Data["max_ttl"] != "24h0m0s" {
+			if resp.Data["ttl"].(float64) != 3900 || resp.Data["max_ttl"].(float64) != 86400 {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
