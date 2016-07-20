@@ -154,6 +154,15 @@ allowed to read.
   <dd>
     <ul>
       <li>
+        <span class="param">max_idle_connections</span>
+        <span class="param-flags">optional</span>
+        Maximum number of idle connections to the database. A zero uses the value of max_open_connections and a negative value disables idle connections. If larger than max_open_connections it will be reduced to be equal.
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
         <span class="param">verify-connection</span>
         <span class="param-flags">optional</span>
 	If set, connection_url is verified by actually connecting to the database.
