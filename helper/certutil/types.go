@@ -437,7 +437,7 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 	}
 
 	tlsConfig := &tls.Config{
-		NextProtos: []string{"http/1.1"},
+		NextProtos: []string{"h2", "http/1.1"},
 		MinVersion: tls.VersionTLS12,
 	}
 

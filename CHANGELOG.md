@@ -56,6 +56,8 @@ IMPROVEMENTS:
    configuration [GH-1581]
  * secret/mssql,mysql,postgresql: Reading of connection settings is supported
    in all the sql backends [GH-1515]
+ * secret/mysql: Use a combination of the role name and token display name in
+   generated user names and allow the length to be controlled [GH-1604]
  * credential/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
    will have `MinVersion` set to TLS 1.2 by default.
  * logical/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
@@ -74,6 +76,7 @@ BUG FIXES:
    [GH-1575]
  * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
    transaction object which could lead to connection exhaustion [GH-1572]
+ * secret/pki: Fix parsing CA bundle containing trailing whitespace [GH-1634]
  * physical/postgres: Remove use of prepared statements as this causes
    connection multiplexing software to break [GH-1548]
  * physical/consul: Multiple Vault nodes on the same machine leading to check ID
