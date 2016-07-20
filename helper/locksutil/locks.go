@@ -12,7 +12,7 @@ import (
 func CreateLocks(p map[string]*sync.RWMutex, count int64) error {
 	// Since the indices of the map entries are based on 2 character
 	// hex values, this utility can only create upto 256 locks.
-	if count > 256 {
+	if count <= 0 || count > 256 {
 		return fmt.Errorf("invalid count: %d", count)
 	}
 
