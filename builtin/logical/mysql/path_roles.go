@@ -74,7 +74,13 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 		return nil, nil
 	}
 
-	var result roleEntry
+	// Set defaults to handle upgrade cases
+	result := roleEntry{
+		UsernameLength:    16,
+		RolenameLength:    4,
+		DisplaynameLength: 4,
+	}
+
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
