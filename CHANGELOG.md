@@ -70,10 +70,14 @@ BUG FIXES:
  * core: Fix panic that could occur during a leadership transition [GH-1627]
  * secret/postgresql: Handle revoking roles that have privileges on sequences
    [GH-1573]
+ * secret/postgresql: Check for existence of role before attempting deletion
+   [GH-1575]
  * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
    transaction object which could lead to connection exhaustion [GH-1572]
  * physical/postgres: Remove use of prepared statements as this causes
    connection multiplexing software to break [GH-1548]
+ * physical/consul: Multiple Vault nodes on the same machine leading to check ID
+   collisions were resulting in incorrect health check responses [GH-1628]
 
 ## 0.6.0 (June 14th, 2016)
 
