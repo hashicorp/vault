@@ -50,10 +50,21 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{}
 	}
 
-	// Generate our username and password. The username will be the name of
-	// the role, truncated to role.displaynameLength, appended to a uuid,
-	// with the entire string truncated to role.usernameLength.
-	displayName := name
+	// Generate our username and password. The username will be a
+	// concatenation of:
+	//
+	// - the role name, truncated to role.rolenameLength (default 4)
+	// - the token display name, truncated to role.displaynameLength (default 4)
+	// - a UUID
+	//
+	// the entire contactenated string is then truncated to role.usernameLength,
+	// which by default is 16 due to limitations in older but still-prevalant
+	// versions of MySQL.
+	roleName := name
+	if len(roleName) > role.RolenameLength {
+		roleName = roleName[:role.RolenameLength]
+	}
+	displayName := req.DisplayName
 	if len(displayName) > role.DisplaynameLength {
 		displayName = displayName[:role.DisplaynameLength]
 	}
@@ -61,7 +72,7 @@ func (b *backend) pathRoleCreateRead(
 	if err != nil {
 		return nil, err
 	}
-	username := fmt.Sprintf("%s-%s", displayName, userUUID)
+	username := fmt.Sprintf("%s-%s-%s", roleName, displayName, userUUID)
 	if len(username) > role.UsernameLength {
 		username = username[:role.UsernameLength]
 	}

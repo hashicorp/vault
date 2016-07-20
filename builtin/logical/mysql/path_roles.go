@@ -41,10 +41,16 @@ func pathRoles(b *backend) *framework.Path {
 				Default:     16,
 			},
 
+			"rolename_length": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "number of characters to truncate the rolename portion of generated mysql usernames to (default 4)",
+				Default:     4,
+			},
+
 			"displayname_length": &framework.FieldSchema{
 				Type:        framework.TypeInt,
-				Description: "number of characters to truncate the rolename portion of generated mysql usernames to (default 10)",
-				Default:     10,
+				Description: "number of characters to truncate the displayname portion of generated mysql usernames to (default 4)",
+				Default:     4,
 			},
 		},
 
@@ -118,6 +124,7 @@ func (b *backend) pathRoleCreate(
 	name := data.Get("name").(string)
 	sql := data.Get("sql").(string)
 	username_length := data.Get("username_length").(int)
+	rolename_length := data.Get("rolename_length").(int)
 	displayname_length := data.Get("displayname_length").(int)
 
 	// Get our connection
@@ -144,6 +151,7 @@ func (b *backend) pathRoleCreate(
 		SQL:               sql,
 		UsernameLength:    username_length,
 		DisplaynameLength: displayname_length,
+		RolenameLength:    rolename_length,
 	})
 	if err != nil {
 		return nil, err
@@ -158,6 +166,7 @@ type roleEntry struct {
 	SQL               string `json:"sql"`
 	UsernameLength    int    `json:"username_length"`
 	DisplaynameLength int    `json:"displayname_length"`
+	RolenameLength    int    `json:"rolename_length"`
 }
 
 const pathRoleHelpSyn = `
@@ -184,15 +193,23 @@ Example of a decent SQL query to use:
 Note the above user would be able to access anything in db1. Please see the MySQL
 manual on the GRANT command to learn how to do more fine grained access.
 
-The "displayname_length" parameter determines how many characters of the
-role name will be used in creating the generated mysql username; the
-default is 10.  Note that mysql versions prior to 5.8 have a 16 character
-total limit on usernames.
+The "rolename_length" parameter determines how many characters of the role name
+will be used in creating the generated mysql username; the default is 4.
+
+The "displayname_length" parameter determines how many characters of the token
+display name will be used in creating the generated mysql username; the default
+is 4.
 
 The "username_length" parameter determines how many total characters the
-generated username (including both the displayname and the uuid portion) will
-be truncated to.  Versions of MySQL prior to 5.7.8 are limited to 16
-characters total (see http://dev.mysql.com/doc/refman/5.7/en/user-names.html)
-so that is the default; for versions >=5.7.8 it is safe to increase this
-to 32.
+generated username (including the role name, token display name and the uuid
+portion) will be truncated to.  Versions of MySQL prior to 5.7.8 are limited to
+16 characters total (see
+http://dev.mysql.com/doc/refman/5.7/en/user-names.html) so that is the default;
+for versions >=5.7.8 it is safe to increase this to 32.
+
+For best readability in MySQL process lists, we recommend using MySQL 5.7.8 or
+later, setting "username_length" to 32 and setting both "rolename_length" and
+"displayname_length" to 8.  However due the the prevalence of older versions of
+MySQL in general deployment, the defaults are currently tuned for a
+username_length of 16.
 `

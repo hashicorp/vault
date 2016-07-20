@@ -245,18 +245,25 @@ the default on versions prior to that.
         values will be substituted.
       </li>
       <li>
-        <span class="param">displayname_length</span>
+        <span class="param">rolename_length</span>
         <span class="param-flags">optional</span>
         Determines how many characters from the role name will be used
         to form the mysql username interpolated into the '{{name}}' field
-        of the sql parameter.
+        of the sql parameter.  The default is 4.
+      </li>
+      <li>
+        <span class="param">displayname_length</span>
+        <span class="param-flags">optional</span>
+        Determines how many characters from the token display name will be used
+        to form the mysql username interpolated into the '{{name}}' field
+        of the sql parameter.  The default is 4.
       </li>
       <li>
         <span class="param">username_length</span>
         <span class="param-flags">optional</span>
         Determines the maximum total length in characters of the
         mysql username interpolated into the '{{name}}' field
-        of the sql parameter.
+        of the sql parameter.  The default is 16.
       </li>
     </ul>
   </dd>
@@ -389,7 +396,7 @@ the default on versions prior to that.
     ```javascript
     {
       "data": {
-        "username": "rolename-aefa635a-18",
+        "username": "user-role-aefa63",
         "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
       }
     }
