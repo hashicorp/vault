@@ -74,6 +74,7 @@ BUG FIXES:
    [GH-1575]
  * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
    transaction object which could lead to connection exhaustion [GH-1572]
+ * secret/pki: Fix parsing CA bundle containing trailing whitespace [GH-1634]
  * physical/postgres: Remove use of prepared statements as this causes
    connection multiplexing software to break [GH-1548]
  * physical/consul: Multiple Vault nodes on the same machine leading to check ID
