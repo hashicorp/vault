@@ -58,6 +58,8 @@ IMPROVEMENTS:
    configuration [GH-1581]
  * secret/mssql,mysql,postgresql: Reading of connection settings is supported
    in all the sql backends [GH-1515]
+ * secret/mysql: Added optional maximum idle connections value to MySQL 
+   connection configuration [GH-1616]
  * secret/mysql: Use a combination of the role name and token display name in
    generated user names and allow the length to be controlled [GH-1604]
  * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
