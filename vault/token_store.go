@@ -94,7 +94,9 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	t.tokenLocks = map[string]*sync.RWMutex{}
 
 	// Create 256 locks
-	locksutil.CreateLocks(t.tokenLocks, 256)
+	if err = locksutil.CreateLocks(t.tokenLocks, 256); err != nil {
+		return nil, fmt.Errorf("failed to create locks: %v", err)
+	}
 
 	t.tokenLocks["custom"] = &sync.RWMutex{}
 
