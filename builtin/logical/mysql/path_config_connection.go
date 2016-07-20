@@ -136,7 +136,7 @@ type connectionConfig struct {
 	// Deprecate "value" in coming releases
 	ConnectionString   string `json:"value" structs:"value" mapstructure:"value"`
 	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
-	MaxIdleConnections int    `json:"max_idle_connections" structs: "max_idle_connections" mapstructure:"max_idle_connections"`
+	MaxIdleConnections int    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 }
 
 const pathConfigConnectionHelpSyn = `
