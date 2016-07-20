@@ -50,6 +50,8 @@ IMPROVEMENTS:
    telemetry [GH-1625]
  * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role
    [GH-1523]
+ * credential/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
+   will have `MinVersion` set to TLS 1.2 by default. This is configurable.
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * secret/aws: Listing of roles is supported now  [GH-1546]
  * secret/cassandra: Add `connect_timeout` value for Cassandra connection
@@ -58,9 +60,7 @@ IMPROVEMENTS:
    in all the sql backends [GH-1515]
  * secret/mysql: Use a combination of the role name and token display name in
    generated user names and allow the length to be controlled [GH-1604]
- * credential/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
-   will have `MinVersion` set to TLS 1.2 by default.
- * logical/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
+ * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
    role name as part of response of `verify` API.
 
 BUG FIXES:
