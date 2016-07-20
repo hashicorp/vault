@@ -86,6 +86,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	// Set some connection pool settings. We don't need much of this,
 	// since the request rate shouldn't be high.
 	b.db.SetMaxOpenConns(connConfig.MaxOpenConnections)
+	b.db.SetMaxIdleConns(connConfig.MaxIdleConnections)
 
 	return b.db, nil
 }

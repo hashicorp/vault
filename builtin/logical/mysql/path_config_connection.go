@@ -27,6 +27,10 @@ This name is deprecated.`,
 				Type:        framework.TypeInt,
 				Description: "Maximum number of open connections to database",
 			},
+			"max_idle_connections": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "Maximum number of idle connections to the database; a zero uses the value of max_open_connections and a negative value disables idle connections. If larger than max_open_connections it will be reduced to the same size.",
+			},
 			"verify_connection": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
@@ -80,6 +84,14 @@ func (b *backend) pathConnectionWrite(
 		maxOpenConns = 2
 	}
 
+	maxIdleConns := data.Get("max_idle_connections").(int)
+	if maxIdleConns == 0 {
+		maxIdleConns = maxOpenConns
+	}
+	if maxIdleConns > maxOpenConns {
+		maxIdleConns = maxOpenConns
+	}
+
 	// Don't check the connection_url if verification is disabled
 	verifyConnection := data.Get("verify_connection").(bool)
 	if verifyConnection {
@@ -101,6 +113,7 @@ func (b *backend) pathConnectionWrite(
 	entry, err := logical.StorageEntryJSON("config/connection", connectionConfig{
 		ConnectionURL:      connURL,
 		MaxOpenConnections: maxOpenConns,
+		MaxIdleConnections: maxIdleConns,
 	})
 	if err != nil {
 		return nil, err
@@ -123,6 +136,7 @@ type connectionConfig struct {
 	// Deprecate "value" in coming releases
 	ConnectionString   string `json:"value" structs:"value" mapstructure:"value"`
 	MaxOpenConnections int    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
+	MaxIdleConnections int    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 }
 
 const pathConfigConnectionHelpSyn = `

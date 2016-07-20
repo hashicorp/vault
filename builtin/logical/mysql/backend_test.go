@@ -82,7 +82,8 @@ func TestBackend_config_connection(t *testing.T) {
 	configData := map[string]interface{}{
 		"value":                "",
 		"connection_url":       "sample_connection_url",
-		"max_open_connections": 7,
+		"max_open_connections": 9,
+		"max_idle_connections": 7,
 		"verify_connection":    false,
 	}
 
