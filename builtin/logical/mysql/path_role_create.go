@@ -31,7 +31,6 @@ func pathRoleCreate(b *backend) *framework.Path {
 func (b *backend) pathRoleCreateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	var usernameLength int
 
 	// Get the role
 	role, err := b.Role(req.Storage, name)
@@ -51,24 +50,20 @@ func (b *backend) pathRoleCreateRead(
 		lease = &configLease{}
 	}
 
-	// Generate our username and password. MySQL limits user to 16 characters
+	// Generate our username and password. The username will be the name of
+	// the role, truncated to role.displaynameLength, appended to a uuid,
+	// with the entire string truncated to role.usernameLength.
 	displayName := name
-	ul, ok := data.GetOk("username_length")
-	if ok == true {
-		usernameLength = ul.(int)
-	} else {
-		usernameLength = 10
-	}
-	if len(displayName) > usernameLength {
-		displayName = displayName[:usernameLength]
+	if len(displayName) > role.DisplaynameLength {
+		displayName = displayName[:role.DisplaynameLength]
 	}
 	userUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, err
 	}
 	username := fmt.Sprintf("%s-%s", displayName, userUUID)
-	if len(username) > 16 {
-		username = username[:16]
+	if len(username) > role.UsernameLength {
+		username = username[:role.UsernameLength]
 	}
 	password, err := uuid.GenerateUUID()
 	if err != nil {

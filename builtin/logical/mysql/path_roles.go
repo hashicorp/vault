@@ -37,7 +37,14 @@ func pathRoles(b *backend) *framework.Path {
 
 			"username_length": &framework.FieldSchema{
 				Type:        framework.TypeInt,
-				Description: "number of characters to truncate generated mysql usernames to (default 10)",
+				Description: "number of characters to truncate generated mysql usernames to (default 16)",
+				Default:     16,
+			},
+
+			"displayname_length": &framework.FieldSchema{
+				Type:        framework.TypeInt,
+				Description: "number of characters to truncate the rolename portion of generated mysql usernames to (default 10)",
+				Default:     10,
 			},
 		},
 
@@ -111,6 +118,7 @@ func (b *backend) pathRoleCreate(
 	name := data.Get("name").(string)
 	sql := data.Get("sql").(string)
 	username_length := data.Get("username_length").(int)
+	displayname_length := data.Get("displayname_length").(int)
 
 	// Get our connection
 	db, err := b.DB(req.Storage)
@@ -133,8 +141,9 @@ func (b *backend) pathRoleCreate(
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		SQL:             sql,
-		USERNAME_LENGTH: username_length,
+		SQL:               sql,
+		UsernameLength:    username_length,
+		DisplaynameLength: displayname_length,
 	})
 	if err != nil {
 		return nil, err
@@ -146,8 +155,9 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	SQL             string `json:"sql"`
-	USERNAME_LENGTH int    `json:"username_length"`
+	SQL               string `json:"sql"`
+	UsernameLength    int    `json:"username_length"`
+	DisplaynameLength int    `json:"displayname_length"`
 }
 
 const pathRoleHelpSyn = `
@@ -174,8 +184,15 @@ Example of a decent SQL query to use:
 Note the above user would be able to access anything in db1. Please see the MySQL
 manual on the GRANT command to learn how to do more fine grained access.
 
-The "username_length" parameter determines how many characters of the
+The "displayname_length" parameter determines how many characters of the
 role name will be used in creating the generated mysql username; the
 default is 10.  Note that mysql versions prior to 5.8 have a 16 character
 total limit on usernames.
+
+The "username_length" parameter determines how many total characters the
+generated username (including both the displayname and the uuid portion) will
+be truncated to.  Versions of MySQL prior to 5.7.8 are limited to 16
+characters total (see http://dev.mysql.com/doc/refman/5.7/en/user-names.html)
+so that is the default; for versions >=5.7.8 it is safe to increase this
+to 32.
 `

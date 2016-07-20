@@ -92,7 +92,7 @@ Key           	Value
 lease_id      	mysql/creds/readonly/bd404e98-0f35-b378-269a-b7770ef01897
 lease_duration	3600
 password      	132ae3ef-5a64-7499-351e-bfe59f3a2a21
-username      	root-aefa635a-18
+username      	readonly-aefa635a-18
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new
@@ -105,12 +105,15 @@ that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
 
-Optionally, you may configure the number of character from the role
-name that are truncated to form the mysql usernamed interpolated into
-the `{{name}}` field: the default is 10.  Note that versions of
-mysql prior to 5.8 have a 16 character total limit on user names, so
-it is probably not safe to increase this above the default on versions
-prior to that.
+Optionally, you may configure both the number of characters from the role name
+that are truncated to form the display name portion of the mysql username
+interpolated into the `{{name}}` field: the default is 10. 
+
+You may also configure the total number of characters allowed in the entire
+generated username (the sum of the display name and uuid poritions); the
+default is 16. Note that versions of MySQL prior to 5.8 have a 16 character
+total limit on user names, so it is probably not safe to increase this above
+the default on versions prior to that.
 
 ## API
 
@@ -242,10 +245,17 @@ prior to that.
         values will be substituted.
       </li>
       <li>
-        <span class="param">username_length</span>
+        <span class="param">displayname_length</span>
         <span class="param-flags">optional</span>
         Determines how many characters from the role name will be used
         to form the mysql username interpolated into the '{{name}}' field
+        of the sql parameter.
+      </li>
+      <li>
+        <span class="param">username_length</span>
+        <span class="param-flags">optional</span>
+        Determines the maximum total length in characters of the
+        mysql username interpolated into the '{{name}}' field
         of the sql parameter.
       </li>
     </ul>
@@ -379,7 +389,7 @@ prior to that.
     ```javascript
     {
       "data": {
-        "username": "root-aefa635a-18",
+        "username": "rolename-aefa635a-18",
         "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
       }
     }
