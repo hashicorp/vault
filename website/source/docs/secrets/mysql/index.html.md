@@ -92,7 +92,7 @@ Key           	Value
 lease_id      	mysql/creds/readonly/bd404e98-0f35-b378-269a-b7770ef01897
 lease_duration	3600
 password      	132ae3ef-5a64-7499-351e-bfe59f3a2a21
-username      	root-aefa635a-18
+username      	readonly-aefa635a-18
 ```
 
 By reading from the `creds/readonly` path, Vault has generated a new
@@ -104,6 +104,16 @@ Using ACLs, it is possible to restrict using the mysql backend such
 that trusted operators can manage the role definitions, and both
 users and applications are restricted in the credentials they are
 allowed to read.
+
+Optionally, you may configure both the number of characters from the role name
+that are truncated to form the display name portion of the mysql username
+interpolated into the `{{name}}` field: the default is 10. 
+
+You may also configure the total number of characters allowed in the entire
+generated username (the sum of the display name and uuid poritions); the
+default is 16. Note that versions of MySQL prior to 5.8 have a 16 character
+total limit on user names, so it is probably not safe to increase this above
+the default on versions prior to that.
 
 ## API
 
@@ -233,6 +243,27 @@ allowed to read.
         The SQL statements executed to create and configure the role.
         Must be semi-colon separated. The '{{name}}' and '{{password}}'
         values will be substituted.
+      </li>
+      <li>
+        <span class="param">rolename_length</span>
+        <span class="param-flags">optional</span>
+        Determines how many characters from the role name will be used
+        to form the mysql username interpolated into the '{{name}}' field
+        of the sql parameter.  The default is 4.
+      </li>
+      <li>
+        <span class="param">displayname_length</span>
+        <span class="param-flags">optional</span>
+        Determines how many characters from the token display name will be used
+        to form the mysql username interpolated into the '{{name}}' field
+        of the sql parameter.  The default is 4.
+      </li>
+      <li>
+        <span class="param">username_length</span>
+        <span class="param-flags">optional</span>
+        Determines the maximum total length in characters of the
+        mysql username interpolated into the '{{name}}' field
+        of the sql parameter.  The default is 16.
       </li>
     </ul>
   </dd>
@@ -365,7 +396,7 @@ allowed to read.
     ```javascript
     {
       "data": {
-        "username": "root-aefa635a-18",
+        "username": "user-role-aefa63",
         "password": "132ae3ef-5a64-7499-351e-bfe59f3a2a21"
       }
     }
