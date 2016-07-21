@@ -210,6 +210,8 @@ func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*ParsedCer
 // loadTrustedCerts is used to load all the trusted certificates from the backend
 func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
+	trusted = make([]*ParsedCert)
+	trustedNonCAs = make([]*ParsedCert)
 	names, err := store.List("cert/")
 	if err != nil {
 		b.Logger().Printf("[ERR] cert: failed to list trusted certs: %v", err)
