@@ -257,39 +257,63 @@ General Options:
 ` + meta.GeneralOptionsUsage() + `
 Init Options:
 
-  -check                    Don't actually initialize, just check if Vault is
-                            already initialized. A return code of 0 means Vault
-                            is initialized; a return code of 2 means Vault is not
-                            initialized; a return code of 1 means an error was
-                            encountered.
+  -check			Don't actually initialize, just check if Vault is
+				already initialized. A return code of 0 means Vault
+				is initialized; a return code of 2 means Vault is not
+				initialized; a return code of 1 means an error was
+				encountered.
 
-  -key-shares=5             The number of key shares to split the master key
-                            into.
+  -key-shares=5			The number of key shares to split the master key
+				into.
 
-  -key-threshold=3          The number of key shares required to reconstruct
-                            the master key.
+  -key-threshold=3		The number of key shares required to reconstruct
+				the master key.
 
-  -stored-shares=0          The number of unseal keys to store. This is not
-                            normally available.
+  -stored-shares=0		The number of unseal keys to store. This is not
+				normally available.
 
-  -pgp-keys                 If provided, must be a comma-separated list of
-                            files on disk containing binary- or base64-format
-                            public PGP keys, or Keybase usernames specified as
-                            "keybase:<username>". The number of given entries
-                            must match 'key-shares'. The output unseal keys will
-                            be encrypted and hex-encoded, in order, with the
-                            given public keys.  If you want to use them with the
-                            'vault unseal' command, you will need to hex decode
-                            and decrypt; this will be the plaintext unseal key.
+  -pgp-keys			If provided, must be a comma-separated list of
+				files on disk containing binary- or base64-format
+				public PGP keys, or Keybase usernames specified as
+				"keybase:<username>". The number of given entries
+				must match 'key-shares'. The output unseal keys will
+				be encrypted and hex-encoded, in order, with the
+				given public keys.  If you want to use them with the
+				'vault unseal' command, you will need to hex decode
+				and decrypt; this will be the plaintext unseal key.
 
-  -recovery-shares=5        The number of key shares to split the recovery key
-                            into. This is not normally available.
+  -recovery-shares=5		The number of key shares to split the recovery key
+				into. This is not normally available.
 
-  -recovery-threshold=3     The number of key shares required to reconstruct
-                            the recovery key. This is not normally available.
+  -recovery-threshold=3		The number of key shares required to reconstruct
+				the recovery key. This is not normally available.
 
-  -recovery-pgp-keys        If provided, behaves like "pgp-keys" but for the
-                            recovery key shares. This is not normally available.
+  -recovery-pgp-keys		If provided, behaves like "pgp-keys" but for the
+				recovery key shares. This is not normally available.
+
+  -auto				If set, performs service discovery using the underlying
+				Consul storage backend. When one or more Vault servers
+				are running on Consul storage backend (none else),
+				setting this flag will create a Consul client and
+				discovrs the nodes using the service name under which
+				Vault nodes are registered with Consul. Service name
+				should be supplied using 'consul-service' flag. This
+				option works well when each Vault cluster is registered
+				under a unique service name. Ensure that environment
+				variables required to communicate with Consul, like
+				(CONSUL_HTTP_ADDR, CONSUL_HTTP_TOKEN, CONSUL_HTTP_SSL,
+				et al) are properly set. If, only one Vault node is
+				discovered, then an initialization attempt will be made.
+				If more than one Vault nodes are discovered, they will
+				be listed on the output, requiring another execution of
+				this command with updated VAULT_ADDR environment variable.
+
+  -consul-service		Service name under which the all nodes of Vault are
+				registered with Consul. When Vault is using Consul
+				as its storage backend, by default, it will auto register
+				itself with Consul under the default name of "vault".
+				This name can be modified in Vault's configuration file,
+				using the "service" option under Consul backend.
 `
 	return strings.TrimSpace(helpText)
 }
