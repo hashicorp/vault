@@ -143,6 +143,10 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	}
 	connState := req.Connection.ConnState
 
+	if connState.PeerCertificates == nil || len(connState.PeerCertificates) == 0 {
+		return nil, logical.ErrorResponse("client certificate must be supplied"), nil
+	}
+
 	// Load the trusted certificates
 	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage)
 
