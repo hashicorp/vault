@@ -11,6 +11,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -91,9 +92,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	t.salt = salt
 
 	t.tokenLocks = map[string]*sync.RWMutex{}
-	for i := int64(0); i < 256; i++ {
-		t.tokenLocks[fmt.Sprintf("%02x", i)] = &sync.RWMutex{}
+
+	// Create 256 locks
+	if err = locksutil.CreateLocks(t.tokenLocks, 256); err != nil {
+		return nil, fmt.Errorf("failed to create locks: %v", err)
 	}
+
 	t.tokenLocks["custom"] = &sync.RWMutex{}
 
 	// Setup the framework endpoints
