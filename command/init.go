@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/meta"
+	"github.com/hashicorp/vault/physical"
 )
 
 // InitCommand is a Command that initializes a new Vault server.
@@ -21,7 +23,7 @@ func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
 	var pgpKeys, recoveryPgpKeys pgpkeys.PubKeyFilesFlag
 	var auto, check bool
-	var consulService string
+	var consulServiceName string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
@@ -33,7 +35,7 @@ func (c *InitCommand) Run(args []string) int {
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
 	flags.BoolVar(&check, "check", false, "")
 	flags.BoolVar(&auto, "auto", false, "")
-	flags.StringVar(&consulService, "consul-service", "", "")
+	flags.StringVar(&consulServiceName, "consul-service", physical.DefaultServiceName, "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
@@ -52,11 +54,6 @@ func (c *InitCommand) Run(args []string) int {
 	// variables of Consul.
 	if auto {
 
-		if strings.TrimSpace(consulService) == "" {
-			c.Ui.Error("'consul-service' must be supplied when 'auto' is set")
-			return 1
-		}
-
 		// Create configuration for Consul
 		consulConfig := consulapi.DefaultConfig()
 
@@ -71,19 +68,21 @@ func (c *InitCommand) Run(args []string) int {
 		var initializedVault string
 
 		// Query the nodes belonging to the cluster
-		if services, _, err := consulClient.Catalog().Service(consulService, "", &consulapi.QueryOptions{AllowStale: true}); err == nil {
+		if services, _, err := consulClient.Catalog().Service(consulServiceName, "", &consulapi.QueryOptions{AllowStale: true}); err == nil {
 		Loop:
 			for _, service := range services {
-				vaultAddress := fmt.Sprintf("%s://%s:%d", consulConfig.Scheme, service.ServiceAddress, service.ServicePort)
+				vaultAddress := &url.URL{
+					Scheme: consulConfig.Scheme,
+					Host:   fmt.Sprintf("%s:%d", service.ServiceAddress, service.ServicePort),
+				}
 
 				// Set VAULT_ADDR to the discovered node
-				os.Setenv(api.EnvVaultAddress, vaultAddress)
+				os.Setenv(api.EnvVaultAddress, vaultAddress.String())
 
 				// Create a client to communicate with the discovered node
 				client, err := c.Client()
 				if err != nil {
-					c.Ui.Error(fmt.Sprintf(
-						"Error initializing client: %s", err))
+					c.Ui.Error(fmt.Sprintf("Error initializing client: %v", err))
 					return 1
 				}
 
@@ -91,15 +90,15 @@ func (c *InitCommand) Run(args []string) int {
 				inited, err := client.Sys().InitStatus()
 				switch {
 				case err != nil:
-					c.Ui.Error(fmt.Sprintf("Error checking initialization status of discovered node: %s err:%s", vaultAddress, err))
+					c.Ui.Error(fmt.Sprintf("Error checking initialization status of discovered node: %+q. Err: %v", vaultAddress.String(), err))
 					return 1
 				case inited:
 					// One of the nodes in the cluster is initialized. Break out.
-					initializedVault = vaultAddress
+					initializedVault = vaultAddress.String()
 					break Loop
 				default:
 					// Vault is uninitialized.
-					uninitializedVaults = append(uninitializedVaults, vaultAddress)
+					uninitializedVaults = append(uninitializedVaults, vaultAddress.String())
 				}
 			}
 		}
@@ -112,45 +111,58 @@ func (c *InitCommand) Run(args []string) int {
 		}
 
 		if initializedVault != "" {
-			c.Ui.Output(fmt.Sprintf("Discovered an initialized Vault node at '%s'", initializedVault))
+			vaultURL, err := url.Parse(initializedVault)
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf("Failed to parse Vault address: %+q. Err: %v", initializedVault, err))
+			}
+			c.Ui.Output(fmt.Sprintf("Discovered an initialized Vault node at %+q, using Consul service name %+q", vaultURL.String(), consulServiceName))
 			c.Ui.Output("\nSet the following environment variable to operate on the discovered Vault:\n")
-			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%shttp://%s%s", export, quote, initializedVault, quote))
+			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultURL.String(), quote))
 			return 0
 		}
 
 		switch len(uninitializedVaults) {
 		case 0:
-			c.Ui.Error(fmt.Sprintf("Failed to discover Vault nodes under Consul service name '%s'", consulService))
+			c.Ui.Error(fmt.Sprintf("Failed to discover Vault nodes using Consul service name %+q", consulServiceName))
 			return 1
 		case 1:
 			// There was only one node found in the Vault cluster and it
 			// was uninitialized.
 
+			vaultURL, err := url.Parse(uninitializedVaults[0])
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf("Failed to parse Vault address: %+q. Err: %v", uninitializedVaults[0], err))
+			}
+
 			// Set the VAULT_ADDR to the discovered node. This will ensure
 			// that the client created will operate on the discovered node.
-			os.Setenv(api.EnvVaultAddress, uninitializedVaults[0])
+			os.Setenv(api.EnvVaultAddress, vaultURL.String())
 
 			// Let the client know that initialization is perfomed on the
 			// discovered node.
-			c.Ui.Output(fmt.Sprintf("Discovered Vault at '%s'\n", uninitializedVaults[0]))
+			c.Ui.Output(fmt.Sprintf("Discovered Vault at %+q using Consul service name %+q\n", vaultURL.String(), consulServiceName))
 
 			// Attempt initializing it
 			ret := c.runInit(check, initRequest)
 
 			// Regardless of success or failure, instruct client to update VAULT_ADDR
 			c.Ui.Output("\nSet the following environment variable to operate on the discovered Vault:\n")
-			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%shttp://%s%s", export, quote, uninitializedVaults[0], quote))
+			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultURL.String(), quote))
 
 			return ret
 		default:
 			// If more than one Vault node were discovered, print out all of them,
 			// requiring the client to update VAULT_ADDR and to run init again.
-			c.Ui.Output(fmt.Sprintf("Discovered more than one uninitialized Vaults under Consul service name '%s'\n", consulService))
+			c.Ui.Output(fmt.Sprintf("Discovered more than one uninitialized Vaults using Consul service name %+q\n", consulServiceName))
 			c.Ui.Output("To initialize these Vaults, set any *one* of the following environment variables and run 'vault init':")
 
 			// Print valid commands to make setting the variables easier
 			for _, vaultNode := range uninitializedVaults {
-				c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultNode, quote))
+				vaultURL, err := url.Parse(vaultNode)
+				if err != nil {
+					c.Ui.Error(fmt.Sprintf("Failed to parse Vault address: %+q. Err: %v", vaultNode, err))
+				}
+				c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultURL.String(), quote))
 
 			}
 			return 0

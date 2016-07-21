@@ -38,9 +38,9 @@ const (
 	// defaultCheckTimeout changes the timeout of TTL checks
 	defaultCheckTimeout = 5 * time.Second
 
-	// defaultServiceName is the default Consul service name used when
+	// DefaultServiceName is the default Consul service name used when
 	// advertising a Vault instance.
-	defaultServiceName = "vault"
+	DefaultServiceName = "vault"
 
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
@@ -104,7 +104,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 	// Get the service name to advertise in Consul
 	service, ok := conf["service"]
 	if !ok {
-		service = defaultServiceName
+		service = DefaultServiceName
 	}
 	logger.Printf("[DEBUG]: consul: config service set to %s", service)
 
