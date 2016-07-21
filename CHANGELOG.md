@@ -48,9 +48,9 @@ IMPROVEMENTS:
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
  * core: The duration of leadership is now exported via events through
    telemetry [GH-1625]
- * credential/aws-ec2: Added a new constraint, 'bound_account_id' to the role
+ * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
    [GH-1523]
- * credential/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
+ * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
    will have `MinVersion` set to TLS 1.2 by default. This is configurable.
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * secret/aws: Listing of roles is supported now  [GH-1546]
@@ -67,8 +67,9 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * credential/aws-ec2: Added a nil check for stored whitelist identity object
+ * auth/aws-ec2: Added a nil check for stored whitelist identity object
    during renewal [GH-1542]
+ * auth/cert: Fix panic if no client certificate is supplied [GH-1637]
  * core: Fix regression causing status codes to be `400` in most non-5xx error
    cases [GH-1553]
  * core: Fix panic that could occur during a leadership transition [GH-1627]
