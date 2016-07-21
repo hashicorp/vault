@@ -20,8 +20,8 @@ type InitCommand struct {
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
 	var pgpKeys, recoveryPgpKeys pgpkeys.PubKeyFilesFlag
-	var check bool
-	var auto string
+	var auto, check bool
+	var consulService string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
@@ -32,7 +32,8 @@ func (c *InitCommand) Run(args []string) int {
 	flags.IntVar(&recoveryThreshold, "recovery-threshold", 3, "")
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
 	flags.BoolVar(&check, "check", false, "")
-	flags.StringVar(&auto, "auto", "", "")
+	flags.BoolVar(&auto, "auto", false, "")
+	flags.StringVar(&consulService, "consul-service", "", "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
@@ -49,7 +50,13 @@ func (c *InitCommand) Run(args []string) int {
 
 	// If running in 'auto' mode, run service discovery based on environment
 	// variables of Consul.
-	if auto != "" {
+	if auto {
+
+		if strings.TrimSpace(consulService) == "" {
+			c.Ui.Error("'consul-service' must be supplied when 'auto' is set")
+			return 1
+		}
+
 		// Create configuration for Consul
 		consulConfig := consulapi.DefaultConfig()
 
@@ -64,7 +71,7 @@ func (c *InitCommand) Run(args []string) int {
 		var initializedVault string
 
 		// Query the nodes belonging to the cluster
-		if services, _, err := consulClient.Catalog().Service(auto, "", &consulapi.QueryOptions{AllowStale: true}); err == nil {
+		if services, _, err := consulClient.Catalog().Service(consulService, "", &consulapi.QueryOptions{AllowStale: true}); err == nil {
 		Loop:
 			for _, service := range services {
 				vaultAddress := fmt.Sprintf("%s://%s:%d", consulConfig.Scheme, service.ServiceAddress, service.ServicePort)
@@ -105,15 +112,15 @@ func (c *InitCommand) Run(args []string) int {
 		}
 
 		if initializedVault != "" {
-			c.Ui.Output(fmt.Sprintf("Discovered an initialized Vault node at '%s'\n", initializedVault))
-			c.Ui.Output("Set the following environment variable to operate on the discovered Vault:\n")
+			c.Ui.Output(fmt.Sprintf("Discovered an initialized Vault node at '%s'", initializedVault))
+			c.Ui.Output("\nSet the following environment variable to operate on the discovered Vault:\n")
 			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%shttp://%s%s", export, quote, initializedVault, quote))
 			return 0
 		}
 
 		switch len(uninitializedVaults) {
 		case 0:
-			c.Ui.Error(fmt.Sprintf("Failed to discover Vault nodes under the service name '%s'", auto))
+			c.Ui.Error(fmt.Sprintf("Failed to discover Vault nodes under Consul service name '%s'", consulService))
 			return 1
 		case 1:
 			// There was only one node found in the Vault cluster and it
@@ -131,19 +138,19 @@ func (c *InitCommand) Run(args []string) int {
 			ret := c.runInit(check, initRequest)
 
 			// Regardless of success or failure, instruct client to update VAULT_ADDR
-			c.Ui.Output("Set the following environment variable to operate on the discovered Vault:\n")
+			c.Ui.Output("\nSet the following environment variable to operate on the discovered Vault:\n")
 			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%shttp://%s%s", export, quote, uninitializedVaults[0], quote))
 
 			return ret
 		default:
 			// If more than one Vault node were discovered, print out all of them,
 			// requiring the client to update VAULT_ADDR and to run init again.
-			c.Ui.Output(fmt.Sprintf("Discovered more than one uninitialized Vaults under the service name '%s'\n", auto))
-			c.Ui.Output("To initialize all Vaults, set any *one* of the following and run 'vault init':")
+			c.Ui.Output(fmt.Sprintf("Discovered more than one uninitialized Vaults under Consul service name '%s'\n", consulService))
+			c.Ui.Output("To initialize these Vaults, set any *one* of the following environment variables and run 'vault init':")
 
 			// Print valid commands to make setting the variables easier
 			for _, vaultNode := range uninitializedVaults {
-				c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%shttp://%s%s", export, quote, vaultNode, quote))
+				c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultNode, quote))
 
 			}
 			return 0
