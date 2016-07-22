@@ -3,8 +3,8 @@ package strutil
 import "testing"
 
 func TestStrutil_EquivalentSlices(t *testing.T) {
-	slice1 := []string{"test1", "test2", "test3"}
-	slice2 := []string{"test1", "test2", "test3"}
+	slice1 := []string{"test2", "test1", "test3"}
+	slice2 := []string{"test3", "test2", "test1"}
 	if !EquivalentSlices(slice1, slice2) {
 		t.Fatalf("bad: expected a match")
 	}
