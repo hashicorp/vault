@@ -41,6 +41,12 @@
 			"revisionTime": "2016-05-21T00:23:38Z"
 		},
 		{
+			"checksumSHA1": "OmqT9Y1mAHvlAKeJh0jBHC9SH78=",
+			"path": "github.com/armon/go-metrics/circonus",
+			"revision": "3df31a1ada83e310c2e24b267c8e8b68836547b4",
+			"revisionTime": "2016-07-17T04:34:58Z"
+		},
+		{
 			"checksumSHA1": "gNO0JNpLzYOdInGeq7HqMZUzx9M=",
 			"path": "github.com/armon/go-radix",
 			"revision": "4239b77079c7b5d1243b7b4736304ce8ddb6f0f2",
@@ -237,6 +243,30 @@
 			"path": "github.com/bgentry/speakeasy",
 			"revision": "e1439544d8ecd0f3e9373a636d447668096a8f81",
 			"revisionTime": "2016-05-20T23:26:10Z"
+		},
+		{
+			"checksumSHA1": "b5zgHT9TxBAVh/KP9kQi7QVoz9w=",
+			"path": "github.com/circonus-labs/circonus-gometrics",
+			"revision": "a7c30e0dcc6e2341053132470dcedc12bc7705ef",
+			"revisionTime": "2016-07-22T17:27:10Z"
+		},
+		{
+			"checksumSHA1": "IFiYTxu8jshL4A8BCttUaDhp1m4=",
+			"path": "github.com/circonus-labs/circonus-gometrics/api",
+			"revision": "a7c30e0dcc6e2341053132470dcedc12bc7705ef",
+			"revisionTime": "2016-07-22T17:27:10Z"
+		},
+		{
+			"checksumSHA1": "+9vcRzlTdvEjH/Uf8fKC5MXdjNw=",
+			"path": "github.com/circonus-labs/circonus-gometrics/checkmgr",
+			"revision": "a7c30e0dcc6e2341053132470dcedc12bc7705ef",
+			"revisionTime": "2016-07-22T17:27:10Z"
+		},
+		{
+			"checksumSHA1": "C4Z7+l5GOpOCW5DcvNYzheGvQRE=",
+			"path": "github.com/circonus-labs/circonusllhist",
+			"revision": "d724266ae5270ae8b87a5d2e8081f04e307c3c18",
+			"revisionTime": "2016-05-26T04:38:13Z"
 		},
 		{
 			"checksumSHA1": "r1CX8/M/ipvntOfH0rT9jOQ6fdM=",

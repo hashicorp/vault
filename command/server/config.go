@@ -89,6 +89,70 @@ type Telemetry struct {
 	StatsdAddr   string `hcl:"statsd_address"`
 
 	DisableHostname bool `hcl:"disable_hostname"`
+
+	// Circonus: see https://github.com/circonus-labs/circonus-gometrics
+	// for more details on the various configuration options.
+	// Valid configuration combinations:
+	//    - CirconusAPIToken
+	//      metric management enabled (search for existing check or create a new one)
+	//    - CirconusSubmissionUrl
+	//      metric management disabled (use check with specified submission_url,
+	//      broker must be using a public SSL certificate)
+	//    - CirconusAPIToken + CirconusCheckSubmissionURL
+	//      metric management enabled (use check with specified submission_url)
+	//    - CirconusAPIToken + CirconusCheckID
+	//      metric management enabled (use check with specified id)
+
+	// CirconusAPIToken is a valid API Token used to create/manage check. If provided,
+	// metric management is enabled.
+	// Default: none
+	CirconusAPIToken string `hcl:"circonus_api_token"`
+	// CirconusAPIApp is an app name associated with API token.
+	// Default: "consul"
+	CirconusAPIApp string `hcl:"circonus_api_app"`
+	// CirconusAPIURL is the base URL to use for contacting the Circonus API.
+	// Default: "https://api.circonus.com/v2"
+	CirconusAPIURL string `hcl:"circonus_api_url"`
+	// CirconusSubmissionInterval is the interval at which metrics are submitted to Circonus.
+	// Default: 10s
+	CirconusSubmissionInterval string `hcl:"circonus_submission_interval"`
+	// CirconusCheckSubmissionURL is the check.config.submission_url field from a
+	// previously created HTTPTRAP check.
+	// Default: none
+	CirconusCheckSubmissionURL string `hcl:"circonus_submission_url"`
+	// CirconusCheckID is the check id (not check bundle id) from a previously created
+	// HTTPTRAP check. The numeric portion of the check._cid field.
+	// Default: none
+	CirconusCheckID string `hcl:"circonus_check_id"`
+	// CirconusCheckForceMetricActivation will force enabling metrics, as they are encountered,
+	// if the metric already exists and is NOT active. If check management is enabled, the default
+	// behavior is to add new metrics as they are encoutered. If the metric already exists in the
+	// check, it will *NOT* be activated. This setting overrides that behavior.
+	// Default: "false"
+	CirconusCheckForceMetricActivation string `hcl:"circonus_check_force_metric_activation"`
+	// CirconusCheckInstanceID serves to uniquely identify the metrics comming from this "instance".
+	// It can be used to maintain metric continuity with transient or ephemeral instances as
+	// they move around within an infrastructure.
+	// Default: hostname:app
+	CirconusCheckInstanceID string `hcl:"circonus_check_instance_id"`
+	// CirconusCheckSearchTag is a special tag which, when coupled with the instance id, helps to
+	// narrow down the search results when neither a Submission URL or Check ID is provided.
+	// Default: service:app (e.g. service:consul)
+	CirconusCheckSearchTag string `hcl:"circonus_check_search_tag"`
+	// CirconusBrokerID is an explicit broker to use when creating a new check. The numeric portion
+	// of broker._cid. If metric management is enabled and neither a Submission URL nor Check ID
+	// is provided, an attempt will be made to search for an existing check using Instance ID and
+	// Search Tag. If one is not found, a new HTTPTRAP check will be created.
+	// Default: use Select Tag if provided, otherwise, a random Enterprise Broker associated
+	// with the specified API token or the default Circonus Broker.
+	// Default: none
+	CirconusBrokerID string `hcl:"circonus_broker_id"`
+	// CirconusBrokerSelectTag is a special tag which will be used to select a broker when
+	// a Broker ID is not provided. The best use of this is to as a hint for which broker
+	// should be used based on *where* this particular instance is running.
+	// (e.g. a specific geo location or datacenter, dc:sfo)
+	// Default: none
+	CirconusBrokerSelectTag string `hcl:"circonus_broker_select_tag"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -490,6 +554,17 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"statsite_address",
 		"statsd_address",
 		"disable_hostname",
+		"circonus_api_token",
+		"circonus_api_app",
+		"circonus_api_url",
+		"circonus_submission_interval",
+		"circonus_submission_url",
+		"circonus_check_id",
+		"circonus_check_force_metric_activation",
+		"circonus_check_instance_id",
+		"circonus_check_search_tag",
+		"circonus_broker_id",
+		"circonus_broker_select_tag",
 	}
 	if err := checkHCLKeys(item.Val, valid); err != nil {
 		return multierror.Prefix(err, "telemetry:")
