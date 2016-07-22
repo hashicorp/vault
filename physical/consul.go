@@ -79,15 +79,15 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 	if !ok {
 		path = "vault/"
 	}
-	logger.Printf("[DEBUG]: consul: config path set to %v", path)
+	logger.Printf("[DEBUG]: physical/consul: config path set to %v", path)
 
 	// Ensure path is suffixed but not prefixed
 	if !strings.HasSuffix(path, "/") {
-		logger.Printf("[WARN]: consul: appending trailing forward slash to path")
+		logger.Printf("[WARN]: physical/consul: appending trailing forward slash to path")
 		path += "/"
 	}
 	if strings.HasPrefix(path, "/") {
-		logger.Printf("[WARN]: consul: trimming path of its forward slash")
+		logger.Printf("[WARN]: physical/consul: trimming path of its forward slash")
 		path = strings.TrimPrefix(path, "/")
 	}
 
@@ -101,19 +101,19 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		}
 		disableRegistration = b
 	}
-	logger.Printf("[DEBUG]: consul: config disable_registration set to %v", disableRegistration)
+	logger.Printf("[DEBUG]: physical/consul: config disable_registration set to %v", disableRegistration)
 
 	// Get the service name to advertise in Consul
 	service, ok := conf["service"]
 	if !ok {
 		service = DefaultServiceName
 	}
-	logger.Printf("[DEBUG]: consul: config service set to %s", service)
+	logger.Printf("[DEBUG]: physical/consul: config service set to %s", service)
 
 	// Get the additional tags to attach to the registered service name
 	tags := conf["service-tags"]
 
-	logger.Printf("[DEBUG]: consul: config service-tags set to %s", tags)
+	logger.Printf("[DEBUG]: physical/consul: config service-tags set to %s", tags)
 
 	checkTimeout := defaultCheckTimeout
 	checkTimeoutStr, ok := conf["check_timeout"]
@@ -129,7 +129,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		}
 
 		checkTimeout = d
-		logger.Printf("[DEBUG]: consul: config check_timeout set to %v", d)
+		logger.Printf("[DEBUG]: physical/consul: config check_timeout set to %v", d)
 	}
 
 	// Configure the client
@@ -137,15 +137,15 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
-		logger.Printf("[DEBUG]: consul: config address set to %s", addr)
+		logger.Printf("[DEBUG]: physical/consul: config address set to %s", addr)
 	}
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
-		logger.Printf("[DEBUG]: consul: config scheme set to %s", scheme)
+		logger.Printf("[DEBUG]: physical/consul: config scheme set to %s", scheme)
 	}
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
-		logger.Printf("[DEBUG]: consul: config token set")
+		logger.Printf("[DEBUG]: physical/consul: config token set")
 	}
 
 	if consulConf.Scheme == "https" {
@@ -158,7 +158,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		transport.MaxIdleConnsPerHost = 4
 		transport.TLSClientConfig = tlsClientConfig
 		consulConf.HttpClient.Transport = transport
-		logger.Printf("[DEBUG]: consul: configured TLS")
+		logger.Printf("[DEBUG]: physical/consul: configured TLS")
 	}
 
 	client, err := api.NewClient(consulConf)
@@ -173,7 +173,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
-		logger.Printf("[DEBUG]: consul: max_parallel set to %d", maxParInt)
+		logger.Printf("[DEBUG]: physical/consul: max_parallel set to %d", maxParInt)
 	}
 
 	// Setup the backend
@@ -394,7 +394,7 @@ func (c *ConsulBackend) NotifyActiveStateChange() error {
 	default:
 		// NOTE: If this occurs Vault's active status could be out of
 		// sync with Consul until reconcileTimer expires.
-		c.logger.Printf("[WARN]: consul: Concurrent state change notify dropped")
+		c.logger.Printf("[WARN]: physical/consul: Concurrent state change notify dropped")
 	}
 
 	return nil
@@ -406,7 +406,7 @@ func (c *ConsulBackend) NotifySealedStateChange() error {
 	default:
 		// NOTE: If this occurs Vault's sealed status could be out of
 		// sync with Consul until checkTimer expires.
-		c.logger.Printf("[WARN]: consul: Concurrent sealed state change notify dropped")
+		c.logger.Printf("[WARN]: physical/consul: Concurrent sealed state change notify dropped")
 	}
 
 	return nil
@@ -472,7 +472,7 @@ shutdown:
 					for !shutdown {
 						serviceID, err := c.reconcileConsul(activeFunc, sealedFunc)
 						if err != nil {
-							c.logger.Printf("[WARN]: consul: reconcile unable to talk with Consul backend: %v", err)
+							c.logger.Printf("[WARN]: physical/consul: reconcile unable to talk with Consul backend: %v", err)
 							time.Sleep(consulRetryInterval)
 							continue
 						}
@@ -496,7 +496,7 @@ shutdown:
 					for !shutdown {
 						sealed := sealedFunc()
 						if err := c.runCheck(sealed); err != nil {
-							c.logger.Printf("[WARN]: consul: check unable to talk with Consul backend: %v", err)
+							c.logger.Printf("[WARN]: physical/consul: check unable to talk with Consul backend: %v", err)
 							time.Sleep(consulRetryInterval)
 							continue
 						}
@@ -505,7 +505,7 @@ shutdown:
 				}()
 			}
 		case <-shutdownCh:
-			c.logger.Printf("[INFO]: consul: Shutting down consul backend")
+			c.logger.Printf("[INFO]: physical/consul: Shutting down consul backend")
 			shutdown = true
 			break shutdown
 		}
@@ -514,7 +514,7 @@ shutdown:
 	c.serviceLock.RLock()
 	defer c.serviceLock.RUnlock()
 	if err := c.client.Agent().ServiceDeregister(registeredServiceID); err != nil {
-		c.logger.Printf("[WARN]: consul: service deregistration failed: %v", err)
+		c.logger.Printf("[WARN]: physical/consul: service deregistration failed: %v", err)
 	}
 }
 
