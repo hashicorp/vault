@@ -2,6 +2,19 @@ package strutil
 
 import "testing"
 
+func TestStrutil_EquivalentSlices(t *testing.T) {
+	slice1 := []string{"test1", "test2", "test3"}
+	slice2 := []string{"test1", "test2", "test3"}
+	if !EquivalentSlices(slice1, slice2) {
+		t.Fatalf("bad: expected a match")
+	}
+
+	slice2 = append(slice2, "test4")
+	if EquivalentSlices(slice1, slice2) {
+		t.Fatalf("bad: expected a mismatch")
+	}
+}
+
 func TestStrListContains(t *testing.T) {
 	haystack := []string{
 		"dev",

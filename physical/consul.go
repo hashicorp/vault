@@ -470,7 +470,7 @@ shutdown:
 				go func() {
 					defer atomic.CompareAndSwapInt64(&serviceRegLock, 1, 0)
 					for !shutdown {
-						serviceID, err := c.reconcileConsul(activeFunc, sealedFunc)
+						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc)
 						if err != nil {
 							c.logger.Printf("[WARN]: physical/consul: reconcile unable to talk with Consul backend: %v", err)
 							time.Sleep(consulRetryInterval)
@@ -535,7 +535,7 @@ func (c *ConsulBackend) serviceID() string {
 // without any locks held and can be run concurrently, therefore no changes
 // to ConsulBackend can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
-func (c *ConsulBackend) reconcileConsul(activeFunc activeFunction, sealedFunc sealedFunction) (serviceID string, err error) {
+func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc activeFunction, sealedFunc sealedFunction) (serviceID string, err error) {
 	// Query vault Core for its current state
 	active := activeFunc()
 	sealed := sealedFunc()
@@ -558,7 +558,19 @@ func (c *ConsulBackend) reconcileConsul(activeFunc activeFunction, sealedFunc se
 
 	tags := c.fetchServiceTags(active)
 
-	if currentVaultService != nil {
+	var reregister bool
+
+	switch {
+	case currentVaultService == nil, registeredServiceID == "":
+		reregister = true
+	default:
+		switch {
+		case !strutil.EquivalentSlices(currentVaultService.ServiceTags, tags):
+			reregister = true
+		}
+	}
+
+	if !reregister {
 		// When re-registration is not required, return a valid serviceID
 		// to avoid registration in the next cycle.
 		return serviceID, nil
