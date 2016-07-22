@@ -30,6 +30,7 @@ func StrListSubset(super, sub []string) bool {
 // The return slice will be sorted and will not contain duplicate or
 // empty items. The values will be converted to lower case.
 func ParseStrings(input string) []string {
+	input = strings.TrimSpace(input)
 	var parsed []string
 	if input == "" {
 		// Don't return nil

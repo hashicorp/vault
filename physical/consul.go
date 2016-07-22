@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 )
 
@@ -62,6 +63,7 @@ type ConsulBackend struct {
 	advertiseHost       string
 	advertisePort       int64
 	serviceName         string
+	serviceTags         []string
 	disableRegistration bool
 	checkTimeout        time.Duration
 
@@ -108,6 +110,11 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 	}
 	logger.Printf("[DEBUG]: consul: config service set to %s", service)
 
+	// Get the additional tags to attach to the registered service name
+	tags := conf["service-tags"]
+
+	logger.Printf("[DEBUG]: consul: config service-tags set to %s", tags)
+
 	checkTimeout := defaultCheckTimeout
 	checkTimeoutStr, ok := conf["check_timeout"]
 	if ok {
@@ -130,11 +137,11 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
-		logger.Printf("[DEBUG]: consul: config address set to %d", addr)
+		logger.Printf("[DEBUG]: consul: config address set to %s", addr)
 	}
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
-		logger.Printf("[DEBUG]: consul: config scheme set to %d", scheme)
+		logger.Printf("[DEBUG]: consul: config scheme set to %s", scheme)
 	}
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
@@ -177,6 +184,7 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 		kv:                  client.KV(),
 		permitPool:          NewPermitPool(maxParInt),
 		serviceName:         service,
+		serviceTags:         strutil.ParseStrings(tags),
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
 	}
@@ -462,7 +470,7 @@ shutdown:
 				go func() {
 					defer atomic.CompareAndSwapInt64(&serviceRegLock, 1, 0)
 					for !shutdown {
-						serviceID, err := c.reconcileConsul(registeredServiceID, activeFunc, sealedFunc)
+						serviceID, err := c.reconcileConsul(activeFunc, sealedFunc)
 						if err != nil {
 							c.logger.Printf("[WARN]: consul: reconcile unable to talk with Consul backend: %v", err)
 							time.Sleep(consulRetryInterval)
@@ -527,7 +535,7 @@ func (c *ConsulBackend) serviceID() string {
 // without any locks held and can be run concurrently, therefore no changes
 // to ConsulBackend can be made in this method (i.e. wtb const receiver for
 // compiler enforced safety).
-func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc activeFunction, sealedFunc sealedFunction) (serviceID string, err error) {
+func (c *ConsulBackend) reconcileConsul(activeFunc activeFunction, sealedFunc sealedFunction) (serviceID string, err error) {
 	// Query vault Core for its current state
 	active := activeFunc()
 	sealed := sealedFunc()
@@ -548,22 +556,9 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc a
 		}
 	}
 
-	tags := serviceTags(active)
+	tags := c.fetchServiceTags(active)
 
-	var reregister bool
-	switch {
-	case currentVaultService == nil,
-		registeredServiceID == "":
-		reregister = true
-	default:
-		switch {
-		case len(currentVaultService.ServiceTags) != 1,
-			currentVaultService.ServiceTags[0] != tags[0]:
-			reregister = true
-		}
-	}
-
-	if !reregister {
+	if currentVaultService != nil {
 		// When re-registration is not required, return a valid serviceID
 		// to avoid registration in the next cycle.
 		return serviceID, nil
@@ -616,13 +611,13 @@ func (c *ConsulBackend) runCheck(sealed bool) error {
 	}
 }
 
-// serviceTags returns all of the relevant tags for Consul.
-func serviceTags(active bool) []string {
+// fetchServiceTags returns all of the relevant tags for Consul.
+func (c *ConsulBackend) fetchServiceTags(active bool) []string {
 	activeTag := "standby"
 	if active {
 		activeTag = "active"
 	}
-	return []string{activeTag}
+	return append(c.serviceTags, activeTag)
 }
 
 func (c *ConsulBackend) setAdvertiseAddr(addr string) (err error) {
