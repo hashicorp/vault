@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 type consulConf map[string]string
@@ -69,6 +70,42 @@ func testSealedFunc(sealedPct float64) sealedFunction {
 			sealed = true
 		}
 		return sealed
+	}
+}
+
+func TestConsul_ServiceTags(t *testing.T) {
+	consulConfig := map[string]string{
+		"path":                 "seaTech/",
+		"service":              "astronomy",
+		"service-tags":         "deadbeef, cafeefac, deadc0de, feedface",
+		"advertiseAddr":        "http://127.0.0.2:8200",
+		"check_timeout":        "6s",
+		"address":              "127.0.0.2",
+		"scheme":               "https",
+		"token":                "deadbeef-cafeefac-deadc0de-feedface",
+		"max_parallel":         "4",
+		"disable_registration": "false",
+	}
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+	be, err := newConsulBackend(consulConfig, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	c, ok := be.(*ConsulBackend)
+	if !ok {
+		t.Fatalf("failed to create physical Consul backend")
+	}
+
+	expected := []string{"deadbeef", "cafeefac", "deadc0de", "feedface"}
+	actual := c.fetchServiceTags(false)
+	if !strutil.EquivalentSlices(actual, append(expected, "standby")) {
+		t.Fatalf("bad: expected:%s actual:%s", append(expected, "standby"), actual)
+	}
+
+	actual = c.fetchServiceTags(true)
+	if !strutil.EquivalentSlices(actual, append(expected, "active")) {
+		t.Fatalf("bad: expected:%s actual:%s", append(expected, "active"), actual)
 	}
 }
 
@@ -196,7 +233,7 @@ func TestConsul_serviceTags(t *testing.T) {
 		},
 	}
 
-	c := testConsulBackendConfig(t, &consulConf{})
+	c := testConsulBackend(t)
 
 	for _, test := range tests {
 		tags := c.fetchServiceTags(test.active)
