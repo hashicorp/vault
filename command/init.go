@@ -305,27 +305,25 @@ Init Options:
 
   -auto				If set, performs service discovery using the underlying
 				Consul storage backend. When one or more Vault servers
-				are running on Consul storage backend (none else),
-				setting this flag will create a Consul client and
-				discovrs the nodes using the service name under which
-				Vault nodes are registered with Consul. Service name
-				should be supplied using 'consul-service' flag. This
-				option works well when each Vault cluster is registered
-				under a unique service name. Ensure that environment
-				variables required to communicate with Consul, like
-				(CONSUL_HTTP_ADDR, CONSUL_HTTP_TOKEN, CONSUL_HTTP_SSL,
-				et al) are properly set. If, only one Vault node is
-				discovered, then an initialization attempt will be made.
-				If more than one Vault nodes are discovered, they will
-				be listed on the output, requiring another execution of
-				this command with updated VAULT_ADDR environment variable.
+				are using Consul for data storage, setting this flag
+				will create a Consul client and discover nodes using
+				the service name under which Vault nodes are registered
+				with Consul. The service name can be changed using
+				'consul-service' flag. This option works well when each
+				Vault cluster is registered under a unique service name.
+				Ensure that environment variables required to communicate
+				with Consul, like (CONSUL_HTTP_ADDR, CONSUL_HTTP_TOKEN,
+				CONSUL_HTTP_SSL, et al) are properly set. If only one
+				Vault node is discovered, then an initialization attempt
+				will be made. If more than one Vault node is discovered,
+				they will be output.
 
-  -consul-service		Service name under which the all nodes of Vault are
-				registered with Consul. When Vault is using Consul
-				as its storage backend, by default, it will auto register
-				itself with Consul under the default name of "vault".
-				This name can be modified in Vault's configuration file,
-				using the "service" option under Consul backend.
+  -consul-service		Service name under which all the nodes of a Vault cluster
+				are registered with Consul. When Vault uses Consul as its
+				storage backend, by default, it will register as a service
+				with Consul by the name "vault". This name can be modified
+				in Vault's configuration file, using the "service" option
+				for the Consul backend.
 `
 	return strings.TrimSpace(helpText)
 }
