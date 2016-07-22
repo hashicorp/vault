@@ -74,6 +74,8 @@ IMPROVEMENTS:
    generated user names and allow the length to be controlled [GH-1604]
  * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
    role name as part of response of `verify` API.
+ * sys/health: Added version information to the response of health status
+   endpoint [GH-1647]
 
 BUG FIXES:
 
