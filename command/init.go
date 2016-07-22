@@ -303,27 +303,28 @@ Init Options:
   -recovery-pgp-keys		If provided, behaves like "pgp-keys" but for the
 				recovery key shares. This is not normally available.
 
-  -auto				If set, performs service discovery using the underlying
-				Consul storage backend. When one or more Vault servers
-				are using Consul for data storage, setting this flag
-				will create a Consul client and discover nodes using
-				the service name under which Vault nodes are registered
-				with Consul. The service name can be changed using
-				'consul-service' flag. This option works well when each
-				Vault cluster is registered under a unique service name.
+  -auto				If set, performs service discovery using Consul. When 
+				all the nodes of a Vault cluster are registered with
+				Consul, setting this flag will trigger service discovery
+				using the service name with which Vault nodes are
+				registered. This option works well when each Vault
+				cluster is registered under a unique service name.
+				Note that, when Consul is serving as Vault's HA backend,
+				Vault nodes are registered with Consul by default. The
+				service name can be changed using 'consul-service' flag.
 				Ensure that environment variables required to communicate
 				with Consul, like (CONSUL_HTTP_ADDR, CONSUL_HTTP_TOKEN,
-				CONSUL_HTTP_SSL, et al) are properly set. If only one
-				Vault node is discovered, then an initialization attempt
-				will be made. If more than one Vault node is discovered,
-				they will be output.
+				CONSUL_HTTP_SSL, et al) are properly set. When only one
+				Vault node is discovered, it will be initialized and
+				when more than one Vault node is discovered, they will
+				be output for easy selection.
 
   -consul-service		Service name under which all the nodes of a Vault cluster
-				are registered with Consul. When Vault uses Consul as its
-				storage backend, by default, it will register as a service
-				with Consul by the name "vault". This name can be modified
-				in Vault's configuration file, using the "service" option
-				for the Consul backend.
+				are registered with Consul. Note that, when Vault uses
+				Consul as its HA backend, by default, Vault will register
+				itself as a service with Consul with the service name "vault".
+				This name can be modified in Vault's configuration file,
+				using the "service" option for the Consul backend.
 `
 	return strings.TrimSpace(helpText)
 }

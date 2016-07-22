@@ -28,6 +28,10 @@ FEATURES:
    environment variable. See the [environment variable
    documentation](https://www.vaultproject.io/docs/commands/environment.html)
    for more details. [GH-1594]
+ * **Service Discovery in `vault init`**: The new `-auto` option on `vault init`
+   will perform service discovery using Consul. When only one node is discovered,
+   it will be initialized and when more than one node is discovered, they will
+   be output for easy selection. See `vault init --help` for more details. [GH-1642]
  * **MongoDB Secret Backend**: Generate dynamic unique MongoDB database
    credentials based on configured roles. Sponsored by
    [CommerceHub](http://www.commercehub.com/). [GH-1414]
@@ -49,7 +53,6 @@ IMPROVEMENTS:
    fields [GH-1567]
  * cli: `vault write -field` now allows selecting wrapped response fields
    [GH-1567]
- * command/init: Added service discovery to `init` command [GH-1642]
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
  * core: The duration of leadership is now exported via events through
    telemetry [GH-1625]
