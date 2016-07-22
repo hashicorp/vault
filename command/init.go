@@ -315,14 +315,14 @@ Init Options:
 				Ensure that environment variables required to communicate
 				with Consul, like (CONSUL_HTTP_ADDR, CONSUL_HTTP_TOKEN,
 				CONSUL_HTTP_SSL, et al) are properly set. When only one
-				Vault node is discovered, an initialization attempt will
-				be made. When more than one Vault node is discovered,
-				they will be output.
+				Vault node is discovered, it will be initialized and
+				when more than one Vault node is discovered, they will
+				be output for easy selection.
 
   -consul-service		Service name under which all the nodes of a Vault cluster
 				are registered with Consul. Note that, when Vault uses
 				Consul as its HA backend, by default, Vault will register
-				itself as a service with Consul by the service name "vault".
+				itself as a service with Consul with the service name "vault".
 				This name can be modified in Vault's configuration file,
 				using the "service" option for the Consul backend.
 `
