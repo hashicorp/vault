@@ -196,8 +196,10 @@ func TestConsul_serviceTags(t *testing.T) {
 		},
 	}
 
+	c := testConsulBackendConfig(t, &consulConf{})
+
 	for _, test := range tests {
-		tags := serviceTags(test.active)
+		tags := c.fetchServiceTags(test.active)
 		if !reflect.DeepEqual(tags[:], test.tags[:]) {
 			t.Errorf("Bad %v: %v %v", test.active, tags, test.tags)
 		}
