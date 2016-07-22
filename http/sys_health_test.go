@@ -30,6 +30,7 @@ func TestSysHealth_get(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -50,6 +51,7 @@ func TestSysHealth_get(t *testing.T) {
 	testResponseStatus(t, resp, 500)
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -79,6 +81,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 
 	expected["server_time_utc"] = actual["server_time_utc"]
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -103,6 +106,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 	testResponseStatus(t, resp, 503)
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}

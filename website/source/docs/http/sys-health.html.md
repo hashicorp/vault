@@ -53,11 +53,13 @@ description: |-
     <dd>
 
     ```javascript
-    {
-      "initialized": true,
-      "sealed": false,
-      "standby": false
-    }
+{
+  "version": "Vault v0.6.1-dev ('418257d27c67fabc4fdd831a6a750d54d8bed76f+CHANGES')",
+  "server_time_utc": 1469226751,
+  "standby": false,
+  "sealed": false,
+  "initialized": true
+}
     ```
 
     Default Status Codes (GET/HEAD):
