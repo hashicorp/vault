@@ -35,6 +35,10 @@ FEATURES:
  * **MongoDB Secret Backend**: Generate dynamic unique MongoDB database
    credentials based on configured roles. Sponsored by
    [CommerceHub](http://www.commercehub.com/). [GH-1414]
+ * **Circonus Metrics Integration**: Vault can now send metrics to
+   [Circonus](http://www.circonus.com/). See the [configuration
+   documentation](https://www.vaultproject.io/docs/config/index.html) for
+   details. [GH-1646]
 
 IMPROVEMENTS:
 
