@@ -34,6 +34,10 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
+   [GH-1523]
+ * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
+   will have `MinVersion` set to TLS 1.2 by default. This is configurable.
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
@@ -49,11 +53,9 @@ IMPROVEMENTS:
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
  * core: The duration of leadership is now exported via events through
    telemetry [GH-1625]
- * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
-   [GH-1523]
- * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
-   will have `MinVersion` set to TLS 1.2 by default. This is configurable.
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
+ * physical/consul: Allowing additional tags to be added to Consul service
+   registration via `service-tags` option [GH-1643]
  * secret/aws: Listing of roles is supported now  [GH-1546]
  * secret/cassandra: Add `connect_timeout` value for Cassandra connection
    configuration [GH-1581]
