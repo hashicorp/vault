@@ -44,7 +44,7 @@ Please add `-u` flag to update in the future.
 
 ### Loading from data sources
 
-A **Data Source** is either raw data in type `[]byte` or a file name with type `string` and you can load **as many as** data sources you want. Passing other types will simply return an error.
+A **Data Source** is either raw data in type `[]byte` or a file name with type `string` and you can load **as many data sources as you want**. Passing other types will simply return an error.
 
 ```go
 cfg, err := ini.Load([]byte("raw data"), "filename")
@@ -56,7 +56,7 @@ Or start with an empty object:
 cfg := ini.Empty()
 ```
 
-When you cannot decide how many data sources to load at the beginning, you still able to **Append()** them later.
+When you cannot decide how many data sources to load at the beginning, you will still be able to **Append()** them later.
 
 ```go
 err := cfg.Append("other file", []byte("other raw data"))
@@ -67,6 +67,8 @@ If you have a list of files with possibilities that some of them may not availab
 ```go
 cfg, err := ini.LooseLoad("filename", "filename_404")
 ```
+
+The cool thing is, whenever the file is available to load while you're calling `Reload` method, it will be counted as usual.
 
 When you do not care about cases of section and key names, you can use `InsensitiveLoad` to force all names to be lowercased while parsing.
 
@@ -83,7 +85,7 @@ key1, err := cfg.GetKey("Key")
 key2, err := cfg.GetKey("KeY")
 ```
 
-The cool thing is, whenever the file is available to load while you're calling `Reload` method, it will be counted as usual.
+If you want to give more advanced load options, use `LoadSources` and take a look at [`LoadOptions`](https://github.com/go-ini/ini/blob/v1.16.1/ini.go#L156).
 
 ### Working with sections
 
@@ -268,6 +270,16 @@ Piece of cake!
 cfg.Section("advance").Key("two_lines").String() // how about continuation lines?
 cfg.Section("advance").Key("lots_of_lines").String() // 1 2 3 4
 ```
+
+Well, I hate continuation lines, how do I disable that?
+
+```go
+cfg, err := ini.LoadSources(ini.LoadOptions{
+	IgnoreContinuation: true,
+}, "filename")
+```
+
+Holy crap! 
 
 Note that single quotes around values will be stripped:
 

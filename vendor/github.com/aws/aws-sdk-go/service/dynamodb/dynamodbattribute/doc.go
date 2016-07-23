@@ -57,4 +57,6 @@
 // the json.Marshaler and json.Unmarshaler interfaces have been removed and
 // replaced with have been replaced with dynamodbattribute.Marshaler and
 // dynamodbattribute.Unmarshaler interfaces.
+//
+// `time.Time` is marshaled as RFC3339 format.
 package dynamodbattribute

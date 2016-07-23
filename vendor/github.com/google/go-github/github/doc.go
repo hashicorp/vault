@@ -6,6 +6,10 @@
 /*
 Package github provides a client for using the GitHub API.
 
+Usage:
+
+	import "github.com/google/go-github/github"
+
 Construct a new GitHub client, then use the various services on the client to
 access different parts of the GitHub API. For example:
 
@@ -14,7 +18,9 @@ access different parts of the GitHub API. For example:
 	// list all organizations for user "willnorris"
 	orgs, _, err := client.Organizations.List("willnorris", nil)
 
-Set optional parameters for an API method by passing an Options object.
+Some API methods have optional parameters that can be passed. For example:
+
+	client := github.NewClient(nil)
 
 	// list recently updated repositories for org "github"
 	opt := &github.RepositoryListByOrgOptions{Sort: "updated"}
@@ -51,18 +57,23 @@ Note that when using an authenticated Client, all calls made by the client will
 include the specified OAuth token. Therefore, authenticated clients should
 almost never be shared between different users.
 
+See the oauth2 docs for complete instructions on using that library.
+
+For API methods that require HTTP Basic Authentication, use the
+BasicAuthTransport.
+
 Rate Limiting
 
-GitHub imposes a rate limit on all API clients.  Unauthenticated clients are
+GitHub imposes a rate limit on all API clients. Unauthenticated clients are
 limited to 60 requests per hour, while authenticated clients can make up to
-5,000 requests per hour.  To receive the higher rate limit when making calls
+5,000 requests per hour. To receive the higher rate limit when making calls
 that are not issued on behalf of a user, use the
 UnauthenticatedRateLimitedTransport.
 
 The Rate method on a client returns the rate limit information based on the most
-recent API call.  This is updated on every call, but may be out of date if it's
+recent API call. This is updated on every call, but may be out of date if it's
 been some time since the last API call and other clients have made subsequent
-requests since then.  You can always call RateLimits() directly to get the most
+requests since then. You can always call RateLimits() directly to get the most
 up-to-date rate limit data for the client.
 
 To detect an API rate limit error, you can check if its type is *github.RateLimitError:
@@ -79,11 +90,9 @@ Conditional Requests
 
 The GitHub API has good support for conditional requests which will help
 prevent you from burning through your rate limit, as well as help speed up your
-application.  go-github does not handle conditional requests directly, but is
-instead designed to work with a caching http.Transport.  We recommend using
-https://github.com/gregjones/httpcache, which can be used in conjunction with
-https://github.com/sourcegraph/apiproxy to provide additional flexibility and
-control of caching rules.
+application. go-github does not handle conditional requests directly, but is
+instead designed to work with a caching http.Transport. We recommend using
+https://github.com/gregjones/httpcache for that.
 
 Learn more about GitHub conditional requests at
 https://developer.github.com/v3/#conditional-requests.
@@ -93,7 +102,7 @@ Creating and Updating Resources
 All structs for GitHub resources use pointer values for all non-repeated fields.
 This allows distinguishing between unset fields and those set to a zero-value.
 Helper functions have been provided to easily create these pointers for string,
-bool, and int values.  For example:
+bool, and int values. For example:
 
 	// create a new private repository named "foo"
 	repo := &github.Repository{
@@ -106,11 +115,14 @@ Users who have worked with protocol buffers should find this pattern familiar.
 
 Pagination
 
-All requests for resource collections (repos, pull requests, issues, etc)
+All requests for resource collections (repos, pull requests, issues, etc.)
 support pagination. Pagination options are described in the
-ListOptions struct and passed to the list methods directly or as an
+github.ListOptions struct and passed to the list methods directly or as an
 embedded type of a more specific list options struct (for example
-PullRequestListOptions).  Pages information is available via Response struct.
+github.PullRequestListOptions). Pages information is available via the
+github.Response struct.
+
+	client := github.NewClient(nil)
 
 	opt := &github.RepositoryListByOrgOptions{
 		ListOptions: github.ListOptions{PerPage: 10},

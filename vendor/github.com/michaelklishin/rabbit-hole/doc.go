@@ -83,6 +83,10 @@ Operations on Queues
         resp, err := rmqc.DeleteQueue("/", "a.queue")
         // => *http.Response, err
 
+        // purges all messages in queue
+        resp, err := rmqc.PurgeQueue("/", "a.queue")
+        // => *http.Response, err
+
 Operations on Bindings
 
         bs, err := rmqc.ListBindings()

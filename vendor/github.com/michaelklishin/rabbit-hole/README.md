@@ -215,6 +215,10 @@ resp, err := rmqc.DeclareQueue("/", "a.queue", QueueSettings{Durable: false})
 // deletes individual queue
 resp, err := rmqc.DeleteQueue("/", "a.queue")
 // => *http.Response, err
+
+// purges all messages in queue
+resp, err := rmqc.PurgeQueue("/", "a.queue")
+// => *http.Response, err
 ```
 
 

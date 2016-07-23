@@ -3015,7 +3015,13 @@ func (c *IAM) GetGroupPolicyRequest(input *GetGroupPolicyInput) (req *request.Re
 // Retrieves the specified inline policy document that is embedded in the specified
 // IAM group.
 //
-// An IAM group can also have managed policies attached to it. To retrieve
+//  Policies returned by this API are URL-encoded compliant with RFC 3986 (https://tools.ietf.org/html/rfc3986).
+// You can use a URL decoding method to convert the policy back to plain JSON
+// text. For example, if you use Java, you can use the decode method of the
+// java.net.URLDecoder utility class in the Java SDK. Other languages and SDKs
+// provide similar functionality.
+//
+//  An IAM group can also have managed policies attached to it. To retrieve
 // a managed policy document that is attached to a group, use GetPolicy to determine
 // the policy's default version, then use GetPolicyVersion to retrieve the policy
 // document.
@@ -3284,7 +3290,13 @@ func (c *IAM) GetPolicyVersionRequest(input *GetPolicyVersionInput) (req *reques
 // Retrieves information about the specified version of the specified managed
 // policy, including the policy document.
 //
-// To list the available versions for a policy, use ListPolicyVersions.
+//  Policies returned by this API are URL-encoded compliant with RFC 3986 (https://tools.ietf.org/html/rfc3986).
+// You can use a URL decoding method to convert the policy back to plain JSON
+// text. For example, if you use Java, you can use the decode method of the
+// java.net.URLDecoder utility class in the Java SDK. Other languages and SDKs
+// provide similar functionality.
+//
+//  To list the available versions for a policy, use ListPolicyVersions.
 //
 // This API retrieves information about managed policies. To retrieve information
 // about an inline policy that is embedded in a user, group, or role, use the
@@ -3347,6 +3359,12 @@ func (c *IAM) GetRoleRequest(input *GetRoleInput) (req *request.Request, output 
 // Retrieves information about the specified role, including the role's path,
 // GUID, ARN, and the role's trust policy that grants permission to assume the
 // role. For more information about roles, see Working with Roles (http://docs.aws.amazon.com/IAM/latest/UserGuide/WorkingWithRoles.html).
+//
+//  Policies returned by this API are URL-encoded compliant with RFC 3986 (https://tools.ietf.org/html/rfc3986).
+// You can use a URL decoding method to convert the policy back to plain JSON
+// text. For example, if you use Java, you can use the decode method of the
+// java.net.URLDecoder utility class in the Java SDK. Other languages and SDKs
+// provide similar functionality.
 func (c *IAM) GetRole(input *GetRoleInput) (*GetRoleOutput, error) {
 	req, out := c.GetRoleRequest(input)
 	err := req.Send()
@@ -3397,8 +3415,14 @@ func (c *IAM) GetRolePolicyRequest(input *GetRolePolicyInput) (req *request.Requ
 // Retrieves the specified inline policy document that is embedded with the
 // specified IAM role.
 //
-// An IAM role can also have managed policies attached to it. To retrieve a
-// managed policy document that is attached to a role, use GetPolicy to determine
+//  Policies returned by this API are URL-encoded compliant with RFC 3986 (https://tools.ietf.org/html/rfc3986).
+// You can use a URL decoding method to convert the policy back to plain JSON
+// text. For example, if you use Java, you can use the decode method of the
+// java.net.URLDecoder utility class in the Java SDK. Other languages and SDKs
+// provide similar functionality.
+//
+//  An IAM role can also have managed policies attached to it. To retrieve
+// a managed policy document that is attached to a role, use GetPolicy to determine
 // the policy's default version, then use GetPolicyVersion to retrieve the policy
 // document.
 //
@@ -3668,8 +3692,14 @@ func (c *IAM) GetUserPolicyRequest(input *GetUserPolicyInput) (req *request.Requ
 // Retrieves the specified inline policy document that is embedded in the specified
 // IAM user.
 //
-// An IAM user can also have managed policies attached to it. To retrieve a
-// managed policy document that is attached to a user, use GetPolicy to determine
+//  Policies returned by this API are URL-encoded compliant with RFC 3986 (https://tools.ietf.org/html/rfc3986).
+// You can use a URL decoding method to convert the policy back to plain JSON
+// text. For example, if you use Java, you can use the decode method of the
+// java.net.URLDecoder utility class in the Java SDK. Other languages and SDKs
+// provide similar functionality.
+//
+//  An IAM user can also have managed policies attached to it. To retrieve
+// a managed policy document that is attached to a user, use GetPolicy to determine
 // the policy's default version, then use GetPolicyVersion to retrieve the policy
 // document.
 //
@@ -5189,6 +5219,12 @@ func (c *IAM) ListSSHPublicKeysRequest(input *ListSSHPublicKeysInput) (req *requ
 		Name:       opListSSHPublicKeys,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"Marker"},
+			OutputTokens:    []string{"Marker"},
+			LimitToken:      "MaxItems",
+			TruncationToken: "IsTruncated",
+		},
 	}
 
 	if input == nil {
@@ -5216,6 +5252,31 @@ func (c *IAM) ListSSHPublicKeys(input *ListSSHPublicKeysInput) (*ListSSHPublicKe
 	req, out := c.ListSSHPublicKeysRequest(input)
 	err := req.Send()
 	return out, err
+}
+
+// ListSSHPublicKeysPages iterates over the pages of a ListSSHPublicKeys operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See ListSSHPublicKeys method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a ListSSHPublicKeys operation.
+//    pageNum := 0
+//    err := client.ListSSHPublicKeysPages(params,
+//        func(page *ListSSHPublicKeysOutput, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *IAM) ListSSHPublicKeysPages(input *ListSSHPublicKeysInput, fn func(p *ListSSHPublicKeysOutput, lastPage bool) (shouldContinue bool)) error {
+	page, _ := c.ListSSHPublicKeysRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
+	return page.EachPage(func(p interface{}, lastPage bool) bool {
+		return fn(p.(*ListSSHPublicKeysOutput), lastPage)
+	})
 }
 
 const opListServerCertificates = "ListServerCertificates"
@@ -6161,6 +6222,12 @@ func (c *IAM) SimulateCustomPolicyRequest(input *SimulateCustomPolicyInput) (req
 		Name:       opSimulateCustomPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"Marker"},
+			OutputTokens:    []string{"Marker"},
+			LimitToken:      "MaxItems",
+			TruncationToken: "IsTruncated",
+		},
 	}
 
 	if input == nil {
@@ -6196,6 +6263,31 @@ func (c *IAM) SimulateCustomPolicy(input *SimulateCustomPolicyInput) (*SimulateP
 	return out, err
 }
 
+// SimulateCustomPolicyPages iterates over the pages of a SimulateCustomPolicy operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See SimulateCustomPolicy method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a SimulateCustomPolicy operation.
+//    pageNum := 0
+//    err := client.SimulateCustomPolicyPages(params,
+//        func(page *SimulatePolicyResponse, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *IAM) SimulateCustomPolicyPages(input *SimulateCustomPolicyInput, fn func(p *SimulatePolicyResponse, lastPage bool) (shouldContinue bool)) error {
+	page, _ := c.SimulateCustomPolicyRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
+	return page.EachPage(func(p interface{}, lastPage bool) bool {
+		return fn(p.(*SimulatePolicyResponse), lastPage)
+	})
+}
+
 const opSimulatePrincipalPolicy = "SimulatePrincipalPolicy"
 
 // SimulatePrincipalPolicyRequest generates a "aws/request.Request" representing the
@@ -6225,6 +6317,12 @@ func (c *IAM) SimulatePrincipalPolicyRequest(input *SimulatePrincipalPolicyInput
 		Name:       opSimulatePrincipalPolicy,
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
+		Paginator: &request.Paginator{
+			InputTokens:     []string{"Marker"},
+			OutputTokens:    []string{"Marker"},
+			LimitToken:      "MaxItems",
+			TruncationToken: "IsTruncated",
+		},
 	}
 
 	if input == nil {
@@ -6268,6 +6366,31 @@ func (c *IAM) SimulatePrincipalPolicy(input *SimulatePrincipalPolicyInput) (*Sim
 	req, out := c.SimulatePrincipalPolicyRequest(input)
 	err := req.Send()
 	return out, err
+}
+
+// SimulatePrincipalPolicyPages iterates over the pages of a SimulatePrincipalPolicy operation,
+// calling the "fn" function with the response data for each page. To stop
+// iterating, return false from the fn function.
+//
+// See SimulatePrincipalPolicy method for more information on how to use this operation.
+//
+// Note: This operation can generate multiple requests to a service.
+//
+//    // Example iterating over at most 3 pages of a SimulatePrincipalPolicy operation.
+//    pageNum := 0
+//    err := client.SimulatePrincipalPolicyPages(params,
+//        func(page *SimulatePolicyResponse, lastPage bool) bool {
+//            pageNum++
+//            fmt.Println(page)
+//            return pageNum <= 3
+//        })
+//
+func (c *IAM) SimulatePrincipalPolicyPages(input *SimulatePrincipalPolicyInput, fn func(p *SimulatePolicyResponse, lastPage bool) (shouldContinue bool)) error {
+	page, _ := c.SimulatePrincipalPolicyRequest(input)
+	page.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler("Paginator"))
+	return page.EachPage(func(p interface{}, lastPage bool) bool {
+		return fn(p.(*SimulatePolicyResponse), lastPage)
+	})
 }
 
 const opUpdateAccessKey = "UpdateAccessKey"

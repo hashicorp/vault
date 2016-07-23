@@ -295,7 +295,7 @@ func NewClient(ctx context.Context, src TokenSource) *http.Client {
 	if src == nil {
 		c, err := internal.ContextClient(ctx)
 		if err != nil {
-			return &http.Client{Transport: internal.ErrorTransport{err}}
+			return &http.Client{Transport: internal.ErrorTransport{Err: err}}
 		}
 		return c
 	}

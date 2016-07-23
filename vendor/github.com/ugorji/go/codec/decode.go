@@ -1169,7 +1169,7 @@ type decRtidFn struct {
 // primitives are being decoded.
 //
 // maps and arrays are not handled by this mechanism.
-// However, RawExt is, and we accomodate for extensions that decode
+// However, RawExt is, and we accommodate for extensions that decode
 // RawExt from DecodeNaked, but need to decode the value subsequently.
 // kInterfaceNaked and swallow, which call DecodeNaked, handle this caveat.
 //

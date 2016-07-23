@@ -263,3 +263,21 @@ func (c *Client) DeleteQueue(vhost, queue string) (res *http.Response, err error
 
 	return res, nil
 }
+
+//
+// DELETE /api/queues/{vhost}/{name}/contents
+//
+
+func (c *Client) PurgeQueue(vhost, queue string) (res *http.Response, err error) {
+	req, err := newRequestWithBody(c, "DELETE", "queues/"+url.QueryEscape(vhost)+"/"+url.QueryEscape(queue)+"/contents", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err = executeRequest(c, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

@@ -3003,7 +3003,7 @@ Error:
 // unmarshalled into by gobson.  This function blocks until either a result
 // is available or an error happens.  For example:
 //
-//     err := collection.Find(bson.M{"a", 1}).One(&result)
+//     err := collection.Find(bson.M{"a": 1}).One(&result)
 //
 // In case the resulting document includes a field named $err or errmsg, which
 // are standard ways for MongoDB to return query errors, the returned err will

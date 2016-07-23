@@ -61,6 +61,8 @@ err := cfg.Append("other file", []byte("other raw data"))
 cfg, err := ini.LooseLoad("filename", "filename_404")
 ```
 
+更牛逼的是，当那些之前不存在的文件在重新调用 `Reload` 方法的时候突然出现了，那么它们会被正常加载。
+
 有时候分区和键的名称大小写混合非常烦人，这个时候就可以通过 `InsensitiveLoad` 将所有分区和键名在读取里强制转换为小写：
 
 ```go
@@ -76,7 +78,7 @@ key1, err := cfg.GetKey("Key")
 key2, err := cfg.GetKey("KeY")
 ```
 
-更牛逼的是，当那些之前不存在的文件在重新调用 `Reload` 方法的时候突然出现了，那么它们会被正常加载。
+如果您想要更加自定义的加载选项，可以使用 `LoadSources` 方法并参见 [`LoadOptions`](https://github.com/go-ini/ini/blob/v1.16.1/ini.go#L156)。
 
 ### 操作分区（Section）
 
@@ -261,6 +263,16 @@ lots_of_lines = 1 \
 cfg.Section("advance").Key("two_lines").String() // how about continuation lines?
 cfg.Section("advance").Key("lots_of_lines").String() // 1 2 3 4
 ```
+
+可是我有时候觉得两行连在一起特别没劲，怎么才能不自动连接两行呢？
+
+```go
+cfg, err := ini.LoadSources(ini.LoadOptions{
+	IgnoreContinuation: true,
+}, "filename")
+```
+
+哇靠给力啊！
 
 需要注意的是，值两侧的单引号会被自动剔除：
 

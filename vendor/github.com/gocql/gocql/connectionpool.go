@@ -481,6 +481,13 @@ func (pool *hostConnPool) connect() (err error) {
 		if err == nil {
 			break
 		}
+		if opErr, isOpErr := err.(*net.OpError); isOpErr {
+			// if the error is not a temporary error (ex: network unreachable) don't
+			//  retry
+			if !opErr.Temporary() {
+				break
+			}
+		}
 	}
 
 	if err != nil {

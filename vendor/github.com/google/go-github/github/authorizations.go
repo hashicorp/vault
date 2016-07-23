@@ -397,3 +397,40 @@ func (s *AuthorizationsService) DeleteGrant(id int) (*Response, error) {
 
 	return s.client.Do(req, nil)
 }
+
+// Create an impersonation OAuth token.
+//
+// This requires admin permissions. With the returned Authorization.Token
+// you can e.g. create or delete a user's public SSH key. NOTE: creating a
+// new token automatically revokes an existing one.
+//
+// GitHub API docs: https://developer.github.com/enterprise/2.5/v3/users/administration/#create-an-impersonation-oauth-token
+func (s *AuthorizationsService) CreateImpersonation(username string, authReq *AuthorizationRequest) (*Authorization, *Response, error) {
+	u := fmt.Sprintf("admin/users/%v/authorizations", username)
+	req, err := s.client.NewRequest("POST", u, authReq)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	a := new(Authorization)
+	resp, err := s.client.Do(req, a)
+	if err != nil {
+		return nil, resp, err
+	}
+	return a, resp, err
+}
+
+// Delete an impersonation OAuth token.
+//
+// NOTE: there can be only one at a time.
+//
+// GitHub API docs: https://developer.github.com/enterprise/2.5/v3/users/administration/#delete-an-impersonation-oauth-token
+func (s *AuthorizationsService) DeleteImpersonation(username string) (*Response, error) {
+	u := fmt.Sprintf("admin/users/%v/authorizations", username)
+	req, err := s.client.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.client.Do(req, nil)
+}

@@ -77,7 +77,7 @@ import (
 // codecgen will panic if the file was generated with an old version of the library in use.
 //
 // Note:
-//   It was a concious decision to have gen.go always explicitly call EncodeNil or TryDecodeAsNil.
+//   It was a conscious decision to have gen.go always explicitly call EncodeNil or TryDecodeAsNil.
 //   This way, there isn't a function call overhead just to see that we should not enter a block of code.
 
 // GenVersion is the current version of codecgen.
@@ -1421,7 +1421,7 @@ func (x *genRunner) decStructMapSwitch(kName string, varname string, rtid uintpt
 		if si.i != -1 {
 			t2 = t.Field(int(si.i))
 		} else {
-			//we must accomodate anonymous fields, where the embedded field is a nil pointer in the value.
+			//we must accommodate anonymous fields, where the embedded field is a nil pointer in the value.
 			// t2 = t.FieldByIndex(si.is)
 			t2typ := t
 			varname3 := varname
@@ -1509,7 +1509,7 @@ func (x *genRunner) decStructArray(varname, lenvarname, breakString string, rtid
 		if si.i != -1 {
 			t2 = t.Field(int(si.i))
 		} else {
-			//we must accomodate anonymous fields, where the embedded field is a nil pointer in the value.
+			//we must accommodate anonymous fields, where the embedded field is a nil pointer in the value.
 			// t2 = t.FieldByIndex(si.is)
 			t2typ := t
 			varname3 := varname
@@ -1931,7 +1931,7 @@ func genInternalInit() {
 	}
 	var gt genInternal
 
-	// For each slice or map type, there must be a (symetrical) Encode and Decode fast-path function
+	// For each slice or map type, there must be a (symmetrical) Encode and Decode fast-path function
 	for _, s := range types {
 		gt.Values = append(gt.Values, genV{Primitive: s, Size: mapvaltypes2[s]})
 		if s != "uint8" { // do not generate fast path for slice of bytes. Treat specially already.

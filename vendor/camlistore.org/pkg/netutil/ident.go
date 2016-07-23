@@ -28,7 +28,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/user"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -134,18 +133,6 @@ func (p maybeBrackets) String() string {
 
 // Changed by tests.
 var uidFromUsername = uidFromUsernameFn
-
-func uidFromUsernameFn(username string) (uid int, err error) {
-	if uid := os.Getuid(); uid != 0 && username == os.Getenv("USER") {
-		return uid, nil
-	}
-	u, err := user.Lookup(username)
-	if err == nil {
-		uid, err := strconv.Atoi(u.Uid)
-		return uid, err
-	}
-	return 0, err
-}
 
 func uidFromLsof(lip net.IP, lport int, rip net.IP, rport int) (uid int, err error) {
 	seek := fmt.Sprintf("%s:%d->%s:%d", maybeBrackets(lip), lport, maybeBrackets(rip), rport)

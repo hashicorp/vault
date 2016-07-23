@@ -57,6 +57,12 @@ var (
 
 	// ConsulImageName is the Consul image name on dockerhub.
 	ConsulImageName = env.Getenv("DOCKERTEST_CONSUL_IMAGE_NAME", "consul")
+
+	// ZooKeeperImageName is the ZooKeeper image name on dockerhub.
+	ZooKeeperImageName = env.Getenv("DOCKERTEST_ZOOKEEPER_IMAGE_NAME", "jplock/zookeeper")
+
+	// CassandraImageName is the Cassandra image name on dockerhub.
+	CassandraImageName = env.Getenv("DOCKERTEST_CASSANDRA_IMAGE_NAME", "cassandra")
 )
 
 // Username and password configuration

@@ -118,6 +118,11 @@ type Signer struct {
 	// with pre-signed requests preventing headers from being added to the
 	// request's query string.
 	DisableHeaderHoisting bool
+
+	// currentTimeFn returns the time value which represents the current time.
+	// This value should only be used for testing. If it is nil the default
+	// time.Now will be used.
+	currentTimeFn func() time.Time
 }
 
 // NewSigner returns a Signer pointer configured with the credentials and optional
@@ -150,6 +155,7 @@ type signingCtx struct {
 	formattedTime      string
 	formattedShortTime string
 
+	bodyDigest       string
 	signedHeaders    string
 	canonicalHeaders string
 	canonicalString  string
@@ -217,6 +223,11 @@ func (v4 Signer) Presign(r *http.Request, body io.ReadSeeker, service, region st
 }
 
 func (v4 Signer) signWithBody(r *http.Request, body io.ReadSeeker, service, region string, exp time.Duration, signTime time.Time) (http.Header, error) {
+	currentTimeFn := v4.currentTimeFn
+	if currentTimeFn == nil {
+		currentTimeFn = time.Now
+	}
+
 	ctx := &signingCtx{
 		Request:     r,
 		Body:        body,
@@ -229,12 +240,12 @@ func (v4 Signer) signWithBody(r *http.Request, body io.ReadSeeker, service, regi
 	}
 
 	if ctx.isRequestSigned() {
-		if !v4.Credentials.IsExpired() && time.Now().Before(ctx.Time.Add(10*time.Minute)) {
+		if !v4.Credentials.IsExpired() && currentTimeFn().Before(ctx.Time.Add(10*time.Minute)) {
 			// If the request is already signed, and the credentials have not
 			// expired, and the request is not too old ignore the signing request.
 			return ctx.SignedHeaderVals, nil
 		}
-		ctx.Time = time.Now()
+		ctx.Time = currentTimeFn()
 		ctx.handlePresignRemoval()
 	}
 
@@ -303,6 +314,9 @@ var SignRequestHandler = request.NamedHandler{
 // If the credentials of the request's config are set to
 // credentials.AnonymousCredentials the request will not be signed.
 func SignSDKRequest(req *request.Request) {
+	signSDKRequestWithCurrTime(req, time.Now)
+}
+func signSDKRequestWithCurrTime(req *request.Request, curTimeFn func() time.Time) {
 	// If the request does not need to be signed ignore the signing of the
 	// request if the AnonymousCredentials object is used.
 	if req.Config.Credentials == credentials.AnonymousCredentials {
@@ -323,11 +337,23 @@ func SignSDKRequest(req *request.Request) {
 		v4.Debug = req.Config.LogLevel.Value()
 		v4.Logger = req.Config.Logger
 		v4.DisableHeaderHoisting = req.NotHoist
+		v4.currentTimeFn = curTimeFn
 	})
 
-	signedHeaders, err := v4.signWithBody(req.HTTPRequest, req.Body, name, region, req.ExpireTime, req.Time)
+	signingTime := req.Time
+	if !req.LastSignedAt.IsZero() {
+		signingTime = req.LastSignedAt
+	}
+
+	signedHeaders, err := v4.signWithBody(req.HTTPRequest, req.Body, name, region, req.ExpireTime, signingTime)
+	if err != nil {
+		req.Error = err
+		req.SignedHeaderVals = nil
+		return
+	}
+
 	req.SignedHeaderVals = signedHeaders
-	req.Error = err
+	req.LastSignedAt = curTimeFn()
 }
 
 const logSignInfoMsg = `DEBUG: Request Signiture:
@@ -364,6 +390,7 @@ func (ctx *signingCtx) build(disableHeaderHoisting bool) {
 		}
 	}
 
+	ctx.buildBodyDigest()
 	ctx.buildCanonicalHeaders(ignoredHeaders, unsignedHeaders)
 	ctx.buildCanonicalString() // depends on canon headers / signed headers
 	ctx.buildStringToSign()    // depends on canon string
@@ -485,7 +512,7 @@ func (ctx *signingCtx) buildCanonicalString() {
 		ctx.Request.URL.RawQuery,
 		ctx.canonicalHeaders + "\n",
 		ctx.signedHeaders,
-		ctx.bodyDigest(),
+		ctx.bodyDigest,
 	}, "\n")
 }
 
@@ -508,7 +535,7 @@ func (ctx *signingCtx) buildSignature() {
 	ctx.signature = hex.EncodeToString(signature)
 }
 
-func (ctx *signingCtx) bodyDigest() string {
+func (ctx *signingCtx) buildBodyDigest() {
 	hash := ctx.Request.Header.Get("X-Amz-Content-Sha256")
 	if hash == "" {
 		if ctx.isPresign && ctx.ServiceName == "s3" {
@@ -518,9 +545,11 @@ func (ctx *signingCtx) bodyDigest() string {
 		} else {
 			hash = hex.EncodeToString(makeSha256Reader(ctx.Body))
 		}
-		ctx.Request.Header.Add("X-Amz-Content-Sha256", hash)
+		if ctx.ServiceName == "s3" {
+			ctx.Request.Header.Set("X-Amz-Content-Sha256", hash)
+		}
 	}
-	return hash
+	ctx.bodyDigest = hash
 }
 
 // isRequestSigned returns if the request is currently signed or presigned

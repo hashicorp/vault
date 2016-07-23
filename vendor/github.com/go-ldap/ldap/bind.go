@@ -10,16 +10,22 @@ import (
 	"gopkg.in/asn1-ber.v1"
 )
 
+// SimpleBindRequest represents a username/password bind operation
 type SimpleBindRequest struct {
+	// Username is the name of the Directory object that the client wishes to bind as
 	Username string
+	// Password is the credentials to bind with
 	Password string
+	// Controls are optional controls to send with the bind request
 	Controls []Control
 }
 
+// SimpleBindResult contains the response from the server
 type SimpleBindResult struct {
 	Controls []Control
 }
 
+// NewSimpleBindRequest returns a bind request
 func NewSimpleBindRequest(username string, password string, controls []Control) *SimpleBindRequest {
 	return &SimpleBindRequest{
 		Username: username,
@@ -39,6 +45,7 @@ func (bindRequest *SimpleBindRequest) encode() *ber.Packet {
 	return request
 }
 
+// SimpleBind performs the simple bind operation defined in the given request
 func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResult, error) {
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
 	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
@@ -90,6 +97,7 @@ func (l *Conn) SimpleBind(simpleBindRequest *SimpleBindRequest) (*SimpleBindResu
 	return result, nil
 }
 
+// Bind performs a bind with the given username and password
 func (l *Conn) Bind(username, password string) error {
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
 	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))
