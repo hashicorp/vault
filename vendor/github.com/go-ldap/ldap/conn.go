@@ -17,18 +17,27 @@ import (
 )
 
 const (
-	MessageQuit     = 0
-	MessageRequest  = 1
+	// MessageQuit causes the processMessages loop to exit
+	MessageQuit = 0
+	// MessageRequest sends a request to the server
+	MessageRequest = 1
+	// MessageResponse receives a response from the server
 	MessageResponse = 2
-	MessageFinish   = 3
-	MessageTimeout  = 4
+	// MessageFinish indicates the client considers a particular message ID to be finished
+	MessageFinish = 3
+	// MessageTimeout indicates the client-specified timeout for a particular message ID has been reached
+	MessageTimeout = 4
 )
 
+// PacketResponse contains the packet or error encountered reading a response
 type PacketResponse struct {
+	// Packet is the packet read from the server
 	Packet *ber.Packet
-	Error  error
+	// Error is an error encountered while reading
+	Error error
 }
 
+// ReadPacket returns the packet or an error
 func (pr *PacketResponse) ReadPacket() (*ber.Packet, error) {
 	if (pr == nil) || (pr.Packet == nil && pr.Error == nil) {
 		return nil, NewError(ErrorNetwork, errors.New("ldap: could not retrieve response"))
@@ -37,8 +46,10 @@ func (pr *PacketResponse) ReadPacket() (*ber.Packet, error) {
 }
 
 type messageContext struct {
-	id        int64
-	done      chan struct{}
+	id int64
+	// close(done) should only be called from finishMessage()
+	done chan struct{}
+	// close(responses) should only be called from processMessages(), and only sent to from sendResponse()
 	responses chan *PacketResponse
 }
 
@@ -140,6 +151,7 @@ func NewConn(conn net.Conn, isTLS bool) *Conn {
 	}
 }
 
+// Start initializes goroutines to read responses and process messages
 func (l *Conn) Start() {
 	go l.reader()
 	go l.processMessages()
@@ -167,7 +179,7 @@ func (l *Conn) Close() {
 	l.wgClose.Wait()
 }
 
-// Sets the time after a request is sent that a MessageTimeout triggers
+// SetTimeout sets the time after a request is sent that a MessageTimeout triggers
 func (l *Conn) SetTimeout(timeout time.Duration) {
 	if timeout > 0 {
 		l.requestTimeout = timeout
@@ -253,15 +265,14 @@ func (l *Conn) sendMessageWithFlags(packet *ber.Packet, flags sendMessageFlags) 
 	l.Debug.Printf("flags&startTLS = %d", flags&startTLS)
 	if l.isStartingTLS {
 		l.messageMutex.Unlock()
-		return nil, NewError(ErrorNetwork, errors.New("ldap: connection is in startls phase."))
+		return nil, NewError(ErrorNetwork, errors.New("ldap: connection is in startls phase"))
 	}
 	if flags&startTLS != 0 {
 		if l.outstandingRequests != 0 {
 			l.messageMutex.Unlock()
 			return nil, NewError(ErrorNetwork, errors.New("ldap: cannot StartTLS with outstanding requests"))
-		} else {
-			l.isStartingTLS = true
 		}
+		l.isStartingTLS = true
 	}
 	l.outstandingRequests++
 

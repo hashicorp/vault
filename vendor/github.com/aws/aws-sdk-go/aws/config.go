@@ -139,6 +139,11 @@ type Config struct {
 	//
 	EC2MetadataDisableTimeoutOverride *bool
 
+	// SleepDelay is an override for the func the SDK will call when sleeping
+	// during the lifecycle of a request. Specifically this will be used for
+	// request delays. This value should only be used for testing. To adjust
+	// the delay of a request see the aws/client.DefaultRetryer and
+	// aws/request.Retryer.
 	SleepDelay func(time.Duration)
 }
 

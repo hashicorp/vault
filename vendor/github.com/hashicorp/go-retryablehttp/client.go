@@ -86,6 +86,13 @@ func NewRequest(method, url string, body io.ReadSeeker) (*Request, error) {
 // consumers.
 type RequestLogHook func(*log.Logger, *http.Request, int)
 
+// ResponseLogHook is like RequestLogHook, but allows running a function
+// on each HTTP response. This function will be invoked at the end of
+// every HTTP request executed, regardless of whether a subsequent retry
+// needs to be performed or not. If the response body is read or closed
+// from this method, this will affect the response returned from Do().
+type ResponseLogHook func(*log.Logger, *http.Response)
+
 // Client is used to make HTTP requests. It adds additional functionality
 // like automatic retries to tolerate minor outages.
 type Client struct {
@@ -99,6 +106,10 @@ type Client struct {
 	// RequestLogHook allows a user-supplied function to be called
 	// before each retry.
 	RequestLogHook RequestLogHook
+
+	// ResponseLogHook allows a user-supplied function to be called
+	// with the response from each HTTP request executed.
+	ResponseLogHook ResponseLogHook
 }
 
 // NewClient creates a new Client with default settings.
@@ -137,6 +148,11 @@ func (c *Client) Do(req *Request) (*http.Response, error) {
 			goto RETRY
 		}
 		code = resp.StatusCode
+
+		// Call the response logger function if provided.
+		if c.ResponseLogHook != nil {
+			c.ResponseLogHook(c.Logger, resp)
+		}
 
 		// Check the response code. We retry on 500-range responses to allow
 		// the server time to recover, as 500's are typically not permanent

@@ -12,8 +12,11 @@ import (
 	"gopkg.in/asn1-ber.v1"
 )
 
+// DelRequest implements an LDAP deletion request
 type DelRequest struct {
-	DN       string
+	// DN is the name of the directory entry to delete
+	DN string
+	// Controls hold optional controls to send with the request
 	Controls []Control
 }
 
@@ -23,6 +26,7 @@ func (d DelRequest) encode() *ber.Packet {
 	return request
 }
 
+// NewDelRequest creates a delete request for the given DN and controls
 func NewDelRequest(DN string,
 	Controls []Control) *DelRequest {
 	return &DelRequest{
@@ -31,6 +35,7 @@ func NewDelRequest(DN string,
 	}
 }
 
+// Del executes the given delete request
 func (l *Conn) Del(delRequest *DelRequest) error {
 	packet := ber.Encode(ber.ClassUniversal, ber.TypeConstructed, ber.TagSequence, nil, "LDAP Request")
 	packet.AppendChild(ber.NewInteger(ber.ClassUniversal, ber.TypePrimitive, ber.TagInteger, l.nextMessageID(), "MessageID"))

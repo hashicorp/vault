@@ -705,7 +705,7 @@ func (d *bincDecDriver) decStringAndBytes(bs []byte, withString, zerocopy bool) 
 }
 
 func (d *bincDecDriver) DecodeString() (s string) {
-	// DecodeBytes does not accomodate symbols, whose impl stores string version in map.
+	// DecodeBytes does not accommodate symbols, whose impl stores string version in map.
 	// Use decStringAndBytes directly.
 	// return string(d.DecodeBytes(d.b[:], true, true))
 	_, s = d.decStringAndBytes(d.b[:], true, true)

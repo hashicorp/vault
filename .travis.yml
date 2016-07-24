@@ -6,10 +6,7 @@ services:
   - docker
 
 go:
-  - 1.6.2
-# tip is currently using go1.4.1, which we're not compatible with, so always
-# fails
-#  - tip
+  - 1.7rc3
 
 matrix:
   allow_failures:

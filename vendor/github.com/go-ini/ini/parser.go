@@ -178,7 +178,7 @@ func hasSurroundedQuote(in string, quote byte) bool {
 		strings.IndexByte(in[1:], quote) == len(in)-2
 }
 
-func (p *parser) readValue(in []byte) (string, error) {
+func (p *parser) readValue(in []byte, ignoreContinuation bool) (string, error) {
 	line := strings.TrimLeftFunc(string(in), unicode.IsSpace)
 	if len(line) == 0 {
 		return "", nil
@@ -205,8 +205,8 @@ func (p *parser) readValue(in []byte) (string, error) {
 	// Won't be able to reach here if value only contains whitespace.
 	line = strings.TrimSpace(line)
 
-	// Check continuation lines
-	if line[len(line)-1] == '\\' {
+	// Check continuation lines when desired.
+	if !ignoreContinuation && line[len(line)-1] == '\\' {
 		return p.readContinuationLines(line[:len(line)-1])
 	}
 
@@ -302,7 +302,7 @@ func (f *File) parse(reader io.Reader) (err error) {
 		}
 		key.isAutoIncr = isAutoIncr
 
-		value, err := p.readValue(line[offset:])
+		value, err := p.readValue(line[offset:], f.options.IgnoreContinuation)
 		if err != nil {
 			return err
 		}

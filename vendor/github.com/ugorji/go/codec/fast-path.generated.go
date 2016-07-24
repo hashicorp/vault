@@ -23,7 +23,7 @@ package codec
 // Currently support
 //    - slice of all builtin types,
 //    - map of all builtin types to string or interface value
-//    - symetrical maps of all builtin types (e.g. str-str, uint8-uint8)
+//    - symmetrical maps of all builtin types (e.g. str-str, uint8-uint8)
 // This should provide adequate "typical" implementations.
 //
 // Note that fast track decode functions must handle values for which an address cannot be obtained.

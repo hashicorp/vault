@@ -13,6 +13,7 @@ type Pages struct {
 	Status    *string `json:"status,omitempty"`
 	CNAME     *string `json:"cname,omitempty"`
 	Custom404 *bool   `json:"custom_404,omitempty"`
+	HTMLURL   *string `json:"html_url,omitempty"`
 }
 
 // PagesError represents a build error for a GitHub Pages site.
@@ -41,6 +42,9 @@ func (s *RepositoriesService) GetPagesInfo(owner string, repo string) (*Pages, *
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypePagesPreview)
 
 	site := new(Pages)
 	resp, err := s.client.Do(req, site)
@@ -79,6 +83,28 @@ func (s *RepositoriesService) GetLatestPagesBuild(owner string, repo string) (*P
 	if err != nil {
 		return nil, nil, err
 	}
+
+	build := new(PagesBuild)
+	resp, err := s.client.Do(req, build)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return build, resp, err
+}
+
+// RequestPageBuild requests a build of a GitHub Pages site without needing to push new commit.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/pages/#request-a-page-build
+func (s *RepositoriesService) RequestPageBuild(owner string, repo string) (*PagesBuild, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/pages/builds", owner, repo)
+	req, err := s.client.NewRequest("POST", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypePagesPreview)
 
 	build := new(PagesBuild)
 	resp, err := s.client.Do(req, build)

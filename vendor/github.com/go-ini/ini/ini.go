@@ -36,7 +36,7 @@ const (
 
 	// Maximum allowed depth when recursively substituing variable names.
 	_DEPTH_VALUES = 99
-	_VERSION      = "1.16.1"
+	_VERSION      = "1.18.0"
 )
 
 // Version returns current package version literal.
@@ -154,10 +154,12 @@ func parseDataSource(source interface{}) (dataSource, error) {
 }
 
 type LoadOptions struct {
-	// Loose indicats whether the parser should ignore nonexistent files or return error.
+	// Loose indicates whether the parser should ignore nonexistent files or return error.
 	Loose bool
 	// Insensitive indicates whether the parser forces all section and key names to lowercase.
 	Insensitive bool
+	// IgnoreContinuation indicates whether to ignore continuation lines while parsing.
+	IgnoreContinuation bool
 }
 
 func LoadSources(opts LoadOptions, source interface{}, others ...interface{}) (_ *File, err error) {

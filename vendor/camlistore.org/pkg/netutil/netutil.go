@@ -139,3 +139,27 @@ func loopbackIP() net.IP {
 	}
 	return nil
 }
+
+// RandPort returns a random port to listen on.
+func RandPort() (int, error) {
+	var port int
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		return port, err
+	}
+	listener, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		return port, fmt.Errorf("could not listen to find random port: %v", err)
+	}
+	randAddr := listener.Addr().(*net.TCPAddr)
+	if err := listener.Close(); err != nil {
+		return port, fmt.Errorf("could not close random listener: %v", err)
+	}
+	return randAddr.Port, nil
+}
+
+// HasPort, given a string of the form "host", "host:port", or
+// "[ipv6::address]:port", returns true if the string includes a port.
+func HasPort(s string) bool {
+	return strings.LastIndex(s, ":") > strings.LastIndex(s, "]")
+}

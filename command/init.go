@@ -2,11 +2,16 @@ package command
 
 import (
 	"fmt"
+	"net/url"
+	"os"
+	"runtime"
 	"strings"
 
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/meta"
+	"github.com/hashicorp/vault/physical"
 )
 
 // InitCommand is a Command that initializes a new Vault server.
@@ -17,7 +22,8 @@ type InitCommand struct {
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
 	var pgpKeys, recoveryPgpKeys pgpkeys.PubKeyFilesFlag
-	var check bool
+	var auto, check bool
+	var consulServiceName string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
@@ -28,10 +34,145 @@ func (c *InitCommand) Run(args []string) int {
 	flags.IntVar(&recoveryThreshold, "recovery-threshold", 3, "")
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
 	flags.BoolVar(&check, "check", false, "")
+	flags.BoolVar(&auto, "auto", false, "")
+	flags.StringVar(&consulServiceName, "consul-service", physical.DefaultServiceName, "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
+	initRequest := &api.InitRequest{
+		SecretShares:      shares,
+		SecretThreshold:   threshold,
+		StoredShares:      storedShares,
+		PGPKeys:           pgpKeys,
+		RecoveryShares:    recoveryShares,
+		RecoveryThreshold: recoveryThreshold,
+		RecoveryPGPKeys:   recoveryPgpKeys,
+	}
+
+	// If running in 'auto' mode, run service discovery based on environment
+	// variables of Consul.
+	if auto {
+
+		// Create configuration for Consul
+		consulConfig := consulapi.DefaultConfig()
+
+		// Create a client to communicate with Consul
+		consulClient, err := consulapi.NewClient(consulConfig)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("failed to create Consul client:%v", err))
+			return 1
+		}
+
+		var uninitializedVaults []string
+		var initializedVault string
+
+		// Query the nodes belonging to the cluster
+		if services, _, err := consulClient.Catalog().Service(consulServiceName, "", &consulapi.QueryOptions{AllowStale: true}); err == nil {
+		Loop:
+			for _, service := range services {
+				vaultAddress := &url.URL{
+					Scheme: consulConfig.Scheme,
+					Host:   fmt.Sprintf("%s:%d", service.ServiceAddress, service.ServicePort),
+				}
+
+				// Set VAULT_ADDR to the discovered node
+				os.Setenv(api.EnvVaultAddress, vaultAddress.String())
+
+				// Create a client to communicate with the discovered node
+				client, err := c.Client()
+				if err != nil {
+					c.Ui.Error(fmt.Sprintf("Error initializing client: %v", err))
+					return 1
+				}
+
+				// Check the initialization status of the discovered node
+				inited, err := client.Sys().InitStatus()
+				switch {
+				case err != nil:
+					c.Ui.Error(fmt.Sprintf("Error checking initialization status of discovered node: %+q. Err: %v", vaultAddress.String(), err))
+					return 1
+				case inited:
+					// One of the nodes in the cluster is initialized. Break out.
+					initializedVault = vaultAddress.String()
+					break Loop
+				default:
+					// Vault is uninitialized.
+					uninitializedVaults = append(uninitializedVaults, vaultAddress.String())
+				}
+			}
+		}
+
+		export := "export"
+		quote := "'"
+		if runtime.GOOS == "windows" {
+			export = "set"
+			quote = ""
+		}
+
+		if initializedVault != "" {
+			vaultURL, err := url.Parse(initializedVault)
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf("Failed to parse Vault address: %+q. Err: %v", initializedVault, err))
+			}
+			c.Ui.Output(fmt.Sprintf("Discovered an initialized Vault node at %+q, using Consul service name %+q", vaultURL.String(), consulServiceName))
+			c.Ui.Output("\nSet the following environment variable to operate on the discovered Vault:\n")
+			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultURL.String(), quote))
+			return 0
+		}
+
+		switch len(uninitializedVaults) {
+		case 0:
+			c.Ui.Error(fmt.Sprintf("Failed to discover Vault nodes using Consul service name %+q", consulServiceName))
+			return 1
+		case 1:
+			// There was only one node found in the Vault cluster and it
+			// was uninitialized.
+
+			vaultURL, err := url.Parse(uninitializedVaults[0])
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf("Failed to parse Vault address: %+q. Err: %v", uninitializedVaults[0], err))
+			}
+
+			// Set the VAULT_ADDR to the discovered node. This will ensure
+			// that the client created will operate on the discovered node.
+			os.Setenv(api.EnvVaultAddress, vaultURL.String())
+
+			// Let the client know that initialization is perfomed on the
+			// discovered node.
+			c.Ui.Output(fmt.Sprintf("Discovered Vault at %+q using Consul service name %+q\n", vaultURL.String(), consulServiceName))
+
+			// Attempt initializing it
+			ret := c.runInit(check, initRequest)
+
+			// Regardless of success or failure, instruct client to update VAULT_ADDR
+			c.Ui.Output("\nSet the following environment variable to operate on the discovered Vault:\n")
+			c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultURL.String(), quote))
+
+			return ret
+		default:
+			// If more than one Vault node were discovered, print out all of them,
+			// requiring the client to update VAULT_ADDR and to run init again.
+			c.Ui.Output(fmt.Sprintf("Discovered more than one uninitialized Vaults using Consul service name %+q\n", consulServiceName))
+			c.Ui.Output("To initialize these Vaults, set any *one* of the following environment variables and run 'vault init':")
+
+			// Print valid commands to make setting the variables easier
+			for _, vaultNode := range uninitializedVaults {
+				vaultURL, err := url.Parse(vaultNode)
+				if err != nil {
+					c.Ui.Error(fmt.Sprintf("Failed to parse Vault address: %+q. Err: %v", vaultNode, err))
+				}
+				c.Ui.Output(fmt.Sprintf("\t%s VAULT_ADDR=%s%s%s", export, quote, vaultURL.String(), quote))
+
+			}
+			return 0
+		}
+	}
+
+	return c.runInit(check, initRequest)
+}
+
+func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 	client, err := c.Client()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
@@ -43,15 +184,7 @@ func (c *InitCommand) Run(args []string) int {
 		return c.checkStatus(client)
 	}
 
-	resp, err := client.Sys().Init(&api.InitRequest{
-		SecretShares:      shares,
-		SecretThreshold:   threshold,
-		StoredShares:      storedShares,
-		PGPKeys:           pgpKeys,
-		RecoveryShares:    recoveryShares,
-		RecoveryThreshold: recoveryThreshold,
-		RecoveryPGPKeys:   recoveryPgpKeys,
-	})
+	resp, err := client.Sys().Init(initRequest)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing Vault: %s", err))
@@ -67,7 +200,7 @@ func (c *InitCommand) Run(args []string) int {
 
 	c.Ui.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))
 
-	if storedShares < 1 {
+	if initRequest.StoredShares < 1 {
 		c.Ui.Output(fmt.Sprintf(
 			"\n"+
 				"Vault initialized with %d keys and a key threshold of %d. Please\n"+
@@ -76,10 +209,10 @@ func (c *InitCommand) Run(args []string) int {
 				"to unseal it again.\n\n"+
 				"Vault does not store the master key. Without at least %d keys,\n"+
 				"your Vault will remain permanently sealed.",
-			shares,
-			threshold,
-			threshold,
-			threshold,
+			initRequest.SecretShares,
+			initRequest.SecretThreshold,
+			initRequest.SecretThreshold,
+			initRequest.SecretThreshold,
 		))
 	} else {
 		c.Ui.Output(
@@ -92,8 +225,8 @@ func (c *InitCommand) Run(args []string) int {
 			"\n"+
 				"Recovery key initialized with %d keys and a key threshold of %d. Please\n"+
 				"securely distribute the above keys.",
-			recoveryShares,
-			recoveryThreshold,
+			initRequest.RecoveryShares,
+			initRequest.RecoveryThreshold,
 		))
 	}
 
@@ -136,39 +269,62 @@ General Options:
 ` + meta.GeneralOptionsUsage() + `
 Init Options:
 
-  -check                    Don't actually initialize, just check if Vault is
-                            already initialized. A return code of 0 means Vault
-                            is initialized; a return code of 2 means Vault is not
-                            initialized; a return code of 1 means an error was
-                            encountered.
+  -check			Don't actually initialize, just check if Vault is
+				already initialized. A return code of 0 means Vault
+				is initialized; a return code of 2 means Vault is not
+				initialized; a return code of 1 means an error was
+				encountered.
 
-  -key-shares=5             The number of key shares to split the master key
-                            into.
+  -key-shares=5			The number of key shares to split the master key
+				into.
 
-  -key-threshold=3          The number of key shares required to reconstruct
-                            the master key.
+  -key-threshold=3		The number of key shares required to reconstruct
+				the master key.
 
-  -stored-shares=0          The number of unseal keys to store. This is not
-                            normally available.
+  -stored-shares=0		The number of unseal keys to store. This is not
+				normally available.
 
-  -pgp-keys                 If provided, must be a comma-separated list of
-                            files on disk containing binary- or base64-format
-                            public PGP keys, or Keybase usernames specified as
-                            "keybase:<username>". The number of given entries
-                            must match 'key-shares'. The output unseal keys will
-                            be encrypted and hex-encoded, in order, with the
-                            given public keys.  If you want to use them with the
-                            'vault unseal' command, you will need to hex decode
-                            and decrypt; this will be the plaintext unseal key.
+  -pgp-keys			If provided, must be a comma-separated list of
+				files on disk containing binary- or base64-format
+				public PGP keys, or Keybase usernames specified as
+				"keybase:<username>". The number of given entries
+				must match 'key-shares'. The output unseal keys will
+				be encrypted and hex-encoded, in order, with the
+				given public keys.  If you want to use them with the
+				'vault unseal' command, you will need to hex decode
+				and decrypt; this will be the plaintext unseal key.
 
-  -recovery-shares=5        The number of key shares to split the recovery key
-                            into. This is not normally available.
+  -recovery-shares=5		The number of key shares to split the recovery key
+				into. This is not normally available.
 
-  -recovery-threshold=3     The number of key shares required to reconstruct
-                            the recovery key. This is not normally available.
+  -recovery-threshold=3		The number of key shares required to reconstruct
+				the recovery key. This is not normally available.
 
-  -recovery-pgp-keys        If provided, behaves like "pgp-keys" but for the
-                            recovery key shares. This is not normally available.
+  -recovery-pgp-keys		If provided, behaves like "pgp-keys" but for the
+				recovery key shares. This is not normally available.
+
+  -auto				If set, performs service discovery using Consul. When 
+				all the nodes of a Vault cluster are registered with
+				Consul, setting this flag will trigger service discovery
+				using the service name with which Vault nodes are
+				registered. This option works well when each Vault
+				cluster is registered under a unique service name.
+				Note that, when Consul is serving as Vault's HA backend,
+				Vault nodes are registered with Consul by default. The
+				service name can be changed using 'consul-service' flag.
+				Ensure that environment variables required to communicate
+				with Consul, like (CONSUL_HTTP_ADDR, CONSUL_HTTP_TOKEN,
+				CONSUL_HTTP_SSL, et al) are properly set. When only one
+				Vault node is discovered, it will be initialized and
+				when more than one Vault node is discovered, they will
+				be output for easy selection.
+
+  -consul-service		Service name under which all the nodes of a Vault cluster
+				are registered with Consul. Note that, when Vault uses
+				Consul as its HA backend, by default, Vault will register
+				itself as a service with Consul with the service name "vault".
+				This name can be modified in Vault's configuration file,
+				using the "service" option for the Consul backend.
 `
 	return strings.TrimSpace(helpText)
 }

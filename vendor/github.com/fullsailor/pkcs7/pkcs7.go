@@ -303,7 +303,7 @@ func (p7 *PKCS7) GetOnlySigner() *x509.Certificate {
 }
 
 // ErrUnsupportedAlgorithm tells you when our quick dev assumptions have failed
-var ErrUnsupportedAlgorithm = errors.New("pkcs7: cannot decrypt data: only RSA, DES, DES-EDE3 and AES-256-CBC supported")
+var ErrUnsupportedAlgorithm = errors.New("pkcs7: cannot decrypt data: only RSA, DES, DES-EDE3, AES-256-CBC and AES-128-GCM supported")
 
 // ErrNotEncryptedContent is returned when attempting to Decrypt data that is not encrypted data
 var ErrNotEncryptedContent = errors.New("pkcs7: content data is a decryptable data type")
@@ -333,10 +333,14 @@ func (p7 *PKCS7) Decrypt(cert *x509.Certificate, pk crypto.PrivateKey) ([]byte, 
 var oidEncryptionAlgorithmDESCBC = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 7}
 var oidEncryptionAlgorithmDESEDE3CBC = asn1.ObjectIdentifier{1, 2, 840, 113549, 3, 7}
 var oidEncryptionAlgorithmAES256CBC = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 42}
+var oidEncryptionAlgorithmAES128GCM = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 6}
 
 func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 	alg := eci.ContentEncryptionAlgorithm.Algorithm
-	if !alg.Equal(oidEncryptionAlgorithmDESCBC) && !alg.Equal(oidEncryptionAlgorithmDESEDE3CBC) && !alg.Equal(oidEncryptionAlgorithmAES256CBC) {
+	if !alg.Equal(oidEncryptionAlgorithmDESCBC) &&
+		!alg.Equal(oidEncryptionAlgorithmDESEDE3CBC) &&
+		!alg.Equal(oidEncryptionAlgorithmAES256CBC) &&
+		!alg.Equal(oidEncryptionAlgorithmAES128GCM) {
 		fmt.Printf("Unsupported Content Encryption Algorithm: %s\n", alg)
 		return nil, ErrUnsupportedAlgorithm
 	}
@@ -371,10 +375,42 @@ func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 	case alg.Equal(oidEncryptionAlgorithmDESEDE3CBC):
 		block, err = des.NewTripleDESCipher(key)
 	case alg.Equal(oidEncryptionAlgorithmAES256CBC):
+		fallthrough
+	case alg.Equal(oidEncryptionAlgorithmAES128GCM):
 		block, err = aes.NewCipher(key)
 	}
+
 	if err != nil {
 		return nil, err
+	}
+
+	if alg.Equal(oidEncryptionAlgorithmAES128GCM) {
+		params := aesGCMParameters{}
+		paramBytes := eci.ContentEncryptionAlgorithm.Parameters.Bytes
+
+		_, err := asn1.Unmarshal(paramBytes, &params)
+		if err != nil {
+			return nil, err
+		}
+
+		gcm, err := cipher.NewGCM(block)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(params.Nonce) != gcm.NonceSize() {
+			return nil, errors.New("pkcs7: encryption algorithm parameters are incorrect")
+		}
+		if params.ICVLen != gcm.Overhead() {
+			return nil, errors.New("pkcs7: encryption algorithm parameters are incorrect")
+		}
+
+		plaintext, err := gcm.Open(nil, params.Nonce, cyphertext, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		return plaintext, nil
 	}
 
 	iv := eci.ContentEncryptionAlgorithm.Parameters.Bytes
@@ -696,27 +732,98 @@ func DegenerateCertificate(cert []byte) ([]byte, error) {
 	return asn1.Marshal(signedContent)
 }
 
-// Encrypt creates and returns an envelope data PKCS7 structure with encrypted
-// recipient keys for each recipient public key
-// TODO(fullsailor): Add support for encrypting content with other algorithms
-func Encrypt(content []byte, recipients []*x509.Certificate) ([]byte, error) {
+const (
+	EncryptionAlgorithmDESCBC = iota
+	EncryptionAlgorithmAES128GCM
+)
 
+// ContentEncryptionAlgorithm determines the algorithm used to encrypt the
+// plaintext message. Change the value of this variable to change which
+// algorithm is used in the Encrypt() function.
+var ContentEncryptionAlgorithm = EncryptionAlgorithmDESCBC
+
+// ErrUnsupportedEncryptionAlgorithm is returned when attempting to encrypt
+// content with an unsupported algorithm.
+var ErrUnsupportedEncryptionAlgorithm = errors.New("pkcs7: cannot encrypt content: only DES-CBC and AES-128-GCM supported")
+
+const nonceSize = 12
+
+type aesGCMParameters struct {
+	Nonce  []byte `asn1:"tag:4"`
+	ICVLen int
+}
+
+func encryptAES128GCM(content []byte) ([]byte, *encryptedContentInfo, error) {
+	// Create AES key and nonce
+	key := make([]byte, 16)
+	nonce := make([]byte, nonceSize)
+
+	_, err := rand.Read(key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	_, err = rand.Read(nonce)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Encrypt content
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ciphertext := gcm.Seal(nil, nonce, content, nil)
+
+	// Prepare ASN.1 Encrypted Content Info
+	paramSeq := aesGCMParameters{
+		Nonce:  nonce,
+		ICVLen: gcm.Overhead(),
+	}
+
+	paramBytes, err := asn1.Marshal(paramSeq)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	eci := encryptedContentInfo{
+		ContentType: oidData,
+		ContentEncryptionAlgorithm: pkix.AlgorithmIdentifier{
+			Algorithm: oidEncryptionAlgorithmAES128GCM,
+			Parameters: asn1.RawValue{
+				Tag:   asn1.TagSequence,
+				Bytes: paramBytes,
+			},
+		},
+		EncryptedContent: marshalEncryptedContent(ciphertext),
+	}
+
+	return key, &eci, nil
+}
+
+func encryptDESCBC(content []byte) ([]byte, *encryptedContentInfo, error) {
 	// Create DES key & CBC IV
 	key := make([]byte, 8)
 	iv := make([]byte, des.BlockSize)
 	_, err := rand.Read(key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	_, err = rand.Read(iv)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Encrypt padded content
 	block, err := des.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	mode := cipher.NewCBCEncrypter(block, iv)
 	plaintext, err := pad(content, mode.BlockSize())
@@ -731,6 +838,41 @@ func Encrypt(content []byte, recipients []*x509.Certificate) ([]byte, error) {
 			Parameters: asn1.RawValue{Tag: 4, Bytes: iv},
 		},
 		EncryptedContent: marshalEncryptedContent(cyphertext),
+	}
+
+	return key, &eci, nil
+}
+
+// Encrypt creates and returns an envelope data PKCS7 structure with encrypted
+// recipient keys for each recipient public key.
+//
+// The algorithm used to perform encryption is determined by the current value
+// of the global ContentEncryptionAlgorithm package variable. By default, the
+// value is EncryptionAlgorithmDESCBC. To use a different algorithm, change the
+// value before calling Encrypt(). For example:
+//
+//     ContentEncryptionAlgorithm = EncryptionAlgorithmAES128GCM
+//
+// TODO(fullsailor): Add support for encrypting content with other algorithms
+func Encrypt(content []byte, recipients []*x509.Certificate) ([]byte, error) {
+	var eci *encryptedContentInfo
+	var key []byte
+	var err error
+
+	// Apply chosen symmetric encryption method
+	switch ContentEncryptionAlgorithm {
+	case EncryptionAlgorithmDESCBC:
+		key, eci, err = encryptDESCBC(content)
+
+	case EncryptionAlgorithmAES128GCM:
+		key, eci, err = encryptAES128GCM(content)
+
+	default:
+		return nil, ErrUnsupportedEncryptionAlgorithm
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	// Prepare each recipient's encrypted cipher key
@@ -757,7 +899,7 @@ func Encrypt(content []byte, recipients []*x509.Certificate) ([]byte, error) {
 
 	// Prepare envelope content
 	envelope := envelopedData{
-		EncryptedContentInfo: eci,
+		EncryptedContentInfo: *eci,
 		Version:              0,
 		RecipientInfos:       recipientInfos,
 	}

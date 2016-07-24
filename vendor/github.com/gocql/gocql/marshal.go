@@ -1255,6 +1255,10 @@ func marshalMap(info TypeInfo, value interface{}) ([]byte, error) {
 		return nil, marshalErrorf("marshal: can not marshal none collection type into map")
 	}
 
+	if value == nil {
+		return nil, nil
+	}
+
 	rv := reflect.ValueOf(value)
 	if rv.IsNil() {
 		return nil, nil

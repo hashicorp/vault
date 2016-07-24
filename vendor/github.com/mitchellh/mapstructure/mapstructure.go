@@ -246,6 +246,10 @@ func (d *Decoder) decode(name string, data interface{}, val reflect.Value) error
 // value to "data" of that type.
 func (d *Decoder) decodeBasic(name string, data interface{}, val reflect.Value) error {
 	dataVal := reflect.ValueOf(data)
+	if !dataVal.IsValid() {
+		dataVal = reflect.Zero(val.Type())
+	}
+
 	dataValType := dataVal.Type()
 	if !dataValType.AssignableTo(val.Type()) {
 		return fmt.Errorf(

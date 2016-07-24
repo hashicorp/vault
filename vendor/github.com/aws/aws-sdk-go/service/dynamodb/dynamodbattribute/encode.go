@@ -183,6 +183,12 @@ func (e *Encoder) Encode(in interface{}) (*dynamodb.AttributeValue, error) {
 }
 
 func (e *Encoder) encode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
+	// We should check for omitted values first before dereferencing.
+	if fieldTag.OmitEmpty && emptyValue(v) {
+		encodeNull(av)
+		return nil
+	}
+
 	// Handle both pointers and interface conversion into types
 	v = valueElem(v)
 
@@ -190,11 +196,6 @@ func (e *Encoder) encode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag 
 		if used, err := tryMarshaler(av, v); used {
 			return err
 		}
-	}
-
-	if fieldTag.OmitEmpty && emptyValue(v) {
-		encodeNull(av)
-		return nil
 	}
 
 	switch v.Kind() {
@@ -235,6 +236,9 @@ func (e *Encoder) encodeStruct(av *dynamodb.AttributeValue, v reflect.Value) err
 		fv := v.FieldByIndex(f.Index)
 		elem := &dynamodb.AttributeValue{}
 		err := e.encode(elem, fv, f.tag)
+		if err != nil {
+			return err
+		}
 		skip, err := keepOrOmitEmpty(f.OmitEmpty, elem, err)
 		if err != nil {
 			return err
@@ -279,13 +283,14 @@ func (e *Encoder) encodeMap(av *dynamodb.AttributeValue, v reflect.Value, fieldT
 }
 
 func (e *Encoder) encodeSlice(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
-	switch typed := v.Interface().(type) {
-	case []byte:
-		if len(typed) == 0 {
+	switch v.Type().Elem().Kind() {
+	case reflect.Uint8:
+		b := v.Bytes()
+		if len(b) == 0 {
 			encodeNull(av)
 			return nil
 		}
-		av.B = append([]byte{}, typed...)
+		av.B = append([]byte{}, b...)
 	default:
 		var elemFn func(dynamodb.AttributeValue) error
 
@@ -356,20 +361,23 @@ func (e *Encoder) encodeList(v reflect.Value, fieldTag tag, elemFn func(dynamodb
 }
 
 func (e *Encoder) encodeScalar(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
-	switch typed := v.Interface().(type) {
-	case bool:
-		av.BOOL = new(bool)
-		*av.BOOL = typed
-	case string:
-		if err := e.encodeString(av, v); err != nil {
-			return err
-		}
-	case Number:
-		s := string(typed)
+	if v.Type() == numberType {
+		s := v.String()
 		if fieldTag.AsString {
 			av.S = &s
 		} else {
 			av.N = &s
+		}
+		return nil
+	}
+
+	switch v.Kind() {
+	case reflect.Bool:
+		av.BOOL = new(bool)
+		*av.BOOL = v.Bool()
+	case reflect.String:
+		if err := e.encodeString(av, v); err != nil {
+			return err
 		}
 	default:
 		// Fallback to encoding numbers, will return invalid type if not supported
@@ -391,31 +399,13 @@ func (e *Encoder) encodeNumber(av *dynamodb.AttributeValue, v reflect.Value) err
 	}
 
 	var out string
-	switch typed := v.Interface().(type) {
-	case int:
-		out = encodeInt(int64(typed))
-	case int8:
-		out = encodeInt(int64(typed))
-	case int16:
-		out = encodeInt(int64(typed))
-	case int32:
-		out = encodeInt(int64(typed))
-	case int64:
-		out = encodeInt(typed)
-	case uint:
-		out = encodeUint(uint64(typed))
-	case uint8:
-		out = encodeUint(uint64(typed))
-	case uint16:
-		out = encodeUint(uint64(typed))
-	case uint32:
-		out = encodeUint(uint64(typed))
-	case uint64:
-		out = encodeUint(typed)
-	case float32:
-		out = encodeFloat(float64(typed))
-	case float64:
-		out = encodeFloat(typed)
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		out = encodeInt(v.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		out = encodeUint(v.Uint())
+	case reflect.Float32, reflect.Float64:
+		out = encodeFloat(v.Float())
 	default:
 		return &unsupportedMarshalTypeError{Type: v.Type()}
 	}
@@ -430,12 +420,13 @@ func (e *Encoder) encodeString(av *dynamodb.AttributeValue, v reflect.Value) err
 		return err
 	}
 
-	switch typed := v.Interface().(type) {
-	case string:
-		if len(typed) == 0 && e.NullEmptyString {
+	switch v.Kind() {
+	case reflect.String:
+		s := v.String()
+		if len(s) == 0 && e.NullEmptyString {
 			encodeNull(av)
 		} else {
-			av.S = &typed
+			av.S = &s
 		}
 	default:
 		return &unsupportedMarshalTypeError{Type: v.Type()}

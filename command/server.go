@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/armon/go-metrics/circonus"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/logutils"
@@ -602,6 +603,37 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 		if err != nil {
 			return err
 		}
+		fanout = append(fanout, sink)
+	}
+
+	// Configure the Circonus sink
+	if telConfig.CirconusAPIToken != "" || telConfig.CirconusCheckSubmissionURL != "" {
+		cfg := &circonus.Config{}
+		cfg.Interval = telConfig.CirconusSubmissionInterval
+		cfg.CheckManager.API.TokenKey = telConfig.CirconusAPIToken
+		cfg.CheckManager.API.TokenApp = telConfig.CirconusAPIApp
+		cfg.CheckManager.API.URL = telConfig.CirconusAPIURL
+		cfg.CheckManager.Check.SubmissionURL = telConfig.CirconusCheckSubmissionURL
+		cfg.CheckManager.Check.ID = telConfig.CirconusCheckID
+		cfg.CheckManager.Check.ForceMetricActivation = telConfig.CirconusCheckForceMetricActivation
+		cfg.CheckManager.Check.InstanceID = telConfig.CirconusCheckInstanceID
+		cfg.CheckManager.Check.SearchTag = telConfig.CirconusCheckSearchTag
+		cfg.CheckManager.Broker.ID = telConfig.CirconusBrokerID
+		cfg.CheckManager.Broker.SelectTag = telConfig.CirconusBrokerSelectTag
+
+		if cfg.CheckManager.API.TokenApp == "" {
+			cfg.CheckManager.API.TokenApp = "vault"
+		}
+
+		if cfg.CheckManager.Check.SearchTag == "" {
+			cfg.CheckManager.Check.SearchTag = "service:vault"
+		}
+
+		sink, err := circonus.NewCirconusSink(cfg)
+		if err != nil {
+			return err
+		}
+		sink.Start()
 		fanout = append(fanout, sink)
 	}
 

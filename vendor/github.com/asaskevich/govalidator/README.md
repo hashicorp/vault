@@ -47,16 +47,19 @@ Here's some code to explain it:
 type exampleStruct struct {
   Name  string ``
   Email string `valid:"email"`
+}
 
 // this, however, will only fail when Email is empty or an invalid email address:
 type exampleStruct2 struct {
   Name  string `valid:"-"`
   Email string `valid:"email"`
+}
 
 // lastly, this will only fail when Email is an invalid email address but not when it's empty:
 type exampleStruct2 struct {
   Name  string `valid:"-"`
   Email string `valid:"email,optional"`
+}
 ```
 
 #### Recent breaking changes (see [#123](https://github.com/asaskevich/govalidator/pull/123))

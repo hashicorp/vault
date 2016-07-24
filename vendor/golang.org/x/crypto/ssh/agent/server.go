@@ -257,7 +257,7 @@ func parseECDSAKey(req []byte) (*AddedKey, error) {
 		return nil, err
 	}
 
-	return &AddedKey{PrivateKey: &priv, Comment: k.Comments}, nil
+	return &AddedKey{PrivateKey: priv, Comment: k.Comments}, nil
 }
 
 func parseRSACert(req []byte) (*AddedKey, error) {
@@ -393,7 +393,7 @@ func (s *server) insertIdentity(req []byte) error {
 	case ssh.KeyAlgoDSA:
 		addedKey, err = parseDSAKey(req)
 	case ssh.KeyAlgoECDSA256, ssh.KeyAlgoECDSA384, ssh.KeyAlgoECDSA521:
-		addedKey, err = parseECDSACert(req)
+		addedKey, err = parseECDSAKey(req)
 	case ssh.KeyAlgoED25519:
 		addedKey, err = parseEd25519Key(req)
 	case ssh.CertAlgoRSAv01:

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 )
 
 func handleSysHealth(core *vault.Core) http.Handler {
@@ -119,13 +120,15 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		Sealed:        sealed,
 		Standby:       standby,
 		ServerTimeUTC: time.Now().UTC().Unix(),
+		Version:       version.GetVersion().String(),
 	}
 	return code, body, nil
 }
 
 type HealthResponse struct {
-	Initialized   bool  `json:"initialized"`
-	Sealed        bool  `json:"sealed"`
-	Standby       bool  `json:"standby"`
-	ServerTimeUTC int64 `json:"server_time_utc"`
+	Initialized   bool   `json:"initialized"`
+	Sealed        bool   `json:"sealed"`
+	Standby       bool   `json:"standby"`
+	ServerTimeUTC int64  `json:"server_time_utc"`
+	Version       string `json:"version"`
 }

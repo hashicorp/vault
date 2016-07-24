@@ -100,9 +100,20 @@ func TestLoadConfigFile_json(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsiteAddr:    "baz",
-			StatsdAddr:      "",
-			DisableHostname: false,
+			StatsiteAddr:                       "baz",
+			StatsdAddr:                         "",
+			DisableHostname:                    false,
+			CirconusAPIToken:                   "",
+			CirconusAPIApp:                     "",
+			CirconusAPIURL:                     "",
+			CirconusSubmissionInterval:         "",
+			CirconusCheckSubmissionURL:         "",
+			CirconusCheckID:                    "",
+			CirconusCheckForceMetricActivation: "",
+			CirconusCheckInstanceID:            "",
+			CirconusCheckSearchTag:             "",
+			CirconusBrokerID:                   "",
+			CirconusBrokerSelectTag:            "",
 		},
 
 		MaxLeaseTTL:        10 * time.Hour,
@@ -152,9 +163,20 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		},
 
 		Telemetry: &Telemetry{
-			StatsiteAddr:    "foo",
-			StatsdAddr:      "bar",
-			DisableHostname: true,
+			StatsiteAddr:                       "foo",
+			StatsdAddr:                         "bar",
+			DisableHostname:                    true,
+			CirconusAPIToken:                   "0",
+			CirconusAPIApp:                     "vault",
+			CirconusAPIURL:                     "http://api.circonus.com/v2",
+			CirconusSubmissionInterval:         "10s",
+			CirconusCheckSubmissionURL:         "https://someplace.com/metrics",
+			CirconusCheckID:                    "0",
+			CirconusCheckForceMetricActivation: "true",
+			CirconusCheckInstanceID:            "node1:vault",
+			CirconusCheckSearchTag:             "service:vault",
+			CirconusBrokerID:                   "0",
+			CirconusBrokerSelectTag:            "dc:sfo",
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {

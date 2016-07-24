@@ -146,23 +146,23 @@ func providerAuthHeaderWorks(tokenURL string) bool {
 	return true
 }
 
-func RetrieveToken(ctx context.Context, ClientID, ClientSecret, TokenURL string, v url.Values) (*Token, error) {
+func RetrieveToken(ctx context.Context, clientID, clientSecret, tokenURL string, v url.Values) (*Token, error) {
 	hc, err := ContextClient(ctx)
 	if err != nil {
 		return nil, err
 	}
-	v.Set("client_id", ClientID)
-	bustedAuth := !providerAuthHeaderWorks(TokenURL)
-	if bustedAuth && ClientSecret != "" {
-		v.Set("client_secret", ClientSecret)
+	v.Set("client_id", clientID)
+	bustedAuth := !providerAuthHeaderWorks(tokenURL)
+	if bustedAuth && clientSecret != "" {
+		v.Set("client_secret", clientSecret)
 	}
-	req, err := http.NewRequest("POST", TokenURL, strings.NewReader(v.Encode()))
+	req, err := http.NewRequest("POST", tokenURL, strings.NewReader(v.Encode()))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if !bustedAuth {
-		req.SetBasicAuth(ClientID, ClientSecret)
+		req.SetBasicAuth(clientID, clientSecret)
 	}
 	r, err := hc.Do(req)
 	if err != nil {

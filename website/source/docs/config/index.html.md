@@ -130,6 +130,39 @@ is within the object itself.
 * `disable_hostname` (optional) - Whether or not to prepend runtime telemetry
   with the machines hostname. This is a global option. Defaults to false.
 
+* `circonus_api_token`
+  A valid [Circonus](http://circonus.com/) API Token used to create/manage check. If provided, metric management is enabled.
+
+* `circonus_api_app`
+  A valid app name associated with the API token. By default, this is set to "consul".
+
+* `circonus_api_url`
+  The base URL to use for contacting the Circonus API. By default, this is set to "https://api.circonus.com/v2".
+
+* `circonus_submission_interval`
+  The interval at which metrics are submitted to Circonus. By default, this is set to "10s" (ten seconds).
+
+* `circonus_submission_url`
+  The `check.config.submission_url` field, of a Check API object, from a previously created HTTPTRAP check.
+
+* `circonus_check_id`
+  The Check ID (not **check bundle**) from a previously created HTTPTRAP check. The numeric portion of the `check._cid` field in the Check API object.
+
+* `circonus_check_force_metric_activation`
+  Force activation of metrics which already exist and are not currently active. If check management is enabled, the default behavior is to add new metrics as they are encountered. If the metric already exists in the check, it will **not** be activated. This setting overrides that behavior. By default, this is set to "false".
+
+* `circonus_check_instance_id`
+  Serves to uniquely identify the metrics coming from this *instance*.  It can be used to maintain metric continuity with transient or ephemeral instances as they move around within an infrastructure. By default, this is set to hostname:application name (e.g. "host123:consul").
+
+* `circonus_check_search_tag`
+  A special tag which, when coupled with the instance id, helps to narrow down the search results when neither a Submission URL or Check ID is provided. By default, this is set to service:app (e.g. "service:consul").
+
+* `circonus_broker_id`
+  The ID of a specific Circonus Broker to use when creating a new check. The numeric portion of `broker._cid` field in a Broker API object. If metric management is enabled and neither a Submission URL nor Check ID is provided, an attempt will be made to search for an existing check using Instance ID and Search Tag. If one is not found, a new HTTPTRAP check will be created. By default, this is not used and a random Enterprise Broker is selected, or, the default Circonus Public Broker.
+
+* `circonus_broker_select_tag`
+  A special tag which will be used to select a Circonus Broker when a Broker ID is not provided. The best use of this is to as a hint for which broker should be used based on *where* this particular instance is running (e.g. a specific geo location or datacenter, dc:sfo). By default, this is not used.
+
 ## Backend Reference
 
 For the `backend` section, the supported physical backends are shown below.
@@ -214,6 +247,9 @@ For Consul, the following options are supported:
 
   * `service` (optional) - The name of the service to register with Consul.
     Defaults to "vault".
+
+  * `service-tags` (optional) - Comma separated list of tags that are to be
+    applied to the service that gets registered with Consul.
 
   * `token` (optional) - An access token to use to write data to Consul.
 

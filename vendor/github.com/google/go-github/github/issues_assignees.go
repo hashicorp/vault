@@ -58,9 +58,6 @@ func (s *IssuesService) AddAssignees(owner, repo string, number int, assignees [
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeMultipleAssigneesPreview)
-
 	issue := &Issue{}
 	resp, err := s.client.Do(req, issue)
 	return issue, resp, err
@@ -78,9 +75,6 @@ func (s *IssuesService) RemoveAssignees(owner, repo string, number int, assignee
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeMultipleAssigneesPreview)
 
 	issue := &Issue{}
 	resp, err := s.client.Do(req, issue)

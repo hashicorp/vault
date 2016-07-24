@@ -17,7 +17,7 @@ import (
 
 // This file is used to generate helper code for codecgen.
 // The values here i.e. genHelper(En|De)coder are not to be used directly by
-// library users. They WILL change continously and without notice.
+// library users. They WILL change continuously and without notice.
 //
 // To help enforce this, we create an unexported type with exported members.
 // The only way to get the type is via the one exported type that we control (somewhat).

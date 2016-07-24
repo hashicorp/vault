@@ -28,12 +28,24 @@ FEATURES:
    environment variable. See the [environment variable
    documentation](https://www.vaultproject.io/docs/commands/environment.html)
    for more details. [GH-1594]
+ * **Service Discovery in `vault init`**: The new `-auto` option on `vault init`
+   will perform service discovery using Consul. When only one node is discovered,
+   it will be initialized and when more than one node is discovered, they will
+   be output for easy selection. See `vault init --help` for more details. [GH-1642]
  * **MongoDB Secret Backend**: Generate dynamic unique MongoDB database
    credentials based on configured roles. Sponsored by
    [CommerceHub](http://www.commercehub.com/). [GH-1414]
+ * **Circonus Metrics Integration**: Vault can now send metrics to
+   [Circonus](http://www.circonus.com/). See the [configuration
+   documentation](https://www.vaultproject.io/docs/config/index.html) for
+   details. [GH-1646]
 
 IMPROVEMENTS:
 
+ * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
+   [GH-1523]
+ * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
+   will have `MinVersion` set to TLS 1.2 by default. This is configurable.
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
@@ -48,11 +60,9 @@ IMPROVEMENTS:
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
  * core: The duration of leadership is now exported via events through
    telemetry [GH-1625]
- * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
-   [GH-1523]
- * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
-   will have `MinVersion` set to TLS 1.2 by default. This is configurable.
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
+ * physical/consul: Allowing additional tags to be added to Consul service
+   registration via `service-tags` option [GH-1643]
  * secret/aws: Listing of roles is supported now  [GH-1546]
  * secret/cassandra: Add `connect_timeout` value for Cassandra connection
    configuration [GH-1581]
@@ -64,6 +74,8 @@ IMPROVEMENTS:
    generated user names and allow the length to be controlled [GH-1604]
  * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
    role name as part of response of `verify` API.
+ * sys/health: Added version information to the response of health status
+   endpoint [GH-1647]
 
 BUG FIXES:
 

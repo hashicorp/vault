@@ -74,9 +74,9 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 
 	// Create an audit trail of the response
-	if err := c.auditBroker.LogResponse(auth, req, resp, err); err != nil {
+	if auditErr := c.auditBroker.LogResponse(auth, req, resp, err); auditErr != nil {
 		c.logger.Printf("[ERR] core: failed to audit response (request path: %s): %v",
-			req.Path, err)
+			req.Path, auditErr)
 		return nil, ErrInternalError
 	}
 

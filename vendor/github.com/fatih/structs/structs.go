@@ -431,7 +431,7 @@ func strctVal(s interface{}) reflect.Value {
 	v := reflect.ValueOf(s)
 
 	// if pointer get the underlying element≤
-	if v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
 
