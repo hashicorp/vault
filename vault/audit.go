@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -351,16 +352,23 @@ func (a *AuditBroker) GetHash(name string, input string) (string, error) {
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) (reterr error) {
+func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) (retErr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.l.RLock()
 	defer a.l.RUnlock()
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.Printf("[ERR] audit: panic logging: req path: %s", req.Path)
-			reterr = fmt.Errorf("panic generating audit log")
+			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
 	}()
+
+	// All logged requests must have an identifier
+	if req.ID == "" {
+		a.logger.Printf("[ERR] audit: missing identifier in request object: %s", req.Path)
+		retErr = multierror.Append(retErr, fmt.Errorf("missing identifier in request object: %s", req.Path))
+		return
+	}
 
 	// Ensure at least one backend logs
 	anyLogged := false
@@ -375,7 +383,8 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outer
 		}
 	}
 	if !anyLogged && len(a.backends) > 0 {
-		return fmt.Errorf("no audit backend succeeded in logging the request")
+		retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the request"))
+		return
 	}
 	return nil
 }
