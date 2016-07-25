@@ -46,26 +46,29 @@ func (b *backend) pathUserPasswordUpdate(
 		return nil, fmt.Errorf("username does not exist")
 	}
 
-	err = b.updateUserPassword(req, d, userEntry)
-	if err != nil {
+	userErr, intErr := b.updateUserPassword(req, d, userEntry)
+	if intErr != nil {
 		return nil, err
+	}
+	if userErr != nil {
+		return logical.ErrorResponse(userErr.Error()), nil
 	}
 
 	return nil, b.setUser(req.Storage, username, userEntry)
 }
 
-func (b *backend) updateUserPassword(req *logical.Request, d *framework.FieldData, userEntry *UserEntry) error {
+func (b *backend) updateUserPassword(req *logical.Request, d *framework.FieldData, userEntry *UserEntry) (error, error) {
 	password := d.Get("password").(string)
 	if password == "" {
-		return fmt.Errorf("missing password")
+		return fmt.Errorf("missing password"), nil
 	}
 	// Generate a hash of the password
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	userEntry.PasswordHash = hash
-	return nil
+	return nil, nil
 }
 
 const pathUserPasswordHelpSyn = `
