@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"text/template"
 
 	"github.com/fatih/structs"
 	"github.com/go-ldap/ldap"
@@ -21,6 +22,7 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"url": &framework.FieldSchema{
 				Type:        framework.TypeString,
+				Default:     "ldap://127.0.0.1",
 				Description: "ldap URL to connect to (default: ldap://127.0.0.1)",
 			},
 
@@ -41,7 +43,25 @@ func pathConfig(b *backend) *framework.Path {
 
 			"groupdn": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "LDAP domain to use for groups (eg: ou=Groups,dc=example,dc=org)",
+				Description: "LDAP search base to use for group membership search (eg: ou=Groups,dc=example,dc=org)",
+			},
+
+			"groupfilter": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))",
+				Description: `Go template for querying group membership of user (optional)
+The template can access the following context variables: UserDN, Username
+Example: (&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))
+Default: (|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))`,
+			},
+
+			"groupattr": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "cn",
+				Description: `LDAP attribute to follow on objects returned by <groupfilter>
+in order to enumerate user group membership.
+Examples: "cn" or "memberOf", etc.
+Default: cn`,
 			},
 
 			"upndomain": &framework.FieldSchema{
@@ -51,6 +71,7 @@ func pathConfig(b *backend) *framework.Path {
 
 			"userattr": &framework.FieldSchema{
 				Type:        framework.TypeString,
+				Default:     "cn",
 				Description: "Attribute used for users (default: cn)",
 			},
 
@@ -91,20 +112,39 @@ func pathConfig(b *backend) *framework.Path {
 	}
 }
 
+/*
+ * Construct ConfigEntry struct using stored configuration.
+ */
 func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
-	entry, err := req.Storage.Get("config")
+	// Schema for ConfigEntry
+	fd, err := b.getConfigFieldData()
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return nil, nil
-	}
-	var result ConfigEntry
-	result.SetDefaults()
-	if err := entry.DecodeJSON(&result); err != nil {
+
+	// Create a new ConfigEntry, filling in defaults where appropriate
+	result, err := b.newConfigEntry(fd)
+	if err != nil {
 		return nil, err
 	}
-	return &result, nil
+
+	storedConfig, err := req.Storage.Get("config")
+	if err != nil {
+		return nil, err
+	}
+
+	if storedConfig == nil {
+		// No user overrides, return default configuration
+		return result, nil
+	}
+
+	// Deserialize stored configuration.
+	// Fields not specified in storedConfig will retain their defaults.
+	if err := storedConfig.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (b *backend) pathConfigRead(
@@ -123,10 +163,13 @@ func (b *backend) pathConfigRead(
 	}, nil
 }
 
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+/*
+ * Creates and initializes a ConfigEntry object with its default values,
+ * as specified by the passed schema.
+ */
+func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
+	cfg := new(ConfigEntry)
 
-	cfg := &ConfigEntry{}
 	url := d.Get("url").(string)
 	if url != "" {
 		cfg.Url = strings.ToLower(url)
@@ -143,8 +186,22 @@ func (b *backend) pathConfigWrite(
 	if groupdn != "" {
 		cfg.GroupDN = groupdn
 	}
+	groupfilter := d.Get("groupfilter").(string)
+	if groupfilter != "" {
+		// Validate the template before proceeding
+		_, err := template.New("queryTemplate").Parse(groupfilter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid groupfilter (%v)", err)
+		}
+
+		cfg.GroupFilter = groupfilter
+	}
+	groupattr := d.Get("groupattr").(string)
+	if groupattr != "" {
+		cfg.GroupAttr = groupattr
+	}
 	upndomain := d.Get("upndomain").(string)
-	if groupdn != "" {
+	if upndomain != "" {
 		cfg.UPNDomain = upndomain
 	}
 	certificate := d.Get("certificate").(string)
@@ -157,13 +214,13 @@ func (b *backend) pathConfigWrite(
 	}
 	cfg.TLSMinVersion = d.Get("tls_min_version").(string)
 	if cfg.TLSMinVersion == "" {
-		return logical.ErrorResponse("failed to get 'tls_min_version' value"), nil
+		return nil, fmt.Errorf("failed to get 'tls_min_version' value")
 	}
 
 	var ok bool
 	_, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
 	if !ok {
-		return logical.ErrorResponse("invalid 'tls_min_version'"), nil
+		return nil, fmt.Errorf("invalid 'tls_min_version'")
 	}
 
 	startTLS := d.Get("starttls").(bool)
@@ -183,17 +240,17 @@ func (b *backend) pathConfigWrite(
 		cfg.DiscoverDN = discoverDN
 	}
 
-	// Try to connect to the LDAP server, to validate the URL configuration
-	// We can also check the URL at this stage, as anything else would probably
-	// require authentication.
-	conn, cerr := cfg.DialLDAP()
-	if cerr != nil {
-		return logical.ErrorResponse(cerr.Error()), nil
+	return cfg, nil
+}
+
+func (b *backend) pathConfigWrite(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	// Build a ConfigEntry struct out of the supplied FieldData
+	cfg, err := b.newConfigEntry(d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
 	}
-	if conn == nil {
-		return logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
-	}
-	conn.Close()
 
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
@@ -210,6 +267,8 @@ type ConfigEntry struct {
 	Url           string `json:"url" structs:"url" mapstructure:"url"`
 	UserDN        string `json:"userdn" structs:"userdn" mapstructure:"userdn"`
 	GroupDN       string `json:"groupdn" structs:"groupdn" mapstructure:"groupdn"`
+	GroupFilter   string `json:"groupfilter" structs:"groupfilter" mapstructure:"groupfilter"`
+	GroupAttr     string `json:"groupattr" structs:"groupattr" mapstructure:"groupattr"`
 	UPNDomain     string `json:"upndomain" structs:"upndomain" mapstructure:"upndomain"`
 	UserAttr      string `json:"userattr" structs:"userattr" mapstructure:"userattr"`
 	Certificate   string `json:"certificate" structs:"certificate" mapstructure:"certificate"`
@@ -293,9 +352,24 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 	return conn, nil
 }
 
-func (c *ConfigEntry) SetDefaults() {
-	c.Url = "ldap://127.0.0.1"
-	c.UserAttr = "cn"
+/*
+ * Returns FieldData describing our ConfigEntry struct schema
+ */
+func (b *backend) getConfigFieldData() (*framework.FieldData, error) {
+	configPath := b.Route("config")
+
+	if configPath == nil {
+		return nil, logical.ErrUnsupportedPath
+	}
+
+	raw := make(map[string]interface{}, len(configPath.Fields))
+
+	fd := framework.FieldData{
+		Raw:    raw,
+		Schema: configPath.Fields,
+	}
+
+	return &fd, nil
 }
 
 const pathConfigHelpSyn = `
