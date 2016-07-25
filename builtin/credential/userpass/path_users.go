@@ -161,7 +161,7 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 			return nil, err
 		}
 		if userErr != nil {
-			return logical.ErrorResponse(userErr.Error()), nil
+			return logical.ErrorResponse(userErr.Error()), logical.ErrInvalidRequest
 		}
 	}
 

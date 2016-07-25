@@ -51,7 +51,7 @@ func (b *backend) pathUserPasswordUpdate(
 		return nil, err
 	}
 	if userErr != nil {
-		return logical.ErrorResponse(userErr.Error()), nil
+		return logical.ErrorResponse(userErr.Error()), logical.ErrInvalidRequest
 	}
 
 	return nil, b.setUser(req.Storage, username, userEntry)
