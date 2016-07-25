@@ -156,9 +156,12 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 	}
 
 	if _, ok := d.GetOk("password"); ok {
-		err = b.updateUserPassword(req, d, userEntry)
-		if err != nil {
+		userErr, intErr := b.updateUserPassword(req, d, userEntry)
+		if intErr != nil {
 			return nil, err
+		}
+		if userErr != nil {
+			return logical.ErrorResponse(userErr.Error()), nil
 		}
 	}
 
