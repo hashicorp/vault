@@ -21,9 +21,10 @@ but also a second copy in case the first is tampered with.
 ## Sensitive Information
 
 The audit logs contain the full request and response objects for every
-interaction with Vault. The data in the request and the data in the
-response (including secrets and authentication tokens) will be hashed
-with a salt using HMAC-SHA256.
+interaction with Vault. The request and response can be matched utilizing a
+unique identifier assigned to each request. The data in the request and the
+data in the response (including secrets and authentication tokens) will be
+hashed with a salt using HMAC-SHA256.
 
 The purpose of the hash is so that secrets aren't in plaintext within your
 audit logs. However, you're still able to check the value of secrets by
