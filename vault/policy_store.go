@@ -92,7 +92,7 @@ func (c *Core) setupPolicyStore() error {
 	// Ensure that the cubbyhole response wrapping policy exists
 	policy, err = c.policyStore.GetPolicy(cubbyholeResponseWrappingPolicyName)
 	if err != nil {
-		return errwrap.Wrapf("error fetching response wrapping policy from store: {{err}}", err)
+		return errwrap.Wrapf("error fetching response-wrapping policy from store: {{err}}", err)
 	}
 	if policy == nil || policy.Raw != cubbyholeResponseWrappingPolicy {
 		err := c.policyStore.createCubbyholeResponseWrappingPolicy()
