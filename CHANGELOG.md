@@ -8,6 +8,11 @@ DEPRECATIONS/BREAKING CHANGES:
    some non-ideal behavior around failover that was causing confusion. See the
    [documentation] for information on enabling HA mode. It is very important
    that this configuration is added _before upgrading_.
+ * The `ldap` backend no longer searches for `memberOf` groups as part of its
+   normal flow. Instead, the desired group filter must be specified. This fixes
+   some errors and increases speed for directories with different structures,
+   but if this behavior has been relied upon, ensure that you see the upgrade
+   notes _before upgrading_.
 
 FEATURES:
 
@@ -18,6 +23,10 @@ FEATURES:
    derivation when convergent encryption is enabled. See [the `transit`
    documentation](https://www.vaultproject.io/docs/secrets/transit/index.html)
    for more details. [GH-1537]
+ * **Improved LDAP Group Filters**: The `ldap` auth backend now uses templates
+   to define group filters, providing the capability to support some
+   directories that could not easily be supported before (especially specific
+   Active Directory setups with nested groups). [GH-1388]
  * **Key Usage Control in `PKI`**: Issued certificates from roles created or
    modified after upgrading contain a set of default key usages for increased
    compatibility with OpenVPN and some other software. This set can be changed
