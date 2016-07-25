@@ -36,6 +36,9 @@ var (
 		"root",
 		cubbyholeResponseWrappingPolicyName,
 	}
+	nonAssignablePolicies = []string{
+		cubbyholeResponseWrappingPolicyName,
+	}
 )
 
 // PolicyStore is used to provide durable storage of policy, and to
@@ -89,7 +92,7 @@ func (c *Core) setupPolicyStore() error {
 	// Ensure that the cubbyhole response wrapping policy exists
 	policy, err = c.policyStore.GetPolicy(cubbyholeResponseWrappingPolicyName)
 	if err != nil {
-		return errwrap.Wrapf("error fetching default policy from store: {{err}}", err)
+		return errwrap.Wrapf("error fetching response-wrapping policy from store: {{err}}", err)
 	}
 	if policy == nil || policy.Raw != cubbyholeResponseWrappingPolicy {
 		err := c.policyStore.createCubbyholeResponseWrappingPolicy()
@@ -210,7 +213,25 @@ func (ps *PolicyStore) ListPolicies() ([]string, error) {
 	defer metrics.MeasureSince([]string{"policy", "list_policies"}, time.Now())
 	// Scan the view, since the policy names are the same as the
 	// key names.
-	return CollectKeys(ps.view)
+	keys, err := CollectKeys(ps.view)
+
+	for _, nonAssignable := range nonAssignablePolicies {
+		deleteIndex := -1
+		//Find indices of non-assignable policies in keys
+		for index, key := range keys {
+			if key == nonAssignable {
+				// Delete collection outside the loop
+				deleteIndex = index
+				break
+			}
+		}
+		// Remove non-assignable policies when found
+		if deleteIndex != -1 {
+			keys = append(keys[:deleteIndex], keys[deleteIndex+1:]...)
+		}
+	}
+
+	return keys, err
 }
 
 // DeletePolicy is used to delete the named policy
