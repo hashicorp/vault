@@ -1349,7 +1349,7 @@ func (b *SystemBackend) handleKeyStatus(
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"term":         info.Term,
-			"install_time": info.InstallTime.Format(time.RFC3339),
+			"install_time": info.InstallTime.Format(time.RFC3339Nano),
 		},
 	}
 	return resp, nil
