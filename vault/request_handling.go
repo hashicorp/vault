@@ -424,7 +424,15 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 		return nil, ErrInternalError
 	}
 
+	var requestid string
+	requestid, err = uuid.generateUUID()
+	if err != nil {
+		c.logger.Printf("[ERR] core: failed to generate unique identifier: %v", err)
+		return nil, ErrInternalError
+	}
+
 	cubbyReq := &logical.Request{
+		ID:          requestid,
 		Operation:   logical.CreateOperation,
 		Path:        "cubbyhole/response",
 		ClientToken: te.ID,
