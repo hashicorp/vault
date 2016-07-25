@@ -211,7 +211,7 @@ func (b *backend) getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (st
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
 			Scope:  2, // subtree
-			Filter: fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username)),
+			Filter: filter,
 		})
 		if err != nil {
 			return bindDN, fmt.Errorf("LDAP search for binddn failed: %v", err)
