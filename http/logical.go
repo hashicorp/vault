@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -64,8 +65,14 @@ func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Reque
 		}
 	}
 
-	var err error
+	// Generate a unique identifier for the request
+	requestid, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
+	}
+
 	req := requestAuth(r, &logical.Request{
+		ID:         requestid,
 		Operation:  op,
 		Path:       path,
 		Data:       data,

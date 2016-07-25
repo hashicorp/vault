@@ -708,12 +708,6 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		return retErr
 	}
 
-	// Create an identifier for the request
-	var err error
-	req.ID, err = uuid.GenerateUUID()
-	if err != nil {
-		return fmt.Errorf("failed to generate identifier for the request: path: %s err: %v", req.Path, err)
-	}
 	// Validate the token is a root token
 	acl, te, err := c.fetchACLandTokenEntry(req)
 	if err != nil {

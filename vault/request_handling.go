@@ -2,14 +2,12 @@ package vault
 
 import (
 	"encoding/json"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -35,12 +33,6 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		(req.Operation == logical.UpdateOperation ||
 			req.Operation == logical.CreateOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
-	}
-
-	// Create an identifier for the request
-	req.ID, err = uuid.GenerateUUID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate identifier for the request: path %s err %v", req.Path, err)
 	}
 
 	var auth *logical.Auth
