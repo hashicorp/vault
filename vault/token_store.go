@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -92,12 +91,10 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	t.salt = salt
 
 	t.tokenLocks = map[string]*sync.RWMutex{}
-
-	// Create 256 locks
-	if err = locksutil.CreateLocks(t.tokenLocks, 256); err != nil {
-		return nil, fmt.Errorf("failed to create locks: %v", err)
+	for i := int64(0); i < 256; i++ {
+		t.tokenLocks[fmt.Sprintf("%2x",
+			strconv.FormatInt(i, 16))] = &sync.RWMutex{}
 	}
-
 	t.tokenLocks["custom"] = &sync.RWMutex{}
 
 	// Setup the framework endpoints
@@ -419,41 +416,18 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 // TokenEntry is used to represent a given token
 type TokenEntry struct {
-	// ID of this entry, generally a random UUID
-	ID string `json:"id" mapstructure:"id" structs:"id"`
-
-	// Accessor for this token, a random UUID
-	Accessor string `json:"accessor" mapstructure:"accessor" structs:"accessor"`
-
-	// Parent token, used for revocation trees
-	Parent string `json:"parent" mapstructure:"parent" structs:"parent"`
-
-	// Which named policies should be used
-	Policies []string `json:"policies" mapstructure:"policies" structs:"policies"`
-
-	// Used for audit trails, this is something like "auth/user/login"
-	Path string `json:"path" mapstructure:"path" structs:"path"`
-
-	// Used for auditing. This could include things like "source", "user", "ip"
-	Meta map[string]string `json:"meta" mapstructure:"meta" structs:"meta"`
-
-	// Used for operators to be able to associate with the source
-	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`
-
-	// Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
-	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
-
-	// Time of token creation
-	CreationTime int64 `json:"creation_time" mapstructure:"creation_time" structs:"creation_time"`
-
-	// Duration set when token was created
-	TTL time.Duration `json:"ttl" mapstructure:"ttl" structs:"ttl"`
-
-	// Explicit maximum TTL on the token
-	ExplicitMaxTTL time.Duration `json:"" mapstructure:"" structs:""`
-
-	// If set, the role that was used for parameters at creation time
-	Role string `json:"role" mapstructure:"role" structs:"role"`
+	ID             string            // ID of this entry, generally a random UUID
+	Accessor       string            // Accessor for this token, a random UUID
+	Parent         string            // Parent token, used for revocation trees
+	Policies       []string          // Which named policies should be used
+	Path           string            // Used for audit trails, this is something like "auth/user/login"
+	Meta           map[string]string // Used for auditing. This could include things like "source", "user", "ip"
+	DisplayName    string            // Used for operators to be able to associate with the source
+	NumUses        int               // Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	CreationTime   int64             // Time of token creation
+	TTL            time.Duration     // Duration set when token was created
+	ExplicitMaxTTL time.Duration     // Explicit maximum TTL on the token
+	Role           string            // If set, the role that was used for parameters at creation time
 }
 
 // tsRoleEntry contains token store role information
@@ -715,7 +689,7 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 
 	// Unmarshal the token
 	entry := new(TokenEntry)
-	if err := jsonutil.DecodeJSON(raw.Value, entry); err != nil {
+	if err := json.Unmarshal(raw.Value, entry); err != nil {
 		return nil, fmt.Errorf("failed to decode entry: %v", err)
 	}
 
@@ -1191,13 +1165,6 @@ func (ts *TokenStore) handleCreateCommon(
 	// Create the token
 	if err := ts.create(&te); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	// Prevent internal policies from being assigned to any tokens
-	for _, policy := range te.Policies {
-		if strutil.StrListContains(nonAssignablePolicies, policy) {
-			return logical.ErrorResponse(fmt.Sprintf("cannot assign %s policy", policy)), nil
-		}
 	}
 
 	// Generate the response
