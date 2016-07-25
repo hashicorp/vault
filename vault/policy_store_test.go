@@ -138,7 +138,8 @@ func TestPolicyStore_Predefined(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(out) != 2 || out[0] != "default" || out[1] != "response-wrapping" {
+	// This shouldn't contain response-wrapping since it's non-assignable
+	if len(out) != 1 || out[0] != "default" {
 		t.Fatalf("bad: %v", out)
 	}
 

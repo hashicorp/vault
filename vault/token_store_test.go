@@ -503,6 +503,32 @@ func TestTokenStore_RevokeSelf(t *testing.T) {
 	}
 }
 
+func TestTokenStore_HandleRequest_NonAssignable(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"default", "foo"}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	req.Data["policies"] = []string{"default", "foo", cubbyholeResponseWrappingPolicyName}
+
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got a nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error; response is %#v", *resp)
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_DisplayName(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 
