@@ -92,7 +92,7 @@ func (c *Core) setupPolicyStore() error {
 	// Ensure that the cubbyhole response wrapping policy exists
 	policy, err = c.policyStore.GetPolicy(cubbyholeResponseWrappingPolicyName)
 	if err != nil {
-		return errwrap.Wrapf("error fetching cubbyhole response wrapping policy from store: {{err}}", err)
+		return errwrap.Wrapf("error fetching response wrapping policy from store: {{err}}", err)
 	}
 	if policy == nil || policy.Raw != cubbyholeResponseWrappingPolicy {
 		err := c.policyStore.createCubbyholeResponseWrappingPolicy()
@@ -117,7 +117,7 @@ func (ps *PolicyStore) SetPolicy(p *Policy) error {
 	if p.Name == "" {
 		return fmt.Errorf("policy name missing")
 	}
-	if strutil.StrListContains(immutablePolicies, p.Name) || strutil.StrListContains(nonAssignablePolicies, p.Name) {
+	if strutil.StrListContains(immutablePolicies, p.Name) {
 		return fmt.Errorf("cannot update %s policy", p.Name)
 	}
 
@@ -237,7 +237,7 @@ func (ps *PolicyStore) ListPolicies() ([]string, error) {
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(name string) error {
 	defer metrics.MeasureSince([]string{"policy", "delete_policy"}, time.Now())
-	if strutil.StrListContains(immutablePolicies, name) || strutil.StrListContains(nonAssignablePolicies, name) {
+	if strutil.StrListContains(immutablePolicies, name) {
 		return fmt.Errorf("cannot delete %s policy", name)
 	}
 	if name == "default" {
