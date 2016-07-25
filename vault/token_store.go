@@ -1193,13 +1193,6 @@ func (ts *TokenStore) handleCreateCommon(
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	// Prevent internal policies from being assigned to any tokens
-	for _, policy := range te.Policies {
-		if strutil.StrListContains(nonAssignablePolicies, policy) {
-			return logical.ErrorResponse(fmt.Sprintf("cannot assign %s policy", policy)), nil
-		}
-	}
-
 	// Generate the response
 	resp.Auth = &logical.Auth{
 		DisplayName: te.DisplayName,
