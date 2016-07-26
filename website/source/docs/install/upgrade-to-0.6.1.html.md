@@ -54,3 +54,10 @@ In addition, if LDAP is relied upon for authentication, operators should ensure
 that they have valid tokens with policies allowing modification of LDAP
 parameters before upgrading, so that once an upgrade is performed, the new
 configuration can be specified successfully.
+
+## App-ID is Deprecated
+
+With the addition of of the new AppRole backend, App-ID is deprecated. There
+are no plans to remove it, but we encourage using AppRole whenever possible, as
+it offers enhanced functionality and can accommodate many more types of
+authentication paradigms.
