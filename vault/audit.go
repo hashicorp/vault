@@ -364,11 +364,11 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outer
 	}()
 
 	// All logged requests must have an identifier
-	if req.ID == "" {
-		a.logger.Printf("[ERR] audit: missing identifier in request object: %s", req.Path)
-		retErr = multierror.Append(retErr, fmt.Errorf("missing identifier in request object: %s", req.Path))
-		return
-	}
+	//if req.ID == "" {
+	//	a.logger.Printf("[ERR] audit: missing identifier in request object: %s", req.Path)
+	//	retErr = multierror.Append(retErr, fmt.Errorf("missing identifier in request object: %s", req.Path))
+	//	return
+	//}
 
 	// Ensure at least one backend logs
 	anyLogged := false
