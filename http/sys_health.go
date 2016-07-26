@@ -123,10 +123,11 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		if err != nil {
 			return http.StatusInternalServerError, nil, err
 		}
-		if cluster != nil {
-			clusterName = cluster.Name
-			clusterID = cluster.ID
+		if cluster == nil {
+			return http.StatusInternalServerError, nil, nil
 		}
+		clusterName = cluster.Name
+		clusterID = cluster.ID
 	}
 
 	// Format the body
