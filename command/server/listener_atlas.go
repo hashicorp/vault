@@ -29,7 +29,7 @@ func (s *SCADAListener) Addr() net.Addr {
 func atlasListenerFactory(config map[string]string, logger io.Writer) (net.Listener, map[string]string, ReloadFunc, error) {
 	scadaConfig := &scada.Config{
 		Service:      "vault",
-		Version:      version.GetVersion().String(),
+		Version:      version.GetVersion().Version,
 		ResourceType: "vault-cluster",
 		Meta: map[string]string{
 			"node_id": config["node_id"],
