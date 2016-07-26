@@ -31,6 +31,8 @@ func TestSysHealth_get(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["cluster_name"] = actual["cluster_name"]
+	expected["cluster_id"] = actual["cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -52,6 +54,8 @@ func TestSysHealth_get(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["cluster_name"] = actual["cluster_name"]
+	expected["cluster_id"] = actual["cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -82,6 +86,8 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["cluster_name"] = actual["cluster_name"]
+	expected["cluster_id"] = actual["cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -107,6 +113,8 @@ func TestSysHealth_customcodes(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["cluster_name"] = actual["cluster_name"]
+	expected["cluster_id"] = actual["cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}

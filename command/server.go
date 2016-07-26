@@ -187,6 +187,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
+		ClusterName:        config.ClusterName,
 	}
 
 	// Initialize the separate HA physical backend, if it exists

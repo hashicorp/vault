@@ -33,6 +33,8 @@ type Config struct {
 	MaxLeaseTTLRaw     string        `hcl:"max_lease_ttl"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw string        `hcl:"default_lease_ttl"`
+
+	ClusterName string `hcl:"cluster_name"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -210,6 +212,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
+	result.ClusterName = c.ClusterName
+	if c2.ClusterName != "" {
+		result.ClusterName = c2.ClusterName
+	}
+
 	return result
 }
 
@@ -277,6 +284,7 @@ func ParseConfig(d string) (*Config, error) {
 		"telemetry",
 		"default_lease_ttl",
 		"max_lease_ttl",
+		"cluster_name",
 
 		// TODO: Remove in 0.6.0
 		// Deprecated keys

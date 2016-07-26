@@ -218,23 +218,44 @@ type Core struct {
 
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
+
+	clusterName string
 }
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	LogicalBackends    map[string]logical.Factory
-	CredentialBackends map[string]logical.Factory
-	AuditBackends      map[string]audit.Factory
-	Physical           physical.Backend
-	HAPhysical         physical.HABackend // May be nil, which disables HA operations
-	Seal               Seal
-	Logger             *log.Logger
-	DisableCache       bool   // Disables the LRU cache on the physical backend
-	DisableMlock       bool   // Disables mlock syscall
-	CacheSize          int    // Custom cache size of zero for default
-	AdvertiseAddr      string // Set as the leader address for HA
-	DefaultLeaseTTL    time.Duration
-	MaxLeaseTTL        time.Duration
+	LogicalBackends map[string]logical.Factory `json:"logical_backends" structs:"logical_backends" mapstructure:"logical_backends"`
+
+	CredentialBackends map[string]logical.Factory `json:"credential_backends" structs:"credential_backends" mapstructure:"credential_backends"`
+
+	AuditBackends map[string]audit.Factory `json:"audit_backends" structs:"audit_backends" mapstructure:"audit_backends"`
+
+	Physical physical.Backend `json:"physical" structs:"physical" mapstructure:"physical"`
+
+	// May be nil, which disables HA operations
+	HAPhysical physical.HABackend `json:"ha_physical" structs:"ha_physical" mapstructure:"ha_physical"`
+
+	Seal Seal `json:"seal" structs:"seal" mapstructure:"seal"`
+
+	Logger *log.Logger `json:"logger" structs:"logger" mapstructure:"logger"`
+
+	// Disables the LRU cache on the physical backend
+	DisableCache bool `json:"disable_cache" structs:"disable_cache" mapstructure:"disable_cache"`
+
+	// Disables mlock syscall
+	DisableMlock bool `json:"disable_mlock" structs:"disable_mlock" mapstructure:"disable_mlock"`
+
+	// Custom cache size of zero for default
+	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
+
+	// Set as the leader address for HA
+	AdvertiseAddr string `json:"advertise_addr" structs:"advertise_addr" mapstructure:"advertise_addr"`
+
+	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+
+	MaxLeaseTTL time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+
+	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
 }
 
 // NewCore is used to construct a new core
@@ -315,6 +336,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		defaultLeaseTTL: conf.DefaultLeaseTTL,
 		maxLeaseTTL:     conf.MaxLeaseTTL,
 		cachingDisabled: conf.DisableCache,
+		clusterName:     conf.ClusterName,
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -968,6 +990,9 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupAudits(); err != nil {
+		return err
+	}
+	if err := c.setupCluster(); err != nil {
 		return err
 	}
 	c.metricsCh = make(chan struct{})

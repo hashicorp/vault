@@ -5,3 +5,4 @@ telemetry {
 }
 
 default_lease_ttl = "10h"
+cluster_name = "testcluster"

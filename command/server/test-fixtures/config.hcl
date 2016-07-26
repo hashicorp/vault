@@ -26,3 +26,4 @@ ha_backend "consul" {
 
 max_lease_ttl = "10h"
 default_lease_ttl = "10h"
+cluster_name = "testcluster"
