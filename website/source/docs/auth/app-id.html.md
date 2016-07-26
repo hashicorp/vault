@@ -10,6 +10,17 @@ description: |-
 
 Name: `app-id`
 
+## Deprecation Notice
+
+As of Vault 0.6.1, App ID is deprecated in favor of
+[AppRole](https://www.vaultproject.io/docs/auth/approle.html). AppRole can
+accommodate the same workflow as App ID while enabling much more secure and
+flexible management and other types of authentication workflows. No new
+features or enhancements are planned for App ID, and new users should use
+AppRole instead of App ID.
+
+## Introduction
+
 The App ID auth backend is a mechanism for machines to authenticate with Vault.
 It works by requiring two hard-to-guess unique pieces of information: a unique
 app ID, and a unique user ID.

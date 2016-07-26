@@ -57,7 +57,8 @@ configuration can be specified successfully.
 
 ## App-ID is Deprecated
 
-With the addition of of the new AppRole backend, App-ID is deprecated. There
-are no plans to remove it, but we encourage using AppRole whenever possible, as
-it offers enhanced functionality and can accommodate many more types of
-authentication paradigms.
+With the addition of of the new [AppRole
+backend](https://www.vaultproject.io/docs/auth/approle.html), App-ID is
+deprecated. There are no plans to remove it, but we encourage using AppRole
+whenever possible, as it offers enhanced functionality and can accommodate many
+more types of authentication paradigms.
