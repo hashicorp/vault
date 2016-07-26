@@ -65,7 +65,7 @@ func (c *Core) setupCluster() error {
 			c.logger.Printf("[ERR] core: failed to generate cluster name: %v", err)
 			return err
 		}
-		c.clusterName = fmt.Sprintf("vaule-cluster-%08x", clusterNameBytes)
+		c.clusterName = fmt.Sprintf("vault-cluster-%08x", clusterNameBytes)
 	}
 
 	// Generate a clusterID
