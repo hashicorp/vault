@@ -96,6 +96,8 @@ IMPROVEMENTS:
    role name as part of response of `verify` API.
  * sys/health: Added version information to the response of health status
    endpoint [GH-1647]
+ * sys/health: ClusterName and ClusterID will be returned as part of health
+   status, when Vault is unsealed.
 
 BUG FIXES:
 
