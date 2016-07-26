@@ -212,6 +212,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
+	result.ClusterName = c.ClusterName
+	if c2.ClusterName != "" {
+		result.ClusterName = c2.ClusterName
+	}
+
 	return result
 }
 
