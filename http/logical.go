@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -65,14 +64,8 @@ func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Reque
 		}
 	}
 
-	// Generate a unique identifier for the request
-	requestid, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
-	}
-
+	var err error
 	req := requestAuth(r, &logical.Request{
-		ID:         requestid,
 		Operation:  op,
 		Path:       path,
 		Data:       data,
@@ -142,11 +135,11 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 		}
 
 		// Build the proper response
-		respondLogical(w, r, req.Path, dataOnly, resp)
+		respondLogical(w, r, req, dataOnly, resp)
 	})
 }
 
-func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnly bool, resp *logical.Response) {
+func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, dataOnly bool, resp *logical.Response) {
 	var httpResp interface{}
 	if resp != nil {
 		if resp.Redirect != "" {
@@ -163,7 +156,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 
 		// Check if this is a raw response
 		if _, ok := resp.Data[logical.HTTPContentType]; ok {
-			respondRaw(w, r, path, resp)
+			respondRaw(w, r, req.Path, resp)
 			return
 		}
 
@@ -177,7 +170,9 @@ func respondLogical(w http.ResponseWriter, r *http.Request, path string, dataOnl
 				},
 			}
 		} else {
-			httpResp = logical.SanitizeResponse(resp)
+			sanitizedHttp := logical.SanitizeResponse(resp)
+			sanitizedHttp.RequestID = req.ID
+			httpResp = sanitizedHttp
 		}
 	}
 
