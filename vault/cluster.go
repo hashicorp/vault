@@ -69,7 +69,6 @@ func (c *Core) setupCluster() error {
 	}
 
 	// Generate a clusterID
-	var err error
 	clusterID, err := uuid.GenerateUUID()
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to generate cluster identifier: %v", err)

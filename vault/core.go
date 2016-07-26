@@ -219,11 +219,7 @@ type Core struct {
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
 
-	localClusterName string
-	localClusterID   string
-
-	globalClusterName string
-	globalClusterID   string
+	clusterName string
 }
 
 // CoreConfig is used to parameterize a core
@@ -259,13 +255,7 @@ type CoreConfig struct {
 
 	MaxLeaseTTL time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 
-	LocalClusterName string `json:"local_cluster_name" structs:"local_cluster_name" mapstructure:"local_cluster_name"`
-
-	LocalClusterID string `json:"local_cluster_id" structs:"local_cluster_id" mapstructure:"local_cluster_id"`
-
-	GlobalClusterName string `json:"global_cluster_name" structs:"global_cluster_name" mapstructure:"global_cluster_name"`
-
-	GlobalClusterID string `json:"global_cluster_id" structs:"global_cluster_id" mapstructure:"global_cluster_id"`
+	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
 }
 
 // NewCore is used to construct a new core
@@ -335,21 +325,18 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		advertiseAddr:     conf.AdvertiseAddr,
-		physical:          conf.Physical,
-		seal:              conf.Seal,
-		barrier:           barrier,
-		router:            NewRouter(),
-		sealed:            true,
-		standby:           true,
-		logger:            conf.Logger,
-		defaultLeaseTTL:   conf.DefaultLeaseTTL,
-		maxLeaseTTL:       conf.MaxLeaseTTL,
-		cachingDisabled:   conf.DisableCache,
-		localClusterName:  conf.LocalClusterName,
-		localClusterID:    conf.LocalClusterID,
-		globalClusterName: conf.GlobalClusterName,
-		globalClusterID:   conf.GlobalClusterID,
+		advertiseAddr:   conf.AdvertiseAddr,
+		physical:        conf.Physical,
+		seal:            conf.Seal,
+		barrier:         barrier,
+		router:          NewRouter(),
+		sealed:          true,
+		standby:         true,
+		logger:          conf.Logger,
+		defaultLeaseTTL: conf.DefaultLeaseTTL,
+		maxLeaseTTL:     conf.MaxLeaseTTL,
+		cachingDisabled: conf.DisableCache,
+		clusterName:     conf.ClusterName,
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
