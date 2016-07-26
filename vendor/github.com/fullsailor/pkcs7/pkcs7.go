@@ -221,6 +221,7 @@ func (p7 *PKCS7) Verify() (err error) {
 }
 
 func verifySignature(p7 *PKCS7, signer signerInfo) error {
+	signedData := p7.Content
 	if len(signer.AuthenticatedAttributes) > 0 {
 		// TODO(fullsailor): First check the content type match
 		var digest []byte
@@ -241,19 +242,20 @@ func verifySignature(p7 *PKCS7, signer signerInfo) error {
 				ActualDigest:   computed,
 			}
 		}
+		// TODO(fullsailor): Optionally verify certificate chain
+		// TODO(fullsailor): Optionally verify signingTime against certificate NotAfter/NotBefore
+		signedData, err = marshalAttributes(signer.AuthenticatedAttributes)
+		if err != nil {
+			return err
+		}
 	}
 	cert := getCertFromCertsByIssuerAndSerial(p7.Certificates, signer.IssuerAndSerialNumber)
 	if cert == nil {
 		return errors.New("pkcs7: No certificate for signer")
 	}
-	// TODO(fullsailor): Optionally verify certificate chain
-	// TODO(fullsailor): Optionally verify signingTime against certificate NotAfter/NotBefore
-	encodedAttributes, err := marshalAttributes(signer.AuthenticatedAttributes)
-	if err != nil {
-		return err
-	}
+
 	algo := x509.SHA1WithRSA
-	return cert.CheckSignature(algo, encodedAttributes, signer.EncryptedDigest)
+	return cert.CheckSignature(algo, signedData, signer.EncryptedDigest)
 }
 
 func marshalAttributes(attrs []attribute) ([]byte, error) {
