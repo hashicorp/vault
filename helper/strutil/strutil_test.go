@@ -1,6 +1,10 @@
 package strutil
 
-import "testing"
+import (
+	"encoding/base64"
+	"reflect"
+	"testing"
+)
 
 func TestStrutil_EquivalentSlices(t *testing.T) {
 	slice1 := []string{"test2", "test1", "test3"}
@@ -15,7 +19,7 @@ func TestStrutil_EquivalentSlices(t *testing.T) {
 	}
 }
 
-func TestStrListContains(t *testing.T) {
+func TestStrutil_ListContains(t *testing.T) {
 	haystack := []string{
 		"dev",
 		"ops",
@@ -30,7 +34,7 @@ func TestStrListContains(t *testing.T) {
 	}
 }
 
-func TestStrListSubset(t *testing.T) {
+func TestStrutil_ListSubset(t *testing.T) {
 	parent := []string{
 		"dev",
 		"ops",
@@ -58,5 +62,119 @@ func TestStrListSubset(t *testing.T) {
 	}
 	if StrListSubset(nil, child) {
 		t.Fatalf("Bad")
+	}
+}
+
+func TestStrutil_ParseKeyValues(t *testing.T) {
+	actual := make(map[string]string)
+	expected := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+	var input string
+	var err error
+
+	input = "key1=value1,key2=value2"
+	err = ParseKeyValues(input, actual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+	}
+	for k, _ := range actual {
+		delete(actual, k)
+	}
+
+	input = "key1 = value1, key2	= value2"
+	err = ParseKeyValues(input, actual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+	}
+	for k, _ := range actual {
+		delete(actual, k)
+	}
+
+	input = "key1 = value1, key2	=   "
+	err = ParseKeyValues(input, actual)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for k, _ := range actual {
+		delete(actual, k)
+	}
+
+	input = "key1 = value1, 	=  value2 "
+	err = ParseKeyValues(input, actual)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	for k, _ := range actual {
+		delete(actual, k)
+	}
+}
+
+func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
+	actual := make(map[string]string)
+	expected := map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+	var input string
+	var err error
+
+	// Test <key>=<value> as comma separated string
+	input = "key1=value1,key2=value2"
+	_, err = ParseArbitraryKeyValues(input, actual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+	}
+	for k, _ := range actual {
+		delete(actual, k)
+	}
+
+	// Test <key>=<value> as base64 encoded comma separated string
+	input = base64.StdEncoding.EncodeToString([]byte(input))
+	_, err = ParseArbitraryKeyValues(input, actual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+	}
+	for k, _ := range actual {
+		delete(actual, k)
+	}
+
+	// Test JSON encoded <key>=<value> tuples
+	input = `{"key1":"value1", "key2":"value2"}`
+	_, err = ParseArbitraryKeyValues(input, actual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+	}
+	for k, _ := range actual {
+		delete(actual, k)
+	}
+
+	// Test base64 encoded JSON string of <key>=<value> tuples
+	input = base64.StdEncoding.EncodeToString([]byte(input))
+	_, err = ParseArbitraryKeyValues(input, actual)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+	}
+	for k, _ := range actual {
+		delete(actual, k)
 	}
 }

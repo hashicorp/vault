@@ -231,6 +231,7 @@ func (c *Core) loadCredentials() error {
 				entry.Type = "aws-ec2"
 				needPersist = true
 			}
+
 			if entry.Table == "" {
 				entry.Table = c.auth.Type
 				needPersist = true
