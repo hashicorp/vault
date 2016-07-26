@@ -148,6 +148,6 @@ type HealthResponse struct {
 	Standby       bool   `json:"standby"`
 	ServerTimeUTC int64  `json:"server_time_utc"`
 	Version       string `json:"version"`
-	ClusterName   string `json:"cluster_name"`
-	ClusterID     string `json:"cluster_id"`
+	ClusterName   string `json:"cluster_name,omitempty"`
+	ClusterID     string `json:"cluster_id,omitempty"`
 }
