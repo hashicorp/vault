@@ -72,7 +72,7 @@ func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Reque
 	}
 
 	req := requestAuth(r, &logical.Request{
-		//	ID:         request_id,
+		ID:         request_id,
 		Operation:  op,
 		Path:       path,
 		Data:       data,
