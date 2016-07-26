@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/hex"
 	"encoding/json"
-	"log"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -173,7 +172,6 @@ func TestSysUnseal_Reset(t *testing.T) {
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
 		}
-		log.Printf("reached here\n")
 	}
 
 	resp = testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{

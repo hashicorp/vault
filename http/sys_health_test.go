@@ -31,6 +31,10 @@ func TestSysHealth_get(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["local_cluster_name"] = actual["local_cluster_name"]
+	expected["local_cluster_id"] = actual["local_cluster_id"]
+	expected["global_cluster_name"] = actual["global_cluster_name"]
+	expected["global_cluster_id"] = actual["global_cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -52,6 +56,10 @@ func TestSysHealth_get(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["local_cluster_name"] = actual["local_cluster_name"]
+	expected["local_cluster_id"] = actual["local_cluster_id"]
+	expected["global_cluster_name"] = actual["global_cluster_name"]
+	expected["global_cluster_id"] = actual["global_cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -82,6 +90,10 @@ func TestSysHealth_customcodes(t *testing.T) {
 
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["local_cluster_name"] = actual["local_cluster_name"]
+	expected["local_cluster_id"] = actual["local_cluster_id"]
+	expected["global_cluster_name"] = actual["global_cluster_name"]
+	expected["global_cluster_id"] = actual["global_cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -107,6 +119,10 @@ func TestSysHealth_customcodes(t *testing.T) {
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]
+	expected["local_cluster_name"] = actual["local_cluster_name"]
+	expected["local_cluster_id"] = actual["local_cluster_id"]
+	expected["global_cluster_name"] = actual["global_cluster_name"]
+	expected["global_cluster_id"] = actual["global_cluster_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}

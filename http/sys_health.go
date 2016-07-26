@@ -114,21 +114,55 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = standbyCode
 	}
 
+	// Fetch the local cluster name and identifier
+	var localClusterName, localClusterID string
+	localCluster, err := core.Cluster(true)
+
+	// Don't set the cluster details in the health status when Vault is sealed
+	if err != nil && err.Error() != "Vault is sealed" {
+		return http.StatusInternalServerError, nil, err
+	}
+	if localCluster != nil {
+		localClusterName = localCluster.Name
+		localClusterID = localCluster.ID
+	}
+
+	// Fetch the global cluster name and identifier
+	var globalClusterName, globalClusterID string
+	globalCluster, err := core.Cluster(false)
+
+	// Don't set the cluster details in the health status when Vault is sealed
+	if err != nil && err.Error() != "Vault is sealed" {
+		return http.StatusInternalServerError, nil, err
+	}
+	if globalCluster != nil {
+		globalClusterName = globalCluster.Name
+		globalClusterID = globalCluster.ID
+	}
+
 	// Format the body
 	body := &HealthResponse{
-		Initialized:   init,
-		Sealed:        sealed,
-		Standby:       standby,
-		ServerTimeUTC: time.Now().UTC().Unix(),
-		Version:       version.GetVersion().String(),
+		Initialized:       init,
+		Sealed:            sealed,
+		Standby:           standby,
+		ServerTimeUTC:     time.Now().UTC().Unix(),
+		Version:           version.GetVersion().String(),
+		LocalClusterName:  localClusterName,
+		LocalClusterID:    localClusterID,
+		GlobalClusterName: globalClusterName,
+		GlobalClusterID:   globalClusterID,
 	}
 	return code, body, nil
 }
 
 type HealthResponse struct {
-	Initialized   bool   `json:"initialized"`
-	Sealed        bool   `json:"sealed"`
-	Standby       bool   `json:"standby"`
-	ServerTimeUTC int64  `json:"server_time_utc"`
-	Version       string `json:"version"`
+	Initialized       bool   `json:"initialized"`
+	Sealed            bool   `json:"sealed"`
+	Standby           bool   `json:"standby"`
+	ServerTimeUTC     int64  `json:"server_time_utc"`
+	Version           string `json:"version"`
+	LocalClusterName  string `json:"local_cluster_name"`
+	LocalClusterID    string `json:"local_cluster_id"`
+	GlobalClusterName string `json:"global_cluster_name"`
+	GlobalClusterID   string `json:"global_cluster_id"`
 }
