@@ -13,9 +13,20 @@ DEPRECATIONS/BREAKING CHANGES:
    some errors and increases speed for directories with different structures,
    but if this behavior has been relied upon, ensure that you see the upgrade
    notes _before upgrading_.
+ * `app-id` is now deprecated with the addition of the new AppRole backend.
+   There are no plans to remove it, but we encourage using AppRole whenever
+   possible, as it offers enhanced functionality and can accommodate many more
+   types of authentication paradigms.
 
 FEATURES:
 
+ * **AppRole Authentication Backend**: The `approle` backend is a
+   machine-oriented authentication backend that provides a similar concept to
+   App-ID while adding many missing features, including a pull model that
+   allows for the backend to generate authentication credentials rather than
+   requiring operators or other systems to push credentials in. It should be
+   useful in many more situations than App-ID. The inclusion of this backend
+   deprecates App-ID. [GH-1426]
  * **Convergent Encryption in `Transit`**: The `transit` backend now supports a
    convergent encryption mode where the same plaintext will produce the same
    ciphertext. Although very useful in some situations, this has security
