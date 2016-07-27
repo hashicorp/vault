@@ -42,6 +42,7 @@ func (f *FormatJSON) FormatRequest(
 
 		Request: JSONRequest{
 			ClientToken: req.ClientToken,
+			ID:          req.ID,
 			Operation:   req.Operation,
 			Path:        req.Path,
 			Data:        req.Data,
@@ -112,6 +113,7 @@ func (f *FormatJSON) FormatResponse(
 
 		Request: JSONRequest{
 			ClientToken: req.ClientToken,
+			ID:          req.ID,
 			Operation:   req.Operation,
 			Path:        req.Path,
 			Data:        req.Data,
@@ -149,6 +151,7 @@ type JSONResponseEntry struct {
 }
 
 type JSONRequest struct {
+	ID          string                 `json:"id"`
 	Operation   logical.Operation      `json:"operation"`
 	ClientToken string                 `json:"client_token"`
 	Path        string                 `json:"path"`

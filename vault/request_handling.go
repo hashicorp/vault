@@ -411,6 +411,9 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 
 	httpResponse := logical.SanitizeResponse(resp)
 
+	// Add the unique identifier of the original request to the response
+	httpResponse.RequestID = req.ID
+
 	// Because of the way that JSON encodes (likely just in Go) we actually get
 	// mixed-up values for ints if we simply put this object in the response
 	// and encode the whole thing; so instead we marshal it first, then store

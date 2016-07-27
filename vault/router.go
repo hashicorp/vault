@@ -248,11 +248,15 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	// Cache the pointer to the original connection object
 	originalConn := req.Connection
 
+	// Cache the identifier of the request
+	originalReqID := req.ID
+
 	// Reset the request before returning
 	defer func() {
 		req.Path = original
 		req.MountPoint = ""
 		req.Connection = originalConn
+		req.ID = originalReqID
 		req.Storage = nil
 		req.ClientToken = clientToken
 	}()

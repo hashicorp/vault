@@ -10,6 +10,8 @@ import (
 
 	"errors"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/logical"
 )
@@ -223,9 +225,17 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Operation: logical.ReadOperation,
 		Path:      "sys/mounts",
 	}
+
+	// Create an identifier for the request to verify against
+	var err error
+	req.ID, err = uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate identifier for the request: path%s err: %v", req.Path, err)
+	}
+
 	reqErrs := errors.New("errs")
 
-	err := b.LogRequest(auth, req, reqErrs)
+	err = b.LogRequest(auth, req, reqErrs)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -250,7 +260,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(auth, req, nil); err.Error() != "no audit backend succeeded in logging the request" {
+	if err := b.LogRequest(auth, req, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }

@@ -1153,6 +1153,12 @@ func TestCore_StepDown(t *testing.T) {
 		Path:        "sys/step-down",
 	}
 
+	// Create an identifier for the request
+	req.ID, err = uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate identifier for the request: path: %s err: %v", req.Path, err)
+	}
+
 	// Step down core
 	err = core.StepDown(req)
 	if err != nil {

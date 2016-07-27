@@ -31,51 +31,51 @@ const (
 type WrapInfo struct {
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
-	TTL time.Duration
+	TTL time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
 
 	// The token containing the wrapped response
-	Token string
+	Token string `json:"token" structs:"token" mapstructure:"token"`
 
 	// The creation time. This can be used with the TTL to figure out an
 	// expected expiration.
-	CreationTime time.Time
+	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"cration_time"`
 
 	// If the contained response is the output of a token creation call, the
 	// created token's accessor will be accessible here
-	WrappedAccessor string
+	WrappedAccessor string `json:"wrapped_accessor" structs:"wrapped_accessor" mapstructure:"wrapped_accessor"`
 }
 
 // Response is a struct that stores the response of a request.
 // It is used to abstract the details of the higher level request protocol.
 type Response struct {
 	// Secret, if not nil, denotes that this response represents a secret.
-	Secret *Secret
+	Secret *Secret `json:"secret" structs:"secret" mapstructure:"secret"`
 
 	// Auth, if not nil, contains the authentication information for
 	// this response. This is only checked and means something for
 	// credential backends.
-	Auth *Auth
+	Auth *Auth `json:"auth" structs:"auth" mapstructure:"auth"`
 
 	// Response data is an opaque map that must have string keys. For
 	// secrets, this data is sent down to the user as-is. To store internal
 	// data that you don't want the user to see, store it in
 	// Secret.InternalData.
-	Data map[string]interface{}
+	Data map[string]interface{} `json:"data" structs:"data" mapstructure:"data"`
 
 	// Redirect is an HTTP URL to redirect to for further authentication.
 	// This is only valid for credential backends. This will be blanked
 	// for any logical backend and ignored.
-	Redirect string
+	Redirect string `json:"redirect" structs:"redirect" mapstructure:"redirect"`
 
 	// Warnings allow operations or backends to return warnings in response
 	// to user actions without failing the action outright.
 	// Making it private helps ensure that it is easy for various parts of
 	// Vault (backend, core, etc.) to add warnings without accidentally
 	// replacing what exists.
-	warnings []string
+	warnings []string `json:"warnings" structs:"warnings" mapstructure:"warnings"`
 
 	// Information for wrapping the response in a cubbyhole
-	WrapInfo *WrapInfo
+	WrapInfo *WrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
 }
 
 func init() {
