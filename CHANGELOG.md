@@ -62,6 +62,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * audit: Added a unique identifier to each request which will also be found in
+   the request portion of the response. [GH-1650]
  * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
    [GH-1523]
  * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
@@ -89,7 +91,7 @@ IMPROVEMENTS:
  * secret/mssql,mysql,postgresql: Reading of connection settings is supported
    in all the sql backends [GH-1515]
  * secret/mysql: Added optional maximum idle connections value to MySQL 
-   connection configuration [GH-1616]
+   connection configuration [GH-1635]
  * secret/mysql: Use a combination of the role name and token display name in
    generated user names and allow the length to be controlled [GH-1604]
  * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
