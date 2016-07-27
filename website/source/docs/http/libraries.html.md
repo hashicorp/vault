@@ -29,6 +29,11 @@ These libraries are officially maintained by HashiCorp.
 
 These libraries are provided by the community.
 
+### Ansible
+
+* [Ansible Modules Hashivault](https://pypi.python.org/pypi/ansible-modules-hashivault)
+  * `pip install ansible-modules-hashivault`
+
 ### C&#35;
 
 * [VaultSharp](https://github.com/rajanadar/VaultSharp)
