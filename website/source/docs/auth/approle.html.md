@@ -12,7 +12,7 @@ This backend allows machines and services (logically referred as `app`s) to
 authenticate with Vault, by registering them as AppRoles. The open design of
 AppRoles, enables a varied set of Apps to authenticate themselves. Since an
 AppRole can represent a service, or a machine or anything that can be IDed,
-this backend is a potential successor for the App-ID backend.
+this backend is the successor for the App-ID backend.
 
 ### AppRole
 
@@ -23,7 +23,7 @@ service requires a set of Vault policies, an AppRole can be registered under
 the service's name with the desired policies.  The credentials presented at the
 login endpoint depends on the constraints set on AppRoles.
 
-### RoleID 
+### RoleID
 
 RoleID is a credential to be used at the login endpoint.  The credentials used
 to fetch a Vault token depends on the configured contraints on the AppRole.
@@ -53,7 +53,7 @@ referred as `Pull` mode. If a "custom" SecretID is set against an AppRole by
 the client, it is referred as a `Push` mode.
 
 While the `user_id` of the App-ID backend worked in a `Push` mode, this backend
-recommends the `Pull` mode. The `Pull` mode is supported in AppRole backend,
+recommends the `Pull` mode. The `Push` mode is supported in AppRole backend,
 *only* to be able to make this backend to do all that App-ID did.
 
 ### AppRole Constraints
@@ -96,27 +96,13 @@ role_id     db02de05-fa39-4855-059b-67221c5c2f63
 #### Get a SecretID issued against the AppRole
 
 ```javascript
-$ vault write auth/approle/role/testrole/secret-id metadata=@secret-metadata
+$ vault write auth/approle/role/testrole/secret-id
 ```
 
 ```javascript
 secret_id               6a174c20-f6de-a53c-74d2-6018fcceff64
 secret_id_accessor      c454f7e5-996e-7230-6074-6ef26b7bcf86
 ```
-
-```javascript
-$ cat secret-metadata
-{
-  "secret_prefix": "test_secrets",
-  "secret_version": "v1"
-}
-```
-
-*Note*: Metadata can be of the following formats.
- * JSON string
- * Base64 encoded JSON string
- * String containing comma separated <key>=<value> pairs
- * Base64 encoded string containing comma separated <key>=<value> pairs
 
 
 #### Login to get a Vault Token
@@ -156,7 +142,7 @@ $ curl -XGET -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/role/
 #### Get a SecretID issued against the AppRole
 
 ```javascript
-$ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id" -d '{"metadata":"{\"secret_prefix\": \"test_secrets\",\"secret_version\": \"v1\"}"}'
+$ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id"
 ```
 
 #### Login to get a Vault Token
@@ -184,7 +170,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
   None
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -298,7 +284,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
       </li>
     </ul>
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>`204` response code.
   </dd>
@@ -321,7 +307,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
     None.
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -368,7 +354,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
     None.
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>`204` response code.
   </dd>
@@ -393,7 +379,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
     None.
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -437,7 +423,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
       </li>
     </ul>
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
   `204` response code.
@@ -474,7 +460,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
       </li>
     </ul>
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -514,7 +500,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
   None
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -559,7 +545,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
     None.
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -572,10 +558,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
     "secret_id_ttl": 600,
     "secret_id_num_uses": 40,
     "secret_id_accessor": "5e222f10-278d-a829-4e74-10d71977bb53",
-    "metadata": {
-      "version": "v1",
-      "prefix": "dev_secrets"
-    },
+    "metadata": {},
     "last_updated_time": "2016-06-29T05:31:09.407042587Z",
     "expiration_time": "2016-06-29T05:41:09.407042587Z",
     "creation_time": "2016-06-29T05:31:09.407042587Z"
@@ -606,7 +589,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
     None.
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
   `204` response code.
@@ -646,7 +629,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
       </li>
     </ul>
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -703,7 +686,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
       </li>
     </ul>
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
 
@@ -759,7 +742,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>
   Refer to `/auth/approle/role/[role_name]` endpoint.
   </dd>
-  
+
   <dt>Returns</dt>
   <dd>
   Refer to `/auth/approle/role/[role_name]` endpoint.
