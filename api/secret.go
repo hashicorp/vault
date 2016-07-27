@@ -9,6 +9,9 @@ import (
 
 // Secret is the structure returned for every secret within Vault.
 type Secret struct {
+	// The request ID that generated this response
+	RequestID string `json:"request_id"`
+
 	LeaseID       string `json:"lease_id"`
 	LeaseDuration int    `json:"lease_duration"`
 	Renewable     bool   `json:"renewable"`
