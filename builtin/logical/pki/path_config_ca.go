@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -37,7 +38,7 @@ func (b *backend) pathCAWrite(
 	parsedBundle, err := certutil.ParsePEMBundle(pemBundle)
 	if err != nil {
 		switch err.(type) {
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		default:
 			return logical.ErrorResponse(err.Error()), nil

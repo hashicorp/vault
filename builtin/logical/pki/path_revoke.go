@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -64,9 +64,9 @@ func (b *backend) pathRotateCRLRead(req *logical.Request, data *framework.FieldD
 
 	crlErr := buildCRL(b, req)
 	switch crlErr.(type) {
-	case certutil.UserError:
+	case errutil.UserError:
 		return logical.ErrorResponse(fmt.Sprintf("Error during CRL building: %s", crlErr)), nil
-	case certutil.InternalError:
+	case errutil.InternalError:
 		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
 	default:
 		return &logical.Response{

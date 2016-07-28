@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -128,7 +129,7 @@ func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, e
 
 	err = fd.Validate()
 	if err != nil {
-		return false, false, err
+		return false, false, errutil.UserError{Err: err.Error()}
 	}
 
 	// Call the callback with the request and the data

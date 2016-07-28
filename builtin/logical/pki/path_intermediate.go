@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -65,9 +66,9 @@ func (b *backend) pathGenerateIntermediate(
 	parsedBundle, err := generateIntermediateCSR(b, role, nil, req, data)
 	if err != nil {
 		switch err.(type) {
-		case certutil.UserError:
+		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		}
 	}
@@ -132,7 +133,7 @@ func (b *backend) pathSetSignedIntermediate(
 	inputBundle, err := certutil.ParsePEMBundle(cert)
 	if err != nil {
 		switch err.(type) {
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		default:
 			return logical.ErrorResponse(err.Error()), nil

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -461,7 +462,11 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 			// Continue on
 		default:
 			c.logger.Printf("[ERR] core: failed to run existence check: %v", err)
-			return nil, nil, ErrInternalError
+			if _, ok := err.(errutil.UserError); ok {
+				return nil, nil, err
+			} else {
+				return nil, nil, ErrInternalError
+			}
 		}
 
 		switch {

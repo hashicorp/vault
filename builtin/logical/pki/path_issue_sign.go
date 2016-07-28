@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -140,11 +141,11 @@ func (b *backend) pathIssueSignCert(
 	var caErr error
 	signingBundle, caErr := fetchCAInfo(req)
 	switch caErr.(type) {
-	case certutil.UserError:
-		return nil, certutil.UserError{Err: fmt.Sprintf(
+	case errutil.UserError:
+		return nil, errutil.UserError{Err: fmt.Sprintf(
 			"Could not fetch the CA certificate (was one set?): %s", caErr)}
-	case certutil.InternalError:
-		return nil, certutil.InternalError{Err: fmt.Sprintf(
+	case errutil.InternalError:
+		return nil, errutil.InternalError{Err: fmt.Sprintf(
 			"Error fetching CA certificate: %s", caErr)}
 	}
 
@@ -157,9 +158,9 @@ func (b *backend) pathIssueSignCert(
 	}
 	if err != nil {
 		switch err.(type) {
-		case certutil.UserError:
+		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		}
 	}

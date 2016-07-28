@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -96,9 +96,9 @@ func (b *backend) pathEncryptWrite(
 	ciphertext, err := p.Encrypt(context, value)
 	if err != nil {
 		switch err.(type) {
-		case certutil.UserError:
+		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		default:
 			return nil, err
