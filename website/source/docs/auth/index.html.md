@@ -16,7 +16,7 @@ Having multiple auth backends enables you to use an auth backend
 that makes the sense for your use case of Vault and your organization.
 
 For example, on developer machines, the [GitHub auth backend](/docs/auth/github.html)
-is easiest to use. But for servers the [App ID](/docs/auth/app-id.html)
+is easiest to use. But for servers the [AppRole](/docs/auth/approle.html)
 backend is the recommended choice.
 
 To learn more about authentication, see the
