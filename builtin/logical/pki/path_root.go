@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -84,9 +84,9 @@ func (b *backend) pathCAGenerateRoot(
 	parsedBundle, err := generateCert(b, role, nil, true, req, data)
 	if err != nil {
 		switch err.(type) {
-		case certutil.UserError:
+		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		}
 	}
@@ -201,11 +201,11 @@ func (b *backend) pathCASignIntermediate(
 	var caErr error
 	signingBundle, caErr := fetchCAInfo(req)
 	switch caErr.(type) {
-	case certutil.UserError:
-		return nil, certutil.UserError{Err: fmt.Sprintf(
+	case errutil.UserError:
+		return nil, errutil.UserError{Err: fmt.Sprintf(
 			"could not fetch the CA certificate (was one set?): %s", caErr)}
-	case certutil.InternalError:
-		return nil, certutil.InternalError{Err: fmt.Sprintf(
+	case errutil.InternalError:
+		return nil, errutil.InternalError{Err: fmt.Sprintf(
 			"error fetching CA certificate: %s", caErr)}
 	}
 
@@ -220,9 +220,9 @@ func (b *backend) pathCASignIntermediate(
 	parsedBundle, err := signCert(b, role, signingBundle, true, useCSRValues, req, data)
 	if err != nil {
 		switch err.(type) {
-		case certutil.UserError:
+		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), nil
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		}
 	}

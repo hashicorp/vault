@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -74,9 +74,9 @@ func (b *backend) pathRewrapWrite(
 	plaintext, err := p.Decrypt(context, value)
 	if err != nil {
 		switch err.(type) {
-		case certutil.UserError:
+		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		default:
 			return nil, err
@@ -90,9 +90,9 @@ func (b *backend) pathRewrapWrite(
 	ciphertext, err := p.Encrypt(context, plaintext)
 	if err != nil {
 		switch err.(type) {
-		case certutil.UserError:
+		case errutil.UserError:
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		case certutil.InternalError:
+		case errutil.InternalError:
 			return nil, err
 		default:
 			return nil, err
