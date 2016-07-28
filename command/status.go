@@ -38,11 +38,13 @@ func (c *StatusCommand) Run(args []string) int {
 		"Sealed: %v\n"+
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
-			"Unseal Progress: %d",
+			"Unseal Progress: %d\n"+
+			"Version: %s",
 		sealStatus.Sealed,
 		sealStatus.N,
 		sealStatus.T,
-		sealStatus.Progress))
+		sealStatus.Progress,
+		sealStatus.Version))
 
 	// Mask the 'Vault is sealed' error, since this means HA is enabled,
 	// but that we cannot query for the leader since we are sealed.

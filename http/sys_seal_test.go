@@ -32,6 +32,10 @@ func TestSysSealStatus(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["version"] == nil {
+		t.Fatalf("expected version information")
+	}
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -104,6 +108,10 @@ func TestSysUnseal(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["version"] == nil {
+		t.Fatalf("expected version information")
+	}
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -128,6 +136,10 @@ func TestSysUnseal_badKey(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["version"] == nil {
+		t.Fatalf("expected version information")
+	}
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -169,6 +181,10 @@ func TestSysUnseal_Reset(t *testing.T) {
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
+		if actual["version"] == nil {
+			t.Fatalf("expected version information")
+		}
+		expected["version"] = actual["version"]
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
 		}
@@ -187,6 +203,10 @@ func TestSysUnseal_Reset(t *testing.T) {
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	if actual["version"] == nil {
+		t.Fatalf("expected version information")
+	}
+	expected["version"] = actual["version"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
 	}

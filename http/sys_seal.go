@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 )
 
 func handleSysSeal(core *vault.Core) http.Handler {
@@ -155,14 +156,16 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 		T:        sealConfig.SecretThreshold,
 		N:        sealConfig.SecretShares,
 		Progress: core.SecretProgress(),
+		Version:  version.GetVersion().String(),
 	})
 }
 
 type SealStatusResponse struct {
-	Sealed   bool `json:"sealed"`
-	T        int  `json:"t"`
-	N        int  `json:"n"`
-	Progress int  `json:"progress"`
+	Sealed   bool   `json:"sealed"`
+	T        int    `json:"t"`
+	N        int    `json:"n"`
+	Progress int    `json:"progress"`
+	Version  string `json:"version"`
 }
 
 type UnsealRequest struct {

@@ -53,4 +53,5 @@ type SealStatusResponse struct {
 	T        int
 	N        int
 	Progress int
+	Version  string
 }
