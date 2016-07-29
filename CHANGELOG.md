@@ -79,6 +79,8 @@ IMPROVEMENTS:
    fields [GH-1567]
  * cli: `vault write -field` now allows selecting wrapped response fields
    [GH-1567]
+ * command/status: Version information and cluster details added to the output
+   of `vault status` command [GH-1671]
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
  * core: The duration of leadership is now exported via events through
    telemetry [GH-1625]
