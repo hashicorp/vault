@@ -156,7 +156,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	if !sealed {
 		cluster, err := core.Cluster()
 
-		// Don't set the cluster details in the health status when Vault is sealed
+		// Don't set the cluster details in the status when Vault is sealed
 		if err != nil {
 			respondError(w, http.StatusInternalServerError, err)
 			return

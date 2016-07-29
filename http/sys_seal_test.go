@@ -46,11 +46,6 @@ func TestSysSealStatus(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
