@@ -572,12 +572,12 @@ func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *fram
 		return logical.ErrorResponse("missing accessor"), nil
 	}
 
-	token, err := b.Core.tokenStore.lookupByAccessor(accessor)
+	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor)
 	if err != nil {
 		return nil, err
 	}
 
-	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
+	capabilities, err := b.Core.Capabilities(aEntry.TokenID, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}

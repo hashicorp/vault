@@ -107,6 +107,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"revoke-orphan/*",
+				"accessors*",
 			},
 		},
 
@@ -120,6 +121,14 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				HelpSynopsis:    tokenListRolesHelp,
 				HelpDescription: tokenListRolesHelp,
+			},
+
+			&framework.Path{
+				Pattern: "accessors/?$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: t.tokenStoreAccessorList,
+				},
 			},
 
 			&framework.Path{
@@ -484,6 +493,11 @@ type tsRoleEntry struct {
 	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl" structs:"explicit_max_ttl"`
 }
 
+type accessorEntry struct {
+	TokenID    string `json:"token_id"`
+	AccessorID string `json:"accessor_id"`
+}
+
 // SetExpirationManager is used to provide the token store with
 // an expiration manager. This is used to manage prefix based revocation
 // of tokens and to cleanup entries when removed from the token store.
@@ -508,6 +522,31 @@ func (ts *TokenStore) rootToken() (*TokenEntry, error) {
 		return nil, err
 	}
 	return te, nil
+}
+
+func (ts *TokenStore) tokenStoreAccessorList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := ts.view.List(accessorPrefix)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := &logical.Response{}
+
+	ret := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		aEntry, err := ts.lookupBySaltedAccessor(entry)
+		if err != nil {
+			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
+			continue
+		}
+		ret = append(ret, aEntry.AccessorID)
+	}
+
+	resp.Data = map[string]interface{}{
+		"keys": ret,
+	}
+	return resp, nil
 }
 
 // createAccessor is used to create an identifier for the token ID.
@@ -845,16 +884,33 @@ func (ts *TokenStore) handleCreateAgainstRole(
 	return ts.handleCreateCommon(req, d, false, roleEntry)
 }
 
-func (ts *TokenStore) lookupByAccessor(accessor string) (string, error) {
-	entry, err := ts.view.Get(accessorPrefix + ts.SaltID(accessor))
+func (ts *TokenStore) lookupByAccessor(accessor string) (accessorEntry, error) {
+	return ts.lookupBySaltedAccessor(ts.SaltID(accessor))
+}
+
+func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEntry, error) {
+	entry, err := ts.view.Get(accessorPrefix + saltedAccessor)
+	var aEntry accessorEntry
+
 	if err != nil {
-		return "", fmt.Errorf("failed to read index using accessor: %s", err)
+		return aEntry, fmt.Errorf("failed to read index using accessor: %s", err)
 	}
 	if entry == nil {
-		return "", &StatusBadRequest{Err: "invalid accessor"}
+		return aEntry, &StatusBadRequest{Err: "invalid accessor"}
 	}
 
-	return string(entry.Value), nil
+	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
+	// If we hit an error, assume it's a pre-struct straight token ID
+	if err != nil {
+		aEntry.TokenID = string(entry.Value)
+		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID))
+		if err != nil {
+			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
+		}
+		aEntry.AccessorID = te.Accessor
+	}
+
+	return aEntry, nil
 }
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
@@ -868,7 +924,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 		}
 	}
 
-	tokenID, err := ts.lookupByAccessor(accessor)
+	aEntry, err := ts.lookupByAccessor(accessor)
 	if err != nil {
 		return nil, err
 	}
@@ -876,7 +932,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 	// Prepare the field data required for a lookup call
 	d := &framework.FieldData{
 		Raw: map[string]interface{}{
-			"token": tokenID,
+			"token": aEntry.TokenID,
 		},
 		Schema: map[string]*framework.FieldSchema{
 			"token": &framework.FieldSchema{
@@ -916,13 +972,13 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 		}
 	}
 
-	tokenID, err := ts.lookupByAccessor(accessor)
+	aEntry, err := ts.lookupByAccessor(accessor)
 	if err != nil {
 		return nil, err
 	}
 
 	// Revoke the token and its children
-	if err := ts.RevokeTree(tokenID); err != nil {
+	if err := ts.RevokeTree(aEntry.TokenID); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 	return nil, nil
