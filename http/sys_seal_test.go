@@ -36,8 +36,23 @@ func TestSysSealStatus(t *testing.T) {
 		t.Fatalf("expected version information")
 	}
 	expected["version"] = actual["version"]
+	if actual["cluster_name"] == nil {
+		delete(expected, "cluster_name")
+	} else {
+		expected["cluster_name"] = actual["cluster_name"]
+	}
+	if actual["cluster_id"] == nil {
+		delete(expected, "cluster_id")
+	} else {
+		expected["cluster_id"] = actual["cluster_id"]
+	}
+	if actual["cluster_id"] == nil {
+		delete(expected, "cluster_id")
+	} else {
+		expected["cluster_id"] = actual["cluster_id"]
+	}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
 }
 
@@ -112,8 +127,18 @@ func TestSysUnseal(t *testing.T) {
 		t.Fatalf("expected version information")
 	}
 	expected["version"] = actual["version"]
+	if actual["cluster_name"] == nil {
+		delete(expected, "cluster_name")
+	} else {
+		expected["cluster_name"] = actual["cluster_name"]
+	}
+	if actual["cluster_id"] == nil {
+		delete(expected, "cluster_id")
+	} else {
+		expected["cluster_id"] = actual["cluster_id"]
+	}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
 }
 
@@ -140,8 +165,18 @@ func TestSysUnseal_badKey(t *testing.T) {
 		t.Fatalf("expected version information")
 	}
 	expected["version"] = actual["version"]
+	if actual["cluster_name"] == nil {
+		delete(expected, "cluster_name")
+	} else {
+		expected["cluster_name"] = actual["cluster_name"]
+	}
+	if actual["cluster_id"] == nil {
+		delete(expected, "cluster_id")
+	} else {
+		expected["cluster_id"] = actual["cluster_id"]
+	}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
 }
 
@@ -185,6 +220,16 @@ func TestSysUnseal_Reset(t *testing.T) {
 			t.Fatalf("expected version information")
 		}
 		expected["version"] = actual["version"]
+		if actual["cluster_name"] == nil {
+			delete(expected, "cluster_name")
+		} else {
+			expected["cluster_name"] = actual["cluster_name"]
+		}
+		if actual["cluster_id"] == nil {
+			delete(expected, "cluster_id")
+		} else {
+			expected["cluster_id"] = actual["cluster_id"]
+		}
 		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
 		}
@@ -207,6 +252,16 @@ func TestSysUnseal_Reset(t *testing.T) {
 		t.Fatalf("expected version information")
 	}
 	expected["version"] = actual["version"]
+	if actual["cluster_name"] == nil {
+		delete(expected, "cluster_name")
+	} else {
+		expected["cluster_name"] = actual["cluster_name"]
+	}
+	if actual["cluster_id"] == nil {
+		delete(expected, "cluster_id")
+	} else {
+		expected["cluster_id"] = actual["cluster_id"]
+	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected:\n%#v\nactual:\n%#v\n", expected, actual)
 	}
