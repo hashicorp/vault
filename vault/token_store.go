@@ -563,7 +563,17 @@ func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 
 	// Create index entry, mapping the accessor to the token ID
 	path := accessorPrefix + ts.SaltID(entry.Accessor)
-	le := &logical.StorageEntry{Key: path, Value: []byte(entry.ID)}
+
+	aEntry := &accessorEntry{
+		TokenID:    entry.ID,
+		AccessorID: entry.Accessor,
+	}
+	aEntryBytes, err := jsonutil.EncodeJSON(aEntry)
+	if err != nil {
+		return fmt.Errorf("failed to marshel accessor index entry: %v", err)
+	}
+
+	le := &logical.StorageEntry{Key: path, Value: aEntryBytes}
 	if err := ts.view.Put(le); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %v", err)
 	}
