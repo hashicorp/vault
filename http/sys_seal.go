@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 )
 
 func handleSysSeal(core *vault.Core) http.Handler {
@@ -150,19 +151,43 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Fetch the local cluster name and identifier
+	var clusterName, clusterID string
+	if !sealed {
+		cluster, err := core.Cluster()
+
+		// Don't set the cluster details in the status when Vault is sealed
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if cluster == nil {
+			respondError(w, http.StatusInternalServerError, nil)
+			return
+		}
+		clusterName = cluster.Name
+		clusterID = cluster.ID
+	}
+
 	respondOk(w, &SealStatusResponse{
-		Sealed:   sealed,
-		T:        sealConfig.SecretThreshold,
-		N:        sealConfig.SecretShares,
-		Progress: core.SecretProgress(),
+		Sealed:      sealed,
+		T:           sealConfig.SecretThreshold,
+		N:           sealConfig.SecretShares,
+		Progress:    core.SecretProgress(),
+		Version:     version.GetVersion().String(),
+		ClusterName: clusterName,
+		ClusterID:   clusterID,
 	})
 }
 
 type SealStatusResponse struct {
-	Sealed   bool `json:"sealed"`
-	T        int  `json:"t"`
-	N        int  `json:"n"`
-	Progress int  `json:"progress"`
+	Sealed      bool   `json:"sealed"`
+	T           int    `json:"t"`
+	N           int    `json:"n"`
+	Progress    int    `json:"progress"`
+	Version     string `json:"version"`
+	ClusterName string `json:"cluster_name,omitempty"`
+	ClusterID   string `json:"cluster_id,omitempty"`
 }
 
 type UnsealRequest struct {

@@ -34,15 +34,24 @@ func (c *StatusCommand) Run(args []string) int {
 			"Error checking seal status: %s", err))
 		return 1
 	}
-	c.Ui.Output(fmt.Sprintf(
+
+	outStr := fmt.Sprintf(
 		"Sealed: %v\n"+
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
-			"Unseal Progress: %d",
+			"Unseal Progress: %d\n"+
+			"Version: %s",
 		sealStatus.Sealed,
 		sealStatus.N,
 		sealStatus.T,
-		sealStatus.Progress))
+		sealStatus.Progress,
+		sealStatus.Version)
+
+	if sealStatus.ClusterName != "" && sealStatus.ClusterID != "" {
+		outStr = fmt.Sprintf("%s\nCluster Name: %s\nCluster ID: %s", outStr, sealStatus.ClusterName, sealStatus.ClusterID)
+	}
+
+	c.Ui.Output(outStr)
 
 	// Mask the 'Vault is sealed' error, since this means HA is enabled,
 	// but that we cannot query for the leader since we are sealed.
