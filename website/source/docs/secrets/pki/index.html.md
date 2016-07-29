@@ -1212,7 +1212,7 @@ subpath for interactive help output.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/roles/?list=true`</dd>
+  <dd>`/pki/roles/?list=true`</dd>
 
   <dt>Parameters</dt>
   <dd>
