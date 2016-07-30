@@ -416,17 +416,19 @@ func (c *ConsulBackend) checkDuration() time.Duration {
 	return lib.DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
+func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
 	if err := c.setAdvertiseAddr(advertiseAddr); err != nil {
 		return err
 	}
 
-	go c.runEventDemuxer(shutdownCh, advertiseAddr, activeFunc, sealedFunc)
+	waitGroup.Add(1)
+
+	go c.runEventDemuxer(waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
 
 	return nil
 }
 
-func (c *ConsulBackend) runEventDemuxer(shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
+func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
 	// Fire the reconcileTimer immediately upon starting the event demuxer
 	reconcileTimer := time.NewTimer(0)
 	defer reconcileTimer.Stop()
@@ -516,6 +518,7 @@ shutdown:
 	if err := c.client.Agent().ServiceDeregister(registeredServiceID); err != nil {
 		c.logger.Printf("[WARN]: physical/consul: service deregistration failed: %v", err)
 	}
+	defer waitGroup.Done()
 }
 
 // checkID returns the ID used for a Consul Check.  Assume at least a read
