@@ -32,6 +32,7 @@ type SSHCredentialResp struct {
 
 func (c *SSHCommand) Run(args []string) int {
 	var role, mountPoint, format, userKnownHostsFile, strictHostKeyChecking string
+	var commands string
 	var noExec bool
 	var sshCmdArgs []string
 	var sshDynamicKeyFileName string
@@ -42,6 +43,7 @@ func (c *SSHCommand) Run(args []string) int {
 	flags.StringVar(&role, "role", "", "")
 	flags.StringVar(&mountPoint, "mount-point", "ssh", "")
 	flags.BoolVar(&noExec, "no-exec", false, "")
+	flags.StringVar(&commands, "commands", "", "")
 
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -173,7 +175,7 @@ func (c *SSHCommand) Run(args []string) int {
 		// Feel free to try and remove this dependency.
 		sshpassPath, err := exec.LookPath("sshpass")
 		if err == nil {
-			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-o UserKnownHostsFile=" + userKnownHostsFile, "-o StrictHostKeyChecking=" + strictHostKeyChecking, "-p", resp.Port, username + "@" + ip.String()}...)
+			sshCmdArgs = append(sshCmdArgs, []string{"-p", string(resp.Key), "ssh", "-o UserKnownHostsFile=" + userKnownHostsFile, "-o StrictHostKeyChecking=" + strictHostKeyChecking, "-p", resp.Port, username + "@" + ip.String(), commands}...)
 			sshCmd := exec.Command(sshpassPath, sshCmdArgs...)
 			sshCmd.Stdin = os.Stdin
 			sshCmd.Stdout = os.Stdout
@@ -186,7 +188,7 @@ func (c *SSHCommand) Run(args []string) int {
 		c.Ui.Output("OTP for the session is " + resp.Key)
 		c.Ui.Output("[Note: Install 'sshpass' to automate typing in OTP]")
 	}
-	sshCmdArgs = append(sshCmdArgs, []string{"-o UserKnownHostsFile=" + userKnownHostsFile, "-o StrictHostKeyChecking=" + strictHostKeyChecking, "-p", resp.Port, username + "@" + ip.String()}...)
+	sshCmdArgs = append(sshCmdArgs, []string{"-o UserKnownHostsFile=" + userKnownHostsFile, "-o StrictHostKeyChecking=" + strictHostKeyChecking, "-p", resp.Port, username + "@" + ip.String(), commands}...)
 
 	sshCmd := exec.Command("ssh", sshCmdArgs...)
 	sshCmd.Stdin = os.Stdin
