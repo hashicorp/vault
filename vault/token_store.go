@@ -570,7 +570,7 @@ func (ts *TokenStore) createAccessor(entry *TokenEntry) error {
 	}
 	aEntryBytes, err := jsonutil.EncodeJSON(aEntry)
 	if err != nil {
-		return fmt.Errorf("failed to marshel accessor index entry: %v", err)
+		return fmt.Errorf("failed to marshal accessor index entry: %v", err)
 	}
 
 	le := &logical.StorageEntry{Key: path, Value: aEntryBytes}
