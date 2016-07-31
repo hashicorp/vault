@@ -416,19 +416,19 @@ func (c *ConsulBackend) checkDuration() time.Duration {
 	return lib.DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
+func (c *ConsulBackend) RunServiceDiscovery(shutdownTriggered *bool, waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
 	if err := c.setAdvertiseAddr(advertiseAddr); err != nil {
 		return err
 	}
 
 	waitGroup.Add(1)
 
-	go c.runEventDemuxer(waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
+	go c.runEventDemuxer(shutdownTriggered, waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
 
 	return nil
 }
 
-func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
+func (c *ConsulBackend) runEventDemuxer(shutdownTriggered *bool, waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
 	// Fire the reconcileTimer immediately upon starting the event demuxer
 	reconcileTimer := time.NewTimer(0)
 	defer reconcileTimer.Stop()
@@ -453,7 +453,7 @@ func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh Sh
 	var registeredServiceID string
 	var serviceRegLock int64
 shutdown:
-	for {
+	for !shutdown {
 		select {
 		case <-c.notifyActiveCh:
 			// Run reconcile immediately upon active state change notification
@@ -511,6 +511,7 @@ shutdown:
 			shutdown = true
 			break shutdown
 		}
+		shutdown = *shutdownTriggered
 	}
 
 	c.serviceLock.RLock()
