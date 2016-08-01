@@ -68,6 +68,7 @@ IMPROVEMENTS:
    [GH-1523]
  * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
    will have `MinVersion` set to TLS 1.2 by default. This is configurable.
+ * auth/token: Add endpoint to list accessors [GH-1676]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
@@ -98,10 +99,11 @@ IMPROVEMENTS:
    generated user names and allow the length to be controlled [GH-1604]
  * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
    role name as part of response of `verify` API.
+ * secret/ssh: Added passthrough of command line arguments to `ssh` [GH-1680]
  * sys/health: Added version information to the response of health status
    endpoint [GH-1647]
- * sys/health: ClusterName and ClusterID will be returned as part of health
-   status, when Vault is unsealed.
+ * sys/health: Cluster information will be returned as part of health
+   status when Vault is unsealed [GH-1671]
 
 BUG FIXES:
 
@@ -122,8 +124,7 @@ BUG FIXES:
    connection multiplexing software to break [GH-1548]
  * physical/consul: Multiple Vault nodes on the same machine leading to check ID
    collisions were resulting in incorrect health check responses [GH-1628]
- * physical/consul: Introduced WaitGroup to wait for deregistrations of Vault
-   health checks in Consul, before Vault binary terminates [GH-1678]
+ * physical/consul: Fix deregistration of health checks on exit [GH-1678]
 
 ## 0.6.0 (June 14th, 2016)
 
