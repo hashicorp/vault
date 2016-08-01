@@ -421,7 +421,7 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownTriggered *bool, waitGroup *
 		return err
 	}
 
-	// 'server' command will wait for the belog goroutine to complete
+	// 'server' command will wait for the below goroutine to complete
 	waitGroup.Add(1)
 
 	go c.runEventDemuxer(shutdownTriggered, waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
