@@ -70,14 +70,14 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 		t.Fatalf("bad: %#v", out)
 	}
 
-	token, err := ts.lookupByAccessor(out.Accessor)
+	aEntry, err := ts.lookupByAccessor(out.Accessor)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Verify that the value returned from the index matches the token ID
-	if token != ent.ID {
-		t.Fatalf("bad: got\n%s\nexpected\n%s\n", token, ent.ID)
+	if aEntry.TokenID != ent.ID {
+		t.Fatalf("bad: got\n%s\nexpected\n%s\n", aEntry.TokenID, ent.ID)
 	}
 }
 
@@ -109,6 +109,83 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 	// Verify that the lookup-accessor operation does not return the token ID
 	if resp.Data["id"].(string) != "" {
 		t.Fatalf("token ID should not be returned")
+	}
+}
+
+func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	testKeys := []string{"token1", "token2", "token3", "token4"}
+	for _, key := range testKeys {
+		testMakeToken(t, ts, root, key, "", []string{"foo"})
+	}
+
+	// Revoke root to make the number of accessors match
+	ts.revokeSalted(ts.SaltID(root))
+
+	req := logical.TestRequest(t, logical.ListOperation, "accessors")
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Data == nil {
+		t.Fatalf("response should contain data")
+	}
+	if resp.Data["keys"] == nil {
+		t.Fatalf("keys should not be empty")
+	}
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != len(testKeys) {
+		t.Fatalf("wrong number of accessors found")
+	}
+	if len(resp.Warnings()) != 0 {
+		t.Fatalf("got warnings:\n%#v", resp.Warnings())
+	}
+
+	// Test upgrade from old struct method of accessor storage (of token id)
+	for _, accessor := range keys {
+		aEntry, err := ts.lookupByAccessor(accessor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if aEntry.TokenID == "" || aEntry.AccessorID == "" {
+			t.Fatalf("error, accessor entry looked up is empty, but no error thrown")
+		}
+		path := accessorPrefix + ts.SaltID(accessor)
+		le := &logical.StorageEntry{Key: path, Value: []byte(aEntry.TokenID)}
+		if err := ts.view.Put(le); err != nil {
+			t.Fatalf("failed to persist accessor index entry: %v", err)
+		}
+	}
+
+	// Do the lookup again, should get same result
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if resp.Data == nil {
+		t.Fatalf("response should contain data")
+	}
+	if resp.Data["keys"] == nil {
+		t.Fatalf("keys should not be empty")
+	}
+	keys2 := resp.Data["keys"].([]string)
+	if len(keys) != len(testKeys) {
+		t.Fatalf("wrong number of accessors found")
+	}
+	if len(resp.Warnings()) != 0 {
+		t.Fatalf("got warnings:\n%#v", resp.Warnings())
+	}
+
+	for _, accessor := range keys2 {
+		aEntry, err := ts.lookupByAccessor(accessor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if aEntry.TokenID == "" || aEntry.AccessorID == "" {
+			t.Fatalf("error, accessor entry looked up is empty, but no error thrown")
+		}
 	}
 }
 
