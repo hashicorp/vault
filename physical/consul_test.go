@@ -197,8 +197,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 		var shutdownCh ShutdownChannel
 		waitGroup := &sync.WaitGroup{}
-		shutdown := false
-		if err := c.RunServiceDiscovery(&shutdown, waitGroup, shutdownCh, test.advertiseAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
+		if err := c.RunServiceDiscovery(waitGroup, shutdownCh, test.advertiseAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
 			t.Fatalf("bad: %v", err)
 		}
 
