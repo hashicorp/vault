@@ -437,6 +437,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// Wait for dependant goroutines to complete
 	c.WaitGroup.Wait()
 	return 0
 }

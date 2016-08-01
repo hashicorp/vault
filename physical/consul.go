@@ -421,6 +421,7 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownTriggered *bool, waitGroup *
 		return err
 	}
 
+	// 'server' command will wait for the belog goroutine to complete
 	waitGroup.Add(1)
 
 	go c.runEventDemuxer(shutdownTriggered, waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
@@ -429,6 +430,9 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownTriggered *bool, waitGroup *
 }
 
 func (c *ConsulBackend) runEventDemuxer(shutdownTriggered *bool, waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
+	// This defer statement should be executed last. So push it first.
+	defer waitGroup.Done()
+
 	// Fire the reconcileTimer immediately upon starting the event demuxer
 	reconcileTimer := time.NewTimer(0)
 	defer reconcileTimer.Stop()
@@ -519,7 +523,6 @@ shutdown:
 	if err := c.client.Agent().ServiceDeregister(registeredServiceID); err != nil {
 		c.logger.Printf("[WARN]: physical/consul: service deregistration failed: %v", err)
 	}
-	defer waitGroup.Done()
 }
 
 // checkID returns the ID used for a Consul Check.  Assume at least a read
