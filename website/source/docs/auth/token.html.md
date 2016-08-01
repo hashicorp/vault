@@ -40,6 +40,44 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
 ## API
 
+### /auth/token/accessors
+#### LIST or GET 
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Lists token accessors. This requires `sudo` capability, and access to it
+    should be tightly controlled as the accessors can be used to revoke very
+    large numbers of tokens and their associated leases at once.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>LIST or GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/accessors` (LIST)<dd>
+  <dd>`/auth/token/accessors?list=true` (GET)<dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+        "keys": ["476ea048-ded5-4d07-eeea-938c6b4e43ec", "bb00c093-b7d3-b0e9-69cc-c4d85081165b"]
+      }
+    }
+    ```
+
+  </dd>
+</dl>
+
+
 ### /auth/token/create
 ### /auth/token/create-orphan
 ### /auth/token/create/[role_name]

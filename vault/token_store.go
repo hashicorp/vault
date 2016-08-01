@@ -129,6 +129,9 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ListOperation: t.tokenStoreAccessorList,
 				},
+
+				HelpSynopsis:    tokenListAccessorsHelp,
+				HelpDescription: tokenListAccessorsHelp,
 			},
 
 			&framework.Path{
@@ -540,7 +543,11 @@ func (ts *TokenStore) tokenStoreAccessorList(
 			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
 			continue
 		}
-		ret = append(ret, aEntry.AccessorID)
+		if aEntry.TokenID == "" {
+			resp.AddWarning(fmt.Sprintf("Found an accessor entry missing a token: %v", aEntry.AccessorID))
+		} else {
+			ret = append(ret, aEntry.AccessorID)
+		}
 	}
 
 	resp.Data = map[string]interface{}{
@@ -917,7 +924,14 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 		if err != nil {
 			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
 		}
-		aEntry.AccessorID = te.Accessor
+		// It's hard to reason about what to do here -- it may be that the
+		// token was revoked async, or that it's an old accessor index entry
+		// that was somehow not cleared up, or or or. A nonexistent token entry
+		// on lookup is nil, not an error, so we keep that behavior here to be
+		// safe...the token ID is simply not filled in.
+		if te != nil {
+			aEntry.AccessorID = te.Accessor
+		}
 	}
 
 	return aEntry, nil
@@ -1766,4 +1780,10 @@ no effect on the token being renewed.`
 	tokenRenewableHelp = `Tokens created via this role will be
 renewable or not according to this value.
 Defaults to "true".`
+	tokenListAccessorsHelp = `List token accessors, which can then be
+be used to iterate and discover their properities
+or revoke them. Because this can be used to
+cause a denial of service, this endpoint
+requires 'sudo' capability in addition to
+'list'.`
 )
