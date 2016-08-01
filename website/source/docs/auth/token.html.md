@@ -340,8 +340,8 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">increment</span>
         <span class="param-flags">optional</span>
-            An optional requested lease increment can be provided. This
-            increment may be ignored.
+            An optional requested lease increment (measured in seconds) can be provided.
+            This increment may be ignored. See "[token concepts](/docs/concepts/tokens.html#ttls-and-leases)" for more info.
       </li>
     </ul>
   </dd>
@@ -396,8 +396,8 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">increment</span>
         <span class="param-flags">optional</span>
-            An optional requested lease increment can be provided. This
-            increment may be ignored.
+            An optional requested lease increment (measured in seconds) can be provided.
+            This increment may be ignored. See "[token concepts](/docs/concepts/tokens.html#ttls-and-leases)" for more info.
       </li>
     </ul>
   </dd>
@@ -515,7 +515,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
 ### /auth/token/roles/[role_name]
 
-#### DELETE 
+#### DELETE
 
 <dl class="api">
   <dt>Description</dt>
@@ -540,7 +540,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-#### GET 
+#### GET
 
 <dl class="api">
   <dt>Description</dt>
@@ -576,7 +576,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-#### LIST 
+#### LIST
 
 <dl class="api">
   <dt>Description</dt>
@@ -781,4 +781,3 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>`204` response code.
   </dd>
 </dl>
-
