@@ -38,6 +38,7 @@ func Backend() *backend {
 			pathSetSignedIntermediate(&b),
 			pathSignIntermediate(&b),
 			pathConfigCA(&b),
+			pathConfigChain(&b),
 			pathConfigCRL(&b),
 			pathConfigURLs(&b),
 			pathSignVerbatim(&b),
