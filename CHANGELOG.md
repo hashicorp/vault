@@ -122,6 +122,8 @@ BUG FIXES:
    connection multiplexing software to break [GH-1548]
  * physical/consul: Multiple Vault nodes on the same machine leading to check ID
    collisions were resulting in incorrect health check responses [GH-1628]
+ * physical/consul: Introduced WaitGroup to wait for deregistrations of Vault
+   health checks in Consul, before Vault binary terminates [GH-1678]
 
 ## 0.6.0 (June 14th, 2016)
 
