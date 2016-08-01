@@ -375,8 +375,6 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Instantiate the wait group
 	c.WaitGroup = &sync.WaitGroup{}
-	// Wait for shutdown
-	shutdownTriggered := false
 
 	// If the backend supports service discovery, run service discovery
 	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
@@ -396,7 +394,7 @@ func (c *ServerCommand) Run(args []string) int {
 				return true
 			}
 
-			if err := sd.RunServiceDiscovery(&shutdownTriggered, c.WaitGroup, c.ShutdownCh, coreConfig.AdvertiseAddr, activeFunc, sealedFunc); err != nil {
+			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.AdvertiseAddr, activeFunc, sealedFunc); err != nil {
 				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}
@@ -420,6 +418,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Release the log gate.
 	logGate.Flush()
+
+	// Wait for shutdown
+	shutdownTriggered := false
 
 	for !shutdownTriggered {
 		select {
@@ -757,10 +758,8 @@ func MakeShutdownCh() chan struct{} {
 	shutdownCh := make(chan os.Signal, 4)
 	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		for {
-			<-shutdownCh
-			resultCh <- struct{}{}
-		}
+		<-shutdownCh
+		close(resultCh)
 	}()
 	return resultCh
 }

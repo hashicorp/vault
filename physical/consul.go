@@ -416,7 +416,7 @@ func (c *ConsulBackend) checkDuration() time.Duration {
 	return lib.DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulBackend) RunServiceDiscovery(shutdownTriggered *bool, waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
+func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
 	if err := c.setAdvertiseAddr(advertiseAddr); err != nil {
 		return err
 	}
@@ -424,12 +424,12 @@ func (c *ConsulBackend) RunServiceDiscovery(shutdownTriggered *bool, waitGroup *
 	// 'server' command will wait for the below goroutine to complete
 	waitGroup.Add(1)
 
-	go c.runEventDemuxer(shutdownTriggered, waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
+	go c.runEventDemuxer(waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
 
 	return nil
 }
 
-func (c *ConsulBackend) runEventDemuxer(shutdownTriggered *bool, waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
+func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
 	// This defer statement should be executed last. So push it first.
 	defer waitGroup.Done()
 
@@ -456,7 +456,7 @@ func (c *ConsulBackend) runEventDemuxer(shutdownTriggered *bool, waitGroup *sync
 	var checkLock int64
 	var registeredServiceID string
 	var serviceRegLock int64
-shutdown:
+
 	for !shutdown {
 		select {
 		case <-c.notifyActiveCh:
@@ -513,9 +513,7 @@ shutdown:
 		case <-shutdownCh:
 			c.logger.Printf("[INFO]: physical/consul: Shutting down consul backend")
 			shutdown = true
-			break shutdown
 		}
-		shutdown = *shutdownTriggered
 	}
 
 	c.serviceLock.RLock()
