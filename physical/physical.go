@@ -3,6 +3,7 @@ package physical
 import (
 	"fmt"
 	"log"
+	"sync"
 )
 
 const DefaultParallelOperations = 128
@@ -71,7 +72,7 @@ type ServiceDiscovery interface {
 
 	// Run executes any background service discovery tasks until the
 	// shutdown channel is closed.
-	RunServiceDiscovery(shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) error
+	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) error
 }
 
 type Lock interface {

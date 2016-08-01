@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -42,6 +43,8 @@ type ServerCommand struct {
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
+
+	WaitGroup *sync.WaitGroup
 
 	meta.Meta
 
@@ -308,31 +311,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	// If the backend supports service discovery, run service discovery
-	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
-		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
-		if ok {
-			activeFunc := func() bool {
-				if isLeader, _, err := core.Leader(); err == nil {
-					return isLeader
-				}
-				return false
-			}
-
-			sealedFunc := func() bool {
-				if sealed, err := core.Sealed(); err == nil {
-					return sealed
-				}
-				return true
-			}
-
-			if err := sd.RunServiceDiscovery(c.ShutdownCh, coreConfig.AdvertiseAddr, activeFunc, sealedFunc); err != nil {
-				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
-				return 1
-			}
-		}
-	}
-
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
@@ -392,6 +370,37 @@ func (c *ServerCommand) Run(args []string) int {
 		return 0
 	}
 
+	// Perform service discovery registrations and initialization of
+	// HTTP server after the verifyOnly check.
+
+	// Instantiate the wait group
+	c.WaitGroup = &sync.WaitGroup{}
+
+	// If the backend supports service discovery, run service discovery
+	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
+		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
+		if ok {
+			activeFunc := func() bool {
+				if isLeader, _, err := core.Leader(); err == nil {
+					return isLeader
+				}
+				return false
+			}
+
+			sealedFunc := func() bool {
+				if sealed, err := core.Sealed(); err == nil {
+					return sealed
+				}
+				return true
+			}
+
+			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.AdvertiseAddr, activeFunc, sealedFunc); err != nil {
+				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
+				return 1
+			}
+		}
+	}
+
 	// Initialize the HTTP server
 	server := &http.Server{}
 	server.Handler = vaulthttp.Handler(core)
@@ -412,6 +421,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Wait for shutdown
 	shutdownTriggered := false
+
 	for !shutdownTriggered {
 		select {
 		case <-c.ShutdownCh:
@@ -428,6 +438,8 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// Wait for dependent goroutines to complete
+	c.WaitGroup.Wait()
 	return 0
 }
 
@@ -746,10 +758,8 @@ func MakeShutdownCh() chan struct{} {
 	shutdownCh := make(chan os.Signal, 4)
 	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		for {
-			<-shutdownCh
-			resultCh <- struct{}{}
-		}
+		<-shutdownCh
+		close(resultCh)
 	}()
 	return resultCh
 }

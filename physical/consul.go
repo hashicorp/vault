@@ -416,17 +416,23 @@ func (c *ConsulBackend) checkDuration() time.Duration {
 	return lib.DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulBackend) RunServiceDiscovery(shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
+func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
 	if err := c.setAdvertiseAddr(advertiseAddr); err != nil {
 		return err
 	}
 
-	go c.runEventDemuxer(shutdownCh, advertiseAddr, activeFunc, sealedFunc)
+	// 'server' command will wait for the below goroutine to complete
+	waitGroup.Add(1)
+
+	go c.runEventDemuxer(waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
 
 	return nil
 }
 
-func (c *ConsulBackend) runEventDemuxer(shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
+func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
+	// This defer statement should be executed last. So push it first.
+	defer waitGroup.Done()
+
 	// Fire the reconcileTimer immediately upon starting the event demuxer
 	reconcileTimer := time.NewTimer(0)
 	defer reconcileTimer.Stop()
@@ -450,8 +456,8 @@ func (c *ConsulBackend) runEventDemuxer(shutdownCh ShutdownChannel, advertiseAdd
 	var checkLock int64
 	var registeredServiceID string
 	var serviceRegLock int64
-shutdown:
-	for {
+
+	for !shutdown {
 		select {
 		case <-c.notifyActiveCh:
 			// Run reconcile immediately upon active state change notification
@@ -507,7 +513,6 @@ shutdown:
 		case <-shutdownCh:
 			c.logger.Printf("[INFO]: physical/consul: Shutting down consul backend")
 			shutdown = true
-			break shutdown
 		}
 	}
 

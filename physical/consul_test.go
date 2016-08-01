@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -195,7 +196,8 @@ func TestConsul_newConsulBackend(t *testing.T) {
 		}
 
 		var shutdownCh ShutdownChannel
-		if err := c.RunServiceDiscovery(shutdownCh, test.advertiseAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
+		waitGroup := &sync.WaitGroup{}
+		if err := c.RunServiceDiscovery(waitGroup, shutdownCh, test.advertiseAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
 			t.Fatalf("bad: %v", err)
 		}
 
