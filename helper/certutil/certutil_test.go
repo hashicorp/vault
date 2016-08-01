@@ -18,9 +18,13 @@ import (
 func TestCertBundleConversion(t *testing.T) {
 	cbuts := []*CertBundle{
 		refreshRSACertBundle(),
+		refreshRSACertBundleWithChain(),
 		refreshRSA8CertBundle(),
+		refreshRSA8CertBundleWithChain(),
 		refreshECCertBundle(),
+		refreshECCertBundleWithChain(),
 		refreshEC8CertBundle(),
+		refreshEC8CertBundleWithChain(),
 	}
 
 	for i, cbut := range cbuts {
@@ -53,9 +57,13 @@ func BenchmarkCertBundleParsing(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		cbuts := []*CertBundle{
 			refreshRSACertBundle(),
+			refreshRSACertBundleWithChain(),
 			refreshRSA8CertBundle(),
+			refreshRSA8CertBundleWithChain(),
 			refreshECCertBundle(),
+			refreshECCertBundleWithChain(),
 			refreshEC8CertBundle(),
+			refreshEC8CertBundleWithChain(),
 		}
 
 		for i, cbut := range cbuts {
@@ -162,6 +170,13 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		return fmt.Errorf("Parsed bundle private key does not match subject key id")
 	}
 
+	switch {
+	case len(pcbut.IssuingCAChain) > 0 && len(cbut.IssuingCAChain) == 0:
+		return fmt.Errorf("Parsed bundle ca chain has certs when cert bundle does not")
+	case len(pcbut.IssuingCAChain) == 0 && len(cbut.IssuingCAChain) > 0:
+		return fmt.Errorf("Cert bundle ca chain has certs when parsed cert bundle does not")
+	}
+
 	cb, err := pcbut.ToCertBundle()
 	if err != nil {
 		return fmt.Errorf("Thrown error during parsed bundle conversion: %s\n\nInput was: %#v", err, *pcbut)
@@ -191,6 +206,15 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 
 	if cb.SerialNumber != GetHexFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
 		return fmt.Errorf("Bundle serial number does not match")
+	}
+
+	switch {
+	case len(pcbut.IssuingCAChain) > 0 && len(cb.IssuingCAChain) == 0:
+		return fmt.Errorf("Parsed bundle ca chain has certs when cert bundle does not")
+	case len(pcbut.IssuingCAChain) == 0 && len(cb.IssuingCAChain) > 0:
+		return fmt.Errorf("Cert bundle ca chain has certs when parsed cert bundle does not")
+	case cbut.IssuingCAChain != cb.IssuingCAChain:
+		return fmt.Errorf("Cert bundle ca chain does not match: %s\n\n%s", cbut.IssuingCAChain, cb.IssuingCAChain)
 	}
 
 	return nil
@@ -366,6 +390,15 @@ func refreshRSA8CertBundle() *CertBundle {
 	}
 }
 
+func refreshRSA8CertBundleWithChain() *CertBundle {
+	return &CertBundle{
+		Certificate:    certRSAPem,
+		PrivateKey:     privRSA8KeyPem,
+		IssuingCA:      issuingCaPem,
+		IssuingCAChain: issuingCaChainPem,
+	}
+}
+
 func refreshRSACertBundle() *CertBundle {
 	ret := &CertBundle{
 		Certificate: certRSAPem,
@@ -375,10 +408,30 @@ func refreshRSACertBundle() *CertBundle {
 	return ret
 }
 
+func refreshRSACertBundleWithChain() *CertBundle {
+	ret := &CertBundle{
+		Certificate:    certRSAPem,
+		IssuingCA:      issuingCaPem,
+		IssuingCAChain: issuingCaChainPem,
+	}
+	ret.PrivateKey = privRSAKeyPem
+	return ret
+}
+
 func refreshECCertBundle() *CertBundle {
 	ret := &CertBundle{
 		Certificate: certECPem,
 		IssuingCA:   issuingCaPem,
+	}
+	ret.PrivateKey = privECKeyPem
+	return ret
+}
+
+func refreshECCertBundleWithChain() *CertBundle {
+	ret := &CertBundle{
+		Certificate:    certECPem,
+		IssuingCA:      issuingCaPem,
+		IssuingCAChain: issuingCaChainPem,
 	}
 	ret.PrivateKey = privECKeyPem
 	return ret
@@ -405,6 +458,15 @@ func refreshEC8CertBundle() *CertBundle {
 		Certificate: certECPem,
 		PrivateKey:  privEC8KeyPem,
 		IssuingCA:   issuingCaPem,
+	}
+}
+
+func refreshEC8CertBundleWithChain() *CertBundle {
+	return &CertBundle{
+		Certificate:    certECPem,
+		PrivateKey:     privEC8KeyPem,
+		IssuingCA:      issuingCaPem,
+		IssuingCAChain: issuingCaChainPem,
 	}
 }
 
@@ -567,5 +629,66 @@ ABNBmSD6SSU2HKX1bFCBAAS3YHONE5o1K5tzwLsMl5uilNf+Wid3NjFnQ4KfuYI5
 loN/opnM6+a/O3Zua8RAuMMAv9wyqwn88aVuLvVzDNSMe5qC5kkuLGmRkNgY06rI
 S/fXIHIOldeQxgYCqhdVmcDWJ1PtVaDfBsKVpRg1GRU8LUGw2E4AY+twd+J2FBfa
 G/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==
+-----END CERTIFICATE-----`
+
+	issuingCaChainPem = `-----BEGIN CERTIFICATE-----
+MIIFOjCCAyKgAwIBAgIJALe+g3AtSiP5MA0GCSqGSIb3DQEBCwUAMCoxKDAmBgNV
+BAMMH1ZhdWx0IFRlc3RpbmcgSW50ZXJtZWRpYXRlIENBIDEwHhcNMTYwODAxMDEy
+OTIwWhcNMzYwNzI3MDEyOTIwWjAqMSgwJgYDVQQDDB9WYXVsdCBUZXN0aW5nIElu
+dGVybWVkaWF0ZSBDQSAxMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEA
+sdb9+FH4ZqztyFOrcKUYGYxRVsoZFos2WAMEZrwpHcbW72RETnrtDWOlQddIQ2mT
+oNZ/yVLqLkvSKAc0qaHA19GdRwdhWfXEomz9ExyeVLIBzvZBRVoiAJQYLSrJxzq8
+XdsCWapagAf+HL+4ErAwgAPKUXEtFfZqmdRaWVLUhPd55TK0c+6Jp+LmC+g/pVPU
+HLJp/ELbc+cfYjus0cMC5WSxuN0pHGNyYMdpsNfdWEQfhuNosS2dKSCjDlHJ3mBH
+GbyPnm8vsajYJtTuQeXlfvy3npn39nKMOxsMAtEB5CxjqiSviFGqINzzH3T+nDsn
+at2Ludo8pDRiOW195GJCw+DHrRWaDkKf8xkfh4Xkjx3jottNyR1MtGa5soKSGIwu
+iJKWMzE6x8SJX0eXVcfaRQb7aay/PSVDGbLUE65+9NR0Mow8PW+nbecL1IzkOrND
+pIR9k1YSg1god3t/AF1uSoLZK/SdiY4ENb3K8nZvShYMQvDSJEFM6A4oBXnsk3e1
+u8k1ww+5j9RAfMQ3+TMEOU0j6kfJlyaR330glQ0f4uCt9pl+JzAVhDsYNHMUKc9M
+3+APAZMw86d1qHZhjO5crEX9Ot1xjmuBRvdaIUbcY09TWU6IiFWPEbm8ZDEbtVwb
+JLRzTbvvqn/O+nlQXOuRChMWLG12+f19+3F61ILuKYkCAwEAAaNjMGEwHQYDVR0O
+BBYEFL/c8JJo/0b+VpmT1kgM7c4JWEQGMB8GA1UdIwQYMBaAFL/c8JJo/0b+VpmT
+1kgM7c4JWEQGMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0PAQH/BAQDAgGGMA0GCSqG
+SIb3DQEBCwUAA4ICAQCLOREj65nL/NFOo0N63p2Egw/fhQk0jJOUaiNiFcOsGNy/
+mSE+Deo4tcUFdWG+W8iDVQZ7Pw9gkiw0q4DrIYqeawyKHYelGVa0Wn8c0K0QaqoF
+FczjtQhy+Phxdhg74g/MWhmqe+FwXcAUgfQvcMTzclOy4Ph0BprmL3ErTcPcIo1h
+J9aMCmZbsjaYzWGWSkOumEfkaFfdW6cjdPXKtSfginZ4X/m7K/NMazz5+ghUFguR
+xNy2feVJX2Uya69UiMnI6BYdWfRK5I9Tp0ZqgOn6h1nC64BS23bu0slGKfSYsqJh
+cX8/AwJlM/FVyHjHsXkobJ8a12i5+5IarSWdZ2hPoWYptv+PtbVeWEzuhMaqBOuL
+Ij35x+BlHZrgDDfGkK/4O5UAtnflqiN5sjREUFnvkyWv32pO/n6GMIoePiPKcDvn
+jkT2We3lcTLcyReN+w5BnW2bEP5NiZbOY9bpEXu2XGbUeo2jjFE+StfixfF4PMgX
+k98HLtkOlYPKTWdVQCHr47LShqeQ29XjRSCtfzTUZRo/inEKgJEcjWfXe/3Extem
+10Vsp7eyRaTXjlrT2YIBdJx7+8EyMCgDYJWUxX31TqAz+FfFcutSTmomXPCpn4/3
+xLozZuA/qM8PFyGKKVBNLryasTaxpd7Vp1XfvvHKxLiMGLXEIUQVUvvnp7akQw==
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIFNjCCAx6gAwIBAgICEAAwDQYJKoZIhvcNAQELBQAwKjEoMCYGA1UEAwwfVmF1
+bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgQ0EgMTAeFw0xNjA4MDEwMTM0MjJaFw0y
+NjA3MzAwMTM0MjJaMCoxKDAmBgNVBAMMH1ZhdWx0IFRlc3RpbmcgSW50ZXJtZWRp
+YXRlIENBIDIwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDG6yugvaE2
+19/g9bxGW8Vu5kYIGlgOZlgpNgSFjgD9zdANDoAk7Ik7I8P8rmH5LDvxzQo5UC66
+RXcfMnx/vhQiaykG6Jq4U59UNbG0I18zlbRz4tgFspliErRTCyM8y3tdEPer/IqI
+3Qxrz0lkNBhSys1oGFzrocSZ38YypTQlMTDo1e12Rej1s+m0to83msFEaWlphAUr
+sdFJ0ReUe3TKXPyDcVPUqDdXNgo0QPvZgMlyQp95VhvCNgoPq0BRRixVCqEPxReM
+ZvWnlmq5APWEuZuTk5idosDXqluezuLDfm40NlBBliPlI12mSSWIQFGim9hGMFpl
+XGEff3Ev+G/tQSJ29tr0Xs8sOVzxhS4GMhBmfDWy69dY22Pmk//gOxi6X/KUhS3K
+bBHdn2wvoNdvlT7VadXSB/+XErrMWanOeKeHBULVZSlgSEouejMZ+x57lsrZrL3P
+UVU2JNr0ttpkk1weeYYKbruBTsMGqlgdIRIBcsAtBeW1SivamF6Yku+SD5BWwbTE
+ZXavyxliEWg+T3t+JUs70m2uLi2Ztdz/N/BaYxnmF/RGcsy87LqjUEXzdsSImk7y
+jPw/LMY37loSqsUpdJ5o6DHZLtsbnNzdJ1Mn1koOL4MXKiOye3LdOW4lcpJJjrMA
+NB7FAVGw6ZC7rx8SFJRL5c/a2S99eTZM1wIDAQABo2YwZDAdBgNVHQ4EFgQUiHlH
+2WXk4GlizhInay5Ui2KyFWswHwYDVR0jBBgwFoAUv9zwkmj/Rv5WmZPWSAztzglY
+RAYwEgYDVR0TAQH/BAgwBgEB/wIBADAOBgNVHQ8BAf8EBAMCAYYwDQYJKoZIhvcN
+AQELBQADggIBAC0/4db8nlKYlVNjlGKnNDj4lVZX1IEI2ybGFIrGLoAN+HRt4ibP
+bOuTbrKetUaKJvjrWVuVIq8FXXX6c8Oxxig6svIipC+5epBHWm+rzWRzcSdKOm/E
+Jhdh4cFYV8L4ixHSt06giyVDjB9Hq1VqLm+ALUqtiZ+5Oe33kCqy5YqWxolLOmou
+Ts8g9k/zMS9Dlaq+5XC1a0H2+RR30+bU7ogKUJTfAjGnia3OSb3cxQ6xIxZBxUnS
+2NPXGIWTZoElSamtMuaMH94ZNNK1Zd1Xf5k2IOUddlvDkbQPdE0wKDcFwpKom3Cz
+djD7q2pjW74ou5YClVlnUzoZ2KHX10J7VjiwOLUV1U8dSdG/4f9ZDBvgKC9QUV16
+MbP0pjrqTXieDkBbtGEIHisySiSxtHtO4gl+8kUzsG8yFejd5jD4BhpZxomOmMrw
+XNkowVMrjAHLjF2cgnm7UbyhJhFtAbIbVSjD+XtID0TsmcFh6H58fyfxYsiAVddo
+wQ5Pr4BbtfSQT6iSVYQuSAOmL4HConfVSMFqw/PkW1voWpYh1sKfU7beAkq8LZp+
+g3CupMlVMAKQBPPlBfXOWniam8zopNSx8DLm8/NkUdlBkDNaqHsnzoFlLP6uUb7f
+AN4uO9BathzGZo6dVchplHRnm3P5YJUB2UIRSW1fQKa9LsN9pEdW+QOM
 -----END CERTIFICATE-----`
 )

@@ -72,6 +72,7 @@ type CertBundle struct {
 	PrivateKeyType PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
 	Certificate    string         `json:"certificate" structs:"certificate" mapstructure:"certificate"`
 	IssuingCA      string         `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
+	IssuingCAChain string         `json:"issuing_ca_chain,omitempty" structs:"issuing_ca_chain" mapstructure:"issuing_ca_chain"`
 	PrivateKey     string         `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 	SerialNumber   string         `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
@@ -79,15 +80,17 @@ type CertBundle struct {
 // ParsedCertBundle contains a key type, a DER-encoded private key,
 // and a DER-encoded certificate
 type ParsedCertBundle struct {
-	PrivateKeyType   PrivateKeyType
-	PrivateKeyFormat BlockType
-	PrivateKeyBytes  []byte
-	PrivateKey       crypto.Signer
-	IssuingCABytes   []byte
-	IssuingCA        *x509.Certificate
-	CertificateBytes []byte
-	Certificate      *x509.Certificate
-	SerialNumber     *big.Int
+	PrivateKeyType      PrivateKeyType
+	PrivateKeyFormat    BlockType
+	PrivateKeyBytes     []byte
+	PrivateKey          crypto.Signer
+	IssuingCAChainBytes [][]byte
+	IssuingCAChain      []*x509.Certificate
+	IssuingCABytes      []byte
+	IssuingCA           *x509.Certificate
+	CertificateBytes    []byte
+	Certificate         *x509.Certificate
+	SerialNumber        *big.Int
 }
 
 // CSRBundle contains a key type, a PEM-encoded private key,
@@ -177,6 +180,22 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 
 	result.SerialNumber = result.Certificate.SerialNumber
 
+	if len(c.IssuingCAChain) > 0 {
+		remainingBytes := []byte(c.IssuingCAChain)
+		for len(remainingBytes) > 0 {
+			pemBlock, remainingBytes = pem.Decode(remainingBytes)
+			if pemBlock == nil {
+				return nil, errutil.UserError{"Error decoding issuing CA chain from cert bundle"}
+			}
+			result.IssuingCAChainBytes = append(result.IssuingCAChainBytes, pemBlock.Bytes)
+			chainCert, err := x509.ParseCertificate(result.IssuingCABytes)
+			if err != nil {
+				return nil, errutil.UserError{fmt.Sprintf("Error parsing CA chain certificate: %s", err)}
+			}
+			result.IssuingCAChain = append(result.IssuingCAChain, chainCert)
+		}
+	}
+
 	// Populate if it isn't there already
 	if len(c.SerialNumber) == 0 && len(c.Certificate) > 0 {
 		c.SerialNumber = GetHexFormatted(result.Certificate.SerialNumber.Bytes(), ":")
@@ -205,6 +224,15 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 	if p.IssuingCABytes != nil && len(p.IssuingCABytes) > 0 {
 		block.Bytes = p.IssuingCABytes
 		result.IssuingCA = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+	}
+
+	if p.IssuingCAChainBytes != nil && len(p.IssuingCAChainBytes) > 0 {
+		var issuingCaChain string
+		for _, caCertBytes := range p.IssuingCAChainBytes {
+			block.Bytes = caCertBytes
+			issuingCaChain = fmt.Sprintf("%s\n%s", issuingCaChain, strings.TrimSpace(string(pem.EncodeToMemory(&block))))
+		}
+		result.IssuingCAChain = strings.TrimSpace(issuingCaChain)
 	}
 
 	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
