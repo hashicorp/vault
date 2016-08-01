@@ -188,9 +188,9 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 				return nil, errutil.UserError{"Error decoding issuing CA chain from cert bundle"}
 			}
 			result.IssuingCAChainBytes = append(result.IssuingCAChainBytes, pemBlock.Bytes)
-			chainCert, err := x509.ParseCertificate(result.IssuingCABytes)
+			chainCert, err := x509.ParseCertificate(pemBlock.Bytes)
 			if err != nil {
-				return nil, errutil.UserError{fmt.Sprintf("Error parsing CA chain certificate: %s", err)}
+				return nil, errutil.UserError{fmt.Sprintf("Error parsing CA chain certificate: %s\n%s", err)}
 			}
 			result.IssuingCAChain = append(result.IssuingCAChain, chainCert)
 		}
