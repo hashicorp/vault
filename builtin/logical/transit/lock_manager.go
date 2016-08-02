@@ -307,6 +307,19 @@ func (lm *lockManager) DeletePolicy(storage logical.Storage, name string) error 
 	return nil
 }
 
+func (lm *lockManager) DeletePolicyFromCache(storage logical.Storage, name string) error {
+	lm.cacheMutex.Lock()
+	defer lm.cacheMutex.Unlock()
+
+	if !lm.CacheActive() {
+		return nil
+	}
+
+	delete(lm.cache, name)
+
+	return nil
+}
+
 func (lm *lockManager) getStoredPolicy(storage logical.Storage, name string) (*Policy, error) {
 	// Check if the policy already exists
 	raw, err := storage.Get("policy/" + name)
