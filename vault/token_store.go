@@ -10,6 +10,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -1179,7 +1180,7 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	if data.ExplicitMaxTTL != "" {
-		dur, err := time.ParseDuration(data.ExplicitMaxTTL)
+		dur, err := duration.ParseDurationSecond(data.ExplicitMaxTTL)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
@@ -1191,7 +1192,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Parse the TTL/lease if any
 	if data.TTL != "" {
-		dur, err := time.ParseDuration(data.TTL)
+		dur, err := duration.ParseDurationSecond(data.TTL)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
