@@ -37,19 +37,33 @@ func (b *backend) pathChainWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	caChain := data.Get("ca_chain").(string)
 
-	cb := &certutil.CertBundle{
-		IssuingCAChain: caChain,
-	}
-	_, err := cb.ToParsedCertBundle()
+	cb := &certutil.CertBundle{}
+	entry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse CA chain: %s", err)
+		return nil, err
+	}
+	if entry == nil {
+		return logical.ErrorResponse("could not find any existing ca entry"), nil
 	}
 
-	config := &caChainConfig{
-		CAChain: caChain,
+	cb.IssuingCAChain = caChain
+
+	err = entry.DecodeJSON(cb)
+	if err != nil {
+		return nil, err
 	}
 
-	entry, err := logical.StorageEntryJSON("config/ca_chain", config)
+	parsedCB, err := cb.ToParsedCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("error parsing cert bundle: %s", err)
+	}
+
+	cb, err = parsedCB.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("error converting raw values into cert bundle: %s", err)
+	}
+
+	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +76,7 @@ func (b *backend) pathChainWrite(
 }
 
 func getCAChain(req *logical.Request) (*caChainConfig, error) {
-	entry, err := req.Storage.Get("config/ca_chain")
+	entry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
 		return nil, err
 	}
@@ -70,12 +84,16 @@ func getCAChain(req *logical.Request) (*caChainConfig, error) {
 		return nil, nil
 	}
 
-	var chainConfig caChainConfig
-	if err := entry.DecodeJSON(&chainConfig); err != nil {
+	cb := &certutil.CertBundle{}
+	if err := entry.DecodeJSON(&cb); err != nil {
 		return nil, err
 	}
 
-	return &chainConfig, nil
+	chainConfig := &caChainConfig{
+		CAChain: cb.IssuingCAChain,
+	}
+
+	return chainConfig, nil
 }
 
 func (b *backend) pathChainRead(
