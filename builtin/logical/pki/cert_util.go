@@ -858,6 +858,8 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	if creationInfo.SigningBundle != nil {
 		result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
 		result.IssuingCA = creationInfo.SigningBundle.Certificate
+		result.IssuingCAChainBytes = creationInfo.SigningBundle.IssuingCAChainBytes
+		result.IssuingCAChain = creationInfo.SigningBundle.IssuingCAChain
 	} else {
 		result.IssuingCABytes = result.CertificateBytes
 		result.IssuingCA = result.Certificate
@@ -1013,6 +1015,8 @@ func signCertificate(creationInfo *creationBundle,
 
 	result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
 	result.IssuingCA = creationInfo.SigningBundle.Certificate
+	result.IssuingCAChainBytes = creationInfo.SigningBundle.IssuingCAChainBytes
+	result.IssuingCAChain = creationInfo.SigningBundle.IssuingCAChain
 
 	return result, nil
 }

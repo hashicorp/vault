@@ -3,6 +3,7 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -172,9 +173,10 @@ func (b *backend) pathIssueSignCert(
 
 	resp := b.Secret(SecretCertsType).Response(
 		map[string]interface{}{
-			"certificate":   cb.Certificate,
-			"issuing_ca":    cb.IssuingCA,
-			"serial_number": cb.SerialNumber,
+			"certificate":      cb.Certificate,
+			"issuing_ca":       cb.IssuingCA,
+			"issuing_ca_chain": cb.IssuingCAChain,
+			"serial_number":    cb.SerialNumber,
 		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
@@ -183,6 +185,7 @@ func (b *backend) pathIssueSignCert(
 	switch format {
 	case "pem":
 		resp.Data["issuing_ca"] = cb.IssuingCA
+		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
 		resp.Data["certificate"] = cb.Certificate
 
 		if !useCSR {
@@ -192,19 +195,27 @@ func (b *backend) pathIssueSignCert(
 
 	case "pem_bundle":
 		resp.Data["issuing_ca"] = cb.IssuingCA
-		resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA)
+		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
+		resp.Data["certificate"] = strings.TrimSpace(fmt.Sprintf("%s\n%s\n%s", cb.Certificate, cb.IssuingCA, cb.IssuingCAChain))
 		if !useCSR {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
-			resp.Data["certificate"] = fmt.Sprintf("%s\n%s\n%s", cb.PrivateKey, cb.Certificate, cb.IssuingCA)
+			resp.Data["certificate"] = strings.TrimSpace(fmt.Sprintf("%s\n%s\n%s\n%s", cb.PrivateKey, cb.Certificate, cb.IssuingCA, cb.IssuingCAChain))
 		}
 
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+		for _, cert := range parsedBundle.IssuingCAChainBytes {
+			resp.Data["issuing_ca_chain"] = fmt.Sprintf("%s\n%s", resp.Data["issuing_ca_chain"], base64.StdEncoding.EncodeToString(cert))
+		}
 		if !useCSR {
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 		}
+	}
+
+	if len(resp.Data["issuing_ca_chain"].(string)) == 0 {
+		delete(resp.Data, "issuing_ca_chain")
 	}
 
 	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
