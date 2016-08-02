@@ -1524,6 +1524,139 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 }
 
+func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
+	var req *logical.Request
+	var resp *logical.Response
+	var err error
+
+	core, ts, _, root := TestCoreWithTokenStore(t)
+	ps := core.policyStore
+
+	// Create 3 different policies
+	policy, _ := Parse(tokenCreationPolicy)
+	policy.Name = "test1"
+	if err := ps.SetPolicy(policy); err != nil {
+		t.Fatal(err)
+	}
+
+	policy, _ = Parse(tokenCreationPolicy)
+	policy.Name = "test2"
+	if err := ps.SetPolicy(policy); err != nil {
+		t.Fatal(err)
+	}
+
+	policy, _ = Parse(tokenCreationPolicy)
+	policy.Name = "test3"
+	if err := ps.SetPolicy(policy); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create roles with different disallowed_policies configuration
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test1")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies": "test1",
+	}
+	resp, err = ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test23")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies": "test2,test3",
+	}
+	resp, err = ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test123")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies": "test1,test2,test3",
+	}
+	resp, err = ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// Create a token that has all the policies defined above
+	req = logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"test1", "test2", "test3"}
+	resp, err = ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatal("got nil response")
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: ClientToken; resp:%#v", resp)
+	}
+	parentToken := resp.Auth.ClientToken
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/test1")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatal("expected an error response")
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/test23")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatal("expected an error response")
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/test123")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatal("expected an error response")
+	}
+
+	// Create a role to have both disallowed_policies and allowed_policies
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/both")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allowed_policies":    "test1",
+		"disallowed_policies": "test1",
+	}
+	resp, err = ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/both")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(req)
+	if err != nil || resp != nil && resp.IsError() {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// Create a role to have 'default' policy disallowed
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/default")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"disallowed_policies": "default",
+	}
+	resp, err = ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/default")
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(req)
+	if err == nil || resp != nil && !resp.IsError() {
+		t.Fatal("expected an error response")
+	}
+}
+
 func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 
