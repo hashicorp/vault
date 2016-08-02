@@ -232,7 +232,7 @@ func respondErrorCommon(w http.ResponseWriter, resp *logical.Response, err error
 		}
 	}
 
-	if resp != nil {
+	if resp != nil && resp.IsError(){
 		err = fmt.Errorf("%s", resp.Data["error"].(string))
 	}
 
