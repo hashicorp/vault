@@ -152,7 +152,7 @@ func (r *Response) CloneWarnings(other *Response) {
 
 // IsError returns true if this response seems to indicate an error.
 func (r *Response) IsError() bool {
-	return r != nil && len(r.Data) == 1 && r.Data["error"] != nil
+	return r != nil && r.Data != nil && len(r.Data) == 1 && r.Data["error"] != nil
 }
 
 func (r *Response) Error() error {
