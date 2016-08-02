@@ -72,7 +72,15 @@ func (m *Meta) Client() (*api.Client, error) {
 	}
 	// If we need custom TLS configuration, then set it
 	if m.flagCACert != "" || m.flagCAPath != "" || m.flagClientCert != "" || m.flagClientKey != "" || m.flagInsecure {
-		config.ConfigureTLS(m.flagCACert, m.flagCAPath, m.flagClientCert, m.flagClientKey, "", m.flagInsecure)
+		t := &api.TLSConfig{
+			CACert:        m.flagCACert,
+			CAPath:        m.flagCAPath,
+			ClientCert:    m.flagClientCert,
+			ClientKey:     m.flagClientKey,
+			TLSServerName: "",
+			Insecure:      m.flagInsecure,
+		}
+		config.ConfigureTLS(t)
 	}
 
 	// Build the client
