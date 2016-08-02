@@ -1794,16 +1794,15 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenRevokeOrphanHelp    = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRenewHelp           = `This endpoint will renew the given token and prevent expiration.`
 	tokenRenewSelfHelp       = `This endpoint will renew the token used to call it and prevent expiration.`
-	tokenAllowedPoliciesHelp = `If set, tokens created via this role
-can be created with any subset of this list,
-rather than the normal semantics of a subset
-of the client token's policies. This
-parameter should be sent as a comma-delimited
-string.`
-	tokenDisallowedPoliciesHelp = `If set, successful token creation
-via this role will require that the desired policies on the token being
-created, be not the ones present in this list. Note that, this will *not*
-take effect when 'allowed_policies' is also set.`
+	tokenAllowedPoliciesHelp = `If set, tokens can be created with any subset of the policies in this
+list, rather than the normal semantics of tokens being a subset of the
+calling token's policies. The parameter is a comma-delimited string of
+policy names. If this and 'disallowed_policies' are both set, only this
+option takes effect.`
+	tokenDisallowedPoliciesHelp = `If set, successful token creation via this role will require that
+no policies in the given list are requested. If both
+'disallowed_policies' and 'allowed_policies' are set, this option has
+no effect. The parameter is a comma-delimited string of policy names.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role

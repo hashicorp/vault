@@ -743,10 +743,10 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">disallowed_policies</span>
         <span class="param-flags">optional</span>
-        If set, successful token creation via this role will require that the
-        no policies in the given list are requested. If both
-        `disallowed_policies` and `allowed_policies` are set, this option has
-        no effect. The parameter is a comma-delimited string of policy names.
+        If set, successful token creation via this role will require that
+        no policies in the given list are requested. If both `disallowed_policies`
+        and `allowed_policies` are set, this option has no effect. The parameter
+        is a comma-delimited string of policy names.
       </li>
       <li>
         <span class="param">orphan</span>
