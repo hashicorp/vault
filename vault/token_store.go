@@ -483,6 +483,7 @@ type tsRoleEntry struct {
 	// escaping or further locking down normal subset checking
 	AllowedPolicies []string `json:"allowed_policies" mapstructure:"allowed_policies" structs:"allowed_policies"`
 
+	// List of policies to be not allowed during token creation using this role
 	DisallowedPolicies []string `json:"disallowed_policies" mapstructure:"disallowed_policies" structs:"disallowed_policies"`
 
 	// If true, tokens created using this role will be orphans
@@ -1137,7 +1138,7 @@ func (ts *TokenStore) handleCreateCommon(
 	// parent policies; the role allowed policies trumps all
 	case role != nil && len(role.AllowedPolicies) > 0:
 		if len(role.DisallowedPolicies) > 0 {
-			resp.AddWarning("both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
+			resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
 		}
 		if len(data.Policies) == 0 {
 			data.Policies = role.AllowedPolicies
@@ -1326,7 +1327,7 @@ func (ts *TokenStore) handleCreateCommon(
 				return logical.ErrorResponse(fmt.Sprintf("could not look up policy %s", p)), nil
 			}
 			if policy == nil {
-				resp.AddWarning(fmt.Sprintf("policy \"%s\" does not exist", p))
+				resp.AddWarning(fmt.Sprintf("Policy \"%s\" does not exist", p))
 			}
 		}
 	}
@@ -1754,7 +1755,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 		if resp == nil {
 			resp = &logical.Response{}
 		}
-		resp.AddWarning("both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
+		resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
 	}
 
 	// Explicit max TTLs and periods cannot be used at the same time since the

@@ -1372,13 +1372,14 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"name":             "test",
-		"orphan":           true,
-		"period":           int64(259200),
-		"allowed_policies": []string{"default", "test1", "test2"},
-		"path_suffix":      "happenin",
-		"explicit_max_ttl": int64(0),
-		"renewable":        true,
+		"name":                "test",
+		"orphan":              true,
+		"period":              int64(259200),
+		"allowed_policies":    []string{"test1", "test2"},
+		"disallowed_policies": []string{},
+		"path_suffix":         "happenin",
+		"explicit_max_ttl":    int64(0),
+		"renewable":           true,
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -1415,13 +1416,14 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":             "test",
-		"orphan":           true,
-		"period":           int64(284400),
-		"allowed_policies": []string{"default", "test3"},
-		"path_suffix":      "happenin",
-		"explicit_max_ttl": int64(0),
-		"renewable":        false,
+		"name":                "test",
+		"orphan":              true,
+		"period":              int64(284400),
+		"allowed_policies":    []string{"test3"},
+		"disallowed_policies": []string{},
+		"path_suffix":         "happenin",
+		"explicit_max_ttl":    int64(0),
+		"renewable":           false,
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -1463,13 +1465,14 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 
 	expected = map[string]interface{}{
-		"name":             "test",
-		"orphan":           true,
-		"explicit_max_ttl": int64(5),
-		"allowed_policies": []string{"default", "test3"},
-		"path_suffix":      "happenin",
-		"period":           int64(0),
-		"renewable":        false,
+		"name":                "test",
+		"orphan":              true,
+		"explicit_max_ttl":    int64(5),
+		"allowed_policies":    []string{"test3"},
+		"disallowed_policies": []string{},
+		"path_suffix":         "happenin",
+		"period":              int64(0),
+		"renewable":           false,
 	}
 
 	if !reflect.DeepEqual(expected, resp.Data) {
@@ -1521,7 +1524,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 }
 
-func TestTokenStore_RoleAllowedRoles(t *testing.T) {
+func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "roles/test")
