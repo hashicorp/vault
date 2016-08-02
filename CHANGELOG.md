@@ -69,6 +69,7 @@ IMPROVEMENTS:
  * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
    will have `MinVersion` set to TLS 1.2 by default. This is configurable.
  * auth/token: Add endpoint to list accessors [GH-1676]
+ * auth/token: Added `disallowed_policies` option to token store roles [GH-1681]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
