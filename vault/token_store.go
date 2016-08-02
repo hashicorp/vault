@@ -148,6 +148,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 						Description: tokenAllowedPoliciesHelp,
 					},
 
+					"disallowed_policies": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Default:     "",
+						Description: tokenDisallowedPoliciesHelp,
+					},
+
 					"orphan": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Default:     false,
@@ -476,6 +482,8 @@ type tsRoleEntry struct {
 	// The policies that creation functions using this role can assign to a token,
 	// escaping or further locking down normal subset checking
 	AllowedPolicies []string `json:"allowed_policies" mapstructure:"allowed_policies" structs:"allowed_policies"`
+
+	DisallowedPolicies []string `json:"disallowed_policies" mapstructure:"disallowed_policies" structs:"disallowed_policies"`
 
 	// If true, tokens created using this role will be orphans
 	Orphan bool `json:"orphan" mapstructure:"orphan" structs:"orphan"`
@@ -1122,10 +1130,15 @@ func (ts *TokenStore) handleCreateCommon(
 		te.ID = data.ID
 	}
 
+	resp := &logical.Response{}
+
 	switch {
 	// If we have a role, and the role defines policies, we don't even consider
 	// parent policies; the role allowed policies trumps all
 	case role != nil && len(role.AllowedPolicies) > 0:
+		if len(role.DisallowedPolicies) > 0 {
+			resp.AddWarning("both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
+		}
 		if len(data.Policies) == 0 {
 			data.Policies = role.AllowedPolicies
 		} else {
@@ -1135,6 +1148,21 @@ func (ts *TokenStore) handleCreateCommon(
 
 			if !strutil.StrListSubset(sanitizedRolePolicies, sanitizedInputPolicies) {
 				return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", sanitizedInputPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+			}
+		}
+
+	case role != nil && len(role.DisallowedPolicies) > 0:
+		if len(data.Policies) == 0 {
+			data.Policies = parent.Policies
+		}
+		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
+
+		// Do not voluntarily add 'default' to the list of items to check on
+		sanitizedRolePolicies := policyutil.SanitizePolicies(role.DisallowedPolicies, false)
+
+		for _, inputPolicy := range sanitizedInputPolicies {
+			if strutil.StrListContains(sanitizedRolePolicies, inputPolicy) {
+				return logical.ErrorResponse(fmt.Sprintf("token policy (%s) is disallowed by this role", inputPolicy)), logical.ErrInvalidRequest
 			}
 		}
 
@@ -1210,8 +1238,6 @@ func (ts *TokenStore) handleCreateCommon(
 		}
 		te.TTL = dur
 	}
-
-	resp := &logical.Response{}
 
 	// Set the lesser explicit max TTL if defined
 	if role != nil && role.ExplicitMaxTTL != 0 {
@@ -1602,13 +1628,14 @@ func (ts *TokenStore) tokenStoreRoleRead(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"period":           int64(role.Period.Seconds()),
-			"explicit_max_ttl": int64(role.ExplicitMaxTTL.Seconds()),
-			"allowed_policies": role.AllowedPolicies,
-			"name":             role.Name,
-			"orphan":           role.Orphan,
-			"path_suffix":      role.PathSuffix,
-			"renewable":        role.Renewable,
+			"period":              int64(role.Period.Seconds()),
+			"explicit_max_ttl":    int64(role.ExplicitMaxTTL.Seconds()),
+			"disallowed_policies": role.DisallowedPolicies,
+			"allowed_policies":    role.AllowedPolicies,
+			"name":                role.Name,
+			"orphan":              role.Orphan,
+			"path_suffix":         role.PathSuffix,
+			"renewable":           role.Renewable,
 		},
 	}
 
@@ -1711,9 +1738,23 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 
 	allowedPoliciesStr, ok := data.GetOk("allowed_policies")
 	if ok {
-		entry.AllowedPolicies = policyutil.ParsePolicies(allowedPoliciesStr.(string))
+		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(allowedPoliciesStr.(string), ","), false)
 	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.ParsePolicies(data.Get("allowed_policies").(string))
+		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("allowed_policies").(string), ","), false)
+	}
+
+	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
+	if ok {
+		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(disallowedPoliciesStr.(string), ","), false)
+	} else if req.Operation == logical.CreateOperation {
+		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), false)
+	}
+
+	if len(entry.AllowedPolicies) > 0 && len(entry.DisallowedPolicies) > 0 {
+		if resp == nil {
+			resp = &logical.Response{}
+		}
+		resp.AddWarning("both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
 	}
 
 	// Explicit max TTLs and periods cannot be used at the same time since the
@@ -1758,6 +1799,10 @@ rather than the normal semantics of a subset
 of the client token's policies. This
 parameter should be sent as a comma-delimited
 string.`
+	tokenDisallowedPoliciesHelp = `If set, successful token creation
+via this role will require that the desired policies on the token being
+created, be not the ones present in this list. Note that, this will *not*
+take effect when 'allowed_policies' is also set.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role
