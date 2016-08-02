@@ -2,15 +2,11 @@ package meta
 
 import (
 	"bufio"
-	"crypto/tls"
 	"flag"
-	"fmt"
 	"io"
-	"net/http"
 	"os"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
@@ -76,31 +72,15 @@ func (m *Meta) Client() (*api.Client, error) {
 	}
 	// If we need custom TLS configuration, then set it
 	if m.flagCACert != "" || m.flagCAPath != "" || m.flagClientCert != "" || m.flagClientKey != "" || m.flagInsecure {
-		// We may have set items from the environment so start with the
-		// existing TLS config
-		tlsConfig := config.HttpClient.Transport.(*http.Transport).TLSClientConfig
-
-		rootConfig := &rootcerts.Config{
-			CAFile: m.flagCACert,
-			CAPath: m.flagCAPath,
+		t := &api.TLSConfig{
+			CACert:        m.flagCACert,
+			CAPath:        m.flagCAPath,
+			ClientCert:    m.flagClientCert,
+			ClientKey:     m.flagClientKey,
+			TLSServerName: "",
+			Insecure:      m.flagInsecure,
 		}
-		if err := rootcerts.ConfigureTLS(tlsConfig, rootConfig); err != nil {
-			return nil, err
-		}
-
-		if m.flagInsecure {
-			tlsConfig.InsecureSkipVerify = true
-		}
-
-		if m.flagClientCert != "" && m.flagClientKey != "" {
-			tlsCert, err := tls.LoadX509KeyPair(m.flagClientCert, m.flagClientKey)
-			if err != nil {
-				return nil, err
-			}
-			tlsConfig.Certificates = []tls.Certificate{tlsCert}
-		} else if m.flagClientCert != "" || m.flagClientKey != "" {
-			return nil, fmt.Errorf("Both client cert and client key must be provided")
-		}
+		config.ConfigureTLS(t)
 	}
 
 	// Build the client

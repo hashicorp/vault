@@ -57,6 +57,31 @@ type Config struct {
 	MaxRetries int
 }
 
+// TLSConfig contains the parameters needed to configure TLS on the HTTP client
+// used to communicate with Vault.
+type TLSConfig struct {
+	// CACert is the path to a PEM-encoded CA cert file to use to verify the
+	// Vault server SSL certificate.
+	CACert string
+
+	// CAPath is the path to a directory of PEM-encoded CA cert files to verify
+	// the Vault server SSL certificate.
+	CAPath string
+
+	// ClientCert is the path to the certificate for Vault communication
+	ClientCert string
+
+	// ClientKey is the path to the private key for Vault communication
+	ClientKey string
+
+	// TLSServerName, if set, is used to set the SNI host when connecting via
+	// TLS.
+	TLSServerName string
+
+	// Insecure enables or disables SSL verification
+	Insecure bool
+}
+
 // DefaultConfig returns a default configuration for the client. It is
 // safe to modify the return value of this function.
 //
@@ -84,6 +109,49 @@ func DefaultConfig() *Config {
 	return config
 }
 
+// ConfigureTLS takes a set of TLS configurations and applies those to the the HTTP client.
+func (c *Config) ConfigureTLS(t *TLSConfig) error {
+
+	if c.HttpClient == nil {
+		return fmt.Errorf("config HTTP Client must be set")
+	}
+
+	var clientCert tls.Certificate
+	foundClientCert := false
+	if t.CACert != "" || t.CAPath != "" || t.ClientCert != "" || t.ClientKey != "" || t.Insecure {
+		if t.ClientCert != "" && t.ClientKey != "" {
+			var err error
+			clientCert, err = tls.LoadX509KeyPair(t.ClientCert, t.ClientKey)
+			if err != nil {
+				return err
+			}
+			foundClientCert = true
+		} else if t.ClientCert != "" || t.ClientKey != "" {
+			return fmt.Errorf("Both client cert and client key must be provided")
+		}
+	}
+
+	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
+	rootConfig := &rootcerts.Config{
+		CAFile: t.CACert,
+		CAPath: t.CAPath,
+	}
+	if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
+		return err
+	}
+
+	clientTLSConfig.InsecureSkipVerify = t.Insecure
+
+	if foundClientCert {
+		clientTLSConfig.Certificates = []tls.Certificate{clientCert}
+	}
+	if t.TLSServerName != "" {
+		clientTLSConfig.ServerName = t.TLSServerName
+	}
+
+	return nil
+}
+
 // ReadEnvironment reads configuration information from the
 // environment. If there is an error, no configuration value
 // is updated.
@@ -94,15 +162,10 @@ func (c *Config) ReadEnvironment() error {
 	var envClientCert string
 	var envClientKey string
 	var envInsecure bool
-	var foundInsecure bool
 	var envTLSServerName string
-
 	var envMaxRetries *uint64
 
-	var clientCert tls.Certificate
-	var foundClientCert bool
-	var err error
-
+	// Parse the environment variables
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		envAddress = v
 	}
@@ -131,31 +194,21 @@ func (c *Config) ReadEnvironment() error {
 		if err != nil {
 			return fmt.Errorf("Could not parse VAULT_SKIP_VERIFY")
 		}
-		foundInsecure = true
 	}
 	if v := os.Getenv(EnvVaultTLSServerName); v != "" {
 		envTLSServerName = v
 	}
-	// If we need custom TLS configuration, then set it
-	if envCACert != "" || envCAPath != "" || envClientCert != "" || envClientKey != "" || envInsecure {
-		if envClientCert != "" && envClientKey != "" {
-			clientCert, err = tls.LoadX509KeyPair(envClientCert, envClientKey)
-			if err != nil {
-				return err
-			}
-			foundClientCert = true
-		} else if envClientCert != "" || envClientKey != "" {
-			return fmt.Errorf("Both client cert and client key must be provided")
-		}
-	}
 
-	clientTLSConfig := c.HttpClient.Transport.(*http.Transport).TLSClientConfig
-	rootConfig := &rootcerts.Config{
-		CAFile: envCACert,
-		CAPath: envCAPath,
+	// Configure the HTTP clients TLS configuration.
+	t := &TLSConfig{
+		CACert:        envCACert,
+		CAPath:        envCAPath,
+		ClientCert:    envClientCert,
+		ClientKey:     envClientKey,
+		TLSServerName: envTLSServerName,
+		Insecure:      envInsecure,
 	}
-	err = rootcerts.ConfigureTLS(clientTLSConfig, rootConfig)
-	if err != nil {
+	if err := c.ConfigureTLS(t); err != nil {
 		return err
 	}
 
@@ -165,17 +218,6 @@ func (c *Config) ReadEnvironment() error {
 
 	if envMaxRetries != nil {
 		c.MaxRetries = int(*envMaxRetries) + 1
-	}
-
-	if foundInsecure {
-		clientTLSConfig.InsecureSkipVerify = envInsecure
-	}
-
-	if foundClientCert {
-		clientTLSConfig.Certificates = []tls.Certificate{clientCert}
-	}
-	if envTLSServerName != "" {
-		clientTLSConfig.ServerName = envTLSServerName
 	}
 
 	return nil
