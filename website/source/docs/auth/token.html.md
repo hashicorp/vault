@@ -737,15 +737,16 @@ of the header should be "X-Vault-Token" and the value should be the token.
         If set, tokens can be created with any subset of the policies in this
         list, rather than the normal semantics of tokens being a subset of the
         calling token's policies. The parameter is a comma-delimited string of
-        policy names.
+        policy names. If this and `disallowed_policies` are both set, only this
+        option takes effect.
       </li>
       <li>
         <span class="param">disallowed_policies</span>
         <span class="param-flags">optional</span>
         If set, successful token creation via this role will require that the
-        desired policies on the token being created, be not the ones present
-        in this list. Note that, this will *not* take effect when 'allowed_policies'
-        is also set.
+        no policies in the given list are requested. If both
+        `disallowed_policies` and `allowed_policies` are set, this option has
+        no effect. The parameter is a comma-delimited string of policy names.
       </li>
       <li>
         <span class="param">orphan</span>
