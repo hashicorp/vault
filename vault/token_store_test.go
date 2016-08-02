@@ -1637,6 +1637,10 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	if err != nil || resp != nil && resp.IsError() {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
+	expected := []string{"default", "test1"}
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "test1"}) {
+		t.Fatalf("bad: expected:%#v actual:%#v", expected, resp.Auth.Policies)
+	}
 
 	// Create a role to have 'default' policy disallowed
 	req = logical.TestRequest(t, logical.UpdateOperation, "roles/default")

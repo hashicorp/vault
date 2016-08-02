@@ -1327,7 +1327,7 @@ func (ts *TokenStore) handleCreateCommon(
 				return logical.ErrorResponse(fmt.Sprintf("could not look up policy %s", p)), nil
 			}
 			if policy == nil {
-				resp.AddWarning(fmt.Sprintf("Policy \"%s\" does not exist", p))
+				resp.AddWarning(fmt.Sprintf("Policy %q does not exist", p))
 			}
 		}
 	}
