@@ -32,20 +32,24 @@ func StrListSubset(super, sub []string) bool {
 // Parses a comma separated list of strings into a slice of strings.
 // The return slice will be sorted and will not contain duplicate or
 // empty items. The values will be converted to lower case.
-func ParseDedupAndSortStrings(input string) []string {
+func ParseDedupAndSortStrings(input string, sep string) []string {
 	input = strings.TrimSpace(input)
 	var parsed []string
 	if input == "" {
 		// Don't return nil
 		return parsed
 	}
-	return RemoveDuplicates(strings.Split(input, ","))
+	return RemoveDuplicates(strings.Split(input, sep))
 }
 
 // Parses a comma separated list of `<key>=<value>` tuples into a
 // map[string]string.
-func ParseKeyValues(input string, out map[string]string) error {
-	keyValues := ParseDedupAndSortStrings(input)
+func ParseKeyValues(input string, out map[string]string, sep string) error {
+	if out == nil {
+		return fmt.Errorf("'out is nil")
+	}
+
+	keyValues := ParseDedupAndSortStrings(input, sep)
 	if len(keyValues) == 0 {
 		return nil
 	}
@@ -72,7 +76,7 @@ func ParseKeyValues(input string, out map[string]string) error {
 //
 // Input will be parsed into the output paramater, which should
 // be a non-nil map[string]string.
-func ParseArbitraryKeyValues(input string, out map[string]string) error {
+func ParseArbitraryKeyValues(input string, out map[string]string, sep string) error {
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return nil
@@ -94,7 +98,7 @@ func ParseArbitraryKeyValues(input string, out map[string]string) error {
 	if err != nil {
 		// If JSON unmarshalling fails, consider that the input was
 		// supplied as a comma separated string of 'key=value' pairs.
-		if err = ParseKeyValues(input, out); err != nil {
+		if err = ParseKeyValues(input, out, sep); err != nil {
 			return fmt.Errorf("failed to parse the input: %v", err)
 		}
 	}
@@ -107,6 +111,71 @@ func ParseArbitraryKeyValues(input string, out map[string]string) error {
 	}
 
 	return nil
+}
+
+// Parses a `sep`-separated list of strings into a
+// []string.
+//
+// The output will always be a valid slice but may be of length zero.
+func ParseStringSlice(input string, sep string) []string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return []string{}
+	}
+
+	splitStr := strings.Split(input, sep)
+	ret := make([]string, len(splitStr))
+	for i, val := range splitStr {
+		ret[i] = val
+	}
+
+	return ret
+}
+
+// Parses arbitrary string slice. The input can be one of
+// the following:
+// * JSON string
+// * Base64 encoded JSON string
+// * `sep` separated list of values
+// * Base64-encoded string containting a `sep` separated list of values
+//
+// Note that the separator is ignored if the input is found to already be in a
+// structured format (e.g., JSON)
+//
+// The output will always be a valid slice but may be of length zero.
+func ParseArbitraryStringSlice(input string, sep string) []string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return []string{}
+	}
+
+	// Try to base64 decode the input. If successful, consider the decoded
+	// value as input.
+	inputBytes, err := base64.StdEncoding.DecodeString(input)
+	if err == nil {
+		input = string(inputBytes)
+	}
+
+	var d struct {
+		Ret []string
+	}
+
+	var outD d
+
+	// Try to JSON unmarshal the input. If successful, consider that the
+	// metadata was supplied as JSON input.
+	err = json.Unmarshal([]byte(input), &outD)
+	if err != nil {
+		// If JSON unmarshalling fails, consider that the input was
+		// supplied as a separated string of values.
+		return ParseStringSlice(input, sep)
+	}
+
+	if outD.Ret == nil {
+		return []string{}
+	}
+
+	return outD.Ret
 }
 
 // Removes duplicate and empty elements from a slice of strings.

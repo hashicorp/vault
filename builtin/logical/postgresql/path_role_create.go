@@ -2,9 +2,11 @@ package postgresql
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	_ "github.com/lib/pq"
@@ -100,7 +102,12 @@ func (b *backend) pathRoleCreateRead(
 	}()
 
 	// Execute each query
-	for _, query := range SplitSQL(role.SQL) {
+	for _, query := range strutil.ParseArbitraryStringSlice(role.SQL, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+
 		b.logger.Println("[TRACE] postgres/pathRoleCreateRead: preparing statement")
 		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":       username,

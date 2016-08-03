@@ -2,8 +2,10 @@ package mysql
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	_ "github.com/lib/pq"
@@ -95,7 +97,12 @@ func (b *backend) pathRoleCreateRead(
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range SplitSQL(role.SQL) {
+	for _, query := range strutil.ParseArbitraryStringSlice(role.SQL, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+
 		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":     username,
 			"password": password,
