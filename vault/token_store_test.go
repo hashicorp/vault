@@ -832,6 +832,23 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+	testMakeToken(t, ts, root, "client", "", []string{"foo", "bar"})
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = "client"
+	req.Data["policies"] = []string{"root", "foo", "bar"}
+
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Data["error"] != "root tokens may not be created without parent token being root" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 	testMakeToken(t, ts, root, "client", "", []string{"foo"})
