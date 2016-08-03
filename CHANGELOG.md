@@ -68,7 +68,7 @@ IMPROVEMENTS:
    [GH-1523]
  * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
    will have `MinVersion` set to TLS 1.2 by default. This is configurable.
- * auth/token: Add endpoint to list accessors [GH-1676]
+ * auth/token: Added endpoint to list accessors [GH-1676]
  * auth/token: Added `disallowed_policies` option to token store roles [GH-1681]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
@@ -98,6 +98,10 @@ IMPROVEMENTS:
    connection configuration [GH-1635]
  * secret/mysql: Use a combination of the role name and token display name in
    generated user names and allow the length to be controlled [GH-1604]
+ * secret/{cassandra,mssql,mysql,postgresql}: SQL statements can now be passed
+   in via one of four ways: a semicolon-delimited string, a base64-delimited
+   string, a serialized JSON string array, or a base64-encoded serialized JSON
+   string array [GH-1686]
  * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
    role name as part of response of `verify` API.
  * secret/ssh: Added passthrough of command line arguments to `ssh` [GH-1680]
