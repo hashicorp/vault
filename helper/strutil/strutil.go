@@ -156,26 +156,22 @@ func ParseArbitraryStringSlice(input string, sep string) []string {
 		input = string(inputBytes)
 	}
 
-	var d struct {
-		Ret []string
-	}
-
-	var outD d
+	ret := []string{}
 
 	// Try to JSON unmarshal the input. If successful, consider that the
 	// metadata was supplied as JSON input.
-	err = json.Unmarshal([]byte(input), &outD)
+	err = json.Unmarshal([]byte(input), &ret)
 	if err != nil {
 		// If JSON unmarshalling fails, consider that the input was
 		// supplied as a separated string of values.
 		return ParseStringSlice(input, sep)
 	}
 
-	if outD.Ret == nil {
+	if ret == nil {
 		return []string{}
 	}
 
-	return outD.Ret
+	return ret
 }
 
 // Removes duplicate and empty elements from a slice of strings.
