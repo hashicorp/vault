@@ -26,6 +26,7 @@ func pathConfigChain(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathChainWrite,
 			logical.ReadOperation:   b.pathChainRead,
+			logical.DeleteOperation: b.pathChainDelete,
 		},
 
 		HelpSynopsis:    pathConfigChainHelpSyn,
@@ -111,6 +112,36 @@ func (b *backend) pathChainRead(
 	}
 
 	return resp, nil
+}
+
+func (b *backend) pathChainDelete(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	cb := &certutil.CertBundle{}
+	entry, err := req.Storage.Get("config/ca_bundle")
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return logical.ErrorResponse("could not find any existing entry with a private key"), nil
+	}
+
+	err = entry.DecodeJSON(cb)
+	if err != nil {
+		return nil, err
+	}
+
+	cb.IssuingCAChain = ""
+
+	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
+	if err != nil {
+		return nil, err
+	}
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 const pathConfigChainHelpSyn = `
