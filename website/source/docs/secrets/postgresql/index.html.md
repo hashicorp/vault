@@ -241,9 +241,11 @@ subpath for interactive help output.
       <li>
         <span class="param">sql</span>
         <span class="param-flags">required</span>
-        The SQL statements executed to create and configure the role.
-        Must be semi-colon separated. The '{{name}}', '{{password}}' and
-        '{{expiration}}' values will be substituted.
+        The SQL statements executed to create and configure the role. Must be
+        a semicolon-separated string, a base64-encoded semicolon-separated
+        string, a serialized JSON string array, or a base64-encoded serialized
+        JSON string array. The '{{name}}', '{{password}}' and '{{expiration}}'
+        values will be substituted.
       </li>
     </ul>
   </dd>
