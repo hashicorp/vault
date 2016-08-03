@@ -10,7 +10,7 @@ import (
 
 const (
 	// Storage path where the local cluster name and identifier are stored
-	coreClusterPath = "core/cluster/local"
+	coreLocalClusterPath = "core/cluster/local"
 )
 
 // Structure representing the storage entry that holds cluster information
@@ -26,7 +26,7 @@ type Cluster struct {
 // input. This method errors out when Vault is sealed.
 func (c *Core) Cluster() (*Cluster, error) {
 	// Fetch the storage entry. This call fails when Vault is sealed.
-	entry, err := c.barrier.Get(coreClusterPath)
+	entry, err := c.barrier.Get(coreLocalClusterPath)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (c *Core) setupCluster() error {
 
 	// Store it
 	return c.barrier.Put(&Entry{
-		Key:   coreClusterPath,
+		Key:   coreLocalClusterPath,
 		Value: rawCluster,
 	})
 
