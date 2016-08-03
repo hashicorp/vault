@@ -32,7 +32,7 @@ func StrListSubset(super, sub []string) bool {
 // Parses a comma separated list of strings into a slice of strings.
 // The return slice will be sorted and will not contain duplicate or
 // empty items. The values will be converted to lower case.
-func ParseStrings(input string) []string {
+func ParseDedupAndSortStrings(input string) []string {
 	input = strings.TrimSpace(input)
 	var parsed []string
 	if input == "" {
@@ -45,7 +45,7 @@ func ParseStrings(input string) []string {
 // Parses a comma separated list of `<key>=<value>` tuples into a
 // map[string]string.
 func ParseKeyValues(input string, out map[string]string) error {
-	keyValues := ParseStrings(input)
+	keyValues := ParseDedupAndSortStrings(input)
 	if len(keyValues) == 0 {
 		return nil
 	}
@@ -72,13 +72,13 @@ func ParseKeyValues(input string, out map[string]string) error {
 //
 // Input will be parsed into the output paramater, which should
 // be a non-nil map[string]string.
-func ParseArbitraryKeyValues(input string, out map[string]string) (string, error) {
+func ParseArbitraryKeyValues(input string, out map[string]string) error {
 	input = strings.TrimSpace(input)
 	if input == "" {
-		return "", nil
+		return nil
 	}
 	if out == nil {
-		return "", fmt.Errorf("'out' is nil")
+		return fmt.Errorf("'out' is nil")
 	}
 
 	// Try to base64 decode the input. If successful, consider the decoded
@@ -95,18 +95,18 @@ func ParseArbitraryKeyValues(input string, out map[string]string) (string, error
 		// If JSON unmarshalling fails, consider that the input was
 		// supplied as a comma separated string of 'key=value' pairs.
 		if err = ParseKeyValues(input, out); err != nil {
-			return "", fmt.Errorf("failed to parse the input: %v", err)
+			return fmt.Errorf("failed to parse the input: %v", err)
 		}
 	}
 
 	// Validate the parsed input
 	for key, value := range out {
 		if key != "" && value == "" {
-			return "", fmt.Errorf("invalid value for key '%s'", key)
+			return fmt.Errorf("invalid value for key '%s'", key)
 		}
 	}
 
-	return input, nil
+	return nil
 }
 
 // Removes duplicate and empty elements from a slice of strings.

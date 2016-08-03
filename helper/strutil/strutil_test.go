@@ -128,7 +128,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 
 	// Test <key>=<value> as comma separated string
 	input = "key1=value1,key2=value2"
-	_, err = ParseArbitraryKeyValues(input, actual)
+	err = ParseArbitraryKeyValues(input, actual)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 
 	// Test <key>=<value> as base64 encoded comma separated string
 	input = base64.StdEncoding.EncodeToString([]byte(input))
-	_, err = ParseArbitraryKeyValues(input, actual)
+	err = ParseArbitraryKeyValues(input, actual)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 
 	// Test JSON encoded <key>=<value> tuples
 	input = `{"key1":"value1", "key2":"value2"}`
-	_, err = ParseArbitraryKeyValues(input, actual)
+	err = ParseArbitraryKeyValues(input, actual)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,7 +167,7 @@ func TestStrutil_ParseArbitraryKeyValues(t *testing.T) {
 
 	// Test base64 encoded JSON string of <key>=<value> tuples
 	input = base64.StdEncoding.EncodeToString([]byte(input))
-	_, err = ParseArbitraryKeyValues(input, actual)
+	err = ParseArbitraryKeyValues(input, actual)
 	if err != nil {
 		t.Fatal(err)
 	}
