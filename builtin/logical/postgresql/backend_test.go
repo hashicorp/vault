@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -133,7 +134,7 @@ func TestBackend_basic(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepCreateRole(t, "web", testRole),
+			testAccStepCreateRole(t, "web", testRole, false),
 			testAccStepReadCreds(t, b, config.StorageView, "web", connURL),
 		},
 	})
@@ -159,10 +160,42 @@ func TestBackend_roleCrud(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepCreateRole(t, "web", testRole),
+			testAccStepCreateRole(t, "web", testRole, false),
 			testAccStepReadRole(t, "web", testRole),
 			testAccStepDeleteRole(t, "web"),
 			testAccStepReadRole(t, "web", ""),
+		},
+	})
+}
+
+func TestBackend_BlockStatements(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	jsonBlockStatement, err := json.Marshal(testBlockStatementRoleSlice)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, connData, false),
+			// This will also validate the query
+			testAccStepCreateRole(t, "web-block", testBlockStatementRole, true),
+			testAccStepCreateRole(t, "web-block", string(jsonBlockStatement), false),
 		},
 	})
 }
@@ -187,8 +220,8 @@ func TestBackend_roleReadOnly(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepCreateRole(t, "web", testRole),
-			testAccStepCreateRole(t, "web-readonly", testReadOnlyRole),
+			testAccStepCreateRole(t, "web", testRole, false),
+			testAccStepCreateRole(t, "web-readonly", testReadOnlyRole, false),
 			testAccStepReadRole(t, "web-readonly", testReadOnlyRole),
 			testAccStepCreateTable(t, b, config.StorageView, "web", connURL),
 			testAccStepReadCreds(t, b, config.StorageView, "web-readonly", connURL),
@@ -229,13 +262,14 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 	}
 }
 
-func testAccStepCreateRole(t *testing.T, name string, sql string) logicaltest.TestStep {
+func testAccStepCreateRole(t *testing.T, name string, sql string, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      path.Join("roles", name),
 		Data: map[string]interface{}{
 			"sql": sql,
 		},
+		ErrorOk: expectFail,
 	}
 }
 
@@ -485,3 +519,46 @@ CREATE ROLE "{{name}}" WITH
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
 GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";
 `
+
+const testBlockStatementRole = `
+DO $$
+BEGIN
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname='foo-role') THEN
+      CREATE ROLE "foo-role";
+      CREATE SCHEMA IF NOT EXISTS foo AUTHORIZATION "foo-role";
+      ALTER ROLE "foo-role" SET search_path = foo;
+      GRANT TEMPORARY ON DATABASE "postgres" TO "foo-role";
+      GRANT ALL PRIVILEGES ON SCHEMA foo TO "foo-role";
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA foo TO "foo-role";
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA foo TO "foo-role";
+      GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA foo TO "foo-role";
+   END IF;
+END
+$$
+
+CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';
+GRANT "foo-role" TO "{{name}}";
+ALTER ROLE "{{name}}" SET search_path = foo;
+GRANT CONNECT ON DATABASE "postgres" TO "{{name}}";
+`
+
+var testBlockStatementRoleSlice = []string{
+	`DO $$
+BEGIN
+   IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname='foo-role') THEN
+      CREATE ROLE "foo-role";
+      CREATE SCHEMA IF NOT EXISTS foo AUTHORIZATION "foo-role";
+      ALTER ROLE "foo-role" SET search_path = foo;
+      GRANT TEMPORARY ON DATABASE "postgres" TO "foo-role";
+      GRANT ALL PRIVILEGES ON SCHEMA foo TO "foo-role";
+      GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA foo TO "foo-role";
+      GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA foo TO "foo-role";
+      GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA foo TO "foo-role";
+   END IF;
+END
+$$`,
+	`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';`,
+	`GRANT "foo-role" TO "{{name}}";`,
+	`ALTER ROLE "{{name}}" SET search_path = foo;`,
+	`GRANT CONNECT ON DATABASE "postgres" TO "{{name}}";`,
+}

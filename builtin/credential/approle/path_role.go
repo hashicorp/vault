@@ -1452,7 +1452,7 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 		Metadata:        make(map[string]string),
 	}
 
-	if err = strutil.ParseArbitraryKeyValues(data.Get("metadata").(string), secretIDStorage.Metadata); err != nil {
+	if err = strutil.ParseArbitraryKeyValues(data.Get("metadata").(string), secretIDStorage.Metadata, ","); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse metadata: %v", err)), nil
 	}
 
