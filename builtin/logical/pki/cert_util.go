@@ -573,7 +573,7 @@ func generateCreationBundle(b *backend,
 			if len(cnAlt) != 0 {
 				for _, v := range strings.Split(cnAlt, ",") {
 					if strings.Contains(v, "@") {
-						emailAddresses = append(emailAddresses, cn)
+						emailAddresses = append(emailAddresses, v)
 					} else {
 						dnsNames = append(dnsNames, v)
 					}
