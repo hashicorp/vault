@@ -296,7 +296,7 @@ username@<IP of remote host>:~$
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Creates or updates a named key. This is a root protected endpoint.
+    Creates or updates a named key.
   </dd>
 
   <dt>Method</dt>
@@ -327,7 +327,7 @@ username@<IP of remote host>:~$
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Deletes a named key. This is a root protected endpoint.
+    Deletes a named key.
   </dd>
 
   <dt>Method</dt>

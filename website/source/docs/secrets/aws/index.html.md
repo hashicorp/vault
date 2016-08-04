@@ -371,7 +371,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
   <dt>Description</dt>
   <dd>
     Configures the root IAM credentials used.
-    This is a root protected endpoint. 
     If static credentials are not provided using
     this endpoint, then the credentials will be retrieved from the
     environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and `AWS_REGION`
@@ -420,7 +419,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
   <dt>Description</dt>
   <dd>
     Configures the lease settings for generated credentials.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>

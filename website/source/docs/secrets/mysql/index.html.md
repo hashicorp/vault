@@ -124,7 +124,6 @@ the default on versions prior to that.
   <dt>Description</dt>
   <dd>
     Configures the connection DSN used to communicate with MySQL.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>

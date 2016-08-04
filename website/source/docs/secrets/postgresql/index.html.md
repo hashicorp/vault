@@ -116,7 +116,6 @@ subpath for interactive help output.
   <dt>Description</dt>
   <dd>
     Configures the connection string used to communicate with PostgreSQL.
-    This is a root protected endpoint.
   </dd>
 
   <dt>Method</dt>
