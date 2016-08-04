@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/fatih/structs"
@@ -83,44 +82,58 @@ func BenchmarkCertBundleParsing(b *testing.B) {
 }
 
 func TestCertBundleParsing(t *testing.T) {
-	jsonBundle := refreshRSACertBundle()
-	jsonString, err := json.Marshal(jsonBundle)
-	if err != nil {
-		t.Fatalf("Error marshaling testing certbundle to JSON: %s", err)
-	}
-	pcbut, err := ParsePKIJSON(jsonString)
-	if err != nil {
-		t.Fatalf("Error during JSON bundle handling: %s", err)
-	}
-	err = compareCertBundleToParsedCertBundle(jsonBundle, pcbut)
-	if err != nil {
-		t.Fatalf(err.Error())
+	cbuts := []*CertBundle{
+		refreshRSACertBundle(),
+		//refreshRSACertBundleWithChain(),
+		refreshRSA8CertBundle(),
+		//refreshRSA8CertBundleWithChain(),
+		refreshECCertBundle(),
+		//refreshECCertBundleWithChain(),
+		refreshEC8CertBundle(),
+		//refreshEC8CertBundleWithChain(),
 	}
 
-	secret := &api.Secret{
-		Data: structs.New(jsonBundle).Map(),
-	}
-	pcbut, err = ParsePKIMap(secret.Data)
-	if err != nil {
-		t.Fatalf("Error during JSON bundle handling: %s", err)
-	}
-	err = compareCertBundleToParsedCertBundle(jsonBundle, pcbut)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
+	for i, cbut := range cbuts {
+		jsonString, err := json.Marshal(cbut)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf("Error marshaling testing certbundle to JSON: %s", err)
+		}
+		pcbut, err := ParsePKIJSON(jsonString)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf("Error during JSON bundle handling: %s", err)
+		}
+		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf(err.Error())
+		}
 
-	pemBundle := strings.Join([]string{
-		jsonBundle.Certificate,
-		jsonBundle.IssuingCA,
-		jsonBundle.PrivateKey,
-	}, "\n")
-	pcbut, err = ParsePEMBundle(pemBundle)
-	if err != nil {
-		t.Fatalf("Error during JSON bundle handling: %s", err)
-	}
-	err = compareCertBundleToParsedCertBundle(jsonBundle, pcbut)
-	if err != nil {
-		t.Fatalf(err.Error())
+		secret := &api.Secret{
+			Data: structs.New(cbut).Map(),
+		}
+		pcbut, err = ParsePKIMap(secret.Data)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf("Error during JSON bundle handling: %s", err)
+		}
+		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf(err.Error())
+		}
+
+		pcbut, err = ParsePEMBundle(cbut.ToPEMBundle())
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf("Error during JSON bundle handling: %s", err)
+		}
+		err = compareCertBundleToParsedCertBundle(cbut, pcbut)
+		if err != nil {
+			t.Logf("Error occurred with bundle %d in test array (index %d).\n", i+1, i)
+			t.Fatalf(err.Error())
+		}
 	}
 }
 
@@ -391,66 +404,51 @@ func refreshRSA8CertBundle() *CertBundle {
 }
 
 func refreshRSA8CertBundleWithChain() *CertBundle {
-	return &CertBundle{
-		Certificate:    certRSAPem,
-		PrivateKey:     privRSA8KeyPem,
-		IssuingCA:      issuingCaPem,
-		IssuingCAChain: issuingCaChainPem,
-	}
-}
-
-func refreshRSACertBundle() *CertBundle {
-	ret := &CertBundle{
-		Certificate: certRSAPem,
-		IssuingCA:   issuingCaPem,
-	}
-	ret.PrivateKey = privRSAKeyPem
+	ret := refreshRSA8CertBundle()
+	ret.IssuingCAChain = issuingCaChainPem
 	return ret
 }
 
-func refreshRSACertBundleWithChain() *CertBundle {
-	ret := &CertBundle{
-		Certificate:    certRSAPem,
-		IssuingCA:      issuingCaPem,
-		IssuingCAChain: issuingCaChainPem,
+func refreshRSACertBundle() *CertBundle {
+	return &CertBundle{
+		Certificate: certRSAPem,
+		IssuingCA:   issuingCaPem,
+		PrivateKey:  privRSAKeyPem,
 	}
-	ret.PrivateKey = privRSAKeyPem
+}
+
+func refreshRSACertBundleWithChain() *CertBundle {
+	ret := refreshRSACertBundle()
+	ret.IssuingCAChain = issuingCaChainPem
 	return ret
 }
 
 func refreshECCertBundle() *CertBundle {
-	ret := &CertBundle{
+	return &CertBundle{
 		Certificate: certECPem,
 		IssuingCA:   issuingCaPem,
+		PrivateKey:  privECKeyPem,
 	}
-	ret.PrivateKey = privECKeyPem
-	return ret
 }
 
 func refreshECCertBundleWithChain() *CertBundle {
-	ret := &CertBundle{
-		Certificate:    certECPem,
-		IssuingCA:      issuingCaPem,
-		IssuingCAChain: issuingCaChainPem,
-	}
-	ret.PrivateKey = privECKeyPem
+	ret := refreshECCertBundle()
+	ret.IssuingCAChain = issuingCaChainPem
 	return ret
 }
 
 func refreshRSACSRBundle() *CSRBundle {
-	ret := &CSRBundle{
-		CSR: csrRSAPem,
+	return &CSRBundle{
+		CSR:        csrRSAPem,
+		PrivateKey: privRSAKeyPem,
 	}
-	ret.PrivateKey = privRSAKeyPem
-	return ret
 }
 
 func refreshECCSRBundle() *CSRBundle {
-	ret := &CSRBundle{
-		CSR: csrECPem,
+	return &CSRBundle{
+		CSR:        csrECPem,
+		PrivateKey: privECKeyPem,
 	}
-	ret.PrivateKey = privECKeyPem
-	return ret
 }
 
 func refreshEC8CertBundle() *CertBundle {
@@ -462,12 +460,9 @@ func refreshEC8CertBundle() *CertBundle {
 }
 
 func refreshEC8CertBundleWithChain() *CertBundle {
-	return &CertBundle{
-		Certificate:    certECPem,
-		PrivateKey:     privEC8KeyPem,
-		IssuingCA:      issuingCaPem,
-		IssuingCAChain: issuingCaChainPem,
-	}
+	ret := refreshEC8CertBundle()
+	ret.IssuingCAChain = issuingCaChainPem
+	return ret
 }
 
 const (

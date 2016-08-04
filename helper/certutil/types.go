@@ -111,6 +111,25 @@ type ParsedCSRBundle struct {
 	CSR             *x509.CertificateRequest
 }
 
+func (c *CertBundle) ToPEMBundle() string {
+	var result []string
+
+	if len(c.PrivateKey) > 0 {
+		result = append(result, c.PrivateKey)
+	}
+	if len(c.Certificate) > 0 {
+		result = append(result, c.Certificate)
+	}
+	if len(c.IssuingCA) > 0 {
+		result = append(result, c.IssuingCA)
+	}
+	if len(c.IssuingCAChain) > 0 {
+		result = append(result, c.IssuingCAChain)
+	}
+
+	return strings.Join(result, "\n")
+}
+
 // ToParsedCertBundle converts a string-based certificate bundle
 // to a byte-based raw certificate bundle
 func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {

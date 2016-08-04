@@ -100,6 +100,11 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 	return nil, errutil.UserError{"unable to parse out of either secret data or a secret object"}
 }
 
+type certificateBlock struct {
+	Certificate   *x509.Certificate
+	PemBlockBytes []byte
+}
+
 // ParsePEMBundle takes a string of concatenated PEM-format certificate
 // and private key values and decodes/parses them, checking validity along
 // the way. There must be at max two certificates (a certificate and its
@@ -113,6 +118,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 
 	pemBytes := []byte(pemBundle)
 	var pemBlock *pem.Block
+	var certificateChain []*certificateBlock
 	parsedBundle := &ParsedCertBundle{}
 
 	for len(pemBytes) > 0 {
@@ -155,43 +161,44 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
-			switch len(certificates) {
-			case 0:
-				return nil, errutil.UserError{"pem block cannot be decoded to a private key or certificate"}
-
-			case 1:
-				if parsedBundle.Certificate != nil {
-					switch {
-					// We just found the issuing CA
-					case bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, certificates[0].SubjectKeyId) && certificates[0].IsCA:
-						parsedBundle.IssuingCABytes = pemBlock.Bytes
-						parsedBundle.IssuingCA = certificates[0]
-
-					// Our saved certificate is actually the issuing CA
-					case bytes.Equal(parsedBundle.Certificate.SubjectKeyId, certificates[0].AuthorityKeyId) && parsedBundle.Certificate.IsCA:
-						parsedBundle.IssuingCA = parsedBundle.Certificate
-						parsedBundle.IssuingCABytes = parsedBundle.CertificateBytes
-						parsedBundle.CertificateBytes = pemBlock.Bytes
-						parsedBundle.Certificate = certificates[0]
-					}
-				} else {
-					switch {
-					// If this case isn't correct, the caller needs to assign
-					// the values to Certificate/CertificateBytes; assumptions
-					// made here will not be valid for all cases.
-					case certificates[0].IsCA:
-						parsedBundle.IssuingCABytes = pemBlock.Bytes
-						parsedBundle.IssuingCA = certificates[0]
-
-					default:
-						parsedBundle.CertificateBytes = pemBlock.Bytes
-						parsedBundle.Certificate = certificates[0]
-					}
-				}
-
-			default:
-				return nil, errutil.UserError{"too many certificates given; provide a maximum of two certificates in the bundle"}
+			certBlock := &certificateBlock{
+				Certificate:   certificates[0],
+				PemBlockBytes: pemBlock.Bytes,
 			}
+			certificateChain = append(certificateChain, certBlock)
+		}
+	}
+
+	for i, cert := range certificateChain {
+		switch i {
+		case 0:
+			equal, err := ComparePublicKeys(cert.Certificate.PublicKey, parsedBundle.PrivateKey.Public())
+			if err != nil {
+				return nil, fmt.Errorf("Unable to compare public and private keys: %s", err)
+			}
+			if !equal {
+				return nil, errutil.UserError{"Public key of certificate does not match private key"}
+			}
+			parsedBundle.Certificate = cert.Certificate
+			parsedBundle.CertificateBytes = cert.PemBlockBytes
+		case 1:
+			if !bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
+				return nil, fmt.Errorf("TODO")
+			}
+			parsedBundle.IssuingCA = cert.Certificate
+			parsedBundle.IssuingCABytes = cert.PemBlockBytes
+		case 2:
+			if !bytes.Equal(parsedBundle.IssuingCA.AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
+				return nil, fmt.Errorf("TODO")
+			}
+			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert.Certificate)
+			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, cert.PemBlockBytes)
+		default:
+			if !bytes.Equal(parsedBundle.IssuingCAChain[i-3].AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
+				return nil, fmt.Errorf("TODO")
+			}
+			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert.Certificate)
+			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, cert.PemBlockBytes)
 		}
 	}
 
