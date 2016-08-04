@@ -206,7 +206,7 @@ func (c *Core) mount(me *MountEntry) error {
 	newTable := c.mounts.ShallowClone()
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
-		return errors.New("failed to update mount table")
+		return logical.CodedError(500, "failed to update mount table")
 	}
 	c.mounts = newTable
 
@@ -290,7 +290,7 @@ func (c *Core) removeMountEntry(path string) error {
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
-		return errors.New("failed to update mount table")
+		return logical.CodedError(500, "failed to update mount table")
 	}
 
 	c.mounts = newTable
@@ -305,7 +305,7 @@ func (c *Core) taintMountEntry(path string) error {
 
 	// Update the mount table
 	if err := c.persistMounts(c.mounts); err != nil {
-		return errors.New("failed to update mount table")
+		return logical.CodedError(500, "failed to update mount table")
 	}
 
 	return nil
@@ -374,7 +374,7 @@ func (c *Core) remount(src, dst string) error {
 	if err := c.persistMounts(c.mounts); err != nil {
 		ent.Path = src
 		ent.Tainted = true
-		return errors.New("failed to update mount table")
+		return logical.CodedError(500, "failed to update mount table")
 	}
 
 	// Remount the backend
