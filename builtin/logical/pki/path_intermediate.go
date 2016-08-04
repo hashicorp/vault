@@ -140,15 +140,6 @@ func (b *backend) pathSetSignedIntermediate(
 		}
 	}
 
-	// If only one certificate is provided and it's a CA
-	// the parsing will assign it to the IssuingCA, so move it over
-	if inputBundle.Certificate == nil && inputBundle.IssuingCA != nil {
-		inputBundle.Certificate = inputBundle.IssuingCA
-		inputBundle.IssuingCA = nil
-		inputBundle.CertificateBytes = inputBundle.IssuingCABytes
-		inputBundle.IssuingCABytes = nil
-	}
-
 	if inputBundle.Certificate == nil {
 		return logical.ErrorResponse("supplied certificate could not be successfully parsed"), nil
 	}
