@@ -45,6 +45,9 @@ The following parameters are required:
   credentials.
 - `region` the AWS region for API calls.
 
+Note: the client uses the official AWS SDK and will use environment variable or IAM 
+role-provided credentials if available.
+
 The next step is to configure a role. A role is a logical name that maps
 to a policy used to generated those credentials.
 You can either supply a user inline policy (via the policy argument), or
@@ -368,7 +371,13 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
   <dt>Description</dt>
   <dd>
     Configures the root IAM credentials used.
-    This is a root protected endpoint.
+    This is a root protected endpoint. 
+    If static credentials are not provided using
+    this endpoint, then the credentials will be retrieved from the
+    environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and `AWS_REGION`
+    respectively. If the credentials are still not found and if the
+    backend is configured on an EC2 instance with metadata querying
+    capabilities, the credentials are fetched automatically.
   </dd>
 
   <dt>Method</dt>
