@@ -181,9 +181,9 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 	result.SerialNumber = result.Certificate.SerialNumber
 
 	if len(c.IssuingCAChain) > 0 {
-		remainingBytes := []byte(c.IssuingCAChain)
-		for len(remainingBytes) > 0 {
-			pemBlock, remainingBytes = pem.Decode(remainingBytes)
+		pemBytes := []byte(c.IssuingCAChain)
+		for len(pemBytes) > 0 {
+			pemBlock, pemBytes = pem.Decode(pemBytes)
 			if pemBlock == nil {
 				return nil, errutil.UserError{"Error decoding issuing CA chain from cert bundle"}
 			}

@@ -115,7 +115,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	var pemBlock *pem.Block
 	parsedBundle := &ParsedCertBundle{}
 
-	for {
+	for len(pemBytes) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
 			return nil, errutil.UserError{"no data found"}
@@ -192,10 +192,6 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 			default:
 				return nil, errutil.UserError{"too many certificates given; provide a maximum of two certificates in the bundle"}
 			}
-		}
-
-		if len(pemBytes) == 0 {
-			break
 		}
 	}
 
