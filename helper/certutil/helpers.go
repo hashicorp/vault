@@ -172,18 +172,22 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	for i, cert := range certificateChain {
 		switch i {
 		case 0:
-			equal, err := ComparePublicKeys(cert.Certificate.PublicKey, parsedBundle.PrivateKey.Public())
-			if err != nil {
-				return nil, fmt.Errorf("Unable to compare public and private keys: %s", err)
+			// If private key exists, check if it matches the public key of cert
+			if len(parsedBundle.PrivateKeyBytes) > 0 && parsedBundle.PrivateKeyType != "" {
+				equal, err := ComparePublicKeys(cert.Certificate.PublicKey, parsedBundle.PrivateKey.Public())
+				if err != nil {
+					return nil, fmt.Errorf("Unable to compare public and private keys: %s", err)
+				}
+				if !equal {
+					return nil, errutil.UserError{"Public key of certificate does not match private key"}
+				}
 			}
-			if !equal {
-				return nil, errutil.UserError{"Public key of certificate does not match private key"}
-			}
+
 			parsedBundle.Certificate = cert.Certificate
 			parsedBundle.CertificateBytes = cert.PemBlockBytes
 		case 1:
 			if !bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
-				return nil, fmt.Errorf("TODO")
+				return nil, fmt.Errorf("")
 			}
 			parsedBundle.IssuingCA = cert.Certificate
 			parsedBundle.IssuingCABytes = cert.PemBlockBytes

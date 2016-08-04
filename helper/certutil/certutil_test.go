@@ -83,6 +83,7 @@ func BenchmarkCertBundleParsing(b *testing.B) {
 
 func TestCertBundleParsing(t *testing.T) {
 	cbuts := []*CertBundle{
+		refreshRSACertOnly(),
 		refreshRSACertBundle(),
 		//refreshRSACertBundleWithChain(),
 		refreshRSA8CertBundle(),
@@ -414,6 +415,12 @@ func refreshRSACertBundle() *CertBundle {
 		Certificate: certRSAPem,
 		IssuingCA:   issuingCaPem,
 		PrivateKey:  privRSAKeyPem,
+	}
+}
+
+func refreshRSACertOnly() *CertBundle {
+	return &CertBundle{
+		Certificate: certRSAPem,
 	}
 }
 
