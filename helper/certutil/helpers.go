@@ -187,19 +187,19 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 			parsedBundle.CertificateBytes = cert.PemBlockBytes
 		case 1:
 			if !bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
-				return nil, fmt.Errorf("")
+				return nil, fmt.Errorf("certificate authority id does not match the certificate")
 			}
 			parsedBundle.IssuingCA = cert.Certificate
 			parsedBundle.IssuingCABytes = cert.PemBlockBytes
 		case 2:
 			if !bytes.Equal(parsedBundle.IssuingCA.AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
-				return nil, fmt.Errorf("TODO")
+				return nil, fmt.Errorf("certificate authority id does not match the certificate")
 			}
 			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert.Certificate)
 			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, cert.PemBlockBytes)
 		default:
 			if !bytes.Equal(parsedBundle.IssuingCAChain[i-3].AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
-				return nil, fmt.Errorf("TODO")
+				return nil, fmt.Errorf("certificate authority id does not match the certificate")
 			}
 			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert.Certificate)
 			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, cert.PemBlockBytes)
