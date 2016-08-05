@@ -55,16 +55,11 @@ func (b *backend) pathChainWrite(
 		}
 	}
 
-	for i := range parsedCAChain.CertificatePath {
-		switch i {
-		case 0:
-			parsedBundle.IssuingCA = parsedCAChain.CertificatePath[0]
-			parsedBundle.IssuingCABytes = parsedCAChain.CertificatePathBytes[0]
-		default:
-			parsedBundle.IssuingCAChain = parsedCAChain.CertificatePath[1:]
-			parsedBundle.IssuingCAChainBytes = parsedCAChain.CertificatePathBytes[1:]
-			break
-		}
+	parsedBundle.IssuingCA = parsedCAChain.CertificatePath[0]
+	parsedBundle.IssuingCABytes = parsedCAChain.CertificatePathBytes[0]
+	if len(parsedCAChain.CertificatePath) > 1 {
+		parsedBundle.IssuingCAChain = parsedCAChain.CertificatePath[1:]
+		parsedBundle.IssuingCAChainBytes = parsedCAChain.CertificatePathBytes[1:]
 	}
 
 	if err := parsedBundle.Verify(); err != nil {
