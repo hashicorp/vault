@@ -1076,11 +1076,6 @@ func (ts *TokenStore) handleCreateCommon(
 			logical.ErrInvalidRequest
 	}
 
-	// Prevent attempts to create a root token without an actual root token as parent
-	if strutil.StrListContains(data.Policies, "root") && !strutil.StrListContains(parent.Policies, "root") {
-		return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
-	}
-
 	// Setup the token entry
 	te := TokenEntry{
 		Parent: req.ClientToken,
@@ -1244,6 +1239,11 @@ func (ts *TokenStore) handleCreateCommon(
 			return logical.ErrorResponse("lease must be positive"), logical.ErrInvalidRequest
 		}
 		te.TTL = dur
+	}
+
+	// Prevent attempts to creat a root token without an actual root token as parent
+	if strutil.StrListContains(data.Policies, "root") && strutil.StrListContains(parent.Policies, "root") {
+		return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
 	}
 
 	// Set the lesser explicit max TTL if defined

@@ -833,19 +833,48 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 }
 
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
-	_, ts, _, root := TestCoreWithTokenStore(t)
-	testMakeToken(t, ts, root, "client", "", []string{"foo", "bar"})
+	core, ts, _, root := TestCoreWithTokenStore(t)
+	ps := core.policyStore
 
+	// Create sudo policy
+	policy, _ := Parse(tokenCreationPolicy)
+	policy.Name = "NonRootSudoTest"
+	if err := ps.SetPolicy(policy); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a token to use as parent
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
-	req.ClientToken = "client"
-	req.Data["policies"] = []string{"root", "foo", "bar"}
-
+	req.ClientToken = root
+	req.Data["policies"] = []string{"NonRootSudoTest"}
 	resp, err := ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+	parentToken := resp.Auth.ClientToken
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = parentToken
+	req.Data["policies"] = []string{"root", "create"}
+
+	resp, err = ts.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v %v", err, resp)
 	}
 	if resp.Data["error"] != "root tokens may not be created without parent token being root" {
 		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
 	}
 }
 
