@@ -192,7 +192,7 @@ func TestLogical_CreateToken(t *testing.T) {
 			"policies":       []interface{}{"root"},
 			"metadata":       nil,
 			"lease_duration": json.Number("0"),
-			"renewable":      true,
+			"renewable":      false,
 		},
 		"warnings": nilWarnings,
 	}
