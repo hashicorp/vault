@@ -535,7 +535,8 @@ subpath for interactive help output.
 
     ```javascript
     {
-      "ca_chain": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+      "issuing_ca": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+      "issuing_ca_chain": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----"
     }
     ```
 
@@ -561,7 +562,7 @@ subpath for interactive help output.
     <ul>
       <li>
       <li>
-        <span class="param">ca_chain</span>
+        <span class="param">pem_bundle</span>
         <span class="param-flags">required</span>
         PEM-format, concatenated certificates for the CA trust chain.
       </li>
