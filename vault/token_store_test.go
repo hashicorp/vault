@@ -846,7 +846,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "sudoClient"
-	req.Data["policies"] = []string{"create"}
+	req.Data["policies"] = []string{"create", "root"}
 
 	resp, err := ts.HandleRequest(req)
 	if resp == nil || resp.Data == nil {
