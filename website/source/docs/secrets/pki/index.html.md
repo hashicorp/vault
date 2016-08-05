@@ -141,7 +141,7 @@ Next, Vault must be configured with a CA certificate and associated private
 key. We'll take advantage of the backend's self-signed root generation support,
 but Vault also supports generating an intermediate CA (with a CSR for signing)
 or setting a PEM-encoded certificate and private key bundle directly into the
-backend. 
+backend.
 
 Generally you'll want a root certificate to only be used to sign CA
 intermediate certificates, but for this example we'll proceed as if you will
@@ -510,6 +510,94 @@ subpath for interactive help output.
   </dd>
 </dl>
 
+### /pki/config/chain
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows getting the certificate authority trust chain in PEM format.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/config/chain`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "ca_chain": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
+    }
+    ```
+
+  </dd>
+</dl>
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows setting certificate authority trust chain in PEM format.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/config/chain`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+      <li>
+        <span class="param">ca_chain</span>
+        <span class="param-flags">required</span>
+        PEM-format, concatenated certificates for the CA trust chain.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
+
+#### DELETE
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows deleting certificate authority trust chain.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/config/chain`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    A `204` response code.
+  </dd>
+</dl>
 
 ### /pki/config/crl
 #### GET

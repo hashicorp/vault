@@ -18,8 +18,9 @@ func pathConfigChain(b *backend) *framework.Path {
 		Pattern: "config/chain",
 		Fields: map[string]*framework.FieldSchema{
 			"ca_chain": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `TODO`,
+				Type: framework.TypeString,
+				Description: `PEM-format, concatenated certificates
+for the CA trust chain.`,
 			},
 		},
 
@@ -145,9 +146,16 @@ func (b *backend) pathChainDelete(
 }
 
 const pathConfigChainHelpSyn = `
-TODO
+Configure the certificate authority trust chain.
 `
 
 const pathConfigChainHelpDesc = `
-TODO
+This endpoint allows configuration of the trust chain for the certificate
+authority.  By populating the trust chain, this information will be returned
+when issuing certificates and will be written when requesting pem bundles.
+
+Multiple certificates can be concatenated into a single file in order from the
+issuing certificate authority.  Because certificate validation requires that
+root keys be distributed independently, the root certificate authority should
+be omitted from the trust chain.
 `
