@@ -601,6 +601,7 @@ func TestConvergentEncryption(t *testing.T) {
 		Data: map[string]interface{}{
 			"derived":               false,
 			"convergent_encryption": true,
+			"context_as_nonce":      true,
 		},
 	}
 
@@ -619,6 +620,7 @@ func TestConvergentEncryption(t *testing.T) {
 	req.Data = map[string]interface{}{
 		"derived":               true,
 		"convergent_encryption": true,
+		"context_as_nonce":      true,
 	}
 
 	resp, err = b.HandleRequest(req)

@@ -18,22 +18,41 @@ func (b *backend) pathKeys() *framework.Path {
 			},
 
 			"derived": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Description: "Enables key derivation mode. This allows for per-transaction unique keys",
+				Type: framework.TypeBool,
+				Description: `Enables key derivation mode. This
+allows for per-transaction unique keys.`,
 			},
 
 			"convergent_encryption": &framework.FieldSchema{
 				Type: framework.TypeBool,
-				Description: `Whether to use convergent encryption.
+				Description: `Whether to support convergent encryption.
 This is only supported when using a key with
 key derivation enabled and will require all
-context values to be 96 bits (12 bytes) when
-base64-decoded. This mode ensures that when
-the same context is supplied, the same
-ciphertext is emitted from the encryption
-function. It is *very important* when using
-this mode that you ensure that all contexts
-are *globally unique*. Failing to do so will
+requests to carry both a context and 96-bit
+(12-byte) nonce, unless the "context_as_nonce"
+feature is also enabled. The given nonce will
+be used in place of a randomly generated nonce.
+As a result, when the same context and nonce
+(or context, if "context_as_nonce" is enabled)
+are supplied, the same ciphertext is emitted
+from the encryption function. It is *very
+important* when using this mode that you ensure
+that all nonces are unique for a given context,
+or, when using "context_as_nonce", that all
+contexts are unique for a given key. Failing to
+do so will severely impact the ciphertext's
+security.`,
+			},
+
+			"context_as_nonce": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Whether to use the context value as the
+nonce in the convergent encryption operation
+mode. If set true, the user will have to
+supply a 96-bit (12-byte) context value.
+It is *very important* when using this
+mode that you ensure that all contexts are
+*globally unique*. Failing to do so will
 severely impact the security of the key.`,
 			},
 		},
@@ -54,12 +73,13 @@ func (b *backend) pathPolicyWrite(
 	name := d.Get("name").(string)
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
+	contextAsNonce := d.Get("context_as_nonce").(bool)
 
 	if !derived && convergent {
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
 	}
 
-	p, lock, upserted, err := b.lm.GetPolicyUpsert(req.Storage, name, derived, convergent)
+	p, lock, upserted, err := b.lm.GetPolicyUpsert(req.Storage, name, derived, convergent, contextAsNonce)
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -107,6 +127,9 @@ func (b *backend) pathPolicyRead(
 	if p.Derived {
 		resp.Data["kdf_mode"] = p.KDFMode
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption
+		if p.ContextAsNonce != nil {
+			resp.Data["context_as_nonce"] = *p.ContextAsNonce
+		}
 	}
 
 	retKeys := map[string]int64{}

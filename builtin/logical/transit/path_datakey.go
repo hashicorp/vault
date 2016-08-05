@@ -100,7 +100,7 @@ func (b *backend) pathDatakeyWrite(
 		return nil, err
 	}
 
-	ciphertext, err := p.Encrypt(context, base64.StdEncoding.EncodeToString(newKey))
+	ciphertext, err := p.Encrypt(context, nil, base64.StdEncoding.EncodeToString(newKey))
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
