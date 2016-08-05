@@ -262,7 +262,7 @@ func (b *backend) pathCASignIntermediate(
 		}
 	}
 
-	if len(resp.Data["issuing_ca_chain"].(string)) == 0 {
+	if s, ok := resp.Data["issuing_ca_chain"].(string); ok && len(s) == 0 {
 		delete(resp.Data, "issuing_ca_chain")
 	}
 
