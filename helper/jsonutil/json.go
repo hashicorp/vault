@@ -2,14 +2,12 @@ package jsonutil
 
 import (
 	"bytes"
-	"compress/lzw"
 	"encoding/json"
 	"fmt"
 	"io"
-)
+	"log"
 
-const (
-	canaryByte byte = 'Z'
+	"github.com/hashicorp/vault/helper/compressutil"
 )
 
 // Encodes/Marshals the given object into JSON
@@ -67,37 +65,24 @@ func DecompressAndDecodeJSON(data []byte, out interface{}) error {
 		return fmt.Errorf("output parameter 'out' is nil")
 	}
 
-	// Read the first byte out
-	bytesReader := bytes.NewReader(data)
-	firstByte, err := bytesReader.ReadByte()
+	decompressedBytes, unencrypted, err := compressutil.Decompress(data, compressutil.CompressionCanaryJSON)
 	if err != nil {
-		return fmt.Errorf("failed to find the canary in the compressed input")
+		return fmt.Errorf("failed to decompress JSON: err: %v", err)
 	}
 
-	// If the first byte doesn't match the canaryByte, it means that the
-	// content was not compressed in the first place. Try JSON decoding it.
-	if canaryByte != firstByte {
+	// If the data supplied failed to contain the JSON compression canary,
+	// it can be inferred that it was not compressed in the first place.
+	// Try to JSON decode it.
+	if unencrypted {
 		return DecodeJSON(data, out)
-	} else {
-		// If the first byte matches the canaryByte, remove the canary
-		// byte and try to decompress the data before JSON decoding it.
-		data = data[1:]
 	}
 
-	// Create a reader to read out the compressed data
-	reader := lzw.NewReader(bytes.NewReader(data), lzw.LSB, 8)
-
-	// Close the io.ReadCloser
-	defer reader.Close()
-
-	// Read all the compressed data out into a buffer
-	var jsonBuf bytes.Buffer
-	if _, err := io.Copy(&jsonBuf, reader); err != nil {
-		return err
+	if decompressedBytes == nil || len(decompressedBytes) == 0 {
+		return fmt.Errorf("decompressed data being decoded is invalid")
 	}
 
 	// JSON decode the read out bytes
-	return DecodeJSON(jsonBuf.Bytes(), out)
+	return DecodeJSON(decompressedBytes, out)
 }
 
 // EncodeJSONAndCompress encodes the given input into JSON and compresses the
@@ -114,24 +99,7 @@ func EncodeJSONAndCompress(in interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("EncodeJSONAndCompress: len(encodedBytes): %d\n", len(encodedBytes))
 
-	// Create a buffer and place the canary as its first byte
-	var buf bytes.Buffer
-	buf.Write([]byte{canaryByte})
-
-	// Create writer to compress the JSON encoded bytes
-	writer := lzw.NewWriter(&buf, lzw.LSB, 8)
-
-	// Compress the JSON bytes
-	if _, err := writer.Write(encodedBytes); err != nil {
-		return nil, fmt.Errorf("failed to compress JSON string; err: %v", err)
-	}
-
-	// Close the io.WriteCloser
-	if err := writer.Close(); err != nil {
-		return nil, err
-	}
-
-	// Return the compressed bytes with canary byte at the start
-	return buf.Bytes(), nil
+	return compressutil.Compress(encodedBytes, compressutil.CompressionCanaryJSON)
 }
