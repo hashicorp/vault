@@ -1242,7 +1242,7 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	// Prevent attempts to creat a root token without an actual root token as parent
-	if strutil.StrListContains(data.Policies, "root") && strutil.StrListContains(parent.Policies, "root") {
+	if strutil.StrListContains(data.Policies, "root") && !strutil.StrListContains(parent.Policies, "root") {
 		return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
 	}
 
