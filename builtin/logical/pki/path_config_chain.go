@@ -3,21 +3,17 @@ package pki
 import (
 	"fmt"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
-
-type caChainConfig struct {
-	CAChain string `json:"ca_chain" mapstructure:"ca_chain" structs:"ca_chain"`
-}
 
 func pathConfigChain(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/chain",
 		Fields: map[string]*framework.FieldSchema{
-			"ca_chain": &framework.FieldSchema{
+			"pem_bundle": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `PEM-format, concatenated certificates
 for the CA trust chain.`,
@@ -37,35 +33,50 @@ for the CA trust chain.`,
 
 func (b *backend) pathChainWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	caChain := data.Get("ca_chain").(string)
+	pemBundle := data.Get("pem_bundle").(string)
 
-	cb := &certutil.CertBundle{}
-	entry, err := req.Storage.Get("config/ca_bundle")
+	caBundle, err := fetchCABundle(req)
 	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return logical.ErrorResponse("could not find any existing ca entry"), nil
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch CA bundle: %v", err)}
 	}
 
-	cb.IssuingCAChain = caChain
-
-	err = entry.DecodeJSON(cb)
+	parsedBundle, err := caBundle.ToParsedCertBundle()
 	if err != nil {
-		return nil, err
+		return nil, errutil.InternalError{Err: err.Error()}
 	}
 
-	parsedCB, err := cb.ToParsedCertBundle()
+	parsedCAChain, err := certutil.ParsePEMBundle(pemBundle)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing cert bundle: %s", err)
+		switch err.(type) {
+		case errutil.InternalError:
+			return nil, err
+		default:
+			return logical.ErrorResponse(err.Error()), nil
+		}
 	}
 
-	cb, err = parsedCB.ToCertBundle()
+	for i := range parsedCAChain.CertificatePath {
+		switch i {
+		case 0:
+			parsedBundle.IssuingCA = parsedCAChain.CertificatePath[0]
+			parsedBundle.IssuingCABytes = parsedCAChain.CertificatePathBytes[0]
+		default:
+			parsedBundle.IssuingCAChain = parsedCAChain.CertificatePath[1:]
+			parsedBundle.IssuingCAChainBytes = parsedCAChain.CertificatePathBytes[1:]
+			break
+		}
+	}
+
+	if err := parsedBundle.Verify(); err != nil {
+		return nil, fmt.Errorf("verification of parsed bundle failed: %s", err)
+	}
+
+	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw values into cert bundle: %s", err)
 	}
 
-	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
+	entry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
 	if err != nil {
 		return nil, err
 	}
@@ -77,39 +88,25 @@ func (b *backend) pathChainWrite(
 	return nil, err
 }
 
-func getCAChain(req *logical.Request) (*caChainConfig, error) {
-	entry, err := req.Storage.Get("config/ca_bundle")
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	cb := &certutil.CertBundle{}
-	if err := entry.DecodeJSON(&cb); err != nil {
-		return nil, err
-	}
-
-	chainConfig := &caChainConfig{
-		CAChain: cb.IssuingCAChain,
-	}
-
-	return chainConfig, nil
-}
-
 func (b *backend) pathChainRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := getCAChain(req)
+	caBundle, err := fetchCABundle(req)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
+	if caBundle == nil {
 		return nil, nil
 	}
 
 	resp := &logical.Response{
-		Data: structs.New(entry).Map(),
+		Data: map[string]interface{}{
+			"issuing_ca":       caBundle.IssuingCA,
+			"issuing_ca_chain": caBundle.IssuingCAChain,
+		},
+	}
+
+	if len(resp.Data["issuing_ca_chain"].(string)) == 0 {
+		delete(resp.Data, "issuing_ca_chain")
 	}
 
 	return resp, nil
@@ -117,23 +114,18 @@ func (b *backend) pathChainRead(
 
 func (b *backend) pathChainDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	cb := &certutil.CertBundle{}
-	entry, err := req.Storage.Get("config/ca_bundle")
+	caBundle, err := fetchCABundle(req)
 	if err != nil {
 		return nil, err
 	}
-	if entry == nil {
-		return logical.ErrorResponse("could not find any existing entry with a private key"), nil
+	if caBundle == nil {
+		return nil, nil
 	}
 
-	err = entry.DecodeJSON(cb)
-	if err != nil {
-		return nil, err
-	}
+	caBundle.IssuingCA = ""
+	caBundle.IssuingCAChain = ""
 
-	cb.IssuingCAChain = ""
-
-	entry, err = logical.StorageEntryJSON("config/ca_bundle", cb)
+	entry, err := logical.StorageEntryJSON("config/ca_bundle", caBundle)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +144,7 @@ Configure the certificate authority trust chain.
 const pathConfigChainHelpDesc = `
 This endpoint allows configuration of the trust chain for the certificate
 authority.  By populating the trust chain, this information will be returned
-when issuing certificates and will be written when requesting pem bundles.
+when issuing certificates and will be returned when requesting pem bundles.
 
 Multiple certificates can be concatenated into a single file in order from the
 issuing certificate authority.  Because certificate validation requires that

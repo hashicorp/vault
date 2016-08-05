@@ -7,6 +7,7 @@
 package certutil
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
@@ -72,7 +73,7 @@ type CertBundle struct {
 	PrivateKeyType PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
 	Certificate    string         `json:"certificate" structs:"certificate" mapstructure:"certificate"`
 	IssuingCA      string         `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
-	IssuingCAChain string         `json:"issuing_ca_chain,omitempty" structs:"issuing_ca_chain" mapstructure:"issuing_ca_chain"`
+	IssuingCAChain string         `json:"issuing_ca_chain,omitempty" structs:"issuing_ca_chain,omitempty" mapstructure:"issuing_ca_chain"`
 	PrivateKey     string         `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 	SerialNumber   string         `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
@@ -80,17 +81,19 @@ type CertBundle struct {
 // ParsedCertBundle contains a key type, a DER-encoded private key,
 // and a DER-encoded certificate
 type ParsedCertBundle struct {
-	PrivateKeyType      PrivateKeyType
-	PrivateKeyFormat    BlockType
-	PrivateKeyBytes     []byte
-	PrivateKey          crypto.Signer
-	IssuingCAChainBytes [][]byte
-	IssuingCAChain      []*x509.Certificate
-	IssuingCABytes      []byte
-	IssuingCA           *x509.Certificate
-	CertificateBytes    []byte
-	Certificate         *x509.Certificate
-	SerialNumber        *big.Int
+	PrivateKeyType       PrivateKeyType
+	PrivateKeyFormat     BlockType
+	PrivateKeyBytes      []byte
+	PrivateKey           crypto.Signer
+	IssuingCAChainBytes  [][]byte
+	IssuingCAChain       []*x509.Certificate
+	IssuingCABytes       []byte
+	IssuingCA            *x509.Certificate
+	CertificateBytes     []byte
+	Certificate          *x509.Certificate
+	CertificatePath      []*x509.Certificate
+	CertificatePathBytes [][]byte
+	SerialNumber         *big.Int
 }
 
 // CSRBundle contains a key type, a PEM-encoded private key,
@@ -183,6 +186,8 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		if err != nil {
 			return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle"}
 		}
+		result.CertificatePath = append(result.CertificatePath, result.Certificate)
+		result.CertificatePathBytes = append(result.CertificatePathBytes, result.CertificateBytes)
 	}
 
 	if len(c.IssuingCA) > 0 {
@@ -195,6 +200,8 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		if err != nil {
 			return nil, errutil.UserError{fmt.Sprintf("Error parsing CA certificate: %s", err)}
 		}
+		result.CertificatePath = append(result.CertificatePath, result.IssuingCA)
+		result.CertificatePathBytes = append(result.CertificatePathBytes, result.IssuingCABytes)
 	}
 
 	result.SerialNumber = result.Certificate.SerialNumber
@@ -213,6 +220,8 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 			}
 			result.IssuingCAChain = append(result.IssuingCAChain, chainCert)
 		}
+		result.CertificatePath = append(result.CertificatePath, result.IssuingCAChain...)
+		result.CertificatePathBytes = append(result.CertificatePathBytes, result.IssuingCAChainBytes...)
 	}
 
 	// Populate if it isn't there already
@@ -273,6 +282,50 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 	}
 
 	return result, nil
+}
+
+// Verify checks if the parsed bundle is valid.  It validates the public
+// key of the certificate to the private key and checks the certficate trust
+// chain for path issues.
+func (p *ParsedCertBundle) Verify() error {
+	// If private key exists, check if it matches the public key of cert
+	if p.PrivateKey != nil && p.Certificate != nil {
+		equal, err := ComparePublicKeys(p.Certificate.PublicKey, p.PrivateKey.Public())
+		if err != nil {
+			return fmt.Errorf("could not compare public and private keys: %s", err)
+		}
+		if !equal {
+			return fmt.Errorf("Public key of certificate does not match private key")
+		}
+	}
+
+	if p.IssuingCA != nil {
+		if !p.IssuingCA.IsCA {
+			return fmt.Errorf("issuing ca is not a certificate authority")
+		}
+		if !bytes.Equal(p.Certificate.AuthorityKeyId, p.IssuingCA.SubjectKeyId) {
+			return fmt.Errorf("issuing certificate authority id does not match the certificate")
+		}
+
+		for i, caCert := range p.IssuingCAChain {
+			if !caCert.IsCA {
+				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
+			}
+
+			switch i {
+			case 0:
+				if !bytes.Equal(p.IssuingCA.AuthorityKeyId, caCert.SubjectKeyId) {
+					return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect", i+1)
+				}
+			default:
+				if !bytes.Equal(p.IssuingCAChain[i-1].AuthorityKeyId, caCert.SubjectKeyId) {
+					return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect", i+1)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // GetSigner returns a crypto.Signer corresponding to the private key

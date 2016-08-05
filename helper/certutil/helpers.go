@@ -100,11 +100,6 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 	return nil, errutil.UserError{"unable to parse out of either secret data or a secret object"}
 }
 
-type certificateBlock struct {
-	Certificate   *x509.Certificate
-	PemBlockBytes []byte
-}
-
 // ParsePEMBundle takes a string of concatenated PEM-format certificate
 // and private key values and decodes/parses them, checking validity along
 // the way. There must be at max two certificates (a certificate and its
@@ -118,7 +113,6 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 
 	pemBytes := []byte(pemBundle)
 	var pemBlock *pem.Block
-	var certificateChain []*certificateBlock
 	parsedBundle := &ParsedCertBundle{}
 
 	for len(pemBytes) > 0 {
@@ -161,49 +155,30 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
-			certBlock := &certificateBlock{
-				Certificate:   certificates[0],
-				PemBlockBytes: pemBlock.Bytes,
-			}
-			certificateChain = append(certificateChain, certBlock)
+			parsedBundle.CertificatePath = append(parsedBundle.CertificatePath, certificates[0])
+			parsedBundle.CertificatePathBytes = append(parsedBundle.CertificatePathBytes, pemBlock.Bytes)
 		}
 	}
 
-	for i, cert := range certificateChain {
+	for i := range parsedBundle.CertificatePath {
+		cert := parsedBundle.CertificatePath[i]
+		certBytes := parsedBundle.CertificatePathBytes[i]
+
 		switch i {
 		case 0:
-			// If private key exists, check if it matches the public key of cert
-			if len(parsedBundle.PrivateKeyBytes) > 0 && parsedBundle.PrivateKeyType != "" {
-				equal, err := ComparePublicKeys(cert.Certificate.PublicKey, parsedBundle.PrivateKey.Public())
-				if err != nil {
-					return nil, fmt.Errorf("Unable to compare public and private keys: %s", err)
-				}
-				if !equal {
-					return nil, errutil.UserError{"Public key of certificate does not match private key"}
-				}
-			}
-
-			parsedBundle.Certificate = cert.Certificate
-			parsedBundle.CertificateBytes = cert.PemBlockBytes
+			parsedBundle.Certificate = cert
+			parsedBundle.CertificateBytes = certBytes
 		case 1:
-			if !bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
-				return nil, fmt.Errorf("certificate authority id does not match the certificate")
-			}
-			parsedBundle.IssuingCA = cert.Certificate
-			parsedBundle.IssuingCABytes = cert.PemBlockBytes
-		case 2:
-			if !bytes.Equal(parsedBundle.IssuingCA.AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
-				return nil, fmt.Errorf("certificate authority id does not match the certificate")
-			}
-			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert.Certificate)
-			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, cert.PemBlockBytes)
+			parsedBundle.IssuingCA = cert
+			parsedBundle.IssuingCABytes = certBytes
 		default:
-			if !bytes.Equal(parsedBundle.IssuingCAChain[i-3].AuthorityKeyId, cert.Certificate.SubjectKeyId) || !cert.Certificate.IsCA {
-				return nil, fmt.Errorf("certificate authority id does not match the certificate")
-			}
-			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert.Certificate)
-			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, cert.PemBlockBytes)
+			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert)
+			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, certBytes)
 		}
+	}
+
+	if err := parsedBundle.Verify(); err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf("verification of parsed bundle failed: %s", err)}
 	}
 
 	return parsedBundle, nil

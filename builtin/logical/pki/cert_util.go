@@ -113,9 +113,7 @@ func validateKeyTypeLength(keyType string, keyBits int) *logical.Response {
 	return nil
 }
 
-// Fetches the CA info. Unlike other certificates, the CA info is stored
-// in the backend as a CertBundle, because we are storing its private key
-func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
+func fetchCABundle(req *logical.Request) (*certutil.CertBundle, error) {
 	bundleEntry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
@@ -124,12 +122,23 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 		return nil, errutil.UserError{Err: "backend must be configured with a CA certificate/key"}
 	}
 
-	var bundle certutil.CertBundle
-	if err := bundleEntry.DecodeJSON(&bundle); err != nil {
+	bundle := &certutil.CertBundle{}
+	if err := bundleEntry.DecodeJSON(bundle); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode local CA certificate/key: %v", err)}
 	}
 
-	parsedBundle, err := bundle.ToParsedCertBundle()
+	return bundle, nil
+}
+
+// Fetches the CA info. Unlike other certificates, the CA info is stored
+// in the backend as a CertBundle, because we are storing its private key
+func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
+	caBundle, err := fetchCABundle(req)
+	if err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch CA bundle: %v", err)}
+	}
+
+	parsedBundle, err := caBundle.ToParsedCertBundle()
 	if err != nil {
 		return nil, errutil.InternalError{Err: err.Error()}
 	}

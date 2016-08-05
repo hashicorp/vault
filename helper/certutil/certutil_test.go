@@ -417,12 +417,6 @@ func refreshRSACertBundle() *CertBundle {
 	}
 }
 
-func refreshRSACertOnly() *CertBundle {
-	return &CertBundle{
-		Certificate: certRSAPem,
-	}
-}
-
 func refreshRSACertBundleWithChain() *CertBundle {
 	ret := refreshRSACertBundle()
 	ret.IssuingCAChain = issuingCaChainPem

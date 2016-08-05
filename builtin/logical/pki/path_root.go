@@ -227,6 +227,10 @@ func (b *backend) pathCASignIntermediate(
 		}
 	}
 
+	if err := parsedBundle.Verify(); err != nil {
+		return nil, fmt.Errorf("verification of parsed bundle failed: %s", err)
+	}
+
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
@@ -243,14 +247,23 @@ func (b *backend) pathCASignIntermediate(
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
 		resp.Data["issuing_ca"] = cb.IssuingCA
+		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
 
 	case "pem_bundle":
-		resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA)
+		resp.Data["certificate"] = cb.ToPEMBundle()
 		resp.Data["issuing_ca"] = cb.IssuingCA
+		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
 
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+		for _, cert := range parsedBundle.IssuingCAChainBytes {
+			resp.Data["issuing_ca_chain"] = fmt.Sprintf("%s\n%s", resp.Data["issuing_ca_chain"], base64.StdEncoding.EncodeToString(cert))
+		}
+	}
+
+	if len(resp.Data["issuing_ca_chain"].(string)) == 0 {
+		delete(resp.Data, "issuing_ca_chain")
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
