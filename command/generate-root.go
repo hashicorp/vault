@@ -286,7 +286,7 @@ func (c *GenerateRootCommand) dumpStatus(status *api.GenerateRootStatusResponse)
 }
 
 func (c *GenerateRootCommand) Synopsis() string {
-	return "Promotes a token to a root token"
+	return "Generates a new root token"
 }
 
 func (c *GenerateRootCommand) Help() string {
