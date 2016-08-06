@@ -847,11 +847,11 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "sudoClient"
 	req.MountPoint = "auth/token/"
-	req.Data["policies"] = []string{"create", "root"}
+	req.Data["policies"] = []string{"root"}
 
 	resp, err := ts.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v; resp: %v", err, resp)
+		t.Fatalf("err: %v; resp: %#v", err, resp)
 	}
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("expected a response")
@@ -869,7 +869,13 @@ func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
 
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err: %v; resp: %#v", err, resp)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatalf("failed to create a root token using another root token")
+	}
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"root"}) {
+		t.Fatalf("bad: policies: expected: root; actual: %s", resp.Auth.Policies)
 	}
 }
 
