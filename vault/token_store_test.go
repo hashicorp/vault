@@ -846,14 +846,15 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = "sudoClient"
+	req.MountPoint = "auth/token/"
 	req.Data["policies"] = []string{"create", "root"}
 
 	resp, err := ts.HandleRequest(req)
-	if resp == nil || resp.Data == nil {
-		t.Fatalf("err: empty response")
-	}
 	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v %v", err, resp)
+		t.Fatalf("err: %v; resp: %v", err, resp)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("expected a response")
 	}
 	if resp.Data["error"].(string) != "root tokens may not be created without parent token being root" {
 		t.Fatalf("bad: %#v", resp)
