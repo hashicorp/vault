@@ -114,6 +114,7 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	pemBytes := []byte(pemBundle)
 	var pemBlock *pem.Block
 	parsedBundle := &ParsedCertBundle{}
+	var certPath []*CertBlock
 
 	for len(pemBytes) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
@@ -155,25 +156,24 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
-			parsedBundle.CertificatePath = append(parsedBundle.CertificatePath, certificates[0])
-			parsedBundle.CertificatePathBytes = append(parsedBundle.CertificatePathBytes, pemBlock.Bytes)
+			certPath = append(certPath, &CertBlock{
+				Certificate: certificates[0],
+				Bytes:       pemBlock.Bytes,
+			})
 		}
 	}
 
-	for i := range parsedBundle.CertificatePath {
-		cert := parsedBundle.CertificatePath[i]
-		certBytes := parsedBundle.CertificatePathBytes[i]
-
+	for i, certBlock := range certPath {
 		switch i {
 		case 0:
-			parsedBundle.Certificate = cert
-			parsedBundle.CertificateBytes = certBytes
+			parsedBundle.Certificate = certBlock.Certificate
+			parsedBundle.CertificateBytes = certBlock.Bytes
 		case 1:
-			parsedBundle.IssuingCA = cert
-			parsedBundle.IssuingCABytes = certBytes
+			parsedBundle.IssuingCA = certBlock.Certificate
+			parsedBundle.IssuingCABytes = certBlock.Bytes
 		default:
-			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, cert)
-			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, certBytes)
+			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, certBlock.Certificate)
+			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, certBlock.Bytes)
 		}
 	}
 

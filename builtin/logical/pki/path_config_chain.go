@@ -35,16 +35,6 @@ func (b *backend) pathChainWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	pemBundle := data.Get("pem_bundle").(string)
 
-	caBundle, err := fetchCABundle(req)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch CA bundle: %v", err)}
-	}
-
-	parsedBundle, err := caBundle.ToParsedCertBundle()
-	if err != nil {
-		return nil, errutil.InternalError{Err: err.Error()}
-	}
-
 	parsedCAChain, err := certutil.ParsePEMBundle(pemBundle)
 	if err != nil {
 		switch err.(type) {
@@ -55,11 +45,26 @@ func (b *backend) pathChainWrite(
 		}
 	}
 
-	parsedBundle.IssuingCA = parsedCAChain.CertificatePath[0]
-	parsedBundle.IssuingCABytes = parsedCAChain.CertificatePathBytes[0]
-	if len(parsedCAChain.CertificatePath) > 1 {
-		parsedBundle.IssuingCAChain = parsedCAChain.CertificatePath[1:]
-		parsedBundle.IssuingCAChainBytes = parsedCAChain.CertificatePathBytes[1:]
+	caChain, err := parsedCAChain.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("error converting raw values into cert bundle: %s", err)
+	}
+
+	caBundle, err := fetchCABundle(req)
+	if err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch CA bundle: %v", err)}
+	}
+
+	caBundle.IssuingCA = caChain.Certificate
+	if len(caChain.IssuingCAChain) > 0 {
+		caBundle.IssuingCAChain = fmt.Sprintf("%s/n%s", caChain.IssuingCA, caChain.IssuingCAChain)
+	} else {
+		caBundle.IssuingCAChain = caChain.IssuingCA
+	}
+
+	parsedBundle, err := caBundle.ToParsedCertBundle()
+	if err != nil {
+		return nil, errutil.InternalError{Err: err.Error()}
 	}
 
 	if err := parsedBundle.Verify(); err != nil {
