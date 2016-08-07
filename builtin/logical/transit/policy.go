@@ -72,7 +72,6 @@ type Policy struct {
 	Derived              bool   `json:"derived"`
 	KDFMode              string `json:"kdf_mode"`
 	ConvergentEncryption bool   `json:"convergent_encryption"`
-	ContextAsNonce       *bool  `json:"context_as_nonce"`
 
 	// The minimum version of the key allowed to be used
 	// for decryption
@@ -260,10 +259,6 @@ func (p *Policy) needsUpgrade() bool {
 		return true
 	}
 
-	if p.ConvergentEncryption && p.ContextAsNonce == nil {
-		return true
-	}
-
 	return false
 }
 
@@ -290,14 +285,6 @@ func (p *Policy) upgrade(storage logical.Storage) error {
 
 	// On first load after an upgrade, copy keys to the archive
 	if p.ArchiveVersion == 0 {
-		persistNeeded = true
-	}
-
-	// Originally the context-as-nonce mode was the only mode, so keep that
-	// behavior if convergent encryption is already in use
-	if p.ConvergentEncryption && p.ContextAsNonce == nil {
-		p.ContextAsNonce = new(bool)
-		*p.ContextAsNonce = true
 		persistNeeded = true
 	}
 
@@ -377,17 +364,9 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	}
 
 	if p.ConvergentEncryption {
-
-		if *p.ContextAsNonce {
-			if len(context) != gcm.NonceSize() {
-				return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded context must be %d bytes long when using convergent encryption with context-as-nonce with this key", gcm.NonceSize())}
-			}
-			nonce = context
-
-		} else if len(nonce) != gcm.NonceSize() {
+		if len(nonce) != gcm.NonceSize() {
 			return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
 		}
-
 	} else {
 		// Compute random nonce
 		nonce = make([]byte, gcm.NonceSize())
@@ -421,7 +400,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: "invalid ciphertext: no prefix"}
 	}
 
-	if p.ConvergentEncryption && !*p.ContextAsNonce && (nonce == nil || len(nonce) == 0) {
+	if p.ConvergentEncryption && (nonce == nil || len(nonce) == 0) {
 		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
 	}
 
@@ -483,9 +462,6 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	// Extract the nonce and ciphertext
 	var ciphertext []byte
 	if p.ConvergentEncryption {
-		if *p.ContextAsNonce {
-			nonce = context
-		}
 		ciphertext = decoded
 	} else {
 		nonce = decoded[:gcm.NonceSize()]

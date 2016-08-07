@@ -30,7 +30,7 @@ func (b *backend) pathDecrypt() *framework.Path {
 
 			"nonce": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Nonce for when convergent encryption is used and the context is not used as the nonce",
+				Description: "Nonce for when convergent encryption is used",
 			},
 		},
 

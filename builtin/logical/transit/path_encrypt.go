@@ -31,7 +31,7 @@ func (b *backend) pathEncrypt() *framework.Path {
 
 			"nonce": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Nonce for when convergent encryption is used and the context is not used as the nonce",
+				Description: "Nonce for when convergent encryption is used",
 			},
 		},
 
@@ -95,7 +95,7 @@ func (b *backend) pathEncryptWrite(
 	var lock *sync.RWMutex
 	var upserted bool
 	if req.Operation == logical.CreateOperation {
-		p, lock, upserted, err = b.lm.GetPolicyUpsert(req.Storage, name, len(context) != 0, false, false)
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(req.Storage, name, len(context) != 0, false)
 	} else {
 		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
 	}
