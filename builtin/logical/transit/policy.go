@@ -370,7 +370,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 		}
 	} else {
 		// Compute random nonce
-		nonce, err := uuid.GenerateRandomBytes(gcm.NonceSize())
+		nonce, err = uuid.GenerateRandomBytes(gcm.NonceSize())
 		if err != nil {
 			return "", errutil.InternalError{Err: err.Error()}
 		}
