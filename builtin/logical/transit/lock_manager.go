@@ -132,7 +132,7 @@ func (lm *lockManager) GetPolicyExclusive(storage logical.Storage, name string) 
 // Get the policy with a read lock; if it returns that an exclusive lock is
 // needed, retry. If successful, call one more time to get a read lock and
 // return the value.
-func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, derived bool, convergent bool) (*Policy, *sync.RWMutex, bool, error) {
+func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, derived, convergent bool) (*Policy, *sync.RWMutex, bool, error) {
 	p, lock, _, err := lm.getPolicyCommon(storage, name, true, derived, convergent, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {

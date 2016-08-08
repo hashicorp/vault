@@ -18,23 +18,25 @@ func (b *backend) pathKeys() *framework.Path {
 			},
 
 			"derived": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Description: "Enables key derivation mode. This allows for per-transaction unique keys",
+				Type: framework.TypeBool,
+				Description: `Enables key derivation mode. This
+allows for per-transaction unique keys.`,
 			},
 
 			"convergent_encryption": &framework.FieldSchema{
 				Type: framework.TypeBool,
-				Description: `Whether to use convergent encryption.
+				Description: `Whether to support convergent encryption.
 This is only supported when using a key with
 key derivation enabled and will require all
-context values to be 96 bits (12 bytes) when
-base64-decoded. This mode ensures that when
-the same context is supplied, the same
-ciphertext is emitted from the encryption
-function. It is *very important* when using
-this mode that you ensure that all contexts
-are *globally unique*. Failing to do so will
-severely impact the security of the key.`,
+requests to carry both a context and 96-bit
+(12-byte) nonce. The given nonce will be used
+in place of a randomly generated nonce. As a
+result, when the same context and nonce are
+supplied, the same ciphertext is generated. It
+is *very important* when using this mode that
+you ensure that all nonces are unique for a
+given context. Failing to do so will severely
+impact the ciphertext's security.`,
 			},
 		},
 

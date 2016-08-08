@@ -28,6 +28,11 @@ func (b *backend) pathEncrypt() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Context for key derivation. Required for derived keys.",
 			},
+
+			"nonce": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Nonce for when convergent encryption is used",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -63,14 +68,25 @@ func (b *backend) pathEncryptWrite(
 		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
 	}
 
+	var err error
+
 	// Decode the context if any
 	contextRaw := d.Get("context").(string)
 	var context []byte
-	var err error
 	if len(contextRaw) != 0 {
 		context, err = base64.StdEncoding.DecodeString(contextRaw)
 		if err != nil {
 			return logical.ErrorResponse("failed to decode context as base64"), logical.ErrInvalidRequest
+		}
+	}
+
+	// Decode the nonce if any
+	nonceRaw := d.Get("nonce").(string)
+	var nonce []byte
+	if len(nonceRaw) != 0 {
+		nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to decode nonce as base64"), logical.ErrInvalidRequest
 		}
 	}
 
@@ -93,7 +109,7 @@ func (b *backend) pathEncryptWrite(
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	ciphertext, err := p.Encrypt(context, value)
+	ciphertext, err := p.Encrypt(context, nonce, value)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

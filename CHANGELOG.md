@@ -29,9 +29,10 @@ FEATURES:
    deprecates App-ID. [GH-1426]
  * **Convergent Encryption in `Transit`**: The `transit` backend now supports a
    convergent encryption mode where the same plaintext will produce the same
-   ciphertext. Although very useful in some situations, this has security
-   implications, which are mostly mitigated by requiring the use of key
-   derivation when convergent encryption is enabled. See [the `transit`
+   ciphertext. Although very useful in some situations, this has potential
+   security implications, which are mostly mitigated by requiring the use of
+   key derivation when convergent encryption is enabled. See [the `transit`
+   backend
    documentation](https://www.vaultproject.io/docs/secrets/transit/index.html)
    for more details. [GH-1537]
  * **Improved LDAP Group Filters**: The `ldap` auth backend now uses templates

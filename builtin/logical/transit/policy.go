@@ -307,10 +307,6 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 		return nil, errutil.InternalError{Err: "unable to access the key; no key versions found"}
 	}
 
-	if p.LatestVersion == 0 {
-		return nil, errutil.InternalError{Err: "unable to access the key; no key versions found"}
-	}
-
 	if ver <= 0 || ver > p.LatestVersion {
 		return nil, errutil.UserError{Err: "invalid key version"}
 	}
@@ -335,7 +331,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	}
 }
 
-func (p *Policy) Encrypt(context []byte, value string) (string, error) {
+func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	// Decode the plaintext value
 	plaintext, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
@@ -367,15 +363,12 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 		return "", errutil.InternalError{Err: err.Error()}
 	}
 
-	if p.ConvergentEncryption && len(context) != gcm.NonceSize() {
-		return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded context must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
-	}
-
-	// Compute random nonce
-	var nonce []byte
 	if p.ConvergentEncryption {
-		nonce = context
+		if len(nonce) != gcm.NonceSize() {
+			return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
+		}
 	} else {
+		// Compute random nonce
 		nonce = make([]byte, gcm.NonceSize())
 		_, err = rand.Read(nonce)
 		if err != nil {
@@ -387,7 +380,10 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 	out := gcm.Seal(nil, nonce, plaintext, nil)
 
 	// Place the encrypted data after the nonce
-	full := append(nonce, out...)
+	full := out
+	if !p.ConvergentEncryption {
+		full = append(nonce, out...)
+	}
 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(full)
@@ -398,10 +394,14 @@ func (p *Policy) Encrypt(context []byte, value string) (string, error) {
 	return encoded, nil
 }
 
-func (p *Policy) Decrypt(context []byte, value string) (string, error) {
+func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	// Verify the prefix
 	if !strings.HasPrefix(value, "vault:v") {
 		return "", errutil.UserError{Err: "invalid ciphertext: no prefix"}
+	}
+
+	if p.ConvergentEncryption && (nonce == nil || len(nonce) == 0) {
+		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
 	}
 
 	splitVerCiphertext := strings.SplitN(strings.TrimPrefix(value, "vault:v"), ":", 2)
@@ -460,8 +460,13 @@ func (p *Policy) Decrypt(context []byte, value string) (string, error) {
 	}
 
 	// Extract the nonce and ciphertext
-	nonce := decoded[:gcm.NonceSize()]
-	ciphertext := decoded[gcm.NonceSize():]
+	var ciphertext []byte
+	if p.ConvergentEncryption {
+		ciphertext = decoded
+	} else {
+		nonce = decoded[:gcm.NonceSize()]
+		ciphertext = decoded[gcm.NonceSize():]
+	}
 
 	// Verify and Decrypt
 	plain, err := gcm.Open(nil, nonce, ciphertext, nil)

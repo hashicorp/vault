@@ -33,7 +33,7 @@ data's attack surface.
 Key derivation is supported, which allows the same key to be used for multiple
 purposes by deriving a new key based on a user-supplied context value. In this
 mode, convergent encryption can optionally be supported, which allows the same
-context and plaintext to produce the same ciphertext.
+input values to produce the same ciphertext.
 
 The backend also supports key rotation, which allows a new version of the named
 key to be generated. All data encrypted with the key will use the newest
@@ -156,12 +156,16 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param-flags">optional</span>
         If set, the key will support convergent encryption, where the same
         plaintext creates the same ciphertext. This requires _derived_ to be
-        set to `true`. When enabled, the context value must be exactly 12 bytes
-        (96 bits) and will both be used to derive the key and as the nonce for
-        the encryption operation. Note that while this is useful for particular
-        situations, it also has security implications. In particular, you must
-        ensure that you do **not** use the same context value for more than one
-        plaintext value. Defaults to false.
+        set to `true`. When enabled, each
+        encryption(/decryption/rewrap/datakey) operation will require a `nonce`
+        value to be specified. Note that while this is useful for particular
+        situations, all nonce values used with a given context value **must be
+        unique** or it will compromise the security of your key. A common way
+        to use this will be to generate a unique identifier for the given data
+        (for instance, a SHA-512 sum), then separate the bytes so that twelve
+        bytes are used as the nonce and the remaining as the context, ensuring
+        that all bits of unique identity are used as a part of the encryption
+        operation. Defaults to false.
       </li>
     </ul>
   </dd>
@@ -347,6 +351,15 @@ only encrypt or decrypt using the named keys they need access to.
         The key derivation context, provided as base64 encoded.
         Must be provided if derivation is enabled.
       </li>
+      <li>
+        <span class="param">nonce</span>
+        <span class="param-flags">optional</span>
+        The nonce value, provided as base64 encoded. Must be provided if
+        convergent encryption is enabled for this key. The value must be
+        exactly 96 bits (12 bytes) long and the user must ensure that for any
+        given context (and thus, any given encryption key) this nonce value is
+        **never reused**.
+      </li>
     </ul>
   </dd>
 
@@ -392,6 +405,12 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param-flags">optional</span>
         The key derivation context, provided as base64 encoded.
         Must be provided if derivation is enabled.
+      </li>
+      <li>
+        <span class="param">nonce</span>
+        <span class="param-flags">optional</span>
+        The nonce value used during encryption, provided as base64 encoded.
+        Must be provided if convergent encryption is enabled for this key.
       </li>
     </ul>
   </dd>
@@ -440,6 +459,12 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param-flags">optional</span>
         The key derivation context, provided as base64 encoded.
         Must be provided if derivation is enabled.
+      </li>
+      <li>
+        <span class="param">nonce</span>
+        <span class="param-flags">optional</span>
+        The nonce value used during encryption, provided as base64 encoded.
+        Must be provided if convergent encryption is enabled for this key.
       </li>
     </ul>
   </dd>
@@ -492,6 +517,15 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param-flags">optional</span>
         The key derivation context, provided as base64 encoded.
         Must be provided if derivation is enabled.
+      </li>
+      <li>
+        <span class="param">nonce</span>
+        <span class="param-flags">optional</span>
+        The nonce value, provided as base64 encoded. Must be provided if
+        convergent encryption is enabled for this key. The value must be
+        exactly 96 bits (12 bytes) long and the user must ensure that for any
+        given context (and thus, any given encryption key) this nonce value is
+        **never reused**.
       </li>
       <li>
         <span class="param">bits</span>
