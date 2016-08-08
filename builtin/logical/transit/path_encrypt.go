@@ -76,7 +76,7 @@ func (b *backend) pathEncryptWrite(
 	if len(contextRaw) != 0 {
 		context, err = base64.StdEncoding.DecodeString(contextRaw)
 		if err != nil {
-			return logical.ErrorResponse("failed to decode context as base64"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
 		}
 	}
 
@@ -86,7 +86,7 @@ func (b *backend) pathEncryptWrite(
 	if len(nonceRaw) != 0 {
 		nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
 		if err != nil {
-			return logical.ErrorResponse("failed to decode nonce as base64"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("failed to base64-decode nonce"), logical.ErrInvalidRequest
 		}
 	}
 

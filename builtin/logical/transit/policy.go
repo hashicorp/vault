@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/kdf"
@@ -335,7 +336,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	// Decode the plaintext value
 	plaintext, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
-		return "", errutil.UserError{Err: "failed to decode plaintext as base64"}
+		return "", errutil.UserError{Err: "failed to base64-decode plaintext"}
 	}
 
 	// Derive the key that should be used
@@ -369,8 +370,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 		}
 	} else {
 		// Compute random nonce
-		nonce = make([]byte, gcm.NonceSize())
-		_, err = rand.Read(nonce)
+		nonce, err := uuid.GenerateRandomBytes(gcm.NonceSize())
 		if err != nil {
 			return "", errutil.InternalError{Err: err.Error()}
 		}
