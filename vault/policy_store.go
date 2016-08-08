@@ -301,6 +301,10 @@ path "sys/capabilities-self" {
     capabilities = ["update"]
 }
 
+path "sys/renew" {
+    capabilities = ["update"]
+}
+
 path "sys/renew/*" {
     capabilities = ["update"]
 }

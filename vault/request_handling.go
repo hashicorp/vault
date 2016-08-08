@@ -174,7 +174,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 	// If there is a secret, we must register it with the expiration manager.
 	// We exclude renewal of a lease, since it does not need to be re-registered
-	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew/") {
+	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew") {
 		// Get the SystemView for the mount
 		sysView := c.router.MatchingSystemView(req.Path)
 		if sysView == nil {
