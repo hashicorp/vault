@@ -261,7 +261,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
+func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	// Create an audit trail of the request, auth is not available on login requests
@@ -269,6 +269,16 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
 			req.Path, err)
 		return nil, nil, ErrInternalError
+	}
+
+	// The token store uses authentication even when creating a new token,
+	// so it's handled in handleRequest. It should not be reached here.
+	if strings.HasPrefix(req.Path, "auth/token/") {
+		c.logger.Printf(
+			"[ERR] core: unexpected login request for token backend "+
+				"(request path: %s)", req.Path)
+		retErr = multierror.Append(retErr, ErrInternalError)
+		return nil, nil, retErr
 	}
 
 	// Route the request
@@ -296,6 +306,10 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	if resp != nil && resp.Auth != nil {
 		auth = resp.Auth
 
+		if strutil.StrListSubset(auth.Policies, []string{"root"}) {
+			return logical.ErrorResponse("authentication backends cannot create root tokens"), nil, logical.ErrInvalidRequest
+		}
+
 		// Determine the source of the login
 		source := c.router.MatchingMount(req.Path)
 		source = strings.TrimPrefix(source, credentialRoutePrefix)
@@ -311,8 +325,8 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			return nil, nil, ErrInternalError
 		}
 
-		// Set the default lease if non-provided, root tokens are exempt
-		if auth.TTL == 0 && !strutil.StrListContains(auth.Policies, "root") {
+		// Set the default lease if not provided
+		if auth.TTL == 0 {
 			auth.TTL = sysView.DefaultLeaseTTL()
 		}
 
@@ -331,30 +345,26 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			TTL:          auth.TTL,
 		}
 
-		if strutil.StrListSubset(te.Policies, []string{"root"}) {
-			te.Policies = []string{"root"}
-		} else {
-			// Use a map to filter out/prevent duplicates
-			policyMap := map[string]bool{}
-			for _, policy := range te.Policies {
-				if policy == "" {
-					// Don't allow a policy with no name, even though it is a valid
-					// slice member
-					continue
-				}
-				policyMap[policy] = true
+		// Use a map to filter out/prevent duplicates
+		policyMap := map[string]bool{}
+		for _, policy := range te.Policies {
+			if policy == "" {
+				// Don't allow a policy with no name, even though it is a valid
+				// slice member
+				continue
 			}
-
-			// Add the default policy
-			policyMap["default"] = true
-
-			te.Policies = []string{}
-			for k, _ := range policyMap {
-				te.Policies = append(te.Policies, k)
-			}
-
-			sort.Strings(te.Policies)
+			policyMap[policy] = true
 		}
+
+		// Add the default policy
+		policyMap["default"] = true
+
+		te.Policies = []string{}
+		for k, _ := range policyMap {
+			te.Policies = append(te.Policies, k)
+		}
+
+		sort.Strings(te.Policies)
 
 		if err := c.tokenStore.create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)

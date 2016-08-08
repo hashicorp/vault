@@ -49,7 +49,7 @@ The response will be in JSON. For example:
   "auth": {
     "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
     "policies": [
-      "root"
+      "admins"
     ],
     "metadata": {
       "username": "mitchellh"
@@ -85,12 +85,12 @@ Use `vault path-help` for more details.
 ```
 $ vault write auth/userpass/users/mitchellh \
     password=foo \
-    policies=root
+    policies=admins
 ...
 ```
 
 The above creates a new user "mitchellh" with the password "foo" that
-will be associated with the "root" policy. This is the only configuration
+will be associated with the "admins" policy. This is the only configuration
 necessary.
 
 ## API

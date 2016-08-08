@@ -1808,7 +1808,6 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 
 // Based on bug GH-203, attempt to disable a credential backend with leased secrets
 func TestCore_EnableDisableCred_WithLease(t *testing.T) {
-	// Create a badass credential backend that always logs in as armon
 	noopBack := &NoopBackend{
 		Login: []string{"login"},
 		Response: &logical.Response{
@@ -1817,9 +1816,23 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 			},
 		},
 	}
+
 	c, _, root := TestCoreUnsealed(t)
 	c.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return noopBack, nil
+	}
+
+	var secretWritingPolicy = `
+name = "admins"
+path "secret/*" {
+	capabilities = ["update", "create", "read"]
+}
+`
+
+	ps := c.policyStore
+	policy, _ := Parse(secretWritingPolicy)
+	if err := ps.SetPolicy(policy); err != nil {
+		t.Fatal(err)
 	}
 
 	// Enable the credential backend
@@ -1831,11 +1844,21 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Attempt to login
+	// Attempt to login -- should fail because we don't allow root to be returned
 	lreq := &logical.Request{
 		Path: "auth/foo/login",
 	}
 	lresp, err := c.HandleRequest(lreq)
+	if err == nil || lresp == nil || !lresp.IsError() {
+		t.Fatalf("expected error trying to auth and receive root policy")
+	}
+
+	// Fix and try again
+	noopBack.Response.Auth.Policies = []string{"admins"}
+	lreq = &logical.Request{
+		Path: "auth/foo/login",
+	}
+	lresp, err = c.HandleRequest(lreq)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1879,7 +1902,7 @@ func TestCore_EnableDisableCred_WithLease(t *testing.T) {
 
 	// Disable the credential backend
 	req = logical.TestRequest(t, logical.DeleteOperation, "sys/auth/foo")
-	req.ClientToken = lresp.Auth.ClientToken
+	req.ClientToken = root
 	resp, err = c.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp)

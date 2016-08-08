@@ -50,7 +50,7 @@ The response will be in JSON. For example:
   "auth": {
     "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
     "policies": [
-      "root"
+      "admins"
     ],
     "metadata": {
       "org": "test_org",
@@ -109,12 +109,11 @@ you will need to include it as: `some-amazing-team`.
 Example:
 
 ```
-$ vault write auth/github/map/teams/admins value=root
+$ vault write auth/github/map/teams/admins value=admins
 Success! Data written to: auth/github/map/teams/admins
 ```
 
-The above would make anyone in the "admins" team a root user in Vault
-(not recommended).
+The above would make anyone in the "admins" team receive tokens with the policy `admins`.
 
 You can then auth with a user that is a member of the "admins" team using a Personal Access Token with the `read:org` scope.
 
@@ -125,6 +124,6 @@ $ vault auth -method=github token=000000905b381e723b3d6a7d52f148a5d43c4b45
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
-root
+admins
 ```
 

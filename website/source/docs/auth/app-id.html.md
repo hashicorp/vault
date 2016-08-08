@@ -101,21 +101,21 @@ the set of App IDs, user IDs, and the mapping between them. An
 example is shown below, use `vault path-help` for more details.
 
 ```
-$ vault write auth/app-id/map/app-id/foo value=root display_name=foo
+$ vault write auth/app-id/map/app-id/foo value=admins display_name=foo
 ...
 
 $ vault write auth/app-id/map/user-id/bar value=foo cidr_block=10.0.0.0/16
 ...
 ```
 
-The above creates an App ID "foo" that associates with the policy "root".
+The above creates an App ID "foo" that associates with the policy "admins".
 The `display_name` sets the display name for audit logs and secrets.
 Next, we configure the user ID "bar" and say that the user ID bar
 can be paired with "foo" but only if the client is in the "10.0.0.0/16" CIDR block.
 The `cidr_block` configuration is optional.
 
 This means that if a client authenticates and provide both "foo" and "bar",
-then the app ID will authenticate that client with the policy "root".
+then the app ID will authenticate that client with the policy "admins".
 
 In practice, both the user and app ID are likely hard-to-guess UUID-like values.
 
