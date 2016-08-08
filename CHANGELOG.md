@@ -90,8 +90,9 @@ IMPROVEMENTS:
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
  * core: The duration of leadership is now exported via events through
    telemetry [GH-1625]
- * core: `sys/capabilities-self` is now accessible as part of the default
+ * core: `sys/capabilities-self` is now accessible as part of the `default`
    policy [GH-1695]
+ * core: `sys/renew` is now accessible as part of the `default` policy [GH-1701]
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * physical/consul: Allowing additional tags to be added to Consul service
    registration via `service-tags` option [GH-1643]
