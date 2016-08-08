@@ -263,10 +263,10 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 			},
 
 			&framework.Path{
-				Pattern: "renew" + framework.OptionalParamRegex("urllease_id"),
+				Pattern: "renew" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
-					"urllease_id": &framework.FieldSchema{
+					"url_lease_id": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
@@ -973,7 +973,7 @@ func (b *SystemBackend) handleRenew(
 	// Get all the options
 	leaseID := data.Get("lease_id").(string)
 	if leaseID == "" {
-		leaseID = data.Get("urllease_id").(string)
+		leaseID = data.Get("url_lease_id").(string)
 	}
 	incrementRaw := data.Get("increment").(int)
 
