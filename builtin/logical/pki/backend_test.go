@@ -150,6 +150,32 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_ChainCRUD(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 24
+	maxLeaseTTLVal := time.Hour * 24 * 30
+	b, err := Factory(&logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps:   []logicaltest.TestStep{},
+	}
+
+	stepCount = len(testCase.Steps)
+
+	testCase.Steps = append(testCase.Steps, generateChainSteps(t, rsaCACert, rsaCAKey, rsaCAChain)...)
+
+	logicaltest.Test(t, testCase)
+}
+
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
@@ -591,6 +617,103 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 	}
+	return ret
+}
+
+func generateChainSteps(t *testing.T, caCert, caKey, caChain string) []logicaltest.TestStep {
+	ret := []logicaltest.TestStep{
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "config/chain",
+			Data: map[string]interface{}{
+				"pem_bundle": caChain,
+			},
+			ErrorOk: true,
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "config/ca",
+			Data: map[string]interface{}{
+				"pem_bundle": caKey + caCert,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "config/chain",
+			Check: func(resp *logical.Response) error {
+				if resp.Data["issuing_ca"].(string) != "" {
+					return fmt.Errorf("issuing_ca should be empty")
+				}
+				if _, ok := resp.Data["issuing_ca_chain"]; ok {
+					return fmt.Errorf("issuing_ca_chain should not be returned")
+				}
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "config/ca",
+			Data: map[string]interface{}{
+				"pem_bundle": caKey + caCert + caChain,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "config/chain",
+			Check: func(resp *logical.Response) error {
+				if resp.Data["issuing_ca"].(string) == "" {
+					return fmt.Errorf("issuing_ca should not be empty")
+				}
+				if _, ok := resp.Data["issuing_ca_chain"]; !ok {
+					return fmt.Errorf("issuing_ca_chain should be returned")
+				}
+				respChain := fmt.Sprintf("%s\n%s\n", resp.Data["issuing_ca"].(string), resp.Data["issuing_ca_chain"].(string))
+				if respChain != caChain {
+					return fmt.Errorf("parsed CA chain does not match chain")
+				}
+				return nil
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "config/ca",
+			Data: map[string]interface{}{
+				"pem_bundle": caKey + caCert,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.UpdateOperation,
+			Path:      "config/chain",
+			Data: map[string]interface{}{
+				"pem_bundle": caChain,
+			},
+		},
+
+		logicaltest.TestStep{
+			Operation: logical.ReadOperation,
+			Path:      "config/chain",
+			Check: func(resp *logical.Response) error {
+				if resp.Data["issuing_ca"].(string) == "" {
+					return fmt.Errorf("issuing_ca should not be empty")
+				}
+				if _, ok := resp.Data["issuing_ca_chain"]; !ok {
+					return fmt.Errorf("issuing_ca_chain should be returned")
+				}
+				respChain := fmt.Sprintf("%s\n%s\n", resp.Data["issuing_ca"].(string), resp.Data["issuing_ca_chain"].(string))
+				if respChain != caChain {
+					return fmt.Errorf("parsed CA chain does not match chain")
+				}
+				return nil
+			},
+		},
+	}
+
 	return ret
 }
 
@@ -1920,52 +2043,98 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 
 const (
 	rsaCAKey string = `-----BEGIN RSA PRIVATE KEY-----
-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
+MIIEogIBAAKCAQEAmPQlK7xD5p+E8iLQ8XlVmll5uU2NKMxKY3UF5tbh+0vkc+Fy
+XmutLxxXAyYRPoztZ1g7ocr8XBFYsQPK26TFc3TzrLL7bBEYHQArd8M+VUHjziB7
+zwwpbV7tG8WPqIScDKMNncavDcT8sDg3DUqb8/zWkBD8WEYmsVr1VfKY5pFdxIZU
+kHP3/MkDpGmfrED9K5qPu17dIHTL2VYi4KxKhtIryapZTk6vDwRNfIYJD23QbQnt
+Si1j0X9MTRUf3BIcd0Ch60aGvv0VSL+1NTafsZQD+z1RY/zNp9IUHz5bNIiePZ6l
+JrlddodAAXZ4sN1CMetf4bA2RXssxBEIb5FyiQIDAQABAoIBAGMScSk9DvZJCUIV
+zyU6JHqPzkp6sx5kBSMa37HAKiwt4lI1C3GhaVIEl0/Qzoannfa8rhOEeaXhDoPK
+IxHWTpcUf+mzHSvIfsf6Hi2655stzLLtU4SvKf5P6GF+vCi5jKKa0u0JjsXqfIpg
+Pzh6xT1q3kf+2JUNC28Brbv4IZXmPmqWwu21VN+t3GsMGYgOnEOzBjXMhvNnm9kN
+kznV9Y2y0UIcT4dhbe2VRs4Dp8dGEyrFM7/Ovb3hIJrTkPcxjBbL5eMqpXnIkiW2
+7NyPMWFvX2lGnGdZ1Erh65SVtMjnHFwnSJ8jD+x9RAH9c1LQrYASws3MvMV8Bdzg
+2iljNqECgYEAw3Ow0clLx2alj9qFXcS2ap1lUCJxXZ9UiIU5lOcPxpCpHPloua14
+46rj2EJ9SD1L2kyB5gCq4nGK5uUIx37AJryy1SGzUmtmIVxQLnm6XK6zKnTBk0gx
+gevS6D7fHLDiVGGl3oGw4evibUFCk7dFOb/I/uBRb1zyaJrqOIlDS7UCgYEAyFYi
+RYQbYJJ0k18fUWDKy/P/Rl7uy9D67Qa9+wxoYN2Kh/aQwnNxYHAbwG7Pupd0oGcW
+Yl4bgUliAX3IFGs/cCkPJAIHzwWBPjUDhsJ020TGxKfL4SWP9OaxOpN5TOAixvBY
+ar9aSaKEl7QShmzc/Dknxu58LcoZUwI82pKIGAUCgYAxaHJ/ZcpxOsKJjez+2jZe
+1zEAQ+SyjQ96f2sh+BMl1/XYLDhMD80qiE2WoqA2/b/KDGMd+Hc6TQeW/LjubV03
+raXreNxy7lFgB40BYqY4vbTu+5rfl3VkaW/kY9hU0WY1fIXIrLJBOjb/9WpWGxM1
+2QR/YcdURoPE67xf1FsdrQKBgE8KdNEakzah8e6nLBMOblTTutcH4410sVvNOi2P
+sqrtHZgRNwIRTB0xfjGJRtomoXQb2CANYyq6SjmuZ79upQPan0ekqXILiPeDMRX9
+KN/OHeI/FdiJ2mdUkX476zLih7YX47qSLsw4m7nC6UAyOWomHsSFGWdzglRW4K2X
+/KwFAoGAYQUEWhXp5vpKzAly1ivSH9+sGC59Cujdy50oJSjaw9J+W1fM5WO9z+MH
+CoEpRt8epIgvCBBP2IM7uJUu8i2jQgJ/rrn3NTJgZn2UEPzyxUxbuWnSyueyUsD6
+uhTwBDf8LWOpvdZHMI4CPZ5WJwxAGkvde9xtlzuZUSAlyI2X8m0=
 -----END RSA PRIVATE KEY-----
 `
 	rsaCACert string = `-----BEGIN CERTIFICATE-----
-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
+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
+/k6w2PwdoRom7Q==
+-----END CERTIFICATE-----
+`
+
+	rsaCAChain string = `-----BEGIN CERTIFICATE-----
+MIIDijCCAnKgAwIBAgIUOiGo/1EOhRhuupTRGDYnqdALk/swDQYJKoZIhvcNAQEL
+BQAwLzEtMCsGA1UEAxMkVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgQXV0aG9y
+aXR5MB4XDTE2MDgwNzIyNTA1MloXDTI2MDcyODE0NTEyMlowMzExMC8GA1UEAxMo
+VmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3ViIEF1dGhvcml0eTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAMTPRQREwW3BEifNcm0XElMRB0GNTXHr
+XCuNoFVsVBlIEsNVQkka+SHZcmNBdEcZLBXP/W3tBT82B48GVN8jyxAGfYZ5hoOQ
+ed3GVft1A7lAnxcGvf5e9kfecKDcBB4G4rBhqdDNcAtklS2hV4uZUcVcEJKggpsQ
+a1wZkCn8eg6sqEYG/SxPouwL52PblxIN+Dd57sBeqx4qdL297XR8LuLkxqftwUCZ
+l2iFBnSDID/06ZmHDXA38I0n3jT2ZGjgPGFnIFKxRGq1vpVc3F5ga8qk+u66ybBu
+xWHzINQrrryjELbl2YBTr6i0R9HnZle6OPcXMWp0JuGjtDC1xb5NmnkCAwEAAaOB
+mTCBljAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU
+dDqtlU1ARHTpumtbCiU73WTFeS4wHwYDVR0jBBgwFoAU+UO/nrlKr4COZCxLZSY/
+ul+YMvMwMwYDVR0RBCwwKoIoVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3Vi
+IEF1dGhvcml0eTANBgkqhkiG9w0BAQsFAAOCAQEAjgCuTXsLFkf0DVkfSsKReNwI
+U/yBcP8Ttbx/ltanJGIVfD5TZoCnNTWm6RkML29ohfxI27sHTUhj+/6Ba0MRiLeI
+FXdclXmHOU2dTHlrmUa0m/4cb5uYoiiEnpmyWL5k94fqPOZAvJcFHnP3db4vsaUW
+47YcOvJbPSJqFXZHadqnsf3Fur5NCeTkIk6yZSvwTaZJT0JIWcqfE5LK3mYAMMC3
+iPaIa1cYqOZhWx9ilQfW6u6WxWeOphGuDIusP7Q4qc2Dr9sekyD59dfIYsroK5TP
+QVJb69nIYINpYdg3l3VNmmkY4G30N9QNs6acaH49rYzLcRX6tLBgPklO6d+TPA==
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIDejCCAmKgAwIBAgIUULdIdrdK4Y8d+XM9fuOpDlNcJIYwDQYJKoZIhvcNAQEL
+BQAwJzElMCMGA1UEAxMcVmF1bHQgVGVzdGluZyBSb290IEF1dGhvcml0eTAeFw0x
+NjA4MDcyMjUwNTFaFw0yNjA4MDExODUxMjFaMC8xLTArBgNVBAMTJFZhdWx0IFRl
+c3RpbmcgSW50ZXJtZWRpYXRlIEF1dGhvcml0eTCCASIwDQYJKoZIhvcNAQEBBQAD
+ggEPADCCAQoCggEBANXa6U+MDiUrryeZeGxgkmAZdrm9wCKz/6SmxYSebKr8aZwD
+nfbsPLRFxU6BXp9Nc6pP7e8HLBv6PtFTQG389zxOBwAHxZQvUsFESumUd64oTLRG
+J+AErTh7rtSWbLZsgDtQVvpx+6mKkvm53f/aKcq+DbqAFOg6slYOaQix0ZvP/qL0
+iWGIPr1JZk9uBJOUuIUBJdbsgTk+KQqJL9M6up8bCnM0noCafwrNKwZWtsbkfOZE
+OLSycdzCEBeHejpHTIU0vgAkdj63oEy2AbK3hMPxKzNthL3DX6W0tssoVgL//92i
+oSfpDTxiXqqdr+J3accpsAvA+F+D2TqaxdAfjLcCAwEAAaOBlTCBkjAOBgNVHQ8B
+Af8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU+UO/nrlKr4COZCxL
+ZSY/ul+YMvMwHwYDVR0jBBgwFoAUA3jY4OUWi1Y7zQgM7S9QeXjNgIQwLwYDVR0R
+BCgwJoIkVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgQXV0aG9yaXR5MA0GCSqG
+SIb3DQEBCwUAA4IBAQA9VJt92LsOOegtAx35rr41LSSfPWB2SCKg0fphL2gMPO5y
+fE2u8O5TF5dJWJ1fF3cg9/XK30Ohdl1/ujfHbVcX+O6Sb3cgwKTQQOhTdsAZKFRT
+RPHaf/Ja8uqAXMITApxOp7YiYQwukwZr+OsKi66s+zhlfI790PoQbC3UJvgmNDmv
+V5oP63mw4yhqRNPn4NOjzoC/hJSIM0AIdRB1nx2rsSUw0P354R1j9gO43L/Lj33S
+NEaPmw+SC3Tbcx4yxeKnTvGdu3sw/ndmZkCjaq5jxgTy9FONqT45TPJOyk29o5gl
++AVQz5fD2M3C1L/sZIPH2OQbXxePHcsvUZVgaKyk
 -----END CERTIFICATE-----
 `
 

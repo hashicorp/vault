@@ -23,7 +23,6 @@ for the CA trust chain.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathChainWrite,
 			logical.ReadOperation:   b.pathChainRead,
-			logical.DeleteOperation: b.pathChainDelete,
 		},
 
 		HelpSynopsis:    pathConfigChainHelpSyn,
@@ -110,31 +109,6 @@ func (b *backend) pathChainRead(
 	}
 
 	return resp, nil
-}
-
-func (b *backend) pathChainDelete(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	caBundle, err := fetchCABundle(req)
-	if err != nil {
-		return nil, err
-	}
-	if caBundle == nil {
-		return nil, nil
-	}
-
-	caBundle.IssuingCA = ""
-	caBundle.IssuingCAChain = ""
-
-	entry, err := logical.StorageEntryJSON("config/ca_bundle", caBundle)
-	if err != nil {
-		return nil, err
-	}
-	err = req.Storage.Put(entry)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
 }
 
 const pathConfigChainHelpSyn = `
