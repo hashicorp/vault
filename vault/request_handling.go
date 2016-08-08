@@ -261,7 +261,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 // handleLoginRequest is used to handle a login request, which is an
 // unauthenticated request to the backend.
-func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
+func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *logical.Auth, error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	// Create an audit trail of the request, auth is not available on login requests
@@ -277,8 +277,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 		c.logger.Printf(
 			"[ERR] core: unexpected login request for token backend "+
 				"(request path: %s)", req.Path)
-		retErr = multierror.Append(retErr, ErrInternalError)
-		return nil, nil, retErr
+		return nil, nil, ErrInternalError
 	}
 
 	// Route the request
