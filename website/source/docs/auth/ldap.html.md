@@ -49,7 +49,7 @@ Password (will be hidden):
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
-root
+admins
 ```
 
 #### Via the API
@@ -74,7 +74,7 @@ The response will be in JSON. For example:
   "auth": {
     "client_token": "c4f280f6-fdb2-18eb-89d3-589e2e834cdb",
     "policies": [
-      "root"
+      "admins"
     ],
     "metadata": {
       "username": "mitchellh"
