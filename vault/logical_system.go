@@ -263,7 +263,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 			},
 
 			&framework.Path{
-				Pattern: "renew/(?P<urllease_id>.+)",
+				Pattern: "renew" + framework.OptionalParamRegex("urllease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"urllease_id": &framework.FieldSchema{
