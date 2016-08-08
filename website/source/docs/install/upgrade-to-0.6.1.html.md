@@ -11,6 +11,11 @@ description: |-
 This page contains the list of breaking changes for Vault 0.6.1. Please read it
 carefully.
 
+## Root Token Creation Restrictions
+
+Root tokens (tokens with the `root` policy) can no longer be created except by
+another root token or the `generate-root` endpoint.
+
 ## PKI Backend Certificates Will Contain Default Key Usages
 
 Issued certificates from the `pki` backend against roles created or modified
