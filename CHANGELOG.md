@@ -2,12 +2,16 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
+ * Root tokens (tokens with the `root` policy) can no longer be created by
+   tokens with `sudo` privileges to the token creation endpoints. They can only
+   be created by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
    modified after upgrading will contain a set of default key usages. 
  * The `dynamodb` physical data store no longer supports HA by default. It has
    some non-ideal behavior around failover that was causing confusion. See the
-   [documentation] for information on enabling HA mode. It is very important
-   that this configuration is added _before upgrading_.
+   [documentation](https://www.vaultproject.io/docs/config/index.html#ha_enabled)
+   for information on enabling HA mode. It is very important that this
+   configuration is added _before upgrading_.
  * The `ldap` backend no longer searches for `memberOf` groups as part of its
    normal flow. Instead, the desired group filter must be specified. This fixes
    some errors and increases speed for directories with different structures,
