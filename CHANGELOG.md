@@ -2,9 +2,8 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
- * Root tokens (tokens with the `root` policy) can no longer be created by
-   tokens with `sudo` privileges to the token creation endpoints. They can only
-   be created by another root token or the `generate-root` endpoint.
+ * Root tokens (tokens with the `root` policy) can no longer be created except
+   by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
    modified after upgrading will contain a set of default key usages. 
  * The `dynamodb` physical data store no longer supports HA by default. It has
