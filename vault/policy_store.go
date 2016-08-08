@@ -300,6 +300,10 @@ path "cubbyhole" {
 path "sys/capabilities-self" {
     capabilities = ["update"]
 }
+
+path "sys/renew/*" {
+    capabilities = ["update"]
+}
 `)
 	if err != nil {
 		return errwrap.Wrapf("error parsing default policy: {{err}}", err)
