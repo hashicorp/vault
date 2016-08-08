@@ -2,12 +2,12 @@ package vault
 
 import (
 	"encoding/json"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -345,26 +345,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (retResp *logical.Respon
 			TTL:          auth.TTL,
 		}
 
-		// Use a map to filter out/prevent duplicates
-		policyMap := map[string]bool{}
-		for _, policy := range te.Policies {
-			if policy == "" {
-				// Don't allow a policy with no name, even though it is a valid
-				// slice member
-				continue
-			}
-			policyMap[policy] = true
-		}
-
-		// Add the default policy
-		policyMap["default"] = true
-
-		te.Policies = []string{}
-		for k, _ := range policyMap {
-			te.Policies = append(te.Policies, k)
-		}
-
-		sort.Strings(te.Policies)
+		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
 
 		if err := c.tokenStore.create(&te); err != nil {
 			c.logger.Printf("[ERR] core: failed to create token: %v", err)
