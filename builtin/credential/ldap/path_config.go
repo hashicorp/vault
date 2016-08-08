@@ -158,9 +158,11 @@ func (b *backend) pathConfigRead(
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: structs.New(cfg).Map(),
-	}, nil
+	}
+	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords.")
+	return resp, nil
 }
 
 /*
