@@ -1241,6 +1241,12 @@ func (ts *TokenStore) handleCreateCommon(
 		te.TTL = dur
 	}
 
+	// Prevent attempts to create a root token without an actual root token as parent.
+	// This is to thwart privilege escalation by tokens having 'sudo' privileges.
+	if strutil.StrListContains(data.Policies, "root") && !strutil.StrListContains(parent.Policies, "root") {
+		return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
+	}
+
 	// Set the lesser explicit max TTL if defined
 	if role != nil && role.ExplicitMaxTTL != 0 {
 		switch {

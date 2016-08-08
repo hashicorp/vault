@@ -832,6 +832,53 @@ func TestTokenStore_HandleRequest_CreateToken_NonRoot_InvalidSubset(t *testing.T
 	}
 }
 
+func TestTokenStore_HandleRequest_CreateToken_NonRoot_RootChild(t *testing.T) {
+	core, ts, _, root := TestCoreWithTokenStore(t)
+	ps := core.policyStore
+
+	policy, _ := Parse(tokenCreationPolicy)
+	policy.Name = "test1"
+	if err := ps.SetPolicy(policy); err != nil {
+		t.Fatal(err)
+	}
+
+	testMakeToken(t, ts, root, "sudoClient", "", []string{"test1"})
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = "sudoClient"
+	req.MountPoint = "auth/token/"
+	req.Data["policies"] = []string{"root"}
+
+	resp, err := ts.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v; resp: %#v", err, resp)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("expected a response")
+	}
+	if resp.Data["error"].(string) != "root tokens may not be created without parent token being root" {
+		t.Fatalf("bad: %#v", resp)
+	}
+}
+
+func TestTokenStore_HandleRequest_CreateToken_Root_RootChild(t *testing.T) {
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v; resp: %#v", err, resp)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatalf("failed to create a root token using another root token")
+	}
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"root"}) {
+		t.Fatalf("bad: policies: expected: root; actual: %s", resp.Auth.Policies)
+	}
+}
+
 func TestTokenStore_HandleRequest_CreateToken_NonRoot_NoParent(t *testing.T) {
 	_, ts, _, root := TestCoreWithTokenStore(t)
 	testMakeToken(t, ts, root, "client", "", []string{"foo"})
