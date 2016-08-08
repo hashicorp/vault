@@ -575,31 +575,6 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Allows deleting certificate authority trust chain.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/pki/config/chain`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
 ### /pki/config/crl
 #### GET
 
