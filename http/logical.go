@@ -147,17 +147,14 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 }
 
 func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, dataOnly bool, resp *logical.Response) {
-	var httpResp interface{}
+	var httpResp *logical.HTTPResponse
+	var ret interface{}
+
 	if resp != nil {
 		if resp.Redirect != "" {
 			// If we have a redirect, redirect! We use a 307 code
 			// because we don't actually know if its permanent.
 			http.Redirect(w, r, resp.Redirect, 307)
-			return
-		}
-
-		if dataOnly {
-			respondOk(w, resp.Data)
 			return
 		}
 
@@ -168,7 +165,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 		}
 
 		if resp.WrapInfo != nil && resp.WrapInfo.Token != "" {
-			httpResp = logical.HTTPResponse{
+			httpResp = &logical.HTTPResponse{
 				WrapInfo: &logical.HTTPWrapInfo{
 					Token:           resp.WrapInfo.Token,
 					TTL:             int(resp.WrapInfo.TTL.Seconds()),
@@ -177,14 +174,22 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 				},
 			}
 		} else {
-			sanitizedHttp := logical.SanitizeResponse(resp)
-			sanitizedHttp.RequestID = req.ID
-			httpResp = sanitizedHttp
+			httpResp = logical.SanitizeResponse(resp)
+			httpResp.RequestID = req.ID
+		}
+
+		ret = httpResp
+
+		if dataOnly {
+			injector := logical.HTTPSysInjector{
+				Response: httpResp,
+			}
+			ret = injector
 		}
 	}
 
 	// Respond
-	respondOk(w, httpResp)
+	respondOk(w, ret)
 	return
 }
 
