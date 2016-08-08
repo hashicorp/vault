@@ -29,6 +29,41 @@ path "cubbyhole/response" {
     capabilities = ["create", "read"]
 }
 `
+
+	// defaultPolicy is the "default" policy
+	defaultPolicy = `
+path "auth/token/lookup-self" {
+    capabilities = ["read"]
+}
+
+path "auth/token/renew-self" {
+    capabilities = ["update"]
+}
+
+path "auth/token/revoke-self" {
+    capabilities = ["update"]
+}
+
+path "cubbyhole/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+path "cubbyhole" {
+    capabilities = ["list"]
+}
+
+path "sys/capabilities-self" {
+    capabilities = ["update"]
+}
+
+path "sys/renew" {
+    capabilities = ["update"]
+}
+
+path "sys/renew/*" {
+    capabilities = ["update"]
+}
+`
 )
 
 var (
@@ -276,39 +311,7 @@ func (ps *PolicyStore) ACL(names ...string) (*ACL, error) {
 }
 
 func (ps *PolicyStore) createDefaultPolicy() error {
-	policy, err := Parse(`
-path "auth/token/lookup-self" {
-    capabilities = ["read"]
-}
-
-path "auth/token/renew-self" {
-    capabilities = ["update"]
-}
-
-path "auth/token/revoke-self" {
-    capabilities = ["update"]
-}
-
-path "cubbyhole/*" {
-    capabilities = ["create", "read", "update", "delete", "list"]
-}
-
-path "cubbyhole" {
-    capabilities = ["list"]
-}
-
-path "sys/capabilities-self" {
-    capabilities = ["update"]
-}
-
-path "sys/renew" {
-    capabilities = ["update"]
-}
-
-path "sys/renew/*" {
-    capabilities = ["update"]
-}
-`)
+	policy, err := Parse(defaultPolicy)
 	if err != nil {
 		return errwrap.Wrapf("error parsing default policy: {{err}}", err)
 	}
