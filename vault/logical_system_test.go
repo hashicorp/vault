@@ -321,7 +321,6 @@ func TestSystemBackend_renew(t *testing.T) {
 
 	// Attempt renew
 	req2 := logical.TestRequest(t, logical.UpdateOperation, "renew/"+resp.Secret.LeaseID)
-	req2.Data["increment"] = "100s"
 	resp2, err := b.HandleRequest(req2)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -331,6 +330,64 @@ func TestSystemBackend_renew(t *testing.T) {
 	if resp2.Data["error"] != "lease is not renewable" {
 		t.Fatalf("bad: %#v", resp)
 	}
+
+	// Add a TTL to the lease
+	req = logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
+	req.Data["foo"] = "bar"
+	req.Data["ttl"] = "180s"
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read a key with a LeaseID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Attempt renew
+	req2 = logical.TestRequest(t, logical.UpdateOperation, "renew/"+resp.Secret.LeaseID)
+	resp2, err = b.HandleRequest(req2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp2.IsError() {
+		t.Fatalf("got an error")
+	}
+	if resp2.Data == nil {
+		t.Fatal("nil data")
+	}
+	if resp.Secret.TTL != 180*time.Second {
+		t.Fatal("bad lease duration: %v", resp.Secret.TTL)
+	}
+
+	// Test the other route path
+	req2 = logical.TestRequest(t, logical.UpdateOperation, "renew")
+	req2.Data["lease_id"] = resp.Secret.LeaseID
+	resp2, err = b.HandleRequest(req2)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp2.IsError() {
+		t.Fatalf("got an error")
+	}
+	if resp2.Data == nil {
+		t.Fatal("nil data")
+	}
+	if resp.Secret.TTL != 180*time.Second {
+		t.Fatal("bad lease duration: %v", resp.Secret.TTL)
+	}
+
 }
 
 func TestSystemBackend_renew_invalidID(t *testing.T) {
