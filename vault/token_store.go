@@ -1307,16 +1307,16 @@ func (ts *TokenStore) handleCreateCommon(
 		renewable = false
 	}
 
-	// Create the token
-	if err := ts.create(&te); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
 	// Prevent internal policies from being assigned to tokens
 	for _, policy := range te.Policies {
 		if strutil.StrListContains(nonAssignablePolicies, policy) {
 			return logical.ErrorResponse(fmt.Sprintf("cannot assign %s policy", policy)), nil
 		}
+	}
+
+	// Create the token
+	if err := ts.create(&te); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
 	// Generate the response
