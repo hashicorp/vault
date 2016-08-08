@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -17,11 +18,22 @@ func TestSysPolicies(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"policies": []interface{}{"default", "root"},
+			"keys":     []interface{}{"default", "root"},
+		},
 		"policies": []interface{}{"default", "root"},
 		"keys":     []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
@@ -37,11 +49,22 @@ func TestSysReadPolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"name":  "root",
+			"rules": "",
+		},
 		"name":  "root",
 		"rules": "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
@@ -62,11 +85,22 @@ func TestSysWritePolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"policies": []interface{}{"default", "foo", "root"},
+			"keys":     []interface{}{"default", "foo", "root"},
+		},
 		"policies": []interface{}{"default", "foo", "root"},
 		"keys":     []interface{}{"default", "foo", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
@@ -100,11 +134,22 @@ func TestSysDeletePolicy(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
+		"lease_id":       "",
+		"renewable":      false,
+		"lease_duration": json.Number("0"),
+		"wrap_info":      nil,
+		"warnings":       nil,
+		"auth":           nil,
+		"data": map[string]interface{}{
+			"policies": []interface{}{"default", "root"},
+			"keys":     []interface{}{"default", "root"},
+		},
 		"policies": []interface{}{"default", "root"},
 		"keys":     []interface{}{"default", "root"},
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
+	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}

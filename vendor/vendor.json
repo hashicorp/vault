@@ -649,10 +649,10 @@
 			"revisionTime": "2016-06-21T17:42:43Z"
 		},
 		{
-			"checksumSHA1": "Dz6YPuvQ7AbRoNoc0t1pW4ABF14=",
+			"checksumSHA1": "LUrnGREfnifW4WDMaavmc9MlLI0=",
 			"path": "github.com/mitchellh/mapstructure",
-			"revision": "21a35fb16463dfb7c8eee579c65d995d95e64d1e",
-			"revisionTime": "2016-07-13T01:02:19Z"
+			"revision": "ca63d7c062ee3c9f34db231e352b60012b4fd0c1",
+			"revisionTime": "2016-08-08T18:12:53Z"
 		},
 		{
 			"checksumSHA1": "mrqMlK6gqe//WsJSrJ1HgkPM0lM=",

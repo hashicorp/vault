@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 func (c *Sys) AuditHash(path string, input string) (string, error) {
@@ -20,12 +22,25 @@ func (c *Sys) AuditHash(path string, input string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
+		return "", nil
+	}
+
 	type d struct {
 		Hash string
 	}
 
 	var result d
-	err = resp.DecodeJSON(&result)
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return "", err
+	}
+
 	return result.Hash, err
 }
 
@@ -37,8 +52,25 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	}
 	defer resp.Body.Close()
 
-	var result map[string]*Audit
-	err = resp.DecodeJSON(&result)
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
+		return nil, nil
+	}
+
+	result := map[string]*Audit{}
+	for k, v := range secret.Data {
+		var res Audit
+		err = mapstructure.Decode(v, &res)
+		if err != nil {
+			return nil, err
+		}
+		result[k] = &res
+	}
+
 	return result, err
 }
 

@@ -8,6 +8,7 @@
 package mapstructure
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -306,6 +307,7 @@ func (d *Decoder) decodeString(name string, data interface{}, val reflect.Value)
 func (d *Decoder) decodeInt(name string, data interface{}, val reflect.Value) error {
 	dataVal := reflect.ValueOf(data)
 	dataKind := getKind(dataVal)
+	dataType := dataVal.Type()
 
 	switch {
 	case dataKind == reflect.Int:
@@ -327,6 +329,14 @@ func (d *Decoder) decodeInt(name string, data interface{}, val reflect.Value) er
 		} else {
 			return fmt.Errorf("cannot parse '%s' as int: %s", name, err)
 		}
+	case dataType.PkgPath() == "encoding/json" && dataType.Name() == "Number":
+		jn := data.(json.Number)
+		i, err := jn.Int64()
+		if err != nil {
+			return fmt.Errorf(
+				"error decoding json.Number into %s: %s", name, err)
+		}
+		val.SetInt(i)
 	default:
 		return fmt.Errorf(
 			"'%s' expected type '%s', got unconvertible type '%s'",
@@ -413,6 +423,7 @@ func (d *Decoder) decodeBool(name string, data interface{}, val reflect.Value) e
 func (d *Decoder) decodeFloat(name string, data interface{}, val reflect.Value) error {
 	dataVal := reflect.ValueOf(data)
 	dataKind := getKind(dataVal)
+	dataType := dataVal.Type()
 
 	switch {
 	case dataKind == reflect.Int:
@@ -434,6 +445,14 @@ func (d *Decoder) decodeFloat(name string, data interface{}, val reflect.Value) 
 		} else {
 			return fmt.Errorf("cannot parse '%s' as float: %s", name, err)
 		}
+	case dataType.PkgPath() == "encoding/json" && dataType.Name() == "Number":
+		jn := data.(json.Number)
+		i, err := jn.Float64()
+		if err != nil {
+			return fmt.Errorf(
+				"error decoding json.Number into %s: %s", name, err)
+		}
+		val.SetFloat(i)
 	default:
 		return fmt.Errorf(
 			"'%s' expected type '%s', got unconvertible type '%s'",

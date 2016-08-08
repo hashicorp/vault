@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/fatih/structs"
+	"github.com/mitchellh/mapstructure"
 )
 
 func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
@@ -14,9 +15,26 @@ func (c *Sys) ListMounts() (map[string]*MountOutput, error) {
 	}
 	defer resp.Body.Close()
 
-	var result map[string]*MountOutput
-	err = resp.DecodeJSON(&result)
-	return result, err
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
+		return nil, nil
+	}
+
+	result := map[string]*MountOutput{}
+	for k, v := range secret.Data {
+		var res MountOutput
+		err = mapstructure.Decode(v, &res)
+		if err != nil {
+			return nil, err
+		}
+		result[k] = &res
+	}
+
+	return result, nil
 }
 
 func (c *Sys) Mount(path string, mountInfo *MountInput) error {
@@ -85,8 +103,22 @@ func (c *Sys) MountConfig(path string) (*MountConfigOutput, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
+		return nil, nil
+	}
+
 	var result MountConfigOutput
-	err = resp.DecodeJSON(&result)
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return nil, err
+	}
+
 	return &result, err
 }
 
