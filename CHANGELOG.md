@@ -67,7 +67,7 @@ IMPROVEMENTS:
  * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
    [GH-1523]
  * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
-   will have `MinVersion` set to TLS 1.2 by default. This is configurable.
+   have the minimum TLS version set to 1.2 by default. This is configurable.
  * auth/token: Added endpoint to list accessors [GH-1676]
  * auth/token: Added `disallowed_policies` option to token store roles [GH-1681]
  * cli: Output formatting in the presence of warnings in the response object
@@ -86,6 +86,8 @@ IMPROVEMENTS:
  * core: Response wrapping is now enabled for login endpoints [GH-1588]
  * core: The duration of leadership is now exported via events through
    telemetry [GH-1625]
+ * core: `sys/capabilities-self` is now accessible as part of the default
+   policy [GH-1695]
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * physical/consul: Allowing additional tags to be added to Consul service
    registration via `service-tags` option [GH-1643]
@@ -103,12 +105,12 @@ IMPROVEMENTS:
    string, a serialized JSON string array, or a base64-encoded serialized JSON
    string array [GH-1686]
  * secret/ssh: Added `allowed_roles` to vault-ssh-helper's config and returning
-   role name as part of response of `verify` API.
+   role name as part of response of `verify` API
  * secret/ssh: Added passthrough of command line arguments to `ssh` [GH-1680]
  * sys/health: Added version information to the response of health status
    endpoint [GH-1647]
- * sys/health: Cluster information will be returned as part of health
-   status when Vault is unsealed [GH-1671]
+ * sys/health: Cluster information isbe returned as part of health status when
+   Vault is unsealed [GH-1671]
 
 BUG FIXES:
 
