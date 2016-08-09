@@ -23,6 +23,28 @@ func EncodeJSON(in interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// EncodeJSONAndCompress encodes the given input into JSON and compresses the
+// encoded value using Gzip format (BestCompression level). A canary byte is
+// placed at the beginning of the returned bytes for the logic in decompression
+// method to identify compressed input.
+func EncodeJSONAndCompress(in interface{}) ([]byte, error) {
+	if in == nil {
+		return nil, fmt.Errorf("input for encoding is nil")
+	}
+
+	// First JSON encode the given input
+	encodedBytes, err := EncodeJSON(in)
+	if err != nil {
+		return nil, err
+	}
+
+	// For compression, use Gzip format with 'BestCompression' level.
+	return compressutil.Compress(encodedBytes, &compressutil.CompressionConfig{
+		Type:                 compressutil.CompressionTypeGzip,
+		GzipCompressionLevel: gzip.BestCompression,
+	})
+}
+
 // Decodes/Unmarshals the given JSON into a desired object
 func DecodeJSON(data []byte, out interface{}) error {
 	if data == nil {
@@ -60,26 +82,24 @@ func DecodeJSONFromReader(r io.Reader, out interface{}) error {
 // data will be JSON decoded.
 func DecompressAndDecodeJSON(dataBytes []byte, out interface{}) error {
 	if dataBytes == nil || len(dataBytes) == 0 {
-		return fmt.Errorf("'dataBytes' being decoded is invalid")
+		return fmt.Errorf("invalid input")
 	}
 	if out == nil {
 		return fmt.Errorf("output parameter 'out' is nil")
 	}
 
-	// Decompress the dataBytes using Gzip format. Decompression when using Gzip
-	// is agnostic of the compression levels used during compression.
-	decompressedBytes, unencrypted, err :=
-		compressutil.Decompress(dataBytes, &compressutil.CompressionConfig{
-			Type: compressutil.CompressionTypeGzip,
-		})
+	// Decompress the dataBytes using Gzip format.
+	decompressedBytes, uncompressed, err := compressutil.Decompress(dataBytes, &compressutil.CompressionConfig{
+		Type: compressutil.CompressionTypeGzip,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to decompress JSON: err: %v", err)
 	}
 
-	// If the dataBytes supplied failed to contain the compression canary, it
-	// can be inferred that it was not compressed in the first place.  Try
-	// to decode it.
-	if unencrypted {
+	// If the input supplied failed to contain the compression canary, it
+	// will be notified by the compression utility. Decode the input
+	// directly.
+	if uncompressed {
 		return DecodeJSON(dataBytes, out)
 	}
 
@@ -87,28 +107,6 @@ func DecompressAndDecodeJSON(dataBytes []byte, out interface{}) error {
 		return fmt.Errorf("decompressed data being decoded is invalid")
 	}
 
-	// JSON decode the decompressed data
+	// Decode the decompressed data
 	return DecodeJSON(decompressedBytes, out)
-}
-
-// EncodeJSONAndCompress encodes the given input into JSON and compresses the
-// encoded value using Gzip format (BestCompression level). A canary byte is
-// placed at the beginning of the returned bytes for the logic in decompression
-// method to identify compressed input.
-func EncodeJSONAndCompress(in interface{}) ([]byte, error) {
-	if in == nil {
-		return nil, fmt.Errorf("input for encoding is nil")
-	}
-
-	// First JSON encode the given input
-	encodedBytes, err := EncodeJSON(in)
-	if err != nil {
-		return nil, err
-	}
-
-	// For compression, use Gzip format with 'BestCompression' level.
-	return compressutil.Compress(encodedBytes, &compressutil.CompressionConfig{
-		Type:                 compressutil.CompressionTypeGzip,
-		GzipCompressionLevel: gzip.BestCompression,
-	})
 }

@@ -60,11 +60,17 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 	case CompressionTypeLzw:
 		writer = lzw.NewWriter(&buf, lzw.LSB, 8)
 	case CompressionTypeGzip:
-		level := gzip.DefaultCompression
-		if config.GzipCompressionLevel != gzip.NoCompression {
-			level = config.GzipCompressionLevel
+		switch {
+		case config.GzipCompressionLevel == gzip.BestCompression,
+			config.GzipCompressionLevel == gzip.BestSpeed,
+			config.GzipCompressionLevel == gzip.DefaultCompression:
+			// These are valid compression levels
+		default:
+			// If compression level is set to NoCompression or to
+			// any invalid value, fallback to Defaultcompression
+			config.GzipCompressionLevel = gzip.DefaultCompression
 		}
-		writer, err = gzip.NewWriterLevel(&buf, level)
+		writer, err = gzip.NewWriterLevel(&buf, config.GzipCompressionLevel)
 	default:
 		return nil, fmt.Errorf("unsupported compression type")
 	}
@@ -79,7 +85,7 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 	// Compress the input and place it in the same buffer containing the
 	// canary byte.
 	if _, err = writer.Write(data); err != nil {
-		return nil, fmt.Errorf("failed to compress JSON string; err: %v", err)
+		return nil, fmt.Errorf("failed to compress input data; err: %v", err)
 	}
 
 	// Close the io.WriteCloser
@@ -95,7 +101,7 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 // If the first byte is a canary byte, then the input past the canary byte
 // will be decompressed using the method specified in the given configuration.
 // If the first byte isn't a canary byte, then the utility returns a boolean
-// return value indicating that the input was not compressed.
+// value indicating that the input was not compressed.
 func Decompress(data []byte, config *CompressionConfig) ([]byte, bool, error) {
 	var err error
 	var reader io.ReadCloser
@@ -121,7 +127,7 @@ func Decompress(data []byte, config *CompressionConfig) ([]byte, bool, error) {
 		return nil, true, nil
 	} else {
 		// If the first byte matches the canary byte, remove the canary
-		// byte and try to decompress the data before JSON decoding it.
+		// byte and try to decompress the data that is after the canary.
 		if len(data) < 2 {
 			return nil, false, fmt.Errorf("invalid 'data' after the canary")
 		}
@@ -136,7 +142,7 @@ func Decompress(data []byte, config *CompressionConfig) ([]byte, bool, error) {
 	case CompressionTypeGzip:
 		reader, err = gzip.NewReader(bytes.NewReader(data))
 	default:
-		return nil, false, fmt.Errorf("invalid 'data' being decompressed is invalid")
+		return nil, false, fmt.Errorf("invalid compression type %s", config.Type)
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to create a compression reader; err: %v", err)
@@ -150,10 +156,10 @@ func Decompress(data []byte, config *CompressionConfig) ([]byte, bool, error) {
 	defer reader.Close()
 
 	// Read all the compressed data into a buffer
-	var jsonBuf bytes.Buffer
-	if _, err = io.Copy(&jsonBuf, reader); err != nil {
+	var buf bytes.Buffer
+	if _, err = io.Copy(&buf, reader); err != nil {
 		return nil, false, err
 	}
 
-	return jsonBuf.Bytes(), false, nil
+	return buf.Bytes(), false, nil
 }
