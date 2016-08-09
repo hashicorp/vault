@@ -113,18 +113,11 @@ func Decompress(data []byte) ([]byte, bool, error) {
 	var err error
 	var reader io.ReadCloser
 	if data == nil || len(data) == 0 {
-		return nil, false, fmt.Errorf("'data' being decompressed is invalid")
-	}
-
-	// Read the first byte
-	bytesReader := bytes.NewReader(data)
-	firstByte, err := bytesReader.ReadByte()
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to read the first byte from the input")
+		return nil, false, fmt.Errorf("'data' being decompressed is empty")
 	}
 
 	switch {
-	case firstByte == CompressionCanaryGzip:
+	case data[0] == CompressionCanaryGzip:
 		// If the first byte matches the canary byte, remove the canary
 		// byte and try to decompress the data that is after the canary.
 		if len(data) < 2 {
@@ -132,7 +125,7 @@ func Decompress(data []byte) ([]byte, bool, error) {
 		}
 		data = data[1:]
 		reader, err = gzip.NewReader(bytes.NewReader(data))
-	case firstByte == CompressionCanaryLzw:
+	case data[0] == CompressionCanaryLzw:
 		// If the first byte matches the canary byte, remove the canary
 		// byte and try to decompress the data that is after the canary.
 		if len(data) < 2 {
