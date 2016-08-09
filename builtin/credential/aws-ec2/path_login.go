@@ -400,13 +400,14 @@ func (b *backend) pathLoginUpdate(
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
-				TTL:       b.System().DefaultLeaseTTL(),
+				TTL:       roleEntry.TTL,
 			},
 		},
 	}
 
 	// Cap the TTL value.
-	if shortestMaxTTL < resp.Auth.TTL {
+	if shortestMaxTTL < roleEntry.TTL {
+		resp.AddWarning(fmt.Sprintf("Role ttl of %d exceeded the effective max_ttl of %d; ttl value is capped appropriately", roleEntry.TTL/time.Second, shortestMaxTTL/time.Second))
 		resp.Auth.TTL = shortestMaxTTL
 	}
 
