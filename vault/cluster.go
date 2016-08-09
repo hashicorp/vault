@@ -40,6 +40,11 @@ func (c *Core) Cluster() (*Cluster, error) {
 		return nil, fmt.Errorf("failed to decode cluster details: %v", err)
 	}
 
+	// Set in config file
+	if c.clusterName != "" {
+		cluster.Name = c.clusterName
+	}
+
 	return &cluster, nil
 }
 
