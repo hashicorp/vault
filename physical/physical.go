@@ -114,6 +114,9 @@ var builtinBackends = map[string]Factory{
 	"inmem": func(_ map[string]string, logger *log.Logger) (Backend, error) {
 		return NewInmem(logger), nil
 	},
+	"inmem_ha": func(_ map[string]string, logger *log.Logger) (Backend, error) {
+		return NewInmemHA(logger), nil
+	},
 	"consul":     newConsulBackend,
 	"zookeeper":  newZookeeperBackend,
 	"file":       newFileBackend,

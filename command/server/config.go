@@ -38,8 +38,8 @@ type Config struct {
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig() *Config {
-	return &Config{
+func DevConfig(ha bool) *Config {
+	ret := &Config{
 		DisableCache: false,
 		DisableMlock: true,
 
@@ -62,6 +62,12 @@ func DevConfig() *Config {
 		MaxLeaseTTL:     30 * 24 * time.Hour,
 		DefaultLeaseTTL: 30 * 24 * time.Hour,
 	}
+
+	if ha {
+		ret.Backend.Type = "inmem_ha"
+	}
+
+	return ret
 }
 
 // Listener is the listener configuration for the server.

@@ -54,7 +54,7 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly bool
+	var dev, verifyOnly, devHA bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress string
 	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
@@ -63,6 +63,7 @@ func (c *ServerCommand) Run(args []string) int {
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
+	flags.BoolVar(&devHA, "dev-ha", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -98,7 +99,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	if dev {
-		config = server.DevConfig()
+		config = server.DevConfig(devHA)
 		if devListenAddress != "" {
 			config.Listeners[0].Config["address"] = devListenAddress
 		}
@@ -464,6 +465,25 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 	}
 	if !unsealed {
 		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+	}
+
+	isLeader, _, err := core.Leader()
+	if err != nil && err != vault.ErrHANotEnabled {
+		return nil, fmt.Errorf("failed to check active status: %v", err)
+	}
+	if err == nil {
+		leaderCount := 3
+		for !isLeader {
+			if leaderCount == 0 {
+				return nil, fmt.Errorf("failed to get active status after three seconds")
+			}
+			time.Sleep(1 * time.Second)
+			isLeader, _, err = core.Leader()
+			if err != nil {
+				return nil, fmt.Errorf("failed to check active status: %v", err)
+			}
+			leaderCount--
+		}
 	}
 
 	if rootTokenID != "" {

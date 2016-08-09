@@ -2,6 +2,8 @@ package vault
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
@@ -220,7 +222,10 @@ type Core struct {
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
 
-	clusterName string
+	// Cluster information
+	clusterName            string
+	localClusterPrivateKey crypto.Signer
+	localClusterCertPool   *x509.CertPool
 }
 
 // CoreConfig is used to parameterize a core
