@@ -1,6 +1,11 @@
 package logical
 
-import "time"
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"time"
+)
 
 // This logic was pulled from the http package so that it can be used for
 // encoding wrapped responses as well. It simply translates the logical request
@@ -59,4 +64,47 @@ type HTTPWrapInfo struct {
 	TTL             int       `json:"ttl"`
 	CreationTime    time.Time `json:"creation_time"`
 	WrappedAccessor string    `json:"wrapped_accessor,omitempty"`
+}
+
+type HTTPSysInjector struct {
+	Response *HTTPResponse
+}
+
+func (h HTTPSysInjector) MarshalJSON() ([]byte, error) {
+	j, err := json.Marshal(h.Response)
+	if err != nil {
+		return nil, err
+	}
+
+	// Fast path no data or empty data
+	if h.Response.Data == nil || len(h.Response.Data) == 0 {
+		return j, nil
+	}
+
+	// Marshaling a response will always be a JSON object, meaning it will
+	// always start with '{', so we hijack this to prepend necessary values
+
+	// Make a guess at the capacity, and write the object opener
+	buf := bytes.NewBuffer(make([]byte, 0, len(j)*2))
+	buf.WriteRune('{')
+
+	for k, v := range h.Response.Data {
+		// Marshal each key/value individually
+		mk, err := json.Marshal(k)
+		if err != nil {
+			return nil, err
+		}
+		mv, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		// Write into the final buffer. We'll never have a valid response
+		// without any fields so we can unconditionally add a comma after each.
+		buf.WriteString(fmt.Sprintf("%s: %s, ", mk, mv))
+	}
+
+	// Add the rest, without the first '{'
+	buf.Write(j[1:])
+
+	return buf.Bytes(), nil
 }

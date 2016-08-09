@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 func (c *Sys) ListPolicies() ([]string, error) {
@@ -12,8 +14,21 @@ func (c *Sys) ListPolicies() ([]string, error) {
 	}
 	defer resp.Body.Close()
 
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
+		return nil, nil
+	}
+
 	var result listPoliciesResp
-	err = resp.DecodeJSON(&result)
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return nil, err
+	}
+
 	return result.Policies, err
 }
 
@@ -30,8 +45,21 @@ func (c *Sys) GetPolicy(name string) (string, error) {
 		return "", err
 	}
 
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
+		return "", nil
+	}
+
 	var result getPoliciesResp
-	err = resp.DecodeJSON(&result)
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return "", err
+	}
+
 	return result.Rules, err
 }
 
