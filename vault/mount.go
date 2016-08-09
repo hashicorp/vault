@@ -405,9 +405,12 @@ func (c *Core) loadMounts() error {
 	defer c.mountsLock.Unlock()
 
 	if raw != nil {
+		// Check if the persisted value has canary in the beginning. If
+		// yes, decompress the table and then JSON decode it. If not,
+		// simply JSON decode it.
 		if err := jsonutil.DecodeJSON(raw.Value, mountTable); err != nil {
-			c.logger.Printf("[ERR] core: failed to decode mount table: %v", err)
-			return errLoadMountsFailed
+			c.logger.Printf("[ERR] core: failed to decompress and/or decode the mount table: %v", err)
+			return err
 		}
 		c.mounts = mountTable
 	}
@@ -484,17 +487,17 @@ func (c *Core) persistMounts(table *MountTable) error {
 		}
 	}
 
-	// Marshal the table
-	raw, err := json.Marshal(table)
+	// Encode the mount table into JSON and compress it (lzw).
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(table, nil)
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to encode mount table: %v", err)
+		c.logger.Printf("[ERR] core: failed to encode and/or compress the mount table: %v", err)
 		return err
 	}
 
 	// Create an entry
 	entry := &Entry{
 		Key:   coreMountConfigPath,
-		Value: raw,
+		Value: compressedBytes,
 	}
 
 	// Write to the physical backend
