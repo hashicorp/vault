@@ -18,7 +18,7 @@ description: |-
   <dd>PUT</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/renew/<lease id>`</dd>
+  <dd>`/sys/renew(/<lease id>)`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -28,6 +28,12 @@ description: |-
         <span class="param-flags">optional</span>
         A requested amount of time in seconds to extend the lease.
         This is advisory.
+      </li>
+      <li>
+        <span class="param">lease_id</span>
+        <span class="param-flags">required</span>
+        The ID of the lease to extend. This can be specified as part of the URL
+        or in the request body.
       </li>
     </ul>
   </dd>

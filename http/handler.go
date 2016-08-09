@@ -34,6 +34,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/step-down", handleSysStepDown(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
+	mux.Handle("/v1/sys/renew", handleLogical(core, false, nil))
 	mux.Handle("/v1/sys/renew/", handleLogical(core, false, nil))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
@@ -232,7 +233,7 @@ func respondErrorCommon(w http.ResponseWriter, resp *logical.Response, err error
 		}
 	}
 
-	if resp != nil && resp.IsError(){
+	if resp != nil && resp.IsError() {
 		err = fmt.Errorf("%s", resp.Data["error"].(string))
 	}
 
