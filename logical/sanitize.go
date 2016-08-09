@@ -85,7 +85,7 @@ func (h HTTPSysInjector) MarshalJSON() ([]byte, error) {
 	// always start with '{', so we hijack this to prepend necessary values
 
 	// Make a guess at the capacity, and write the object opener
-	buf := bytes.NewBuffer(make([]byte, 0, len(j)+len(h.Response.Data)*100))
+	buf := bytes.NewBuffer(make([]byte, 0, len(j)*2))
 	buf.WriteRune('{')
 
 	for k, v := range h.Response.Data {
