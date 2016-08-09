@@ -93,6 +93,10 @@ IMPROVEMENTS:
  * core: `sys/capabilities-self` is now accessible as part of the `default`
    policy [GH-1695]
  * core: `sys/renew` is now accessible as part of the `default` policy [GH-1701]
+ * core: Responses from most `/sys` endpoints now return normal `api.Secret`
+   structs in addition to the values they carried before. This means that
+   response wrapping can now be used with most authenticated `/sys` operations
+   [GH-1699]
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * physical/consul: Allowing additional tags to be added to Consul service
    registration via `service-tags` option [GH-1643]
