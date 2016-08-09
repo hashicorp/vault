@@ -13,7 +13,12 @@ const (
 	// which is used to distinguish if a JSON input is compressed or not.
 	// The value of this constant should not be a first character of any
 	// valid JSON string.
-	CompressionCanary byte = 'Z'
+
+	// Byte value used as canary when using Gzip format
+	CompressionCanaryGzip byte = 'G'
+
+	// Byte value used as canary when using Lzw format
+	CompressionCanaryLzw byte = 'L'
 
 	CompressionTypeLzw = "lzw"
 
@@ -52,14 +57,16 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 		return nil, fmt.Errorf("config is nil")
 	}
 
-	// Write the canary into the buffer first
-	buf.Write([]byte{CompressionCanary})
-
-	// Create writer to compress the input data based on the configured type
+	// Write the canary into the buffer and create writer to compress the
+	// input data based on the configured type
 	switch config.Type {
 	case CompressionTypeLzw:
+		buf.Write([]byte{CompressionCanaryLzw})
+
 		writer = lzw.NewWriter(&buf, lzw.LSB, 8)
 	case CompressionTypeGzip:
+		buf.Write([]byte{CompressionCanaryGzip})
+
 		switch {
 		case config.GzipCompressionLevel == gzip.BestCompression,
 			config.GzipCompressionLevel == gzip.BestSpeed,
@@ -102,15 +109,11 @@ func Compress(data []byte, config *CompressionConfig) ([]byte, error) {
 // will be decompressed using the method specified in the given configuration.
 // If the first byte isn't a canary byte, then the utility returns a boolean
 // value indicating that the input was not compressed.
-func Decompress(data []byte, config *CompressionConfig) ([]byte, bool, error) {
+func Decompress(data []byte) ([]byte, bool, error) {
 	var err error
 	var reader io.ReadCloser
 	if data == nil || len(data) == 0 {
 		return nil, false, fmt.Errorf("'data' being decompressed is invalid")
-	}
-
-	if config == nil {
-		return nil, false, fmt.Errorf("config is nil")
 	}
 
 	// Read the first byte
@@ -120,34 +123,32 @@ func Decompress(data []byte, config *CompressionConfig) ([]byte, bool, error) {
 		return nil, false, fmt.Errorf("failed to read the first byte from the input")
 	}
 
-	// If the first byte doesn't match the canary byte, it means that the
-	// content was not compressed in the first place.
-	if CompressionCanary != firstByte {
-		// Indicate the caller that the input was not compressed
-		return nil, true, nil
-	} else {
+	switch {
+	case firstByte == CompressionCanaryGzip:
 		// If the first byte matches the canary byte, remove the canary
 		// byte and try to decompress the data that is after the canary.
 		if len(data) < 2 {
 			return nil, false, fmt.Errorf("invalid 'data' after the canary")
 		}
 		data = data[1:]
-	}
-
-	// Create a reader to read the compressed data based on the configured
-	// compression type
-	switch config.Type {
-	case CompressionTypeLzw:
-		reader = lzw.NewReader(bytes.NewReader(data), lzw.LSB, 8)
-	case CompressionTypeGzip:
 		reader, err = gzip.NewReader(bytes.NewReader(data))
+	case firstByte == CompressionCanaryLzw:
+		// If the first byte matches the canary byte, remove the canary
+		// byte and try to decompress the data that is after the canary.
+		if len(data) < 2 {
+			return nil, false, fmt.Errorf("invalid 'data' after the canary")
+		}
+		data = data[1:]
+		reader = lzw.NewReader(bytes.NewReader(data), lzw.LSB, 8)
 	default:
-		return nil, false, fmt.Errorf("invalid compression type %s", config.Type)
+		// If the first byte doesn't match the canary byte, it means
+		// that the content was not compressed at all. Indicate the
+		// caller that the input was not compressed.
+		return nil, true, nil
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to create a compression reader; err: %v", err)
 	}
-
 	if reader == nil {
 		return nil, false, fmt.Errorf("failed to create a compression reader")
 	}

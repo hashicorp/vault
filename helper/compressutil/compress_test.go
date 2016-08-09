@@ -42,14 +42,12 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		t.Fatal("failed to compress data in lzw format")
 	}
 	// Check the presense of the canary
-	if compressedJSONBytes[0] != CompressionCanary {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanary, compressedJSONBytes[0])
+	if compressedJSONBytes[0] != CompressionCanaryLzw {
+		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryLzw, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
-	decompressedJSONBytes, uncompressed, err := Decompress(compressedJSONBytes, &CompressionConfig{
-		Type: CompressionTypeLzw,
-	})
+	decompressedJSONBytes, uncompressed, err := Decompress(compressedJSONBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,14 +62,6 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		t.Fatalf("bad: mismatch: inputJSONBytes: %s\n decompressedJSONBytes: %s", string(inputJSONBytes), string(decompressedJSONBytes))
 	}
 
-	// Decompress using wrong format
-	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes, &CompressionConfig{
-		Type: CompressionTypeGzip,
-	})
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-
 	// Compress input using Gzip format, assume DefaultCompression
 	compressedJSONBytes, err = Compress(inputJSONBytes, &CompressionConfig{
 		Type: CompressionTypeGzip,
@@ -83,14 +73,12 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		t.Fatal("failed to compress data in lzw format")
 	}
 	// Check the presense of the canary
-	if compressedJSONBytes[0] != CompressionCanary {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanary, compressedJSONBytes[0])
+	if compressedJSONBytes[0] != CompressionCanaryGzip {
+		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
-	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes, &CompressionConfig{
-		Type: CompressionTypeGzip,
-	})
+	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,14 +105,12 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		t.Fatal("failed to compress data in lzw format")
 	}
 	// Check the presense of the canary
-	if compressedJSONBytes[0] != CompressionCanary {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanary, compressedJSONBytes[0])
+	if compressedJSONBytes[0] != CompressionCanaryGzip {
+		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
-	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes, &CompressionConfig{
-		Type: CompressionTypeGzip,
-	})
+	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,14 +125,6 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		t.Fatalf("bad: mismatch: inputJSONBytes: %s\n decompressedJSONBytes: %s", string(inputJSONBytes), string(decompressedJSONBytes))
 	}
 
-	// Decompress using wrong format
-	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes, &CompressionConfig{
-		Type: CompressionTypeLzw,
-	})
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-
 	// Compress input using Gzip format, BestCompression
 	compressedJSONBytes, err = Compress(inputJSONBytes, &CompressionConfig{
 		Type:                 CompressionTypeGzip,
@@ -159,14 +137,12 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		t.Fatal("failed to compress data in lzw format")
 	}
 	// Check the presense of the canary
-	if compressedJSONBytes[0] != CompressionCanary {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanary, compressedJSONBytes[0])
+	if compressedJSONBytes[0] != CompressionCanaryGzip {
+		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
-	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes, &CompressionConfig{
-		Type: CompressionTypeGzip,
-	})
+	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,14 +169,13 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		t.Fatal("failed to compress data in lzw format")
 	}
 	// Check the presense of the canary
-	if compressedJSONBytes[0] != CompressionCanary {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanary, compressedJSONBytes[0])
+	if compressedJSONBytes[0] != CompressionCanaryGzip {
+		t.Fatal("bad: compression canary: expected: %d actual: %d",
+			CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
-	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes, &CompressionConfig{
-		Type: CompressionTypeGzip,
-	})
+	decompressedJSONBytes, uncompressed, err = Decompress(compressedJSONBytes)
 	if err != nil {
 		t.Fatal(err)
 	}

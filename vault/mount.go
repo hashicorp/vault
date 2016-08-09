@@ -408,7 +408,7 @@ func (c *Core) loadMounts() error {
 		// Check if the persisted value has canary in the beginning. If
 		// yes, decompress the table and then JSON decode it. If not,
 		// simply JSON decode it.
-		if err := jsonutil.DecompressAndDecodeJSON(raw.Value, mountTable); err != nil {
+		if err := jsonutil.DecodeJSON(raw.Value, mountTable); err != nil {
 			c.logger.Printf("[ERR] core: failed to decompress and/or decode the mount table: %v", err)
 			return err
 		}
@@ -488,7 +488,7 @@ func (c *Core) persistMounts(table *MountTable) error {
 	}
 
 	// Encode the mount table into JSON and compress it (lzw).
-	compressedBytes, err := jsonutil.EncodeJSONAndCompress(table)
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(table, nil)
 	if err != nil {
 		c.logger.Printf("[ERR] core: failed to encode and/or compress the mount table: %v", err)
 		return err

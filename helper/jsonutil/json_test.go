@@ -2,6 +2,7 @@ package jsonutil
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"reflect"
 	"strings"
@@ -17,7 +18,7 @@ func TestJSONUtil_CompressDecompressJSON(t *testing.T) {
 	}
 
 	// Compress an object
-	compressedBytes, err := EncodeJSONAndCompress(expected)
+	compressedBytes, err := EncodeJSONAndCompress(expected, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,14 +27,14 @@ func TestJSONUtil_CompressDecompressJSON(t *testing.T) {
 	}
 
 	// Check if canary is present in the compressed data
-	if compressedBytes[0] != compressutil.CompressionCanary {
+	if compressedBytes[0] != compressutil.CompressionCanaryGzip {
 		t.Fatalf("canary missing in compressed data")
 	}
 
 	// Decompress and decode the compressed information and verify the functional
 	// behavior
 	var actual map[string]interface{}
-	if err = DecompressAndDecodeJSON(compressedBytes, &actual); err != nil {
+	if err = DecodeJSON(compressedBytes, &actual); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(expected, actual) {
@@ -44,15 +45,41 @@ func TestJSONUtil_CompressDecompressJSON(t *testing.T) {
 	}
 
 	// Test invalid data
-	if err = DecompressAndDecodeJSON([]byte{}, &actual); err == nil {
+	if err = DecodeJSON([]byte{}, &actual); err == nil {
 		t.Fatalf("expected a failure")
 	}
 
 	// Test invalid data after the canary byte
 	var buf bytes.Buffer
-	buf.Write([]byte{compressutil.CompressionCanary})
-	if err = DecompressAndDecodeJSON(buf.Bytes(), &actual); err == nil {
+	buf.Write([]byte{compressutil.CompressionCanaryGzip})
+	if err = DecodeJSON(buf.Bytes(), &actual); err == nil {
 		t.Fatalf("expected a failure")
+	}
+
+	// Compress an object
+	compressedBytes, err = EncodeJSONAndCompress(expected, &compressutil.CompressionConfig{
+		Type:                 compressutil.CompressionTypeGzip,
+		GzipCompressionLevel: gzip.BestSpeed,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(compressedBytes) == 0 {
+		t.Fatal("expected compressed data")
+	}
+
+	// Check if canary is present in the compressed data
+	if compressedBytes[0] != compressutil.CompressionCanaryGzip {
+		t.Fatalf("canary missing in compressed data")
+	}
+
+	// Decompress and decode the compressed information and verify the functional
+	// behavior
+	if err = DecodeJSON(compressedBytes, &actual); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
 }
 
