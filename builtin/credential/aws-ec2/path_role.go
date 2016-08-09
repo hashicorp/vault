@@ -291,7 +291,7 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.MaxTTL = time.Duration(data.Get("max_ttl").(int)) * time.Second
 	}
 
-	if roleEntry.MaxTTL < roleEntry.TTL {
+	if roleEntry.MaxTTL != 0 && roleEntry.MaxTTL < roleEntry.TTL {
 		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
 	}
 
