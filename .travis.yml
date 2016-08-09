@@ -6,7 +6,7 @@ services:
   - docker
 
 go:
-  - 1.7rc3
+  - 1.7rc6
 
 matrix:
   allow_failures:
@@ -16,11 +16,6 @@ branches:
   only:
     - master
     - travis-testing
-
-# Having an install function stops Travis from trying to do automagic things
-# with godep
-install:
-  - true
 
 script:
   - make test testrace
