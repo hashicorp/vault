@@ -6,7 +6,6 @@ import (
 	"compress/lzw"
 	"fmt"
 	"io"
-	"log"
 )
 
 const (
@@ -156,6 +155,5 @@ func Decompress(data []byte, config *CompressionConfig) ([]byte, bool, error) {
 		return nil, false, err
 	}
 
-	log.Printf("decompressedBytes: %s\n", string(jsonBuf.Bytes()))
 	return jsonBuf.Bytes(), false, nil
 }
