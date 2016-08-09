@@ -368,7 +368,7 @@ func TestSystemBackend_renew(t *testing.T) {
 		t.Fatal("nil data")
 	}
 	if resp.Secret.TTL != 180*time.Second {
-		t.Fatal("bad lease duration: %v", resp.Secret.TTL)
+		t.Fatalf("bad lease duration: %v", resp.Secret.TTL)
 	}
 
 	// Test the other route path
@@ -385,9 +385,8 @@ func TestSystemBackend_renew(t *testing.T) {
 		t.Fatal("nil data")
 	}
 	if resp.Secret.TTL != 180*time.Second {
-		t.Fatal("bad lease duration: %v", resp.Secret.TTL)
+		t.Fatalf("bad lease duration: %v", resp.Secret.TTL)
 	}
-
 }
 
 func TestSystemBackend_renew_invalidID(t *testing.T) {
