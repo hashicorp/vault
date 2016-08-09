@@ -120,6 +120,8 @@ IMPROVEMENTS:
    endpoint [GH-1647]
  * sys/health: Cluster information isbe returned as part of health status when
    Vault is unsealed [GH-1671]
+ * sys/mounts: MountTable data is compressed before serializing to accommodate
+   thousands of mounts [GH-1693]
 
 BUG FIXES:
 
