@@ -22,6 +22,10 @@ const (
 	// WrapHeaderName is the name of the header containing a directive to wrap the
 	// response.
 	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
+
+	// NoRequestForwardingHeaderName is the name of the header telling Vault
+	// not to use request forwarding
+	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -34,18 +38,18 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/step-down", handleSysStepDown(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/renew", handleLogical(core, false, nil))
-	mux.Handle("/v1/sys/renew/", handleLogical(core, false, nil))
+	mux.Handle("/v1/sys/renew", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	mux.Handle("/v1/sys/renew/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core))
-	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
-	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core, false))
-	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core, false))
-	mux.Handle("/v1/sys/rekey-recovery-key/init", handleSysRekeyInit(core, true))
-	mux.Handle("/v1/sys/rekey-recovery-key/update", handleSysRekeyUpdate(core, true))
-	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesSelfCallback))
-	mux.Handle("/v1/sys/", handleLogical(core, true, nil))
+	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core)))
+	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core)))
+	mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+	mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+	mux.Handle("/v1/sys/capabilities-self", handleRequestForwarding(core, handleLogical(core, true, sysCapabilitiesSelfCallback)))
+	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, true, nil)))
 	mux.Handle("/v1/", handleLogical(core, false, nil))
 
 	// Wrap the handler in another handler to trigger all help paths.
@@ -87,6 +91,42 @@ func parseRequest(r *http.Request, out interface{}) error {
 		return fmt.Errorf("Failed to parse JSON input: %s", err)
 	}
 	return err
+}
+
+func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(NoRequestForwardingHeaderName) != "" {
+			// Forwarding explicitly disabled, fall back to previous behavior
+			handler.ServeHTTP(w, r)
+			return
+		}
+
+		isLeader, leaderAddr, err := core.Leader()
+		if err != nil {
+			if err == vault.ErrHANotEnabled {
+				// Standalone node, serve request normally
+				handler.ServeHTTP(w, r)
+				return
+			}
+			// Some internal error occurred
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if isLeader {
+			handler.ServeHTTP(w, r)
+			return
+		}
+		if leaderAddr == "" {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("node not active but active node not found"))
+			return
+		}
+
+		// Perform forwarding
+		// TODO
+
+		handler.ServeHTTP(w, r)
+		return
+	})
 }
 
 // request is a helper to perform a request and properly exit in the
