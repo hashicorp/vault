@@ -159,6 +159,10 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
+		if cluster == nil {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to fetch cluster details"))
+			return
+		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
 	}

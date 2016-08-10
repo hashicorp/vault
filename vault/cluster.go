@@ -23,15 +23,14 @@ type Cluster struct {
 }
 
 // Cluster fetches the details of either local or global cluster based on the
-// input. This method errors out when Vault is sealed. This function never
-// returns a nil Cluster object.
+// input. This method errors out when Vault is sealed.
 func (c *Core) Cluster() (*Cluster, error) {
 	var cluster Cluster
 
 	// Fetch the storage entry. This call fails when Vault is sealed.
 	entry, err := c.barrier.Get(coreLocalClusterInfoPath)
 	if err != nil {
-		return &cluster, err
+		return nil, err
 	}
 	if entry == nil {
 		return &cluster, nil
@@ -39,7 +38,7 @@ func (c *Core) Cluster() (*Cluster, error) {
 
 	// Decode the cluster information
 	if err = jsonutil.DecodeJSON(entry.Value, &cluster); err != nil {
-		return &cluster, fmt.Errorf("failed to decode cluster details: %v", err)
+		return nil, fmt.Errorf("failed to decode cluster details: %v", err)
 	}
 
 	// Set in config file
