@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -118,13 +119,11 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	var clusterName, clusterID string
 	if !sealed {
 		cluster, err := core.Cluster()
-
-		// Don't set the cluster details in the health status when Vault is sealed
 		if err != nil {
 			return http.StatusInternalServerError, nil, err
 		}
 		if cluster == nil {
-			return http.StatusInternalServerError, nil, nil
+			return http.StatusInternalServerError, nil, fmt.Errorf("failed to fetch cluster details")
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID

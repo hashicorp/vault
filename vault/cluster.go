@@ -25,17 +25,18 @@ type Cluster struct {
 // Cluster fetches the details of either local or global cluster based on the
 // input. This method errors out when Vault is sealed.
 func (c *Core) Cluster() (*Cluster, error) {
+	var cluster Cluster
+
 	// Fetch the storage entry. This call fails when Vault is sealed.
 	entry, err := c.barrier.Get(coreLocalClusterInfoPath)
 	if err != nil {
 		return nil, err
 	}
 	if entry == nil {
-		return nil, nil
+		return &cluster, nil
 	}
 
 	// Decode the cluster information
-	var cluster Cluster
 	if err = jsonutil.DecodeJSON(entry.Value, &cluster); err != nil {
 		return nil, fmt.Errorf("failed to decode cluster details: %v", err)
 	}
@@ -58,42 +59,60 @@ func (c *Core) setupCluster() error {
 		c.logger.Printf("[ERR] core: failed to get cluster details: %v", err)
 		return err
 	}
-	if cluster != nil {
-		// If index is already present, don't update it
-		return nil
+
+	if cluster == nil {
+		cluster = &Cluster{}
 	}
 
-	// If cluster name is not supplied, generate one
-	if c.clusterName == "" {
-		clusterNameBytes, err := uuid.GenerateRandomBytes(4)
+	var modified bool
+
+	if cluster.Name == "" {
+		// If cluster name is not supplied, generate one
+		if c.clusterName == "" {
+			c.logger.Printf("[TRACE] core: cluster name not found/set, generating new")
+			clusterNameBytes, err := uuid.GenerateRandomBytes(4)
+			if err != nil {
+				c.logger.Printf("[ERR] core: failed to generate cluster name: %v", err)
+				return err
+			}
+			c.clusterName = fmt.Sprintf("vault-cluster-%08x", clusterNameBytes)
+		}
+
+		cluster.Name = c.clusterName
+		c.logger.Printf("[DEBUG] core: cluster name set to %s", cluster.Name)
+		modified = true
+	}
+
+	if cluster.ID == "" {
+		// Generate a clusterID
+		clusterID, err := uuid.GenerateUUID()
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate cluster name: %v", err)
+			c.logger.Printf("[ERR] core: failed to generate cluster identifier: %v", err)
 			return err
 		}
-		c.clusterName = fmt.Sprintf("vault-cluster-%08x", clusterNameBytes)
+		cluster.ID = clusterID
+		c.logger.Printf("[DEBUG] core: cluster ID set to %s", cluster.ID)
+		modified = true
 	}
 
-	// Generate a clusterID
-	clusterID, err := uuid.GenerateUUID()
-	if err != nil {
-		c.logger.Printf("[ERR] core: failed to generate cluster identifier: %v", err)
-		return err
+	if modified {
+		// Encode the cluster information into as a JSON string
+		rawCluster, err := json.Marshal(cluster)
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to encode cluster details: %v", err)
+			return err
+		}
+
+		// Store it
+		err = c.barrier.Put(&Entry{
+			Key:   coreLocalClusterInfoPath,
+			Value: rawCluster,
+		})
+		if err != nil {
+			c.logger.Printf("[ERR] core: failed to store cluster details: %v", err)
+			return err
+		}
 	}
 
-	// Encode the cluster information into as a JSON string
-	rawCluster, err := json.Marshal(&Cluster{
-		Name: c.clusterName,
-		ID:   clusterID,
-	})
-	if err != nil {
-		c.logger.Printf("[ERR] core: failed to encode cluster details: %v", err)
-		return err
-	}
-
-	// Store it
-	return c.barrier.Put(&Entry{
-		Key:   coreLocalClusterInfoPath,
-		Value: rawCluster,
-	})
-
+	return nil
 }
