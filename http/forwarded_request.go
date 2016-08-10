@@ -23,24 +23,18 @@ type forwardedRequest struct {
 	// The original method
 	Method string `json:"method"`
 
-	// The original path
-	RawPath string `json:"raw_path"`
+	// The original URL object
+	URL *url.URL `json:"url"`
 
-	// The original query string
-	RawQuery string `json:"raw_query"`
-
-	// The client token header value
-	ClientToken string `json:"client_token"`
-
-	// The wrap TTL header value
-	WrapTTL string `json:"wrap_ttl"`
+	// The original headers
+	Header http.Header `json:"header"`
 
 	// The request body
 	Body []byte `json:"body"`
 
 	// The specified host
-
 	Host string `json:"host"`
+
 	// The remote address
 	RemoteAddr string `json:"remote_addr"`
 
@@ -51,10 +45,8 @@ type forwardedRequest struct {
 func generateForwardedRequest(req *http.Request, addr string) (*http.Request, error) {
 	fq := forwardedRequest{
 		Method:          req.Method,
-		RawPath:         req.URL.RawPath,
-		RawQuery:        req.URL.RawQuery,
-		ClientToken:     req.Header.Get(AuthHeaderName),
-		WrapTTL:         req.Header.Get(WrapTTLHeaderName),
+		URL:             req.URL,
+		Header:          req.Header,
 		Host:            req.Host,
 		RemoteAddr:      req.RemoteAddr,
 		ConnectionState: req.TLS,
@@ -107,21 +99,13 @@ func parseForwardedRequest(req *http.Request) (*http.Request, error) {
 	}
 
 	ret := &http.Request{
-		Method: fq.Method,
-		URL: &url.URL{
-			RawPath:  fq.RawPath,
-			RawQuery: fq.RawQuery,
-		},
-		Header: map[string][]string{
-			AuthHeaderName: {fq.ClientToken},
-		},
+		Method:     fq.Method,
+		URL:        fq.URL,
+		Header:     fq.Header,
 		Body:       buf,
 		Host:       fq.Host,
 		RemoteAddr: fq.RemoteAddr,
 		TLS:        fq.ConnectionState,
-	}
-	if fq.WrapTTL != "" {
-		ret.Header.Add(WrapTTLHeaderName, fq.WrapTTL)
 	}
 
 	return ret, nil
