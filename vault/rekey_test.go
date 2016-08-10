@@ -225,7 +225,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 			t.Fatalf("err: %v", err)
 		}
 		for i := 0; i < 3; i++ {
-			_, err = c.Unseal(result.SecretShares[i])
+			_, err = TestCoreUnseal(c, result.SecretShares[i])
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -282,7 +282,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		unseal, err := c.Unseal(result.SecretShares[0])
+		unseal, err := TestCoreUnseal(c, result.SecretShares[0])
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -375,7 +375,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -393,7 +393,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 

@@ -14,12 +14,14 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"golang.org/x/net/http2"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/requestutil"
 )
 
 const (
@@ -35,6 +37,11 @@ type privKeyParams struct {
 	X    *big.Int `json:"x"`
 	Y    *big.Int `json:"y"`
 	D    *big.Int `json:"d"`
+}
+
+type activeConnection struct {
+	*http.Client
+	activeAddr string
 }
 
 // Structure representing the storage entry that holds cluster information
@@ -211,22 +218,9 @@ func (c *Core) setupCluster() error {
 			return fmt.Errorf("failed to find private key when generating new local cluster certificate")
 		}
 
-		u, err := url.Parse(c.advertiseAddr)
+		host, err := uuid.GenerateUUID()
 		if err != nil {
-			errMsg := fmt.Sprintf("unable to parse advertise address %s: %v", c.advertiseAddr, err)
-			c.logger.Printf("[ERR] core: %s", errMsg)
-			return fmt.Errorf(errMsg)
-		}
-		if u.Host == "" {
-			errMsg := fmt.Sprintf("parsed advertise address %s has empty host", c.advertiseAddr)
-			c.logger.Printf("[ERR] core: %s", errMsg)
-			return fmt.Errorf(errMsg)
-		}
-
-		host := u.Host
-		splitHost, _, err := net.SplitHostPort(u.Host)
-		if err == nil {
-			host = splitHost
+			return err
 		}
 
 		template := &x509.Certificate{
@@ -244,11 +238,6 @@ func (c *Core) setupCluster() error {
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
 			IsCA: true,
-		}
-
-		ip := net.ParseIP(host)
-		if ip != nil {
-			template.IPAddresses = []net.IP{ip}
 		}
 
 		certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)
@@ -289,11 +278,14 @@ func (c *Core) setupCluster() error {
 	return nil
 }
 
+// SetClusterListenerSetupFunc sets the listener setup func, which is used to
+// know which ports to listen on and a handler to use.
 func (c *Core) SetClusterListenerSetupFunc(setupFunc func() ([]net.Listener, http.Handler, error)) {
 	c.clusterListenerSetupFunc = setupFunc
 }
 
-// It is assumed that the state lock is held while this is run
+// startClusterListener starts cluster request listeners during postunseal. It
+// is assumed that the state lock is held while this is run.
 func (c *Core) startClusterListener() error {
 	if c.clusterListenerShutdownCh != nil {
 		c.logger.Printf("[ERR] core/startClusterListener: attempt to set up cluster listeners when already set up")
@@ -343,7 +335,8 @@ func (c *Core) startClusterListener() error {
 	return nil
 }
 
-// It is assumed that the state lock is held while this is run
+// stopClusterListener stops any existing listeners during preseal. It is
+// assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
 	if c.clusterListenerShutdownCh != nil {
 		close(c.clusterListenerShutdownCh)
@@ -360,6 +353,8 @@ func (c *Core) stopClusterListener() {
 	defer func() { c.clusterListenerShutdownSuccessCh = nil }()
 }
 
+// ClusterTLSConfig generates a TLS configuration based on the local cluster
+// key and cert.
 func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 	cluster, err := c.Cluster()
 	if err != nil {
@@ -372,6 +367,11 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		return nil, fmt.Errorf("cluster certificate is nil")
 	}
 
+	parsedCert, err := x509.ParseCertificate(cluster.Certificate)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing local cluster certificate: %v", err)
+	}
+
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{
 			tls.Certificate{
@@ -380,6 +380,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 			},
 		},
 		RootCAs:    c.localClusterCertPool,
+		ServerName: parsedCert.Subject.CommonName,
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs:  c.localClusterCertPool,
 		NextProtos: []string{
@@ -388,4 +389,86 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 	}
 
 	return tlsConfig, nil
+}
+
+// refreshRequestForwardingConnection ensures that the client/transport are
+// alive and that the current active address value matches the most
+// recently-known address.
+func (c *Core) refreshRequestForwardingConnection(activeAddr string) error {
+	c.requestForwardingConnectionWriteLock.RLock()
+	if c.requestForwardingConnection != nil &&
+		c.requestForwardingConnection.activeAddr == activeAddr {
+		c.requestForwardingConnectionWriteLock.RUnlock()
+		return nil
+	}
+
+	// Give up the read lock and get a write lock, then verify it's still required
+	c.requestForwardingConnectionWriteLock.RUnlock()
+	c.requestForwardingConnectionWriteLock.Lock()
+	defer c.requestForwardingConnectionWriteLock.Unlock()
+	if c.requestForwardingConnection != nil &&
+		c.requestForwardingConnection.activeAddr == activeAddr {
+		return nil
+	}
+
+	if c.requestForwardingConnection == nil {
+		tlsConfig, err := c.ClusterTLSConfig()
+		if err != nil {
+			return err
+		}
+		tp := &http.Transport{
+			TLSClientConfig: tlsConfig,
+		}
+		err = http2.ConfigureTransport(tp)
+		if err != nil {
+			return err
+		}
+		c.requestForwardingConnection = &activeConnection{
+			Client: &http.Client{
+				Transport: tp,
+			},
+		}
+	}
+
+	if c.requestForwardingConnection.activeAddr != activeAddr {
+		c.requestForwardingConnection.activeAddr = activeAddr
+	}
+
+	return nil
+}
+
+// ForwardRequest forwards a given request to the active node and returns the
+// response.
+func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
+	c.requestForwardingConnectionWriteLock.RLock()
+	defer c.requestForwardingConnectionWriteLock.RUnlock()
+	if c.requestForwardingConnection == nil {
+		return nil, fmt.Errorf("no connection to the active node")
+	}
+
+	// Figure out the final host/port
+	u, err := url.ParseRequestURI(c.requestForwardingConnection.activeAddr)
+	if err != nil {
+		return nil, err
+	}
+	host, port, err := net.SplitHostPort(u.Host)
+	nPort, nPortErr := strconv.Atoi(port)
+	if err != nil {
+		// assume it's due to there not being a port specified, in which case
+		// use 443
+		host = u.Host
+		nPort = 443
+	}
+	if nPortErr != nil {
+		return nil, err
+	}
+	u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
+	faddr := u.String()
+
+	freq, err := requestutil.GenerateForwardedRequest(req, faddr)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.requestForwardingConnection.Do(freq)
 }

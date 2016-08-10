@@ -85,7 +85,7 @@ func TestCore_EnableAudit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestCore_DisableAudit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -177,7 +177,7 @@ func TestCore_DefaultAuditTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

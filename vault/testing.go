@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"testing"
@@ -131,6 +132,11 @@ func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
 func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
+	return TestCoreInitClusterListenerSetup(t, core, func() ([]net.Listener, http.Handler, error) { return nil, nil, nil })
+}
+
+func TestCoreInitClusterListenerSetup(t *testing.T, core *Core, setupFunc func() ([]net.Listener, http.Handler, error)) ([]byte, string) {
+	core.SetClusterListenerSetupFunc(setupFunc)
 	result, err := core.Initialize(&SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
@@ -141,12 +147,17 @@ func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
 	return result.SecretShares[0], result.RootToken
 }
 
+func TestCoreUnseal(core *Core, key []byte) (bool, error) {
+	core.SetClusterListenerSetupFunc(func() ([]net.Listener, http.Handler, error) { return nil, nil, nil })
+	return core.Unseal(key)
+}
+
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
 func TestCoreUnsealed(t *testing.T) (*Core, []byte, string) {
 	core := TestCore(t)
 	key, token := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 

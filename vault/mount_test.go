@@ -25,7 +25,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestCore_Mount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestCore_Unmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -216,7 +216,7 @@ func TestCore_Remount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

@@ -1,4 +1,4 @@
-package http
+package requestutil
 
 import (
 	"bufio"
@@ -15,8 +15,6 @@ func TestForwardedRequestGenerateParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Add(AuthHeaderName, "suppose_i_do")
-	req.Header.Add(WrapTTLHeaderName, "43s")
 	req.TLS = &tls.ConnectionState{
 		Version:           tls.VersionTLS12,
 		HandshakeComplete: true,
@@ -39,7 +37,7 @@ func TestForwardedRequestGenerateParse(t *testing.T) {
 	}
 
 	// Generate the request with the forwarded request in the body
-	req, err = generateForwardedRequest(initialReq, "https://bloopety.bloop:8201")
+	req, err = GenerateForwardedRequest(initialReq, "https://bloopety.bloop:8201")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +55,7 @@ func TestForwardedRequestGenerateParse(t *testing.T) {
 	}
 
 	// Now extract the forwarded request to generate a final request for processing
-	finalReq, err := parseForwardedRequest(intreq)
+	finalReq, err := ParseForwardedRequest(intreq)
 	if err != nil {
 		t.Fatal(err)
 	}

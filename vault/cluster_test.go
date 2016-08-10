@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -64,7 +65,7 @@ func TestClusterHA(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	key, _ := TestCoreInit(t, c)
-	if _, err := c.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -115,15 +116,6 @@ func TestClusterHA(t *testing.T) {
 	if err != nil {
 		t.Fatal("error parsing local cluster certificate: %v", err)
 	}
-	if cert.Subject.CommonName != "127.0.0.1" {
-		t.Fatalf("bad common name: %#v", cert.Subject.CommonName)
-	}
-	if len(cert.DNSNames) != 1 || cert.DNSNames[0] != "127.0.0.1" {
-		t.Fatalf("bad dns names: %#v", cert.DNSNames)
-	}
-	if len(cert.IPAddresses) != 1 || cert.IPAddresses[0].String() != "127.0.0.1" {
-		t.Fatalf("bad ip sans: %#v", cert.IPAddresses)
-	}
 
 	// Make sure the cert pool is as expected
 	if len(c.localClusterCertPool.Subjects()) != 1 {
@@ -134,16 +126,26 @@ func TestClusterHA(t *testing.T) {
 	}
 }
 
-func TestCluster_ListenForRequests(t *testing.T) {
+func TestCluster_ForwardCommon(t *testing.T) {
 	logger = log.New(os.Stderr, "", log.LstdFlags)
-	advertise := "http://127.0.0.1:8200"
 
-	c, err := NewCore(&CoreConfig{
-		Physical:      physical.NewInmemHA(logger),
-		HAPhysical:    physical.NewInmemHA(logger),
-		AdvertiseAddr: advertise,
-		DisableMlock:  true,
-	})
+	logicalBackends := make(map[string]logical.Factory)
+	logicalBackends["generic"] = PassthroughBackendFactory
+
+	// Create two cores with the same physical and different advertise addrs
+	coreConfig := &CoreConfig{
+		Physical:        physical.NewInmem(logger),
+		HAPhysical:      physical.NewInmemHA(logger),
+		LogicalBackends: logicalBackends,
+		AdvertiseAddr:   "https://127.0.0.1:8202",
+		DisableMlock:    true,
+	}
+	c1, err := NewCore(coreConfig)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	coreConfig.AdvertiseAddr = "https://127.0.0.1:8206"
+	c2, err := NewCore(coreConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -152,20 +154,28 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	lns := []net.Listener{ln}
+	c1lns := []net.Listener{ln}
 	ln, err = net.Listen("tcp", "127.0.0.1:8204")
 	if err != nil {
 		t.Fatal(err)
 	}
-	lns = append(lns, ln)
+	c1lns = append(c1lns, ln)
+	ln, err = net.Listen("tcp", "127.0.0.1:8206")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c2lns := []net.Listener{ln}
 
 	defer func() {
-		for _, ln := range lns {
+		for _, ln := range c1lns {
+			ln.Close()
+		}
+		for _, ln := range c2lns {
 			ln.Close()
 		}
 	}()
 
-	clusterListenerSetupFunc := func() ([]net.Listener, http.Handler, error) {
+	clusterListenerSetupFunc := func(c *Core, lns []net.Listener) ([]net.Listener, http.Handler, error) {
 		ret := make([]net.Listener, 0, len(lns))
 		// Loop over the existing listeners and start listeners on appropriate ports
 		for _, ln := range lns {
@@ -186,15 +196,22 @@ func TestCluster_ListenForRequests(t *testing.T) {
 		return ret, nil, nil
 	}
 
-	c.SetClusterListenerSetupFunc(clusterListenerSetupFunc)
+	c1SetupFunc := func() ([]net.Listener, http.Handler, error) {
+		return clusterListenerSetupFunc(c1, c1lns)
+	}
+	c2SetupFunc := func() ([]net.Listener, http.Handler, error) {
+		return clusterListenerSetupFunc(c1, c2lns)
+	}
 
-	key, root := TestCoreInit(t, c)
-	if _, err := c.Unseal(TestKeyCopy(key)); err != nil {
+	c2.SetClusterListenerSetupFunc(c2SetupFunc)
+
+	key, root := TestCoreInitClusterListenerSetup(t, c1, c1SetupFunc)
+	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
 	// Verify unsealed
-	sealed, err := c.Sealed()
+	sealed, err := c1.Sealed()
 	if err != nil {
 		t.Fatalf("err checking seal status: %s", err)
 	}
@@ -202,9 +219,35 @@ func TestCluster_ListenForRequests(t *testing.T) {
 		t.Fatal("should not be sealed")
 	}
 
-	// Wait for core to become active
-	testWaitActive(t, c)
+	// Make this nicer for tests
+	oldManualStepDownSleepPeriod := manualStepDownSleepPeriod
+	manualStepDownSleepPeriod = 3 * time.Second
+	// Restore this value for other tests
+	defer func() { manualStepDownSleepPeriod = oldManualStepDownSleepPeriod }()
 
+	// Wait for core to become active
+	testWaitActive(t, c1)
+
+	// At this point c2 should still be sealed. We don't want to have more than
+	// one core unsealed for the listener tests since we do some timing with
+	// step-downs.
+	testCluster_ListenForRequests(t, c1, c1lns, root)
+
+	// Re-unseal core1, wait for it to be active, then unseal core2.
+	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+	testWaitActive(t, c1)
+	if _, err := c2.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Test forwarding a request. Since we're going directly from core to core
+	// with no fallback we know that if it worked, request handling is working
+	testCluster_ForwardRequests(t, c2, root)
+}
+
+func testCluster_ListenForRequests(t *testing.T, c *Core, lns []net.Listener, root string) {
 	tlsConfig, err := c.ClusterTLSConfig()
 	if err != nil {
 		t.Fatal(err)
@@ -223,7 +266,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+1)
 					continue
 				}
-				t.Fatal(err)
+				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, lns[0].(*net.TCPListener).Addr(), lns[1].(*net.TCPListener).Addr())
 			}
 			if expectFail {
 				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+1)
@@ -245,15 +288,9 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 	checkListenersFunc(false)
 
-	// Make this nicer for tests
-	oldManualStepDownSleepPeriod := manualStepDownSleepPeriod
-	manualStepDownSleepPeriod = 3 * time.Second
-	// Restore this value for other tests
-	defer func() { manualStepDownSleepPeriod = oldManualStepDownSleepPeriod }()
-
 	err = c.StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
-		Path:        "sys/seal",
+		Path:        "sys/step-down",
 		ClientToken: root,
 	})
 	if err != nil {
@@ -274,4 +311,30 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	}
 	time.Sleep(1 * time.Second)
 	checkListenersFunc(true)
+}
+
+func testCluster_ForwardRequests(t *testing.T, c *Core, root string) {
+	standby, err := c.Standby()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !standby {
+		t.Fatal("expected core to be standby")
+	}
+
+	bodBuf := bytes.NewReader([]byte(`{ "foo": "bar", "zip": "zap" }`))
+	req, err := http.NewRequest("PUT", "https://pushit.real.good:9281/v1/secret/foobar", bodBuf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Add("X-Vault-Token", root)
+
+	resp, err := c.ForwardRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil {
+		t.Fatal("nil resp")
+	}
+	//	t.Fatalf("resp:\n%#v\n", *resp)
 }

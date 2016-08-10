@@ -46,7 +46,7 @@ func TestSealConfig_Invalid(t *testing.T) {
 func TestCore_Unseal_MultiShare(t *testing.T) {
 	c := TestCore(t)
 
-	_, err := c.Unseal(invalidKey)
+	_, err := TestCoreUnseal(c, invalidKey)
 	if err != ErrNotInit {
 		t.Fatalf("err: %v", err)
 	}
@@ -73,13 +73,13 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		unseal, err := c.Unseal(res.SecretShares[i])
+		unseal, err := TestCoreUnseal(c, res.SecretShares[i])
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 
 		// Ignore redundant
-		_, err = c.Unseal(res.SecretShares[i])
+		_, err = TestCoreUnseal(c, res.SecretShares[i])
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -131,7 +131,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 func TestCore_Unseal_Single(t *testing.T) {
 	c := TestCore(t)
 
-	_, err := c.Unseal(invalidKey)
+	_, err := TestCoreUnseal(c, invalidKey)
 	if err != ErrNotInit {
 		t.Fatalf("err: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
-	unseal, err := c.Unseal(res.SecretShares[0])
+	unseal, err := TestCoreUnseal(c, res.SecretShares[0])
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	unseal, err := c.Unseal(res.SecretShares[0])
+	unseal, err := TestCoreUnseal(c, res.SecretShares[0])
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -222,7 +222,7 @@ func TestCore_SealUnseal(t *testing.T) {
 	if err := c.Seal(root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if unseal, err := c.Unseal(key); err != nil || !unseal {
+	if unseal, err := TestCoreUnseal(c, key); err != nil || !unseal {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -969,7 +969,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1008,7 +1008,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1075,7 +1075,7 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1114,7 +1114,7 @@ func TestCore_StepDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1261,7 +1261,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1327,7 +1327,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1427,7 +1427,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		t.Fatalf("err: %v", err)
 	}
 	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1480,7 +1480,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -1982,7 +1982,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -2000,7 +2000,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 

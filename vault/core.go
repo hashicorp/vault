@@ -225,13 +225,29 @@ type Core struct {
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
 
+	//
 	// Cluster information
-	clusterName                      string
-	localClusterPrivateKey           crypto.Signer
-	localClusterCertPool             *x509.CertPool
-	clusterListenerSetupFunc         func() ([]net.Listener, http.Handler, error)
-	clusterListenerShutdownCh        chan struct{}
+	//
+	// Name
+	clusterName string
+	// The private key stored in the barrier used for establishing
+	// mutually-authenticated connections between Vault cluster members
+	localClusterPrivateKey crypto.Signer
+	// The cert pool containing the self-signed CA as a trusted CA
+	localClusterCertPool *x509.CertPool
+	// The setup function that gives us the listeners for the cluster-cluster
+	// connection and the handler to use
+	clusterListenerSetupFunc func() ([]net.Listener, http.Handler, error)
+	// Shutdown channel for the cluster listeners
+	clusterListenerShutdownCh chan struct{}
+	// Shutdown success channel. We need this to be done serially to ensure
+	// that binds are removed before they might be reinstated.
 	clusterListenerShutdownSuccessCh chan struct{}
+	// Connection info containing a client and a current active address
+	requestForwardingConnection *activeConnection
+	// Write lock used to ensure that we don't have multiple connections adjust
+	// this value at the same time
+	requestForwardingConnectionWriteLock sync.RWMutex
 }
 
 // CoreConfig is used to parameterize a core
@@ -545,6 +561,17 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Check if we are the leader
 	if !c.standby {
+		// If we have connections from talking to a previous leader, close them
+		// out to free resources
+		if c.requestForwardingConnection != nil {
+			c.requestForwardingConnectionWriteLock.Lock()
+			// Verify that the condition hasn't changed
+			if c.requestForwardingConnection != nil {
+				c.requestForwardingConnection.Transport.(*http.Transport).CloseIdleConnections()
+			}
+			c.requestForwardingConnection = nil
+			c.requestForwardingConnectionWriteLock.Unlock()
+		}
 		return true, c.advertiseAddr, nil
 	}
 
@@ -574,7 +601,16 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	}
 
 	// Leader address is in the entry
-	return false, string(entry.Value), nil
+	activeAddr := string(entry.Value)
+
+	// This will ensure that we both have a connection at the ready and that
+	// the address is the current known value
+	err = c.refreshRequestForwardingConnection(activeAddr)
+	if err != nil {
+		return false, "", err
+	}
+
+	return false, activeAddr, nil
 }
 
 // SecretProgress returns the number of keys provided so far

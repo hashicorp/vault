@@ -1,4 +1,4 @@
-package http
+package requestutil
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ func (b bufCloser) Close() error {
 	return nil
 }
 
-type forwardedRequest struct {
+type ForwardedRequest struct {
 	// The original method
 	Method string `json:"method"`
 
@@ -42,8 +42,10 @@ type forwardedRequest struct {
 	ConnectionState *tls.ConnectionState `json:"connection_state"`
 }
 
-func generateForwardedRequest(req *http.Request, addr string) (*http.Request, error) {
-	fq := forwardedRequest{
+// GenerateForwardedRequest generates a new http.Request that contains the
+// original requests's information in the new request's body.
+func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, error) {
+	fq := ForwardedRequest{
 		Method:          req.Method,
 		URL:             req.URL,
 		Header:          req.Header,
@@ -74,10 +76,10 @@ func generateForwardedRequest(req *http.Request, addr string) (*http.Request, er
 	return ret, nil
 }
 
-// parseForwardedRequest generates a new http.Request that is comprised of the
+// ParseForwardedRequest generates a new http.Request that is comprised of the
 // values in the given request's body, assuming it correctly parses into a
-// forwardedRequest.
-func parseForwardedRequest(req *http.Request) (*http.Request, error) {
+// ForwardedRequest.
+func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 	buf := bufCloser{
 		Buffer: bytes.NewBuffer(nil),
 	}
@@ -86,7 +88,7 @@ func parseForwardedRequest(req *http.Request) (*http.Request, error) {
 		return nil, err
 	}
 
-	var fq forwardedRequest
+	var fq ForwardedRequest
 	err = jsonutil.DecodeJSON(buf.Bytes(), &fq)
 	if err != nil {
 		return nil, err

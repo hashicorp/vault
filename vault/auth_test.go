@@ -81,7 +81,7 @@ func TestCore_DefaultAuthTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestCore_EnableCredential(t *testing.T) {
 	c2.credentialBackends["noop"] = func(*logical.BackendConfig) (logical.Backend, error) {
 		return &NoopBackend{}, nil
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestCore_DisableCredential(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := c2.Unseal(key)
+	unseal, err := TestCoreUnseal(c2, key)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
