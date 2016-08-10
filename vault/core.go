@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"sync"
@@ -223,9 +225,11 @@ type Core struct {
 	cachingDisabled bool
 
 	// Cluster information
-	clusterName            string
-	localClusterPrivateKey crypto.Signer
-	localClusterCertPool   *x509.CertPool
+	clusterName               string
+	localClusterPrivateKey    crypto.Signer
+	localClusterCertPool      *x509.CertPool
+	clusterListenerSetupFunc  func() ([]net.Listener, http.Handler, error)
+	clusterListenerShutdownCh chan struct{}
 }
 
 // CoreConfig is used to parameterize a core
@@ -1005,6 +1009,11 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupCluster(); err != nil {
 		return err
 	}
+	if c.ha != nil {
+		if err := c.startClusterListener(); err != nil {
+			return err
+		}
+	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
 	c.logger.Printf("[INFO] core: post-unseal setup complete")
@@ -1028,6 +1037,10 @@ func (c *Core) preSeal() error {
 		c.metricsCh = nil
 	}
 	var result error
+	if c.ha != nil {
+		c.stopClusterListener()
+	}
+
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down audits: {{err}}", err))
 	}

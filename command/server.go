@@ -254,39 +254,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	// If we're in dev mode, then initialize the core
-	if dev {
-		init, err := c.enableDev(core, devRootTokenID)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Error initializing dev mode: %s", err))
-			return 1
-		}
-
-		export := "export"
-		quote := "'"
-		if runtime.GOOS == "windows" {
-			export = "set"
-			quote = ""
-		}
-
-		c.Ui.Output(fmt.Sprintf(
-			"==> WARNING: Dev mode is enabled!\n\n"+
-				"In this mode, Vault is completely in-memory and unsealed.\n"+
-				"Vault is configured to only have a single unseal key. The root\n"+
-				"token has already been authenticated with the CLI, so you can\n"+
-				"immediately begin using the Vault CLI.\n\n"+
-				"The only step you need to take is to set the following\n"+
-				"environment variables:\n\n"+
-				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"]+quote+"\n\n"+
-				"The unseal key and root token are reproduced below in case you\n"+
-				"want to seal/unseal the Vault or play with authentication.\n\n"+
-				"Unseal Key: %s\nRoot Token: %s\n",
-			hex.EncodeToString(init.SecretShares[0]),
-			init.RootToken,
-		))
-	}
-
 	// Compile server information for output later
 	info["backend"] = config.Backend.Type
 	info["log level"] = logLevel
@@ -402,9 +369,69 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	handler := vaulthttp.Handler(core)
+
+	clusterListenerSetupFunc := func() ([]net.Listener, http.Handler, error) {
+		ret := make([]net.Listener, 0, len(lns))
+		// Loop over the existing listeners and start listeners on appropriate ports
+		for _, ln := range lns {
+			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
+			if !ok {
+				c.logger.Printf("[TRACE] command/server: %s not a candidate for cluster request handling", ln.Addr().String())
+				continue
+			}
+			c.logger.Printf("[TRACE] command/server: %s is a candidate for cluster request handling at addr %s and port %d", tcpAddr.String(), tcpAddr.IP.String(), tcpAddr.Port+1)
+
+			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+1))
+			if err != nil {
+				return nil, nil, err
+			}
+			ret = append(ret, ln)
+		}
+
+		return ret, handler, nil
+	}
+
+	// This needs to happen before we first unseal, so before we trigger dev
+	// mode if it's set
+	core.SetClusterListenerSetupFunc(clusterListenerSetupFunc)
+
+	// If we're in dev mode, then initialize the core
+	if dev {
+		init, err := c.enableDev(core, devRootTokenID)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error initializing dev mode: %s", err))
+			return 1
+		}
+
+		export := "export"
+		quote := "'"
+		if runtime.GOOS == "windows" {
+			export = "set"
+			quote = ""
+		}
+
+		c.Ui.Output(fmt.Sprintf(
+			"==> WARNING: Dev mode is enabled!\n\n"+
+				"In this mode, Vault is completely in-memory and unsealed.\n"+
+				"Vault is configured to only have a single unseal key. The root\n"+
+				"token has already been authenticated with the CLI, so you can\n"+
+				"immediately begin using the Vault CLI.\n\n"+
+				"The only step you need to take is to set the following\n"+
+				"environment variables:\n\n"+
+				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"]+quote+"\n\n"+
+				"The unseal key and root token are reproduced below in case you\n"+
+				"want to seal/unseal the Vault or play with authentication.\n\n"+
+				"Unseal Key: %s\nRoot Token: %s\n",
+			hex.EncodeToString(init.SecretShares[0]),
+			init.RootToken,
+		))
+	}
+
 	// Initialize the HTTP server
 	server := &http.Server{}
-	server.Handler = vaulthttp.Handler(core)
+	server.Handler = handler
 	for _, ln := range lns {
 		go server.Serve(ln)
 	}
@@ -472,10 +499,12 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 		return nil, fmt.Errorf("failed to check active status: %v", err)
 	}
 	if err == nil {
-		leaderCount := 3
+		leaderCount := 5
 		for !isLeader {
 			if leaderCount == 0 {
-				return nil, fmt.Errorf("failed to get active status after three seconds")
+				buf := make([]byte, 1<<16)
+				runtime.Stack(buf, true)
+				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s\n", buf)
 			}
 			time.Sleep(1 * time.Second)
 			isLeader, _, err = core.Leader()

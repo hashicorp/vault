@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -11,8 +12,11 @@ import (
 	"math/big"
 	mathrand "math/rand"
 	"net"
+	"net/http"
 	"net/url"
 	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -283,4 +287,88 @@ func (c *Core) setupCluster() error {
 	}
 
 	return nil
+}
+
+func (c *Core) SetClusterListenerSetupFunc(setupFunc func() ([]net.Listener, http.Handler, error)) {
+	c.clusterListenerSetupFunc = setupFunc
+}
+
+// It is assumed that the state lock is held while this is run
+func (c *Core) startClusterListener() error {
+	if c.clusterListenerShutdownCh != nil {
+		c.logger.Printf("[ERR] core/startClusterListener: attempt to set up cluster listeners when already set up")
+		return fmt.Errorf("cluster listeners already setup")
+	}
+
+	if c.clusterListenerSetupFunc == nil {
+		c.logger.Printf("[ERR] core/startClusterListener: cluster listener setup function has not been set")
+		return fmt.Errorf("cluster listener setup function has not been set")
+	}
+
+	cluster, err := c.Cluster()
+	if err != nil {
+		c.logger.Printf("[ERR] core/startClusterListener: failed to get cluster details: %v", err)
+		return err
+	}
+	if cluster == nil {
+		c.logger.Printf("[ERR] core/startClusterListener: cluster information is nil")
+		return fmt.Errorf("cluster information is nil")
+	}
+	if cluster.Certificate == nil || len(cluster.Certificate) == 0 {
+		c.logger.Printf("[ERR] core/startClusterListener: cluster certificate is nil")
+		return fmt.Errorf("cluster certificate is nil")
+	}
+
+	lns, handler, err := c.clusterListenerSetupFunc()
+	if err != nil {
+		return err
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{
+			tls.Certificate{
+				Certificate: [][]byte{cluster.Certificate},
+				PrivateKey:  c.localClusterPrivateKey,
+			},
+		},
+		RootCAs:    c.localClusterCertPool,
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  c.localClusterCertPool,
+		NextProtos: []string{
+			"h2",
+		},
+	}
+
+	tlsLns := make([]net.Listener, 0, len(lns))
+	for _, ln := range lns {
+		tlsLn := tls.NewListener(ln, tlsConfig)
+		tlsLns = append(tlsLns, tlsLn)
+		server := &http.Server{
+			Handler: handler,
+		}
+		http2.ConfigureServer(server, nil)
+		c.logger.Printf("[TRACE] core/startClusterListener: serving cluster requests on %s", tlsLn.Addr())
+		go server.Serve(tlsLn)
+	}
+
+	c.clusterListenerShutdownCh = make(chan struct{})
+
+	go func() {
+		<-c.clusterListenerShutdownCh
+		c.logger.Printf("[TRACE] core/startClusterListener: shutting down listeners")
+		for _, tlsLn := range tlsLns {
+			tlsLn.Close()
+		}
+	}()
+
+	return nil
+}
+
+// It is assumed that the state lock is held while this is run
+func (c *Core) stopClusterListener() {
+	if c.clusterListenerShutdownCh == nil {
+		return
+	}
+	close(c.clusterListenerShutdownCh)
+	c.clusterListenerShutdownCh = nil
 }
