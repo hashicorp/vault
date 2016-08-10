@@ -1304,6 +1304,9 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Don't advertise non-expiring root tokens as renewable, as attempts to renew them are denied
 	if te.TTL == 0 {
+		if parent.TTL != 0 {
+			return logical.ErrorResponse("expiring root tokens cannot create non-expiring root tokens"), logical.ErrInvalidRequest
+		}
 		renewable = false
 	}
 
