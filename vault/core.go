@@ -50,10 +50,6 @@ const (
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
-
-	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
-	// step down of the active node, to prevent instantly regrabbing the lock
-	manualStepDownSleepPeriod = 10 * time.Second
 )
 
 var (
@@ -80,6 +76,11 @@ var (
 	// ErrHANotEnabled is returned if the operation only makes sense
 	// in an HA setting
 	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
+
+	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
+	// step down of the active node, to prevent instantly regrabbing the lock.
+	// It's var not const so that tests can manipulate it.
+	manualStepDownSleepPeriod = 10 * time.Second
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -225,11 +226,12 @@ type Core struct {
 	cachingDisabled bool
 
 	// Cluster information
-	clusterName               string
-	localClusterPrivateKey    crypto.Signer
-	localClusterCertPool      *x509.CertPool
-	clusterListenerSetupFunc  func() ([]net.Listener, http.Handler, error)
-	clusterListenerShutdownCh chan struct{}
+	clusterName                      string
+	localClusterPrivateKey           crypto.Signer
+	localClusterCertPool             *x509.CertPool
+	clusterListenerSetupFunc         func() ([]net.Listener, http.Handler, error)
+	clusterListenerShutdownCh        chan struct{}
+	clusterListenerShutdownSuccessCh chan struct{}
 }
 
 // CoreConfig is used to parameterize a core
