@@ -61,31 +61,30 @@ you'll first need [Go](https://www.golang.org) installed on your
 machine (version 1.6+ is *required*).
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH). After setting up Go, you can
-download the required build tools such as vet, cover, etc by bootstrapping
-your environment. 
+[GOPATH](https://golang.org/doc/code.html#GOPATH). Next, clone this repository
+into `$GOPATH/src/github.com/hashicorp/vault`. You can then download any
+required build tools by bootstrapping your environment:
 
 ```sh
 $ make bootstrap
 ...
 ```
 
-Next, clone this repository into `$GOPATH/src/github.com/hashicorp/vault`.
-Then type `make`. This will run the tests. If this exits with exit status 0,
-then everything is working!
-
-```sh
-$ make
-...
-```
-
-To compile a development version of Vault, run `make dev`. This will put the
-Vault binary in the `bin` and `$GOPATH/bin` folders:
+To compile a development version of Vault, run `make` or `make dev`. This will
+put the Vault binary in the `bin` and `$GOPATH/bin` folders:
 
 ```sh
 $ make dev
 ...
 $ bin/vault
+...
+```
+
+To run tests, type `make test`. Note: this requires Docker to be installed. If
+this exits with exit status 0, then everything is working!
+
+```sh
+$ make test
 ...
 ```
 

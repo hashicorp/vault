@@ -4,7 +4,7 @@ EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox
 BUILD_TAGS?=vault
 
-default: test
+default: dev 
 
 # bin generates the releaseable binaries for Vault
 bin: generate
