@@ -134,19 +134,20 @@ BUG FIXES:
  * core: Fix regression causing status codes to be `400` in most non-5xx error
    cases [GH-1553]
  * core: Fix panic that could occur during a leadership transition [GH-1627]
- * secret/postgresql: Handle revoking roles that have privileges on sequences
-   [GH-1573]
- * secret/postgresql: Check for existence of role before attempting deletion
-   [GH-1575]
- * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
-   transaction object which could lead to connection exhaustion [GH-1572]
- * secret/pki: Fix parsing CA bundle containing trailing whitespace [GH-1634]
- * secret/pki: Fix adding email addresses as SANs [GH-1688]
  * physical/postgres: Remove use of prepared statements as this causes
    connection multiplexing software to break [GH-1548]
  * physical/consul: Multiple Vault nodes on the same machine leading to check ID
    collisions were resulting in incorrect health check responses [GH-1628]
  * physical/consul: Fix deregistration of health checks on exit [GH-1678]
+ * secret/postgresql: Check for existence of role before attempting deletion
+   [GH-1575]
+ * secret/postgresql: Handle revoking roles that have privileges on sequences
+   [GH-1573]
+ * secret/postgresql(,mysql,mssql): Fix incorrect use of database over
+   transaction object which could lead to connection exhaustion [GH-1572]
+ * secret/pki: Fix parsing CA bundle containing trailing whitespace [GH-1634]
+ * secret/pki: Fix adding email addresses as SANs [GH-1688]
+ * sys/seal-status: Fixed nil Cluster object while checking seal status [GH-1715]
 
 ## 0.6.0 (June 14th, 2016)
 
