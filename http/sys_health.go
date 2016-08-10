@@ -118,13 +118,8 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	var clusterName, clusterID string
 	if !sealed {
 		cluster, err := core.Cluster()
-
-		// Don't set the cluster details in the health status when Vault is sealed
 		if err != nil {
 			return http.StatusInternalServerError, nil, err
-		}
-		if cluster == nil {
-			return http.StatusInternalServerError, nil, nil
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
