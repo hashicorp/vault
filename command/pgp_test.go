@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/packet"
+	"github.com/keybase/go-crypto/openpgp"
+	"github.com/keybase/go-crypto/openpgp/packet"
 )
 
 func getPubKeyFiles(t *testing.T) (string, []string, error) {

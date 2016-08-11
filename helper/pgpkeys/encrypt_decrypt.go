@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/packet"
+	"github.com/keybase/go-crypto/openpgp"
+	"github.com/keybase/go-crypto/openpgp/packet"
 )
 
 // EncryptShares takes an ordered set of byte slices to encrypt and the
