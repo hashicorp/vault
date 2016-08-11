@@ -1,4 +1,4 @@
-// +build notvault
+// +build vault
 
 package version
 

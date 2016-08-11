@@ -10,8 +10,8 @@ var (
 	GitCommit   string
 	GitDescribe string
 
-	Version           string = "unknown"
-	VersionPrerelease        = "unknown"
+	Version           = "unknown"
+	VersionPrerelease = "unknown"
 )
 
 // VersionInfo
