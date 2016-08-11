@@ -62,6 +62,7 @@ type SSHHelperConfig struct {
 	AllowedCidrList string `hcl:"allowed_cidr_list"`
 	AllowedRoles    string `hcl:"allowed_roles"`
 	TLSSkipVerify   bool   `hcl:"tls_skip_verify"`
+	TLSServerName   string `hcl:"tls_server_name"`
 }
 
 // SetTLSParameters sets the TLS parameters for this SSH agent.
@@ -70,11 +71,22 @@ func (c *SSHHelperConfig) SetTLSParameters(clientConfig *Config, certPool *x509.
 		InsecureSkipVerify: c.TLSSkipVerify,
 		MinVersion:         tls.VersionTLS12,
 		RootCAs:            certPool,
+		ServerName:         c.TLSServerName,
 	}
 
 	transport := cleanhttp.DefaultTransport()
 	transport.TLSClientConfig = tlsConfig
 	clientConfig.HttpClient.Transport = transport
+}
+
+// Returns true if any of the following conditions are true:
+//   * CA cert is configured
+//   * CA path is configured
+//   * configured to skip certificate verification
+//   * TLS server name is configured
+//
+func (c *SSHHelperConfig) shouldSetTLSParameters() bool {
+	return c.CACert != "" || c.CAPath != "" || c.TLSServerName != "" || c.TLSSkipVerify
 }
 
 // NewClient returns a new client for the configuration. This client will be used by the
@@ -89,7 +101,7 @@ func (c *SSHHelperConfig) NewClient() (*Client, error) {
 	clientConfig.Address = c.VaultAddr
 
 	// Check if certificates are provided via config file.
-	if c.CACert != "" || c.CAPath != "" || c.TLSSkipVerify {
+	if c.shouldSetTLSParameters() {
 		rootConfig := &rootcerts.Config{
 			CAFile: c.CACert,
 			CAPath: c.CAPath,
@@ -145,6 +157,7 @@ func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
 		"allowed_cidr_list",
 		"allowed_roles",
 		"tls_skip_verify",
+		"tls_server_name",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, multierror.Prefix(err, "ssh_helper:")
