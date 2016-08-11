@@ -1082,9 +1082,6 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupAudits(); err != nil {
 		return err
 	}
-	if err := c.setupCluster(); err != nil {
-		return err
-	}
 	if c.ha != nil {
 		if err := c.startClusterListener(); err != nil {
 			return err
@@ -1192,8 +1189,20 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// detect flapping
 		activeTime := time.Now()
 
-		// Advertise ourself as leader
+		// Grab the lock as we need it for cluster setup, which needs to happen
+		// before advertising
+		c.stateLock.Lock()
+		if err := c.setupCluster(); err != nil {
+			c.stateLock.Unlock()
+			c.logger.Printf("[ERR] core: cluster setup failed: %v", err)
+			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			continue
+		}
+
+		// Advertise as leader
 		if err := c.advertiseLeader(uuid, leaderLostCh); err != nil {
+			c.stateLock.Unlock()
 			c.logger.Printf("[ERR] core: leader advertisement setup failed: %v", err)
 			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
@@ -1201,7 +1210,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		}
 
 		// Attempt the post-unseal process
-		c.stateLock.Lock()
 		err = c.postUnseal()
 		if err == nil {
 			c.standby = false
@@ -1447,4 +1455,8 @@ func (c *Core) SealAccess() *SealAccess {
 	sa := &SealAccess{}
 	sa.SetSeal(c.seal)
 	return sa
+}
+
+func (c *Core) Logger() *log.Logger {
+	return c.logger
 }

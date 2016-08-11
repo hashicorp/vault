@@ -452,11 +452,13 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 
 	if c.requestForwardingConnection == nil && clusterAddr == "" {
 		c.requestForwardingConnectionLock.RUnlock()
+		c.logger.Printf("[TRACE] core/refreshRequestForwardingConnection: no change (nil and empty)")
 		return nil
 	}
 	if c.requestForwardingConnection != nil &&
 		c.requestForwardingConnection.clusterAddr == clusterAddr {
 		c.requestForwardingConnectionLock.RUnlock()
+		c.logger.Printf("[TRACE] core/refreshRequestForwardingConnection: no changes")
 		return nil
 	}
 
@@ -478,6 +480,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	if c.requestForwardingConnection == nil {
 		tlsConfig, err := c.ClusterTLSConfig()
 		if err != nil {
+			c.logger.Printf("[ERR] core/refreshRequestForwardingConnection: error fetching cluster tls configuration: %v", err)
 			return err
 		}
 		tp := &http.Transport{
@@ -485,6 +488,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		}
 		err = http2.ConfigureTransport(tp)
 		if err != nil {
+			c.logger.Printf("[ERR] core/refreshRequestForwardingConnection: error configuring transport: %v", err)
 			return err
 		}
 		c.requestForwardingConnection = &activeConnection{
@@ -514,9 +518,10 @@ func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
 		return nil, ErrCannotForward
 	}
 
-	freq, err := requestutil.GenerateForwardedRequest(req, c.requestForwardingConnection.clusterAddr)
+	freq, err := requestutil.GenerateForwardedRequest(req, c.requestForwardingConnection.clusterAddr+"/cluster/forwarded-request")
 	if err != nil {
-		return nil, err
+		c.logger.Printf("[ERR] core/ForwardRequest: error creating forwarded request: %v", err)
+		return nil, fmt.Errorf("error creating forwarding request")
 	}
 
 	return c.requestForwardingConnection.Do(freq)

@@ -278,6 +278,17 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
+		// Will always be TLS-secured
+		u.Scheme = "https"
+		coreConfig.ClusterAddr = u.String()
+	} else if coreConfig.ClusterAddr != "" {
+		// Force https as we'll always be TLS-secured
+		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error parsing advertise address %s: %v", coreConfig.AdvertiseAddr, err))
+			return 1
+		}
+		u.Scheme = "https"
 		coreConfig.ClusterAddr = u.String()
 	}
 
@@ -303,7 +314,7 @@ func (c *ServerCommand) Run(args []string) int {
 		info["advertise address"] = coreConfig.AdvertiseAddr
 		infoKeys = append(infoKeys, "HA backend", "advertise address")
 		if coreConfig.ClusterAddr != "" {
-			info["cluster_address"] = coreConfig.ClusterAddr
+			info["cluster address"] = coreConfig.ClusterAddr
 			infoKeys = append(infoKeys, "cluster address")
 		}
 	} else {
@@ -312,9 +323,9 @@ func (c *ServerCommand) Run(args []string) int {
 			if coreConfig.HAPhysical.HAEnabled() {
 				info["backend"] += " (HA available)"
 				info["advertise address"] = coreConfig.AdvertiseAddr
-				infoKeys = append(infoKeys, "HA backend", "advertise address")
+				infoKeys = append(infoKeys, "advertise address")
 				if coreConfig.ClusterAddr != "" {
-					info["cluster_address"] = coreConfig.ClusterAddr
+					info["cluster address"] = coreConfig.ClusterAddr
 					infoKeys = append(infoKeys, "cluster address")
 				}
 			} else {
@@ -415,30 +426,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	handler := vaulthttp.Handler(core)
 
-	clusterListenerSetupFunc := func() ([]net.Listener, http.Handler, error) {
-		ret := make([]net.Listener, 0, len(lns))
-		// Loop over the existing listeners and start listeners on appropriate ports
-		for _, ln := range lns {
-			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-			if !ok {
-				c.logger.Printf("[TRACE] command/server: %s not a candidate for cluster request handling", ln.Addr().String())
-				continue
-			}
-			c.logger.Printf("[TRACE] command/server: %s is a candidate for cluster request handling at addr %s and port %d", tcpAddr.String(), tcpAddr.IP.String(), tcpAddr.Port+1)
-
-			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+1))
-			if err != nil {
-				return nil, nil, err
-			}
-			ret = append(ret, ln)
-		}
-
-		return ret, handler, nil
-	}
-
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
-	core.SetClusterListenerSetupFunc(clusterListenerSetupFunc)
+	core.SetClusterListenerSetupFunc(vaulthttp.WrapListenersForClustering(lns, handler, c.logger))
 
 	// If we're in dev mode, then initialize the core
 	if dev {

@@ -1,9 +1,12 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -11,6 +14,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/requestutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -26,6 +30,9 @@ const (
 	// NoRequestForwardingHeaderName is the name of the header telling Vault
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
+
+	// Internal so as not to log a trace message
+	intNoForwardingHeaderName = "X-Vault-Internal-No-Request-Forwarding"
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -50,7 +57,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
 	mux.Handle("/v1/sys/capabilities-self", handleRequestForwarding(core, handleLogical(core, true, sysCapabilitiesSelfCallback)))
 	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, true, nil)))
-	mux.Handle("/v1/", handleLogical(core, false, nil))
+	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
@@ -93,14 +100,25 @@ func parseRequest(r *http.Request, out interface{}) error {
 	return err
 }
 
+// handleRequestForwarding determines whether to forward a request or not,
+// falling back on the older behavior of redirecting the client
 func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get(NoRequestForwardingHeaderName) != "" {
-			// Forwarding explicitly disabled, fall back to previous behavior
+		if r.Header.Get(intNoForwardingHeaderName) != "" {
 			handler.ServeHTTP(w, r)
 			return
 		}
 
+		if r.Header.Get(NoRequestForwardingHeaderName) != "" {
+			// Forwarding explicitly disabled, fall back to previous behavior
+			core.Logger().Printf("[TRACE] http/handleRequestForwarding: forwarding disabled by client request")
+			handler.ServeHTTP(w, r)
+			return
+		}
+
+		// Note: in an HA setup, this call will also ensure that connections to
+		// the leader are set up, as that happens once the advertised cluster
+		// values are read during this function
 		isLeader, leaderAddr, err := core.Leader()
 		if err != nil {
 			if err == vault.ErrHANotEnabled {
@@ -113,6 +131,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 		if isLeader {
+			// No forwarding needed, we're leader
 			handler.ServeHTTP(w, r)
 			return
 		}
@@ -121,10 +140,37 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 
-		// Perform forwarding
-		// TODO
+		core.Logger().Printf("[TRACE] http/handleRequestForwarding: forwarding request")
 
-		handler.ServeHTTP(w, r)
+		// Attempt forwarding the request. If we cannot forward -- perhaps it's
+		// been disabled on the active node -- this will return with an
+		// ErrCannotForward and we simply fall back
+		resp, err := core.ForwardRequest(r)
+		if err != nil {
+			if err == vault.ErrCannotForward {
+				// This will use redirects as normal
+				core.Logger().Printf("[TRACE] http/handleRequestForwarding: cannot forward, falling back")
+				handler.ServeHTTP(w, r)
+				return
+			}
+			core.Logger().Printf("[ERR] http/handleRequestForwarding: error forwarding request: %v", err)
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Read the body into a buffer so we can write it back out to the
+		// original requestor
+		buf := bytes.NewBuffer(nil)
+		_, err = buf.ReadFrom(resp.Body)
+		if err != nil {
+			core.Logger().Printf("[ERR] http/handleRequestForwarding: error reading response body: %v", err)
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		w.WriteHeader(resp.StatusCode)
+		w.Write(buf.Bytes())
 		return
 	})
 }
@@ -290,6 +336,53 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		w.WriteHeader(http.StatusOK)
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
+	}
+}
+
+// WrapListenersForClustering takes in Vault's listeners and original HTTP
+// handler, creates a new handler that handles forwarded requests, and returns
+// the cluster setup function that creates the new listners and assigns to the
+// new handler
+func WrapListenersForClustering(lns []net.Listener, handler http.Handler, logger *log.Logger) func() ([]net.Listener, http.Handler, error) {
+	// This mux handles cluster functions (right now, only forwarded requests)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/cluster/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
+		freq, err := requestutil.ParseForwardedRequest(req)
+		if err != nil {
+			logger.Printf("[ERR] http/ForwardedRequestHandler: error parsing forwarded request: %v", err)
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("unable to parse forwarded request"))
+			return
+		}
+
+		// To avoid the risk of a forward loop in some pathological condition,
+		// set the no-forward header
+		freq.Header.Set(intNoForwardingHeaderName, "true")
+		handler.ServeHTTP(w, freq)
+	})
+
+	return func() ([]net.Listener, http.Handler, error) {
+		ret := make([]net.Listener, 0, len(lns))
+		// Loop over the existing listeners and start listeners on appropriate ports
+		for _, ln := range lns {
+			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
+			if !ok {
+				logger.Printf("[TRACE] http/WrapClusterListener: %s not a candidate for cluster request handling", ln.Addr().String())
+				continue
+			}
+			logger.Printf("[TRACE] http/WrapClusterListener: %s is a candidate for cluster request handling at addr %s and port %d", tcpAddr.String(), tcpAddr.IP.String(), tcpAddr.Port+1)
+
+			ipStr := tcpAddr.IP.String()
+			if len(tcpAddr.IP) == net.IPv6len {
+				ipStr = fmt.Sprintf("[%s]", ipStr)
+			}
+			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1))
+			if err != nil {
+				return nil, nil, err
+			}
+			ret = append(ret, ln)
+		}
+
+		return ret, mux, nil
 	}
 }
 

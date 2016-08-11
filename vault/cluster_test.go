@@ -202,7 +202,11 @@ func TestCluster_ForwardCommon(t *testing.T) {
 			}
 			c.logger.Printf("[TRACE] command/server: %s is a candidate for cluster request handling at addr %s and port %d", tcpAddr.String(), tcpAddr.IP.String(), tcpAddr.Port+1)
 
-			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+1))
+			ipStr := tcpAddr.IP.String()
+			if len(tcpAddr.IP) == net.IPv6len {
+				ipStr = fmt.Sprintf("[%s]", ipStr)
+			}
+			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1))
 			if err != nil {
 				return nil, nil, err
 			}
