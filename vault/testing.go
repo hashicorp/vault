@@ -388,3 +388,184 @@ func GenerateRandBytes(length int) ([]byte, error) {
 
 	return buf, nil
 }
+
+func TestWaitActive(t *testing.T, core *Core) {
+	start := time.Now()
+	var standby bool
+	var err error
+	for time.Now().Sub(start) < time.Second {
+		standby, err = core.Standby()
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if !standby {
+			break
+		}
+	}
+	if standby {
+		t.Fatalf("should not be in standby mode")
+	}
+}
+
+type TestClusterCore struct {
+	*Core
+	Listeners []net.Listener
+	Root      string
+	Key       []byte
+}
+
+func (t *TestClusterCore) CloseListeners() {
+	if t.Listeners != nil {
+		for _, ln := range t.Listeners {
+			ln.Close()
+		}
+	}
+	// Give time to actually shut down/clean up before the next test
+	time.Sleep(time.Second)
+}
+
+func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unsealStandbys bool) []*TestClusterCore {
+	if handlers == nil || len(handlers) != 3 {
+		t.Fatal("handlers must be size 3")
+	}
+
+	logger := log.New(os.Stderr, "", log.LstdFlags)
+
+	// Create three cores with the same physical and different advertise addrs
+	coreConfig := &CoreConfig{
+		Physical:           physical.NewInmem(logger),
+		HAPhysical:         physical.NewInmemHA(logger),
+		LogicalBackends:    make(map[string]logical.Factory),
+		CredentialBackends: make(map[string]logical.Factory),
+		AuditBackends:      make(map[string]audit.Factory),
+		AdvertiseAddr:      "https://127.0.0.1:8202",
+		ClusterAddr:        "https://127.0.0.1:8203",
+		DisableMlock:       true,
+	}
+
+	coreConfig.LogicalBackends["generic"] = PassthroughBackendFactory
+
+	if base != nil {
+		if base.LogicalBackends != nil {
+			for _, be := range base.LogicalBackends {
+				coreConfig.LogicalBackends = be
+			}
+		}
+		if base.CredentialBackends != nil {
+			for _, be := range base.CredentialBackends {
+				coreConfig.CredentialBackends = be
+			}
+		}
+		if base.AuditBackends != nil {
+			for _, be := range base.AuditBackends {
+				coreConfig.AuditBackends = be
+			}
+		}
+	}
+
+	c1, err := NewCore(coreConfig)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	coreConfig.AdvertiseAddr = "https://127.0.0.1:8206"
+	coreConfig.ClusterAddr = "https://127.0.0.1:8207"
+	c2, err := NewCore(coreConfig)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	coreConfig.AdvertiseAddr = "https://127.0.0.1:8208"
+	coreConfig.ClusterAddr = "https://127.0.0.1:8209"
+	c3, err := NewCore(coreConfig)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	ln, err := net.Listen("tcp", "127.0.0.1:8202")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c1lns := []net.Listener{ln}
+	ln, err = net.Listen("tcp", "127.0.0.1:8204")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c1lns = append(c1lns, ln)
+	ln, err = net.Listen("tcp", "127.0.0.1:8206")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c2lns := []net.Listener{ln}
+	ln, err = net.Listen("tcp", "127.0.0.1:8208")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c3lns := []net.Listener{ln}
+
+	c2.SetClusterListenerSetupFunc(WrapListenersForClustering(c2lns, handlers[1], logger))
+	c3.SetClusterListenerSetupFunc(WrapListenersForClustering(c3lns, handlers[2], logger))
+
+	key, root := TestCoreInitClusterListenerSetup(t, c1, WrapListenersForClustering(c1lns, handlers[0], logger))
+	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
+
+	// Verify unsealed
+	sealed, err := c1.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	TestWaitActive(t, c1)
+
+	if unsealStandbys {
+		if _, err := c2.Unseal(TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+		if _, err := c3.Unseal(TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+
+		// Let them come fully up to standby
+		time.Sleep(2 * time.Second)
+
+		// Ensure cluster connection info is populated
+		isLeader, _, err := c2.Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if isLeader {
+			t.Fatal("c2 should not be leader")
+		}
+		isLeader, _, err = c3.Leader()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if isLeader {
+			t.Fatal("c3 should not be leader")
+		}
+	}
+
+	return []*TestClusterCore{
+		&TestClusterCore{
+			Core:      c1,
+			Listeners: c1lns,
+			Root:      root,
+			Key:       TestKeyCopy(key),
+		},
+		&TestClusterCore{
+			Core:      c2,
+			Listeners: c2lns,
+			Root:      root,
+			Key:       TestKeyCopy(key),
+		},
+		&TestClusterCore{
+			Core:      c3,
+			Listeners: c3lns,
+			Root:      root,
+			Key:       TestKeyCopy(key),
+		},
+	}
+}

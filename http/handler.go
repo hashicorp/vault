@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -14,7 +12,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/requestutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -30,9 +27,6 @@ const (
 	// NoRequestForwardingHeaderName is the name of the header telling Vault
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
-
-	// Internal so as not to log a trace message
-	intNoForwardingHeaderName = "X-Vault-Internal-No-Request-Forwarding"
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -104,7 +98,7 @@ func parseRequest(r *http.Request, out interface{}) error {
 // falling back on the older behavior of redirecting the client
 func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get(intNoForwardingHeaderName) != "" {
+		if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
 			handler.ServeHTTP(w, r)
 			return
 		}
@@ -336,53 +330,6 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 		w.WriteHeader(http.StatusOK)
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
-	}
-}
-
-// WrapListenersForClustering takes in Vault's listeners and original HTTP
-// handler, creates a new handler that handles forwarded requests, and returns
-// the cluster setup function that creates the new listners and assigns to the
-// new handler
-func WrapListenersForClustering(lns []net.Listener, handler http.Handler, logger *log.Logger) func() ([]net.Listener, http.Handler, error) {
-	// This mux handles cluster functions (right now, only forwarded requests)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/cluster/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
-		freq, err := requestutil.ParseForwardedRequest(req)
-		if err != nil {
-			logger.Printf("[ERR] http/ForwardedRequestHandler: error parsing forwarded request: %v", err)
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("unable to parse forwarded request"))
-			return
-		}
-
-		// To avoid the risk of a forward loop in some pathological condition,
-		// set the no-forward header
-		freq.Header.Set(intNoForwardingHeaderName, "true")
-		handler.ServeHTTP(w, freq)
-	})
-
-	return func() ([]net.Listener, http.Handler, error) {
-		ret := make([]net.Listener, 0, len(lns))
-		// Loop over the existing listeners and start listeners on appropriate ports
-		for _, ln := range lns {
-			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-			if !ok {
-				logger.Printf("[TRACE] http/WrapClusterListener: %s not a candidate for cluster request handling", ln.Addr().String())
-				continue
-			}
-			logger.Printf("[TRACE] http/WrapClusterListener: %s is a candidate for cluster request handling at addr %s and port %d", tcpAddr.String(), tcpAddr.IP.String(), tcpAddr.Port+1)
-
-			ipStr := tcpAddr.IP.String()
-			if len(tcpAddr.IP) == net.IPv6len {
-				ipStr = fmt.Sprintf("[%s]", ipStr)
-			}
-			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1))
-			if err != nil {
-				return nil, nil, err
-			}
-			ret = append(ret, ln)
-		}
-
-		return ret, mux, nil
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -29,6 +30,9 @@ const (
 	coreLocalClusterKeyPath  = "core/cluster/local/key"
 
 	corePrivateKeyTypeP521 = "p521"
+
+	// Internal so as not to log a trace message
+	IntNoForwardingHeaderName = "X-Vault-Internal-No-Request-Forwarding"
 )
 
 var (
@@ -525,4 +529,71 @@ func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
 	}
 
 	return c.requestForwardingConnection.Do(freq)
+}
+
+// WrapListenersForClustering takes in Vault's listeners and original HTTP
+// handler, creates a new handler that handles forwarded requests, and returns
+// the cluster setup function that creates the new listners and assigns to the
+// new handler
+func WrapListenersForClustering(lns []net.Listener, handler http.Handler, logger *log.Logger) func() ([]net.Listener, http.Handler, error) {
+	// This mux handles cluster functions (right now, only forwarded requests)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/cluster/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
+		freq, err := requestutil.ParseForwardedRequest(req)
+		if err != nil {
+			if logger != nil {
+				logger.Printf("[ERR] http/ForwardedRequestHandler: error parsing forwarded request: %v", err)
+			}
+
+			w.Header().Add("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+
+			type errorResponse struct {
+				Errors []string
+			}
+			resp := &errorResponse{
+				Errors: []string{
+					err.Error(),
+				},
+			}
+
+			enc := json.NewEncoder(w)
+			enc.Encode(resp)
+			return
+		}
+
+		// To avoid the risk of a forward loop in some pathological condition,
+		// set the no-forward header
+		freq.Header.Set(IntNoForwardingHeaderName, "true")
+		handler.ServeHTTP(w, freq)
+	})
+
+	return func() ([]net.Listener, http.Handler, error) {
+		ret := make([]net.Listener, 0, len(lns))
+		// Loop over the existing listeners and start listeners on appropriate ports
+		for _, ln := range lns {
+			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
+			if !ok {
+				if logger != nil {
+					logger.Printf("[TRACE] http/WrapClusterListener: %s not a candidate for cluster request handling", ln.Addr().String())
+				}
+				continue
+			}
+			if logger != nil {
+				logger.Printf("[TRACE] http/WrapClusterListener: %s is a candidate for cluster request handling at addr %s and port %d", tcpAddr.String(), tcpAddr.IP.String(), tcpAddr.Port+1)
+			}
+
+			ipStr := tcpAddr.IP.String()
+			if len(tcpAddr.IP) == net.IPv6len {
+				ipStr = fmt.Sprintf("[%s]", ipStr)
+			}
+			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1))
+			if err != nil {
+				return nil, nil, err
+			}
+			ret = append(ret, ln)
+		}
+
+		return ret, mux, nil
+	}
 }

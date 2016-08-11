@@ -745,6 +745,14 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
+		// We still need to set up cluster info even if it's not part of a
+		// cluster right now
+		if err := c.setupCluster(); err != nil {
+			c.logger.Printf("[ERR] core: cluster setup failed: %v", err)
+			c.barrier.Seal()
+			c.logger.Printf("[WARN] core: vault is sealed")
+			return false, err
+		}
 		if err := c.postUnseal(); err != nil {
 			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 			c.barrier.Seal()

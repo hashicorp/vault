@@ -380,7 +380,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	}
 
 	// Wait for core to become active
-	testWaitActive(t, core)
+	TestWaitActive(t, core)
 
 	// Create a second core, attached to same in-memory store
 	advertiseOriginal2 := "http://127.0.0.1:8500"
@@ -429,7 +429,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	}
 
 	// Wait for core2 to become active
-	testWaitActive(t, core2)
+	TestWaitActive(t, core2)
 
 	// Rekey the master key again
 	err = core2.RekeyInit(newConf, false)

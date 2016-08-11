@@ -428,7 +428,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
-	core.SetClusterListenerSetupFunc(vaulthttp.WrapListenersForClustering(lns, handler, c.logger))
+	core.SetClusterListenerSetupFunc(vault.WrapListenersForClustering(lns, handler, c.logger))
 
 	// If we're in dev mode, then initialize the core
 	if dev {

@@ -983,7 +983,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	}
 
 	// Wait for core to become active
-	testWaitActive(t, core)
+	TestWaitActive(t, core)
 
 	// Check the leader is local
 	isLeader, advertise, err := core.Leader()
@@ -1089,7 +1089,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Wait for core to become active
-	testWaitActive(t, core)
+	TestWaitActive(t, core)
 
 	// Check the leader is local
 	isLeader, advertise, err := core.Leader()
@@ -1275,7 +1275,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	}
 
 	// Wait for core to become active
-	testWaitActive(t, core)
+	TestWaitActive(t, core)
 
 	// Ensure that the original clean function has stopped running
 	time.Sleep(2 * time.Second)
@@ -1377,7 +1377,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	}
 
 	// Wait for core2 to become active
-	testWaitActive(t, core2)
+	TestWaitActive(t, core2)
 
 	// Check the leader is local
 	isLeader, advertise, err = core2.Leader()
@@ -1441,7 +1441,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Wait for core to become active
-	testWaitActive(t, core)
+	TestWaitActive(t, core)
 
 	// Put a secret
 	req := &logical.Request{
@@ -1536,7 +1536,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Wait for core2 to become active
-	testWaitActive(t, core2)
+	TestWaitActive(t, core2)
 
 	// Read the secret
 	req = &logical.Request{
@@ -1948,24 +1948,6 @@ func TestCore_HandleRequest_MountPoint(t *testing.T) {
 	}
 }
 
-func testWaitActive(t *testing.T, core *Core) {
-	start := time.Now()
-	var standby bool
-	var err error
-	for time.Now().Sub(start) < time.Second {
-		standby, err = core.Standby()
-		if err != nil {
-			t.Fatalf("err: %v", err)
-		}
-		if !standby {
-			break
-		}
-	}
-	if standby {
-		t.Fatalf("should not be in standby mode")
-	}
-}
-
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
 	logger = log.New(os.Stderr, "", log.LstdFlags)
@@ -1987,7 +1969,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	}
 
 	// Wait for core to become active
-	testWaitActive(t, core)
+	TestWaitActive(t, core)
 
 	// Create a second core, attached to same in-memory store
 	advertiseOriginal2 := "http://127.0.0.1:8500"
@@ -2022,7 +2004,7 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	}
 
 	// Wait for core2 to become active
-	testWaitActive(t, core2)
+	TestWaitActive(t, core2)
 
 	// Read the key status
 	req = &logical.Request{
