@@ -5,9 +5,14 @@ import (
 	"fmt"
 )
 
-// The git commit that was compiled. This will be filled in by the compiler.
-var GitCommit string
-var GitDescribe string
+var (
+	// The git commit that was compiled. This will be filled in by the compiler.
+	GitCommit   string
+	GitDescribe string
+
+	Version           string = "unknown"
+	VersionPrerelease        = "unknown"
+)
 
 // VersionInfo
 type VersionInfo struct {
