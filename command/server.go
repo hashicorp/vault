@@ -194,6 +194,8 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 	}
 
+	var disableClustering bool
+
 	// Initialize the separate HA physical backend, if it exists
 	var ok bool
 	if config.HABackend != nil {
@@ -217,9 +219,17 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 
 		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
+		disableClustering = config.HABackend.DisableClustering
+		if !disableClustering {
+			coreConfig.ClusterAddr = config.HABackend.ClusterAddr
+		}
 	} else {
 		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
 			coreConfig.AdvertiseAddr = config.Backend.AdvertiseAddr
+			disableClustering = config.Backend.DisableClustering
+			if !disableClustering {
+				coreConfig.ClusterAddr = config.Backend.ClusterAddr
+			}
 		}
 	}
 
@@ -245,6 +255,32 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// After the advertise bits are sorted out, if no cluster address was
+	// explicitly given, derive one from the advertise addr
+	if disableClustering {
+		coreConfig.ClusterAddr = ""
+	} else if coreConfig.ClusterAddr == "" && coreConfig.AdvertiseAddr != "" {
+		u, err := url.ParseRequestURI(coreConfig.AdvertiseAddr)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Error parsing advertise address %s: %v", coreConfig.AdvertiseAddr, err))
+			return 1
+		}
+		host, port, err := net.SplitHostPort(u.Host)
+		nPort, nPortErr := strconv.Atoi(port)
+		if err != nil {
+			// assume it's due to there not being a port specified, in which case
+			// use 443
+			host = u.Host
+			nPort = 443
+		}
+		if nPortErr != nil {
+			c.Ui.Error(fmt.Sprintf("Cannot parse %s as a numeric port: %v", port, nPortErr))
+			return 1
+		}
+		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
+		coreConfig.ClusterAddr = u.String()
+	}
+
 	// Initialize the core
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
@@ -266,13 +302,21 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HA backend"] = config.HABackend.Type
 		info["advertise address"] = coreConfig.AdvertiseAddr
 		infoKeys = append(infoKeys, "HA backend", "advertise address")
+		if coreConfig.ClusterAddr != "" {
+			info["cluster_address"] = coreConfig.ClusterAddr
+			infoKeys = append(infoKeys, "cluster address")
+		}
 	} else {
 		// If the backend supports HA, then note it
 		if coreConfig.HAPhysical != nil {
 			if coreConfig.HAPhysical.HAEnabled() {
 				info["backend"] += " (HA available)"
 				info["advertise address"] = coreConfig.AdvertiseAddr
-				infoKeys = append(infoKeys, "advertise address")
+				infoKeys = append(infoKeys, "HA backend", "advertise address")
+				if coreConfig.ClusterAddr != "" {
+					info["cluster_address"] = coreConfig.ClusterAddr
+					infoKeys = append(infoKeys, "cluster address")
+				}
 			} else {
 				info["backend"] += " (HA disabled)"
 			}

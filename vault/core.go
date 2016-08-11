@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -107,6 +108,11 @@ func (e *ErrInvalidKey) Error() string {
 	return fmt.Sprintf("invalid key: %v", e.Reason)
 }
 
+type activeAdvertisement struct {
+	AdvertiseAddr string `json:"advertise_addr"`
+	ClusterAddr   string `json:"cluster_addr"`
+}
+
 // Core is used as the central manager of Vault activity. It is the primary point of
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
@@ -114,8 +120,11 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
-	// AdvertiseAddr is the address we advertise as leader if held
+	// advertiseAddr is the address we advertise as leader if held
 	advertiseAddr string
+
+	// clusterAddr is the address we use for clustering
+	clusterAddr string
 
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
@@ -279,6 +288,9 @@ type CoreConfig struct {
 	// Set as the leader address for HA
 	AdvertiseAddr string `json:"advertise_addr" structs:"advertise_addr" mapstructure:"advertise_addr"`
 
+	// Set as the cluster address for HA
+	ClusterAddr string `json:"cluster_addr" structs:"cluster_addr" mapstructure:"cluster_addr"`
+
 	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 
 	MaxLeaseTTL time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
@@ -288,8 +300,10 @@ type CoreConfig struct {
 
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
-	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() && conf.AdvertiseAddr == "" {
-		return nil, fmt.Errorf("missing advertisement address")
+	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
+		if conf.AdvertiseAddr == "" {
+			return nil, fmt.Errorf("missing advertisement address")
+		}
 	}
 
 	if conf.DefaultLeaseTTL == 0 {
@@ -354,6 +368,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// Setup the core
 	c := &Core{
 		advertiseAddr:   conf.AdvertiseAddr,
+		clusterAddr:     conf.ClusterAddr,
 		physical:        conf.Physical,
 		seal:            conf.Seal,
 		barrier:         barrier,
@@ -600,17 +615,25 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
-	// Leader address is in the entry
-	activeAddr := string(entry.Value)
+	var advAddr string
+
+	var adv activeAdvertisement
+	err = jsonutil.DecodeJSON(entry.Value, &adv)
+	if err != nil {
+		// Fall back to pre-struct handling
+		advAddr = string(entry.Value)
+	} else {
+		advAddr = adv.AdvertiseAddr
+	}
 
 	// This will ensure that we both have a connection at the ready and that
 	// the address is the current known value
-	err = c.refreshRequestForwardingConnection(activeAddr)
+	err = c.refreshRequestForwardingConnection(adv.ClusterAddr)
 	if err != nil {
 		return false, "", err
 	}
 
-	return false, activeAddr, nil
+	return false, advAddr, nil
 }
 
 // SecretProgress returns the number of keys provided so far
@@ -1309,11 +1332,19 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 // advertiseLeader is used to advertise the current node as leader
 func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error {
 	go c.cleanLeaderPrefix(uuid, leaderLostCh)
+	adv := &activeAdvertisement{
+		AdvertiseAddr: c.advertiseAddr,
+		ClusterAddr:   c.clusterAddr,
+	}
+	val, err := jsonutil.EncodeJSON(adv)
+	if err != nil {
+		return err
+	}
 	ent := &Entry{
 		Key:   coreLeaderPrefix + uuid,
-		Value: []byte(c.advertiseAddr),
+		Value: val,
 	}
-	err := c.barrier.Put(ent)
+	err = c.barrier.Put(ent)
 	if err != nil {
 		return err
 	}

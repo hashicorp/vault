@@ -8,13 +8,12 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	mathrand "math/rand"
 	"net"
 	"net/http"
-	"net/url"
-	"strconv"
 	"time"
 
 	"golang.org/x/net/http2"
@@ -32,6 +31,10 @@ const (
 	corePrivateKeyTypeP521 = "p521"
 )
 
+var (
+	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
+)
+
 type privKeyParams struct {
 	Type string   `json:"type"`
 	X    *big.Int `json:"x"`
@@ -41,7 +44,7 @@ type privKeyParams struct {
 
 type activeConnection struct {
 	*http.Client
-	activeAddr string
+	clusterAddr string
 }
 
 // Structure representing the storage entry that holds cluster information
@@ -394,10 +397,15 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 // refreshRequestForwardingConnection ensures that the client/transport are
 // alive and that the current active address value matches the most
 // recently-known address.
-func (c *Core) refreshRequestForwardingConnection(activeAddr string) error {
+func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	c.requestForwardingConnectionWriteLock.RLock()
+
+	if c.requestForwardingConnection == nil && clusterAddr == "" {
+		c.requestForwardingConnectionWriteLock.RUnlock()
+		return nil
+	}
 	if c.requestForwardingConnection != nil &&
-		c.requestForwardingConnection.activeAddr == activeAddr {
+		c.requestForwardingConnection.clusterAddr == clusterAddr {
 		c.requestForwardingConnectionWriteLock.RUnlock()
 		return nil
 	}
@@ -407,7 +415,13 @@ func (c *Core) refreshRequestForwardingConnection(activeAddr string) error {
 	c.requestForwardingConnectionWriteLock.Lock()
 	defer c.requestForwardingConnectionWriteLock.Unlock()
 	if c.requestForwardingConnection != nil &&
-		c.requestForwardingConnection.activeAddr == activeAddr {
+		c.requestForwardingConnection.clusterAddr == clusterAddr {
+		return nil
+	}
+
+	// Disabled, potentially
+	if clusterAddr == "" {
+		c.requestForwardingConnection = nil
 		return nil
 	}
 
@@ -430,8 +444,8 @@ func (c *Core) refreshRequestForwardingConnection(activeAddr string) error {
 		}
 	}
 
-	if c.requestForwardingConnection.activeAddr != activeAddr {
-		c.requestForwardingConnection.activeAddr = activeAddr
+	if c.requestForwardingConnection.clusterAddr != clusterAddr {
+		c.requestForwardingConnection.clusterAddr = clusterAddr
 	}
 
 	return nil
@@ -443,29 +457,14 @@ func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
 	c.requestForwardingConnectionWriteLock.RLock()
 	defer c.requestForwardingConnectionWriteLock.RUnlock()
 	if c.requestForwardingConnection == nil {
-		return nil, fmt.Errorf("no connection to the active node")
+		return nil, ErrCannotForward
 	}
 
-	// Figure out the final host/port
-	u, err := url.ParseRequestURI(c.requestForwardingConnection.activeAddr)
-	if err != nil {
-		return nil, err
+	if c.requestForwardingConnection.clusterAddr == "" {
+		return nil, ErrCannotForward
 	}
-	host, port, err := net.SplitHostPort(u.Host)
-	nPort, nPortErr := strconv.Atoi(port)
-	if err != nil {
-		// assume it's due to there not being a port specified, in which case
-		// use 443
-		host = u.Host
-		nPort = 443
-	}
-	if nPortErr != nil {
-		return nil, err
-	}
-	u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
-	faddr := u.String()
 
-	freq, err := requestutil.GenerateForwardedRequest(req, faddr)
+	freq, err := requestutil.GenerateForwardedRequest(req, c.requestForwardingConnection.clusterAddr)
 	if err != nil {
 		return nil, err
 	}

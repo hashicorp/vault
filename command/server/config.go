@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -82,9 +83,11 @@ func (l *Listener) GoString() string {
 
 // Backend is the backend configuration for the server.
 type Backend struct {
-	Type          string
-	AdvertiseAddr string
-	Config        map[string]string
+	Type              string
+	AdvertiseAddr     string
+	ClusterAddr       string
+	DisableClustering bool
+	Config            map[string]string
 }
 
 func (b *Backend) GoString() string {
@@ -455,10 +458,28 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 		delete(m, "advertise_addr")
 	}
 
+	// Pull out the cluster address since it's common to all backends
+	var clusterAddr string
+	if v, ok := m["cluster_addr"]; ok {
+		clusterAddr = v
+		delete(m, "cluster_addr")
+	}
+
+	var disableClustering bool
+	var err error
+	if v, ok := m["disable_clustering"]; ok {
+		disableClustering, err = strconv.ParseBool(v)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+		}
+	}
+
 	result.Backend = &Backend{
-		AdvertiseAddr: advertiseAddr,
-		Type:          strings.ToLower(key),
-		Config:        m,
+		AdvertiseAddr:     advertiseAddr,
+		ClusterAddr:       clusterAddr,
+		DisableClustering: disableClustering,
+		Type:              strings.ToLower(key),
+		Config:            m,
 	}
 	return nil
 }
@@ -488,10 +509,28 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		delete(m, "advertise_addr")
 	}
 
+	// Pull out the cluster address since it's common to all backends
+	var clusterAddr string
+	if v, ok := m["cluster_addr"]; ok {
+		clusterAddr = v
+		delete(m, "cluster_addr")
+	}
+
+	var disableClustering bool
+	var err error
+	if v, ok := m["disable_clustering"]; ok {
+		disableClustering, err = strconv.ParseBool(v)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+		}
+	}
+
 	result.HABackend = &Backend{
-		AdvertiseAddr: advertiseAddr,
-		Type:          strings.ToLower(key),
-		Config:        m,
+		AdvertiseAddr:     advertiseAddr,
+		ClusterAddr:       clusterAddr,
+		DisableClustering: disableClustering,
+		Type:              strings.ToLower(key),
+		Config:            m,
 	}
 	return nil
 }
