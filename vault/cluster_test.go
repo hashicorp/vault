@@ -38,7 +38,7 @@ func TestCluster(t *testing.T) {
 		t.Fatal("missing local cluster private key")
 	}
 
-	var params privKeyParams
+	var params clusterKeyParams
 	if err = jsonutil.DecodeJSON(entry.Value, &params); err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestClusterHA(t *testing.T) {
 		t.Fatal("missing local cluster private key")
 	}
 
-	var params privKeyParams
+	var params clusterKeyParams
 	if err = jsonutil.DecodeJSON(entry.Value, &params); err != nil {
 		t.Fatal(err)
 	}
@@ -132,12 +132,13 @@ func TestCluster_ForwardCommon(t *testing.T) {
 	logicalBackends := make(map[string]logical.Factory)
 	logicalBackends["generic"] = PassthroughBackendFactory
 
-	// Create two cores with the same physical and different advertise addrs
+	// Create three cores with the same physical and different advertise addrs
 	coreConfig := &CoreConfig{
 		Physical:        physical.NewInmem(logger),
 		HAPhysical:      physical.NewInmemHA(logger),
 		LogicalBackends: logicalBackends,
 		AdvertiseAddr:   "https://127.0.0.1:8202",
+		ClusterAddr:     "https://127.0.0.1:8203",
 		DisableMlock:    true,
 	}
 	c1, err := NewCore(coreConfig)
@@ -145,7 +146,14 @@ func TestCluster_ForwardCommon(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	coreConfig.AdvertiseAddr = "https://127.0.0.1:8206"
+	coreConfig.ClusterAddr = "https://127.0.0.1:8207"
 	c2, err := NewCore(coreConfig)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	coreConfig.AdvertiseAddr = "https://127.0.0.1:8208"
+	coreConfig.ClusterAddr = "https://127.0.0.1:8209"
+	c3, err := NewCore(coreConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -165,6 +173,11 @@ func TestCluster_ForwardCommon(t *testing.T) {
 		t.Fatal(err)
 	}
 	c2lns := []net.Listener{ln}
+	ln, err = net.Listen("tcp", "127.0.0.1:8208")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c3lns := []net.Listener{ln}
 
 	defer func() {
 		for _, ln := range c1lns {
@@ -173,9 +186,12 @@ func TestCluster_ForwardCommon(t *testing.T) {
 		for _, ln := range c2lns {
 			ln.Close()
 		}
+		for _, ln := range c3lns {
+			ln.Close()
+		}
 	}()
 
-	clusterListenerSetupFunc := func(c *Core, lns []net.Listener) ([]net.Listener, http.Handler, error) {
+	clusterListenerSetupFunc := func(c *Core, corestring string, lns []net.Listener) ([]net.Listener, http.Handler, error) {
 		ret := make([]net.Listener, 0, len(lns))
 		// Loop over the existing listeners and start listeners on appropriate ports
 		for _, ln := range lns {
@@ -193,17 +209,34 @@ func TestCluster_ForwardCommon(t *testing.T) {
 			ret = append(ret, ln)
 		}
 
-		return ret, nil, nil
+		handler := http.NewServeMux()
+		handler.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+			switch corestring {
+			case "core1":
+				w.WriteHeader(201)
+			case "core2":
+				w.WriteHeader(202)
+			case "core3":
+				w.WriteHeader(203)
+			}
+			w.Write([]byte(corestring))
+		})
+
+		return ret, handler, nil
 	}
 
 	c1SetupFunc := func() ([]net.Listener, http.Handler, error) {
-		return clusterListenerSetupFunc(c1, c1lns)
+		return clusterListenerSetupFunc(c1, "core1", c1lns)
 	}
 	c2SetupFunc := func() ([]net.Listener, http.Handler, error) {
-		return clusterListenerSetupFunc(c1, c2lns)
+		return clusterListenerSetupFunc(c2, "core2", c2lns)
+	}
+	c3SetupFunc := func() ([]net.Listener, http.Handler, error) {
+		return clusterListenerSetupFunc(c3, "core3", c3lns)
 	}
 
 	c2.SetClusterListenerSetupFunc(c2SetupFunc)
+	c3.SetClusterListenerSetupFunc(c3SetupFunc)
 
 	key, root := TestCoreInitClusterListenerSetup(t, c1, c1SetupFunc)
 	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
@@ -221,7 +254,7 @@ func TestCluster_ForwardCommon(t *testing.T) {
 
 	// Make this nicer for tests
 	oldManualStepDownSleepPeriod := manualStepDownSleepPeriod
-	manualStepDownSleepPeriod = 3 * time.Second
+	manualStepDownSleepPeriod = 5 * time.Second
 	// Restore this value for other tests
 	defer func() { manualStepDownSleepPeriod = oldManualStepDownSleepPeriod }()
 
@@ -241,10 +274,121 @@ func TestCluster_ForwardCommon(t *testing.T) {
 	if _, err := c2.Unseal(TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
+	if _, err := c3.Unseal(TestKeyCopy(key)); err != nil {
+		t.Fatalf("unseal err: %s", err)
+	}
 
 	// Test forwarding a request. Since we're going directly from core to core
 	// with no fallback we know that if it worked, request handling is working
-	testCluster_ForwardRequests(t, c2, root)
+	testCluster_ForwardRequests(t, c2, "core1", root)
+	testCluster_ForwardRequests(t, c3, "core1", root)
+
+	//
+	// Now we do a bunch of round-robining. The point is to make sure that as
+	// nodes come and go, we can always successfully forward to the active
+	// node.
+	//
+
+	// Ensure active core is c2 and test
+	err = c1.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+	_ = c3.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	time.Sleep(2 * time.Second)
+	testWaitActive(t, c2)
+	testCluster_ForwardRequests(t, c1, "core2", root)
+	testCluster_ForwardRequests(t, c3, "core2", root)
+
+	// Ensure active core is c3 and test
+	err = c2.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+	_ = c1.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	time.Sleep(2 * time.Second)
+	testWaitActive(t, c3)
+	testCluster_ForwardRequests(t, c1, "core3", root)
+	testCluster_ForwardRequests(t, c2, "core3", root)
+
+	// Ensure active core is c1 and test
+	err = c3.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+	_ = c2.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	time.Sleep(2 * time.Second)
+	testWaitActive(t, c1)
+	testCluster_ForwardRequests(t, c2, "core1", root)
+	testCluster_ForwardRequests(t, c3, "core1", root)
+
+	// Ensure active core is c2 and test
+	err = c1.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+	_ = c3.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	time.Sleep(2 * time.Second)
+	testWaitActive(t, c2)
+	testCluster_ForwardRequests(t, c1, "core2", root)
+	testCluster_ForwardRequests(t, c3, "core2", root)
+
+	// Ensure active core is c3 and test
+	err = c2.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+	_ = c1.StepDown(&logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "sys/step-down",
+		ClientToken: root,
+	})
+	time.Sleep(2 * time.Second)
+	testWaitActive(t, c3)
+	testCluster_ForwardRequests(t, c1, "core3", root)
+	testCluster_ForwardRequests(t, c2, "core3", root)
+
 }
 
 func testCluster_ListenForRequests(t *testing.T, c *Core, lns []net.Listener, root string) {
@@ -313,13 +457,22 @@ func testCluster_ListenForRequests(t *testing.T, c *Core, lns []net.Listener, ro
 	checkListenersFunc(true)
 }
 
-func testCluster_ForwardRequests(t *testing.T, c *Core, root string) {
+func testCluster_ForwardRequests(t *testing.T, c *Core, otherCoreString, root string) {
 	standby, err := c.Standby()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !standby {
 		t.Fatal("expected core to be standby")
+	}
+
+	// We need to call Leader as that refreshes the connection info
+	isLeader, _, err := c.Leader()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isLeader {
+		t.Fatal("core should not be leader")
 	}
 
 	bodBuf := bytes.NewReader([]byte(`{ "foo": "bar", "zip": "zap" }`))
@@ -336,5 +489,26 @@ func testCluster_ForwardRequests(t *testing.T, c *Core, root string) {
 	if resp == nil {
 		t.Fatal("nil resp")
 	}
-	//	t.Fatalf("resp:\n%#v\n", *resp)
+	defer resp.Body.Close()
+
+	body := bytes.NewBuffer(nil)
+	body.ReadFrom(resp.Body)
+
+	if body.String() != otherCoreString {
+		t.Fatalf("expected %s, got %s", otherCoreString, body.String())
+	}
+	switch body.String() {
+	case "core1":
+		if resp.StatusCode != 201 {
+			t.Fatal("bad response")
+		}
+	case "core2":
+		if resp.StatusCode != 202 {
+			t.Fatal("bad response")
+		}
+	case "core3":
+		if resp.StatusCode != 203 {
+			t.Fatal("bad response")
+		}
+	}
 }

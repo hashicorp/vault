@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -109,8 +110,10 @@ func (e *ErrInvalidKey) Error() string {
 }
 
 type activeAdvertisement struct {
-	AdvertiseAddr string `json:"advertise_addr"`
-	ClusterAddr   string `json:"cluster_addr"`
+	AdvertiseAddr    string           `json:"advertise_addr"`
+	ClusterAddr      string           `json:"cluster_addr"`
+	ClusterCert      []byte           `json:"cluster_cert"`
+	ClusterKeyParams clusterKeyParams `json:"cluster_key_params"`
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -239,9 +242,13 @@ type Core struct {
 	//
 	// Name
 	clusterName string
+	// Used to modify cluster TLS params
+	clusterParamsLock sync.RWMutex
 	// The private key stored in the barrier used for establishing
 	// mutually-authenticated connections between Vault cluster members
 	localClusterPrivateKey crypto.Signer
+	// The local cluster cert
+	localClusterCert []byte
 	// The cert pool containing the self-signed CA as a trusted CA
 	localClusterCertPool *x509.CertPool
 	// The setup function that gives us the listeners for the cluster-cluster
@@ -256,7 +263,7 @@ type Core struct {
 	requestForwardingConnection *activeConnection
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
-	requestForwardingConnectionWriteLock sync.RWMutex
+	requestForwardingConnectionLock sync.RWMutex
 }
 
 // CoreConfig is used to parameterize a core
@@ -367,19 +374,20 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		advertiseAddr:   conf.AdvertiseAddr,
-		clusterAddr:     conf.ClusterAddr,
-		physical:        conf.Physical,
-		seal:            conf.Seal,
-		barrier:         barrier,
-		router:          NewRouter(),
-		sealed:          true,
-		standby:         true,
-		logger:          conf.Logger,
-		defaultLeaseTTL: conf.DefaultLeaseTTL,
-		maxLeaseTTL:     conf.MaxLeaseTTL,
-		cachingDisabled: conf.DisableCache,
-		clusterName:     conf.ClusterName,
+		advertiseAddr:        conf.AdvertiseAddr,
+		clusterAddr:          conf.ClusterAddr,
+		physical:             conf.Physical,
+		seal:                 conf.Seal,
+		barrier:              barrier,
+		router:               NewRouter(),
+		sealed:               true,
+		standby:              true,
+		logger:               conf.Logger,
+		defaultLeaseTTL:      conf.DefaultLeaseTTL,
+		maxLeaseTTL:          conf.MaxLeaseTTL,
+		cachingDisabled:      conf.DisableCache,
+		clusterName:          conf.ClusterName,
+		localClusterCertPool: x509.NewCertPool(),
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -579,13 +587,13 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		// If we have connections from talking to a previous leader, close them
 		// out to free resources
 		if c.requestForwardingConnection != nil {
-			c.requestForwardingConnectionWriteLock.Lock()
+			c.requestForwardingConnectionLock.Lock()
 			// Verify that the condition hasn't changed
 			if c.requestForwardingConnection != nil {
 				c.requestForwardingConnection.Transport.(*http.Transport).CloseIdleConnections()
 			}
 			c.requestForwardingConnection = nil
-			c.requestForwardingConnectionWriteLock.Unlock()
+			c.requestForwardingConnectionLock.Unlock()
 		}
 		return true, c.advertiseAddr, nil
 	}
@@ -616,21 +624,28 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	}
 
 	var advAddr string
+	var oldAdv bool
 
 	var adv activeAdvertisement
 	err = jsonutil.DecodeJSON(entry.Value, &adv)
 	if err != nil {
 		// Fall back to pre-struct handling
 		advAddr = string(entry.Value)
+		oldAdv = true
 	} else {
 		advAddr = adv.AdvertiseAddr
 	}
 
-	// This will ensure that we both have a connection at the ready and that
-	// the address is the current known value
-	err = c.refreshRequestForwardingConnection(adv.ClusterAddr)
-	if err != nil {
-		return false, "", err
+	if !oldAdv {
+		// Ensure we are using current values
+		err = c.loadClusterTLS(adv)
+
+		// This will ensure that we both have a connection at the ready and that
+		// the address is the current known value
+		err = c.refreshRequestForwardingConnection(adv.ClusterAddr)
+		if err != nil {
+			return false, "", err
+		}
 	}
 
 	return false, advAddr, nil
@@ -1332,9 +1347,28 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 // advertiseLeader is used to advertise the current node as leader
 func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error {
 	go c.cleanLeaderPrefix(uuid, leaderLostCh)
+
+	var key *ecdsa.PrivateKey
+	switch c.localClusterPrivateKey.(type) {
+	case *ecdsa.PrivateKey:
+		key = c.localClusterPrivateKey.(*ecdsa.PrivateKey)
+	default:
+		c.logger.Printf("[ERR] core: unknown cluster private key type %T", c.localClusterPrivateKey)
+		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey)
+	}
+
+	keyParams := clusterKeyParams{
+		Type: corePrivateKeyTypeP521,
+		X:    key.X,
+		Y:    key.Y,
+		D:    key.D,
+	}
+
 	adv := &activeAdvertisement{
-		AdvertiseAddr: c.advertiseAddr,
-		ClusterAddr:   c.clusterAddr,
+		AdvertiseAddr:    c.advertiseAddr,
+		ClusterAddr:      c.clusterAddr,
+		ClusterCert:      c.localClusterCert,
+		ClusterKeyParams: keyParams,
 	}
 	val, err := jsonutil.EncodeJSON(adv)
 	if err != nil {

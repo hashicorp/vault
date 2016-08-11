@@ -35,7 +35,7 @@ var (
 	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
 )
 
-type privKeyParams struct {
+type clusterKeyParams struct {
 	Type string   `json:"type"`
 	X    *big.Int `json:"x"`
 	Y    *big.Int `json:"y"`
@@ -83,20 +83,58 @@ func (c *Core) Cluster() (*Cluster, error) {
 		cluster.Name = c.clusterName
 	}
 
-	if c.localClusterCertPool == nil {
-		c.localClusterCertPool = x509.NewCertPool()
-	}
-	if cluster.Certificate != nil && len(cluster.Certificate) != 0 {
-		cert, err := x509.ParseCertificate(cluster.Certificate)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing local cluster certificate: %v", err)
-		}
-
-		// This is idempotent
-		c.localClusterCertPool.AddCert(cert)
-	}
-
 	return &cluster, nil
+}
+
+// This is idempotent, so we return nil if there is no entry yet (say, because
+// the active node has not yet generated this)
+func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
+	c.clusterParamsLock.RLock()
+	if c.localClusterPrivateKey != nil && c.localClusterCert != nil && len(c.localClusterCert) != 0 {
+		c.clusterParamsLock.RUnlock()
+		return nil
+	}
+
+	c.clusterParamsLock.RUnlock()
+	c.clusterParamsLock.Lock()
+	defer c.clusterParamsLock.Unlock()
+
+	// Verify no modification
+	if c.localClusterPrivateKey != nil && c.localClusterCert != nil && len(c.localClusterCert) != 0 {
+		return nil
+	}
+
+	if c.localClusterPrivateKey == nil {
+		switch {
+		case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
+			c.logger.Printf("[ERR] core/loadClusterPrivateKey: failed to parse local cluster key due to missing params")
+			return fmt.Errorf("failed to parse local cluster key")
+		case adv.ClusterKeyParams.Type == corePrivateKeyTypeP521:
+		default:
+			c.logger.Printf("[ERR] core/loadClusterPrivateKey: unknown local cluster key type %v", adv.ClusterKeyParams.Type)
+			return fmt.Errorf("failed to find valid local cluster key type")
+		}
+		c.localClusterPrivateKey = &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: elliptic.P521(),
+				X:     adv.ClusterKeyParams.X,
+				Y:     adv.ClusterKeyParams.Y,
+			},
+			D: adv.ClusterKeyParams.D,
+		}
+	}
+
+	c.localClusterCert = adv.ClusterCert
+
+	cert, err := x509.ParseCertificate(c.localClusterCert)
+	if err != nil {
+		c.logger.Printf("[ERR] core/loadClusterPrivateKey: failed parsing local cluster certificate: %v", err)
+		return fmt.Errorf("error parsing local cluster certificate: %v", err)
+	}
+
+	c.localClusterCertPool.AddCert(cert)
+
+	return nil
 }
 
 // setupCluster creates storage entries for holding Vault cluster information.
@@ -164,7 +202,7 @@ func (c *Core) setupCluster() error {
 			}
 
 			// Encode the cluster information into as a JSON string
-			rawPrivKeyParams, err := json.Marshal(&privKeyParams{
+			rawPrivKeyParams, err := json.Marshal(&clusterKeyParams{
 				Type: corePrivateKeyTypeP521,
 				X:    key.X,
 				Y:    key.Y,
@@ -189,14 +227,14 @@ func (c *Core) setupCluster() error {
 			c.localClusterPrivateKey = key
 		} else {
 			c.logger.Printf("[TRACE] core: local cluster private key found")
-			var params privKeyParams
+			var params clusterKeyParams
 			if err = jsonutil.DecodeJSON(entry.Value, &params); err != nil {
 				c.logger.Printf("[ERR] core: failed to decode local cluster key: %v", err)
 				return err
 			}
 			switch {
 			case params.X == nil, params.Y == nil, params.D == nil:
-				c.logger.Printf("[ERR] core: failed to parse local cluster key: %v", err)
+				c.logger.Printf("[ERR] core: failed to parse local cluster key due to missing params")
 				return fmt.Errorf("failed to parse local cluster key")
 			case params.Type == corePrivateKeyTypeP521:
 			default:
@@ -214,7 +252,7 @@ func (c *Core) setupCluster() error {
 		}
 	}
 
-	if (needNewCert || cluster.Certificate == nil || len(cluster.Certificate) == 0) && c.advertiseAddr != "" {
+	if needNewCert || cluster.Certificate == nil || len(cluster.Certificate) == 0 {
 		c.logger.Printf("[TRACE] core: generating new local cluster certificate")
 		if c.localClusterPrivateKey == nil {
 			c.logger.Printf("[ERR] core: generating a new local cluster certificate but private key is nil")
@@ -258,6 +296,7 @@ func (c *Core) setupCluster() error {
 		cluster.Certificate = certBytes
 		modified = true
 	}
+	c.localClusterCert = cluster.Certificate
 
 	if modified {
 		// Encode the cluster information into as a JSON string
@@ -300,6 +339,8 @@ func (c *Core) startClusterListener() error {
 		return fmt.Errorf("cluster listener setup function has not been set")
 	}
 
+	c.logger.Printf("[TRACE] core/startClusterListener: starting listeners")
+
 	lns, handler, err := c.clusterListenerSetupFunc()
 	if err != nil {
 		return err
@@ -341,6 +382,7 @@ func (c *Core) startClusterListener() error {
 // stopClusterListener stops any existing listeners during preseal. It is
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
+	c.logger.Printf("[TRACE] core/stopClusterListener: stopping listeners")
 	if c.clusterListenerShutdownCh != nil {
 		close(c.clusterListenerShutdownCh)
 		defer func() { c.clusterListenerShutdownCh = nil }()
@@ -357,8 +399,12 @@ func (c *Core) stopClusterListener() {
 }
 
 // ClusterTLSConfig generates a TLS configuration based on the local cluster
-// key and cert.
+// key and cert. This isn't called often and we lock because the CertPool is
+// not concurrency-safe.
 func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
+	c.clusterParamsLock.Lock()
+	defer c.clusterParamsLock.Unlock()
+
 	cluster, err := c.Cluster()
 	if err != nil {
 		return nil, err
@@ -366,19 +412,22 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 	if cluster == nil {
 		return nil, fmt.Errorf("cluster information is nil")
 	}
-	if cluster.Certificate == nil || len(cluster.Certificate) == 0 {
+	if c.localClusterCert == nil || len(c.localClusterCert) == 0 {
 		return nil, fmt.Errorf("cluster certificate is nil")
 	}
 
-	parsedCert, err := x509.ParseCertificate(cluster.Certificate)
+	parsedCert, err := x509.ParseCertificate(c.localClusterCert)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing local cluster certificate: %v", err)
 	}
 
+	// This is idempotent, so be sure it's been added
+	c.localClusterCertPool.AddCert(parsedCert)
+
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{
 			tls.Certificate{
-				Certificate: [][]byte{cluster.Certificate},
+				Certificate: [][]byte{c.localClusterCert},
 				PrivateKey:  c.localClusterPrivateKey,
 			},
 		},
@@ -398,22 +447,23 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 // alive and that the current active address value matches the most
 // recently-known address.
 func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
-	c.requestForwardingConnectionWriteLock.RLock()
+	c.logger.Printf("[TRACE] core/refreshRequestForwardingConnection: cluster address %s", clusterAddr)
+	c.requestForwardingConnectionLock.RLock()
 
 	if c.requestForwardingConnection == nil && clusterAddr == "" {
-		c.requestForwardingConnectionWriteLock.RUnlock()
+		c.requestForwardingConnectionLock.RUnlock()
 		return nil
 	}
 	if c.requestForwardingConnection != nil &&
 		c.requestForwardingConnection.clusterAddr == clusterAddr {
-		c.requestForwardingConnectionWriteLock.RUnlock()
+		c.requestForwardingConnectionLock.RUnlock()
 		return nil
 	}
 
 	// Give up the read lock and get a write lock, then verify it's still required
-	c.requestForwardingConnectionWriteLock.RUnlock()
-	c.requestForwardingConnectionWriteLock.Lock()
-	defer c.requestForwardingConnectionWriteLock.Unlock()
+	c.requestForwardingConnectionLock.RUnlock()
+	c.requestForwardingConnectionLock.Lock()
+	defer c.requestForwardingConnectionLock.Unlock()
 	if c.requestForwardingConnection != nil &&
 		c.requestForwardingConnection.clusterAddr == clusterAddr {
 		return nil
@@ -454,8 +504,8 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 // ForwardRequest forwards a given request to the active node and returns the
 // response.
 func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
-	c.requestForwardingConnectionWriteLock.RLock()
-	defer c.requestForwardingConnectionWriteLock.RUnlock()
+	c.requestForwardingConnectionLock.RLock()
+	defer c.requestForwardingConnectionLock.RUnlock()
 	if c.requestForwardingConnection == nil {
 		return nil, ErrCannotForward
 	}
