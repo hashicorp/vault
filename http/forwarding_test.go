@@ -15,6 +15,7 @@ import (
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
+	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -74,8 +75,6 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 		if secret.Data["id"].(string) != root {
 			t.Fatal("token mismatch")
 		}
-
-		config.HttpClient.Transport.(*http.Transport).CloseIdleConnections()
 	}
 }
 
@@ -133,8 +132,6 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 		if secret.Data["id"].(string) != root {
 			t.Fatal("token mismatch")
 		}
-
-		config.HttpClient.Transport.(*http.Transport).CloseIdleConnections()
 	}
 }
 
@@ -403,4 +400,94 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 	wg.Wait()
 
 	core.Logger().Printf("[TRACE] total operations tried: %d, total successful: %d", totalOps, successfulOps)
+}
+
+// This tests TLS connection state forwarding by ensuring that we can use a
+// client TLS to authenticate against the cert backend
+func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
+	handler1 := http.NewServeMux()
+	handler2 := http.NewServeMux()
+	handler3 := http.NewServeMux()
+
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"cert": credCert.Factory,
+		},
+	}
+
+	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
+	// add routes chained to a Handler-created handler.
+	cores := vault.TestCluster(t, []http.Handler{handler1, handler2, handler3}, coreConfig, true)
+	for _, core := range cores {
+		defer core.CloseListeners()
+	}
+	handler1.Handle("/", Handler(cores[0].Core))
+	handler2.Handle("/", Handler(cores[1].Core))
+	handler3.Handle("/", Handler(cores[2].Core))
+
+	// make it easy to get access to the active
+	core := cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	root := cores[0].Root
+
+	transport := cleanhttp.DefaultPooledTransport()
+	transport.TLSClientConfig = cores[0].TLSConfig
+
+	client := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return fmt.Errorf("redirects not allowed in this test")
+		},
+	}
+
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/auth/cert", cores[0].Listeners[0].Address.Port),
+		bytes.NewBuffer([]byte("{\"type\": \"cert\"}")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set(AuthHeaderName, root)
+	_, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req, err = http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/auth/cert/certs/test", cores[0].Listeners[0].Address.Port),
+		bytes.NewBuffer([]byte(fmt.Sprintf("{\"certificate\": \"%s\", \"policies\": \"default\"}", vault.TestClusterCACert))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set(AuthHeaderName, root)
+	_, err = client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hosts := []string{
+		fmt.Sprintf("https://127.0.0.1:%d/v1/", cores[1].Listeners[0].Address.Port),
+		fmt.Sprintf("https://127.0.0.1:%d/v1/", cores[2].Listeners[0].Address.Port),
+	}
+
+	for _, host := range hosts {
+		config := api.DefaultConfig()
+		config.Address = addr
+		config.HttpClient = cleanhttp.DefaultClient()
+		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
+		client, err := api.NewClient(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(root)
+
+		secret, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil {
+			t.Fatal("secret is nil")
+		}
+		if secret.Data["id"].(string) != root {
+			t.Fatal("token mismatch")
+		}
+	}
 }

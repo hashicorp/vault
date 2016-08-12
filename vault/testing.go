@@ -443,7 +443,7 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 	//
 	// TLS setup
 	//
-	block, _ := pem.Decode([]byte(clusterCACert))
+	block, _ := pem.Decode([]byte(TestClusterCACert))
 	if block == nil {
 		t.Fatal("error decoding cluster CA cert")
 	}
@@ -453,7 +453,7 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatal(err)
 	}
 
-	block, _ = pem.Decode([]byte(clusterServerCert))
+	block, _ = pem.Decode([]byte(TestClusterServerCert))
 	if block == nil {
 		t.Fatal("error decoding cluster server cert")
 	}
@@ -463,7 +463,7 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatal(err)
 	}
 
-	block, _ = pem.Decode([]byte(clusterServerKey))
+	block, _ = pem.Decode([]byte(TestClusterServerKey))
 	if block == nil {
 		t.Fatal("error decoding cluster server key")
 	}
@@ -730,7 +730,7 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 }
 
 const (
-	clusterCACert = `-----BEGIN CERTIFICATE-----
+	TestClusterCACert = `-----BEGIN CERTIFICATE-----
 MIIDPjCCAiagAwIBAgIUfIKsF2VPT7sdFcKOHJH2Ii6K4MwwDQYJKoZIhvcNAQEL
 BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMTYwNTAyMTYwNTQyWhgPMjA2
 NjA0MjAxNjA2MTJaMBYxFDASBgNVBAMTC215dmF1bHQuY29tMIIBIjANBgkqhkiG
@@ -751,7 +751,7 @@ CpA30CHpNXvKeyNeW2ktv+2nAbSpvNW+e6MecBCTBIoDSkgU8ShbrzmDKVwNN66Q
 5gn6KxUPBKHEtNzs5DgGM7nq
 -----END CERTIFICATE-----`
 
-	clusterCAKey = `-----BEGIN RSA PRIVATE KEY-----
+	TestClusterCAKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAuOimEXawD2qBoLCFP3Skq5zi1XzzcMAJlfdSxz9hfymuJb+c
 N8rB91HOdU9wQCwVKnkUtGWxUnMp0tT0uAZj5NzhNfyinf0JGAbP67HDzVZhGBHl
 HTjPX0638yaiUx90cTnucX0N20SgCYct29dMSgcPl+W78D3Jw3xEJsHQPYS9ASe2
@@ -779,7 +779,7 @@ QNKKJLmFmMsEqfxHUNWmpiHkm2E0p37Zehui3kywo+A4ybHPTua70ZWQfZhKxLUr
 PvJa8JmwiCM7kO8zjOv+edY1mMWrbjAZH1YUbfcTHmST7S8vp0F3
 -----END RSA PRIVATE KEY-----`
 
-	clusterServerCert = `-----BEGIN CERTIFICATE-----
+	TestClusterServerCert = `-----BEGIN CERTIFICATE-----
 MIIDtzCCAp+gAwIBAgIUBLqh6ctGWVDUxFhxJX7m6S/bnrcwDQYJKoZIhvcNAQEL
 BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMTYwNTAyMTYwOTI2WhgPMjA2
 NjA0MjAxNTA5NTZaMBsxGTAXBgNVBAMTEGNlcnQubXl2YXVsdC5jb20wggEiMA0G
@@ -802,7 +802,7 @@ Y2S9LLKLRaCsWo9wRU1Az4Rhd7vK5SEMh16jJ82GyEODWPvuxOTI1MnzfnbWyLYe
 TTp6YBjGMVf1I6NEcWNur7U17uIOiQjMZ9krNvoMJ1A/cxCoZ98QHgcIPg==
 -----END CERTIFICATE-----`
 
-	clusterServerKey = `-----BEGIN RSA PRIVATE KEY-----
+	TestClusterServerKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA2N4DwdvZJHW7tJjzuidHn2oEIUolwfTsg7i3+bDJOglQ1lVm
 peYSEpMgZsP5V4Be6gtlxSor6STq3BkHeRKfaLQasiS8yG9CFnV7jyK1Z1w8HHVq
 /Osm19oguNsyln214I8xoo3gFaZdFCSygY/n5Oaujb5ES+RVC+k0Veyq5/Zq5p61
