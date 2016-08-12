@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -264,6 +265,12 @@ type Core struct {
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
+	// Most recent hashed value of the advertise/cluster info. Used to avoid
+	// repeatedly JSON parsing the same values.
+	clusterActiveAdvertisementHash []byte
+	// Cache of most recently known active advertisement information, used to
+	// return values when the hash matches
+	clusterActiveAdvertisement activeAdvertisement
 }
 
 // CoreConfig is used to parameterize a core
@@ -623,6 +630,15 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
+	entrySHA256 := sha256.Sum256(entry.Value)
+
+	// Avoid JSON parsing and function calling if nothing has changed
+	if c.clusterActiveAdvertisementHash != nil {
+		if bytes.Compare(entrySHA256[:], c.clusterActiveAdvertisementHash) == 0 {
+			return false, c.clusterActiveAdvertisement.AdvertiseAddr, nil
+		}
+	}
+
 	var advAddr string
 	var oldAdv bool
 
@@ -639,6 +655,9 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	if !oldAdv {
 		// Ensure we are using current values
 		err = c.loadClusterTLS(adv)
+		if err != nil {
+			return false, "", err
+		}
 
 		// This will ensure that we both have a connection at the ready and that
 		// the address is the current known value
@@ -647,6 +666,9 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 			return false, "", err
 		}
 	}
+
+	c.clusterActiveAdvertisement = adv
+	c.clusterActiveAdvertisementHash = entrySHA256[:]
 
 	return false, advAddr, nil
 }

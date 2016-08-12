@@ -447,18 +447,18 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 
 	if base != nil {
 		if base.LogicalBackends != nil {
-			for _, be := range base.LogicalBackends {
-				coreConfig.LogicalBackends = be
+			for k, v := range base.LogicalBackends {
+				coreConfig.LogicalBackends[k] = v
 			}
 		}
 		if base.CredentialBackends != nil {
-			for _, be := range base.CredentialBackends {
-				coreConfig.CredentialBackends = be
+			for k, v := range base.CredentialBackends {
+				coreConfig.CredentialBackends[k] = v
 			}
 		}
 		if base.AuditBackends != nil {
-			for _, be := range base.AuditBackends {
-				coreConfig.AuditBackends = be
+			for k, v := range base.AuditBackends {
+				coreConfig.AuditBackends[k] = v
 			}
 		}
 	}
@@ -490,16 +490,36 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatal(err)
 	}
 	c1lns = append(c1lns, ln)
+	server1 := &http.Server{
+		Handler: handlers[0],
+	}
+	for _, ln := range c1lns {
+		go server1.Serve(ln)
+	}
+
 	ln, err = net.Listen("tcp", "127.0.0.1:8206")
 	if err != nil {
 		t.Fatal(err)
 	}
 	c2lns := []net.Listener{ln}
+	server2 := &http.Server{
+		Handler: handlers[1],
+	}
+	for _, ln := range c2lns {
+		go server2.Serve(ln)
+	}
+
 	ln, err = net.Listen("tcp", "127.0.0.1:8208")
 	if err != nil {
 		t.Fatal(err)
 	}
 	c3lns := []net.Listener{ln}
+	server3 := &http.Server{
+		Handler: handlers[2],
+	}
+	for _, ln := range c3lns {
+		go server3.Serve(ln)
+	}
 
 	c2.SetClusterListenerSetupFunc(WrapListenersForClustering(c2lns, handlers[1], logger))
 	c3.SetClusterListenerSetupFunc(WrapListenersForClustering(c3lns, handlers[2], logger))

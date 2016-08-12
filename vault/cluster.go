@@ -451,18 +451,15 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 // alive and that the current active address value matches the most
 // recently-known address.
 func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
-	c.logger.Printf("[TRACE] core/refreshRequestForwardingConnection: cluster address %s", clusterAddr)
 	c.requestForwardingConnectionLock.RLock()
 
 	if c.requestForwardingConnection == nil && clusterAddr == "" {
 		c.requestForwardingConnectionLock.RUnlock()
-		c.logger.Printf("[TRACE] core/refreshRequestForwardingConnection: no change (nil and empty)")
 		return nil
 	}
 	if c.requestForwardingConnection != nil &&
 		c.requestForwardingConnection.clusterAddr == clusterAddr {
 		c.requestForwardingConnectionLock.RUnlock()
-		c.logger.Printf("[TRACE] core/refreshRequestForwardingConnection: no changes")
 		return nil
 	}
 

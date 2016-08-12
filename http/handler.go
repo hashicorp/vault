@@ -134,8 +134,6 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 
-		core.Logger().Printf("[TRACE] http/handleRequestForwarding: forwarding request")
-
 		// Attempt forwarding the request. If we cannot forward -- perhaps it's
 		// been disabled on the active node -- this will return with an
 		// ErrCannotForward and we simply fall back

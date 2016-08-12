@@ -718,16 +718,16 @@ func TestPolicyFuzzing(t *testing.T) {
 	be = Backend(&logical.BackendConfig{
 		System: sysView,
 	})
-	testPolicyFuzzingCommon(t, be)
+	TestPolicyFuzzingCommon(t, be)
 
 	sysView.CachingDisabledVal = true
 	be = Backend(&logical.BackendConfig{
 		System: sysView,
 	})
-	testPolicyFuzzingCommon(t, be)
+	TestPolicyFuzzingCommon(t, be)
 }
 
-func testPolicyFuzzingCommon(t *testing.T, be *backend) {
+func TestPolicyFuzzingCommon(t *testing.T, be *backend) {
 	storage := &logical.InmemStorage{}
 	wg := sync.WaitGroup{}
 
