@@ -36,6 +36,29 @@ func TestDefaultConfig_envvar(t *testing.T) {
 	}
 }
 
+func TestClientNilConfig(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if client == nil {
+		t.Fatal("expected a non-nil client")
+	}
+}
+
+func TestClientSetAddress(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.SetAddress("http://172.168.2.1:8300"); err != nil {
+		t.Fatal(err)
+	}
+	if client.addr.Host != "172.168.2.1:8300" {
+		t.Fatalf("bad: expected: '172.168.2.1:8300' actual: %q", client.addr.Host)
+	}
+}
+
 func TestClientToken(t *testing.T) {
 	tokenValue := "foo"
 	handler := func(w http.ResponseWriter, req *http.Request) {}
