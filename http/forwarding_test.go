@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -400,6 +401,9 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 	wg.Wait()
 
 	core.Logger().Printf("[TRACE] total operations tried: %d, total successful: %d", totalOps, successfulOps)
+	if totalOps != successfulOps {
+		t.Fatalf("total/successful ops mismatch: %d/%d", totalOps, successfulOps)
+	}
 }
 
 // This tests TLS connection state forwarding by ensuring that we can use a
@@ -431,14 +435,11 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 
 	root := cores[0].Root
 
-	transport := cleanhttp.DefaultPooledTransport()
+	transport := cleanhttp.DefaultTransport()
 	transport.TLSClientConfig = cores[0].TLSConfig
 
 	client := &http.Client{
 		Transport: transport,
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return fmt.Errorf("redirects not allowed in this test")
-		},
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/auth/cert", cores[0].Listeners[0].Address.Port),
@@ -452,8 +453,19 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	type certConfig struct {
+		Certificate string `json:"certificate"`
+		Policies    string `json:"policies"`
+	}
+	encodedCertConfig, err := json.Marshal(&certConfig{
+		Certificate: vault.TestClusterCACert,
+		Policies:    "default",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	req, err = http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/auth/cert/certs/test", cores[0].Listeners[0].Address.Port),
-		bytes.NewBuffer([]byte(fmt.Sprintf("{\"certificate\": \"%s\", \"policies\": \"default\"}", vault.TestClusterCACert))))
+		bytes.NewBuffer(encodedCertConfig))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,31 +475,47 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hosts := []string{
-		fmt.Sprintf("https://127.0.0.1:%d/v1/", cores[1].Listeners[0].Address.Port),
-		fmt.Sprintf("https://127.0.0.1:%d/v1/", cores[2].Listeners[0].Address.Port),
+	addrs := []string{
+		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
+		fmt.Sprintf("https://127.0.0.1:%d", cores[2].Listeners[0].Address.Port),
 	}
 
-	for _, host := range hosts {
+	// Ensure we can't possibly use lingering connections even though it should be to a different address
+
+	transport = cleanhttp.DefaultTransport()
+	transport.TLSClientConfig = cores[0].TLSConfig
+
+	client = &http.Client{
+		Transport: transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return fmt.Errorf("redirects not allowed in this test")
+		},
+	}
+
+	//cores[0].Logger().Printf("root token is %s", root)
+	//time.Sleep(4 * time.Hour)
+
+	for _, addr := range addrs {
 		config := api.DefaultConfig()
 		config.Address = addr
-		config.HttpClient = cleanhttp.DefaultClient()
-		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
+		config.HttpClient = client
 		client, err := api.NewClient(config)
 		if err != nil {
 			t.Fatal(err)
 		}
-		client.SetToken(root)
 
-		secret, err := client.Auth().Token().LookupSelf()
+		secret, err := client.Logical().Write("auth/cert/login", nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if secret == nil {
 			t.Fatal("secret is nil")
 		}
-		if secret.Data["id"].(string) != root {
-			t.Fatal("token mismatch")
+		if secret.Auth == nil {
+			t.Fatal("auth is nil")
+		}
+		if secret.Auth.Policies == nil || len(secret.Auth.Policies) == 0 || secret.Auth.Policies[0] != "default" {
+			t.Fatalf("bad policies: %#v", secret.Auth.Policies)
 		}
 	}
 }

@@ -343,6 +343,11 @@ func (c *Core) startClusterListener() error {
 		return fmt.Errorf("cluster listener setup function has not been set")
 	}
 
+	if c.clusterAddr == "" {
+		c.logger.Printf("[TRACE] core/startClusterListener: clustering disabled, starting listeners")
+		return nil
+	}
+
 	c.logger.Printf("[TRACE] core/startClusterListener: starting listeners")
 
 	lns, handler, err := c.clusterListenerSetupFunc()

@@ -22,6 +22,7 @@ backend "consul" {
 ha_backend "consul" {
     bar = "baz"
     advertise_addr = "snafu"
+    disable_clustering = "false"
 }
 
 max_lease_ttl = "10h"

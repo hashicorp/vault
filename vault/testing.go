@@ -453,43 +453,51 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatal(err)
 	}
 
-	block, _ = pem.Decode([]byte(TestClusterServerCert))
-	if block == nil {
-		t.Fatal("error decoding cluster server cert")
-	}
-	certBytes := block.Bytes
-	serverCert, err := x509.ParseCertificate(certBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	block, _ = pem.Decode([]byte(TestClusterServerKey))
-	if block == nil {
-		t.Fatal("error decoding cluster server key")
-	}
-	serverKeyBytes := block.Bytes
-	serverKey, err := x509.ParsePKCS1PrivateKey(serverKeyBytes)
+	serverCert, err := tls.X509KeyPair([]byte(TestClusterServerCert), []byte(TestClusterServerKey))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	rootCAs := x509.NewCertPool()
-	rootCAs.AddCert(caCert)
+	rootCAs.AppendCertsFromPEM([]byte(TestClusterCACert))
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{
-			tls.Certificate{
-				Certificate: [][]byte{
-					certBytes,
-					caBytes,
-				},
-				PrivateKey: serverKey,
-				Leaf:       serverCert,
-			},
-		},
-		RootCAs:    rootCAs,
-		ServerName: "127.0.0.1",
-		ClientAuth: tls.RequestClientCert,
-		ClientCAs:  rootCAs,
+		Certificates: []tls.Certificate{serverCert},
+		RootCAs:      rootCAs,
+		ClientCAs:    rootCAs,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+	}
+	tlsConfig.BuildNameToCertificate()
+
+	// Sanity checking
+	block, _ = pem.Decode([]byte(TestClusterServerCert))
+	if block == nil {
+		t.Fatal(err)
+	}
+	parsedServerCert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	chains, err := parsedServerCert.Verify(x509.VerifyOptions{
+		DNSName:   "127.0.0.1",
+		Roots:     rootCAs,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if chains == nil || len(chains) == 0 {
+		t.Fatal("no verified chains for server auth")
+	}
+	chains, err = parsedServerCert.Verify(x509.VerifyOptions{
+		DNSName:   "127.0.0.1",
+		Roots:     rootCAs,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if chains == nil || len(chains) == 0 {
+		t.Fatal("no verified chains for chains auth")
 	}
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)

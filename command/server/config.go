@@ -473,6 +473,7 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 		if err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
 		}
+		delete(m, "disable_clustering")
 	}
 
 	result.Backend = &Backend{
@@ -517,13 +518,15 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		delete(m, "cluster_addr")
 	}
 
-	var disableClustering bool
+	//TODO: Change this in the future
+	disableClustering := true
 	var err error
 	if v, ok := m["disable_clustering"]; ok {
 		disableClustering, err = strconv.ParseBool(v)
 		if err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
 		}
+		delete(m, "disable_clustering")
 	}
 
 	result.HABackend = &Backend{

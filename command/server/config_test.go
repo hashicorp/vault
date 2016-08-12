@@ -38,6 +38,7 @@ func TestLoadConfigFile(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
+			DisableClustering: true,
 		},
 
 		HABackend: &Backend{
@@ -98,6 +99,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
+			DisableClustering: true,
 		},
 
 		Telemetry: &Telemetry{
@@ -155,6 +157,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
+			DisableClustering: true,
 		},
 
 		HABackend: &Backend{
@@ -182,7 +185,6 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		},
 	}
 	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
 	}
 }
 
@@ -223,7 +225,7 @@ func TestLoadConfigDir(t *testing.T) {
 		ClusterName:     "testcluster",
 	}
 	if !reflect.DeepEqual(config, expected) {
-		t.Fatalf("bad: %#v", config)
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
 	}
 }
 
