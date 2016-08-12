@@ -551,6 +551,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 
 		valid := []string{
 			"address",
+			"cluster_address",
 			"endpoint",
 			"infrastructure",
 			"node_id",

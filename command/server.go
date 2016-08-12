@@ -347,6 +347,35 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 
+		lns = append(lns, ln)
+
+		if reloadFunc != nil {
+			relSlice := c.ReloadFuncs["listener|"+lnConfig.Type]
+			relSlice = append(relSlice, reloadFunc)
+			c.ReloadFuncs["listener|"+lnConfig.Type] = relSlice
+		}
+
+		if !disableClustering && lnConfig.Type == "tcp" {
+			var addr string
+			var ok bool
+			if addr, ok = lnConfig.Config["cluster_address"]; ok {
+				clusterAddrs = append(clusterAddrs, addr)
+			} else {
+				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
+				if !ok {
+					c.Ui.Error("Failed to parse tcp listener")
+					return 1
+				}
+				ipStr := tcpAddr.IP.String()
+				if len(tcpAddr.IP) == net.IPv6len {
+					ipStr = fmt.Sprintf("[%s]", ipStr)
+				}
+				addr = fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1)
+				clusterAddrs = append(clusterAddrs, addr)
+			}
+			props["cluster address"] = addr
+		}
+
 		// Store the listener props for output later
 		key := fmt.Sprintf("listener %d", i+1)
 		propsList := make([]string, 0, len(props))
@@ -359,26 +388,6 @@ func (c *ServerCommand) Run(args []string) int {
 		info[key] = fmt.Sprintf(
 			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
-		lns = append(lns, ln)
-
-		if reloadFunc != nil {
-			relSlice := c.ReloadFuncs["listener|"+lnConfig.Type]
-			relSlice = append(relSlice, reloadFunc)
-			c.ReloadFuncs["listener|"+lnConfig.Type] = relSlice
-		}
-
-		if lnConfig.Type == "tcp" {
-			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-			if !ok {
-				c.Ui.Error("Failed to parse tcp listener")
-				return 1
-			}
-			ipStr := tcpAddr.IP.String()
-			if len(tcpAddr.IP) == net.IPv6len {
-				ipStr = fmt.Sprintf("[%s]", ipStr)
-			}
-			clusterAddrs = append(clusterAddrs, fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1))
-		}
 	}
 	if !disableClustering {
 		c.logger.Printf("[TRACE] cluster listeners will be started on %v", clusterAddrs)
