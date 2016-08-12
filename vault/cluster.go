@@ -537,7 +537,7 @@ func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
 // handler, creates a new handler that handles forwarded requests, and returns
 // the cluster setup function that creates the new listners and assigns to the
 // new handler
-func WrapListenersForClustering(lns []net.Listener, handler http.Handler, logger *log.Logger) func() ([]net.Listener, http.Handler, error) {
+func WrapListenersForClustering(addrs []string, handler http.Handler, logger *log.Logger) func() ([]net.Listener, http.Handler, error) {
 	// This mux handles cluster functions (right now, only forwarded requests)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/cluster/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
@@ -571,25 +571,10 @@ func WrapListenersForClustering(lns []net.Listener, handler http.Handler, logger
 	})
 
 	return func() ([]net.Listener, http.Handler, error) {
-		ret := make([]net.Listener, 0, len(lns))
+		ret := make([]net.Listener, 0, len(addrs))
 		// Loop over the existing listeners and start listeners on appropriate ports
-		for _, ln := range lns {
-			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
-			if !ok {
-				if logger != nil {
-					logger.Printf("[TRACE] http/WrapClusterListener: %s not a candidate for cluster request handling", ln.Addr().String())
-				}
-				continue
-			}
-			if logger != nil {
-				logger.Printf("[TRACE] http/WrapClusterListener: %s is a candidate for cluster request handling at addr %s and port %d", tcpAddr.String(), tcpAddr.IP.String(), tcpAddr.Port+1)
-			}
-
-			ipStr := tcpAddr.IP.String()
-			if len(tcpAddr.IP) == net.IPv6len {
-				ipStr = fmt.Sprintf("[%s]", ipStr)
-			}
-			ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1))
+		for _, addr := range addrs {
+			ln, err := net.Listen("tcp", addr)
 			if err != nil {
 				return nil, nil, err
 			}

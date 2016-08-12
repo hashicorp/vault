@@ -334,6 +334,8 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	clusterAddrs := []string{}
+
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
@@ -364,6 +366,22 @@ func (c *ServerCommand) Run(args []string) int {
 			relSlice = append(relSlice, reloadFunc)
 			c.ReloadFuncs["listener|"+lnConfig.Type] = relSlice
 		}
+
+		if lnConfig.Type == "tcp" {
+			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
+			if !ok {
+				c.Ui.Error("Failed to parse tcp listener")
+				return 1
+			}
+			ipStr := tcpAddr.IP.String()
+			if len(tcpAddr.IP) == net.IPv6len {
+				ipStr = fmt.Sprintf("[%s]", ipStr)
+			}
+			clusterAddrs = append(clusterAddrs, fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1))
+		}
+	}
+	if !disableClustering {
+		c.logger.Printf("[TRACE] cluster listeners will be started on %v", clusterAddrs)
 	}
 
 	// Make sure we close all listeners from this point on
@@ -428,7 +446,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
-	core.SetClusterListenerSetupFunc(vault.WrapListenersForClustering(lns, handler, c.logger))
+	core.SetClusterListenerSetupFunc(vault.WrapListenersForClustering(clusterAddrs, handler, c.logger))
 
 	// If we're in dev mode, then initialize the core
 	if dev {

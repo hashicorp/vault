@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -118,17 +117,9 @@ func TestClusterHAFetching(t *testing.T) {
 	}
 
 	// Make sure the certificate meets expectations
-	cert, err := x509.ParseCertificate(cluster.Certificate)
+	_, err = x509.ParseCertificate(cluster.Certificate)
 	if err != nil {
 		t.Fatal("error parsing local cluster certificate: %v", err)
-	}
-
-	// Make sure the cert pool is as expected
-	if len(c.localClusterCertPool.Subjects()) != 1 {
-		t.Fatal("unexpected local cluster cert pool length")
-	}
-	if !reflect.DeepEqual(cert.RawSubject, c.localClusterCertPool.Subjects()[0]) {
-		t.Fatal("cert pool subject does not match expected")
 	}
 }
 

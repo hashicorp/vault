@@ -640,29 +640,22 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 	//
 	// Clustering setup
 	//
-	c1SetupFunc := func() []net.Listener {
-		ret := make([]net.Listener, len(c1lns))
-		for i, ln := range c1lns {
-			ret[i] = ln.Listener
+	clusterAddrGen := func(lns []*TestListener) []string {
+		ret := make([]string, len(lns))
+		for i, ln := range lns {
+			curAddr := ln.Address
+			ipStr := curAddr.IP.String()
+			if len(curAddr.IP) == net.IPv6len {
+				ipStr = fmt.Sprintf("[%s]", ipStr)
+			}
+			ret[i] = fmt.Sprintf("%s:%d", ipStr, curAddr.Port+1)
 		}
 		return ret
 	}
-	c2.SetClusterListenerSetupFunc(WrapListenersForClustering(func() []net.Listener {
-		ret := make([]net.Listener, len(c2lns))
-		for i, ln := range c2lns {
-			ret[i] = ln.Listener
-		}
-		return ret
-	}(), handlers[1], logger))
-	c3.SetClusterListenerSetupFunc(WrapListenersForClustering(func() []net.Listener {
-		ret := make([]net.Listener, len(c3lns))
-		for i, ln := range c3lns {
-			ret[i] = ln.Listener
-		}
-		return ret
-	}(), handlers[2], logger))
 
-	key, root := TestCoreInitClusterListenerSetup(t, c1, WrapListenersForClustering(c1SetupFunc(), handlers[0], logger))
+	c2.SetClusterListenerSetupFunc(WrapListenersForClustering(clusterAddrGen(c2lns), handlers[1], logger))
+	c3.SetClusterListenerSetupFunc(WrapListenersForClustering(clusterAddrGen(c3lns), handlers[2], logger))
+	key, root := TestCoreInitClusterListenerSetup(t, c1, WrapListenersForClustering(clusterAddrGen(c1lns), handlers[0], logger))
 	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
