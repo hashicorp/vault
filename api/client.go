@@ -238,6 +238,13 @@ type Client struct {
 // automatically added to the client. Otherwise, you must manually call
 // `SetToken()`.
 func NewClient(c *Config) (*Client, error) {
+	if c == nil {
+		c = DefaultConfig()
+		if err := c.ReadEnvironment(); err != nil {
+			return nil, fmt.Errorf("error reading environment: %v", err)
+		}
+	}
+
 	u, err := url.Parse(c.Address)
 	if err != nil {
 		return nil, err
@@ -269,6 +276,18 @@ func NewClient(c *Config) (*Client, error) {
 	}
 
 	return client, nil
+}
+
+// Sets the address of Vault in the client. The format of address should be
+// "<Scheme>://<Host>:<Port>". Setting this on a client will override the
+// value of VAULT_ADDR environment variable.
+func (c *Client) SetAddress(addr string) error {
+	var err error
+	if c.addr, err = url.Parse(addr); err != nil {
+		return fmt.Errorf("failed to set address: %v", err)
+	}
+
+	return nil
 }
 
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
