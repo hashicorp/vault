@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"net"
@@ -407,11 +410,19 @@ func TestWaitActive(t *testing.T, core *Core) {
 	}
 }
 
+type TestListener struct {
+	net.Listener
+	Address *net.TCPAddr
+}
+
 type TestClusterCore struct {
 	*Core
-	Listeners []net.Listener
-	Root      string
-	Key       []byte
+	Listeners   []*TestListener
+	Root        string
+	Key         []byte
+	CACertBytes []byte
+	CACert      *x509.Certificate
+	TLSConfig   *tls.Config
 }
 
 func (t *TestClusterCore) CloseListeners() {
@@ -429,7 +440,130 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatal("handlers must be size 3")
 	}
 
+	//
+	// TLS setup
+	//
+	block, _ := pem.Decode([]byte(clusterCACert))
+	if block == nil {
+		t.Fatal("error decoding cluster CA cert")
+	}
+	caBytes := block.Bytes
+	caCert, err := x509.ParseCertificate(caBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block, _ = pem.Decode([]byte(clusterServerCert))
+	if block == nil {
+		t.Fatal("error decoding cluster server cert")
+	}
+	certBytes := block.Bytes
+	serverCert, err := x509.ParseCertificate(certBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	block, _ = pem.Decode([]byte(clusterServerKey))
+	if block == nil {
+		t.Fatal("error decoding cluster server key")
+	}
+	serverKeyBytes := block.Bytes
+	serverKey, err := x509.ParsePKCS1PrivateKey(serverKeyBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootCAs := x509.NewCertPool()
+	rootCAs.AddCert(caCert)
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{
+			tls.Certificate{
+				Certificate: [][]byte{
+					certBytes,
+					caBytes,
+				},
+				PrivateKey: serverKey,
+				Leaf:       serverCert,
+			},
+		},
+		RootCAs:    rootCAs,
+		ServerName: "127.0.0.1",
+		ClientAuth: tls.RequestClientCert,
+		ClientCAs:  rootCAs,
+	}
+
 	logger := log.New(os.Stderr, "", log.LstdFlags)
+
+	//
+	// Listener setup
+	//
+	ln, err := net.ListenTCP("tcp", &net.TCPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c1lns := []*TestListener{&TestListener{
+		Listener: tls.NewListener(ln, tlsConfig),
+		Address:  ln.Addr().(*net.TCPAddr),
+	},
+	}
+	ln, err = net.ListenTCP("tcp", &net.TCPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c1lns = append(c1lns, &TestListener{
+		Listener: tls.NewListener(ln, tlsConfig),
+		Address:  ln.Addr().(*net.TCPAddr),
+	})
+	server1 := &http.Server{
+		Handler: handlers[0],
+	}
+	for _, ln := range c1lns {
+		go server1.Serve(ln)
+	}
+
+	ln, err = net.ListenTCP("tcp", &net.TCPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c2lns := []*TestListener{&TestListener{
+		Listener: tls.NewListener(ln, tlsConfig),
+		Address:  ln.Addr().(*net.TCPAddr),
+	},
+	}
+	server2 := &http.Server{
+		Handler: handlers[1],
+	}
+	for _, ln := range c2lns {
+		go server2.Serve(ln)
+	}
+
+	ln, err = net.ListenTCP("tcp", &net.TCPAddr{
+		IP:   net.ParseIP("127.0.0.1"),
+		Port: 0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c3lns := []*TestListener{&TestListener{
+		Listener: tls.NewListener(ln, tlsConfig),
+		Address:  ln.Addr().(*net.TCPAddr),
+	},
+	}
+	server3 := &http.Server{
+		Handler: handlers[2],
+	}
+	for _, ln := range c3lns {
+		go server3.Serve(ln)
+	}
 
 	// Create three cores with the same physical and different advertise addrs
 	coreConfig := &CoreConfig{
@@ -438,19 +572,23 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
-		AdvertiseAddr:      "http://127.0.0.1:8202",
-		ClusterAddr:        "https://127.0.0.1:8203",
+		AdvertiseAddr:      fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port),
+		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port+1),
 		DisableMlock:       true,
-	}
-
-	// Used to set something non-working to test fallback
-	if base.ClusterAddr != "" {
-		coreConfig.ClusterAddr = base.ClusterAddr
 	}
 
 	coreConfig.LogicalBackends["generic"] = PassthroughBackendFactory
 
 	if base != nil {
+		// Used to set something non-working to test fallback
+		switch base.ClusterAddr {
+		case "empty":
+			coreConfig.ClusterAddr = ""
+		case "":
+		default:
+			coreConfig.ClusterAddr = base.ClusterAddr
+		}
+
 		if base.LogicalBackends != nil {
 			for k, v := range base.LogicalBackends {
 				coreConfig.LogicalBackends[k] = v
@@ -472,64 +610,51 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	coreConfig.AdvertiseAddr = "http://127.0.0.1:8206"
-	coreConfig.ClusterAddr = "https://127.0.0.1:8207"
+
+	coreConfig.AdvertiseAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port)
+	if coreConfig.ClusterAddr != "" {
+		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port+1)
+	}
 	c2, err := NewCore(coreConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	coreConfig.AdvertiseAddr = "http://127.0.0.1:8208"
-	coreConfig.ClusterAddr = "https://127.0.0.1:8209"
+
+	coreConfig.AdvertiseAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port)
+	if coreConfig.ClusterAddr != "" {
+		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port+1)
+	}
 	c3, err := NewCore(coreConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	ln, err := net.Listen("tcp", "127.0.0.1:8202")
-	if err != nil {
-		t.Fatal(err)
+	//
+	// Clustering setup
+	//
+	c1SetupFunc := func() []net.Listener {
+		ret := make([]net.Listener, len(c1lns))
+		for i, ln := range c1lns {
+			ret[i] = ln.Listener
+		}
+		return ret
 	}
-	c1lns := []net.Listener{ln}
-	ln, err = net.Listen("tcp", "127.0.0.1:8204")
-	if err != nil {
-		t.Fatal(err)
-	}
-	c1lns = append(c1lns, ln)
-	server1 := &http.Server{
-		Handler: handlers[0],
-	}
-	for _, ln := range c1lns {
-		go server1.Serve(ln)
-	}
+	c2.SetClusterListenerSetupFunc(WrapListenersForClustering(func() []net.Listener {
+		ret := make([]net.Listener, len(c2lns))
+		for i, ln := range c2lns {
+			ret[i] = ln.Listener
+		}
+		return ret
+	}(), handlers[1], logger))
+	c3.SetClusterListenerSetupFunc(WrapListenersForClustering(func() []net.Listener {
+		ret := make([]net.Listener, len(c3lns))
+		for i, ln := range c3lns {
+			ret[i] = ln.Listener
+		}
+		return ret
+	}(), handlers[2], logger))
 
-	ln, err = net.Listen("tcp", "127.0.0.1:8206")
-	if err != nil {
-		t.Fatal(err)
-	}
-	c2lns := []net.Listener{ln}
-	server2 := &http.Server{
-		Handler: handlers[1],
-	}
-	for _, ln := range c2lns {
-		go server2.Serve(ln)
-	}
-
-	ln, err = net.Listen("tcp", "127.0.0.1:8208")
-	if err != nil {
-		t.Fatal(err)
-	}
-	c3lns := []net.Listener{ln}
-	server3 := &http.Server{
-		Handler: handlers[2],
-	}
-	for _, ln := range c3lns {
-		go server3.Serve(ln)
-	}
-
-	c2.SetClusterListenerSetupFunc(WrapListenersForClustering(c2lns, handlers[1], logger))
-	c3.SetClusterListenerSetupFunc(WrapListenersForClustering(c3lns, handlers[2], logger))
-
-	key, root := TestCoreInitClusterListenerSetup(t, c1, WrapListenersForClustering(c1lns, handlers[0], logger))
+	key, root := TestCoreInitClusterListenerSetup(t, c1, WrapListenersForClustering(c1SetupFunc(), handlers[0], logger))
 	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
@@ -575,22 +700,133 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 
 	return []*TestClusterCore{
 		&TestClusterCore{
-			Core:      c1,
-			Listeners: c1lns,
-			Root:      root,
-			Key:       TestKeyCopy(key),
+			Core:        c1,
+			Listeners:   c1lns,
+			Root:        root,
+			Key:         TestKeyCopy(key),
+			CACertBytes: caBytes,
+			CACert:      caCert,
+			TLSConfig:   tlsConfig,
 		},
 		&TestClusterCore{
-			Core:      c2,
-			Listeners: c2lns,
-			Root:      root,
-			Key:       TestKeyCopy(key),
+			Core:        c2,
+			Listeners:   c2lns,
+			Root:        root,
+			Key:         TestKeyCopy(key),
+			CACertBytes: caBytes,
+			CACert:      caCert,
+			TLSConfig:   tlsConfig,
 		},
 		&TestClusterCore{
-			Core:      c3,
-			Listeners: c3lns,
-			Root:      root,
-			Key:       TestKeyCopy(key),
+			Core:        c3,
+			Listeners:   c3lns,
+			Root:        root,
+			Key:         TestKeyCopy(key),
+			CACertBytes: caBytes,
+			CACert:      caCert,
+			TLSConfig:   tlsConfig,
 		},
 	}
 }
+
+const (
+	clusterCACert = `-----BEGIN CERTIFICATE-----
+MIIDPjCCAiagAwIBAgIUfIKsF2VPT7sdFcKOHJH2Ii6K4MwwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMTYwNTAyMTYwNTQyWhgPMjA2
+NjA0MjAxNjA2MTJaMBYxFDASBgNVBAMTC215dmF1bHQuY29tMIIBIjANBgkqhkiG
+9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuOimEXawD2qBoLCFP3Skq5zi1XzzcMAJlfdS
+xz9hfymuJb+cN8rB91HOdU9wQCwVKnkUtGWxUnMp0tT0uAZj5NzhNfyinf0JGAbP
+67HDzVZhGBHlHTjPX0638yaiUx90cTnucX0N20SgCYct29dMSgcPl+W78D3Jw3xE
+JsHQPYS9ASe2eONxG09F/qNw7w/RO5/6WYoV2EmdarMMxq52pPe2chtNMQdSyOUb
+cCcIZyk4QVFZ1ZLl6jTnUPb+JoCx1uMxXvMek4NF/5IL0Wr9dw2gKXKVKoHDr6SY
+WrCONRw61A5Zwx1V+kn73YX3USRlkufQv/ih6/xThYDAXDC9cwIDAQABo4GBMH8w
+DgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFOuKvPiU
+G06iHkRXAOeMiUdBfHFyMB8GA1UdIwQYMBaAFOuKvPiUG06iHkRXAOeMiUdBfHFy
+MBwGA1UdEQQVMBOCC215dmF1bHQuY29thwR/AAABMA0GCSqGSIb3DQEBCwUAA4IB
+AQBcN/UdAMzc7UjRdnIpZvO+5keBGhL/vjltnGM1dMWYHa60Y5oh7UIXF+P1RdNW
+n7g80lOyvkSR15/r1rDkqOK8/4oruXU31EcwGhDOC4hU6yMUy4ltV/nBoodHBXNh
+MfKiXeOstH1vdI6G0P6W93Bcww6RyV1KH6sT2dbETCw+iq2VN9CrruGIWzd67UT/
+spe/kYttr3UYVV3O9kqgffVVgVXg/JoRZ3J7Hy2UEXfh9UtWNanDlRuXaZgE9s/d
+CpA30CHpNXvKeyNeW2ktv+2nAbSpvNW+e6MecBCTBIoDSkgU8ShbrzmDKVwNN66Q
+5gn6KxUPBKHEtNzs5DgGM7nq
+-----END CERTIFICATE-----`
+
+	clusterCAKey = `-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAuOimEXawD2qBoLCFP3Skq5zi1XzzcMAJlfdSxz9hfymuJb+c
+N8rB91HOdU9wQCwVKnkUtGWxUnMp0tT0uAZj5NzhNfyinf0JGAbP67HDzVZhGBHl
+HTjPX0638yaiUx90cTnucX0N20SgCYct29dMSgcPl+W78D3Jw3xEJsHQPYS9ASe2
+eONxG09F/qNw7w/RO5/6WYoV2EmdarMMxq52pPe2chtNMQdSyOUbcCcIZyk4QVFZ
+1ZLl6jTnUPb+JoCx1uMxXvMek4NF/5IL0Wr9dw2gKXKVKoHDr6SYWrCONRw61A5Z
+wx1V+kn73YX3USRlkufQv/ih6/xThYDAXDC9cwIDAQABAoIBAG3bCo7ljMQb6tel
+CAUjL5Ilqz5a9ebOsONABRYLOclq4ePbatxawdJF7/sSLwZxKkIJnZtvr2Hkubxg
+eOO8KC0YbVS9u39Rjc2QfobxHfsojpbWSuCJl+pvwinbkiUAUxXR7S/PtCPJKat/
+fGdYCiMQ/tqnynh4vR4+/d5o12c0KuuQ22/MdEf3GOadUamRXS1ET9iJWqla1pJW
+TmzrlkGAEnR5PPO2RMxbnZCYmj3dArxWAnB57W+bWYla0DstkDKtwg2j2ikNZpXB
+nkZJJpxR76IYD1GxfwftqAKxujKcyfqB0dIKCJ0UmfOkauNWjexroNLwaAOC3Nud
+XIxppAECgYEA1wJ9EH6A6CrSjdzUocF9LtQy1LCDHbdiQFHxM5/zZqIxraJZ8Gzh
+Q0d8JeOjwPdG4zL9pHcWS7+x64Wmfn0+Qfh6/47Vy3v90PIL0AeZYshrVZyJ/s6X
+YkgFK80KEuWtacqIZ1K2UJyCw81u/ynIl2doRsIbgkbNeN0opjmqVTMCgYEA3CkW
+2fETWK1LvmgKFjG1TjOotVRIOUfy4iN0kznPm6DK2PgTF5DX5RfktlmA8i8WPmB7
+YFOEdAWHf+RtoM/URa7EAGZncCWe6uggAcWqznTS619BJ63OmncpSWov5Byg90gJ
+48qIMY4wDjE85ypz1bmBc2Iph974dtWeDtB7dsECgYAyKZh4EquMfwEkq9LH8lZ8
+aHF7gbr1YeWAUB3QB49H8KtacTg+iYh8o97pEBUSXh6hvzHB/y6qeYzPAB16AUpX
+Jdu8Z9ylXsY2y2HKJRu6GjxAewcO9bAH8/mQ4INrKT6uIdx1Dq0OXZV8jR9KVLtB
+55RCfeLhIBesDR0Auw9sVQKBgB0xTZhkgP43LF35Ca1btgDClNJGdLUztx8JOIH1
+HnQyY/NVIaL0T8xO2MLdJ131pGts+68QI/YGbaslrOuv4yPCQrcS3RBfzKy1Ttkt
+TrLFhtoy7T7HqyeMOWtEq0kCCs3/PWB5EIoRoomfOcYlOOrUCDg2ge9EP4nyVVz9
+hAGBAoGBAJXw/ufevxpBJJMSyULmVWYr34GwLC1OhSE6AVVt9JkIYnc5L4xBKTHP
+QNKKJLmFmMsEqfxHUNWmpiHkm2E0p37Zehui3kywo+A4ybHPTua70ZWQfZhKxLUr
+PvJa8JmwiCM7kO8zjOv+edY1mMWrbjAZH1YUbfcTHmST7S8vp0F3
+-----END RSA PRIVATE KEY-----`
+
+	clusterServerCert = `-----BEGIN CERTIFICATE-----
+MIIDtzCCAp+gAwIBAgIUBLqh6ctGWVDUxFhxJX7m6S/bnrcwDQYJKoZIhvcNAQEL
+BQAwFjEUMBIGA1UEAxMLbXl2YXVsdC5jb20wIBcNMTYwNTAyMTYwOTI2WhgPMjA2
+NjA0MjAxNTA5NTZaMBsxGTAXBgNVBAMTEGNlcnQubXl2YXVsdC5jb20wggEiMA0G
+CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDY3gPB29kkdbu0mPO6J0efagQhSiXB
+9OyDuLf5sMk6CVDWVWal5hISkyBmw/lXgF7qC2XFKivpJOrcGQd5Ep9otBqyJLzI
+b0IWdXuPIrVnXDwcdWr86ybX2iC42zKWfbXgjzGijeAVpl0UJLKBj+fk5q6NvkRL
+5FUL6TRV7Krn9mrmnrV9J5IqV15pTd9W2aVJ6IqWvIPCACtZKulqWn4707uy2X2W
+1Stq/5qnp1pDshiGk1VPyxCwQ6yw3iEcgecbYo3vQfhWcv7Q8LpSIM9ZYpXu6OmF
++czqRZS9gERl+wipmmrN1MdYVrTuQem21C/PNZ4jo4XUk1SFx6JrcA+lAgMBAAGj
+gfUwgfIwHQYDVR0lBBYwFAYIKwYBBQUHAwEGCCsGAQUFBwMCMB0GA1UdDgQWBBSe
+Cl9WV3BjGCwmS/KrDSLRjfwyqjAfBgNVHSMEGDAWgBTrirz4lBtOoh5EVwDnjIlH
+QXxxcjA7BggrBgEFBQcBAQQvMC0wKwYIKwYBBQUHMAKGH2h0dHA6Ly8xMjcuMC4w
+LjE6ODIwMC92MS9wa2kvY2EwIQYDVR0RBBowGIIQY2VydC5teXZhdWx0LmNvbYcE
+fwAAATAxBgNVHR8EKjAoMCagJKAihiBodHRwOi8vMTI3LjAuMC4xOjgyMDAvdjEv
+cGtpL2NybDANBgkqhkiG9w0BAQsFAAOCAQEAWGholPN8buDYwKbUiDavbzjsxUIX
+lU4MxEqOHw7CD3qIYIauPboLvB9EldBQwhgOOy607Yvdg3rtyYwyBFwPhHo/hK3Z
+6mn4hc6TF2V+AUdHBvGzp2dbYLeo8noVoWbQ/lBulggwlIHNNF6+a3kALqsqk1Ch
+f/hzsjFnDhAlNcYFgG8TgfE2lE/FckvejPqBffo7Q3I+wVAw0buqiz5QL81NOT+D
+Y2S9LLKLRaCsWo9wRU1Az4Rhd7vK5SEMh16jJ82GyEODWPvuxOTI1MnzfnbWyLYe
+TTp6YBjGMVf1I6NEcWNur7U17uIOiQjMZ9krNvoMJ1A/cxCoZ98QHgcIPg==
+-----END CERTIFICATE-----`
+
+	clusterServerKey = `-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEA2N4DwdvZJHW7tJjzuidHn2oEIUolwfTsg7i3+bDJOglQ1lVm
+peYSEpMgZsP5V4Be6gtlxSor6STq3BkHeRKfaLQasiS8yG9CFnV7jyK1Z1w8HHVq
+/Osm19oguNsyln214I8xoo3gFaZdFCSygY/n5Oaujb5ES+RVC+k0Veyq5/Zq5p61
+fSeSKldeaU3fVtmlSeiKlryDwgArWSrpalp+O9O7stl9ltUrav+ap6daQ7IYhpNV
+T8sQsEOssN4hHIHnG2KN70H4VnL+0PC6UiDPWWKV7ujphfnM6kWUvYBEZfsIqZpq
+zdTHWFa07kHpttQvzzWeI6OF1JNUhceia3APpQIDAQABAoIBAQCH3vEzr+3nreug
+RoPNCXcSJXXY9X+aeT0FeeGqClzIg7Wl03OwVOjVwl/2gqnhbIgK0oE8eiNwurR6
+mSPZcxV0oAJpwiKU4T/imlCDaReGXn86xUX2l82KRxthNdQH/VLKEmzij0jpx4Vh
+bWx5SBPdkbmjDKX1dmTiRYWIn/KjyNPvNvmtwdi8Qluhf4eJcNEUr2BtblnGOmfL
+FdSu+brPJozpoQ1QdDnbAQRgqnh7Shl0tT85whQi0uquqIj1gEOGVjmBvDDnL3GV
+WOENTKqsmIIoEzdZrql1pfmYTk7WNaD92bfpN128j8BF7RmAV4/DphH0pvK05y9m
+tmRhyHGxAoGBAOV2BBocsm6xup575VqmFN+EnIOiTn+haOvfdnVsyQHnth63fOQx
+PNtMpTPR1OMKGpJ13e2bV0IgcYRsRkScVkUtoa/17VIgqZXffnJJ0A/HT67uKBq3
+8o7RrtyK5N20otw0lZHyqOPhyCdpSsurDhNON1kPVJVYY4N1RiIxfut/AoGBAPHz
+HfsJ5ZkyELE9N/r4fce04lprxWH+mQGK0/PfjS9caXPhj/r5ZkVMvzWesF3mmnY8
+goE5S35TuTvV1+6rKGizwlCFAQlyXJiFpOryNWpLwCmDDSzLcm+sToAlML3tMgWU
+jM3dWHx3C93c3ft4rSWJaUYI9JbHsMzDW6Yh+GbbAoGBANIbKwxh5Hx5XwEJP2yu
+kIROYCYkMy6otHLujgBdmPyWl+suZjxoXWoMl2SIqR8vPD+Jj6mmyNJy9J6lqf3f
+DRuQ+fEuBZ1i7QWfvJ+XuN0JyovJ5Iz6jC58D1pAD+p2IX3y5FXcVQs8zVJRFjzB
+p0TEJOf2oqORaKWRd6ONoMKvAoGALKu6aVMWdQZtVov6/fdLIcgf0pn7Q3CCR2qe
+X3Ry2L+zKJYIw0mwvDLDSt8VqQCenB3n6nvtmFFU7ds5lvM67rnhsoQcAOaAehiS
+rl4xxoJd5Ewx7odRhZTGmZpEOYzFo4odxRSM9c30/u18fqV1Mm0AZtHYds4/sk6P
+aUj0V+kCgYBMpGrJk8RSez5g0XZ35HfpI4ENoWbiwB59FIpWsLl2LADEh29eC455
+t9Muq7MprBVBHQo11TMLLFxDIjkuMho/gcKgpYXCt0LfiNm8EZehvLJUXH+3WqUx
+we6ywrbFCs6LaxaOCtTiLsN+GbZCatITL0UJaeBmTAbiw0KQjUuZPQ==
+-----END RSA PRIVATE KEY-----`
+)

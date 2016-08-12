@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func TestHTTP_Fallback(t *testing.T) {
+func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 	handler1 := http.NewServeMux()
 	handler2 := http.NewServeMux()
 	handler3 := http.NewServeMux()
@@ -29,7 +29,7 @@ func TestHTTP_Fallback(t *testing.T) {
 		LogicalBackends: map[string]logical.Factory{
 			"transit": transit.Factory,
 		},
-		ClusterAddr: "https://127.0.0.1:8382",
+		ClusterAddr: "https://127.3.4.1:8382",
 	}
 
 	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
@@ -48,11 +48,16 @@ func TestHTTP_Fallback(t *testing.T) {
 
 	root := cores[0].Root
 
-	addrs := []string{"http://127.0.0.1:8206", "http://127.0.0.1:8208"}
+	addrs := []string{
+		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
+		fmt.Sprintf("https://127.0.0.1:%d", cores[2].Listeners[0].Address.Port),
+	}
 
 	for _, addr := range addrs {
 		config := api.DefaultConfig()
 		config.Address = addr
+		config.HttpClient = cleanhttp.DefaultClient()
+		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
 		client, err := api.NewClient(config)
 		if err != nil {
 			t.Fatal(err)
@@ -69,6 +74,67 @@ func TestHTTP_Fallback(t *testing.T) {
 		if secret.Data["id"].(string) != root {
 			t.Fatal("token mismatch")
 		}
+
+		config.HttpClient.Transport.(*http.Transport).CloseIdleConnections()
+	}
+}
+
+func TestHTTP_Fallback_Disabled(t *testing.T) {
+	handler1 := http.NewServeMux()
+	handler2 := http.NewServeMux()
+	handler3 := http.NewServeMux()
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": transit.Factory,
+		},
+		ClusterAddr: "empty",
+	}
+
+	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
+	// add routes chained to a Handler-created handler.
+	cores := vault.TestCluster(t, []http.Handler{handler1, handler2, handler3}, coreConfig, true)
+	for _, core := range cores {
+		defer core.CloseListeners()
+	}
+	handler1.Handle("/", Handler(cores[0].Core))
+	handler2.Handle("/", Handler(cores[1].Core))
+	handler3.Handle("/", Handler(cores[2].Core))
+
+	// make it easy to get access to the active
+	core := cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	root := cores[0].Root
+
+	addrs := []string{
+		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
+		fmt.Sprintf("https://127.0.0.1:%d", cores[2].Listeners[0].Address.Port),
+	}
+
+	for _, addr := range addrs {
+		config := api.DefaultConfig()
+		config.Address = addr
+		config.HttpClient = cleanhttp.DefaultClient()
+		config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
+		client, err := api.NewClient(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(root)
+
+		secret, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil {
+			t.Fatal("secret is nil")
+		}
+		if secret.Data["id"].(string) != root {
+			t.Fatal("token mismatch")
+		}
+
+		config.HttpClient.Transport.(*http.Transport).CloseIdleConnections()
 	}
 }
 
@@ -108,21 +174,27 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 
 	funcs := []string{"encrypt", "decrypt", "rotate", "change_min_version"}
 	keys := []string{"test1", "test2", "test3"}
-	hosts := []string{"http://127.0.0.1:8206/v1/transit/", "http://127.0.0.1:8208/v1/transit/"}
+
+	hosts := []string{
+		fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[1].Listeners[0].Address.Port),
+		fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[2].Listeners[0].Address.Port),
+	}
 
 	transport := cleanhttp.DefaultPooledTransport()
+	transport.TLSClientConfig = cores[0].TLSConfig
 
-	//core.Logger().Printf("[TRACE] mounting transit")
-	req, err := http.NewRequest("POST", "http://127.0.0.1:8202/v1/sys/mounts/transit",
-		bytes.NewBuffer([]byte("{\"type\": \"transit\"}")))
-	if err != nil {
-		t.Fatal(err)
-	}
 	client := &http.Client{
 		Transport: transport,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return fmt.Errorf("redirects not allowed in this test")
 		},
+	}
+
+	//core.Logger().Printf("[TRACE] mounting transit")
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/mounts/transit", cores[0].Listeners[0].Address.Port),
+		bytes.NewBuffer([]byte("{\"type\": \"transit\"}")))
+	if err != nil {
+		t.Fatal(err)
 	}
 	req.Header.Set(AuthHeaderName, root)
 	_, err = client.Do(req)
