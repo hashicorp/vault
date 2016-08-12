@@ -140,12 +140,10 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		resp, err := core.ForwardRequest(r)
 		if err != nil {
 			if err == vault.ErrCannotForward {
-				// This will use redirects as normal
-				core.Logger().Printf("[TRACE] http/handleRequestForwarding: cannot forward, falling back")
-				handler.ServeHTTP(w, r)
-				return
+				core.Logger().Printf("[TRACE] http/handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
+			} else {
+				core.Logger().Printf("[ERR] http/handleRequestForwarding: error forwarding request: %v", err)
 			}
-			core.Logger().Printf("[ERR] http/handleRequestForwarding: error forwarding request: %v", err)
 
 			// Fall back to redirection
 			handler.ServeHTTP(w, r)
