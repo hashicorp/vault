@@ -131,6 +131,7 @@ BUG FIXES:
  * auth/cert: Fix panic if no client certificate is supplied [GH-1637]
  * auth/token: Don't report that a non-expiring root token is renewable, as
    attempting to renew it results in an error [GH-1692]
+ * cli: Don't retry a command when a redirection is received [GH-1724]
  * core: Fix regression causing status codes to be `400` in most non-5xx error
    cases [GH-1553]
  * core: Fix panic that could occur during a leadership transition [GH-1627]
