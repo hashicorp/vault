@@ -835,6 +835,24 @@
 			"revisionTime": "2016-07-26T08:08:57Z"
 		},
 		{
+			"checksumSHA1": "g4lA8FNetHh8as26V8cLl5EGy78=",
+			"path": "golang.org/x/net/http2",
+			"revision": "07b51741c1d6423d4a6abab1c49940ec09cb1aaf",
+			"revisionTime": "2016-08-11T10:50:59Z"
+		},
+		{
+			"checksumSHA1": "EYNaHp7XdLWRydUCE0amEkKAtgk=",
+			"path": "golang.org/x/net/http2/hpack",
+			"revision": "07b51741c1d6423d4a6abab1c49940ec09cb1aaf",
+			"revisionTime": "2016-08-11T10:50:59Z"
+		},
+		{
+			"checksumSHA1": "yhndhWXMs/VSEDLks4dNyFMQStA=",
+			"path": "golang.org/x/net/lex/httplex",
+			"revision": "07b51741c1d6423d4a6abab1c49940ec09cb1aaf",
+			"revisionTime": "2016-08-11T10:50:59Z"
+		},
+		{
 			"checksumSHA1": "8GUYZXntrAzpG1cThk8/TtR3kj4=",
 			"path": "golang.org/x/oauth2",
 			"revision": "1364adb2c63445016c5ed4518fc71f6a3cda6169",
