@@ -20,6 +20,58 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+func TestHTTP_Fallback(t *testing.T) {
+	handler1 := http.NewServeMux()
+	handler2 := http.NewServeMux()
+	handler3 := http.NewServeMux()
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": transit.Factory,
+		},
+		ClusterAddr: "https://127.0.0.1:8382",
+	}
+
+	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
+	// add routes chained to a Handler-created handler.
+	cores := vault.TestCluster(t, []http.Handler{handler1, handler2, handler3}, coreConfig, true)
+	for _, core := range cores {
+		defer core.CloseListeners()
+	}
+	handler1.Handle("/", Handler(cores[0].Core))
+	handler2.Handle("/", Handler(cores[1].Core))
+	handler3.Handle("/", Handler(cores[2].Core))
+
+	// make it easy to get access to the active
+	core := cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	root := cores[0].Root
+
+	addrs := []string{"http://127.0.0.1:8206", "http://127.0.0.1:8208"}
+
+	for _, addr := range addrs {
+		config := api.DefaultConfig()
+		config.Address = addr
+		client, err := api.NewClient(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetToken(root)
+
+		secret, err := client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil {
+			t.Fatal("secret is nil")
+		}
+		if secret.Data["id"].(string) != root {
+			t.Fatal("token mismatch")
+		}
+	}
+}
+
 // This function recreates the fuzzy testing from transit to pipe a large
 // number of requests from the standbys to the active node.
 func TestHTTP_Forwarding_Stress(t *testing.T) {

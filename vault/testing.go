@@ -438,9 +438,14 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
-		AdvertiseAddr:      "https://127.0.0.1:8202",
+		AdvertiseAddr:      "http://127.0.0.1:8202",
 		ClusterAddr:        "https://127.0.0.1:8203",
 		DisableMlock:       true,
+	}
+
+	// Used to set something non-working to test fallback
+	if base.ClusterAddr != "" {
+		coreConfig.ClusterAddr = base.ClusterAddr
 	}
 
 	coreConfig.LogicalBackends["generic"] = PassthroughBackendFactory
@@ -467,13 +472,13 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	coreConfig.AdvertiseAddr = "https://127.0.0.1:8206"
+	coreConfig.AdvertiseAddr = "http://127.0.0.1:8206"
 	coreConfig.ClusterAddr = "https://127.0.0.1:8207"
 	c2, err := NewCore(coreConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	coreConfig.AdvertiseAddr = "https://127.0.0.1:8208"
+	coreConfig.AdvertiseAddr = "http://127.0.0.1:8208"
 	coreConfig.ClusterAddr = "https://127.0.0.1:8209"
 	c3, err := NewCore(coreConfig)
 	if err != nil {

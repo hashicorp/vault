@@ -146,7 +146,9 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				return
 			}
 			core.Logger().Printf("[ERR] http/handleRequestForwarding: error forwarding request: %v", err)
-			respondError(w, http.StatusInternalServerError, err)
+
+			// Fall back to redirection
+			handler.ServeHTTP(w, r)
 			return
 		}
 		defer resp.Body.Close()
