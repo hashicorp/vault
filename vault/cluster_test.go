@@ -124,18 +124,15 @@ func TestClusterHAFetching(t *testing.T) {
 }
 
 func TestCluster_ListenForRequests(t *testing.T) {
+	// Make this nicer for tests
+	manualStepDownSleepPeriod = 5 * time.Second
+
 	cores := TestCluster(t, []http.Handler{nil, nil, nil}, nil, false)
 	for _, core := range cores {
 		defer core.CloseListeners()
 	}
 
 	root := cores[0].Root
-
-	// Make this nicer for tests
-	oldManualStepDownSleepPeriod := manualStepDownSleepPeriod
-	manualStepDownSleepPeriod = 5 * time.Second
-	// Restore this value for other tests
-	defer func() { manualStepDownSleepPeriod = oldManualStepDownSleepPeriod }()
 
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
@@ -208,6 +205,9 @@ func TestCluster_ListenForRequests(t *testing.T) {
 }
 
 func TestCluster_ForwardRequests(t *testing.T) {
+	// Make this nicer for tests
+	manualStepDownSleepPeriod = 5 * time.Second
+
 	handler1 := http.NewServeMux()
 	handler1.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(201)
@@ -230,12 +230,6 @@ func TestCluster_ForwardRequests(t *testing.T) {
 	}
 
 	root := cores[0].Root
-
-	// Make this nicer for tests
-	oldManualStepDownSleepPeriod := manualStepDownSleepPeriod
-	manualStepDownSleepPeriod = 5 * time.Second
-	// Restore this value for other tests
-	defer func() { manualStepDownSleepPeriod = oldManualStepDownSleepPeriod }()
 
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
