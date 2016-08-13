@@ -2337,8 +2337,8 @@ func TestTokenStore_Periodic(t *testing.T) {
 	}
 
 	// Now we create a token against the role and also set the te value
-	// directly. We should be able to renew; increment should be ignored as
-	// well.
+	// directly. We should use the smaller of the two and be able to renew;
+	// increment should be ignored as well.
 	{
 		req.ClientToken = root
 		req.Operation = logical.UpdateOperation
