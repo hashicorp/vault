@@ -149,6 +149,7 @@ BUG FIXES:
    transaction object which could lead to connection exhaustion [GH-1572]
  * secret/pki: Fix parsing CA bundle containing trailing whitespace [GH-1634]
  * secret/pki: Fix adding email addresses as SANs [GH-1688]
+ * secret/pki: Ensure that CRL values are always UTC, per RFC [GH-1727]
  * sys/seal-status: Fixed nil Cluster object while checking seal status [GH-1715]
 
 ## 0.6.0 (June 14th, 2016)
