@@ -75,6 +75,7 @@ IMPROVEMENTS:
    have the minimum TLS version set to 1.2 by default. This is configurable.
  * auth/token: Added endpoint to list accessors [GH-1676]
  * auth/token: Added `disallowed_policies` option to token store roles [GH-1681]
+ * build: Add support for building on Solaris/Illumos [GH-1726]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
  * cli: `vault auth` command supports a `-path` option to take in the path at
