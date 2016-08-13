@@ -1161,7 +1161,6 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"num_uses":         0,
 		"creation_ttl":     int64(0),
 		"ttl":              int64(0),
-		"role":             "",
 		"explicit_max_ttl": int64(0),
 	}
 
@@ -1197,7 +1196,6 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"num_uses":         0,
 		"creation_ttl":     int64(3600),
 		"ttl":              int64(3600),
-		"role":             "",
 		"explicit_max_ttl": int64(0),
 		"renewable":        true,
 	}
@@ -1240,7 +1238,6 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"num_uses":         0,
 		"creation_ttl":     int64(3600),
 		"ttl":              int64(3600),
-		"role":             "",
 		"explicit_max_ttl": int64(0),
 		"renewable":        true,
 	}
@@ -1306,7 +1303,6 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		"num_uses":         0,
 		"creation_ttl":     int64(0),
 		"ttl":              int64(0),
-		"role":             "",
 		"explicit_max_ttl": int64(0),
 	}
 
@@ -1508,18 +1504,6 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, resp.Data)
-	}
-
-	// Now test setting explicit max ttl at the same time as period, which
-	// should be an error
-	req.Operation = logical.CreateOperation
-	req.Data = map[string]interface{}{
-		"explicit_max_ttl": "5",
-	}
-
-	resp, err = core.HandleRequest(req)
-	if err == nil {
-		t.Fatalf("expected error")
 	}
 
 	// Now set explicit max ttl and clear the period
