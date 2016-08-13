@@ -33,8 +33,8 @@ func TestLoadConfigFile(t *testing.T) {
 		},
 
 		Backend: &Backend{
-			Type:          "consul",
-			AdvertiseAddr: "foo",
+			Type:         "consul",
+			RedirectAddr: "foo",
 			Config: map[string]string{
 				"foo": "bar",
 			},
@@ -42,8 +42,8 @@ func TestLoadConfigFile(t *testing.T) {
 		},
 
 		HABackend: &Backend{
-			Type:          "consul",
-			AdvertiseAddr: "snafu",
+			Type:         "consul",
+			RedirectAddr: "snafu",
 			Config: map[string]string{
 				"bar": "baz",
 			},

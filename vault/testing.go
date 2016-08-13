@@ -573,14 +573,14 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		go server3.Serve(ln)
 	}
 
-	// Create three cores with the same physical and different advertise addrs
+	// Create three cores with the same physical and different redirect/cluster addrs
 	coreConfig := &CoreConfig{
 		Physical:           physical.NewInmem(logger),
 		HAPhysical:         physical.NewInmemHA(logger),
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
-		AdvertiseAddr:      fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port),
+		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port),
 		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port+1),
 		DisableMlock:       true,
 	}
@@ -619,7 +619,7 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatalf("err: %v", err)
 	}
 
-	coreConfig.AdvertiseAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port)
+	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
 		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port+1)
 	}
@@ -628,7 +628,7 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatalf("err: %v", err)
 	}
 
-	coreConfig.AdvertiseAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port)
+	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
 		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port+1)
 	}

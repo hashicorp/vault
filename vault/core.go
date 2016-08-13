@@ -111,7 +111,7 @@ func (e *ErrInvalidKey) Error() string {
 }
 
 type activeAdvertisement struct {
-	AdvertiseAddr    string           `json:"advertise_addr"`
+	RedirectAddr     string           `json:"redirect_addr"`
 	ClusterAddr      string           `json:"cluster_addr"`
 	ClusterCert      []byte           `json:"cluster_cert"`
 	ClusterKeyParams clusterKeyParams `json:"cluster_key_params"`
@@ -124,8 +124,8 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
-	// advertiseAddr is the address we advertise as leader if held
-	advertiseAddr string
+	// redirectAddr is the address we advertise as leader if held
+	redirectAddr string
 
 	// clusterAddr is the address we use for clustering
 	clusterAddr string
@@ -300,7 +300,7 @@ type CoreConfig struct {
 	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
 
 	// Set as the leader address for HA
-	AdvertiseAddr string `json:"advertise_addr" structs:"advertise_addr" mapstructure:"advertise_addr"`
+	RedirectAddr string `json:"redirect_addr" structs:"redirect_addr" mapstructure:"redirect_addr"`
 
 	// Set as the cluster address for HA
 	ClusterAddr string `json:"cluster_addr" structs:"cluster_addr" mapstructure:"cluster_addr"`
@@ -315,7 +315,7 @@ type CoreConfig struct {
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
-		if conf.AdvertiseAddr == "" {
+		if conf.RedirectAddr == "" {
 			return nil, fmt.Errorf("missing advertisement address")
 		}
 	}
@@ -331,8 +331,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Validate the advertise addr if its given to us
-	if conf.AdvertiseAddr != "" {
-		u, err := url.Parse(conf.AdvertiseAddr)
+	if conf.RedirectAddr != "" {
+		u, err := url.Parse(conf.RedirectAddr)
 		if err != nil {
 			return nil, fmt.Errorf("advertisement address is not valid url: %s", err)
 		}
@@ -381,7 +381,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		advertiseAddr:        conf.AdvertiseAddr,
+		redirectAddr:         conf.RedirectAddr,
 		clusterAddr:          conf.ClusterAddr,
 		physical:             conf.Physical,
 		seal:                 conf.Seal,
@@ -602,7 +602,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 			c.requestForwardingConnection = nil
 			c.requestForwardingConnectionLock.Unlock()
 		}
-		return true, c.advertiseAddr, nil
+		return true, c.redirectAddr, nil
 	}
 
 	// Initialize a lock
@@ -635,7 +635,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	// Avoid JSON parsing and function calling if nothing has changed
 	if c.clusterActiveAdvertisementHash != nil {
 		if bytes.Compare(entrySHA256[:], c.clusterActiveAdvertisementHash) == 0 {
-			return false, c.clusterActiveAdvertisement.AdvertiseAddr, nil
+			return false, c.clusterActiveAdvertisement.RedirectAddr, nil
 		}
 	}
 
@@ -649,7 +649,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		advAddr = string(entry.Value)
 		oldAdv = true
 	} else {
-		advAddr = adv.AdvertiseAddr
+		advAddr = adv.RedirectAddr
 	}
 
 	if !oldAdv {
@@ -1403,7 +1403,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 	}
 
 	adv := &activeAdvertisement{
-		AdvertiseAddr:    c.advertiseAddr,
+		RedirectAddr:     c.redirectAddr,
 		ClusterAddr:      c.clusterAddr,
 		ClusterCert:      c.localClusterCert,
 		ClusterKeyParams: keyParams,

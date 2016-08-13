@@ -58,13 +58,13 @@ func TestClusterFetching(t *testing.T) {
 
 func TestClusterHAFetching(t *testing.T) {
 	logger = log.New(os.Stderr, "", log.LstdFlags)
-	advertise := "http://127.0.0.1:8200"
+	redirect := "http://127.0.0.1:8200"
 
 	c, err := NewCore(&CoreConfig{
-		Physical:      physical.NewInmemHA(logger),
-		HAPhysical:    physical.NewInmemHA(logger),
-		AdvertiseAddr: advertise,
-		DisableMlock:  true,
+		Physical:     physical.NewInmemHA(logger),
+		HAPhysical:   physical.NewInmemHA(logger),
+		RedirectAddr: redirect,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)

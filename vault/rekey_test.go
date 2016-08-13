@@ -364,12 +364,12 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
-	advertiseOriginal := "http://127.0.0.1:8200"
+	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -383,12 +383,12 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	TestWaitActive(t, core)
 
 	// Create a second core, attached to same in-memory store
-	advertiseOriginal2 := "http://127.0.0.1:8500"
+	redirectOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal2,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)

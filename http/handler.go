@@ -185,43 +185,43 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
 func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// Request the leader address
-	_, advertise, err := core.Leader()
+	_, redirectAddr, err := core.Leader()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// If there is no leader, generate a 503 error
-	if advertise == "" {
+	if redirectAddr == "" {
 		err = fmt.Errorf("no active Vault instance found")
 		respondError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	// Parse the advertise location
-	advertiseURL, err := url.Parse(advertise)
+	// Parse the redirect location
+	redirectURL, err := url.Parse(redirectAddr)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// Generate a redirect URL
-	redirectURL := url.URL{
-		Scheme:   advertiseURL.Scheme,
-		Host:     advertiseURL.Host,
+	finalURL := url.URL{
+		Scheme:   redirectURL.Scheme,
+		Host:     redirectURL.Host,
 		Path:     reqURL.Path,
 		RawQuery: reqURL.RawQuery,
 	}
 
 	// Ensure there is a scheme, default to https
-	if redirectURL.Scheme == "" {
-		redirectURL.Scheme = "https"
+	if finalURL.Scheme == "" {
+		finalURL.Scheme = "https"
 	}
 
 	// If we have an address, redirect! We use a 307 code
 	// because we don't actually know if its permanent and
 	// the request method should be preserved.
-	w.Header().Set("Location", redirectURL.String())
+	w.Header().Set("Location", finalURL.String())
 	w.WriteHeader(307)
 }
 

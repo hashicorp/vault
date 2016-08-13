@@ -19,12 +19,12 @@ var (
 	invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
 )
 
-func TestNewCore_badAdvertiseAddr(t *testing.T) {
+func TestNewCore_badRedirectAddr(t *testing.T) {
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 	conf := &CoreConfig{
-		AdvertiseAddr: "127.0.0.1:8200",
-		Physical:      physical.NewInmem(logger),
-		DisableMlock:  true,
+		RedirectAddr: "127.0.0.1:8200",
+		Physical:     physical.NewInmem(logger),
+		DisableMlock: true,
 	}
 	_, err := NewCore(conf)
 	if err == nil {
@@ -958,12 +958,12 @@ func TestCore_Standby_Seal(t *testing.T) {
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
-	advertiseOriginal := "http://127.0.0.1:8200"
+	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -993,17 +993,17 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
 	// Create the second core and initialize it
-	advertiseOriginal2 := "http://127.0.0.1:8500"
+	redirectOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal2,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1038,7 +1038,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if isLeader {
 		t.Fatalf("should not be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1064,12 +1064,12 @@ func TestCore_StepDown(t *testing.T) {
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
-	advertiseOriginal := "http://127.0.0.1:8200"
+	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1099,17 +1099,17 @@ func TestCore_StepDown(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
 	// Create the second core and initialize it
-	advertiseOriginal2 := "http://127.0.0.1:8500"
+	redirectOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal2,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1144,7 +1144,7 @@ func TestCore_StepDown(t *testing.T) {
 	if isLeader {
 		t.Fatalf("should not be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1185,7 +1185,7 @@ func TestCore_StepDown(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal2 {
+	if advertise != redirectOriginal2 {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1197,7 +1197,7 @@ func TestCore_StepDown(t *testing.T) {
 	if isLeader {
 		t.Fatalf("should not be leader")
 	}
-	if advertise != advertiseOriginal2 {
+	if advertise != redirectOriginal2 {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1228,7 +1228,7 @@ func TestCore_StepDown(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1240,7 +1240,7 @@ func TestCore_StepDown(t *testing.T) {
 	if isLeader {
 		t.Fatalf("should not be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 }
@@ -1250,12 +1250,12 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
-	advertiseOriginal := "http://127.0.0.1:8200"
+	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1312,17 +1312,17 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
 	// Create a second core, attached to same in-memory store
-	advertiseOriginal2 := "http://127.0.0.1:8500"
+	redirectOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal2,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1357,7 +1357,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if isLeader {
 		t.Fatalf("should not be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1387,7 +1387,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal2 {
+	if advertise != redirectOriginal2 {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1416,12 +1416,12 @@ func TestCore_Standby_SeparateHA(t *testing.T) {
 
 func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.HABackend) {
 	// Create the first core and initialize it
-	advertiseOriginal := "http://127.0.0.1:8200"
+	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1465,17 +1465,17 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
 	// Create a second core, attached to same in-memory store
-	advertiseOriginal2 := "http://127.0.0.1:8500"
+	redirectOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal2,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1516,7 +1516,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if isLeader {
 		t.Fatalf("should not be leader")
 	}
-	if advertise != advertiseOriginal {
+	if advertise != redirectOriginal {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1562,7 +1562,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if !isLeader {
 		t.Fatalf("should be leader")
 	}
-	if advertise != advertiseOriginal2 {
+	if advertise != redirectOriginal2 {
 		t.Fatalf("Bad advertise: %v", advertise)
 	}
 
@@ -1953,12 +1953,12 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	logger = log.New(os.Stderr, "", log.LstdFlags)
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
-	advertiseOriginal := "http://127.0.0.1:8200"
+	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1972,12 +1972,12 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	TestWaitActive(t, core)
 
 	// Create a second core, attached to same in-memory store
-	advertiseOriginal2 := "http://127.0.0.1:8500"
+	redirectOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal2,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)

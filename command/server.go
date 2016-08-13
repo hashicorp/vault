@@ -180,7 +180,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
-		AdvertiseAddr:      config.Backend.AdvertiseAddr,
+		RedirectAddr:       config.Backend.RedirectAddr,
 		HAPhysical:         nil,
 		Seal:               seal,
 		AuditBackends:      c.AuditBackends,
@@ -218,14 +218,14 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 
-		coreConfig.AdvertiseAddr = config.HABackend.AdvertiseAddr
+		coreConfig.RedirectAddr = config.HABackend.RedirectAddr
 		disableClustering = config.HABackend.DisableClustering
 		if !disableClustering {
 			coreConfig.ClusterAddr = config.HABackend.ClusterAddr
 		}
 	} else {
 		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
-			coreConfig.AdvertiseAddr = config.Backend.AdvertiseAddr
+			coreConfig.RedirectAddr = config.Backend.RedirectAddr
 			disableClustering = config.Backend.DisableClustering
 			if !disableClustering {
 				coreConfig.ClusterAddr = config.Backend.ClusterAddr
@@ -233,36 +233,40 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
-		coreConfig.AdvertiseAddr = envAA
+	if envRA := os.Getenv("VAULT_REDIRECT_ADDR"); envRA != "" {
+		coreConfig.RedirectAddr = envRA
+	} else if envAA := os.Getenv("VAULT_ADVERTISE_ADDR"); envAA != "" {
+		coreConfig.RedirectAddr = envAA
 	}
 
-	// Attempt to detect the advertise address, if possible
-	var detect physical.AdvertiseDetect
+	// Attempt to detect the redirect address, if possible
+	var detect physical.RedirectDetect
 	if coreConfig.HAPhysical != nil && coreConfig.HAPhysical.HAEnabled() {
-		detect, ok = coreConfig.HAPhysical.(physical.AdvertiseDetect)
+		detect, ok = coreConfig.HAPhysical.(physical.RedirectDetect)
 	} else {
-		detect, ok = coreConfig.Physical.(physical.AdvertiseDetect)
+		detect, ok = coreConfig.Physical.(physical.RedirectDetect)
 	}
-	if ok && coreConfig.AdvertiseAddr == "" {
-		advertise, err := c.detectAdvertise(detect, config)
+	if ok && coreConfig.RedirectAddr == "" {
+		redirect, err := c.detectRedirect(detect, config)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error detecting advertise address: %s", err))
-		} else if advertise == "" {
-			c.Ui.Error("Failed to detect advertise address.")
+			c.Ui.Error(fmt.Sprintf("Error detecting redirect address: %s", err))
+		} else if redirect == "" {
+			c.Ui.Error("Failed to detect redirect address.")
 		} else {
-			coreConfig.AdvertiseAddr = advertise
+			coreConfig.RedirectAddr = redirect
 		}
 	}
 
-	// After the advertise bits are sorted out, if no cluster address was
-	// explicitly given, derive one from the advertise addr
+	// After the redirect bits are sorted out, if no cluster address was
+	// explicitly given, derive one from the redirect addr
 	if disableClustering {
 		coreConfig.ClusterAddr = ""
-	} else if coreConfig.ClusterAddr == "" && coreConfig.AdvertiseAddr != "" {
-		u, err := url.ParseRequestURI(coreConfig.AdvertiseAddr)
+	} else if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
+		coreConfig.ClusterAddr = envCA
+	} else if coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "" {
+		u, err := url.ParseRequestURI(coreConfig.RedirectAddr)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error parsing advertise address %s: %v", coreConfig.AdvertiseAddr, err))
+			c.Ui.Error(fmt.Sprintf("Error parsing redirect address %s: %v", coreConfig.RedirectAddr, err))
 			return 1
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -281,11 +285,12 @@ func (c *ServerCommand) Run(args []string) int {
 		// Will always be TLS-secured
 		u.Scheme = "https"
 		coreConfig.ClusterAddr = u.String()
-	} else if coreConfig.ClusterAddr != "" {
+	}
+	if coreConfig.ClusterAddr != "" {
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error parsing advertise address %s: %v", coreConfig.AdvertiseAddr, err))
+			c.Ui.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.RedirectAddr, err))
 			return 1
 		}
 		u.Scheme = "https"
@@ -311,8 +316,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if config.HABackend != nil {
 		info["HA backend"] = config.HABackend.Type
-		info["advertise address"] = coreConfig.AdvertiseAddr
-		infoKeys = append(infoKeys, "HA backend", "advertise address")
+		info["redirect address"] = coreConfig.RedirectAddr
+		infoKeys = append(infoKeys, "HA backend", "redirect address")
 		if coreConfig.ClusterAddr != "" {
 			info["cluster address"] = coreConfig.ClusterAddr
 			infoKeys = append(infoKeys, "cluster address")
@@ -322,8 +327,8 @@ func (c *ServerCommand) Run(args []string) int {
 		if coreConfig.HAPhysical != nil {
 			if coreConfig.HAPhysical.HAEnabled() {
 				info["backend"] += " (HA available)"
-				info["advertise address"] = coreConfig.AdvertiseAddr
-				infoKeys = append(infoKeys, "advertise address")
+				info["redirect address"] = coreConfig.RedirectAddr
+				infoKeys = append(infoKeys, "redirect address")
 				if coreConfig.ClusterAddr != "" {
 					info["cluster address"] = coreConfig.ClusterAddr
 					infoKeys = append(infoKeys, "cluster address")
@@ -444,7 +449,7 @@ func (c *ServerCommand) Run(args []string) int {
 				return true
 			}
 
-			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.AdvertiseAddr, activeFunc, sealedFunc); err != nil {
+			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, sealedFunc); err != nil {
 				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}
@@ -621,8 +626,8 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 	return init, nil
 }
 
-// detectAdvertise is used to attempt advertise address detection
-func (c *ServerCommand) detectAdvertise(detect physical.AdvertiseDetect,
+// detectRedirect is used to attempt redirect address detection
+func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 	config *server.Config) (string, error) {
 	// Get the hostname
 	host, err := detect.DetectHostAddr()

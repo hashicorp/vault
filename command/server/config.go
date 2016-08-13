@@ -84,7 +84,7 @@ func (l *Listener) GoString() string {
 // Backend is the backend configuration for the server.
 type Backend struct {
 	Type              string
-	AdvertiseAddr     string
+	RedirectAddr      string
 	ClusterAddr       string
 	DisableClustering bool
 	Config            map[string]string
@@ -451,10 +451,13 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's common to all backends
-	var advertiseAddr string
-	if v, ok := m["advertise_addr"]; ok {
-		advertiseAddr = v
+	// Pull out the redirect address since it's common to all backends
+	var redirectAddr string
+	if v, ok := m["redirect_addr"]; ok {
+		redirectAddr = v
+		delete(m, "redirect_addr")
+	} else if v, ok := m["advertise_addr"]; ok {
+		redirectAddr = v
 		delete(m, "advertise_addr")
 	}
 
@@ -477,7 +480,7 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.Backend = &Backend{
-		AdvertiseAddr:     advertiseAddr,
+		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
 		DisableClustering: disableClustering,
 		Type:              strings.ToLower(key),
@@ -504,10 +507,13 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("ha_backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's common to all backends
-	var advertiseAddr string
-	if v, ok := m["advertise_addr"]; ok {
-		advertiseAddr = v
+	// Pull out the redirect address since it's common to all backends
+	var redirectAddr string
+	if v, ok := m["redirect_addr"]; ok {
+		redirectAddr = v
+		delete(m, "redirect_addr")
+	} else if v, ok := m["advertise_addr"]; ok {
+		redirectAddr = v
 		delete(m, "advertise_addr")
 	}
 
@@ -530,7 +536,7 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 	}
 
 	result.HABackend = &Backend{
-		AdvertiseAddr:     advertiseAddr,
+		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
 		DisableClustering: disableClustering,
 		Type:              strings.ToLower(key),
