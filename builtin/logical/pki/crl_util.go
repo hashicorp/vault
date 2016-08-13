@@ -112,12 +112,15 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"revocation_time":     revInfo.RevocationTime,
-			"revocation_time_utc": revInfo.RevocationTimeUTC.Format(time.RFC3339),
+			"revocation_time": revInfo.RevocationTime,
 		},
-	}, nil
+	}
+	if !revInfo.RevocationTimeUTC.IsZero() {
+		resp.Data["revocation_time_utc"] = revInfo.RevocationTimeUTC.Format(time.RFC3339)
+	}
+	return resp, nil
 }
 
 // Builds a CRL by going through the list of revoked certificates and building
