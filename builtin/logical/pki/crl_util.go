@@ -12,8 +12,9 @@ import (
 )
 
 type revocationInfo struct {
-	CertificateBytes []byte `json:"certificate_bytes"`
-	RevocationTime   int64  `json:"revocation_time"`
+	CertificateBytes  []byte    `json:"certificate_bytes"`
+	RevocationTime    int64     `json:"revocation_time"`
+	RevocationTimeUTC time.Time `json:"revocation_time_utc"`
 }
 
 // Revokes a cert, and tries to be smart about error recovery
@@ -86,8 +87,10 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 			return nil, nil
 		}
 
+		currTime := time.Now()
 		revInfo.CertificateBytes = certEntry.Value
-		revInfo.RevocationTime = time.Now().Unix()
+		revInfo.RevocationTime = currTime.Unix()
+		revInfo.RevocationTimeUTC = currTime.UTC()
 
 		certEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
 		if err != nil {
@@ -109,11 +112,15 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		return nil, fmt.Errorf("Error encountered during CRL building: %s", crlErr)
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"revocation_time": revInfo.RevocationTime,
 		},
-	}, nil
+	}
+	if !revInfo.RevocationTimeUTC.IsZero() {
+		resp.Data["revocation_time_utc"] = revInfo.RevocationTimeUTC.Format(time.RFC3339)
+	}
+	return resp, nil
 }
 
 // Builds a CRL by going through the list of revoked certificates and building
@@ -151,10 +158,17 @@ func buildCRL(b *backend, req *logical.Request) error {
 			return errutil.InternalError{Err: fmt.Sprintf("Unable to parse stored revoked certificate with serial %s: %s", serial, err)}
 		}
 
-		revokedCerts = append(revokedCerts, pkix.RevokedCertificate{
-			SerialNumber:   revokedCert.SerialNumber,
-			RevocationTime: time.Unix(revInfo.RevocationTime, 0),
-		})
+		// NOTE: We have to change this to UTC time because the CRL standard
+		// mandates it but Go will happily encode the CRL without this.
+		newRevCert := pkix.RevokedCertificate{
+			SerialNumber: revokedCert.SerialNumber,
+		}
+		if !revInfo.RevocationTimeUTC.IsZero() {
+			newRevCert.RevocationTime = revInfo.RevocationTimeUTC
+		} else {
+			newRevCert.RevocationTime = time.Unix(revInfo.RevocationTime, 0).UTC()
+		}
+		revokedCerts = append(revokedCerts, newRevCert)
 	}
 
 	signingBundle, caErr := fetchCAInfo(req)
