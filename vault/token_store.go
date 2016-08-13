@@ -1308,9 +1308,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	sysView := ts.System()
 
-	if role != nil && role.Period > 0 {
-		te.TTL = role.Period
-	} else if te.Period > 0 {
+	if te.Period > 0 {
 		te.TTL = te.Period
 	} else {
 		// Set the default lease if not provided, root tokens are exempt
