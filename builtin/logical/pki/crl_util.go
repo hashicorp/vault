@@ -161,11 +161,12 @@ func buildCRL(b *backend, req *logical.Request) error {
 		// NOTE: We have to change this to UTC time because the CRL standard
 		// mandates it but Go will happily encode the CRL without this.
 		newRevCert := pkix.RevokedCertificate{
-			SerialNumber:   revokedCert.SerialNumber,
-			RevocationTime: time.Unix(revInfo.RevocationTime, 0).UTC(),
+			SerialNumber: revokedCert.SerialNumber,
 		}
 		if !revInfo.RevocationTimeUTC.IsZero() {
 			newRevCert.RevocationTime = revInfo.RevocationTimeUTC
+		} else {
+			newRevCert.RevocationTime = time.Unix(revInfo.RevocationTime, 0).UTC()
 		}
 		revokedCerts = append(revokedCerts, newRevCert)
 	}
