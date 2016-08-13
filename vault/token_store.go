@@ -1325,8 +1325,8 @@ func (ts *TokenStore) handleCreateCommon(
 	// Run some bounding checks if the explicit max TTL is set; we do not check
 	// period as it's defined to escape the max TTL
 	if te.ExplicitMaxTTL > 0 {
-		// Limit the lease duration
-		if sysView.MaxLeaseTTL() != 0 && te.ExplicitMaxTTL > sysView.MaxLeaseTTL() {
+		// Limit the lease duration, except for periodic tokens -- in that case the explicit max limits the period, which itself can escape normal max
+		if sysView.MaxLeaseTTL() != 0 && te.ExplicitMaxTTL > sysView.MaxLeaseTTL() && te.Period == 0 {
 			resp.AddWarning(fmt.Sprintf(
 				"Explicit max TTL of %d seconds is greater than system/mount allowed value; value is being capped to %d seconds",
 				int64(te.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
@@ -1334,8 +1334,10 @@ func (ts *TokenStore) handleCreateCommon(
 		}
 
 		if te.TTL == 0 {
+			// This won't be the case if it's periodic -- it will be set above
 			te.TTL = te.ExplicitMaxTTL
 		} else {
+			// Limit even in the periodic case
 			if te.TTL > te.ExplicitMaxTTL {
 				resp.AddWarning(fmt.Sprintf(
 					"Requested TTL of %d seconds higher than explicit max TTL; value being capped to %d seconds",
@@ -1617,7 +1619,13 @@ func (ts *TokenStore) authRenew(
 				req.Auth.TTL = te.Period
 				return &logical.Response{Auth: req.Auth}, nil
 			} else {
-				f = framework.LeaseExtend(te.Period, te.ExplicitMaxTTL, ts.System())
+				maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
+				if maxTime.Add(-1 * te.Period).Before(time.Now()) {
+					req.Auth.TTL = maxTime.Sub(time.Now())
+				} else {
+					req.Auth.TTL = te.Period
+				}
+				return &logical.Response{Auth: req.Auth}, nil
 			}
 		}
 		return f(req, d)
@@ -1634,11 +1642,21 @@ func (ts *TokenStore) authRenew(
 
 	// Same deal here, but using the role period
 	if role.Period != 0 {
+		periodToUse := role.Period
+		if te.Period < role.Period {
+			periodToUse = te.Period
+		}
 		if te.ExplicitMaxTTL == 0 {
-			req.Auth.TTL = role.Period
+			req.Auth.TTL = periodToUse
 			return &logical.Response{Auth: req.Auth}, nil
 		} else {
-			f = framework.LeaseExtend(role.Period, te.ExplicitMaxTTL, ts.System())
+			maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
+			if maxTime.Add(-1 * periodToUse).Before(time.Now()) {
+				req.Auth.TTL = maxTime.Sub(time.Now())
+			} else {
+				req.Auth.TTL = periodToUse
+			}
+			return &logical.Response{Auth: req.Auth}, nil
 		}
 	}
 

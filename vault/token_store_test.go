@@ -2196,3 +2196,204 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenStore_Periodic(t *testing.T) {
+	core, _, _, root := TestCoreWithTokenStore(t)
+
+	core.defaultLeaseTTL = 10 * time.Second
+	core.maxLeaseTTL = 10 * time.Second
+
+	// Note: these requests are sent to Core since Core handles registration
+	// with the expiration manager and we need the storage to be consistent
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"period": 300,
+	}
+
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	// First make one directly and verify on renew it uses the period.
+	{
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl < 299 {
+			t.Fatalf("TTL too small (expected %d, got %d", 299, ttl)
+		}
+
+		// Let the TTL go down a bit to 3 seconds
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 1,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl < 299 {
+			t.Fatalf("TTL too small (expected %d, got %d", 299, ttl)
+		}
+	}
+
+	// Do the same with an explicit max TTL
+	{
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create"
+		req.Data = map[string]interface{}{
+			"period":           300,
+			"explicit_max_ttl": 150,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl < 149 || ttl > 150 {
+			t.Fatalf("TTL bad (expected %d, got %d", 149, ttl)
+		}
+
+		// Let the TTL go down a bit to 3 seconds
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 76,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl < 140 || ttl > 150 {
+			t.Fatalf("TTL bad (expected around %d, got %d", 145, ttl)
+		}
+	}
+
+	// Now we create a token against the role and also set the te value
+	// directly. We should be able to renew; increment should be ignored as
+	// well.
+	{
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create/test"
+		req.Data = map[string]interface{}{
+			"period": 150,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl < 149 || ttl > 150 {
+			t.Fatalf("TTL bad (expected %d, got %d", 149, ttl)
+		}
+
+		// Let the TTL go down a bit to 3 seconds
+		time.Sleep(2 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 1,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl < 149 {
+			t.Fatalf("TTL bad (expected %d, got %d", 149, ttl)
+		}
+	}
+}
