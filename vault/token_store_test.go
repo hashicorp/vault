@@ -2248,10 +2248,10 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 		ttl := resp.Data["ttl"].(int64)
 		if ttl < 299 {
-			t.Fatalf("TTL too small (expected %d, got %d", 299, ttl)
+			t.Fatalf("TTL too small (expected %d, got %d)", 299, ttl)
 		}
 
-		// Let the TTL go down a bit to 3 seconds
+		// Let the TTL go down a bit
 		time.Sleep(2 * time.Second)
 
 		req.Operation = logical.UpdateOperation
@@ -2272,7 +2272,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl < 299 {
-			t.Fatalf("TTL too small (expected %d, got %d", 299, ttl)
+			t.Fatalf("TTL too small (expected %d, got %d)", 299, ttl)
 		}
 	}
 
@@ -2308,10 +2308,10 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 		ttl := resp.Data["ttl"].(int64)
 		if ttl < 149 || ttl > 150 {
-			t.Fatalf("TTL bad (expected %d, got %d", 149, ttl)
+			t.Fatalf("TTL bad (expected %d, got %d)", 149, ttl)
 		}
 
-		// Let the TTL go down a bit to 3 seconds
+		// Let the TTL go down a bit
 		time.Sleep(2 * time.Second)
 
 		req.Operation = logical.UpdateOperation
@@ -2332,7 +2332,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl < 140 || ttl > 150 {
-			t.Fatalf("TTL bad (expected around %d, got %d", 145, ttl)
+			t.Fatalf("TTL bad (expected around %d, got %d)", 145, ttl)
 		}
 	}
 
@@ -2369,10 +2369,10 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 		ttl := resp.Data["ttl"].(int64)
 		if ttl < 149 || ttl > 150 {
-			t.Fatalf("TTL bad (expected %d, got %d", 149, ttl)
+			t.Fatalf("TTL bad (expected %d, got %d)", 149, ttl)
 		}
 
-		// Let the TTL go down a bit to 3 seconds
+		// Let the TTL go down a bit
 		time.Sleep(2 * time.Second)
 
 		req.Operation = logical.UpdateOperation
@@ -2393,7 +2393,74 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 		ttl = resp.Data["ttl"].(int64)
 		if ttl < 149 {
-			t.Fatalf("TTL bad (expected %d, got %d", 149, ttl)
+			t.Fatalf("TTL bad (expected %d, got %d)", 149, ttl)
+		}
+	}
+
+	// Now do the same, also using an explicit max in the role
+	{
+		req.Path = "auth/token/roles/test"
+		req.ClientToken = root
+		req.Data = map[string]interface{}{
+			"period":           300,
+			"explicit_max_ttl": 150,
+		}
+
+		req.ClientToken = root
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/create/test"
+		req.Data = map[string]interface{}{
+			"period":           150,
+			"explicit_max_ttl": 130,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+		if resp == nil {
+			t.Fatal("response was nil")
+		}
+		if resp.Auth == nil {
+			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		}
+		if resp.Auth.ClientToken == "" {
+			t.Fatalf("bad: %#v", resp)
+		}
+
+		req.ClientToken = resp.Auth.ClientToken
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl := resp.Data["ttl"].(int64)
+		if ttl < 129 || ttl > 130 {
+			t.Fatalf("TTL bad (expected %d, got %d)", 129, ttl)
+		}
+
+		// Let the TTL go down a bit
+		time.Sleep(4 * time.Second)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = "auth/token/renew-self"
+		req.Data = map[string]interface{}{
+			"increment": 1,
+		}
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v %v", err, resp)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = "auth/token/lookup-self"
+		resp, err = core.HandleRequest(req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		ttl = resp.Data["ttl"].(int64)
+		if ttl > 127 {
+			t.Fatalf("TTL bad (expected < %d, got %d)", 128, ttl)
 		}
 	}
 }
