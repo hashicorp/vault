@@ -45,14 +45,14 @@ data store used to transfer state.
 
 For the request forwarding method, the servers need direct communication with
 each other. In order to perform this securely, the active node also advertises,
-via the encrypted data store entry, a private key (ECDSA-P521) and a
-self-signed certificate designated for client and server authentication. Each
-standby uses the private key and certificate to open a TLS 1.2 connection to
-the active node via the advertised cluster address. When client requests come
-in, the requests are serialized, sent over this TLS-protected communication
-channel, and acted upon by the active node. The active node then returns a
-response to the standby, which sends the response back to the requesting
-client.
+via the encrypted data store entry, a newly-generated private key (ECDSA-P521)
+and a newly-generated self-signed certificate designated for client and server
+authentication. Each standby uses the private key and certificate to open a
+mutually-authenticated TLS 1.2 connection to the active node via the advertised
+cluster address. When client requests come in, the requests are serialized,
+sent over this TLS-protected communication channel, and acted upon by the
+active node. The active node then returns a response to the standby, which
+sends the response back to the requesting client.
 
 ## Client Redirection
 

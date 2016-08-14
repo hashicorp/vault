@@ -111,9 +111,9 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 	logger.Printf("[DEBUG]: physical/consul: config service set to %s", service)
 
 	// Get the additional tags to attach to the registered service name
-	tags := conf["service-tags"]
+	tags := conf["service_tags"]
 
-	logger.Printf("[DEBUG]: physical/consul: config service-tags set to %s", tags)
+	logger.Printf("[DEBUG]: physical/consul: config service_tags set to %s", tags)
 
 	checkTimeout := defaultCheckTimeout
 	checkTimeoutStr, ok := conf["check_timeout"]

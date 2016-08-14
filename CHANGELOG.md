@@ -104,7 +104,7 @@ IMPROVEMENTS:
    [GH-1699]
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * physical/consul: Allowing additional tags to be added to Consul service
-   registration via `service-tags` option [GH-1643]
+   registration via `service_tags` option [GH-1643]
  * secret/aws: Listing of roles is supported now  [GH-1546]
  * secret/cassandra: Add `connect_timeout` value for Cassandra connection
    configuration [GH-1581]

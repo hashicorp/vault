@@ -3,7 +3,6 @@ package vault
 import (
 	"bytes"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"log"
 	"net"
@@ -12,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -32,27 +30,6 @@ func TestClusterFetching(t *testing.T) {
 	// Test whether expected values are found
 	if cluster == nil || cluster.Name == "" || cluster.ID == "" {
 		t.Fatalf("cluster information missing: cluster: %#v", cluster)
-	}
-
-	// Test whether a private key has been generated
-	entry, err := c.barrier.Get(coreLocalClusterKeyPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry == nil {
-		t.Fatal("missing local cluster private key")
-	}
-
-	var params clusterKeyParams
-	if err = jsonutil.DecodeJSON(entry.Value, &params); err != nil {
-		t.Fatal(err)
-	}
-	switch {
-	case params.X == nil, params.Y == nil, params.D == nil:
-		t.Fatalf("x or y or d are nil: %#v", params)
-	case params.Type == corePrivateKeyTypeP521:
-	default:
-		t.Fatal("parameter error: %#v", params)
 	}
 }
 
@@ -91,35 +68,8 @@ func TestClusterHAFetching(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Test whether expected values are found
-	if cluster == nil || cluster.Name == "" || cluster.ID == "" || cluster.Certificate == nil || len(cluster.Certificate) == 0 {
+	if cluster == nil || cluster.Name == "" || cluster.ID == "" {
 		t.Fatalf("cluster information missing: cluster:%#v", cluster)
-	}
-
-	// Test whether a private key has been generated
-	entry, err := c.barrier.Get(coreLocalClusterKeyPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry == nil {
-		t.Fatal("missing local cluster private key")
-	}
-
-	var params clusterKeyParams
-	if err = jsonutil.DecodeJSON(entry.Value, &params); err != nil {
-		t.Fatal(err)
-	}
-	switch {
-	case params.X == nil, params.Y == nil, params.D == nil:
-		t.Fatalf("x or y or d are nil: %#v", params)
-	case params.Type == corePrivateKeyTypeP521:
-	default:
-		t.Fatal("parameter error: %#v", params)
-	}
-
-	// Make sure the certificate meets expectations
-	_, err = x509.ParseCertificate(cluster.Certificate)
-	if err != nil {
-		t.Fatal("error parsing local cluster certificate: %v", err)
 	}
 }
 
@@ -137,12 +87,12 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
-	tlsConfig, err := cores[0].ClusterTLSConfig()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	checkListenersFunc := func(expectFail bool) {
+		tlsConfig, err := cores[0].ClusterTLSConfig()
+		if err != nil && err.Error() != ErrSealed.Error() {
+			t.Fatal(err)
+		}
+
 		for _, ln := range cores[0].Listeners {
 			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 			if !ok {
@@ -177,7 +127,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 	checkListenersFunc(false)
 
-	err = cores[0].StepDown(&logical.Request{
+	err := cores[0].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
 		ClientToken: root,

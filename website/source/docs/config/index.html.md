@@ -254,7 +254,7 @@ For Consul, the following options are supported:
   * `service` (optional) - The name of the service to register with Consul.
     Defaults to "vault".
 
-  * `service-tags` (optional) - Comma separated list of tags that are to be
+  * `service_tags` (optional) - Comma separated list of tags that are to be
     applied to the service that gets registered with Consul.
 
   * `token` (optional) - An access token to use to write data to Consul.

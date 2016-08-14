@@ -27,7 +27,6 @@ import (
 const (
 	// Storage path where the local cluster name and identifier are stored
 	coreLocalClusterInfoPath = "core/cluster/local/info"
-	coreLocalClusterKeyPath  = "core/cluster/local/key"
 
 	corePrivateKeyTypeP521 = "p521"
 
@@ -58,9 +57,6 @@ type Cluster struct {
 
 	// Identifier of the cluster
 	ID string `json:"id" structs:"id" mapstructure:"id"`
-
-	// Certificate corresponding to the private key
-	Certificate []byte `json:"certificate" structs:"certificate" mapstructure:"certificate"`
 }
 
 // Cluster fetches the details of either local or global cluster based on the
@@ -93,39 +89,25 @@ func (c *Core) Cluster() (*Cluster, error) {
 // This is idempotent, so we return nil if there is no entry yet (say, because
 // the active node has not yet generated this)
 func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
-	c.clusterParamsLock.RLock()
-	if c.localClusterPrivateKey != nil && c.localClusterCert != nil && len(c.localClusterCert) != 0 {
-		c.clusterParamsLock.RUnlock()
-		return nil
-	}
-
-	c.clusterParamsLock.RUnlock()
 	c.clusterParamsLock.Lock()
 	defer c.clusterParamsLock.Unlock()
 
-	// Verify no modification
-	if c.localClusterPrivateKey != nil && c.localClusterCert != nil && len(c.localClusterCert) != 0 {
-		return nil
+	switch {
+	case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
+		c.logger.Printf("[ERR] core/loadClusterPrivateKey: failed to parse local cluster key due to missing params")
+		return fmt.Errorf("failed to parse local cluster key")
+	case adv.ClusterKeyParams.Type == corePrivateKeyTypeP521:
+	default:
+		c.logger.Printf("[ERR] core/loadClusterPrivateKey: unknown local cluster key type %v", adv.ClusterKeyParams.Type)
+		return fmt.Errorf("failed to find valid local cluster key type")
 	}
-
-	if c.localClusterPrivateKey == nil {
-		switch {
-		case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
-			c.logger.Printf("[ERR] core/loadClusterPrivateKey: failed to parse local cluster key due to missing params")
-			return fmt.Errorf("failed to parse local cluster key")
-		case adv.ClusterKeyParams.Type == corePrivateKeyTypeP521:
-		default:
-			c.logger.Printf("[ERR] core/loadClusterPrivateKey: unknown local cluster key type %v", adv.ClusterKeyParams.Type)
-			return fmt.Errorf("failed to find valid local cluster key type")
-		}
-		c.localClusterPrivateKey = &ecdsa.PrivateKey{
-			PublicKey: ecdsa.PublicKey{
-				Curve: elliptic.P521(),
-				X:     adv.ClusterKeyParams.X,
-				Y:     adv.ClusterKeyParams.Y,
-			},
-			D: adv.ClusterKeyParams.D,
-		}
+	c.localClusterPrivateKey = &ecdsa.PrivateKey{
+		PublicKey: ecdsa.PublicKey{
+			Curve: elliptic.P521(),
+			X:     adv.ClusterKeyParams.X,
+			Y:     adv.ClusterKeyParams.Y,
+		},
+		D: adv.ClusterKeyParams.D,
 	}
 
 	c.localClusterCert = adv.ClusterCert
@@ -153,7 +135,6 @@ func (c *Core) setupCluster() error {
 	}
 
 	var modified bool
-	var needNewCert bool
 
 	if cluster == nil {
 		cluster = &Cluster{}
@@ -189,79 +170,21 @@ func (c *Core) setupCluster() error {
 		modified = true
 	}
 
-	// Check for and optionally generate the local cluster private key
-	if c.localClusterPrivateKey == nil {
-		c.logger.Printf("[TRACE] core: local cluster private key not loaded, loading now")
-		entry, err := c.barrier.Get(coreLocalClusterKeyPath)
+	// Create a private key
+	{
+		c.logger.Printf("[TRACE] core: generating cluster private key")
+		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to read local cluster key path: %v", err)
+			c.logger.Printf("[ERR] core: failed to generate local cluster key: %v", err)
 			return err
 		}
-		if entry == nil {
-			c.logger.Printf("[TRACE] core: local cluster private key not found, generating new")
-			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-			if err != nil {
-				c.logger.Printf("[ERR] core: failed to generate local cluster key: %v", err)
-				return err
-			}
 
-			// Encode the cluster information into as a JSON string
-			rawPrivKeyParams, err := json.Marshal(&clusterKeyParams{
-				Type: corePrivateKeyTypeP521,
-				X:    key.X,
-				Y:    key.Y,
-				D:    key.D,
-			})
-			if err != nil {
-				c.logger.Printf("[ERR] core: failed to encode local cluster key: %v", err)
-				return err
-			}
-
-			// Store it
-			err = c.barrier.Put(&Entry{
-				Key:   coreLocalClusterKeyPath,
-				Value: rawPrivKeyParams,
-			})
-			if err != nil {
-				c.logger.Printf("[ERR] core: failed to store local cluster key: %v", err)
-				return err
-			}
-
-			needNewCert = true
-			c.localClusterPrivateKey = key
-		} else {
-			c.logger.Printf("[TRACE] core: local cluster private key found")
-			var params clusterKeyParams
-			if err = jsonutil.DecodeJSON(entry.Value, &params); err != nil {
-				c.logger.Printf("[ERR] core: failed to decode local cluster key: %v", err)
-				return err
-			}
-			switch {
-			case params.X == nil, params.Y == nil, params.D == nil:
-				c.logger.Printf("[ERR] core: failed to parse local cluster key due to missing params")
-				return fmt.Errorf("failed to parse local cluster key")
-			case params.Type == corePrivateKeyTypeP521:
-			default:
-				c.logger.Printf("[ERR] core: unknown local cluster key type %v", params.Type)
-				return fmt.Errorf("failed to find valid local cluster key type")
-			}
-			c.localClusterPrivateKey = &ecdsa.PrivateKey{
-				PublicKey: ecdsa.PublicKey{
-					Curve: elliptic.P521(),
-					X:     params.X,
-					Y:     params.Y,
-				},
-				D: params.D,
-			}
-		}
+		c.localClusterPrivateKey = key
 	}
 
-	if needNewCert || cluster.Certificate == nil || len(cluster.Certificate) == 0 {
-		c.logger.Printf("[TRACE] core: generating new local cluster certificate")
-		if c.localClusterPrivateKey == nil {
-			c.logger.Printf("[ERR] core: generating a new local cluster certificate but private key is nil")
-			return fmt.Errorf("failed to find private key when generating new local cluster certificate")
-		}
+	// Create a certificate
+	{
+		c.logger.Printf("[TRACE] core: generating local cluster certificate")
 
 		host, err := uuid.GenerateUUID()
 		if err != nil {
@@ -277,9 +200,10 @@ func (c *Core) setupCluster() error {
 				x509.ExtKeyUsageServerAuth,
 				x509.ExtKeyUsageClientAuth,
 			},
-			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement | x509.KeyUsageCertSign,
-			SerialNumber:          big.NewInt(mathrand.Int63()),
-			NotBefore:             time.Now().Add(-30 * time.Second),
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement | x509.KeyUsageCertSign,
+			SerialNumber: big.NewInt(mathrand.Int63()),
+			NotBefore:    time.Now().Add(-30 * time.Second),
+			// 30 years of single-active uptime ought to be enough for anybody
 			NotAfter:              time.Now().Add(262980 * time.Hour),
 			BasicConstraintsValid: true,
 			IsCA: true,
@@ -297,10 +221,8 @@ func (c *Core) setupCluster() error {
 			return fmt.Errorf("error parsing generated certificate: %v", err)
 		}
 
-		cluster.Certificate = certBytes
-		modified = true
+		c.localClusterCert = certBytes
 	}
-	c.localClusterCert = cluster.Certificate
 
 	if modified {
 		// Encode the cluster information into as a JSON string
@@ -456,26 +378,19 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 // alive and that the current active address value matches the most
 // recently-known address.
 func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
-	c.requestForwardingConnectionLock.RLock()
-
-	if c.requestForwardingConnection == nil && clusterAddr == "" {
-		c.requestForwardingConnectionLock.RUnlock()
-		return nil
-	}
-	if c.requestForwardingConnection != nil &&
-		c.requestForwardingConnection.clusterAddr == clusterAddr {
-		c.requestForwardingConnectionLock.RUnlock()
-		return nil
-	}
-
-	// Give up the read lock and get a write lock, then verify it's still required
-	c.requestForwardingConnectionLock.RUnlock()
 	c.requestForwardingConnectionLock.Lock()
 	defer c.requestForwardingConnectionLock.Unlock()
-	if c.requestForwardingConnection != nil &&
-		c.requestForwardingConnection.clusterAddr == clusterAddr {
+
+	// It's nil but we don't have an address anyways, so exit
+	if c.requestForwardingConnection == nil && clusterAddr == "" {
 		return nil
 	}
+
+	// NOTE: We don't fast path the case where we have a connection because the
+	// address is the same, because the cert/key could have changed if the
+	// active node ended up being the same node. Before we hit this function in
+	// Leader() we'll have done a hash on the advertised info to ensure that we
+	// won't hit this function unnecessarily anyways.
 
 	// Disabled, potentially
 	if clusterAddr == "" {
@@ -483,29 +398,24 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		return nil
 	}
 
-	if c.requestForwardingConnection == nil {
-		tlsConfig, err := c.ClusterTLSConfig()
-		if err != nil {
-			c.logger.Printf("[ERR] core/refreshRequestForwardingConnection: error fetching cluster tls configuration: %v", err)
-			return err
-		}
-		tp := &http.Transport{
-			TLSClientConfig: tlsConfig,
-		}
-		err = http2.ConfigureTransport(tp)
-		if err != nil {
-			c.logger.Printf("[ERR] core/refreshRequestForwardingConnection: error configuring transport: %v", err)
-			return err
-		}
-		c.requestForwardingConnection = &activeConnection{
-			Client: &http.Client{
-				Transport: tp,
-			},
-		}
+	tlsConfig, err := c.ClusterTLSConfig()
+	if err != nil {
+		c.logger.Printf("[ERR] core/refreshRequestForwardingConnection: error fetching cluster tls configuration: %v", err)
+		return err
 	}
-
-	if c.requestForwardingConnection.clusterAddr != clusterAddr {
-		c.requestForwardingConnection.clusterAddr = clusterAddr
+	tp := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	err = http2.ConfigureTransport(tp)
+	if err != nil {
+		c.logger.Printf("[ERR] core/refreshRequestForwardingConnection: error configuring transport: %v", err)
+		return err
+	}
+	c.requestForwardingConnection = &activeConnection{
+		Client: &http.Client{
+			Transport: tp,
+		},
+		clusterAddr: clusterAddr,
 	}
 
 	return nil
