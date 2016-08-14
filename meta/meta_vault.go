@@ -4,7 +4,7 @@ package meta
 
 func AdditionalOptionsUsage() string {
 	return `
-  -wrap-ttl=""            Indiciates that the response should be wrapped in a
+  -wrap-ttl=""            Indicates that the response should be wrapped in a
                           cubbyhole token with the requested TTL. The response
                           will live at "cubbyhole/response" in the cubbyhole of
                           the returned token with a key of "response" and can
