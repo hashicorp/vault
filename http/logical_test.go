@@ -144,7 +144,6 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"id":               root,
 			"ttl":              json.Number("0"),
 			"creation_ttl":     json.Number("0"),
-			"role":             "",
 			"explicit_max_ttl": json.Number("0"),
 		},
 		"warnings":  nilWarnings,

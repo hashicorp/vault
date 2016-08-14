@@ -303,7 +303,6 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		"creation_ttl":     json.Number("0"),
 		"ttl":              json.Number("0"),
 		"path":             "auth/token/root",
-		"role":             "",
 		"explicit_max_ttl": json.Number("0"),
 	}
 
@@ -386,7 +385,6 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		"creation_ttl":     json.Number("0"),
 		"ttl":              json.Number("0"),
 		"path":             "auth/token/root",
-		"role":             "",
 		"explicit_max_ttl": json.Number("0"),
 	}
 
