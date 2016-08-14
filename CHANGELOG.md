@@ -3,7 +3,10 @@
 DEPRECATIONS/BREAKING CHANGES:
 
  * Once the active node is 0.6.1, standby nodes must also be 0.6.1 in order to
-   connect to the HA cluster.
+   connect to the HA cluster. We recommend following our [general upgrade
+   instructions](https://www.vaultproject.io/docs/install/upgrade.html) in
+   addition to 0.6.1-specific upgrade instructions to ensure that this is not
+   an issue.
  * Root tokens (tokens with the `root` policy) can no longer be created except
    by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
