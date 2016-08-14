@@ -2,6 +2,8 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
+ * Once the active node is 0.6.1, standby nodes must also be 0.6.1 in order to
+   connect to the HA cluster.
  * Root tokens (tokens with the `root` policy) can no longer be created except
    by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
