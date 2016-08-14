@@ -127,6 +127,9 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 // Entries will be created only if they are not already present. If clusterName
 // is not supplied, this method will auto-generate it.
 func (c *Core) setupCluster() error {
+	c.clusterParamsLock.Lock()
+	defer c.clusterParamsLock.Unlock()
+
 	// Check if storage index is already present or not
 	cluster, err := c.Cluster()
 	if err != nil {
