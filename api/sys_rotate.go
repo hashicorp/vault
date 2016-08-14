@@ -1,10 +1,6 @@
 package api
 
-import (
-	"time"
-
-	"github.com/mitchellh/mapstructure"
-)
+import "time"
 
 func (c *Sys) Rotate() error {
 	r := c.c.NewRequest("POST", "/v1/sys/rotate")
@@ -23,25 +19,12 @@ func (c *Sys) KeyStatus() (*KeyStatus, error) {
 	}
 	defer resp.Body.Close()
 
-	secret, err := ParseSecret(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
-		return nil, nil
-	}
-
-	var result KeyStatus
-	err = mapstructure.Decode(secret.Data, &result)
-	if err != nil {
-		return nil, err
-	}
-
-	return &result, err
+	result := new(KeyStatus)
+	err = resp.DecodeJSON(result)
+	return result, err
 }
 
 type KeyStatus struct {
-	Term        int
+	Term        int       `json:"term"`
 	InstallTime time.Time `json:"install_time"`
 }
