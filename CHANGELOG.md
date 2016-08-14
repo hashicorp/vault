@@ -75,6 +75,9 @@ IMPROVEMENTS:
    have the minimum TLS version set to 1.2 by default. This is configurable.
  * auth/token: Added endpoint to list accessors [GH-1676]
  * auth/token: Added `disallowed_policies` option to token store roles [GH-1681]
+ * auth/token: `root` or `sudo` tokens can now create periodic tokens via
+   `auth/token/create`; additionally, the same token can now be periodic and
+   have an explicit max TTL [GH-1725]
  * build: Add support for building on Solaris/Illumos [GH-1726]
  * cli: Output formatting in the presence of warnings in the response object
    [GH-1533]
@@ -124,6 +127,9 @@ IMPROVEMENTS:
    Vault is unsealed [GH-1671]
  * sys/mounts: MountTable data is compressed before serializing to accommodate
    thousands of mounts [GH-1693]
+ * website: The [token
+   concepts](https://www.vaultproject.io/docs/concepts/tokens.html) page has
+   been completely rewritten [GH-1725]
 
 BUG FIXES:
 
