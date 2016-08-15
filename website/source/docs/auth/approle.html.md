@@ -114,7 +114,7 @@ $ vault write auth/approle/login role_id=db02de05-fa39-4855-059b-67221c5c2f63 se
 ```javascript
 token           65b74ffd-842c-fd43-1386-f7d7006e520a
 token_accessor  3c29bc22-5c72-11a6-f778-2bc8f48cea0e
-token_duration  1200
+token_duration  20m0s
 token_renewable true
 token_policies  [default]
 ```
