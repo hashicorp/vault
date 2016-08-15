@@ -16,7 +16,7 @@ this backend is the successor for the App-ID backend.
 
 ### AppRole
 
-An AppRole represents a set of Vault policies, under a name. In essense, if a
+An AppRole represents a set of Vault policies, under a name. In essence, if a
 machine needs to authenticate with Vault for a set of policies, an AppRole can
 be registered under the machine's name with the desired set of policies. If a
 service requires a set of Vault policies, an AppRole can be registered under
