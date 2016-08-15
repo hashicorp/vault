@@ -35,6 +35,11 @@ FEATURES:
    requiring operators or other systems to push credentials in. It should be
    useful in many more situations than App-ID. The inclusion of this backend
    deprecates App-ID. [GH-1426]
+ * **Request Forwarding**: Vault servers can now forward requests to each other
+   rather than redirecting clients. This feature is off by default in 0.6.1 but
+   will be on by default in the next release. See the [HA concepts
+   page](https://www.vaultproject.io/docs/concepts/ha.html) for information on
+   enabling and configuring it. [GH-443]
  * **Convergent Encryption in `Transit`**: The `transit` backend now supports a
    convergent encryption mode where the same plaintext will produce the same
    ciphertext. Although very useful in some situations, this has potential
