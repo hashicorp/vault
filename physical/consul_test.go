@@ -78,8 +78,8 @@ func TestConsul_ServiceTags(t *testing.T) {
 	consulConfig := map[string]string{
 		"path":                 "seaTech/",
 		"service":              "astronomy",
-		"service-tags":         "deadbeef, cafeefac, deadc0de, feedface",
-		"advertiseAddr":        "http://127.0.0.2:8200",
+		"service_tags":         "deadbeef, cafeefac, deadc0de, feedface",
+		"redirect_addr":        "http://127.0.0.2:8200",
 		"check_timeout":        "6s",
 		"address":              "127.0.0.2",
 		"scheme":               "https",
@@ -112,38 +112,38 @@ func TestConsul_ServiceTags(t *testing.T) {
 
 func TestConsul_newConsulBackend(t *testing.T) {
 	tests := []struct {
-		name          string
-		consulConfig  map[string]string
-		fail          bool
-		advertiseAddr string
-		checkTimeout  time.Duration
-		path          string
-		service       string
-		address       string
-		scheme        string
-		token         string
-		max_parallel  int
-		disableReg    bool
+		name         string
+		consulConfig map[string]string
+		fail         bool
+		redirectAddr string
+		checkTimeout time.Duration
+		path         string
+		service      string
+		address      string
+		scheme       string
+		token        string
+		max_parallel int
+		disableReg   bool
 	}{
 		{
-			name:          "Valid default config",
-			consulConfig:  map[string]string{},
-			checkTimeout:  5 * time.Second,
-			advertiseAddr: "http://127.0.0.1:8200",
-			path:          "vault/",
-			service:       "vault",
-			address:       "127.0.0.1:8500",
-			scheme:        "http",
-			token:         "",
-			max_parallel:  4,
-			disableReg:    false,
+			name:         "Valid default config",
+			consulConfig: map[string]string{},
+			checkTimeout: 5 * time.Second,
+			redirectAddr: "http://127.0.0.1:8200",
+			path:         "vault/",
+			service:      "vault",
+			address:      "127.0.0.1:8500",
+			scheme:       "http",
+			token:        "",
+			max_parallel: 4,
+			disableReg:   false,
 		},
 		{
 			name: "Valid modified config",
 			consulConfig: map[string]string{
 				"path":                 "seaTech/",
 				"service":              "astronomy",
-				"advertiseAddr":        "http://127.0.0.2:8200",
+				"redirect_addr":        "http://127.0.0.2:8200",
 				"check_timeout":        "6s",
 				"address":              "127.0.0.2",
 				"scheme":               "https",
@@ -151,14 +151,14 @@ func TestConsul_newConsulBackend(t *testing.T) {
 				"max_parallel":         "4",
 				"disable_registration": "false",
 			},
-			checkTimeout:  6 * time.Second,
-			path:          "seaTech/",
-			service:       "astronomy",
-			advertiseAddr: "http://127.0.0.2:8200",
-			address:       "127.0.0.2",
-			scheme:        "https",
-			token:         "deadbeef-cafeefac-deadc0de-feedface",
-			max_parallel:  4,
+			checkTimeout: 6 * time.Second,
+			path:         "seaTech/",
+			service:      "astronomy",
+			redirectAddr: "http://127.0.0.2:8200",
+			address:      "127.0.0.2",
+			scheme:       "https",
+			token:        "deadbeef-cafeefac-deadc0de-feedface",
+			max_parallel: 4,
 		},
 		{
 			name: "check timeout too short",
@@ -197,7 +197,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 
 		var shutdownCh ShutdownChannel
 		waitGroup := &sync.WaitGroup{}
-		if err := c.RunServiceDiscovery(waitGroup, shutdownCh, test.advertiseAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
+		if err := c.RunServiceDiscovery(waitGroup, shutdownCh, test.redirectAddr, testActiveFunc(0.5), testSealedFunc(0.5)); err != nil {
 			t.Fatalf("bad: %v", err)
 		}
 
@@ -245,7 +245,7 @@ func TestConsul_serviceTags(t *testing.T) {
 	}
 }
 
-func TestConsul_setAdvertiseAddr(t *testing.T) {
+func TestConsul_setRedirectAddr(t *testing.T) {
 	tests := []struct {
 		addr string
 		host string
@@ -287,7 +287,7 @@ func TestConsul_setAdvertiseAddr(t *testing.T) {
 	}
 	for _, test := range tests {
 		c := testConsulBackend(t)
-		err := c.setAdvertiseAddr(test.addr)
+		err := c.setRedirectAddr(test.addr)
 		if test.pass {
 			if err != nil {
 				t.Fatalf("bad: %v", err)
@@ -300,12 +300,12 @@ func TestConsul_setAdvertiseAddr(t *testing.T) {
 			}
 		}
 
-		if c.advertiseHost != test.host {
-			t.Fatalf("bad: %v != %v", c.advertiseHost, test.host)
+		if c.redirectHost != test.host {
+			t.Fatalf("bad: %v != %v", c.redirectHost, test.host)
 		}
 
-		if c.advertisePort != test.port {
-			t.Fatalf("bad: %v != %v", c.advertisePort, test.port)
+		if c.redirectPort != test.port {
+			t.Fatalf("bad: %v != %v", c.redirectPort, test.port)
 		}
 	}
 }
@@ -338,28 +338,28 @@ func TestConsul_NotifySealedStateChange(t *testing.T) {
 
 func TestConsul_serviceID(t *testing.T) {
 	passingTests := []struct {
-		name          string
-		advertiseAddr string
-		serviceName   string
-		expected      string
+		name         string
+		redirectAddr string
+		serviceName  string
+		expected     string
 	}{
 		{
-			name:          "valid host w/o slash",
-			advertiseAddr: "http://127.0.0.1:8200",
-			serviceName:   "sea-tech-astronomy",
-			expected:      "sea-tech-astronomy:127.0.0.1:8200",
+			name:         "valid host w/o slash",
+			redirectAddr: "http://127.0.0.1:8200",
+			serviceName:  "sea-tech-astronomy",
+			expected:     "sea-tech-astronomy:127.0.0.1:8200",
 		},
 		{
-			name:          "valid host w/ slash",
-			advertiseAddr: "http://127.0.0.1:8200/",
-			serviceName:   "sea-tech-astronomy",
-			expected:      "sea-tech-astronomy:127.0.0.1:8200",
+			name:         "valid host w/ slash",
+			redirectAddr: "http://127.0.0.1:8200/",
+			serviceName:  "sea-tech-astronomy",
+			expected:     "sea-tech-astronomy:127.0.0.1:8200",
 		},
 		{
-			name:          "valid https host w/ slash",
-			advertiseAddr: "https://127.0.0.1:8200/",
-			serviceName:   "sea-tech-astronomy",
-			expected:      "sea-tech-astronomy:127.0.0.1:8200",
+			name:         "valid https host w/ slash",
+			redirectAddr: "https://127.0.0.1:8200/",
+			serviceName:  "sea-tech-astronomy",
+			expected:     "sea-tech-astronomy:127.0.0.1:8200",
 		},
 	}
 
@@ -368,7 +368,7 @@ func TestConsul_serviceID(t *testing.T) {
 			"service": test.serviceName,
 		})
 
-		if err := c.setAdvertiseAddr(test.advertiseAddr); err != nil {
+		if err := c.setRedirectAddr(test.redirectAddr); err != nil {
 			t.Fatalf("bad: %s %v", test.name, err)
 		}
 
@@ -445,9 +445,9 @@ func TestConsulHABackend(t *testing.T) {
 	}
 	testHABackend(t, ha, ha)
 
-	detect, ok := b.(AdvertiseDetect)
+	detect, ok := b.(RedirectDetect)
 	if !ok {
-		t.Fatalf("consul does not implement AdvertiseDetect")
+		t.Fatalf("consul does not implement RedirectDetect")
 	}
 	host, err := detect.DetectHostAddr()
 	if err != nil {

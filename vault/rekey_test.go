@@ -225,7 +225,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 			t.Fatalf("err: %v", err)
 		}
 		for i := 0; i < 3; i++ {
-			_, err = c.Unseal(result.SecretShares[i])
+			_, err = TestCoreUnseal(c, result.SecretShares[i])
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -282,7 +282,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
-		unseal, err := c.Unseal(result.SecretShares[0])
+		unseal, err := TestCoreUnseal(c, result.SecretShares[0])
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -364,36 +364,36 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
-	advertiseOriginal := "http://127.0.0.1:8200"
+	redirectOriginal := "http://127.0.0.1:8200"
 	core, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	key, root := TestCoreInit(t, core)
-	if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
 	// Wait for core to become active
-	testWaitActive(t, core)
+	TestWaitActive(t, core)
 
 	// Create a second core, attached to same in-memory store
-	advertiseOriginal2 := "http://127.0.0.1:8500"
+	redirectOriginal2 := "http://127.0.0.1:8500"
 	core2, err := NewCore(&CoreConfig{
-		Physical:      inm,
-		HAPhysical:    inmha,
-		AdvertiseAddr: advertiseOriginal2,
-		DisableMlock:  true,
+		Physical:     inm,
+		HAPhysical:   inmha,
+		RedirectAddr: redirectOriginal2,
+		DisableMlock: true,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(TestKeyCopy(key)); err != nil {
+	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}
 
@@ -429,7 +429,7 @@ func TestCore_Standby_Rekey(t *testing.T) {
 	}
 
 	// Wait for core2 to become active
-	testWaitActive(t, core2)
+	TestWaitActive(t, core2)
 
 	// Rekey the master key again
 	err = core2.RekeyInit(newConf, false)

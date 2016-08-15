@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +23,10 @@ const (
 	// WrapHeaderName is the name of the header containing a directive to wrap the
 	// response.
 	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
+
+	// NoRequestForwardingHeaderName is the name of the header telling Vault
+	// not to use request forwarding
+	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -34,19 +39,19 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/step-down", handleSysStepDown(core))
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-	mux.Handle("/v1/sys/renew", handleLogical(core, false, nil))
-	mux.Handle("/v1/sys/renew/", handleLogical(core, false, nil))
+	mux.Handle("/v1/sys/renew", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	mux.Handle("/v1/sys/renew/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
-	mux.Handle("/v1/sys/generate-root/attempt", handleSysGenerateRootAttempt(core))
-	mux.Handle("/v1/sys/generate-root/update", handleSysGenerateRootUpdate(core))
-	mux.Handle("/v1/sys/rekey/init", handleSysRekeyInit(core, false))
-	mux.Handle("/v1/sys/rekey/update", handleSysRekeyUpdate(core, false))
-	mux.Handle("/v1/sys/rekey-recovery-key/init", handleSysRekeyInit(core, true))
-	mux.Handle("/v1/sys/rekey-recovery-key/update", handleSysRekeyUpdate(core, true))
-	mux.Handle("/v1/sys/capabilities-self", handleLogical(core, true, sysCapabilitiesSelfCallback))
-	mux.Handle("/v1/sys/", handleLogical(core, true, nil))
-	mux.Handle("/v1/", handleLogical(core, false, nil))
+	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core)))
+	mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core, handleSysGenerateRootUpdate(core)))
+	mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+	mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+	mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+	mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+	mux.Handle("/v1/sys/capabilities-self", handleRequestForwarding(core, handleLogical(core, true, sysCapabilitiesSelfCallback)))
+	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, true, nil)))
+	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
@@ -89,6 +94,79 @@ func parseRequest(r *http.Request, out interface{}) error {
 	return err
 }
 
+// handleRequestForwarding determines whether to forward a request or not,
+// falling back on the older behavior of redirecting the client
+func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(vault.IntNoForwardingHeaderName) != "" {
+			handler.ServeHTTP(w, r)
+			return
+		}
+
+		if r.Header.Get(NoRequestForwardingHeaderName) != "" {
+			// Forwarding explicitly disabled, fall back to previous behavior
+			core.Logger().Printf("[TRACE] http/handleRequestForwarding: forwarding disabled by client request")
+			handler.ServeHTTP(w, r)
+			return
+		}
+
+		// Note: in an HA setup, this call will also ensure that connections to
+		// the leader are set up, as that happens once the advertised cluster
+		// values are read during this function
+		isLeader, leaderAddr, err := core.Leader()
+		if err != nil {
+			if err == vault.ErrHANotEnabled {
+				// Standalone node, serve request normally
+				handler.ServeHTTP(w, r)
+				return
+			}
+			// Some internal error occurred
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if isLeader {
+			// No forwarding needed, we're leader
+			handler.ServeHTTP(w, r)
+			return
+		}
+		if leaderAddr == "" {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("node not active but active node not found"))
+			return
+		}
+
+		// Attempt forwarding the request. If we cannot forward -- perhaps it's
+		// been disabled on the active node -- this will return with an
+		// ErrCannotForward and we simply fall back
+		resp, err := core.ForwardRequest(r)
+		if err != nil {
+			if err == vault.ErrCannotForward {
+				core.Logger().Printf("[TRACE] http/handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
+			} else {
+				core.Logger().Printf("[ERR] http/handleRequestForwarding: error forwarding request: %v", err)
+			}
+
+			// Fall back to redirection
+			handler.ServeHTTP(w, r)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Read the body into a buffer so we can write it back out to the
+		// original requestor
+		buf := bytes.NewBuffer(nil)
+		_, err = buf.ReadFrom(resp.Body)
+		if err != nil {
+			core.Logger().Printf("[ERR] http/handleRequestForwarding: error reading response body: %v", err)
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		w.WriteHeader(resp.StatusCode)
+		w.Write(buf.Bytes())
+		return
+	})
+}
+
 // request is a helper to perform a request and properly exit in the
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
@@ -107,43 +185,43 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
 func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// Request the leader address
-	_, advertise, err := core.Leader()
+	_, redirectAddr, err := core.Leader()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// If there is no leader, generate a 503 error
-	if advertise == "" {
+	if redirectAddr == "" {
 		err = fmt.Errorf("no active Vault instance found")
 		respondError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	// Parse the advertise location
-	advertiseURL, err := url.Parse(advertise)
+	// Parse the redirect location
+	redirectURL, err := url.Parse(redirectAddr)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	// Generate a redirect URL
-	redirectURL := url.URL{
-		Scheme:   advertiseURL.Scheme,
-		Host:     advertiseURL.Host,
+	finalURL := url.URL{
+		Scheme:   redirectURL.Scheme,
+		Host:     redirectURL.Host,
 		Path:     reqURL.Path,
 		RawQuery: reqURL.RawQuery,
 	}
 
 	// Ensure there is a scheme, default to https
-	if redirectURL.Scheme == "" {
-		redirectURL.Scheme = "https"
+	if finalURL.Scheme == "" {
+		finalURL.Scheme = "https"
 	}
 
 	// If we have an address, redirect! We use a 307 code
 	// because we don't actually know if its permanent and
 	// the request method should be preserved.
-	w.Header().Set("Location", redirectURL.String())
+	w.Header().Set("Location", finalURL.String())
 	w.WriteHeader(307)
 }
 

@@ -173,8 +173,13 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 	}()
 
 	// Perform initial setup
+	if err := c.setupCluster(); err != nil {
+		c.stateLock.Unlock()
+		c.logger.Printf("[ERR] core: cluster setup failed during init: %v", err)
+		return nil, err
+	}
 	if err := c.postUnseal(); err != nil {
-		c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
+		c.logger.Printf("[ERR] core: post-unseal setup failed during init: %v", err)
 		return nil, err
 	}
 

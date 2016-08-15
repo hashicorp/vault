@@ -11,6 +11,13 @@ description: |-
 This page contains the list of breaking changes for Vault 0.6.1. Please read it
 carefully.
 
+## Standby Nodes Must Be 0.6.1 As Well
+
+Once an active node is running 0.6.1, only standby nodes running 0.6.1+ will be
+able to form an HA cluster. If following our [general upgrade
+instructions](https://www.vaultproject.io/docs/install/upgrade.html) this will
+not be an issue.
+
 ## Root Token Creation Restrictions
 
 Root tokens (tokens with the `root` policy) can no longer be created except by

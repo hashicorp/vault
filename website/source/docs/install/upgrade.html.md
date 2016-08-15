@@ -25,9 +25,16 @@ upgrade notes.
 
 ## HA Installations
 
-This is our recommended upgrade procedure, and the procedure we use internally at HashiCorp. However, you should consider how to apply these steps to your particular setup since HA setups can differ on whether a load balancer is in use, what addresses clients are being given to connect to Vault (standby + leader, leader-only, or discovered via service discovery), etc.
+This is our recommended upgrade procedure, and the procedure we use internally
+at HashiCorp. However, you should consider how to apply these steps to your
+particular setup since HA setups can differ on whether a load balancer is in
+use, what addresses clients are being given to connect to Vault (standby +
+leader, leader-only, or discovered via service discovery), etc.
 
-Please note that Vault does not support true zero-downtime upgrades, but with proper upgrade procedure the downtime should be very short (a few hundred milliseconds to a second depending on how the speed of access to the storage backend).
+Please note that Vault does not support true zero-downtime upgrades, but with
+proper upgrade procedure the downtime should be very short (a few hundred
+milliseconds to a second depending on how the speed of access to the storage
+backend).
 
 Perform these steps on each standby:
 
@@ -36,7 +43,9 @@ Perform these steps on each standby:
 3. Start the standby node
 4. Unseal the standby node
 
-At this point all standby nodes will be upgraded and ready to take over. The upgrade will not be complete until one of the upgraded standby nodes takes over active duty. To do this:
+At this point all standby nodes will be upgraded and ready to take over. The
+upgrade will not be complete until one of the upgraded standby nodes takes over
+active duty. To do this:
 
 1. Properly shut down the remaining (active) node. Note: it is _**very
    important**_ that you shut the node down properly. This causes the HA lock to

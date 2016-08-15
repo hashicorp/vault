@@ -39,7 +39,7 @@ backend "consul" {
 	haconsulhcl = `
 ha_backend "consul" {
     prefix = "bar/"
-    advertise_addr = "http://127.0.0.1:8200"
+    redirect_addr = "http://127.0.0.1:8200"
     disable_registration = "true"
 }
 `

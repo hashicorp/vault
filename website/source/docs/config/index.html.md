@@ -96,6 +96,11 @@ The supported options are:
   * `address` (optional) - The address to bind to for listening. This
       defaults to "127.0.0.1:8200".
 
+  * `cluster_address` (optional) - The address to bind to for cluster
+      server-to-server requests. This defaults to one port higher than the
+      value of `address`, so with the default value of `address`, this would be
+      "127.0.0.1:8201".
+
   * `tls_disable` (optional) - If true, then TLS will be disabled.
       This will parse as boolean value, and can be set to "0", "no",
       "false", "1", "yes", or "true". This is an opt-in; Vault assumes
@@ -213,19 +218,26 @@ to help you, but may refer you to the backend author.
     This backend does not support HA.
 
 
-#### Common Backend Options
+#### High Availability Options
 
-All backends support the following options:
+All HA backends support the following options. These are discussed in much more
+detail in the [High Availability concepts
+page](https://www.vaultproject.io/docs/concepts/ha.html).
 
-  * `advertise_addr` (optional) - For backends that support HA, this
-    is the address to advertise to other Vault servers in the cluster for
-    request forwarding. As an example, if a cluster contains nodes A, B, and C,
-    node A should set it to the address that B and C should redirect client
-    nodes to when A is the active node and B and C are standby nodes. This may
-    be the same address across nodes if using a load balancer or service
-    discovery. Most HA backends will attempt to determine the advertise address
-    if not provided.  This can also be overridden via the `VAULT_ADVERTISE_ADDR`
-    environment variable.
+  * `redirect_addr` (optional) - This is the address to advertise to other
+    Vault servers in the cluster for client redirection. This can also be
+    set via the `VAULT_REDIRECT_ADDR` environment variable, which takes
+    precedence.
+
+  * `cluster_addr` (optional) - This is the address to advertise to other Vault
+    servers in the cluster for request forwarding. This can also be set via the
+    `VAULT_CLUSTER_ADDR` environment variable, which takes precedence.
+
+  * `disable_clustering` (optional) - This controls whether clustering features
+    (currently, request forwarding) are enabled. Setting this on a node will
+    disable these features _when that node is the active node_. In 0.6.1 this
+    is `"true"` (note the quotes) by default, but will become `"false"` by
+    default in the next release.
 
 #### Backend Reference: Consul
 
@@ -248,7 +260,7 @@ For Consul, the following options are supported:
   * `service` (optional) - The name of the service to register with Consul.
     Defaults to "vault".
 
-  * `service-tags` (optional) - Comma separated list of tags that are to be
+  * `service_tags` (optional) - Comma separated list of tags that are to be
     applied to the service that gets registered with Consul.
 
   * `token` (optional) - An access token to use to write data to Consul.

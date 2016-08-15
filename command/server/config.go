@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,8 +39,8 @@ type Config struct {
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig() *Config {
-	return &Config{
+func DevConfig(ha bool) *Config {
+	ret := &Config{
 		DisableCache: false,
 		DisableMlock: true,
 
@@ -62,6 +63,12 @@ func DevConfig() *Config {
 		MaxLeaseTTL:     30 * 24 * time.Hour,
 		DefaultLeaseTTL: 30 * 24 * time.Hour,
 	}
+
+	if ha {
+		ret.Backend.Type = "inmem_ha"
+	}
+
+	return ret
 }
 
 // Listener is the listener configuration for the server.
@@ -76,9 +83,11 @@ func (l *Listener) GoString() string {
 
 // Backend is the backend configuration for the server.
 type Backend struct {
-	Type          string
-	AdvertiseAddr string
-	Config        map[string]string
+	Type              string
+	RedirectAddr      string
+	ClusterAddr       string
+	DisableClustering bool
+	Config            map[string]string
 }
 
 func (b *Backend) GoString() string {
@@ -442,17 +451,40 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's common to all backends
-	var advertiseAddr string
-	if v, ok := m["advertise_addr"]; ok {
-		advertiseAddr = v
+	// Pull out the redirect address since it's common to all backends
+	var redirectAddr string
+	if v, ok := m["redirect_addr"]; ok {
+		redirectAddr = v
+		delete(m, "redirect_addr")
+	} else if v, ok := m["advertise_addr"]; ok {
+		redirectAddr = v
 		delete(m, "advertise_addr")
 	}
 
+	// Pull out the cluster address since it's common to all backends
+	var clusterAddr string
+	if v, ok := m["cluster_addr"]; ok {
+		clusterAddr = v
+		delete(m, "cluster_addr")
+	}
+
+	//TODO: Change this in the future
+	disableClustering := true
+	var err error
+	if v, ok := m["disable_clustering"]; ok {
+		disableClustering, err = strconv.ParseBool(v)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+		}
+		delete(m, "disable_clustering")
+	}
+
 	result.Backend = &Backend{
-		AdvertiseAddr: advertiseAddr,
-		Type:          strings.ToLower(key),
-		Config:        m,
+		RedirectAddr:      redirectAddr,
+		ClusterAddr:       clusterAddr,
+		DisableClustering: disableClustering,
+		Type:              strings.ToLower(key),
+		Config:            m,
 	}
 	return nil
 }
@@ -475,17 +507,40 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		return multierror.Prefix(err, fmt.Sprintf("ha_backend.%s:", key))
 	}
 
-	// Pull out the advertise address since it's common to all backends
-	var advertiseAddr string
-	if v, ok := m["advertise_addr"]; ok {
-		advertiseAddr = v
+	// Pull out the redirect address since it's common to all backends
+	var redirectAddr string
+	if v, ok := m["redirect_addr"]; ok {
+		redirectAddr = v
+		delete(m, "redirect_addr")
+	} else if v, ok := m["advertise_addr"]; ok {
+		redirectAddr = v
 		delete(m, "advertise_addr")
 	}
 
+	// Pull out the cluster address since it's common to all backends
+	var clusterAddr string
+	if v, ok := m["cluster_addr"]; ok {
+		clusterAddr = v
+		delete(m, "cluster_addr")
+	}
+
+	//TODO: Change this in the future
+	disableClustering := true
+	var err error
+	if v, ok := m["disable_clustering"]; ok {
+		disableClustering, err = strconv.ParseBool(v)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+		}
+		delete(m, "disable_clustering")
+	}
+
 	result.HABackend = &Backend{
-		AdvertiseAddr: advertiseAddr,
-		Type:          strings.ToLower(key),
-		Config:        m,
+		RedirectAddr:      redirectAddr,
+		ClusterAddr:       clusterAddr,
+		DisableClustering: disableClustering,
+		Type:              strings.ToLower(key),
+		Config:            m,
 	}
 	return nil
 }
@@ -502,6 +557,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 
 		valid := []string{
 			"address",
+			"cluster_address",
 			"endpoint",
 			"infrastructure",
 			"node_id",

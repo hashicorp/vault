@@ -44,10 +44,10 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
-// AdvertiseDetect is an optional interface that an HABackend
-// can implement. If they do, an advertise address can be automatically
+// RedirectDetect is an optional interface that an HABackend
+// can implement. If they do, a redirect address can be automatically
 // detected.
-type AdvertiseDetect interface {
+type RedirectDetect interface {
 	// DetectHostAddr is used to detect the host address
 	DetectHostAddr() (string, error)
 }
@@ -72,7 +72,7 @@ type ServiceDiscovery interface {
 
 	// Run executes any background service discovery tasks until the
 	// shutdown channel is closed.
-	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) error
+	RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc activeFunction, sealedFunc sealedFunction) error
 }
 
 type Lock interface {
@@ -113,6 +113,9 @@ func NewBackend(t string, logger *log.Logger, conf map[string]string) (Backend, 
 var builtinBackends = map[string]Factory{
 	"inmem": func(_ map[string]string, logger *log.Logger) (Backend, error) {
 		return NewInmem(logger), nil
+	},
+	"inmem_ha": func(_ map[string]string, logger *log.Logger) (Backend, error) {
+		return NewInmemHA(logger), nil
 	},
 	"consul":     newConsulBackend,
 	"zookeeper":  newZookeeperBackend,

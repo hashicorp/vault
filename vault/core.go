@@ -2,9 +2,15 @@ package vault
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/sha256"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
+	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"sync"
@@ -16,6 +22,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -46,10 +53,6 @@ const (
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
-
-	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
-	// step down of the active node, to prevent instantly regrabbing the lock
-	manualStepDownSleepPeriod = 10 * time.Second
 )
 
 var (
@@ -76,6 +79,11 @@ var (
 	// ErrHANotEnabled is returned if the operation only makes sense
 	// in an HA setting
 	ErrHANotEnabled = errors.New("Vault is not configured for highly-available mode")
+
+	// manualStepDownSleepPeriod is how long to sleep after a user-initiated
+	// step down of the active node, to prevent instantly regrabbing the lock.
+	// It's var not const so that tests can manipulate it.
+	manualStepDownSleepPeriod = 10 * time.Second
 )
 
 // NonFatalError is an error that can be returned during NewCore that should be
@@ -102,6 +110,13 @@ func (e *ErrInvalidKey) Error() string {
 	return fmt.Sprintf("invalid key: %v", e.Reason)
 }
 
+type activeAdvertisement struct {
+	RedirectAddr     string           `json:"redirect_addr"`
+	ClusterAddr      string           `json:"cluster_addr"`
+	ClusterCert      []byte           `json:"cluster_cert"`
+	ClusterKeyParams clusterKeyParams `json:"cluster_key_params"`
+}
+
 // Core is used as the central manager of Vault activity. It is the primary point of
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
@@ -109,8 +124,11 @@ type Core struct {
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
-	// AdvertiseAddr is the address we advertise as leader if held
-	advertiseAddr string
+	// redirectAddr is the address we advertise as leader if held
+	redirectAddr string
+
+	// clusterAddr is the address we use for clustering
+	clusterAddr string
 
 	// physical backend is the un-trusted backend with durable data
 	physical physical.Backend
@@ -220,7 +238,39 @@ type Core struct {
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
 
+	//
+	// Cluster information
+	//
+	// Name
 	clusterName string
+	// Used to modify cluster TLS params
+	clusterParamsLock sync.RWMutex
+	// The private key stored in the barrier used for establishing
+	// mutually-authenticated connections between Vault cluster members
+	localClusterPrivateKey crypto.Signer
+	// The local cluster cert
+	localClusterCert []byte
+	// The cert pool containing the self-signed CA as a trusted CA
+	localClusterCertPool *x509.CertPool
+	// The setup function that gives us the listeners for the cluster-cluster
+	// connection and the handler to use
+	clusterListenerSetupFunc func() ([]net.Listener, http.Handler, error)
+	// Shutdown channel for the cluster listeners
+	clusterListenerShutdownCh chan struct{}
+	// Shutdown success channel. We need this to be done serially to ensure
+	// that binds are removed before they might be reinstated.
+	clusterListenerShutdownSuccessCh chan struct{}
+	// Connection info containing a client and a current active address
+	requestForwardingConnection *activeConnection
+	// Write lock used to ensure that we don't have multiple connections adjust
+	// this value at the same time
+	requestForwardingConnectionLock sync.RWMutex
+	// Most recent hashed value of the advertise/cluster info. Used to avoid
+	// repeatedly JSON parsing the same values.
+	clusterActiveAdvertisementHash []byte
+	// Cache of most recently known active advertisement information, used to
+	// return values when the hash matches
+	clusterActiveAdvertisement activeAdvertisement
 }
 
 // CoreConfig is used to parameterize a core
@@ -250,7 +300,10 @@ type CoreConfig struct {
 	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
 
 	// Set as the leader address for HA
-	AdvertiseAddr string `json:"advertise_addr" structs:"advertise_addr" mapstructure:"advertise_addr"`
+	RedirectAddr string `json:"redirect_addr" structs:"redirect_addr" mapstructure:"redirect_addr"`
+
+	// Set as the cluster address for HA
+	ClusterAddr string `json:"cluster_addr" structs:"cluster_addr" mapstructure:"cluster_addr"`
 
 	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 
@@ -261,8 +314,10 @@ type CoreConfig struct {
 
 // NewCore is used to construct a new core
 func NewCore(conf *CoreConfig) (*Core, error) {
-	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() && conf.AdvertiseAddr == "" {
-		return nil, fmt.Errorf("missing advertisement address")
+	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
+		if conf.RedirectAddr == "" {
+			return nil, fmt.Errorf("missing advertisement address")
+		}
 	}
 
 	if conf.DefaultLeaseTTL == 0 {
@@ -276,8 +331,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Validate the advertise addr if its given to us
-	if conf.AdvertiseAddr != "" {
-		u, err := url.Parse(conf.AdvertiseAddr)
+	if conf.RedirectAddr != "" {
+		u, err := url.Parse(conf.RedirectAddr)
 		if err != nil {
 			return nil, fmt.Errorf("advertisement address is not valid url: %s", err)
 		}
@@ -326,18 +381,20 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		advertiseAddr:   conf.AdvertiseAddr,
-		physical:        conf.Physical,
-		seal:            conf.Seal,
-		barrier:         barrier,
-		router:          NewRouter(),
-		sealed:          true,
-		standby:         true,
-		logger:          conf.Logger,
-		defaultLeaseTTL: conf.DefaultLeaseTTL,
-		maxLeaseTTL:     conf.MaxLeaseTTL,
-		cachingDisabled: conf.DisableCache,
-		clusterName:     conf.ClusterName,
+		redirectAddr:         conf.RedirectAddr,
+		clusterAddr:          conf.ClusterAddr,
+		physical:             conf.Physical,
+		seal:                 conf.Seal,
+		barrier:              barrier,
+		router:               NewRouter(),
+		sealed:               true,
+		standby:              true,
+		logger:               conf.Logger,
+		defaultLeaseTTL:      conf.DefaultLeaseTTL,
+		maxLeaseTTL:          conf.MaxLeaseTTL,
+		cachingDisabled:      conf.DisableCache,
+		clusterName:          conf.ClusterName,
+		localClusterCertPool: x509.NewCertPool(),
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -534,7 +591,18 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Check if we are the leader
 	if !c.standby {
-		return true, c.advertiseAddr, nil
+		// If we have connections from talking to a previous leader, close them
+		// out to free resources
+		if c.requestForwardingConnection != nil {
+			c.requestForwardingConnectionLock.Lock()
+			// Verify that the condition hasn't changed
+			if c.requestForwardingConnection != nil {
+				c.requestForwardingConnection.Transport.(*http.Transport).CloseIdleConnections()
+			}
+			c.requestForwardingConnection = nil
+			c.requestForwardingConnectionLock.Unlock()
+		}
+		return true, c.redirectAddr, nil
 	}
 
 	// Initialize a lock
@@ -562,8 +630,47 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
-	// Leader address is in the entry
-	return false, string(entry.Value), nil
+	entrySHA256 := sha256.Sum256(entry.Value)
+
+	// Avoid JSON parsing and function calling if nothing has changed
+	if c.clusterActiveAdvertisementHash != nil {
+		if bytes.Compare(entrySHA256[:], c.clusterActiveAdvertisementHash) == 0 {
+			return false, c.clusterActiveAdvertisement.RedirectAddr, nil
+		}
+	}
+
+	var advAddr string
+	var oldAdv bool
+
+	var adv activeAdvertisement
+	err = jsonutil.DecodeJSON(entry.Value, &adv)
+	if err != nil {
+		// Fall back to pre-struct handling
+		advAddr = string(entry.Value)
+		oldAdv = true
+	} else {
+		advAddr = adv.RedirectAddr
+	}
+
+	if !oldAdv {
+		// Ensure we are using current values
+		err = c.loadClusterTLS(adv)
+		if err != nil {
+			return false, "", err
+		}
+
+		// This will ensure that we both have a connection at the ready and that
+		// the address is the current known value
+		err = c.refreshRequestForwardingConnection(adv.ClusterAddr)
+		if err != nil {
+			return false, "", err
+		}
+	}
+
+	c.clusterActiveAdvertisement = adv
+	c.clusterActiveAdvertisementHash = entrySHA256[:]
+
+	return false, advAddr, nil
 }
 
 // SecretProgress returns the number of keys provided so far
@@ -660,6 +767,14 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
+		// We still need to set up cluster info even if it's not part of a
+		// cluster right now
+		if err := c.setupCluster(); err != nil {
+			c.logger.Printf("[ERR] core: cluster setup failed: %v", err)
+			c.barrier.Seal()
+			c.logger.Printf("[WARN] core: vault is sealed")
+			return false, err
+		}
 		if err := c.postUnseal(); err != nil {
 			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
 			c.barrier.Seal()
@@ -997,8 +1112,10 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupAudits(); err != nil {
 		return err
 	}
-	if err := c.setupCluster(); err != nil {
-		return err
+	if c.ha != nil {
+		if err := c.startClusterListener(); err != nil {
+			return err
+		}
 	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
@@ -1023,6 +1140,10 @@ func (c *Core) preSeal() error {
 		c.metricsCh = nil
 	}
 	var result error
+	if c.ha != nil {
+		c.stopClusterListener()
+	}
+
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down audits: {{err}}", err))
 	}
@@ -1098,8 +1219,20 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// detect flapping
 		activeTime := time.Now()
 
-		// Advertise ourself as leader
+		// Grab the lock as we need it for cluster setup, which needs to happen
+		// before advertising
+		c.stateLock.Lock()
+		if err := c.setupCluster(); err != nil {
+			c.stateLock.Unlock()
+			c.logger.Printf("[ERR] core: cluster setup failed: %v", err)
+			lock.Unlock()
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			continue
+		}
+
+		// Advertise as leader
 		if err := c.advertiseLeader(uuid, leaderLostCh); err != nil {
+			c.stateLock.Unlock()
 			c.logger.Printf("[ERR] core: leader advertisement setup failed: %v", err)
 			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
@@ -1107,7 +1240,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		}
 
 		// Attempt the post-unseal process
-		c.stateLock.Lock()
 		err = c.postUnseal()
 		if err == nil {
 			c.standby = false
@@ -1253,11 +1385,38 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 // advertiseLeader is used to advertise the current node as leader
 func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error {
 	go c.cleanLeaderPrefix(uuid, leaderLostCh)
+
+	var key *ecdsa.PrivateKey
+	switch c.localClusterPrivateKey.(type) {
+	case *ecdsa.PrivateKey:
+		key = c.localClusterPrivateKey.(*ecdsa.PrivateKey)
+	default:
+		c.logger.Printf("[ERR] core: unknown cluster private key type %T", c.localClusterPrivateKey)
+		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey)
+	}
+
+	keyParams := clusterKeyParams{
+		Type: corePrivateKeyTypeP521,
+		X:    key.X,
+		Y:    key.Y,
+		D:    key.D,
+	}
+
+	adv := &activeAdvertisement{
+		RedirectAddr:     c.redirectAddr,
+		ClusterAddr:      c.clusterAddr,
+		ClusterCert:      c.localClusterCert,
+		ClusterKeyParams: keyParams,
+	}
+	val, err := jsonutil.EncodeJSON(adv)
+	if err != nil {
+		return err
+	}
 	ent := &Entry{
 		Key:   coreLeaderPrefix + uuid,
-		Value: []byte(c.advertiseAddr),
+		Value: val,
 	}
-	err := c.barrier.Put(ent)
+	err = c.barrier.Put(ent)
 	if err != nil {
 		return err
 	}
@@ -1326,4 +1485,8 @@ func (c *Core) SealAccess() *SealAccess {
 	sa := &SealAccess{}
 	sa.SetSeal(c.seal)
 	return sa
+}
+
+func (c *Core) Logger() *log.Logger {
+	return c.logger
 }

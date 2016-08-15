@@ -27,10 +27,7 @@ The following table describes them:
     <td><tt>VAULT_ADDR</tt></td>
     <td>The address of the Vault server.</td>
   </tr>
-  <tr>
-    <td><tt>VAULT_ADVERTISE_ADDR</tt></td>
-    <td>The advertised address of the server to use for client request forwarding when running in High Availability mode.</td>
-  <tr>
+    <tr>
     <td><tt>VAULT_CACERT</tt></td>
     <td>Path to a PEM-encoded CA cert file to use to verify the Vault server SSL certificate.</td>
   </tr>
@@ -47,8 +44,16 @@ The following table describes them:
     <td>Path to an unencrypted PEM-encoded private key matching the client certificate.</td>
   </tr>
   <tr>
+    <td><tt>VAULT_CLUSTER_ADDR</tt></td>
+    <td>The address that should be used for other cluster members to connect to this node when in High Availability mode.</td>
+  </tr>
+  <tr>
     <td><tt>VAULT_MAX_RETRIES</tt></td>
     <td>The maximum number of retries when a `5xx` error code is encountered. Default is `2`, for three total tries; set to `0` or less to disable retrying.</td>
+  </tr>
+  <tr>
+    <td><tt>VAULT_REDIRECT_ADDR</tt></td>
+    <td>The address that should be used when clients are redirected to this node when in High Availability mode.</td>
   </tr>
   <tr>
     <td><tt>VAULT_SKIP_VERIFY</tt></td>

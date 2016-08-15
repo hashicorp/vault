@@ -18,7 +18,8 @@
   },
   "ha_backend":{
     "consul":{
-      "bar":"baz"
+      "bar":"baz",
+      "disable_clustering": "false"
     }
   },
   "telemetry":{

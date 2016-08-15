@@ -60,8 +60,8 @@ type ConsulBackend struct {
 	kv                  *api.KV
 	permitPool          *PermitPool
 	serviceLock         sync.RWMutex
-	advertiseHost       string
-	advertisePort       int64
+	redirectHost        string
+	redirectPort        int64
 	serviceName         string
 	serviceTags         []string
 	disableRegistration bool
@@ -111,9 +111,9 @@ func newConsulBackend(conf map[string]string, logger *log.Logger) (Backend, erro
 	logger.Printf("[DEBUG]: physical/consul: config service set to %s", service)
 
 	// Get the additional tags to attach to the registered service name
-	tags := conf["service-tags"]
+	tags := conf["service_tags"]
 
-	logger.Printf("[DEBUG]: physical/consul: config service-tags set to %s", tags)
+	logger.Printf("[DEBUG]: physical/consul: config service_tags set to %s", tags)
 
 	checkTimeout := defaultCheckTimeout
 	checkTimeoutStr, ok := conf["check_timeout"]
@@ -416,20 +416,20 @@ func (c *ConsulBackend) checkDuration() time.Duration {
 	return lib.DurationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
-func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
-	if err := c.setAdvertiseAddr(advertiseAddr); err != nil {
+func (c *ConsulBackend) RunServiceDiscovery(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc activeFunction, sealedFunc sealedFunction) (err error) {
+	if err := c.setRedirectAddr(redirectAddr); err != nil {
 		return err
 	}
 
 	// 'server' command will wait for the below goroutine to complete
 	waitGroup.Add(1)
 
-	go c.runEventDemuxer(waitGroup, shutdownCh, advertiseAddr, activeFunc, sealedFunc)
+	go c.runEventDemuxer(waitGroup, shutdownCh, redirectAddr, activeFunc, sealedFunc)
 
 	return nil
 }
 
-func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, advertiseAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
+func (c *ConsulBackend) runEventDemuxer(waitGroup *sync.WaitGroup, shutdownCh ShutdownChannel, redirectAddr string, activeFunc activeFunction, sealedFunc sealedFunction) {
 	// This defer statement should be executed last. So push it first.
 	defer waitGroup.Done()
 
@@ -532,7 +532,7 @@ func (c *ConsulBackend) checkID() string {
 // serviceID returns the Vault ServiceID for use in Consul.  Assume at least
 // a read lock is held.
 func (c *ConsulBackend) serviceID() string {
-	return fmt.Sprintf("%s:%s:%d", c.serviceName, c.advertiseHost, c.advertisePort)
+	return fmt.Sprintf("%s:%s:%d", c.serviceName, c.redirectHost, c.redirectPort)
 }
 
 // reconcileConsul queries the state of Vault Core and Consul and fixes up
@@ -585,8 +585,8 @@ func (c *ConsulBackend) reconcileConsul(registeredServiceID string, activeFunc a
 		ID:                serviceID,
 		Name:              c.serviceName,
 		Tags:              tags,
-		Port:              int(c.advertisePort),
-		Address:           c.advertiseHost,
+		Port:              int(c.redirectPort),
+		Address:           c.redirectHost,
 		EnableTagOverride: false,
 	}
 
@@ -637,18 +637,18 @@ func (c *ConsulBackend) fetchServiceTags(active bool) []string {
 	return append(c.serviceTags, activeTag)
 }
 
-func (c *ConsulBackend) setAdvertiseAddr(addr string) (err error) {
+func (c *ConsulBackend) setRedirectAddr(addr string) (err error) {
 	if addr == "" {
-		return fmt.Errorf("advertise address must not be empty")
+		return fmt.Errorf("redirect address must not be empty")
 	}
 
 	url, err := url.Parse(addr)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf(`failed to parse advertise URL "%v": {{err}}`, addr), err)
+		return errwrap.Wrapf(fmt.Sprintf(`failed to parse redirect URL "%v": {{err}}`, addr), err)
 	}
 
 	var portStr string
-	c.advertiseHost, portStr, err = net.SplitHostPort(url.Host)
+	c.redirectHost, portStr, err = net.SplitHostPort(url.Host)
 	if err != nil {
 		if url.Scheme == "http" {
 			portStr = "80"
@@ -656,13 +656,13 @@ func (c *ConsulBackend) setAdvertiseAddr(addr string) (err error) {
 			portStr = "443"
 		} else if url.Scheme == "unix" {
 			portStr = "-1"
-			c.advertiseHost = url.Path
+			c.redirectHost = url.Path
 		} else {
-			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in advertise address "%v": {{err}}`, url.Host), err)
+			return errwrap.Wrapf(fmt.Sprintf(`failed to find a host:port in redirect address "%v": {{err}}`, url.Host), err)
 		}
 	}
-	c.advertisePort, err = strconv.ParseInt(portStr, 10, 0)
-	if err != nil || c.advertisePort < -1 || c.advertisePort > 65535 {
+	c.redirectPort, err = strconv.ParseInt(portStr, 10, 0)
+	if err != nil || c.redirectPort < -1 || c.redirectPort > 65535 {
 		return errwrap.Wrapf(fmt.Sprintf(`failed to parse valid port "%v": {{err}}`, portStr), err)
 	}
 

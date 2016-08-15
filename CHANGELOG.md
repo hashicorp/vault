@@ -2,6 +2,11 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
+ * Once the active node is 0.6.1, standby nodes must also be 0.6.1 in order to
+   connect to the HA cluster. We recommend following our [general upgrade
+   instructions](https://www.vaultproject.io/docs/install/upgrade.html) in
+   addition to 0.6.1-specific upgrade instructions to ensure that this is not
+   an issue.
  * Root tokens (tokens with the `root` policy) can no longer be created except
    by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
@@ -104,7 +109,7 @@ IMPROVEMENTS:
    [GH-1699]
  * physical/etcd: Support `ETCD_ADDR` env var for specifying addresses [GH-1576]
  * physical/consul: Allowing additional tags to be added to Consul service
-   registration via `service-tags` option [GH-1643]
+   registration via `service_tags` option [GH-1643]
  * secret/aws: Listing of roles is supported now  [GH-1546]
  * secret/cassandra: Add `connect_timeout` value for Cassandra connection
    configuration [GH-1581]

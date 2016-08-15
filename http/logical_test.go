@@ -84,10 +84,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	// Create an HA Vault
 	inmha := physical.NewInmemHA(logger)
 	conf := &vault.CoreConfig{
-		Physical:      inmha,
-		HAPhysical:    inmha,
-		AdvertiseAddr: addr1,
-		DisableMlock:  true,
+		Physical:     inmha,
+		HAPhysical:   inmha,
+		RedirectAddr: addr1,
+		DisableMlock: true,
 	}
 	core1, err := vault.NewCore(conf)
 	if err != nil {
@@ -104,10 +104,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 
 	// Create a second HA Vault
 	conf2 := &vault.CoreConfig{
-		Physical:      inmha,
-		HAPhysical:    inmha,
-		AdvertiseAddr: addr2,
-		DisableMlock:  true,
+		Physical:     inmha,
+		HAPhysical:   inmha,
+		RedirectAddr: addr2,
+		DisableMlock: true,
 	}
 	core2, err := vault.NewCore(conf2)
 	if err != nil {
