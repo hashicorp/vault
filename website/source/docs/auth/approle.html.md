@@ -16,7 +16,7 @@ this backend is the successor for the App-ID backend.
 
 ### AppRole
 
-An AppRole represents a set of Vault policies, under a name. In essense, if a
+An AppRole represents a set of Vault policies, under a name. In essence, if a
 machine needs to authenticate with Vault for a set of policies, an AppRole can
 be registered under the machine's name with the desired set of policies. If a
 service requires a set of Vault policies, an AppRole can be registered under
@@ -96,7 +96,7 @@ role_id     db02de05-fa39-4855-059b-67221c5c2f63
 #### Get a SecretID issued against the AppRole
 
 ```javascript
-$ vault write auth/approle/role/testrole/secret-id
+$ vault write -f auth/approle/role/testrole/secret-id
 ```
 
 ```javascript
@@ -114,7 +114,7 @@ $ vault write auth/approle/login role_id=db02de05-fa39-4855-059b-67221c5c2f63 se
 ```javascript
 token           65b74ffd-842c-fd43-1386-f7d7006e520a
 token_accessor  3c29bc22-5c72-11a6-f778-2bc8f48cea0e
-token_duration  1200
+token_duration  20m0s
 token_renewable true
 token_policies  [default]
 ```
