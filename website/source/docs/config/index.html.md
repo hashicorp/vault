@@ -265,8 +265,8 @@ For Consul, the following options are supported:
 
   * `token` (optional) - An access token to use to write data to Consul.
 
-  * `max_parallel` (optional) - The maximum number of concurrent connections to Consul.
-    Defaults to "128".
+  * `max_parallel` (optional) - The maximum number of concurrent requests to Consul.
+    Defaults to `"128"`.
 
   * `tls_skip_verify` (optional) - If non-empty, then TLS host verification
     will be disabled for Consul communication.  Defaults to false.
@@ -506,6 +506,9 @@ The DynamoDB backend has the following options:
     `AWS_DEFAULT_REGION` environment variable and will default to `us-east-1`
     if not specified.
 
+  * `max_parallel` (optional) - The maximum number of concurrent requests to
+    DynamoDB. Defaults to `"128"`.
+
   * `ha_enabled` (optional) - Setting this to `"1"`, `"t"`, or `"true"` will
     enable HA mode. Please ensure you have read the documentation for the
     `recovery_mode` option before enabling this. This option can also be
@@ -563,7 +566,7 @@ profile enabled. Vault will handle renewing profile credentials as they rotate.
 
   * `container`   (required) - The Azure Storage Blob container name
 
-  * `max_parallel` (optional) - The maximum number of concurrent connections to Azure. Defaults to "128".
+  * `max_parallel` (optional) - The maximum number of concurrent requests to Azure. Defaults to `"128"`.
 
 The current implementation is limited to a maximum of 4 MBytes per blob/file.
 
@@ -581,7 +584,7 @@ For Swift, the following options are supported:
 
   * `tenant` (optional) - The name of Tenant to use. It can be sourced from the `OS_TENANT_NAME` environment variable and will default to default tenant of for the username if not specified.
 
-  * `max_parallel` (optional) - The maximum number of concurrent connections to Swift. Defaults to "128".
+  * `max_parallel` (optional) - The maximum number of concurrent requests to Swift. Defaults to `"128"`.
 
 #### Backend Reference: MySQL (Community-Supported)
 

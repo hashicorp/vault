@@ -21,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/hashicorp/errwrap"
 )
 
 const (
@@ -61,11 +62,12 @@ const (
 // a DynamoDB table. It can be run in high-availability mode
 // as DynamoDB has locking capabilities.
 type DynamoDBBackend struct {
-	table     string
-	client    *dynamodb.DynamoDB
-	recovery  bool
-	logger    *log.Logger
-	haEnabled bool
+	table      string
+	client     *dynamodb.DynamoDB
+	recovery   bool
+	logger     *log.Logger
+	haEnabled  bool
+	permitPool *PermitPool
 }
 
 // DynamoDBRecord is the representation of a vault entry in
@@ -184,12 +186,23 @@ func newDynamoDBBackend(conf map[string]string, logger *log.Logger) (Backend, er
 	}
 	recoveryModeBool, _ := strconv.ParseBool(recoveryMode)
 
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		logger.Printf("[DEBUG]: physical/consul: max_parallel set to %d", maxParInt)
+	}
+
 	return &DynamoDBBackend{
-		table:     table,
-		client:    client,
-		recovery:  recoveryModeBool,
-		haEnabled: haEnabledBool,
-		logger:    logger,
+		table:      table,
+		client:     client,
+		permitPool: NewPermitPool(maxParInt),
+		recovery:   recoveryModeBool,
+		haEnabled:  haEnabledBool,
+		logger:     logger,
 	}, nil
 }
 
@@ -234,6 +247,9 @@ func (d *DynamoDBBackend) Put(entry *Entry) error {
 // Get is used to fetch an entry
 func (d *DynamoDBBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"dynamodb", "get"}, time.Now())
+
+	d.permitPool.Acquire()
+	defer d.permitPool.Release()
 
 	resp, err := d.client.GetItem(&dynamodb.GetItemInput{
 		TableName:      aws.String(d.table),
@@ -318,6 +334,10 @@ func (d *DynamoDBBackend) List(prefix string) ([]string, error) {
 			},
 		},
 	}
+
+	d.permitPool.Acquire()
+	defer d.permitPool.Release()
+
 	err := d.client.QueryPages(queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
 		var record DynamoDBRecord
 		for _, item := range out.Items {
@@ -357,11 +377,13 @@ func (d *DynamoDBBackend) batchWriteRequests(requests []*dynamodb.WriteRequest) 
 		batch := requests[:batchSize]
 		requests = requests[batchSize:]
 
+		d.permitPool.Acquire()
 		_, err := d.client.BatchWriteItem(&dynamodb.BatchWriteItemInput{
 			RequestItems: map[string][]*dynamodb.WriteRequest{
 				d.table: batch,
 			},
 		})
+		d.permitPool.Release()
 		if err != nil {
 			return err
 		}
