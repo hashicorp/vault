@@ -96,7 +96,7 @@ role_id     db02de05-fa39-4855-059b-67221c5c2f63
 #### Get a SecretID issued against the AppRole
 
 ```javascript
-$ vault write auth/approle/role/testrole/secret-id
+$ vault write -f auth/approle/role/testrole/secret-id
 ```
 
 ```javascript
