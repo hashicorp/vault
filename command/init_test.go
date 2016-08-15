@@ -244,5 +244,5 @@ func TestInit_PGP(t *testing.T) {
 
 	rootToken := matches[0][1]
 
-	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), rootToken, false, nil, core)
+	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), rootToken, false, nil, nil, core)
 }

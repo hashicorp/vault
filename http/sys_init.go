@@ -97,7 +97,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	keysB64 := make([]string, 0, len(result.SecretShares))
 	for _, k := range result.SecretShares {
 		keys = append(keys, hex.EncodeToString(k))
-		keysB64 = append(keys, base64.StdEncoding.EncodeToString(k))
+		keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
 	}
 
 	resp := &InitResponse{
@@ -111,7 +111,7 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		resp.RecoveryKeysB64 = make([]string, 0, len(result.RecoveryShares))
 		for _, k := range result.RecoveryShares {
 			resp.RecoveryKeys = append(resp.RecoveryKeys, hex.EncodeToString(k))
-			resp.RecoveryKeysB64 = append(resp.RecoveryKeys, base64.StdEncoding.EncodeToString(k))
+			resp.RecoveryKeysB64 = append(resp.RecoveryKeysB64, base64.StdEncoding.EncodeToString(k))
 		}
 	}
 
