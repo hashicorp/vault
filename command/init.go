@@ -192,10 +192,20 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 	}
 
 	for i, key := range resp.Keys {
-		c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, key))
+		if resp.KeysB64 != nil && len(resp.KeysB64) == len(resp.Keys) {
+			c.Ui.Output(fmt.Sprintf("Unseal Key %d (hex)   : %s", i+1, key))
+			c.Ui.Output(fmt.Sprintf("Unseal Key %d (base64): %s", i+1, resp.KeysB64[i]))
+		} else {
+			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, key))
+		}
 	}
 	for i, key := range resp.RecoveryKeys {
-		c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, key))
+		if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) {
+			c.Ui.Output(fmt.Sprintf("Recovery Key %d (hex)   : %s", i+1, key))
+			c.Ui.Output(fmt.Sprintf("Recovery Key %d (base64): %s", i+1, resp.RecoveryKeysB64[i]))
+		} else {
+			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, key))
+		}
 	}
 
 	c.Ui.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))

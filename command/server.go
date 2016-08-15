@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -489,8 +490,9 @@ func (c *ServerCommand) Run(args []string) int {
 				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"]+quote+"\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
-				"Unseal Key: %s\nRoot Token: %s\n",
+				"Unseal Key (hex)   : %s\nUnseal Key (base64): %s\nRoot Token: %s\n",
 			hex.EncodeToString(init.SecretShares[0]),
+			base64.StdEncoding.EncodeToString(init.SecretShares[0]),
 			init.RootToken,
 		))
 	}

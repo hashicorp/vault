@@ -180,8 +180,13 @@ func TestSysRekey_Update(t *testing.T) {
 	if len(keys) != 5 {
 		t.Fatalf("bad: %#v", keys)
 	}
+	keysB64 := actual["keys_base64"].([]interface{})
+	if len(keysB64) != 5 {
+		t.Fatalf("bad: %#v", keysB64)
+	}
 
 	delete(actual, "keys")
+	delete(actual, "keys_base64")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}

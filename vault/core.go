@@ -1490,3 +1490,9 @@ func (c *Core) SealAccess() *SealAccess {
 func (c *Core) Logger() *log.Logger {
 	return c.logger
 }
+
+func (c *Core) BarrierKeyLength() (min, max int) {
+	min, max = c.barrier.KeyLength()
+	max += shamir.ShareOverhead
+	return
+}

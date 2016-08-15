@@ -66,7 +66,9 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	input, rootToken string,
 	fingerprints bool,
 	backupKeys map[string][]string,
+	backupKeysB64 map[string][]string,
 	core *vault.Core) {
+
 	decoder := base64.StdEncoding
 	priv1Bytes, err := decoder.DecodeString(pgpkeys.TestPrivKey1)
 	if err != nil {
@@ -87,89 +89,106 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 		priv3Bytes,
 	}
 
-	var re *regexp.Regexp
-	if fingerprints {
-		re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value:\\s+(.*)")
-	} else {
-		re, err = regexp.Compile("\\s*Key\\s+\\d+:\\s+(.*)")
-	}
-	if err != nil {
-		t.Fatalf("Error compiling regex: %s", err)
-	}
-	matches := re.FindAllStringSubmatch(input, -1)
-	if len(matches) != 4 {
-		t.Fatalf("Unexpected number of keys returned, got %d, matches was \n\n%#v\n\n, input was \n\n%s\n\n", len(matches), matches, input)
-	}
-
-	encodedKeys := []string{}
-	matchedFingerprints := []string{}
-	for _, tuple := range matches {
+	testFunc := func(b64 bool, bkeys map[string][]string) {
+		var re *regexp.Regexp
 		if fingerprints {
-			if len(tuple) != 3 {
-				t.Fatalf("Key not found: %#v", tuple)
+			if b64 {
+				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value\\s+\\(base64\\):\\s+(.*)")
+			} else {
+				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value\\s+\\(hex\\)\\s+:\\s+(.*)")
 			}
-			matchedFingerprints = append(matchedFingerprints, tuple[1])
-			encodedKeys = append(encodedKeys, tuple[2])
 		} else {
-			if len(tuple) != 2 {
-				t.Fatalf("Key not found: %#v", tuple)
+			if b64 {
+				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s\\(base64\\):\\s+(.*)")
+			} else {
+				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s\\(hex\\)\\s+:\\s+(.*)")
 			}
-			encodedKeys = append(encodedKeys, tuple[1])
+		}
+		if err != nil {
+			t.Fatalf("Error compiling regex: %s", err)
+		}
+		matches := re.FindAllStringSubmatch(input, -1)
+		if len(matches) != 4 {
+			t.Fatalf("Unexpected number of keys returned, got %d, matches was \n\n%#v\n\n, input was \n\n%s\n\n", len(matches), matches, input)
+		}
+
+		encodedKeys := []string{}
+		matchedFingerprints := []string{}
+		for _, tuple := range matches {
+			if fingerprints {
+				if len(tuple) != 3 {
+					t.Fatalf("Key not found: %#v", tuple)
+				}
+				matchedFingerprints = append(matchedFingerprints, tuple[1])
+				encodedKeys = append(encodedKeys, tuple[2])
+			} else {
+				if len(tuple) != 2 {
+					t.Fatalf("Key not found: %#v", tuple)
+				}
+				encodedKeys = append(encodedKeys, tuple[1])
+			}
+		}
+
+		if bkeys != nil && len(matchedFingerprints) != 0 {
+			testMap := map[string][]string{}
+			for i, v := range matchedFingerprints {
+				testMap[v] = append(testMap[v], encodedKeys[i])
+				sort.Strings(testMap[v])
+			}
+			if !reflect.DeepEqual(testMap, bkeys) {
+				t.Fatalf("test map and backup map do not match, test map is\n%#v\nbackup map is\n%#v", testMap, bkeys)
+			}
+		}
+
+		unsealKeys := []string{}
+		ptBuf := bytes.NewBuffer(nil)
+		for i, privKeyBytes := range privBytes {
+			if i > 2 {
+				break
+			}
+			ptBuf.Reset()
+			entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(privKeyBytes)))
+			if err != nil {
+				t.Fatalf("Error parsing private key %d: %s", i, err)
+			}
+			var keyBytes []byte
+			if b64 {
+				keyBytes, err = base64.StdEncoding.DecodeString(encodedKeys[i])
+			} else {
+				keyBytes, err = hex.DecodeString(encodedKeys[i])
+			}
+			if err != nil {
+				t.Fatalf("Error decoding key %d: %s", i, err)
+			}
+			entityList := &openpgp.EntityList{entity}
+			md, err := openpgp.ReadMessage(bytes.NewBuffer(keyBytes), entityList, nil, nil)
+			if err != nil {
+				t.Fatalf("Error decrypting with key %d (%s): %s", i, encodedKeys[i], err)
+			}
+			ptBuf.ReadFrom(md.UnverifiedBody)
+			unsealKeys = append(unsealKeys, ptBuf.String())
+		}
+
+		err = core.Seal(rootToken)
+		if err != nil {
+			t.Fatalf("Error sealing vault with provided root token: %s", err)
+		}
+
+		for i, unsealKey := range unsealKeys {
+			unsealBytes, err := hex.DecodeString(unsealKey)
+			if err != nil {
+				t.Fatalf("Error hex decoding unseal key %s: %s", unsealKey, err)
+			}
+			unsealed, err := core.Unseal(unsealBytes)
+			if err != nil {
+				t.Fatalf("Error using unseal key %s: %s", unsealKey, err)
+			}
+			if i >= 2 && !unsealed {
+				t.Fatalf("Error: Provided two unseal keys but core is not unsealed")
+			}
 		}
 	}
 
-	if backupKeys != nil && len(matchedFingerprints) != 0 {
-		testMap := map[string][]string{}
-		for i, v := range matchedFingerprints {
-			testMap[v] = append(testMap[v], encodedKeys[i])
-			sort.Strings(testMap[v])
-		}
-		if !reflect.DeepEqual(testMap, backupKeys) {
-			t.Fatalf("test map and backup map do not match, test map is\n%#v\nbackup map is\n%#v", testMap, backupKeys)
-		}
-	}
-
-	unsealKeys := []string{}
-	ptBuf := bytes.NewBuffer(nil)
-	for i, privKeyBytes := range privBytes {
-		if i > 2 {
-			break
-		}
-		ptBuf.Reset()
-		entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(privKeyBytes)))
-		if err != nil {
-			t.Fatalf("Error parsing private key %d: %s", i, err)
-		}
-		keyBytes, err := hex.DecodeString(encodedKeys[i])
-		if err != nil {
-			t.Fatalf("Error hex-decoding key %d: %s", i, err)
-		}
-		entityList := &openpgp.EntityList{entity}
-		md, err := openpgp.ReadMessage(bytes.NewBuffer(keyBytes), entityList, nil, nil)
-		if err != nil {
-			t.Fatalf("Error decrypting with key %d (%s): %s", i, encodedKeys[i], err)
-		}
-		ptBuf.ReadFrom(md.UnverifiedBody)
-		unsealKeys = append(unsealKeys, ptBuf.String())
-	}
-
-	err = core.Seal(rootToken)
-	if err != nil {
-		t.Fatalf("Error sealing vault with provided root token: %s", err)
-	}
-
-	for i, unsealKey := range unsealKeys {
-		unsealBytes, err := hex.DecodeString(unsealKey)
-		if err != nil {
-			t.Fatalf("Error hex decoding unseal key %s: %s", unsealKey, err)
-		}
-		unsealed, err := core.Unseal(unsealBytes)
-		if err != nil {
-			t.Fatalf("Error using unseal key %s: %s", unsealKey, err)
-		}
-		if i >= 2 && !unsealed {
-			t.Fatalf("Error: Provided two unseal keys but core is not unsealed")
-		}
-	}
-
+	testFunc(false, backupKeys)
+	testFunc(true, backupKeysB64)
 }

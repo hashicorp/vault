@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -146,13 +147,20 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			return
 		}
 
-		// Decode the key, which is hex encoded
+		// Decode the key, which is base64 or hex encoded
+		min, max := core.BarrierKeyLength()
 		key, err := hex.DecodeString(req.Key)
-		if err != nil {
-			respondError(
-				w, http.StatusBadRequest,
-				errors.New("'key' must be a valid hex-string"))
-			return
+		// We check min and max here to ensure that a string that is base64
+		// encoded but also valid hex will not be valid and we instead base64
+		// decode it
+		if err != nil || len(key) < min || len(key) > max {
+			key, err = base64.StdEncoding.DecodeString(req.Key)
+			if err != nil {
+				respondError(
+					w, http.StatusBadRequest,
+					errors.New("'key' must be a valid hex or base64 string"))
+				return
+			}
 		}
 
 		// Use the key to make progress on rekey
@@ -167,16 +175,18 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 		if result != nil {
 			resp.Complete = true
 			resp.Nonce = req.Nonce
+			resp.Backup = result.Backup
+			resp.PGPFingerprints = result.PGPFingerprints
 
 			// Encode the keys
 			keys := make([]string, 0, len(result.SecretShares))
+			keysB64 := make([]string, 0, len(result.SecretShares))
 			for _, k := range result.SecretShares {
 				keys = append(keys, hex.EncodeToString(k))
+				keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
 			}
 			resp.Keys = keys
-
-			resp.Backup = result.Backup
-			resp.PGPFingerprints = result.PGPFingerprints
+			resp.KeysB64 = keysB64
 		}
 		respondOk(w, resp)
 	})
@@ -210,6 +220,7 @@ type RekeyUpdateResponse struct {
 	Nonce           string   `json:"nonce"`
 	Complete        bool     `json:"complete"`
 	Keys            []string `json:"keys"`
+	KeysB64         []string `json:"keys_base64"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
 	Backup          bool     `json:"backup"`
 }

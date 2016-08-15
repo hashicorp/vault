@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/http"
@@ -93,19 +94,24 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 
 	// Encode the keys
 	keys := make([]string, 0, len(result.SecretShares))
+	keysB64 := make([]string, 0, len(result.SecretShares))
 	for _, k := range result.SecretShares {
 		keys = append(keys, hex.EncodeToString(k))
+		keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
 	}
 
 	resp := &InitResponse{
 		Keys:      keys,
+		KeysB64:   keysB64,
 		RootToken: result.RootToken,
 	}
 
 	if len(result.RecoveryShares) > 0 {
 		resp.RecoveryKeys = make([]string, 0, len(result.RecoveryShares))
+		resp.RecoveryKeysB64 = make([]string, 0, len(result.RecoveryShares))
 		for _, k := range result.RecoveryShares {
 			resp.RecoveryKeys = append(resp.RecoveryKeys, hex.EncodeToString(k))
+			resp.RecoveryKeysB64 = append(resp.RecoveryKeysB64, base64.StdEncoding.EncodeToString(k))
 		}
 	}
 
@@ -125,9 +131,11 @@ type InitRequest struct {
 }
 
 type InitResponse struct {
-	Keys         []string `json:"keys"`
-	RecoveryKeys []string `json:"recovery_keys,omitempty"`
-	RootToken    string   `json:"root_token"`
+	Keys            []string `json:"keys"`
+	KeysB64         []string `json:"keys_base64"`
+	RecoveryKeys    []string `json:"recovery_keys,omitempty"`
+	RecoveryKeysB64 []string `json:"recovery_keys_base64,omitempty"`
+	RootToken       string   `json:"root_token"`
 }
 
 type InitStatusResponse struct {
