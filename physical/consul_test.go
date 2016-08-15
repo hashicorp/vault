@@ -12,12 +12,14 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/ory-am/dockertest"
 )
 
 type consulConf map[string]string
 
 var (
-	addrCount int = 0
+	addrCount     int = 0
+	testImagePull sync.Once
 )
 
 func testHostIP() string {
@@ -311,11 +313,6 @@ func TestConsul_setRedirectAddr(t *testing.T) {
 }
 
 func TestConsul_NotifyActiveStateChange(t *testing.T) {
-	addr := os.Getenv("CONSUL_HTTP_ADDR")
-	if addr == "" {
-		t.Skipf("No consul process running, skipping test")
-	}
-
 	c := testConsulBackend(t)
 
 	if err := c.NotifyActiveStateChange(); err != nil {
@@ -324,11 +321,6 @@ func TestConsul_NotifyActiveStateChange(t *testing.T) {
 }
 
 func TestConsul_NotifySealedStateChange(t *testing.T) {
-	addr := os.Getenv("CONSUL_HTTP_ADDR")
-	if addr == "" {
-		t.Skipf("No consul process running, skipping test")
-	}
-
 	c := testConsulBackend(t)
 
 	if err := c.NotifySealedStateChange(); err != nil {
@@ -380,13 +372,20 @@ func TestConsul_serviceID(t *testing.T) {
 }
 
 func TestConsulBackend(t *testing.T) {
+	var token string
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		t.Skipf("No consul process running, skipping test")
+		cid, connURL := prepareTestContainer(t)
+		if cid != "" {
+			defer cleanupTestContainer(t, cid)
+		}
+		addr = connURL
+		token = dockertest.ConsulACLMasterToken
 	}
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
+	conf.Token = token
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -399,9 +398,10 @@ func TestConsulBackend(t *testing.T) {
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	b, err := NewBackend("consul", logger, map[string]string{
-		"address":      addr,
+		"address":      conf.Address,
 		"path":         randPath,
 		"max_parallel": "256",
+		"token":        conf.Token,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -412,13 +412,20 @@ func TestConsulBackend(t *testing.T) {
 }
 
 func TestConsulHABackend(t *testing.T) {
+	var token string
 	addr := os.Getenv("CONSUL_HTTP_ADDR")
 	if addr == "" {
-		t.Skipf("No consul process running, skipping test")
+		cid, connURL := prepareTestContainer(t)
+		if cid != "" {
+			defer cleanupTestContainer(t, cid)
+		}
+		addr = connURL
+		token = dockertest.ConsulACLMasterToken
 	}
 
 	conf := api.DefaultConfig()
 	conf.Address = addr
+	conf.Token = token
 	client, err := api.NewClient(conf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -431,9 +438,10 @@ func TestConsulHABackend(t *testing.T) {
 
 	logger := log.New(os.Stderr, "", log.LstdFlags)
 	b, err := NewBackend("consul", logger, map[string]string{
-		"address":      addr,
+		"address":      conf.Address,
 		"path":         randPath,
 		"max_parallel": "-1",
+		"token":        conf.Token,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -455,5 +463,63 @@ func TestConsulHABackend(t *testing.T) {
 	}
 	if host == "" {
 		t.Fatalf("bad addr: %v", host)
+	}
+}
+
+func prepareTestContainer(t *testing.T) (cid dockertest.ContainerID, retAddress string) {
+	if os.Getenv("CONSUL_HTTP_ADDR") != "" {
+		return "", os.Getenv("CONSUL_HTTP_ADDR")
+	}
+
+	// Without this the checks for whether the container has started seem to
+	// never actually pass. There's really no reason to expose the test
+	// containers, so don't.
+	dockertest.BindDockerToLocalhost = "yep"
+
+	testImagePull.Do(func() {
+		dockertest.Pull(dockertest.ConsulImageName)
+	})
+
+	try := 0
+	cid, connErr := dockertest.ConnectToConsul(60, 500*time.Millisecond, func(connAddress string) bool {
+		try += 1
+		// Build a client and verify that the credentials work
+		config := api.DefaultConfig()
+		config.Address = connAddress
+		config.Token = dockertest.ConsulACLMasterToken
+		client, err := api.NewClient(config)
+		if err != nil {
+			if try > 50 {
+				panic(err)
+			}
+			return false
+		}
+
+		_, err = client.KV().Put(&api.KVPair{
+			Key:   "setuptest",
+			Value: []byte("setuptest"),
+		}, nil)
+		if err != nil {
+			if try > 50 {
+				panic(err)
+			}
+			return false
+		}
+
+		retAddress = connAddress
+		return true
+	})
+
+	if connErr != nil {
+		t.Fatalf("could not connect to consul: %v", connErr)
+	}
+
+	return
+}
+
+func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
+	err := cid.KillRemove()
+	if err != nil {
+		t.Fatal(err)
 	}
 }
