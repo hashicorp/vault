@@ -22,21 +22,12 @@ func (c *Sys) AuditHash(path string, input string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	secret, err := ParseSecret(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
-		return "", nil
-	}
-
 	type d struct {
-		Hash string
+		Hash string `json:"hash"`
 	}
 
 	var result d
-	err = mapstructure.Decode(secret.Data, &result)
+	err = resp.DecodeJSON(&result)
 	if err != nil {
 		return "", err
 	}
@@ -52,26 +43,32 @@ func (c *Sys) ListAudit() (map[string]*Audit, error) {
 	}
 	defer resp.Body.Close()
 
-	secret, err := ParseSecret(resp.Body)
+	var result map[string]interface{}
+	err = resp.DecodeJSON(&result)
 	if err != nil {
 		return nil, err
 	}
 
-	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
-		return nil, nil
-	}
-
-	result := map[string]*Audit{}
-	for k, v := range secret.Data {
+	mounts := map[string]*Audit{}
+	for k, v := range result {
+		switch v.(type) {
+		case map[string]interface{}:
+		default:
+			continue
+		}
 		var res Audit
 		err = mapstructure.Decode(v, &res)
 		if err != nil {
 			return nil, err
 		}
-		result[k] = &res
+		// Not a mount, some other api.Secret data
+		if res.Type == "" {
+			continue
+		}
+		mounts[k] = &res
 	}
 
-	return result, err
+	return mounts, nil
 }
 
 func (c *Sys) EnableAudit(
@@ -106,7 +103,7 @@ func (c *Sys) DisableAudit(path string) error {
 }
 
 // Structures for the requests/resposne are all down here. They aren't
-// individually documentd because the map almost directly to the raw HTTP API
+// individually documented because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
 type Audit struct {

@@ -28,17 +28,14 @@ func (c *Sys) Capabilities(token, path string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	secret, err := ParseSecret(resp.Body)
+	var result map[string]interface{}
+	err = resp.DecodeJSON(&result)
 	if err != nil {
 		return nil, err
 	}
 
-	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
-		return nil, nil
-	}
-
 	var capabilities []string
-	capabilitiesRaw := secret.Data["capabilities"].([]interface{})
+	capabilitiesRaw := result["capabilities"].([]interface{})
 	for _, capability := range capabilitiesRaw {
 		capabilities = append(capabilities, capability.(string))
 	}

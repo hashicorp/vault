@@ -14,26 +14,32 @@ func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
 	}
 	defer resp.Body.Close()
 
-	secret, err := ParseSecret(resp.Body)
+	var result map[string]interface{}
+	err = resp.DecodeJSON(&result)
 	if err != nil {
 		return nil, err
 	}
 
-	if secret == nil || secret.Data == nil || len(secret.Data) == 0 {
-		return nil, nil
-	}
-
-	result := map[string]*AuthMount{}
-	for k, v := range secret.Data {
+	mounts := map[string]*AuthMount{}
+	for k, v := range result {
+		switch v.(type) {
+		case map[string]interface{}:
+		default:
+			continue
+		}
 		var res AuthMount
 		err = mapstructure.Decode(v, &res)
 		if err != nil {
 			return nil, err
 		}
-		result[k] = &res
+		// Not a mount, some other api.Secret data
+		if res.Type == "" {
+			continue
+		}
+		mounts[k] = &res
 	}
 
-	return result, err
+	return mounts, nil
 }
 
 func (c *Sys) EnableAuth(path, authType, desc string) error {
