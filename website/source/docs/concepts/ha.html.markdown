@@ -112,6 +112,10 @@ server, set the value of the key `disable_clustering` to `"false"` (note the
 quotes) in the `backend` block (or `ha_backend` block if using split data/HA
 backends).
 
+If request forwarding is enabled, clients can still force the older/fallback
+redirection behavior if desired by setting the `X-Vault-No-Request-Forwarding`
+header to any non-empty value.
+
 Successful cluster setup requires a few configuration parameters, although some
 can be automatically determined.
 
