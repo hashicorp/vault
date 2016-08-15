@@ -190,11 +190,13 @@ type RekeyUpdateResponse struct {
 	Nonce           string
 	Complete        bool
 	Keys            []string
+	KeysB64         []string `json:"keys_base64"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
 	Backup          bool
 }
 
 type RekeyRetrieveResponse struct {
-	Nonce string
-	Keys  map[string][]string
+	Nonce   string
+	Keys    map[string][]string
+	KeysB64 map[string][]string `json:"keys_base64"`
 }

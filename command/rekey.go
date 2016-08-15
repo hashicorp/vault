@@ -93,12 +93,14 @@ func (c *RekeyCommand) Run(args []string) int {
 				SecretShares:    shares,
 				SecretThreshold: threshold,
 				PGPKeys:         pgpKeys,
+				Backup:          backup,
 			})
 		} else {
 			rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
 				SecretShares:    shares,
 				SecretThreshold: threshold,
 				PGPKeys:         pgpKeys,
+				Backup:          backup,
 			})
 		}
 		if err != nil {
@@ -158,11 +160,25 @@ func (c *RekeyCommand) Run(args []string) int {
 	// Space between the key prompt, if any, and the output
 	c.Ui.Output("\n")
 	// Provide the keys
+	var haveB64 bool
+	if result.KeysB64 != nil && len(result.KeysB64) == len(result.Keys) {
+		haveB64 = true
+	}
 	for i, key := range result.Keys {
 		if len(result.PGPFingerprints) > 0 {
-			c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value: %s", i+1, result.PGPFingerprints[i], key))
+			if haveB64 {
+				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value (hex)   : %s", i+1, result.PGPFingerprints[i], key))
+				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value (base64): %s", i+1, result.PGPFingerprints[i], result.KeysB64[i]))
+			} else {
+				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value: %s", i+1, result.PGPFingerprints[i], key))
+			}
 		} else {
-			c.Ui.Output(fmt.Sprintf("Key %d: %s", i+1, key))
+			if haveB64 {
+				c.Ui.Output(fmt.Sprintf("Key %d (hex)   : %s", i+1, key))
+				c.Ui.Output(fmt.Sprintf("Key %d (base64): %s", i+1, result.KeysB64[i]))
+			} else {
+				c.Ui.Output(fmt.Sprintf("Key %d: %s", i+1, key))
+			}
 		}
 	}
 

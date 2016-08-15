@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
@@ -607,11 +609,28 @@ func (b *SystemBackend) handleRekeyRetrieve(
 		return logical.ErrorResponse("no backed-up keys found"), nil
 	}
 
+	keysB64 := map[string][]string{}
+	for k, v := range backup.Keys {
+		for _, j := range v {
+			currB64Keys := keysB64[k]
+			if currB64Keys == nil {
+				currB64Keys = []string{}
+			}
+			key, err := hex.DecodeString(j)
+			if err != nil {
+				return nil, fmt.Errorf("error decoding hex-encoded backup key: %v", err)
+			}
+			currB64Keys = append(currB64Keys, base64.StdEncoding.EncodeToString(key))
+			keysB64[k] = currB64Keys
+		}
+	}
+
 	// Format the status
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"nonce": backup.Nonce,
-			"keys":  backup.Keys,
+			"nonce":       backup.Nonce,
+			"keys":        backup.Keys,
+			"keys_base64": keysB64,
 		},
 	}
 
