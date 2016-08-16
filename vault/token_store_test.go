@@ -1967,7 +1967,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 		}
 
 		// Let the TTL go down a bit to 3 seconds
-		time.Sleep(2 * time.Second)
+		time.Sleep(3 * time.Second)
 
 		req.Operation = logical.UpdateOperation
 		req.Path = "auth/token/renew-self"

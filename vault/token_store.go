@@ -1243,6 +1243,7 @@ func (ts *TokenStore) handleCreateCommon(
 		te.ExplicitMaxTTL = dur
 	}
 
+	var periodToUse time.Duration
 	if data.Period != "" {
 		if !isSudo {
 			return logical.ErrorResponse("root or sudo privileges required to create periodic token"),
@@ -1256,6 +1257,7 @@ func (ts *TokenStore) handleCreateCommon(
 			return logical.ErrorResponse("period must be positive"), logical.ErrInvalidRequest
 		}
 		te.Period = dur
+		periodToUse = dur
 	}
 
 	// Parse the TTL/lease if any
@@ -1295,21 +1297,21 @@ func (ts *TokenStore) handleCreateCommon(
 		}
 		if role.Period != 0 {
 			switch {
-			case te.Period == 0:
-				te.Period = role.Period
+			case periodToUse == 0:
+				periodToUse = role.Period
 			default:
-				if role.Period < te.Period {
-					te.Period = role.Period
+				if role.Period < periodToUse {
+					periodToUse = role.Period
 				}
-				resp.AddWarning(fmt.Sprintf("Period specified both during creation call and in role; using the lesser value of %d seconds", int64(te.Period.Seconds())))
+				resp.AddWarning(fmt.Sprintf("Period specified both during creation call and in role; using the lesser value of %d seconds", int64(periodToUse.Seconds())))
 			}
 		}
 	}
 
 	sysView := ts.System()
 
-	if te.Period > 0 {
-		te.TTL = te.Period
+	if periodToUse > 0 {
+		te.TTL = periodToUse
 	} else {
 		// Set the default lease if not provided, root tokens are exempt
 		if te.TTL == 0 && !strutil.StrListContains(te.Policies, "root") {
@@ -1326,7 +1328,7 @@ func (ts *TokenStore) handleCreateCommon(
 	// period as it's defined to escape the max TTL
 	if te.ExplicitMaxTTL > 0 {
 		// Limit the lease duration, except for periodic tokens -- in that case the explicit max limits the period, which itself can escape normal max
-		if sysView.MaxLeaseTTL() != 0 && te.ExplicitMaxTTL > sysView.MaxLeaseTTL() && te.Period == 0 {
+		if sysView.MaxLeaseTTL() != 0 && te.ExplicitMaxTTL > sysView.MaxLeaseTTL() && periodToUse == 0 {
 			resp.AddWarning(fmt.Sprintf(
 				"Explicit max TTL of %d seconds is greater than system/mount allowed value; value is being capped to %d seconds",
 				int64(te.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
@@ -1514,7 +1516,8 @@ func (ts *TokenStore) handleLookup(
 
 	if out.Role != "" {
 		resp.Data["role"] = out.Role
-	} else if out.Period != 0 {
+	}
+	if out.Period != 0 {
 		resp.Data["period"] = int64(out.Period.Seconds())
 	}
 
@@ -1643,7 +1646,7 @@ func (ts *TokenStore) authRenew(
 	// Same deal here, but using the role period
 	if role.Period != 0 {
 		periodToUse := role.Period
-		if te.Period < role.Period {
+		if te.Period > 0 && te.Period < role.Period {
 			periodToUse = te.Period
 		}
 		if te.ExplicitMaxTTL == 0 {
