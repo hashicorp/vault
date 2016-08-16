@@ -1620,7 +1620,7 @@ func (ts *TokenStore) authRenew(
 				return &logical.Response{Auth: req.Auth}, nil
 			} else {
 				maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
-				if maxTime.Add(-1 * te.Period).Before(time.Now()) {
+				if time.Now().Add(te.Period).After(maxTime) {
 					req.Auth.TTL = maxTime.Sub(time.Now())
 				} else {
 					req.Auth.TTL = te.Period
@@ -1651,7 +1651,7 @@ func (ts *TokenStore) authRenew(
 			return &logical.Response{Auth: req.Auth}, nil
 		} else {
 			maxTime := time.Unix(te.CreationTime, 0).Add(te.ExplicitMaxTTL)
-			if maxTime.Add(-1 * periodToUse).Before(time.Now()) {
+			if time.Now().Add(periodToUse).After(maxTime) {
 				req.Auth.TTL = maxTime.Sub(time.Now())
 			} else {
 				req.Auth.TTL = periodToUse
