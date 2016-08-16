@@ -437,7 +437,7 @@ func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
 		return nil, ErrCannotForward
 	}
 
-	freq, err := requestutil.GenerateForwardedRequest(req, c.requestForwardingConnection.clusterAddr+"/cluster/forwarded-request")
+	freq, err := requestutil.GenerateForwardedRequest(req, c.requestForwardingConnection.clusterAddr+"/cluster/local/forwarded-request")
 	if err != nil {
 		c.logger.Printf("[ERR] core/ForwardRequest: error creating forwarded request: %v", err)
 		return nil, fmt.Errorf("error creating forwarding request")
@@ -453,7 +453,7 @@ func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
 func WrapListenersForClustering(addrs []string, handler http.Handler, logger *log.Logger) func() ([]net.Listener, http.Handler, error) {
 	// This mux handles cluster functions (right now, only forwarded requests)
 	mux := http.NewServeMux()
-	mux.HandleFunc("/cluster/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("/cluster/local/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
 		freq, err := requestutil.ParseForwardedRequest(req)
 		if err != nil {
 			if logger != nil {
