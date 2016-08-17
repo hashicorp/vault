@@ -15,7 +15,7 @@ package vault
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import forwarding "forwarding"
+import forwarding "github.com/hashicorp/vault/helper/forwarding"
 
 import (
 	context "golang.org/x/net/context"
@@ -41,64 +41,64 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion3
 
-// Client API for RequestHandler service
+// Client API for ForwardedRequestHandler service
 
-type RequestHandlerClient interface {
+type ForwardedRequestHandlerClient interface {
 	HandleRequest(ctx context.Context, in *forwarding.Request, opts ...grpc.CallOption) (*forwarding.Response, error)
 }
 
-type requestHandlerClient struct {
+type forwardedRequestHandlerClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewRequestHandlerClient(cc *grpc.ClientConn) RequestHandlerClient {
-	return &requestHandlerClient{cc}
+func NewForwardedRequestHandlerClient(cc *grpc.ClientConn) ForwardedRequestHandlerClient {
+	return &forwardedRequestHandlerClient{cc}
 }
 
-func (c *requestHandlerClient) HandleRequest(ctx context.Context, in *forwarding.Request, opts ...grpc.CallOption) (*forwarding.Response, error) {
+func (c *forwardedRequestHandlerClient) HandleRequest(ctx context.Context, in *forwarding.Request, opts ...grpc.CallOption) (*forwarding.Response, error) {
 	out := new(forwarding.Response)
-	err := grpc.Invoke(ctx, "/vault.RequestHandler/HandleRequest", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/vault.ForwardedRequestHandler/HandleRequest", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for RequestHandler service
+// Server API for ForwardedRequestHandler service
 
-type RequestHandlerServer interface {
+type ForwardedRequestHandlerServer interface {
 	HandleRequest(context.Context, *forwarding.Request) (*forwarding.Response, error)
 }
 
-func RegisterRequestHandlerServer(s *grpc.Server, srv RequestHandlerServer) {
-	s.RegisterService(&_RequestHandler_serviceDesc, srv)
+func RegisterForwardedRequestHandlerServer(s *grpc.Server, srv ForwardedRequestHandlerServer) {
+	s.RegisterService(&_ForwardedRequestHandler_serviceDesc, srv)
 }
 
-func _RequestHandler_HandleRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ForwardedRequestHandler_HandleRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(forwarding.Request)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RequestHandlerServer).HandleRequest(ctx, in)
+		return srv.(ForwardedRequestHandlerServer).HandleRequest(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/vault.RequestHandler/HandleRequest",
+		FullMethod: "/vault.ForwardedRequestHandler/HandleRequest",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RequestHandlerServer).HandleRequest(ctx, req.(*forwarding.Request))
+		return srv.(ForwardedRequestHandlerServer).HandleRequest(ctx, req.(*forwarding.Request))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _RequestHandler_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "vault.RequestHandler",
-	HandlerType: (*RequestHandlerServer)(nil),
+var _ForwardedRequestHandler_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "vault.ForwardedRequestHandler",
+	HandlerType: (*ForwardedRequestHandlerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "HandleRequest",
-			Handler:    _RequestHandler_HandleRequest_Handler,
+			Handler:    _ForwardedRequestHandler_HandleRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -108,13 +108,15 @@ var _RequestHandler_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("forwarding_service.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 120 bytes of a gzipped FileDescriptorProto
+	// 156 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x92, 0x48, 0xcb, 0x2f, 0x2a,
 	0x4f, 0x2c, 0x4a, 0xc9, 0xcc, 0x4b, 0x8f, 0x2f, 0x4e, 0x2d, 0x2a, 0xcb, 0x4c, 0x4e, 0xd5, 0x2b,
-	0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0x4b, 0x2c, 0xcd, 0x29, 0x91, 0x12, 0x43, 0x28, 0xd0,
-	0x2f, 0xa9, 0x2c, 0x48, 0x2d, 0x86, 0x48, 0x1b, 0xf9, 0x71, 0xf1, 0x05, 0xa5, 0x16, 0x96, 0xa6,
-	0x16, 0x97, 0x78, 0x24, 0xe6, 0xa5, 0xe4, 0xa4, 0x16, 0x09, 0xd9, 0x70, 0xf1, 0x42, 0x98, 0x50,
-	0x71, 0x21, 0x61, 0x3d, 0x84, 0x5e, 0x3d, 0xa8, 0xa0, 0x94, 0x08, 0xaa, 0x60, 0x71, 0x41, 0x7e,
-	0x5e, 0x71, 0xaa, 0x12, 0x43, 0x12, 0x1b, 0xd8, 0x58, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0x2f, 0x62, 0x9b, 0x83, 0x91, 0x00, 0x00, 0x00,
+	0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0x4b, 0x2c, 0xcd, 0x29, 0x91, 0xb2, 0x48, 0xcf, 0x2c,
+	0xc9, 0x28, 0x4d, 0xd2, 0x4b, 0xce, 0xcf, 0xd5, 0xcf, 0x48, 0x2c, 0xce, 0xc8, 0x4c, 0xce, 0x2f,
+	0x2a, 0xd0, 0x07, 0xcb, 0xe9, 0x67, 0xa4, 0xe6, 0x14, 0xa4, 0x16, 0xe9, 0x23, 0x8c, 0xd0, 0x2f,
+	0xa9, 0x2c, 0x48, 0x2d, 0x86, 0x18, 0x60, 0x14, 0xce, 0x25, 0xee, 0x06, 0x91, 0x49, 0x4d, 0x09,
+	0x4a, 0x2d, 0x2c, 0x4d, 0x2d, 0x2e, 0xf1, 0x48, 0xcc, 0x4b, 0xc9, 0x49, 0x2d, 0x12, 0xb2, 0xe1,
+	0xe2, 0x85, 0x30, 0xa1, 0xe2, 0x42, 0xc2, 0x7a, 0x08, 0x43, 0xf4, 0xa0, 0x82, 0x52, 0x22, 0xa8,
+	0x82, 0xc5, 0x05, 0xf9, 0x79, 0xc5, 0xa9, 0x4a, 0x0c, 0x49, 0x6c, 0x60, 0xf3, 0x8d, 0x01, 0x01,
+	0x00, 0x00, 0xff, 0xff, 0x4e, 0x32, 0x79, 0x01, 0xbc, 0x00, 0x00, 0x00,
 }

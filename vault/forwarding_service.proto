@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-import "forwarding/types.proto";
+import "github.com/hashicorp/vault/helper/forwarding/types.proto";
 
 package vault;
 
-service RequestHandler {
+service ForwardedRequestHandler {
 	rpc HandleRequest(forwarding.Request) returns (forwarding.Response) {}
 }

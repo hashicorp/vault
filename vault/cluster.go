@@ -19,6 +19,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
 
 	"github.com/hashicorp/go-uuid"
@@ -296,11 +297,13 @@ func (c *Core) startClusterListener() error {
 			Handler: handler,
 		}
 		http2.ConfigureServer(server, nil)
-		//server.TLSNextProto["forwarding_v1"] =
+		server.TLSNextProto["forwarding_v1"] = c.handleRPCForwardingRequest
+
 		c.logger.Printf("[TRACE] core/startClusterListener: serving cluster requests on %s", tlsLn.Addr())
 
 		c.forwardingService = grpc.NewServer()
-		c.forwardingService
+		RegisterForwardedRequestHandlerServer(c.forwardingService, &forwardedRequestRPCServer{})
+
 		go server.Serve(tlsLn)
 	}
 
@@ -378,7 +381,6 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs:  c.localClusterCertPool,
 		NextProtos: []string{
-			"h2",
 			"forwarding_v1",
 		},
 	}
@@ -507,5 +509,15 @@ func WrapListenersForClustering(addrs []string, handler http.Handler, logger *lo
 	}
 }
 
-func handleRPCForwardingRequest(server *http.Server, conn *tls.Conn, handler http.Handler) {
+type forwardedRequestRPCServer struct{}
+
+func (s *forwardedRequestRPCServer) HandleRequest(context.Context, *forwarding.Request) (*forwarding.Response, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (c *Core) handleRPCForwardingRequest(server *http.Server, conn *tls.Conn, handler http.Handler) {
+	h2s := &http2.Server{}
+	h2s.ServeConn(conn, &http2.ServeConnOpts{
+		Handler: c.forwardingService,
+	})
 }
