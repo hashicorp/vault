@@ -68,16 +68,16 @@ func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, er
 	switch os.Getenv("VAULT_MESSAGE_TYPE") {
 	case "json":
 		newBody, err = jsonutil.EncodeJSON(&fq)
-	case "proto3":
-		newBody, err = proto.Marshal(&fq)
-	case "msgpack":
-		newBody, err = msgpack.Marshal(&fq)
 	case "json_compress":
-		fallthrough
-	default:
 		newBody, err = jsonutil.EncodeJSONAndCompress(&fq, &compressutil.CompressionConfig{
 			Type: compressutil.CompressionTypeLzw,
 		})
+	case "msgpack":
+		newBody, err = msgpack.Marshal(&fq)
+	case "proto3":
+		fallthrough
+	default:
+		newBody, err = proto.Marshal(&fq)
 	}
 	if err != nil {
 		return nil, err
@@ -105,12 +105,12 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 
 	fq := new(ForwardedRequest)
 	switch os.Getenv("VAULT_MESSAGE_TYPE") {
-	case "proto3":
-		err = proto.Unmarshal(buf.Bytes(), fq)
+	case "json", "json_compress":
+		err = jsonutil.DecodeJSON(buf.Bytes(), fq)
 	case "msgpack":
 		err = msgpack.Unmarshal(buf.Bytes(), fq)
 	default:
-		err = jsonutil.DecodeJSON(buf.Bytes(), fq)
+		err = proto.Unmarshal(buf.Bytes(), fq)
 	}
 	if err != nil {
 		return nil, err
