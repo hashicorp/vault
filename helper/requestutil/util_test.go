@@ -35,17 +35,6 @@ func Benchmark_ForwardedRequest_GenerateParse_JSON_Compressed(b *testing.B) {
 	b.Logf("message size per op: %d", totalSize/numRuns)
 }
 
-func Benchmark_ForwardedRequest_GenerateParse_MsgPack(b *testing.B) {
-	os.Setenv("VAULT_MESSAGE_TYPE", "msgpack")
-	var totalSize int64
-	var numRuns int64
-	for i := 0; i < b.N; i++ {
-		totalSize += testForwardedRequestGenerateParse(b)
-		numRuns++
-	}
-	b.Logf("message size per op: %d", totalSize/numRuns)
-}
-
 func Benchmark_ForwardedRequest_GenerateParse_Proto3(b *testing.B) {
 	os.Setenv("VAULT_MESSAGE_TYPE", "proto3")
 	var totalSize int64

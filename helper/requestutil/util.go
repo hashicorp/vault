@@ -11,7 +11,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 type bufCloser struct {
@@ -72,8 +71,6 @@ func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, er
 		newBody, err = jsonutil.EncodeJSONAndCompress(&fq, &compressutil.CompressionConfig{
 			Type: compressutil.CompressionTypeLzw,
 		})
-	case "msgpack":
-		newBody, err = msgpack.Marshal(&fq)
 	case "proto3":
 		fallthrough
 	default:
@@ -107,8 +104,6 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 	switch os.Getenv("VAULT_MESSAGE_TYPE") {
 	case "json", "json_compress":
 		err = jsonutil.DecodeJSON(buf.Bytes(), fq)
-	case "msgpack":
-		err = msgpack.Unmarshal(buf.Bytes(), fq)
 	default:
 		err = proto.Unmarshal(buf.Bytes(), fq)
 	}
