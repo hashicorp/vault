@@ -25,7 +25,7 @@ The following table describes them:
   </tr>
   <tr>
     <td><tt>VAULT_ADDR</tt></td>
-    <td>The address of the Vault server.</td>
+    <td>The address of the Vault server expressed as a URL and port, for example: <tt>http://127.0.0.1:8200</tt></td>
   </tr>
     <tr>
     <td><tt>VAULT_CACERT</tt></td>
