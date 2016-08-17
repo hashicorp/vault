@@ -148,7 +148,7 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 			if err != nil {
 				return nil, err
 			}
-			req.TLS.PeerCertificates[i] = cert
+			ret.TLS.PeerCertificates[i] = cert
 		}
 	}
 

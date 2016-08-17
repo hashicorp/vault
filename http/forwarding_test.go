@@ -517,5 +517,19 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		if secret.Auth.Policies == nil || len(secret.Auth.Policies) == 0 || secret.Auth.Policies[0] != "default" {
 			t.Fatalf("bad policies: %#v", secret.Auth.Policies)
 		}
+		if secret.Auth.ClientToken == "" {
+			t.Fatalf("bad client token: %#v", *secret.Auth)
+		}
+		client.SetToken(secret.Auth.ClientToken)
+		secret, err = client.Auth().Token().LookupSelf()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if secret == nil {
+			t.Fatal("secret is nil")
+		}
+		if secret.Data == nil || len(secret.Data) == 0 {
+			t.Fatal("secret data was empty")
+		}
 	}
 }
