@@ -3,6 +3,7 @@ package requestutil
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"net/url"
 
@@ -38,20 +39,26 @@ type ForwardedRequest struct {
 	// The remote address
 	RemoteAddr string `json:"remote_addr"`
 
-	// The client's TLS connection state
-	ConnectionState *tls.ConnectionState `json:"connection_state"`
+	// The client's TLS peer certificates
+	PeerCertificates [][]byte `json:"peer_certificates"`
 }
 
 // GenerateForwardedRequest generates a new http.Request that contains the
 // original requests's information in the new request's body.
 func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, error) {
 	fq := ForwardedRequest{
-		Method:          req.Method,
-		URL:             req.URL,
-		Header:          req.Header,
-		Host:            req.Host,
-		RemoteAddr:      req.RemoteAddr,
-		ConnectionState: req.TLS,
+		Method:     req.Method,
+		URL:        req.URL,
+		Header:     req.Header,
+		Host:       req.Host,
+		RemoteAddr: req.RemoteAddr,
+	}
+
+	if req.TLS.PeerCertificates != nil && len(req.TLS.PeerCertificates) > 0 {
+		fq.PeerCertificates = make([][]byte, len(req.TLS.PeerCertificates))
+		for i, cert := range req.TLS.PeerCertificates {
+			fq.PeerCertificates[i] = cert.Raw
+		}
 	}
 
 	buf := bytes.NewBuffer(nil)
@@ -107,7 +114,19 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 		Body:       buf,
 		Host:       fq.Host,
 		RemoteAddr: fq.RemoteAddr,
-		TLS:        fq.ConnectionState,
+	}
+
+	if fq.PeerCertificates != nil && len(fq.PeerCertificates) > 0 {
+		ret.TLS = &tls.ConnectionState{
+			PeerCertificates: make([]*x509.Certificate, len(fq.PeerCertificates)),
+		}
+		for i, certBytes := range fq.PeerCertificates {
+			cert, err := x509.ParseCertificate(certBytes)
+			if err != nil {
+				return nil, err
+			}
+			req.TLS.PeerCertificates[i] = cert
+		}
 	}
 
 	return ret, nil
