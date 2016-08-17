@@ -8,11 +8,9 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/vault/helper/compressutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
-
-	fr "github.com/hashicorp/vault/helper/requestutil/proto"
 )
 
 type bufCloser struct {
@@ -27,15 +25,15 @@ func (b bufCloser) Close() error {
 // GenerateForwardedRequest generates a new http.Request that contains the
 // original requests's information in the new request's body.
 func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, error) {
-	fq := fr.ForwardedRequest{
+	fq := ForwardedRequest{
 		Method:        req.Method,
-		HeaderEntries: make(map[string]*fr.HeaderEntry, len(req.Header)),
+		HeaderEntries: make(map[string]*HeaderEntry, len(req.Header)),
 		Host:          req.Host,
 		RemoteAddr:    req.RemoteAddr,
 	}
 
 	reqURL := req.URL
-	fq.Url = &fr.URL{
+	fq.Url = &URL{
 		Scheme:   reqURL.Scheme,
 		Opaque:   reqURL.Opaque,
 		Host:     reqURL.Host,
@@ -46,12 +44,12 @@ func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, er
 	}
 
 	for k, v := range req.Header {
-		fq.HeaderEntries[k] = &fr.HeaderEntry{
+		fq.HeaderEntries[k] = &HeaderEntry{
 			Values: v,
 		}
 	}
 
-	if req.TLS.PeerCertificates != nil && len(req.TLS.PeerCertificates) > 0 {
+	if req.TLS != nil && req.TLS.PeerCertificates != nil && len(req.TLS.PeerCertificates) > 0 {
 		fq.PeerCertificates = make([][]byte, len(req.TLS.PeerCertificates))
 		for i, cert := range req.TLS.PeerCertificates {
 			fq.PeerCertificates[i] = cert.Raw
@@ -102,7 +100,7 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 		return nil, err
 	}
 
-	fq := new(fr.ForwardedRequest)
+	fq := new(ForwardedRequest)
 	switch os.Getenv("VAULT_MESSAGE_TYPE") {
 	case "proto3":
 		err = proto.Unmarshal(buf.Bytes(), fq)

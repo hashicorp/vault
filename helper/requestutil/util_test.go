@@ -3,22 +3,54 @@ package requestutil
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 )
 
-func TestForwardedRequestGenerateParse(t *testing.T) {
+func Test_ForwardedRequest_GenerateParse(t *testing.T) {
+	testForwardedRequestGenerateParse(t)
+}
+
+func Benchmark_ForwardedRequest_GenerateParse_JSON(b *testing.B) {
+	os.Setenv("VAULT_MESSAGE_TYPE", "json")
+	var totalSize int64
+	var numRuns int64
+	for i := 0; i < b.N; i++ {
+		totalSize += testForwardedRequestGenerateParse(b)
+		numRuns++
+	}
+	b.Logf("message size per op: %d", totalSize/numRuns)
+}
+
+func Benchmark_ForwardedRequest_GenerateParse_JSON_Compressed(b *testing.B) {
+	os.Setenv("VAULT_MESSAGE_TYPE", "json_compress")
+	var totalSize int64
+	var numRuns int64
+	for i := 0; i < b.N; i++ {
+		totalSize += testForwardedRequestGenerateParse(b)
+		numRuns++
+	}
+	b.Logf("message size per op: %d", totalSize/numRuns)
+}
+
+func Benchmark_ForwardedRequest_GenerateParse_Proto3(b *testing.B) {
+	os.Setenv("VAULT_MESSAGE_TYPE", "proto3")
+	var totalSize int64
+	var numRuns int64
+	for i := 0; i < b.N; i++ {
+		totalSize += testForwardedRequestGenerateParse(b)
+		numRuns++
+	}
+	b.Logf("message size per op: %d", totalSize/numRuns)
+}
+
+func testForwardedRequestGenerateParse(t testing.TB) int64 {
 	bodBuf := bytes.NewReader([]byte(`{ "foo": "bar", "zip": { "argle": "bargle", neet: 0 } }`))
 	req, err := http.NewRequest("FOOBAR", "https://pushit.real.good:9281/snicketysnack?furbleburble=bloopetybloop", bodBuf)
 	if err != nil {
 		t.Fatal(err)
-	}
-	req.TLS = &tls.ConnectionState{
-		Version:           tls.VersionTLS12,
-		HandshakeComplete: true,
-		ServerName:        "tralala",
 	}
 
 	// We want to get the fields we would expect from an incoming request, so
@@ -48,6 +80,7 @@ func TestForwardedRequestGenerateParse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	size := int64(buf2.Len())
 	bufr2 := bufio.NewReader(buf2)
 	intreq, err := http.ReadRequest(bufr2)
 	if err != nil {
@@ -71,8 +104,6 @@ func TestForwardedRequestGenerateParse(t *testing.T) {
 		t.Fatalf("bad url:\ninitialReq:\n%#v\nfinalReq:\n%#v\n", *initialReq.URL, *finalReq.URL)
 	case !reflect.DeepEqual(initialReq.Header, finalReq.Header):
 		t.Fatalf("bad header:\ninitialReq:\n%#v\nfinalReq:\n%#v\n", *initialReq, *finalReq)
-	case !reflect.DeepEqual(initialReq.TLS, finalReq.TLS):
-		t.Fatalf("bad tls:\ninitialReq:\n%#v\nfinalReq:\n%#v\n", *initialReq, *finalReq)
 	default:
 		// Compare bodies
 		bodBuf.Seek(0, 0)
@@ -90,4 +121,6 @@ func TestForwardedRequestGenerateParse(t *testing.T) {
 			t.Fatalf("badbody :\ninitialReq:\n%#v\nfinalReq:\n%#v\n", initBuf.Bytes(), finBuf.Bytes())
 		}
 	}
+
+	return size
 }

@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package requestutil;
+
 message ForwardedRequest {
 	string method = 1;
 	URL url = 2;
