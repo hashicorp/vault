@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
@@ -271,6 +273,7 @@ type Core struct {
 	// Cache of most recently known active advertisement information, used to
 	// return values when the hash matches
 	clusterActiveAdvertisement activeAdvertisement
+	forwardingService          *grpc.Server
 }
 
 // CoreConfig is used to parameterize a core

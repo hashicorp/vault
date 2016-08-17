@@ -1,4 +1,4 @@
-package requestutil
+package forwarding
 
 import (
 	"bytes"
@@ -25,7 +25,7 @@ func (b bufCloser) Close() error {
 // GenerateForwardedRequest generates a new http.Request that contains the
 // original requests's information in the new request's body.
 func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, error) {
-	fq := ForwardedRequest{
+	fq := Request{
 		Method:        req.Method,
 		HeaderEntries: make(map[string]*HeaderEntry, len(req.Header)),
 		Host:          req.Host,
@@ -100,7 +100,7 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 		return nil, err
 	}
 
-	fq := new(ForwardedRequest)
+	fq := new(Request)
 	switch os.Getenv("VAULT_MESSAGE_TYPE") {
 	case "json", "json_compress":
 		err = jsonutil.DecodeJSON(buf.Bytes(), fq)

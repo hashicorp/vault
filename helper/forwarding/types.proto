@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package requestutil;
+package forwarding;
 
-message ForwardedRequest {
+message Request {
 	string method = 1;
 	URL url = 2;
 	map<string, HeaderEntry> header_entries = 3;
@@ -29,4 +29,9 @@ message URL {
 
 message HeaderEntry {
 	repeated string values = 1;
+}
+
+message Response {
+	uint32 status_code = 1;
+	bytes body = 2;
 }

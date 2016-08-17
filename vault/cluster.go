@@ -17,11 +17,13 @@ import (
 	"net/http"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"golang.org/x/net/http2"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/requestutil"
 )
 
 const (
@@ -294,7 +296,11 @@ func (c *Core) startClusterListener() error {
 			Handler: handler,
 		}
 		http2.ConfigureServer(server, nil)
+		//server.TLSNextProto["forwarding_v1"] =
 		c.logger.Printf("[TRACE] core/startClusterListener: serving cluster requests on %s", tlsLn.Addr())
+
+		c.forwardingService = grpc.NewServer()
+		c.forwardingService
 		go server.Serve(tlsLn)
 	}
 
@@ -304,6 +310,8 @@ func (c *Core) startClusterListener() error {
 	go func() {
 		<-c.clusterListenerShutdownCh
 		c.logger.Printf("[TRACE] core/startClusterListener: shutting down listeners")
+		c.forwardingService.Stop()
+		c.forwardingService = nil
 		for _, tlsLn := range tlsLns {
 			tlsLn.Close()
 		}
@@ -371,6 +379,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		ClientCAs:  c.localClusterCertPool,
 		NextProtos: []string{
 			"h2",
+			"forwarding_v1",
 		},
 	}
 
@@ -437,7 +446,7 @@ func (c *Core) ForwardRequest(req *http.Request) (*http.Response, error) {
 		return nil, ErrCannotForward
 	}
 
-	freq, err := requestutil.GenerateForwardedRequest(req, c.requestForwardingConnection.clusterAddr+"/cluster/local/forwarded-request")
+	freq, err := forwarding.GenerateForwardedRequest(req, c.requestForwardingConnection.clusterAddr+"/cluster/local/forwarded-request")
 	if err != nil {
 		c.logger.Printf("[ERR] core/ForwardRequest: error creating forwarded request: %v", err)
 		return nil, fmt.Errorf("error creating forwarding request")
@@ -454,7 +463,7 @@ func WrapListenersForClustering(addrs []string, handler http.Handler, logger *lo
 	// This mux handles cluster functions (right now, only forwarded requests)
 	mux := http.NewServeMux()
 	mux.HandleFunc("/cluster/local/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
-		freq, err := requestutil.ParseForwardedRequest(req)
+		freq, err := forwarding.ParseForwardedRequest(req)
 		if err != nil {
 			if logger != nil {
 				logger.Printf("[ERR] http/ForwardedRequestHandler: error parsing forwarded request: %v", err)
@@ -496,4 +505,7 @@ func WrapListenersForClustering(addrs []string, handler http.Handler, logger *lo
 
 		return ret, mux, nil
 	}
+}
+
+func handleRPCForwardingRequest(server *http.Server, conn *tls.Conn, handler http.Handler) {
 }
