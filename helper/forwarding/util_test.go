@@ -69,7 +69,7 @@ func testForwardedRequestGenerateParse(t testing.TB) int64 {
 	}
 
 	// Generate the request with the forwarded request in the body
-	req, err = GenerateForwardedRequest(initialReq, "https://bloopety.bloop:8201")
+	req, err = GenerateForwardedHTTPRequest(initialReq, "https://bloopety.bloop:8201")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func testForwardedRequestGenerateParse(t testing.TB) int64 {
 	}
 
 	// Now extract the forwarded request to generate a final request for processing
-	finalReq, err := ParseForwardedRequest(intreq)
+	finalReq, err := ParseForwardedHTTPRequest(intreq)
 	if err != nil {
 		t.Fatal(err)
 	}
