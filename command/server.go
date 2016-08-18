@@ -365,7 +365,7 @@ func (c *ServerCommand) Run(args []string) int {
 			var addr string
 			var ok bool
 			if addr, ok = lnConfig.Config["cluster_address"]; ok {
-				tcpAddr := net.ResolveTCPAddr("tcp", addr)
+				tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 				if err != nil {
 					c.Ui.Error(fmt.Sprintf(
 						"Error resolving cluster_address: %s",
