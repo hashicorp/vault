@@ -602,7 +602,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 			c.requestForwardingConnectionLock.Lock()
 			// Verify that the condition hasn't changed
 			if c.requestForwardingConnection != nil {
-				c.requestForwardingConnection.Transport.(*http.Transport).CloseIdleConnections()
+				c.requestForwardingConnection.transport.CloseIdleConnections()
 			}
 			c.requestForwardingConnection = nil
 			c.requestForwardingConnectionLock.Unlock()

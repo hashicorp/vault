@@ -180,11 +180,6 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 		fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[2].Listeners[0].Address.Port),
 	}
 
-	/*
-		transport := cleanhttp.DefaultPooledTransport()
-		transport.TLSClientConfig = cores[0].TLSConfig
-	*/
-
 	transport := &http.Transport{
 		TLSClientConfig: cores[0].TLSConfig,
 	}
@@ -210,24 +205,29 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 	}
 	//core.Logger().Printf("[TRACE] done mounting transit")
 
-	var totalOps int64
-	var successfulOps int64
+	var totalOps uint64
+	var successfulOps uint64
 	var key1ver int64 = 1
 	var key2ver int64 = 1
 	var key3ver int64 = 1
-	var numWorkers int64 = 20
-	var numWorkersStarted int64
+	var numWorkers uint64 = 50
+	var numWorkersStarted uint64
 	var waitLock sync.Mutex
 	waitCond := sync.NewCond(&waitLock)
 
 	// This is the goroutine loop
-	doFuzzy := func(id int) {
+	doFuzzy := func(id int, parallel bool) {
+		var myTotalOps uint64
+		var mySuccessfulOps uint64
+		var keyVer int64 = 1
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
-				//core.Logger().Printf("[ERR] got a panic: %v", err)
+				core.Logger().Printf("[ERR] got a panic: %v", err)
 				t.Fail()
 			}
+			atomic.AddUint64(&totalOps, myTotalOps)
+			atomic.AddUint64(&successfulOps, mySuccessfulOps)
 			wg.Done()
 		}()
 
@@ -283,14 +283,24 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 		for _, chosenHost := range hosts {
 			for _, chosenKey := range keys {
 				// Try to write the key to make sure it exists
-				_, err := doReq("POST", chosenHost+"keys/"+chosenKey, bytes.NewBuffer([]byte("{}")))
+				_, err := doReq("POST", chosenHost+"keys/"+fmt.Sprintf("%s-%t", chosenKey, parallel), bytes.NewBuffer([]byte("{}")))
 				if err != nil {
 					panic(err)
 				}
 			}
 		}
 
-		atomic.AddInt64(&numWorkersStarted, 1)
+		if !parallel {
+			chosenHost = hosts[id%len(hosts)]
+			chosenKey = fmt.Sprintf("key-%t-%d", parallel, id)
+
+			_, err := doReq("POST", chosenHost+"keys/"+chosenKey, bytes.NewBuffer([]byte("{}")))
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		atomic.AddUint64(&numWorkersStarted, 1)
 
 		waitCond.L.Lock()
 		for numWorkersStarted != numWorkers {
@@ -308,12 +318,14 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 				return
 			}
 
-			atomic.AddInt64(&totalOps, 1)
+			myTotalOps++
 
 			// Pick a function and a key
 			chosenFunc = funcs[myRand.Int()%len(funcs)]
-			chosenKey = keys[myRand.Int()%len(keys)]
-			chosenHost = hosts[myRand.Int()%len(hosts)]
+			if parallel {
+				chosenKey = fmt.Sprintf("%s-%t", keys[myRand.Int()%len(keys)], parallel)
+				chosenHost = hosts[myRand.Int()%len(hosts)]
+			}
 
 			switch chosenFunc {
 			// Encrypt our plaintext and store the result
@@ -335,13 +347,13 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 				}
 				latestEncryptedText[chosenKey] = secret.Data["ciphertext"].(string)
 
-				atomic.AddInt64(&successfulOps, 1)
+				mySuccessfulOps++
 
 			// Decrypt the ciphertext and compare the result
 			case "decrypt":
 				ct := latestEncryptedText[chosenKey]
 				if ct == "" {
-					atomic.AddInt64(&successfulOps, 1)
+					mySuccessfulOps++
 					continue
 				}
 
@@ -355,7 +367,7 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 				if err != nil {
 					// This could well happen since the min version is jumping around
 					if strings.Contains(err.Error(), transit.ErrTooOld) {
-						atomic.AddInt64(&successfulOps, 1)
+						mySuccessfulOps++
 						continue
 					}
 					panic(err)
@@ -370,7 +382,7 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 					panic(fmt.Errorf("got bad plaintext back: %s", pt))
 				}
 
-				atomic.AddInt64(&successfulOps, 1)
+				mySuccessfulOps++
 
 			// Rotate to a new key version
 			case "rotate":
@@ -379,26 +391,33 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 				if err != nil {
 					panic(err)
 				}
-				switch chosenKey {
-				case "test1":
-					atomic.AddInt64(&key1ver, 1)
-				case "test2":
-					atomic.AddInt64(&key2ver, 1)
-				case "test3":
-					atomic.AddInt64(&key3ver, 1)
+				if parallel {
+					switch chosenKey {
+					case "test1":
+						atomic.AddInt64(&key1ver, 1)
+					case "test2":
+						atomic.AddInt64(&key2ver, 1)
+					case "test3":
+						atomic.AddInt64(&key3ver, 1)
+					}
+				} else {
+					keyVer++
 				}
-				atomic.AddInt64(&successfulOps, 1)
+
+				mySuccessfulOps++
 
 			// Change the min version, which also tests the archive functionality
 			case "change_min_version":
-				var latestVersion int64
-				switch chosenKey {
-				case "test1":
-					latestVersion = atomic.LoadInt64(&key1ver)
-				case "test2":
-					latestVersion = atomic.LoadInt64(&key2ver)
-				case "test3":
-					latestVersion = atomic.LoadInt64(&key3ver)
+				var latestVersion int64 = keyVer
+				if parallel {
+					switch chosenKey {
+					case "test1":
+						latestVersion = atomic.LoadInt64(&key1ver)
+					case "test2":
+						latestVersion = atomic.LoadInt64(&key2ver)
+					case "test3":
+						latestVersion = atomic.LoadInt64(&key3ver)
+					}
 				}
 
 				setVersion := (myRand.Int63() % latestVersion) + 1
@@ -410,16 +429,16 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 					panic(err)
 				}
 
-				atomic.AddInt64(&successfulOps, 1)
+				mySuccessfulOps++
 			}
 		}
 	}
 
-	// Spawn 20 of these workers for 10 seconds
-	for i := 0; i < int(atomic.LoadInt64(&numWorkers)); i++ {
+	// Spawn some of these workers for 10 seconds
+	for i := 0; i < int(atomic.LoadUint64(&numWorkers)); i++ {
 		wg.Add(1)
 		//core.Logger().Printf("[TRACE] spawning %d", i)
-		go doFuzzy(i + 1)
+		go doFuzzy(i+1, false)
 	}
 
 	// Wait for them all to finish
@@ -429,6 +448,14 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 		t.Fatalf("total/successful ops zero or mismatch: %d/%d", totalOps, successfulOps)
 	}
 	t.Logf("total operations tried: %d, total successful: %d", totalOps, successfulOps)
+
+	totalOps = 0
+	successfulOps = 0
+	key1ver = 0
+	key2ver = 0
+	key3ver = 0
+	numWorkersStarted = 0
+
 }
 
 // This tests TLS connection state forwarding by ensuring that we can use a
