@@ -3,13 +3,16 @@ syntax = "proto3";
 package forwarding;
 
 message Request {
-	string method = 1;
-	URL url = 2;
-	map<string, HeaderEntry> header_entries = 3;
-	bytes body = 4;
-	string host = 5;
-	string remote_addr = 6;
-	repeated bytes peer_certificates = 7;
+	// Not used right now but reserving in case it turns out that streaming
+	// makes things more economical on the gRPC side
+	//uint64 id = 1;
+	string method = 2;
+	URL url = 3;
+	map<string, HeaderEntry> header_entries = 4;
+	bytes body = 5;
+	string host = 6;
+	string remote_addr = 7;
+	repeated bytes peer_certificates = 8;
 }
 
 message URL {
@@ -32,6 +35,9 @@ message HeaderEntry {
 }
 
 message Response {
-	uint32 status_code = 1;
-	bytes body = 2;
+	// Not used right now but reserving in case it turns out that streaming
+	// makes things more economical on the gRPC side
+	//uint64 id = 1;
+	uint32 status_code = 2;
+	bytes body = 3;
 }
