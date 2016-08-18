@@ -6,7 +6,7 @@ services:
   - docker
 
 go:
-  - 1.7rc6
+  - 1.7
 
 matrix:
   allow_failures:
