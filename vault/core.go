@@ -274,8 +274,10 @@ type Core struct {
 	// Cache of most recently known active advertisement information, used to
 	// return values when the hash matches
 	clusterActiveAdvertisement activeAdvertisement
-	forwardingService          *grpc.Server
-	forwardingClient           ForwardedRequestHandlerClient
+	// The grpc Server that handles server RPC calls
+	rpcServer *grpc.Server
+	// The grpc forwarding client
+	forwardingClient ForwardedRequestHandlerClient
 }
 
 // CoreConfig is used to parameterize a core

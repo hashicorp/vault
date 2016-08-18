@@ -27,8 +27,8 @@ func (c *Core) startForwarding(lns []net.Listener) error {
 	}
 	tlsConfig.NextProtos = []string{"h2", "req_fw_sb-act_v1"}
 
-	c.forwardingService = grpc.NewServer()
-	RegisterForwardedRequestHandlerServer(c.forwardingService, &forwardedRequestRPCServer{
+	c.rpcServer = grpc.NewServer()
+	RegisterForwardedRequestHandlerServer(c.rpcServer, &forwardedRequestRPCServer{
 		core:    c,
 		handler: baseHandler,
 	})
@@ -73,7 +73,7 @@ func (c *Core) startForwarding(lns []net.Listener) error {
 					case "req_fw_sb-act_v1":
 						c.logger.Printf("[TRACE] core/startClusterListener/Accept: got req_fw_sb-act_v1 connection")
 						go fws.ServeConn(conn, &http2.ServeConnOpts{
-							Handler: c.forwardingService,
+							Handler: c.rpcServer,
 						})
 
 					default:
@@ -92,8 +92,8 @@ func (c *Core) startForwarding(lns []net.Listener) error {
 	go func() {
 		<-c.clusterListenerShutdownCh
 		c.logger.Printf("[TRACE] core/startClusterListener: shutting down listeners")
-		c.forwardingService.Stop()
-		c.forwardingService = nil
+		c.rpcServer.Stop()
+		c.rpcServer = nil
 		for _, tlsLn := range tlsLns {
 			tlsLn.Close()
 		}
