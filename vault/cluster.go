@@ -251,42 +251,31 @@ func (c *Core) setupCluster() error {
 
 // SetClusterSetupFunc sets the listener setup func, which is used to
 // know which ports to listen on and a handler to use.
-func (c *Core) SetClusterSetupFuncs(listener func() ([]net.Listener, error), handler func() (http.Handler, http.Handler)) {
-	c.clusterListenerSetupFunc = listener
+func (c *Core) SetClusterSetupFuncs(handler func() (http.Handler, http.Handler)) {
 	c.clusterHandlerSetupFunc = handler
 }
 
 // startClusterListener starts cluster request listeners during postunseal. It
 // is assumed that the state lock is held while this is run.
 func (c *Core) startClusterListener() error {
-	if c.clusterListenerShutdownCh != nil {
-		c.logger.Printf("[ERR] core/startClusterListener: attempt to set up cluster listeners when already set up")
-		return fmt.Errorf("cluster listeners already setup")
-	}
-
-	if c.clusterListenerSetupFunc == nil {
-		c.logger.Printf("[ERR] core/startClusterListener: cluster listener setup function has not been set")
-		return fmt.Errorf("cluster listener setup function has not been set")
-	}
-
 	if c.clusterHandlerSetupFunc == nil {
 		c.logger.Printf("[ERR] core/startClusterListener: cluster handler setup function has not been set")
 		return fmt.Errorf("cluster handler setup function has not been set")
 	}
 
 	if c.clusterAddr == "" {
-		c.logger.Printf("[TRACE] core/startClusterListener: clustering disabled, starting listeners")
+		c.logger.Printf("[TRACE] core/startClusterListener: clustering disabled, not starting listeners")
 		return nil
+	}
+
+	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
+		c.logger.Printf("[TRACE] core/startClusterListener: clustering not disabled but no addresses to listen on")
+		return fmt.Errorf("cluster addresses not found")
 	}
 
 	c.logger.Printf("[TRACE] core/startClusterListener: starting listeners")
 
-	lns, err := c.clusterListenerSetupFunc()
-	if err != nil {
-		return err
-	}
-
-	err = c.startForwarding(lns)
+	err := c.startForwarding()
 	if err != nil {
 		return err
 	}
@@ -297,20 +286,20 @@ func (c *Core) startClusterListener() error {
 // stopClusterListener stops any existing listeners during preseal. It is
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
-	c.logger.Printf("[TRACE] core/stopClusterListener: stopping listeners")
-	if c.clusterListenerShutdownCh != nil {
-		close(c.clusterListenerShutdownCh)
-		defer func() { c.clusterListenerShutdownCh = nil }()
+	if c.clusterAddr == "" {
+		c.logger.Printf("[TRACE] core/stopClusterListener: clustering disabled, nothing to do")
+		return
 	}
+
+	c.logger.Printf("[TRACE] core/stopClusterListener: stopping listeners")
+	c.clusterListenerShutdownCh <- struct{}{}
 
 	// The reason for this loop-de-loop is that we may be unsealing again
 	// quickly, and if the listeners are not yet closed, we will get socket
 	// bind errors. This ensures proper ordering.
-	if c.clusterListenerShutdownSuccessCh == nil {
-		return
-	}
+	c.logger.Printf("[TRACE] core/stopClusterListener: waiting for success notification")
 	<-c.clusterListenerShutdownSuccessCh
-	defer func() { c.clusterListenerShutdownSuccessCh = nil }()
+	c.logger.Printf("[TRACE] core/stopClusterListener: success")
 }
 
 // ClusterTLSConfig generates a TLS configuration based on the local cluster
@@ -353,6 +342,10 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 	}
 
 	return tlsConfig, nil
+}
+
+func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
+	c.clusterListenerAddrs = addrs
 }
 
 // WrapHandlerForClustering takes in Vault's HTTP handler and returns a setup

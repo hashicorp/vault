@@ -282,7 +282,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uin
 			}
 
 			result := &api.Response{Response: resp}
-			err = result.Error()
+			err := result.Error()
 			if err != nil {
 				return nil, err
 			}
@@ -318,7 +318,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uin
 		atomic.AddUint64(&numWorkersStarted, 1)
 
 		waitCond.L.Lock()
-		for numWorkersStarted != numWorkers {
+		for atomic.LoadUint64(&numWorkersStarted) != numWorkers {
 			waitCond.Wait()
 		}
 		waitCond.L.Unlock()
