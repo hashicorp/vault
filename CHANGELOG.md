@@ -7,6 +7,10 @@ DEPRECATIONS/BREAKING CHANGES:
    instructions](https://www.vaultproject.io/docs/install/upgrade.html) in
    addition to 0.6.1-specific upgrade instructions to ensure that this is not
    an issue.
+ * Status codes for sealed/uninitialized Vaults have changed to `503`/`501`
+   respectively. See the [version-specific upgrade
+   guide](https://www.vaultproject.io/docs/install/upgrade-to-0.6.1.html) for
+   more details. 
  * Root tokens (tokens with the `root` policy) can no longer be created except
    by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
