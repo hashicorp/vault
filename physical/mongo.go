@@ -2,8 +2,9 @@ package physical
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
-	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/url"
@@ -16,9 +17,12 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+// this part was derived from and adjusted for our needs from:
+//   builtin/logical/mongodb/util.go
+//
 // Unfortunately, mgo doesn't support the ssl parameter in its MongoDB URI parsing logic, so we have to handle that
 // ourselves. See https://github.com/go-mgo/mgo/issues/84
-func parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
+func (b *MongoBackend) parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
 	uri, err := url.Parse(rawUri)
 	if err != nil {
 		return nil, err
@@ -34,6 +38,8 @@ func parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
 		info.Username = uri.User.Username()
 		info.Password, _ = uri.User.Password()
 	}
+
+	uriSsl := false
 
 	query := uri.Query()
 	for key, values := range query {
@@ -63,9 +69,7 @@ func parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
 				return nil, errors.New("bad value for ssl: " + value)
 			}
 			if ssl {
-				info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-					return tls.Dial("tcp", addr.String(), &tls.Config{})
-				}
+				uriSsl = true
 			}
 		case "connect":
 			if value == "direct" {
@@ -81,9 +85,47 @@ func parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
 		}
 	}
 
+	// deal with TLS
+	if uriSsl || b.tls {
+		tlsConfig := tls.Config{}
+
+		if b.tlsSkipVerify {
+			tlsConfig.InsecureSkipVerify = true
+		}
+
+		if b.tlsCAFile != "" {
+			caBytes, err := ioutil.ReadFile(b.tlsCAFile)
+			if err != nil {
+				return nil, errors.New("could not read CA data from '" + b.tlsCAFile + "'")
+			}
+			caPool := x509.NewCertPool()
+			ok := caPool.AppendCertsFromPEM(caBytes)
+			if !ok {
+				b.logger.Printf("[WARN]: physical/mongo: could not parse CAs from '%v'. Are you sure they are PEM encoded?", b.tlsCAFile)
+			}
+			tlsConfig.RootCAs = caPool
+		}
+
+		if b.tlsKeyFile != "" && b.tlsCertFile != "" {
+			cert, err := tls.LoadX509KeyPair(b.tlsCertFile, b.tlsKeyFile)
+			if err != nil {
+				return nil, errors.New("could not load cert and/or key from '" + b.tlsCertFile + " / '" + b.tlsKeyFile + "'")
+			}
+
+			tlsConfig.Certificates = []tls.Certificate{cert}
+		}
+
+		info.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+			return tls.Dial("tcp", addr.String(), &tlsConfig)
+		}
+	}
+
 	return &info, nil
 }
 
+// this part was derived from and adjusted for our needs from:
+//   builtin/logical/mongodb/backend.go
+//
 func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
@@ -95,13 +137,15 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 		b.session.Close()
 	}
 
-	dialInfo, err := parseMongoURI(b.Url)
+	dialInfo, err := b.parseMongoURI(b.Url)
 	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not parse MongoDB URI: %v", err)
 		return nil, err
 	}
 
 	b.session, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not establish connection to MongoDB: %v", err)
 		return nil, err
 	}
 	b.session.SetSyncTimeout(1 * time.Minute)
@@ -117,19 +161,24 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 
 // MongoBackend is a physical backend that stores data on disk
 type MongoBackend struct {
-	Url        string
-	Database   string
-	Collection string
-	l          sync.Mutex
-	session    *mgo.Session
-	logger     *log.Logger
+	Url           string
+	Database      string
+	Collection    string
+	l             sync.Mutex
+	session       *mgo.Session
+	logger        *log.Logger
+	tls           bool
+	tlsSkipVerify bool
+	tlsCertFile   string
+	tlsKeyFile    string
+	tlsCAFile     string
 }
 
 // newMongoBackend constructs a MongoBackend using the given directory
 func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
 	url, ok := conf["url"]
 	if !ok {
-		return nil, fmt.Errorf("'url' must be set")
+		url = "mongodb://127.0.0.1:27017/vault"
 	}
 
 	database, ok := conf["database"]
@@ -142,12 +191,46 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 		collection = "vault"
 	}
 
+	tls := false
+	_, ok = conf["tls"]
+	if ok {
+		tls = true
+	}
+
+	tlsSkipVerify := false
+	_, ok = conf["tls_skip_verify"]
+	if ok {
+		tlsSkipVerify = true
+	}
+
+	tlsCAFile, ok := conf["tls_ca_file"]
+	if !ok {
+		tlsCAFile = ""
+	}
+
+	tlsCertFile, ok := conf["tls_cert_file"]
+	if !ok {
+		tlsCertFile = ""
+	}
+
+	tlsKeyFile, ok := conf["tls_key_file"]
+	if !ok {
+		tlsKeyFile = ""
+	}
+
+	// TODO: add TLS config options
+
 	logger.Printf("[DEBUG]: physical/mongo: newMongoBackend: (%v, %v, %v)", url, database, collection)
 	return &MongoBackend{
-		Url:        url,
-		Database:   database,
-		Collection: collection,
-		logger:     logger,
+		Url:           url,
+		Database:      database,
+		Collection:    collection,
+		logger:        logger,
+		tls:           tls,
+		tlsSkipVerify: tlsSkipVerify,
+		tlsCAFile:     tlsCAFile,
+		tlsCertFile:   tlsCertFile,
+		tlsKeyFile:    tlsKeyFile,
 	}, nil
 }
 
@@ -225,6 +308,8 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 
 	var results []string
 
+	// The prefix needs to get its slashes replaced with '\/' so that it can form
+	// a proper regex
 	p := strings.Replace(prefix, "/", "\\/", -1)
 	regex := `^` + p + `[^/]*`
 
@@ -235,6 +320,7 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 	var result Entry
 	for iter.Next(&result) {
 		b.logger.Printf("[DEBUG]: physical/mongo: List(%v): Next(%v)", prefix, result)
+		// we remove the prefix from the result and add it to the return list
 		results = append(results, strings.TrimPrefix(result.Key, prefix))
 	}
 
@@ -248,10 +334,3 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 
 	return results, nil
 }
-
-// func (b *MongoBackend) path(k string) (string, string) {
-// 	path := filepath.Join(b.Path, k)
-// 	key := filepath.Base(path)
-// 	path = filepath.Dir(path)
-// 	return path, "_" + key
-// }
