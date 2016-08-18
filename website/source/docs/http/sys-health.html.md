@@ -44,7 +44,14 @@ description: |-
             <span class="param">sealedcode</span>
             <span class="param-flags">optional</span>
             A query parameter provided to indicate the status code that should
-            be returned for a sealed node instead of the default of `500`
+            be returned for a sealed node instead of the default of `503`
+          </li>
+          <li>
+            <span class="param">uninitcode</span>
+            <span class="param-flags">optional</span>
+            A query parameter provided to indicate the status code that should
+            be returned for an uninitialized Vault instead of the default of
+            `501`
           </li>
         </ul>
     </dd>

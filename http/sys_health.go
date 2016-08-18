@@ -73,9 +73,14 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	// Check if being a standby is allowed for the purpose of a 200 OK
 	_, standbyOK := r.URL.Query()["standbyok"]
 
-	// FIXME: Change the sealed code to http.StatusServiceUnavailable at some
-	// point
-	sealedCode := http.StatusInternalServerError
+	uninitCode := http.StatusNotImplemented
+	if code, found, ok := fetchStatusCode(r, "uninitcode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		uninitCode = code
+	}
+
+	sealedCode := http.StatusServiceUnavailable
 	if code, found, ok := fetchStatusCode(r, "sealedcode"); !ok {
 		return http.StatusBadRequest, nil, nil
 	} else if found {
@@ -108,7 +113,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	code := activeCode
 	switch {
 	case !init:
-		code = http.StatusInternalServerError
+		code = uninitCode
 	case sealed:
 		code = sealedCode
 	case !standbyOK && standby:
