@@ -411,6 +411,10 @@ func (b *backend) pathLoginUpdate(
 		resp.Auth.TTL = shortestMaxTTL
 	}
 
+	if resp.Auth.TTL == 0 {
+		resp.Auth.TTL = shortestMaxTTL
+	}
+
 	return resp, nil
 
 }
