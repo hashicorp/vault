@@ -405,17 +405,15 @@ func (b *backend) pathLoginUpdate(
 		},
 	}
 
+	// Cap the TTL value.
 	shortestTTL := b.System().DefaultLeaseTTL()
 	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
 		shortestTTL = roleEntry.TTL
 	}
-
-	// Cap the TTL value.
 	if shortestMaxTTL < shortestTTL {
 		resp.AddWarning(fmt.Sprintf("Effective ttl of %d exceeded the effective max_ttl of %d; ttl value is capped appropriately", shortestTTL/time.Second, shortestMaxTTL/time.Second))
 		shortestTTL = shortestMaxTTL
 	}
-
 	resp.Auth.TTL = shortestTTL
 
 	return resp, nil
@@ -556,6 +554,15 @@ func (b *backend) pathLoginRenew(
 		longestMaxTTL = rTagMaxTTL
 	}
 
+	// Cap the TTL value.
+	shortestTTL := b.System().DefaultLeaseTTL()
+	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
+		shortestTTL = roleEntry.TTL
+	}
+	if shortestMaxTTL < shortestTTL {
+		shortestTTL = shortestMaxTTL
+	}
+
 	// Only LastUpdatedTime and ExpirationTime change and all other fields remain the same.
 	currentTime := time.Now()
 	storedIdentity.LastUpdatedTime = currentTime
@@ -565,7 +572,7 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 
-	return framework.LeaseExtend(roleEntry.TTL, shortestMaxTTL, b.System())(req, data)
+	return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
 }
 
 // Struct to represent items of interest from the EC2 instance identity document.
