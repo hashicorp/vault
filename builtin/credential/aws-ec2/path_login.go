@@ -411,7 +411,7 @@ func (b *backend) pathLoginUpdate(
 		shortestTTL = roleEntry.TTL
 	}
 	if shortestMaxTTL < shortestTTL {
-		resp.AddWarning(fmt.Sprintf("Effective ttl of %d exceeded the effective max_ttl of %d; ttl value is capped appropriately", shortestTTL/time.Second, shortestMaxTTL/time.Second))
+		resp.AddWarning(fmt.Sprintf("Effective ttl of %q exceeded the effective max_ttl of %q; ttl value is capped appropriately", (shortestTTL / time.Second).String(), (shortestMaxTTL / time.Second).String()))
 		shortestTTL = shortestMaxTTL
 	}
 	resp.Auth.TTL = shortestTTL
