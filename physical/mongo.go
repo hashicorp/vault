@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -321,7 +322,23 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 	for iter.Next(&result) {
 		b.logger.Printf("[DEBUG]: physical/mongo: List(%v): Next(%v)", prefix, result)
 		// we remove the prefix from the result and add it to the return list
-		results = append(results, strings.TrimPrefix(result.Key, prefix))
+		key := strings.TrimPrefix(result.Key, prefix)
+		if strings.ContainsAny(key, "/") {
+			dirKey := strings.SplitAfter(key, "/")[0]
+			inResults := false
+			for _, a := range results {
+				if a == dirKey {
+					inResults = true
+				}
+			}
+			if !inResults {
+				//results = append(results, dirKey)
+				//append([]string{"Prepend Item"}, data...)
+				results = append([]string{dirKey}, results...)
+			}
+		} else {
+			results = append(results, key)
+		}
 	}
 
 	err = iter.Close()
@@ -329,6 +346,9 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 		b.logger.Printf("[ERROR]: physical/mongo: List(%v): error in iter.Next(): %v", prefix, err)
 		return nil, err
 	}
+
+	// sort
+	sort.Strings(results)
 
 	b.logger.Printf("[DEBUG]: physical/mongo: List(%v): %v", prefix, results)
 
