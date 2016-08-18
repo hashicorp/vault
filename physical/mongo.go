@@ -142,6 +142,7 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 		collection = "vault"
 	}
 
+	logger.Printf("[DEBUG]: physical/mongo: newMongoBackend: (%v, %v, %v)", url, database, collection)
 	return &MongoBackend{
 		Url:        url,
 		Database:   database,
@@ -151,45 +152,101 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 }
 
 func (b *MongoBackend) Delete(k string) error {
+	b.logger.Printf("[DEBUG]: physical/mongo: Delete(%v)", k)
 	session, err := b.activeSession()
 	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
 	c := session.DB(b.Database).C(b.Collection)
-	return c.Remove(bson.M{"Key": k})
+	err = c.Remove(bson.M{"key": k})
+	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: Delete(%v): error in Remove() : %v", k, err)
+		return err
+	}
+	return nil
 }
 
 func (b *MongoBackend) Get(k string) (*Entry, error) {
+	b.logger.Printf("[DEBUG]: physical/mongo: Get(%v)", k)
 	session, err := b.activeSession()
 	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
 		return nil, err
 	}
 	c := session.DB(b.Database).C(b.Collection)
 
+	q := c.Find(bson.M{"key": k})
+	n, err := q.Count()
+	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: Get(%v): error in Count() : %v", k, err)
+		return nil, err
+	}
+
+	// not found requires us to return nil and not throw an error
+	// make an exception
+	if n <= 0 {
+		b.logger.Printf("[DEBUG]: physical/mongo: Get(%v): not found", k)
+		return nil, nil
+	}
 	var entry Entry
-	err = c.Find(bson.M{"Key": k}).One(&entry)
-	return &entry, err
+	err = q.One(&entry)
+	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: Get(%v): error in One(): %v", k, err)
+		return nil, err
+	}
+	return &entry, nil
 }
 
 func (b *MongoBackend) Put(entry *Entry) error {
+	b.logger.Printf("[DEBUG]: physical/mongo: Put(%v)", entry.Key)
 	session, err := b.activeSession()
 	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
 	c := session.DB(b.Database).C(b.Collection)
-	_, err = c.Upsert(bson.M{"Key": entry.Key}, entry)
-	return err
+	_, err = c.Upsert(bson.M{"key": entry.Key}, entry)
+	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: Put(%v): error in Upsert(): %v", entry.Key, err)
+		return err
+	}
+	return nil
 }
 
 func (b *MongoBackend) List(prefix string) ([]string, error) {
+	b.logger.Printf("[DEBUG]: physical/mongo: List(%v)", prefix)
 	session, err := b.activeSession()
 	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
 		return nil, err
 	}
 	c := session.DB(b.Database).C(b.Collection)
+
 	var results []string
-	err = c.Find(bson.M{"Key": prefix}).Select(bson.M{"Key": 1}).All(&results)
-	return results, err
+
+	p := strings.Replace(prefix, "/", "\\/", -1)
+	regex := `^` + p + `[^/]*`
+
+	iter := c.Find(bson.M{"key": bson.M{"$regex": bson.RegEx{Pattern: regex, Options: ""}}}).
+		Select(bson.M{"key": 1}).
+		Iter()
+
+	var result Entry
+	for iter.Next(&result) {
+		b.logger.Printf("[DEBUG]: physical/mongo: List(%v): Next(%v)", prefix, result)
+		results = append(results, strings.TrimPrefix(result.Key, prefix))
+	}
+
+	err = iter.Close()
+	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: List(%v): error in iter.Next(): %v", prefix, err)
+		return nil, err
+	}
+
+	b.logger.Printf("[DEBUG]: physical/mongo: List(%v): %v", prefix, results)
+
+	return results, nil
 }
 
 // func (b *MongoBackend) path(k string) (string, string) {
