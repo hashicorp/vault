@@ -135,11 +135,11 @@ func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
 func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
-	return TestCoreInitClusterListenerSetup(t, core, func() ([]net.Listener, http.Handler, error) { return nil, nil, nil })
+	return TestCoreInitClusterWrapperSetup(t, core, func() ([]net.Listener, error) { return nil, nil }, func() (http.Handler, http.Handler) { return nil, nil })
 }
 
-func TestCoreInitClusterListenerSetup(t *testing.T, core *Core, setupFunc func() ([]net.Listener, http.Handler, error)) ([]byte, string) {
-	core.SetClusterListenerSetupFunc(setupFunc)
+func TestCoreInitClusterWrapperSetup(t *testing.T, core *Core, listenerSetupFunc func() ([]net.Listener, error), handlerSetupFunc func() (http.Handler, http.Handler)) ([]byte, string) {
+	core.SetClusterSetupFuncs(listenerSetupFunc, handlerSetupFunc)
 	result, err := core.Initialize(&SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
@@ -151,7 +151,7 @@ func TestCoreInitClusterListenerSetup(t *testing.T, core *Core, setupFunc func()
 }
 
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
-	core.SetClusterListenerSetupFunc(func() ([]net.Listener, http.Handler, error) { return nil, nil, nil })
+	core.SetClusterSetupFuncs(func() ([]net.Listener, error) { return nil, nil }, func() (http.Handler, http.Handler) { return nil, nil })
 	return core.Unseal(key)
 }
 
@@ -653,9 +653,9 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		return ret
 	}
 
-	c2.SetClusterListenerSetupFunc(WrapListenersForClustering(clusterAddrGen(c2lns), handlers[1], logger))
-	c3.SetClusterListenerSetupFunc(WrapListenersForClustering(clusterAddrGen(c3lns), handlers[2], logger))
-	key, root := TestCoreInitClusterListenerSetup(t, c1, WrapListenersForClustering(clusterAddrGen(c1lns), handlers[0], logger))
+	c2.SetClusterSetupFuncs(WrapListenersForClustering(clusterAddrGen(c2lns), logger), WrapHandlerForClustering(handlers[1], logger))
+	c3.SetClusterSetupFuncs(WrapListenersForClustering(clusterAddrGen(c3lns), logger), WrapHandlerForClustering(handlers[2], logger))
+	key, root := TestCoreInitClusterWrapperSetup(t, c1, WrapListenersForClustering(clusterAddrGen(c1lns), logger), WrapHandlerForClustering(handlers[0], logger))
 	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
 		t.Fatalf("unseal err: %s", err)
 	}

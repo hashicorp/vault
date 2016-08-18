@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
@@ -178,8 +180,15 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 		fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[2].Listeners[0].Address.Port),
 	}
 
-	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cores[0].TLSConfig
+	/*
+		transport := cleanhttp.DefaultPooledTransport()
+		transport.TLSClientConfig = cores[0].TLSConfig
+	*/
+
+	transport := &http.Transport{
+		TLSClientConfig: cores[0].TLSConfig,
+	}
+	http2.ConfigureTransport(transport)
 
 	client := &http.Client{
 		Transport: transport,
@@ -206,13 +215,17 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 	var key1ver int64 = 1
 	var key2ver int64 = 1
 	var key3ver int64 = 1
+	var numWorkers int64 = 20
+	var numWorkersStarted int64
+	var waitLock sync.Mutex
+	waitCond := sync.NewCond(&waitLock)
 
 	// This is the goroutine loop
 	doFuzzy := func(id int) {
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
-				core.Logger().Printf("[ERR] got a panic: %v", err)
+				//core.Logger().Printf("[ERR] got a panic: %v", err)
 				t.Fail()
 			}
 			wg.Done()
@@ -221,12 +234,13 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 		// Holds the latest encrypted value for each key
 		latestEncryptedText := map[string]string{}
 
-		startTime := time.Now()
 		client := &http.Client{
 			Transport: transport,
 		}
 
 		var chosenFunc, chosenKey, chosenHost string
+
+		myRand := rand.New(rand.NewSource(int64(id) * 400))
 
 		doReq := func(method, url string, body io.Reader) (*http.Response, error) {
 			req, err := http.NewRequest(method, url, body)
@@ -276,7 +290,18 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 			}
 		}
 
-		//core.Logger().Printf("[TRACE] Starting %d", id)
+		atomic.AddInt64(&numWorkersStarted, 1)
+
+		waitCond.L.Lock()
+		for numWorkersStarted != numWorkers {
+			waitCond.Wait()
+		}
+		waitCond.L.Unlock()
+		waitCond.Broadcast()
+
+		core.Logger().Printf("[TRACE] Starting %d", id)
+
+		startTime := time.Now()
 		for {
 			// Stop after 10 seconds
 			if time.Now().Sub(startTime) > 10*time.Second {
@@ -286,9 +311,9 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 			atomic.AddInt64(&totalOps, 1)
 
 			// Pick a function and a key
-			chosenFunc = funcs[rand.Int()%len(funcs)]
-			chosenKey = keys[rand.Int()%len(keys)]
-			chosenHost = hosts[rand.Int()%len(hosts)]
+			chosenFunc = funcs[myRand.Int()%len(funcs)]
+			chosenKey = keys[myRand.Int()%len(keys)]
+			chosenHost = hosts[myRand.Int()%len(hosts)]
 
 			switch chosenFunc {
 			// Encrypt our plaintext and store the result
@@ -376,7 +401,7 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 					latestVersion = atomic.LoadInt64(&key3ver)
 				}
 
-				setVersion := (rand.Int63() % latestVersion) + 1
+				setVersion := (myRand.Int63() % latestVersion) + 1
 
 				//core.Logger().Printf("[TRACE] %s, %s, %d, new min version %d", chosenFunc, chosenKey, id, setVersion)
 
@@ -391,19 +416,19 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 	}
 
 	// Spawn 20 of these workers for 10 seconds
-	for i := 0; i < 20; i++ {
+	for i := 0; i < int(atomic.LoadInt64(&numWorkers)); i++ {
 		wg.Add(1)
 		//core.Logger().Printf("[TRACE] spawning %d", i)
-		go doFuzzy(i)
+		go doFuzzy(i + 1)
 	}
 
 	// Wait for them all to finish
 	wg.Wait()
 
-	core.Logger().Printf("[TRACE] total operations tried: %d, total successful: %d", totalOps, successfulOps)
-	if totalOps != successfulOps {
-		t.Fatalf("total/successful ops mismatch: %d/%d", totalOps, successfulOps)
+	if totalOps == 0 || totalOps != successfulOps {
+		t.Fatalf("total/successful ops zero or mismatch: %d/%d", totalOps, successfulOps)
 	}
+	t.Logf("total operations tried: %d, total successful: %d", totalOps, successfulOps)
 }
 
 // This tests TLS connection state forwarding by ensuring that we can use a

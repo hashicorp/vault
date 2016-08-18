@@ -1,7 +1,6 @@
 package http
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -137,7 +136,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		// Attempt forwarding the request. If we cannot forward -- perhaps it's
 		// been disabled on the active node -- this will return with an
 		// ErrCannotForward and we simply fall back
-		resp, err := core.ForwardRequest(r)
+		statusCode, retBytes, err := core.ForwardRequest(r)
 		if err != nil {
 			if err == vault.ErrCannotForward {
 				core.Logger().Printf("[TRACE] http/handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
@@ -149,20 +148,9 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			handler.ServeHTTP(w, r)
 			return
 		}
-		defer resp.Body.Close()
 
-		// Read the body into a buffer so we can write it back out to the
-		// original requestor
-		buf := bytes.NewBuffer(nil)
-		_, err = buf.ReadFrom(resp.Body)
-		if err != nil {
-			core.Logger().Printf("[ERR] http/handleRequestForwarding: error reading response body: %v", err)
-			respondError(w, http.StatusInternalServerError, err)
-			return
-		}
-
-		w.WriteHeader(resp.StatusCode)
-		w.Write(buf.Bytes())
+		w.WriteHeader(statusCode)
+		w.Write(retBytes)
 		return
 	})
 }

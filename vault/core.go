@@ -256,7 +256,8 @@ type Core struct {
 	localClusterCertPool *x509.CertPool
 	// The setup function that gives us the listeners for the cluster-cluster
 	// connection and the handler to use
-	clusterListenerSetupFunc func() ([]net.Listener, http.Handler, error)
+	clusterListenerSetupFunc func() ([]net.Listener, error)
+	clusterHandlerSetupFunc  func() (http.Handler, http.Handler)
 	// Shutdown channel for the cluster listeners
 	clusterListenerShutdownCh chan struct{}
 	// Shutdown success channel. We need this to be done serially to ensure
@@ -274,6 +275,7 @@ type Core struct {
 	// return values when the hash matches
 	clusterActiveAdvertisement activeAdvertisement
 	forwardingService          *grpc.Server
+	forwardingClient           ForwardedRequestHandlerClient
 }
 
 // CoreConfig is used to parameterize a core
