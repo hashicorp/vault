@@ -844,6 +844,12 @@ in its identity document to match the one specified by this parameter.
         Defaults to an empty string, meaning that role tags are disabled.
       </li>
     </ul>
+    <li>
+      <span class="param">ttl</span>
+      <span class="param-flags">optional</span>
+      The TTL period of tokens issued using this role, provided as "1h", where hour is
+      the largest suffix.
+    </li>
     <ul>
       <li>
         <span class="param">max_ttl</span>
