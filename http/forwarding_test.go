@@ -8,6 +8,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -141,8 +142,22 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 // This function recreates the fuzzy testing from transit to pipe a large
 // number of requests from the standbys to the active node.
 func TestHTTP_Forwarding_Stress(t *testing.T) {
+	testHTTP_Forwarding_Stress_Common(t, false, false, 50)
+	testHTTP_Forwarding_Stress_Common(t, false, true, 50)
+	testHTTP_Forwarding_Stress_Common(t, true, false, 50)
+	testHTTP_Forwarding_Stress_Common(t, true, true, 50)
+	os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
+}
+
+func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uint64) {
 	testPlaintext := "the quick brown fox"
 	testPlaintextB64 := "dGhlIHF1aWNrIGJyb3duIGZveA=="
+
+	if rpc {
+		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "1")
+	} else {
+		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
+	}
 
 	handler1 := http.NewServeMux()
 	handler2 := http.NewServeMux()
@@ -434,28 +449,22 @@ func TestHTTP_Forwarding_Stress(t *testing.T) {
 		}
 	}
 
+	atomic.StoreUint64(&numWorkers, num)
+
 	// Spawn some of these workers for 10 seconds
 	for i := 0; i < int(atomic.LoadUint64(&numWorkers)); i++ {
 		wg.Add(1)
 		//core.Logger().Printf("[TRACE] spawning %d", i)
-		go doFuzzy(i+1, false)
+		go doFuzzy(i+1, parallel)
 	}
 
 	// Wait for them all to finish
 	wg.Wait()
 
 	if totalOps == 0 || totalOps != successfulOps {
-		t.Fatalf("total/successful ops zero or mismatch: %d/%d", totalOps, successfulOps)
+		t.Fatalf("total/successful ops zero or mismatch: %d/%d; rpc: %t, parallel: %t, num %d", totalOps, successfulOps, rpc, parallel, num)
 	}
-	t.Logf("total operations tried: %d, total successful: %d", totalOps, successfulOps)
-
-	totalOps = 0
-	successfulOps = 0
-	key1ver = 0
-	key2ver = 0
-	key3ver = 0
-	numWorkersStarted = 0
-
+	t.Logf("total operations tried: %d, total successful: %d; rpc: %t, parallel: %t, num %d", totalOps, successfulOps, rpc, parallel, num)
 }
 
 // This tests TLS connection state forwarding by ensuring that we can use a
