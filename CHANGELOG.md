@@ -7,6 +7,10 @@ DEPRECATIONS/BREAKING CHANGES:
    instructions](https://www.vaultproject.io/docs/install/upgrade.html) in
    addition to 0.6.1-specific upgrade instructions to ensure that this is not
    an issue.
+ * Status codes for sealed/uninitialized Vaults have changed to `503`/`501`
+   respectively. See the [version-specific upgrade
+   guide](https://www.vaultproject.io/docs/install/upgrade-to-0.6.1.html) for
+   more details. 
  * Root tokens (tokens with the `root` policy) can no longer be created except
    by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
@@ -78,8 +82,10 @@ IMPROVEMENTS:
 
  * audit: Added a unique identifier to each request which will also be found in
    the request portion of the response. [GH-1650]
- * auth/aws-ec2: Added a new constraint, 'bound_account_id' to the role
+ * auth/aws-ec2: Added a new constraint `bound_account_id` to the role
    [GH-1523]
+ * auth/aws-ec2: Added a new constraint `bound_iam_role_arn` to the role 
+   [GH-1522]
  * auth/aws-ec2: Added `ttl` field for the role [GH-1703]
  * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
    have the minimum TLS version set to 1.2 by default. This is configurable.
