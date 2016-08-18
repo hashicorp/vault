@@ -312,7 +312,7 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 	// The prefix needs to get its slashes replaced with '\/' so that it can form
 	// a proper regex
 	p := strings.Replace(prefix, "/", "\\/", -1)
-	regex := `^` + p + `[^/]*`
+	regex := `^` + p
 
 	iter := c.Find(bson.M{"key": bson.M{"$regex": bson.RegEx{Pattern: regex, Options: ""}}}).
 		Select(bson.M{"key": 1}).
