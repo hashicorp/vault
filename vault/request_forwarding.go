@@ -25,16 +25,7 @@ const (
 // Starts the listeners and servers necessary to handle forwarded requests
 func (c *Core) startForwarding() error {
 	// Clean up in case we have transitioned from a client to a server
-	c.requestForwardingConnection = nil
-	c.rpcForwardingClient = nil
-	if c.rpcClientConnCancelFunc != nil {
-		c.rpcClientConnCancelFunc()
-		c.rpcClientConnCancelFunc = nil
-	}
-	if c.rpcClientConn != nil {
-		c.rpcClientConn.Close()
-		c.rpcClientConn = nil
-	}
+	c.clearForwardingClients()
 
 	// Get our base handler (for our RPC server) and our wrapped handler (for
 	// straight HTTP/2 forwarding)
@@ -191,16 +182,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 
 	// Disabled, potentially, so clean up anything that might be around.
 	if clusterAddr == "" {
-		c.requestForwardingConnection = nil
-		c.rpcForwardingClient = nil
-		if c.rpcClientConnCancelFunc != nil {
-			c.rpcClientConnCancelFunc()
-			c.rpcClientConnCancelFunc = nil
-		}
-		if c.rpcClientConn != nil {
-			c.rpcClientConn.Close()
-			c.rpcClientConn = nil
-		}
+		c.clearForwardingClients()
 		return nil
 	}
 
@@ -242,6 +224,25 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	}
 
 	return nil
+}
+
+func (c *Core) clearForwardingClients() {
+	if c.requestForwardingConnection != nil {
+		c.requestForwardingConnection.transport.CloseIdleConnections()
+		c.requestForwardingConnection = nil
+	}
+
+	c.rpcForwardingClient = nil
+
+	if c.rpcClientConnCancelFunc != nil {
+		c.rpcClientConnCancelFunc()
+		c.rpcClientConnCancelFunc = nil
+	}
+
+	if c.rpcClientConn != nil {
+		c.rpcClientConn.Close()
+		c.rpcClientConn = nil
+	}
 }
 
 // ForwardRequest forwards a given request to the active node and returns the
