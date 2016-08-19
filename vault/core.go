@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/ecdsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -114,10 +113,10 @@ func (e *ErrInvalidKey) Error() string {
 }
 
 type activeAdvertisement struct {
-	RedirectAddr     string           `json:"redirect_addr"`
-	ClusterAddr      string           `json:"cluster_addr"`
-	ClusterCert      []byte           `json:"cluster_cert"`
-	ClusterKeyParams clusterKeyParams `json:"cluster_key_params"`
+	RedirectAddr     string            `json:"redirect_addr"`
+	ClusterAddr      string            `json:"cluster_addr,omitempty"`
+	ClusterCert      []byte            `json:"cluster_cert,omitempty"`
+	ClusterKeyParams *clusterKeyParams `json:"cluster_key_params,omitempty"`
 }
 
 // Core is used as the central manager of Vault activity. It is the primary point of
@@ -269,12 +268,11 @@ type Core struct {
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
-	// Most recent hashed value of the advertise/cluster info. Used to avoid
-	// repeatedly JSON parsing the same values.
-	clusterActiveAdvertisementHash []byte
-	// Cache of most recently known active advertisement information, used to
-	// return values when the hash matches
-	clusterActiveAdvertisement activeAdvertisement
+	// Most recent leader UUID. Used to avoid repeatedly JSON parsing the same
+	// values.
+	clusterLeaderUUID string
+	// Most recent leader redirect addr
+	clusterLeaderRedirectAddr string
 	// The grpc Server that handles server RPC calls
 	rpcServer *grpc.Server
 	// The function for canceling the client connection
@@ -626,7 +624,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	}
 
 	// Read the value
-	held, value, err := lock.Value()
+	held, leaderUUID, err := lock.Value()
 	if err != nil {
 		return false, "", err
 	}
@@ -634,8 +632,13 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
-	// Value is the UUID of the leader, fetch the key
-	key := coreLeaderPrefix + value
+	// If the leader hasn't changed, return the cached value; nothing changes
+	// mid-leadership, and the barrier caches anyways
+	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
+		return false, c.clusterLeaderRedirectAddr, nil
+	}
+
+	key := coreLeaderPrefix + leaderUUID
 	entry, err := c.barrier.Get(key)
 	if err != nil {
 		return false, "", err
@@ -644,26 +647,14 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
-	entrySHA256 := sha256.Sum256(entry.Value)
-
-	// Avoid JSON parsing and function calling if nothing has changed
-	if c.clusterActiveAdvertisementHash != nil {
-		if bytes.Compare(entrySHA256[:], c.clusterActiveAdvertisementHash) == 0 {
-			return false, c.clusterActiveAdvertisement.RedirectAddr, nil
-		}
-	}
-
-	var advAddr string
 	var oldAdv bool
 
 	var adv activeAdvertisement
 	err = jsonutil.DecodeJSON(entry.Value, &adv)
 	if err != nil {
 		// Fall back to pre-struct handling
-		advAddr = string(entry.Value)
+		adv.RedirectAddr = string(entry.Value)
 		oldAdv = true
-	} else {
-		advAddr = adv.RedirectAddr
 	}
 
 	if !oldAdv {
@@ -681,10 +672,12 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		}
 	}
 
-	c.clusterActiveAdvertisement = adv
-	c.clusterActiveAdvertisementHash = entrySHA256[:]
+	// Don't set these until everything has been parsed successfully or we'll
+	// never try again
+	c.clusterLeaderRedirectAddr = adv.RedirectAddr
+	c.clusterLeaderUUID = leaderUUID
 
-	return false, advAddr, nil
+	return false, c.clusterLeaderRedirectAddr, nil
 }
 
 // SecretProgress returns the number of keys provided so far
@@ -1409,7 +1402,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey)
 	}
 
-	keyParams := clusterKeyParams{
+	keyParams := &clusterKeyParams{
 		Type: corePrivateKeyTypeP521,
 		X:    key.X,
 		Y:    key.Y,

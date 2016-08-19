@@ -90,16 +90,26 @@ func (c *Core) Cluster() (*Cluster, error) {
 // It also ensures the cert is in our local cluster cert pool.
 func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 	switch {
+	case adv.ClusterAddr == "":
+		// Clustering disabled on the server, don't try to look for params
+		return nil
+
+	case adv.ClusterKeyParams == nil:
+		c.logger.Printf("[ERR] core/loadClusterTLS: no key params found")
+		return fmt.Errorf("no local cluster key params found")
+
 	case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
-		c.logger.Printf("[ERR] core/loadClusterPrivateKey: failed to parse local cluster key due to missing params")
+		c.logger.Printf("[ERR] core/loadClusterTLS: failed to parse local cluster key due to missing params")
 		return fmt.Errorf("failed to parse local cluster key")
 
-	case adv.ClusterKeyParams.Type == corePrivateKeyTypeP521:
-		// Nothing, this is what we want
-
-	default:
-		c.logger.Printf("[ERR] core/loadClusterPrivateKey: unknown local cluster key type %v", adv.ClusterKeyParams.Type)
+	case adv.ClusterKeyParams.Type != corePrivateKeyTypeP521:
+		c.logger.Printf("[ERR] core/loadClusterTLS: unknown local cluster key type %v", adv.ClusterKeyParams.Type)
 		return fmt.Errorf("failed to find valid local cluster key type")
+
+	case adv.ClusterCert == nil || len(adv.ClusterCert) == 0:
+		c.logger.Printf("[ERR] core/loadClusterTLS: no local cluster cert found")
+		return fmt.Errorf("no local cluster cert found")
+
 	}
 
 	// Prevent data races with the TLS parameters
@@ -119,7 +129,7 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 
 	cert, err := x509.ParseCertificate(c.localClusterCert)
 	if err != nil {
-		c.logger.Printf("[ERR] core/loadClusterPrivateKey: failed parsing local cluster certificate: %v", err)
+		c.logger.Printf("[ERR] core/loadClusterTLS: failed parsing local cluster certificate: %v", err)
 		return fmt.Errorf("error parsing local cluster certificate: %v", err)
 	}
 
