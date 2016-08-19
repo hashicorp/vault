@@ -72,11 +72,11 @@ unfortunately has the side effect that `memberOf` is no longer searched for by
 default, which is a breaking change for many existing setups. 
 
 `Scenario 2` in the [updated
-documentation](https://github.com/hashicorp/vault/blob/master/website/source/docs/auth/ldap.html.md)
-shows an example of configuring the backend to query `memberOf`. It is
-recommended that a test Vault server be set up and that successful
-authentication can be performed using the new configuration before upgrading a
-primary or production Vault instance.
+documentation](https://www.vaultproject.io/docs/auth/ldap.html) shows an
+example of configuring the backend to query `memberOf`. It is recommended that
+a test Vault server be set up and that successful authentication can be
+performed using the new configuration before upgrading a primary or production
+Vault instance.
 
 In addition, if LDAP is relied upon for authentication, operators should ensure
 that they have valid tokens with policies allowing modification of LDAP
