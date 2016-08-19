@@ -16,6 +16,9 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
@@ -252,9 +255,10 @@ type Core struct {
 	localClusterCert []byte
 	// The cert pool containing the self-signed CA as a trusted CA
 	localClusterCertPool *x509.CertPool
-	// The setup function that gives us the listeners for the cluster-cluster
-	// connection and the handler to use
-	clusterListenerSetupFunc func() ([]net.Listener, http.Handler, error)
+	// The TCP addresses we should use for clustering
+	clusterListenerAddrs []*net.TCPAddr
+	// The setup function that gives us the handler to use
+	clusterHandlerSetupFunc func() (http.Handler, http.Handler)
 	// Shutdown channel for the cluster listeners
 	clusterListenerShutdownCh chan struct{}
 	// Shutdown success channel. We need this to be done serially to ensure
@@ -271,6 +275,14 @@ type Core struct {
 	// Cache of most recently known active advertisement information, used to
 	// return values when the hash matches
 	clusterActiveAdvertisement activeAdvertisement
+	// The grpc Server that handles server RPC calls
+	rpcServer *grpc.Server
+	// The function for canceling the client connection
+	rpcClientConnCancelFunc context.CancelFunc
+	// The grpc ClientConn for RPC calls
+	rpcClientConn *grpc.ClientConn
+	// The grpc forwarding client
+	rpcForwardingClient ForwardedRequestHandlerClient
 }
 
 // CoreConfig is used to parameterize a core
@@ -381,20 +393,22 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		redirectAddr:         conf.RedirectAddr,
-		clusterAddr:          conf.ClusterAddr,
-		physical:             conf.Physical,
-		seal:                 conf.Seal,
-		barrier:              barrier,
-		router:               NewRouter(),
-		sealed:               true,
-		standby:              true,
-		logger:               conf.Logger,
-		defaultLeaseTTL:      conf.DefaultLeaseTTL,
-		maxLeaseTTL:          conf.MaxLeaseTTL,
-		cachingDisabled:      conf.DisableCache,
-		clusterName:          conf.ClusterName,
-		localClusterCertPool: x509.NewCertPool(),
+		redirectAddr:                     conf.RedirectAddr,
+		clusterAddr:                      conf.ClusterAddr,
+		physical:                         conf.Physical,
+		seal:                             conf.Seal,
+		barrier:                          barrier,
+		router:                           NewRouter(),
+		sealed:                           true,
+		standby:                          true,
+		logger:                           conf.Logger,
+		defaultLeaseTTL:                  conf.DefaultLeaseTTL,
+		maxLeaseTTL:                      conf.MaxLeaseTTL,
+		cachingDisabled:                  conf.DisableCache,
+		clusterName:                      conf.ClusterName,
+		localClusterCertPool:             x509.NewCertPool(),
+		clusterListenerShutdownCh:        make(chan struct{}),
+		clusterListenerShutdownSuccessCh: make(chan struct{}),
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -597,7 +611,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 			c.requestForwardingConnectionLock.Lock()
 			// Verify that the condition hasn't changed
 			if c.requestForwardingConnection != nil {
-				c.requestForwardingConnection.Transport.(*http.Transport).CloseIdleConnections()
+				c.requestForwardingConnection.transport.CloseIdleConnections()
 			}
 			c.requestForwardingConnection = nil
 			c.requestForwardingConnectionLock.Unlock()

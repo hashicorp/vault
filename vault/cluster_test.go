@@ -87,10 +87,18 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
+	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
+	var lastTLSConfig *tls.Config
 	checkListenersFunc := func(expectFail bool) {
 		tlsConfig, err := cores[0].ClusterTLSConfig()
-		if err != nil && err.Error() != ErrSealed.Error() {
-			t.Fatal(err)
+		if err != nil {
+			if err.Error() != ErrSealed.Error() {
+				t.Fatal(err)
+			}
+			tlsConfig = lastTLSConfig
+		} else {
+			tlsConfig.NextProtos = []string{"h2"}
+			lastTLSConfig = tlsConfig
 		}
 
 		for _, ln := range cores[0].Listeners {
@@ -125,6 +133,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 		}
 	}
 
+	time.Sleep(2 * time.Second)
 	checkListenersFunc(false)
 
 	err := cores[0].StepDown(&logical.Request{
@@ -138,7 +147,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 	// StepDown doesn't wait during actual preSeal so give time for listeners
 	// to close
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	checkListenersFunc(true)
 
 	// After this period it should be active again
@@ -149,7 +158,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	// After sealing it should be inactive again
 	checkListenersFunc(true)
 }
@@ -321,32 +330,26 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 	}
 	req.Header.Add("X-Vault-Token", c.Root)
 
-	resp, err := c.ForwardRequest(req)
+	statusCode, respBytes, err := c.ForwardRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if resp == nil {
-		t.Fatal("nil resp")
-	}
-	defer resp.Body.Close()
+	body := string(respBytes)
 
-	body := bytes.NewBuffer(nil)
-	body.ReadFrom(resp.Body)
-
-	if body.String() != remoteCoreID {
-		t.Fatalf("expected %s, got %s", remoteCoreID, body.String())
+	if body != remoteCoreID {
+		t.Fatalf("expected %s, got %s", remoteCoreID, body)
 	}
-	switch body.String() {
+	switch body {
 	case "core1":
-		if resp.StatusCode != 201 {
+		if statusCode != 201 {
 			t.Fatal("bad response")
 		}
 	case "core2":
-		if resp.StatusCode != 202 {
+		if statusCode != 202 {
 			t.Fatal("bad response")
 		}
 	case "core3":
-		if resp.StatusCode != 203 {
+		if statusCode != 203 {
 			t.Fatal("bad response")
 		}
 	}

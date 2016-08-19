@@ -18,6 +18,8 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc/grpclog"
+
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/hashicorp/errwrap"
@@ -154,6 +156,7 @@ func (c *ServerCommand) Run(args []string) int {
 		MinLevel: logutils.LogLevel(strings.ToUpper(logLevel)),
 		Writer:   logGate,
 	}, "", log.LstdFlags)
+	grpclog.SetLogger(c.logger)
 
 	if err := c.setupTelemetry(config); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
@@ -344,7 +347,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	clusterAddrs := []string{}
+	clusterAddrs := []*net.TCPAddr{}
 
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
@@ -369,19 +372,24 @@ func (c *ServerCommand) Run(args []string) int {
 			var addr string
 			var ok bool
 			if addr, ok = lnConfig.Config["cluster_address"]; ok {
-				clusterAddrs = append(clusterAddrs, addr)
+				tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
+				if err != nil {
+					c.Ui.Error(fmt.Sprintf(
+						"Error resolving cluster_address: %s",
+						err))
+					return 1
+				}
+				clusterAddrs = append(clusterAddrs, tcpAddr)
 			} else {
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
 					c.Ui.Error("Failed to parse tcp listener")
 					return 1
 				}
-				ipStr := tcpAddr.IP.String()
-				if len(tcpAddr.IP) == net.IPv6len {
-					ipStr = fmt.Sprintf("[%s]", ipStr)
-				}
-				addr = fmt.Sprintf("%s:%d", ipStr, tcpAddr.Port+1)
-				clusterAddrs = append(clusterAddrs, addr)
+				clusterAddrs = append(clusterAddrs, &net.TCPAddr{
+					IP:   tcpAddr.IP,
+					Port: tcpAddr.Port + 1,
+				})
 			}
 			props["cluster address"] = addr
 		}
@@ -465,7 +473,8 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
-	core.SetClusterListenerSetupFunc(vault.WrapListenersForClustering(clusterAddrs, handler, c.logger))
+	core.SetClusterListenerAddrs(clusterAddrs)
+	core.SetClusterSetupFuncs(vault.WrapHandlerForClustering(handler, c.logger))
 
 	// If we're in dev mode, then initialize the core
 	if dev {
