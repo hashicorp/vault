@@ -3,15 +3,17 @@ package framework
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	log "github.com/mgutz/logxi/v1"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -71,7 +73,7 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
-	logger  *log.Logger
+	logger  log.Logger
 	system  logical.SystemView
 	once    sync.Once
 	pathsRe []*regexp.Regexp
@@ -224,12 +226,12 @@ func (b *Backend) Cleanup() {
 
 // Logger can be used to get the logger. If no logger has been set,
 // the logs will be discarded.
-func (b *Backend) Logger() *log.Logger {
+func (b *Backend) Logger() log.Logger {
 	if b.logger != nil {
 		return b.logger
 	}
 
-	return log.New(ioutil.Discard, "", 0)
+	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
 }
 
 func (b *Backend) System() logical.SystemView {

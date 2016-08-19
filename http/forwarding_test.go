@@ -238,7 +238,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uin
 		// Check for panics, otherwise notify we're done
 		defer func() {
 			if err := recover(); err != nil {
-				core.Logger().Printf("[ERR] got a panic: %v", err)
+				core.Logger().Error("got a panic: %v", err)
 				t.Fail()
 			}
 			atomic.AddUint64(&totalOps, myTotalOps)
@@ -324,7 +324,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uin
 		waitCond.L.Unlock()
 		waitCond.Broadcast()
 
-		core.Logger().Printf("[TRACE] Starting %d", id)
+		core.Logger().Trace("Starting goroutine", "id", id)
 
 		startTime := time.Now()
 		for {

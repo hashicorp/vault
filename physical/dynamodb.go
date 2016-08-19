@@ -2,7 +2,6 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"path/filepath"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
@@ -65,7 +66,7 @@ type DynamoDBBackend struct {
 	table      string
 	client     *dynamodb.DynamoDB
 	recovery   bool
-	logger     *log.Logger
+	logger     log.Logger
 	haEnabled  bool
 	permitPool *PermitPool
 }
@@ -90,7 +91,7 @@ type DynamoDBLock struct {
 
 // newDynamoDBBackend constructs a DynamoDB backend. If the
 // configured DynamoDB table does not exist, it creates it.
-func newDynamoDBBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
+func newDynamoDBBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 	table := os.Getenv("AWS_DYNAMODB_TABLE")
 	if table == "" {
 		table = conf["table"]
@@ -193,7 +194,9 @@ func newDynamoDBBackend(conf map[string]string, logger *log.Logger) (Backend, er
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
-		logger.Printf("[DEBUG]: physical/consul: max_parallel set to %d", maxParInt)
+		if logger.IsDebug() {
+			logger.Debug("physical/consul: max_parallel set", "max_parallel", maxParInt)
+		}
 	}
 
 	return &DynamoDBBackend{

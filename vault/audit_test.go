@@ -2,8 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -13,7 +11,9 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 type NoopAudit struct {
@@ -206,7 +206,7 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 }
 
 func TestAuditBroker_LogRequest(t *testing.T) {
-	l := log.New(os.Stderr, "", log.LstdFlags)
+	l := logformat.NewVaultLogger(log.LevelTrace)
 	b := NewAuditBroker(l)
 	a1 := &NoopAudit{}
 	a2 := &NoopAudit{}
@@ -266,7 +266,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 }
 
 func TestAuditBroker_LogResponse(t *testing.T) {
-	l := log.New(os.Stderr, "", log.LstdFlags)
+	l := logformat.NewVaultLogger(log.LevelTrace)
 	b := NewAuditBroker(l)
 	a1 := &NoopAudit{}
 	a2 := &NoopAudit{}

@@ -1,7 +1,5 @@
 disable_cache = true
 disable_mlock = true
-statsd_addr = "bar"
-statsite_addr = "foo"
 
 listener "atlas" {
     token = "foobar"
@@ -23,6 +21,11 @@ ha_backend "consul" {
     bar = "baz"
     advertise_addr = "snafu"
     disable_clustering = "false"
+}
+
+telemetry {
+    statsd_address = "bar"
+    statsite_address = "foo"
 }
 
 max_lease_ttl = "10h"

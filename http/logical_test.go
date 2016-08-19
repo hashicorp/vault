@@ -4,19 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"log"
-	"os"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
+	log "github.com/mgutz/logxi/v1"
+
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
-)
-
-var (
-	logger = log.New(os.Stderr, "", log.LstdFlags)
 )
 
 func TestLogical(t *testing.T) {
@@ -82,6 +79,8 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	defer ln2.Close()
 
 	// Create an HA Vault
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	inmha := physical.NewInmemHA(logger)
 	conf := &vault.CoreConfig{
 		Physical:     inmha,

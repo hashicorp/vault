@@ -2,10 +2,12 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
 )
@@ -24,7 +26,8 @@ func TestAzureBackend(t *testing.T) {
 
 	cleanupClient, _ := storage.NewBasicClient(accountName, accountKey)
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	backend, err := NewBackend("azure", logger, map[string]string{
 		"container":   container,
 		"accountName": accountName,

@@ -105,7 +105,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
-	b.Logger().Printf("[DEBUG] auth/ldap: BindDN for %s is %s", username, bindDN)
+	if b.Logger().IsDebug() {
+		b.Logger().Debug("auth/ldap: BindDN fetched", "username", username, "binddn", bindDN)
+	}
 
 	// Try to bind as the login user. This is where the actual authentication takes place.
 	if err = c.Bind(bindDN, password); err != nil {
@@ -121,7 +123,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
-	b.Logger().Printf("[DEBUG] auth/ldap: Server returned %d groups: %v", len(ldapGroups), ldapGroups)
+	if b.Logger().IsDebug() {
+		b.Logger().Debug("auth/ldap: Groups fetched from server", "num_server_groups", len(ldapGroups), "server_groups", ldapGroups)
+	}
 
 	ldapResponse := &logical.Response{
 		Data: map[string]interface{}{},
@@ -137,7 +141,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Import the custom added groups from ldap backend
 	user, err := b.User(req.Storage, username)
 	if err == nil && user != nil && user.Groups != nil {
-		b.Logger().Printf("[DEBUG] auth/ldap: adding %d local groups: %v\n", len(user.Groups), user.Groups)
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/ldap: adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
+		}
 		allGroups = append(allGroups, user.Groups...)
 	}
 	// Merge local and LDAP groups
@@ -207,7 +213,9 @@ func (b *backend) getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (st
 		}
 
 		filter := fmt.Sprintf("(%s=%s)", cfg.UserAttr, ldap.EscapeFilter(username))
-		b.Logger().Printf("[DEBUG] auth/ldap: Discovering user, BaseDN=%s, Filter=%s", cfg.UserDN, filter)
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/ldap: Discovering user", "userdn", cfg.UserDN, "filter", filter)
+		}
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
 			Scope:  2, // subtree
@@ -239,7 +247,9 @@ func (b *backend) getUserDN(cfg *ConfigEntry, c *ldap.Conn, bindDN string) (stri
 	if cfg.UPNDomain != "" {
 		// Find the distinguished name for the user if userPrincipalName used for login
 		filter := fmt.Sprintf("(userPrincipalName=%s)", ldap.EscapeFilter(bindDN))
-		b.Logger().Printf("[DEBUG] auth/ldap: Searching UPN, BaseDN=%s, Filter=%s", cfg.UserDN, filter)
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/ldap: Searching UPN", "userdn", cfg.UserDN, "filter", filter)
+		}
 		result, err := c.Search(&ldap.SearchRequest{
 			BaseDN: cfg.UserDN,
 			Scope:  2, // subtree
@@ -281,18 +291,20 @@ func (b *backend) getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, u
 	ldapMap := make(map[string]bool)
 
 	if cfg.GroupFilter == "" {
-		b.Logger().Printf("[WARN] auth/ldap: GroupFilter is empty, will not query server")
+		b.Logger().Warn("auth/ldap: GroupFilter is empty, will not query server")
 		return make([]string, 0), nil
 	}
 
 	if cfg.GroupDN == "" {
-		b.Logger().Printf("[WARN] auth/ldap: GroupDN is empty, will not query server")
+		b.Logger().Warn("auth/ldap: GroupDN is empty, will not query server")
 		return make([]string, 0), nil
 	}
 
 	// If groupfilter was defined, resolve it as a Go template and use the query for
 	// returning the user's groups
-	b.Logger().Printf("[DEBUG] auth/ldap: Compiling group filter %s", cfg.GroupFilter)
+	if b.Logger().IsDebug() {
+		b.Logger().Debug("auth/ldap: Compiling group filter", "group_filter", cfg.GroupFilter)
+	}
 
 	// Parse the configuration as a template.
 	// Example template "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
@@ -313,7 +325,9 @@ func (b *backend) getLdapGroups(cfg *ConfigEntry, c *ldap.Conn, userDN string, u
 	var renderedQuery bytes.Buffer
 	t.Execute(&renderedQuery, context)
 
-	b.Logger().Printf("[DEBUG] auth/ldap: Searching GroupDN=%s, query=%s", cfg.GroupDN, renderedQuery.String())
+	if b.Logger().IsDebug() {
+		b.Logger().Debug("auth/ldap: Searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
+	}
 
 	result, err := c.Search(&ldap.SearchRequest{
 		BaseDN: cfg.GroupDN,

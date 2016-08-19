@@ -67,8 +67,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 
 	// Create an audit trail of the response
 	if auditErr := c.auditBroker.LogResponse(auth, req, resp, err); auditErr != nil {
-		c.logger.Printf("[ERR] core: failed to audit response (request path: %s): %v",
-			req.Path, auditErr)
+		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
 		return nil, ErrInternalError
 	}
 
@@ -96,7 +95,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		var err error
 		te, err = c.tokenStore.UseToken(te)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to use token: %v", err)
+			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, nil, retErr
 		}
@@ -112,7 +111,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			defer func(id string) {
 				err = c.tokenStore.Revoke(id)
 				if err != nil {
-					c.logger.Printf("[ERR] core: failed to revoke token: %v", err)
+					c.logger.Error("core: failed to revoke token", "error", err)
 					retResp = nil
 					retAuth = nil
 					retErr = multierror.Append(retErr, ErrInternalError)
@@ -138,8 +137,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 
 		if err := c.auditBroker.LogRequest(auth, req, ctErr); err != nil {
-			c.logger.Printf("[ERR] core: failed to audit request with path (%s): %v",
-				req.Path, err)
+			c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		}
 
 		if errType != nil {
@@ -153,8 +151,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 	// Create an audit trail of the request
 	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request with path (%s): %v",
-			req.Path, err)
+		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, ErrInternalError)
 		return nil, auth, retErr
 	}
@@ -178,7 +175,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		// Get the SystemView for the mount
 		sysView := c.router.MatchingSystemView(req.Path)
 		if sysView == nil {
-			c.logger.Println("[ERR] core: unable to retrieve system view from router")
+			c.logger.Error("core: unable to retrieve system view from router")
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -199,7 +196,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		registerLease := true
 		matchingBackend := c.router.MatchingBackend(req.Path)
 		if matchingBackend == nil {
-			c.logger.Println("[ERR] core: unable to retrieve generic backend from router")
+			c.logger.Error("core: unable to retrieve generic backend from router")
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -213,9 +210,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		if registerLease {
 			leaseID, err := c.expiration.Register(req, resp)
 			if err != nil {
-				c.logger.Printf(
-					"[ERR] core: failed to register lease "+
-						"(request path: %s): %v", req.Path, err)
+				c.logger.Error("core: failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
 				return nil, auth, retErr
 			}
@@ -228,9 +223,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// since it does not need to be re-registered
 	if resp != nil && resp.Auth != nil && !strings.HasPrefix(req.Path, "auth/token/renew") {
 		if !strings.HasPrefix(req.Path, "auth/token/") {
-			c.logger.Printf(
-				"[ERR] core: unexpected Auth response for non-token backend "+
-					"(request path: %s)", req.Path)
+			c.logger.Error("core: unexpected Auth response for non-token backend", "request_path", req.Path)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -239,14 +232,13 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		// here because roles allow suffixes.
 		te, err := c.tokenStore.Lookup(resp.Auth.ClientToken)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
+			c.logger.Error("core: failed to look up token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, nil, retErr
 		}
 
 		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
-			c.logger.Printf("[ERR] core: failed to register token lease "+
-				"(request path: %s): %v", req.Path, err)
+			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -266,17 +258,14 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 	// Create an audit trail of the request, auth is not available on login requests
 	if err := c.auditBroker.LogRequest(nil, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
-			req.Path, err)
+		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		return nil, nil, ErrInternalError
 	}
 
 	// The token store uses authentication even when creating a new token,
 	// so it's handled in handleRequest. It should not be reached here.
 	if strings.HasPrefix(req.Path, "auth/token/") {
-		c.logger.Printf(
-			"[ERR] core: unexpected login request for token backend "+
-				"(request path: %s)", req.Path)
+		c.logger.Error("core: unexpected login request for token backend", "request_path", req.Path)
 		return nil, nil, ErrInternalError
 	}
 
@@ -295,8 +284,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 	// A login request should never return a secret!
 	if resp != nil && resp.Secret != nil {
-		c.logger.Printf("[ERR] core: unexpected Secret response for login path"+
-			"(request path: %s)", req.Path)
+		c.logger.Error("core: unexpected Secret response for login path", "request_path", req.Path)
 		return nil, nil, ErrInternalError
 	}
 
@@ -319,8 +307,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 		sysView := c.router.MatchingSystemView(req.Path)
 		if sysView == nil {
-			c.logger.Printf("[ERR] core: unable to look up sys view for login path"+
-				"(request path: %s)", req.Path)
+			c.logger.Error("core: unable to look up sys view for login path", "request_path", req.Path)
 			return nil, nil, ErrInternalError
 		}
 
@@ -347,7 +334,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
 
 		if err := c.tokenStore.create(&te); err != nil {
-			c.logger.Printf("[ERR] core: failed to create token: %v", err)
+			c.logger.Error("core: failed to create token", "error", err)
 			return nil, auth, ErrInternalError
 		}
 
@@ -358,8 +345,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
-			c.logger.Printf("[ERR] core: failed to register token lease "+
-				"(request path: %s): %v", req.Path, err)
+			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}
 
@@ -386,7 +372,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	}
 
 	if err := c.tokenStore.create(&te); err != nil {
-		c.logger.Printf("[ERR] core: failed to create wrapping token: %v", err)
+		c.logger.Error("core: failed to create wrapping token", "error", err)
 		return nil, ErrInternalError
 	}
 
@@ -413,7 +399,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 
 	marshaledResponse, err := json.Marshal(httpResponse)
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to marshal wrapped response: %v", err)
+		c.logger.Error("core: failed to marshal wrapped response", "error", err)
 		return nil, ErrInternalError
 	}
 
@@ -430,12 +416,12 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	if err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.Revoke(te.ID)
-		c.logger.Printf("[ERR] core: failed to store wrapped response information: %v", err)
+		c.logger.Error("core: failed to store wrapped response information", "error", err)
 		return nil, ErrInternalError
 	}
 	if cubbyResp != nil && cubbyResp.IsError() {
 		c.tokenStore.Revoke(te.ID)
-		c.logger.Printf("[ERR] core: failed to store wrapped response information: %v", cubbyResp.Data["error"])
+		c.logger.Error("core: failed to store wrapped response information", "error", cubbyResp.Data["error"])
 		return cubbyResp, nil
 	}
 
@@ -452,8 +438,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.Revoke(te.ID)
-		c.logger.Printf("[ERR] core: failed to register cubbyhole wrapping token lease "+
-			"(request path: %s): %v", req.Path, err)
+		c.logger.Error("core: failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
 		return nil, ErrInternalError
 	}
 

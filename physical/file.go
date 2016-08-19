@@ -3,10 +3,11 @@ package physical
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
@@ -21,11 +22,11 @@ import (
 type FileBackend struct {
 	Path   string
 	l      sync.Mutex
-	logger *log.Logger
+	logger log.Logger
 }
 
 // newFileBackend constructs a Filebackend using the given directory
-func newFileBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
+func newFileBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 	path, ok := conf["path"]
 	if !ok {
 		return nil, fmt.Errorf("'path' must be set")

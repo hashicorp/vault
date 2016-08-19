@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -59,7 +58,7 @@ func (b *backend) tidySecretID(s logical.Storage) error {
 			}
 
 			if secretIDEntry == nil {
-				result = multierror.Append(result, errwrap.Wrapf("[ERR] {{err}}", fmt.Errorf("entry for SecretID %s is nil", secretIDHMAC)))
+				result = multierror.Append(result, fmt.Errorf("entry for SecretID %s is nil", secretIDHMAC))
 				lock.Unlock()
 				continue
 			}

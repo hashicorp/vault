@@ -1,13 +1,15 @@
 package physical
 
 import (
-	"log"
-	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func TestInmem(t *testing.T) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := NewInmem(logger)
 	testBackend(t, inm)
 	testBackend_ListPrefix(t, inm)

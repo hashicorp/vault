@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
@@ -231,30 +232,30 @@ func (c *Config) Merge(c2 *Config) *Config {
 
 // LoadConfig loads the configuration at the given path, regardless if
 // its a file or directory.
-func LoadConfig(path string) (*Config, error) {
+func LoadConfig(path string, logger log.Logger) (*Config, error) {
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDir(path)
+		return LoadConfigDir(path, logger)
 	} else {
-		return LoadConfigFile(path)
+		return LoadConfigFile(path, logger)
 	}
 }
 
 // LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string) (*Config, error) {
+func LoadConfigFile(path string, logger log.Logger) (*Config, error) {
 	// Read the file
 	d, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return ParseConfig(string(d))
+	return ParseConfig(string(d), logger)
 }
 
-func ParseConfig(d string) (*Config, error) {
+func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	// Parse!
 	obj, err := hcl.Parse(d)
 	if err != nil {
@@ -294,39 +295,9 @@ func ParseConfig(d string) (*Config, error) {
 		"default_lease_ttl",
 		"max_lease_ttl",
 		"cluster_name",
-
-		// TODO: Remove in 0.6.0
-		// Deprecated keys
-		"statsd_addr",
-		"statsite_addr",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, err
-	}
-
-	// TODO: Remove in 0.6.0
-	// Preflight checks for deprecated keys
-	sda := list.Filter("statsd_addr")
-	ssa := list.Filter("statsite_addr")
-	if len(sda.Items) > 0 || len(ssa.Items) > 0 {
-		log.Println("[WARN] The top-level keys 'statsd_addr' and 'statsite_addr' " +
-			"have been moved into a 'telemetry' block instead. Please update your " +
-			"Vault configuration as this deprecation will be removed in the next " +
-			"major release. Values specified in a 'telemetry' block will take " +
-			"precendence.")
-
-		t := struct {
-			StatsdAddr   string `hcl:"statsd_addr"`
-			StatsiteAddr string `hcl:"statsite_addr"`
-		}{}
-		if err := hcl.DecodeObject(&t, list); err != nil {
-			return nil, err
-		}
-
-		result.Telemetry = &Telemetry{
-			StatsdAddr:   t.StatsdAddr,
-			StatsiteAddr: t.StatsiteAddr,
-		}
 	}
 
 	if o := list.Filter("backend"); len(o.Items) > 0 {
@@ -358,7 +329,7 @@ func ParseConfig(d string) (*Config, error) {
 
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
-func LoadConfigDir(dir string) (*Config, error) {
+func LoadConfigDir(dir string, logger log.Logger) (*Config, error) {
 	f, err := os.Open(dir)
 	if err != nil {
 		return nil, err
@@ -409,7 +380,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 
 	var result *Config
 	for _, f := range files {
-		config, err := LoadConfigFile(f)
+		config, err := LoadConfigFile(f, logger)
 		if err != nil {
 			return nil, fmt.Errorf("Error loading %s: %s", f, err)
 		}
@@ -615,9 +586,6 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 
 	// Check for invalid keys
 	valid := []string{
-		"statsite_address",
-		"statsd_address",
-		"disable_hostname",
 		"circonus_api_token",
 		"circonus_api_app",
 		"circonus_api_url",
@@ -629,6 +597,9 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"circonus_check_search_tag",
 		"circonus_broker_id",
 		"circonus_broker_select_tag",
+		"disable_hostname",
+		"statsd_address",
+		"statsite_address",
 	}
 	if err := checkHCLKeys(item.Val, valid); err != nil {
 		return multierror.Prefix(err, "telemetry:")

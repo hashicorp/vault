@@ -191,7 +191,9 @@ reply:
 				logical.HTTPRawBody:     certificate,
 			}}
 		if retErr != nil {
-			b.Logger().Printf("Possible error, but cannot return in raw response: %s. Note that an empty CA probably means none was configured, and an empty CRL is quite possibly correct", retErr)
+			if b.Logger().IsWarn() {
+				b.Logger().Warn("Possible error, but cannot return in raw response. Note that an empty CA probably means none was configured, and an empty CRL is possibly correct", "error", retErr)
+			}
 		}
 		retErr = nil
 		response.Data[logical.HTTPStatusCode] = 200
