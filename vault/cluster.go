@@ -173,58 +173,60 @@ func (c *Core) setupCluster() error {
 		modified = true
 	}
 
-	// Create a private key
-	{
-		c.logger.Printf("[TRACE] core: generating cluster private key")
-		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate local cluster key: %v", err)
-			return err
+	if c.ha != nil {
+		// Create a private key
+		{
+			c.logger.Printf("[TRACE] core: generating cluster private key")
+			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+			if err != nil {
+				c.logger.Printf("[ERR] core: failed to generate local cluster key: %v", err)
+				return err
+			}
+
+			c.localClusterPrivateKey = key
 		}
 
-		c.localClusterPrivateKey = key
-	}
+		// Create a certificate
+		{
+			c.logger.Printf("[TRACE] core: generating local cluster certificate")
 
-	// Create a certificate
-	{
-		c.logger.Printf("[TRACE] core: generating local cluster certificate")
+			host, err := uuid.GenerateUUID()
+			if err != nil {
+				return err
+			}
 
-		host, err := uuid.GenerateUUID()
-		if err != nil {
-			return err
+			template := &x509.Certificate{
+				Subject: pkix.Name{
+					CommonName: host,
+				},
+				DNSNames: []string{host},
+				ExtKeyUsage: []x509.ExtKeyUsage{
+					x509.ExtKeyUsageServerAuth,
+					x509.ExtKeyUsageClientAuth,
+				},
+				KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement | x509.KeyUsageCertSign,
+				SerialNumber: big.NewInt(mathrand.Int63()),
+				NotBefore:    time.Now().Add(-30 * time.Second),
+				// 30 years of single-active uptime ought to be enough for anybody
+				NotAfter:              time.Now().Add(262980 * time.Hour),
+				BasicConstraintsValid: true,
+				IsCA: true,
+			}
+
+			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)
+			if err != nil {
+				c.logger.Printf("[ERR] core: error generating self-signed cert: %v", err)
+				return fmt.Errorf("unable to generate local cluster certificate: %v", err)
+			}
+
+			_, err = x509.ParseCertificate(certBytes)
+			if err != nil {
+				c.logger.Printf("[ERR] core: error parsing self-signed cert: %v", err)
+				return fmt.Errorf("error parsing generated certificate: %v", err)
+			}
+
+			c.localClusterCert = certBytes
 		}
-
-		template := &x509.Certificate{
-			Subject: pkix.Name{
-				CommonName: host,
-			},
-			DNSNames: []string{host},
-			ExtKeyUsage: []x509.ExtKeyUsage{
-				x509.ExtKeyUsageServerAuth,
-				x509.ExtKeyUsageClientAuth,
-			},
-			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement | x509.KeyUsageCertSign,
-			SerialNumber: big.NewInt(mathrand.Int63()),
-			NotBefore:    time.Now().Add(-30 * time.Second),
-			// 30 years of single-active uptime ought to be enough for anybody
-			NotAfter:              time.Now().Add(262980 * time.Hour),
-			BasicConstraintsValid: true,
-			IsCA: true,
-		}
-
-		certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)
-		if err != nil {
-			c.logger.Printf("[ERR] core: error generating self-signed cert: %v", err)
-			return fmt.Errorf("unable to generate local cluster certificate: %v", err)
-		}
-
-		_, err = x509.ParseCertificate(certBytes)
-		if err != nil {
-			c.logger.Printf("[ERR] core: error parsing self-signed cert: %v", err)
-			return fmt.Errorf("error parsing generated certificate: %v", err)
-		}
-
-		c.localClusterCert = certBytes
 	}
 
 	if modified {

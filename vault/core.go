@@ -255,9 +255,9 @@ type Core struct {
 	localClusterCert []byte
 	// The cert pool containing the self-signed CA as a trusted CA
 	localClusterCertPool *x509.CertPool
-	// The setup function that gives us the listeners for the cluster-cluster
-	// connection and the handler to use
-	clusterListenerAddrs    []*net.TCPAddr
+	// The TCP addresses we should use for clustering
+	clusterListenerAddrs []*net.TCPAddr
+	// The setup function that gives us the handler to use
 	clusterHandlerSetupFunc func() (http.Handler, http.Handler)
 	// Shutdown channel for the cluster listeners
 	clusterListenerShutdownCh chan struct{}
