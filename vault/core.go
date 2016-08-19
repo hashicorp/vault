@@ -316,7 +316,7 @@ type CoreConfig struct {
 func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		if conf.RedirectAddr == "" {
-			return nil, fmt.Errorf("missing advertisement address")
+			return nil, fmt.Errorf("missing redirect address")
 		}
 	}
 
@@ -334,11 +334,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.RedirectAddr != "" {
 		u, err := url.Parse(conf.RedirectAddr)
 		if err != nil {
-			return nil, fmt.Errorf("advertisement address is not valid url: %s", err)
+			return nil, fmt.Errorf("redirect address is not valid url: %s", err)
 		}
 
 		if u.Scheme == "" {
-			return nil, fmt.Errorf("advertisement address must include scheme (ex. 'http')")
+			return nil, fmt.Errorf("redirect address must include scheme (ex. 'http')")
 		}
 	}
 
