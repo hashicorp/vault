@@ -274,12 +274,12 @@ func (c *Core) startClusterListener() error {
 	}
 
 	if c.clusterAddr == "" {
-		c.logger.Printf("[TRACE] core/startClusterListener: clustering disabled, not starting listeners")
+		c.logger.Printf("[INFO] core/startClusterListener: clustering disabled, not starting listeners")
 		return nil
 	}
 
 	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
-		c.logger.Printf("[TRACE] core/startClusterListener: clustering not disabled but no addresses to listen on")
+		c.logger.Printf("[WARN] core/startClusterListener: clustering not disabled but no addresses to listen on")
 		return fmt.Errorf("cluster addresses not found")
 	}
 
@@ -301,7 +301,7 @@ func (c *Core) stopClusterListener() {
 		return
 	}
 
-	c.logger.Printf("[TRACE] core/stopClusterListener: stopping listeners")
+	c.logger.Printf("[INFO] core/stopClusterListener: stopping listeners")
 
 	// Tell the goroutine managing the listeners to perform the shutdown
 	// process
@@ -312,7 +312,7 @@ func (c *Core) stopClusterListener() {
 	// bind errors. This ensures proper ordering.
 	c.logger.Printf("[TRACE] core/stopClusterListener: waiting for success notification")
 	<-c.clusterListenerShutdownSuccessCh
-	c.logger.Printf("[TRACE] core/stopClusterListener: success")
+	c.logger.Printf("[INFO] core/stopClusterListener: success")
 }
 
 // ClusterTLSConfig generates a TLS configuration based on the local cluster
@@ -373,7 +373,7 @@ func WrapHandlerForClustering(handler http.Handler, logger *log.Logger) func() (
 			freq, err := forwarding.ParseForwardedHTTPRequest(req)
 			if err != nil {
 				if logger != nil {
-					logger.Printf("[ERR] http/ForwardedRequestHandler: error parsing forwarded request: %v", err)
+					logger.Printf("[ERR] http/forwarded-request-server: error parsing forwarded request: %v", err)
 				}
 
 				w.Header().Add("Content-Type", "application/json")

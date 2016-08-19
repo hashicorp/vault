@@ -52,7 +52,7 @@ func (c *Core) startForwarding() error {
 
 	// Create our RPC server and register the request handler server
 	c.rpcServer = grpc.NewServer()
-	RegisterForwardedRequestHandlerServer(c.rpcServer, &forwardedRequestRPCServer{
+	RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
 		core:    c,
 		handler: baseHandler,
 	})
@@ -77,20 +77,20 @@ func (c *Core) startForwarding() error {
 		go func() {
 			defer shutdownWg.Done()
 
-			c.logger.Printf("[TRACE] core/startClusterListener: starting listener")
+			c.logger.Printf("[INFO] core/startClusterListener: starting listener")
 
 			// Create a TCP listener. We do this separately and specifically
 			// with TCP so that we can set deadlines.
 			tcpLn, err := net.ListenTCP("tcp", laddr)
 			if err != nil {
-				c.logger.Printf("[TRACE] core/startClusterListener: error starting listener: %v", err)
+				c.logger.Printf("[ERROR] core/startClusterListener: error starting listener: %v", err)
 				return
 			}
 
 			// Wrap the listener with TLS
 			tlsLn := tls.NewListener(tcpLn, tlsConfig)
 
-			c.logger.Printf("[TRACE] core/startClusterListener: serving cluster requests on %s", tlsLn.Addr())
+			c.logger.Printf("[INFO] core/startClusterListener: serving cluster requests on %s", tlsLn.Addr())
 
 			for {
 				if atomic.LoadUint32(&shutdown) > 0 {
@@ -117,7 +117,7 @@ func (c *Core) startForwarding() error {
 				tlsConn := conn.(*tls.Conn)
 				err = tlsConn.Handshake()
 				if err != nil {
-					c.logger.Printf("[TRACE] core/startClusterListener/Accept: error handshaking: %v", err)
+					c.logger.Printf("[DEBUG] core/startClusterListener/Accept: error handshaking: %v", err)
 					if conn != nil {
 						conn.Close()
 					}
@@ -126,19 +126,19 @@ func (c *Core) startForwarding() error {
 
 				switch tlsConn.ConnectionState().NegotiatedProtocol {
 				case "h2":
-					c.logger.Printf("[TRACE] core/startClusterListener/Accept: got h2 connection")
+					c.logger.Printf("[DEBUG] core/startClusterListener/Accept: got h2 connection")
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: wrappedHandler,
 					})
 
 				case "req_fw_sb-act_v1":
-					c.logger.Printf("[TRACE] core/startClusterListener/Accept: got req_fw_sb-act_v1 connection")
+					c.logger.Printf("[DEBUG] core/startClusterListener/Accept: got req_fw_sb-act_v1 connection")
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: c.rpcServer,
 					})
 
 				default:
-					c.logger.Printf("[TRACE] core/startClusterListener/Accept: unknown negotiated protocol")
+					c.logger.Printf("[DEBUG] core/startClusterListener/Accept: unknown negotiated protocol")
 					conn.Close()
 					continue
 				}
@@ -154,7 +154,7 @@ func (c *Core) startForwarding() error {
 
 		// Stop the RPC server
 		c.rpcServer.Stop()
-		c.logger.Printf("[TRACE] core/startClusterListener: shutting down listeners")
+		c.logger.Printf("[INFO] core/startClusterListener: shutting down listeners")
 
 		// Set the shutdown flag. This will cause the listeners to shut down
 		// within the deadline in clusterListenerAcceptDeadline
@@ -162,7 +162,7 @@ func (c *Core) startForwarding() error {
 
 		// Wait for them all to shut down
 		shutdownWg.Wait()
-		c.logger.Printf("[TRACE] core/startClusterListener: listeners successfully shut down")
+		c.logger.Printf("[INFO] core/startClusterListener: listeners successfully shut down")
 
 		// Tell the main thread that shutdown is done.
 		c.clusterListenerShutdownSuccessCh <- struct{}{}
@@ -238,7 +238,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 			c.logger.Printf("[ERR] core/refreshRequestForwardingConnection: err setting up rpc client: %v", err)
 			return err
 		}
-		c.rpcForwardingClient = NewForwardedRequestHandlerClient(c.rpcClientConn)
+		c.rpcForwardingClient = NewRequestForwardingClient(c.rpcClientConn)
 	}
 
 	return nil

@@ -4,6 +4,6 @@ import "github.com/hashicorp/vault/helper/forwarding/types.proto";
 
 package vault;
 
-service ForwardedRequestHandler {
+service RequestForwarding {
 	rpc HandleRequest(forwarding.Request) returns (forwarding.Response) {}
 }

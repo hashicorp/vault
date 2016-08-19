@@ -282,7 +282,7 @@ type Core struct {
 	// The grpc ClientConn for RPC calls
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
-	rpcForwardingClient ForwardedRequestHandlerClient
+	rpcForwardingClient RequestForwardingClient
 }
 
 // CoreConfig is used to parameterize a core
