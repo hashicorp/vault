@@ -133,6 +133,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 		}
 	}
 
+	time.Sleep(2 * time.Second)
 	checkListenersFunc(false)
 
 	err := cores[0].StepDown(&logical.Request{
@@ -146,7 +147,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 	// StepDown doesn't wait during actual preSeal so give time for listeners
 	// to close
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	checkListenersFunc(true)
 
 	// After this period it should be active again
@@ -157,7 +158,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(1 * time.Second)
+	time.Sleep(2 * time.Second)
 	// After sealing it should be inactive again
 	checkListenersFunc(true)
 }
