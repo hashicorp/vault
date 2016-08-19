@@ -35,7 +35,7 @@ func MFARootPaths() []string {
 }
 
 // HandlerFunc is the callback called to handle MFA for a login request.
-type HandlerFunc func (*logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
+type HandlerFunc func(*logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
 
 // handlers maps each supported MFA type to its handler.
 var handlers = map[string]HandlerFunc{
@@ -52,7 +52,7 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 		Description: "One time passcode (optional)",
 	}
 	loginPath.Fields["method"] = &framework.FieldSchema{
-		Type:      framework.TypeString,
+		Type:        framework.TypeString,
 		Description: "Multi-factor auth method to use (optional)",
 	}
 	// wrap write callback to do MFA after auth
@@ -62,9 +62,9 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 }
 
 func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framework.OperationFunc {
-	return func (req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return func(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		// login with original login function first
-		resp, err := loginHandler(req, d);
+		resp, err := loginHandler(req, d)
 		if err != nil || resp.Auth == nil {
 			return resp, err
 		}

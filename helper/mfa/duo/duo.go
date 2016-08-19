@@ -22,7 +22,7 @@ func DuoPaths() []*framework.Path {
 
 // DuoRootPaths returns the paths that are used to configure Duo.
 func DuoRootPaths() []string {
-	return []string {
+	return []string{
 		"duo/access",
 		"duo/config",
 	}
@@ -60,10 +60,10 @@ func DuoHandler(req *logical.Request, d *framework.FieldData, resp *logical.Resp
 
 type duoAuthRequest struct {
 	successResp *logical.Response
-	username string
-	method string
-	passcode string
-	ipAddr string
+	username    string
+	method      string
+	passcode    string
+	ipAddr      string
 }
 
 func duoHandler(duoConfig *DuoConfig, duoAuthClient AuthClient, request *duoAuthRequest) (

@@ -26,7 +26,7 @@ valid; defaults to 72 hours`,
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:  b.pathCRLRead,
+			logical.ReadOperation:   b.pathCRLRead,
 			logical.UpdateOperation: b.pathCRLWrite,
 		},
 
