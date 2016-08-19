@@ -86,21 +86,26 @@ func (c *Core) Cluster() (*Cluster, error) {
 	return &cluster, nil
 }
 
-// This is idempotent, so we return nil if there is no entry yet (say, because
-// the active node has not yet generated this)
+// This sets our local cluster cert and private key based on the advertisement.
+// It also ensures the cert is in our local cluster cert pool.
 func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
-	c.clusterParamsLock.Lock()
-	defer c.clusterParamsLock.Unlock()
-
 	switch {
 	case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
 		c.logger.Printf("[ERR] core/loadClusterPrivateKey: failed to parse local cluster key due to missing params")
 		return fmt.Errorf("failed to parse local cluster key")
+
 	case adv.ClusterKeyParams.Type == corePrivateKeyTypeP521:
+		// Nothing, this is what we want
+
 	default:
 		c.logger.Printf("[ERR] core/loadClusterPrivateKey: unknown local cluster key type %v", adv.ClusterKeyParams.Type)
 		return fmt.Errorf("failed to find valid local cluster key type")
 	}
+
+	// Prevent data races with the TLS parameters
+	c.clusterParamsLock.Lock()
+	defer c.clusterParamsLock.Unlock()
+
 	c.localClusterPrivateKey = &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
 			Curve: elliptic.P521(),
@@ -127,9 +132,6 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 // Entries will be created only if they are not already present. If clusterName
 // is not supplied, this method will auto-generate it.
 func (c *Core) setupCluster() error {
-	c.clusterParamsLock.Lock()
-	defer c.clusterParamsLock.Unlock()
-
 	// Check if storage index is already present or not
 	cluster, err := c.Cluster()
 	if err != nil {
@@ -173,7 +175,12 @@ func (c *Core) setupCluster() error {
 		modified = true
 	}
 
+	// If we're using HA, generate server-to-server parameters
 	if c.ha != nil {
+		// Prevent data races with the TLS parameters
+		c.clusterParamsLock.Lock()
+		defer c.clusterParamsLock.Unlock()
+
 		// Create a private key
 		{
 			c.logger.Printf("[TRACE] core: generating cluster private key")
@@ -251,14 +258,15 @@ func (c *Core) setupCluster() error {
 	return nil
 }
 
-// SetClusterSetupFunc sets the listener setup func, which is used to
-// know which ports to listen on and a handler to use.
+// SetClusterSetupFuncs sets the handler setup func
 func (c *Core) SetClusterSetupFuncs(handler func() (http.Handler, http.Handler)) {
 	c.clusterHandlerSetupFunc = handler
 }
 
 // startClusterListener starts cluster request listeners during postunseal. It
-// is assumed that the state lock is held while this is run.
+// is assumed that the state lock is held while this is run. Right now this
+// only starts forwarding listeners; it's TBD whether other request types will
+// be built in the same mechanism or started independently.
 func (c *Core) startClusterListener() error {
 	if c.clusterHandlerSetupFunc == nil {
 		c.logger.Printf("[ERR] core/startClusterListener: cluster handler setup function has not been set")
@@ -294,6 +302,9 @@ func (c *Core) stopClusterListener() {
 	}
 
 	c.logger.Printf("[TRACE] core/stopClusterListener: stopping listeners")
+
+	// Tell the goroutine managing the listeners to perform the shutdown
+	// process
 	c.clusterListenerShutdownCh <- struct{}{}
 
 	// The reason for this loop-de-loop is that we may be unsealing again
@@ -305,12 +316,8 @@ func (c *Core) stopClusterListener() {
 }
 
 // ClusterTLSConfig generates a TLS configuration based on the local cluster
-// key and cert. This isn't called often and we lock because the CertPool is
-// not concurrency-safe.
+// key and cert.
 func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
-	c.clusterParamsLock.Lock()
-	defer c.clusterParamsLock.Unlock()
-
 	cluster, err := c.Cluster()
 	if err != nil {
 		return nil, err
@@ -318,6 +325,11 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 	if cluster == nil {
 		return nil, fmt.Errorf("cluster information is nil")
 	}
+
+	// Prevent data races with the TLS parameters
+	c.clusterParamsLock.Lock()
+	defer c.clusterParamsLock.Unlock()
+
 	if c.localClusterCert == nil || len(c.localClusterCert) == 0 {
 		return nil, fmt.Errorf("cluster certificate is nil")
 	}

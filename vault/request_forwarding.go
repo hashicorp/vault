@@ -18,43 +18,76 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	clusterListenerAcceptDeadline = 500 * time.Millisecond
+)
+
 // Starts the listeners and servers necessary to handle forwarded requests
 func (c *Core) startForwarding() error {
+	// Clean up in case we have transitioned from a client to a server
+	c.requestForwardingConnection = nil
+	c.rpcForwardingClient = nil
+	if c.rpcClientConnCancelFunc != nil {
+		c.rpcClientConnCancelFunc()
+		c.rpcClientConnCancelFunc = nil
+	}
+	if c.rpcClientConn != nil {
+		c.rpcClientConn.Close()
+		c.rpcClientConn = nil
+	}
+
+	// Get our base handler (for our RPC server) and our wrapped handler (for
+	// straight HTTP/2 forwarding)
 	baseHandler, wrappedHandler := c.clusterHandlerSetupFunc()
 
+	// Get our TLS config
 	tlsConfig, err := c.ClusterTLSConfig()
 	if err != nil {
 		c.logger.Printf("[ERR] core/startClusterListener: failed to get tls configuration: %v", err)
 		return err
 	}
+
+	// The server supports all of the possible protos
 	tlsConfig.NextProtos = []string{"h2", "req_fw_sb-act_v1"}
 
+	// Create our RPC server and register the request handler server
 	c.rpcServer = grpc.NewServer()
 	RegisterForwardedRequestHandlerServer(c.rpcServer, &forwardedRequestRPCServer{
 		core:    c,
 		handler: baseHandler,
 	})
 
+	// Create the HTTP/2 server that will be shared by both RPC and regular
+	// duties. Doing it this way instead of listening via the server and gRPC
+	// allows us to re-use the same port via ALPN. We can just tell the server
+	// to serve a given conn and which handler to use.
 	fws := &http2.Server{}
 
+	// Shutdown coordination logic
 	var shutdown uint32
 	shutdownWg := &sync.WaitGroup{}
 
 	for _, addr := range c.clusterListenerAddrs {
 		shutdownWg.Add(1)
 
+		// Force a local resolution to avoid data races
 		laddr := addr
 
+		// Start our listening loop
 		go func() {
 			defer shutdownWg.Done()
 
 			c.logger.Printf("[TRACE] core/startClusterListener: starting listener")
+
+			// Create a TCP listener. We do this separately and specifically
+			// with TCP so that we can set deadlines.
 			tcpLn, err := net.ListenTCP("tcp", laddr)
 			if err != nil {
 				c.logger.Printf("[TRACE] core/startClusterListener: error starting listener: %v", err)
 				return
 			}
 
+			// Wrap the listener with TLS
 			tlsLn := tls.NewListener(tcpLn, tlsConfig)
 
 			c.logger.Printf("[TRACE] core/startClusterListener: serving cluster requests on %s", tlsLn.Addr())
@@ -65,7 +98,12 @@ func (c *Core) startForwarding() error {
 					return
 				}
 
-				tcpLn.SetDeadline(time.Now().Add(500 * time.Millisecond))
+				// Set the deadline for the accept call. If it passes we'll get
+				// an error, causing us to check the condition at the top
+				// again.
+				tcpLn.SetDeadline(time.Now().Add(clusterListenerAcceptDeadline))
+
+				// Accept the connection
 				conn, err := tlsLn.Accept()
 				if err != nil {
 					if conn != nil {
@@ -73,6 +111,9 @@ func (c *Core) startForwarding() error {
 					}
 					continue
 				}
+
+				// Type assert to TLS connection and handshake to populate the
+				// connection state
 				tlsConn := conn.(*tls.Conn)
 				err = tlsConn.Handshake()
 				if err != nil {
@@ -105,13 +146,25 @@ func (c *Core) startForwarding() error {
 		}()
 	}
 
+	// This is in its own goroutine so that we don't block the main thread, and
+	// thus we use atomic and channels to coordinate
 	go func() {
+		// If we get told to shut down...
 		<-c.clusterListenerShutdownCh
+
+		// Stop the RPC server
 		c.rpcServer.Stop()
 		c.logger.Printf("[TRACE] core/startClusterListener: shutting down listeners")
+
+		// Set the shutdown flag. This will cause the listeners to shut down
+		// within the deadline in clusterListenerAcceptDeadline
 		atomic.StoreUint32(&shutdown, 1)
+
+		// Wait for them all to shut down
 		shutdownWg.Wait()
 		c.logger.Printf("[TRACE] core/startClusterListener: listeners successfully shut down")
+
+		// Tell the main thread that shutdown is done.
 		c.clusterListenerShutdownSuccessCh <- struct{}{}
 	}()
 
@@ -136,7 +189,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	// Leader() we'll have done a hash on the advertised info to ensure that we
 	// won't hit this function unnecessarily anyways.
 
-	// Disabled, potentially
+	// Disabled, potentially, so clean up anything that might be around.
 	if clusterAddr == "" {
 		c.requestForwardingConnection = nil
 		c.rpcForwardingClient = nil
@@ -252,6 +305,9 @@ func (c *Core) ForwardRequest(req *http.Request) (int, []byte, error) {
 	}
 }
 
+// getGRPCDialer is used to return a dialer that has the correct TLS
+// configuration. Otherwise gRPC tries to be helpful and stomps all over our
+// NextProtos.
 func (c *Core) getGRPCDialer() func(string, time.Duration) (net.Conn, error) {
 	return func(addr string, timeout time.Duration) (net.Conn, error) {
 		tlsConfig, err := c.ClusterTLSConfig()
@@ -273,12 +329,17 @@ type forwardedRequestRPCServer struct {
 }
 
 func (s *forwardedRequestRPCServer) HandleRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
+	// Parse an http.Request out of it
 	req, err := forwarding.ParseForwardedRequest(freq)
 	if err != nil {
 		return nil, err
 	}
 
+	// A very dummy response writer that doesn't follow normal semantics, just
+	// lets you write a status code (last written wins) and a body. But it
+	// meets the interface requirements.
 	w := forwarding.NewRPCResponseWriter()
+
 	s.handler.ServeHTTP(w, req)
 
 	return &forwarding.Response{

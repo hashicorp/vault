@@ -18,6 +18,8 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc/grpclog"
+
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/hashicorp/errwrap"
@@ -150,6 +152,7 @@ func (c *ServerCommand) Run(args []string) int {
 		MinLevel: logutils.LogLevel(strings.ToUpper(logLevel)),
 		Writer:   logGate,
 	}, "", log.LstdFlags)
+	grpclog.SetLogger(c.logger)
 
 	if err := c.setupTelemetry(config); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
