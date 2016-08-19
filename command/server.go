@@ -79,6 +79,10 @@ func (c *ServerCommand) Run(args []string) int {
 		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
 	}
 
+	if devHA {
+		dev = true
+	}
+
 	// Validation
 	if !dev {
 		switch {
