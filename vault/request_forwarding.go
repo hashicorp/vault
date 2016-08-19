@@ -65,7 +65,7 @@ func (c *Core) startForwarding() error {
 					return
 				}
 
-				tcpLn.SetDeadline(time.Now().Add(100 * time.Millisecond))
+				tcpLn.SetDeadline(time.Now().Add(500 * time.Millisecond))
 				conn, err := tlsLn.Accept()
 				if err != nil {
 					if conn != nil {
