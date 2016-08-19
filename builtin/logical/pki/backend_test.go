@@ -150,32 +150,6 @@ func TestBackend_URLsCRUD(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
-func TestBackend_ChainCRUD(t *testing.T) {
-	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
-	b, err := Factory(&logical.BackendConfig{
-		Logger: nil,
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: defaultLeaseTTLVal,
-			MaxLeaseTTLVal:     maxLeaseTTLVal,
-		},
-	})
-	if err != nil {
-		t.Fatalf("Unable to create backend: %s", err)
-	}
-
-	testCase := logicaltest.TestCase{
-		Backend: b,
-		Steps:   []logicaltest.TestStep{},
-	}
-
-	stepCount = len(testCase.Steps)
-
-	testCase.Steps = append(testCase.Steps, generateChainSteps(t, rsaCACert, rsaCAKey, rsaCAChain)...)
-
-	logicaltest.Test(t, testCase)
-}
-
 // Generates and tests steps that walk through the various possibilities
 // of role flags to ensure that they are properly restricted
 // Uses the RSA CA key
@@ -617,103 +591,6 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			},
 		},
 	}
-	return ret
-}
-
-func generateChainSteps(t *testing.T, caCert, caKey, caChain string) []logicaltest.TestStep {
-	ret := []logicaltest.TestStep{
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/chain",
-			Data: map[string]interface{}{
-				"pem_bundle": caChain,
-			},
-			ErrorOk: true,
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data: map[string]interface{}{
-				"pem_bundle": caKey + caCert,
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "config/chain",
-			Check: func(resp *logical.Response) error {
-				if resp.Data["issuing_ca"].(string) != "" {
-					return fmt.Errorf("issuing_ca should be empty")
-				}
-				if _, ok := resp.Data["issuing_ca_chain"]; ok {
-					return fmt.Errorf("issuing_ca_chain should not be returned")
-				}
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data: map[string]interface{}{
-				"pem_bundle": caKey + caCert + caChain,
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "config/chain",
-			Check: func(resp *logical.Response) error {
-				if resp.Data["issuing_ca"].(string) == "" {
-					return fmt.Errorf("issuing_ca should not be empty")
-				}
-				if _, ok := resp.Data["issuing_ca_chain"]; !ok {
-					return fmt.Errorf("issuing_ca_chain should be returned")
-				}
-				respChain := fmt.Sprintf("%s\n%s\n", resp.Data["issuing_ca"].(string), resp.Data["issuing_ca_chain"].(string))
-				if respChain != caChain {
-					return fmt.Errorf("parsed CA chain does not match chain")
-				}
-				return nil
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/ca",
-			Data: map[string]interface{}{
-				"pem_bundle": caKey + caCert,
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "config/chain",
-			Data: map[string]interface{}{
-				"pem_bundle": caChain,
-			},
-		},
-
-		logicaltest.TestStep{
-			Operation: logical.ReadOperation,
-			Path:      "config/chain",
-			Check: func(resp *logical.Response) error {
-				if resp.Data["issuing_ca"].(string) == "" {
-					return fmt.Errorf("issuing_ca should not be empty")
-				}
-				if _, ok := resp.Data["issuing_ca_chain"]; !ok {
-					return fmt.Errorf("issuing_ca_chain should be returned")
-				}
-				respChain := fmt.Sprintf("%s\n%s\n", resp.Data["issuing_ca"].(string), resp.Data["issuing_ca_chain"].(string))
-				if respChain != caChain {
-					return fmt.Errorf("parsed CA chain does not match chain")
-				}
-				return nil
-			},
-		},
-	}
-
 	return ret
 }
 
