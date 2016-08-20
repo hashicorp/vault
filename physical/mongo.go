@@ -124,6 +124,16 @@ func (b *MongoBackend) parseMongoURI(rawUri string) (*mgo.DialInfo, error) {
 	return &info, nil
 }
 
+var keyIndex mgo.Index = mgo.Index{
+	Key:    []string{"key"},
+	Unique: true,
+}
+
+var lastCheckedInIndex mgo.Index = mgo.Index{
+	Key:         []string{"lastCheckedIn"},
+	ExpireAfter: 5 * time.Second,
+}
+
 // this part was derived from and adjusted for our needs from:
 //   builtin/logical/mongodb/backend.go
 //
@@ -138,6 +148,8 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 		b.session.Close()
 	}
 
+	// we need to establish a new session
+	b.logger.Printf("[INFO]: physical/mongo: establishing new MongoDB session")
 	dialInfo, err := b.parseMongoURI(b.Url)
 	if err != nil {
 		b.logger.Printf("[ERROR]: physical/mongo: could not parse MongoDB URI: %v", err)
@@ -152,10 +164,20 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 	b.session.SetSyncTimeout(1 * time.Minute)
 	b.session.SetSocketTimeout(1 * time.Minute)
 
-	// handled by mgo
-	//if b.Database == "" {
-	//	b.Database = dialInfo.Database
-	//}
+	// ensure indices
+	b.logger.Printf("[INFO]: physical/mongo: ensuring MongoDB indices exist")
+	c := b.session.DB(b.Database).C(b.Collection)
+	err = c.EnsureIndex(keyIndex)
+	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not EnsureIndex() for 'key': %v", err)
+		return nil, err
+	}
+
+	err = c.EnsureIndex(lastCheckedInIndex)
+	if err != nil {
+		b.logger.Printf("[ERROR]: physical/mongo: could not EnsureIndex() for 'lastCheckedIn': %v", err)
+		return nil, err
+	}
 
 	return b.session, nil
 }
@@ -168,11 +190,15 @@ type MongoBackend struct {
 	l             sync.Mutex
 	session       *mgo.Session
 	logger        *log.Logger
+	haEnabled     bool
 	tls           bool
 	tlsSkipVerify bool
 	tlsCertFile   string
 	tlsKeyFile    string
 	tlsCAFile     string
+	lockValue     string
+	leaderCh      chan struct{}
+	isLeader      bool
 }
 
 // newMongoBackend constructs a MongoBackend using the given directory
@@ -196,6 +222,12 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 	_, ok = conf["tls"]
 	if ok {
 		tls = true
+	}
+
+	haEnabled := false
+	_, ok = conf["ha_enabled"]
+	if ok {
+		haEnabled = true
 	}
 
 	tlsSkipVerify := false
@@ -227,6 +259,7 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 		Database:      database,
 		Collection:    collection,
 		logger:        logger,
+		haEnabled:     haEnabled,
 		tls:           tls,
 		tlsSkipVerify: tlsSkipVerify,
 		tlsCAFile:     tlsCAFile,
@@ -353,4 +386,191 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 	b.logger.Printf("[DEBUG]: physical/mongo: List(%v): %v", prefix, results)
 
 	return results, nil
+}
+
+// This is configurable right now, as HA should be considered experimental
+// The default is off
+func (b *MongoBackend) HAEnabled() bool {
+	b.logger.Printf("[DEBUG]: physical/mongo: HAEnabled(%v)", b.haEnabled)
+	return b.haEnabled
+}
+
+// LockWith is used for mutual exclusion based on the given key.
+func (b *MongoBackend) LockWith(key, value string) (Lock, error) {
+	b.logger.Printf("[DEBUG]: physical/mongo: LockWith(%v, %v)", key, value)
+	l := &MongoLock{
+		b:     b,
+		key:   key,
+		value: value,
+	}
+	return l, nil
+}
+
+type MongoLock struct {
+	b     *MongoBackend
+	key   string
+	value string
+}
+
+type LockEntry struct {
+	Key           string
+	Value         string
+	LastCheckedIn bson.MongoTimestamp
+}
+
+// Lock is used to acquire the given lock
+// The stopCh is optional and if closed should interrupt the lock
+// acquisition attempt. The return struct should be closed when
+// leadership is lost.
+func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	l.b.logger.Printf("[DEBUG]: physical/mongo: Lock()")
+	session, err := l.b.activeSession()
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		return nil, err
+	}
+	c := session.DB(l.b.Database).C(l.b.Collection)
+
+	q := c.Find(bson.M{"key": l.key})
+	n, err := q.Count()
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): error in Count() : %v", err)
+		return nil, err
+	}
+
+	// nobody has the lock yet, acquire it
+	if n <= 0 {
+		err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
+		if err != nil {
+			l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): could not Insert(): %v", err)
+			return nil, err
+		}
+
+		// acquired :)
+		l.b.lockValue = l.value
+		l.b.isLeader = true
+		l.b.leaderCh = make(chan struct{})
+		go func() {
+			for {
+				time.Sleep(3 * time.Second)
+				if l.b.isLeader {
+					err = l.activePoller()
+					if err != nil {
+						l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): activePoller() error, going to lose leadership: %v", err)
+						l.loseLeadership()
+						break
+					}
+				} else {
+					break
+				}
+			}
+		}()
+		return l.b.leaderCh, nil
+	}
+
+	// could not acquire
+	return nil, errors.New("Lock already acquired by other vault instance")
+}
+
+func (l *MongoLock) loseLeadership() {
+	l.b.lockValue = ""
+	l.b.isLeader = false
+	close(l.b.leaderCh)
+	l.b.leaderCh = nil
+}
+
+// Unlock is used to release the lock
+func (l *MongoLock) Unlock() error {
+	l.b.logger.Printf("[DEBUG]: physical/mongo: Unlock()")
+	if l.b.isLeader {
+		l.loseLeadership()
+	}
+
+	session, err := l.b.activeSession()
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		return err
+	}
+	c := session.DB(l.b.Database).C(l.b.Collection)
+
+	err = c.Remove(bson.M{"key": l.key, "value": l.value})
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: l.Unlock() could not remove lock: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (l *MongoLock) activePoller() error {
+	l.b.logger.Printf("[DEBUG]: physical/mongo: activePoller()")
+	session, err := l.b.activeSession()
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		return err
+	}
+	c := session.DB(l.b.Database).C(l.b.Collection)
+
+	err = c.Update(bson.M{"key": l.key, "value": l.value}, bson.M{"$currentDate": bson.M{"lastCheckedIn": bson.M{"$type": "timestamp"}}})
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: activePoller(): Update() failed: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+/*func (l *MongoLock) standbyPoller() error {
+	session, err := l.b.activeSession()
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		return err
+	}
+	c := session.DB(l.b.Database).C(l.b.Collection)
+
+	// remove leader if timestamp too old
+  time.Now().S
+	return nil
+}*/
+
+// Returns the value of the lock and if it is held
+func (l *MongoLock) Value() (bool, string, error) {
+	l.b.logger.Printf("[DEBUG]: physical/mongo: Value()")
+	session, err := l.b.activeSession()
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		return false, "", err
+	}
+	c := session.DB(l.b.Database).C(l.b.Collection)
+
+	q := c.Find(bson.M{"key": l.key})
+	n, err := q.Count()
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): error in Count() : %v", err)
+		return false, "", err
+	}
+
+	if n <= 0 {
+		return false, "", errors.New("nobody holds the lock yet")
+	}
+
+	var entry LockEntry
+	err = q.One(&entry)
+	if err != nil {
+		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): error in One(): %v", err)
+		return false, "", err
+	}
+
+	//l.b.logger.Printf("[DEBUG]: physical/mongo: LockEntry: %v", entry)
+	//l.b.logger.Printf("[DEBUG]: physical/mongo: entry.Value '%v', l.Value '%v'", entry.Value, l.b.lockValue)
+
+	// we are holding the lock :)
+	if entry.Value == l.b.lockValue {
+		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): (true, %v)", entry.Value)
+		return true, entry.Value, nil
+	}
+
+	// we are not holding the lock :(
+	l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): (false, %v)", entry.Value)
+	return false, entry.Value, nil
 }
