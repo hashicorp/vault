@@ -91,7 +91,6 @@ func (b *backend) secretCredsRevoke(
 	}
 	username, ok := usernameRaw.(string)
 
-
 	// Get our connection
 	db, err := b.DB(req.Storage)
 	if err != nil {

@@ -34,7 +34,7 @@ func pathDuoAccess() *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:  pathDuoAccessWrite,
+			logical.UpdateOperation: pathDuoAccessWrite,
 		},
 
 		HelpSynopsis:    pathDuoAccessHelpSyn,

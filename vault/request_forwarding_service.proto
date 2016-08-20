@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+import "github.com/hashicorp/vault/helper/forwarding/types.proto";
+
+package vault;
+
+service RequestForwarding {
+	rpc HandleRequest(forwarding.Request) returns (forwarding.Response) {}
+}

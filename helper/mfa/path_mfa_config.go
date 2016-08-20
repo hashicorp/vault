@@ -16,8 +16,8 @@ func pathMFAConfig(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:  b.pathMFAConfigWrite,
-			logical.ReadOperation: b.pathMFAConfigRead,
+			logical.UpdateOperation: b.pathMFAConfigWrite,
+			logical.ReadOperation:   b.pathMFAConfigRead,
 		},
 
 		HelpSynopsis:    pathMFAConfigHelpSyn,

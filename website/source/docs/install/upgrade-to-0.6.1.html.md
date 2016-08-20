@@ -18,6 +18,22 @@ able to form an HA cluster. If following our [general upgrade
 instructions](https://www.vaultproject.io/docs/install/upgrade.html) this will
 not be an issue.
 
+## Health Endpoint Status Code Changes
+
+Prior to 0.6.1, the health endpoint would return a `500` (Internal Server
+Error) for both a sealed and uninitialized state. In both states this was
+confusing, since it was hard to tell, based on the status code, an actual
+internal error from Vault from a Vault that was simply uninitialized or sealed,
+not to mention differentiating between those two states.
+
+In 0.6.1, a sealed Vault will return a `503` (Service Unavailable) status code.
+As before, this can be adjusted with the `sealedcode` query parameter. An
+uninitialized Vault will return a `501` (Not Implemented) status code. This can
+be adjusted with the `uninitcode` query parameter.
+
+This removes ambiguity/confusion and falls more in line with the intention of
+each status code (including `500`).
+
 ## Root Token Creation Restrictions
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
@@ -56,11 +72,11 @@ unfortunately has the side effect that `memberOf` is no longer searched for by
 default, which is a breaking change for many existing setups. 
 
 `Scenario 2` in the [updated
-documentation](https://github.com/hashicorp/vault/blob/master/website/source/docs/auth/ldap.html.md)
-shows an example of configuring the backend to query `memberOf`. It is
-recommended that a test Vault server be set up and that successful
-authentication can be performed using the new configuration before upgrading a
-primary or production Vault instance.
+documentation](https://www.vaultproject.io/docs/auth/ldap.html) shows an
+example of configuring the backend to query `memberOf`. It is recommended that
+a test Vault server be set up and that successful authentication can be
+performed using the new configuration before upgrading a primary or production
+Vault instance.
 
 In addition, if LDAP is relied upon for authentication, operators should ensure
 that they have valid tokens with policies allowing modification of LDAP

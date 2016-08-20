@@ -13,7 +13,7 @@ func pathDuoConfig() *framework.Path {
 		Pattern: `duo/config`,
 		Fields: map[string]*framework.FieldSchema{
 			"user_agent": &framework.FieldSchema{
-				Type: framework.TypeString,
+				Type:        framework.TypeString,
 				Description: "User agent to connect to Duo (default \"\")",
 			},
 			"username_format": &framework.FieldSchema{
@@ -24,7 +24,7 @@ func pathDuoConfig() *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: pathDuoConfigWrite,
-			logical.ReadOperation: pathDuoConfigRead,
+			logical.ReadOperation:   pathDuoConfigRead,
 		},
 
 		HelpSynopsis:    pathDuoConfigHelpSyn,
@@ -87,7 +87,7 @@ func pathDuoConfigRead(
 
 type DuoConfig struct {
 	UsernameFormat string `json:"username_format"`
-	UserAgent string `json:"user_agent"`
+	UserAgent      string `json:"user_agent"`
 }
 
 const pathDuoConfigHelpSyn = `

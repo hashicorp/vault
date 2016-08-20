@@ -1,4 +1,4 @@
-package requestutil
+package forwarding
 
 import (
 	"bytes"
@@ -24,8 +24,39 @@ func (b bufCloser) Close() error {
 
 // GenerateForwardedRequest generates a new http.Request that contains the
 // original requests's information in the new request's body.
-func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, error) {
-	fq := ForwardedRequest{
+func GenerateForwardedHTTPRequest(req *http.Request, addr string) (*http.Request, error) {
+	fq, err := GenerateForwardedRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	var newBody []byte
+	switch os.Getenv("VAULT_MESSAGE_TYPE") {
+	case "json":
+		newBody, err = jsonutil.EncodeJSON(fq)
+	case "json_compress":
+		newBody, err = jsonutil.EncodeJSONAndCompress(fq, &compressutil.CompressionConfig{
+			Type: compressutil.CompressionTypeLzw,
+		})
+	case "proto3":
+		fallthrough
+	default:
+		newBody, err = proto.Marshal(fq)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	ret, err := http.NewRequest("POST", addr, bytes.NewBuffer(newBody))
+	if err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+func GenerateForwardedRequest(req *http.Request) (*Request, error) {
+	fq := Request{
 		Method:        req.Method,
 		HeaderEntries: make(map[string]*HeaderEntry, len(req.Header)),
 		Host:          req.Host,
@@ -49,13 +80,6 @@ func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, er
 		}
 	}
 
-	if req.TLS != nil && req.TLS.PeerCertificates != nil && len(req.TLS.PeerCertificates) > 0 {
-		fq.PeerCertificates = make([][]byte, len(req.TLS.PeerCertificates))
-		for i, cert := range req.TLS.PeerCertificates {
-			fq.PeerCertificates[i] = cert.Raw
-		}
-	}
-
 	buf := bytes.NewBuffer(nil)
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
@@ -63,44 +87,27 @@ func GenerateForwardedRequest(req *http.Request, addr string) (*http.Request, er
 	}
 	fq.Body = buf.Bytes()
 
-	var newBody []byte
-	switch os.Getenv("VAULT_MESSAGE_TYPE") {
-	case "json":
-		newBody, err = jsonutil.EncodeJSON(&fq)
-	case "json_compress":
-		newBody, err = jsonutil.EncodeJSONAndCompress(&fq, &compressutil.CompressionConfig{
-			Type: compressutil.CompressionTypeLzw,
-		})
-	case "proto3":
-		fallthrough
-	default:
-		newBody, err = proto.Marshal(&fq)
-	}
-	if err != nil {
-		return nil, err
+	if req.TLS != nil && req.TLS.PeerCertificates != nil && len(req.TLS.PeerCertificates) > 0 {
+		fq.PeerCertificates = make([][]byte, len(req.TLS.PeerCertificates))
+		for i, cert := range req.TLS.PeerCertificates {
+			fq.PeerCertificates[i] = cert.Raw
+		}
 	}
 
-	ret, err := http.NewRequest("POST", addr, bytes.NewBuffer(newBody))
-	if err != nil {
-		return nil, err
-	}
-
-	return ret, nil
+	return &fq, nil
 }
 
 // ParseForwardedRequest generates a new http.Request that is comprised of the
 // values in the given request's body, assuming it correctly parses into a
 // ForwardedRequest.
-func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
-	buf := bufCloser{
-		Buffer: bytes.NewBuffer(nil),
-	}
+func ParseForwardedHTTPRequest(req *http.Request) (*http.Request, error) {
+	buf := bytes.NewBuffer(nil)
 	_, err := buf.ReadFrom(req.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	fq := new(ForwardedRequest)
+	fq := new(Request)
 	switch os.Getenv("VAULT_MESSAGE_TYPE") {
 	case "json", "json_compress":
 		err = jsonutil.DecodeJSON(buf.Bytes(), fq)
@@ -111,10 +118,12 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 		return nil, err
 	}
 
-	buf.Reset()
-	_, err = buf.Write(fq.Body)
-	if err != nil {
-		return nil, err
+	return ParseForwardedRequest(fq)
+}
+
+func ParseForwardedRequest(fq *Request) (*http.Request, error) {
+	buf := bufCloser{
+		Buffer: bytes.NewBuffer(fq.Body),
 	}
 
 	ret := &http.Request{
@@ -153,4 +162,42 @@ func ParseForwardedRequest(req *http.Request) (*http.Request, error) {
 	}
 
 	return ret, nil
+}
+
+type RPCResponseWriter struct {
+	statusCode int
+	header     http.Header
+	body       *bytes.Buffer
+}
+
+// NewRPCResponseWriter returns an initialized RPCResponseWriter
+func NewRPCResponseWriter() *RPCResponseWriter {
+	w := &RPCResponseWriter{
+		header:     make(http.Header),
+		body:       new(bytes.Buffer),
+		statusCode: 200,
+	}
+	//w.header.Set("Content-Type", "application/octet-stream")
+	return w
+}
+
+func (w *RPCResponseWriter) Header() http.Header {
+	return w.header
+}
+
+func (w *RPCResponseWriter) Write(buf []byte) (int, error) {
+	w.body.Write(buf)
+	return len(buf), nil
+}
+
+func (w *RPCResponseWriter) WriteHeader(code int) {
+	w.statusCode = code
+}
+
+func (w *RPCResponseWriter) StatusCode() int {
+	return w.statusCode
+}
+
+func (w *RPCResponseWriter) Body() *bytes.Buffer {
+	return w.body
 }
