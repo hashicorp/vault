@@ -395,6 +395,12 @@ func (b *MongoBackend) HAEnabled() bool {
 	return b.haEnabled
 }
 
+// DetectHostAddr is used to detect the host address
+func (b *MongoBackend) DetectHostAddr() (string, error) {
+	b.logger.Printf("[DEBUG]: physical/mongo:DetectHostAddr()")
+	return "aaa", nil
+}
+
 // LockWith is used for mutual exclusion based on the given key.
 func (b *MongoBackend) LockWith(key, value string) (Lock, error) {
 	b.logger.Printf("[DEBUG]: physical/mongo: LockWith(%v, %v)", key, value)
@@ -423,7 +429,12 @@ type LockEntry struct {
 // acquisition attempt. The return struct should be closed when
 // leadership is lost.
 func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
-	l.b.logger.Printf("[DEBUG]: physical/mongo: Lock()")
+	l.b.logger.Printf("[DEBUG]: physical/mongo: Lock(%v)", l.value)
+	if l.value == "read" {
+		l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() for mysterious read lock!")
+		return l.b.leaderCh, nil
+	}
+
 	session, err := l.b.activeSession()
 	if err != nil {
 		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
@@ -437,6 +448,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): error in Count() : %v", err)
 		return nil, err
 	}
+	//l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() count is %v", n)
 
 	// nobody has the lock yet, acquire it
 	if n <= 0 {
@@ -465,11 +477,14 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				}
 			}
 		}()
+		//l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() success", n)
 		return l.b.leaderCh, nil
 	}
 
 	// could not acquire
+	//l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() error", n)
 	return nil, errors.New("Lock already acquired by other vault instance")
+	//return nil, nil
 }
 
 func (l *MongoLock) loseLeadership() {
@@ -482,6 +497,11 @@ func (l *MongoLock) loseLeadership() {
 // Unlock is used to release the lock
 func (l *MongoLock) Unlock() error {
 	l.b.logger.Printf("[DEBUG]: physical/mongo: Unlock()")
+	if l.value == "read" {
+		l.b.logger.Printf("[DEBUG]: physical/mongo: Unlock() for mysterious 'read' lock!")
+		return nil
+	}
+
 	if l.b.isLeader {
 		l.loseLeadership()
 	}
@@ -535,7 +555,7 @@ func (l *MongoLock) activePoller() error {
 
 // Returns the value of the lock and if it is held
 func (l *MongoLock) Value() (bool, string, error) {
-	l.b.logger.Printf("[DEBUG]: physical/mongo: Value()")
+	l.b.logger.Printf("[DEBUG]: physical/mongo: Value(%v)", l.value)
 	session, err := l.b.activeSession()
 	if err != nil {
 		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
@@ -564,13 +584,13 @@ func (l *MongoLock) Value() (bool, string, error) {
 	//l.b.logger.Printf("[DEBUG]: physical/mongo: LockEntry: %v", entry)
 	//l.b.logger.Printf("[DEBUG]: physical/mongo: entry.Value '%v', l.Value '%v'", entry.Value, l.b.lockValue)
 
-	// we are holding the lock :)
-	if entry.Value == l.b.lockValue {
-		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): (true, %v)", entry.Value)
+	// the read lock
+	if l.value == "read" {
+		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(read): %v", entry.Value)
 		return true, entry.Value, nil
 	}
 
-	// we are not holding the lock :(
-	l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): (false, %v)", entry.Value)
-	return false, entry.Value, nil
+	// our default lock
+	l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(%v): %v", l.value, entry.Value)
+	return l.b.isLeader, entry.Value, nil
 }
