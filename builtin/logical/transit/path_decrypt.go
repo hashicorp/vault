@@ -74,6 +74,20 @@ func (b *backend) pathDecryptWrite(
 	}
 
 	// Get the policy
+	resp, err := b.pathDecryptWriteHelper(name, context, ciphertext, req, d)
+	if err != nil && err.Error() == "invalid ciphertext: version is too new" {
+		err = b.lm.DeletePolicyFromCache(req.Storage, name)
+		if err != nil {
+			return nil, err
+		}
+		resp, err = b.pathDecryptWriteHelper(name, context, ciphertext, req, d)
+	}
+	return resp, err
+}
+
+func (b *backend) pathDecryptWriteHelper(name string, context []byte, ciphertext string,
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
 	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
 	if lock != nil {
 		defer lock.RUnlock()
