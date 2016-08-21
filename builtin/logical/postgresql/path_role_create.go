@@ -33,12 +33,13 @@ func pathRoleCreate(b *backend) *framework.Path {
 
 func (b *backend) pathRoleCreateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.logger.Println("[TRACE] postgres/pathRoleCreateRead: enter")
-	defer b.logger.Println("[TRACE] postgres/pathRoleCreateRead: exit")
+	b.logger.Trace("postgres/pathRoleCreateRead: enter")
+	defer b.logger.Trace("postgres/pathRoleCreateRead: exit")
+
 	name := data.Get("name").(string)
 
 	// Get the role
-	b.logger.Println("[TRACE] postgres/pathRoleCreateRead: getting role")
+	b.logger.Trace("postgres/pathRoleCreateRead: getting role")
 	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -48,7 +49,7 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Determine if we have a lease
-	b.logger.Println("[TRACE] postgres/pathRoleCreateRead: getting lease")
+	b.logger.Trace("postgres/pathRoleCreateRead: getting lease")
 	lease, err := b.Lease(req.Storage)
 	if err != nil {
 		return nil, err
@@ -84,20 +85,20 @@ func (b *backend) pathRoleCreateRead(
 		Format("2006-01-02 15:04:05-0700")
 
 	// Get our handle
-	b.logger.Println("[TRACE] postgres/pathRoleCreateRead: getting database handle")
+	b.logger.Trace("postgres/pathRoleCreateRead: getting database handle")
 	db, err := b.DB(req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	// Start a transaction
-	b.logger.Println("[TRACE] postgres/pathRoleCreateRead: starting transaction")
+	b.logger.Trace("postgres/pathRoleCreateRead: starting transaction")
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		b.logger.Println("[TRACE] postgres/pathRoleCreateRead: rolling back transaction")
+		b.logger.Trace("postgres/pathRoleCreateRead: rolling back transaction")
 		tx.Rollback()
 	}()
 
@@ -108,7 +109,7 @@ func (b *backend) pathRoleCreateRead(
 			continue
 		}
 
-		b.logger.Println("[TRACE] postgres/pathRoleCreateRead: preparing statement")
+		b.logger.Trace("postgres/pathRoleCreateRead: preparing statement")
 		stmt, err := tx.Prepare(Query(query, map[string]string{
 			"name":       username,
 			"password":   password,
@@ -118,7 +119,7 @@ func (b *backend) pathRoleCreateRead(
 			return nil, err
 		}
 		defer stmt.Close()
-		b.logger.Println("[TRACE] postgres/pathRoleCreateRead: executing statement")
+		b.logger.Trace("postgres/pathRoleCreateRead: executing statement")
 		if _, err := stmt.Exec(); err != nil {
 			return nil, err
 		}
@@ -126,14 +127,14 @@ func (b *backend) pathRoleCreateRead(
 
 	// Commit the transaction
 
-	b.logger.Println("[TRACE] postgres/pathRoleCreateRead: committing transaction")
+	b.logger.Trace("postgres/pathRoleCreateRead: committing transaction")
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
 
 	// Return the secret
 
-	b.logger.Println("[TRACE] postgres/pathRoleCreateRead: generating secret")
+	b.logger.Trace("postgres/pathRoleCreateRead: generating secret")
 	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
 		"username": username,
 		"password": password,

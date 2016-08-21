@@ -777,7 +777,7 @@ func (b *SystemBackend) handleMount(
 
 	// Attempt mount
 	if err := b.Core.mount(me); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: mount %s failed: %v", me.Path, err)
+		b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 
@@ -807,7 +807,7 @@ func (b *SystemBackend) handleUnmount(
 
 	// Attempt unmount
 	if err := b.Core.unmount(suffix); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: unmount '%s' failed: %v", suffix, err)
+		b.Backend.Logger().Error("sys: unmount failed", "path", suffix, "error", err)
 		return handleError(err)
 	}
 
@@ -831,7 +831,7 @@ func (b *SystemBackend) handleRemount(
 
 	// Attempt remount
 	if err := b.Core.remount(fromPath, toPath); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: remount '%s' to '%s' failed: %v", fromPath, toPath, err)
+		b.Backend.Logger().Error("sys: remount failed", "from_path", fromPath, "to_path", toPath, "error", err)
 		return handleError(err)
 	}
 
@@ -872,9 +872,8 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 
 	sysView := b.Core.router.MatchingSystemView(path)
 	if sysView == nil {
-		err := fmt.Errorf("[ERR] sys: cannot fetch sysview for path %s", path)
-		b.Backend.Logger().Print(err)
-		return handleError(err)
+		b.Backend.Logger().Error("sys: cannot fetch sysview", "path", path)
+		return handleError(fmt.Errorf("sys: cannot fetch sysview for path %s", path))
 	}
 
 	resp := &logical.Response{
@@ -920,17 +919,15 @@ func (b *SystemBackend) handleTuneWriteCommon(
 	// Prevent protected paths from being changed
 	for _, p := range untunableMounts {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Errorf("[ERR] core: cannot tune '%s'", path)
-			b.Backend.Logger().Print(err)
-			return handleError(err)
+			b.Backend.Logger().Error("sys: cannot tune this mount", "path", path)
+			return handleError(fmt.Errorf("sys: cannot tune '%s'", path))
 		}
 	}
 
 	mountEntry := b.Core.router.MatchingMountEntry(path)
 	if mountEntry == nil {
-		err := fmt.Errorf("[ERR] sys: tune of path '%s' failed: no mount entry found", path)
-		b.Backend.Logger().Print(err)
-		return handleError(err)
+		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
+		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
 	}
 
 	var lock *sync.RWMutex
@@ -977,7 +974,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			defer lock.Unlock()
 
 			if err := b.tuneMountTTLs(path, &mountEntry.Config, newDefault, newMax); err != nil {
-				b.Backend.Logger().Printf("[ERR] sys: tune of path '%s' failed: %v", path, err)
+				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
 				return handleError(err)
 			}
 		}
@@ -1002,7 +999,7 @@ func (b *SystemBackend) handleRenew(
 	// Invoke the expiration manager directly
 	resp, err := b.Core.expiration.Renew(leaseID, increment)
 	if err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: renew '%s' failed: %v", leaseID, err)
+		b.Backend.Logger().Error("sys: lease renewal failed", "lease_id", leaseID, "error", err)
 		return handleError(err)
 	}
 	return resp, err
@@ -1016,7 +1013,7 @@ func (b *SystemBackend) handleRevoke(
 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: revoke '%s' failed: %v", leaseID, err)
+		b.Backend.Logger().Error("sys: lease revocation failed", "lease_id", leaseID, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -1048,7 +1045,7 @@ func (b *SystemBackend) handleRevokePrefixCommon(
 		err = b.Core.expiration.RevokePrefix(prefix)
 	}
 	if err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: revoke prefix '%s' failed: %v", prefix, err)
+		b.Backend.Logger().Error("sys: revoke prefix failed", "prefix", prefix, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -1103,7 +1100,7 @@ func (b *SystemBackend) handleEnableAuth(
 
 	// Attempt enabling
 	if err := b.Core.enableCredential(me); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: enable auth %s failed: %v", me.Path, err)
+		b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -1121,7 +1118,7 @@ func (b *SystemBackend) handleDisableAuth(
 
 	// Attempt disable
 	if err := b.Core.disableCredential(suffix); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: disable auth '%s' failed: %v", suffix, err)
+		b.Backend.Logger().Error("sys: disable auth mount failed", "path", suffix, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -1273,7 +1270,7 @@ func (b *SystemBackend) handleEnableAudit(
 
 	// Attempt enabling
 	if err := b.Core.enableAudit(me); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: enable audit %s failed: %v", me.Path, err)
+		b.Backend.Logger().Error("sys: enable audit mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -1286,7 +1283,7 @@ func (b *SystemBackend) handleDisableAudit(
 
 	// Attempt disable
 	if err := b.Core.disableAudit(path); err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: disable audit '%s' failed: %v", path, err)
+		b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil
@@ -1387,22 +1384,22 @@ func (b *SystemBackend) handleRotate(
 	// Rotate to the new term
 	newTerm, err := b.Core.barrier.Rotate()
 	if err != nil {
-		b.Backend.Logger().Printf("[ERR] sys: failed to create new encryption key: %v", err)
+		b.Backend.Logger().Error("sys: failed to create new encryption key", "error", err)
 		return handleError(err)
 	}
-	b.Backend.Logger().Printf("[INFO] sys: installed new encryption key")
+	b.Backend.Logger().Info("sys: installed new encryption key")
 
 	// In HA mode, we need to an upgrade path for the standby instances
 	if b.Core.ha != nil {
 		// Create the upgrade path to the new term
 		if err := b.Core.barrier.CreateUpgrade(newTerm); err != nil {
-			b.Backend.Logger().Printf("[ERR] sys: failed to create new upgrade for key term %d: %v", newTerm, err)
+			b.Backend.Logger().Error("sys: failed to create new upgrade", "term", newTerm, "error", err)
 		}
 
 		// Schedule the destroy of the upgrade path
 		time.AfterFunc(keyRotateGracePeriod, func() {
 			if err := b.Core.barrier.DestroyUpgrade(newTerm); err != nil {
-				b.Backend.Logger().Printf("[ERR] sys: failed to destroy upgrade for key term %d: %v", newTerm, err)
+				b.Backend.Logger().Error("sys: failed to destroy upgrade", "term", newTerm, "error", err)
 			}
 		})
 	}

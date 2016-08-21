@@ -218,18 +218,18 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 	trustedNonCAs = make([]*ParsedCert, 0)
 	names, err := store.List("cert/")
 	if err != nil {
-		b.Logger().Printf("[ERR] cert: failed to list trusted certs: %v", err)
+		b.Logger().Error("cert: failed to list trusted certs", "error", err)
 		return
 	}
 	for _, name := range names {
 		entry, err := b.Cert(store, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
-			b.Logger().Printf("[ERR] cert: failed to load trusted certs '%s': %v", name, err)
+			b.Logger().Error("cert: failed to load trusted cert", "name", name, "error", err)
 			continue
 		}
 		parsed := parsePEM([]byte(entry.Certificate))
 		if len(parsed) == 0 {
-			b.Logger().Printf("[ERR] cert: failed to parse certificate for '%s'", name)
+			b.Logger().Error("cert: failed to parse certificate", "name", name)
 			continue
 		}
 		if !parsed[0].IsCA {

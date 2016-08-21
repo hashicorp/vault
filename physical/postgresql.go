@@ -3,9 +3,10 @@ package physical
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
 	"github.com/lib/pq"
@@ -20,12 +21,12 @@ type PostgreSQLBackend struct {
 	get_query    string
 	delete_query string
 	list_query   string
-	logger       *log.Logger
+	logger       log.Logger
 }
 
 // newPostgreSQLBackend constructs a PostgreSQL backend using the given
 // API client, server address, credentials, and database.
-func newPostgreSQLBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
+func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 	// Get the PostgreSQL credentials to perform read/write operations.
 	connURL, ok := conf["connection_url"]
 	if !ok || connURL == "" {

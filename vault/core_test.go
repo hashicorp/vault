@@ -1,8 +1,6 @@
 package vault
 
 import (
-	"log"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -10,8 +8,10 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 var (
@@ -20,7 +20,8 @@ var (
 )
 
 func TestNewCore_badRedirectAddr(t *testing.T) {
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger = logformat.NewVaultLogger(log.LevelTrace)
+
 	conf := &CoreConfig{
 		RedirectAddr: "127.0.0.1:8200",
 		Physical:     physical.NewInmem(logger),
@@ -955,7 +956,8 @@ func TestCore_LimitedUseToken(t *testing.T) {
 
 func TestCore_Standby_Seal(t *testing.T) {
 	// Create the first core and initialize it
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger = logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
 	redirectOriginal := "http://127.0.0.1:8200"
@@ -1061,7 +1063,8 @@ func TestCore_Standby_Seal(t *testing.T) {
 
 func TestCore_StepDown(t *testing.T) {
 	// Create the first core and initialize it
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger = logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
 	redirectOriginal := "http://127.0.0.1:8200"
@@ -1247,7 +1250,8 @@ func TestCore_StepDown(t *testing.T) {
 
 func TestCore_CleanLeaderPrefix(t *testing.T) {
 	// Create the first core and initialize it
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger = logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
 	redirectOriginal := "http://127.0.0.1:8200"
@@ -1404,13 +1408,15 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 }
 
 func TestCore_Standby(t *testing.T) {
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger = logformat.NewVaultLogger(log.LevelTrace)
+
 	inmha := physical.NewInmemHA(logger)
 	testCore_Standby_Common(t, inmha, inmha)
 }
 
 func TestCore_Standby_SeparateHA(t *testing.T) {
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger = logformat.NewVaultLogger(log.LevelTrace)
+
 	testCore_Standby_Common(t, physical.NewInmemHA(logger), physical.NewInmemHA(logger))
 }
 
@@ -1950,7 +1956,8 @@ func TestCore_HandleRequest_MountPoint(t *testing.T) {
 
 func TestCore_Standby_Rotate(t *testing.T) {
 	// Create the first core and initialize it
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger = logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
 	redirectOriginal := "http://127.0.0.1:8200"

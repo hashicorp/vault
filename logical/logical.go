@@ -1,6 +1,6 @@
 package logical
 
-import "log"
+import log "github.com/mgutz/logxi/v1"
 
 // Backend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount
@@ -44,7 +44,7 @@ type BackendConfig struct {
 	StorageView Storage
 
 	// The backend should use this logger. The log should not contain any secrets.
-	Logger *log.Logger
+	Logger log.Logger
 
 	// System provides a view into a subset of safe system information that
 	// is useful for backends, such as the default/max lease TTLs

@@ -75,7 +75,9 @@ func (b *SystemBackend) tuneMountTTLs(path string, meConfig *MountConfig, newDef
 		return fmt.Errorf("failed to update mount table, rolling back TTL changes")
 	}
 
-	b.Core.logger.Printf("[INFO] core: tuned '%s'", path)
+	if b.Core.logger.IsInfo() {
+		b.Core.logger.Info("core: mount tuning successful", "path", path)
+	}
 
 	return nil
 }

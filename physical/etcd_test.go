@@ -2,10 +2,12 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/coreos/etcd/client"
 	"golang.org/x/net/context"
@@ -48,7 +50,8 @@ func TestEtcdBackend(t *testing.T) {
 
 	// Generate new etcd backend. The etcd address is read from ETCD_ADDR. No
 	// need to provide it explicitly.
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	b, err := NewBackend("etcd", logger, map[string]string{
 		"path": randPath,
 	})

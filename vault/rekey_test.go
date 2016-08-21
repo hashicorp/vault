@@ -2,11 +2,12 @@ package vault
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"reflect"
 	"testing"
 
+	log "github.com/mgutz/logxi/v1"
+
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
 )
 
@@ -361,7 +362,8 @@ func testCore_Rekey_Invalid_Common(t *testing.T, c *Core, keys [][]byte, recover
 
 func TestCore_Standby_Rekey(t *testing.T) {
 	// Create the first core and initialize it
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := physical.NewInmem(logger)
 	inmha := physical.NewInmemHA(logger)
 	redirectOriginal := "http://127.0.0.1:8200"

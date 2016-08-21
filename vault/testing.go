@@ -8,18 +8,19 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
-	"os"
 	"os/exec"
 	"testing"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"golang.org/x/crypto/ssh"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -110,7 +111,8 @@ func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 		logicalBackends[backendName] = backendFactory
 	}
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	physicalBackend := physical.NewInmem(logger)
 	conf := &CoreConfig{
 		Physical:           physicalBackend,
@@ -203,7 +205,7 @@ func TestCoreWithTokenStore(t *testing.T) (*Core, *TokenStore, []byte, string) {
 	router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: ""}, ts.view)
 
 	subview := c.systemBarrierView.SubView(expirationSubPath)
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	exp := NewExpirationManager(router, subview, ts, logger)
 	ts.SetExpirationManager(exp)
@@ -501,7 +503,7 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		t.Fatal("no verified chains for chains auth")
 	}
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	//
 	// Listener setup
