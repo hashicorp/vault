@@ -75,8 +75,10 @@ type roleIDStorageEntry struct {
 // role/<role_name>/period - For updating the param
 // role/<role_name>/role-id - For fetching the role_id of an role
 // role/<role_name>/secret-id - For issuing a secret_id against an role, also to list the secret_id_accessorss
-// role/<role_name>/secret-id/<secret_id_accessor> - For reading the properties of, or deleting a secret_id
 // role/<role_name>/custom-secret-id - For assigning a custom SecretID against an role
+// role/<role_name>/secret-id/<secret_id> - For reading the properties of, or deleting a secret_id
+// role/<role_name>/secret-id-accessor/<secret_id_accessor> - For reading the
+// 		properties of, or deleting a secret_id, using the accessor of secret_id.
 func rolePaths(b *backend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
@@ -363,7 +365,28 @@ formatted string containing the metadata in key value pairs.`,
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id"][1]),
 		},
 		&framework.Path{
-			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/" + framework.GenericNameRegex("secret_id_accessor"),
+			Pattern: "role/" +
+				framework.GenericNameRegex("role_name") + "/secret-id/" + framework.GenericNameRegex("secret_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+				"secret_id": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "SecretID attached to the role.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation:   b.pathRoleSecretIDSecretIDRead,
+				logical.DeleteOperation: b.pathRoleSecretIDSecretIDDelete,
+			},
+			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-secret-id"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-secret-id"][1]),
+		},
+		&framework.Path{
+			Pattern: "role/" +
+				framework.GenericNameRegex("role_name") + "/secret-id-accessor/" + framework.GenericNameRegex("secret_id_accessor"),
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -742,6 +765,135 @@ func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData
 }
 
 // Returns the properties of the SecretID
+func (b *backend) pathRoleSecretIDSecretIDRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	secretID := data.Get("secret_id").(string)
+	if secretID == "" {
+		return logical.ErrorResponse("missing secret_id"), nil
+	}
+
+	// Fetch the role
+	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, fmt.Errorf("role %s does not exist", roleName)
+	}
+
+	// Create the HMAC of the secret ID using the per-role HMAC key
+	secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HMAC of secret_id: %s", err)
+	}
+
+	// Create the HMAC of the roleName using the per-role HMAC key
+	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %s", err)
+	}
+
+	// Create the index at which the secret_id would've been stored
+	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
+
+	return b.secretIDCommon(req.Storage, entryIndex, secretIDHMAC)
+}
+
+func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC string) (*logical.Response, error) {
+	lock := b.secretIDLock(secretIDHMAC)
+	lock.RLock()
+	defer lock.RUnlock()
+
+	result := secretIDStorageEntry{}
+	if entry, err := s.Get(entryIndex); err != nil {
+		return nil, err
+	} else if entry == nil {
+		return nil, nil
+	} else if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	result.SecretIDTTL /= time.Second
+	d := structs.New(result).Map()
+
+	// Converting the time values to RFC3339Nano format.
+	//
+	// Map() from 'structs' package formats time in RFC3339Nano.
+	// In order to not break the API due to a modification in the
+	// third party package, converting the time values again.
+	d["creation_time"] = (d["creation_time"].(time.Time)).Format(time.RFC3339Nano)
+	d["expiration_time"] = (d["expiration_time"].(time.Time)).Format(time.RFC3339Nano)
+	d["last_updated_time"] = (d["last_updated_time"].(time.Time)).Format(time.RFC3339Nano)
+
+	return &logical.Response{
+		Data: d,
+	}, nil
+}
+
+func (b *backend) pathRoleSecretIDSecretIDDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	secretID := data.Get("secret_id").(string)
+	if secretID == "" {
+		return logical.ErrorResponse("missing secret_id"), nil
+	}
+
+	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, fmt.Errorf("role %s does not exist", roleName)
+	}
+
+	secretIDHMAC, err := createHMAC(role.HMACKey, secretID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HMAC of secret_id: %s", err)
+	}
+
+	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HMAC of role_name: %s", err)
+	}
+
+	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
+
+	lock := b.secretIDLock(secretIDHMAC)
+	lock.Lock()
+	defer lock.Unlock()
+
+	result := secretIDStorageEntry{}
+	if entry, err := req.Storage.Get(entryIndex); err != nil {
+		return nil, err
+	} else if entry == nil {
+		return nil, nil
+	} else if err := entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	accessorEntryIndex := "accessor/" + b.salt.SaltID(result.SecretIDAccessor)
+
+	// Delete the accessor of the SecretID first
+	if err := req.Storage.Delete(accessorEntryIndex); err != nil {
+		return nil, fmt.Errorf("failed to delete accessor storage entry: %s", err)
+	}
+
+	// Delete the storage entry that corresponds to the SecretID
+	if err := req.Storage.Delete(entryIndex); err != nil {
+		return nil, fmt.Errorf("failed to delete SecretID: %s", err)
+	}
+
+	return nil, nil
+}
+
+// Returns the properties of the SecretID
 func (b *backend) pathRoleSecretIDAccessorRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
@@ -780,34 +932,7 @@ func (b *backend) pathRoleSecretIDAccessorRead(req *logical.Request, data *frame
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
 
-	lock := b.secretIDLock(accessorEntry.SecretIDHMAC)
-	lock.RLock()
-	defer lock.RUnlock()
-
-	result := secretIDStorageEntry{}
-	if entry, err := req.Storage.Get(entryIndex); err != nil {
-		return nil, err
-	} else if entry == nil {
-		return nil, nil
-	} else if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	result.SecretIDTTL /= time.Second
-	d := structs.New(result).Map()
-
-	// Converting the time values to RFC3339Nano format.
-	//
-	// Map() from 'structs' package formats time in RFC3339Nano.
-	// In order to not break the API due to a modification in the
-	// third party package, converting the time values again.
-	d["creation_time"] = (d["creation_time"].(time.Time)).Format(time.RFC3339Nano)
-	d["expiration_time"] = (d["expiration_time"].(time.Time)).Format(time.RFC3339Nano)
-	d["last_updated_time"] = (d["last_updated_time"].(time.Time)).Format(time.RFC3339Nano)
-
-	return &logical.Response{
-		Data: d,
-	}, nil
+	return b.secretIDCommon(req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
 }
 
 func (b *backend) pathRoleSecretIDAccessorDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1592,8 +1717,13 @@ that are generated against the role using 'role/<role_name>/secret-id' or
 'role/<role_name>/custom-secret-id' endpoints.`,
 		``,
 	},
-	"role-secret-id-accessor": {
+	"role-secret-id-secret-id": {
 		"Read or delete a issued secret_id",
+		`This endpoint is used to either read the properties of a
+secret_id associated to a role or to invalidate it.`,
+	},
+	"role-secret-id-accessor": {
+		"Read or delete a issued secret_id, using its accessor",
 		`This is particularly useful to clean-up the non-expiring 'secret_id's.
 The list operation on the 'role/<role_name>/secret-id' endpoint will return
 the 'secret_id_accessor's. This endpoint can be used to read the properties
