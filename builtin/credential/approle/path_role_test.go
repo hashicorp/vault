@@ -156,6 +156,52 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 	b, storage := createBackendWithStorage(t)
 
 	createRole(t, b, storage, "role1", "a,b")
+	secretIDCreateReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id",
+	}
+	resp, err = b.HandleRequest(secretIDCreateReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	secretID := resp.Data["secret_id"].(string)
+
+	secretIDReq := &logical.Request{
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id/" + secretID,
+	}
+	resp, err = b.HandleRequest(secretIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if resp.Data == nil {
+		t.Fatal(err)
+	}
+
+	secretIDReq.Operation = logical.DeleteOperation
+	resp, err = b.HandleRequest(secretIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	secretIDReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(secretIDReq)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("error response:%#v", err, resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	createRole(t, b, storage, "role1", "a,b")
 	secretIDReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Storage:   storage,
@@ -180,7 +226,7 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 	hmacReq := &logical.Request{
 		Operation: logical.ReadOperation,
 		Storage:   storage,
-		Path:      "role/role1/secret-id/" + hmacSecretID,
+		Path:      "role/role1/secret-id-accessor/" + hmacSecretID,
 	}
 	resp, err = b.HandleRequest(hmacReq)
 	if err != nil || (resp != nil && resp.IsError()) {

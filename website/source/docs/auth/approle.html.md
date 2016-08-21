@@ -545,7 +545,76 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   </dd>
 </dl>
 
-### /auth/approle/role/[role_name]/secret-id/<secret_id_accessor>
+### /auth/approle/role/[role_name]/secret-id/<secret_id>
+#### GET
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+  Reads out the properties of a SecretID.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>`GET`</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/approle/role/[role_name]/secret-id/<secret_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "wrap_info": null,
+  "data": {
+    "secret_id_ttl": 600,
+    "secret_id_num_uses": 40,
+    "secret_id_accessor": "5e222f10-278d-a829-4e74-10d71977bb53",
+    "metadata": {},
+    "last_updated_time": "2016-06-29T05:31:09.407042587Z",
+    "expiration_time": "2016-06-29T05:41:09.407042587Z",
+    "creation_time": "2016-06-29T05:31:09.407042587Z"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### DELETE
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+  Deletes a SecretID.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>`DELETE`</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/approle/role/[role_name]/secret-id/<secret_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+  `204` response code.
+  </dd>
+</dl>
+
+### /auth/approle/role/[role_name]/secret-id-accessor/<secret_id_accessor>
 #### GET
 <dl class="api">
   <dt>Description</dt>
@@ -558,7 +627,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>`GET`</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/approle/role/[role_name]/secret-id/<secret_id_accessor>`</dd>
+  <dd>`/auth/approle/role/[role_name]/secret-id-accessor/<secret_id_accessor>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -602,7 +671,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/logi
   <dd>`DELETE`</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/approle/role/[role_name]/secret-id/<secret_id_accessor>`</dd>
+  <dd>`/auth/approle/role/[role_name]/secret-id-accessor/<secret_id_accessor>`</dd>
 
   <dt>Parameters</dt>
   <dd>
