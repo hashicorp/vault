@@ -800,12 +800,16 @@ func (b *backend) pathRoleSecretIDSecretIDRead(req *logical.Request, data *frame
 	// Create the index at which the secret_id would've been stored
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
 
+	return b.secretIDCommon(req.Storage, entryIndex, secretIDHMAC)
+}
+
+func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC string) (*logical.Response, error) {
 	lock := b.secretIDLock(secretIDHMAC)
 	lock.RLock()
 	defer lock.RUnlock()
 
 	result := secretIDStorageEntry{}
-	if entry, err := req.Storage.Get(entryIndex); err != nil {
+	if entry, err := s.Get(entryIndex); err != nil {
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
@@ -928,34 +932,7 @@ func (b *backend) pathRoleSecretIDAccessorRead(req *logical.Request, data *frame
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
 
-	lock := b.secretIDLock(accessorEntry.SecretIDHMAC)
-	lock.RLock()
-	defer lock.RUnlock()
-
-	result := secretIDStorageEntry{}
-	if entry, err := req.Storage.Get(entryIndex); err != nil {
-		return nil, err
-	} else if entry == nil {
-		return nil, nil
-	} else if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	result.SecretIDTTL /= time.Second
-	d := structs.New(result).Map()
-
-	// Converting the time values to RFC3339Nano format.
-	//
-	// Map() from 'structs' package formats time in RFC3339Nano.
-	// In order to not break the API due to a modification in the
-	// third party package, converting the time values again.
-	d["creation_time"] = (d["creation_time"].(time.Time)).Format(time.RFC3339Nano)
-	d["expiration_time"] = (d["expiration_time"].(time.Time)).Format(time.RFC3339Nano)
-	d["last_updated_time"] = (d["last_updated_time"].(time.Time)).Format(time.RFC3339Nano)
-
-	return &logical.Response{
-		Data: d,
-	}, nil
+	return b.secretIDCommon(req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
 }
 
 func (b *backend) pathRoleSecretIDAccessorDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
