@@ -60,8 +60,8 @@ client, the SecretID can be kept confidential from all parties except for the
 final authenticating client by using [Response
 Wrapping](https://www.vaultproject.io/docs/concepts/response-wrapping.html).
 
-Pull mode is available for App-ID workflow compatibility, which in some
-specific cases is preferable, but in most cases Push mode is more secure and
+Push mode is available for App-ID workflow compatibility, which in some
+specific cases is preferable, but in most cases Pull mode is more secure and
 should be preferred.
 
 ### Further Constraints
