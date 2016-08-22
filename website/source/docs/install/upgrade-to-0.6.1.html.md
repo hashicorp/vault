@@ -37,7 +37,9 @@ each status code (including `500`).
 ## Root Token Creation Restrictions
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
-another root token or the `generate-root` endpoint.
+another root token or the
+[`generate-root`](https://www.vaultproject.io/docs/http/sys-generate-root.html)
+endpoint or CLI command.
 
 ## PKI Backend Certificates Will Contain Default Key Usages
 
@@ -58,9 +60,9 @@ enable it in Vault's configuration; see the
 for details.
 
 If you are already using DynamoDB in an HA fashion and wish to keep doing so,
-it is *very important* that you set this option before upgrading your Vault
+it is *very important* that you set this option **before** upgrading your Vault
 instances. Without doing so, each Vault instance will believe that it is
-standalone and there will be consistency issues.
+standalone and there could be consistency issues.
 
 ## LDAP Auth Backend Does Not Search `memberOf`
 
@@ -87,6 +89,7 @@ configuration can be specified successfully.
 
 With the addition of of the new [AppRole
 backend](https://www.vaultproject.io/docs/auth/approle.html), App-ID is
-deprecated. There are no plans to remove it, but we encourage using AppRole
-whenever possible, as it offers enhanced functionality and can accommodate many
-more types of authentication paradigms.
+deprecated. There are no current plans to remove it, but we encourage using
+AppRole whenever possible, as it offers enhanced functionality and can
+accommodate many more types of authentication paradigms. App-ID will receive
+security-related fixes only.
