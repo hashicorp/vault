@@ -28,7 +28,7 @@ scalability. In general, the bottleneck of Vault is the data store itself, not
 Vault core. For example: to increase the scalability of Vault with Consul, you
 would generally scale Consul instead of Vault.
 
-The sections below explain the server communication pattens and each type of
+The sections below explain the server communication patterns and each type of
 request handling in more detail. At a minimum, the requirements for redirection
 mode must be met for an HA cluster to work successfully.
 
