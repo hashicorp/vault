@@ -1,9 +1,10 @@
 package physical
 
 import (
-	"log"
-	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 )
 
 var mongoConfBackend map[string]string = map[string]string{
@@ -17,7 +18,7 @@ var mongoConfHABackend map[string]string = map[string]string{
 
 func TestMongoBackend(t *testing.T) {
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
 	b, err := NewBackend("mongo", logger, mongoConfBackend)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -29,7 +30,7 @@ func TestMongoBackend(t *testing.T) {
 }
 
 func TestMongoHABackend(t *testing.T) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
 	b, err := NewBackend("mongo", logger, mongoConfHABackend)
 	if err != nil {
 		t.Fatalf("err: %s", err)
