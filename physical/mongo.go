@@ -260,7 +260,7 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 	// TODO: add TLS config options
 
 	logger.Printf("[DEBUG]: physical/mongo: newMongoBackend: (%v, %v, %v)", url, database, collection)
-	return &MongoBackend{
+	b := MongoBackend{
 		Url:           url,
 		Database:      database,
 		Collection:    collection,
@@ -272,7 +272,32 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 		tlsCAFile:     tlsCAFile,
 		tlsCertFile:   tlsCertFile,
 		tlsKeyFile:    tlsKeyFile,
-	}, nil
+	}
+
+	// monitor if we can remove the lock if in standby
+	go func() {
+		for {
+			select {
+			case <-time.After(time.Second * 3):
+				if !b.isLeader {
+					b.logger.Printf("[DEBUG]: physical/mongo: not active, monitoring necessity to remove Lock")
+					err := b.inactivePoller()
+
+					// a different error from 'Not Found' should be the only interesting case
+					if err != nil && err != mgo.ErrNotFound {
+						b.logger.Printf("[ERR]: physical/mongo: inactivePoller error: %v", err)
+					}
+
+					// removal was necessary
+					if err == nil {
+						b.logger.Printf("[INFO]: physical/mongo: Lock was older than 5s and was therefore removed")
+					}
+				}
+			}
+		}
+	}()
+
+	return &b, nil
 }
 
 func (b *MongoBackend) Delete(k string) error {
@@ -448,7 +473,9 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		}
 
 		if l.b.lockOnPrimary != currentPrimary {
+			//l.b.logger.Printf("[WARN]: physical/mongo: current MongoDB primary is not '%v', but '%v'. Not attempting to become leader.", l.b.lockOnPrimary, currentPrimary)
 			return nil, errors.New("current MongoDB primary is not '" + l.b.lockOnPrimary + "', but '" + currentPrimary + "'")
+			//return nil, nil
 		}
 	}
 
@@ -488,13 +515,16 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	select {
 	case ok := <-didLock:
 		if !ok {
+			//l.b.logger.Printf("[ERR]: physical/mongo: Lock already acquired by other vault instance")
 			return nil, errors.New("Lock already acquired by other vault instance")
+			//return nil, nil
 		}
 		releaseCh <- false
 	case <-stopCh:
 		releaseCh <- true
-		//return nil, nil
-		return nil, errors.New("Early Lock release requested")
+		l.b.logger.Printf("[INFO]: physical/mongo: Early Lock release requested")
+		//return nil, errors.New("Early Lock release requested")
+		return nil, nil
 	}
 	close(didLock)
 	close(releaseCh)
@@ -506,7 +536,9 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// poll and update the lock as long as we are the leader
 	abortCh1 := make(chan struct{})
-	abortCh2 := make(chan struct{})
+	// we initialize this one only later if we really use it
+	//abortCh2 := make(chan struct{})
+	var abortCh2 chan struct{}
 	l.llCh = make(chan struct{})
 	l.llChOpen = true
 	go func() {
@@ -533,6 +565,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	// poll and break if the primary changes
 	if l.b.lockOnPrimary != "" {
+		abortCh2 = make(chan struct{})
 		go func() {
 		primaryLoop:
 			for {
@@ -575,7 +608,9 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			l.b.lockValue = ""
 			l.b.isLeader = false
 			abortCh1 <- struct{}{}
-			abortCh2 <- struct{}{}
+			if l.b.lockOnPrimary != "" {
+				abortCh2 <- struct{}{}
+			}
 			close(l.b.leaderCh)
 			l.b.leaderCh = nil
 			l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() end")
@@ -623,7 +658,7 @@ func (l *MongoLock) activePoller() error {
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
 
-	err = c.Update(bson.M{"key": l.key, "value": l.value}, bson.M{"$currentDate": bson.M{"lastCheckedIn": bson.M{"$type": "timestamp"}}})
+	err = c.Update(bson.M{"key": l.key, "value": l.value}, bson.M{"$currentDate": bson.M{"lastCheckedIn": bson.M{"$type": "date"}}})
 	if err != nil {
 		l.b.logger.Printf("[ERR]: physical/mongo: activePoller(): Update() failed: %v", err)
 		return err
@@ -632,18 +667,32 @@ func (l *MongoLock) activePoller() error {
 	return nil
 }
 
-/*func (l *MongoLock) standbyPoller() error {
-	session, err := l.b.activeSession()
+func (b *MongoBackend) inactivePoller() error {
+	session, err := b.activeSession()
 	if err != nil {
-		l.b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
-	c := session.DB(l.b.Database).C(l.b.Collection)
+	c := session.DB(b.Database).C(b.Collection)
 
 	// remove leader if timestamp too old
-  time.Now().S
-	return nil
-}*/
+	//
+	// PROBLEM 1: we're working in the second range and likely with a lot of vault servers together
+	//            of course time "should" be the same amongst servers, but we shouldn't assume it.
+	//            Therefore we need a serverside solution for a time check and removal
+	//
+	// PROBLEM 2: even though we have an index that expires the lock document, the trouble is that
+	//            this runs as a background task in mongod (and only on the primary), and is only
+	//            running once every 60s. This resolution is not enough. Furthermore, I think that
+	//            index won't work anyway, as we're also using a Unique Index on 'key'.
+	//
+	// SOLUTION:  not pretty, but a mongo "$where" clause executes JavaScript on the mongo server,
+	//            and therefore will not have trouble with the time. Better solutions are always
+	//            welcomed :)
+	//
+	//  db.vault.find({"key":"core/lock", $where:"this.lastCheckedIn <= new Date(ISODate().getTime()-1000*5)"})
+	return c.Remove(bson.M{"key": "core/lock", "$where": "this.lastCheckedIn <= new Date(ISODate().getTime()-1000*5)"})
+}
 
 type isMasterResult struct {
 	IsMaster       bool
