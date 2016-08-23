@@ -459,11 +459,45 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
 
-	err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
-	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: Lock already acquired by other vault instance: %v", err)
-		return nil, errors.New("Lock already acquired by other vault instance: " + err.Error())
+	// Attempt an async acquisition
+	didLock := make(chan bool)
+	releaseCh := make(chan bool, 1)
+	go func() {
+		err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
+		if err != nil {
+			l.b.logger.Printf("[ERROR]: physical/mongo: acquireLock: %v", err)
+			didLock <- false
+			return
+		}
+
+		// Signal that lock is held
+		didLock <- true
+
+		// Handle an early abort
+		release := <-releaseCh
+		if release {
+			l.b.logger.Printf("[DEBUG]: physical/mongo: early release on Lock requested")
+			err = c.Remove(bson.M{"key": l.key, "value": l.value})
+			if err != nil {
+				l.b.logger.Printf("[ERROR]: physical/mongo: earlyRelease: %v", err)
+			}
+		}
+	}()
+
+	// Wait for lock acquisition or shutdown
+	select {
+	case ok := <-didLock:
+		if !ok {
+			return nil, errors.New("Lock already acquired by other vault instance")
+		}
+		releaseCh <- false
+	case <-stopCh:
+		releaseCh <- true
+		//return nil, nil
+		return nil, errors.New("Early Lock release requested")
 	}
+	close(didLock)
+	close(releaseCh)
 
 	// acquired :)
 	l.b.lockValue = l.value
