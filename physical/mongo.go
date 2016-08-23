@@ -402,12 +402,6 @@ func (b *MongoBackend) HAEnabled() bool {
 	return b.haEnabled
 }
 
-// DetectHostAddr is used to detect the host address
-func (b *MongoBackend) DetectHostAddr() (string, error) {
-	b.logger.Printf("[DEBUG]: physical/mongo:DetectHostAddr()")
-	return "aaa", nil
-}
-
 // LockWith is used for mutual exclusion based on the given key.
 func (b *MongoBackend) LockWith(key, value string) (Lock, error) {
 	b.logger.Printf("[DEBUG]: physical/mongo: LockWith(%v, %v)", key, value)
@@ -425,8 +419,6 @@ type MongoLock struct {
 	value    string
 	llCh     chan struct{}
 	llChOpen bool
-	abortCh1 chan struct{}
-	abortCh2 chan struct{}
 }
 
 type LockEntry struct {
@@ -441,9 +433,9 @@ type LockEntry struct {
 // leadership is lost.
 func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	l.b.logger.Printf("[DEBUG]: physical/mongo: Lock(%v)", l.value)
+
 	// the "read" lock needs special treatment
 	if l.value == "read" {
-		l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() for mysterious read lock!")
 		return l.b.leaderCh, nil
 	}
 
@@ -467,117 +459,108 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
 
-	q := c.Find(bson.M{"key": l.key})
-	n, err := q.Count()
+	err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): error in Count() : %v", err)
-		return nil, err
+		l.b.logger.Printf("[ERROR]: physical/mongo: Lock already acquired by other vault instance: %v", err)
+		return nil, errors.New("Lock already acquired by other vault instance: " + err.Error())
 	}
-	l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() %v", q)
-	l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() count is %v", n)
 
-	// nobody has the lock yet, acquire it
-	if n <= 0 {
-		err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
-		if err != nil {
-			l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): could not Insert(): %v", err)
-			return nil, err
+	// acquired :)
+	l.b.lockValue = l.value
+	l.b.isLeader = true
+	l.b.leaderCh = make(chan struct{})
+
+	// poll and update the lock as long as we are the leader
+	abortCh1 := make(chan struct{})
+	abortCh2 := make(chan struct{})
+	l.llCh = make(chan struct{})
+	l.llChOpen = true
+	go func() {
+	updateLoop:
+		for {
+			select {
+			case <-abortCh1:
+				l.b.logger.Printf("[DEBUG]: physical/mongo: abortCh1")
+				close(abortCh1)
+				break updateLoop
+			case <-time.After(time.Second * 3):
+				if l.b.isLeader {
+					err = l.activePoller()
+					if err != nil {
+						l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): activePoller() error, going to lose leadership: %v", err)
+						if l.llChOpen {
+							l.llCh <- struct{}{}
+						}
+					}
+				}
+			}
 		}
+	}()
 
-		// acquired :)
-		l.b.lockValue = l.value
-		l.b.isLeader = true
-		l.b.leaderCh = make(chan struct{})
-
-		// poll and update the lock as long as we are the leader
-		l.abortCh1 = make(chan struct{})
-		l.abortCh2 = make(chan struct{})
-		l.llCh = make(chan struct{})
-		l.llChOpen = true
+	// poll and break if the primary changes
+	if l.b.lockOnPrimary != "" {
 		go func() {
-		updateLoop:
+		primaryLoop:
 			for {
+				l.b.logger.Printf("[DEBUG]: physical/mongo: primary monitor")
 				select {
-				case <-l.abortCh1:
-					l.b.logger.Printf("[DEBUG]: physical/mongo: l.abortCh1")
-					close(l.abortCh1)
-					break updateLoop
-				case <-time.After(time.Second * 3):
-					if l.b.isLeader {
-						err = l.activePoller()
-						if err != nil {
-							l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): activePoller() error, going to lose leadership: %v", err)
-							if l.llChOpen {
-								l.llCh <- struct{}{}
-							}
+				case <-abortCh2:
+					l.b.logger.Printf("[DEBUG]: physical/mongo: abortCh2")
+					close(abortCh2)
+					break primaryLoop
+				case <-time.After(time.Second * 1):
+					currentPrimary, err := l.getPrimary()
+					if err != nil {
+						l.b.logger.Printf("[WARN]: physical/mongo: could not get primary: %v", err)
+						break
+					}
+
+					if l.b.lockOnPrimary != currentPrimary {
+						l.b.logger.Printf("[INFO]: physical/mongo: MongoDB PRIMARY changed to '%v'. Dropping leadership.", currentPrimary)
+						if l.llChOpen {
+							l.llCh <- struct{}{}
 						}
 					}
 				}
 			}
 		}()
-
-		// poll and break if the primary changes
-		if l.b.lockOnPrimary != "" {
-			go func() {
-			primaryLoop:
-				for {
-					l.b.logger.Printf("[DEBUG]: physical/mongo: primary monitor")
-					select {
-					case <-l.abortCh2:
-						l.b.logger.Printf("[DEBUG]: physical/mongo: l.abortCh2")
-						close(l.abortCh2)
-						break primaryLoop
-					case <-time.After(time.Second * 1):
-						currentPrimary, err := l.getPrimary()
-						if err != nil {
-							l.b.logger.Printf("[WARN]: physical/mongo: could not get primary: %v", err)
-							break
-						}
-
-						if l.b.lockOnPrimary != currentPrimary {
-							l.b.logger.Printf("[INFO]: physical/mongo: MongoDB PRIMARY changed to '%v'. Dropping leadership.", currentPrimary)
-							if l.llChOpen {
-								l.llCh <- struct{}{}
-							}
-						}
-					}
-				}
-			}()
-		}
-
-		// abort and call lose leadership if there is something in the llCh channel
-		go func() {
-			l.b.logger.Printf("[DEBUG]: physical/mongo: llCh before")
-			if l.llChOpen {
-				<-l.llCh
-				l.llChOpen = false
-				close(l.llCh)
-				l.llCh = nil
-				l.b.logger.Printf("[DEBUG]: physical/mongo: llCh after")
-				l.loseLeadership()
-			}
-		}()
-
-		//l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() success", n)
-		return l.b.leaderCh, nil
 	}
 
-	// could not acquire
-	//l.b.logger.Printf("[DEBUG]: physical/mongo: Lock() error", n)
-	return nil, errors.New("Lock already acquired by other vault instance")
-	//return nil, nil
+	// abort and call lose leadership if there is something in the llCh channel
+	go func() {
+		l.b.logger.Printf("[DEBUG]: physical/mongo: llCh before")
+		if l.llChOpen {
+			<-l.llCh
+			l.llChOpen = false
+			close(l.llCh)
+			l.llCh = nil
+			l.b.logger.Printf("[DEBUG]: physical/mongo: llCh after")
+
+			//l.loseLeadership()
+			l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() begin")
+			l.b.lockValue = ""
+			l.b.isLeader = false
+			abortCh1 <- struct{}{}
+			abortCh2 <- struct{}{}
+			close(l.b.leaderCh)
+			l.b.leaderCh = nil
+			l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() end")
+		}
+	}()
+
+	return l.b.leaderCh, nil
 }
 
-func (l *MongoLock) loseLeadership() {
-	l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() begin")
-	l.b.lockValue = ""
-	l.b.isLeader = false
-	l.abortCh1 <- struct{}{}
-	l.abortCh2 <- struct{}{}
-	close(l.b.leaderCh)
-	l.b.leaderCh = nil
-	l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() end")
-}
+// func (l *MongoLock) loseLeadership() {
+// 	l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() begin")
+// 	l.b.lockValue = ""
+// 	l.b.isLeader = false
+// 	l.abortCh1 <- struct{}{}
+// 	l.abortCh2 <- struct{}{}
+// 	close(l.b.leaderCh)
+// 	l.b.leaderCh = nil
+// 	l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() end")
+// }
 
 // Unlock is used to release the lock
 func (l *MongoLock) Unlock() error {
@@ -587,6 +570,7 @@ func (l *MongoLock) Unlock() error {
 		return nil
 	}
 
+	// lose leadership, stop go routines and close channels
 	if l.b.isLeader && l.llChOpen {
 		l.llCh <- struct{}{}
 	}
@@ -685,11 +669,12 @@ func (l *MongoLock) Value() (bool, string, error) {
 
 	if n <= 0 {
 		//return false, "", errors.New("nobody holds the lock yet")
-		if l.value == "read" {
-			return true, "", nil
-		} else {
-			return l.b.isLeader, "", nil
-		}
+		//if l.value == "read" {
+		//	return true, "", nil
+		//} else {
+		//	return l.b.isLeader, "", nil
+		//}
+		return false, "", nil
 	}
 
 	var entry LockEntry
@@ -703,12 +688,13 @@ func (l *MongoLock) Value() (bool, string, error) {
 	//l.b.logger.Printf("[DEBUG]: physical/mongo: entry.Value '%v', l.Value '%v'", entry.Value, l.b.lockValue)
 
 	// the read lock
-	if l.value == "read" {
-		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(read): %v", entry.Value)
-		return true, entry.Value, nil
-	}
+	// if l.value == "read" {
+	// 	l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(read): %v", entry.Value)
+	// 	return true, entry.Value, nil
+	// }
 
-	// our default lock
-	l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(%v): %v", l.value, entry.Value)
-	return l.b.isLeader, entry.Value, nil
+	// // our default lock
+	// l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(%v): %v", l.value, entry.Value)
+	// return l.b.isLeader, entry.Value, nil
+	return true, entry.Value, nil
 }
