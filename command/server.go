@@ -130,10 +130,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Error("Root token ID can only be specified with -dev")
 			flags.Usage()
 			return 1
-		case devListenAddress != "":
-			c.Ui.Error("Development address can only be specified with -dev")
-			flags.Usage()
-			return 1
 		}
 	}
 
