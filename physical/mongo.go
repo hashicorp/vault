@@ -275,27 +275,29 @@ func newMongoBackend(conf map[string]string, logger *log.Logger) (Backend, error
 	}
 
 	// monitor if we can remove the lock if in standby
-	go func() {
-		for {
-			select {
-			case <-time.After(time.Second * 3):
-				if !b.isLeader {
-					b.logger.Printf("[DEBUG]: physical/mongo: not active, monitoring necessity to remove Lock")
-					err := b.inactivePoller()
+	if haEnabled {
+		go func() {
+			for {
+				select {
+				case <-time.After(time.Second * 3):
+					if !b.isLeader {
+						b.logger.Printf("[DEBUG]: physical/mongo: not active, monitoring necessity to remove Lock")
+						err := b.inactivePoller()
 
-					// a different error from 'Not Found' should be the only interesting case
-					if err != nil && err != mgo.ErrNotFound {
-						b.logger.Printf("[ERR]: physical/mongo: inactivePoller error: %v", err)
-					}
+						// a different error from 'Not Found' should be the only interesting case
+						if err != nil && err != mgo.ErrNotFound {
+							b.logger.Printf("[ERR]: physical/mongo: inactivePoller error: %v", err)
+						}
 
-					// removal was necessary
-					if err == nil {
-						b.logger.Printf("[INFO]: physical/mongo: Lock was older than 5s and was therefore removed")
+						// removal was necessary
+						if err == nil {
+							b.logger.Printf("[INFO]: physical/mongo: Lock was older than 5s and was therefore removed")
+						}
 					}
 				}
 			}
-		}
-	}()
+		}()
+	}
 
 	return &b, nil
 }
