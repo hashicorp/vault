@@ -158,7 +158,7 @@ $ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/role
 #### Login to get a Vault Token
 
 ```shell
-$ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50bec295-3535-0ddc-b729-e4d0773717b3","secret_id":"0c36edb2-8b34-c077-9e3a-9bdcbb4ab0df"}'
+$ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50bec295-3535-0ddc-b729-e4d0773717b3","secret_id":"0c36edb2-8b34-c077-9e3a-9bdcbb4ab0df"}'
 ```
 
 ## API
