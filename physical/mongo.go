@@ -152,13 +152,13 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 	b.logger.Printf("[INFO]: physical/mongo: establishing new MongoDB session")
 	dialInfo, err := b.parseMongoURI(b.Url)
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not parse MongoDB URI: %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not parse MongoDB URI: %v", err)
 		return nil, err
 	}
 
 	b.session, err = mgo.DialWithInfo(dialInfo)
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not establish connection to MongoDB: %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not establish connection to MongoDB: %v", err)
 		return nil, err
 	}
 	b.session.SetSyncTimeout(1 * time.Minute)
@@ -169,13 +169,13 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 	c := b.session.DB(b.Database).C(b.Collection)
 	err = c.EnsureIndex(keyIndex)
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not EnsureIndex() for 'key': %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not EnsureIndex() for 'key': %v", err)
 		return nil, err
 	}
 
 	err = c.EnsureIndex(lastCheckedInIndex)
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not EnsureIndex() for 'lastCheckedIn': %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not EnsureIndex() for 'lastCheckedIn': %v", err)
 		return nil, err
 	}
 
@@ -279,13 +279,13 @@ func (b *MongoBackend) Delete(k string) error {
 	b.logger.Printf("[DEBUG]: physical/mongo: Delete(%v)", k)
 	session, err := b.activeSession()
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
 	c := session.DB(b.Database).C(b.Collection)
 	err = c.Remove(bson.M{"key": k})
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: Delete(%v): error in Remove() : %v", k, err)
+		b.logger.Printf("[ERR]: physical/mongo: Delete(%v): error in Remove() : %v", k, err)
 		return err
 	}
 	return nil
@@ -295,7 +295,7 @@ func (b *MongoBackend) Get(k string) (*Entry, error) {
 	b.logger.Printf("[DEBUG]: physical/mongo: Get(%v)", k)
 	session, err := b.activeSession()
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return nil, err
 	}
 	c := session.DB(b.Database).C(b.Collection)
@@ -303,7 +303,7 @@ func (b *MongoBackend) Get(k string) (*Entry, error) {
 	q := c.Find(bson.M{"key": k})
 	n, err := q.Count()
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: Get(%v): error in Count() : %v", k, err)
+		b.logger.Printf("[ERR]: physical/mongo: Get(%v): error in Count() : %v", k, err)
 		return nil, err
 	}
 
@@ -316,7 +316,7 @@ func (b *MongoBackend) Get(k string) (*Entry, error) {
 	var entry Entry
 	err = q.One(&entry)
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: Get(%v): error in One(): %v", k, err)
+		b.logger.Printf("[ERR]: physical/mongo: Get(%v): error in One(): %v", k, err)
 		return nil, err
 	}
 	return &entry, nil
@@ -326,13 +326,13 @@ func (b *MongoBackend) Put(entry *Entry) error {
 	b.logger.Printf("[DEBUG]: physical/mongo: Put(%v)", entry.Key)
 	session, err := b.activeSession()
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
 	c := session.DB(b.Database).C(b.Collection)
 	_, err = c.Upsert(bson.M{"key": entry.Key}, entry)
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: Put(%v): error in Upsert(): %v", entry.Key, err)
+		b.logger.Printf("[ERR]: physical/mongo: Put(%v): error in Upsert(): %v", entry.Key, err)
 		return err
 	}
 	return nil
@@ -342,7 +342,7 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 	b.logger.Printf("[DEBUG]: physical/mongo: List(%v)", prefix)
 	session, err := b.activeSession()
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return nil, err
 	}
 	c := session.DB(b.Database).C(b.Collection)
@@ -383,7 +383,7 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 
 	err = iter.Close()
 	if err != nil {
-		b.logger.Printf("[ERROR]: physical/mongo: List(%v): error in iter.Next(): %v", prefix, err)
+		b.logger.Printf("[ERR]: physical/mongo: List(%v): error in iter.Next(): %v", prefix, err)
 		return nil, err
 	}
 
@@ -443,7 +443,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	if l.b.lockOnPrimary != "" {
 		currentPrimary, err := l.getPrimary()
 		if err != nil {
-			l.b.logger.Printf("[ERROR]: physical/mongo: could not get primary: %v", err)
+			l.b.logger.Printf("[ERR]: physical/mongo: could not get primary: %v", err)
 			return nil, err
 		}
 
@@ -454,7 +454,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 	session, err := l.b.activeSession()
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return nil, err
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
@@ -465,7 +465,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	go func() {
 		err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
 		if err != nil {
-			l.b.logger.Printf("[ERROR]: physical/mongo: acquireLock: %v", err)
+			l.b.logger.Printf("[ERR]: physical/mongo: acquireLock: %v", err)
 			didLock <- false
 			return
 		}
@@ -479,7 +479,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			l.b.logger.Printf("[DEBUG]: physical/mongo: early release on Lock requested")
 			err = c.Remove(bson.M{"key": l.key, "value": l.value})
 			if err != nil {
-				l.b.logger.Printf("[ERROR]: physical/mongo: earlyRelease: %v", err)
+				l.b.logger.Printf("[ERR]: physical/mongo: earlyRelease: %v", err)
 			}
 		}
 	}()
@@ -521,7 +521,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				if l.b.isLeader {
 					err = l.activePoller()
 					if err != nil {
-						l.b.logger.Printf("[ERROR]: physical/mongo: l.Lock(): activePoller() error, going to lose leadership: %v", err)
+						l.b.logger.Printf("[ERR]: physical/mongo: l.Lock(): activePoller() error, going to lose leadership: %v", err)
 						if l.llChOpen {
 							l.llCh <- struct{}{}
 						}
@@ -585,17 +585,6 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	return l.b.leaderCh, nil
 }
 
-// func (l *MongoLock) loseLeadership() {
-// 	l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() begin")
-// 	l.b.lockValue = ""
-// 	l.b.isLeader = false
-// 	l.abortCh1 <- struct{}{}
-// 	l.abortCh2 <- struct{}{}
-// 	close(l.b.leaderCh)
-// 	l.b.leaderCh = nil
-// 	l.b.logger.Printf("[DEBUG]: physical/mongo: loseLeadership() end")
-// }
-
 // Unlock is used to release the lock
 func (l *MongoLock) Unlock() error {
 	l.b.logger.Printf("[DEBUG]: physical/mongo: Unlock()")
@@ -611,14 +600,14 @@ func (l *MongoLock) Unlock() error {
 
 	session, err := l.b.activeSession()
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
 
 	err = c.Remove(bson.M{"key": l.key, "value": l.value})
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: l.Unlock() could not remove lock: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: l.Unlock() could not remove lock: %v", err)
 		return err
 	}
 
@@ -629,14 +618,14 @@ func (l *MongoLock) activePoller() error {
 	l.b.logger.Printf("[DEBUG]: physical/mongo: activePoller()")
 	session, err := l.b.activeSession()
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
 
 	err = c.Update(bson.M{"key": l.key, "value": l.value}, bson.M{"$currentDate": bson.M{"lastCheckedIn": bson.M{"$type": "timestamp"}}})
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: activePoller(): Update() failed: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: activePoller(): Update() failed: %v", err)
 		return err
 	}
 
@@ -646,7 +635,7 @@ func (l *MongoLock) activePoller() error {
 /*func (l *MongoLock) standbyPoller() error {
 	session, err := l.b.activeSession()
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return err
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
@@ -672,7 +661,7 @@ func (l *MongoLock) getPrimary() (string, error) {
 	var result isMasterResult
 	session, err := l.b.activeSession()
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return "", err
 	}
 	err = session.Run("ismaster", &result)
@@ -689,7 +678,7 @@ func (l *MongoLock) Value() (bool, string, error) {
 	l.b.logger.Printf("[DEBUG]: physical/mongo: Value(%v)", l.value)
 	session, err := l.b.activeSession()
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: could not establish mongo session: %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: could not establish mongo session: %v", err)
 		return false, "", err
 	}
 	c := session.DB(l.b.Database).C(l.b.Collection)
@@ -697,38 +686,21 @@ func (l *MongoLock) Value() (bool, string, error) {
 	q := c.Find(bson.M{"key": l.key})
 	n, err := q.Count()
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): error in Count() : %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: l.Value(): error in Count() : %v", err)
 		return false, "", err
 	}
 
+	// nobody holds the lock yet
 	if n <= 0 {
-		//return false, "", errors.New("nobody holds the lock yet")
-		//if l.value == "read" {
-		//	return true, "", nil
-		//} else {
-		//	return l.b.isLeader, "", nil
-		//}
 		return false, "", nil
 	}
 
 	var entry LockEntry
 	err = q.One(&entry)
 	if err != nil {
-		l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(): error in One(): %v", err)
+		l.b.logger.Printf("[ERR]: physical/mongo: l.Value(): error in One(): %v", err)
 		return false, "", err
 	}
 
-	//l.b.logger.Printf("[DEBUG]: physical/mongo: LockEntry: %v", entry)
-	//l.b.logger.Printf("[DEBUG]: physical/mongo: entry.Value '%v', l.Value '%v'", entry.Value, l.b.lockValue)
-
-	// the read lock
-	// if l.value == "read" {
-	// 	l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(read): %v", entry.Value)
-	// 	return true, entry.Value, nil
-	// }
-
-	// // our default lock
-	// l.b.logger.Printf("[ERROR]: physical/mongo: l.Value(%v): %v", l.value, entry.Value)
-	// return l.b.isLeader, entry.Value, nil
 	return true, entry.Value, nil
 }
