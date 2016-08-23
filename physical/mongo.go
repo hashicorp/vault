@@ -312,6 +312,11 @@ func (b *MongoBackend) Delete(k string) error {
 	c := session.DB(b.Database).C(b.Collection)
 	err = c.Remove(bson.M{"key": k})
 	if err != nil {
+		// the docs/tests say that we are not supposed to fail on a delete if the
+		// entry does not exist
+		if err == mgo.ErrNotFound {
+			return nil
+		}
 		b.logger.Printf("[ERR]: physical/mongo: Delete(%v): error in Remove() : %v", k, err)
 		return err
 	}
@@ -513,8 +518,19 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		}
 	}()
 
+	// If you want to have all working unit tests, this sleep is required
+	// our lock acquisition is too fast for the async stopCh to work as the
+	// tests are currently planned
+	//
+	//time.Sleep(200 * time.Millisecond)
+
 	// Wait for lock acquisition or shutdown
 	select {
+	case <-stopCh:
+		releaseCh <- true
+		l.b.logger.Printf("[INFO]: physical/mongo: Early Lock release requested")
+		//return nil, errors.New("Early Lock release requested")
+		return nil, nil
 	case ok := <-didLock:
 		if !ok {
 			//l.b.logger.Printf("[ERR]: physical/mongo: Lock already acquired by other vault instance")
@@ -522,11 +538,6 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			//return nil, nil
 		}
 		releaseCh <- false
-	case <-stopCh:
-		releaseCh <- true
-		l.b.logger.Printf("[INFO]: physical/mongo: Early Lock release requested")
-		//return nil, errors.New("Early Lock release requested")
-		return nil, nil
 	}
 	close(didLock)
 	close(releaseCh)
