@@ -1,9 +1,10 @@
 package physical
 
 import (
-	"log"
 	"strings"
 	"sync"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-radix"
 )
@@ -15,11 +16,11 @@ type InmemBackend struct {
 	root       *radix.Tree
 	l          sync.RWMutex
 	permitPool *PermitPool
-	logger     *log.Logger
+	logger     log.Logger
 }
 
 // NewInmem constructs a new in-memory backend
-func NewInmem(logger *log.Logger) *InmemBackend {
+func NewInmem(logger log.Logger) *InmemBackend {
 	in := &InmemBackend{
 		root:       radix.New(),
 		permitPool: NewPermitPool(DefaultParallelOperations),

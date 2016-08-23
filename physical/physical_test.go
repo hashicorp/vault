@@ -1,16 +1,18 @@
 package physical
 
 import (
-	"log"
-	"os"
 	"reflect"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func testNewBackend(t *testing.T) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	_, err := NewBackend("foobar", logger, nil)
 	if err == nil {
 		t.Fatalf("expected error")

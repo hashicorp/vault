@@ -1,9 +1,11 @@
 package physical
 
 import (
-	"log"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 
 	_ "github.com/lib/pq"
 )
@@ -20,7 +22,8 @@ func TestPostgreSQLBackend(t *testing.T) {
 	}
 
 	// Run vault tests
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	b, err := NewBackend("postgresql", logger, map[string]string{
 		"connection_url": connURL,
 		"table":          table,

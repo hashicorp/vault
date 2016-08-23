@@ -7,13 +7,13 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"sync"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -235,7 +236,7 @@ type Core struct {
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
-	logger *log.Logger
+	logger log.Logger
 
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
@@ -298,7 +299,7 @@ type CoreConfig struct {
 
 	Seal Seal `json:"seal" structs:"seal" mapstructure:"seal"`
 
-	Logger *log.Logger `json:"logger" structs:"logger" mapstructure:"logger"`
+	Logger log.Logger `json:"logger" structs:"logger" mapstructure:"logger"`
 
 	// Disables the LRU cache on the physical backend
 	DisableCache bool `json:"disable_cache" structs:"disable_cache" mapstructure:"disable_cache"`
@@ -386,7 +387,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Make a default logger if not provided
 	if conf.Logger == nil {
-		conf.Logger = log.New(os.Stderr, "", log.LstdFlags)
+		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
 
 	// Setup the core
@@ -479,14 +480,14 @@ func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, e
 	}
 
 	if c.tokenStore == nil {
-		c.logger.Printf("[ERR] core: token store is unavailable")
+		c.logger.Error("core: token store is unavailable")
 		return nil, nil, ErrInternalError
 	}
 
 	// Resolve the token policy
 	te, err := c.tokenStore.Lookup(req.ClientToken)
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to lookup token: %v", err)
+		c.logger.Error("core: failed to lookup token", "error", err)
 		return nil, nil, ErrInternalError
 	}
 
@@ -498,7 +499,7 @@ func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, e
 	// Construct the corresponding ACL object
 	acl, err := c.policyStore.ACL(te.Policies...)
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to construct ACL: %v", err)
+		c.logger.Error("core: failed to construct ACL", "error", err)
 		return nil, nil, ErrInternalError
 	}
 
@@ -530,7 +531,7 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 		case nil:
 			// Continue on
 		default:
-			c.logger.Printf("[ERR] core: failed to run existence check: %v", err)
+			c.logger.Error("core: failed to run existence check", "error", err)
 			if _, ok := err.(errutil.UserError); ok {
 				return nil, nil, err
 			} else {
@@ -747,8 +748,9 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 
 	// Check if we don't have enough keys to unlock
 	if len(c.unlockParts) < config.SecretThreshold {
-		c.logger.Printf("[DEBUG] core: cannot unseal, have %d of %d keys",
-			len(c.unlockParts), config.SecretThreshold)
+		if c.logger.IsDebug() {
+			c.logger.Debug("core: cannot unseal, not enough keys", "keys", len(c.unlockParts), "threshold", config.SecretThreshold)
+		}
 		return false, nil
 	}
 
@@ -770,22 +772,24 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	if err := c.barrier.Unseal(masterKey); err != nil {
 		return false, err
 	}
-	c.logger.Printf("[INFO] core: vault is unsealed")
+	if c.logger.IsInfo() {
+		c.logger.Info("core: vault is unsealed")
+	}
 
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
 		// cluster right now
 		if err := c.setupCluster(); err != nil {
-			c.logger.Printf("[ERR] core: cluster setup failed: %v", err)
+			c.logger.Error("core: cluster setup failed", "error", err)
 			c.barrier.Seal()
-			c.logger.Printf("[WARN] core: vault is sealed")
+			c.logger.Warn("core: vault is sealed")
 			return false, err
 		}
 		if err := c.postUnseal(); err != nil {
-			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
+			c.logger.Error("core: post-unseal setup failed", "error", err)
 			c.barrier.Seal()
-			c.logger.Printf("[WARN] core: vault is sealed")
+			c.logger.Warn("core: vault is sealed")
 			return false, err
 		}
 		c.standby = false
@@ -803,7 +807,9 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
 			if err := sd.NotifySealedStateChange(); err != nil {
-				c.logger.Printf("[WARN] core: failed to notify unsealed status: %v", err)
+				if c.logger.IsWarn() {
+					c.logger.Warn("core: failed to notify unsealed status", "error", err)
+				}
 			}
 		}
 	}
@@ -866,7 +872,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		// just returning with an error and recommending a vault restart, which
 		// essentially does the same thing.
 		if c.standby {
-			c.logger.Printf("[ERR] core: vault cannot seal when in standby mode; please restart instead")
+			c.logger.Error("core: vault cannot seal when in standby mode; please restart instead")
 			retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
 			return retErr
 		}
@@ -883,8 +889,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
-			req.Path, err)
+		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		return retErr
 	}
@@ -894,7 +899,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	if te != nil {
 		te, err = c.tokenStore.UseToken(te)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to use token: %v", err)
+			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return retErr
 		}
@@ -908,7 +913,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 			defer func(id string) {
 				err = c.tokenStore.Revoke(id)
 				if err != nil {
-					c.logger.Printf("[ERR] core: token needed revocation after seal but failed to revoke: %v", err)
+					c.logger.Error("core: token needed revocation after seal but failed to revoke", "error", err)
 					retErr = multierror.Append(retErr, ErrInternalError)
 				}
 			}(te.ID)
@@ -970,8 +975,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
-		c.logger.Printf("[ERR] core: failed to audit request with path %s: %v",
-			req.Path, err)
+		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		return retErr
 	}
@@ -980,7 +984,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	if te != nil {
 		te, err = c.tokenStore.UseToken(te)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to use token: %v", err)
+			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return retErr
 		}
@@ -994,7 +998,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 			defer func(id string) {
 				err = c.tokenStore.Revoke(id)
 				if err != nil {
-					c.logger.Printf("[ERR] core: token needed revocation after step-down but failed to revoke: %v", err)
+					c.logger.Error("core: token needed revocation after step-down but failed to revoke", "error", err)
 					retErr = multierror.Append(retErr, ErrInternalError)
 				}
 			}(te.ID)
@@ -1017,7 +1021,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	select {
 	case c.manualStepDownCh <- struct{}{}:
 	default:
-		c.logger.Printf("[WARN] core: manual step-down operation already queued")
+		c.logger.Warn("core: manual step-down operation already queued")
 	}
 
 	return retErr
@@ -1032,7 +1036,7 @@ func (c *Core) sealInternal() error {
 	// Do pre-seal teardown if HA is not enabled
 	if c.ha == nil {
 		if err := c.preSeal(); err != nil {
-			c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
+			c.logger.Error("core: pre-seal teardown failed", "error", err)
 			return fmt.Errorf("internal error")
 		}
 	} else {
@@ -1048,13 +1052,15 @@ func (c *Core) sealInternal() error {
 	if err := c.barrier.Seal(); err != nil {
 		return err
 	}
-	c.logger.Printf("[INFO] core: vault is sealed")
+	c.logger.Info("core: vault is sealed")
 
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
 		if ok {
 			if err := sd.NotifySealedStateChange(); err != nil {
-				c.logger.Printf("[WARN] core: failed to notify sealed status: %v", err)
+				if c.logger.IsWarn() {
+					c.logger.Warn("core: failed to notify sealed status", "error", err)
+				}
 			}
 		}
 	}
@@ -1073,7 +1079,7 @@ func (c *Core) postUnseal() (retErr error) {
 			c.preSeal()
 		}
 	}()
-	c.logger.Printf("[INFO] core: post-unseal setup starting")
+	c.logger.Info("core: post-unseal setup starting")
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
 	}
@@ -1126,7 +1132,7 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 	c.metricsCh = make(chan struct{})
 	go c.emitMetrics(c.metricsCh)
-	c.logger.Printf("[INFO] core: post-unseal setup complete")
+	c.logger.Info("core: post-unseal setup complete")
 	return nil
 }
 
@@ -1134,7 +1140,7 @@ func (c *Core) postUnseal() (retErr error) {
 // for any state teardown required.
 func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
-	c.logger.Printf("[INFO] core: pre-seal teardown starting")
+	c.logger.Info("core: pre-seal teardown starting")
 
 	// Clear any rekey progress
 	c.barrierRekeyConfig = nil
@@ -1152,27 +1158,27 @@ func (c *Core) preSeal() error {
 	}
 
 	if err := c.teardownAudits(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down audits: {{err}}", err))
+		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))
 	}
 	if err := c.stopExpiration(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("[ERR] error stopping expiration: {{err}}", err))
+		result = multierror.Append(result, errwrap.Wrapf("error stopping expiration: {{err}}", err))
 	}
 	if err := c.teardownCredentials(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down credentials: {{err}}", err))
+		result = multierror.Append(result, errwrap.Wrapf("error tearing down credentials: {{err}}", err))
 	}
 	if err := c.teardownPolicyStore(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("[ERR] error tearing down policy store: {{err}}", err))
+		result = multierror.Append(result, errwrap.Wrapf("error tearing down policy store: {{err}}", err))
 	}
 	if err := c.stopRollback(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("[ERR] error stopping rollback: {{err}}", err))
+		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))
 	}
 	if err := c.unloadMounts(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("[ERR] error unloading mounts: {{err}}", err))
+		result = multierror.Append(result, errwrap.Wrapf("error unloading mounts: {{err}}", err))
 	}
 	if cache, ok := c.physical.(*physical.Cache); ok {
 		cache.Purge()
 	}
-	c.logger.Printf("[INFO] core: pre-seal teardown complete")
+	c.logger.Info("core: pre-seal teardown complete")
 	return result
 }
 
@@ -1182,7 +1188,7 @@ func (c *Core) preSeal() error {
 func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
-	c.logger.Printf("[INFO] core: entering standby mode")
+	c.logger.Info("core: entering standby mode")
 
 	// Monitor for key rotation
 	keyRotateDone := make(chan struct{})
@@ -1204,12 +1210,12 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate uuid: %v", err)
+			c.logger.Error("core: failed to generate uuid", "error", err)
 			return
 		}
 		lock, err := c.ha.LockWith(coreLockPath, uuid)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to create lock: %v", err)
+			c.logger.Error("core: failed to create lock", "error", err)
 			return
 		}
 
@@ -1220,7 +1226,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		if leaderLostCh == nil {
 			return
 		}
-		c.logger.Printf("[INFO] core: acquired lock, enabling active operation")
+		c.logger.Info("core: acquired lock, enabling active operation")
 
 		// This is used later to log a metrics event; this can be helpful to
 		// detect flapping
@@ -1231,7 +1237,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		c.stateLock.Lock()
 		if err := c.setupCluster(); err != nil {
 			c.stateLock.Unlock()
-			c.logger.Printf("[ERR] core: cluster setup failed: %v", err)
+			c.logger.Error("core: cluster setup failed", "error", err)
 			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
@@ -1240,7 +1246,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// Advertise as leader
 		if err := c.advertiseLeader(uuid, leaderLostCh); err != nil {
 			c.stateLock.Unlock()
-			c.logger.Printf("[ERR] core: leader advertisement setup failed: %v", err)
+			c.logger.Error("core: leader advertisement setup failed", "error", err)
 			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
@@ -1255,7 +1261,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 
 		// Handle a failure to unseal
 		if err != nil {
-			c.logger.Printf("[ERR] core: post-unseal setup failed: %v", err)
+			c.logger.Error("core: post-unseal setup failed", "error", err)
 			lock.Unlock()
 			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
 			continue
@@ -1265,11 +1271,11 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		var manualStepDown bool
 		select {
 		case <-leaderLostCh:
-			c.logger.Printf("[WARN] core: leadership lost, stopping active operation")
+			c.logger.Warn("core: leadership lost, stopping active operation")
 		case <-stopCh:
-			c.logger.Printf("[WARN] core: stopping active operation")
+			c.logger.Warn("core: stopping active operation")
 		case <-manualStepDownCh:
-			c.logger.Printf("[WARN] core: stepping down from active operation to standby")
+			c.logger.Warn("core: stepping down from active operation to standby")
 			manualStepDown = true
 		}
 
@@ -1277,7 +1283,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 
 		// Clear ourself as leader
 		if err := c.clearLeader(uuid); err != nil {
-			c.logger.Printf("[ERR] core: clearing leader advertisement failed: %v", err)
+			c.logger.Error("core: clearing leader advertisement failed", "error", err)
 		}
 
 		// Attempt the pre-seal process
@@ -1291,7 +1297,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 
 		// Check for a failure to prepare to seal
 		if preSealErr != nil {
-			c.logger.Printf("[ERR] core: pre-seal teardown failed: %v", err)
+			c.logger.Error("core: pre-seal teardown failed", "error", err)
 		}
 
 		// If we've merely stepped down, we could instantly grab the lock
@@ -1317,7 +1323,7 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 			}
 
 			if err := c.checkKeyUpgrades(); err != nil {
-				c.logger.Printf("[ERR] core: key rotation periodic upgrade check failed: %v", err)
+				c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
 			}
 		case <-stopCh:
 			return
@@ -1339,7 +1345,9 @@ func (c *Core) checkKeyUpgrades() error {
 		if !didUpgrade {
 			break
 		}
-		c.logger.Printf("[INFO] core: upgraded to key term %d", newTerm)
+		if c.logger.IsInfo() {
+			c.logger.Info("core: upgraded to new key term", "term", newTerm)
+		}
 	}
 	return nil
 }
@@ -1363,7 +1371,7 @@ func (c *Core) scheduleUpgradeCleanup() error {
 		for _, upgrade := range upgrades {
 			path := fmt.Sprintf("%s%s", keyringUpgradePrefix, upgrade)
 			if err := c.barrier.Delete(path); err != nil {
-				c.logger.Printf("[ERR] core: failed to cleanup upgrade: %s", path)
+				c.logger.Error("core: failed to cleanup upgrade", "path", path, "error", err)
 			}
 		}
 	})
@@ -1380,7 +1388,7 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 		}
 
 		// Retry the acquisition
-		c.logger.Printf("[ERR] core: failed to acquire lock: %v", err)
+		c.logger.Error("core: failed to acquire lock", "error", err)
 		select {
 		case <-time.After(lockRetryInterval):
 		case <-stopCh:
@@ -1398,7 +1406,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 	case *ecdsa.PrivateKey:
 		key = c.localClusterPrivateKey.(*ecdsa.PrivateKey)
 	default:
-		c.logger.Printf("[ERR] core: unknown cluster private key type %T", c.localClusterPrivateKey)
+		c.logger.Error("core: unknown cluster private key type", "key_type", fmt.Sprintf("%T", c.localClusterPrivateKey))
 		return fmt.Errorf("unknown cluster private key type %T", c.localClusterPrivateKey)
 	}
 
@@ -1431,7 +1439,9 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 	sd, ok := c.ha.(physical.ServiceDiscovery)
 	if ok {
 		if err := sd.NotifyActiveStateChange(); err != nil {
-			c.logger.Printf("[WARN] core: failed to notify active status: %v", err)
+			if c.logger.IsWarn() {
+				c.logger.Warn("core: failed to notify active status", "error", err)
+			}
 		}
 	}
 	return nil
@@ -1440,7 +1450,7 @@ func (c *Core) advertiseLeader(uuid string, leaderLostCh <-chan struct{}) error 
 func (c *Core) cleanLeaderPrefix(uuid string, leaderLostCh <-chan struct{}) {
 	keys, err := c.barrier.List(coreLeaderPrefix)
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to list entries in core/leader: %v", err)
+		c.logger.Error("core: failed to list entries in core/leader", "error", err)
 		return
 	}
 	for len(keys) > 0 {
@@ -1465,7 +1475,9 @@ func (c *Core) clearLeader(uuid string) error {
 	sd, ok := c.ha.(physical.ServiceDiscovery)
 	if ok {
 		if err := sd.NotifyActiveStateChange(); err != nil {
-			c.logger.Printf("[WARN] core: failed to notify standby status: %v", err)
+			if c.logger.IsWarn() {
+				c.logger.Warn("core: failed to notify standby status", "error", err)
+			}
 		}
 	}
 
@@ -1494,7 +1506,7 @@ func (c *Core) SealAccess() *SealAccess {
 	return sa
 }
 
-func (c *Core) Logger() *log.Logger {
+func (c *Core) Logger() log.Logger {
 	return c.logger
 }
 

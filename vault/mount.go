@@ -214,7 +214,9 @@ func (c *Core) mount(me *MountEntry) error {
 	if err := c.router.Mount(backend, me.Path, me, view); err != nil {
 		return err
 	}
-	c.logger.Printf("[INFO] core: mounted '%s' type: %s", me.Path, me.Type)
+	if c.logger.IsInfo() {
+		c.logger.Info("core: successful mount", "path", me.Path, "type", me.Type)
+	}
 	return nil
 }
 
@@ -278,7 +280,9 @@ func (c *Core) unmount(path string) error {
 	if err := c.removeMountEntry(path); err != nil {
 		return err
 	}
-	c.logger.Printf("[INFO] core: unmounted '%s'", path)
+	if c.logger.IsInfo() {
+		c.logger.Info("core: successful unmounted", "path", path)
+	}
 	return nil
 }
 
@@ -387,7 +391,9 @@ func (c *Core) remount(src, dst string) error {
 		return err
 	}
 
-	c.logger.Printf("[INFO] core: remounted '%s' to '%s'", src, dst)
+	if c.logger.IsInfo() {
+		c.logger.Info("core: successful remount", "old_path", src, "new_path", dst)
+	}
 	return nil
 }
 
@@ -397,7 +403,7 @@ func (c *Core) loadMounts() error {
 	// Load the existing mount table
 	raw, err := c.barrier.Get(coreMountConfigPath)
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to read mount table: %v", err)
+		c.logger.Error("core: failed to read mount table", "error", err)
 		return errLoadMountsFailed
 	}
 
@@ -409,7 +415,7 @@ func (c *Core) loadMounts() error {
 		// yes, decompress the table and then JSON decode it. If not,
 		// simply JSON decode it.
 		if err := jsonutil.DecodeJSON(raw.Value, mountTable); err != nil {
-			c.logger.Printf("[ERR] core: failed to decompress and/or decode the mount table: %v", err)
+			c.logger.Error("core: failed to decompress and/or decode the mount table", "error", err)
 			return err
 		}
 		c.mounts = mountTable
@@ -469,20 +475,13 @@ func (c *Core) loadMounts() error {
 // persistMounts is used to persist the mount table after modification
 func (c *Core) persistMounts(table *MountTable) error {
 	if table.Type != mountTableType {
-		c.logger.Printf(
-			"[ERR] core: given table to persist has type %s but need type %s",
-			table.Type,
-			mountTableType)
+		c.logger.Error("core: given table to persist has wrong type", "actual_type", table.Type, "expected_type", mountTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
 	for _, entry := range table.Entries {
 		if entry.Table != table.Type {
-			c.logger.Printf(
-				"[ERR] core: entry in mount table with path %s has table value %s but is in table %s, refusing to persist",
-				entry.Path,
-				entry.Table,
-				table.Type)
+			c.logger.Error("core: given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
 			return fmt.Errorf("invalid mount entry found, not persisting")
 		}
 	}
@@ -490,7 +489,7 @@ func (c *Core) persistMounts(table *MountTable) error {
 	// Encode the mount table into JSON and compress it (lzw).
 	compressedBytes, err := jsonutil.EncodeJSONAndCompress(table, nil)
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to encode and/or compress the mount table: %v", err)
+		c.logger.Error("core: failed to encode and/or compress the mount table", "error", err)
 		return err
 	}
 
@@ -502,7 +501,7 @@ func (c *Core) persistMounts(table *MountTable) error {
 
 	// Write to the physical backend
 	if err := c.barrier.Put(entry); err != nil {
-		c.logger.Printf("[ERR] core: failed to persist mount table: %v", err)
+		c.logger.Error("core: failed to persist mount table", "error", err)
 		return err
 	}
 	return nil
@@ -532,9 +531,7 @@ func (c *Core) setupMounts() error {
 		// Create the new backend
 		backend, err = c.newLogicalBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
 		if err != nil {
-			c.logger.Printf(
-				"[ERR] core: failed to create mount entry %s: %v",
-				entry.Path, err)
+			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
 		}
 
@@ -550,10 +547,12 @@ func (c *Core) setupMounts() error {
 		// Mount the backend
 		err = c.router.Mount(backend, entry.Path, entry, view)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to mount entry %s: %v", entry.Path, err)
+			c.logger.Error("core: failed to mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
 		} else {
-			c.logger.Printf("[INFO] core: mounted backend of type %s at %s", entry.Type, entry.Path)
+			if c.logger.IsInfo() {
+				c.logger.Info("core: successfully mounted backend", "type", entry.Type, "path", entry.Path)
+			}
 		}
 
 		// Ensure the path is tainted if set in the mount table

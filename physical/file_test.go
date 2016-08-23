@@ -2,9 +2,11 @@ package physical
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func TestFileBackend(t *testing.T) {
@@ -14,7 +16,8 @@ func TestFileBackend(t *testing.T) {
 	}
 	defer os.RemoveAll(dir)
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	b, err := NewBackend("file", logger, map[string]string{
 		"path": dir,
 	})

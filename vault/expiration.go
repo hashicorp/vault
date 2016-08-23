@@ -3,12 +3,12 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
 	"path"
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
@@ -52,7 +52,7 @@ type ExpirationManager struct {
 	idView     *BarrierView
 	tokenView  *BarrierView
 	tokenStore *TokenStore
-	logger     *log.Logger
+	logger     log.Logger
 
 	pending     map[string]*time.Timer
 	pendingLock sync.Mutex
@@ -60,9 +60,10 @@ type ExpirationManager struct {
 
 // NewExpirationManager creates a new ExpirationManager that is backed
 // using a given view, and uses the provided router for revocation.
-func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, logger *log.Logger) *ExpirationManager {
+func NewExpirationManager(router *Router, view *BarrierView, ts *TokenStore, logger log.Logger) *ExpirationManager {
 	if logger == nil {
-		logger = log.New(os.Stderr, "", log.LstdFlags)
+		logger = log.New("expiration_manager")
+
 	}
 	exp := &ExpirationManager{
 		router:     router,
@@ -153,7 +154,9 @@ func (m *ExpirationManager) Restore() error {
 		})
 	}
 	if len(m.pending) > 0 {
-		m.logger.Printf("[INFO] expire: restored %d leases", len(m.pending))
+		if m.logger.IsInfo() {
+			m.logger.Info("expire: leases restored", "restored_lease_count", len(m.pending))
+		}
 	}
 	return nil
 }
@@ -199,7 +202,9 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 			if !force {
 				return err
 			} else {
-				m.logger.Printf("[WARN]: revocation from the backend failed, but in force mode so ignoring; error was: %s", err)
+				if m.logger.IsWarn() {
+					m.logger.Warn("revocation from the backend failed, but in force mode so ignoring", "error", err)
+				}
 			}
 		}
 	}
@@ -565,13 +570,15 @@ func (m *ExpirationManager) expireID(leaseID string) {
 	for attempt := uint(0); attempt < maxRevokeAttempts; attempt++ {
 		err := m.Revoke(leaseID)
 		if err == nil {
-			m.logger.Printf("[INFO] expire: revoked '%s'", leaseID)
+			if m.logger.IsInfo() {
+				m.logger.Info("expire: revoked lease", "lease_id", leaseID)
+			}
 			return
 		}
-		m.logger.Printf("[ERR] expire: failed to revoke '%s': %v", leaseID, err)
+		m.logger.Error("expire: failed to revoke lease", "lease_id", leaseID, "error", err)
 		time.Sleep((1 << attempt) * revokeRetryBase)
 	}
-	m.logger.Printf("[ERR] expire: maximum revoke attempts for '%s' reached", leaseID)
+	m.logger.Error("expire: maximum revoke attempts reached", "lease_id", leaseID)
 }
 
 // revokeEntry is used to attempt revocation of an internal entry

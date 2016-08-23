@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func TestClusterFetching(t *testing.T) {
@@ -34,7 +34,8 @@ func TestClusterFetching(t *testing.T) {
 }
 
 func TestClusterHAFetching(t *testing.T) {
-	logger = log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	redirect := "http://127.0.0.1:8200"
 
 	c, err := NewCore(&CoreConfig{

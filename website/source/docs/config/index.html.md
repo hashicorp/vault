@@ -127,7 +127,7 @@ For the `telemetry` section, there is no resource name. All configuration
 is within the object itself.
 
 * `statsite_address` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
-  instances for metrics. This is highly recommended for production usage.
+  instance for metrics. This is highly recommended for production usage.
 
 * `statsd_address` (optional) - This is the same as `statsite_address` but
   for StatsD.

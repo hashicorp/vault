@@ -2,12 +2,13 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
 	"github.com/samuel/go-zookeeper/zk"
@@ -28,12 +29,12 @@ type ZookeeperBackend struct {
 	path   string
 	client *zk.Conn
 	acl    []zk.ACL
-	logger *log.Logger
+	logger log.Logger
 }
 
 // newZookeeperBackend constructs a Zookeeper backend using the given API client
 // and the prefix in the KV store.
-func newZookeeperBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
+func newZookeeperBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 	// Get the path in Zookeeper
 	path, ok := conf["path"]
 	if !ok {

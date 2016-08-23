@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -38,6 +39,9 @@ type SSHCommConfig struct {
 
 	// DisableAgent, if true, will not forward the SSH agent.
 	DisableAgent bool
+
+	// Logger for output
+	Logger log.Logger
 }
 
 // Creates a new communicator implementation over SSH. This takes
@@ -92,8 +96,9 @@ func (c *comm) NewSession() (session *ssh.Session, err error) {
 	}
 
 	if err != nil {
-		log.Printf("ssh session open error: '%s', attempting reconnect", err)
+		c.config.Logger.Error("ssh session open error, attempting reconnect", "error", err)
 		if err := c.reconnect(); err != nil {
+			c.config.Logger.Error("reconnect attempt failed", "error", err)
 			return nil, err
 		}
 
@@ -119,13 +124,13 @@ func (c *comm) reconnect() error {
 		//
 		// http://golang.org/doc/faq#nil_error
 		c.conn = nil
-		log.Printf("reconnection error: %s", err)
+		c.config.Logger.Error("reconnection error", "error", err)
 		return err
 	}
 
 	sshConn, sshChan, req, err := ssh.NewClientConn(c.conn, c.address, c.config.SSHConfig)
 	if err != nil {
-		log.Printf("handshake error: %s", err)
+		c.config.Logger.Error("handshake error", "error", err)
 		c.Close()
 		return err
 	}
@@ -153,7 +158,7 @@ func (c *comm) connectToAgent() {
 	}
 	agentConn, err := net.Dial("unix", socketLocation)
 	if err != nil {
-		log.Printf("[ERROR] could not connect to local agent socket: %s", socketLocation)
+		c.config.Logger.Error("could not connect to local agent socket", "socket_path", socketLocation)
 		return
 	}
 	defer agentConn.Close()
@@ -161,7 +166,7 @@ func (c *comm) connectToAgent() {
 	// create agent and add in auth
 	forwardingAgent := agent.NewClient(agentConn)
 	if forwardingAgent == nil {
-		log.Printf("[ERROR] Could not create agent client")
+		c.config.Logger.Error("could not create agent client")
 		return
 	}
 
@@ -180,7 +185,7 @@ func (c *comm) connectToAgent() {
 
 	err = agent.RequestAgentForwarding(session)
 	if err != nil {
-		log.Printf("[ERROR] RequestAgentForwarding: %#v", err)
+		c.config.Logger.Error("error requesting agent forwarding", "error", err)
 		return
 	}
 	return
@@ -243,7 +248,7 @@ func (c *comm) scpSession(scpCommand string, f func(io.Writer, *bufio.Reader) er
 		if exitErr, ok := err.(*ssh.ExitError); ok {
 			// Otherwise, we have an ExitErorr, meaning we can just read
 			// the exit status
-			log.Printf("non-zero exit status: %d", exitErr.ExitStatus())
+			c.config.Logger.Error("got non-zero exit status", "exit_status", exitErr.ExitStatus())
 
 			// If we exited with status 127, it means SCP isn't available.
 			// Return a more descriptive error for that.

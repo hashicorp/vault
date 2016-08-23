@@ -1,13 +1,15 @@
 package physical
 
 import (
-	"log"
-	"os"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func TestInmemHA(t *testing.T) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := NewInmemHA(logger)
 	testHABackend(t, inm, inm)
 }

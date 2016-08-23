@@ -3,22 +3,20 @@ package testing
 import (
 	"crypto/tls"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"sort"
 	"testing"
 
+	log "github.com/mgutz/logxi/v1"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/vault"
-)
-
-var (
-	logger = log.New(os.Stderr, "", log.LstdFlags)
 )
 
 // TestEnvVar must be set to a non-empty value for acceptance tests to run.
@@ -136,6 +134,8 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	// Create an in-memory Vault core
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	core, err := vault.NewCore(&vault.CoreConfig{
 		Physical: physical.NewInmem(logger),
 		LogicalBackends: map[string]logical.Factory{
@@ -200,7 +200,9 @@ func Test(tt TestT, c TestCase) {
 	// Make requests
 	var revoke []*logical.Request
 	for i, s := range c.Steps {
-		log.Printf("[WARN] Executing test step %d", i+1)
+		if log.IsWarn() {
+			log.Warn("Executing test step", "step_number", i+1)
+		}
 
 		// Create the request
 		req := &logical.Request{
@@ -282,7 +284,9 @@ func Test(tt TestT, c TestCase) {
 	// Revoke any secrets we might have.
 	var failedRevokes []*logical.Secret
 	for _, req := range revoke {
-		log.Printf("[WARN] Revoking secret: %#v", req)
+		if log.IsWarn() {
+			log.Warn("Revoking secret", "secret", fmt.Sprintf("%#v", req))
+		}
 		req.ClientToken = client.Token()
 		resp, err := core.HandleRequest(req)
 		if err == nil && resp.IsError() {
@@ -290,14 +294,14 @@ func Test(tt TestT, c TestCase) {
 		}
 		if err != nil {
 			failedRevokes = append(failedRevokes, req.Secret)
-			tt.Error(fmt.Sprintf("[ERR] Revoke error: %s", err))
+			tt.Error(fmt.Sprintf("Revoke error: %s", err))
 		}
 	}
 
 	// Perform any rollbacks. This should no-op if there aren't any.
 	// We set the "immediate" flag here that any backend can pick up on
 	// to do all rollbacks immediately even if the WAL entries are new.
-	log.Printf("[WARN] Requesting RollbackOperation")
+	log.Warn("Requesting RollbackOperation")
 	req := logical.RollbackRequest(prefix + "/")
 	req.Data["immediate"] = true
 	req.ClientToken = client.Token()

@@ -2,10 +2,12 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/samuel/go-zookeeper/zk"
 )
@@ -38,7 +40,8 @@ func TestZookeeperBackend(t *testing.T) {
 		client.Close()
 	}()
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	b, err := NewBackend("zookeeper", logger, map[string]string{
 		"address": addr + "," + addr,
 		"path":    randPath,
@@ -77,7 +80,8 @@ func TestZookeeperHABackend(t *testing.T) {
 		client.Close()
 	}()
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	b, err := NewBackend("zookeeper", logger, map[string]string{
 		"address": addr + "," + addr,
 		"path":    randPath,

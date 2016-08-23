@@ -2,8 +2,9 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"sync"
+
+	log "github.com/mgutz/logxi/v1"
 )
 
 type InmemHABackend struct {
@@ -11,11 +12,11 @@ type InmemHABackend struct {
 	locks  map[string]string
 	l      sync.Mutex
 	cond   *sync.Cond
-	logger *log.Logger
+	logger log.Logger
 }
 
 // NewInmemHA constructs a new in-memory HA backend. This is only for testing.
-func NewInmemHA(logger *log.Logger) *InmemHABackend {
+func NewInmemHA(logger log.Logger) *InmemHABackend {
 	in := &InmemHABackend{
 		InmemBackend: *NewInmem(logger),
 		locks:        make(map[string]string),

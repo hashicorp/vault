@@ -5,10 +5,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func TestLoadConfigFile(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/config.hcl")
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	config, err := LoadConfigFile("./test-fixtures/config.hcl", logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -70,7 +75,9 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestLoadConfigFile_json(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/config.hcl.json")
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	config, err := LoadConfigFile("./test-fixtures/config.hcl.json", logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -131,7 +138,9 @@ func TestLoadConfigFile_json(t *testing.T) {
 }
 
 func TestLoadConfigFile_json2(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json")
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	config, err := LoadConfigFile("./test-fixtures/config2.hcl.json", logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -189,7 +198,9 @@ func TestLoadConfigFile_json2(t *testing.T) {
 }
 
 func TestLoadConfigDir(t *testing.T) {
-	config, err := LoadConfigDir("./test-fixtures/config-dir")
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	config, err := LoadConfigDir("./test-fixtures/config-dir", logger)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -230,11 +241,13 @@ func TestLoadConfigDir(t *testing.T) {
 }
 
 func TestParseConfig_badTopLevel(t *testing.T) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	_, err := ParseConfig(strings.TrimSpace(`
 backend {}
 bad  = "one"
 nope = "yes"
-`))
+`), logger)
 
 	if err == nil {
 		t.Fatal("expected error")
@@ -250,13 +263,15 @@ nope = "yes"
 }
 
 func TestParseConfig_badListener(t *testing.T) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	_, err := ParseConfig(strings.TrimSpace(`
 listener "tcp" {
 	address = "1.2.3.3"
 	bad  = "one"
 	nope = "yes"
 }
-`))
+`), logger)
 
 	if err == nil {
 		t.Fatal("expected error")
@@ -272,13 +287,15 @@ listener "tcp" {
 }
 
 func TestParseConfig_badTelemetry(t *testing.T) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	_, err := ParseConfig(strings.TrimSpace(`
 telemetry {
 	statsd_address = "1.2.3.3"
 	bad  = "one"
 	nope = "yes"
 }
-`))
+`), logger)
 
 	if err == nil {
 		t.Fatal("expected error")

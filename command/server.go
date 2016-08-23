@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -18,17 +17,20 @@ import (
 	"syscall"
 	"time"
 
+	colorable "github.com/mattn/go-colorable"
+	log "github.com/mgutz/logxi/v1"
+
 	"google.golang.org/grpc/grpclog"
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/logutils"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
 	"github.com/hashicorp/vault/helper/gated-writer"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -51,7 +53,7 @@ type ServerCommand struct {
 
 	meta.Meta
 
-	logger *log.Logger
+	logger log.Logger
 
 	ReloadFuncs map[string][]server.ReloadFunc
 }
@@ -72,6 +74,38 @@ func (c *ServerCommand) Run(args []string) int {
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
+
+	// Create a logger. We wrap it in a gated writer so that it doesn't
+	// start logging too early.
+	logGate := &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
+	var level int
+	switch logLevel {
+	case "trace":
+		level = log.LevelTrace
+	case "debug":
+		level = log.LevelDebug
+	case "info":
+		level = log.LevelInfo
+	case "notice":
+		level = log.LevelNotice
+	case "warn":
+		level = log.LevelWarn
+	case "err":
+		level = log.LevelError
+	default:
+		c.Ui.Output(fmt.Sprintf("Unknown log level %s", logLevel))
+		return 1
+	}
+	switch strings.ToLower(os.Getenv("LOGXI_FORMAT")) {
+	case "vault", "vault_json", "vault-json", "vaultjson", "":
+		c.logger = logformat.NewVaultLoggerWithWriter(logGate, level)
+	default:
+		c.logger = log.NewLogger(logGate, "vault")
+		c.logger.SetLevel(level)
+	}
+	grpclog.SetLogger(&grpclogFaker{
+		logger: c.logger,
+	})
 
 	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" && devRootTokenID == "" {
 		devRootTokenID = os.Getenv("VAULT_DEV_ROOT_TOKEN_ID")
@@ -96,10 +130,6 @@ func (c *ServerCommand) Run(args []string) int {
 			c.Ui.Error("Root token ID can only be specified with -dev")
 			flags.Usage()
 			return 1
-		case devListenAddress != "":
-			c.Ui.Error("Development address can only be specified with -dev")
-			flags.Usage()
-			return 1
 		}
 	}
 
@@ -112,7 +142,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 	for _, path := range configPath {
-		current, err := server.LoadConfig(path)
+		current, err := server.LoadConfig(path, c.logger)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error loading configuration from %s: %s", path, err))
@@ -146,17 +176,6 @@ func (c *ServerCommand) Run(args []string) int {
 		c.Ui.Output("  swapped to disk is not supported on this system. Running")
 		c.Ui.Output("  Vault on an mlockall(2) enabled system is much more secure.\n")
 	}
-
-	// Create a logger. We wrap it in a gated writer so that it doesn't
-	// start logging too early.
-	logGate := &gatedwriter.Writer{Writer: os.Stderr}
-	c.logger = log.New(&logutils.LevelFilter{
-		Levels: []logutils.LogLevel{
-			"TRACE", "DEBUG", "INFO", "WARN", "ERR"},
-		MinLevel: logutils.LogLevel(strings.ToUpper(logLevel)),
-		Writer:   logGate,
-	}, "", log.LstdFlags)
-	grpclog.SetLogger(c.logger)
 
 	if err := c.setupTelemetry(config); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
@@ -408,7 +427,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	}
 	if !disableClustering {
-		c.logger.Printf("[TRACE] cluster listeners will be started on %v", clusterAddrs)
+		if c.logger.IsTrace() {
+			c.logger.Trace("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
+		}
 	}
 
 	// Make sure we close all listeners from this point on
@@ -598,6 +619,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 
 	if rootTokenID != "" {
 		req := &logical.Request{
+			ID:          "dev-gen-root",
 			Operation:   logical.UpdateOperation,
 			ClientToken: init.RootToken,
 			Path:        "auth/token/create",
@@ -621,6 +643,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 
 		init.RootToken = resp.Auth.ClientToken
 
+		req.ID = "dev-revoke-init-root"
 		req.Path = "auth/token/revoke-self"
 		req.Data = nil
 		resp, err = core.HandleRequest(req)
@@ -795,7 +818,7 @@ func (c *ServerCommand) Reload(configPath []string) error {
 	// Read the new config
 	var config *server.Config
 	for _, path := range configPath {
-		current, err := server.LoadConfig(path)
+		current, err := server.LoadConfig(path, c.logger)
 		if err != nil {
 			retErr := fmt.Errorf("Error loading configuration from %s: %s", path, err)
 			c.Ui.Error(retErr.Error())
@@ -909,4 +932,35 @@ func MakeSighupCh() chan struct{} {
 		}
 	}()
 	return resultCh
+}
+
+type grpclogFaker struct {
+	logger log.Logger
+}
+
+func (g *grpclogFaker) Fatal(args ...interface{}) {
+	g.logger.Error(fmt.Sprint(args...))
+	os.Exit(1)
+}
+
+func (g *grpclogFaker) Fatalf(format string, args ...interface{}) {
+	g.logger.Error(fmt.Sprintf(format, args...))
+	os.Exit(1)
+}
+
+func (g *grpclogFaker) Fatalln(args ...interface{}) {
+	g.logger.Error(fmt.Sprintln(args...))
+	os.Exit(1)
+}
+
+func (g *grpclogFaker) Print(args ...interface{}) {
+	g.logger.Warn(fmt.Sprint(args...))
+}
+
+func (g *grpclogFaker) Printf(format string, args ...interface{}) {
+	g.logger.Warn(fmt.Sprintf(format, args...))
+}
+
+func (g *grpclogFaker) Println(args ...interface{}) {
+	g.logger.Warn(fmt.Sprintln(args...))
 }

@@ -2,7 +2,6 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"reflect"
@@ -10,7 +9,10 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/mgutz/logxi/v1"
+
 	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/ory-am/dockertest"
 )
@@ -33,7 +35,8 @@ func testConsulBackend(t *testing.T) *ConsulBackend {
 }
 
 func testConsulBackendConfig(t *testing.T, conf *consulConf) *ConsulBackend {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	be, err := newConsulBackend(*conf, logger)
 	if err != nil {
 		t.Fatalf("Expected Consul to initialize: %v", err)
@@ -89,7 +92,8 @@ func TestConsul_ServiceTags(t *testing.T) {
 		"max_parallel":         "4",
 		"disable_registration": "false",
 	}
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	be, err := newConsulBackend(consulConfig, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -172,7 +176,8 @@ func TestConsul_newConsulBackend(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		logger := log.New(os.Stderr, "", log.LstdFlags)
+		logger := logformat.NewVaultLogger(log.LevelTrace)
+
 		be, err := newConsulBackend(test.consulConfig, logger)
 		if test.fail {
 			if err == nil {
@@ -396,7 +401,8 @@ func TestConsulBackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	b, err := NewBackend("consul", logger, map[string]string{
 		"address":      conf.Address,
 		"path":         randPath,
@@ -436,7 +442,8 @@ func TestConsulHABackend(t *testing.T) {
 		client.KV().DeleteTree(randPath, nil)
 	}()
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	b, err := NewBackend("consul", logger, map[string]string{
 		"address":      conf.Address,
 		"path":         randPath,

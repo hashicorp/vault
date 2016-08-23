@@ -139,7 +139,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 
 	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
-		c.logger.Printf("[ERR] core: invalid rekey seal configuration: %v", err)
+		c.logger.Error("core: invalid rekey seal configuration", "error", err)
 		return fmt.Errorf("invalid rekey seal configuration: %v", err)
 	}
 
@@ -171,8 +171,9 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 	}
 	c.barrierRekeyConfig.Nonce = nonce
 
-	c.logger.Printf("[INFO] core: rekey initialized (nonce: %s, shares: %d, threshold: %d)",
-		c.barrierRekeyConfig.Nonce, c.barrierRekeyConfig.SecretShares, c.barrierRekeyConfig.SecretThreshold)
+	if c.logger.IsInfo() {
+		c.logger.Info("core: rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
+	}
 	return nil
 }
 
@@ -184,7 +185,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 
 	// Check if the seal configuration is valid
 	if err := config.Validate(); err != nil {
-		c.logger.Printf("[ERR] core: invalid recovery configuration: %v", err)
+		c.logger.Error("core: invalid recovery configuration", "error", err)
 		return fmt.Errorf("invalid recovery configuration: %v", err)
 	}
 
@@ -220,8 +221,9 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 	}
 	c.recoveryRekeyConfig.Nonce = nonce
 
-	c.logger.Printf("[INFO] core: rekey initialized (nonce: %s, shares: %d, threshold: %d)",
-		c.recoveryRekeyConfig.Nonce, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
+	if c.logger.IsInfo() {
+		c.logger.Info("core: rekey initialized", "nonce", c.recoveryRekeyConfig.Nonce, "shares", c.recoveryRekeyConfig.SecretShares, "threshold", c.recoveryRekeyConfig.SecretThreshold)
+	}
 	return nil
 }
 
@@ -289,8 +291,9 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 
 	// Check if we don't have enough keys to unlock
 	if len(c.barrierRekeyProgress) < existingConfig.SecretThreshold {
-		c.logger.Printf("[DEBUG] core: cannot rekey, have %d of %d keys",
-			len(c.barrierRekeyProgress), existingConfig.SecretThreshold)
+		if c.logger.IsDebug() {
+			c.logger.Debug("core: cannot rekey yet, not enough keys", "keys", len(c.barrierRekeyProgress), "threshold", existingConfig.SecretThreshold)
+		}
 		return nil, nil
 	}
 
@@ -308,14 +311,14 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	}
 
 	if err := c.barrier.VerifyMaster(masterKey); err != nil {
-		c.logger.Printf("[ERR] core: rekey aborted, master key verification failed: %v", err)
+		c.logger.Error("core: rekey aborted, master key verification failed", "error", err)
 		return nil, err
 	}
 
 	// Generate a new master key
 	newMasterKey, err := c.barrier.GenerateKey()
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to generate master key: %v", err)
+		c.logger.Error("core: failed to generate master key", "error", err)
 		return nil, fmt.Errorf("master key generation failed: %v", err)
 	}
 
@@ -330,7 +333,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(newMasterKey, c.barrierRekeyConfig.SecretShares, c.barrierRekeyConfig.SecretThreshold)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate shares: %v", err)
+			c.logger.Error("core: failed to generate shares", "error", err)
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
@@ -373,7 +376,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 			}
 			buf, err := json.Marshal(backupVals)
 			if err != nil {
-				c.logger.Printf("[ERR] core: failed to marshal unseal key backup: %v", err)
+				c.logger.Error("core: failed to marshal unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to marshal unseal key backup: %v", err)
 			}
 			pe := &physical.Entry{
@@ -381,7 +384,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 				Value: buf,
 			}
 			if err = c.physical.Put(pe); err != nil {
-				c.logger.Printf("[ERR] core: failed to save unseal key backup: %v", err)
+				c.logger.Error("core: failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
@@ -389,21 +392,21 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 
 	if keysToStore != nil {
 		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
-			c.logger.Printf("[ERR] core: failed to store keys: %v", err)
+			c.logger.Error("core: failed to store keys", "error", err)
 			return nil, fmt.Errorf("failed to store keys: %v", err)
 		}
 	}
 
 	// Rekey the barrier
 	if err := c.barrier.Rekey(newMasterKey); err != nil {
-		c.logger.Printf("[ERR] core: failed to rekey barrier: %v", err)
+		c.logger.Error("core: failed to rekey barrier", "error", err)
 		return nil, fmt.Errorf("failed to rekey barrier: %v", err)
 	}
-	c.logger.Printf("[INFO] core: security barrier rekeyed (shares: %d, threshold: %d)",
-		c.barrierRekeyConfig.SecretShares, c.barrierRekeyConfig.SecretThreshold)
-
+	if c.logger.IsInfo() {
+		c.logger.Info("core: security barrier rekeyed", "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold)
+	}
 	if err := c.seal.SetBarrierConfig(c.barrierRekeyConfig); err != nil {
-		c.logger.Printf("[ERR] core: error saving rekey seal configuration: %v", err)
+		c.logger.Error("core: error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
@@ -475,8 +478,9 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 
 	// Check if we don't have enough keys to unlock
 	if len(c.recoveryRekeyProgress) < existingConfig.SecretThreshold {
-		c.logger.Printf("[DEBUG] core: cannot rekey, have %d of %d keys",
-			len(c.recoveryRekeyProgress), existingConfig.SecretThreshold)
+		if c.logger.IsDebug() {
+			c.logger.Debug("core: cannot rekey yet, not enough keys", "keys", len(c.recoveryRekeyProgress), "threshold", existingConfig.SecretThreshold)
+		}
 		return nil, nil
 	}
 
@@ -495,14 +499,14 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 
 	// Verify the recovery key
 	if err := c.seal.VerifyRecoveryKey(masterKey); err != nil {
-		c.logger.Printf("[ERR] core: rekey aborted, recovery key verification failed: %v", err)
+		c.logger.Error("core: rekey aborted, recovery key verification failed", "error", err)
 		return nil, err
 	}
 
 	// Generate a new master key
 	newMasterKey, err := c.barrier.GenerateKey()
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to generate recovery key: %v", err)
+		c.logger.Error("core: failed to generate recovery key", "error", err)
 		return nil, fmt.Errorf("recovery key generation failed: %v", err)
 	}
 
@@ -517,7 +521,7 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(newMasterKey, c.recoveryRekeyConfig.SecretShares, c.recoveryRekeyConfig.SecretThreshold)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate shares: %v", err)
+			c.logger.Error("core: failed to generate shares", "error", err)
 			return nil, fmt.Errorf("failed to generate shares: %v", err)
 		}
 		results.SecretShares = shares
@@ -550,7 +554,7 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 			}
 			buf, err := json.Marshal(backupVals)
 			if err != nil {
-				c.logger.Printf("[ERR] core: failed to marshal recovery key backup: %v", err)
+				c.logger.Error("core: failed to marshal recovery key backup", "error", err)
 				return nil, fmt.Errorf("failed to marshal recovery key backup: %v", err)
 			}
 			pe := &physical.Entry{
@@ -558,19 +562,19 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 				Value: buf,
 			}
 			if err = c.physical.Put(pe); err != nil {
-				c.logger.Printf("[ERR] core: failed to save unseal key backup: %v", err)
+				c.logger.Error("core: failed to save unseal key backup", "error", err)
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
 	}
 
 	if err := c.seal.SetRecoveryKey(newMasterKey); err != nil {
-		c.logger.Printf("[ERR] core: failed to set recovery key: %v", err)
+		c.logger.Error("core: failed to set recovery key", "error", err)
 		return nil, fmt.Errorf("failed to set recovery key: %v", err)
 	}
 
 	if err := c.seal.SetRecoveryConfig(c.recoveryRekeyConfig); err != nil {
-		c.logger.Printf("[ERR] core: error saving rekey seal configuration: %v", err)
+		c.logger.Error("core: error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 

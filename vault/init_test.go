@@ -1,11 +1,12 @@
 package vault
 
 import (
-	"log"
-	"os"
 	"reflect"
 	"testing"
 
+	log "github.com/mgutz/logxi/v1"
+
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 )
@@ -22,7 +23,8 @@ func TestCore_Init(t *testing.T) {
 }
 
 func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	inm := physical.NewInmem(logger)
 	conf := &CoreConfig{
 		Physical:     inm,

@@ -2,12 +2,13 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -20,14 +21,14 @@ import (
 type SwiftBackend struct {
 	container  string
 	client     *swift.Connection
-	logger     *log.Logger
+	logger     log.Logger
 	permitPool *PermitPool
 }
 
 // newSwiftBackend constructs a Swift backend using a pre-existing
 // container. Credentials can be provided to the backend, sourced
 // from the environment.
-func newSwiftBackend(conf map[string]string, logger *log.Logger) (Backend, error) {
+func newSwiftBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 
 	username := os.Getenv("OS_USERNAME")
 	if username == "" {
@@ -87,7 +88,9 @@ func newSwiftBackend(conf map[string]string, logger *log.Logger) (Backend, error
 		if err != nil {
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
-		logger.Printf("[DEBUG]: swift: max_parallel set to %d", maxParInt)
+		if logger.IsDebug() {
+			logger.Debug("swift: max_parallel set", "max_parallel", maxParInt)
+		}
 	}
 
 	s := &SwiftBackend{

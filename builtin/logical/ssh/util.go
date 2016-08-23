@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 
+	log "github.com/mgutz/logxi/v1"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -52,7 +53,7 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 		return err
 	}
 
-	comm, err := createSSHComm(adminUser, ip, port, hostkey)
+	comm, err := createSSHComm(b.Logger(), adminUser, ip, port, hostkey)
 	if err != nil {
 		return err
 	}
@@ -203,7 +204,7 @@ func cidrListContainsIP(ip, cidrList string) (bool, error) {
 	return false, nil
 }
 
-func createSSHComm(username, ip string, port int, hostkey string) (*comm, error) {
+func createSSHComm(logger log.Logger, username, ip string, port int, hostkey string) (*comm, error) {
 	signer, err := ssh.ParsePrivateKey([]byte(hostkey))
 	if err != nil {
 		return nil, err
@@ -234,6 +235,7 @@ func createSSHComm(username, ip string, port int, hostkey string) (*comm, error)
 		Connection:   connfunc,
 		Pty:          false,
 		DisableAgent: true,
+		Logger:       logger,
 	}
 
 	return SSHCommNew(fmt.Sprintf("%s:%d", ip, port), config)

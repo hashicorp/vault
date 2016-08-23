@@ -2,8 +2,9 @@ package physical
 
 import (
 	"fmt"
-	"log"
 	"sync"
+
+	log "github.com/mgutz/logxi/v1"
 )
 
 const DefaultParallelOperations = 128
@@ -96,11 +97,11 @@ type Entry struct {
 }
 
 // Factory is the factory function to create a physical backend.
-type Factory func(config map[string]string, logger *log.Logger) (Backend, error)
+type Factory func(config map[string]string, logger log.Logger) (Backend, error)
 
 // NewBackend returns a new backend with the given type and configuration.
 // The backend is looked up in the builtinBackends variable.
-func NewBackend(t string, logger *log.Logger, conf map[string]string) (Backend, error) {
+func NewBackend(t string, logger log.Logger, conf map[string]string) (Backend, error) {
 	f, ok := builtinBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown physical backend type: %s", t)
@@ -111,10 +112,10 @@ func NewBackend(t string, logger *log.Logger, conf map[string]string) (Backend, 
 // BuiltinBackends is the list of built-in physical backends that can
 // be used with NewBackend.
 var builtinBackends = map[string]Factory{
-	"inmem": func(_ map[string]string, logger *log.Logger) (Backend, error) {
+	"inmem": func(_ map[string]string, logger log.Logger) (Backend, error) {
 		return NewInmem(logger), nil
 	},
-	"inmem_ha": func(_ map[string]string, logger *log.Logger) (Backend, error) {
+	"inmem_ha": func(_ map[string]string, logger log.Logger) (Backend, error) {
 		return NewInmemHA(logger), nil
 	},
 	"consul":     newConsulBackend,

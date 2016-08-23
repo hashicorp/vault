@@ -10,12 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
 	mathrand "math/rand"
 	"net"
 	"net/http"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"golang.org/x/net/http2"
 
@@ -95,19 +96,19 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 		return nil
 
 	case adv.ClusterKeyParams == nil:
-		c.logger.Printf("[ERR] core/loadClusterTLS: no key params found")
+		c.logger.Error("core/loadClusterTLS: no key params found")
 		return fmt.Errorf("no local cluster key params found")
 
 	case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
-		c.logger.Printf("[ERR] core/loadClusterTLS: failed to parse local cluster key due to missing params")
+		c.logger.Error("core/loadClusterTLS: failed to parse local cluster key due to missing params")
 		return fmt.Errorf("failed to parse local cluster key")
 
 	case adv.ClusterKeyParams.Type != corePrivateKeyTypeP521:
-		c.logger.Printf("[ERR] core/loadClusterTLS: unknown local cluster key type %v", adv.ClusterKeyParams.Type)
+		c.logger.Error("core/loadClusterTLS: unknown local cluster key type", "key_type", adv.ClusterKeyParams.Type)
 		return fmt.Errorf("failed to find valid local cluster key type")
 
 	case adv.ClusterCert == nil || len(adv.ClusterCert) == 0:
-		c.logger.Printf("[ERR] core/loadClusterTLS: no local cluster cert found")
+		c.logger.Error("core/loadClusterTLS: no local cluster cert found")
 		return fmt.Errorf("no local cluster cert found")
 
 	}
@@ -129,7 +130,7 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 
 	cert, err := x509.ParseCertificate(c.localClusterCert)
 	if err != nil {
-		c.logger.Printf("[ERR] core/loadClusterTLS: failed parsing local cluster certificate: %v", err)
+		c.logger.Error("core/loadClusterTLS: failed parsing local cluster certificate", "error", err)
 		return fmt.Errorf("error parsing local cluster certificate: %v", err)
 	}
 
@@ -145,7 +146,7 @@ func (c *Core) setupCluster() error {
 	// Check if storage index is already present or not
 	cluster, err := c.Cluster()
 	if err != nil {
-		c.logger.Printf("[ERR] core: failed to get cluster details: %v", err)
+		c.logger.Error("core: failed to get cluster details", "error", err)
 		return err
 	}
 
@@ -158,10 +159,10 @@ func (c *Core) setupCluster() error {
 	if cluster.Name == "" {
 		// If cluster name is not supplied, generate one
 		if c.clusterName == "" {
-			c.logger.Printf("[TRACE] core: cluster name not found/set, generating new")
+			c.logger.Trace("core: cluster name not found/set, generating new")
 			clusterNameBytes, err := uuid.GenerateRandomBytes(4)
 			if err != nil {
-				c.logger.Printf("[ERR] core: failed to generate cluster name: %v", err)
+				c.logger.Error("core: failed to generate cluster name", "error", err)
 				return err
 			}
 
@@ -169,19 +170,23 @@ func (c *Core) setupCluster() error {
 		}
 
 		cluster.Name = c.clusterName
-		c.logger.Printf("[DEBUG] core: cluster name set to %s", cluster.Name)
+		if c.logger.IsDebug() {
+			c.logger.Debug("core: cluster name set", "name", cluster.Name)
+		}
 		modified = true
 	}
 
 	if cluster.ID == "" {
-		c.logger.Printf("[TRACE] core: cluster ID not found, generating new")
+		c.logger.Trace("core: cluster ID not found, generating new")
 		// Generate a clusterID
 		cluster.ID, err = uuid.GenerateUUID()
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to generate cluster identifier: %v", err)
+			c.logger.Error("core: failed to generate cluster identifier", "error", err)
 			return err
 		}
-		c.logger.Printf("[DEBUG] core: cluster ID set to %s", cluster.ID)
+		if c.logger.IsDebug() {
+			c.logger.Debug("core: cluster ID set", "id", cluster.ID)
+		}
 		modified = true
 	}
 
@@ -193,10 +198,10 @@ func (c *Core) setupCluster() error {
 
 		// Create a private key
 		{
-			c.logger.Printf("[TRACE] core: generating cluster private key")
+			c.logger.Trace("core: generating cluster private key")
 			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 			if err != nil {
-				c.logger.Printf("[ERR] core: failed to generate local cluster key: %v", err)
+				c.logger.Error("core: failed to generate local cluster key", "error", err)
 				return err
 			}
 
@@ -205,7 +210,7 @@ func (c *Core) setupCluster() error {
 
 		// Create a certificate
 		{
-			c.logger.Printf("[TRACE] core: generating local cluster certificate")
+			c.logger.Trace("core: generating local cluster certificate")
 
 			host, err := uuid.GenerateUUID()
 			if err != nil {
@@ -232,13 +237,13 @@ func (c *Core) setupCluster() error {
 
 			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)
 			if err != nil {
-				c.logger.Printf("[ERR] core: error generating self-signed cert: %v", err)
+				c.logger.Error("core: error generating self-signed cert", "error", err)
 				return fmt.Errorf("unable to generate local cluster certificate: %v", err)
 			}
 
 			_, err = x509.ParseCertificate(certBytes)
 			if err != nil {
-				c.logger.Printf("[ERR] core: error parsing self-signed cert: %v", err)
+				c.logger.Error("core: error parsing self-signed cert", "error", err)
 				return fmt.Errorf("error parsing generated certificate: %v", err)
 			}
 
@@ -250,7 +255,7 @@ func (c *Core) setupCluster() error {
 		// Encode the cluster information into as a JSON string
 		rawCluster, err := json.Marshal(cluster)
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to encode cluster details: %v", err)
+			c.logger.Error("core: failed to encode cluster details", "error", err)
 			return err
 		}
 
@@ -260,7 +265,7 @@ func (c *Core) setupCluster() error {
 			Value: rawCluster,
 		})
 		if err != nil {
-			c.logger.Printf("[ERR] core: failed to store cluster details: %v", err)
+			c.logger.Error("core: failed to store cluster details", "error", err)
 			return err
 		}
 	}
@@ -279,21 +284,21 @@ func (c *Core) SetClusterSetupFuncs(handler func() (http.Handler, http.Handler))
 // be built in the same mechanism or started independently.
 func (c *Core) startClusterListener() error {
 	if c.clusterHandlerSetupFunc == nil {
-		c.logger.Printf("[ERR] core/startClusterListener: cluster handler setup function has not been set")
+		c.logger.Error("core/startClusterListener: cluster handler setup function has not been set")
 		return fmt.Errorf("cluster handler setup function has not been set")
 	}
 
 	if c.clusterAddr == "" {
-		c.logger.Printf("[INFO] core/startClusterListener: clustering disabled, not starting listeners")
+		c.logger.Info("core/startClusterListener: clustering disabled, not starting listeners")
 		return nil
 	}
 
 	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
-		c.logger.Printf("[WARN] core/startClusterListener: clustering not disabled but no addresses to listen on")
+		c.logger.Warn("core/startClusterListener: clustering not disabled but no addresses to listen on")
 		return fmt.Errorf("cluster addresses not found")
 	}
 
-	c.logger.Printf("[TRACE] core/startClusterListener: starting listeners")
+	c.logger.Trace("core/startClusterListener: starting listeners")
 
 	err := c.startForwarding()
 	if err != nil {
@@ -307,11 +312,11 @@ func (c *Core) startClusterListener() error {
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
 	if c.clusterAddr == "" {
-		c.logger.Printf("[TRACE] core/stopClusterListener: clustering disabled, nothing to do")
+		c.logger.Trace("core/stopClusterListener: clustering disabled, nothing to do")
 		return
 	}
 
-	c.logger.Printf("[INFO] core/stopClusterListener: stopping listeners")
+	c.logger.Info("core/stopClusterListener: stopping listeners")
 
 	// Tell the goroutine managing the listeners to perform the shutdown
 	// process
@@ -320,9 +325,9 @@ func (c *Core) stopClusterListener() {
 	// The reason for this loop-de-loop is that we may be unsealing again
 	// quickly, and if the listeners are not yet closed, we will get socket
 	// bind errors. This ensures proper ordering.
-	c.logger.Printf("[TRACE] core/stopClusterListener: waiting for success notification")
+	c.logger.Trace("core/stopClusterListener: waiting for success notification")
 	<-c.clusterListenerShutdownSuccessCh
-	c.logger.Printf("[INFO] core/stopClusterListener: success")
+	c.logger.Info("core/stopClusterListener: success")
 }
 
 // ClusterTLSConfig generates a TLS configuration based on the local cluster
@@ -375,7 +380,7 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 // WrapHandlerForClustering takes in Vault's HTTP handler and returns a setup
 // function that returns both the original handler and one wrapped with cluster
 // methods
-func WrapHandlerForClustering(handler http.Handler, logger *log.Logger) func() (http.Handler, http.Handler) {
+func WrapHandlerForClustering(handler http.Handler, logger log.Logger) func() (http.Handler, http.Handler) {
 	return func() (http.Handler, http.Handler) {
 		// This mux handles cluster functions (right now, only forwarded requests)
 		mux := http.NewServeMux()
@@ -383,7 +388,7 @@ func WrapHandlerForClustering(handler http.Handler, logger *log.Logger) func() (
 			freq, err := forwarding.ParseForwardedHTTPRequest(req)
 			if err != nil {
 				if logger != nil {
-					logger.Printf("[ERR] http/forwarded-request-server: error parsing forwarded request: %v", err)
+					logger.Error("http/forwarded-request-server: error parsing forwarded request", "error", err)
 				}
 
 				w.Header().Add("Content-Type", "application/json")
@@ -415,7 +420,7 @@ func WrapHandlerForClustering(handler http.Handler, logger *log.Logger) func() (
 
 // WrapListenersForClustering takes in Vault's cluster addresses and returns a
 // setup function that creates the new listeners
-func WrapListenersForClustering(addrs []string, logger *log.Logger) func() ([]net.Listener, error) {
+func WrapListenersForClustering(addrs []string, logger log.Logger) func() ([]net.Listener, error) {
 	return func() ([]net.Listener, error) {
 		ret := make([]net.Listener, 0, len(addrs))
 		// Loop over the existing listeners and start listeners on appropriate ports

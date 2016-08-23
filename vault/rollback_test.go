@@ -1,13 +1,14 @@
 package vault
 
 import (
-	"log"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
+	log "github.com/mgutz/logxi/v1"
+
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/logformat"
 )
 
 // mockRollback returns a mock rollback manager
@@ -33,7 +34,8 @@ func mockRollback(t *testing.T) (*RollbackManager, *NoopBackend) {
 		return mounts.Entries
 	}
 
-	logger := log.New(os.Stderr, "", log.LstdFlags)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
 	rb := NewRollbackManager(logger, mountsFunc, router)
 	rb.period = 10 * time.Millisecond
 	return rb, backend

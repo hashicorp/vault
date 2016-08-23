@@ -177,7 +177,5 @@ to be given periodic tokens.
 
 There are a few important things to know when using periodic tokens:
 
-* When a periodic token was created via a token store role, the _current_ value
-* of the role's period setting will be used at renewal time A token with both a
-* period and an explicit max TTL will act like a periodic token but will be
-* revoked when the explicit max TTL is reached
+* When a periodic token is created via a token store role, the _current_ value of the role's period setting will be used at renewal time 
+* A token with both a period and an explicit max TTL will act like a periodic token but will be revoked when the explicit max TTL is reached
