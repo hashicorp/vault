@@ -240,21 +240,16 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup" + framework.OptionalParamRegex("urltoken"),
+				Pattern: "lookup",
 
 				Fields: map[string]*framework.FieldSchema{
-					"urltoken": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token to lookup (GET/POST URL parameter)",
-					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to lookup (POST request body)",
+						Description: "Token to lookup",
 					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   t.handleLookup,
 					logical.UpdateOperation: t.handleLookup,
 				},
 
@@ -263,16 +258,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup-accessor" + framework.OptionalParamRegex("urlaccessor"),
+				Pattern: "lookup-accessor",
 
 				Fields: map[string]*framework.FieldSchema{
-					"urlaccessor": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Accessor of the token to look up (URL parameter)",
-					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token to look up (request body)",
+						Description: "Accessor of the token to look up",
 					},
 				},
 
@@ -295,7 +286,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: t.handleLookupSelf,
+					logical.ReadOperation:   t.handleLookupSelf,
+					logical.UpdateOperation: t.handleLookupSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -303,16 +295,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-accessor" + framework.OptionalParamRegex("urlaccessor"),
+				Pattern: "revoke-accessor",
 
 				Fields: map[string]*framework.FieldSchema{
-					"urlaccessor": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Accessor of the token (in URL)",
-					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token (request body)",
+						Description: "Accessor of the token",
 					},
 				},
 
@@ -336,16 +324,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke" + framework.OptionalParamRegex("urltoken"),
+				Pattern: "revoke",
 
 				Fields: map[string]*framework.FieldSchema{
-					"urltoken": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token to revoke (in URL)",
-					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke (request body)",
+						Description: "Token to revoke",
 					},
 				},
 
@@ -358,16 +342,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-orphan" + framework.OptionalParamRegex("urltoken"),
+				Pattern: "revoke-orphan",
 
 				Fields: map[string]*framework.FieldSchema{
-					"urltoken": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token to revoke (in URL)",
-					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke (request body)",
+						Description: "Token to revoke",
 					},
 				},
 
@@ -385,7 +365,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to renew (unused)",
+						Description: "Token to renew (unused, does not need to be set)",
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
@@ -403,16 +383,12 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "renew" + framework.OptionalParamRegex("urltoken"),
+				Pattern: "renew",
 
 				Fields: map[string]*framework.FieldSchema{
-					"urltoken": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "Token to renew (in URL)",
-					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to renew (request body)",
+						Description: "Token to renew",
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
@@ -1409,10 +1385,7 @@ func (ts *TokenStore) handleRevokeTree(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
 	// Revoke the token and its children
@@ -1430,10 +1403,7 @@ func (ts *TokenStore) handleRevokeOrphan(
 	// Parse the id
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
 	parent, err := ts.Lookup(req.ClientToken)
@@ -1470,9 +1440,6 @@ func (ts *TokenStore) handleLookupSelf(
 func (ts *TokenStore) handleLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	id := data.Get("token").(string)
-	if id == "" {
-		id = data.Get("urltoken").(string)
-	}
 	if id == "" {
 		id = req.ClientToken
 	}
@@ -1555,10 +1522,7 @@ func (ts *TokenStore) handleRenew(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	id := data.Get("token").(string)
 	if id == "" {
-		id = data.Get("urltoken").(string)
-		if id == "" {
-			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-		}
+		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 	incrementRaw := data.Get("increment").(int)
 
