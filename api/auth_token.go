@@ -158,7 +158,7 @@ func (c *TokenAuth) RevokeOrphan(token string) error {
 }
 
 // RevokeSelf revokes the token making the call
-func (c *TokenAuth) RevokeSelf(token string) error {
+func (c *TokenAuth) RevokeSelf() error {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/revoke-self")
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
