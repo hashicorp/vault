@@ -103,8 +103,9 @@ func (e *NonFatalError) Error() string {
 	return e.Err.Error()
 }
 
-// ErrInvalidKey is returned if there is an error with a
-// provided unseal key.
+// ErrInvalidKey is returned if there is a user-based error with a provided
+// unseal key. This will be shown to the user, so should not contain
+// information that is sensitive.
 type ErrInvalidKey struct {
 	Reason string
 }
