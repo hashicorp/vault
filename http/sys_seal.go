@@ -116,8 +116,6 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 
 			// Attempt the unseal
 			if _, err := core.Unseal(key); err != nil {
-				// Ignore ErrInvalidKey because its a user error that we
-				// mask away. We just show them the seal status.
 				switch {
 				case errwrap.ContainsType(err, new(vault.ErrInvalidKey)):
 				case errwrap.Contains(err, vault.ErrBarrierInvalidKey.Error()):
