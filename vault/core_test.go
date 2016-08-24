@@ -1783,8 +1783,11 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	newClient := resp.Auth.ClientToken
 
 	// Renew the token
-	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/renew/"+newClient)
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/renew")
 	req.ClientToken = newClient
+	req.Data = map[string]interface{}{
+		"token": newClient,
+	}
 	resp, err = c.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1799,7 +1802,10 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	}
 
 	// Verify our token is still valid (e.g. we did not get invalided by the revoke)
-	req = logical.TestRequest(t, logical.ReadOperation, "auth/token/lookup/"+newClient)
+	req = logical.TestRequest(t, logical.UpdateOperation, "auth/token/lookup")
+	req.Data = map[string]interface{}{
+		"token": newClient,
+	}
 	req.ClientToken = newClient
 	resp, err = c.HandleRequest(req)
 	if err != nil {
