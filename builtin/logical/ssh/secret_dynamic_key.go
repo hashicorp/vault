@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"fmt"
+	"encoding/json"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -92,9 +93,14 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	if !ok {
 		return nil, fmt.Errorf("secret is missing internal data")
 	}
-	port := portRaw.(int)
-	if port == 0 {
-		port = 22
+	// Port comes back as a json.Number
+	port := 22
+	if portJson, ok := portRaw.(json.Number); !ok {
+		return nil, fmt.Errorf("secret contains invalid port")
+	} else if port64, err := portJson.Int64(); err != nil {
+		return nil, fmt.Errorf("secret contains invalid port")
+	} else {
+		port = int(port64)
 	}
 
 	// Fetch the host key using the key name
