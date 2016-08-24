@@ -146,33 +146,7 @@ func TestSysUnseal_badKey(t *testing.T) {
 	resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
 		"key": "0123",
 	})
-
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"sealed":   true,
-		"t":        json.Number("1"),
-		"n":        json.Number("1"),
-		"progress": json.Number("0"),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if actual["version"] == nil {
-		t.Fatalf("expected version information")
-	}
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
-	}
+	testResponseStatus(t, resp, 400)
 }
 
 func TestSysUnseal_Reset(t *testing.T) {
