@@ -354,6 +354,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
+	// Make a default logger if not provided
+	if conf.Logger == nil {
+		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
+	}
+
 	// Wrap the backend in a cache unless disabled
 	if !conf.DisableCache {
 		_, isCache := conf.Physical.(*physical.Cache)
@@ -384,11 +389,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	barrier, err := NewAESGCMBarrier(conf.Physical)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
-	}
-
-	// Make a default logger if not provided
-	if conf.Logger == nil {
-		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
 
 	// Setup the core
