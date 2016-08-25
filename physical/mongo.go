@@ -223,7 +223,7 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 			if !result.Capped {
 				b.logger.Info(fmt.Sprintf("physical/mongo: MongoDB collection '%v' is not capped, running convertToCapped", b.CollectionMsg))
 				var result2 bson.M
-				err = db.Run(bson.D{bson.DocElem{Name: "convertToCapped", Value: b.CollectionMsg}, bson.DocElem{Name: "size", Value: 4096 * 2}}, &result2)
+				err = db.Run(bson.D{bson.DocElem{Name: "convertToCapped", Value: b.CollectionMsg}, bson.DocElem{Name: "size", Value: 4096}}, &result2)
 				if err != nil {
 					b.logger.Error(fmt.Sprintf("physical/mongo: could not run convertToCapped: %v", err))
 					return nil, err
@@ -233,8 +233,8 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 			b.logger.Info(fmt.Sprintf("physical/mongo: MongoDB collection '%v' does not exist yet, creating it now", b.CollectionMsg))
 			err = db.C(b.CollectionMsg).Create(&mgo.CollectionInfo{
 				Capped:   true,
-				MaxBytes: 4096 * 2,
-				MaxDocs:  20,
+				MaxBytes: 4096,
+				MaxDocs:  2,
 			})
 			if err != nil {
 				b.logger.Error(fmt.Sprintf("physical/mongo: could not create collection '%v': %v", b.CollectionMsg, err))
@@ -252,6 +252,31 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 
 type CappedResult struct {
 	Capped bool
+}
+
+type BroadcastMsg struct {
+	Msg string
+}
+
+const MsgForcedRemoval = "ForcedLeaderRemoval"
+const MsgStepDownPrimaryChange = "SteppedDownPrimaryChanged"
+const MsgStepDownActiveUpdateFailure = "SteppedDownActiveUpdateFailure"
+const MsgStepDownShutdown = "SteppedDownShutdown"
+const MsgUnknownReason = "UnknownReason"
+
+func isKnownBroadcastReason(reason string) bool {
+	switch reason {
+	case MsgForcedRemoval:
+		return true
+	case MsgStepDownPrimaryChange:
+		return true
+	case MsgStepDownActiveUpdateFailure:
+		return true
+	case MsgStepDownShutdown:
+		return true
+	default:
+		return false
+	}
 }
 
 func (b *MongoBackend) getDataCollection() (*mgo.Collection, error) {
@@ -298,10 +323,13 @@ type MongoBackend struct {
 	lockValue          string
 	leaderCh           chan struct{}
 	isLeader           bool
+	broadcastCh        chan BroadcastMsg
+	shutdownReason     string
 }
 
 // newMongoBackend constructs a MongoBackend using the given directory
 func newMongoBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+	logger.Debug("physical/mongo: newMongoBackend()")
 	url, ok := conf["url"]
 	if !ok {
 		url = "mongodb://127.0.0.1:27017/vault"
@@ -360,7 +388,12 @@ func newMongoBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		tlsKeyFile = ""
 	}
 
-	// TODO: add TLS config options
+	var broadcastCh chan BroadcastMsg
+	if haEnabled {
+		broadcastCh = make(chan BroadcastMsg)
+	} else {
+		broadcastCh = nil
+	}
 
 	logger.Debug("physical/mongo: newMongoBackend: (%v, %v, %v)", url, database, collection)
 	b := MongoBackend{
@@ -376,10 +409,12 @@ func newMongoBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		tlsCAFile:     tlsCAFile,
 		tlsCertFile:   tlsCertFile,
 		tlsKeyFile:    tlsKeyFile,
+		broadcastCh:   broadcastCh,
 	}
 
-	// monitor if we can remove the lock if in standby
 	if haEnabled {
+		// monitor if we can remove the lock if in standby
+		// this is a last resort if the leader died (or went away for other reasons)
 		go func() {
 			for {
 				select {
@@ -393,11 +428,28 @@ func newMongoBackend(conf map[string]string, logger log.Logger) (Backend, error)
 							b.logger.Error("physical/mongo: inactivePoller error: %v", err)
 						}
 
-						// removal was necessary
+						// removal was necessary, log and send broadcast
 						if err == nil {
 							b.logger.Info("physical/mongo: Lock was older than 5s and was therefore removed")
+
+							// sending broadcast
+							err := b.sendBroadcast(MsgForcedRemoval)
+							if err != nil {
+								b.logger.Error(fmt.Sprintf("physical/mongo: could not send broadcast message for forced removal: %v", err))
+							}
 						}
 					}
+				}
+			}
+		}()
+
+		// starts and keeps the broadcast receiver running
+		go func() {
+			for {
+				b.logger.Debug("physical/mongo: starting broadcast receiver")
+				err := b.receiveBroadcast()
+				if err != nil {
+					b.logger.Error(fmt.Sprintf("physical/mongo: receiving broadcasts failed: %v", err))
 				}
 			}
 		}()
@@ -594,36 +646,84 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		}
 	}
 
-	session, err := l.b.activeSession()
-	if err != nil {
-		l.b.logger.Error(fmt.Sprintf("physical/mongo: could not establish mongo session: %v", err))
-		return nil, err
-	}
-	c := session.DB(l.b.Database).C(l.b.Collection)
-
 	// Attempt an async acquisition
 	didLock := make(chan bool)
 	releaseCh := make(chan bool, 1)
 	go func() {
-		err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
-		if err != nil {
-			l.b.logger.Error(fmt.Sprintf("physical/mongo: acquireLock: %v", err))
-			didLock <- false
+		// the acquire function definition
+		acquire := func() {
+			// check primary first
+			if l.b.lockOnPrimary != "" {
+				currentPrimary, err := l.getPrimary()
+				if err != nil {
+					l.b.logger.Error(fmt.Sprintf("physical/mongo: could not get primary: %v", err))
+					return
+				}
+
+				if l.b.lockOnPrimary != currentPrimary {
+					l.b.logger.Warn(fmt.Sprintf("current MongoDB primary is not '%v', but '%v'. Not attempting to become leader.", l.b.lockOnPrimary, currentPrimary))
+					return
+				}
+			}
+
+			// get the collection and try to insert
+			c, err := l.b.getDataCollection()
+			if err != nil {
+				return
+			}
+
+			err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
+			if err != nil {
+				l.b.logger.Error(fmt.Sprintf("physical/mongo: acquireLock: %v", err))
+				return
+			}
+
+			// Signal that lock is held
+			didLock <- true
 			return
 		}
 
-		// Signal that lock is held
-		didLock <- true
+		// run the acquire() function first once, then go into the loop
+		acquire()
+	acquireLoop:
+		for {
+			select {
+			case msg := <-l.b.broadcastCh:
+				if isKnownBroadcastReason(msg.Msg) {
+					l.b.logger.Info(fmt.Sprintf("physical/mongo: received broadcast '%v'. Trying to acquire lock.", msg.Msg))
+					acquire()
+				} else {
+					l.b.logger.Warn(fmt.Sprintf("physical/mongo: received unknown broadcast: '%v'. Not trying to acquire lock.", msg.Msg))
+				}
 
-		// Handle an early abort
-		release := <-releaseCh
-		if release {
-			l.b.logger.Debug("physical/mongo: early release on Lock requested")
-			err = c.Remove(bson.M{"key": l.key, "value": l.value})
-			if err != nil {
-				l.b.logger.Error(fmt.Sprintf("physical/mongo: earlyRelease: %v", err))
+			case <-time.After(time.Second * 30):
+				l.b.logger.Debug("physical/mongo: reached 30s impatient timeout. Trying to acquire lock.")
+				acquire()
+
+				// Handle an early abort
+			case release := <-releaseCh:
+				if release {
+					// remove lock again
+					l.b.logger.Debug("physical/mongo: early release on Lock requested")
+					c, err := l.b.getDataCollection()
+					if err == nil {
+						err = c.Remove(bson.M{"key": l.key, "value": l.value})
+						if err != nil {
+							l.b.logger.Error(fmt.Sprintf("physical/mongo: earlyRelease: %v", err))
+						}
+					}
+
+					// and send broadcast that the remove happened
+					l.b.shutdownReason = MsgStepDownShutdown
+					err = l.b.sendBroadcast(MsgStepDownShutdown)
+					if err != nil {
+						l.b.logger.Error(fmt.Sprintf("physical/mongo: l.Unlock() could not send broadcast message '%v': %v", MsgStepDownShutdown, err))
+					}
+				}
+				break acquireLoop
 			}
 		}
+		l.b.logger.Debug("physical/mongo: acquireLoop broken")
 	}()
 
 	// If you want to have all working unit tests, this sleep is required
@@ -639,12 +739,12 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		l.b.logger.Info("physical/mongo: Early Lock release requested")
 		//return nil, errors.New("Early Lock release requested")
 		return nil, nil
-	case ok := <-didLock:
-		if !ok {
-			//l.b.logger.Printf("[ERR]: physical/mongo: Lock already acquired by other vault instance")
-			return nil, errors.New("Lock already acquired by other vault instance")
-			//return nil, nil
-		}
+	case <-didLock:
+		//if !ok {
+		//l.b.logger.Printf("[ERR]: physical/mongo: Lock already acquired by other vault instance")
+		//	return nil, errors.New("Lock already acquired by other vault instance")
+		//return nil, nil
+		//}
 		releaseCh <- false
 	}
 	close(didLock)
@@ -672,10 +772,11 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				break updateLoop
 			case <-time.After(time.Second * 3):
 				if l.b.isLeader {
-					err = l.activePoller()
+					err := l.activePoller()
 					if err != nil {
 						l.b.logger.Error(fmt.Sprintf("physical/mongo: l.Lock(): activePoller() error, going to lose leadership: %v", err))
 						if l.llChOpen {
+							l.b.shutdownReason = MsgStepDownActiveUpdateFailure
 							l.llCh <- struct{}{}
 						}
 					}
@@ -706,6 +807,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 					if l.b.lockOnPrimary != currentPrimary {
 						l.b.logger.Info(fmt.Sprintf("physical/mongo: MongoDB PRIMARY changed to '%v'. Dropping leadership.", currentPrimary))
 						if l.llChOpen {
+							l.b.shutdownReason = MsgStepDownPrimaryChange
 							l.llCh <- struct{}{}
 						}
 					}
@@ -738,6 +840,33 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		}
 	}()
 
+	// check a last time if stop was requested, and stop everything before
+	// returning nil
+	select {
+	case <-stopCh:
+		if l.llChOpen {
+			// remove lock again
+			l.b.logger.Debug("physical/mongo: early release on Lock requested")
+			c, err := l.b.getDataCollection()
+			if err == nil {
+				err = c.Remove(bson.M{"key": l.key, "value": l.value})
+				if err != nil {
+					l.b.logger.Error(fmt.Sprintf("physical/mongo: earlyRelease: %v", err))
+				}
+			}
+
+			// and send broadcast that the remove happened
+			l.b.shutdownReason = MsgStepDownShutdown
+			err = l.b.sendBroadcast(MsgStepDownShutdown)
+			if err != nil {
+				l.b.logger.Error(fmt.Sprintf("physical/mongo: l.Unlock() could not send broadcast message '%v': %v", MsgStepDownShutdown, err))
+			}
+			l.llCh <- struct{}{}
+		}
+		return nil, nil
+	default:
+	}
+
 	return l.b.leaderCh, nil
 }
 
@@ -751,6 +880,7 @@ func (l *MongoLock) Unlock() error {
 
 	// lose leadership, stop go routines and close channels
 	if l.b.isLeader && l.llChOpen {
+		l.b.shutdownReason = MsgStepDownShutdown
 		l.llCh <- struct{}{}
 	}
 
@@ -763,6 +893,18 @@ func (l *MongoLock) Unlock() error {
 	if err != nil {
 		l.b.logger.Error(fmt.Sprintf("physical/mongo: l.Unlock() could not remove lock: %v", err))
 		return err
+	}
+
+	// send broadcast message that we are Unlocking
+	var msg string
+	if len(l.b.shutdownReason) > 0 {
+		msg = l.b.shutdownReason
+	} else {
+		msg = MsgUnknownReason
+	}
+	err = l.b.sendBroadcast(msg)
+	if err != nil {
+		l.b.logger.Error(fmt.Sprintf("physical/mongo: l.Unlock() could not send broadcast message '%v': %v", msg, err))
 	}
 
 	return nil
@@ -808,6 +950,59 @@ func (b *MongoBackend) inactivePoller() error {
 	//
 	//  db.vault.find({"key":"core/lock", $where:"this.lastCheckedIn <= new Date(ISODate().getTime()-1000*5)"})
 	return c.Remove(bson.M{"key": "core/lock", "$where": "this.lastCheckedIn <= new Date(ISODate().getTime()-1000*5)"})
+}
+
+func (b *MongoBackend) receiveBroadcast() error {
+	b.logger.Debug("physical/mongo: receiveBroadcast()")
+	c, err := b.getMsgCollection()
+	if err != nil {
+		return err
+	}
+
+	var result BroadcastMsg
+	iter := c.Find(nil).Tail(-1)
+	for iter.Next(&result) {
+		b.logger.Debug(fmt.Sprintf("physical/mongo: received broadcast message: '%v'", result.Msg))
+		//b.broadcastCh <- result
+		//b.logger.Debug(fmt.Sprintf("physical/mongo: inserted broadcast message '%v' into broadcastCh", result))
+	}
+	if iter.Err() != nil {
+		// close will return the error
+		return iter.Close()
+	}
+	if iter.Timeout() {
+		iter.Close()
+		return errors.New("timeout on tailed query")
+	}
+
+	// kind of impossible to get here (if the collection is not empty)
+	return errors.New("tailed query broke with no error")
+}
+
+func (b *MongoBackend) sendBroadcast(message string) error {
+	b.logger.Debug(fmt.Sprintf("physical/mongo: sendBroadcast(%v)", message))
+	i := 0
+	max := 5
+	for i < max {
+		i = i + 1
+		c, err := b.getMsgCollection()
+		if err != nil {
+			b.logger.Error(fmt.Sprintf("physical/mongo: sendBroadcast(%v of %v attempts) get session failed: %v", i, max, err))
+			continue
+		}
+
+		err = c.Insert(BroadcastMsg{Msg: message})
+		if err != nil {
+			b.logger.Error(fmt.Sprintf("physical/mongo: sendBroadcast(%v of %v attempts) broadcast insert failed: %v", i, max, err))
+			continue
+		}
+
+		// broadcast success
+		return nil
+	}
+
+	// reached maximum number of retries
+	return fmt.Errorf("reached maximum number of broadcast retries: %v", max)
 }
 
 type isMasterResult struct {
