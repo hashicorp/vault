@@ -214,11 +214,6 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 				b.logger.Error(fmt.Sprintf("physical/mongo: could not retrieve collStats: %v", err))
 				return nil, err
 			}
-			//capped, ok := result["capped"].(bool)
-			//if !ok {
-			//	b.logger.Error("physical/mongo: collStats did not contain a 'capped' field or it was not boolean")
-			//	return nil, errors.New("command collStats did not return with a 'capped' field")
-			//}
 
 			if !result.Capped {
 				b.logger.Info(fmt.Sprintf("physical/mongo: MongoDB collection '%v' is not capped, running convertToCapped", b.CollectionMsg))
@@ -234,7 +229,7 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 			err = db.C(b.CollectionMsg).Create(&mgo.CollectionInfo{
 				Capped:   true,
 				MaxBytes: 4096,
-				MaxDocs:  2,
+				MaxDocs:  1,
 			})
 			if err != nil {
 				b.logger.Error(fmt.Sprintf("physical/mongo: could not create collection '%v': %v", b.CollectionMsg, err))
@@ -304,27 +299,28 @@ func (b *MongoBackend) getMsgCollection() (*mgo.Collection, error) {
 
 // MongoBackend is a physical backend that stores data on disk
 type MongoBackend struct {
-	Url                string
-	Database           string
-	Collection         string
-	CollectionMsg      string
-	l                  sync.Mutex
-	session            *mgo.Session
-	ensuredDataIndices bool
-	ensuredMsgCapped   bool
-	logger             log.Logger
-	haEnabled          bool
-	lockOnPrimary      string
-	tls                bool
-	tlsSkipVerify      bool
-	tlsCertFile        string
-	tlsKeyFile         string
-	tlsCAFile          string
-	lockValue          string
-	leaderCh           chan struct{}
-	isLeader           bool
-	broadcastCh        chan BroadcastMsg
-	shutdownReason     string
+	Url                  string
+	Database             string
+	Collection           string
+	CollectionMsg        string
+	l                    sync.Mutex
+	session              *mgo.Session
+	ensuredDataIndices   bool
+	ensuredMsgCapped     bool
+	logger               log.Logger
+	haEnabled            bool
+	lockOnPrimary        string
+	tls                  bool
+	tlsSkipVerify        bool
+	tlsCertFile          string
+	tlsKeyFile           string
+	tlsCAFile            string
+	lockValue            string
+	leaderCh             chan struct{}
+	isLeader             bool
+	broadcastCh          chan BroadcastMsg
+	broadcastChListening bool
+	shutdownReason       string
 }
 
 // newMongoBackend constructs a MongoBackend using the given directory
@@ -447,10 +443,8 @@ func newMongoBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		go func() {
 			for {
 				b.logger.Debug("physical/mongo: starting broadcast receiver")
-				err := b.receiveBroadcast()
-				if err != nil {
-					b.logger.Error(fmt.Sprintf("physical/mongo: receiving broadcasts failed: %v", err))
-				}
+				// this is blocking
+				b.receiveBroadcast()
 			}
 		}()
 	}
@@ -685,6 +679,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 		// run the acquire() function first once, then go into the loop
 		acquire()
+		l.b.broadcastChListening = true
 	acquireLoop:
 		for {
 			select {
@@ -723,6 +718,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				break acquireLoop
 			}
 		}
+		l.b.broadcastChListening = false
 		l.b.logger.Debug("physical/mongo: acquireLoop broken")
 	}()
 
@@ -954,29 +950,59 @@ func (b *MongoBackend) inactivePoller() error {
 
 func (b *MongoBackend) receiveBroadcast() error {
 	b.logger.Debug("physical/mongo: receiveBroadcast()")
-	c, err := b.getMsgCollection()
-	if err != nil {
-		return err
-	}
+	for {
+		c, err := b.getMsgCollection()
+		if err != nil {
+			continue
+		}
 
-	var result BroadcastMsg
-	iter := c.Find(nil).Tail(-1)
-	for iter.Next(&result) {
-		b.logger.Debug(fmt.Sprintf("physical/mongo: received broadcast message: '%v'", result.Msg))
-		//b.broadcastCh <- result
-		//b.logger.Debug(fmt.Sprintf("physical/mongo: inserted broadcast message '%v' into broadcastCh", result))
-	}
-	if iter.Err() != nil {
-		// close will return the error
-		return iter.Close()
-	}
-	if iter.Timeout() {
-		iter.Close()
-		return errors.New("timeout on tailed query")
-	}
+		var result BroadcastMsg
+		iter := c.Find(nil).Tail(-1)
+		b.logger.Debug("physical/mongo: receiveBroadcast(): starting Tail()")
 
-	// kind of impossible to get here (if the collection is not empty)
-	return errors.New("tailed query broke with no error")
+		// PROBLEM: the max_docs of this capped collection is at 1, which means that
+		//          waiting for the Next() will work once the first document has been
+		//          read. However, the cursor position is destroyed, and therefore
+		//          we can be sure that the call will actually fail and we need to
+		//          restart over.
+		//
+		// SOLUTION: run the block twice, either times it is the failing or the
+		//           success state, in which case we need to call Tail() again.
+
+		// 1. run
+		if iter.Next(&result) {
+			b.logger.Debug(fmt.Sprintf("physical/mongo: received broadcast message: '%v'", result.Msg))
+			if b.broadcastChListening {
+				b.logger.Debug(fmt.Sprintf("physical/mongo: inserting broadcast message '%v' into broadcastCh...", result))
+				b.broadcastCh <- result
+				b.logger.Debug(fmt.Sprintf("physical/mongo: successfully inserted broadcast message '%v' into broadcastCh", result))
+			}
+		} else {
+			if iter.Err() != nil {
+				// close will return the error
+				err = iter.Close()
+				b.logger.Debug(fmt.Sprintf("physical/mongo: receiveBroadcast(): %v", err))
+				continue
+			}
+		}
+
+		// 2. run
+		if iter.Next(&result) {
+			b.logger.Debug(fmt.Sprintf("physical/mongo: received broadcast message: '%v'", result.Msg))
+			if b.broadcastChListening {
+				b.logger.Debug(fmt.Sprintf("physical/mongo: inserting broadcast message '%v' into broadcastCh...", result))
+				b.broadcastCh <- result
+				b.logger.Debug(fmt.Sprintf("physical/mongo: successfully inserted broadcast message '%v' into broadcastCh", result))
+			}
+		} else {
+			if iter.Err() != nil {
+				// close will return the error
+				err = iter.Close()
+				b.logger.Debug(fmt.Sprintf("physical/mongo: receiveBroadcast(): %v", err))
+				continue
+			}
+		}
+	}
 }
 
 func (b *MongoBackend) sendBroadcast(message string) error {
