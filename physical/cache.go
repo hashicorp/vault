@@ -4,11 +4,12 @@ import (
 	"strings"
 
 	"github.com/hashicorp/golang-lru"
+	log "github.com/mgutz/logxi/v1"
 )
 
 const (
 	// DefaultCacheSize is used if no cache size is specified for NewCache
-	DefaultCacheSize = 32 * 1024
+	DefaultCacheSize = 1024 * 1024
 )
 
 // Cache is used to wrap an underlying physical backend
@@ -22,9 +23,12 @@ type Cache struct {
 
 // NewCache returns a physical cache of the given size.
 // If no size is provided, the default size is used.
-func NewCache(b Backend, size int) *Cache {
+func NewCache(b Backend, size int, logger log.Logger) *Cache {
 	if size <= 0 {
 		size = DefaultCacheSize
+	}
+	if logger.IsTrace() {
+		logger.Trace("physical/cache: creating LRU cache", "size", size)
 	}
 	cache, _ := lru.New2Q(size)
 	c := &Cache{

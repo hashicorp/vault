@@ -219,6 +219,7 @@ func (c *ServerCommand) Run(args []string) int {
 		MaxLeaseTTL:        config.MaxLeaseTTL,
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 		ClusterName:        config.ClusterName,
+		CacheSize:          config.CacheSize,
 	}
 
 	var disableClustering bool

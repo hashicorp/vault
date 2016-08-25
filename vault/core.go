@@ -308,7 +308,7 @@ type CoreConfig struct {
 	// Disables mlock syscall
 	DisableMlock bool `json:"disable_mlock" structs:"disable_mlock" mapstructure:"disable_mlock"`
 
-	// Custom cache size of zero for default
+	// Custom cache size for the LRU cache on the physical backend, or zero for default
 	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
 
 	// Set as the leader address for HA
@@ -359,7 +359,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		_, isCache := conf.Physical.(*physical.Cache)
 		_, isInmem := conf.Physical.(*physical.InmemBackend)
 		if !isCache && !isInmem {
-			cache := physical.NewCache(conf.Physical, conf.CacheSize)
+			cache := physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
 			conf.Physical = cache
 		}
 	}
