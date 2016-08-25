@@ -140,8 +140,8 @@ var lastCheckedInIndex mgo.Index = mgo.Index{
 //   builtin/logical/mongodb/backend.go
 //
 func (b *MongoBackend) activeSession() (*mgo.Session, error) {
-	b.l.Lock()
-	defer b.l.Unlock()
+	b.sessionLock.Lock()
+	defer b.sessionLock.Unlock()
 
 	if b.session != nil {
 		if err := b.session.Ping(); err == nil {
@@ -149,7 +149,6 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 		}
 		b.session.Close()
 		b.ensuredDataIndices = false
-		b.ensuredMsgCapped = false
 	}
 
 	// we need to establish a new session
@@ -187,11 +186,46 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 		b.ensuredDataIndices = true
 	}
 
+	return b.session, nil
+}
+
+// this part was derived from and adjusted for our needs from:
+//   builtin/logical/mongodb/backend.go
+//
+func (b *MongoBackend) activeSessionMsgReceiver() (*mgo.Session, error) {
+	b.sessionMsgReceiverLock.Lock()
+	defer b.sessionMsgReceiverLock.Unlock()
+
+	if b.sessionMsgReceiver != nil {
+		if err := b.sessionMsgReceiver.Ping(); err == nil {
+			return b.sessionMsgReceiver, nil
+		}
+		b.sessionMsgReceiver.Close()
+		b.ensuredMsgCapped = false
+	}
+
+	// we need to establish a new session
+	b.logger.Info("physical/mongo: establishing new MongoDB session for Broadcast Message Receiver")
+	dialInfo, err := b.parseMongoURI(b.Url)
+	if err != nil {
+		b.logger.Error(fmt.Sprintf("physical/mongo: could not parse MongoDB URI: %v", err))
+		return nil, err
+	}
+
+	b.sessionMsgReceiver, err = mgo.DialWithInfo(dialInfo)
+	if err != nil {
+		b.logger.Error(fmt.Sprintf("physical/mongo: could not establish connection to MongoDB: %v", err))
+		return nil, err
+	}
+	// TODO: adjust these values
+	b.sessionMsgReceiver.SetSyncTimeout(1 * time.Minute)
+	b.sessionMsgReceiver.SetSocketTimeout(1 * time.Minute)
+
 	if b.haEnabled && !b.ensuredMsgCapped {
 		b.logger.Info(fmt.Sprintf("physical/mongo: ensuring MongoDB collection '%v' exists and is capped", b.CollectionMsg))
 		// check if collection exists, create if not
 		// if it exitst, check if it is a capped collection, if not use convertToCapped (?)
-		db := b.session.DB(b.Database)
+		db := b.sessionMsgReceiver.DB(b.Database)
 		colls, err := db.CollectionNames()
 		if err != nil {
 			b.logger.Error(fmt.Sprintf("physical/mongo: could not retrieve list of collection names: %v", err))
@@ -242,7 +276,7 @@ func (b *MongoBackend) activeSession() (*mgo.Session, error) {
 		b.ensuredMsgCapped = true
 	}
 
-	return b.session, nil
+	return b.sessionMsgReceiver, nil
 }
 
 type CappedResult struct {
@@ -284,7 +318,7 @@ func (b *MongoBackend) getDataCollection() (*mgo.Collection, error) {
 	return c, nil
 }
 
-func (b *MongoBackend) getMsgCollection() (*mgo.Collection, error) {
+/*func (b *MongoBackend) getMsgCollection() (*mgo.Collection, error) {
 	if b.haEnabled {
 		session, err := b.activeSession()
 		if err != nil {
@@ -295,32 +329,34 @@ func (b *MongoBackend) getMsgCollection() (*mgo.Collection, error) {
 		return c, nil
 	}
 	return nil, errors.New("mongo backend HA is disabled")
-}
+}*/
 
 // MongoBackend is a physical backend that stores data on disk
 type MongoBackend struct {
-	Url                  string
-	Database             string
-	Collection           string
-	CollectionMsg        string
-	l                    sync.Mutex
-	session              *mgo.Session
-	ensuredDataIndices   bool
-	ensuredMsgCapped     bool
-	logger               log.Logger
-	haEnabled            bool
-	lockOnPrimary        string
-	tls                  bool
-	tlsSkipVerify        bool
-	tlsCertFile          string
-	tlsKeyFile           string
-	tlsCAFile            string
-	lockValue            string
-	leaderCh             chan struct{}
-	isLeader             bool
-	broadcastCh          chan BroadcastMsg
-	broadcastChListening bool
-	shutdownReason       string
+	Url                    string
+	Database               string
+	Collection             string
+	CollectionMsg          string
+	sessionLock            sync.Mutex
+	sessionMsgReceiverLock sync.Mutex
+	session                *mgo.Session
+	sessionMsgReceiver     *mgo.Session
+	ensuredDataIndices     bool
+	ensuredMsgCapped       bool
+	logger                 log.Logger
+	haEnabled              bool
+	lockOnPrimary          string
+	tls                    bool
+	tlsSkipVerify          bool
+	tlsCertFile            string
+	tlsKeyFile             string
+	tlsCAFile              string
+	lockValue              string
+	leaderCh               chan struct{}
+	isLeader               bool
+	broadcastCh            chan BroadcastMsg
+	broadcastChListening   bool
+	shutdownReason         string
 }
 
 // newMongoBackend constructs a MongoBackend using the given directory
@@ -951,10 +987,12 @@ func (b *MongoBackend) inactivePoller() error {
 func (b *MongoBackend) receiveBroadcast() error {
 	b.logger.Debug("physical/mongo: receiveBroadcast()")
 	for {
-		c, err := b.getMsgCollection()
+		session, err := b.activeSessionMsgReceiver()
 		if err != nil {
+			b.logger.Error(fmt.Sprintf("physical/mongo: could not establish mongo session for broadcast receiver: %v", err))
 			continue
 		}
+		c := session.DB(b.Database).C(b.CollectionMsg)
 
 		var result BroadcastMsg
 		iter := c.Find(nil).Tail(-1)
@@ -1011,7 +1049,12 @@ func (b *MongoBackend) sendBroadcast(message string) error {
 	max := 5
 	for i < max {
 		i = i + 1
-		c, err := b.getMsgCollection()
+		session, err := b.activeSession()
+		if err != nil {
+			b.logger.Error(fmt.Sprintf("physical/mongo: sendBroadcast(%v of %v attempts): could not establish mongo session: %v", i, max, err))
+			continue
+		}
+		c := session.DB(b.Database).C(b.CollectionMsg)
 		if err != nil {
 			b.logger.Error(fmt.Sprintf("physical/mongo: sendBroadcast(%v of %v attempts) get session failed: %v", i, max, err))
 			continue
