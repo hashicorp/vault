@@ -318,19 +318,6 @@ func (b *MongoBackend) getDataCollection() (*mgo.Collection, error) {
 	return c, nil
 }
 
-/*func (b *MongoBackend) getMsgCollection() (*mgo.Collection, error) {
-	if b.haEnabled {
-		session, err := b.activeSession()
-		if err != nil {
-			b.logger.Error(fmt.Sprintf("physical/mongo: could not establish mongo session: %v", err))
-			return nil, err
-		}
-		c := session.DB(b.Database).C(b.CollectionMsg)
-		return c, nil
-	}
-	return nil, errors.New("mongo backend HA is disabled")
-}*/
-
 // MongoBackend is a physical backend that stores data on disk
 type MongoBackend struct {
 	Url                    string
@@ -617,7 +604,8 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 	return results, nil
 }
 
-// This is configurable right now, as HA should be considered experimental
+// This is configurable right now, as HA involves more routines that we don't
+// necessarily want to run, if not really necessary
 // The default is off
 func (b *MongoBackend) HAEnabled() bool {
 	b.logger.Debug(fmt.Sprintf("physical/mongo: HAEnabled(%v)", b.haEnabled))
@@ -661,21 +649,6 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		return l.b.leaderCh, nil
 	}
 
-	// get the primary and see if we even want to acquire the lock
-	if l.b.lockOnPrimary != "" {
-		currentPrimary, err := l.getPrimary()
-		if err != nil {
-			l.b.logger.Error(fmt.Sprintf("physical/mongo: could not get primary: %v", err))
-			return nil, err
-		}
-
-		if l.b.lockOnPrimary != currentPrimary {
-			//l.b.logger.Printf("[WARN]: physical/mongo: current MongoDB primary is not '%v', but '%v'. Not attempting to become leader.", l.b.lockOnPrimary, currentPrimary)
-			return nil, errors.New("current MongoDB primary is not '" + l.b.lockOnPrimary + "', but '" + currentPrimary + "'")
-			//return nil, nil
-		}
-	}
-
 	// Attempt an async acquisition
 	didLock := make(chan bool)
 	releaseCh := make(chan bool, 1)
@@ -704,7 +677,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 
 			err = c.Insert(bson.M{"key": l.key, "value": l.value, "lastCheckedIn": bson.Now()})
 			if err != nil {
-				l.b.logger.Error(fmt.Sprintf("physical/mongo: acquireLock: %v", err))
+				l.b.logger.Debug(fmt.Sprintf("physical/mongo: acquireLock failed: %v", err))
 				return
 			}
 
@@ -758,25 +731,13 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		l.b.logger.Debug("physical/mongo: acquireLoop broken")
 	}()
 
-	// If you want to have all working unit tests, this sleep is required
-	// our lock acquisition is too fast for the async stopCh to work as the
-	// tests are currently planned
-	//
-	//time.Sleep(200 * time.Millisecond)
-
 	// Wait for lock acquisition or shutdown
 	select {
 	case <-stopCh:
 		releaseCh <- true
 		l.b.logger.Info("physical/mongo: Early Lock release requested")
-		//return nil, errors.New("Early Lock release requested")
 		return nil, nil
 	case <-didLock:
-		//if !ok {
-		//l.b.logger.Printf("[ERR]: physical/mongo: Lock already acquired by other vault instance")
-		//	return nil, errors.New("Lock already acquired by other vault instance")
-		//return nil, nil
-		//}
 		releaseCh <- false
 	}
 	close(didLock)
@@ -790,7 +751,6 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	// poll and update the lock as long as we are the leader
 	abortCh1 := make(chan struct{})
 	// we initialize this one only later if we really use it
-	//abortCh2 := make(chan struct{})
 	var abortCh2 chan struct{}
 	l.llCh = make(chan struct{})
 	l.llChOpen = true
@@ -858,7 +818,7 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 			l.llCh = nil
 			l.b.logger.Trace("physical/mongo: llCh after")
 
-			//l.loseLeadership()
+			// lose leadership
 			l.b.logger.Trace("physical/mongo: loseLeadership() begin")
 			l.b.lockValue = ""
 			l.b.isLeader = false
@@ -1007,8 +967,9 @@ func (b *MongoBackend) receiveBroadcast() error {
 		// SOLUTION: run the block twice, either times it is the failing or the
 		//           success state, in which case we need to call Tail() again.
 
-		// 1. run
+		// 1. run - should successfully read the entry
 		if iter.Next(&result) {
+			// we expect to end up here in the first run
 			b.logger.Debug(fmt.Sprintf("physical/mongo: received broadcast message: '%v'", result.Msg))
 			if b.broadcastChListening {
 				b.logger.Debug(fmt.Sprintf("physical/mongo: inserting broadcast message '%v' into broadcastCh...", result))
@@ -1019,12 +980,13 @@ func (b *MongoBackend) receiveBroadcast() error {
 			if iter.Err() != nil {
 				// close will return the error
 				err = iter.Close()
-				b.logger.Debug(fmt.Sprintf("physical/mongo: receiveBroadcast(): %v", err))
+				b.logger.Error(fmt.Sprintf("physical/mongo: unexpected receive broadcast error: %v", err))
 				continue
 			}
 		}
 
-		// 2. run
+		// 2. run - should block until a new entry is inserted, however, we expect
+		//          the Next() call to fail
 		if iter.Next(&result) {
 			b.logger.Debug(fmt.Sprintf("physical/mongo: received broadcast message: '%v'", result.Msg))
 			if b.broadcastChListening {
@@ -1033,10 +995,12 @@ func (b *MongoBackend) receiveBroadcast() error {
 				b.logger.Debug(fmt.Sprintf("physical/mongo: successfully inserted broadcast message '%v' into broadcastCh", result))
 			}
 		} else {
+			// we expect to end up here on the 2nd run
 			if iter.Err() != nil {
 				// close will return the error
 				err = iter.Close()
-				b.logger.Debug(fmt.Sprintf("physical/mongo: receiveBroadcast(): %v", err))
+				// making this a debug message, as this is expected
+				b.logger.Debug(fmt.Sprintf("physical/mongo: expected receive broadcast error: %v", err))
 				continue
 			}
 		}
