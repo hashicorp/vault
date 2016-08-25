@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/mitchellh/go-homedir"
 )
@@ -46,7 +47,7 @@ func (i *InternalTokenHelper) Get() (string, error) {
 		return "", err
 	}
 
-	return buf.String(), nil
+	return strings.TrimSpace(buf.String()), nil
 }
 
 // Store stores the value of the token to the file

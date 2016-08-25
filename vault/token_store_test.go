@@ -92,7 +92,10 @@ func TestTokenStore_HandleRequest_LookupAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor/"+out.Accessor)
+	req := logical.TestRequest(t, logical.UpdateOperation, "lookup-accessor")
+	req.Data = map[string]interface{}{
+		"accessor": out.Accessor,
+	}
 
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
@@ -200,7 +203,10 @@ func TestTokenStore_HandleRequest_RevokeAccessor(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor/"+out.Accessor)
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-accessor")
+	req.Data = map[string]interface{}{
+		"accessor": out.Accessor,
+	}
 
 	_, err = ts.HandleRequest(req)
 	if err != nil {
@@ -1050,7 +1056,10 @@ func TestTokenStore_HandleRequest_Revoke(t *testing.T) {
 	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
 	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke/child")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke")
+	req.Data = map[string]interface{}{
+		"token": "child",
+	}
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -1082,7 +1091,10 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	testMakeToken(t, ts, root, "child", "", []string{"root", "foo"})
 	testMakeToken(t, ts, "child", "sub-child", "", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan/child")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req.Data = map[string]interface{}{
+		"token": "child",
+	}
 	req.ClientToken = root
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
@@ -1122,7 +1134,10 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan/child")
+	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req.Data = map[string]interface{}{
+		"token": "child",
+	}
 	req.ClientToken = "child"
 	resp, err := ts.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
@@ -1141,7 +1156,10 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 
 func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	c, ts, _, root := TestCoreWithTokenStore(t)
-	req := logical.TestRequest(t, logical.ReadOperation, "lookup/"+root)
+	req := logical.TestRequest(t, logical.UpdateOperation, "lookup")
+	req.Data = map[string]interface{}{
+		"token": root,
+	}
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -1176,7 +1194,10 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	testCoreMakeToken(t, c, root, "client", "3600s", []string{"foo"})
 
 	// Test via GET
-	req = logical.TestRequest(t, logical.ReadOperation, "lookup/client")
+	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
+	req.Data = map[string]interface{}{
+		"token": "client",
+	}
 	resp, err = ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -1257,7 +1278,10 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 	}
 
 	// Test last_renewal_time functionality
-	req = logical.TestRequest(t, logical.UpdateOperation, "renew/client")
+	req = logical.TestRequest(t, logical.UpdateOperation, "renew")
+	req.Data = map[string]interface{}{
+		"token": "client",
+	}
 	resp, err = ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -1266,7 +1290,10 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "lookup/client")
+	req = logical.TestRequest(t, logical.UpdateOperation, "lookup")
+	req.Data = map[string]interface{}{
+		"token": "client",
+	}
 	resp, err = ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -1343,7 +1370,12 @@ func TestTokenStore_HandleRequest_Renew(t *testing.T) {
 	originalExpire := auth.ExpirationTime()
 
 	beforeRenew := time.Now()
-	req := logical.TestRequest(t, logical.UpdateOperation, "renew/"+root.ID)
+	req := logical.TestRequest(t, logical.UpdateOperation, "renew")
+	req.Data = map[string]interface{}{
+		"token":     root.ID,
+		"increment": "3600s",
+	}
+
 	req.Data["increment"] = "3600s"
 	resp, err := ts.HandleRequest(req)
 	if err != nil {

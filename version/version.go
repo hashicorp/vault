@@ -41,6 +41,9 @@ func GetVersion() *VersionInfo {
 func (c *VersionInfo) String() string {
 	var versionString bytes.Buffer
 
+	if Version == "unknown" && VersionPrerelease == "unknown" {
+		fmt.Fprintf(&versionString, "Vault (version unknown)")
+	}
 	fmt.Fprintf(&versionString, "Vault v%s", c.Version)
 	if c.VersionPrerelease != "" {
 		fmt.Fprintf(&versionString, "-%s", c.VersionPrerelease)

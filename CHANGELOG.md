@@ -1,3 +1,24 @@
+## 0.6.2 (Unreleased)
+
+DEPRECATIONS/BREAKING CHANGES:
+
+ * Tokens can no longer be used in URL paths in the token store (`/auth/token`)
+   and must be passed in via the request body. In the case of the
+   `auth/token/lookup` endpoint, this means that `GET` is no longer a supported
+   operation. In addition, in the Go API, the `TokenAuth.LookupSelf` call no
+   longer takes a parameter [GH-1783]
+
+IMPROVEMENTS:
+
+ * api: Return error when an invalid (as opposed to incorrect) unseal key is
+   submitted, rather than ignoring it [GH-1782]
+ * core: Allow the size of the read cache to be set via the config file, and
+   change the default value to 1MB (from 32KB) [GH-1784]
+
+BUG FIXES:
+
+ * secret/ssh: Fix panic when revoking SSH dynamic keys [GH-1781]
+
 ## 0.6.1 (August 22, 2016)
 
 DEPRECATIONS/BREAKING CHANGES:

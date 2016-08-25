@@ -3,8 +3,10 @@ package ssh
 import (
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/mitchellh/mapstructure"
 )
 
 const SecretDynamicKeyType = "secret_dynamic_key_type"
@@ -34,78 +36,34 @@ func (b *backend) secretDynamicKeyRenew(req *logical.Request, d *framework.Field
 }
 
 func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	adminUserRaw, ok := req.Secret.InternalData["admin_user"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-	adminUser, ok := adminUserRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-
-	usernameRaw, ok := req.Secret.InternalData["username"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-	username, ok := usernameRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
+	type sec struct {
+		AdminUser        string `mapstructure:"admin_user"`
+		Username         string `mapstructure:"username"`
+		IP               string `mapstructure:"ip"`
+		HostKeyName      string `mapstructure:"host_key_name"`
+		DynamicPublicKey string `mapstructure:"dynamic_public_key"`
+		InstallScript    string `mapstructure:"install_script"`
+		Port             int    `mapstructure:"port"`
 	}
 
-	ipRaw, ok := req.Secret.InternalData["ip"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
+	intSec := &sec{}
+	err := mapstructure.Decode(req.Secret.InternalData, intSec)
+	if err != nil {
+		return nil, errwrap.Wrapf("secret internal data could not be decoded: {{err}}", err)
 	}
-	ip, ok := ipRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-
-	hostKeyNameRaw, ok := req.Secret.InternalData["host_key_name"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-	hostKeyName := hostKeyNameRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-
-	dynamicPublicKeyRaw, ok := req.Secret.InternalData["dynamic_public_key"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-	dynamicPublicKey := dynamicPublicKeyRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-
-	installScriptRaw, ok := req.Secret.InternalData["install_script"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-	installScript := installScriptRaw.(string)
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-
-	portRaw, ok := req.Secret.InternalData["port"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing internal data")
-	}
-	port := int(portRaw.(float64))
 
 	// Fetch the host key using the key name
-	hostKey, err := b.getKey(req.Storage, hostKeyName)
+	hostKey, err := b.getKey(req.Storage, intSec.HostKeyName)
 	if err != nil {
-		return nil, fmt.Errorf("key '%s' not found error:%s", hostKeyName, err)
+		return nil, fmt.Errorf("key '%s' not found error:%s", intSec.HostKeyName, err)
 	}
 	if hostKey == nil {
-		return nil, fmt.Errorf("key '%s' not found", hostKeyName)
+		return nil, fmt.Errorf("key '%s' not found", intSec.HostKeyName)
 	}
 
 	// Remove the public key from authorized_keys file in target machine
 	// The last param 'false' indicates that the key should be uninstalled.
-	err = b.installPublicKeyInTarget(adminUser, username, ip, port, hostKey.Key, dynamicPublicKey, installScript, false)
+	err = b.installPublicKeyInTarget(intSec.AdminUser, intSec.Username, intSec.IP, intSec.Port, hostKey.Key, intSec.DynamicPublicKey, intSec.InstallScript, false)
 	if err != nil {
 		return nil, fmt.Errorf("error removing public key from authorized_keys file in target")
 	}
