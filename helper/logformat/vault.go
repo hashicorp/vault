@@ -17,22 +17,33 @@ const (
 	stylejson
 )
 
+// NewVaultLogger creates a new logger with the specified level and a Vault
+// formatter
 func NewVaultLogger(level int) log.Logger {
 	logger := log.New("vault")
 	return setLevelFormatter(logger, level, createVaultFormatter())
 }
 
+// NewVaultLoggerWithWriter creates a new logger with the specified level and
+// writer and a Vault formatter
 func NewVaultLoggerWithWriter(w io.Writer, level int) log.Logger {
 	logger := log.NewLogger(w, "vault")
 	return setLevelFormatter(logger, level, createVaultFormatter())
 }
 
+// Sets the level and formatter on the log, which must be a DefaultLogger
 func setLevelFormatter(logger log.Logger, level int, formatter log.Formatter) log.Logger {
 	logger.(*log.DefaultLogger).SetLevel(level)
 	logger.(*log.DefaultLogger).SetFormatter(formatter)
 	return logger
 }
 
+// DeriveModuleLogger derives  a logger from the input logger and the given
+// module string. A derived logger shares the underlying writer, level, and
+// style, but the module set on the formatter is different. If the string is
+// empty, it derives a new logger with no module set; if the string begins with
+// "/" it sets the following name as the module name itself (rather than
+// deriving one with no module and then deriving a new one).
 func DeriveModuleLogger(logger log.Logger, module string) log.Logger {
 	defLogger := logger.(*log.DefaultLogger)
 	formatter := defLogger.Formatter().(*vaultFormatter)
@@ -40,8 +51,12 @@ func DeriveModuleLogger(logger log.Logger, module string) log.Logger {
 		Mutex: formatter.Mutex,
 		style: formatter.style,
 	}
-	switch formatter.module {
-	case "":
+	switch {
+	case module == "":
+		// Don't set a module, clear it instead
+	case strings.HasPrefix(module, "/"):
+		newFormatter.module = module[1:]
+	case formatter.module == "":
 		newFormatter.module = module
 	default:
 		newFormatter.module = fmt.Sprintf("%s/%s", formatter.module, module)
@@ -51,6 +66,7 @@ func DeriveModuleLogger(logger log.Logger, module string) log.Logger {
 	return setLevelFormatter(newLogger, defLogger.Level(), newFormatter)
 }
 
+// Creates a formatter, checking env vars for the style
 func createVaultFormatter() log.Formatter {
 	ret := &vaultFormatter{
 		Mutex: &sync.Mutex{},
@@ -64,6 +80,7 @@ func createVaultFormatter() log.Formatter {
 	return ret
 }
 
+// Thread safe formatter
 type vaultFormatter struct {
 	*sync.Mutex
 	style  int
@@ -82,6 +99,7 @@ func (v *vaultFormatter) Format(writer io.Writer, level int, msg string, args []
 }
 
 func (v *vaultFormatter) formatDefault(writer io.Writer, level int, msg string, args []interface{}) {
+	// Write a trailing newline
 	defer writer.Write([]byte("\n"))
 
 	writer.Write([]byte(time.Now().Local().Format("2006/01/02 15:04:05.000000")))

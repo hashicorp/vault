@@ -81,7 +81,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResult, error) {
-	logger := logformat.DeriveModuleLogger(logger, "init")
+	logger := logformat.DeriveModuleLogger(c.logger, "init")
 
 	if c.seal.RecoveryKeySupported() {
 		if recoveryConfig == nil {
