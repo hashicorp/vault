@@ -50,7 +50,7 @@ sending a SIGHUP to the server process. These are denoted below.
   "tcp" is currently the only option available. A full reference for the
    inner syntax is below.
 
-* `cache_size` (optional) - A boolean. If set, the size of the read cache used
+* `cache_size` (optional) - If set, the size of the read cache used
   by the physical storage subsystem will be set to this value, in bytes.
   Defaults to 1048576 (1MB).
 
