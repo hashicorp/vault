@@ -391,7 +391,7 @@ func newMongoBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		broadcastCh = nil
 	}
 
-	logger.Debug("physical/mongo: newMongoBackend: (%v, %v, %v)", url, database, collection)
+	logger.Debug(fmt.Sprintf("physical/mongo: newMongoBackend: (%v, %v, %v)", url, database, collection))
 	b := MongoBackend{
 		Url:           url,
 		Database:      database,
@@ -421,7 +421,7 @@ func newMongoBackend(conf map[string]string, logger log.Logger) (Backend, error)
 
 						// a different error from 'Not Found' should be the only interesting case
 						if err != nil && err != mgo.ErrNotFound {
-							b.logger.Error("physical/mongo: inactivePoller error: %v", err)
+							b.logger.Error(fmt.Sprintf("physical/mongo: inactivePoller error: %v", err))
 						}
 
 						// removal was necessary, log and send broadcast
@@ -549,7 +549,7 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 				}
 			}
 			if !inResults {
-				// on prepending here
+				// "on prepending" here
 				//
 				// the general attitude should be:
 				// - append to arrays
@@ -576,7 +576,7 @@ func (b *MongoBackend) List(prefix string) ([]string, error) {
 	// sort
 	sort.Strings(results)
 
-	b.logger.Debug("physical/mongo: List(%v): %v", prefix, results)
+	b.logger.Debug(fmt.Sprintf("physical/mongo: List(%v): %v", prefix, results))
 
 	return results, nil
 }
