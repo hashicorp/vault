@@ -39,25 +39,6 @@ from the command-line, make sure to place it somewhere on your `PATH`.
 
 ## Compiling from Source
 
-To compile from source, you'll need [Go](https://golang.org) installed
-and configured properly. You'll also need Git.
-
-  1. Clone the Vault repository into your GOPATH: https://github.com/hashicorp/vault
-
-  1. Verify that the file `$GOPATH/src/github.com/hashicorp/vault/main.go`
-     exists. If it doesn't, then you didn't clone Vault into the proper
-     path.
-
-  1. Run `make dev`. This will build Vault for your current system
-     and put the binary in `bin` (relative to the git checkout).
-
-~> **Note:** All the dependencies of Vault are vendored and the command
-above will use these vendored binaries. This is to avoid malicious
-upstream dependencies if possible.
-
-## Verifying the Installation
-
-To verify Vault is properly installed, execute the `vault` binary on
-your system. You should see help output. If you are executing it from
-the command line, make sure it is on your PATH or you may get an error
-about `vault` not being found.
+Check [Vault's README on
+GitHub](https://github.com/hashicorp/vault#developing-vault) for up-to-date
+information about compiling Go from source.
