@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/jefferai/logxi/v1"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/logformat"

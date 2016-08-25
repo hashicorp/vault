@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/jefferai/logxi/v1"
 
 	"github.com/armon/go-metrics"
 	"github.com/samuel/go-zookeeper/zk"

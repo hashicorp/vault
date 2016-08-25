@@ -5,9 +5,10 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/jefferai/logxi/v1"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -89,7 +90,7 @@ func (m *RollbackManager) Stop() {
 
 // run is a long running routine to periodically invoke rollback
 func (m *RollbackManager) run() {
-	m.logger.Info("rollback: starting rollback manager")
+	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
 	defer tick.Stop()
 	defer close(m.doneCh)
@@ -99,7 +100,7 @@ func (m *RollbackManager) run() {
 			m.triggerRollbacks()
 
 		case <-m.shutdownCh:
-			m.logger.Info("rollback: stopping rollback manager")
+			m.logger.Info("stopping rollback manager")
 			return
 		}
 	}
@@ -138,7 +139,7 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
 	if m.logger.IsDebug() {
-		m.logger.Debug("rollback: attempting rollback", "path", path)
+		m.logger.Debug("attempting rollback", "path", path)
 	}
 
 	defer func() {
@@ -163,7 +164,7 @@ func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err e
 		err = nil
 	}
 	if err != nil {
-		m.logger.Error("rollback: error rolling back", "path", path, "error", err)
+		m.logger.Error("error rolling back", "path", path, "error", err)
 	}
 	return
 }
@@ -212,7 +213,7 @@ func (c *Core) startRollback() error {
 		}
 		return ret
 	}
-	c.rollback = NewRollbackManager(c.logger, backendsFunc, c.router)
+	c.rollback = NewRollbackManager(logformat.DeriveModuleLogger(c.logger, "rollback"), backendsFunc, c.router)
 	c.rollback.Start()
 	return nil
 }

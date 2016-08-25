@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/jefferai/logxi/v1"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/armon/go-metrics"

@@ -1,6 +1,6 @@
 package logical
 
-import log "github.com/mgutz/logxi/v1"
+import log "github.com/jefferai/logxi/v1"
 
 // Backend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount

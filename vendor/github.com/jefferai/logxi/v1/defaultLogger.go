@@ -138,12 +138,24 @@ func (l *DefaultLogger) IsWarn() bool {
 	return l.level >= LevelWarn
 }
 
+func (l *DefaultLogger) Level() int {
+	return l.level
+}
+
 // SetLevel sets the level of this logger.
 func (l *DefaultLogger) SetLevel(level int) {
 	l.level = level
 }
 
+func (l *DefaultLogger) Formatter() Formatter {
+	return l.formatter
+}
+
 // SetFormatter set the formatter for this logger.
 func (l *DefaultLogger) SetFormatter(formatter Formatter) {
 	l.formatter = formatter
+}
+
+func (l *DefaultLogger) Writer() io.Writer {
+	return l.writer
 }

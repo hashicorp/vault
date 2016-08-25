@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/jefferai/logxi/v1"
 )
 
 const DefaultParallelOperations = 128

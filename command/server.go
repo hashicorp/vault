@@ -16,8 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	log "github.com/jefferai/logxi/v1"
 	colorable "github.com/mattn/go-colorable"
-	log "github.com/mgutz/logxi/v1"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -103,7 +103,7 @@ func (c *ServerCommand) Run(args []string) int {
 		c.logger.SetLevel(level)
 	}
 	grpclog.SetLogger(&grpclogFaker{
-		logger: c.logger,
+		logger: logformat.DeriveModuleLogger(c.logger, "grpc"),
 	})
 
 	if os.Getenv("VAULT_DEV_ROOT_TOKEN_ID") != "" && devRootTokenID == "" {
@@ -141,7 +141,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 	for _, path := range configPath {
-		current, err := server.LoadConfig(path, c.logger)
+		current, err := server.LoadConfig(path, logformat.DeriveModuleLogger(c.logger, "config"))
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error loading configuration from %s: %s", path, err))
@@ -183,7 +183,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the backend
 	backend, err := physical.NewBackend(
-		config.Backend.Type, c.logger, config.Backend.Config)
+		config.Backend.Type, logformat.DeriveModuleLogger(c.logger, "physical"), config.Backend.Config)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing backend of type %s: %s",
@@ -212,7 +212,7 @@ func (c *ServerCommand) Run(args []string) int {
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
 		LogicalBackends:    c.LogicalBackends,
-		Logger:             c.logger,
+		Logger:             logformat.DeriveModuleLogger(c.logger, "core"),
 		DisableCache:       config.DisableCache,
 		DisableMlock:       config.DisableMlock,
 		MaxLeaseTTL:        config.MaxLeaseTTL,
@@ -227,7 +227,7 @@ func (c *ServerCommand) Run(args []string) int {
 	var ok bool
 	if config.HABackend != nil {
 		habackend, err := physical.NewBackend(
-			config.HABackend.Type, c.logger, config.HABackend.Config)
+			config.HABackend.Type, logformat.DeriveModuleLogger(c.logger, "physical-ha"), config.HABackend.Config)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
 				"Error initializing backend of type %s: %s",
@@ -495,7 +495,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterSetupFuncs(vault.WrapHandlerForClustering(handler, c.logger))
+	core.SetClusterSetupFuncs(vault.WrapHandlerForClustering(handler, core.Logger()))
 
 	// If we're in dev mode, then initialize the core
 	if dev {
@@ -817,7 +817,7 @@ func (c *ServerCommand) Reload(configPath []string) error {
 	// Read the new config
 	var config *server.Config
 	for _, path := range configPath {
-		current, err := server.LoadConfig(path, c.logger)
+		current, err := server.LoadConfig(path, logformat.DeriveModuleLogger(c.logger, "config"))
 		if err != nil {
 			retErr := fmt.Errorf("Error loading configuration from %s: %s", path, err)
 			c.Ui.Error(retErr.Error())

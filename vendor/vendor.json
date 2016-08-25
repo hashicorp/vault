@@ -613,6 +613,12 @@
 			"revisionTime": "2016-07-20T23:31:40Z"
 		},
 		{
+			"checksumSHA1": "jY4K6LIq1El/1vBTADZf3VndYiQ=",
+			"path": "github.com/jefferai/logxi/v1",
+			"revision": "cb167973dcfd613d83a81eca159f87701e1b8ff0",
+			"revisionTime": "2016-08-25T02:24:33Z"
+		},
+		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74",
@@ -701,12 +707,6 @@
 			"path": "github.com/mgutz/ansi",
 			"revision": "c286dcecd19ff979eeb73ea444e479b903f2cfcb",
 			"revisionTime": "2015-09-14T16:22:38Z"
-		},
-		{
-			"checksumSHA1": "DUdWW5gRHBk2zTxGQZoH1KLxFtc=",
-			"path": "github.com/mgutz/logxi/v1",
-			"revision": "7d364cab682d1b7b9063a3293c9e8c3087194940",
-			"revisionTime": "2016-04-16T16:59:08Z"
 		},
 		{
 			"checksumSHA1": "GSum+utW01N3KeMdvAPnsW0TemM=",

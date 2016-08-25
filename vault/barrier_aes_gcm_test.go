@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/physical"
-	log "github.com/mgutz/logxi/v1"
+	log "github.com/jefferai/logxi/v1"
 )
 
 var (
