@@ -383,8 +383,8 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 				return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
 			}
 		} else {
-			if len(nonce) < 12 {
-				return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be at least 12 bytes long when using convergent encryption with this key")}
+			if len(nonce) < gcm.NonceSize() {
+				return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be at least %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
 			}
 			nonceKey, err := p.DeriveKey(nonce, p.LatestVersion)
 			if err != nil {
