@@ -166,6 +166,9 @@ func TestCluster_ListenForRequests(t *testing.T) {
 }
 
 func TestCluster_ForwardRequests(t *testing.T) {
+	// Make this nicer for tests
+	manualStepDownSleepPeriod = 5 * time.Second
+
 	testCluster_ForwardRequestsCommon(t, false)
 	testCluster_ForwardRequestsCommon(t, true)
 	os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
@@ -177,9 +180,6 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	} else {
 		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
 	}
-
-	// Make this nicer for tests
-	manualStepDownSleepPeriod = 5 * time.Second
 
 	handler1 := http.NewServeMux()
 	handler1.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
