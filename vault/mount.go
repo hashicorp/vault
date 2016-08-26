@@ -112,6 +112,17 @@ func (t *MountTable) SetTaint(path string, value bool) bool {
 	return false
 }
 
+// Tainted returns whether a given path is tainted
+func (t *MountTable) Tainted(path string) bool {
+	n := len(t.Entries)
+	for i := 0; i < n; i++ {
+		if t.Entries[i].Path == path {
+			return t.Entries[i].Tainted
+		}
+	}
+	return false
+}
+
 // Remove is used to remove a given path entry
 func (t *MountTable) Remove(path string) bool {
 	n := len(t.Entries)
@@ -186,9 +197,6 @@ func (c *Core) mount(me *MountEntry) error {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
-
 	// Generate a new UUID and view
 	meUUID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -203,12 +211,15 @@ func (c *Core) mount(me *MountEntry) error {
 	}
 
 	// Update the mount table
+	c.mountsLock.Lock()
 	newTable := c.mounts.ShallowClone()
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
+		c.mountsLock.Unlock()
 		return logical.CodedError(500, "failed to update mount table")
 	}
 	c.mounts = newTable
+	c.mountsLock.Unlock()
 
 	// Mount the backend
 	if err := c.router.Mount(backend, me.Path, me, view); err != nil {
@@ -240,18 +251,16 @@ func (c *Core) unmount(path string) error {
 		return fmt.Errorf("no matching mount")
 	}
 
-	// Store the view for this backend
+	// Get the view for this backend
 	view := c.router.MatchingStorageView(path)
-
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
 
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(path); err != nil {
 		return err
 	}
 
-	// Taint the router path to prevent routing
+	// Taint the router path to prevent routing. Note that in-flight requests
+	// are uncertain, right now.
 	if err := c.router.Taint(path); err != nil {
 		return err
 	}
@@ -288,6 +297,9 @@ func (c *Core) unmount(path string) error {
 
 // removeMountEntry is used to remove an entry from the mount table
 func (c *Core) removeMountEntry(path string) error {
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+
 	// Remove the entry from the mount table
 	newTable := c.mounts.ShallowClone()
 	newTable.Remove(path)
@@ -303,6 +315,9 @@ func (c *Core) removeMountEntry(path string) error {
 
 // taintMountEntry is used to mark an entry in the mount table as tainted
 func (c *Core) taintMountEntry(path string) error {
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+
 	// As modifying the taint of an entry affects shallow clones,
 	// we simply use the original
 	c.mounts.SetTaint(path, true)
@@ -342,9 +357,6 @@ func (c *Core) remount(src, dst string) error {
 		return fmt.Errorf("existing mount at '%s'", match)
 	}
 
-	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
-
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(src); err != nil {
 		return err
@@ -365,6 +377,7 @@ func (c *Core) remount(src, dst string) error {
 		return err
 	}
 
+	c.mountsLock.Lock()
 	var ent *MountEntry
 	for _, ent = range c.mounts.Entries {
 		if ent.Path == src {
@@ -378,8 +391,10 @@ func (c *Core) remount(src, dst string) error {
 	if err := c.persistMounts(c.mounts); err != nil {
 		ent.Path = src
 		ent.Tainted = true
+		c.mountsLock.Unlock()
 		return logical.CodedError(500, "failed to update mount table")
 	}
+	c.mountsLock.Unlock()
 
 	// Remount the backend
 	if err := c.router.Remount(src, dst); err != nil {
