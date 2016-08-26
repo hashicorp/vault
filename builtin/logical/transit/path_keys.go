@@ -109,6 +109,9 @@ func (b *backend) pathPolicyRead(
 	if p.Derived {
 		resp.Data["kdf_mode"] = p.KDFMode
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption
+		if p.ConvergentEncryption {
+			resp.Data["convergent_encryption_version"] = p.ConvergentVersion
+		}
 	}
 
 	retKeys := map[string]int64{}

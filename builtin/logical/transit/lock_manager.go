@@ -204,6 +204,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 		if derived {
 			p.KDFMode = kdfMode
 			p.ConvergentEncryption = convergent
+			p.ConvergentVersion = 2
 		}
 
 		err = p.rotate(storage)
