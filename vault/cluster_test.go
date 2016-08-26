@@ -331,10 +331,18 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 	}
 	req.Header.Add("X-Vault-Token", c.Root)
 
-	statusCode, respBytes, err := c.ForwardRequest(req)
+	statusCode, header, respBytes, err := c.ForwardRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	if header == nil {
+		t.Fatal("err: expected at least a content-type header")
+	}
+	if header.Get("Content-Type") != "application/json" {
+		t.Fatalf("bad content-type: %s", header.Get("Content-Type"))
+	}
+
 	body := string(respBytes)
 
 	if body != remoteCoreID {
