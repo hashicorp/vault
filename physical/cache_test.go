@@ -11,7 +11,7 @@ func TestCache(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	inm := NewInmem(logger)
-	cache := NewCache(inm, 0)
+	cache := NewCache(inm, 0, logger)
 	testBackend(t, cache)
 	testBackend_ListPrefix(t, cache)
 }
@@ -20,7 +20,7 @@ func TestCache_Purge(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	inm := NewInmem(logger)
-	cache := NewCache(inm, 0)
+	cache := NewCache(inm, 0, logger)
 
 	ent := &Entry{
 		Key:   "foo",

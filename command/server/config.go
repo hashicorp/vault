@@ -26,6 +26,7 @@ type Config struct {
 	Backend   *Backend    `hcl:"-"`
 	HABackend *Backend    `hcl:"-"`
 
+	CacheSize    int  `hcl:"cache_size"`
 	DisableCache bool `hcl:"disable_cache"`
 	DisableMlock bool `hcl:"disable_mlock"`
 
@@ -200,6 +201,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Telemetry = c2.Telemetry
 	}
 
+	result.CacheSize = c.CacheSize
+	if c2.CacheSize != 0 {
+		result.CacheSize = c2.CacheSize
+	}
+
 	// merging these booleans via an OR operation
 	result.DisableCache = c.DisableCache
 	if c2.DisableCache {
@@ -289,6 +295,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"backend",
 		"ha_backend",
 		"listener",
+		"cache_size",
 		"disable_cache",
 		"disable_mlock",
 		"telemetry",

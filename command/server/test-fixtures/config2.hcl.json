@@ -22,6 +22,7 @@
       "disable_clustering": "false"
     }
   },
+  "cache_size": 45678,
   "telemetry":{
     "statsd_address":"bar",
     "statsite_address":"foo",

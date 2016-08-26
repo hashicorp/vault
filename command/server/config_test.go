@@ -176,6 +176,8 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			},
 		},
 
+		CacheSize: 45678,
+
 		Telemetry: &Telemetry{
 			StatsiteAddr:                       "foo",
 			StatsdAddr:                         "bar",

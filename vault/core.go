@@ -308,7 +308,7 @@ type CoreConfig struct {
 	// Disables mlock syscall
 	DisableMlock bool `json:"disable_mlock" structs:"disable_mlock" mapstructure:"disable_mlock"`
 
-	// Custom cache size of zero for default
+	// Custom cache size for the LRU cache on the physical backend, or zero for default
 	CacheSize int `json:"cache_size" structs:"cache_size" mapstructure:"cache_size"`
 
 	// Set as the leader address for HA
@@ -354,12 +354,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
+	// Make a default logger if not provided
+	if conf.Logger == nil {
+		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
+	}
+
 	// Wrap the backend in a cache unless disabled
 	if !conf.DisableCache {
 		_, isCache := conf.Physical.(*physical.Cache)
 		_, isInmem := conf.Physical.(*physical.InmemBackend)
 		if !isCache && !isInmem {
-			cache := physical.NewCache(conf.Physical, conf.CacheSize)
+			cache := physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
 			conf.Physical = cache
 		}
 	}
@@ -384,11 +389,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	barrier, err := NewAESGCMBarrier(conf.Physical)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
-	}
-
-	// Make a default logger if not provided
-	if conf.Logger == nil {
-		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
 
 	// Setup the core
