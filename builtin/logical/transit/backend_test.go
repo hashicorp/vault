@@ -548,6 +548,11 @@ func TestKeyUpgrade(t *testing.T) {
 }
 
 func TestConvergentEncryption(t *testing.T) {
+	testConvergentEncryptionCommon(t, 0)
+	testConvergentEncryptionCommon(t, 2)
+}
+
+func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -578,21 +583,22 @@ func TestConvergentEncryption(t *testing.T) {
 		t.Fatalf("bad: expected error response, got %#v", *resp)
 	}
 
-	req.Path = "keys/testkey"
-	req.Data = map[string]interface{}{
-		"derived":               true,
-		"convergent_encryption": true,
+	p := &Policy{
+		Name:                 "testkey",
+		CipherMode:           "aes-gcm",
+		Derived:              true,
+		KDFMode:              kdfMode,
+		ConvergentEncryption: true,
+		ConvergentVersion:    ver,
 	}
 
-	resp, err = b.HandleRequest(req)
+	err = p.rotate(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp != nil {
-		t.Fatalf("bad: got resp %#v", *resp)
-	}
 
-	// First, test using an invalid length of nonce
+	// First, test using an invalid length of nonce; for ver 1 it will be a
+	// mismatch, for 2 it will be too short
 	req.Path = "encrypt/testkey"
 	req.Data = map[string]interface{}{
 		"plaintext": "emlwIHphcA==", // "zip zap"
