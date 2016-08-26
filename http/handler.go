@@ -152,6 +152,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		if header != nil {
 			for k, v := range header {
 				for _, j := range v {
+					core.Logger().Trace("writing header %v %v", k, j)
 					w.Header().Add(k, j)
 				}
 			}
