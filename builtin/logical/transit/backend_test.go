@@ -597,30 +597,31 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		t.Fatal(err)
 	}
 
-	// First, test using an invalid length of nonce; for ver 1 it will be a
-	// mismatch, for 2 it will be too short
+	// First, test using an invalid length of nonce -- this is only used for v1 convergent
 	req.Path = "encrypt/testkey"
-	req.Data = map[string]interface{}{
-		"plaintext": "emlwIHphcA==", // "zip zap"
-		"nonce":     "Zm9vIGJhcg==", // "foo bar"
-		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
-	}
-	resp, err = b.HandleRequest(req)
-	if resp == nil {
-		t.Fatal("expected non-nil response")
-	}
-	if !resp.IsError() {
-		t.Fatalf("expected error response, got %#v", *resp)
-	}
+	if ver < 2 {
+		req.Data = map[string]interface{}{
+			"plaintext": "emlwIHphcA==", // "zip zap"
+			"nonce":     "Zm9vIGJhcg==", // "foo bar"
+			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
+		}
+		resp, err = b.HandleRequest(req)
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if !resp.IsError() {
+			t.Fatalf("expected error response, got %#v", *resp)
+		}
 
-	// Ensure we fail if we do not provide a nonce
-	req.Data = map[string]interface{}{
-		"plaintext": "emlwIHphcA==", // "zip zap"
-		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
-	}
-	resp, err = b.HandleRequest(req)
-	if err == nil && (resp == nil || !resp.IsError()) {
-		t.Fatal("expected error response")
+		// Ensure we fail if we do not provide a nonce
+		req.Data = map[string]interface{}{
+			"plaintext": "emlwIHphcA==", // "zip zap"
+			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
+		}
+		resp, err = b.HandleRequest(req)
+		if err == nil && (resp == nil || !resp.IsError()) {
+			t.Fatal("expected error response")
+		}
 	}
 
 	// Now test encrypting the same value twice
@@ -657,6 +658,12 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"nonce":     "dHdvdGhyZWVmb3Vy", // "twothreefour"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
+	if ver < 2 {
+		req.Data["nonce"] = "dHdvdGhyZWVmb3Vy" // "twothreefour"
+	} else {
+		req.Data["context"] = "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOldandSdd7S"
+	}
+
 	resp, err = b.HandleRequest(req)
 	if resp == nil {
 		t.Fatal("expected non-nil response")
