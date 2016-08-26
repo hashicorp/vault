@@ -383,10 +383,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 				return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
 			}
 		} else {
-			if len(nonce) < gcm.NonceSize() {
-				return "", errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be at least %d bytes long when using convergent encryption with this key", gcm.NonceSize())}
-			}
-			nonceKey, err := p.DeriveKey(nonce, p.LatestVersion)
+			nonceKey, err := p.DeriveKey(append(key, plaintext...), p.LatestVersion)
 			if err != nil {
 				return "", err
 			}
@@ -405,7 +402,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 
 	// Place the encrypted data after the nonce
 	full := out
-	if !p.ConvergentEncryption {
+	if !p.ConvergentEncryption || p.ConvergentVersion > 1 {
 		full = append(nonce, out...)
 	}
 
@@ -424,7 +421,7 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: "invalid ciphertext: no prefix"}
 	}
 
-	if p.ConvergentEncryption && (nonce == nil || len(nonce) == 0) {
+	if p.ConvergentEncryption && p.ConvergentVersion == 1 && (nonce == nil || len(nonce) == 0) {
 		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
 	}
 
@@ -485,15 +482,8 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 
 	// Extract the nonce and ciphertext
 	var ciphertext []byte
-	if p.ConvergentEncryption {
+	if p.ConvergentEncryption && p.ConvergentVersion < 2 {
 		ciphertext = decoded
-		if p.ConvergentVersion == 2 {
-			nonceKey, err := p.DeriveKey(nonce, ver)
-			if err != nil {
-				return "", err
-			}
-			nonce = nonceKey[:gcm.NonceSize()]
-		}
 	} else {
 		nonce = decoded[:gcm.NonceSize()]
 		ciphertext = decoded[gcm.NonceSize():]
