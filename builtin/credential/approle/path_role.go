@@ -441,8 +441,12 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 
 // pathRoleList is used to list all the Roles registered with the backend.
 func (b *backend) pathRoleList(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.roleLock.RLock()
-	defer b.roleLock.RUnlock()
+	// This will return the "custom" lock
+	lock := b.roleLock("")
+
+	lock.RLock()
+	defer lock.RUnlock()
+
 	roles, err := req.Storage.List("role/")
 	if err != nil {
 		return nil, err
@@ -520,9 +524,6 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 // setRoleEntry grabs a write lock and stores the options on an role into the storage.
 // Also creates a reverse index from the role's RoleID to the role itself.
 func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
-	b.roleLock.Lock()
-	defer b.roleLock.Unlock()
-
 	// Create a storage entry for the role
 	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), role)
 	if err != nil {
@@ -571,8 +572,10 @@ func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEnt
 
 	var result roleStorageEntry
 
-	b.roleLock.RLock()
-	defer b.roleLock.RUnlock()
+	lock := b.roleLock(roleName)
+
+	lock.RLock()
+	defer lock.RUnlock()
 
 	if entry, err := s.Get("role/" + strings.ToLower(roleName)); err != nil {
 		return nil, err
@@ -743,8 +746,9 @@ func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData
 	}
 
 	// Acquire the lock before deleting the secrets.
-	b.roleLock.Lock()
-	defer b.roleLock.Unlock()
+	lock := b.roleLock(roleName)
+	lock.Lock()
+	defer lock.Unlock()
 
 	// Just before the role is deleted, remove all the SecretIDs issued as part of the role.
 	if err = b.flushRoleSecrets(req.Storage, roleName, role.HMACKey); err != nil {
@@ -1005,6 +1009,11 @@ func (b *backend) pathRoleBoundCIDRListUpdate(req *logical.Request, data *framew
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	role.BoundCIDRList = strings.TrimSpace(data.Get("bound_cidr_list").(string))
 	if role.BoundCIDRList == "" {
 		return logical.ErrorResponse("missing bound_cidr_list"), nil
@@ -1050,6 +1059,11 @@ func (b *backend) pathRoleBoundCIDRListDelete(req *logical.Request, data *framew
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	// Deleting a field implies setting the value to it's default value.
 	role.BoundCIDRList = data.GetDefaultOrZero("bound_cidr_list").(string)
 
@@ -1069,6 +1083,11 @@ func (b *backend) pathRoleBindSecretIDUpdate(req *logical.Request, data *framewo
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	if bindSecretIDRaw, ok := data.GetOk("bind_secret_id"); ok {
 		role.BindSecretID = bindSecretIDRaw.(bool)
@@ -1111,6 +1130,11 @@ func (b *backend) pathRoleBindSecretIDDelete(req *logical.Request, data *framewo
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	// Deleting a field implies setting the value to it's default value.
 	role.BindSecretID = data.GetDefaultOrZero("bind_secret_id").(bool)
 
@@ -1135,6 +1159,11 @@ func (b *backend) pathRolePoliciesUpdate(req *logical.Request, data *framework.F
 	if policies == "" {
 		return logical.ErrorResponse("missing policies"), nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	role.Policies = policyutil.ParsePolicies(policies)
 
@@ -1174,6 +1203,11 @@ func (b *backend) pathRolePoliciesDelete(req *logical.Request, data *framework.F
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	role.Policies = policyutil.ParsePolicies(data.GetDefaultOrZero("policies").(string))
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
@@ -1192,6 +1226,11 @@ func (b *backend) pathRoleSecretIDNumUsesUpdate(req *logical.Request, data *fram
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	if numUsesRaw, ok := data.GetOk("secret_id_num_uses"); ok {
 		role.SecretIDNumUses = numUsesRaw.(int)
@@ -1217,6 +1256,11 @@ func (b *backend) pathRoleRoleIDUpdate(req *logical.Request, data *framework.Fie
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	previousRoleID := role.RoleID
 	role.RoleID = data.Get("role_id").(string)
@@ -1279,6 +1323,11 @@ func (b *backend) pathRoleSecretIDNumUsesDelete(req *logical.Request, data *fram
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	role.SecretIDNumUses = data.GetDefaultOrZero("secret_id_num_uses").(int)
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
@@ -1297,6 +1346,11 @@ func (b *backend) pathRoleSecretIDTTLUpdate(req *logical.Request, data *framewor
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	if secretIDTTLRaw, ok := data.GetOk("secret_id_ttl"); ok {
 		role.SecretIDTTL = time.Second * time.Duration(secretIDTTLRaw.(int))
@@ -1340,6 +1394,11 @@ func (b *backend) pathRoleSecretIDTTLDelete(req *logical.Request, data *framewor
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	role.SecretIDTTL = time.Second * time.Duration(data.GetDefaultOrZero("secret_id_ttl").(int))
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
@@ -1358,6 +1417,11 @@ func (b *backend) pathRolePeriodUpdate(req *logical.Request, data *framework.Fie
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	if periodRaw, ok := data.GetOk("period"); ok {
 		role.Period = time.Second * time.Duration(periodRaw.(int))
@@ -1404,6 +1468,11 @@ func (b *backend) pathRolePeriodDelete(req *logical.Request, data *framework.Fie
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	role.Period = time.Second * time.Duration(data.GetDefaultOrZero("period").(int))
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
@@ -1422,6 +1491,11 @@ func (b *backend) pathRoleTokenTTLUpdate(req *logical.Request, data *framework.F
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	if tokenTTLRaw, ok := data.GetOk("token_ttl"); ok {
 		role.TokenTTL = time.Second * time.Duration(tokenTTLRaw.(int))
@@ -1468,6 +1542,11 @@ func (b *backend) pathRoleTokenTTLDelete(req *logical.Request, data *framework.F
 		return nil, nil
 	}
 
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
 	role.TokenTTL = time.Second * time.Duration(data.GetDefaultOrZero("token_ttl").(int))
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
@@ -1486,6 +1565,11 @@ func (b *backend) pathRoleTokenMaxTTLUpdate(req *logical.Request, data *framewor
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	if tokenMaxTTLRaw, ok := data.GetOk("token_max_ttl"); ok {
 		role.TokenMaxTTL = time.Second * time.Duration(tokenMaxTTLRaw.(int))
@@ -1531,6 +1615,11 @@ func (b *backend) pathRoleTokenMaxTTLDelete(req *logical.Request, data *framewor
 	if role == nil {
 		return nil, nil
 	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	role.TokenMaxTTL = time.Second * time.Duration(data.GetDefaultOrZero("token_max_ttl").(int))
 
@@ -1604,8 +1693,26 @@ func (b *backend) roleIDLock(roleID string) *sync.RWMutex {
 		lock, ok = b.roleIDLocksMap[roleID[0:2]]
 	}
 	if !ok || lock == nil {
-		// Fall back for custom SecretIDs
 		lock = b.roleIDLocksMap["custom"]
+	}
+	return lock
+}
+
+// roleLock is used to get a lock from the pre-initialized map of locks. Map is
+// indexed based on the first 2 characters of the salted role name, which is a
+// random UUID. If the input is empty, a "custom" lock will be returned.
+func (b *backend) roleLock(roleName string) *sync.RWMutex {
+	var lock *sync.RWMutex
+	var ok bool
+
+	// Salting is used to induce randomness so that roles starting with
+	// similar characters will likely end up having different locks
+	index := b.salt.SaltID(roleName)
+	if len(index) >= 2 {
+		lock, ok = b.roleLocksMap[index[0:2]]
+	}
+	if !ok || lock == nil {
+		lock = b.roleLocksMap["custom"]
 	}
 	return lock
 }

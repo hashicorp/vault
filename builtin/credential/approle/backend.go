@@ -20,9 +20,10 @@ type backend struct {
 	// Guard to clean-up the expired SecretID entries
 	tidySecretIDCASGuard uint32
 
-	// Lock to make changes to Role entries. This is a low-traffic
-	// operation. So, using a single lock would suffice.
-	roleLock *sync.RWMutex
+	// Map of locks to make changes to role entries. This will be initiated
+	// to a predefined number of locks when the backend is created, and
+	// will be indexed based on salted role names.
+	roleLocksMap map[string]*sync.RWMutex
 
 	// Map of locks to make changes to the storage entries of RoleIDs
 	// generated. This will be initiated to a predefined number of locks
@@ -59,8 +60,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		// Set the salt object for the backend
 		salt: salt,
 
-		// Create the lock for making changes to the Roles registered with the backend
-		roleLock: &sync.RWMutex{},
+		// Create the map of locks to modify the registered roles
+		roleLocksMap: map[string]*sync.RWMutex{},
 
 		// Create the map of locks to modify the generated RoleIDs.
 		roleIDLocksMap: map[string]*sync.RWMutex{},
@@ -73,6 +74,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 	// a superfluous number of locks directly proportional to the number of RoleID
 	// and SecretIDs. These locks can be accessed by indexing based on the first two
 	// characters of a randomly generated UUID.
+	if err = locksutil.CreateLocks(b.roleLocksMap, 256); err != nil {
+		return nil, fmt.Errorf("failed to create role locks: %v", err)
+	}
+
 	if err = locksutil.CreateLocks(b.roleIDLocksMap, 256); err != nil {
 		return nil, fmt.Errorf("failed to create role ID locks: %v", err)
 	}
@@ -84,6 +89,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 	// Have an extra lock to use in case the indexing does not result in a lock.
 	// This happens if the indexing value is not beginning with hex characters.
 	// These locks can be used for listing purposes as well.
+	b.roleLocksMap["custom"] = &sync.RWMutex{}
 	b.secretIDLocksMap["custom"] = &sync.RWMutex{}
 	b.roleIDLocksMap["custom"] = &sync.RWMutex{}
 
