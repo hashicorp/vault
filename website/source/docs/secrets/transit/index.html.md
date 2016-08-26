@@ -157,18 +157,12 @@ only encrypt or decrypt using the named keys they need access to.
         If set, the key will support convergent encryption, where the same
         plaintext creates the same ciphertext. This requires _derived_ to be
         set to `true`. When enabled, each
-        encryption(/decryption/rewrap/datakey) operation will require a `nonce`
-        value to be specified. Note that while this is useful for particular
-        situations, all nonce values used with a given context value **must be
-        unique** or it will compromise the security of your key. (To help
-        ensure this, starting in 0.6.2, the nonce undergoes a key-derivation
-        function to increase entropy). A common way to use this will be to
-        generate a unique identifier for the given data (for instance, a
-        SHA-512 sum), then separate half of the identifier into context bytes
-        and half into nonce bytes, ensuring that all bits of unique identity
-        are used as part of the encryption operation. Note that for 0.6.1, the
-        nonce must be *exactly* 12 bytes long; in 0.6.2+ the nonce must be *at
-        least* 12 bytes long.
+        encryption(/decryption/rewrap/datakey) operation will derive a `nonce`
+        value rather than randomly generate it. Note that while this is useful
+        for particular situations, all nonce values used with a given context
+        value **must be unique** or it will compromise the security of your
+        key, and the key space for nonces is 96 bit -- not as large as the AES
+        key itself. Defaults to false.
       </li>
     </ul>
   </dd>
@@ -358,14 +352,11 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
         The nonce value, provided as base64 encoded. Must be provided if
-        convergent encryption is enabled for this key. The value must be
-        exactly 96 bits (12 bytes) long in 0.6.1 and at least 96 bits in
-        0.6.2+. The user must ensure that for any given context (and thus, any
-        given encryption key) this nonce value is **never reused**; however,
-        starting in 0.6.2 Vault helps by using a key derivation function
-        against the given nonce to help ensure high entropy so that the final
-        nonce value can be generated from a longer set of bytes (e.g. if a
-        SHA-512 is split evenly into context/nonce).
+        convergent encryption is enabled for this key and the key was generated
+        with Vault 0.6.1. Not required for keys created in 0.6.2+. The value
+        must be exactly 96 bits (12 bytes) long and the user must ensure that
+        for any given context (and thus, any given encryption key) this nonce
+        value is **never reused**.
       </li>
     </ul>
   </dd>
@@ -417,7 +408,9 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
         The nonce value used during encryption, provided as base64 encoded.
-        Must be provided if convergent encryption is enabled for this key.
+        Must be provided if convergent encryption is enabled for this key and
+        the key was created with Vault 0.6.1. Not required for keys created in
+        0.6.2+.
       </li>
     </ul>
   </dd>
@@ -471,7 +464,9 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
         The nonce value used during encryption, provided as base64 encoded.
-        Must be provided if convergent encryption is enabled for this key.
+        Must be provided if convergent encryption is enabled for this key and
+        the key was created with Vault 0.6.1. Not required for keys created in
+        0.6.2+.
       </li>
     </ul>
   </dd>
@@ -529,14 +524,11 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
         The nonce value, provided as base64 encoded. Must be provided if
-        convergent encryption is enabled for this key. The value must be
-        exactly 96 bits (12 bytes) long in 0.6.1 and at least 96 bits in
-        0.6.2+. The user must ensure that for any given context (and thus, any
-        given encryption key) this nonce value is **never reused**; however,
-        starting in 0.6.2 Vault helps by using a key derivation function
-        against the given nonce to help ensure high entropy so that the final
-        nonce value can be generated from a longer set of bytes (e.g. if a
-        SHA-512 is split evenly into context/nonce).
+        convergent encryption is enabled for this key and the key was generated
+        with Vault 0.6.1. Not required for keys created in 0.6.2+. The value
+        must be exactly 96 bits (12 bytes) long and the user must ensure that
+        for any given context (and thus, any given encryption key) this nonce
+        value is **never reused**.
       </li>
       <li>
         <span class="param">bits</span>
