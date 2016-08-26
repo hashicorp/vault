@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
@@ -168,18 +169,33 @@ func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
+	testCluster_ForwardRequestsCommon(t, false)
+	testCluster_ForwardRequestsCommon(t, true)
+	os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
+}
+
+func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
+	if rpc {
+		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "1")
+	} else {
+		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
+	}
+
 	handler1 := http.NewServeMux()
 	handler1.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(201)
 		w.Write([]byte("core1"))
 	})
 	handler2 := http.NewServeMux()
 	handler2.HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(202)
 		w.Write([]byte("core2"))
 	})
 	handler3 := http.NewServeMux()
 	handler3.HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(203)
 		w.Write([]byte("core3"))
 	})
@@ -331,10 +347,18 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 	}
 	req.Header.Add("X-Vault-Token", c.Root)
 
-	statusCode, respBytes, err := c.ForwardRequest(req)
+	statusCode, header, respBytes, err := c.ForwardRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	if header == nil {
+		t.Fatal("err: expected at least a content-type header")
+	}
+	if header.Get("Content-Type") != "application/json" {
+		t.Fatalf("bad content-type: %s", header.Get("Content-Type"))
+	}
+
 	body := string(respBytes)
 
 	if body != remoteCoreID {

@@ -251,30 +251,30 @@ func (c *Core) clearForwardingClients() {
 
 // ForwardRequest forwards a given request to the active node and returns the
 // response.
-func (c *Core) ForwardRequest(req *http.Request) (int, []byte, error) {
+func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, error) {
 	c.requestForwardingConnectionLock.RLock()
 	defer c.requestForwardingConnectionLock.RUnlock()
 
 	switch os.Getenv("VAULT_USE_GRPC_REQUEST_FORWARDING") {
 	case "":
 		if c.requestForwardingConnection == nil {
-			return 0, nil, ErrCannotForward
+			return 0, nil, nil, ErrCannotForward
 		}
 
 		if c.requestForwardingConnection.clusterAddr == "" {
-			return 0, nil, ErrCannotForward
+			return 0, nil, nil, ErrCannotForward
 		}
 
 		freq, err := forwarding.GenerateForwardedHTTPRequest(req, c.requestForwardingConnection.clusterAddr+"/cluster/local/forwarded-request")
 		if err != nil {
 			c.logger.Error("core/ForwardRequest: error creating forwarded request", "error", err)
-			return 0, nil, fmt.Errorf("error creating forwarding request")
+			return 0, nil, nil, fmt.Errorf("error creating forwarding request")
 		}
 
 		//resp, err := c.requestForwardingConnection.Do(freq)
 		resp, err := c.requestForwardingConnection.transport.RoundTrip(freq)
 		if err != nil {
-			return 0, nil, err
+			return 0, nil, nil, err
 		}
 		defer resp.Body.Close()
 
@@ -283,30 +283,41 @@ func (c *Core) ForwardRequest(req *http.Request) (int, []byte, error) {
 		buf := bytes.NewBuffer(nil)
 		_, err = buf.ReadFrom(resp.Body)
 		if err != nil {
-			return 0, nil, err
+			return 0, nil, nil, err
 		}
-		return resp.StatusCode, buf.Bytes(), nil
+		return resp.StatusCode, resp.Header, buf.Bytes(), nil
 
 	default:
 		if c.rpcForwardingClient == nil {
-			return 0, nil, ErrCannotForward
+			return 0, nil, nil, ErrCannotForward
 		}
 
 		freq, err := forwarding.GenerateForwardedRequest(req)
 		if err != nil {
 			c.logger.Error("core/ForwardRequest: error creating forwarding RPC request", "error", err)
-			return 0, nil, fmt.Errorf("error creating forwarding RPC request")
+			return 0, nil, nil, fmt.Errorf("error creating forwarding RPC request")
 		}
 		if freq == nil {
 			c.logger.Error("core/ForwardRequest: got nil forwarding RPC request")
-			return 0, nil, fmt.Errorf("got nil forwarding RPC request")
+			return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
 		}
 		resp, err := c.rpcForwardingClient.HandleRequest(context.Background(), freq, grpc.FailFast(true))
 		if err != nil {
 			c.logger.Error("core/ForwardRequest: error during forwarded RPC request", "error", err)
-			return 0, nil, fmt.Errorf("error during forwarding RPC request")
+			return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
 		}
-		return int(resp.StatusCode), resp.Body, nil
+
+		var header http.Header
+		if resp.HeaderEntries != nil {
+			header = make(http.Header)
+			for k, v := range resp.HeaderEntries {
+				for _, j := range v.Values {
+					header.Add(k, j)
+				}
+			}
+		}
+
+		return int(resp.StatusCode), header, resp.Body, nil
 	}
 }
 
@@ -347,8 +358,20 @@ func (s *forwardedRequestRPCServer) HandleRequest(ctx context.Context, freq *for
 
 	s.handler.ServeHTTP(w, req)
 
-	return &forwarding.Response{
+	resp := &forwarding.Response{
 		StatusCode: uint32(w.StatusCode()),
 		Body:       w.Body().Bytes(),
-	}, nil
+	}
+
+	header := w.Header()
+	if header != nil {
+		resp.HeaderEntries = make(map[string]*forwarding.HeaderEntry, len(header))
+		for k, v := range header {
+			resp.HeaderEntries[k] = &forwarding.HeaderEntry{
+				Values: v,
+			}
+		}
+	}
+
+	return resp, nil
 }

@@ -136,7 +136,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		// Attempt forwarding the request. If we cannot forward -- perhaps it's
 		// been disabled on the active node -- this will return with an
 		// ErrCannotForward and we simply fall back
-		statusCode, retBytes, err := core.ForwardRequest(r)
+		statusCode, header, retBytes, err := core.ForwardRequest(r)
 		if err != nil {
 			if err == vault.ErrCannotForward {
 				core.Logger().Trace("http/handleRequestForwarding: cannot forward (possibly disabled on active node), falling back")
@@ -147,6 +147,15 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			// Fall back to redirection
 			handler.ServeHTTP(w, r)
 			return
+		}
+
+		if header != nil {
+			for k, v := range header {
+				for _, j := range v {
+					core.Logger().Trace("writing header %v %v", k, j)
+					w.Header().Add(k, j)
+				}
+			}
 		}
 
 		w.WriteHeader(statusCode)
