@@ -83,7 +83,12 @@ func (b *backend) DB(s logical.Storage) (*gocql.Session, error) {
 		return nil, err
 	}
 
-	return createSession(config, s)
+	session, err := createSession(config, s)
+	//  Store the session in backend for reuse
+	b.session = session
+
+	return session, err
+
 }
 
 // ResetDB forces a connection next time DB() is called.
