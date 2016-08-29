@@ -240,16 +240,21 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup",
+				Pattern: "lookup" + framework.OptionalParamRegex("urltoken"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"urltoken": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to lookup (URL parameter)",
+					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to lookup",
+						Description: "Token to lookup (POST request body)",
 					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   t.handleLookup,
 					logical.UpdateOperation: t.handleLookup,
 				},
 
@@ -258,12 +263,16 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "lookup-accessor",
+				Pattern: "lookup-accessor" + framework.OptionalParamRegex("urlaccessor"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"urlaccessor": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Accessor of the token to look up (URL parameter)",
+					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token to look up",
+						Description: "Accessor of the token to look up (request body)",
 					},
 				},
 
@@ -281,13 +290,13 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to look up (unused)",
+						Description: "Token to look up (unused, does not need to be set)",
 					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   t.handleLookupSelf,
 					logical.UpdateOperation: t.handleLookupSelf,
+					logical.ReadOperation:   t.handleLookupSelf,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(tokenLookupHelp),
@@ -295,12 +304,16 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-accessor",
+				Pattern: "revoke-accessor" + framework.OptionalParamRegex("urlaccessor"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"urlaccessor": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Accessor of the token (URL parameter)",
+					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token",
+						Description: "Accessor of the token (request body)",
 					},
 				},
 
@@ -324,12 +337,16 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke",
+				Pattern: "revoke" + framework.OptionalParamRegex("urltoken"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"urltoken": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to revoke (URL parameter)",
+					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke",
+						Description: "Token to revoke (request body)",
 					},
 				},
 
@@ -342,12 +359,16 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "revoke-orphan",
+				Pattern: "revoke-orphan" + framework.OptionalParamRegex("urltoken"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"urltoken": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to revoke (URL parameter)",
+					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke",
+						Description: "Token to revoke (request body)",
 					},
 				},
 
@@ -383,12 +404,16 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			},
 
 			&framework.Path{
-				Pattern: "renew",
+				Pattern: "renew" + framework.OptionalParamRegex("urltoken"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"urltoken": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "Token to renew (URL parameter)",
+					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to renew",
+						Description: "Token to renew (request body)",
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
@@ -931,12 +956,14 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
 // the properties of the token associated with the accessor
 func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
 		accessor = data.Get("urlaccessor").(string)
 		if accessor == "" {
 			return nil, &StatusBadRequest{Err: "missing accessor"}
 		}
+		urlaccessor = true
 	}
 
 	aEntry, err := ts.lookupByAccessor(accessor)
@@ -973,18 +1000,24 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 		resp.Data["id"] = ""
 	}
 
+	if urlaccessor {
+		resp.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
+	}
+
 	return resp, nil
 }
 
 // handleUpdateRevokeAccessor handles the auth/token/revoke-accessor path for revoking
 // the token associated with the accessor
 func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var urlaccessor bool
 	accessor := data.Get("accessor").(string)
 	if accessor == "" {
 		accessor = data.Get("urlaccessor").(string)
 		if accessor == "" {
 			return nil, &StatusBadRequest{Err: "missing accessor"}
 		}
+		urlaccessor = true
 	}
 
 	aEntry, err := ts.lookupByAccessor(accessor)
@@ -996,6 +1029,13 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 	if err := ts.RevokeTree(aEntry.TokenID); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
+
+	if urlaccessor {
+		resp := &logical.Response{}
+		resp.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
+		return resp, nil
+	}
+
 	return nil, nil
 }
 
@@ -1383,15 +1423,27 @@ func (ts *TokenStore) handleRevokeSelf(
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeTree(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
-		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+		id = data.Get("urltoken").(string)
+		if id == "" {
+			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+		}
+		urltoken = true
 	}
 
 	// Revoke the token and its children
 	if err := ts.RevokeTree(id); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
+
+	if urltoken {
+		resp := &logical.Response{}
+		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
+		return resp, nil
+	}
+
 	return nil, nil
 }
 
@@ -1400,10 +1452,15 @@ func (ts *TokenStore) handleRevokeTree(
 // the token and all children.
 func (ts *TokenStore) handleRevokeOrphan(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var urltoken bool
 	// Parse the id
 	id := data.Get("token").(string)
 	if id == "" {
-		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+		id = data.Get("urltoken").(string)
+		if id == "" {
+			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+		}
+		urltoken = true
 	}
 
 	parent, err := ts.Lookup(req.ClientToken)
@@ -1426,6 +1483,13 @@ func (ts *TokenStore) handleRevokeOrphan(
 	if err := ts.Revoke(id); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
+
+	if urltoken {
+		resp := &logical.Response{}
+		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
+		return resp, nil
+	}
+
 	return nil, nil
 }
 
@@ -1439,7 +1503,14 @@ func (ts *TokenStore) handleLookupSelf(
 // a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var urltoken bool
 	id := data.Get("token").(string)
+	if id == "" {
+		id = data.Get("urltoken").(string)
+		if id != "" {
+			urltoken = true
+		}
+	}
 	if id == "" {
 		id = req.ClientToken
 	}
@@ -1507,6 +1578,10 @@ func (ts *TokenStore) handleLookup(
 		}
 	}
 
+	if urltoken {
+		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
+	}
+
 	return resp, nil
 }
 
@@ -1520,9 +1595,14 @@ func (ts *TokenStore) handleRenewSelf(
 // This is used to prevent token expiration and revocation.
 func (ts *TokenStore) handleRenew(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var urltoken bool
 	id := data.Get("token").(string)
 	if id == "" {
-		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+		id = data.Get("urltoken").(string)
+		if id == "" {
+			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+		}
+		urltoken = true
 	}
 	incrementRaw := data.Get("increment").(int)
 
@@ -1541,7 +1621,13 @@ func (ts *TokenStore) handleRenew(
 	}
 
 	// Renew the token and its children
-	return ts.expiration.RenewToken(req, te.Path, te.ID, increment)
+	resp, err := ts.expiration.RenewToken(req, te.Path, te.ID, increment)
+
+	if urltoken {
+		resp.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
+	}
+
+	return resp, err
 }
 
 func (ts *TokenStore) destroyCubbyhole(saltedID string) error {
