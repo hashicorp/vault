@@ -245,7 +245,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to lookup (GET/POST URL parameter)",
+						Description: "Token to lookup (URL parameter)",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -290,7 +290,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to look up (unused)",
+						Description: "Token to look up (unused, does not need to be set)",
 					},
 				},
 
@@ -309,7 +309,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"urlaccessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Accessor of the token (in URL)",
+						Description: "Accessor of the token (URL parameter)",
 					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -342,7 +342,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke (in URL)",
+						Description: "Token to revoke (URL parameter)",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -364,7 +364,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to revoke (in URL)",
+						Description: "Token to revoke (URL parameter)",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
@@ -386,7 +386,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to renew (unused)",
+						Description: "Token to renew (unused, does not need to be set)",
 					},
 					"increment": &framework.FieldSchema{
 						Type:        framework.TypeDurationSecond,
@@ -409,7 +409,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "Token to renew (in URL)",
+						Description: "Token to renew (URL parameter)",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeString,
