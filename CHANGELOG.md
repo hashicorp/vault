@@ -18,6 +18,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * core: Pass back content-type header for forwarded requests [GH-1791]
+ * secret/aws: Mark STS secrets as non-renewable [GH-1804]
  * secret/cassandra: Properly store session for re-use [GH-1802]
  * secret/ssh: Fix panic when revoking SSH dynamic keys [GH-1781]
 
