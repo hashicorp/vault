@@ -242,6 +242,7 @@ description: |-
       "keys": ["one", "two", "three"],
       "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
       "pgp_fingerprints": ["abcd1234"],
+      "keys_base64": ["base64keyvalue"],
       "backup": true
     }
     ```
