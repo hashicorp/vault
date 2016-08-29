@@ -271,6 +271,25 @@ func (b *MongoBackend) activeSessionMsgReceiver() (*mgo.Session, error) {
 			}
 		}
 
+		// check if we need to insert an initialization row
+		// otherwise vault will eat up CPU because the Tail() on the collection
+		// returns immediately which burns the for loop (see receiveBroadcast() for
+		// details)
+		n, err := db.C(b.CollectionMsg).Count()
+		if err != nil {
+			b.logger.Error(fmt.Sprintf("physical/mongo: could not count messages in collection '%v': %v", b.CollectionMsg, err))
+			return nil, err
+		}
+
+		if n < 1 {
+			b.logger.Info(fmt.Sprintf("physical/mongo: inserting initialization row into '%v' collection", b.CollectionMsg))
+			err = db.C(b.CollectionMsg).Insert(BroadcastMsg{Msg: MsgCollectionInitialization})
+			if err != nil {
+				b.logger.Error(fmt.Sprintf("physical/mongo: inserting initialization row into '%v' collection failed: %v", b.CollectionMsg, err))
+				return nil, err
+			}
+		}
+
 		// only if we reach this part, we truly ensured the collection is capped
 		b.logger.Info(fmt.Sprintf("physical/mongo: MongoDB collection '%v' exists and is capped", b.CollectionMsg))
 		b.ensuredMsgCapped = true
@@ -291,7 +310,10 @@ const MsgForcedRemoval = "ForcedLeaderRemoval"
 const MsgStepDownPrimaryChange = "SteppedDownPrimaryChanged"
 const MsgStepDownActiveUpdateFailure = "SteppedDownActiveUpdateFailure"
 const MsgStepDownShutdown = "SteppedDownShutdown"
+
+// these 2 don't need to be checked in the isKnownBroadcastReason function
 const MsgUnknownReason = "UnknownReason"
+const MsgCollectionInitialization = "CollectionInitialized"
 
 func isKnownBroadcastReason(reason string) bool {
 	switch reason {
@@ -696,6 +718,8 @@ func (l *MongoLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 				if isKnownBroadcastReason(msg.Msg) {
 					l.b.logger.Info(fmt.Sprintf("physical/mongo: received broadcast '%v'. Trying to acquire lock.", msg.Msg))
 					acquire()
+				} else if msg.Msg == MsgCollectionInitialization {
+					l.b.logger.Debug(fmt.Sprintf("physical/mongo: received broadcast '%v'. Broadcast collection '%v' has just been initialized. Not trying to acquire lock.", l.b.CollectionMsg, msg.Msg))
 				} else {
 					l.b.logger.Warn(fmt.Sprintf("physical/mongo: received unknown broadcast: '%v'. Not trying to acquire lock.", msg.Msg))
 				}
