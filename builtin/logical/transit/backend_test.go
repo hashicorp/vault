@@ -4,12 +4,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/rand"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -227,7 +229,7 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				Keys                 map[string]int64 `mapstructure:"keys"`
 				CipherMode           string           `mapstructure:"cipher_mode"`
 				Derived              bool             `mapstructure:"derived"`
-				KDFMode              string           `mapstructure:"kdf_mode"`
+				KDF                  string           `mapstructure:"kdf"`
 				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
 				ConvergentEncryption bool             `mapstructure:"convergent_encryption"`
 			}
@@ -254,7 +256,7 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 			if d.Derived != derived {
 				return fmt.Errorf("bad: %#v", d)
 			}
-			if derived && d.KDFMode != kdfMode {
+			if derived && d.KDF != "hkdf_sha256" {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			return nil
@@ -531,9 +533,10 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 }
 
 func TestKeyUpgrade(t *testing.T) {
+	key, _ := uuid.GenerateRandomBytes(32)
 	p := &Policy{
 		Name:       "test",
-		Key:        []byte(testPlaintext),
+		Key:        key,
 		CipherMode: "aes-gcm",
 	}
 
@@ -542,8 +545,77 @@ func TestKeyUpgrade(t *testing.T) {
 	if p.Key != nil ||
 		p.Keys == nil ||
 		len(p.Keys) != 1 ||
-		string(p.Keys[1].Key) != testPlaintext {
+		!reflect.DeepEqual(p.Keys[1].Key, key) {
 		t.Errorf("bad key migration, result is %#v", p.Keys)
+	}
+}
+
+func TestDerivedKeyUpgrade(t *testing.T) {
+	key, _ := uuid.GenerateRandomBytes(32)
+	context, _ := uuid.GenerateRandomBytes(32)
+	storage := &logical.InmemStorage{}
+
+	p := &Policy{
+		Name:       "test",
+		Key:        key,
+		CipherMode: "aes-gcm",
+		KDFMode:    kdfMode,
+		Derived:    true,
+	}
+
+	p.migrateKeyToKeysMap()
+
+	if !p.needsUpgrade() {
+		t.Fatal("expected that an upgrade would be needed")
+	}
+
+	if err := p.upgrade(storage); err != nil {
+		t.Fatalf("err during upgrade: %v")
+	}
+
+	if p.needsUpgrade() {
+		t.Fatal("expected no upgrade needed")
+	}
+
+	if p.KDFMode != "" || p.KDF != KDF_hmac_sha256_counter {
+		t.Fatalf("bad KDF values after upgrade: %#v", *p)
+	}
+
+	derBytesOld, err := p.DeriveKey(context, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	derBytesOld2, err := p.DeriveKey(context, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(derBytesOld, derBytesOld2) {
+		t.Fatal("mismatch of same context alg")
+	}
+
+	p.KDF = KDF_hkdf_sha256
+	if p.needsUpgrade() {
+		t.Fatal("expected no upgrade needed")
+	}
+
+	derBytesNew, err := p.DeriveKey(context, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	derBytesNew2, err := p.DeriveKey(context, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(derBytesNew, derBytesNew2) {
+		t.Fatal("mismatch of same context alg")
+	}
+
+	if reflect.DeepEqual(derBytesOld, derBytesNew) {
+		t.Fatal("match of different context alg")
 	}
 }
 

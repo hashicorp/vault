@@ -1,15 +1,20 @@
 package transit
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/hkdf"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/errutil"
@@ -23,6 +28,11 @@ const (
 	kdfMode = "hmac-sha256-counter"
 
 	ErrTooOld = "ciphertext version is disallowed by policy (too old)"
+)
+
+const (
+	KDF_hmac_sha256_counter = iota // built-in helper
+	KDF_hkdf_sha256                // golang.org/x/crypto/hkdf
 )
 
 // KeyEntry stores the key and metadata
@@ -71,7 +81,8 @@ type Policy struct {
 	// never used. If convergent encryption is true, the context will be used
 	// as the nonce as well.
 	Derived              bool   `json:"derived"`
-	KDFMode              string `json:"kdf_mode"`
+	KDFMode              string `json:"kdf_mode,omitempty"` //DEPRECATED
+	KDF                  int    `json:"kdf"`
 	ConvergentEncryption bool   `json:"convergent_encryption"`
 
 	// The minimum version of the key allowed to be used
@@ -268,6 +279,11 @@ func (p *Policy) needsUpgrade() bool {
 		return true
 	}
 
+	// Need to switch to const int-based value
+	if p.KDFMode != "" {
+		return true
+	}
+
 	return false
 }
 
@@ -302,6 +318,13 @@ func (p *Policy) upgrade(storage logical.Storage) error {
 		persistNeeded = true
 	}
 
+	// Switch to const int based selector
+	if p.KDFMode != "" {
+		p.KDF = KDF_hmac_sha256_counter
+		p.KDFMode = ""
+		persistNeeded = true
+	}
+
 	if persistNeeded {
 		err := p.Persist(storage)
 		if err != nil {
@@ -312,10 +335,10 @@ func (p *Policy) upgrade(storage logical.Storage) error {
 	return nil
 }
 
-// DeriveKey is used to derive the encryption key that should
-// be used depending on the policy. If derivation is disabled the
-// raw key is used and no context is required, otherwise the KDF
-// mode is used with the context to derive the proper key.
+// DeriveKey is used to derive the encryption key that should be used depending
+// on the policy. If derivation is disabled the raw key is used and no context
+// is required, otherwise the KDF mode is used with the context to derive the
+// proper key.
 func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	if p.Keys == nil || p.LatestVersion == 0 {
 		return nil, errutil.InternalError{Err: "unable to access the key; no key versions found"}
@@ -335,11 +358,27 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 		return nil, errutil.UserError{Err: "missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to encrypt or decrypt information"}
 	}
 
-	switch p.KDFMode {
-	case kdfMode:
+	switch p.KDF {
+	case KDF_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
 		return kdf.CounterMode(prf, prfLen, p.Keys[ver].Key, context, 256)
+	case KDF_hkdf_sha256:
+		reader := hkdf.New(sha256.New, p.Keys[ver].Key, nil, context)
+		derBytes := bytes.NewBuffer(nil)
+		derBytes.Grow(32)
+		limReader := &io.LimitedReader{
+			R: reader,
+			N: 32,
+		}
+		n, err := derBytes.ReadFrom(limReader)
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
+		}
+		if n != 32 {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to read enough derived bytes, needed 32, got %d", n)}
+		}
+		return derBytes.Bytes(), nil
 	default:
 		return nil, errutil.InternalError{Err: "unsupported key derivation mode"}
 	}

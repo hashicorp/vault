@@ -202,7 +202,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 			Derived:    derived,
 		}
 		if derived {
-			p.KDFMode = kdfMode
+			p.KDF = KDF_hkdf_sha256
 			p.ConvergentEncryption = convergent
 			p.ConvergentVersion = 2
 		}
