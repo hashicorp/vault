@@ -61,13 +61,13 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		salt: salt,
 
 		// Create the map of locks to modify the registered roles
-		roleLocksMap: map[string]*sync.RWMutex{},
+		roleLocksMap: make(map[string]*sync.RWMutex, 257),
 
 		// Create the map of locks to modify the generated RoleIDs.
-		roleIDLocksMap: map[string]*sync.RWMutex{},
+		roleIDLocksMap: make(map[string]*sync.RWMutex, 257),
 
 		// Create the map of locks to modify the generated SecretIDs.
-		secretIDLocksMap: map[string]*sync.RWMutex{},
+		secretIDLocksMap: make(map[string]*sync.RWMutex, 257),
 	}
 
 	// Create 256 locks each for managing RoleID and SecretIDs. This will avoid

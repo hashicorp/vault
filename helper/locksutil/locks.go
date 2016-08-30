@@ -16,6 +16,10 @@ func CreateLocks(p map[string]*sync.RWMutex, count int64) error {
 		return fmt.Errorf("invalid count: %d", count)
 	}
 
+	if p == nil {
+		return fmt.Errorf("map of locks is not initialized")
+	}
+
 	for i := int64(0); i < count; i++ {
 		p[fmt.Sprintf("%02x", i)] = &sync.RWMutex{}
 	}
