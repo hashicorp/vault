@@ -509,7 +509,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
 
   <dt>Returns</dt>
   <dd>
-
     ```javascript
     {
       "data": {
@@ -573,7 +572,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
 
   <dt>Returns</dt>
   <dd>
-
     ```javascript
 {
   "auth": null,
@@ -591,7 +589,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
   "lease_id": ""
 }
     ```
-
   </dd>
 </dl>
 
@@ -618,7 +615,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
 
   <dt>Returns</dt>
   <dd>
-
     ```javascript
     {
       "data": {
@@ -628,7 +624,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
       }
     }
     ```
-
   </dd>
 </dl>
 
@@ -637,25 +632,25 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
 #### GET
 
 <dl class="api">
-    <dt>Description</dt>
-    <dd>
-        Generates a dynamic IAM credential with an STS token based on the named role.
-    </dd>
+  <dt>Description</dt>
+  <dd>
+      Generates a dynamic IAM credential with an STS token based on the named
+      role. The TTL will be 3600 seconds (one hour).
+  </dd>
 
-    <dt>Method</dt>
-    <dd>GET</dd>
+  <dt>Method</dt>
+  <dd>GET</dd>
 
-    <dt>URL</dt>
-    <dd>`/aws/sts/<name>`</dd>
+  <dt>URL</dt>
+  <dd>`/aws/sts/<name>`</dd>
 
-    <dt>Parameters</dt>
-    <dd>
-        None
-    </dd>
+  <dt>Parameters</dt>
+  <dd>
+      None
+  </dd>
 
-    <dt>Returns</dt>
-    <dd>
-
+  <dt>Returns</dt>
+  <dd>
     ```javascript
     {
         "data": {
@@ -666,4 +661,44 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
     }
     ```
     </dd>
+</dl>
+
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+      Generates a dynamic IAM credential with an STS token based on the named
+      role and the given TTL (defaults to 3600 seconds, or one hour).
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/aws/sts/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">ttl</span>
+        <span class="param-flags">optional</span>
+        The TTL to use for the STS token.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+    ```javascript
+    {
+        "data": {
+            "access_key": "...",
+            "secret_key": "...",
+            "secret_token": "..."
+        }
+    }
+    ```
+  </dd>
 </dl>
