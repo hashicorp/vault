@@ -106,19 +106,19 @@ func (v *vaultFormatter) formatDefault(writer io.Writer, level int, msg string, 
 
 	switch level {
 	case log.LevelCritical:
-		writer.Write([]byte(" [CRT] "))
+		writer.Write([]byte(" [CRIT ] "))
 	case log.LevelError:
-		writer.Write([]byte(" [ERR] "))
+		writer.Write([]byte(" [ERROR] "))
 	case log.LevelWarn:
-		writer.Write([]byte(" [WRN] "))
+		writer.Write([]byte(" [WARN ] "))
 	case log.LevelInfo:
-		writer.Write([]byte(" [INF] "))
+		writer.Write([]byte(" [INFO ] "))
 	case log.LevelDebug:
-		writer.Write([]byte(" [DBG] "))
+		writer.Write([]byte(" [DEBUG] "))
 	case log.LevelTrace:
-		writer.Write([]byte(" [TRC] "))
+		writer.Write([]byte(" [TRACE] "))
 	default:
-		writer.Write([]byte(" [ALL] "))
+		writer.Write([]byte(" [ALL  ] "))
 	}
 
 	if v.module != "" {
