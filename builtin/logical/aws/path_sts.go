@@ -19,7 +19,12 @@ func pathSTS(b *backend) *framework.Path {
 			"ttl": &framework.FieldSchema{
 				Type: framework.TypeDurationSecond,
 				Description: `Lifetime of the token in seconds.
-AWS mandates a minimum value of 900 seconds and a maximum of 1 hour.`,
+AWS documentation excerpt: The duration, in seconds, that the credentials
+should remain valid. Acceptable durations for IAM user sessions range from 900
+seconds (15 minutes) to 129600 seconds (36 hours), with 43200 seconds (12
+hours) as the default. Sessions for AWS account owners are restricted to a
+maximum of 3600 seconds (one hour). If the duration is longer than one hour,
+the session for AWS account owners defaults to one hour.`,
 				Default: 3600,
 			},
 		},
