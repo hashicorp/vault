@@ -23,17 +23,13 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-const (
-	// kdfMode is the only KDF mode currently supported
-	kdfMode = "hmac-sha256-counter"
-
-	ErrTooOld = "ciphertext version is disallowed by policy (too old)"
-)
-
+// Careful with iota; don't put anything before it in this const block
 const (
 	KDF_hmac_sha256_counter = iota // built-in helper
 	KDF_hkdf_sha256                // golang.org/x/crypto/hkdf
 )
+
+const ErrTooOld = "ciphertext version is disallowed by policy (too old)"
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
@@ -80,10 +76,9 @@ type Policy struct {
 	// Derived keys MUST provide a context and the master underlying key is
 	// never used. If convergent encryption is true, the context will be used
 	// as the nonce as well.
-	Derived              bool   `json:"derived"`
-	KDFMode              string `json:"kdf_mode,omitempty"` //DEPRECATED
-	KDF                  int    `json:"kdf"`
-	ConvergentEncryption bool   `json:"convergent_encryption"`
+	Derived              bool `json:"derived"`
+	KDF                  int  `json:"kdf"`
+	ConvergentEncryption bool `json:"convergent_encryption"`
 
 	// The minimum version of the key allowed to be used
 	// for decryption
@@ -279,11 +274,6 @@ func (p *Policy) needsUpgrade() bool {
 		return true
 	}
 
-	// Need to switch to const int-based value
-	if p.KDFMode != "" {
-		return true
-	}
-
 	return false
 }
 
@@ -315,13 +305,6 @@ func (p *Policy) upgrade(storage logical.Storage) error {
 
 	if p.ConvergentEncryption && p.ConvergentVersion == 0 {
 		p.ConvergentVersion = 1
-		persistNeeded = true
-	}
-
-	// Switch to const int based selector
-	if p.KDFMode != "" {
-		p.KDF = KDF_hmac_sha256_counter
-		p.KDFMode = ""
 		persistNeeded = true
 	}
 

@@ -553,32 +553,18 @@ func TestKeyUpgrade(t *testing.T) {
 func TestDerivedKeyUpgrade(t *testing.T) {
 	key, _ := uuid.GenerateRandomBytes(32)
 	context, _ := uuid.GenerateRandomBytes(32)
-	storage := &logical.InmemStorage{}
 
 	p := &Policy{
 		Name:       "test",
 		Key:        key,
 		CipherMode: "aes-gcm",
-		KDFMode:    kdfMode,
 		Derived:    true,
 	}
 
 	p.migrateKeyToKeysMap()
 
-	if !p.needsUpgrade() {
-		t.Fatal("expected that an upgrade would be needed")
-	}
-
-	if err := p.upgrade(storage); err != nil {
-		t.Fatalf("err during upgrade: %v")
-	}
-
-	if p.needsUpgrade() {
-		t.Fatal("expected no upgrade needed")
-	}
-
-	if p.KDFMode != "" || p.KDF != KDF_hmac_sha256_counter {
-		t.Fatalf("bad KDF values after upgrade: %#v", *p)
+	if p.KDF != KDF_hmac_sha256_counter {
+		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", KDF_hmac_sha256_counter, p.KDF, *p)
 	}
 
 	derBytesOld, err := p.DeriveKey(context, 1)
@@ -659,7 +645,6 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		Name:                 "testkey",
 		CipherMode:           "aes-gcm",
 		Derived:              true,
-		KDFMode:              kdfMode,
 		ConvergentEncryption: true,
 		ConvergentVersion:    ver,
 	}
