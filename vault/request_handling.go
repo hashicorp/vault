@@ -357,6 +357,25 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 }
 
 func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*logical.Response, error) {
+	// Before wrapping, obey special rules for listing: if no entries are
+	// found, 404. This prevents unwrapping only to find empty data.
+	if req.Operation == logical.ListOperation {
+		if resp == nil || len(resp.Data) == 0 {
+			return nil, logical.ErrUnsupportedPath
+		}
+		keysInt, ok := resp.Data["keys"]
+		if !ok || keysInt == nil {
+			return nil, logical.ErrUnsupportedPath
+		}
+		keys, ok := keysInt.([]string)
+		if !ok {
+			return nil, logical.ErrUnsupportedPath
+		}
+		if len(keys) == 0 {
+			return nil, logical.ErrUnsupportedPath
+		}
+	}
+
 	// If we are wrapping, the first part (performed in this functions) happens
 	// before auditing so that resp.WrapInfo.Token can contain the HMAC'd
 	// wrapping token ID in the audit logs, so that it can be determined from

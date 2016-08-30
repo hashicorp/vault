@@ -40,6 +40,9 @@ func TestUnwrap(t *testing.T) {
 		if method == "GET" && path == "secret/foo" {
 			return "60s"
 		}
+		if method == "LIST" && path == "secret" {
+			return "60s"
+		}
 		return ""
 	}
 	client.SetWrappingLookupFunc(wrapLookupFunc)
@@ -70,5 +73,34 @@ func TestUnwrap(t *testing.T) {
 	output := ui.OutputWriter.String()
 	if output != "zap\n" {
 		t.Fatalf("unexpectd output:\n%s", output)
+	}
+
+	// Now test with list handling, specifically that it will be called with
+	// the list output formatter
+	ui.OutputWriter.Reset()
+
+	outer, err = client.Logical().List("secret")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if outer == nil {
+		t.Fatal("outer response was nil")
+	}
+	if outer.WrapInfo == nil {
+		t.Fatal("outer wrapinfo was nil, response was %#v", *outer)
+	}
+
+	args = []string{
+		"-address", addr,
+		outer.WrapInfo.Token,
+	}
+	// Run the read
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	output = ui.OutputWriter.String()
+	if output != "Keys\n----\nfoo\n" {
+		t.Fatalf("unexpected output:\n%s", output)
 	}
 }
