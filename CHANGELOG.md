@@ -17,6 +17,8 @@ IMPROVEMENTS:
    change the default value to 1MB (from 32KB) [GH-1784]
  * core: Allow single and two-character path parameters for most places
    [GH-1811]
+ * secret/transit: Use HKDF (RFC 5869) as the key derivation function for new
+   keys [GH-1812]
 
 BUG FIXES:
 
