@@ -19,3 +19,4 @@ branches:
 
 script:
   - make test testrace
+  - docker run -v $(pwd):/cwd didrocks/snapcraft sh -c 'cd /cwd && apt install -y software-properties-common && add-apt-repository ppa:gophers/archive && apt update && apt install -y golang-1.7-go && snapcraft'
