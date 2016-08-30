@@ -97,6 +97,7 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, list []interfa
 	input := make([]string, 0, 5)
 
 	input = append(input, "Keys")
+	input = append(input, "----")
 
 	keys := make([]string, 0, len(list))
 	for _, k := range list {
