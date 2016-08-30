@@ -17,14 +17,16 @@ func pathSTS(b *backend) *framework.Path {
 				Description: "Name of the role",
 			},
 			"ttl": &framework.FieldSchema{
-				Type:        framework.TypeDurationSecond,
-				Description: "Lifetime of the token in seconds",
-				Default:     3600,
+				Type: framework.TypeDurationSecond,
+				Description: `Lifetime of the token in seconds.
+AWS mandates a minimum value of 900 seconds and a maximum of 1 hour.`,
+				Default: 3600,
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathSTSRead,
+			logical.ReadOperation:   b.pathSTSRead,
+			logical.UpdateOperation: b.pathSTSRead,
 		},
 
 		HelpSynopsis:    pathSTSHelpSyn,
