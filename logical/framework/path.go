@@ -11,7 +11,7 @@ import (
 // Helper which returns a generic regex string for creating endpoint patterns
 // that are identified by the given name in the backends
 func GenericNameRegex(name string) string {
-	return fmt.Sprintf("(?P<%s>\\w[\\w-.]+\\w)", name)
+	return fmt.Sprintf("(?P<%s>\\w(([\\w-.]+)?\\w)?)", name)
 }
 
 // Helper which returns a regex string for optionally accepting the a field
