@@ -786,7 +786,7 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws-ec2/role/<role>
+### /auth/aws-ec2/role/[role]
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1000,7 +1000,7 @@ in its identity document to match the one specified by this parameter.
 </dl>
 
 
-### /auth/aws-ec2/role/<role>/tag
+### /auth/aws-ec2/role/[role]/tag
 #### POST
 <dl class="api">
   <dt>Description</dt>
