@@ -823,6 +823,12 @@
 			"revisionTime": "2016-07-08T11:45:45Z"
 		},
 		{
+			"checksumSHA1": "4D8hxMIaSDEW5pCQk22Xj4DcDh4=",
+			"path": "golang.org/x/crypto/hkdf",
+			"revision": "351dc6a5bf92a5f2ae22fadeee08eb6a45aa2d93",
+			"revisionTime": "2016-08-24T13:50:57Z"
+		},
+		{
 			"checksumSHA1": "MCeXr2RNeiG1XG6V+er1OR0qyeo=",
 			"path": "golang.org/x/crypto/md4",
 			"revision": "bc89c496413265e715159bdc8478ee9a92fdc265",

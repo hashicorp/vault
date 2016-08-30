@@ -181,7 +181,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 
 	if p == nil {
 		// This is the only place we upsert a new policy, so if upsert is not
-		// specified, or the lock type is wrong, unllock before returning
+		// specified, or the lock type is wrong, unlock before returning
 		if !upsert {
 			lm.UnlockPolicy(lock, lockType)
 			return nil, nil, false, nil
@@ -202,7 +202,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 			Derived:    derived,
 		}
 		if derived {
-			p.KDFMode = kdfMode
+			p.KDF = KDF_hkdf_sha256
 			p.ConvergentEncryption = convergent
 			p.ConvergentVersion = 2
 		}
