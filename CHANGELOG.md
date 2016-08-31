@@ -23,6 +23,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * core: Pass back content-type header for forwarded requests [GH-1791]
+ * physical: Remove empty directories from the `file` storage backend [GH-1821]
  * secret/aws: Added update operation to `aws/sts` path to consider `ttl`
    parameter [39b75c6]
  * secret/aws: Mark STS secrets as non-renewable [GH-1804]
