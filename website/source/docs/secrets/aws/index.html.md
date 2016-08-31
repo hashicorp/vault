@@ -179,7 +179,7 @@ as soon as they are generated.
 Vault also supports an STS credentials instead of creating a new IAM user.
 
 The `aws/sts` endpoint will always fetch credentials with a 1hr ttl.
-Unlike the `aws/creds` enpoint, the ttl is enforced by STS.
+Unlike the `aws/creds` endpoint, the ttl is enforced by STS.
 
 Vault supports two of the [STS APIs](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html),
 [STS federation tokens](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html) and
