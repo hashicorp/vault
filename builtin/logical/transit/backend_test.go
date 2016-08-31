@@ -565,8 +565,8 @@ func TestDerivedKeyUpgrade(t *testing.T) {
 	p.migrateKeyToKeysMap()
 	p.upgrade(storage) // Need to run the upgrade code to make the migration stick
 
-	if p.KDF != KDF_hmac_sha256_counter {
-		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", KDF_hmac_sha256_counter, p.KDF, *p)
+	if p.KDF != kdf_hmac_sha256_counter {
+		t.Fatalf("bad KDF value by default; counter val is %d, KDF val is %d, policy is %#v", kdf_hmac_sha256_counter, p.KDF, *p)
 	}
 
 	derBytesOld, err := p.DeriveKey(context, 1)
@@ -583,7 +583,7 @@ func TestDerivedKeyUpgrade(t *testing.T) {
 		t.Fatal("mismatch of same context alg")
 	}
 
-	p.KDF = KDF_hkdf_sha256
+	p.KDF = kdf_hkdf_sha256
 	if p.needsUpgrade() {
 		t.Fatal("expected no upgrade needed")
 	}

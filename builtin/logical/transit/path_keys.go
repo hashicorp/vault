@@ -108,10 +108,10 @@ func (b *backend) pathPolicyRead(
 	}
 	if p.Derived {
 		switch p.KDF {
-		case KDF_hmac_sha256_counter:
+		case kdf_hmac_sha256_counter:
 			resp.Data["kdf"] = "hmac-sha256-counter"
 			resp.Data["kdf_mode"] = "hmac-sha256-counter"
-		case KDF_hkdf_sha256:
+		case kdf_hkdf_sha256:
 			resp.Data["kdf"] = "hkdf_sha256"
 		}
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption

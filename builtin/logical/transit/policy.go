@@ -25,8 +25,8 @@ import (
 
 // Careful with iota; don't put anything before it in this const block
 const (
-	KDF_hmac_sha256_counter = iota // built-in helper
-	KDF_hkdf_sha256                // golang.org/x/crypto/hkdf
+	kdf_hmac_sha256_counter = iota // built-in helper
+	kdf_hkdf_sha256                // golang.org/x/crypto/hkdf
 )
 
 const ErrTooOld = "ciphertext version is disallowed by policy (too old)"
@@ -342,11 +342,11 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	}
 
 	switch p.KDF {
-	case KDF_hmac_sha256_counter:
+	case kdf_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
 		return kdf.CounterMode(prf, prfLen, p.Keys[ver].Key, context, 256)
-	case KDF_hkdf_sha256:
+	case kdf_hkdf_sha256:
 		reader := hkdf.New(sha256.New, p.Keys[ver].Key, nil, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(32)
