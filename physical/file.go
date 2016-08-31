@@ -3,6 +3,7 @@ package physical
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -43,14 +44,46 @@ func (b *FileBackend) Delete(k string) error {
 	defer b.l.Unlock()
 
 	path, key := b.path(k)
-	path = filepath.Join(path, key)
+	fullPath := filepath.Join(path, key)
 
-	err := os.Remove(path)
-	if err != nil && os.IsNotExist(err) {
-		err = nil
+	// If the path doesn't exist return success; this is in line with Vault's
+	// expected behavior and we don't want to check for an empty directory if
+	// we couldn't even find the path in the first place.
+	err := os.Remove(fullPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		} else {
+			return err
+		}
 	}
 
-	return err
+	// Check for the directory being empty and remove if so, with another
+	// additional guard for the path not existing
+	dir, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		} else {
+			return err
+		}
+	}
+
+	list, err := dir.Readdir(1)
+	dir.Close()
+	if err != nil && err != io.EOF {
+		return err
+	}
+
+	// If we have no entries, it's an empty directory; remove it
+	if err == io.EOF || list == nil || len(list) == 0 {
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (b *FileBackend) Get(k string) (*Entry, error) {

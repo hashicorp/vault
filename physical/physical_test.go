@@ -124,6 +124,18 @@ func testBackend(t *testing.T, b Backend) {
 		t.Fatalf("err: %v", err)
 	}
 
+	keys, err = b.List("")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys) != 2 {
+		t.Fatalf("bad: %v", keys)
+	}
+	sort.Strings(keys)
+	if keys[0] != "foo" || keys[1] != "foo/" {
+		t.Fatalf("bad: %v", keys)
+	}
+
 	// Delete with children should work
 	err = b.Delete("foo")
 	if err != nil {
@@ -137,6 +149,44 @@ func testBackend(t *testing.T, b Backend) {
 	}
 	if out == nil {
 		t.Fatalf("missing child")
+	}
+
+	// Make a second nested entry to test prefix removal
+	e = &Entry{Key: "foo/zip", Value: []byte("zap")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete should not remove the prefix
+	err = b.Delete("foo/bar")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	keys, err = b.List("")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys) != 1 {
+		t.Fatalf("bad: %v", keys)
+	}
+	if keys[0] != "foo/" {
+		t.Fatalf("bad: %v", keys)
+	}
+
+	// Delete should remove the prefix
+	err = b.Delete("foo/zip")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	keys, err = b.List("")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys) != 0 {
+		t.Fatalf("bad: %v", keys)
 	}
 }
 
