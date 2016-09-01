@@ -167,15 +167,13 @@ func (c *RekeyCommand) Run(args []string) int {
 	for i, key := range result.Keys {
 		if len(result.PGPFingerprints) > 0 {
 			if haveB64 {
-				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value (hex)   : %s", i+1, result.PGPFingerprints[i], key))
-				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value (base64): %s", i+1, result.PGPFingerprints[i], result.KeysB64[i]))
+				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value: %s", i+1, result.PGPFingerprints[i], result.KeysB64[i]))
 			} else {
 				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value: %s", i+1, result.PGPFingerprints[i], key))
 			}
 		} else {
 			if haveB64 {
-				c.Ui.Output(fmt.Sprintf("Key %d (hex)   : %s", i+1, key))
-				c.Ui.Output(fmt.Sprintf("Key %d (base64): %s", i+1, result.KeysB64[i]))
+				c.Ui.Output(fmt.Sprintf("Key %d: %s", i+1, result.KeysB64[i]))
 			} else {
 				c.Ui.Output(fmt.Sprintf("Key %d: %s", i+1, key))
 			}
@@ -404,9 +402,9 @@ Rekey Options:
                           public PGP keys, or Keybase usernames specified as
                           "keybase:<username>". The number of given entries
                           must match 'key-shares'. The output unseal keys will
-                          be encrypted and hex-encoded, in order, with the
+                          be encrypted and base64-encoded, in order, with the
                           given public keys.  If you want to use them with the
-                          'vault unseal' command, you will need to hex decode
+                          'vault unseal' command, you will need to base64-decode
                           and decrypt; this will be the plaintext unseal key.
 
   -backup=false           If true, and if the key shares are PGP-encrypted, a

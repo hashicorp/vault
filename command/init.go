@@ -193,16 +193,14 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 
 	for i, key := range resp.Keys {
 		if resp.KeysB64 != nil && len(resp.KeysB64) == len(resp.Keys) {
-			c.Ui.Output(fmt.Sprintf("Unseal Key %d (hex)   : %s", i+1, key))
-			c.Ui.Output(fmt.Sprintf("Unseal Key %d (base64): %s", i+1, resp.KeysB64[i]))
+			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, resp.KeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, key))
 		}
 	}
 	for i, key := range resp.RecoveryKeys {
 		if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) {
-			c.Ui.Output(fmt.Sprintf("Recovery Key %d (hex)   : %s", i+1, key))
-			c.Ui.Output(fmt.Sprintf("Recovery Key %d (base64): %s", i+1, resp.RecoveryKeysB64[i]))
+			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, resp.RecoveryKeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, key))
 		}
@@ -279,62 +277,66 @@ General Options:
 ` + meta.GeneralOptionsUsage() + `
 Init Options:
 
-  -check			Don't actually initialize, just check if Vault is
-				already initialized. A return code of 0 means Vault
-				is initialized; a return code of 2 means Vault is not
-				initialized; a return code of 1 means an error was
-				encountered.
+  -check                    Don't actually initialize, just check if Vault is
+                            already initialized. A return code of 0 means Vault
+                            is initialized; a return code of 2 means Vault is not
+                            initialized; a return code of 1 means an error was
+                            encountered.
 
-  -key-shares=5			The number of key shares to split the master key
-				into.
+  -key-shares=5             The number of key shares to split the master key
+                            into.
 
-  -key-threshold=3		The number of key shares required to reconstruct
-				the master key.
+  -key-threshold=3          The number of key shares required to reconstruct
+                            the master key.
 
-  -stored-shares=0		The number of unseal keys to store. This is not
-				normally available.
+  -stored-shares=0          The number of unseal keys to store. This is not
+                            normally available.
 
-  -pgp-keys			If provided, must be a comma-separated list of
-				files on disk containing binary- or base64-format
-				public PGP keys, or Keybase usernames specified as
-				"keybase:<username>". The number of given entries
-				must match 'key-shares'. The output unseal keys will
-				be encrypted and hex-encoded, in order, with the
-				given public keys.  If you want to use them with the
-				'vault unseal' command, you will need to hex decode
-				and decrypt; this will be the plaintext unseal key.
+  -pgp-keys                 If provided, must be a comma-separated list of
+                            files on disk containing binary- or base64-format
+                            public PGP keys, or Keybase usernames specified as
+                            "keybase:<username>". The number of given entries
+                            must match 'key-shares'. The output unseal keys will
+                            be encrypted and base64-encoded, in order, with the
+                            given public keys.  If you want to use them with the
+                            'vault unseal' command, you will need to base64-
+                            decode and decrypt; this will be the plaintext
+                            unseal key.
 
-  -recovery-shares=5		The number of key shares to split the recovery key
-				into. This is not normally available.
+  -recovery-shares=5        The number of key shares to split the recovery key
+                            into. This is not normally available.
 
-  -recovery-threshold=3		The number of key shares required to reconstruct
-				the recovery key. This is not normally available.
+  -recovery-threshold=3     The number of key shares required to reconstruct
+                            the recovery key. This is not normally available.
 
-  -recovery-pgp-keys		If provided, behaves like "pgp-keys" but for the
-				recovery key shares. This is not normally available.
+  -recovery-pgp-keys        If provided, behaves like "pgp-keys" but for the
+                            recovery key shares. This is not normally available.
 
-  -auto				If set, performs service discovery using Consul. When 
-				all the nodes of a Vault cluster are registered with
-				Consul, setting this flag will trigger service discovery
-				using the service name with which Vault nodes are
-				registered. This option works well when each Vault
-				cluster is registered under a unique service name.
-				Note that, when Consul is serving as Vault's HA backend,
-				Vault nodes are registered with Consul by default. The
-				service name can be changed using 'consul-service' flag.
-				Ensure that environment variables required to communicate
-				with Consul, like (CONSUL_HTTP_ADDR, CONSUL_HTTP_TOKEN,
-				CONSUL_HTTP_SSL, et al) are properly set. When only one
-				Vault node is discovered, it will be initialized and
-				when more than one Vault node is discovered, they will
-				be output for easy selection.
+  -auto                     If set, performs service discovery using Consul. 
+                            When all the nodes of a Vault cluster are
+                            registered with Consul, setting this flag will
+                            trigger service discovery using the service name
+                            with which Vault nodes are registered. This option
+                            works well when each Vault cluster is registered
+                            under a unique service name. Note that, when Consul
+                            is serving as Vault's HA backend, Vault nodes are
+                            registered with Consul by default. The service name
+                            can be changed using 'consul-service' flag. Ensure
+                            that environment variables required to communicate
+                            with Consul, like (CONSUL_HTTP_ADDR,
+                            CONSUL_HTTP_TOKEN, CONSUL_HTTP_SSL, et al) are
+                            properly set. When only one Vault node is
+                            discovered, it will be initialized and when more
+                            than one Vault node is discovered, they will be
+                            output for easy selection.
 
-  -consul-service		Service name under which all the nodes of a Vault cluster
-				are registered with Consul. Note that, when Vault uses
-				Consul as its HA backend, by default, Vault will register
-				itself as a service with Consul with the service name "vault".
-				This name can be modified in Vault's configuration file,
-				using the "service" option for the Consul backend.
+  -consul-service           Service name under which all the nodes of a Vault
+                            cluster are registered with Consul. Note that, when
+                            Vault uses Consul as its HA backend, by default,
+                            Vault will register itself as a service with Consul
+                            with the service name "vault". This name can be
+                            modified in Vault's configuration file, using the
+                            "service" option for the Consul backend.
 `
 	return strings.TrimSpace(helpText)
 }
