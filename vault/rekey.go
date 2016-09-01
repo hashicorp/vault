@@ -282,7 +282,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	// Check if we already have this piece
 	for _, existing := range c.barrierRekeyProgress {
 		if bytes.Equal(existing, key) {
-			return nil, nil
+			return nil, fmt.Errorf("given key has already been provided during this generation operation")
 		}
 	}
 
