@@ -186,7 +186,7 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 		T:           sealConfig.SecretThreshold,
 		N:           sealConfig.SecretShares,
 		Progress:    core.SecretProgress(),
-		Version:     version.GetVersion().String(),
+		Version:     version.GetVersion().VersionNumber(),
 		ClusterName: clusterName,
 		ClusterID:   clusterID,
 	})

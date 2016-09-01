@@ -140,7 +140,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		Sealed:        sealed,
 		Standby:       standby,
 		ServerTimeUTC: time.Now().UTC().Unix(),
-		Version:       version.GetVersion().String(),
+		Version:       version.GetVersion().VersionNumber(),
 		ClusterName:   clusterName,
 		ClusterID:     clusterID,
 	}
