@@ -24,6 +24,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * core: Pass back content-type header for forwarded requests [GH-1791]
+ * core: Fix panic if the same key was given twice to `generate-root` [GH-1827]
  * physical: Remove empty directories from the `file` storage backend [GH-1821]
  * secret/aws: Added update operation to `aws/sts` path to consider `ttl`
    parameter [39b75c6]
