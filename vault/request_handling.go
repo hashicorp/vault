@@ -363,11 +363,11 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 		if resp == nil || len(resp.Data) == 0 {
 			return nil, logical.ErrUnsupportedPath
 		}
-		keysInt, ok := resp.Data["keys"]
-		if !ok || keysInt == nil {
+		keysRaw, ok := resp.Data["keys"]
+		if !ok || keysRaw == nil {
 			return nil, logical.ErrUnsupportedPath
 		}
-		keys, ok := keysInt.([]string)
+		keys, ok := keysRaw.([]string)
 		if !ok {
 			return nil, logical.ErrUnsupportedPath
 		}
