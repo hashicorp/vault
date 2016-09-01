@@ -43,6 +43,7 @@ description: |-
       "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
       "progress": 1,
       "required": 3,
+      "encoded_root_token": "",
       "pgp_fingerprint": "",
       "complete": false
     }
@@ -97,6 +98,7 @@ description: |-
       "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
       "progress": 1,
       "required": 3,
+      "encoded_root_token": "",
       "pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
       "complete": false
     }
