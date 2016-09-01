@@ -74,11 +74,12 @@ description: |-
   <dt>Returns</dt>
   <dd>
     A JSON-encoded object including the (possibly encrypted, if
-    <code>pgp_keys</code> was provided) master keys and initial root token:
+    <code>pgp_keys</code> was provided) master keys, base 64 encoded master keys and initial root token:
 
     ```javascript
     {
       "keys": ["one", "two", "three"],
+      "keys_base64": ["cR9No5cBC", "F3VLrkOo", "zIDSZNGv"],
       "root_token": "foo"
     }
     ```
