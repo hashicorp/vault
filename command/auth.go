@@ -307,9 +307,9 @@ Usage: vault auth [options] [auth-information]
   information is "-", it will be read from stdin.
 
   The -method option allows alternative authentication methods to be used,
-  such as userpass, oauth, or TLS certificates. For these, additional values
-  as "key=value" pairs may be required. For example, to authenticate to the
-  userpass auth backend:
+  such as userpass, GitHub, or TLS certificates. For these, additional
+  values as "key=value" pairs may be required. For example, to authenticate
+  to the userpass auth backend:
 
       $ vault auth -method=userpass username=my-username
 
