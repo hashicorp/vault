@@ -242,7 +242,7 @@ func (c *AuthCommand) Run(args []string) int {
 	output += fmt.Sprintf("\ntoken: %s", secret.Data["id"])
 	output += fmt.Sprintf("\ntoken_duration: %s", secret.Data["ttl"].(json.Number).String())
 	if len(policies) > 0 {
-		output += fmt.Sprintf("\ntoken_policies: [%s]", strings.Join(policies, ", "))
+		output += fmt.Sprintf("\ntoken_policies: %v", policies)
 	}
 
 	c.Ui.Output(output)
