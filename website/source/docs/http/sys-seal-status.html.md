@@ -31,7 +31,22 @@ description: |-
       "sealed": true,
       "t": 3,
       "n": 5,
-      "progress": 2
+      "progress": 2,
+      "version": "Vault v0.6.1"
+    }
+    ```
+    
+    Sample response when the unseal finishes.
+    
+    ```javascript
+    {
+      "sealed": false,
+      "t": 3,
+      "n": 5,
+      "progress": 0,
+      "version": "Vault v0.6.1",
+      "cluster_name": "vault-cluster-d6ec3c7f",
+      "cluster_id": "3e8b3fec-3749-e056-ba41-b62a63b997e8"
     }
     ```
 
