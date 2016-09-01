@@ -297,29 +297,33 @@ func (c *AuthCommand) Synopsis() string {
 
 func (c *AuthCommand) Help() string {
 	helpText := `
-Usage: vault auth [options] [token or config...]
+Usage: vault auth [options] [auth-information]
 
   Authenticate with Vault with the given token or via any supported
   authentication backend.
 
-  If no -method is specified, then the token is expected. If it is not
-  given on the command-line, it will be asked via user input. If the
-  token is "-", it will be read from stdin.
+  By default, the -method is assumed to be token. If not supplied via the
+  command-line, a prompt for input will be shown. If the authentication
+  information is "-", it will be read from stdin.
 
-  By specifying -method, alternate authentication methods can be used
-  such as OAuth or TLS certificates. For these, additional values for
-  configuration can be specified with "key=value" pairs just like
-  "vault write". Specify the "-method-help" flag to get help for a specific
-  method.
+  The -method option allows alternative authentication methods to be used,
+  such as userpass, oauth, or TLS certificates. For these, additional values
+  as "key=value" pairs may be required. For example, to authenticate to the
+  userpass auth backend:
 
-  If an auth backend is enabled at a different path, such as enabling
-  "github" at "github-private", the "method" flag should still be "github".
-  The flag "-path" should be used to specify the path at which the auth
-  backend is enabled. For example:
-  "vault auth -method=github -path=github-private token=<github_token>"
-  The value of the "path" flag will be supplied to auth providers
-  as the "mount" option in the payload to specify the mount point.
-  See the "-method-help" for more info.
+      $ vault auth -method=userpass username=my-username
+
+  Use "-method-help" to get help for a specific method.
+
+  If an auth backend is enabled at a different path, the "-method" flag
+  should still point to the canonical name, and the "-path" flag should be
+  used. If a GitHub auth backend was mounted as "github-private", one would
+  authenticate to this backend via:
+
+      $ vault auth -method=github -path=github-private
+
+  The value of the "-path" flag is supplied to auth providers as the "mount"
+  option in the payload to specify the mount point.
 
 General Options:
 
