@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,22 +17,32 @@ const (
 	stylejson
 )
 
+// NewVaultLogger creates a new logger with the specified level and a Vault
+// formatter
 func NewVaultLogger(level int) log.Logger {
 	logger := log.New("vault")
-	logger.(*log.DefaultLogger).SetLevel(level)
-	logger.(*log.DefaultLogger).SetFormatter(createVaultFormatter())
-	return logger
+	return setLevelFormatter(logger, level, createVaultFormatter())
 }
 
+// NewVaultLoggerWithWriter creates a new logger with the specified level and
+// writer and a Vault formatter
 func NewVaultLoggerWithWriter(w io.Writer, level int) log.Logger {
 	logger := log.NewLogger(w, "vault")
+	return setLevelFormatter(logger, level, createVaultFormatter())
+}
+
+// Sets the level and formatter on the log, which must be a DefaultLogger
+func setLevelFormatter(logger log.Logger, level int, formatter log.Formatter) log.Logger {
 	logger.(*log.DefaultLogger).SetLevel(level)
-	logger.(*log.DefaultLogger).SetFormatter(createVaultFormatter())
+	logger.(*log.DefaultLogger).SetFormatter(formatter)
 	return logger
 }
 
+// Creates a formatter, checking env vars for the style
 func createVaultFormatter() log.Formatter {
-	ret := &vaultFormatter{}
+	ret := &vaultFormatter{
+		Mutex: &sync.Mutex{},
+	}
 	switch os.Getenv("LOGXI_FORMAT") {
 	case "vault_json", "vault-json", "vaultjson":
 		ret.style = stylejson
@@ -41,9 +52,11 @@ func createVaultFormatter() log.Formatter {
 	return ret
 }
 
+// Thread safe formatter
 type vaultFormatter struct {
-	sync.Mutex
-	style int
+	*sync.Mutex
+	style  int
+	module string
 }
 
 func (v *vaultFormatter) Format(writer io.Writer, level int, msg string, args []interface{}) {
@@ -58,25 +71,30 @@ func (v *vaultFormatter) Format(writer io.Writer, level int, msg string, args []
 }
 
 func (v *vaultFormatter) formatDefault(writer io.Writer, level int, msg string, args []interface{}) {
+	// Write a trailing newline
 	defer writer.Write([]byte("\n"))
 
 	writer.Write([]byte(time.Now().Local().Format("2006/01/02 15:04:05.000000")))
 
 	switch level {
+	case log.LevelCritical:
+		writer.Write([]byte(" [CRIT ] "))
 	case log.LevelError:
-		writer.Write([]byte(" [ERR] "))
+		writer.Write([]byte(" [ERROR] "))
 	case log.LevelWarn:
-		writer.Write([]byte(" [WRN] "))
+		writer.Write([]byte(" [WARN ] "))
 	case log.LevelInfo:
-		writer.Write([]byte(" [INF] "))
-	case log.LevelNotice:
-		writer.Write([]byte(" [NOT] "))
+		writer.Write([]byte(" [INFO ] "))
 	case log.LevelDebug:
-		writer.Write([]byte(" [DBG] "))
+		writer.Write([]byte(" [DEBUG] "))
 	case log.LevelTrace:
-		writer.Write([]byte(" [TRC] "))
+		writer.Write([]byte(" [TRACE] "))
 	default:
-		writer.Write([]byte(" [ALL] "))
+		writer.Write([]byte(" [ALL  ] "))
+	}
+
+	if v.module != "" {
+		writer.Write([]byte(fmt.Sprintf("(%s) ", v.module)))
 	}
 
 	writer.Write([]byte(msg))
@@ -86,44 +104,52 @@ func (v *vaultFormatter) formatDefault(writer io.Writer, level int, msg string, 
 			args = append(args, "[unknown!]")
 		}
 
+		writer.Write([]byte(":"))
+
 		for i := 0; i < len(args); i = i + 2 {
-			writer.Write([]byte(fmt.Sprintf(" %s=%v", args[i], args[i+1])))
+			var quote string
+			switch args[i+1].(type) {
+			case string:
+				if strings.ContainsRune(args[i+1].(string), ' ') {
+					quote = `"`
+				}
+			}
+			writer.Write([]byte(fmt.Sprintf(" %s=%s%v%s", args[i], quote, args[i+1], quote)))
 		}
 	}
 }
 
-type logMsg struct {
-	Stamp   string                 `json:"t"`
-	Level   string                 `json:"l"`
-	Message string                 `json:"m"`
-	Args    map[string]interface{} `json:"a,omitempty"`
-}
-
 func (v *vaultFormatter) formatJSON(writer io.Writer, level int, msg string, args []interface{}) {
-	l := &logMsg{
-		Message: msg,
-		Stamp:   time.Now().Format("2006-01-02T15:04:05.000000Z07:00"),
+	vals := map[string]interface{}{
+		"@message":   msg,
+		"@timestamp": time.Now().Format("2006-01-02T15:04:05.000000Z07:00"),
 	}
 
+	var levelStr string
 	switch level {
+	case log.LevelCritical:
+		levelStr = "critical"
 	case log.LevelError:
-		l.Level = "E"
+		levelStr = "error"
 	case log.LevelWarn:
-		l.Level = "W"
+		levelStr = "warn"
 	case log.LevelInfo:
-		l.Level = "I"
-	case log.LevelNotice:
-		l.Level = "N"
+		levelStr = "info"
 	case log.LevelDebug:
-		l.Level = "D"
+		levelStr = "debug"
 	case log.LevelTrace:
-		l.Level = "T"
+		levelStr = "trace"
 	default:
-		l.Level = "A"
+		levelStr = "all"
+	}
+
+	vals["@level"] = levelStr
+
+	if v.module != "" {
+		vals["@module"] = v.module
 	}
 
 	if args != nil && len(args) > 0 {
-		l.Args = make(map[string]interface{}, len(args)/2)
 
 		if len(args)%2 != 0 {
 			args = append(args, "[unknown!]")
@@ -135,10 +161,10 @@ func (v *vaultFormatter) formatJSON(writer io.Writer, level int, msg string, arg
 				// without injecting into logs...
 				continue
 			}
-			l.Args[args[i].(string)] = args[i+1]
+			vals[args[i].(string)] = args[i+1]
 		}
 	}
 
 	enc := json.NewEncoder(writer)
-	enc.Encode(l)
+	enc.Encode(vals)
 }
