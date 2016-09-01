@@ -26,7 +26,7 @@ type lockManager struct {
 	locksMutex sync.RWMutex
 
 	// If caching is enabled, the map of name to in-memory policy cache
-	cache map[string]*Policy
+	cache map[string]*policy
 
 	// Used for global locking, and as the cache map mutex
 	cacheMutex sync.RWMutex
@@ -37,7 +37,7 @@ func newLockManager(cacheDisabled bool) *lockManager {
 		locks: map[string]*sync.RWMutex{},
 	}
 	if !cacheDisabled {
-		lm.cache = map[string]*Policy{}
+		lm.cache = map[string]*policy{}
 	}
 	return lm
 }
@@ -104,7 +104,7 @@ func (lm *lockManager) UnlockPolicy(lock *sync.RWMutex, lockType bool) {
 // Get the policy with a read lock. If we get an error saying an exclusive lock
 // is needed (for instance, for an upgrade/migration), give up the read lock,
 // call again with an exclusive lock, then swap back out for a read lock.
-func (lm *lockManager) GetPolicyShared(storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
+func (lm *lockManager) GetPolicyShared(storage logical.Storage, name string) (*policy, *sync.RWMutex, error) {
 	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, false, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {
@@ -124,7 +124,7 @@ func (lm *lockManager) GetPolicyShared(storage logical.Storage, name string) (*P
 }
 
 // Get the policy with an exclusive lock
-func (lm *lockManager) GetPolicyExclusive(storage logical.Storage, name string) (*Policy, *sync.RWMutex, error) {
+func (lm *lockManager) GetPolicyExclusive(storage logical.Storage, name string) (*policy, *sync.RWMutex, error) {
 	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, false, exclusive)
 	return p, lock, err
 }
@@ -132,7 +132,7 @@ func (lm *lockManager) GetPolicyExclusive(storage logical.Storage, name string) 
 // Get the policy with a read lock; if it returns that an exclusive lock is
 // needed, retry. If successful, call one more time to get a read lock and
 // return the value.
-func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, derived, convergent bool) (*Policy, *sync.RWMutex, bool, error) {
+func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, derived, convergent bool) (*policy, *sync.RWMutex, bool, error) {
 	p, lock, _, err := lm.getPolicyCommon(storage, name, true, derived, convergent, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {
@@ -155,10 +155,10 @@ func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, der
 
 // When the function returns, a lock will be held on the policy if err == nil.
 // It is the caller's responsibility to unlock.
-func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, upsert, derived, convergent, lockType bool) (*Policy, *sync.RWMutex, bool, error) {
+func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, upsert, derived, convergent, lockType bool) (*policy, *sync.RWMutex, bool, error) {
 	lock := lm.policyLock(name, lockType)
 
-	var p *Policy
+	var p *policy
 	var err error
 
 	// Check if it's in our cache. If so, return right away.
@@ -196,7 +196,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 			return nil, nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")
 		}
 
-		p = &Policy{
+		p = &policy{
 			Name:       name,
 			CipherMode: "aes-gcm",
 			Derived:    derived,
@@ -271,7 +271,7 @@ func (lm *lockManager) DeletePolicy(storage logical.Storage, name string) error 
 	defer lock.Unlock()
 	defer lm.cacheMutex.Unlock()
 
-	var p *Policy
+	var p *policy
 	var err error
 
 	if lm.CacheActive() {
@@ -308,7 +308,7 @@ func (lm *lockManager) DeletePolicy(storage logical.Storage, name string) error 
 	return nil
 }
 
-func (lm *lockManager) getStoredPolicy(storage logical.Storage, name string) (*Policy, error) {
+func (lm *lockManager) getStoredPolicy(storage logical.Storage, name string) (*policy, error) {
 	// Check if the policy already exists
 	raw, err := storage.Get("policy/" + name)
 	if err != nil {
@@ -319,8 +319,8 @@ func (lm *lockManager) getStoredPolicy(storage logical.Storage, name string) (*P
 	}
 
 	// Decode the policy
-	policy := &Policy{
-		Keys: KeyEntryMap{},
+	policy := &policy{
+		Keys: keyEntryMap{},
 	}
 	err = jsonutil.DecodeJSON(raw.Value, policy)
 	if err != nil {

@@ -8,11 +8,11 @@ import (
 )
 
 var (
-	keysArchive []KeyEntry
+	keysArchive []keyEntry
 )
 
 func resetKeysArchive() {
-	keysArchive = []KeyEntry{KeyEntry{}}
+	keysArchive = []keyEntry{keyEntry{}}
 }
 
 func Test_KeyUpgrade(t *testing.T) {
@@ -262,7 +262,7 @@ func testArchivingCommon(t *testing.T, lm *lockManager) {
 }
 
 func checkKeys(t *testing.T,
-	policy *Policy,
+	p *policy,
 	storage logical.Storage,
 	action string,
 	archiveVer, latestVer, keysSize int) {
@@ -273,55 +273,55 @@ func checkKeys(t *testing.T,
 			"but keys archive is of size %d", latestVer, latestVer+1, len(keysArchive))
 	}
 
-	archive, err := policy.loadArchive(storage)
+	archive, err := p.loadArchive(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	badArchiveVer := false
 	if archiveVer == 0 {
-		if len(archive.Keys) != 0 || policy.ArchiveVersion != 0 {
+		if len(archive.Keys) != 0 || p.ArchiveVersion != 0 {
 			badArchiveVer = true
 		}
 	} else {
 		// We need to subtract one because we have the indexes match key
 		// versions, which start at 1. So for an archive version of 1, we
 		// actually have two entries -- a blank 0 entry, and the key at spot 1
-		if archiveVer != len(archive.Keys)-1 || archiveVer != policy.ArchiveVersion {
+		if archiveVer != len(archive.Keys)-1 || archiveVer != p.ArchiveVersion {
 			badArchiveVer = true
 		}
 	}
 	if badArchiveVer {
 		t.Fatalf(
 			"expected archive version %d, found length of archive keys %d and policy archive version %d",
-			archiveVer, len(archive.Keys), policy.ArchiveVersion,
+			archiveVer, len(archive.Keys), p.ArchiveVersion,
 		)
 	}
 
-	if latestVer != policy.LatestVersion {
+	if latestVer != p.LatestVersion {
 		t.Fatalf(
 			"expected latest version %d, found %d",
-			latestVer, policy.LatestVersion,
+			latestVer, p.LatestVersion,
 		)
 	}
 
-	if keysSize != len(policy.Keys) {
+	if keysSize != len(p.Keys) {
 		t.Fatalf(
 			"expected keys size %d, found %d, action is %s, policy is \n%#v\n",
-			keysSize, len(policy.Keys), action, policy,
+			keysSize, len(p.Keys), action, p,
 		)
 	}
 
-	for i := policy.MinDecryptionVersion; i <= policy.LatestVersion; i++ {
-		if _, ok := policy.Keys[i]; !ok {
+	for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
+		if _, ok := p.Keys[i]; !ok {
 			t.Fatalf(
 				"expected key %d, did not find it in policy keys", i,
 			)
 		}
 	}
 
-	for i := policy.MinDecryptionVersion; i <= policy.LatestVersion; i++ {
-		if !reflect.DeepEqual(policy.Keys[i], keysArchive[i]) {
+	for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
+		if !reflect.DeepEqual(p.Keys[i], keysArchive[i]) {
 			t.Fatalf("key %d not equivalent between policy keys and test keys archive", i)
 		}
 	}
