@@ -534,7 +534,7 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 
 func TestKeyUpgrade(t *testing.T) {
 	key, _ := uuid.GenerateRandomBytes(32)
-	p := &Policy{
+	p := &policy{
 		Name:       "test",
 		Key:        key,
 		CipherMode: "aes-gcm",
@@ -555,7 +555,7 @@ func TestDerivedKeyUpgrade(t *testing.T) {
 	key, _ := uuid.GenerateRandomBytes(32)
 	context, _ := uuid.GenerateRandomBytes(32)
 
-	p := &Policy{
+	p := &policy{
 		Name:       "test",
 		Key:        key,
 		CipherMode: "aes-gcm",
@@ -643,7 +643,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		t.Fatalf("bad: expected error response, got %#v", *resp)
 	}
 
-	p := &Policy{
+	p := &policy{
 		Name:                 "testkey",
 		CipherMode:           "aes-gcm",
 		Derived:              true,

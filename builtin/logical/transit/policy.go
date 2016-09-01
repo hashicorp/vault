@@ -31,18 +31,18 @@ const (
 
 const ErrTooOld = "ciphertext version is disallowed by policy (too old)"
 
-// KeyEntry stores the key and metadata
-type KeyEntry struct {
+// keyEntry stores the key and metadata
+type keyEntry struct {
 	Key          []byte `json:"key"`
 	CreationTime int64  `json:"creation_time"`
 }
 
-// KeyEntryMap is used to allow JSON marshal/unmarshal
-type KeyEntryMap map[int]KeyEntry
+// keyEntryMap is used to allow JSON marshal/unmarshal
+type keyEntryMap map[int]keyEntry
 
 // MarshalJSON implements JSON marshaling
-func (kem KeyEntryMap) MarshalJSON() ([]byte, error) {
-	intermediate := map[string]KeyEntry{}
+func (kem keyEntryMap) MarshalJSON() ([]byte, error) {
+	intermediate := map[string]keyEntry{}
 	for k, v := range kem {
 		intermediate[strconv.Itoa(k)] = v
 	}
@@ -50,8 +50,8 @@ func (kem KeyEntryMap) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON implements JSON unmarshaling
-func (kem KeyEntryMap) UnmarshalJSON(data []byte) error {
-	intermediate := map[string]KeyEntry{}
+func (kem keyEntryMap) UnmarshalJSON(data []byte) error {
+	intermediate := map[string]keyEntry{}
 	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
 		return err
 	}
@@ -67,10 +67,10 @@ func (kem KeyEntryMap) UnmarshalJSON(data []byte) error {
 }
 
 // Policy is the struct used to store metadata
-type Policy struct {
+type policy struct {
 	Name       string      `json:"name"`
 	Key        []byte      `json:"key,omitempty"` //DEPRECATED
-	Keys       KeyEntryMap `json:"keys"`
+	Keys       keyEntryMap `json:"keys"`
 	CipherMode string      `json:"cipher"`
 
 	// Derived keys MUST provide a context and the master underlying key is
@@ -100,19 +100,19 @@ type Policy struct {
 
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
 // when there are huge numbers of rotations.
-type ArchivedKeys struct {
-	Keys []KeyEntry `json:"keys"`
+type archivedKeys struct {
+	Keys []keyEntry `json:"keys"`
 }
 
-func (p *Policy) loadArchive(storage logical.Storage) (*ArchivedKeys, error) {
-	archive := &ArchivedKeys{}
+func (p *policy) loadArchive(storage logical.Storage) (*archivedKeys, error) {
+	archive := &archivedKeys{}
 
 	raw, err := storage.Get("archive/" + p.Name)
 	if err != nil {
 		return nil, err
 	}
 	if raw == nil {
-		archive.Keys = make([]KeyEntry, 0)
+		archive.Keys = make([]keyEntry, 0)
 		return archive, nil
 	}
 
@@ -123,7 +123,7 @@ func (p *Policy) loadArchive(storage logical.Storage) (*ArchivedKeys, error) {
 	return archive, nil
 }
 
-func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage) error {
+func (p *policy) storeArchive(archive *archivedKeys, storage logical.Storage) error {
 	// Encode the policy
 	buf, err := json.Marshal(archive)
 	if err != nil {
@@ -145,8 +145,8 @@ func (p *Policy) storeArchive(archive *ArchivedKeys, storage logical.Storage) er
 // handleArchiving manages the movement of keys to and from the policy archive.
 // This should *ONLY* be called from Persist() since it assumes that the policy
 // will be persisted afterwards.
-func (p *Policy) handleArchiving(storage logical.Storage) error {
-	// We need to move keys that are no longer accessible to ArchivedKeys, and keys
+func (p *policy) handleArchiving(storage logical.Storage) error {
+	// We need to move keys that are no longer accessible to archivedKeys, and keys
 	// that now need to be accessible back here.
 	//
 	// For safety, because there isn't really a good reason to, we never delete
@@ -193,7 +193,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	// key version
 	if len(archive.Keys) < p.LatestVersion+1 {
 		// Increase the size of the archive slice
-		newKeys := make([]KeyEntry, p.LatestVersion+1)
+		newKeys := make([]keyEntry, p.LatestVersion+1)
 		copy(newKeys, archive.Keys)
 		archive.Keys = newKeys
 	}
@@ -219,7 +219,7 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	return nil
 }
 
-func (p *Policy) Persist(storage logical.Storage) error {
+func (p *policy) Persist(storage logical.Storage) error {
 	err := p.handleArchiving(storage)
 	if err != nil {
 		return err
@@ -243,11 +243,11 @@ func (p *Policy) Persist(storage logical.Storage) error {
 	return nil
 }
 
-func (p *Policy) Serialize() ([]byte, error) {
+func (p *policy) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
-func (p *Policy) needsUpgrade() bool {
+func (p *policy) needsUpgrade() bool {
 	// Ensure we've moved from Key -> Keys
 	if p.Key != nil && len(p.Key) > 0 {
 		return true
@@ -277,7 +277,7 @@ func (p *Policy) needsUpgrade() bool {
 	return false
 }
 
-func (p *Policy) upgrade(storage logical.Storage) error {
+func (p *policy) upgrade(storage logical.Storage) error {
 	persistNeeded := false
 	// Ensure we've moved from Key -> Keys
 	if p.Key != nil && len(p.Key) > 0 {
@@ -322,7 +322,7 @@ func (p *Policy) upgrade(storage logical.Storage) error {
 // on the policy. If derivation is disabled the raw key is used and no context
 // is required, otherwise the KDF mode is used with the context to derive the
 // proper key.
-func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
+func (p *policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	if p.Keys == nil || p.LatestVersion == 0 {
 		return nil, errutil.InternalError{Err: "unable to access the key; no key versions found"}
 	}
@@ -367,7 +367,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	}
 }
 
-func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
+func (p *policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	// Decode the plaintext value
 	plaintext, err := base64.StdEncoding.DecodeString(value)
 	if err != nil {
@@ -437,7 +437,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	return encoded, nil
 }
 
-func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
+func (p *policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	// Verify the prefix
 	if !strings.HasPrefix(value, "vault:v") {
 		return "", errutil.UserError{Err: "invalid ciphertext: no prefix"}
@@ -520,12 +520,12 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	return base64.StdEncoding.EncodeToString(plain), nil
 }
 
-func (p *Policy) rotate(storage logical.Storage) error {
+func (p *policy) rotate(storage logical.Storage) error {
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
 		// get the policy in the first place it will have been run.
-		p.Keys = KeyEntryMap{}
+		p.Keys = keyEntryMap{}
 	}
 
 	// Generate a 256bit key
@@ -537,7 +537,7 @@ func (p *Policy) rotate(storage logical.Storage) error {
 
 	p.LatestVersion += 1
 
-	p.Keys[p.LatestVersion] = KeyEntry{
+	p.Keys[p.LatestVersion] = keyEntry{
 		Key:          newKey,
 		CreationTime: time.Now().Unix(),
 	}
@@ -554,9 +554,9 @@ func (p *Policy) rotate(storage logical.Storage) error {
 	return p.Persist(storage)
 }
 
-func (p *Policy) migrateKeyToKeysMap() {
-	p.Keys = KeyEntryMap{
-		1: KeyEntry{
+func (p *policy) migrateKeyToKeysMap() {
+	p.Keys = keyEntryMap{
+		1: keyEntry{
 			Key:          p.Key,
 			CreationTime: time.Now().Unix(),
 		},

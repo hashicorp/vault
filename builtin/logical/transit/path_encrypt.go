@@ -91,7 +91,7 @@ func (b *backend) pathEncryptWrite(
 	}
 
 	// Get the policy
-	var p *Policy
+	var p *policy
 	var lock *sync.RWMutex
 	var upserted bool
 	if req.Operation == logical.CreateOperation {
