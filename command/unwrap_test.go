@@ -1,6 +1,7 @@
 package command
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/http"
@@ -100,7 +101,7 @@ func TestUnwrap(t *testing.T) {
 	}
 
 	output = ui.OutputWriter.String()
-	if output != "Keys\n----\nfoo\n" {
+	if strings.TrimSpace(output) != "Keys\n----\nfoo" {
 		t.Fatalf("unexpected output:\n%s", output)
 	}
 }
