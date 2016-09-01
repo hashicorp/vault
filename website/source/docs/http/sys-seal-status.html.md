@@ -31,7 +31,8 @@ description: |-
       "sealed": true,
       "t": 3,
       "n": 5,
-      "progress": 2
+      "progress": 2,
+      "version": "Vault v0.6.1"
     }
     ```
 
