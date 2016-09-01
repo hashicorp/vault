@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ghodss/yaml"
@@ -96,28 +97,39 @@ func (t TableFormatter) OutputList(ui cli.Ui, secret *api.Secret, list []interfa
 
 	input := make([]string, 0, 5)
 
-	input = append(input, "Keys")
-	input = append(input, "----")
+	if len(list) > 0 {
+		input = append(input, "Keys")
+		input = append(input, "----")
 
-	keys := make([]string, 0, len(list))
-	for _, k := range list {
-		keys = append(keys, k.(string))
-	}
-	sort.Strings(keys)
+		keys := make([]string, 0, len(list))
+		for _, k := range list {
+			keys = append(keys, k.(string))
+		}
+		sort.Strings(keys)
 
-	for _, k := range keys {
-		input = append(input, fmt.Sprintf("%s", k))
-	}
-
-	if len(secret.Warnings) != 0 {
-		input = append(input, "")
-		input = append(input, "The following warnings were returned from the Vault server:")
-		for _, warning := range secret.Warnings {
-			input = append(input, fmt.Sprintf("* %s", warning))
+		for _, k := range keys {
+			input = append(input, fmt.Sprintf("%s", k))
 		}
 	}
 
-	ui.Output(columnize.Format(input, config))
+	tableOutputStr := columnize.Format(input, config)
+
+	// Print the warning separately because the length of first
+	// column in the output will be increased by the length of
+	// the longest warning string making the output look bad.
+	warningsInput := make([]string, 0, 5)
+	if len(secret.Warnings) != 0 {
+		warningsInput = append(warningsInput, "")
+		warningsInput = append(warningsInput, "The following warnings were returned from the Vault server:")
+		for _, warning := range secret.Warnings {
+			warningsInput = append(warningsInput, fmt.Sprintf("* %s", warning))
+		}
+	}
+
+	warningsOutputStr := columnize.Format(warningsInput, config)
+
+	ui.Output(fmt.Sprintf("%s\n%s", tableOutputStr, warningsOutputStr))
+
 	return nil
 }
 
@@ -129,11 +141,14 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 
 	input := make([]string, 0, 5)
 
-	input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
-
-	input = append(input, fmt.Sprintf("--- %s -----", config.Delim))
+	onceHeader := &sync.Once{}
+	headerFunc := func() {
+		input = append(input, fmt.Sprintf("Key %s Value", config.Delim))
+		input = append(input, fmt.Sprintf("--- %s -----", config.Delim))
+	}
 
 	if s.LeaseDuration > 0 {
+		onceHeader.Do(headerFunc)
 		if s.LeaseID != "" {
 			input = append(input, fmt.Sprintf("lease_id %s %s", config.Delim, s.LeaseID))
 			input = append(input, fmt.Sprintf(
@@ -149,6 +164,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 	}
 
 	if s.Auth != nil {
+		onceHeader.Do(headerFunc)
 		input = append(input, fmt.Sprintf("token %s %s", config.Delim, s.Auth.ClientToken))
 		input = append(input, fmt.Sprintf("token_accessor %s %s", config.Delim, s.Auth.Accessor))
 		input = append(input, fmt.Sprintf("token_duration %s %s", config.Delim, (time.Second*time.Duration(s.Auth.LeaseDuration)).String()))
@@ -160,6 +176,7 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 	}
 
 	if s.WrapInfo != nil {
+		onceHeader.Do(headerFunc)
 		input = append(input, fmt.Sprintf("wrapping_token: %s %s", config.Delim, s.WrapInfo.Token))
 		input = append(input, fmt.Sprintf("wrapping_token_ttl: %s %s", config.Delim, (time.Second*time.Duration(s.WrapInfo.TTL)).String()))
 		input = append(input, fmt.Sprintf("wrapping_token_creation_time: %s %s", config.Delim, s.WrapInfo.CreationTime.String()))
@@ -168,14 +185,17 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		}
 	}
 
-	keys := make([]string, 0, len(s.Data))
-	for k := range s.Data {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+	if s.Data != nil && len(s.Data) > 0 {
+		onceHeader.Do(headerFunc)
+		keys := make([]string, 0, len(s.Data))
+		for k := range s.Data {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
 
-	for _, k := range keys {
-		input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, s.Data[k]))
+		for _, k := range keys {
+			input = append(input, fmt.Sprintf("%s %s %v", k, config.Delim, s.Data[k]))
+		}
 	}
 
 	tableOutputStr := columnize.Format(input, config)
