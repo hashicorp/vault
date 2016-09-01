@@ -191,7 +191,7 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 	// Check if we already have this piece
 	for _, existing := range c.generateRootProgress {
 		if bytes.Equal(existing, key) {
-			return nil, nil
+			return nil, fmt.Errorf("given key has already been provided during this generation operation")
 		}
 	}
 
