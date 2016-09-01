@@ -89,20 +89,12 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 		priv3Bytes,
 	}
 
-	testFunc := func(b64 bool, bkeys map[string][]string) {
+	testFunc := func(bkeys map[string][]string) {
 		var re *regexp.Regexp
 		if fingerprints {
-			if b64 {
-				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value\\s+\\(base64\\):\\s+(.*)")
-			} else {
-				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value\\s+\\(hex\\)\\s+:\\s+(.*)")
-			}
+			re, err = regexp.Compile("\\s*Key\\s+\\d+\\s+fingerprint:\\s+([0-9a-fA-F]+);\\s+value:\\s+(.*)")
 		} else {
-			if b64 {
-				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s\\(base64\\):\\s+(.*)")
-			} else {
-				re, err = regexp.Compile("\\s*Key\\s+\\d+\\s\\(hex\\)\\s+:\\s+(.*)")
-			}
+			re, err = regexp.Compile("\\s*Key\\s+\\d+:\\s+(.*)")
 		}
 		if err != nil {
 			t.Fatalf("Error compiling regex: %s", err)
@@ -152,11 +144,7 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 				t.Fatalf("Error parsing private key %d: %s", i, err)
 			}
 			var keyBytes []byte
-			if b64 {
-				keyBytes, err = base64.StdEncoding.DecodeString(encodedKeys[i])
-			} else {
-				keyBytes, err = hex.DecodeString(encodedKeys[i])
-			}
+			keyBytes, err = base64.StdEncoding.DecodeString(encodedKeys[i])
 			if err != nil {
 				t.Fatalf("Error decoding key %d: %s", i, err)
 			}
@@ -189,6 +177,5 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 		}
 	}
 
-	testFunc(false, backupKeys)
-	testFunc(true, backupKeysB64)
+	testFunc(backupKeysB64)
 }
