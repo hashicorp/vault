@@ -775,10 +775,10 @@
 			"revisionTime": "2016-07-12T16:32:29Z"
 		},
 		{
-			"checksumSHA1": "dF3fORwN1HTgrlrdmll9K2cOjOg=",
+			"checksumSHA1": "egQy+ytQKjfBN1oRKQJ/pxIvjYc=",
 			"path": "github.com/samuel/go-zookeeper/zk",
-			"revision": "e64db453f3512cade908163702045e0f31137843",
-			"revisionTime": "2016-06-16T02:49:54Z"
+			"revision": "87e1bca4477a3cc767ca71be023ced183d74e538",
+			"revisionTime": "2016-09-02T21:22:55Z"
 		},
 		{
 			"checksumSHA1": "8Lm8nsMCFz4+gr9EvQLqK8+w+Ks=",
