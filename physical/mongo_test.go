@@ -1,24 +1,25 @@
 package physical
 
 import (
+	"os"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
 )
 
-var mongoConfBackend map[string]string = map[string]string{
-// nothing needed
-}
-
-var mongoConfHABackend map[string]string = map[string]string{
-	"ha_enabled": "1",
-	"collection": "vault_ha",
-}
-
 func TestMongoBackend(t *testing.T) {
-
 	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	mongoUri := os.Getenv("MONGODB_URI")
+	if mongoUri == "" {
+		t.SkipNow()
+	}
+
+	var mongoConfBackend map[string]string = map[string]string{
+		"url": mongoUri,
+	}
+
 	b, err := NewBackend("mongo", logger, mongoConfBackend)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -31,6 +32,18 @@ func TestMongoBackend(t *testing.T) {
 
 func TestMongoHABackend(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	mongoUri := os.Getenv("MONGODB_URI")
+	if mongoUri == "" {
+		t.SkipNow()
+	}
+
+	var mongoConfHABackend map[string]string = map[string]string{
+		"ha_enabled": "1",
+		"collection": "vault_ha",
+		"url":        mongoUri,
+	}
+
 	b, err := NewBackend("mongo", logger, mongoConfHABackend)
 	if err != nil {
 		t.Fatalf("err: %s", err)
