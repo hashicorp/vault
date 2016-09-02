@@ -97,13 +97,10 @@ Usage: vault audit-enable [options] type [config...]
   For example, to configure the file audit backend to write audit logs at
   the path /var/log/audit.log:
 
-      $ vault audit-enable file path=/var/log/audit.log
+      $ vault audit-enable file file_path=/var/log/audit.log
 
-  Do not confuse the "path" key-value pair with the "-path" flag. The
-  "-path" flag is the unique path (mount point) for the audit backend. The
-  "path" key-value pair is an argument that is specific to the file audit
-  backend. For more information, please see the documentation.
-
+  For information on available configuration options, please see the
+  documentation.
 
 General Options:
 ` + meta.GeneralOptionsUsage() + `
