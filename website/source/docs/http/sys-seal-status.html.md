@@ -32,11 +32,11 @@ description: |-
       "t": 3,
       "n": 5,
       "progress": 2,
-      "version": "Vault v0.6.1"
+      "version": "0.6.1-dev"
     }
     ```
     
-    Sample response when the unseal finishes.
+    Sample response when Vault is unsealed.
     
     ```javascript
     {
@@ -44,7 +44,7 @@ description: |-
       "t": 3,
       "n": 5,
       "progress": 0,
-      "version": "Vault v0.6.1",
+      "version": "0.6.1-dev",
       "cluster_name": "vault-cluster-d6ec3c7f",
       "cluster_id": "3e8b3fec-3749-e056-ba41-b62a63b997e8"
     }

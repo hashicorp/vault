@@ -440,7 +440,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}()
 
 	infoKeys = append(infoKeys, "version")
-	info["version"] = version.GetVersion().String()
+	info["version"] = version.GetVersion().FullVersionNumber()
 
 	// Server configuration output
 	padding := 24
