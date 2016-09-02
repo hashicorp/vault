@@ -23,12 +23,17 @@ import (
 
 // Key represents a key under a section.
 type Key struct {
-	s          *Section
-	Comment    string
-	name       string
-	value      string
-	isAutoIncr bool
+	s               *Section
+	name            string
+	value           string
+	isAutoIncrement bool
+	isBooleanType   bool
+
+	Comment string
 }
+
+// ValueMapper represents a mapping function for values, e.g. os.ExpandEnv
+type ValueMapper func(string) string
 
 // Name returns name of key.
 func (k *Key) Name() string {
@@ -43,6 +48,9 @@ func (k *Key) Value() string {
 // String returns string representation of value.
 func (k *Key) String() string {
 	val := k.value
+	if k.s.f.ValueMapper != nil {
+		val = k.s.f.ValueMapper(val)
+	}
 	if strings.Index(val, "%") == -1 {
 		return val
 	}

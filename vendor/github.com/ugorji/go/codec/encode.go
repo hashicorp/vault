@@ -119,6 +119,12 @@ type EncodeOptions struct {
 	// This is opt-in, as there may be a performance hit to checking circular references.
 	CheckCircularRef bool
 
+	// RecursiveEmptyCheck controls whether we descend into interfaces, structs and pointers
+	// when checking if a value is empty.
+	//
+	// Note that this may make OmitEmpty more expensive, as it incurs a lot more reflect calls.
+	RecursiveEmptyCheck bool
+
 	// AsSymbols defines what should be encoded as symbols.
 	//
 	// Encoding as symbols can reduce the encoded size significantly.
@@ -524,20 +530,20 @@ func (f *encFnInfo) kStruct(rv reflect.Value) {
 	}
 	newlen = 0
 	var kv stringRv
+	recur := e.h.RecursiveEmptyCheck
 	for _, si := range tisfi {
 		kv.r = si.field(rv, false)
 		if toMap {
-			if si.omitEmpty && isEmptyValue(kv.r) {
+			if si.omitEmpty && isEmptyValue(kv.r, recur, recur) {
 				continue
 			}
 			kv.v = si.encName
 		} else {
 			// use the zero value.
 			// if a reference or struct, set to nil (so you do not output too much)
-			if si.omitEmpty && isEmptyValue(kv.r) {
+			if si.omitEmpty && isEmptyValue(kv.r, recur, recur) {
 				switch kv.r.Kind() {
-				case reflect.Struct, reflect.Interface, reflect.Ptr, reflect.Array,
-					reflect.Map, reflect.Slice:
+				case reflect.Struct, reflect.Interface, reflect.Ptr, reflect.Array, reflect.Map, reflect.Slice:
 					kv.r = reflect.Value{} //encode as nil
 				}
 			}

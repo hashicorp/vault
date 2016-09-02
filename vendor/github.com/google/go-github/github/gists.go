@@ -42,6 +42,7 @@ type GistFilename string
 type GistFile struct {
 	Size     *int    `json:"size,omitempty"`
 	Filename *string `json:"filename,omitempty"`
+	Type     *string `json:"type,omitempty"`
 	RawURL   *string `json:"raw_url,omitempty"`
 	Content  *string `json:"content,omitempty"`
 }

@@ -23,7 +23,7 @@ func unmarshalError(r *request.Request) {
 	defer r.HTTPResponse.Body.Close()
 	defer io.Copy(ioutil.Discard, r.HTTPResponse.Body)
 
-	// Bucket exists in a differnt region, and request needs
+	// Bucket exists in a different region, and request needs
 	// to be made to the correct region.
 	if r.HTTPResponse.StatusCode == http.StatusMovedPermanently {
 		r.Error = awserr.NewRequestFailure(

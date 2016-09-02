@@ -37,7 +37,7 @@ import (
 // based on image.
 func runLongTest(image string) error {
 	DockerMachineAvailable = false
-	if haveDockerMachine() {
+	if haveDockerMachine() && UseDockerMachine != "" {
 		DockerMachineAvailable = true
 		if !startDockerMachine() {
 			log.Printf(`Starting docker machine "%s" failed.
@@ -173,6 +173,22 @@ func run(args ...string) (containerID string, err error) {
 func KillContainer(container string) error {
 	if container != "" {
 		return runDockerCommand("docker", "kill", container).Run()
+	}
+	return nil
+}
+
+// StartContainer runs 'docker start' on a container.
+func StartContainer(container string) error {
+	if container != "" {
+		return runDockerCommand("docker", "start", container).Run()
+	}
+	return nil
+}
+
+// StopContainer runs 'docker stop' on a container.
+func StopContainer(container string) error {
+	if container != "" {
+		return runDockerCommand("docker", "stop", container).Run()
 	}
 	return nil
 }

@@ -1,3 +1,7 @@
+// Copyright 2016 Circonus, Inc. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // Package api provides methods for interacting with the Circonus API
 package api
 
@@ -152,36 +156,45 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 	req.Header.Add("X-Circonus-Auth-Token", string(a.key))
 	req.Header.Add("X-Circonus-App-Name", string(a.app))
 
+	// keep last HTTP error in the event of retry failure
+	var lastHTTPError error
+	retryPolicy := func(resp *http.Response, err error) (bool, error) {
+		if err != nil {
+			lastHTTPError = err
+			return true, err
+		}
+		// Check the response code. We retry on 500-range responses to allow
+		// the server time to recover, as 500's are typically not permanent
+		// errors and may relate to outages on the server side. This will catch
+		// invalid response codes as well, like 0 and 999.
+		if resp.StatusCode == 0 || resp.StatusCode >= 500 {
+			defer resp.Body.Close()
+			body, readErr := ioutil.ReadAll(resp.Body)
+			if readErr != nil {
+				lastHTTPError = fmt.Errorf("- last HTTP error: %d %+v", resp.StatusCode, readErr)
+			} else {
+				lastHTTPError = fmt.Errorf("- last HTTP error: %d %s", resp.StatusCode, string(body))
+			}
+			return true, nil
+		}
+		return false, nil
+	}
+
 	client := retryablehttp.NewClient()
 	client.RetryWaitMin = minRetryWait
 	client.RetryWaitMax = maxRetryWait
 	client.RetryMax = maxRetries
 	client.Logger = a.Log
+	client.CheckRetry = retryPolicy
 
 	resp, err := client.Do(req)
 	if err != nil {
-		stdClient := &http.Client{}
-		dataReader.Seek(0, 0)
-		stdRequest, _ := http.NewRequest(reqMethod, reqURL, dataReader)
-		stdRequest.Header.Add("Accept", "application/json")
-		stdRequest.Header.Add("X-Circonus-Auth-Token", string(a.key))
-		stdRequest.Header.Add("X-Circonus-App-Name", string(a.app))
-		res, errSC := stdClient.Do(stdRequest)
-		if errSC != nil {
-			return nil, fmt.Errorf("[ERROR] fetching %s: %s", reqURL, errSC)
+		if lastHTTPError != nil {
+			return nil, fmt.Errorf("[ERROR] fetching: %+v %+v", err, lastHTTPError)
 		}
-
-		if res != nil && res.Body != nil {
-			defer res.Body.Close()
-			body, _ := ioutil.ReadAll(res.Body)
-			if a.Debug {
-				a.Log.Printf("[DEBUG] %v\n", string(body))
-			}
-			return nil, fmt.Errorf("[ERROR] %s", string(body))
-		}
-
-		return nil, fmt.Errorf("[ERROR] fetching %s: %s", reqURL, err)
+		return nil, fmt.Errorf("[ERROR] fetching %s: %+v", reqURL, err)
 	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

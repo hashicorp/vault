@@ -163,7 +163,7 @@ func (s *MigrationService) StartImport(owner, repo string, in *Import) (*Import,
 	return out, resp, err
 }
 
-// QueryImport queries for the status and progress of an ongoing repository import.
+// ImportProgress queries for the status and progress of an ongoing repository import.
 //
 // GitHub API docs: https://developer.github.com/v3/migration/source_imports/#get-import-progress
 func (s *MigrationService) ImportProgress(owner, repo string) (*Import, *Response, error) {

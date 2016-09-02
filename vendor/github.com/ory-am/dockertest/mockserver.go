@@ -2,9 +2,9 @@ package dockertest
 
 import (
 	"fmt"
-	"time"
-	"log"
 	"github.com/go-errors/errors"
+	"log"
+	"time"
 )
 
 // SetupMockserverContainer sets up a real Mockserver instance for testing purposes
@@ -22,7 +22,7 @@ func SetupMockserverContainer() (c ContainerID, ip string, mockPort, proxyPort i
 		proxyForward = "127.0.0.1:" + proxyForward
 	}
 
-	c, ip, err = SetupMultiportContainer(RabbitMQImageName, []int{ mockPort, proxyPort}, 10*time.Second, func() (string, error) {
+	c, ip, err = SetupMultiportContainer(RabbitMQImageName, []int{mockPort, proxyPort}, 10*time.Second, func() (string, error) {
 		res, err := run("--name", GenerateContainerID(), "-d", "-P", "-p", mockForward, "-p", proxyForward, MockserverImageName)
 		return res, err
 	})

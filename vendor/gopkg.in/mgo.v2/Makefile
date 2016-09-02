@@ -1,5 +1,5 @@
 startdb:
-	@testdb/setup.sh start
+	@harness/setup.sh start
 
 stopdb:
-	@testdb/setup.sh stop
+	@harness/setup.sh stop

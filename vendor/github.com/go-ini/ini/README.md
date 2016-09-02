@@ -70,6 +70,8 @@ cfg, err := ini.LooseLoad("filename", "filename_404")
 
 The cool thing is, whenever the file is available to load while you're calling `Reload` method, it will be counted as usual.
 
+#### Ignore cases of key name
+
 When you do not care about cases of section and key names, you can use `InsensitiveLoad` to force all names to be lowercased while parsing.
 
 ```go
@@ -85,7 +87,24 @@ key1, err := cfg.GetKey("Key")
 key2, err := cfg.GetKey("KeY")
 ```
 
-If you want to give more advanced load options, use `LoadSources` and take a look at [`LoadOptions`](https://github.com/go-ini/ini/blob/v1.16.1/ini.go#L156).
+#### MySQL-like boolean key 
+
+MySQL's configuration allows a key without value as follows:
+
+```ini
+[mysqld]
+...
+skip-host-cache
+skip-name-resolve
+```
+
+By default, this is considered as missing value. But if you know you're going to deal with those cases, you can assign advanced load options:
+
+```go
+cfg, err := LoadSources(LoadOptions{AllowBooleanKeys: true}, "my.cnf"))
+```
+
+The value of those keys are always `true`, and when you save to a file, it will keep in the same foramt as you read.
 
 ### Working with sections
 
@@ -512,8 +531,8 @@ Why not?
 ```go
 type Embeded struct {
 	Dates  []time.Time `delim:"|"`
-	Places []string
-	None   []int
+	Places []string    `ini:"places,omitempty"`
+	None   []int       `ini:",omitempty"`
 }
 
 type Author struct {
@@ -548,8 +567,7 @@ GPA = 2.8
 
 [Embeded]
 Dates = 2015-08-07T22:14:22+08:00|2015-08-07T22:14:22+08:00
-Places = HangZhou,Boston
-None =
+places = HangZhou,Boston
 ```
 
 #### Name Mapper
@@ -582,6 +600,26 @@ func main() {
 ```
 
 Same rules of name mapper apply to `ini.ReflectFromWithMapper` function.
+
+#### Value Mapper
+
+To expand values (e.g. from environment variables), you can use the `ValueMapper` to transform values:
+
+```go
+type Env struct {
+	Foo string `ini:"foo"`
+}
+
+func main() {
+	cfg, err := ini.Load([]byte("[env]\nfoo = ${MY_VAR}\n")
+	cfg.ValueMapper = os.ExpandEnv
+	// ...
+	env := &Env{}
+	err = cfg.Section("env").MapTo(env)
+}
+```
+
+This would set the value of `env.Foo` to the value of the environment variable `MY_VAR`.
 
 #### Other Notes On Map/Reflect
 

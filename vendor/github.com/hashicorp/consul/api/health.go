@@ -8,7 +8,6 @@ const (
 	// HealthAny is special, and is used as a wild card,
 	// not as a specific state.
 	HealthAny      = "any"
-	HealthUnknown  = "unknown"
 	HealthPassing  = "passing"
 	HealthWarning  = "warning"
 	HealthCritical = "critical"
@@ -122,7 +121,6 @@ func (h *Health) State(state string, q *QueryOptions) ([]*HealthCheck, *QueryMet
 	case HealthWarning:
 	case HealthCritical:
 	case HealthPassing:
-	case HealthUnknown:
 	default:
 		return nil, nil, fmt.Errorf("Unsupported state: %v", state)
 	}

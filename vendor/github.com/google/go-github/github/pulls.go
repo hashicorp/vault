@@ -42,7 +42,8 @@ type PullRequest struct {
 	StatusesURL  *string    `json:"statuses_url,omitempty"`
 	DiffURL      *string    `json:"diff_url,omitempty"`
 	PatchURL     *string    `json:"patch_url,omitempty"`
-	Assignee     *User      `json:"assignee,omitempty"` // probably only in webhooks
+	Assignee     *User      `json:"assignee,omitempty"`
+	Assignees    []*User    `json:"assignees,omitempty"`
 
 	Head *PullRequestBranch `json:"head,omitempty"`
 	Base *PullRequestBranch `json:"base,omitempty"`

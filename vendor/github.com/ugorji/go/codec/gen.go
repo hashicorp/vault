@@ -987,6 +987,14 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 }
 
 func (x *genRunner) encListFallback(varname string, t reflect.Type) {
+	if t.AssignableTo(uint8SliceTyp) {
+		x.linef("r.EncodeStringBytes(codecSelferC_RAW%s, []byte(%s))", x.xs, varname)
+		return
+	}
+	if t.Kind() == reflect.Array && t.Elem().Kind() == reflect.Uint8 {
+		x.linef("r.EncodeStringBytes(codecSelferC_RAW%s, ([%v]byte(%s))[:])", x.xs, t.Len(), varname)
+		return
+	}
 	i := x.varsfx()
 	g := genTempVarPfx
 	x.line("r.EncodeArrayStart(len(" + varname + "))")
@@ -1306,6 +1314,14 @@ func (x *genRunner) decTryAssignPrimitive(varname string, t reflect.Type) (tryAs
 }
 
 func (x *genRunner) decListFallback(varname string, rtid uintptr, t reflect.Type) {
+	if t.AssignableTo(uint8SliceTyp) {
+		x.line("*" + varname + " = r.DecodeBytes(*((*[]byte)(" + varname + ")), false, false)")
+		return
+	}
+	if t.Kind() == reflect.Array && t.Elem().Kind() == reflect.Uint8 {
+		x.linef("r.DecodeBytes( ((*[%s]byte)(%s))[:], false, true)", t.Len(), varname)
+		return
+	}
 	type tstruc struct {
 		TempVar   string
 		Rand      string

@@ -181,7 +181,7 @@ package codec
 //   - Decoding using a chan is good, but incurs concurrency costs.
 //     This is because there's no fast way to use a channel without it
 //     having to switch goroutines constantly.
-//     Callback pattern is still the best. Maybe cnsider supporting something like:
+//     Callback pattern is still the best. Maybe consider supporting something like:
 //        type X struct {
 //             Name string
 //             Ys []Y

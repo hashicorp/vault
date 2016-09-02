@@ -7,6 +7,7 @@
 package http2
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http"
 )
@@ -48,4 +49,29 @@ func contextWithCancel(ctx contextContext) (_ contextContext, cancel func()) {
 
 func requestWithContext(req *http.Request, ctx contextContext) *http.Request {
 	return req
+}
+
+// temporary copy of Go 1.6's private tls.Config.clone:
+func cloneTLSConfig(c *tls.Config) *tls.Config {
+	return &tls.Config{
+		Rand:                     c.Rand,
+		Time:                     c.Time,
+		Certificates:             c.Certificates,
+		NameToCertificate:        c.NameToCertificate,
+		GetCertificate:           c.GetCertificate,
+		RootCAs:                  c.RootCAs,
+		NextProtos:               c.NextProtos,
+		ServerName:               c.ServerName,
+		ClientAuth:               c.ClientAuth,
+		ClientCAs:                c.ClientCAs,
+		InsecureSkipVerify:       c.InsecureSkipVerify,
+		CipherSuites:             c.CipherSuites,
+		PreferServerCipherSuites: c.PreferServerCipherSuites,
+		SessionTicketsDisabled:   c.SessionTicketsDisabled,
+		SessionTicketKey:         c.SessionTicketKey,
+		ClientSessionCache:       c.ClientSessionCache,
+		MinVersion:               c.MinVersion,
+		MaxVersion:               c.MaxVersion,
+		CurvePreferences:         c.CurvePreferences,
+	}
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // PoolConfig configures the connection pool used by the driver, it defaults to
-// using a round robbin host selection policy and a round robbin connection selection
+// using a round-robin host selection policy and a round-robin connection selection
 // policy for each host.
 type PoolConfig struct {
 	// HostSelectionPolicy sets the policy for selecting which host to use for a
@@ -23,9 +23,9 @@ func (p PoolConfig) buildPool(session *Session) *policyConnPool {
 }
 
 type DiscoveryConfig struct {
-	// If not empty will filter all discoverred hosts to a single Data Centre (default: "")
+	// If not empty will filter all discovered hosts to a single Data Centre (default: "")
 	DcFilter string
-	// If not empty will filter all discoverred hosts to a single Rack (default: "")
+	// If not empty will filter all discovered hosts to a single Rack (default: "")
 	RackFilter string
 	// ignored
 	Sleep time.Duration
@@ -44,8 +44,8 @@ func (d DiscoveryConfig) matchFilter(host *HostInfo) bool {
 }
 
 // ClusterConfig is a struct to configure the default cluster implementation
-// of gocoql. It has a varity of attributes that can be used to modify the
-// behavior to fit the most common use cases. Applications that requre a
+// of gocoql. It has a variety of attributes that can be used to modify the
+// behavior to fit the most common use cases. Applications that require a
 // different setup must implement their own cluster.
 type ClusterConfig struct {
 	Hosts             []string          // addresses for the initial connections
@@ -79,7 +79,7 @@ type ClusterConfig struct {
 	// receiving a schema change frame. (deault: 60s)
 	MaxWaitSchemaAgreement time.Duration
 
-	// HostFilter will filter all incoming events for host, any which dont pass
+	// HostFilter will filter all incoming events for host, any which don't pass
 	// the filter will be ignored. If set will take precedence over any options set
 	// via Discovery
 	HostFilter HostFilter
@@ -113,7 +113,7 @@ type ClusterConfig struct {
 	// DisableSkipMetadata will override the internal result metadata cache so that the driver does not
 	// send skip_metadata for queries, this means that the result will always contain
 	// the metadata to parse the rows and will not reuse the metadata from the prepared
-	// staement.
+	// statement.
 	//
 	// See https://issues.apache.org/jira/browse/CASSANDRA-10786
 	DisableSkipMetadata bool

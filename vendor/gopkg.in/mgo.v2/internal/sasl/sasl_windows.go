@@ -101,6 +101,8 @@ func (ss *saslSession) Step(serverData []byte) (clientData []byte, done bool, er
 	}
 	var buffer C.PVOID
 	var bufferLength C.ULONG
+	var outBuffer C.PVOID
+	var outBufferLength C.ULONG
 	if len(serverData) > 0 {
 		buffer = (C.PVOID)(unsafe.Pointer(&serverData[0]))
 		bufferLength = C.ULONG(len(serverData))
@@ -108,20 +110,20 @@ func (ss *saslSession) Step(serverData []byte) (clientData []byte, done bool, er
 	var status C.int
 	if ss.authComplete {
 		// Step 3: last bit of magic to use the correct server credentials
-		status = C.sspi_send_client_authz_id(&ss.context, &buffer, &bufferLength, ss.cstr(ss.userPlusRealm))
+		status = C.sspi_send_client_authz_id(&ss.context, &outBuffer, &outBufferLength, ss.cstr(ss.userPlusRealm))
 	} else {
 		// Step 1 + Step 2: set up security context with the server and TGT
-		status = C.sspi_step(&ss.credHandle, ss.hasContext, &ss.context, &buffer, &bufferLength, ss.cstr(ss.target))
+		status = C.sspi_step(&ss.credHandle, ss.hasContext, &ss.context, buffer, bufferLength, &outBuffer, &outBufferLength, ss.cstr(ss.target))
 	}
-	if buffer != C.PVOID(nil) {
-		defer C.free(unsafe.Pointer(buffer))
+	if outBuffer != C.PVOID(nil) {
+		defer C.free(unsafe.Pointer(outBuffer))
 	}
 	if status != C.SEC_E_OK && status != C.SEC_I_CONTINUE_NEEDED {
 		ss.errored = true
 		return nil, false, ss.handleSSPIErrorCode(status)
 	}
 
-	clientData = C.GoBytes(unsafe.Pointer(buffer), C.int(bufferLength))
+	clientData = C.GoBytes(unsafe.Pointer(outBuffer), C.int(outBufferLength))
 	if status == C.SEC_E_OK {
 		ss.authComplete = true
 		return clientData, true, nil

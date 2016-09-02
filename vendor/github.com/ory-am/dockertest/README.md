@@ -36,11 +36,12 @@ Dockertest ships with support for these backends:
 - [Write awesome tests](#write-awesome-tests)
   - [Setting up Travis-CI](#setting-up-travis-ci)
 - [Troubleshoot & FAQ](#troubleshoot-&-faq)
-  - [I want to use a specific image version](#i-want-to-use-a-specific-image-version)
+  - [I need to use a specific container version for XYZ](#i-need-to-use-a-specific-container-version-for-xyz)
   - [My build is broken!](#my-build-is-broken)
   - [Out of disk space](#out-of-disk-space)
+  - [I am using docker machine (OSX / Linux)](#i-am-using-docker-machine-osx--linux)
   - [Removing old containers](#removing-old-containers)
-  - [Customized database] (#Customized-database)
+  - [Customized database](#customized-database)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -48,7 +49,7 @@ Dockertest ships with support for these backends:
 
 When developing applications, it is often necessary to use services that talk to a database system.
 Unit Testing these services can be cumbersome because mocking database/DBAL is strenuous. Making slight changes to the
-schema implies rewriting at least some, if not all of the mocks. The same goes for API changes in the DBAL.  
+schema implies rewriting at least some, if not all of the mocks. The same goes for API changes in the DBAL.
 To avoid this, it is smarter to test these specific services against a real database that is destroyed after testing.
 Docker is the perfect system for running unit tests as you can spin up containers in a few seconds and kill them when
 the test completes. The Dockertest library provides easy to use commands for spinning up Docker containers and using
@@ -71,7 +72,7 @@ where `X` is your desired version. For example:
 go get gopkg.in/ory-am/dockertest.v2
 ```
 
-**Note:**  
+**Note:**
 When using the Docker Toolbox (Windows / OSX), make sure that the VM is started by running `docker-machine start default`.
 
 ### Start a container
@@ -90,32 +91,64 @@ func main() {
 	c, err := dockertest.ConnectToMongoDB(15, time.Millisecond*500, func(url string) bool {
 	    // This callback function checks if the image's process is responsive.
 	    // Sometimes, docker images are booted but the process (in this case MongoDB) is still doing maintenance
-	    // before being fully responsive which might cause issues like "TCP Connection reset by peer".	
+	    // before being fully responsive which might cause issues like "TCP Connection reset by peer".
 		var err error
 		db, err = mgo.Dial(url)
 		if err != nil {
 			return false
 		}
-		
+
 		// Sometimes, dialing the database is not enough because the port is already open but the process is not responsive.
 		// Most database conenctors implement a ping function which can be used to test if the process is responsive.
 		// Alternatively, you could execute a query to see if an error occurs or not.
 		return db.Ping() == nil
 	})
-	
+
 	if err != nil {
 	    log.Fatalf("Could not connect to database: %s", err)
 	}
-	
+
 	// Close db connection and kill the container when we leave this function body.
     defer db.Close()
 	defer c.KillRemove()
-	
+
 	// The image is now responsive.
 }
 ```
 
 You can start PostgreSQL and MySQL in a similar fashion.
+
+There are some cases where it's useful to test how your application/code handles
+remote resources failing / shutting down. For example, what if your database
+goes offline? Does your application handle it gracefully?
+
+This can be tested by stopping and starting an existing container:
+
+```go
+	var hosts []string
+	c, err := ConnectToZooKeeper(15, time.Millisecond*500, func(url string) bool {
+		conn, _, err := zk.Connect([]string{url}, time.Second)
+		if err != nil {
+			return false
+		}
+		defer conn.Close()
+		hosts = []string{url}
+
+		return true
+	})
+	defer c.KillRemove()
+
+	conn, _, _ := zk.Connect(hosts, time.Second)
+	conn.Create("/test", []byte("hello"), 0, zk.WorldACL(zk.PermAll))
+
+	c.Stop()
+
+	_, _, err = zk.Get("/test") // err == zk.ErrNoServer
+
+	c.Start()
+
+	data, _, _ = zk.Get("/test") // data == []byte("hello")
+```
 
 It is also possible to start a custom container (in this example, a RabbitMQ container):
 
@@ -170,18 +203,18 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Could not connect to database: %s", err)
 	}
-	
+
 	// Execute tasks like setting up schemata.
-	
+
 	// Run tests
 	result := m.Run()
-	
+
 	// Close database connection.
 	db.Close()
-	
+
 	// Clean up image.
 	c.KillRemove()
-	
+
 	// Exit tests.
 	os.Exit(result)
 }
@@ -224,6 +257,13 @@ If you relied on these, run `go get gopkg.in/ory-am/dockertest.v1` and replace
 ### Out of disk space
 
 Try cleaning up the images with [docker-cleanup-volumes](https://github.com/chadoe/docker-cleanup-volumes).
+
+### I am using docker machine (OSX / Linux)
+
+First of all, consider upgrading! If that's not an option, there are some steps you need to take:
+
+* Set `dockertest.UseDockerMachine = "1"` or set the environment variable `DOCKERTEST_LEGACY_DOCKER_MACHINE=1`
+* Set `docker.BindDockerToLocalhost = ""` or alternatively `DOCKER_BIND_LOCALHOST=`
 
 ### Removing old containers
 

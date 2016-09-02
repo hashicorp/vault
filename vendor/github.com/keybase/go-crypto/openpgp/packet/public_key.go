@@ -64,7 +64,7 @@ func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
 	var key [ed25519.PublicKeySize]byte
 	var sig [ed25519.SignatureSize]byte
 
-	// note(mnk): I'm not entirely sure why we need to ignore the first byte.
+	// NOTE(maxtaco): I'm not entirely sure why we need to ignore the first byte.
 	copy(key[:], e.p.bytes[1:])
 	n := copy(sig[:], r.bytes)
 	copy(sig[n:], s.bytes)
@@ -570,9 +570,18 @@ func (pk *PublicKey) VerifySignature(signed hash.Hash, sig *Signature) (err erro
 	signed.Write(sig.HashSuffix)
 	hashBytes := signed.Sum(nil)
 
-	if hashBytes[0] != sig.HashTag[0] || hashBytes[1] != sig.HashTag[1] {
-		return errors.SignatureError("hash tag doesn't match")
-	}
+	// NOTE(maxtaco) 2016-08-22
+	//
+	// We used to do this:
+	//
+	// if hashBytes[0] != sig.HashTag[0] || hashBytes[1] != sig.HashTag[1] {
+	//	  return errors.SignatureError("hash tag doesn't match")
+	// }
+	//
+	// But don't do anything in this case. Some GPGs generate bad
+	// 2-byte hash prefixes, but GPG also doesn't seem to care on
+	// import. See BrentMaxwell's key. I think it's safe to disable
+	// this check!
 
 	if pk.PubKeyAlgo != sig.PubKeyAlgo {
 		return errors.InvalidArgumentError("public key and signature use different algorithms")

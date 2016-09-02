@@ -63,6 +63,8 @@ cfg, err := ini.LooseLoad("filename", "filename_404")
 
 更牛逼的是，当那些之前不存在的文件在重新调用 `Reload` 方法的时候突然出现了，那么它们会被正常加载。
 
+#### 忽略键名的大小写
+
 有时候分区和键的名称大小写混合非常烦人，这个时候就可以通过 `InsensitiveLoad` 将所有分区和键名在读取里强制转换为小写：
 
 ```go
@@ -78,7 +80,24 @@ key1, err := cfg.GetKey("Key")
 key2, err := cfg.GetKey("KeY")
 ```
 
-如果您想要更加自定义的加载选项，可以使用 `LoadSources` 方法并参见 [`LoadOptions`](https://github.com/go-ini/ini/blob/v1.16.1/ini.go#L156)。
+#### 类似 MySQL 配置中的布尔值键
+
+MySQL 的配置文件中会出现没有具体值的布尔类型的键：
+
+```ini
+[mysqld]
+...
+skip-host-cache
+skip-name-resolve
+```
+
+默认情况下这被认为是缺失值而无法完成解析，但可以通过高级的加载选项对它们进行处理：
+
+```go
+cfg, err := LoadSources(LoadOptions{AllowBooleanKeys: true}, "my.cnf"))
+```
+
+这些键的值永远为 `true`，且在保存到文件时也只会输出键名。
 
 ### 操作分区（Section）
 
@@ -503,8 +522,8 @@ p := &Person{
 ```go
 type Embeded struct {
 	Dates  []time.Time `delim:"|"`
-	Places []string
-	None   []int
+	Places []string    `ini:"places,omitempty"`
+	None   []int       `ini:",omitempty"`
 }
 
 type Author struct {
@@ -539,8 +558,7 @@ GPA = 2.8
 
 [Embeded]
 Dates = 2015-08-07T22:14:22+08:00|2015-08-07T22:14:22+08:00
-Places = HangZhou,Boston
-None =
+places = HangZhou,Boston
 ```
 
 #### 名称映射器（Name Mapper）
@@ -573,6 +591,26 @@ func main() {
 ```
 
 使用函数 `ini.ReflectFromWithMapper` 时也可应用相同的规则。
+
+#### 值映射器（Value Mapper）
+
+值映射器允许使用一个自定义函数自动展开值的具体内容，例如：运行时获取环境变量：
+
+```go
+type Env struct {
+	Foo string `ini:"foo"`
+}
+
+func main() {
+	cfg, err := ini.Load([]byte("[env]\nfoo = ${MY_VAR}\n")
+	cfg.ValueMapper = os.ExpandEnv
+	// ...
+	env := &Env{}
+	err = cfg.Section("env").MapTo(env)
+}
+```
+
+本例中，`env.Foo` 将会是运行时所获取到环境变量 `MY_VAR` 的值。
 
 #### 映射/反射的其它说明
 

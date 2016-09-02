@@ -1,4 +1,4 @@
-// +build windows plan9 netbsd
+// +build windows plan9
 
 package gsyslog
 

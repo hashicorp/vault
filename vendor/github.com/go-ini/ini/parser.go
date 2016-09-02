@@ -111,7 +111,7 @@ func readKeyName(in []byte) (string, int, error) {
 		// Find key-value delimiter
 		i := strings.IndexAny(line[pos+startIdx:], "=:")
 		if i < 0 {
-			return "", -1, fmt.Errorf("key-value delimiter not found: %s", line)
+			return "", -1, ErrDelimiterNotFound{line}
 		}
 		endIdx = pos + i
 		return strings.TrimSpace(line[startIdx:pos]), endIdx + startIdx + 1, nil
@@ -119,7 +119,7 @@ func readKeyName(in []byte) (string, int, error) {
 
 	endIdx = strings.IndexAny(line, "=:")
 	if endIdx < 0 {
-		return "", -1, fmt.Errorf("key-value delimiter not found: %s", line)
+		return "", -1, ErrDelimiterNotFound{line}
 	}
 	return strings.TrimSpace(line[0:endIdx]), endIdx + 1, nil
 }
@@ -285,6 +285,17 @@ func (f *File) parse(reader io.Reader) (err error) {
 
 		kname, offset, err := readKeyName(line)
 		if err != nil {
+			// Treat as boolean key when desired, and whole line is key name.
+			if IsErrDelimiterNotFound(err) && f.options.AllowBooleanKeys {
+				key, err := section.NewKey(string(line), "true")
+				if err != nil {
+					return err
+				}
+				key.isBooleanType = true
+				key.Comment = strings.TrimSpace(p.comment.String())
+				p.comment.Reset()
+				continue
+			}
 			return err
 		}
 
@@ -300,7 +311,7 @@ func (f *File) parse(reader io.Reader) (err error) {
 		if err != nil {
 			return err
 		}
-		key.isAutoIncr = isAutoIncr
+		key.isAutoIncrement = isAutoIncr
 
 		value, err := p.readValue(line[offset:], f.options.IgnoreContinuation)
 		if err != nil {

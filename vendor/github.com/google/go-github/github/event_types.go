@@ -123,8 +123,9 @@ type GollumEvent struct {
 	Sender *User       `json:"sender,omitempty"`
 }
 
-// DEPRECATED: IssueActivityEvent represents the payload delivered by Issue webhook
-// Use IssuesEvent instead.
+// IssueActivityEvent represents the payload delivered by Issue webhook.
+//
+// Deprecated: Use IssuesEvent instead.
 type IssueActivityEvent struct {
 	Action *string `json:"action,omitempty"`
 	Issue  *Issue  `json:"issue,omitempty"`

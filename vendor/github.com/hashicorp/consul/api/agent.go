@@ -62,8 +62,7 @@ type AgentCheckRegistration struct {
 	AgentServiceCheck
 }
 
-// AgentServiceCheck is used to create an associated
-// check for a service
+// AgentServiceCheck is used to define a node or service level check
 type AgentServiceCheck struct {
 	Script            string `json:",omitempty"`
 	DockerContainerID string `json:",omitempty"`
@@ -74,6 +73,14 @@ type AgentServiceCheck struct {
 	HTTP              string `json:",omitempty"`
 	TCP               string `json:",omitempty"`
 	Status            string `json:",omitempty"`
+
+	// In Consul 0.7 and later, checks that are associated with a service
+	// may also contain this optional DeregisterCriticalServiceAfter field,
+	// which is a timeout in the same Go time format as Interval and TTL. If
+	// a check is in the critical state for more than this configured value,
+	// then its associated service (and all of its associated checks) will
+	// automatically be deregistered.
+	DeregisterCriticalServiceAfter string `json:",omitempty"`
 }
 type AgentServiceChecks []*AgentServiceCheck
 

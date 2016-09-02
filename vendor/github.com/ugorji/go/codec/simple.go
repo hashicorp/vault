@@ -474,7 +474,7 @@ func (d *simpleDecDriver) DecodeNaked() {
 // SimpleHandle is a Handle for a very simple encoding format.
 //
 // simple is a simplistic codec similar to binc, but not as compact.
-//   - Encoding of a value is always precedeed by the descriptor byte (bd)
+//   - Encoding of a value is always preceded by the descriptor byte (bd)
 //   - True, false, nil are encoded fully in 1 byte (the descriptor)
 //   - Integers (intXXX, uintXXX) are encoded in 1, 2, 4 or 8 bytes (plus a descriptor byte).
 //     There are positive (uintXXX and intXXX >= 0) and negative (intXXX < 0) integers.

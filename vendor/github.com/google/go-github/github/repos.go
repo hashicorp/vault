@@ -54,6 +54,7 @@ type Repository struct {
 	Private      *bool `json:"private"`
 	HasIssues    *bool `json:"has_issues"`
 	HasWiki      *bool `json:"has_wiki"`
+	HasPages     *bool `json:"has_pages"`
 	HasDownloads *bool `json:"has_downloads"`
 	// Creating an organization repository. Required for non-owners.
 	TeamID *int `json:"team_id"`
@@ -70,6 +71,7 @@ type Repository struct {
 	CompareURL       *string `json:"compare_url,omitempty"`
 	ContentsURL      *string `json:"contents_url,omitempty"`
 	ContributorsURL  *string `json:"contributors_url,omitempty"`
+	DeploymentsURL   *string `json:"deployments_url,omitempty"`
 	DownloadsURL     *string `json:"downloads_url,omitempty"`
 	EventsURL        *string `json:"events_url,omitempty"`
 	ForksURL         *string `json:"forks_url,omitempty"`

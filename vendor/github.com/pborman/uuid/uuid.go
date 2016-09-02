@@ -186,7 +186,7 @@ func (v Variant) String() string {
 	return fmt.Sprintf("BadVariant%d", int(v))
 }
 
-// SetRand sets the random number generator to r, which implents io.Reader.
+// SetRand sets the random number generator to r, which implements io.Reader.
 // If r.Read returns an error when the package requests random data then
 // a panic will be issued.
 //

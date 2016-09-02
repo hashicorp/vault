@@ -17,7 +17,10 @@ var (
 	// BindDockerToLocalhost if set, forces docker to bind the image to localhost. This for example is required when running tests on travis-ci.
 	// You can set this variable either directly or by defining a DOCKERTEST_BIND_LOCALHOST env variable.
 	// FIXME DOCKER_BIND_LOCALHOST remove legacy support
-	BindDockerToLocalhost = env.Getenv("DOCKERTEST_BIND_LOCALHOST", env.Getenv("DOCKER_BIND_LOCALHOST", ""))
+	BindDockerToLocalhost = env.Getenv("DOCKERTEST_BIND_LOCALHOST", env.Getenv("DOCKER_BIND_LOCALHOST", "1"))
+
+	// UseDockerMachine if set, forces docker to use the legacy docker-machine on OSX/Windows.
+	UseDockerMachine = env.Getenv("DOCKERTEST_LEGACY_DOCKER_MACHINE", "")
 
 	// ContainerPrefix will be prepended to all containers started by dockertest to make identification of these "test images" hassle-free.
 	ContainerPrefix = env.Getenv("DOCKERTEST_CONTAINER_PREFIX", "dockertest-")

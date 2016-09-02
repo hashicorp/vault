@@ -96,7 +96,7 @@ func sendRequest(ctx context.Context, codec Codec, compressor Compressor, callHd
 	}
 	outBuf, err := encode(codec, args, compressor, cbuf)
 	if err != nil {
-		return nil, transport.StreamErrorf(codes.Internal, "grpc: %v", err)
+		return nil, Errorf(codes.Internal, "grpc: %v", err)
 	}
 	err = t.Write(stream, outBuf, opts)
 	// t.NewStream(...) could lead to an early rejection of the RPC (e.g., the service/method

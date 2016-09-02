@@ -66,6 +66,8 @@ type Session struct {
 
 	cfg ClusterConfig
 
+	quit chan struct{}
+
 	closeMu  sync.RWMutex
 	isClosed bool
 }
@@ -183,6 +185,8 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		}
 	}
 
+	s.quit = make(chan struct{})
+
 	if cfg.ReconnectInterval > 0 {
 		go s.reconnectDownedHosts(cfg.ReconnectInterval)
 	}
@@ -195,31 +199,46 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		return nil, ErrNoConnectionsStarted
 	}
 
-	s.useSystemSchema = hosts[0].Version().Major >= 3
+	// If we disable the initial host lookup, we need to still check if the
+	// cluster is using the newer system schema or not... however, if control
+	// connection is disable, we really have no choice, so we just make our
+	// best guess...
+	if !cfg.disableControlConn && cfg.DisableInitialHostLookup {
+		newer, _ := checkSystemSchema(s.control)
+		s.useSystemSchema = newer
+	} else {
+		s.useSystemSchema = hosts[0].Version().Major >= 3
+	}
 
 	return s, nil
 }
 
 func (s *Session) reconnectDownedHosts(intv time.Duration) {
-	for !s.Closed() {
-		time.Sleep(intv)
+	reconnectTicker := time.NewTicker(intv)
+	defer reconnectTicker.Stop()
 
-		hosts := s.ring.allHosts()
+	for {
+		select {
+		case <-reconnectTicker.C:
+			hosts := s.ring.allHosts()
 
-		// Print session.ring for debug.
-		if gocqlDebug {
-			buf := bytes.NewBufferString("Session.ring:")
+			// Print session.ring for debug.
+			if gocqlDebug {
+				buf := bytes.NewBufferString("Session.ring:")
+				for _, h := range hosts {
+					buf.WriteString("[" + h.Peer() + ":" + h.State().String() + "]")
+				}
+				log.Println(buf.String())
+			}
+
 			for _, h := range hosts {
-				buf.WriteString("[" + h.Peer() + ":" + h.State().String() + "]")
+				if h.IsUp() {
+					continue
+				}
+				s.handleNodeUp(net.ParseIP(h.Peer()), h.Port(), true)
 			}
-			log.Println(buf.String())
-		}
-
-		for _, h := range hosts {
-			if h.IsUp() {
-				continue
-			}
-			s.handleNodeUp(net.ParseIP(h.Peer()), h.Port(), true)
+		case <-s.quit:
+			return
 		}
 	}
 }
@@ -331,6 +350,10 @@ func (s *Session) Close() {
 
 	if s.schemaEvents != nil {
 		s.schemaEvents.stop()
+	}
+
+	if s.quit != nil {
+		close(s.quit)
 	}
 }
 
@@ -1141,7 +1164,7 @@ func (iter *Iter) PageState() []byte {
 }
 
 // NumRows returns the number of rows in this pagination, it will update when new
-// pages are fetcehd, it is not the value of the total number of rows this iter
+// pages are fetched, it is not the value of the total number of rows this iter
 // will return unless there is only a single page returned.
 func (iter *Iter) NumRows() int {
 	return iter.numRows

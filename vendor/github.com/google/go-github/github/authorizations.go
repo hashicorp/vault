@@ -398,7 +398,7 @@ func (s *AuthorizationsService) DeleteGrant(id int) (*Response, error) {
 	return s.client.Do(req, nil)
 }
 
-// Create an impersonation OAuth token.
+// CreateImpersonation creates an impersonation OAuth token.
 //
 // This requires admin permissions. With the returned Authorization.Token
 // you can e.g. create or delete a user's public SSH key. NOTE: creating a
@@ -420,7 +420,7 @@ func (s *AuthorizationsService) CreateImpersonation(username string, authReq *Au
 	return a, resp, err
 }
 
-// Delete an impersonation OAuth token.
+// DeleteImpersonation deletes an impersonation OAuth token.
 //
 // NOTE: there can be only one at a time.
 //

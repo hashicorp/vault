@@ -163,7 +163,7 @@ import (
 func main() {
     cmc := &cgm.Config{}
     cmc.CheckManager.API.TokenKey = os.Getenv("CIRCONUS_API_TOKEN")
-  
+
     metrics, err := cgm.NewCirconusMetrics(cmc)
     if err != nil {
         panic(err)
@@ -177,3 +177,5 @@ func main() {
 }
 
 ```
+
+Unless otherwise noted, the source files are distributed under the BSD-style license found in the LICENSE file.

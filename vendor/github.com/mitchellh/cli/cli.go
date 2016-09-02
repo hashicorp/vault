@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -405,16 +406,24 @@ func (c *CLI) processArgs() {
 		}
 
 		// If we didn't find a subcommand yet and this is the first non-flag
-		// argument, then this is our subcommand. j
+		// argument, then this is our subcommand.
 		if c.subcommand == "" && arg != "" && arg[0] != '-' {
 			c.subcommand = arg
 			if c.commandNested {
 				// Nested CLI, the subcommand is actually the entire
 				// arg list up to a flag that is still a valid subcommand.
-				k, _, ok := c.commandTree.LongestPrefix(strings.Join(c.Args[i:], " "))
+				searchKey := strings.Join(c.Args[i:], " ")
+				k, _, ok := c.commandTree.LongestPrefix(searchKey)
 				if ok {
-					c.subcommand = k
-					i += strings.Count(k, " ")
+					// k could be a prefix that doesn't contain the full
+					// command such as "foo" instead of "foobar", so we
+					// need to verify that we have an entire key. To do that,
+					// we look for an ending in a space or an end of string.
+					reVerify := regexp.MustCompile(regexp.QuoteMeta(k) + `( |$)`)
+					if reVerify.MatchString(searchKey) {
+						c.subcommand = k
+						i += strings.Count(k, " ")
+					}
 				}
 			}
 

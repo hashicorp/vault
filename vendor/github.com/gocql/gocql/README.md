@@ -201,6 +201,7 @@ The following community maintained tools are known to integrate with gocql:
 * [gocassa](https://github.com/hailocab/gocassa) provides query building, adds data binding, and provides easy-to-use "recipe" tables for common query use-cases.
 * [gocqltable](https://github.com/kristoiv/gocqltable) is a wrapper around gocql that aims to simplify common operations whilst working the library.
 * [gockle](https://github.com/willfaught/gockle) provides simple, mockable interfaces that wrap gocql types
+* [scylladb](https://github.com/scylladb/scylla) is a fast Apache Cassandra-compatible NoSQL database
 
 Other Projects
 --------------

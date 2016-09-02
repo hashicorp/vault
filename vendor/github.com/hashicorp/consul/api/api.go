@@ -80,6 +80,9 @@ type QueryMeta struct {
 
 	// How long did the request take
 	RequestTime time.Duration
+
+	// Is address translation enabled for HTTP responses on this agent
+	AddressTranslationEnabled bool
 }
 
 // WriteMeta is used to return meta data about a write
@@ -542,6 +545,15 @@ func parseQueryMeta(resp *http.Response, q *QueryMeta) error {
 	default:
 		q.KnownLeader = false
 	}
+
+	// Parse X-Consul-Translate-Addresses
+	switch header.Get("X-Consul-Translate-Addresses") {
+	case "true":
+		q.AddressTranslationEnabled = true
+	default:
+		q.AddressTranslationEnabled = false
+	}
+
 	return nil
 }
 

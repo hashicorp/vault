@@ -58,7 +58,11 @@ func (s *Section) NewKey(name, val string) (*Key, error) {
 	}
 
 	s.keyList = append(s.keyList, name)
-	s.keys[name] = &Key{s, "", name, val, false}
+	s.keys[name] = &Key{
+		s:     s,
+		name:  name,
+		value: val,
+	}
 	s.keysHash[name] = val
 	return s.keys[name], nil
 }
