@@ -93,7 +93,14 @@ Usage: vault audit-enable [options] type [config...]
   This command enables an audit backend of type "type". Additional
   options for configuring the audit backend can be specified after the
   type in the same format as the "vault write" command in key/value pairs.
-  Example: vault audit-enable file path=audit.log
+
+  For example, to configure the file audit backend to write audit logs at
+  the path /var/log/audit.log:
+
+      $ vault audit-enable file file_path=/var/log/audit.log
+
+  For information on available configuration options, please see the
+  documentation.
 
 General Options:
 ` + meta.GeneralOptionsUsage() + `
