@@ -120,17 +120,17 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 
 		// Basically: if we have empty "keys" or no keys at all, 404. This
 		// provides consistency with GET.
-		case req.Operation == logical.ListOperation:
+		case req.Operation == logical.ListOperation && resp.WrapInfo == nil:
 			if resp == nil || len(resp.Data) == 0 {
 				respondError(w, http.StatusNotFound, nil)
 				return
 			}
-			keysInt, ok := resp.Data["keys"]
-			if !ok || keysInt == nil {
+			keysRaw, ok := resp.Data["keys"]
+			if !ok || keysRaw == nil {
 				respondError(w, http.StatusNotFound, nil)
 				return
 			}
-			keys, ok := keysInt.([]string)
+			keys, ok := keysRaw.([]string)
 			if !ok {
 				respondError(w, http.StatusInternalServerError, nil)
 				return

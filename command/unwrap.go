@@ -67,6 +67,15 @@ func (c *UnwrapCommand) Run(args []string) int {
 		return PrintRawField(c.Ui, secret, field)
 	}
 
+	// Check if the original was a list response and format as a list if so
+	if secret.Data != nil &&
+		len(secret.Data) == 1 &&
+		secret.Data["keys"] != nil {
+		_, ok := secret.Data["keys"].([]interface{})
+		if ok {
+			return OutputList(c.Ui, format, secret)
+		}
+	}
 	return OutputSecret(c.Ui, format, secret)
 }
 
