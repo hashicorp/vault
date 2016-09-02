@@ -127,7 +127,7 @@ For the `telemetry` section, there is no resource name. All configuration
 is within the object itself.
 
 * `statsite_address` (optional) - An address to a [Statsite](https://github.com/armon/statsite)
-  instances for metrics. This is highly recommended for production usage.
+  instance for metrics. This is highly recommended for production usage.
 
 * `statsd_address` (optional) - This is the same as `statsite_address` but
   for StatsD.
@@ -209,6 +209,11 @@ to help you, but may refer you to the backend author.
 
   * `postgresql` - Store data within PostgreSQL. This backend does not support HA. This
     is a community-supported backend.
+
+  * `mongo` - Store data within MongoDB. This backend supports HA, however, it
+     must be explicitly enabled. It supports an advanced HA mechanism which
+     allows a leader to step down if the mongo primary of a replica set changes.
+     This is a community-supported backend.
 
   * `inmem` - Store data in-memory. This is only really useful for
     development and experimentation. Data is lost whenever Vault is
@@ -666,6 +671,90 @@ LANGUAGE plpgsql;
 ```
 
 More info can be found in the [PostgreSQL documentation](http://www.postgresql.org/docs/9.4/static/plpgsql-control-structures.html#PLPGSQL-UPSERT-EXAMPLE):
+
+#### Backend Reference: MongoDB (Community-Supported)
+
+All configuration options for the `mongo` backend are optional, and all the defaults
+follow the MongoDB developer standard: connect to a locally running mongod instance
+which has no authentication or TLS required.
+
+The configuration options are the following:
+
+  * `url` (optional) - This is a standard MongoDB connection URI and can contain
+  username, password and database - as well as the comma separated replica set
+  as server. If this option is not provided, the backend will fall back to the
+  default of `mongodb://127.0.0.1:27017/vault`.
+
+  * `database` (optional) - This is the database where the collection of data
+  for vault will be stored. If this option is not provided or an empty string,
+  it will fall back to the same database that is used for authentication. Note
+  that the database for authentication needs to be provided in the connection
+  URI.
+
+  * `collection` (optional) - This is the collection used to store the data for
+  vault. It defaults to `vault` if not provided.
+
+  * `collection_msg` (optional) - This is the collection used to store broadcast
+  messages when HA is enabled. It default to `msg` if not provided.
+
+  * `ha_enabled` (optional) - If non-empty, this backend will enable support for
+  HA.
+
+  * `lock_on_primary` (optional) - If provided this instance will only try to
+  become a leader if the current MongoDB primary matches this value. If the
+  mongo primary changes and this instance is currently the leader, this vault
+  instance will drop leadership. If you skip this option or you leave it blank,
+  this vault instance will always try to become a leader regardless of the
+  current mongo primary. The default for this option is empty. This option only
+  makes sense when HA is enabled.
+
+  * `tls` (optional) - If non-empty, TLS connections to mongo are attempted. By
+  default TLS is disabled.
+
+  * `tls_ca_file` (optional) - If TLS is enabled, point this to a path containing
+  a list of concatenated PEM encoded certificates that can verify the identity
+  of your mongo servers. The default is empty which will fall back to your OS
+  defaults.
+
+  * `tls_cert_file` (optional) - If TLS is enabled and you want or need to use
+  client/mutual TLS authentication, point this to a path of a PEM encoded
+  certificate. **Note:** this option does not invoke the X509 authentication
+  mechanism that mongo supports. This is to verify TLS connections only.
+
+  * `tls_key_file` (optional) - If TLS is enabled and you want or need to use
+  client/mutual TLS authentication, point this to a path of a PEM encoded key.
+  **Note:**  this option does not invoke the X509 authentication mechanism that
+  mongo supports. This is to verify TLS connections only.
+
+The most simple configuration file possible is the following and is adequate for
+development purposes only of course.
+
+```javascript
+backend "mongo" {}
+```
+
+Here is an advanced example that uses TLS connections to mongo and authenticates
+with `user` and `password` to the `admin` database. It will then use the `vault`
+database and store all the data inside of the `vault` collection. HA is enabled
+and this vault instance will try to acquire leadership if `server2:27017` is the
+current mongo primary of the replica set. If `server2:27017` becomes a secondary
+of the replica set and this vault instance was holding leadership, it will drop
+leadership.
+
+```javascript
+backend "mongo" {
+  advertise_addr = "https://vault1:8200"     # required for all HA backends
+  url = "mongodb://user:password@server1:27017,server2:27017,server3:27017/admin"
+  database = "vault"
+  collection = "vault"
+  ha_enabled = 1
+  lock_on_primary = "server2:27017"
+  tls = 1
+  tls_ca_file = "/etc/ssl/mongo-ca.crt"
+  tls_cert_file = "/etc/ssl/mongo-client.crt"
+  tls_key_file = "/etc/ssl/mongo-client.key"
+}
+```
 
 #### Backend Reference: Inmem
 
