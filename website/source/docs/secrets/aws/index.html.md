@@ -620,7 +620,7 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
       "data": {
         "access_key": "...",
         "secret_key": "...",
-        "secret_token": null
+        "security_token": null
       }
     }
     ```
@@ -656,7 +656,7 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
         "data": {
             "access_key": "...",
             "secret_key": "...",
-            "secret_token": "..."
+            "security_token": "..."
         }
     }
     ```
@@ -696,7 +696,7 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
         "data": {
             "access_key": "...",
             "secret_key": "...",
-            "secret_token": "..."
+            "security_token": "..."
         }
     }
     ```
