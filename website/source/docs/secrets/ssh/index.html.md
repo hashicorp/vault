@@ -834,4 +834,4 @@ username@<IP of remote host>:~$
 
   </dd>
 
-  <dd>A `204` response code with an empty response body, for an invalid OTP.</dd>
+  <dd>A `400` BadRequest response code with 'OTP not found' message, for an invalid OTP.</dd>
