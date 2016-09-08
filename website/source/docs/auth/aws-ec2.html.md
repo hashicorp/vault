@@ -45,7 +45,8 @@ backend and associated with various optional restrictions, such as the set
 of allowed policies and max TTLs on the generated tokens. Each role can
 be specified with the constraints that are to be met during the login. For
 example, currently the constraint that is supported is to bind against AMI
-ID. A role which is bound to a specific AMI, can only be used for login by
+ID or the instance profile.
+A role which is bound to a specific AMI, can only be used for login by
 those instances that are deployed on the same AMI.
 
 In many cases, an organization will use a "seed AMI" that is specialized after
@@ -831,7 +832,7 @@ in its identity document to match the one specified by this parameter.
       <li>
         <span class="param">bound_iam_role_arn</span>
         <span class="param-flags">optional</span>
-        If set, defines a constraint on the EC2 instances that they should be using the IAM Role ARN specified by this parameter.
+        If set, defines a constraint on the EC2 instances that they should be using the instance profile ARN specified by this parameter.
       </li>
     </ul>
     <ul>
