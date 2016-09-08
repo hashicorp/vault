@@ -93,6 +93,13 @@ func (c *AuthCommand) Run(args []string) int {
 
 		handler = &tokenAuthHandler{Token: token}
 		args = nil
+
+		switch authPath {
+		case "", "auth/token":
+		default:
+			c.Ui.Error("Token authentication does not support custom paths")
+			return 1
+		}
 	}
 
 	if handler == nil {
@@ -140,6 +147,8 @@ func (c *AuthCommand) Run(args []string) int {
 			c.Ui.Error(fmt.Sprintf("Error parsing options: %s", err))
 			return 1
 		}
+	} else {
+		vars = make(map[string]string)
 	}
 
 	// Build the client so we can auth
