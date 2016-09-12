@@ -2,6 +2,7 @@ package shamir
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"fmt"
 )
 
@@ -98,7 +99,7 @@ func div(a, b uint8) uint8 {
 	// Ensure we return zero if a is zero but aren't subject to timing attacks
 	goodVal = ret
 
-	if a == 0 {
+	if subtle.ConstantTimeByteEq(a, 0) == 1 {
 		ret = zero
 	} else {
 		ret = goodVal
@@ -120,13 +121,13 @@ func mult(a, b uint8) (out uint8) {
 	// timing attacks
 	goodVal = ret
 
-	if a == 0 {
+	if subtle.ConstantTimeByteEq(a, 0) == 1 {
 		ret = zero
 	} else {
 		ret = goodVal
 	}
 
-	if b == 0 {
+	if subtle.ConstantTimeByteEq(b, 0) == 1 {
 		ret = zero
 	} else {
 		goodVal = zero
