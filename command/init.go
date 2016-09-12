@@ -304,13 +304,13 @@ Init Options:
                             unseal key.
 
   -recovery-shares=5        The number of key shares to split the recovery key
-                            into. This is not normally available.
+                            into. Only used with Vault HSM.
 
   -recovery-threshold=3     The number of key shares required to reconstruct
-                            the recovery key. This is not normally available.
+                            the recovery key. Only used with Vault HSM.
 
   -recovery-pgp-keys        If provided, behaves like "pgp-keys" but for the
-                            recovery key shares. This is not normally available.
+                            recovery key shares. Only used with Vault HSM.
 
   -auto                     If set, performs service discovery using Consul. 
                             When all the nodes of a Vault cluster are

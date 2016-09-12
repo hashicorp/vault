@@ -414,7 +414,7 @@ Rekey Options:
                           'sys/rekey/backup' endpoint.
 
   -recovery-key=false     Whether to rekey the recovery key instead of the
-                          barrier key. This is not normally available.
+                          barrier key. Only used with Vault HSM.
 `
 	return strings.TrimSpace(helpText)
 }
