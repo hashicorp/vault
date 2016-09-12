@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -529,8 +528,7 @@ func (p *policy) rotate(storage logical.Storage) error {
 	}
 
 	// Generate a 256bit key
-	newKey := make([]byte, 32)
-	_, err := rand.Read(newKey)
+	newKey, err := uuid.GenerateRandomBytes(32)
 	if err != nil {
 		return err
 	}
@@ -548,8 +546,6 @@ func (p *policy) rotate(storage logical.Storage) error {
 	if p.MinDecryptionVersion == 0 {
 		p.MinDecryptionVersion = 1
 	}
-
-	//fmt.Printf("policy %s rotated to %d\n", p.Name, p.LatestVersion)
 
 	return p.Persist(storage)
 }
