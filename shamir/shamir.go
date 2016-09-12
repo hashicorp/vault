@@ -80,30 +80,59 @@ func interpolatePolynomial(x_samples, y_samples []uint8, x uint8) uint8 {
 // div divides two numbers in GF(2^8)
 func div(a, b uint8) uint8 {
 	if b == 0 {
+		// leaks some timing information but we don't care anyways as this
+		// should never happen, hence the panic
 		panic("divide by zero")
 	}
-	if a == 0 {
-		return 0
-	}
 
+	var goodVal, zero uint8
 	log_a := logTable[a]
 	log_b := logTable[b]
 	diff := (int(log_a) - int(log_b)) % 255
 	if diff < 0 {
 		diff += 255
 	}
-	return expTable[diff]
+
+	ret := expTable[diff]
+
+	// Ensure we return zero if a is zero but aren't subject to timing attacks
+	goodVal = ret
+
+	if a == 0 {
+		ret = zero
+	} else {
+		ret = goodVal
+	}
+
+	return ret
 }
 
 // mult multiplies two numbers in GF(2^8)
 func mult(a, b uint8) (out uint8) {
-	if a == 0 || b == 0 {
-		return 0
-	}
+	var goodVal, zero uint8
 	log_a := logTable[a]
 	log_b := logTable[b]
 	sum := (int(log_a) + int(log_b)) % 255
-	return expTable[sum]
+
+	ret := expTable[sum]
+
+	// Ensure we return zero if either a or be are zero but aren't subject to
+	// timing attacks
+	goodVal = ret
+
+	if a == 0 {
+		ret = zero
+	} else {
+		ret = goodVal
+	}
+
+	if b == 0 {
+		ret = zero
+	} else {
+		goodVal = zero
+	}
+
+	return ret
 }
 
 // add combines two numbers in GF(2^8)
