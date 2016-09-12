@@ -1143,6 +1143,10 @@ func marshalList(info TypeInfo, value interface{}) ([]byte, error) {
 		return nil, marshalErrorf("marshal: can not marshal non collection type into list")
 	}
 
+	if value == nil {
+		return nil, nil
+	}
+
 	rv := reflect.ValueOf(value)
 	t := rv.Type()
 	k := t.Kind()

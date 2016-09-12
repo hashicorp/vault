@@ -182,6 +182,23 @@ func (e *Encoder) Encode(in interface{}) (*dynamodb.AttributeValue, error) {
 	return av, nil
 }
 
+func fieldByIndex(v reflect.Value, index []int,
+	OnEmbeddedNilStruct func(*reflect.Value) bool) reflect.Value {
+	fv := v
+	for i, x := range index {
+		if i > 0 {
+			if fv.Kind() == reflect.Ptr && fv.Type().Elem().Kind() == reflect.Struct {
+				if fv.IsNil() && !OnEmbeddedNilStruct(&fv) {
+					break
+				}
+				fv = fv.Elem()
+			}
+		}
+		fv = fv.Field(x)
+	}
+	return fv
+}
+
 func (e *Encoder) encode(av *dynamodb.AttributeValue, v reflect.Value, fieldTag tag) error {
 	// We should check for omitted values first before dereferencing.
 	if fieldTag.OmitEmpty && emptyValue(v) {
@@ -233,7 +250,14 @@ func (e *Encoder) encodeStruct(av *dynamodb.AttributeValue, v reflect.Value) err
 			return &InvalidMarshalError{msg: "map key cannot be empty"}
 		}
 
-		fv := v.FieldByIndex(f.Index)
+		found := true
+		fv := fieldByIndex(v, f.Index, func(v *reflect.Value) bool {
+			found = false
+			return false // to break the loop.
+		})
+		if !found {
+			continue
+		}
 		elem := &dynamodb.AttributeValue{}
 		err := e.encode(elem, fv, f.tag)
 		if err != nil {

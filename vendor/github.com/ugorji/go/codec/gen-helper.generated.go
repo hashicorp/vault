@@ -84,6 +84,11 @@ func (f genHelperEncoder) EncBinaryMarshal(iv encoding.BinaryMarshaler) {
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperEncoder) EncRaw(iv Raw) {
+	f.e.raw(iv)
+}
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
 func (f genHelperEncoder) TimeRtidIfBinc() uintptr {
 	if _, ok := f.e.hh.(*BincHandle); ok {
 		return timeTypId
@@ -189,6 +194,11 @@ func (f genHelperDecoder) DecBinaryUnmarshal(bm encoding.BinaryUnmarshaler) {
 	if fnerr != nil {
 		panic(fnerr)
 	}
+}
+
+// FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*
+func (f genHelperDecoder) DecRaw() []byte {
+	return f.d.raw()
 }
 
 // FOR USE BY CODECGEN ONLY. IT *WILL* CHANGE WITHOUT NOTICE. *DO NOT USE*

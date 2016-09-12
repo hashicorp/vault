@@ -166,6 +166,13 @@ func (d *simpleDecDriver) readNextBd() {
 	d.bdRead = true
 }
 
+func (d *simpleDecDriver) uncacheRead() {
+	if d.bdRead {
+		d.r.unreadn1()
+		d.bdRead = false
+	}
+}
+
 func (d *simpleDecDriver) ContainerType() (vt valueType) {
 	if d.bd == simpleVdNil {
 		return valueTypeNil

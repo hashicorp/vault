@@ -83,15 +83,17 @@ var (
 // dialOptions configure a Dial call. dialOptions are set by the DialOption
 // values passed to Dial.
 type dialOptions struct {
-	codec    Codec
-	cp       Compressor
-	dc       Decompressor
-	bs       backoffStrategy
-	balancer Balancer
-	block    bool
-	insecure bool
-	timeout  time.Duration
-	copts    transport.ConnectOptions
+	unaryInt  UnaryClientInterceptor
+	streamInt StreamClientInterceptor
+	codec     Codec
+	cp        Compressor
+	dc        Decompressor
+	bs        backoffStrategy
+	balancer  Balancer
+	block     bool
+	insecure  bool
+	timeout   time.Duration
+	copts     transport.ConnectOptions
 }
 
 // DialOption configures how we set up the connection.
@@ -215,6 +217,20 @@ func WithUserAgent(s string) DialOption {
 	}
 }
 
+// WithUnaryInterceptor returns a DialOption that specifies the interceptor for unary RPCs.
+func WithUnaryInterceptor(f UnaryClientInterceptor) DialOption {
+	return func(o *dialOptions) {
+		o.unaryInt = f
+	}
+}
+
+// WithStreamInterceptor returns a DialOption that specifies the interceptor for streaming RPCs.
+func WithStreamInterceptor(f StreamClientInterceptor) DialOption {
+	return func(o *dialOptions) {
+		o.streamInt = f
+	}
+}
+
 // Dial creates a client connection to the given target.
 func Dial(target string, opts ...DialOption) (*ClientConn, error) {
 	return DialContext(context.Background(), target, opts...)
@@ -306,11 +322,16 @@ func DialContext(ctx context.Context, target string, opts ...DialOption) (conn *
 	if ok {
 		go cc.lbWatcher()
 	}
-	colonPos := strings.LastIndex(target, ":")
-	if colonPos == -1 {
-		colonPos = len(target)
+	creds := cc.dopts.copts.TransportCredentials
+	if creds != nil && creds.Info().ServerName != "" {
+		cc.authority = creds.Info().ServerName
+	} else {
+		colonPos := strings.LastIndex(target, ":")
+		if colonPos == -1 {
+			colonPos = len(target)
+		}
+		cc.authority = target[:colonPos]
 	}
-	cc.authority = target[:colonPos]
 	return cc, nil
 }
 

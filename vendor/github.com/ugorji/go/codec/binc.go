@@ -348,6 +348,13 @@ func (d *bincDecDriver) readNextBd() {
 	d.bdRead = true
 }
 
+func (d *bincDecDriver) uncacheRead() {
+	if d.bdRead {
+		d.r.unreadn1()
+		d.bdRead = false
+	}
+}
+
 func (d *bincDecDriver) ContainerType() (vt valueType) {
 	if d.vd == bincVdSpecial && d.vs == bincSpNil {
 		return valueTypeNil

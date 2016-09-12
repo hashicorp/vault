@@ -611,8 +611,8 @@ type RateLimits struct {
 	Core *Rate `json:"core"`
 
 	// The rate limit for search API requests.  Unauthenticated requests
-	// are limited to 5 requests per minutes.  Authenticated requests are
-	// limited to 20 per minute.
+	// are limited to 10 requests per minutes.  Authenticated requests are
+	// limited to 30 per minute.
 	//
 	// GitHub API docs: https://developer.github.com/v3/search/#rate-limit
 	Search *Rate `json:"search"`
