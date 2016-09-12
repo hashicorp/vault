@@ -66,6 +66,9 @@ var (
 
 	// CassandraImageName is the Cassandra image name on dockerhub.
 	CassandraImageName = env.Getenv("DOCKERTEST_CASSANDRA_IMAGE_NAME", "cassandra")
+
+	// EtcdImageName is the etcd image name on dockerhub.
+	EtcdImageName = env.Getenv("DOCKERTEST_ETCD_IMAGE_NAME", "quay.io/coreos/etcd")
 )
 
 // Username and password configuration

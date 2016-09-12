@@ -1,31 +1,42 @@
 hash: ea1ce82416f8736cf3fd1f562146f135ee5071c7aed0dcbb4e33b4c18cdeaf6d
-updated: 2016-08-08T16:52:24.58116408+02:00
+updated: 2016-09-03T10:56:05.944984255+08:00
 imports:
 - name: github.com/go-errors/errors
   version: a41850380601eeb43f4350f7d17c6bbd8944aaf8
 - name: github.com/go-sql-driver/mysql
   version: 0b58b37b664c21f3010e836f1b931e1d0b0b0685
 - name: github.com/lib/pq
-  version: 80f8150043c80fb52dee6bc863a709cdac7ec8f8
+  version: 50761b0867bd1d9d069276790bcd4a3bccf2324a
   subpackages:
   - oid
 - name: github.com/ory-am/common
-  version: 930cc805232909c38f2e68310b1e21f71b056d59
+  version: d93c852f2d09c219fd058756caf67bbdf8cf4be4
   subpackages:
   - env
 - name: github.com/pborman/uuid
   version: a97ce2ca70fa5a848076093f05e639a89ca34d06
 testImports:
 - name: github.com/araddon/gou
-  version: 50a94aa4a3fb69e8fbde05df290fcb49fa685e07
+  version: 4060436435c0b91885cb45241edb764c632ed8ae
 - name: github.com/bitly/go-hostpool
   version: d0e59c22a56e8dadfed24f74f452cea5a52722d2
 - name: github.com/cenk/backoff
   version: cdf48bbc1eb78d1349cbda326a4a037f7ba565c6
+- name: github.com/cloudfoundry-incubator/candiedyaml
+  version: 99c3df83b51532e3615f851d8c2dbb638f5313bf
+- name: github.com/coreos/etcd
+  version: 5695120efcfdc05b8ba51be2018d99c2937b41d0
+  subpackages:
+  - auth/authpb
+  - clientv3
+  - etcdserver/api/v3rpc/rpctypes
+  - etcdserver/etcdserverpb
+  - mvcc/mvccpb
+  - pkg/tlsutil
 - name: github.com/dancannon/gorethink
   version: 27d3045458910e2fc56025a0b52caaaa96414a26
 - name: github.com/davecgh/go-spew
-  version: 2df174808ee097f90d259e432cc04442cf60be21
+  version: 6cf5744a041a0022271cefed95ba843f6d87fd51
   subpackages:
   - spew
 - name: github.com/garyburd/redigo
@@ -33,49 +44,57 @@ testImports:
   subpackages:
   - internal
   - redis
+- name: github.com/ghodss/yaml
+  version: aa0c862057666179de291b67d9f093d12b5a8473
 - name: github.com/go-stomp/stomp
   version: 364e36fe21291dd5aec3cba10ea15b0e654d9b40
   subpackages:
   - frame
 - name: github.com/gocql/gocql
-  version: b2caded3d0f457e42515c06d4092c02055cebaa0
+  version: 3ac1aabebaf2705c6f695d4ef2c25ab6239e88b3
   subpackages:
   - internal/lru
   - internal/murmur
   - internal/streams
 - name: github.com/golang/protobuf
-  version: c3cefd437628a0b7d31b34fe44b3a7a540e98527
+  version: 1f49d83d9aa00e6ce4fc8258c71cc7786aec968a
   subpackages:
+  - jsonpb
   - proto
 - name: github.com/golang/snappy
   version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
+- name: github.com/grpc-ecosystem/grpc-gateway
+  version: 331418a167bc76e7e4e7469cf704033eddaba7a5
+  subpackages:
+  - runtime
+  - runtime/internal
+  - utilities
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/hashicorp/consul
-  version: d8262e1ffcdd216bcb26dfb69b670102ff13156c
+  version: 0047f09be55fdf790263cbc088bf5ec924ffe644
   subpackages:
   - api
 - name: github.com/hashicorp/go-cleanhttp
-  version: 875fb671b3ddc66f8e2f0acc33829c8cb989a38d
+  version: ad28ea4487f05916463e2423a55166280e8254b5
 - name: github.com/hashicorp/serf
-  version: 6c4672d66fc6312ddde18399262943e21175d831
+  version: 9432bc08aa8d486e497e27f84878ebbe8c1eab66
   subpackages:
   - coordinate
-  - serf
 - name: github.com/mattbaird/elastigo
   version: 34c4c4d8425cbdcbc8e257943a2044d5e9f7dab5
   subpackages:
   - lib
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
   subpackages:
   - difflib
 - name: github.com/samuel/go-zookeeper
-  version: e64db453f3512cade908163702045e0f31137843
+  version: 8c6a1d79a44d2742da3660540d1fd43f4ddcfc8c
   subpackages:
   - zk
 - name: github.com/Sirupsen/logrus
-  version: a283a10442df8dc09befd873fab202bf8a253d6a
+  version: 3ec0642a7fb6488f65b06f9040adc67e3990296a
 - name: github.com/streadway/amqp
   version: 2e25825abdbd7752ff08b270d313b93519a0a232
 - name: github.com/stretchr/testify
@@ -84,19 +103,35 @@ testImports:
   - assert
   - require
 - name: golang.org/x/crypto
-  version: e0d166c33c321d0ff863f459a5882096e334f508
+  version: f160b6bf95857cd862817875dd958be022e587c4
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
-  version: 075e191f18186a8ff2becaf64478e30f4545cdad
+  version: 1358eff22f0dd0c54fc521042cc607f6ff4b531a
   subpackages:
   - context
+  - http2
+  - http2/hpack
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/sys
-  version: 20457ee8ea8546920d3f4e19e405da45250dc5a5
+  version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
   subpackages:
   - unix
+- name: google.golang.org/grpc
+  version: 52f6504dc290bd928a8139ba94e3ab32ed9a6273
+  subpackages:
+  - codes
+  - credentials
+  - grpclog
+  - internal
+  - metadata
+  - naming
+  - peer
+  - transport
 - name: gopkg.in/dancannon/gorethink.v2
-  version: 27d3045458910e2fc56025a0b52caaaa96414a26
+  version: e75f34b0817d1ed1a4b967975ccf5fac9535dbc2
   subpackages:
   - encoding
   - ql2
@@ -106,7 +141,7 @@ testImports:
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/mgo.v2
-  version: 01084657862d7b12d3b10ffd0394357abf8f8bc2
+  version: 3f83fa5005286a7fe593b055f0d7771a7dce4655
   subpackages:
   - bson
   - internal/json

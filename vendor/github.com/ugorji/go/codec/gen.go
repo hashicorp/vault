@@ -27,6 +27,7 @@ import (
 // ---------------------------------------------------
 // codecgen supports the full cycle of reflection-based codec:
 //    - RawExt
+//    - Raw
 //    - Builtins
 //    - Extensions
 //    - (Binary|Text|JSON)(Unm|M)arshal
@@ -701,13 +702,17 @@ func (x *genRunner) enc(varname string, t reflect.Type) {
 	}
 
 	// check if
-	//   - type is RawExt
+	//   - type is RawExt, Raw
 	//   - the type implements (Text|JSON|Binary)(Unm|M)arshal
 	x.linef("%sm%s := z.EncBinary()", genTempVarPfx, mi)
 	x.linef("_ = %sm%s", genTempVarPfx, mi)
 	x.line("if false {")           //start if block
 	defer func() { x.line("}") }() //end if block
 
+	if t == rawTyp {
+		x.linef("} else { z.EncRaw(%v)", varname)
+		return
+	}
 	if t == rawExtTyp {
 		x.linef("} else { r.EncodeRawExt(%v, e)", varname)
 		return
@@ -1131,7 +1136,7 @@ func (x *genRunner) dec(varname string, t reflect.Type) {
 	}
 
 	// check if
-	//   - type is RawExt
+	//   - type is Raw, RawExt
 	//   - the type implements (Text|JSON|Binary)(Unm|M)arshal
 	mi := x.varsfx()
 	x.linef("%sm%s := z.DecBinary()", genTempVarPfx, mi)
@@ -1139,6 +1144,10 @@ func (x *genRunner) dec(varname string, t reflect.Type) {
 	x.line("if false {")           //start if block
 	defer func() { x.line("}") }() //end if block
 
+	if t == rawTyp {
+		x.linef("} else { *%v = z.DecRaw()", varname)
+		return
+	}
 	if t == rawExtTyp {
 		x.linef("} else { r.DecodeExt(%v, 0, nil)", varname)
 		return

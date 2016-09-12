@@ -2643,7 +2643,7 @@ func (c *EC2) CreateTagsRequest(input *CreateTagsInput) (req *request.Request, o
 }
 
 // Adds or overwrites one or more tags for the specified Amazon EC2 resource
-// or resources. Each resource can have a maximum of 10 tags. Each tag consists
+// or resources. Each resource can have a maximum of 50 tags. Each tag consists
 // of a key and optional value. Tag keys must be unique per resource.
 //
 // For more information about tags, see Tagging Your Resources (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html)
@@ -9529,11 +9529,13 @@ func (c *EC2) ModifyIdentityIdFormatRequest(input *ModifyIdentityIdFormatInput) 
 	return
 }
 
-// Modifies the ID format of a resource for the specified IAM user, IAM role,
-// or root user. You can specify that resources should receive longer IDs (17-character
-// IDs) when they are created. The following resource types support longer IDs:
-// instance | reservation | snapshot | volume. For more information, see Resource
-// IDs (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/resource-ids.html)
+// Modifies the ID format of a resource for a specified IAM user, IAM role,
+// or the root user for an account; or all IAM users, IAM roles, and the root
+// user for an account. You can specify that resources should receive longer
+// IDs (17-character IDs) when they are created.
+//
+// The following resource types support longer IDs: instance | reservation
+// | snapshot | volume. For more information, see Resource IDs (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/resource-ids.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // This setting applies to the principal specified in the request; it does
@@ -17932,10 +17934,10 @@ type DescribeHostReservationOfferingsInput struct {
 	Filter []*Filter `locationNameList:"Filter" type:"list"`
 
 	// This is the maximum duration of the reservation you'd like to purchase, specified
-	// in seconds.Reservations are available in 1, 3, and 5 year terms. The number
-	// of seconds specified must be the number of seconds in a year (365x24x60x60)
-	// times one of the supported durations (1, 3, or 5). For example, specify 157680000
-	// for 5 years.
+	// in seconds. Reservations are available in one-year and three-year terms.
+	// The number of seconds specified must be the number of seconds in a year (365x24x60x60)
+	// times one of the supported durations (1 or 3). For example, specify 94608000
+	// for three years.
 	MaxDuration *int64 `type:"integer"`
 
 	// The maximum number of results to return for the request in a single page.
@@ -17945,10 +17947,10 @@ type DescribeHostReservationOfferingsInput struct {
 	MaxResults *int64 `type:"integer"`
 
 	// This is the minimum duration of the reservation you'd like to purchase, specified
-	// in seconds. Reservations are available in 1, 3, and 5 year terms. The number
-	// of seconds specified must be the number of seconds in a year (365x24x60x60)
-	// times one of the supported durations (1, 3, or 5). For example, specify 94608000
-	// for 3 years.
+	// in seconds. Reservations are available in one-year and three-year terms.
+	// The number of seconds specified must be the number of seconds in a year (365x24x60x60)
+	// times one of the supported durations (1 or 3). For example, specify 31536000
+	// for one year.
 	MinDuration *int64 `type:"integer"`
 
 	// The token to use to retrieve the next page of results.
@@ -23955,7 +23957,7 @@ type HostOffering struct {
 	// The hourly price of the offering.
 	HourlyPrice *string `locationName:"hourlyPrice" type:"string"`
 
-	// The instance family that the offering covers.
+	// The instance family of the offering.
 	InstanceFamily *string `locationName:"instanceFamily" type:"string"`
 
 	// The ID of the offering.
@@ -24017,7 +24019,7 @@ type HostReservation struct {
 	CurrencyCode *string `locationName:"currencyCode" type:"string" enum:"CurrencyCodeValues"`
 
 	// The length of the reservation's term, specified in seconds. Can be 31536000
-	// (1 year) | 94608000 (3 years) | 157680000 (5 years).
+	// (1 year) | 94608000 (3 years).
 	Duration *int64 `locationName:"duration" type:"integer"`
 
 	// The date and time that the reservation ends.
@@ -25933,7 +25935,8 @@ type ModifyIdentityIdFormatInput struct {
 	_ struct{} `type:"structure"`
 
 	// The ARN of the principal, which can be an IAM user, IAM role, or the root
-	// user.
+	// user. Specify all to modify the ID format for all IAM users, IAM roles, and
+	// the root user of the account.
 	PrincipalArn *string `locationName:"principalArn" type:"string" required:"true"`
 
 	// The type of resource: instance | reservation | snapshot | volume
@@ -30216,7 +30219,8 @@ type RunScheduledInstancesInput struct {
 	// Default: 1
 	InstanceCount *int64 `type:"integer"`
 
-	// The launch specification.
+	// The launch specification. You must match the instance type, Availability
+	// Zone, network, and platform of the schedule that you purchased.
 	LaunchSpecification *ScheduledInstancesLaunchSpecification `type:"structure" required:"true"`
 
 	// The Scheduled Instance ID.

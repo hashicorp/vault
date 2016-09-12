@@ -852,6 +852,12 @@ func (t *http2Client) operateHeaders(frame *http2.MetaHeadersFrame) {
 		state.processHeaderField(hf)
 	}
 	if state.err != nil {
+		s.mu.Lock()
+		if !s.headerDone {
+			close(s.headerChan)
+			s.headerDone = true
+		}
+		s.mu.Unlock()
 		s.write(recvMsg{err: state.err})
 		// Something wrong. Stops reading even when there is remaining.
 		return

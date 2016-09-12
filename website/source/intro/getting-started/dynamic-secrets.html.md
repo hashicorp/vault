@@ -68,7 +68,7 @@ $ vault read aws/config/root
 Error reading aws/config/root: Error making API request.
 
 URL: GET http://127.0.0.1:8200/v1/aws/config/root
-Code: 500. Errors:
+Code: 405. Errors:
 
 * unsupported operation
 ```
