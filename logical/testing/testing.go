@@ -154,10 +154,13 @@ func Test(tt TestT, c TestCase) {
 	}
 
 	// Initialize the core
-	init, err := core.Initialize(&vault.SealConfig{
-		SecretShares:    1,
-		SecretThreshold: 1,
-	}, nil)
+	init, err := core.Initialize(&vault.InitParams{
+		BarrierConfig: &vault.SealConfig{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		},
+		RecoveryConfig: nil,
+	})
 	if err != nil {
 		tt.Fatal("error initializing core: ", err)
 		return

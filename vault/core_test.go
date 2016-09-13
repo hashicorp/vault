@@ -56,7 +56,10 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		SecretShares:    5,
 		SecretThreshold: 3,
 	}
-	res, err := c.Initialize(sealConf, nil)
+	res, err := c.Initialize(&InitParams{
+		BarrierConfig:  sealConf,
+		RecoveryConfig: nil,
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -141,7 +144,10 @@ func TestCore_Unseal_Single(t *testing.T) {
 		SecretShares:    1,
 		SecretThreshold: 1,
 	}
-	res, err := c.Initialize(sealConf, nil)
+	res, err := c.Initialize(&InitParams{
+		BarrierConfig:  sealConf,
+		RecoveryConfig: nil,
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -196,7 +202,10 @@ func TestCore_Route_Sealed(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	res, err := c.Initialize(sealConf, nil)
+	res, err := c.Initialize(&InitParams{
+		BarrierConfig:  sealConf,
+		RecoveryConfig: nil,
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
