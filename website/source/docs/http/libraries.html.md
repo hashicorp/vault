@@ -67,3 +67,10 @@ These libraries are provided by the community.
 
 ### Scala
  * [scala-vault](https://github.com/janstenpickle/scala-vault)
+
+
+## Unofficial
+
+### Elixir
+
+* [vaultex](https://hex.pm/packages/vaultex)
