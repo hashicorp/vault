@@ -10,6 +10,51 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func TestAppRole_RoleConstraints(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"role_id":  "role-id-123",
+		"policies": "a,b",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/testrole1",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	// Set bind_secret_id, which is enabled by default
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Set bound_cidr_list alone by explicitly disabling bind_secret_id
+	roleReq.Operation = logical.UpdateOperation
+	roleData["bind_secret_id"] = false
+	roleData["bound_cidr_list"] = "0.0.0.0/0"
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Remove both constraints
+	roleReq.Operation = logical.UpdateOperation
+	roleData["bound_cidr_list"] = ""
+	roleData["bind_secret_id"] = false
+	resp, err = b.HandleRequest(roleReq)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("resp:%#v", err, resp)
+	}
+	if err == nil {
+		t.Fatalf("expected an error")
+	}
+}
+
 func TestAppRole_RoleIDUniqueness(t *testing.T) {
 	var resp *logical.Response
 	var err error

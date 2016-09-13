@@ -211,8 +211,10 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
 <dl class="api">
   <dt>Description</dt>
   <dd>
-  Create a new AppRole or update an existing AppRole. This endpoint
-  supports both `create` and `update` capabilities.
+  Creates a new AppRole or updates an existing AppRole. This endpoint
+  supports both `create` and `update` capabilities. There can be one or more
+  constraints enabled on the role. It is required to have at least one of them
+  enabled while creating or updating a role.
   </dd>
 
   <dt>Method</dt>

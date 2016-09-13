@@ -524,6 +524,22 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 // setRoleEntry grabs a write lock and stores the options on an role into the storage.
 // Also creates a reverse index from the role's RoleID to the role itself.
 func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
+	if roleName == "" {
+		return fmt.Errorf("missing role name")
+	}
+
+	if role == nil {
+		return fmt.Errorf("nil role")
+	}
+
+	// At least one constraint should be enabled on the role
+	switch {
+	case role.BindSecretID:
+	case role.BoundCIDRList != "":
+	default:
+		return fmt.Errorf("at least one constraint should be enabled on the role")
+	}
+
 	// Create a storage entry for the role
 	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), role)
 	if err != nil {
