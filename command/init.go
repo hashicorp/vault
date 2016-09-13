@@ -21,7 +21,7 @@ type InitCommand struct {
 
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
-	var pgpKeys, recoveryPgpKeys pgpkeys.PubKeyFilesFlag
+	var pgpKeys, recoveryPgpKeys, rootTokenPgpKey pgpkeys.PubKeyFilesFlag
 	var auto, check bool
 	var consulServiceName string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
@@ -30,6 +30,7 @@ func (c *InitCommand) Run(args []string) int {
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.IntVar(&storedShares, "stored-shares", 0, "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
+	flags.Var(&rootTokenPgpKey, "root-token-pgp-key", "")
 	flags.IntVar(&recoveryShares, "recovery-shares", 5, "")
 	flags.IntVar(&recoveryThreshold, "recovery-threshold", 3, "")
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
@@ -50,6 +51,15 @@ func (c *InitCommand) Run(args []string) int {
 		RecoveryPGPKeys:   recoveryPgpKeys,
 	}
 
+	switch len(rootTokenPgpKey) {
+	case 0:
+	case 1:
+		initRequest.RootTokenPGPKey = rootTokenPgpKey[0]
+	default:
+		c.Ui.Error("Only one PGP key can be specified for encrypting the root token")
+		return 1
+	}
+
 	// If running in 'auto' mode, run service discovery based on environment
 	// variables of Consul.
 	if auto {
@@ -60,7 +70,7 @@ func (c *InitCommand) Run(args []string) int {
 		// Create a client to communicate with Consul
 		consulClient, err := consulapi.NewClient(consulConfig)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("failed to create Consul client:%v", err))
+			c.Ui.Error(fmt.Sprintf("Failed to create Consul client:%v", err))
 			return 1
 		}
 
@@ -289,8 +299,9 @@ Init Options:
   -key-threshold=3          The number of key shares required to reconstruct
                             the master key.
 
-  -stored-shares=0          The number of unseal keys to store. This is not
-                            normally available.
+  -stored-shares=0          The number of unseal keys to store. Only used with 
+                            Vault HSM. Must currently be equivalent to the
+                            number of shares.
 
   -pgp-keys                 If provided, must be a comma-separated list of
                             files on disk containing binary- or base64-format
@@ -298,10 +309,17 @@ Init Options:
                             "keybase:<username>". The number of given entries
                             must match 'key-shares'. The output unseal keys will
                             be encrypted and base64-encoded, in order, with the
-                            given public keys.  If you want to use them with the
+                            given public keys. If you want to use them with the
                             'vault unseal' command, you will need to base64-
                             decode and decrypt; this will be the plaintext
                             unseal key.
+
+  -root-token-pgp-key       If provided, a file on disk with a binary- or
+                            base64-format public PGP key, or a Keybase username
+                            specified as "keybase:<username>". The output root
+                            token will be encrypted and base64-encoded, in
+                            order, with the given public key. You will need
+                            to base64-decode and decrypt the result.
 
   -recovery-shares=5        The number of key shares to split the recovery key
                             into. Only used with Vault HSM.

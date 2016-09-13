@@ -69,7 +69,10 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		}
 	}
 
-	res, err := c.Initialize(barrierConf, recoveryConf)
+	res, err := c.Initialize(&InitParams{
+		BarrierConfig:  barrierConf,
+		RecoveryConfig: recoveryConf,
+	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -87,7 +90,10 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		t.Fatalf("Bad: %#v", res)
 	}
 
-	_, err = c.Initialize(barrierConf, recoveryConf)
+	_, err = c.Initialize(&InitParams{
+		BarrierConfig:  barrierConf,
+		RecoveryConfig: recoveryConf,
+	})
 	if err != ErrAlreadyInit {
 		t.Fatalf("err: %v", err)
 	}
@@ -125,7 +131,10 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		t.Fatalf("err: %v", err)
 	}
 
-	_, err = c2.Initialize(barrierConf, recoveryConf)
+	_, err = c2.Initialize(&InitParams{
+		BarrierConfig:  barrierConf,
+		RecoveryConfig: recoveryConf,
+	})
 	if err != ErrAlreadyInit {
 		t.Fatalf("err: %v", err)
 	}
