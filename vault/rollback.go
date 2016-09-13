@@ -41,7 +41,7 @@ type RollbackManager struct {
 
 	inflightAll  sync.WaitGroup
 	inflight     map[string]*rollbackState
-	inflightLock sync.Mutex
+	inflightLock sync.RWMutex
 
 	doneCh       chan struct{}
 	shutdown     bool
@@ -107,8 +107,6 @@ func (m *RollbackManager) run() {
 
 // triggerRollbacks is used to trigger the rollbacks across all the backends
 func (m *RollbackManager) triggerRollbacks() {
-	m.inflightLock.Lock()
-	defer m.inflightLock.Unlock()
 
 	backends := m.backends()
 
@@ -117,7 +115,10 @@ func (m *RollbackManager) triggerRollbacks() {
 		if e.Table == credentialTableType {
 			path = "auth/" + path
 		}
-		if _, ok := m.inflight[path]; !ok {
+		m.inflightLock.RLock()
+		_, ok := m.inflight[path]
+		m.inflightLock.RUnlock()
+		if !ok {
 			m.startRollback(path)
 		}
 	}
@@ -129,7 +130,9 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 	rs := &rollbackState{}
 	rs.Add(1)
 	m.inflightAll.Add(1)
+	m.inflightLock.Lock()
 	m.inflight[path] = rs
+	m.inflightLock.Unlock()
 	go m.attemptRollback(path, rs)
 	return rs
 }
@@ -172,12 +175,12 @@ func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err e
 // or to join an existing rollback operation if in flight.
 func (m *RollbackManager) Rollback(path string) error {
 	// Check for an existing attempt and start one if none
-	m.inflightLock.Lock()
+	m.inflightLock.RLock()
 	rs, ok := m.inflight[path]
+	m.inflightLock.RUnlock()
 	if !ok {
 		rs = m.startRollback(path)
 	}
-	m.inflightLock.Unlock()
 
 	// Wait for the attempt to finish
 	rs.Wait()

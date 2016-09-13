@@ -81,7 +81,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	}
 
 	// Update the auth table
-	newTable := c.auth.ShallowClone()
+	newTable := c.auth.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
 	if err := c.persistAuth(newTable); err != nil {
 		return errors.New("failed to update auth table")
@@ -162,8 +162,8 @@ func (c *Core) disableCredential(path string) error {
 // removeCredEntry is used to remove an entry in the auth table
 func (c *Core) removeCredEntry(path string) error {
 	// Taint the entry from the auth table
-	newTable := c.auth.ShallowClone()
-	newTable.Remove(path)
+	newTable := c.auth.shallowClone()
+	newTable.remove(path)
 
 	// Update the auth table
 	if err := c.persistAuth(newTable); err != nil {
@@ -180,7 +180,7 @@ func (c *Core) taintCredEntry(path string) error {
 	// Taint the entry from the auth table
 	// We do this on the original since setting the taint operates
 	// on the entries which a shallow clone shares anyways
-	found := c.auth.SetTaint(path, true)
+	found := c.auth.setTaint(path, true)
 
 	// Ensure there was a match
 	if !found {
