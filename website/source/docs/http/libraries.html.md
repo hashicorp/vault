@@ -39,6 +39,10 @@ These libraries are provided by the community.
 * [VaultSharp](https://github.com/rajanadar/VaultSharp)
   * `Install-Package VaultSharp`
 
+### Elixir
+
+* [vaultex](https://hex.pm/packages/vaultex)
+
 ### Java
 
 * [vault-java](https://github.com/jhaals/vault-java)
@@ -67,7 +71,3 @@ These libraries are provided by the community.
 
 ### Scala
  * [scala-vault](https://github.com/janstenpickle/scala-vault)
-
-### Elixir
-
-* [vaultex](https://hex.pm/packages/vaultex)
