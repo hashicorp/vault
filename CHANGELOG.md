@@ -1,6 +1,6 @@
 ## 0.6.2 (Unreleased)
 
-DEPRECATIONS/BREAKING CHANGES:
+DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
@@ -36,7 +36,7 @@ BUG FIXES:
 
 ## 0.6.1 (August 22, 2016)
 
-DEPRECATIONS/BREAKING CHANGES:
+DEPRECATIONS/CHANGES:
 
  * Once the active node is 0.6.1, standby nodes must also be 0.6.1 in order to
    connect to the HA cluster. We recommend following our [general upgrade
@@ -233,7 +233,7 @@ SECURITY:
    confusion, we have simply removed `auth/token/revoke-prefix` in 0.6, and
    `sys/revoke-prefix` will be meant for both leases and tokens instead.
 
-DEPRECATIONS/BREAKING CHANGES:
+DEPRECATIONS/CHANGES:
 
  * `auth/token/revoke-prefix` has been removed. See the security notice for
    details. [GH-1280]
@@ -508,7 +508,7 @@ BUG FIXES:
 
 ## 0.5.1 (February 25th, 2016)
  
-DEPRECATIONS/BREAKING CHANGES:
+DEPRECATIONS/CHANGES:
 
  * RSA keys less than 2048 bits are no longer supported in the PKI backend.
    1024-bit keys are considered unsafe and are disallowed in the Internet PKI.
@@ -592,7 +592,7 @@ SECURITY:
    would be a denial of service against a legitimate rekey operation by sending
    cancel requests over and over. Thanks to Josh Snyder for the report!
 
-DEPRECATIONS/BREAKING CHANGES:
+DEPRECATIONS/CHANGES:
 
  * `s3` physical backend: Environment variables are now preferred over
    configuration values. This makes it behave similar to the rest of Vault,
@@ -777,7 +777,7 @@ against Go 1.5.3, there are no changes from 0.4.0.
 
 ## 0.4.0 (December 10, 2015)
 
-DEPRECATIONS/BREAKING CHANGES:
+DEPRECATIONS/CHANGES:
 
  * Policy Name Casing: Policy names are now normalized to lower-case on write,
    helping prevent accidental case mismatches. For backwards compatibility,
@@ -927,7 +927,7 @@ MISC:
 
 ## 0.3.0 (September 28, 2015)
 
-DEPRECATIONS/BREAKING CHANGES:
+DEPRECATIONS/CHANGES:
 
 Note: deprecations and breaking changes in upcoming releases are announced
 ahead of time on the "vault-tool" mailing list.

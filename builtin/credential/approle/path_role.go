@@ -521,8 +521,26 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 	return logical.ListResponse(listItems), nil
 }
 
-// setRoleEntry grabs a write lock and stores the options on an role into the storage.
-// Also creates a reverse index from the role's RoleID to the role itself.
+// validRoleConstraints tells if the role has at least one constraint enabled
+func validRoleConstraints(role *roleStorageEntry) (bool, error) {
+	if role == nil {
+		return false, fmt.Errorf("nil role")
+	}
+
+	// At least one constraint should be enabled on the role
+	switch {
+	case role.BindSecretID:
+	case role.BoundCIDRList != "":
+	default:
+		return false, fmt.Errorf("at least one constraint should be enabled on the role")
+	}
+
+	return true, nil
+}
+
+// setRoleEntry grabs a write lock and stores the options on an role into the
+// storage. Also creates a reverse index from the role's RoleID to the role
+// itself.
 func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
 	if roleName == "" {
 		return fmt.Errorf("missing role name")
@@ -532,12 +550,13 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 		return fmt.Errorf("nil role")
 	}
 
-	// At least one constraint should be enabled on the role
-	switch {
-	case role.BindSecretID:
-	case role.BoundCIDRList != "":
-	default:
-		return fmt.Errorf("at least one constraint should be enabled on the role")
+	// Check if role constraints are properly set
+	valid, err := validRoleConstraints(role)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return fmt.Errorf("failed to validate role constraints")
 	}
 
 	// Create a storage entry for the role
@@ -743,9 +762,15 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 		delete(data, "role_id")
 		delete(data, "hmac_key")
 
-		return &logical.Response{
+		resp := &logical.Response{
 			Data: data,
-		}, nil
+		}
+
+		if valid, _ := validRoleConstraints(role); !valid {
+			resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
+		}
+
+		return resp, nil
 	}
 }
 
