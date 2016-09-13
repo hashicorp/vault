@@ -521,21 +521,19 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 	return logical.ListResponse(listItems), nil
 }
 
-// validRoleConstraints tells if the role has at least one constraint enabled
-func validRoleConstraints(role *roleStorageEntry) (bool, error) {
-	if role == nil {
-		return false, fmt.Errorf("nil role")
-	}
-
+// validateRoleConstraints checks if the role has at least one constraint
+// enabled. Note that role being nil is not checked by this method. Use with
+// caution.
+func validateRoleConstraints(role *roleStorageEntry) error {
 	// At least one constraint should be enabled on the role
 	switch {
 	case role.BindSecretID:
 	case role.BoundCIDRList != "":
 	default:
-		return false, fmt.Errorf("at least one constraint should be enabled on the role")
+		return fmt.Errorf("at least one constraint should be enabled on the role")
 	}
 
-	return true, nil
+	return nil
 }
 
 // setRoleEntry grabs a write lock and stores the options on an role into the
@@ -551,12 +549,8 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 	}
 
 	// Check if role constraints are properly set
-	valid, err := validRoleConstraints(role)
-	if err != nil {
+	if err := validateRoleConstraints(role); err != nil {
 		return err
-	}
-	if !valid {
-		return fmt.Errorf("failed to validate role constraints")
 	}
 
 	// Create a storage entry for the role
@@ -766,7 +760,7 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 			Data: data,
 		}
 
-		if valid, _ := validRoleConstraints(role); !valid {
+		if err := validateRoleConstraints(role); err != nil {
 			resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
 		}
 
