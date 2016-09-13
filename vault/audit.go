@@ -82,7 +82,7 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 		return err
 	}
 
-	newTable := c.audit.ShallowClone()
+	newTable := c.audit.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
 	if err := c.persistAudit(newTable); err != nil {
 		return errors.New("failed to update audit table")
@@ -109,8 +109,8 @@ func (c *Core) disableAudit(path string) error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
-	newTable := c.audit.ShallowClone()
-	found := newTable.Remove(path)
+	newTable := c.audit.shallowClone()
+	found := newTable.remove(path)
 
 	// Ensure there was a match
 	if !found {

@@ -64,11 +64,11 @@ type MountTable struct {
 	Entries []*MountEntry `json:"entries"`
 }
 
-// ShallowClone returns a copy of the mount table that
+// shallowClone returns a copy of the mount table that
 // keeps the MountEntry locations, so as not to invalidate
 // other locations holding pointers. Care needs to be taken
 // if modifying entries rather than modifying the table itself
-func (t *MountTable) ShallowClone() *MountTable {
+func (t *MountTable) shallowClone() *MountTable {
 	mt := &MountTable{
 		Type:    t.Type,
 		Entries: make([]*MountEntry, len(t.Entries)),
@@ -89,19 +89,8 @@ func (t *MountTable) Hash() ([]byte, error) {
 	return hash[:], nil
 }
 
-// Find is used to lookup an entry
-func (t *MountTable) Find(path string) *MountEntry {
-	n := len(t.Entries)
-	for i := 0; i < n; i++ {
-		if t.Entries[i].Path == path {
-			return t.Entries[i]
-		}
-	}
-	return nil
-}
-
-// SetTaint is used to set the taint on given entry
-func (t *MountTable) SetTaint(path string, value bool) bool {
+// setTaint is used to set the taint on given entry
+func (t *MountTable) setTaint(path string, value bool) bool {
 	n := len(t.Entries)
 	for i := 0; i < n; i++ {
 		if t.Entries[i].Path == path {
@@ -112,8 +101,8 @@ func (t *MountTable) SetTaint(path string, value bool) bool {
 	return false
 }
 
-// Remove is used to remove a given path entry
-func (t *MountTable) Remove(path string) bool {
+// remove is used to remove a given path entry
+func (t *MountTable) remove(path string) bool {
 	n := len(t.Entries)
 	for i := 0; i < n; i++ {
 		if t.Entries[i].Path == path {
@@ -201,7 +190,7 @@ func (c *Core) mount(me *MountEntry) error {
 
 	// Update the mount table
 	c.mountsLock.Lock()
-	newTable := c.mounts.ShallowClone()
+	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
 		c.mountsLock.Unlock()
@@ -290,8 +279,8 @@ func (c *Core) removeMountEntry(path string) error {
 	defer c.mountsLock.Unlock()
 
 	// Remove the entry from the mount table
-	newTable := c.mounts.ShallowClone()
-	newTable.Remove(path)
+	newTable := c.mounts.shallowClone()
+	newTable.remove(path)
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
@@ -309,7 +298,7 @@ func (c *Core) taintMountEntry(path string) error {
 
 	// As modifying the taint of an entry affects shallow clones,
 	// we simply use the original
-	c.mounts.SetTaint(path, true)
+	c.mounts.setTaint(path, true)
 
 	// Update the mount table
 	if err := c.persistMounts(c.mounts); err != nil {
@@ -574,7 +563,7 @@ func (c *Core) unloadMounts() error {
 	defer c.mountsLock.Unlock()
 
 	if c.mounts != nil {
-		mountTable := c.mounts.ShallowClone()
+		mountTable := c.mounts.shallowClone()
 		for _, e := range mountTable.Entries {
 			prefix := e.Path
 			b, ok := c.router.root.Get(prefix)
