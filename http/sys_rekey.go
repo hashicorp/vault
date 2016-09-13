@@ -13,6 +13,12 @@ import (
 
 func handleSysRekeyInit(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		standby, _ := core.Standby()
+		if standby {
+			respondStandby(core, w, r.URL)
+			return
+		}
+
 		switch {
 		case recovery && !core.SealAccess().RecoveryKeySupported():
 			respondError(w, http.StatusBadRequest, fmt.Errorf("recovery rekeying not supported"))
@@ -134,6 +140,12 @@ func handleSysRekeyInitDelete(core *vault.Core, recovery bool, w http.ResponseWr
 
 func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		standby, _ := core.Standby()
+		if standby {
+			respondStandby(core, w, r.URL)
+			return
+		}
+
 		// Parse the request
 		var req RekeyUpdateRequest
 		if err := parseRequest(r, &req); err != nil {
