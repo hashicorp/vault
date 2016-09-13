@@ -112,17 +112,6 @@ func (t *MountTable) SetTaint(path string, value bool) bool {
 	return false
 }
 
-// Tainted returns whether a given path is tainted
-func (t *MountTable) Tainted(path string) bool {
-	n := len(t.Entries)
-	for i := 0; i < n; i++ {
-		if t.Entries[i].Path == path {
-			return t.Entries[i].Tainted
-		}
-	}
-	return false
-}
-
 // Remove is used to remove a given path entry
 func (t *MountTable) Remove(path string) bool {
 	n := len(t.Entries)
