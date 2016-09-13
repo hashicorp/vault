@@ -18,6 +18,7 @@ IMPROVEMENTS:
    [GH-1877]
  * secret/transit: Use HKDF (RFC 5869) as the key derivation function for new
    keys [GH-1812]
+ * secret/transit: Empty plaintext values are now allowed [GH-1874]
 
 BUG FIXES:
 
