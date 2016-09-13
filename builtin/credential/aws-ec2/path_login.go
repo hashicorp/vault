@@ -83,8 +83,7 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region string)
 	if status.Reservations[0].Instances[0].State == nil {
 		return nil, fmt.Errorf("instance state in instance description is nil")
 	}
-	if *status.Reservations[0].Instances[0].State.Code != 16 ||
-		*status.Reservations[0].Instances[0].State.Name != "running" {
+	if *status.Reservations[0].Instances[0].State.Name != "running" {
 		return nil, fmt.Errorf("instance is not in 'running' state")
 	}
 	return status, nil
