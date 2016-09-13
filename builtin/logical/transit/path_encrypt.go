@@ -64,9 +64,6 @@ func (b *backend) pathEncryptWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
 	value := d.Get("plaintext").(string)
-	if len(value) == 0 {
-		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
-	}
 
 	var err error
 
