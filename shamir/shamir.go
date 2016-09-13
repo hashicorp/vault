@@ -130,6 +130,9 @@ func mult(a, b uint8) (out uint8) {
 	if subtle.ConstantTimeByteEq(b, 0) == 1 {
 		ret = zero
 	} else {
+		// This operation does not do anything logically useful. It
+		// only ensures a constant number of assignments to thwart
+		// timing attacks.
 		goodVal = zero
 	}
 
