@@ -13,6 +13,8 @@ IMPROVEMENTS:
  * core: Allow single and two-character path parameters for most places
    [GH-1811]
  * core: Allow list operations to be response-wrapped [GH-1814]
+ * core: Provide better protection against timing attacks in Shamir code
+   [GH-1877]
  * secret/transit: Use HKDF (RFC 5869) as the key derivation function for new
    keys [GH-1812]
 
