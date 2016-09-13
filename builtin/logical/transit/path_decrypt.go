@@ -2,7 +2,6 @@ package transit
 
 import (
 	"encoding/base64"
-	"fmt"
 
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -95,10 +94,6 @@ func (b *backend) pathDecryptWrite(
 		default:
 			return nil, err
 		}
-	}
-
-	if plaintext == "" {
-		return nil, fmt.Errorf("empty plaintext returned")
 	}
 
 	// Generate the response

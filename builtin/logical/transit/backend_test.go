@@ -31,6 +31,8 @@ func TestBackend_basic(t *testing.T) {
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
+			testAccStepEncrypt(t, "test", "", decryptData),
+			testAccStepDecrypt(t, "test", "", decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepEnableDeletion(t, "test"),
 			testAccStepDeletePolicy(t, "test"),
@@ -780,6 +782,48 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 	if ciphertext3 == ciphertext5 {
 		t.Fatalf("expected different ciphertexts")
+	}
+
+	// Finally, check operations on empty values
+	// First, check without setting a plaintext at all
+	req.Data = map[string]interface{}{
+		"nonce":   "b25ldHdvdGhyZWVl", // "onetwothreee"
+		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
+	}
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if !resp.IsError() {
+		t.Fatalf("expected error response, got: %#v", *resp)
+	}
+
+	// Now set plaintext to empty
+	req.Data = map[string]interface{}{
+		"plaintext": "",
+		"nonce":     "b25ldHdvdGhyZWVl", // "onetwothreee"
+		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
+	}
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error response: %#v", *resp)
+	}
+	ciphertext7 := resp.Data["ciphertext"].(string)
+
+	resp, err = b.HandleRequest(req)
+	if resp == nil {
+		t.Fatal("expected non-nil response")
+	}
+	if resp.IsError() {
+		t.Fatalf("got error response: %#v", *resp)
+	}
+	ciphertext8 := resp.Data["ciphertext"].(string)
+
+	if ciphertext7 != ciphertext8 {
+		t.Fatalf("expected the same ciphertext but got %s and %s", ciphertext7, ciphertext8)
 	}
 }
 
