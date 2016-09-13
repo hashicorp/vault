@@ -16,6 +16,8 @@ IMPROVEMENTS:
  * core: Allow list operations to be response-wrapped [GH-1814]
  * core: Provide better protection against timing attacks in Shamir code
    [GH-1877]
+ * credential/approle: At least one constraint is required to be enabled while
+   creating and updating a role [GH-1882]
  * secret/transit: Use HKDF (RFC 5869) as the key derivation function for new
    keys [GH-1812]
  * secret/transit: Empty plaintext values are now allowed [GH-1874]
