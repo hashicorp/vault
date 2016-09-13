@@ -63,16 +63,17 @@ func (b *backend) pathEncryptExistenceCheck(
 func (b *backend) pathEncryptWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	value := d.Get("plaintext").(string)
-	if len(value) == 0 {
+
+	valueRaw, ok := d.GetOk("plaintext")
+	if !ok {
 		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
 	}
-
-	var err error
+	value := valueRaw.(string)
 
 	// Decode the context if any
 	contextRaw := d.Get("context").(string)
 	var context []byte
+	var err error
 	if len(contextRaw) != 0 {
 		context, err = base64.StdEncoding.DecodeString(contextRaw)
 		if err != nil {
