@@ -1,12 +1,21 @@
 package vault
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/shamir"
 )
+
+// InitParams keeps the init function from being littered with too many
+// params, that's it!
+type InitParams struct {
+	BarrierConfig   *SealConfig
+	RecoveryConfig  *SealConfig
+	RootTokenPGPKey string
+}
 
 // InitResult is used to provide the key parts back after
 // they are generated as part of the initialization.
@@ -79,7 +88,10 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 
 // Initialize is used to initialize the Vault with the given
 // configurations.
-func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResult, error) {
+func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
+	barrierConfig := initParams.BarrierConfig
+	recoveryConfig := initParams.RecoveryConfig
+
 	if c.seal.RecoveryKeySupported() {
 		if recoveryConfig == nil {
 			return nil, fmt.Errorf("recovery configuration must be supplied")
@@ -218,6 +230,15 @@ func (c *Core) Initialize(barrierConfig, recoveryConfig *SealConfig) (*InitResul
 	}
 	results.RootToken = rootToken.ID
 	c.logger.Info("core: root token generated")
+
+	if initParams.RootTokenPGPKey != "" {
+		_, encryptedVals, err := pgpkeys.EncryptShares([][]byte{[]byte(results.RootToken)}, []string{initParams.RootTokenPGPKey})
+		if err != nil {
+			c.logger.Error("core: root token encryption failed", "error", err)
+			return nil, err
+		}
+		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
+	}
 
 	// Prepare to re-seal
 	if err := c.preSeal(); err != nil {

@@ -81,7 +81,13 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	result, initErr := core.Initialize(barrierConfig, recoveryConfig)
+	initParams := &vault.InitParams{
+		BarrierConfig:   barrierConfig,
+		RecoveryConfig:  recoveryConfig,
+		RootTokenPGPKey: req.RootTokenPGPKey,
+	}
+
+	result, initErr := core.Initialize(initParams)
 	if initErr != nil {
 		if !errwrap.ContainsType(initErr, new(vault.NonFatalError)) {
 			respondError(w, http.StatusBadRequest, initErr)
@@ -128,6 +134,7 @@ type InitRequest struct {
 	RecoveryShares    int      `json:"recovery_shares"`
 	RecoveryThreshold int      `json:"recovery_threshold"`
 	RecoveryPGPKeys   []string `json:"recovery_pgp_keys"`
+	RootTokenPGPKey   string   `json:"root_token_pgp_key"`
 }
 
 type InitResponse struct {

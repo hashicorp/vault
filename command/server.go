@@ -574,10 +574,13 @@ func (c *ServerCommand) Run(args []string) int {
 
 func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.InitResult, error) {
 	// Initialize it with a basic single key
-	init, err := core.Initialize(&vault.SealConfig{
-		SecretShares:    1,
-		SecretThreshold: 1,
-	}, nil)
+	init, err := core.Initialize(&vault.InitParams{
+		BarrierConfig: &vault.SealConfig{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		},
+		RecoveryConfig: nil,
+	})
 	if err != nil {
 		return nil, err
 	}

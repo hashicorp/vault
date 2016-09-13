@@ -143,10 +143,13 @@ func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
 func TestCoreInitClusterWrapperSetup(t *testing.T, core *Core, clusterAddrs []*net.TCPAddr, handlerSetupFunc func() (http.Handler, http.Handler)) ([]byte, string) {
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterSetupFuncs(handlerSetupFunc)
-	result, err := core.Initialize(&SealConfig{
-		SecretShares:    1,
-		SecretThreshold: 1,
-	}, nil)
+	result, err := core.Initialize(&InitParams{
+		BarrierConfig: &SealConfig{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		},
+		RecoveryConfig: nil,
+	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
