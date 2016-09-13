@@ -2,12 +2,6 @@
 
 DEPRECATIONS/BREAKING CHANGES:
 
- * Tokens can no longer be used in URL paths in the token store (`/auth/token`)
-   and must be passed in via the request body. In the case of the
-   `auth/token/lookup` endpoint, this means that `GET` is no longer a supported
-   operation. In addition, in the Go API, the `TokenAuth.LookupSelf` call no
-   longer takes a parameter [GH-1783]
-
 IMPROVEMENTS:
 
  * api: Return error when an invalid (as opposed to incorrect) unseal key is
@@ -26,6 +20,7 @@ BUG FIXES:
 
  * core: Pass back content-type header for forwarded requests [GH-1791]
  * core: Fix panic if the same key was given twice to `generate-root` [GH-1827]
+ * core: Fix potential deadlock on unmount/remount [GH-1793]
  * physical: Remove empty directories from the `file` storage backend [GH-1821]
  * secret/aws: Added update operation to `aws/sts` path to consider `ttl`
    parameter [39b75c6]
