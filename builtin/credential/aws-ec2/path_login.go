@@ -39,9 +39,16 @@ If a matching role is not found, login fails.`,
 
 			"nonce": &framework.FieldSchema{
 				Type: framework.TypeString,
-				Description: `The nonce created by a client of this backend. When 'disallow_reauthentication'
-option is enabled on either the role or the role tag, then nonce parameter is
-optional. It is a required parameter otherwise.`,
+				Description: `The nonce to be used for subsequent login requests.
+If this parameter is not specified at all and if reauthentication is allowed,
+then the backend will generate a random nonce, attaches it to the instance's
+identity-whitelist entry and returns the nonce back as part of auth metadata.
+This value should be used with further login requests, to establish client
+authenticity. Clients can choose to set a custom nonce if preferred, in which
+case, it is recommended that clients provide a strong nonce.  If a nonce is
+provided but with an empty value, it indicates intent to disable
+reauthentication. Note that, when `disallow_reauthentication` option is enabled
+on either the role or the role tag, the `nonce` holds no significance.`,
 			},
 		},
 

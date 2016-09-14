@@ -1133,12 +1133,16 @@ in its identity document to match the one specified by this parameter.
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
-	The `nonce` to be used for reauthentication requests. By default, the backend
-	generates a `nonce` if it is not supplied and returns it as part of auth `metadata`.
-	If a custom nonce is desired, this field can be supplied during the first login
-	attempt. Usage of strong `nonce` value is recommended. Note that, when
-	`disallow_reauthentication` option is enabled on either the role or the role
-	tag, the `nonce` holds no significance.
+The nonce to be used for subsequent login requests. If this parameter is not
+specified at all and if reauthentication is allowed, then the backend will
+generate a random nonce, attaches it to the instance's identity-whitelist entry
+and returns the nonce back as part of auth metadata. This value should be used
+with further login requests, to establish client authenticity. Clients can
+choose to set a custom nonce if preferred, in which case, it is recommended
+that clients provide a strong nonce.  If a nonce is provided but with an empty
+value, it indicates intent to disable reauthentication. Note that, when
+`disallow_reauthentication` option is enabled on either the role or the role
+tag, the `nonce` holds no significance.
       </li>
     </ul>
   </dd>
