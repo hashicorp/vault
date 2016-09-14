@@ -390,13 +390,6 @@ func (b *backend) pathLoginUpdate(
 	storedIdentity.PendingTime = identityDoc.PendingTime
 	storedIdentity.DisallowReauthentication = disallowReauthentication
 
-	// Performing the clientNonce empty check after determining the
-	// DisallowReauthentication option. This is to make clientNonce
-	// optional when DisallowReauthentication is set.
-	if clientNonce == "" && !storedIdentity.DisallowReauthentication {
-		return logical.ErrorResponse("missing nonce"), nil
-	}
-
 	// Don't cache the nonce if DisallowReauthentication is set
 	if storedIdentity.DisallowReauthentication {
 		storedIdentity.ClientNonce = ""
