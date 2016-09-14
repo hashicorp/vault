@@ -413,17 +413,21 @@ func (b *backend) pathLoginUpdate(
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
 				"ami_id":           identityDoc.AmiID,
-				// Echo the client nonce back. If nonce was not
-				// supplied to the endpoint, callers should
-				// extract out the nonce from this field for
-				// reauthentication requests.
-				"nonce": clientNonce,
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       roleEntry.TTL,
 			},
 		},
+	}
+
+	// Return the nonce only if reauthentication is allowed
+	if !disallowReauthentication {
+		// Echo the client nonce back. If nonce was not
+		// supplied to the endpoint, callers should
+		// extract out the nonce from this field for
+		// reauthentication requests.
+		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
 	// Cap the TTL value.
