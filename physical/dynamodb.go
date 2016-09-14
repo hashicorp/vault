@@ -195,7 +195,7 @@ func newDynamoDBBackend(conf map[string]string, logger log.Logger) (Backend, err
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("physical/consul: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("physical/dynamodb: max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
