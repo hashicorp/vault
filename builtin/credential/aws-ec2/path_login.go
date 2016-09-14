@@ -1,6 +1,7 @@
 package awsec2
 
 import (
+	"crypto/subtle"
 	"encoding/pem"
 	"fmt"
 	"time"
@@ -126,7 +127,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	//
 	// This is a weak criterion and hence the `allow_instance_migration` option
 	// should be used with caution.
-	if clientNonce != storedIdentity.ClientNonce {
+	if subtle.ConstantTimeCompare([]byte(clientNonce), []byte(storedIdentity.ClientNonce)) != 1 {
 		if !roleEntry.AllowInstanceMigration {
 			return fmt.Errorf("client nonce mismatch")
 		}
