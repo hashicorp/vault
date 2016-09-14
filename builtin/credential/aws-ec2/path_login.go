@@ -325,6 +325,14 @@ func (b *backend) pathLoginUpdate(
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
+		// Don't let subsequent login attempts to bypass in initial
+		// intent of disabling reauthentication, despite the properties
+		// of role getting updated. For example: Role has the value set
+		// to 'false', a role-tag login sets the value to 'true', then
+		// role gets updated to not use a role-tag, and a login attempt
+		// is made with role's value set to 'false'. Removing the entry
+		// from the identity whitelist should be the only way to be
+		// able to login from the instance again.
 		if !disallowReauthentication && storedIdentity.DisallowReauthentication {
 			disallowReauthentication = true
 		}
