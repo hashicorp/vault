@@ -1007,14 +1007,17 @@ in its identity document to match the one specified by this parameter.
   <dd>
 Creates a role tag on the role, which help in restricting the capabilities that
 are set on the role. Role tags are not tied to any specific ec2 instance unless
-specified explicitly using `instance_id` parameter. By default, role tags are
-designed to be used across all instances that satisfies the constraints on the
-role. Regardless of which instances have role tags on them, the restriction
-that the capabilities of role tags being a subset of capabilities on the role
-is strictly enforced. Note that, since adding and removing a tag is a widely
-distributed privilege, care needs to be taken to ensure that the instances are
-attached with correct tags to not let them gain more privileges than what were
-intended.
+specified explicitly using the `instance_id` parameter. By default, role tags
+are designed to be used across all instances that satisfies the constraints on
+the role. Regardless of which instances have role tags on them, capabilities
+defined in a role tag must be a strict subset of the given role's capabilities.
+Note that, since adding and removing a tag is often a widely distributed
+privilege, care needs to be taken to ensure that the instances are attached
+with correct tags to not let them gain more privileges than what were intended.
+If a role tag is changed, the capabilities inherited by the instance will be
+those defined on the new role tag. Since those must be a subset of the role
+capabilities, the role should never provide more capabilities than any given
+instance can be allowed to gain in a worst-case scenario.
   </dd>
 
   <dt>Method</dt>
