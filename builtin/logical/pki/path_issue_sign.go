@@ -3,7 +3,6 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -196,11 +195,10 @@ func (b *backend) pathIssueSignCert(
 	case "pem_bundle":
 		resp.Data["issuing_ca"] = cb.IssuingCA
 		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
-		resp.Data["certificate"] = strings.TrimSpace(fmt.Sprintf("%s\n%s\n%s", cb.Certificate, cb.IssuingCA, cb.IssuingCAChain))
+		resp.Data["certificate"] = cb.ToPEMBundle()
 		if !useCSR {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
-			resp.Data["certificate"] = strings.TrimSpace(fmt.Sprintf("%s\n%s\n%s\n%s", cb.PrivateKey, cb.Certificate, cb.IssuingCA, cb.IssuingCAChain))
 		}
 
 	case "der":
@@ -214,7 +212,7 @@ func (b *backend) pathIssueSignCert(
 		}
 	}
 
-	if s, ok := resp.Data["issuing_ca_chain"].(string); ok && len(s) == 0 {
+	if s, ok := resp.Data["issuing_ca_chain"]; ok && len(s.(string)) == 0 {
 		delete(resp.Data, "issuing_ca_chain")
 	}
 

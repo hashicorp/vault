@@ -135,7 +135,7 @@ func fetchCABundle(req *logical.Request) (*certutil.CertBundle, error) {
 func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 	caBundle, err := fetchCABundle(req)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch CA bundle: %v", err)}
+		return nil, err
 	}
 
 	parsedBundle, err := caBundle.ToParsedCertBundle()
@@ -866,8 +866,13 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 
 	if creationInfo.SigningBundle != nil {
 		certPath := creationInfo.SigningBundle.GetCertificatePath()
-		result.IssuingCABytes = certPath[0].Bytes
-		result.IssuingCA = certPath[0].Certificate
+
+		if len(certPath) > 0 {
+			result.IssuingCABytes = certPath[0].Bytes
+			result.IssuingCA = certPath[0].Certificate
+		} else {
+			return nil, errutil.InternalError{Err: "no certificates in signing bundle"}
+		}
 
 		if len(certPath) > 1 {
 			for _, cert := range certPath[1:] {
