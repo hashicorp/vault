@@ -1009,9 +1009,9 @@ Creates a role tag on the role. Role tags provide an effective way to restrict
 the capabilities that are set on the role. Role tags are not tied to any
 specific ec2 instance unless specified explicitly using `instance_id`
 parameter. By default, role tags are designed to be used across all instances
-that share an AMI. Regardless of which instances have role tags on them, the
-restriction that the capabilities of role tags being a subset of capabilities
-on the role is strictly enforced.
+that satisfies the constraints on the role. Regardless of which instances have
+role tags on them, the restriction that the capabilities of role tags being a
+subset of capabilities on the role is strictly enforced.
   </dd>
 
   <dt>Method</dt>
