@@ -85,14 +85,17 @@ as it means that once a token has expired, subsequent authentication attempts
 would fail. By default, reauthentication is enabled in this backend, and can be
 turned off using 'disallow_reauthentication' parameter on the registered role.
 
-In the default method of operation, the client supplies a unique nonce during
-the first authentication attempt, storing this nonce in the client's memory for
-future use. This nonce is stored in the whitelist, tied to the instance ID.
-Subsequent authentication attempts by the client require the nonce to match;
-since only the original client knows the nonce, only the original client is
-allowed to reauthenticate. (This is the reason that this is a whitelist rather
-than a blacklist; by default, it's keeping track of clients allowed to
-reauthenticate, rather than those that are not.)
+In the default method of operation, the backend will return a unique nonce
+during the first authentication attempt, as part of auth `metadata`. Clients
+should present this `nonce` for subsequent login attempts and it should match
+the `nonce` cached at the identity-whitelist entry at the backend. Since only
+the original client knows the `nonce`, only the original client is allowed to
+reauthenticate. (This is the reason that this is a whitelist rather than a
+blacklist; by default, it's keeping track of clients allowed to reauthenticate,
+rather than those that are not.). Clients can choose to provide a `nonce` even
+for the first login attempt, in which case the provided `nonce` will be tied to
+the cached identity-whitelist entry. It is recommended to use a strong `nonce`
+value in this case.
 
 It is up to the client to behave correctly with respect to the nonce; if the
 client stores the nonce on disk it can survive reboots, but could also give
@@ -287,7 +290,8 @@ $ vault write auth/aws-ec2/role/dev-role bound_ami_id=ami-fce3c696 policies=prod
 #### Perform the login operation
 
 ```
-$ vault write auth/aws-ec2/login role=dev-role pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=vault-client-nonce
+$ vault write auth/aws-ec2/login role=dev-role
+pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=5defbf9e-a8f9-3063-bdfc-54b7a42a1f95
 ```
 
 
@@ -314,7 +318,9 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/role/
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws-ec2/login" -d '{"role":"dev-role","pkcs7":"$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')","nonce":"vault-client-nonce"}'
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws-ec2/login" -d
+'{"role":"dev-role","pkcs7":"$(curl -s
+http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
 ```
 
 
@@ -324,26 +330,30 @@ The response will be in JSON. For example:
 {
   "auth": {
     "renewable": true,
-    "lease_duration": 1800000,
+    "lease_duration": 72000,
     "metadata": {
-      "role_tag_max_ttl": "0",
-      "instance_id": "i-de0f1344"
-      "ami_id": "ami-fce3c696"
-      "role": "dev-prod"
+      "role_tag_max_ttl": "0s",
+      "role": "ami-f083709d",
+      "region": "us-east-1",
+      "nonce": "5defbf9e-a8f9-3063-bdfc-54b7a42a1f95",
+      "instance_id": "i-a832f734",
+      "ami_id": "ami-f083709d"
     },
     "policies": [
       "default",
       "dev",
       "prod"
     ],
-    "accessor": "20b89871-e6f2-1160-fb29-31c2f6d4645e",
-    "client_token": "c9368254-3f21-aded-8a6f-7c818e81b17a"
+    "accessor": "5cd96cd1-58b7-2904-5519-75ddf957ec06",
+    "client_token": "150fc858-2402-49c9-56a5-f4b57f2c8ff1"
   },
   "warnings": null,
+  "wrap_info": null,
   "data": null,
   "lease_duration": 0,
   "renewable": false,
-  "lease_id": ""
+  "lease_id": "",
+  "request_id": "d7d50c06-56b8-37f4-606c-ccdc87a1ee4c"
 }
 ```
 
@@ -1122,10 +1132,13 @@ in its identity document to match the one specified by this parameter.
     <ul>
       <li>
         <span class="param">nonce</span>
-        <span class="param-flags">required/optional, depends</span>
-        The `nonce` created by a client of this backend. When `disallow_reauthentication`
-        option is enabled on either the role or the role tag, then `nonce` parameter is
-        optional. It is a required parameter otherwise.
+        <span class="param-flags">optional</span>
+	The `nonce` to be used for reauthentication requests. By default, the backend
+	generates a `nonce` if it is not supplied and returns it as part of auth `metadata`.
+	If a custom nonce is desired, this field can be supplied during the first login
+	attempt. Usage of strong `nonce` value is recommended. Note that, when
+	`disallow_reauthentication` option is enabled on either the role or the role
+	tag, the `nonce` holds no significance.
       </li>
     </ul>
   </dd>
@@ -1370,7 +1383,7 @@ in its identity document to match the one specified by this parameter.
     "pending_time": "2016-04-14T01:01:41Z",
     "expiration_time": "2016-05-05 10:09:16.67077232 +0000 UTC",
     "creation_time": "2016-04-14 14:09:16.67077232 +0000 UTC",
-    "client_nonce": "vault-client-nonce",
+    "client_nonce": "5defbf9e-a8f9-3063-bdfc-54b7a42a1f95",
     "role": "dev-role"
   },
   "lease_duration": 0,

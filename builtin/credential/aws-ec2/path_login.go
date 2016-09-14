@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/fullsailor/pkcs7"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -108,6 +109,12 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	storedPendingTime, err := time.Parse(time.RFC3339, storedIdentity.PendingTime)
 	if err != nil {
 		return err
+	}
+
+	// For sanity
+	if !storedIdentity.DisallowReauthentication &&
+		storedIdentity.ClientNonce == "" {
+		return fmt.Errorf("client nonce missing in stored identity")
 	}
 
 	// When the presented client nonce does not match the cached entry, it is
@@ -289,6 +296,15 @@ func (b *backend) pathLoginUpdate(
 		}
 	}
 
+	// If the clientNonce is empty at this point, it means that its a first
+	// time login and that a nonce is not supplied. Create a random nonce
+	// to be associated for the instance ID.
+	if clientNonce == "" {
+		if clientNonce, err = uuid.GenerateUUID(); err != nil {
+			return nil, fmt.Errorf("failed to generate random nonce")
+		}
+	}
+
 	// Load the current values for max TTL and policies from the role entry,
 	// before checking for overriding max TTL in the role tag.  The shortest
 	// max TTL is used to cap the token TTL; the longest max TTL is used to
@@ -367,19 +383,26 @@ func (b *backend) pathLoginUpdate(
 		}
 	}
 
-	// DisallowReauthentication, PendingTime, LastUpdatedTime and ExpirationTime may change.
+	// DisallowReauthentication, PendingTime, LastUpdatedTime and
+	// ExpirationTime may change.
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 	storedIdentity.PendingTime = identityDoc.PendingTime
 	storedIdentity.DisallowReauthentication = disallowReauthentication
 
-	// Performing the clientNonce empty check after determining the DisallowReauthentication
-	// option. This is to make clientNonce optional when DisallowReauthentication is set.
+	// Performing the clientNonce empty check after determining the
+	// DisallowReauthentication option. This is to make clientNonce
+	// optional when DisallowReauthentication is set.
 	if clientNonce == "" && !storedIdentity.DisallowReauthentication {
 		return logical.ErrorResponse("missing nonce"), nil
 	}
 
-	// Limit the nonce to a reasonable length.
+	// Don't cache the nonce if DisallowReauthentication is set
+	if storedIdentity.DisallowReauthentication {
+		storedIdentity.ClientNonce = ""
+	}
+
+	// Sanitize the nonce to a reasonable length
 	if len(clientNonce) > 128 && !storedIdentity.DisallowReauthentication {
 		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
@@ -397,6 +420,11 @@ func (b *backend) pathLoginUpdate(
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
 				"ami_id":           identityDoc.AmiID,
+				// Echo the client nonce back. If nonce was not
+				// supplied to the endpoint, callers should
+				// extract out the nonce from this field for
+				// reauthentication requests.
+				"nonce": clientNonce,
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
