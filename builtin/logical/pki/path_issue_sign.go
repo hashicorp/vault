@@ -24,7 +24,6 @@ func pathIssue(b *backend) *framework.Path {
 	}
 
 	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
-
 	return ret
 }
 
@@ -172,10 +171,7 @@ func (b *backend) pathIssueSignCert(
 
 	resp := b.Secret(SecretCertsType).Response(
 		map[string]interface{}{
-			"certificate":      cb.Certificate,
-			"issuing_ca":       cb.IssuingCA,
-			"issuing_ca_chain": cb.IssuingCAChain,
-			"serial_number":    cb.SerialNumber,
+			"serial_number": cb.SerialNumber,
 		},
 		map[string]interface{}{
 			"serial_number": cb.SerialNumber,
@@ -204,9 +200,14 @@ func (b *backend) pathIssueSignCert(
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
-		for _, cert := range parsedBundle.IssuingCAChainBytes {
-			resp.Data["issuing_ca_chain"] = fmt.Sprintf("%s\n%s", resp.Data["issuing_ca_chain"], base64.StdEncoding.EncodeToString(cert))
+
+		switch {
+		case len(parsedBundle.IssuingCAChain) == 1:
+			resp.Data["issuing_ca_chain"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCAChainBytes[0])
+		case len(parsedBundle.IssuingCAChain) > 1:
+			resp.AddWarning("CA chains greater than 1 are not supported in the DER format.")
 		}
+
 		if !useCSR {
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 		}

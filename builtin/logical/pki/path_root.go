@@ -118,9 +118,9 @@ func (b *backend) pathCAGenerateRoot(
 		if exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
-			resp.Data["certificate"] = fmt.Sprintf("%s\n%s\n%s", cb.PrivateKey, cb.Certificate, cb.IssuingCA)
+			resp.Data["certificate"] = cb.ToPEMBundle()
 		} else {
-			resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA)
+			resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA) // Exclude private key
 		}
 
 	case "der":
@@ -257,8 +257,12 @@ func (b *backend) pathCASignIntermediate(
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
-		for _, cert := range parsedBundle.IssuingCAChainBytes {
-			resp.Data["issuing_ca_chain"] = fmt.Sprintf("%s\n%s", resp.Data["issuing_ca_chain"], base64.StdEncoding.EncodeToString(cert))
+
+		switch {
+		case len(parsedBundle.IssuingCAChain) == 1:
+			resp.Data["issuing_ca_chain"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCAChainBytes[0])
+		case len(parsedBundle.IssuingCAChain) > 1:
+			resp.AddWarning("CA chains greater than 1 are not supported in the DER format.")
 		}
 	}
 
