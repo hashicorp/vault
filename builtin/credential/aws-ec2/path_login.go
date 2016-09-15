@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	disableReauthenticationNonce = "221af976-e381-9460-2b97-04863cb1f643"
+	reauthenticationDisabledNonce = "reauthentication-disabled-nonce"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -47,8 +47,8 @@ This value should be used with further login requests, to establish client
 authenticity. Clients can choose to set a custom nonce if preferred, in which
 case, it is recommended that clients provide a strong nonce.  If a nonce is
 provided but with an empty value, it indicates intent to disable
-reauthentication. Note that, when `disallow_reauthentication` option is enabled
-on either the role or the role tag, the `nonce` holds no significance.`,
+reauthentication. Note that, when 'disallow_reauthentication' option is enabled
+on either the role or the role tag, the 'nonce' holds no significance.`,
 			},
 		},
 
@@ -115,7 +115,7 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 	// predefied nonce which indicates reauthentication to be disabled,
 	// authentication will not succeed.
 	if storedIdentity.DisallowReauthentication ||
-		subtle.ConstantTimeCompare([]byte(disableReauthenticationNonce), []byte(clientNonce)) == 1 {
+		subtle.ConstantTimeCompare([]byte(reauthenticationDisabledNonce), []byte(clientNonce)) == 1 {
 		return fmt.Errorf("reauthentication is disabled")
 	}
 
@@ -315,7 +315,7 @@ func (b *backend) pathLoginUpdate(
 		// reauthentication by the client. Set a predefined nonce which
 		// indicates reauthentication being disabled.
 		if clientNonce == "" {
-			clientNonce = disableReauthenticationNonce
+			clientNonce = reauthenticationDisabledNonce
 
 			// Ensure that the intent lands in the whitelist
 			disallowReauthentication = true
@@ -338,7 +338,7 @@ func (b *backend) pathLoginUpdate(
 		// to 'false', a role-tag login sets the value to 'true', then
 		// role gets updated to not use a role-tag, and a login attempt
 		// is made with role's value set to 'false'. Removing the entry
-		// from the identity whitelist should be the only way to be
+		// from the identity-whitelist should be the only way to be
 		// able to login from the instance again.
 		if !disallowReauthentication && storedIdentity.DisallowReauthentication {
 			disallowReauthentication = true
