@@ -522,9 +522,12 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 }
 
 // validateRoleConstraints checks if the role has at least one constraint
-// enabled. Note that role being nil is not checked by this method. Use with
-// caution.
+// enabled.
 func validateRoleConstraints(role *roleStorageEntry) error {
+	if role == nil {
+		return fmt.Errorf("nil role")
+	}
+
 	// At least one constraint should be enabled on the role
 	switch {
 	case role.BindSecretID:
