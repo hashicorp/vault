@@ -10,3 +10,11 @@ description: |-
 
 This page contains the list of breaking changes for Vault 0.6.2. Please read it
 carefully.
+
+## AppRole Role Constraints
+
+Creating or updating a role now requires at least one constraint to be enabled.
+Currently there are only 2 constraints: `bind_secret_id` and `bound_cidr_list`.
+`bind_secret_id` is enabled by default. Roles which had `bind_secret_id`
+disabled and `bound_cidr_list` not set, will require a constraint to be
+speficied during further updates.

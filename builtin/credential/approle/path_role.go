@@ -521,13 +521,9 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 	return logical.ListResponse(listItems), nil
 }
 
-// setRoleEntry grabs a write lock and stores the options on an role into the storage.
-// Also creates a reverse index from the role's RoleID to the role itself.
-func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
-	if roleName == "" {
-		return fmt.Errorf("missing role name")
-	}
-
+// validateRoleConstraints checks if the role has at least one constraint
+// enabled.
+func validateRoleConstraints(role *roleStorageEntry) error {
 	if role == nil {
 		return fmt.Errorf("nil role")
 	}
@@ -538,6 +534,26 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 	case role.BoundCIDRList != "":
 	default:
 		return fmt.Errorf("at least one constraint should be enabled on the role")
+	}
+
+	return nil
+}
+
+// setRoleEntry grabs a write lock and stores the options on an role into the
+// storage. Also creates a reverse index from the role's RoleID to the role
+// itself.
+func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleStorageEntry, previousRoleID string) error {
+	if roleName == "" {
+		return fmt.Errorf("missing role name")
+	}
+
+	if role == nil {
+		return fmt.Errorf("nil role")
+	}
+
+	// Check if role constraints are properly set
+	if err := validateRoleConstraints(role); err != nil {
+		return err
 	}
 
 	// Create a storage entry for the role
@@ -743,9 +759,15 @@ func (b *backend) pathRoleRead(req *logical.Request, data *framework.FieldData) 
 		delete(data, "role_id")
 		delete(data, "hmac_key")
 
-		return &logical.Response{
+		resp := &logical.Response{
 			Data: data,
-		}, nil
+		}
+
+		if err := validateRoleConstraints(role); err != nil {
+			resp.AddWarning("Role does not have any constraints set on it. Updates to this role will require a constraint to be set")
+		}
+
+		return resp, nil
 	}
 }
 
