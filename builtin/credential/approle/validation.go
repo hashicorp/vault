@@ -222,9 +222,9 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hm
 	// the storage but do not fail the validation request. Subsequest
 	// requests to use the same SecretID will fail.
 	if result.SecretIDNumUses == 1 {
-		accessorEntryIndex := "accessor/" + b.salt.SaltID(result.SecretIDAccessor)
-		if err := s.Delete(accessorEntryIndex); err != nil {
-			return false, nil, fmt.Errorf("failed to delete accessor storage entry: %s", err)
+		// Delete the secret IDs accessor first
+		if err := b.deleteSecretIDAccessorEntry(s, result.SecretIDAccessor); err != nil {
+			return false, nil, err
 		}
 		if err := s.Delete(entryIndex); err != nil {
 			return false, nil, fmt.Errorf("failed to delete SecretID: %s", err)
@@ -243,8 +243,8 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hm
 	return true, result.Metadata, nil
 }
 
-// Creates a SHA256 HMAC of the given 'value' using the given 'key'
-// and returns a hex encoded string.
+// Creates a SHA256 HMAC of the given 'value' using the given 'key' and returns
+// a hex encoded string.
 func createHMAC(key, value string) (string, error) {
 	if key == "" {
 		return "", fmt.Errorf("invalid HMAC key")
@@ -254,10 +254,9 @@ func createHMAC(key, value string) (string, error) {
 	return hex.EncodeToString(hm.Sum(nil)), nil
 }
 
-// secretIDLock is used to get a lock from the pre-initialized map
-// of locks. Map is indexed based on the first 2 characters of the
-// secretIDHMAC. If the input is not hex encoded or if empty, a
-// "custom" lock will be returned.
+// secretIDLock is used to get a lock from the pre-initialized map of locks.
+// Map is indexed based on the first 2 characters of the secretIDHMAC. If the
+// input is not hex encoded or if empty, a "custom" lock will be returned.
 func (b *backend) secretIDLock(secretIDHMAC string) *sync.RWMutex {
 	var lock *sync.RWMutex
 	var ok bool
@@ -265,8 +264,27 @@ func (b *backend) secretIDLock(secretIDHMAC string) *sync.RWMutex {
 		lock, ok = b.secretIDLocksMap[secretIDHMAC[0:2]]
 	}
 	if !ok || lock == nil {
-		// Fall back for custom SecretIDs
+		// Fall back for custom lock to make sure that this method
+		// never returns nil
 		lock = b.secretIDLocksMap["custom"]
+	}
+	return lock
+}
+
+// secretIDAccessorLock is used to get a lock from the pre-initialized map
+// of locks. Map is indexed based on the first 2 characters of the
+// secretIDAccessor. If the input is not hex encoded or if empty, a "custom"
+// lock will be returned.
+func (b *backend) secretIDAccessorLock(secretIDAccessor string) *sync.RWMutex {
+	var lock *sync.RWMutex
+	var ok bool
+	if len(secretIDAccessor) >= 2 {
+		lock, ok = b.secretIDAccessorLocksMap[secretIDAccessor[0:2]]
+	}
+	if !ok || lock == nil {
+		// Fall back for custom lock to make sure that this method
+		// never returns nil
+		lock = b.secretIDAccessorLocksMap["custom"]
 	}
 	return lock
 }
@@ -331,7 +349,7 @@ func (b *backend) registerSecretIDEntry(s logical.Storage, roleName, secretID, h
 	}
 
 	// Before storing the SecretID, store its accessor.
-	if err := b.createAccessor(s, secretEntry, secretIDHMAC); err != nil {
+	if err := b.createSecretIDAccessorEntry(s, secretEntry, secretIDHMAC); err != nil {
 		return nil, err
 	}
 
@@ -345,8 +363,7 @@ func (b *backend) registerSecretIDEntry(s logical.Storage, roleName, secretID, h
 }
 
 // secretIDAccessorEntry is used to read the storage entry that maps an
-// accessor to a secret_id. This method should be called when the lock
-// for the corresponding SecretID is held.
+// accessor to a secret_id.
 func (b *backend) secretIDAccessorEntry(s logical.Storage, secretIDAccessor string) (*secretIDAccessorStorageEntry, error) {
 	if secretIDAccessor == "" {
 		return nil, fmt.Errorf("missing secretIDAccessor")
@@ -356,6 +373,10 @@ func (b *backend) secretIDAccessorEntry(s logical.Storage, secretIDAccessor stri
 
 	// Create index entry, mapping the accessor to the token ID
 	entryIndex := "accessor/" + b.salt.SaltID(secretIDAccessor)
+
+	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
+	accessorLock.RLock()
+	defer accessorLock.RUnlock()
 
 	if entry, err := s.Get(entryIndex); err != nil {
 		return nil, err
@@ -368,10 +389,10 @@ func (b *backend) secretIDAccessorEntry(s logical.Storage, secretIDAccessor stri
 	return &result, nil
 }
 
-// createAccessor creates an identifier for the SecretID. A storage index,
+// createSecretIDAccessorEntry creates an identifier for the SecretID. A storage index,
 // mapping the accessor to the SecretID is also created. This method should
 // be called when the lock for the corresponding SecretID is held.
-func (b *backend) createAccessor(s logical.Storage, entry *secretIDStorageEntry, secretIDHMAC string) error {
+func (b *backend) createSecretIDAccessorEntry(s logical.Storage, entry *secretIDStorageEntry, secretIDHMAC string) error {
 	// Create a random accessor
 	accessorUUID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -381,12 +402,33 @@ func (b *backend) createAccessor(s logical.Storage, entry *secretIDStorageEntry,
 
 	// Create index entry, mapping the accessor to the token ID
 	entryIndex := "accessor/" + b.salt.SaltID(entry.SecretIDAccessor)
+
+	accessorLock := b.secretIDAccessorLock(accessorUUID)
+	accessorLock.Lock()
+	defer accessorLock.Unlock()
+
 	if entry, err := logical.StorageEntryJSON(entryIndex, &secretIDAccessorStorageEntry{
 		SecretIDHMAC: secretIDHMAC,
 	}); err != nil {
 		return err
 	} else if err = s.Put(entry); err != nil {
 		return fmt.Errorf("failed to persist accessor index entry: %s", err)
+	}
+
+	return nil
+}
+
+// deleteSecretIDAccessorEntry deletes the storage index mapping the accessor to a SecretID.
+func (b *backend) deleteSecretIDAccessorEntry(s logical.Storage, secretIDAccessor string) error {
+	accessorEntryIndex := "accessor/" + b.salt.SaltID(secretIDAccessor)
+
+	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
+	accessorLock.Lock()
+	defer accessorLock.Unlock()
+
+	// Delete the accessor of the SecretID first
+	if err := s.Delete(accessorEntryIndex); err != nil {
+		return fmt.Errorf("failed to delete accessor storage entry: %s", err)
 	}
 
 	return nil
