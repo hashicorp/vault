@@ -340,9 +340,7 @@ func (b *backend) pathLoginUpdate(
 		// is made with role's value set to 'false'. Removing the entry
 		// from the identity-whitelist should be the only way to be
 		// able to login from the instance again.
-		if !disallowReauthentication && storedIdentity.DisallowReauthentication {
-			disallowReauthentication = true
-		}
+		disallowReauthentication = disallowReauthentication || storedIdentity.DisallowReauthentication
 	}
 
 	// If we reach this point without erroring and if the client nonce was
