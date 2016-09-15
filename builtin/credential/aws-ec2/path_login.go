@@ -9,10 +9,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/fullsailor/pkcs7"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+)
+
+const (
+	reauthenticationDisabledNonce = "reauthentication-disabled-nonce"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -34,9 +39,16 @@ If a matching role is not found, login fails.`,
 
 			"nonce": &framework.FieldSchema{
 				Type: framework.TypeString,
-				Description: `The nonce created by a client of this backend. When 'disallow_reauthentication'
-option is enabled on either the role or the role tag, then nonce parameter is
-optional. It is a required parameter otherwise.`,
+				Description: `The nonce to be used for subsequent login requests.
+If this parameter is not specified at all and if reauthentication is allowed,
+then the backend will generate a random nonce, attaches it to the instance's
+identity-whitelist entry and returns the nonce back as part of auth metadata.
+This value should be used with further login requests, to establish client
+authenticity. Clients can choose to set a custom nonce if preferred, in which
+case, it is recommended that clients provide a strong nonce.  If a nonce is
+provided but with an empty value, it indicates intent to disable
+reauthentication. Note that, when 'disallow_reauthentication' option is enabled
+on either the role or the role tag, the 'nonce' holds no significance.`,
 			},
 		},
 
@@ -94,9 +106,16 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region string)
 // in the identity whitelist during the previous login. But, if reauthentication is
 // disabled, login attempt is failed immediately.
 func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, roleEntry *awsRoleEntry) error {
-	// If reauthentication is disabled, doesn't matter what other metadata is provided,
+	// For sanity
+	if !storedIdentity.DisallowReauthentication && storedIdentity.ClientNonce == "" {
+		return fmt.Errorf("client nonce missing in stored identity")
+	}
+
+	// If reauthentication is disabled or if the nonce supplied matches a
+	// predefied nonce which indicates reauthentication to be disabled,
 	// authentication will not succeed.
-	if storedIdentity.DisallowReauthentication {
+	if storedIdentity.DisallowReauthentication ||
+		subtle.ConstantTimeCompare([]byte(reauthenticationDisabledNonce), []byte(clientNonce)) == 1 {
 		return fmt.Errorf("reauthentication is disabled")
 	}
 
@@ -270,15 +289,40 @@ func (b *backend) pathLoginUpdate(
 		}
 	}
 
-	// Get the entry from the identity whitelist, if there is one.
+	// Get the entry from the identity whitelist, if there is one
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDoc.InstanceID)
 	if err != nil {
 		return nil, err
 	}
 
-	clientNonce := data.Get("nonce").(string)
+	// disallowReauthentication value that gets cached at the stored
+	// identity-whitelist entry is determined not just by the role entry.
+	// If client explicitly sets nonce to be empty, it implies intent to
+	// disable reauthentication. Also, role tag can override the 'false'
+	// value with 'true' (the other way around is not allowed).
 
-	// This is NOT a first login attempt from the client.
+	// Read the value from the role entry
+	disallowReauthentication := roleEntry.DisallowReauthentication
+
+	clientNonce := ""
+
+	// Check if the nonce is supplied by the client
+	clientNonceRaw, clientNonceSupplied := data.GetOk("nonce")
+	if clientNonceSupplied {
+		clientNonce = clientNonceRaw.(string)
+
+		// Nonce explicitly set to empty implies intent to disable
+		// reauthentication by the client. Set a predefined nonce which
+		// indicates reauthentication being disabled.
+		if clientNonce == "" {
+			clientNonce = reauthenticationDisabledNonce
+
+			// Ensure that the intent lands in the whitelist
+			disallowReauthentication = true
+		}
+	}
+
+	// This is NOT a first login attempt from the client
 	if storedIdentity != nil {
 		// Check if the client nonce match the cached nonce and if the pending time
 		// of the identity document is not before the pending time of the document
@@ -286,6 +330,26 @@ func (b *backend) pathLoginUpdate(
 		// enabled on the registered role, client nonce requirement is relaxed.
 		if err = validateMetadata(clientNonce, identityDoc.PendingTime, storedIdentity, roleEntry); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
+		}
+
+		// Don't let subsequent login attempts to bypass in initial
+		// intent of disabling reauthentication, despite the properties
+		// of role getting updated. For example: Role has the value set
+		// to 'false', a role-tag login sets the value to 'true', then
+		// role gets updated to not use a role-tag, and a login attempt
+		// is made with role's value set to 'false'. Removing the entry
+		// from the identity-whitelist should be the only way to be
+		// able to login from the instance again.
+		disallowReauthentication = disallowReauthentication || storedIdentity.DisallowReauthentication
+	}
+
+	// If we reach this point without erroring and if the client nonce was
+	// not supplied, a first time login is implied and that the client
+	// intends that the nonce be generated by the backend. Create a random
+	// nonce to be associated for the instance ID.
+	if !clientNonceSupplied {
+		if clientNonce, err = uuid.GenerateUUID(); err != nil {
+			return nil, fmt.Errorf("failed to generate random nonce")
 		}
 	}
 
@@ -305,17 +369,6 @@ func (b *backend) pathLoginUpdate(
 
 	policies := roleEntry.Policies
 	rTagMaxTTL := time.Duration(0)
-
-	// Read this value from the role entry; however, once it's been set, do not
-	// allow it to be flipped back. This prevents a role with this set to false
-	// to be overridden by a role tag, then have the role tag swapped and have
-	// this go back to false.
-	disallowReauthentication := roleEntry.DisallowReauthentication
-	if storedIdentity != nil {
-		if !disallowReauthentication && storedIdentity.DisallowReauthentication {
-			disallowReauthentication = true
-		}
-	}
 
 	if roleEntry.RoleTag != "" {
 		// Role tag is enabled on the role.
@@ -367,19 +420,19 @@ func (b *backend) pathLoginUpdate(
 		}
 	}
 
-	// DisallowReauthentication, PendingTime, LastUpdatedTime and ExpirationTime may change.
+	// DisallowReauthentication, PendingTime, LastUpdatedTime and
+	// ExpirationTime may change.
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 	storedIdentity.PendingTime = identityDoc.PendingTime
 	storedIdentity.DisallowReauthentication = disallowReauthentication
 
-	// Performing the clientNonce empty check after determining the DisallowReauthentication
-	// option. This is to make clientNonce optional when DisallowReauthentication is set.
-	if clientNonce == "" && !storedIdentity.DisallowReauthentication {
-		return logical.ErrorResponse("missing nonce"), nil
+	// Don't cache the nonce if DisallowReauthentication is set
+	if storedIdentity.DisallowReauthentication {
+		storedIdentity.ClientNonce = ""
 	}
 
-	// Limit the nonce to a reasonable length.
+	// Sanitize the nonce to a reasonable length
 	if len(clientNonce) > 128 && !storedIdentity.DisallowReauthentication {
 		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
@@ -403,6 +456,15 @@ func (b *backend) pathLoginUpdate(
 				TTL:       roleEntry.TTL,
 			},
 		},
+	}
+
+	// Return the nonce only if reauthentication is allowed
+	if !disallowReauthentication {
+		// Echo the client nonce back. If nonce param was not supplied
+		// to the endpoint at all (setting it to empty string does not
+		// qualify here), callers should extract out the nonce from
+		// this field for reauthentication requests.
+		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
 	// Cap the TTL value.
