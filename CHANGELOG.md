@@ -11,6 +11,8 @@ IMPROVEMENTS:
  * auth/aws-ec2: Backend generates the nonce by default and clients can
    explicitly disable reauthentication by setting empty nonce [GH-1889]
  * auth/token: Added warnings if tokens and accessors are used in URLs [GH-1806]
+ * command/format: The `format` flag on select CLI commands takes `yml` as an
+   alias for `yaml` [GH-1899]
  * core: Allow the size of the read cache to be set via the config file, and
    change the default value to 1MB (from 32KB) [GH-1784]
  * core: Allow single and two-character path parameters for most places
