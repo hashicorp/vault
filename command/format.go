@@ -46,6 +46,7 @@ var Formatters = map[string]Formatter{
 	"json":  JsonFormatter{},
 	"table": TableFormatter{},
 	"yaml":  YamlFormatter{},
+	"yml":   YamlFormatter{},
 }
 
 // An output formatter for json output of an object
