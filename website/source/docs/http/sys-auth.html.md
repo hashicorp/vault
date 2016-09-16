@@ -101,7 +101,7 @@ description: |-
   </dd>
 </dl>
 
-# /sys/auth/<auth_path>/tune
+# /sys/auth/[auth_path]/tune
 
 ## GET
 

@@ -125,7 +125,7 @@ description: |-
   </dd>
 </dl>
 
-# /sys/mounts/<mount point>/tune
+# /sys/mounts/[mount point]/tune
 
 ## GET
 
