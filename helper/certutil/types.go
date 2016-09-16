@@ -14,6 +14,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/errutil"
@@ -86,6 +87,7 @@ type ParsedCertBundle struct {
 	IssuingCA        *x509.Certificate
 	CertificateBytes []byte
 	Certificate      *x509.Certificate
+	SerialNumber     *big.Int
 }
 
 // CSRBundle contains a key type, a PEM-encoded private key,
@@ -173,8 +175,11 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 		}
 	}
 
+	result.SerialNumber = result.Certificate.SerialNumber
+
+	// Populate if it isn't there already
 	if len(c.SerialNumber) == 0 && len(c.Certificate) > 0 {
-		c.SerialNumber = GetOctalFormatted(result.Certificate.SerialNumber.Bytes(), ":")
+		c.SerialNumber = GetHexFormatted(result.Certificate.SerialNumber.Bytes(), ":")
 	}
 
 	return result, nil
@@ -189,7 +194,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 	}
 
 	if p.Certificate != nil {
-		result.SerialNumber = strings.TrimSpace(GetOctalFormatted(p.Certificate.SerialNumber.Bytes(), ":"))
+		result.SerialNumber = strings.TrimSpace(GetHexFormatted(p.Certificate.SerialNumber.Bytes(), ":"))
 	}
 
 	if p.CertificateBytes != nil && len(p.CertificateBytes) > 0 {

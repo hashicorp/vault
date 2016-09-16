@@ -20,10 +20,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// GetOctalFormatted returns the byte buffer formatted in octal with
+// GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
-// FIXME: where did I originally copy this code from? This ain't octal, it's hex.
-func GetOctalFormatted(buf []byte, sep string) string {
+func GetHexFormatted(buf []byte, sep string) string {
 	var ret bytes.Buffer
 	for _, cur := range buf {
 		if ret.Len() > 0 {

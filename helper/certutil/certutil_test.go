@@ -13,7 +13,7 @@ import (
 
 // Tests converting back and forth between a CertBundle and a ParsedCertBundle.
 //
-// Also tests the GetSubjKeyID, GetOctalFormatted, and
+// Also tests the GetSubjKeyID, GetHexFormatted, and
 // ParsedCertBundle.getSigner functions.
 func TestCertBundleConversion(t *testing.T) {
 	cbuts := []*CertBundle{
@@ -189,7 +189,7 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		return fmt.Errorf("CertBundle has unknown private key type")
 	}
 
-	if cb.SerialNumber != GetOctalFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
+	if cb.SerialNumber != GetHexFormatted(pcbut.Certificate.SerialNumber.Bytes(), ":") {
 		return fmt.Errorf("Bundle serial number does not match")
 	}
 

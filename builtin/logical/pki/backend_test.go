@@ -986,7 +986,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				if len(revokedList) != 1 {
 					t.Fatalf("length of revoked list not 1; %d", len(revokedList))
 				}
-				revokedString := certutil.GetOctalFormatted(revokedList[0].SerialNumber.Bytes(), ":")
+				revokedString := certutil.GetHexFormatted(revokedList[0].SerialNumber.Bytes(), ":")
 				if revokedString != reqdata["serial_number"].(string) {
 					t.Fatalf("got serial %s, expecting %s", revokedString, reqdata["serial_number"].(string))
 				}
@@ -1144,7 +1144,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				}
 				found := false
 				for _, revEntry := range revokedList {
-					revokedString := certutil.GetOctalFormatted(revEntry.SerialNumber.Bytes(), ":")
+					revokedString := certutil.GetHexFormatted(revEntry.SerialNumber.Bytes(), ":")
 					if revokedString == reqdata["serial_number"].(string) {
 						found = true
 					}
@@ -1259,7 +1259,7 @@ func generateCATestingSteps(t *testing.T, caCert, caKey, otherCaCert string, int
 				foundRsa := false
 				foundEc := false
 				for _, revEntry := range revokedList {
-					revokedString := certutil.GetOctalFormatted(revEntry.SerialNumber.Bytes(), ":")
+					revokedString := certutil.GetHexFormatted(revEntry.SerialNumber.Bytes(), ":")
 					if revokedString == reqdata["rsa_int_serial_number"].(string) {
 						foundRsa = true
 					}
