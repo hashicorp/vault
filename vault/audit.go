@@ -99,7 +99,7 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 }
 
 // disableAudit is used to disable an existing audit backend
-func (c *Core) disableAudit(path string) error {
+func (c *Core) disableAudit(path string) (bool, error) {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -114,12 +114,12 @@ func (c *Core) disableAudit(path string) error {
 
 	// Ensure there was a match
 	if !found {
-		return fmt.Errorf("no matching backend")
+		return false, fmt.Errorf("no matching backend")
 	}
 
 	// Update the audit table
 	if err := c.persistAudit(newTable); err != nil {
-		return errors.New("failed to update audit table")
+		return true, errors.New("failed to update audit table")
 	}
 
 	c.audit = newTable
@@ -129,7 +129,7 @@ func (c *Core) disableAudit(path string) error {
 	if c.logger.IsInfo() {
 		c.logger.Info("core: disabled audit backend", "path", path)
 	}
-	return nil
+	return true, nil
 }
 
 // loadAudits is invoked as part of postUnseal to load the audit table
