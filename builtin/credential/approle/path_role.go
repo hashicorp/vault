@@ -8,6 +8,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -356,6 +357,13 @@ be renewed. Defaults to 0, in which case the value will fall back to the system/
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing the metadata in key value pairs.`,
 				},
+				"cidr_list": &framework.FieldSchema{
+					Type: framework.TypeString,
+					Description: `Comma separated list of CIDR blocks enforcing secret IDs to be used from
+specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
+list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
+the role.`,
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: b.pathRoleSecretIDUpdate,
@@ -419,6 +427,13 @@ formatted string containing the metadata in key value pairs.`,
 					Type: framework.TypeString,
 					Description: `Metadata to be tied to the SecretID. This should be a JSON
 formatted string containing metadata in key value pairs.`,
+				},
+				"cidr_list": &framework.FieldSchema{
+					Type: framework.TypeString,
+					Description: `Comma separated list of CIDR blocks enforcing secret IDs to be used from
+specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
+list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
+the role.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -672,8 +687,12 @@ func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.Fie
 	} else if req.Operation == logical.CreateOperation {
 		role.BoundCIDRList = data.Get("bound_cidr_list").(string)
 	}
-	if err = validateCIDRList(role.BoundCIDRList); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to validate CIDR blocks: %s", err)), nil
+	valid, err := cidrutil.ValidateCIDRListString(role.BoundCIDRList, ",")
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate CIDR blocks: %v", err)
+	}
+	if !valid {
+		return logical.ErrorResponse("invalid CIDR blocks"), nil
 	}
 
 	if policiesRaw, ok := data.GetOk("policies"); ok {
@@ -1054,8 +1073,12 @@ func (b *backend) pathRoleBoundCIDRListUpdate(req *logical.Request, data *framew
 		return logical.ErrorResponse("missing bound_cidr_list"), nil
 	}
 
-	if err = validateCIDRList(role.BoundCIDRList); err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to validate CIDR blocks: %s", err)), nil
+	valid, err := cidrutil.ValidateCIDRListString(role.BoundCIDRList, ",")
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate CIDR blocks: %q", err)
+	}
+	if !valid {
+		return logical.ErrorResponse("failed to validate CIDR blocks"), nil
 	}
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
@@ -1693,6 +1716,48 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 
 	if !role.BindSecretID {
 		return logical.ErrorResponse("bind_secret_id is not set on the role"), nil
+	}
+
+	cidrList := data.Get("cidr_list").(string)
+
+	// Validate the list of CIDR blocks
+	valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate CIDR blocks: %q", err)
+	}
+	if !valid {
+		return logical.ErrorResponse("failed to validate CIDR blocks"), nil
+	}
+
+	// Parse the CIDR blocks into a slice
+	secretIDCIDRs := strutil.ParseDedupAndSortStrings(cidrList, ",")
+	if len(secretIDCIDRs) != 0 {
+		// If role has bound_cidr_list set, check if each CIDR block is
+		// a subset of at least one CIDR block registered under the
+		// role. If bound_cidr_list is not set on the role, then it
+		// means that the role allows any IP address, implying that the
+		// CIDR blocks on the secret ID are a subset of that of role's.
+		roleCIDRs := strutil.ParseDedupAndSortStrings(role.BoundCIDRList, ",")
+		if len(roleCIDRs) != 0 {
+			subset, err := cidrutil.SubsetBlocks(roleCIDRs, secretIDCIDRs)
+			if err != nil {
+				return nil, fmt.Errorf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %v", roleCIDRs, secretIDCIDRs, err)
+			}
+			if !subset {
+				return logical.ErrorResponse(fmt.Sprintf("CIDR blocks on the secret ID %q should be a subset of CIDR blocks on the role %q", secretIDCIDRs, roleCIDRs)), nil
+			}
+		}
+
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			return nil, fmt.Errorf("failed to get connection information")
+		}
+		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, secretIDCIDRs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if IP belonged to configured CIDR blocks on the secret ID")
+		}
+		if !belongs {
+			return logical.ErrorResponse(fmt.Sprintf("unauthorized source address")), nil
+		}
 	}
 
 	secretIDStorage := &secretIDStorageEntry{

@@ -58,21 +58,6 @@ type secretIDAccessorStorageEntry struct {
 	SecretIDHMAC string `json:"secret_id_hmac" structs:"secret_id_hmac" mapstructure:"secret_id_hmac"`
 }
 
-// Checks if all the CIDR blocks in the comma separated list are valid by parsing it.
-func validateCIDRList(cidrList string) error {
-	if cidrList == "" {
-		return nil
-	}
-
-	cidrBlocks := strings.Split(cidrList, ",")
-	for _, block := range cidrBlocks {
-		if _, _, err := net.ParseCIDR(strings.TrimSpace(block)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Checks if the Role represented by the RoleID still exists
 func (b *backend) validateRoleID(s logical.Storage, roleID string) (*roleStorageEntry, string, error) {
 	// Look for the storage entry that maps the roleID to role

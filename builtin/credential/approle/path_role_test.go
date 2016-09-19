@@ -10,6 +10,62 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func TestAppRole_CIDRSubset(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"role_id":         "role-id-123",
+		"policies":        "a,b",
+		"bound_cidr_list": "127.0.0.1/24",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/testrole1",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v resp: %#v", err, resp)
+	}
+
+	secretIDData := map[string]interface{}{
+		"cidr_list": "127.0.0.1/16",
+	}
+	secretIDReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/testrole1/secret-id",
+		Data:      secretIDData,
+	}
+
+	resp, err = b.HandleRequest(secretIDReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("resp:%#v", err, resp)
+	}
+
+	roleData["bound_cidr_list"] = "192.168.27.29/16,172.245.30.40/24,10.20.30.40/30"
+	roleReq.Operation = logical.UpdateOperation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v resp: %#v", err, resp)
+	}
+
+	secretIDData["cidr_list"] = "192.168.27.29/20,172.245.30.40/25,10.20.30.40/32"
+	resp, err = b.HandleRequest(secretIDReq)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("resp: %#v", resp)
+	}
+}
+
 func TestAppRole_RoleConstraints(t *testing.T) {
 	var resp *logical.Response
 	var err error

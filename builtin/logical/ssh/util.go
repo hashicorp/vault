@@ -134,58 +134,6 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 	}
 }
 
-// Checks if the comma separated list of CIDR blocks are all valid and they
-// dont conflict with each other.
-func validateCIDRList(cidrList string) (string, error) {
-	// Check if the blocks are parsable
-	c := strings.Split(cidrList, ",")
-	for _, item := range c {
-		_, _, err := net.ParseCIDR(item)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	var overlaps string
-	for i := 0; i < len(c)-1; i++ {
-		for j := i + 1; j < len(c); j++ {
-			overlap, err := cidrOverlap(c[i], c[j])
-			if err != nil {
-				return "", err
-			}
-			if overlap {
-				overlaps = fmt.Sprintf("%s [%s,%s]", overlaps, c[i], c[j])
-			}
-		}
-	}
-
-	return overlaps, nil
-}
-
-// Tells if the CIDR blocks overlap with eath other. Applying the mask of bigger
-// block to both addresses and checking for its equality to detect an overlap.
-func cidrOverlap(c1, c2 string) (bool, error) {
-	ip1, net1, err := net.ParseCIDR(c1)
-	if err != nil {
-		return false, err
-	}
-	maskLen1, _ := net1.Mask.Size()
-
-	ip2, net2, err := net.ParseCIDR(c2)
-	if err != nil {
-		return false, err
-	}
-	maskLen2, _ := net2.Mask.Size()
-
-	// Choose the mask of bigger block
-	mask := net1.Mask
-	if maskLen2 < maskLen1 {
-		mask = net2.Mask
-	}
-
-	return bytes.Equal(ip1.Mask(mask), ip2.Mask(mask)), nil
-}
-
 // Returns true if the IP supplied by the user is part of the comma
 // separated CIDR blocks
 func cidrListContainsIP(ip, cidrList string) (bool, error) {
