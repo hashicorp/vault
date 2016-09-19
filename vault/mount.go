@@ -209,8 +209,9 @@ func (c *Core) mount(me *MountEntry) error {
 	return nil
 }
 
-// Unmount is used to unmount a path.
-func (c *Core) unmount(path string) error {
+// Unmount is used to unmount a path. The boolean indicates whether the mount
+// was found.
+func (c *Core) unmount(path string) (bool, error) {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -219,14 +220,14 @@ func (c *Core) unmount(path string) error {
 	// Prevent protected paths from being unmounted
 	for _, p := range protectedMounts {
 		if strings.HasPrefix(path, p) {
-			return fmt.Errorf("cannot unmount '%s'", path)
+			return true, fmt.Errorf("cannot unmount '%s'", path)
 		}
 	}
 
 	// Verify exact match of the route
 	match := c.router.MatchingMount(path)
 	if match == "" || path != match {
-		return fmt.Errorf("no matching mount")
+		return false, fmt.Errorf("no matching mount")
 	}
 
 	// Get the view for this backend
@@ -234,43 +235,43 @@ func (c *Core) unmount(path string) error {
 
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(path); err != nil {
-		return err
+		return true, err
 	}
 
 	// Taint the router path to prevent routing. Note that in-flight requests
 	// are uncertain, right now.
 	if err := c.router.Taint(path); err != nil {
-		return err
+		return true, err
 	}
 
 	// Invoke the rollback manager a final time
 	if err := c.rollback.Rollback(path); err != nil {
-		return err
+		return true, err
 	}
 
 	// Revoke all the dynamic keys
 	if err := c.expiration.RevokePrefix(path); err != nil {
-		return err
+		return true, err
 	}
 
 	// Unmount the backend entirely
 	if err := c.router.Unmount(path); err != nil {
-		return err
+		return true, err
 	}
 
 	// Clear the data in the view
 	if err := ClearView(view); err != nil {
-		return err
+		return true, err
 	}
 
 	// Remove the mount table entry
 	if err := c.removeMountEntry(path); err != nil {
-		return err
+		return true, err
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: successful unmounted", "path", path)
 	}
-	return nil
+	return true, nil
 }
 
 // removeMountEntry is used to remove an entry from the mount table
