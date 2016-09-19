@@ -319,8 +319,8 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/role/
 
 ```
 curl -X POST "http://127.0.0.1:8200/v1/auth/aws-ec2/login" -d
-'{"role":"dev-role","pkcs7":"$(curl -s
-http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
+'{"role":"dev-role","pkcs7":"'$(curl -s
+http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
 ```
 
 
