@@ -43,7 +43,8 @@ func (c *AuditDisableCommand) Run(args []string) int {
 	}
 
 	c.Ui.Output(fmt.Sprintf(
-		"Successfully disabled audit backend '%s'!", id))
+		"Successfully disabled audit backend '%s' if it was enabled", id))
+
 	return 0
 }
 

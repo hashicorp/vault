@@ -43,7 +43,7 @@ func (c *UnmountCommand) Run(args []string) int {
 	}
 
 	c.Ui.Output(fmt.Sprintf(
-		"Successfully unmounted '%s'!", path))
+		"Successfully unmounted '%s' if it was mounted", path))
 
 	return 0
 }

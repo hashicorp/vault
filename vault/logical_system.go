@@ -806,7 +806,7 @@ func (b *SystemBackend) handleUnmount(
 	suffix = sanitizeMountPath(suffix)
 
 	// Attempt unmount
-	if err := b.Core.unmount(suffix); err != nil {
+	if existed, err := b.Core.unmount(suffix); existed && err != nil {
 		b.Backend.Logger().Error("sys: unmount failed", "path", suffix, "error", err)
 		return handleError(err)
 	}
@@ -1117,7 +1117,7 @@ func (b *SystemBackend) handleDisableAuth(
 	suffix = sanitizeMountPath(suffix)
 
 	// Attempt disable
-	if err := b.Core.disableCredential(suffix); err != nil {
+	if existed, err := b.Core.disableCredential(suffix); existed && err != nil {
 		b.Backend.Logger().Error("sys: disable auth mount failed", "path", suffix, "error", err)
 		return handleError(err)
 	}
@@ -1282,7 +1282,7 @@ func (b *SystemBackend) handleDisableAudit(
 	path := data.Get("path").(string)
 
 	// Attempt disable
-	if err := b.Core.disableAudit(path); err != nil {
+	if existed, err := b.Core.disableAudit(path); existed && err != nil {
 		b.Backend.Logger().Error("sys: disable audit mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
