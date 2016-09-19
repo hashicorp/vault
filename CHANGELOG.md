@@ -31,6 +31,7 @@ BUG FIXES:
 
  * auth/aws-ec2: Allow authentication if the underlying host is in a bad state
    but the instance is running [GH-1884]
+ * cli: Don't error on newline in token file [GH-1774]
  * core: Pass back content-type header for forwarded requests [GH-1791]
  * core: Fix panic if the same key was given twice to `generate-root` [GH-1827]
  * core: Fix potential deadlock on unmount/remount [GH-1793]
