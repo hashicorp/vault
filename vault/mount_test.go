@@ -80,9 +80,9 @@ func TestCore_Mount(t *testing.T) {
 
 func TestCore_Unmount(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
-	err := c.unmount("secret")
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	existed, err := c.unmount("secret")
+	if !existed || err != nil {
+		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
 
 	match := c.router.MatchingMount("secret/foo")
@@ -169,8 +169,8 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// Unmount, this should cleanup
-	if err := c.unmount("test/"); err != nil {
-		t.Fatalf("err: %v", err)
+	if existed, err := c.unmount("test/"); !existed || err != nil {
+		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
 
 	// Rollback should be invoked

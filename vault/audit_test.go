@@ -112,9 +112,9 @@ func TestCore_DisableAudit(t *testing.T) {
 		}, nil
 	}
 
-	err := c.disableAudit("foo")
-	if err.Error() != "no matching backend" {
-		t.Fatalf("err: %v", err)
+	existed, err := c.disableAudit("foo")
+	if existed && err != nil {
+		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
 
 	me := &MountEntry{
@@ -127,9 +127,9 @@ func TestCore_DisableAudit(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = c.disableAudit("foo")
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	existed, err = c.disableAudit("foo")
+	if !existed || err != nil {
+		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
 
 	// Check for registration

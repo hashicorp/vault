@@ -233,19 +233,6 @@ func TestSystemBackend_CapabilitiesAccessor(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_unmount_invalid(t *testing.T) {
-	b := testSystemBackend(t)
-
-	req := logical.TestRequest(t, logical.DeleteOperation, "mounts/foo/")
-	resp, err := b.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v", err)
-	}
-	if resp.Data["error"] != "no matching mount" {
-		t.Fatalf("bad: %v", resp)
-	}
-}
-
 func TestSystemBackend_remount(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -648,19 +635,6 @@ func TestSystemBackend_disableAuth(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_disableAuth_invalid(t *testing.T) {
-	b := testSystemBackend(t)
-
-	req := logical.TestRequest(t, logical.DeleteOperation, "auth/foo")
-	resp, err := b.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v", err)
-	}
-	if resp.Data["error"] != "no matching backend" {
-		t.Fatalf("bad: %v", resp)
-	}
-}
-
 func TestSystemBackend_policyList(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.ReadOperation, "policy")
@@ -910,19 +884,6 @@ func TestSystemBackend_disableAudit(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 	if resp != nil {
-		t.Fatalf("bad: %v", resp)
-	}
-}
-
-func TestSystemBackend_disableAudit_invalid(t *testing.T) {
-	b := testSystemBackend(t)
-
-	req := logical.TestRequest(t, logical.DeleteOperation, "audit/foo")
-	resp, err := b.HandleRequest(req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("err: %v", err)
-	}
-	if resp.Data["error"] != "no matching backend" {
 		t.Fatalf("bad: %v", resp)
 	}
 }
