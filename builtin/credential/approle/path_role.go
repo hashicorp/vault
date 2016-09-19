@@ -920,11 +920,9 @@ func (b *backend) pathRoleSecretIDSecretIDDelete(req *logical.Request, data *fra
 		return nil, err
 	}
 
-	accessorEntryIndex := "accessor/" + b.salt.SaltID(result.SecretIDAccessor)
-
 	// Delete the accessor of the SecretID first
-	if err := req.Storage.Delete(accessorEntryIndex); err != nil {
-		return nil, fmt.Errorf("failed to delete accessor storage entry: %s", err)
+	if err := b.deleteSecretIDAccessorEntry(req.Storage, result.SecretIDAccessor); err != nil {
+		return nil, err
 	}
 
 	// Delete the storage entry that corresponds to the SecretID
@@ -1014,15 +1012,14 @@ func (b *backend) pathRoleSecretIDAccessorDelete(req *logical.Request, data *fra
 	}
 
 	entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, accessorEntry.SecretIDHMAC)
-	accessorEntryIndex := "accessor/" + b.salt.SaltID(secretIDAccessor)
 
 	lock := b.secretIDLock(accessorEntry.SecretIDHMAC)
 	lock.Lock()
 	defer lock.Unlock()
 
 	// Delete the accessor of the SecretID first
-	if err := req.Storage.Delete(accessorEntryIndex); err != nil {
-		return nil, fmt.Errorf("failed to delete accessor storage entry: %s", err)
+	if err := b.deleteSecretIDAccessorEntry(req.Storage, secretIDAccessor); err != nil {
+		return nil, err
 	}
 
 	// Delete the storage entry that corresponds to the SecretID
