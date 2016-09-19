@@ -44,11 +44,11 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Enable a new auth backend. The auth backend can be accessed
-    and configured via the auth path specified in the URL. This
-    auth path will be exposed under the `auth` prefix. For example,
-    enabling with the `/sys/auth/foo` URL will make the backend
-    available at `/auth/foo`.
+    Enable a new auth backend. The auth backend can be accessed and configured
+    via the auth path specified in the URL. This auth path will be exposed
+    under the `auth` prefix. For example, enabling with the `/sys/auth/foo` URL
+    will make the backend available at `/auth/foo`. _This endpoint requires
+    `sudo` capability on the final path._
   </dd>
 
   <dt>Method</dt>
@@ -83,7 +83,8 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Disable the auth backend at the given auth path.
+    Disable the auth backend at the given auth path. _This endpoint requires
+    `sudo` capability on the final path._
   </dd>
 
   <dt>Method</dt>
@@ -109,8 +110,10 @@ description: |-
   <dt>Description</dt>
   <dd>
     Read the given auth path's configuration. Returns the current time
-    in seconds for each TTL, which may be the system default or a
-    auth path specific value.
+    in seconds for each TTL, which may be the system default or a auth path
+    specific value. _This endpoint requires `sudo` capability on the final
+    path, but the same functionality can be achieved without `sudo` via
+    `sys/mounts/auth/[auth_path]/tune`._
   </dd>
 
   <dt>Method</dt>
@@ -142,7 +145,9 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Tune configuration parameters for a given auth path.
+    Tune configuration parameters for a given auth path. _This endpoint
+    requires `sudo` capability on the final path, but the same functionality
+    can be achieved without `sudo` via `sys/mounts/auth/[auth_path]/tune`._
   </dd>
 
   <dt>Method</dt>

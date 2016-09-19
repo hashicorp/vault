@@ -13,7 +13,8 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    List the mounted audit backends.
+    List the mounted audit backends. _This endpoint requires `sudo`
+    capability._
   </dd>
 
   <dt>Method</dt>
@@ -47,7 +48,7 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Enable an audit backend.
+    Enable an audit backend. _This endpoint requires `sudo` capability._
   </dd>
 
   <dt>Method</dt>
@@ -89,7 +90,8 @@ description: |-
 <dl>
   <dt>Description</dt>
   <dd>
-    Disable the given audit backend.
+    Disable the given audit backend. _This endpoint requires `sudo`
+    capability._
   </dd>
 
   <dt>Method</dt>
