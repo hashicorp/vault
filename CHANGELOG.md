@@ -21,6 +21,9 @@ IMPROVEMENTS:
  * core: Provide better protection against timing attacks in Shamir code
    [GH-1877]
  * core: Allow initial root token to be PGP-encrypted [GH-1883]
+ * core: Unmounting/disabling backends no longer returns an error if the mount
+   didn't exist. This is line with elsewhere in Vault's API where `DELETE` is
+   an idempotent operation. [GH-1903]
  * credential/approle: At least one constraint is required to be enabled while
    creating and updating a role [GH-1882]
  * secret/transit: Use HKDF (RFC 5869) as the key derivation function for new
