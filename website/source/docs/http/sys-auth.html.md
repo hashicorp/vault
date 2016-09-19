@@ -102,7 +102,7 @@ description: |-
   </dd>
 </dl>
 
-# /sys/auth/[auth_path]/tune
+# /sys/auth/[auth-path]/tune
 
 ## GET
 
@@ -113,14 +113,14 @@ description: |-
     in seconds for each TTL, which may be the system default or a auth path
     specific value. _This endpoint requires `sudo` capability on the final
     path, but the same functionality can be achieved without `sudo` via
-    `sys/mounts/auth/[auth_path]/tune`._
+    `sys/mounts/auth/[auth-path]/tune`._
   </dd>
 
   <dt>Method</dt>
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/auth/<auth_path>/tune`</dd>
+  <dd>`/sys/auth/[auth-path]/tune`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -147,14 +147,14 @@ description: |-
   <dd>
     Tune configuration parameters for a given auth path. _This endpoint
     requires `sudo` capability on the final path, but the same functionality
-    can be achieved without `sudo` via `sys/mounts/auth/[auth_path]/tune`._
+    can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   </dd>
 
   <dt>Method</dt>
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/sys/auth/<auth_path>/tune`</dd>
+  <dd>`/sys/auth/[auth-path]/tune`</dd>
 
   <dt>Parameters</dt>
   <dd>
