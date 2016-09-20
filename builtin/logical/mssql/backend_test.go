@@ -186,7 +186,7 @@ func testAccStepWriteLease(t *testing.T) logicaltest.TestStep {
 		Path:      "config/lease",
 		Data: map[string]interface{}{
 			"ttl":     "1h5m",
-			"ttl_max": "24h",
+			"max_ttl": "24h",
 		},
 	}
 }
@@ -196,7 +196,7 @@ func testAccStepReadLease(t *testing.T) logicaltest.TestStep {
 		Operation: logical.ReadOperation,
 		Path:      "config/lease",
 		Check: func(resp *logical.Response) error {
-			if resp.Data["ttl"] != "1h5m0s" || resp.Data["ttl_max"] != "24h0m0s" {
+			if resp.Data["ttl"] != "1h5m0s" || resp.Data["max_ttl"] != "24h0m0s" {
 				return fmt.Errorf("bad: %#v", resp)
 			}
 

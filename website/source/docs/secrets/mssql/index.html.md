@@ -60,7 +60,7 @@ by Vault. This is done by writing to the `config/lease` key:
 ```
 $ vault write mssql/config/lease \
     ttl=1h \
-    ttl_max=24h
+    max_ttl=24h
 Success! Data written to: mssql/config/lease
 ```
 
@@ -187,7 +187,7 @@ allowed to read.
         with time suffix. Hour is the largest suffix.
       </li>
       <li>
-        <span class="param">ttl_max</span>
+        <span class="param">max_ttl</span>
         <span class="param-flags">required</span>
         The maximum ttl value provided as a string duration
         with time suffix. Hour is the largest suffix.
@@ -226,7 +226,7 @@ allowed to read.
         '{{name}}' and '{{password}}' values will be substituted. Must be a
         semicolon-separated string, a base64-encoded semicolon-separated
         string, a serialized JSON string array, or a base64-encoded serialized
-        JSON string array. 
+        JSON string array.
       </li>
     </ul>
   </dd>
