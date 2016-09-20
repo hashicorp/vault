@@ -56,5 +56,9 @@ func atlasListenerFactory(config map[string]string, logger io.Writer) (net.Liste
 		"infrastructure": scadaConfig.Atlas.Infrastructure,
 	}
 
+	// The outer connection is already TLS-enabled; this is just the listener
+	// that reaches back inside that connection
+	config["tls_disable"] = "1"
+
 	return listenerWrapTLS(ln, props, config)
 }
