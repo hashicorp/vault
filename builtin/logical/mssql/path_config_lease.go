@@ -18,6 +18,12 @@ func pathConfigLease(b *backend) *framework.Path {
 			},
 
 			"ttl_max": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Deprecated: use "max_ttl" instead.  Maximum
+time a credential is valid for.`,
+			},
+
+			"max_ttl": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Maximum time a credential is valid for.",
 			},
@@ -36,7 +42,10 @@ func pathConfigLease(b *backend) *framework.Path {
 func (b *backend) pathConfigLeaseWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	ttlRaw := d.Get("ttl").(string)
-	ttlMaxRaw := d.Get("ttl_max").(string)
+	ttlMaxRaw := d.Get("max_ttl").(string)
+	if len(ttlMaxRaw) == 0 {
+		ttlMaxRaw = d.Get("ttl_max").(string)
+	}
 
 	ttl, err := time.ParseDuration(ttlRaw)
 	if err != nil {
@@ -46,7 +55,7 @@ func (b *backend) pathConfigLeaseWrite(
 	ttlMax, err := time.ParseDuration(ttlMaxRaw)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Invalid ttl_max: %s", err)), nil
+			"Invalid max_ttl: %s", err)), nil
 	}
 
 	// Store it
@@ -75,12 +84,16 @@ func (b *backend) pathConfigLeaseRead(
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"ttl":     leaseConfig.TTL.String(),
 			"ttl_max": leaseConfig.TTLMax.String(),
+			"max_ttl": leaseConfig.TTLMax.String(),
 		},
-	}, nil
+	}
+	resp.AddWarning("The field ttl_max is deprecated and will be removed in a future release. Use max_ttl instead.")
+
+	return resp, nil
 }
 
 type configLease struct {
