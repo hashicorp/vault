@@ -371,6 +371,19 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
+		if lnConfig.Type == "atlas" {
+			cluster, err := core.Cluster()
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf(
+					"Error initializing listener of type %s: %s",
+					lnConfig.Type, err))
+				return 1
+			}
+
+			lnConfig.Config["cluster_id"] = cluster.ID
+			lnConfig.Config["cluster_name"] = cluster.Name
+		}
+
 		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, logGate)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
