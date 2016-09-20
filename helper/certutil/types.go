@@ -556,7 +556,7 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 		}
 
 		caPool := x509.NewCertPool()
-		ok := caPool.AppendCertsFromPEM([]byte(certBundle.IssuingCA))
+		ok := caPool.AppendCertsFromPEM([]byte(certBundle.CAChain[0]))
 		if !ok {
 			return nil, fmt.Errorf("Could not append CA certificate")
 		}

@@ -151,8 +151,6 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		return fmt.Errorf("Parsed bundle has nil certificate")
 	case pcbut.PrivateKey == nil:
 		return fmt.Errorf("Parsed bundle has nil private key")
-	case pcbut.CAChain == nil && len(pcbut.CAChain) == 0:
-		return fmt.Errorf("Parsed bundle has nil issuing CA")
 	}
 
 	switch cbut.PrivateKey {
@@ -201,7 +199,7 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		return fmt.Errorf("Bundle has nil certificate")
 	case len(cb.PrivateKey) == 0:
 		return fmt.Errorf("Bundle has nil private key")
-	case len(cb.IssuingCA) == 0:
+	case len(cb.CAChain[0]) == 0:
 		return fmt.Errorf("Bundle has nil issuing CA")
 	}
 
