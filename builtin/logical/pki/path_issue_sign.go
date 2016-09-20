@@ -186,6 +186,9 @@ func (b *backend) pathIssueSignCert(
 	case "pem":
 		resp.Data["issuing_ca"] = signingCB.Certificate
 		resp.Data["certificate"] = cb.Certificate
+		if cb.CAChain != nil && len(cb.CAChain) > 0 {
+			resp.Data["issuing_ca_chain"] = cb.CAChain
+		}
 		if !useCSR {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
@@ -194,7 +197,7 @@ func (b *backend) pathIssueSignCert(
 	case "pem_bundle":
 		resp.Data["issuing_ca"] = signingCB.Certificate
 		resp.Data["certificate"] = cb.ToPEMBundle()
-		if cb.CAChain != nil {
+		if cb.CAChain != nil && len(cb.CAChain) > 0 {
 			resp.Data["issuing_ca_chain"] = cb.CAChain
 		}
 		if !useCSR {
@@ -210,7 +213,7 @@ func (b *backend) pathIssueSignCert(
 		for _, caCert := range parsedBundle.CAChain {
 			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
-		if caChain != nil {
+		if caChain != nil && len(caChain) > 0 {
 			resp.Data["issuing_ca_chain"] = caChain
 		}
 
