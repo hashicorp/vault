@@ -84,12 +84,16 @@ func (b *backend) pathConfigLeaseRead(
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"ttl":     leaseConfig.TTL.String(),
+			"ttl_max": leaseConfig.TTLMax.String(),
 			"max_ttl": leaseConfig.TTLMax.String(),
 		},
-	}, nil
+	}
+	resp.AddWarning("The field ttl_max is deprecated and will be removed in a future release. Use max_ttl instead.")
+
+	return resp, nil
 }
 
 type configLease struct {
