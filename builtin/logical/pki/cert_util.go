@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -865,24 +866,17 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	}
 
 	if creationInfo.SigningBundle != nil {
-		certPath := creationInfo.SigningBundle.GetCertificatePath()
+		if len(creationInfo.SigningBundle.Certificate.AuthorityKeyId) > 0 &&
+			!bytes.Equal(creationInfo.SigningBundle.Certificate.AuthorityKeyId, creationInfo.SigningBundle.Certificate.SubjectKeyId) {
 
-		if len(certPath) > 0 {
-			result.IssuingCABytes = certPath[0].Bytes
-			result.IssuingCA = certPath[0].Certificate
-		} else {
-			return nil, errutil.InternalError{Err: "no certificates in signing bundle"}
-		}
-
-		if len(certPath) > 1 {
-			for _, cert := range certPath[1:] {
-				result.IssuingCAChainBytes = append(result.IssuingCAChainBytes, cert.Bytes)
-				result.IssuingCAChain = append(result.IssuingCAChain, cert.Certificate)
+			result.CAChain = []*certutil.CertBlock{
+				&certutil.CertBlock{
+					Certificate: creationInfo.SigningBundle.Certificate,
+					Bytes:       creationInfo.SigningBundle.CertificateBytes,
+				},
 			}
+			result.CAChain = append(result.CAChain, creationInfo.SigningBundle.CAChain...)
 		}
-	} else {
-		result.IssuingCABytes = result.CertificateBytes
-		result.IssuingCA = result.Certificate
 	}
 
 	return result, nil
@@ -1033,10 +1027,18 @@ func signCertificate(creationInfo *creationBundle,
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
 	}
 
-	result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
-	result.IssuingCA = creationInfo.SigningBundle.Certificate
-	result.IssuingCAChainBytes = creationInfo.SigningBundle.IssuingCAChainBytes
-	result.IssuingCAChain = creationInfo.SigningBundle.IssuingCAChain
+	// Include issuing CA in Chain, not including Root Authority
+	if len(creationInfo.SigningBundle.Certificate.AuthorityKeyId) > 0 &&
+		!bytes.Equal(creationInfo.SigningBundle.Certificate.AuthorityKeyId, creationInfo.SigningBundle.Certificate.SubjectKeyId) {
+
+		result.CAChain = []*certutil.CertBlock{
+			&certutil.CertBlock{
+				Certificate: creationInfo.SigningBundle.Certificate,
+				Bytes:       creationInfo.SigningBundle.CertificateBytes,
+			},
+		}
+		result.CAChain = append(result.CAChain, creationInfo.SigningBundle.CAChain...)
+	}
 
 	return result, nil
 }

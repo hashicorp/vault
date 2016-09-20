@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/fatih/structs"
@@ -150,7 +151,7 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 		return fmt.Errorf("Parsed bundle has nil certificate")
 	case pcbut.PrivateKey == nil:
 		return fmt.Errorf("Parsed bundle has nil private key")
-	case pcbut.IssuingCA == nil:
+	case pcbut.CAChain == nil && len(pcbut.CAChain) == 0:
 		return fmt.Errorf("Parsed bundle has nil issuing CA")
 	}
 
@@ -184,9 +185,9 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 	}
 
 	switch {
-	case len(pcbut.IssuingCAChain) > 0 && len(cbut.IssuingCAChain) == 0:
+	case len(pcbut.CAChain) > 0 && len(cbut.CAChain) == 0:
 		return fmt.Errorf("Parsed bundle ca chain has certs when cert bundle does not")
-	case len(pcbut.IssuingCAChain) == 0 && len(cbut.IssuingCAChain) > 0:
+	case len(pcbut.CAChain) == 0 && len(cbut.CAChain) > 0:
 		return fmt.Errorf("Cert bundle ca chain has certs when parsed cert bundle does not")
 	}
 
@@ -222,12 +223,12 @@ func compareCertBundleToParsedCertBundle(cbut *CertBundle, pcbut *ParsedCertBund
 	}
 
 	switch {
-	case len(pcbut.IssuingCAChain) > 0 && len(cb.IssuingCAChain) == 0:
+	case len(pcbut.CAChain) > 0 && len(cb.CAChain) == 0:
 		return fmt.Errorf("Parsed bundle ca chain has certs when cert bundle does not")
-	case len(pcbut.IssuingCAChain) == 0 && len(cb.IssuingCAChain) > 0:
+	case len(pcbut.CAChain) == 0 && len(cb.CAChain) > 0:
 		return fmt.Errorf("Cert bundle ca chain has certs when parsed cert bundle does not")
-	case cbut.IssuingCAChain != cb.IssuingCAChain:
-		return fmt.Errorf("Cert bundle ca chain does not match: %s\n\n%s", cbut.IssuingCAChain, cb.IssuingCAChain)
+	case !reflect.DeepEqual(cbut.CAChain, cb.CAChain):
+		return fmt.Errorf("Cert bundle ca chain does not match: %#v\n\n%#v", cbut.CAChain, cb.CAChain)
 	}
 
 	return nil
@@ -367,21 +368,21 @@ func TestTLSConfig(t *testing.T) {
 
 		switch usage {
 		case TLSServer | TLSClient:
-			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.CAChain[0].Certificate.RawSubject) != 0 {
 				t.Fatalf("CA certificate not in client cert pool as expected")
 			}
-			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.CAChain[0].Certificate.RawSubject) != 0 {
 				t.Fatalf("CA certificate not in root cert pool as expected")
 			}
 		case TLSServer:
-			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+			if len(tlsConfig.ClientCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.ClientCAs.Subjects()[0], pcbut.CAChain[0].Certificate.RawSubject) != 0 {
 				t.Fatalf("CA certificate not in client cert pool as expected")
 			}
 			if tlsConfig.RootCAs != nil {
 				t.Fatalf("Found root pools in config object when not expected")
 			}
 		case TLSClient:
-			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.IssuingCA.RawSubject) != 0 {
+			if len(tlsConfig.RootCAs.Subjects()) != 1 || bytes.Compare(tlsConfig.RootCAs.Subjects()[0], pcbut.CAChain[0].Certificate.RawSubject) != 0 {
 				t.Fatalf("CA certificate not in root cert pool as expected")
 			}
 			if tlsConfig.ClientCAs != nil {
@@ -399,41 +400,41 @@ func refreshRSA8CertBundle() *CertBundle {
 	return &CertBundle{
 		Certificate: certRSAPem,
 		PrivateKey:  privRSA8KeyPem,
-		IssuingCA:   issuingCaPem,
+		CAChain:     []string{issuingCaChainPem[0]},
 	}
 }
 
 func refreshRSA8CertBundleWithChain() *CertBundle {
 	ret := refreshRSA8CertBundle()
-	ret.IssuingCAChain = issuingCaChainPem
+	ret.CAChain = issuingCaChainPem
 	return ret
 }
 
 func refreshRSACertBundle() *CertBundle {
 	return &CertBundle{
 		Certificate: certRSAPem,
-		IssuingCA:   issuingCaPem,
+		CAChain:     []string{issuingCaChainPem[0]},
 		PrivateKey:  privRSAKeyPem,
 	}
 }
 
 func refreshRSACertBundleWithChain() *CertBundle {
 	ret := refreshRSACertBundle()
-	ret.IssuingCAChain = issuingCaChainPem
+	ret.CAChain = issuingCaChainPem
 	return ret
 }
 
 func refreshECCertBundle() *CertBundle {
 	return &CertBundle{
 		Certificate: certECPem,
-		IssuingCA:   issuingCaPem,
+		CAChain:     []string{issuingCaChainPem[0]},
 		PrivateKey:  privECKeyPem,
 	}
 }
 
 func refreshECCertBundleWithChain() *CertBundle {
 	ret := refreshECCertBundle()
-	ret.IssuingCAChain = issuingCaChainPem
+	ret.CAChain = issuingCaChainPem
 	return ret
 }
 
@@ -455,17 +456,17 @@ func refreshEC8CertBundle() *CertBundle {
 	return &CertBundle{
 		Certificate: certECPem,
 		PrivateKey:  privEC8KeyPem,
-		IssuingCA:   issuingCaPem,
+		CAChain:     []string{issuingCaChainPem[0]},
 	}
 }
 
 func refreshEC8CertBundleWithChain() *CertBundle {
 	ret := refreshEC8CertBundle()
-	ret.IssuingCAChain = issuingCaChainPem
+	ret.CAChain = issuingCaChainPem
 	return ret
 }
 
-const (
+var (
 	privRSA8KeyPem = `-----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC92mr7+D/tGkW5
 nvDH/fYkOLywbxsU9wU7lKVPCdj+zNzQYHiixTZtmZPYVTBj27lZgaUDUXuiw9Ru
@@ -600,7 +601,7 @@ wYoyl0J33Alxq2eC2subR7xISR3MzZFcdkzNNrBddeaSviYlR4SgTUiqOldAcdR4
 QZxtxazcUqQDZ+wZFOpBOnp94bzVeXT9BF+L
 -----END CERTIFICATE-----`
 
-	issuingCaPem = `-----BEGIN CERTIFICATE-----
+	issuingCaChainPem = []string{`-----BEGIN CERTIFICATE-----
 MIIDljCCAn6gAwIBAgIUHjciEzUzeNVqI9mwFJeduNtXWzMwDQYJKoZIhvcNAQEL
 BQAwMzExMC8GA1UEAxMoVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3ViIEF1
 dGhvcml0eTAeFw0xNjA4MDQxOTEyNTdaFw0xNjA4MDUyMDEzMjdaMDcxNTAzBgNV
@@ -621,9 +622,8 @@ O550XgDVIf5e7sXrVuV1rd1XUo3xZLaSLUhU70y/343mcN2TRUslXO4QrIE5lo2v
 awyQl0NW0hSO0F9VZYzOvPPVwu7mf1ijTzbkPtUbAXDnmlvOCrlx2JZd/BqXb75e
 UgYDq7hIyQ109FBOjv0weAM5tZCdesyvro4/43Krd8pa74zHdZMjfQAsTr66WOi4
 yedj8LnWl66JOA==
------END CERTIFICATE-----`
-
-	issuingCaChainPem = `-----BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----`,
+		`-----BEGIN CERTIFICATE-----
 MIIDijCCAnKgAwIBAgIUBNDYCUsOT2Wth8Fz3layfjEVbcIwDQYJKoZIhvcNAQEL
 BQAwLzEtMCsGA1UEAxMkVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgQXV0aG9y
 aXR5MB4XDTE2MDgwNDE5MTI1NloXDTE2MDgwNjIxMTMyNlowMzExMC8GA1UEAxMo
@@ -643,8 +643,8 @@ yjuiH5fBUGHy+f1Ygu6tlAZtUnxAi6pU4eoCDNZpqunJMM4IdaahHeICdjPhx/bH
 AlmwaN0FsNvOlgUuPTjQ3z6jMZn3p2lXI3HiRlcz+nR7gQizPb2L7u8mQ+5EZFmC
 AmXMj40g3bTJVmKoGeAR7cb0pYG/GUELmERjEjCfP7W15eYfuu1j7EYTUAVuPAlJ
 34HDxCuM8cPJwCGMDKfb3Q39AYRmLT6sE3/sq2CZ5xlj8wfwDpVfpXikRDpI0A==
------END CERTIFICATE-----
------BEGIN CERTIFICATE-----
+-----END CERTIFICATE-----`,
+		`-----BEGIN CERTIFICATE-----
 MIIDejCCAmKgAwIBAgIUEtjlbdzIth3U71TELA0PVW7HvaEwDQYJKoZIhvcNAQEL
 BQAwJzElMCMGA1UEAxMcVmF1bHQgVGVzdGluZyBSb290IEF1dGhvcml0eTAeFw0x
 NjA4MDQxOTEyNTVaFw0xNjA4MDgyMzEzMjVaMC8xLTArBgNVBAMTJFZhdWx0IFRl
@@ -664,5 +664,5 @@ SDkbaD05avRtfvSrPCagaUGVRt+wK24g8hpJqQ+trkufzjq9ySU018+NNX9yGRyA
 VjwZAqALlNEAkdcvd4adEBpZqum2x1Fl9EXnjp6NEWQ7nuGkp3X2DP4gDtQPxgmn
 omOo4GHhO0U57exEIl0d4kiy9WU0qcIISOr6I+gzesMooX6aI43CaqJoZKsHXYY6
 1uxFLss+/wDtvIcyXdTdjPrgD38YIgk1/iKNIgKO
------END CERTIFICATE-----`
+-----END CERTIFICATE-----`}
 )

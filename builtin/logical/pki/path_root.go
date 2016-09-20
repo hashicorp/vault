@@ -106,26 +106,26 @@ func (b *backend) pathCAGenerateRoot(
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
-		resp.Data["issuing_ca"] = cb.IssuingCA
+		resp.Data["issuing_ca"] = cb.Certificate
 		if exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
 
 	case "pem_bundle":
-		resp.Data["issuing_ca"] = cb.IssuingCA
+		resp.Data["issuing_ca"] = cb.Certificate
 
 		if exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
-			resp.Data["certificate"] = cb.ToPEMBundle()
+			resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.PrivateKey, cb.Certificate)
 		} else {
-			resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.Certificate, cb.IssuingCA) // Exclude private key
+			resp.Data["certificate"] = cb.Certificate
 		}
 
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
-		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		if exported {
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = cb.PrivateKeyType
@@ -231,6 +231,11 @@ func (b *backend) pathCASignIntermediate(
 		return nil, fmt.Errorf("verification of parsed bundle failed: %s", err)
 	}
 
+	signingCB, err := signingBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+	}
+
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
@@ -246,28 +251,23 @@ func (b *backend) pathCASignIntermediate(
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
-		resp.Data["issuing_ca"] = cb.IssuingCA
-		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
+		resp.Data["issuing_ca"] = signingCB.Certificate
+		resp.Data["issuing_ca_chain"] = cb.CAChain
 
 	case "pem_bundle":
 		resp.Data["certificate"] = cb.ToPEMBundle()
-		resp.Data["issuing_ca"] = cb.IssuingCA
-		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
+		resp.Data["issuing_ca"] = signingCB.Certificate
+		resp.Data["issuing_ca_chain"] = cb.CAChain
 
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
-		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(signingBundle.CertificateBytes)
 
-		switch {
-		case len(parsedBundle.IssuingCAChain) == 1:
-			resp.Data["issuing_ca_chain"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCAChainBytes[0])
-		case len(parsedBundle.IssuingCAChain) > 1:
-			resp.AddWarning("CA chains greater than 1 are not supported in the DER format.")
+		var caChain []string
+		for _, caCert := range parsedBundle.CAChain {
+			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
-	}
-
-	if s, ok := resp.Data["issuing_ca_chain"]; ok && len(s.(string)) == 0 {
-		delete(resp.Data, "issuing_ca_chain")
+		resp.Data["issuing_ca_chain"] = caChain
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{

@@ -344,7 +344,7 @@ func checkCertsAndPrivateKey(keyType string, key crypto.Signer, usage x509.KeyUs
 	switch {
 	case parsedCertBundle.Certificate == nil:
 		return nil, fmt.Errorf("Did not find a certificate in the cert bundle")
-	case parsedCertBundle.IssuingCA == nil:
+	case len(parsedCertBundle.CAChain) == 0 || parsedCertBundle.CAChain[0].Certificate == nil:
 		return nil, fmt.Errorf("Did not find a CA in the cert bundle")
 	case parsedCertBundle.PrivateKey == nil:
 		return nil, fmt.Errorf("Did not find a private key in the cert bundle")

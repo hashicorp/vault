@@ -164,16 +164,11 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	}
 
 	for i, certBlock := range certPath {
-		switch i {
-		case 0:
+		if i == 0 {
 			parsedBundle.Certificate = certBlock.Certificate
 			parsedBundle.CertificateBytes = certBlock.Bytes
-		case 1:
-			parsedBundle.IssuingCA = certBlock.Certificate
-			parsedBundle.IssuingCABytes = certBlock.Bytes
-		default:
-			parsedBundle.IssuingCAChain = append(parsedBundle.IssuingCAChain, certBlock.Certificate)
-			parsedBundle.IssuingCAChainBytes = append(parsedBundle.IssuingCAChainBytes, certBlock.Bytes)
+		} else {
+			parsedBundle.CAChain = append(parsedBundle.CAChain, certBlock)
 		}
 	}
 

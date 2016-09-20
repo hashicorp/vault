@@ -164,6 +164,11 @@ func (b *backend) pathIssueSignCert(
 		}
 	}
 
+	signingCB, err := signingBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("Error converting raw signing bundle to cert bundle: %s", err)
+	}
+
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
@@ -179,19 +184,19 @@ func (b *backend) pathIssueSignCert(
 
 	switch format {
 	case "pem":
-		resp.Data["issuing_ca"] = cb.IssuingCA
-		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
+		resp.Data["issuing_ca"] = signingCB.Certificate
 		resp.Data["certificate"] = cb.Certificate
-
 		if !useCSR {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
 
 	case "pem_bundle":
-		resp.Data["issuing_ca"] = cb.IssuingCA
-		resp.Data["issuing_ca_chain"] = cb.IssuingCAChain
+		resp.Data["issuing_ca"] = signingCB.Certificate
 		resp.Data["certificate"] = cb.ToPEMBundle()
+		if cb.CAChain != nil {
+			resp.Data["issuing_ca_chain"] = cb.CAChain
+		}
 		if !useCSR {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
@@ -199,22 +204,19 @@ func (b *backend) pathIssueSignCert(
 
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
-		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCABytes)
+		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(signingBundle.CertificateBytes)
 
-		switch {
-		case len(parsedBundle.IssuingCAChain) == 1:
-			resp.Data["issuing_ca_chain"] = base64.StdEncoding.EncodeToString(parsedBundle.IssuingCAChainBytes[0])
-		case len(parsedBundle.IssuingCAChain) > 1:
-			resp.AddWarning("CA chains greater than 1 are not supported in the DER format.")
+		var caChain []string
+		for _, caCert := range parsedBundle.CAChain {
+			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
+		}
+		if caChain != nil {
+			resp.Data["issuing_ca_chain"] = caChain
 		}
 
 		if !useCSR {
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 		}
-	}
-
-	if s, ok := resp.Data["issuing_ca_chain"]; ok && len(s.(string)) == 0 {
-		delete(resp.Data, "issuing_ca_chain")
 	}
 
 	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
