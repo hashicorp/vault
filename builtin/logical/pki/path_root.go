@@ -253,14 +253,14 @@ func (b *backend) pathCASignIntermediate(
 		resp.Data["certificate"] = cb.Certificate
 		resp.Data["issuing_ca"] = signingCB.Certificate
 		if cb.CAChain != nil && len(cb.CAChain) > 0 {
-			resp.Data["issuing_ca_chain"] = cb.CAChain
+			resp.Data["ca_chain"] = cb.CAChain
 		}
 
 	case "pem_bundle":
 		resp.Data["certificate"] = cb.ToPEMBundle()
 		resp.Data["issuing_ca"] = signingCB.Certificate
 		if cb.CAChain != nil && len(cb.CAChain) > 0 {
-			resp.Data["issuing_ca_chain"] = cb.CAChain
+			resp.Data["ca_chain"] = cb.CAChain
 		}
 
 	case "der":
@@ -272,7 +272,7 @@ func (b *backend) pathCASignIntermediate(
 			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
 		if caChain != nil && len(caChain) > 0 {
-			resp.Data["issuing_ca_chain"] = cb.CAChain
+			resp.Data["ca_chain"] = cb.CAChain
 		}
 	}
 
