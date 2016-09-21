@@ -28,6 +28,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 			b.pathEncrypt(),
 			b.pathDecrypt(),
 			b.pathDatakey(),
+			b.pathRandom(),
+			b.pathHash(),
+			b.pathHMAC(),
+			b.pathSign(),
+			b.pathVerify(),
 		},
 
 		Secrets: []*framework.Secret{},

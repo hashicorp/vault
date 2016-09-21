@@ -229,7 +229,7 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				Name                 string           `mapstructure:"name"`
 				Key                  []byte           `mapstructure:"key"`
 				Keys                 map[string]int64 `mapstructure:"keys"`
-				CipherMode           string           `mapstructure:"cipher_mode"`
+				Type                 string           `mapstructure:"type"`
 				Derived              bool             `mapstructure:"derived"`
 				KDF                  string           `mapstructure:"kdf"`
 				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
@@ -240,10 +240,10 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 			}
 
 			if d.Name != name {
-				return fmt.Errorf("bad: %#v", d)
+				return fmt.Errorf("bad name: %#v", d)
 			}
-			if d.CipherMode != "aes-gcm" {
-				return fmt.Errorf("bad: %#v", d)
+			if d.Type != KeyType(keyType_AES256_GCM96).String() {
+				return fmt.Errorf("bad key type: %#v", d)
 			}
 			// Should NOT get a key back
 			if d.Key != nil {
@@ -537,9 +537,9 @@ func testAccStepDecryptDatakey(t *testing.T, name string,
 func TestKeyUpgrade(t *testing.T) {
 	key, _ := uuid.GenerateRandomBytes(32)
 	p := &policy{
-		Name:       "test",
-		Key:        key,
-		CipherMode: "aes-gcm",
+		Name: "test",
+		Key:  key,
+		Type: keyType_AES256_GCM96,
 	}
 
 	p.migrateKeyToKeysMap()
@@ -547,7 +547,7 @@ func TestKeyUpgrade(t *testing.T) {
 	if p.Key != nil ||
 		p.Keys == nil ||
 		len(p.Keys) != 1 ||
-		!reflect.DeepEqual(p.Keys[1].Key, key) {
+		!reflect.DeepEqual(p.Keys[1].AESKey, key) {
 		t.Errorf("bad key migration, result is %#v", p.Keys)
 	}
 }
@@ -558,10 +558,10 @@ func TestDerivedKeyUpgrade(t *testing.T) {
 	context, _ := uuid.GenerateRandomBytes(32)
 
 	p := &policy{
-		Name:       "test",
-		Key:        key,
-		CipherMode: "aes-gcm",
-		Derived:    true,
+		Name:    "test",
+		Key:     key,
+		Type:    keyType_AES256_GCM96,
+		Derived: true,
 	}
 
 	p.migrateKeyToKeysMap()
@@ -647,7 +647,7 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 
 	p := &policy{
 		Name:                 "testkey",
-		CipherMode:           "aes-gcm",
+		Type:                 keyType_AES256_GCM96,
 		Derived:              true,
 		ConvergentEncryption: true,
 		ConvergentVersion:    ver,

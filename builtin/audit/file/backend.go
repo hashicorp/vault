@@ -8,9 +8,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/copystructure"
 )
 
 func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
@@ -24,6 +22,16 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		if !ok {
 			return nil, fmt.Errorf("file_path is required")
 		}
+	}
+
+	format, ok := conf.Config["format"]
+	if !ok {
+		format = "json"
+	}
+	switch format {
+	case "json", "jsonx":
+	default:
+		return nil, fmt.Errorf("unknown format type %s", format)
 	}
 
 	// Check if hashing of accessor is disabled
@@ -47,10 +55,19 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	b := &Backend{
-		path:         path,
-		logRaw:       logRaw,
-		hmacAccessor: hmacAccessor,
-		salt:         conf.Salt,
+		path: path,
+		formatConfig: audit.FormatterConfig{
+			Raw:          logRaw,
+			Salt:         conf.Salt,
+			HMACAccessor: hmacAccessor,
+		},
+	}
+
+	switch format {
+	case "json":
+		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{}
+	case "jsonx":
+		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{}
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -69,60 +86,25 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 // It doesn't do anything more at the moment to assist with rotation
 // or reset the write cursor, this should be done in the future.
 type Backend struct {
-	path         string
-	logRaw       bool
-	hmacAccessor bool
-	salt         *salt.Salt
+	path string
+
+	formatter    audit.AuditFormatter
+	formatConfig audit.FormatterConfig
 
 	once sync.Once
 	f    *os.File
 }
 
 func (b *Backend) GetHash(data string) string {
-	return audit.HashString(b.salt, data)
+	return audit.HashString(b.formatConfig.Salt, data)
 }
 
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	if err := b.open(); err != nil {
 		return err
 	}
-	if !b.logRaw {
-		// Before we copy the structure we must nil out some data
-		// otherwise we will cause reflection to panic and die
-		if req.Connection != nil && req.Connection.ConnState != nil {
-			origReq := req
-			origState := req.Connection.ConnState
-			req.Connection.ConnState = nil
-			defer func() {
-				origReq.Connection.ConnState = origState
-			}()
-		}
 
-		// Copy the structures
-		cp, err := copystructure.Copy(auth)
-		if err != nil {
-			return err
-		}
-		auth = cp.(*logical.Auth)
-
-		cp, err = copystructure.Copy(req)
-		if err != nil {
-			return err
-		}
-		req = cp.(*logical.Request)
-
-		// Hash any sensitive information
-		if err := audit.Hash(b.salt, auth); err != nil {
-			return err
-		}
-		if err := audit.Hash(b.salt, req); err != nil {
-			return err
-		}
-
-	}
-
-	var format audit.FormatJSON
-	return format.FormatRequest(b.f, auth, req, outerErr)
+	return b.formatter.FormatRequest(b.f, b.formatConfig, auth, req, outerErr)
 }
 
 func (b *Backend) LogResponse(
@@ -133,76 +115,8 @@ func (b *Backend) LogResponse(
 	if err := b.open(); err != nil {
 		return err
 	}
-	if !b.logRaw {
-		// Before we copy the structure we must nil out some data
-		// otherwise we will cause reflection to panic and die
-		if req.Connection != nil && req.Connection.ConnState != nil {
-			origReq := req
-			origState := req.Connection.ConnState
-			req.Connection.ConnState = nil
-			defer func() {
-				origReq.Connection.ConnState = origState
-			}()
-		}
 
-		// Copy the structure
-		cp, err := copystructure.Copy(auth)
-		if err != nil {
-			return err
-		}
-		auth = cp.(*logical.Auth)
-
-		cp, err = copystructure.Copy(req)
-		if err != nil {
-			return err
-		}
-		req = cp.(*logical.Request)
-
-		cp, err = copystructure.Copy(resp)
-		if err != nil {
-			return err
-		}
-		resp = cp.(*logical.Response)
-
-		// Hash any sensitive information
-
-		// Cache and restore accessor in the auth
-		var accessor, wrappedAccessor string
-		if !b.hmacAccessor && auth != nil && auth.Accessor != "" {
-			accessor = auth.Accessor
-		}
-		if err := audit.Hash(b.salt, auth); err != nil {
-			return err
-		}
-		if accessor != "" {
-			auth.Accessor = accessor
-		}
-
-		if err := audit.Hash(b.salt, req); err != nil {
-			return err
-		}
-
-		// Cache and restore accessor in the response
-		accessor = ""
-		if !b.hmacAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
-			accessor = resp.Auth.Accessor
-		}
-		if !b.hmacAccessor && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
-			wrappedAccessor = resp.WrapInfo.WrappedAccessor
-		}
-		if err := audit.Hash(b.salt, resp); err != nil {
-			return err
-		}
-		if accessor != "" {
-			resp.Auth.Accessor = accessor
-		}
-		if wrappedAccessor != "" {
-			resp.WrapInfo.WrappedAccessor = wrappedAccessor
-		}
-	}
-
-	var format audit.FormatJSON
-	return format.FormatResponse(b.f, auth, req, resp, err)
+	return b.formatter.FormatResponse(b.f, b.formatConfig, auth, req, resp, err)
 }
 
 func (b *Backend) open() error {

@@ -18,6 +18,28 @@ var (
 	errNeedExclusiveLock = errors.New("an exclusive lock is needed for this operation")
 )
 
+// policyRequest holds values used when requesting a policy. Most values are
+// only used during an upsert.
+type policyRequest struct {
+	// The storage to use
+	storage logical.Storage
+
+	// The name of the policy
+	name string
+
+	// The key type
+	keyType KeyType
+
+	// Whether it should be derived
+	derived bool
+
+	// Whether to enable convergent encryption
+	convergent bool
+
+	// Whether to upsert
+	upsert bool
+}
+
 type lockManager struct {
 	// A lock for each named key
 	locks map[string]*sync.RWMutex
@@ -105,58 +127,72 @@ func (lm *lockManager) UnlockPolicy(lock *sync.RWMutex, lockType bool) {
 // is needed (for instance, for an upgrade/migration), give up the read lock,
 // call again with an exclusive lock, then swap back out for a read lock.
 func (lm *lockManager) GetPolicyShared(storage logical.Storage, name string) (*policy, *sync.RWMutex, error) {
-	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, false, shared)
+	p, lock, _, err := lm.getPolicyCommon(policyRequest{
+		storage: storage,
+		name:    name,
+	}, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {
 		return p, lock, err
 	}
 
 	// Try again while asking for an exlusive lock
-	p, lock, _, err = lm.getPolicyCommon(storage, name, false, false, false, exclusive)
+	p, lock, _, err = lm.getPolicyCommon(policyRequest{
+		storage: storage,
+		name:    name,
+	}, exclusive)
 	if err != nil || p == nil || lock == nil {
 		return p, lock, err
 	}
 
 	lock.Unlock()
 
-	p, lock, _, err = lm.getPolicyCommon(storage, name, false, false, false, shared)
+	p, lock, _, err = lm.getPolicyCommon(policyRequest{
+		storage: storage,
+		name:    name,
+	}, shared)
 	return p, lock, err
 }
 
 // Get the policy with an exclusive lock
 func (lm *lockManager) GetPolicyExclusive(storage logical.Storage, name string) (*policy, *sync.RWMutex, error) {
-	p, lock, _, err := lm.getPolicyCommon(storage, name, false, false, false, exclusive)
+	p, lock, _, err := lm.getPolicyCommon(policyRequest{
+		storage: storage,
+		name:    name,
+	}, exclusive)
 	return p, lock, err
 }
 
 // Get the policy with a read lock; if it returns that an exclusive lock is
 // needed, retry. If successful, call one more time to get a read lock and
 // return the value.
-func (lm *lockManager) GetPolicyUpsert(storage logical.Storage, name string, derived, convergent bool) (*policy, *sync.RWMutex, bool, error) {
-	p, lock, _, err := lm.getPolicyCommon(storage, name, true, derived, convergent, shared)
+func (lm *lockManager) GetPolicyUpsert(req policyRequest) (*policy, *sync.RWMutex, bool, error) {
+	req.upsert = true
+
+	p, lock, _, err := lm.getPolicyCommon(req, shared)
 	if err == nil ||
 		(err != nil && err != errNeedExclusiveLock) {
 		return p, lock, false, err
 	}
 
 	// Try again while asking for an exlusive lock
-	p, lock, upserted, err := lm.getPolicyCommon(storage, name, true, derived, convergent, exclusive)
+	p, lock, upserted, err := lm.getPolicyCommon(req, exclusive)
 	if err != nil || p == nil || lock == nil {
 		return p, lock, upserted, err
 	}
-
 	lock.Unlock()
 
-	// Now get a shared lock for the return, but preserve the value of upsert
-	p, lock, _, err = lm.getPolicyCommon(storage, name, true, derived, convergent, shared)
+	req.upsert = false
+	// Now get a shared lock for the return, but preserve the value of upserted
+	p, lock, _, err = lm.getPolicyCommon(req, shared)
 
 	return p, lock, upserted, err
 }
 
 // When the function returns, a lock will be held on the policy if err == nil.
 // It is the caller's responsibility to unlock.
-func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, upsert, derived, convergent, lockType bool) (*policy, *sync.RWMutex, bool, error) {
-	lock := lm.policyLock(name, lockType)
+func (lm *lockManager) getPolicyCommon(req policyRequest, lockType bool) (*policy, *sync.RWMutex, bool, error) {
+	lock := lm.policyLock(req.name, lockType)
 
 	var p *policy
 	var err error
@@ -164,7 +200,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 	// Check if it's in our cache. If so, return right away.
 	if lm.CacheActive() {
 		lm.cacheMutex.RLock()
-		p = lm.cache[name]
+		p = lm.cache[req.name]
 		if p != nil {
 			lm.cacheMutex.RUnlock()
 			return p, lock, false, nil
@@ -173,7 +209,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 	}
 
 	// Load it from storage
-	p, err = lm.getStoredPolicy(storage, name)
+	p, err = lm.getStoredPolicy(req.storage, req.name)
 	if err != nil {
 		lm.UnlockPolicy(lock, lockType)
 		return nil, nil, false, err
@@ -182,7 +218,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 	if p == nil {
 		// This is the only place we upsert a new policy, so if upsert is not
 		// specified, or the lock type is wrong, unlock before returning
-		if !upsert {
+		if !req.upsert {
 			lm.UnlockPolicy(lock, lockType)
 			return nil, nil, false, nil
 		}
@@ -192,22 +228,33 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 			return nil, nil, false, errNeedExclusiveLock
 		}
 
-		if !derived && convergent {
-			return nil, nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")
+		switch req.keyType {
+		case keyType_AES256_GCM96:
+			if req.convergent && !req.derived {
+				return nil, nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")
+			}
+
+		case keyType_ECDSA_P256:
+			if req.derived || req.convergent {
+				return nil, nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %s", keyType_ECDSA_P256)
+			}
+
+		default:
+			return nil, nil, false, fmt.Errorf("unsupported key type %v", req.keyType)
 		}
 
 		p = &policy{
-			Name:       name,
-			CipherMode: "aes-gcm",
-			Derived:    derived,
+			Name:    req.name,
+			Type:    req.keyType,
+			Derived: req.derived,
 		}
-		if derived {
+		if req.derived {
 			p.KDF = kdf_hkdf_sha256
-			p.ConvergentEncryption = convergent
+			p.ConvergentEncryption = req.convergent
 			p.ConvergentVersion = 2
 		}
 
-		err = p.rotate(storage)
+		err = p.rotate(req.storage)
 		if err != nil {
 			lm.UnlockPolicy(lock, lockType)
 			return nil, nil, false, err
@@ -220,12 +267,12 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 			defer lm.cacheMutex.Unlock()
 			// Make sure a policy didn't appear. If so, it will only be set if
 			// there was no error, so assume it's good and return that
-			exp := lm.cache[name]
+			exp := lm.cache[req.name]
 			if exp != nil {
 				return exp, lock, false, nil
 			}
 			if err == nil {
-				lm.cache[name] = p
+				lm.cache[req.name] = p
 			}
 		}
 
@@ -239,7 +286,7 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 			return nil, nil, false, errNeedExclusiveLock
 		}
 
-		err = p.upgrade(storage)
+		err = p.upgrade(req.storage)
 		if err != nil {
 			lm.UnlockPolicy(lock, lockType)
 			return nil, nil, false, err
@@ -253,12 +300,12 @@ func (lm *lockManager) getPolicyCommon(storage logical.Storage, name string, ups
 		defer lm.cacheMutex.Unlock()
 		// Make sure a policy didn't appear. If so, it will only be set if
 		// there was no error, so assume it's good and return that
-		exp := lm.cache[name]
+		exp := lm.cache[req.name]
 		if exp != nil {
 			return exp, lock, false, nil
 		}
 		if err == nil {
-			lm.cache[name] = p
+			lm.cache[req.name] = p
 		}
 	}
 

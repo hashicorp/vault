@@ -22,7 +22,11 @@ func Test_KeyUpgrade(t *testing.T) {
 
 func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
 	storage := &logical.InmemStorage{}
-	p, lock, upserted, err := lm.GetPolicyUpsert(storage, "test", false, false)
+	p, lock, upserted, err := lm.GetPolicyUpsert(policyRequest{
+		storage: storage,
+		keyType: keyType_AES256_GCM96,
+		name:    "test",
+	})
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -36,10 +40,10 @@ func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
 		t.Fatal("expected an upsert")
 	}
 
-	testBytes := make([]byte, len(p.Keys[1].Key))
-	copy(testBytes, p.Keys[1].Key)
+	testBytes := make([]byte, len(p.Keys[1].AESKey))
+	copy(testBytes, p.Keys[1].AESKey)
 
-	p.Key = p.Keys[1].Key
+	p.Key = p.Keys[1].AESKey
 	p.Keys = nil
 	p.migrateKeyToKeysMap()
 	if p.Key != nil {
@@ -48,7 +52,7 @@ func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
 	if len(p.Keys) != 1 {
 		t.Fatal("policy.Keys is the wrong size")
 	}
-	if !reflect.DeepEqual(testBytes, p.Keys[1].Key) {
+	if !reflect.DeepEqual(testBytes, p.Keys[1].AESKey) {
 		t.Fatal("key mismatch")
 	}
 }
@@ -67,8 +71,11 @@ func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-
-	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false, false)
+	p, lock, _, err := lm.GetPolicyUpsert(policyRequest{
+		storage: storage,
+		keyType: keyType_AES256_GCM96,
+		name:    "test",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -191,14 +198,16 @@ func Test_Archiving(t *testing.T) {
 func testArchivingCommon(t *testing.T, lm *lockManager) {
 	resetKeysArchive()
 
-	// First, we generate a policy and rotate it a number of times. Each time
-	// we'll ensure that we have the expected number of keys in the archive and
+	// First, we generate a policy and rotate it a number of times. Each time // we'll ensure that we have the expected number of keys in the archive and
 	// the main keys object, which without changing the min version should be
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-
-	p, lock, _, err := lm.GetPolicyUpsert(storage, "test", false, false)
+	p, lock, _, err := lm.GetPolicyUpsert(policyRequest{
+		storage: storage,
+		keyType: keyType_AES256_GCM96,
+		name:    "test",
+	})
 	if lock != nil {
 		defer lock.RUnlock()
 	}
@@ -327,7 +336,7 @@ func checkKeys(t *testing.T,
 	}
 
 	for i := 1; i < len(archive.Keys); i++ {
-		if !reflect.DeepEqual(archive.Keys[i].Key, keysArchive[i].Key) {
+		if !reflect.DeepEqual(archive.Keys[i].AESKey, keysArchive[i].AESKey) {
 			t.Fatalf("key %d not equivalent between policy archive and test keys archive", i)
 		}
 	}
