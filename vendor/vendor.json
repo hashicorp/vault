@@ -25,6 +25,12 @@
 			"revisionTime": "2016-09-08T17:03:40Z"
 		},
 		{
+			"checksumSHA1": "eWlbQbXextN77vRiVuIBV6kSwuE=",
+			"path": "github.com/Jeffail/gabs",
+			"revision": "855034b6b7a3b7144977efcaefe72d2c64b0d039",
+			"revisionTime": "2016-08-09T16:55:30Z"
+		},
+		{
 			"checksumSHA1": "LLVyR2dAgkihu0+HdZF+JK0gMMs=",
 			"path": "github.com/agl/ed25519",
 			"revision": "278e1ec8e8a6e017cd07577924d6766039146ced",
