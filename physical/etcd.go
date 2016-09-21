@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -70,6 +71,7 @@ type EtcdBackend struct {
 	kAPI       client.KeysAPI
 	permitPool *PermitPool
 	logger     log.Logger
+	haEnabled  bool
 }
 
 // newEtcdBackend constructs a etcd backend using a given machine address.
@@ -103,6 +105,12 @@ func newEtcdBackend(conf map[string]string, logger log.Logger) (Backend, error) 
 			return nil, EtcdAddressError
 		}
 	}
+
+	haEnabled := os.Getenv("ETCD_HA_ENABLED")
+	if haEnabled == "" {
+		haEnabled = conf["ha_enabled"]
+	}
+	haEnabledBool, _ := strconv.ParseBool(haEnabled)
 
 	// Create a new client from the supplied address and attempt to sync with the
 	// cluster.
@@ -181,6 +189,7 @@ func newEtcdBackend(conf map[string]string, logger log.Logger) (Backend, error) 
 		kAPI:       kAPI,
 		permitPool: NewPermitPool(DefaultParallelOperations),
 		logger:     logger,
+		haEnabled:  haEnabledBool,
 	}, nil
 }
 
@@ -317,7 +326,7 @@ func (c *EtcdBackend) LockWith(key, value string) (Lock, error) {
 // HAEnabled indicates whether the HA functionality should be exposed.
 // Currently always returns true.
 func (e *EtcdBackend) HAEnabled() bool {
-	return true
+	return e.haEnabled
 }
 
 // EtcdLock emplements a lock using and etcd backend.

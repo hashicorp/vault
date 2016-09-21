@@ -395,6 +395,12 @@ For etcd, the following options are supported:
     "y", or "true".  Defaults to on.  Set to false if your etcd cluster is
     behind a proxy server and syncing causes Vault to fail.
 
+  * `ha_enabled` (optional) - Setting this to `"1"`, `"t"`, or `"true"` will
+    enable HA mode. _This is currently *known broken*._ This option can also be
+    provided via the environment variable `ETCD_HA_ENABLED`. If you are
+    upgrading from a version of Vault where HA support was enabled by default,
+    it is _very important_ that you set this parameter _before_ upgrading!
+
   * `username` (optional) - Username to use when authenticating with the etcd
     server.  May also be specified via the ETCD_USERNAME environment variable.
 
