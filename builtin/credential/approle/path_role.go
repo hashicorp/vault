@@ -1738,39 +1738,17 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 
 	// Parse the CIDR blocks into a slice
 	secretIDCIDRs := strutil.ParseDedupAndSortStrings(cidrList, ",")
-	if len(secretIDCIDRs) != 0 {
-		// If role has bound_cidr_list set, check if each CIDR block is
-		// a subset of at least one CIDR block registered under the
-		// role. If bound_cidr_list is not set on the role, then it
-		// means that the role allows any IP address, implying that the
-		// CIDR blocks on the secret ID are a subset of that of role's.
-		roleCIDRs := strutil.ParseDedupAndSortStrings(role.BoundCIDRList, ",")
-		if len(roleCIDRs) != 0 {
-			subset, err := cidrutil.SubsetBlocks(roleCIDRs, secretIDCIDRs)
-			if err != nil {
-				return nil, fmt.Errorf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %v", roleCIDRs, secretIDCIDRs, err)
-			}
-			if !subset {
-				return logical.ErrorResponse(fmt.Sprintf("CIDR blocks on the secret ID %q should be a subset of CIDR blocks on the role %q", secretIDCIDRs, roleCIDRs)), nil
-			}
-		}
 
-		if req.Connection == nil || req.Connection.RemoteAddr == "" {
-			return nil, fmt.Errorf("failed to get connection information")
-		}
-		belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, secretIDCIDRs)
-		if err != nil {
-			return nil, fmt.Errorf("failed to check if IP belonged to configured CIDR blocks on the secret ID")
-		}
-		if !belongs {
-			return logical.ErrorResponse(fmt.Sprintf("unauthorized source address")), nil
-		}
+	// Ensure that the CIDRs on the secret ID are a subset of that of role's
+	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role.BoundCIDRList); err != nil {
+		return nil, err
 	}
 
 	secretIDStorage := &secretIDStorageEntry{
 		SecretIDNumUses: role.SecretIDNumUses,
 		SecretIDTTL:     role.SecretIDTTL,
 		Metadata:        make(map[string]string),
+		CIDRList:        secretIDCIDRs,
 	}
 
 	if err = strutil.ParseArbitraryKeyValues(data.Get("metadata").(string), secretIDStorage.Metadata, ","); err != nil {

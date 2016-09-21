@@ -45,11 +45,11 @@ func TestAppRole_CIDRSubset(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(secretIDReq)
-	if err != nil {
-		t.Fatal(err)
+	if resp != nil || resp.IsError() {
+		t.Fatalf("resp:%#v", resp)
 	}
-	if resp == nil || !resp.IsError() {
-		t.Fatalf("resp:%#v", err, resp)
+	if err == nil {
+		t.Fatal("expected an error")
 	}
 
 	roleData["bound_cidr_list"] = "192.168.27.29/16,172.245.30.40/24,10.20.30.40/30"

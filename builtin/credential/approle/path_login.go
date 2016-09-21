@@ -33,7 +33,11 @@ func pathLogin(b *backend) *framework.Path {
 // Returns the Auth object indicating the authentication and authorization information
 // if the credentials provided are validated by the backend.
 func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, roleName, metadata, err := b.validateCredentials(req, data)
+	if req.Connection == nil || req.Connection.RemoteAddr == "" {
+		return nil, fmt.Errorf("failed to get connection information")
+	}
+
+	role, roleName, metadata, err := b.validateCredentials(req, data, req.Connection.RemoteAddr)
 	if err != nil || role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to validate SecretID: %s", err)), nil
 	}

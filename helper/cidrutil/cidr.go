@@ -124,23 +124,23 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 		return false, fmt.Errorf("missing CIDR that needs to be checked")
 	}
 
-	_, net1, err := net.ParseCIDR(cidr1)
+	ip1, net1, err := net.ParseCIDR(cidr1)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse the CIDR to be checked against: %q", err)
 	}
 
 	maskLen1, _ := net1.Mask.Size()
-	if maskLen1 == 0 {
+	if ip1.To4().String() != "0.0.0.0" && maskLen1 == 0 {
 		return false, fmt.Errorf("CIDR to be checked against is not in its canonical form")
 	}
 
-	_, net2, err := net.ParseCIDR(cidr2)
+	ip2, net2, err := net.ParseCIDR(cidr2)
 	if err != nil {
 		return false, fmt.Errorf("failed to parse the CIDR that needs to be checked: %q", err)
 	}
 
 	maskLen2, _ := net2.Mask.Size()
-	if maskLen2 == 0 {
+	if ip2.To4().String() != "0.0.0.0" && maskLen2 == 0 {
 		return false, fmt.Errorf("CIDR that needs to be checked is not in its canonical form")
 	}
 
@@ -179,7 +179,7 @@ func SubsetBlocks(cidrBlocks1, cidrBlocks2 []string) (bool, error) {
 		isSubset := false
 		for _, cidrBlock1 := range cidrBlocks1 {
 			subset, err := Subset(cidrBlock1, cidrBlock2)
-			if !subset && err != nil {
+			if err != nil {
 				return false, err
 			}
 			// If CIDR is a subset of any of the CIDR block, its
