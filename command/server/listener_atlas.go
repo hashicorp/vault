@@ -33,7 +33,6 @@ func atlasListenerFactory(config map[string]string, logger io.Writer) (net.Liste
 		ResourceType: "vault-cluster",
 		Meta: map[string]string{
 			"node_id":      config["node_id"],
-			"cluster_id":   config["cluster_id"],
 			"cluster_name": config["cluster_name"],
 		},
 		Atlas: scada.AtlasConfig{
