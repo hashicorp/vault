@@ -345,6 +345,10 @@ func (p *policy) needsUpgrade() bool {
 		return true
 	}
 
+	if p.Keys[p.LatestVersion].HMACKey == nil || len(p.Keys[p.LatestVersion].HMACKey) == 0 {
+		return true
+	}
+
 	return false
 }
 
@@ -377,6 +381,17 @@ func (p *policy) upgrade(storage logical.Storage) error {
 
 	if p.ConvergentEncryption && p.ConvergentVersion == 0 {
 		p.ConvergentVersion = 1
+		persistNeeded = true
+	}
+
+	if p.Keys[p.LatestVersion].HMACKey == nil || len(p.Keys[p.LatestVersion].HMACKey) == 0 {
+		entry := p.Keys[p.LatestVersion]
+		hmacKey, err := uuid.GenerateRandomBytes(32)
+		if err != nil {
+			return err
+		}
+		entry.HMACKey = hmacKey
+		p.Keys[p.LatestVersion] = entry
 		persistNeeded = true
 	}
 
