@@ -687,12 +687,15 @@ func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.Fie
 	} else if req.Operation == logical.CreateOperation {
 		role.BoundCIDRList = data.Get("bound_cidr_list").(string)
 	}
-	valid, err := cidrutil.ValidateCIDRListString(role.BoundCIDRList, ",")
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate CIDR blocks: %v", err)
-	}
-	if !valid {
-		return logical.ErrorResponse("invalid CIDR blocks"), nil
+
+	if role.BoundCIDRList != "" {
+		valid, err := cidrutil.ValidateCIDRListString(role.BoundCIDRList, ",")
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate CIDR blocks: %v", err)
+		}
+		if !valid {
+			return logical.ErrorResponse("invalid CIDR blocks"), nil
+		}
 	}
 
 	if policiesRaw, ok := data.GetOk("policies"); ok {
@@ -1073,12 +1076,14 @@ func (b *backend) pathRoleBoundCIDRListUpdate(req *logical.Request, data *framew
 		return logical.ErrorResponse("missing bound_cidr_list"), nil
 	}
 
-	valid, err := cidrutil.ValidateCIDRListString(role.BoundCIDRList, ",")
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate CIDR blocks: %q", err)
-	}
-	if !valid {
-		return logical.ErrorResponse("failed to validate CIDR blocks"), nil
+	if role.BoundCIDRList != "" {
+		valid, err := cidrutil.ValidateCIDRListString(role.BoundCIDRList, ",")
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate CIDR blocks: %q", err)
+		}
+		if !valid {
+			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
+		}
 	}
 
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
@@ -1721,12 +1726,14 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 	cidrList := data.Get("cidr_list").(string)
 
 	// Validate the list of CIDR blocks
-	valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate CIDR blocks: %q", err)
-	}
-	if !valid {
-		return logical.ErrorResponse("failed to validate CIDR blocks"), nil
+	if cidrList != "" {
+		valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate CIDR blocks: %q", err)
+		}
+		if !valid {
+			return logical.ErrorResponse("failed to validate CIDR blocks"), nil
+		}
 	}
 
 	// Parse the CIDR blocks into a slice
