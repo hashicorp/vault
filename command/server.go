@@ -372,16 +372,12 @@ func (c *ServerCommand) Run(args []string) int {
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
 		if lnConfig.Type == "atlas" {
-			cluster, err := core.Cluster()
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error initializing listener of type %s: %s",
-					lnConfig.Type, err))
+			if config.ClusterName == "" {
+				c.Ui.Error("cluster_name is not set in the config and is a required value")
 				return 1
 			}
 
-			lnConfig.Config["cluster_id"] = cluster.ID
-			lnConfig.Config["cluster_name"] = cluster.Name
+			lnConfig.Config["cluster_name"] = config.ClusterName
 		}
 
 		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, logGate)
