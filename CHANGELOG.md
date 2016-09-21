@@ -2,6 +2,19 @@
 
 DEPRECATIONS/CHANGES:
 
+ * Convergent Encryption v2: New keys in `transit` using convergent mode will
+   use a new nonce derivation mechanism rather than require the user to supply
+   a nonce. While not explicitly increasing security, it minimizes the
+   likelihood that a user will use the mode improperly and impact the security
+   of their keys. Keys in convergent mode that were created in v0.6.1 will
+   continue to work with the same mechanism (user-supplied nonce).
+ * `etcd` HA off by default: Following in the footsteps of `dynamodb`, the
+   `etcd` storage backend now requires that `ha_enabled` be explicitly
+   specified in the configuration file. The backend currently has known broken
+   HA behavior, so this flag discourages use by default without explicitly
+   enabling it. If you are using this functionality, when upgrading, you should
+   set `ha_enabled` to `"true"` *before* starting the new versions of Vault.
+
 IMPROVEMENTS:
 
  * api: Return error when an invalid (as opposed to incorrect) unseal key is
