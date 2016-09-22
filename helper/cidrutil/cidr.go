@@ -129,8 +129,16 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 		return false, fmt.Errorf("failed to parse the CIDR to be checked against: %q", err)
 	}
 
+	zeroAddr := false
+	if ip := ip1.To4(); ip != nil && ip.Equal(net.IPv4zero) {
+		zeroAddr = true
+	}
+	if ip := ip1.To16(); ip != nil && ip.Equal(net.IPv6zero) {
+		zeroAddr = true
+	}
+
 	maskLen1, _ := net1.Mask.Size()
-	if ip1.To4().Equal(net.IPv4zero) && maskLen1 == 0 {
+	if zeroAddr && maskLen1 == 0 {
 		return false, fmt.Errorf("CIDR to be checked against is not in its canonical form")
 	}
 
@@ -139,8 +147,16 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 		return false, fmt.Errorf("failed to parse the CIDR that needs to be checked: %q", err)
 	}
 
+	zeroAddr = false
+	if ip := ip2.To4(); ip != nil && ip.Equal(net.IPv4zero) {
+		zeroAddr = true
+	}
+	if ip := ip2.To16(); ip != nil && ip.Equal(net.IPv6zero) {
+		zeroAddr = true
+	}
+
 	maskLen2, _ := net2.Mask.Size()
-	if ip2.To4().Equal(net.IPv4zero) && maskLen2 == 0 {
+	if zeroAddr && maskLen2 == 0 {
 		return false, fmt.Errorf("CIDR that needs to be checked is not in its canonical form")
 	}
 
