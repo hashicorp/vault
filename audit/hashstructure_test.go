@@ -207,6 +207,10 @@ func TestHash(t *testing.T) {
 func TestHashWalker(t *testing.T) {
 	replaceText := "foo"
 
+	type T struct {
+		S string
+	}
+
 	cases := []struct {
 		Input  interface{}
 		Output interface{}
@@ -217,6 +221,14 @@ func TestHashWalker(t *testing.T) {
 			},
 			map[string]interface{}{
 				"hello": replaceText,
+			},
+		},
+		{
+			map[string]interface{}{
+				"hello": T{S: "world"},
+			},
+			map[string]interface{}{
+				"hello": T{S: replaceText},
 			},
 		},
 
