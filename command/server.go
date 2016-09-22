@@ -95,7 +95,12 @@ func (c *ServerCommand) Run(args []string) int {
 		c.Ui.Output(fmt.Sprintf("Unknown log level %s", logLevel))
 		return 1
 	}
-	switch strings.ToLower(os.Getenv("LOGXI_FORMAT")) {
+
+	logFormat := os.Getenv("VAULT_LOG_FORMAT")
+	if logFormat == "" {
+		logFormat = os.Getenv("LOGXI_FORMAT")
+	}
+	switch strings.ToLower(logFormat) {
 	case "vault", "vault_json", "vault-json", "vaultjson", "":
 		c.logger = logformat.NewVaultLoggerWithWriter(logGate, level)
 	default:
