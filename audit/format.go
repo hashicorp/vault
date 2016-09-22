@@ -225,7 +225,7 @@ func (f *AuditFormatter) FormatResponse(
 		respWrapInfo = &AuditWrapInfo{
 			TTL:             int(resp.WrapInfo.TTL / time.Second),
 			Token:           resp.WrapInfo.Token,
-			CreationTime:    resp.WrapInfo.CreationTime,
+			CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 		}
 	}
@@ -316,10 +316,10 @@ type AuditSecret struct {
 }
 
 type AuditWrapInfo struct {
-	TTL             int       `json:"ttl"`
-	Token           string    `json:"token"`
-	CreationTime    time.Time `json:"creation_time"`
-	WrappedAccessor string    `json:"wrapped_accessor,omitempty"`
+	TTL             int    `json:"ttl"`
+	Token           string `json:"token"`
+	CreationTime    string `json:"creation_time"`
+	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

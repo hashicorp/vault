@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"time"
 )
 
 // This logic was pulled from the http package so that it can be used for
@@ -60,10 +59,10 @@ type HTTPAuth struct {
 }
 
 type HTTPWrapInfo struct {
-	Token           string    `json:"token"`
-	TTL             int       `json:"ttl"`
-	CreationTime    time.Time `json:"creation_time"`
-	WrappedAccessor string    `json:"wrapped_accessor,omitempty"`
+	Token           string `json:"token"`
+	TTL             int    `json:"ttl"`
+	CreationTime    string `json:"creation_time"`
+	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
 }
 
 type HTTPSysInjector struct {

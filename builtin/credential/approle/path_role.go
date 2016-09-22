@@ -867,9 +867,9 @@ func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC str
 	// Map() from 'structs' package formats time in RFC3339Nano.
 	// In order to not break the API due to a modification in the
 	// third party package, converting the time values again.
-	d["creation_time"] = (d["creation_time"].(time.Time)).Format(time.RFC3339Nano)
-	d["expiration_time"] = (d["expiration_time"].(time.Time)).Format(time.RFC3339Nano)
-	d["last_updated_time"] = (d["last_updated_time"].(time.Time)).Format(time.RFC3339Nano)
+	d["creation_time"] = result.CreationTime.Format(time.RFC3339Nano)
+	d["expiration_time"] = result.ExpirationTime.Format(time.RFC3339Nano)
+	d["last_updated_time"] = result.LastUpdatedTime.Format(time.RFC3339Nano)
 
 	return &logical.Response{
 		Data: d,

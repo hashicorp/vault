@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
@@ -169,7 +170,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 				WrapInfo: &logical.HTTPWrapInfo{
 					Token:           resp.WrapInfo.Token,
 					TTL:             int(resp.WrapInfo.TTL.Seconds()),
-					CreationTime:    resp.WrapInfo.CreationTime,
+					CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 					WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 				},
 			}
