@@ -173,22 +173,26 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 	// Validate the CIDR blocks
 	cidrList := d.Get("cidr_list").(string)
-	valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate cidr_list: %v", err)
-	}
-	if !valid {
-		return logical.ErrorResponse("failed to validate cidr_list"), nil
+	if cidrList != "" {
+		valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate cidr_list: %v", err)
+		}
+		if !valid {
+			return logical.ErrorResponse("failed to validate cidr_list"), nil
+		}
 	}
 
 	// Validate the excluded CIDR blocks
 	excludeCidrList := d.Get("exclude_cidr_list").(string)
-	valid, err = cidrutil.ValidateCIDRListString(excludeCidrList, ",")
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate exclude_cidr_list entry: %v", err)
-	}
-	if !valid {
-		return logical.ErrorResponse(fmt.Sprintf("failed to validate exclude_cidr_list entry: %v", err)), nil
+	if excludeCidrList != "" {
+		valid, err := cidrutil.ValidateCIDRListString(excludeCidrList, ",")
+		if err != nil {
+			return nil, fmt.Errorf("failed to validate exclude_cidr_list entry: %v", err)
+		}
+		if !valid {
+			return logical.ErrorResponse(fmt.Sprintf("failed to validate exclude_cidr_list entry: %v", err)), nil
+		}
 	}
 
 	port := d.Get("port").(int)
