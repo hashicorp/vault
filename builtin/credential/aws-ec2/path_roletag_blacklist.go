@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -128,7 +127,10 @@ func (b *backend) pathRoletagBlacklistRead(
 	}
 
 	return &logical.Response{
-		Data: structs.New(entry).Map(),
+		Data: map[string]interface{}{
+			"creation_time":   entry.CreationTime.Format(time.RFC3339Nano),
+			"expiration_time": entry.ExpirationTime.Format(time.RFC3339Nano),
+		},
 	}, nil
 }
 

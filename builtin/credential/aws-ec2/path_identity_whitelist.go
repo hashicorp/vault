@@ -111,9 +111,14 @@ func (b *backend) pathIdentityWhitelistRead(
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: structs.New(entry).Map(),
-	}, nil
+	}
+	resp.Data["creation_time"] = entry.CreationTime.Format(time.RFC3339Nano)
+	resp.Data["expiration_time"] = entry.ExpirationTime.Format(time.RFC3339Nano)
+	resp.Data["last_updated_time"] = entry.LastUpdatedTime.Format(time.RFC3339Nano)
+
+	return resp, nil
 }
 
 // Struct to represent each item in the identity whitelist.

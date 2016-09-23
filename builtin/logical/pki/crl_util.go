@@ -118,7 +118,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		},
 	}
 	if !revInfo.RevocationTimeUTC.IsZero() {
-		resp.Data["revocation_time_rfc3339"] = revInfo.RevocationTimeUTC
+		resp.Data["revocation_time_rfc3339"] = revInfo.RevocationTimeUTC.Format(time.RFC3339Nano)
 	}
 	return resp, nil
 }
