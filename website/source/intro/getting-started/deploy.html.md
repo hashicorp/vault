@@ -43,7 +43,8 @@ Within the configuration file, there are two primary configurations:
 
   * `listener` - One or more listeners determine how Vault listens for
     API requests. In the example above we're listening on localhost port
-    8200 without TLS.
+    8200 without TLS. In your environment set `VAULT_ADDR=http://127.0.0.1:8200`
+    so the Vault client will connect without TLS. 
 
 For now, copy and paste the configuration above to `example.hcl`. It will
 configure Vault to expect an instance of Consul running locally.
