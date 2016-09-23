@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/logical"
@@ -61,43 +62,82 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 
 // flushCachedEC2Clients deletes all the cached ec2 client objects from the backend.
 // If the client credentials configuration is deleted or updated in the backend, all
-// the cached EC2 client objects will be flushed.
-//
-// Write lock should be acquired using b.configMutex.Lock() before calling this method
-// and lock should be released using b.configMutex.Unlock() after the method returns.
+// the cached EC2 client objects will be flushed. Config mutex lock should be
+// acquired for write operation before calling this method.
 func (b *backend) flushCachedEC2Clients() {
-	// deleting items in map during iteration is safe.
+	// deleting items in map during iteration is safe
 	for region, _ := range b.EC2ClientsMap {
 		delete(b.EC2ClientsMap, region)
 	}
 }
 
-// clientEC2 creates a client to interact with AWS EC2 API.
+// flushCachedIAMClients deletes all the cached iam client objects from the
+// backend. If the client credentials configuration is deleted or updated in
+// the backend, all the cached IAM client objects will be flushed. Config mutex
+// lock should be acquired for write operation before calling this method.
+func (b *backend) flushCachedIAMClients() {
+	// deleting items in map during iteration is safe
+	for region, _ := range b.IAMClientsMap {
+		delete(b.IAMClientsMap, region)
+	}
+}
+
+// clientEC2 creates a client to interact with AWS EC2 API
 func (b *backend) clientEC2(s logical.Storage, region string) (*ec2.EC2, error) {
 	b.configMutex.RLock()
 	if b.EC2ClientsMap[region] != nil {
 		defer b.configMutex.RUnlock()
-		// If the client object was already created, return it.
+		// If the client object was already created, return it
 		return b.EC2ClientsMap[region], nil
 	}
 
-	// Release the read lock and acquire the write lock.
+	// Release the read lock and acquire the write lock
 	b.configMutex.RUnlock()
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	// If the client gets created while switching the locks, return it.
+	// If the client gets created while switching the locks, return it
 	if b.EC2ClientsMap[region] != nil {
 		return b.EC2ClientsMap[region], nil
 	}
 
-	// Create a AWS config object using a chain of providers.
+	// Create an AWS config object using a chain of providers
 	awsConfig, err := b.getClientConfig(s, region)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a new EC2 client object, cache it and return the same.
+	// Create a new EC2 client object, cache it and return the same
 	b.EC2ClientsMap[region] = ec2.New(session.New(awsConfig))
 	return b.EC2ClientsMap[region], nil
+}
+
+// clientIAM creates a client to interact with AWS IAM API
+func (b *backend) clientIAM(s logical.Storage, region string) (*iam.IAM, error) {
+	b.configMutex.RLock()
+	if b.IAMClientsMap[region] != nil {
+		defer b.configMutex.RUnlock()
+		// If the client object was already created, return it
+		return b.IAMClientsMap[region], nil
+	}
+
+	// Release the read lock and acquire the write lock
+	b.configMutex.RUnlock()
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
+	// If the client gets created while switching the locks, return it
+	if b.IAMClientsMap[region] != nil {
+		return b.IAMClientsMap[region], nil
+	}
+
+	// Create an AWS config object using a chain of providers
+	awsConfig, err := b.getClientConfig(s, region)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new IAM client object, cache it and return the same
+	b.IAMClientsMap[region] = iam.New(session.New(awsConfig))
+	return b.IAMClientsMap[region], nil
 }

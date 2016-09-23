@@ -4,10 +4,12 @@ import (
 	"crypto/subtle"
 	"encoding/pem"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fullsailor/pkcs7"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -61,6 +63,39 @@ on either the role or the role tag, the 'nonce' holds no significance.`,
 	}
 }
 
+// instanceIamRoleARN fetches the IAM role ARN associated with the given
+// instance profile name
+func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, region string) (string, error) {
+	iamClient, err := b.clientIAM(s, region)
+	if err != nil {
+		return "", err
+	}
+
+	profile, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{
+		InstanceProfileName: aws.String(instanceProfileName),
+	})
+	if err != nil {
+		return "", err
+	}
+	if profile == nil {
+		return "", fmt.Errorf("nil output while getting instance profile details")
+	}
+
+	if profile.InstanceProfile == nil {
+		return "", fmt.Errorf("nil instance profile in the output of instance profile details")
+	}
+
+	if profile.InstanceProfile.Roles == nil || len(profile.InstanceProfile.Roles) != 1 {
+		return "", fmt.Errorf("invalid roles in the output of instance profile details")
+	}
+
+	if profile.InstanceProfile.Roles[0].Arn == nil {
+		return "", fmt.Errorf("nil role ARN in the output of instance profile details")
+	}
+
+	return *profile.InstanceProfile.Roles[0].Arn, nil
+}
+
 // validateInstance queries the status of the EC2 instance using AWS EC2 API and
 // checks if the instance is running and is healthy.
 func (b *backend) validateInstance(s logical.Storage, instanceID, region string) (*ec2.DescribeInstancesOutput, error) {
@@ -82,6 +117,9 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region string)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error fetching description for instance ID %s: %s\n", instanceID, err)
+	}
+	if status == nil {
+		return nil, fmt.Errorf("nil output from describe instances")
 	}
 	if len(status.Reservations) == 0 {
 		return nil, fmt.Errorf("no reservations found in instance description")
@@ -284,9 +322,41 @@ func (b *backend) pathLoginUpdate(
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
 			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
 		}
-		iamInstanceProfileArn := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
-		if iamInstanceProfileArn != roleEntry.BoundIamInstanceProfileARN {
-			return logical.ErrorResponse(fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileArn, roleName)), nil
+		iamInstanceProfileARN := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
+		if iamInstanceProfileARN != roleEntry.BoundIamInstanceProfileARN {
+			return logical.ErrorResponse(fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName)), nil
+		}
+	}
+
+	// Check if the IAM role ARN of the instance trying to login, matches
+	// the IAM role ARN specified as a constraint on the role.
+	if roleEntry.BoundIamRoleARN != "" {
+		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
+			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
+		}
+		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Id == nil {
+			return nil, fmt.Errorf("IAM instance profile identifier in the instance description is nil")
+		}
+
+		// Fetch the instance profile ARN from the instance description
+		iamInstanceProfileARN := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
+
+		// Extract out the instance profile name from the instance
+		// profile ARN
+		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, ":instance-profile/")
+		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
+
+		// Use instance profile ARN to fetch the associated role ARN
+		iamRoleARN, err := b.instanceIamRoleARN(req.Storage, iamInstanceProfileName, identityDoc.Region)
+		if err != nil {
+			return nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
+		}
+		if iamRoleARN == "" {
+			return nil, fmt.Errorf("IAM role ARN could not be fetched")
+		}
+
+		if iamRoleARN != roleEntry.BoundIamRoleARN {
+			return logical.ErrorResponse(fmt.Sprintf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName)), nil
 		}
 	}
 

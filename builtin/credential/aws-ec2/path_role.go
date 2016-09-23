@@ -30,6 +30,11 @@ using the AMI ID specified by this parameter.`,
 				Description: `If set, defines a constraint on the EC2 instances that the account ID
 in its identity document to match the one specified by this parameter.`,
 			},
+			"bound_iam_role_arn": {
+				Type: framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that they should be using the
+IAM role ARN specified by this parameter.`,
+			},
 			"bound_iam_instance_profile_arn": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the EC2 instances that they should be using the
@@ -194,22 +199,22 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 		return nil, err
 	}
 
-	// Upgrade code to use proper field for bound_iam_instance_profile_arn
-	if result.DeprecatedBoundIamARN != "" {
+	// Check if the value held by role ARN field is actually an instance profile ARN
+	if result.BoundIamRoleARN != "" && strings.Contains(result.BoundIamRoleARN, ":instance-profile/") {
 		// For sanity
 		if result.BoundIamInstanceProfileARN != "" {
-			return nil, fmt.Errorf("both bound_iam_role_arn and bound_iam_instance_profile_arn are set")
+			return nil, fmt.Errorf("bound_iam_role_arn contains instance profile ARN and bound_iam_instance_profile_arn is non empty")
 		}
 
-		// Fill in the new field
-		result.BoundIamInstanceProfileARN = result.DeprecatedBoundIamARN
+		// If yes, move it to the correct field
+		result.BoundIamInstanceProfileARN = result.BoundIamRoleARN
 
 		// Reset the old field
-		result.DeprecatedBoundIamARN = ""
+		result.BoundIamRoleARN = ""
 
 		// Save the update
 		if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
-			return nil, fmt.Errorf("failed to upgrade bound_iam_role_arn to bound_iam_instance_profile_arn")
+			return nil, fmt.Errorf("failed to move instance profile ARN to bound_iam_instance_profile_arn field")
 		}
 	}
 
@@ -246,8 +251,6 @@ func (b *backend) pathRoleList(
 // pathRoleRead is used to view the information registered for a given AMI ID.
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	resp := &logical.Response{}
-
 	roleEntry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return nil, err
@@ -267,15 +270,9 @@ func (b *backend) pathRoleRead(
 	// Display the max_ttl in seconds.
 	respData["max_ttl"] = roleEntry.MaxTTL / time.Second
 
-	// To be removed in the coming releases
-	if respData["bound_iam_instance_profile_arn"] != "" {
-		respData["bound_iam_role_arn"] = respData["bound_iam_instance_profile_arn"]
-		resp.AddWarning("The field bound_iam_role_arn is deprecated and will be removed in future releases; refer bound_iam_instance_profile_arn instead.")
-	}
-
-	resp.Data = respData
-
-	return resp, nil
+	return &logical.Response{
+		Data: respData,
+	}, nil
 }
 
 // pathRoleCreateUpdate is used to associate Vault policies to a given AMI ID.
@@ -298,14 +295,18 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry = &awsRoleEntry{}
 	}
 
-	// Set BoundAmiID only if it is supplied. There can't be a default value.
+	// Fetch and set the bound parameters. There can't be default values
+	// for these.
 	if boundAmiIDRaw, ok := data.GetOk("bound_ami_id"); ok {
 		roleEntry.BoundAmiID = boundAmiIDRaw.(string)
 	}
 
-	// Set BoundAccountID only if it is supplied. There can't be a default value.
 	if boundAccountIDRaw, ok := data.GetOk("bound_account_id"); ok {
 		roleEntry.BoundAccountID = boundAccountIDRaw.(string)
+	}
+
+	if boundIamRoleARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
+		roleEntry.BoundIamRoleARN = boundIamRoleARNRaw.(string)
 	}
 
 	if boundIamInstanceProfileARNRaw, ok := data.GetOk("bound_iam_instance_profile_arn"); ok {
@@ -317,6 +318,7 @@ func (b *backend) pathRoleCreateUpdate(
 	case roleEntry.BoundAccountID != "":
 	case roleEntry.BoundAmiID != "":
 	case roleEntry.BoundIamInstanceProfileARN != "":
+	case roleEntry.BoundIamRoleARN != "":
 	default:
 
 		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
@@ -412,7 +414,7 @@ func (b *backend) pathRoleCreateUpdate(
 type awsRoleEntry struct {
 	BoundAmiID                 string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
 	BoundAccountID             string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
-	DeprecatedBoundIamARN      string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
+	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
 	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
