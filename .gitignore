@@ -60,3 +60,5 @@ tags
 *.ipr
 *.iml
 
+
+testsetup.sh

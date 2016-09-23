@@ -49,9 +49,6 @@ func (b *backend) secretCredsRenew(
 func (b *backend) secretCredsRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
-	// log.Println("b")
-	// log.Printf("%+v", b.Role(req.Storage, data.Get("name").(string)))
-
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -66,6 +63,11 @@ func (b *backend) secretCredsRevoke(
 	}
 
 	// Get the role
+	pathParts := strings.Split(req.Path, "/")
+	if len(pathParts) < 1 {
+		return nil, fmt.Errorf("Role name could not be determined")
+	}
+	name := pathParts[len(pathParts)-1]
 	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, err
