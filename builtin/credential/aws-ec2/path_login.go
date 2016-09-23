@@ -274,18 +274,19 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("Account ID '%s' does not belong to role '%s'", identityDoc.AccountID, roleName)), nil
 	}
 
-	// Check if the IAM Role ARN of the instance trying to login matches the
-	// IAM Role ARN specified as a constraint on the role.
-	if roleEntry.BoundIamARN != "" {
+	// Check if the IAM instance profile ARN of the instance trying to
+	// login, matches the IAM instance profile ARN specified as a constraint
+	// on the role
+	if roleEntry.BoundIamInstanceProfileARN != "" {
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
-			return nil, fmt.Errorf("IAM Instance Profile in the instance description is nil")
+			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
 		}
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
-			return nil, fmt.Errorf("ARN in the instance description is nil")
+			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
 		}
-		iamRoleArn := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
-		if iamRoleArn != roleEntry.BoundIamARN {
-			return logical.ErrorResponse(fmt.Sprintf("IAM Role ARN %s does not belong to role %s", iamRoleArn, roleName)), nil
+		iamInstanceProfileArn := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
+		if iamInstanceProfileArn != roleEntry.BoundIamInstanceProfileARN {
+			return logical.ErrorResponse(fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileArn, roleName)), nil
 		}
 	}
 

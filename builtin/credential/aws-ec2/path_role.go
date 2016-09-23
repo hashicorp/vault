@@ -30,9 +30,10 @@ using the AMI ID specified by this parameter.`,
 				Description: `If set, defines a constraint on the EC2 instances that the account ID
 in its identity document to match the one specified by this parameter.`,
 			},
-			"bound_iam_role_arn": {
-				Type:        framework.TypeString,
-				Description: `If set, defines a constraint on the EC2 instances that they should be using the IAM Role ARN specified by this parameter.`,
+			"bound_iam_instance_profile_arn": {
+				Type: framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that they should be using the
+IAM instance profile ARN specified by this parameter.`,
 			},
 			"role_tag": {
 				Type:        framework.TypeString,
@@ -117,16 +118,70 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 	return entry != nil, nil
 }
 
-// awsRole is used to get the information registered for the given AMI ID.
-func (b *backend) lockedAWSRole(s logical.Storage, role string) (*awsRoleEntry, error) {
+// lockedAWSRole returns the properties set on the given role. This method
+// acquires the read lock before reading the role from the storage.
+func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEntry, error) {
+	if roleName == "" {
+		return nil, fmt.Errorf("missing role name")
+	}
+
 	b.roleMutex.RLock()
 	defer b.roleMutex.RUnlock()
 
-	return b.nonLockedAWSRole(s, role)
+	return b.nonLockedAWSRole(s, roleName)
 }
 
-func (b *backend) nonLockedAWSRole(s logical.Storage, role string) (*awsRoleEntry, error) {
-	entry, err := s.Get("role/" + strings.ToLower(role))
+// lockedSetAWSRole creates or updates a role in the storage. This method
+// acquires the write lock before creating or updating the role at the storage.
+func (b *backend) lockedSetAWSRole(s logical.Storage, roleName string, roleEntry *awsRoleEntry) error {
+	if roleName == "" {
+		return fmt.Errorf("missing role name")
+	}
+
+	if roleEntry == nil {
+		return fmt.Errorf("nil role entry")
+	}
+
+	b.roleMutex.Lock()
+	defer b.roleMutex.Unlock()
+
+	return b.nonLockedSetAWSRole(s, roleName, roleEntry)
+}
+
+// nonLockedSetAWSRole creates or updates a role in the storage. This method
+// does not acquire the write lock before reading the role from the storage. If
+// locking is desired, use lockedSetAWSRole instead.
+func (b *backend) nonLockedSetAWSRole(s logical.Storage, roleName string,
+	roleEntry *awsRoleEntry) error {
+	if roleName == "" {
+		return fmt.Errorf("missing role name")
+	}
+
+	if roleEntry == nil {
+		return fmt.Errorf("nil role entry")
+	}
+
+	entry, err := logical.StorageEntryJSON("role/"+strings.ToLower(roleName), roleEntry)
+	if err != nil {
+		return err
+	}
+
+	if err := s.Put(entry); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// nonLockedAWSRole returns the properties set on the given role. This method
+// does not acquire the read lock before reading the role from the storage. If
+// locking is desired, use lockedAWSRole instead.
+func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRoleEntry, error) {
+	if roleName == "" {
+		return nil, fmt.Errorf("missing role name")
+	}
+
+	entry, err := s.Get("role/" + strings.ToLower(roleName))
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +193,26 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, role string) (*awsRoleEntr
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
+
+	// Upgrade code to use proper field for bound_iam_instance_profile_arn
+	if result.DeprecatedBoundIamARN != "" {
+		// For sanity
+		if result.BoundIamInstanceProfileARN != "" {
+			return nil, fmt.Errorf("both bound_iam_role_arn and bound_iam_instance_profile_arn are set")
+		}
+
+		// Fill in the new field
+		result.BoundIamInstanceProfileARN = result.DeprecatedBoundIamARN
+
+		// Reset the old field
+		result.DeprecatedBoundIamARN = ""
+
+		// Save the update
+		if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
+			return nil, fmt.Errorf("failed to upgrade bound_iam_role_arn to bound_iam_instance_profile_arn")
+		}
+	}
+
 	return &result, nil
 }
 
@@ -171,6 +246,8 @@ func (b *backend) pathRoleList(
 // pathRoleRead is used to view the information registered for a given AMI ID.
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	resp := &logical.Response{}
+
 	roleEntry, err := b.lockedAWSRole(req.Storage, strings.ToLower(data.Get("role").(string)))
 	if err != nil {
 		return nil, err
@@ -190,9 +267,15 @@ func (b *backend) pathRoleRead(
 	// Display the max_ttl in seconds.
 	respData["max_ttl"] = roleEntry.MaxTTL / time.Second
 
-	return &logical.Response{
-		Data: respData,
-	}, nil
+	// To be removed in the coming releases
+	if respData["bound_iam_instance_profile_arn"] != "" {
+		respData["bound_iam_role_arn"] = respData["bound_iam_instance_profile_arn"]
+		resp.AddWarning("The field bound_iam_role_arn is deprecated and will be removed in future releases; refer bound_iam_instance_profile_arn instead.")
+	}
+
+	resp.Data = respData
+
+	return resp, nil
 }
 
 // pathRoleCreateUpdate is used to associate Vault policies to a given AMI ID.
@@ -225,15 +308,15 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundAccountID = boundAccountIDRaw.(string)
 	}
 
-	if boundIamARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
-		roleEntry.BoundIamARN = boundIamARNRaw.(string)
+	if boundIamInstanceProfileARNRaw, ok := data.GetOk("bound_iam_instance_profile_arn"); ok {
+		roleEntry.BoundIamInstanceProfileARN = boundIamInstanceProfileARNRaw.(string)
 	}
 
 	// Ensure that at least one bound is set on the role
 	switch {
 	case roleEntry.BoundAccountID != "":
 	case roleEntry.BoundAmiID != "":
-	case roleEntry.BoundIamARN != "":
+	case roleEntry.BoundIamInstanceProfileARN != "":
 	default:
 
 		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
@@ -314,12 +397,7 @@ func (b *backend) pathRoleCreateUpdate(
 		}
 	}
 
-	entry, err := logical.StorageEntryJSON("role/"+roleName, roleEntry)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := req.Storage.Put(entry); err != nil {
+	if err := b.nonLockedSetAWSRole(req.Storage, roleName, roleEntry); err != nil {
 		return nil, err
 	}
 
@@ -332,16 +410,17 @@ func (b *backend) pathRoleCreateUpdate(
 
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsRoleEntry struct {
-	BoundAmiID               string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
-	BoundAccountID           string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
-	BoundIamARN              string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
-	RoleTag                  string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
-	AllowInstanceMigration   bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
-	TTL                      time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
-	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
-	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
-	HMACKey                  string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
+	BoundAmiID                 string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
+	BoundAccountID             string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
+	DeprecatedBoundIamARN      string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
+	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
+	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
+	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
+	TTL                        time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+	MaxTTL                     time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	Policies                   []string      `json:"policies" structs:"policies" mapstructure:"policies"`
+	DisallowReauthentication   bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+	HMACKey                    string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
 }
 
 const pathRoleSyn = `
