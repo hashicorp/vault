@@ -138,7 +138,7 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 	}
 
 	maskLen1, _ := net1.Mask.Size()
-	if zeroAddr && maskLen1 == 0 {
+	if !zeroAddr && maskLen1 == 0 {
 		return false, fmt.Errorf("CIDR to be checked against is not in its canonical form")
 	}
 
@@ -156,7 +156,7 @@ func Subset(cidr1, cidr2 string) (bool, error) {
 	}
 
 	maskLen2, _ := net2.Mask.Size()
-	if zeroAddr && maskLen2 == 0 {
+	if !zeroAddr && maskLen2 == 0 {
 		return false, fmt.Errorf("CIDR that needs to be checked is not in its canonical form")
 	}
 
