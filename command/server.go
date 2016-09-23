@@ -101,7 +101,7 @@ func (c *ServerCommand) Run(args []string) int {
 		logFormat = os.Getenv("LOGXI_FORMAT")
 	}
 	switch strings.ToLower(logFormat) {
-	case "vault", "vault_json", "vault-json", "vaultjson", "":
+	case "vault", "vault_json", "vault-json", "vaultjson", "json", "":
 		c.logger = logformat.NewVaultLoggerWithWriter(logGate, level)
 	default:
 		c.logger = log.NewLogger(logGate, "vault")

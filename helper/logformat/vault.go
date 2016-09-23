@@ -43,8 +43,12 @@ func createVaultFormatter() log.Formatter {
 	ret := &vaultFormatter{
 		Mutex: &sync.Mutex{},
 	}
-	switch os.Getenv("LOGXI_FORMAT") {
-	case "vault_json", "vault-json", "vaultjson":
+	logFormat := os.Getenv("VAULT_LOG_FORMAT")
+	if logFormat == "" {
+		logFormat = os.Getenv("LOGXI_FORMAT")
+	}
+	switch strings.ToLower(logFormat) {
+	case "json", "vault_json", "vault-json", "vaultjson":
 		ret.style = stylejson
 	default:
 		ret.style = styledefault
