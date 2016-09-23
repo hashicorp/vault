@@ -2,7 +2,9 @@ package mysql
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -46,6 +48,10 @@ func (b *backend) secretCredsRenew(
 
 func (b *backend) secretCredsRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	// log.Println("b")
+	// log.Printf("%+v", b.Role(req.Storage, data.Get("name").(string)))
+
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -59,6 +65,15 @@ func (b *backend) secretCredsRevoke(
 		return nil, err
 	}
 
+	// Get the role
+	role, err := b.Role(req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
+	}
+
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
@@ -66,20 +81,30 @@ func (b *backend) secretCredsRevoke(
 	}
 	defer tx.Rollback()
 
-	// Revoke all permissions for the user. This is done before the
-	// drop, because MySQL explicitly documents that open user connections
-	// will not be closed. By revoking all grants, at least we ensure
-	// that the open connection is useless.
-	_, err = tx.Exec("REVOKE ALL PRIVILEGES, GRANT OPTION FROM '" + username + "'@'%'")
-	if err != nil {
-		return nil, err
-	}
+	for _, query := range strutil.ParseArbitraryStringSlice(role.RevokeSQL, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
 
-	// Drop this user. This only affects the next connection, which is
-	// why we do the revoke initially.
-	_, err = tx.Exec("DROP USER '" + username + "'@'%'")
-	if err != nil {
-		return nil, err
+		// convert {{name}} to username value because we can't use
+		// prepared statements for REVOKE and DROP commands
+		// Generates the following error
+		// 1295: This command is not supported in the prepared statement protocol yet
+		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
+		query = strings.Replace(query, "{{name}}", username, -1)
+
+		// Revoke all permissions for the user. This is done before the
+		// drop, because MySQL explicitly documents that open user connections
+		// will not be closed. By revoking all grants, at least we ensure
+		// that the open connection is useless.
+		// Drop this user. This only affects the next connection, which is
+		// why we do the revoke initially.
+		_, err = tx.Exec(query)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	// Commit the transaction
