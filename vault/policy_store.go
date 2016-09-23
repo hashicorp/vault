@@ -28,6 +28,10 @@ const (
 path "cubbyhole/response" {
     capabilities = ["create", "read"]
 }
+
+path "sys/wrapping/unwrap" {
+    capabilities = ["update"]
+}
 `
 
 	// defaultPolicy is the "default" policy
@@ -62,6 +66,10 @@ path "sys/renew" {
 
 path "sys/renew/*" {
     capabilities = ["update"]
+}
+
+path "sys/wrapping/wrap" {
+	capabilities = ["update"]
 }
 `
 )

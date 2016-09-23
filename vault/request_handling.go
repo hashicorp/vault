@@ -430,7 +430,6 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 			"response": string(marshaledResponse),
 		},
 	}
-
 	cubbyResp, err := c.router.Route(cubbyReq)
 	if err != nil {
 		// Revoke since it's not yet being tracked for expiration
@@ -441,6 +440,25 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	if cubbyResp != nil && cubbyResp.IsError() {
 		c.tokenStore.Revoke(te.ID)
 		c.logger.Error("core: failed to store wrapped response information", "error", cubbyResp.Data["error"])
+		return cubbyResp, nil
+	}
+
+	// Store info for lookup
+	cubbyReq.Path = "cubbyhole/wrapinfo"
+	cubbyReq.Data = map[string]interface{}{
+		"ttl":           resp.WrapInfo.TTL,
+		"creation_time": creationTime,
+	}
+	cubbyResp, err = c.router.Route(cubbyReq)
+	if err != nil {
+		// Revoke since it's not yet being tracked for expiration
+		c.tokenStore.Revoke(te.ID)
+		c.logger.Error("core: failed to store wrapping information", "error", err)
+		return nil, ErrInternalError
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		c.tokenStore.Revoke(te.ID)
+		c.logger.Error("core: failed to store wrapping information", "error", cubbyResp.Data["error"])
 		return cubbyResp, nil
 	}
 

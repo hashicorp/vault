@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
@@ -55,7 +56,7 @@ func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 		case "wrapping_token_ttl":
 			val = secret.WrapInfo.TTL
 		case "wrapping_token_creation_time":
-			val = secret.WrapInfo.CreationTime.String()
+			val = secret.WrapInfo.CreationTime.Format(time.RFC3339Nano)
 		case "wrapped_accessor":
 			val = secret.WrapInfo.WrappedAccessor
 		default:

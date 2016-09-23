@@ -1516,3 +1516,27 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	max += shamir.ShareOverhead
 	return
 }
+
+func (c *Core) ValidateWrappingToken(token string) (bool, error) {
+	if token == "" {
+		return false, fmt.Errorf("token is empty")
+	}
+
+	te, err := c.tokenStore.Lookup(token)
+	if err != nil {
+		return false, err
+	}
+	if te == nil {
+		return false, nil
+	}
+
+	if te.Policies == nil || len(te.Policies) != 1 {
+		return false, nil
+	}
+
+	if te.Policies[0] != cubbyholeResponseWrappingPolicyName {
+		return false, nil
+	}
+
+	return true, nil
+}

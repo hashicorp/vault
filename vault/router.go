@@ -237,6 +237,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	clientToken := req.ClientToken
 	switch {
 	case strings.HasPrefix(original, "auth/token/"):
+	case strings.HasPrefix(original, "sys/"):
 	case strings.HasPrefix(original, "cubbyhole/"):
 		// In order for the token store to revoke later, we need to have the same
 		// salted ID, so we double-salt what's going to the cubbyhole backend

@@ -1,12 +1,5 @@
 package api
 
-import (
-	"bytes"
-	"fmt"
-
-	"github.com/hashicorp/vault/helper/jsonutil"
-)
-
 const (
 	wrappedResponseLocation = "cubbyhole/response"
 )
@@ -96,30 +89,11 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 }
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
-	origToken := c.c.Token()
-	defer c.c.SetToken(origToken)
-
-	c.c.SetToken(wrappingToken)
-
-	secret, err := c.Read(wrappedResponseLocation)
-	if err != nil {
-		return nil, fmt.Errorf("error reading %s: %s", wrappedResponseLocation, err)
+	var data map[string]interface{}
+	if wrappingToken != "" {
+		data = map[string]interface{}{
+			"token": wrappingToken,
+		}
 	}
-	if secret == nil {
-		return nil, fmt.Errorf("no value found at %s", wrappedResponseLocation)
-	}
-	if secret.Data == nil {
-		return nil, fmt.Errorf("\"data\" not found in wrapping response")
-	}
-	if _, ok := secret.Data["response"]; !ok {
-		return nil, fmt.Errorf("\"response\" not found in wrapping response \"data\" map")
-	}
-
-	wrappedSecret := new(Secret)
-	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
-		return nil, fmt.Errorf("error unmarshaling wrapped secret: %s", err)
-	}
-
-	return wrappedSecret, nil
+	return c.Write("sys/wrapping/unwrap", data)
 }
