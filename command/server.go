@@ -376,6 +376,15 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the listeners
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
+		if lnConfig.Type == "atlas" {
+			if config.ClusterName == "" {
+				c.Ui.Error("cluster_name is not set in the config and is a required value")
+				return 1
+			}
+
+			lnConfig.Config["cluster_name"] = config.ClusterName
+		}
+
 		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, logGate)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
