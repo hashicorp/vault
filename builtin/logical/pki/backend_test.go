@@ -216,7 +216,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
 				Data: map[string]interface{}{
-					"pem_bundle": rsaCAKey + rsaCACert,
+					"pem_bundle": rsaCAKey + rsaCACert + rsaCAChain,
 				},
 			},
 		},
