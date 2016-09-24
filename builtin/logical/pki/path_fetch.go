@@ -23,6 +23,20 @@ func pathFetchCA(b *backend) *framework.Path {
 	}
 }
 
+// Returns the CA chain in raw format
+func pathFetchCAChain(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `ca/chain`,
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathFetchReadCAChain,
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
 // Returns the CRL in raw format
 func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
@@ -94,6 +108,37 @@ func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldD
 	}
 
 	return logical.ListResponse(entries), nil
+}
+
+func (b *backend) pathFetchReadCAChain(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	caInfo, err := fetchCAInfo(req)
+	switch err.(type) {
+	case errutil.UserError:
+		return nil,
+			errutil.UserError{Err: fmt.Sprintf("Could not fetch the CA certificate: %s", err)}
+	case errutil.InternalError:
+		return nil,
+			errutil.InternalError{Err: fmt.Sprintf("Error fetching CA certificate: %s", err)}
+	}
+
+	caChain := caInfo.GetCAChain()
+	certs := []byte{}
+	for _, ca := range caChain {
+		block := pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: ca.Bytes,
+		}
+		certs = append(certs, pem.EncodeToMemory(&block)...)
+	}
+
+	response := &logical.Response{
+		Data: map[string]interface{}{
+			logical.HTTPContentType: "application/pkix-cert",
+			logical.HTTPRawBody:     certs,
+		}}
+	response.Data[logical.HTTPStatusCode] = 200
+
+	return response, nil
 }
 
 func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {

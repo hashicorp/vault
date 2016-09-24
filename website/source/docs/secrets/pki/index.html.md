@@ -371,6 +371,38 @@ subpath for interactive help output.
   </dd>
 </dl>
 
+### /pki/ca/chain
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Retrieves the CA certificate chain, including the CA *in PEM format*. This
+    is a bare endpoint that does not return a standard Vault data structure.
+    <br /><br />This is an unauthenticated endpoint.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/pki/ca/chain`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```
+    <PEM-encoded certficiate chain>
+    ```
+
+  </dd>
+</dl>
+
 ### /pki/cert/
 #### GET
 
