@@ -23,7 +23,7 @@ var (
 	}
 )
 
-func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend {
+func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backend, error) {
 	b := &SystemBackend{
 		Core: core,
 	}
@@ -580,9 +580,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 		},
 	}
 
-	b.Backend.Setup(config)
-
-	return b.Backend
+	return b.Backend.Setup(config)
 }
 
 // SystemBackend implements logical.Backend and is used to interact with
