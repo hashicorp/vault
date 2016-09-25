@@ -244,6 +244,14 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 	}
 
+	if resp != nil &&
+		req.Path == "cubbyhole/response" &&
+		te.Policies != nil &&
+		len(te.Policies) == 1 &&
+		te.Policies[0] == responseWrappingPolicyName {
+		resp.AddWarning("Please use sys/wrapping/unwrap to unwrap responses, as it provides additional security checks.")
+	}
+
 	// Return the response and error
 	if err != nil {
 		retErr = multierror.Append(retErr, err)
