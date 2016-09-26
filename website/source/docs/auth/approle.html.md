@@ -479,6 +479,16 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
         _in plaintext_.
       </li>
     </ul>
+    <ul>
+      <li>
+        <span class="param">cidr_list</span>
+        <span class="param-flags">optional</span>
+Comma separated list of CIDR blocks enforcing secret IDs to be used from
+specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
+list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
+the role.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -719,6 +729,16 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
         string containing the metadata in key-value pairs. This metadata will
         be set on tokens issued with this SecretID, and is logged in audit logs
         _in plaintext_.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">cidr_list</span>
+        <span class="param-flags">optional</span>
+Comma separated list of CIDR blocks enforcing secret IDs to be used from
+specific set of IP addresses. If 'bound_cidr_list' is set on the role, then the
+list of CIDR blocks listed here should be a subset of the CIDR blocks listed on
+the role.
       </li>
     </ul>
   </dd>

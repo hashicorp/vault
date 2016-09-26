@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -159,7 +160,7 @@ func pathRoles(b *backend) *framework.Path {
 func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	roleName := d.Get("role").(string)
 	if roleName == "" {
-		return logical.ErrorResponse("Missing role name"), nil
+		return logical.ErrorResponse("missing role name"), nil
 	}
 
 	// Allowed users is an optional field, applicable for both OTP and Dynamic types.
@@ -167,30 +168,30 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 	defaultUser := d.Get("default_user").(string)
 	if defaultUser == "" {
-		return logical.ErrorResponse("Missing default user"), nil
+		return logical.ErrorResponse("missing default user"), nil
 	}
 
+	// Validate the CIDR blocks
 	cidrList := d.Get("cidr_list").(string)
-
-	// Check if all the CIDR blocks are infact valid entries and they don't conflict
-	// with each other
-	if len(cidrList) != 0 {
-		overlaps, err := validateCIDRList(cidrList)
+	if cidrList != "" {
+		valid, err := cidrutil.ValidateCIDRListString(cidrList, ",")
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid cidr_list entry. %s", err)), nil
+			return nil, fmt.Errorf("failed to validate cidr_list: %v", err)
 		}
-		if len(overlaps) != 0 {
-			return logical.ErrorResponse(fmt.Sprintf("CIDR blocks conflicting: %s", overlaps)), nil
+		if !valid {
+			return logical.ErrorResponse("failed to validate cidr_list"), nil
 		}
 	}
 
+	// Validate the excluded CIDR blocks
 	excludeCidrList := d.Get("exclude_cidr_list").(string)
-
-	// Check if all the CIDR blocks are infact valid entries
-	if len(excludeCidrList) != 0 {
-		_, err := validateCIDRList(excludeCidrList)
+	if excludeCidrList != "" {
+		valid, err := cidrutil.ValidateCIDRListString(excludeCidrList, ",")
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid exclude_cidr_list entry. %s", err)), nil
+			return nil, fmt.Errorf("failed to validate exclude_cidr_list entry: %v", err)
+		}
+		if !valid {
+			return logical.ErrorResponse(fmt.Sprintf("failed to validate exclude_cidr_list entry: %v", err)), nil
 		}
 	}
 
@@ -201,7 +202,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 	keyType := d.Get("key_type").(string)
 	if keyType == "" {
-		return logical.ErrorResponse("Missing key type"), nil
+		return logical.ErrorResponse("missing key type"), nil
 	}
 	keyType = strings.ToLower(keyType)
 
@@ -211,7 +212,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		// no need to login to remote machine.
 		adminUser := d.Get("admin_user").(string)
 		if adminUser != "" {
-			return logical.ErrorResponse("Admin user not required for OTP type"), nil
+			return logical.ErrorResponse("admin user not required for OTP type"), nil
 		}
 
 		// Below are the only fields used from the role structure for OTP type.
@@ -227,11 +228,11 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		// Key name is required by dynamic type and not by OTP type.
 		keyName := d.Get("key").(string)
 		if keyName == "" {
-			return logical.ErrorResponse("Missing key name"), nil
+			return logical.ErrorResponse("missing key name"), nil
 		}
 		keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", keyName))
 		if err != nil || keyEntry == nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid 'key': '%s'", keyName)), nil
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'key': '%s'", keyName)), nil
 		}
 
 		installScript := d.Get("install_script").(string)
@@ -245,13 +246,13 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 
 		adminUser := d.Get("admin_user").(string)
 		if adminUser == "" {
-			return logical.ErrorResponse("Missing admin username"), nil
+			return logical.ErrorResponse("missing admin username"), nil
 		}
 
 		// This defaults to 1024 and it can also be 2048.
 		keyBits := d.Get("key_bits").(int)
 		if keyBits != 0 && keyBits != 1024 && keyBits != 2048 {
-			return logical.ErrorResponse("Invalid key_bits field"), nil
+			return logical.ErrorResponse("invalid key_bits field"), nil
 		}
 
 		// If user has not set this field, default it to 1024
@@ -274,7 +275,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 			KeyOptionSpecs:  keyOptionSpecs,
 		}
 	} else {
-		return logical.ErrorResponse("Invalid key type"), nil
+		return logical.ErrorResponse("invalid key type"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON(fmt.Sprintf("roles/%s", roleName), roleEntry)

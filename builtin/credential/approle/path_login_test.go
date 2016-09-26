@@ -43,6 +43,9 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "login",
 		Storage:   storage,
 		Data:      loginData,
+		Connection: &logical.Connection{
+			RemoteAddr: "127.0.0.1",
+		},
 	}
 	resp, err = b.HandleRequest(loginReq)
 	if err != nil || (resp != nil && resp.IsError()) {

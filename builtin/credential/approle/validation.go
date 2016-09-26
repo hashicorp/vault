@@ -5,12 +5,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"net"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/cidrutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -26,51 +27,42 @@ type secretIDStorageEntry struct {
 	// SecretIDs during login.
 	SecretIDAccessor string `json:"secret_id_accessor" structs:"secret_id_accessor" mapstructure:"secret_id_accessor"`
 
-	// Number of times this SecretID can be used to perform the login operation
-	SecretIDNumUses int `json:"secret_id_num_uses" structs:"secret_id_num_uses" mapstructure:"secret_id_num_uses"`
+	// Number of times this SecretID can be used to perform the login
+	// operation
+	SecretIDNumUses int `json:"secret_id_num_uses"
+structs:"secret_id_num_uses" mapstructure:"secret_id_num_uses"`
 
-	// Duration after which this SecretID should expire. This is
-	// croleed by the backend mount's max TTL value.
+	// Duration after which this SecretID should expire. This is croleed by
+	// the backend mount's max TTL value.
 	SecretIDTTL time.Duration `json:"secret_id_ttl" structs:"secret_id_ttl" mapstructure:"secret_id_ttl"`
 
 	// The time when the SecretID was created
 	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 
-	// The time when the SecretID becomes eligible for tidy
-	// operation. Tidying is performed by the PeriodicFunc of the
-	// backend which is 1 minute apart.
+	// The time when the SecretID becomes eligible for tidy operation.
+	// Tidying is performed by the PeriodicFunc of the backend which is 1
+	// minute apart.
 	ExpirationTime time.Time `json:"expiration_time" structs:"expiration_time" mapstructure:"expiration_time"`
 
 	// The time representing the last time this storage entry was modified
 	LastUpdatedTime time.Time `json:"last_updated_time" structs:"last_updated_time" mapstructure:"last_updated_time"`
 
-	// Metadata that belongs to the SecretID.
+	// Metadata that belongs to the SecretID
 	Metadata map[string]string `json:"metadata" structs:"metadata" mapstructure:"metadata"`
+
+	// CIDRList is a set of CIDR blocks that impose source address
+	// restrictions on the usage of SecretID
+	CIDRList []string `json:"cidr_list" structs:"cidr_list" mapstructure:"cidr_list"`
 }
 
-// Represents the payload of the storage entry of the accessor that maps to a unique
-// SecretID. Note that SecretIDs should never be stored in plaintext anywhere in the
-// backend. SecretIDHMAC will be used as an index to fetch the properties of the
-// SecretID and to delete the SecretID.
+// Represents the payload of the storage entry of the accessor that maps to a
+// unique SecretID. Note that SecretIDs should never be stored in plaintext
+// anywhere in the backend. SecretIDHMAC will be used as an index to fetch the
+// properties of the SecretID and to delete the SecretID.
 type secretIDAccessorStorageEntry struct {
 	// Hash of the SecretID which can be used to find the storage index at which
 	// properties of SecretID is stored.
 	SecretIDHMAC string `json:"secret_id_hmac" structs:"secret_id_hmac" mapstructure:"secret_id_hmac"`
-}
-
-// Checks if all the CIDR blocks in the comma separated list are valid by parsing it.
-func validateCIDRList(cidrList string) error {
-	if cidrList == "" {
-		return nil
-	}
-
-	cidrBlocks := strings.Split(cidrList, ",")
-	for _, block := range cidrBlocks {
-		if _, _, err := net.ParseCIDR(strings.TrimSpace(block)); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // Checks if the Role represented by the RoleID still exists
@@ -129,7 +121,7 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 		// Check if the SecretID supplied is valid. If use limit was specified
 		// on the SecretID, it will be decremented in this call.
 		var valid bool
-		valid, metadata, err = b.validateBindSecretID(req.Storage, roleName, secretID, role.HMACKey)
+		valid, metadata, err = b.validateBindSecretID(req, roleName, secretID, role.HMACKey, role.BoundCIDRList)
 		if err != nil {
 			return nil, "", metadata, err
 		}
@@ -140,20 +132,16 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 
 	if role.BoundCIDRList != "" {
 		// If 'bound_cidr_list' was set, verify the CIDR restrictions
-		cidrBlocks := strings.Split(role.BoundCIDRList, ",")
-		for _, block := range cidrBlocks {
-			_, cidr, err := net.ParseCIDR(block)
-			if err != nil {
-				return nil, "", metadata, fmt.Errorf("invalid cidr: %s", err)
-			}
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			return nil, "", metadata, fmt.Errorf("failed to get connection information")
+		}
 
-			var addr string
-			if req.Connection != nil {
-				addr = req.Connection.RemoteAddr
-			}
-			if addr == "" || !cidr.Contains(net.ParseIP(addr)) {
-				return nil, "", metadata, fmt.Errorf("unauthorized source address")
-			}
+		belongs, err := cidrutil.IPBelongsToCIDRBlocksString(req.Connection.RemoteAddr, role.BoundCIDRList, ",")
+		if err != nil {
+			return nil, "", metadata, fmt.Errorf("failed to verify the CIDR restrictions set on the role: %v", err)
+		}
+		if !belongs {
+			return nil, "", metadata, fmt.Errorf("source address unauthorized through CIDR restrictions on the role")
 		}
 	}
 
@@ -161,7 +149,8 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 }
 
 // validateBindSecretID is used to determine if the given SecretID is a valid one.
-func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hmacKey string) (bool, map[string]string, error) {
+func (b *backend) validateBindSecretID(req *logical.Request, roleName, secretID,
+	hmacKey, roleBoundCIDRList string) (bool, map[string]string, error) {
 	secretIDHMAC, err := createHMAC(hmacKey, secretID)
 	if err != nil {
 		return false, nil, fmt.Errorf("failed to create HMAC of secret_id: %s", err)
@@ -181,7 +170,7 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hm
 	lock.RLock()
 
 	result := secretIDStorageEntry{}
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := req.Storage.Get(entryIndex); err != nil {
 		lock.RUnlock()
 		return false, nil, err
 	} else if entry == nil {
@@ -196,6 +185,25 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hm
 	// in which case, the SecretID will remain to be valid as long as it is not
 	// expired.
 	if result.SecretIDNumUses == 0 {
+		// Ensure that the CIDRs on the secret ID are still a subset of that of
+		// role's
+		if err := verifyCIDRRoleSecretIDSubset(result.CIDRList,
+			roleBoundCIDRList); err != nil {
+			return false, nil, err
+		}
+
+		// If CIDR restrictions are present on the secret ID, check if the
+		// source IP complies to it
+		if len(result.CIDRList) != 0 {
+			if req.Connection == nil || req.Connection.RemoteAddr == "" {
+				return false, nil, fmt.Errorf("failed to get connection information")
+			}
+
+			if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
+				return false, nil, fmt.Errorf("source address unauthorized through CIDR restrictions on the secret ID: %v", err)
+			}
+		}
+
 		lock.RUnlock()
 		return true, result.Metadata, nil
 	}
@@ -210,7 +218,7 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hm
 
 	// Lock switching may change the data. Refresh the contents.
 	result = secretIDStorageEntry{}
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := req.Storage.Get(entryIndex); err != nil {
 		return false, nil, err
 	} else if entry == nil {
 		return false, nil, nil
@@ -223,10 +231,10 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hm
 	// requests to use the same SecretID will fail.
 	if result.SecretIDNumUses == 1 {
 		// Delete the secret IDs accessor first
-		if err := b.deleteSecretIDAccessorEntry(s, result.SecretIDAccessor); err != nil {
+		if err := b.deleteSecretIDAccessorEntry(req.Storage, result.SecretIDAccessor); err != nil {
 			return false, nil, err
 		}
-		if err := s.Delete(entryIndex); err != nil {
+		if err := req.Storage.Delete(entryIndex); err != nil {
 			return false, nil, fmt.Errorf("failed to delete SecretID: %s", err)
 		}
 	} else {
@@ -235,12 +243,51 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID, hm
 		result.LastUpdatedTime = time.Now()
 		if entry, err := logical.StorageEntryJSON(entryIndex, &result); err != nil {
 			return false, nil, fmt.Errorf("failed to decrement the use count for SecretID:%s", secretID)
-		} else if err = s.Put(entry); err != nil {
+		} else if err = req.Storage.Put(entry); err != nil {
 			return false, nil, fmt.Errorf("failed to decrement the use count for SecretID:%s", secretID)
 		}
 	}
 
+	// Ensure that the CIDRs on the secret ID are still a subset of that of
+	// role's
+	if err := verifyCIDRRoleSecretIDSubset(result.CIDRList,
+		roleBoundCIDRList); err != nil {
+		return false, nil, err
+	}
+
+	// If CIDR restrictions are present on the secret ID, check if the
+	// source IP complies to it
+	if len(result.CIDRList) != 0 {
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			return false, nil, fmt.Errorf("failed to get connection information")
+		}
+
+		if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
+			return false, nil, fmt.Errorf("source address unauthorized through CIDR restrictions on the secret ID: %v", err)
+		}
+	}
+
 	return true, result.Metadata, nil
+}
+
+// verifyCIDRRoleSecretIDSubset checks if the CIDR blocks set on the secret ID
+// are a subset of CIDR blocks set on the role
+func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList string) error {
+	if len(secretIDCIDRs) != 0 {
+		// Parse the CIDRs on role as a slice
+		roleCIDRs := strutil.ParseDedupAndSortStrings(roleBoundCIDRList, ",")
+
+		// If there are no CIDR blocks on the role, then the subset
+		// requirement would be satisfied
+		if len(roleCIDRs) != 0 {
+			subset, err := cidrutil.SubsetBlocks(roleCIDRs, secretIDCIDRs)
+			if !subset || err != nil {
+				return fmt.Errorf("failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %v", roleCIDRs, secretIDCIDRs, err)
+			}
+		}
+	}
+
+	return nil
 }
 
 // Creates a SHA256 HMAC of the given 'value' using the given 'key' and returns
