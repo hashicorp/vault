@@ -1,7 +1,29 @@
 package api
 
+import "os"
+
 const (
 	wrappedResponseLocation = "cubbyhole/response"
+)
+
+var (
+	// The default TTL that will be used with `sys/wrapping/wrap`, can be
+	// changed
+	DefaultWrappingTTL = "5m"
+
+	// The default function used if no other function is set, which honors the
+	// env var and wraps `sys/wrapping/wrap`
+	DefaultWrappingLookupFunc = func(operation, path string) string {
+		if os.Getenv(EnvVaultWrapTTL) != "" {
+			return os.Getenv(EnvVaultWrapTTL)
+		}
+
+		if (operation == "PUT" || operation == "POST") && path == "sys/wrapping/wrap" {
+			return DefaultWrappingTTL
+		}
+
+		return ""
+	}
 )
 
 // Logical is used to perform logical backend operations on Vault.

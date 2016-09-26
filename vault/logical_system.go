@@ -695,6 +695,7 @@ func (b *SystemBackend) handleRekeyDelete(
 
 	return nil, nil
 }
+
 func (b *SystemBackend) handleRekeyDeleteBarrier(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return b.handleRekeyDelete(req, data, false)
@@ -1511,8 +1512,9 @@ func (b *SystemBackend) handleWrappingUnwrap(
 func (b *SystemBackend) handleWrappingLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	token := data.Get("token").(string)
+
 	if token == "" {
-		token = req.ClientToken
+		return logical.ErrorResponse("no \"token\" value supplied in input"), logical.ErrInvalidRequest
 	}
 
 	cubbyReq := &logical.Request{
