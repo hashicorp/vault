@@ -782,6 +782,9 @@ func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData
 	if err != nil {
 		return nil, err
 	}
+	if role == nil {
+		return nil, nil
+	}
 
 	// Acquire the lock before deleting the secrets.
 	lock := b.roleLock(roleName)
