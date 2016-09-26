@@ -1,6 +1,12 @@
 package api
 
-import "os"
+import (
+	"bytes"
+	"fmt"
+	"os"
+
+	"github.com/hashicorp/vault/helper/jsonutil"
+)
 
 const (
 	wrappedResponseLocation = "cubbyhole/response"
@@ -117,5 +123,52 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 			"token": wrappingToken,
 		}
 	}
-	return c.Write("sys/wrapping/unwrap", data)
+
+	r := c.c.NewRequest("PUT", "/v1/sys/wrapping/unwrap")
+	if err := r.SetJSONBody(data); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	switch resp.StatusCode {
+	case 200: // New method is supported
+		return ParseSecret(resp.Body)
+	case 404: // Fall back to old method
+	default:
+		return nil, nil
+	}
+
+	origToken := c.c.Token()
+	defer c.c.SetToken(origToken)
+
+	c.c.SetToken(wrappingToken)
+
+	secret, err := c.Read(wrappedResponseLocation)
+	if err != nil {
+		return nil, fmt.Errorf("error reading %s: %s", wrappedResponseLocation, err)
+	}
+	if secret == nil {
+		return nil, fmt.Errorf("no value found at %s", wrappedResponseLocation)
+	}
+	if secret.Data == nil {
+		return nil, fmt.Errorf("\"data\" not found in wrapping response")
+	}
+	if _, ok := secret.Data["response"]; !ok {
+		return nil, fmt.Errorf("\"response\" not found in wrapping response \"data\" map")
+	}
+
+	wrappedSecret := new(Secret)
+	buf := bytes.NewBufferString(secret.Data["response"].(string))
+	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
+		return nil, fmt.Errorf("error unmarshaling wrapped secret: %s", err)
+	}
+
+	return wrappedSecret, nil
 }
