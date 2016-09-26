@@ -111,14 +111,14 @@ we tell it what organization users must be a part of, and map a team to a policy
 $ vault write auth/github/config organization=hashicorp
 Success! Data written to: auth/github/config
 
-$ vault write auth/github/map/teams/default value=root
+$ vault write auth/github/map/teams/default value=default
 Success! Data written to: auth/github/map/teams/default
 ```
 
 The above configured our GitHub backend to only accept users from the
 "hashicorp" organization (you should fill in your own organization)
-and to map any team to the "root" policy, which is the only policy we have
-right now until the next section.
+and to map any team to the "default" policy, which is a built-in policy and is
+the only policy (other than `root`) we have right now until the next section.
 
 With GitHub enabled, we can authenticate using `vault auth`:
 
@@ -127,18 +127,20 @@ $ vault auth -method=github token=e6919b17dd654f2b64e67b6369d61cddc0bcc7d5
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
-root
+default
 ```
 
-Success! We've authenticated using GitHub. The "root" policy was associated
-with my identity since we mapped that earlier. The value for "token" should be your own
-[personal access token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
+Success! We've authenticated using GitHub. The "default" policy was associated
+with my identity since we mapped that earlier. The value for "token" should be
+your own [personal access
+token](https://help.github.com/articles/creating-an-access-token-for-command-line-use/).
+
+At this point, if you're following along, re-authenticate with the root token
+from earlier (using `vault auth <token>`) to run the next commands.
 
 You can revoke authentication from any authentication backend using
 `vault token-revoke` as well, which can revoke any path prefix. For
 example, to revoke all GitHub tokens, you could run the following.
-**Don't run this unless you have access to another root token or you'll
-get locked out.**
 
 ```
 $ vault token-revoke -mode=path auth/github
@@ -152,11 +154,6 @@ users from this backend.
 $ vault auth-disable github
 Disabled auth provider at path 'github'!
 ```
-
-If you ran the above, you'll probably find you can't access your Vault
-anymore unless you have another root token, since it invalidated your
-own session since we authenticated with GitHub above. Since we're still
-operating in development mode, just restart the dev server to fix this.
 
 ## Next
 
