@@ -88,7 +88,7 @@ func (b *backend) validateRoleID(s logical.Storage, roleID string) (*roleStorage
 }
 
 // Validates the supplied RoleID and SecretID
-func (b *backend) validateCredentials(req *logical.Request, data *framework.FieldData, sourceIP string) (*roleStorageEntry, string, map[string]string, error) {
+func (b *backend) validateCredentials(req *logical.Request, data *framework.FieldData) (*roleStorageEntry, string, map[string]string, error) {
 	var metadata map[string]string
 	// RoleID must be supplied during every login
 	roleID := strings.TrimSpace(data.Get("role_id").(string))
@@ -121,7 +121,7 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 		// Check if the SecretID supplied is valid. If use limit was specified
 		// on the SecretID, it will be decremented in this call.
 		var valid bool
-		valid, metadata, err = b.validateBindSecretID(req.Storage, roleName, secretID, role.HMACKey, role.BoundCIDRList, sourceIP)
+		valid, metadata, err = b.validateBindSecretID(req, roleName, secretID, role.HMACKey, role.BoundCIDRList)
 		if err != nil {
 			return nil, "", metadata, err
 		}
@@ -132,7 +132,11 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 
 	if role.BoundCIDRList != "" {
 		// If 'bound_cidr_list' was set, verify the CIDR restrictions
-		belongs, err := cidrutil.IPBelongsToCIDRBlocksString(sourceIP, role.BoundCIDRList, ",")
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			return nil, "", metadata, fmt.Errorf("failed to get connection information")
+		}
+
+		belongs, err := cidrutil.IPBelongsToCIDRBlocksString(req.Connection.RemoteAddr, role.BoundCIDRList, ",")
 		if err != nil {
 			return nil, "", metadata, fmt.Errorf("failed to verify the CIDR restrictions set on the role: %v", err)
 		}
@@ -145,8 +149,8 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 }
 
 // validateBindSecretID is used to determine if the given SecretID is a valid one.
-func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID,
-	hmacKey, roleBoundCIDRList, sourceIP string) (bool, map[string]string, error) {
+func (b *backend) validateBindSecretID(req *logical.Request, roleName, secretID,
+	hmacKey, roleBoundCIDRList string) (bool, map[string]string, error) {
 	secretIDHMAC, err := createHMAC(hmacKey, secretID)
 	if err != nil {
 		return false, nil, fmt.Errorf("failed to create HMAC of secret_id: %s", err)
@@ -166,7 +170,7 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID,
 	lock.RLock()
 
 	result := secretIDStorageEntry{}
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := req.Storage.Get(entryIndex); err != nil {
 		lock.RUnlock()
 		return false, nil, err
 	} else if entry == nil {
@@ -191,7 +195,11 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID,
 		// If CIDR restrictions are present on the secret ID, check if the
 		// source IP complies to it
 		if len(result.CIDRList) != 0 {
-			if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(sourceIP, result.CIDRList); !belongs || err != nil {
+			if req.Connection == nil || req.Connection.RemoteAddr == "" {
+				return false, nil, fmt.Errorf("failed to get connection information")
+			}
+
+			if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
 				return false, nil, fmt.Errorf("source address unauthorized through CIDR restrictions on the secret ID: %v", err)
 			}
 		}
@@ -210,7 +218,7 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID,
 
 	// Lock switching may change the data. Refresh the contents.
 	result = secretIDStorageEntry{}
-	if entry, err := s.Get(entryIndex); err != nil {
+	if entry, err := req.Storage.Get(entryIndex); err != nil {
 		return false, nil, err
 	} else if entry == nil {
 		return false, nil, nil
@@ -223,10 +231,10 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID,
 	// requests to use the same SecretID will fail.
 	if result.SecretIDNumUses == 1 {
 		// Delete the secret IDs accessor first
-		if err := b.deleteSecretIDAccessorEntry(s, result.SecretIDAccessor); err != nil {
+		if err := b.deleteSecretIDAccessorEntry(req.Storage, result.SecretIDAccessor); err != nil {
 			return false, nil, err
 		}
-		if err := s.Delete(entryIndex); err != nil {
+		if err := req.Storage.Delete(entryIndex); err != nil {
 			return false, nil, fmt.Errorf("failed to delete SecretID: %s", err)
 		}
 	} else {
@@ -235,7 +243,7 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID,
 		result.LastUpdatedTime = time.Now()
 		if entry, err := logical.StorageEntryJSON(entryIndex, &result); err != nil {
 			return false, nil, fmt.Errorf("failed to decrement the use count for SecretID:%s", secretID)
-		} else if err = s.Put(entry); err != nil {
+		} else if err = req.Storage.Put(entry); err != nil {
 			return false, nil, fmt.Errorf("failed to decrement the use count for SecretID:%s", secretID)
 		}
 	}
@@ -250,7 +258,11 @@ func (b *backend) validateBindSecretID(s logical.Storage, roleName, secretID,
 	// If CIDR restrictions are present on the secret ID, check if the
 	// source IP complies to it
 	if len(result.CIDRList) != 0 {
-		if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(sourceIP, result.CIDRList); !belongs || err != nil {
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			return false, nil, fmt.Errorf("failed to get connection information")
+		}
+
+		if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
 			return false, nil, fmt.Errorf("source address unauthorized through CIDR restrictions on the secret ID: %v", err)
 		}
 	}
