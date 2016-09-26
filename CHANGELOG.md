@@ -47,6 +47,7 @@ BUG FIXES:
 
  * audit: Fix panic being caused by some values logging as underlying Go types
    instead of formatted strings [GH-1912]
+ * auth/approle: Fixed panic on deleting approle that doesn't exist [GH-1920]
  * auth/aws-ec2: Allow authentication if the underlying host is in a bad state
    but the instance is running [GH-1884]
  * cli: Don't error on newline in token file [GH-1774]
