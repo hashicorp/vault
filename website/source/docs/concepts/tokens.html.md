@@ -94,6 +94,34 @@ endpoint, which revokes the given token but rather than revoke the rest of the
 tree, it instead sets the tokens' immediate children to be orphans. Use with
 caution!
 
+### Token Accessors
+
+When tokens are created, a token accessor is also created and returned. This
+accessor is a value that acts as a reference to a token and can only be used to
+perform limited actions:
+
+1. Look up a token's properties (not including the actual token ID)
+2. Look up a token's capabilities on a path
+3. Revoke the token
+
+There are many useful workflows around token accessors. As an example, a
+service that creates tokens on behalf of another service (such as the
+[Nomad](https://www.nomadproject.io/) scheduler) can store the accessor
+correlated with a particular job ID. When the job is complete, the accessor can
+be used to instantly revoke the token given to the job and all of its leased
+credentials, limiting the chance that a bad actor will discover and use them.
+
+Audit backends can optionally be set to not obfuscate token accessors in audit
+logs. This provides a way to quickly revoke tokens in case of an emergency.
+However, it also means that the audit logs can be used to perform a
+larger-scale denial of service attack.
+
+Finally, the only way to "list tokens" is via the `auth/token/accessors`
+command, which actually gives a list of token accessors. While this is still a
+dangerous endpoint (since listing all of the accessors means that they can then
+be used to revoke all tokens), it also provides a way to audit and revoke the
+currently-active set of tokens.
+
 ### Token Time-To-Live, Periodic Tokens, and Explicit Max TTLs
 
 Every non-root token has a time-to-live (TTL) associated with it, which is a
