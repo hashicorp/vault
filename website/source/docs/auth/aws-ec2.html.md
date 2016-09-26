@@ -838,6 +838,16 @@ should be using the AMI ID specified by this parameter.
         If set, defines a constraint on the EC2 instances that the account ID
 in its identity document to match the one specified by this parameter.
       </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">bound_iam_role_arn</span>
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instances that they should be
+using the IAM role ARN specified by this parameter.
+      </li>
+    </ul>
+    <ul>
       <li>
         <span class="param">bound_iam_instance_profile_arn</span>
         <span class="param-flags">optional</span>

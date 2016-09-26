@@ -334,8 +334,8 @@ func (b *backend) pathLoginUpdate(
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
 			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
 		}
-		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Id == nil {
-			return nil, fmt.Errorf("IAM instance profile identifier in the instance description is nil")
+		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
+			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
 		}
 
 		// Fetch the instance profile ARN from the instance description
