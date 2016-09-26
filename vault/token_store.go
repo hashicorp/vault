@@ -470,7 +470,7 @@ type TokenEntry struct {
 	TTL time.Duration `json:"ttl" mapstructure:"ttl" structs:"ttl"`
 
 	// Explicit maximum TTL on the token
-	ExplicitMaxTTL time.Duration `json:"" mapstructure:"" structs:""`
+	ExplicitMaxTTL time.Duration `json:"explicit_max_ttl" mapstructure:"explicit_max_ttl" structs:"explicit_max_ttl"`
 
 	// If set, the role that was used for parameters at creation time
 	Role string `json:"role" mapstructure:"role" structs:"role"`
@@ -806,7 +806,7 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 
 	// Upgrade the deprecated fields
 	if entry.DisplayNameDeprecated != "" {
-		if entry.DisplayName != "" {
+		if entry.DisplayName == "" {
 			entry.DisplayName = entry.DisplayNameDeprecated
 		}
 		entry.DisplayNameDeprecated = ""
