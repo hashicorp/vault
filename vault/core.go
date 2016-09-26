@@ -1534,7 +1534,7 @@ func (c *Core) ValidateWrappingToken(token string) (bool, error) {
 		return false, nil
 	}
 
-	if te.Policies[0] != cubbyholeResponseWrappingPolicyName {
+	if te.Policies[0] != responseWrappingPolicyName {
 		return false, nil
 	}
 

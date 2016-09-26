@@ -2,6 +2,7 @@ package vault
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -340,6 +341,13 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
+
+		// Prevent internal policies from being assigned to tokens
+		for _, policy := range te.Policies {
+			if strutil.StrListContains(nonAssignablePolicies, policy) {
+				return logical.ErrorResponse(fmt.Sprintf("cannot assign %s policy", policy)), nil, logical.ErrInvalidRequest
+			}
+		}
 
 		if err := c.tokenStore.create(&te); err != nil {
 			c.logger.Error("core: failed to create token", "error", err)
