@@ -24,7 +24,7 @@ func Backend() *backend {
 			Unauthenticated: []string{
 				"cert/*",
 				"ca/pem",
-				"ca/chain",
+				"ca_chain",
 				"ca",
 				"crl/pem",
 				"crl",

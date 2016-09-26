@@ -23,13 +23,13 @@ func pathFetchCA(b *backend) *framework.Path {
 	}
 }
 
-// Returns the CA chain in raw format
+// Returns the CA chain
 func pathFetchCAChain(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `ca/chain`,
+		Pattern: `(cert/)?ca_chain`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathFetchReadCAChain,
+			logical.ReadOperation: b.pathFetchRead,
 		},
 
 		HelpSynopsis:    pathFetchHelpSyn,
@@ -110,37 +110,6 @@ func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldD
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathFetchReadCAChain(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	caInfo, err := fetchCAInfo(req)
-	switch err.(type) {
-	case errutil.UserError:
-		return nil,
-			errutil.UserError{Err: fmt.Sprintf("Could not fetch the CA certificate: %s", err)}
-	case errutil.InternalError:
-		return nil,
-			errutil.InternalError{Err: fmt.Sprintf("Error fetching CA certificate: %s", err)}
-	}
-
-	caChain := caInfo.GetCAChain()
-	certs := []byte{}
-	for _, ca := range caChain {
-		block := pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: ca.Bytes,
-		}
-		certs = append(certs, pem.EncodeToMemory(&block)...)
-	}
-
-	response := &logical.Response{
-		Data: map[string]interface{}{
-			logical.HTTPContentType: "application/pkix-cert",
-			logical.HTTPRawBody:     certs,
-		}}
-	response.Data[logical.HTTPStatusCode] = 200
-
-	return response, nil
-}
-
 func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
 	var serial, pemType, contentType string
 	var certEntry, revokedEntry *logical.StorageEntry
@@ -163,6 +132,12 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		if req.Path == "ca/pem" {
 			pemType = "CERTIFICATE"
 		}
+	case req.Path == "ca_chain" || req.Path == "cert/ca_chain":
+		serial = "ca_chain"
+		if req.Path == "ca_chain" {
+			contentType = "application/pkix-cert"
+		}
+		pemType = "CERTIFICATE"
 	case req.Path == "crl" || req.Path == "crl/pem":
 		serial = "crl"
 		contentType = "application/pkix-crl"
@@ -178,6 +153,28 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 	}
 	if len(serial) == 0 {
 		response = logical.ErrorResponse("The serial number must be provided")
+		goto reply
+	}
+
+	if serial == "ca_chain" {
+		caInfo, err := fetchCAInfo(req)
+		switch err.(type) {
+		case errutil.UserError:
+			response = logical.ErrorResponse(funcErr.Error())
+			goto reply
+		case errutil.InternalError:
+			retErr = err
+			goto reply
+		}
+
+		caChain := caInfo.GetCAChain()
+		for _, ca := range caChain {
+			block := pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: ca.Bytes,
+			}
+			certificate = append(certificate, pem.EncodeToMemory(&block)...)
+		}
 		goto reply
 	}
 
@@ -241,7 +238,11 @@ reply:
 			}
 		}
 		retErr = nil
-		response.Data[logical.HTTPStatusCode] = 200
+		if len(certificate) > 0 {
+			response.Data[logical.HTTPStatusCode] = 200
+		} else {
+			response.Data[logical.HTTPStatusCode] = 204
+		}
 	case retErr != nil:
 		response = nil
 	default:
