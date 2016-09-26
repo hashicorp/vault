@@ -479,6 +479,12 @@ type TokenEntry struct {
 	// through the create endpoint; periods managed by roles or other auth
 	// backends are subject to those renewal rules.
 	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
+
+	// These are the deprecated fields
+	DisplayNameDeprecated    string        `json:"DisplayName" mapstructure:"DisplayName" structs:"DisplayName"`
+	NumUsesDeprecated        int           `json:"NumUses" mapstructure:"NumUses" structs:"NumUses"`
+	CreationTimeDeprecated   int64         `json:"CreationTime" mapstructure:"CreationTime" structs:"CreationTime"`
+	ExplicitMaxTTLDeprecated time.Duration `json:"ExplicitMaxTTL" mapstructure:"ExplicitMaxTTL" structs:"ExplicitMaxTTL"`
 }
 
 // tsRoleEntry contains token store role information
@@ -794,6 +800,48 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 	// This is a token that is awaiting deferred revocation
 	if entry.NumUses == -1 {
 		return nil, nil
+	}
+
+	persistNeeded := false
+
+	// Upgrade the deprecated fields
+	if entry.DisplayNameDeprecated != "" {
+		if entry.DisplayName != "" {
+			entry.DisplayName = entry.DisplayNameDeprecated
+		}
+		entry.DisplayNameDeprecated = ""
+		persistNeeded = true
+	}
+
+	if entry.CreationTimeDeprecated != 0 {
+		if entry.CreationTime == 0 {
+			entry.CreationTime = entry.CreationTimeDeprecated
+		}
+		entry.CreationTimeDeprecated = 0
+		persistNeeded = true
+	}
+
+	if entry.ExplicitMaxTTLDeprecated != 0 {
+		if entry.ExplicitMaxTTL == 0 {
+			entry.ExplicitMaxTTL = entry.ExplicitMaxTTLDeprecated
+		}
+		entry.ExplicitMaxTTLDeprecated = 0
+		persistNeeded = true
+	}
+
+	if entry.NumUsesDeprecated != 0 {
+		if entry.NumUses == 0 || entry.NumUsesDeprecated < entry.NumUses {
+			entry.NumUses = entry.NumUsesDeprecated
+		}
+		entry.NumUsesDeprecated = 0
+		persistNeeded = true
+	}
+
+	// If fields are getting upgraded, store the changes
+	if persistNeeded {
+		if err := ts.storeCommon(entry, false); err != nil {
+			return nil, fmt.Errorf("failed to persist token upgrade: %v", err)
+		}
 	}
 
 	return entry, nil
