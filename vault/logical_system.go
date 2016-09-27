@@ -607,7 +607,11 @@ type SystemBackend struct {
 
 // handleCapabilitiesreturns the ACL capabilities of the token for a given path
 func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	capabilities, err := b.Core.Capabilities(req.ClientToken, d.Get("path").(string))
+	token := d.Get("token").(string)
+	if token == "" {
+		token = req.ClientToken
+	}
+	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
