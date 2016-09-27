@@ -246,7 +246,7 @@ subpath for interactive help output.
         <span class="param-flags">optional</span>
         The consistency level value provided as a string. Determines the 
         consistency level used for operations performed on the Cassandra
-        database. Defaults to aconsistency level of Quorum.
+        database. Defaults to a consistency level of Quorum.
       </li>
     </ul>
   </dd>
