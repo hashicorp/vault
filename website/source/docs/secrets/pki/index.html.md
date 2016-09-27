@@ -249,84 +249,128 @@ and manage certificates!
 ```text
 $ vault write pki/issue/example-dot-com \
     common_name=blah.example.com
-Key                     Value
-lease_id                pki/issue/example-dot-com/32db49a9-61dd-f9ca-f4a6-aaefafe53739
-lease_duration          259199
-lease_renewable         false
-certificate             -----BEGIN CERTIFICATE-----
-MIIDVDCCAjygAwIBAgIUFMne7ro1DyvpZV+URHMPtz3vv9MwDQYJKoZIhvcNAQEL
-BQAwGzEZMBcGA1UEAxMQaW50ZXJtZWRpYXRlLmNvbTAeFw0xNTExMjAxODEzMDNa
-Fw0xNTExMjMxODEzMDNaMBsxGTAXBgNVBAMTEGJsYWguZXhhbXBsZS5jb20wggEi
-MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDEfl5iimLtEkyZiKYs+PfoaAbe
-VhtZxTYWFA+B7IIlr8iPTEZDuf72OOf0Nu/8TNrV6Zkoq0EuHvBtNi1ut3usYt6V
-i9lrcofD/Qjn0EH6aOZnE5J7c+gmsODhlxflLfz8uEytonKxofwOw26J9+subuSI
-migMbpbTP/BL2n29K4NJoKdhh8VMxNCFPQxgu5ACEdJ9GsiPO5wBb7ifdIq0HcSU
-0ONe6uZqDXeKiqfrTg6eap4EaALogkJhuk8BcAJv9aSbJswOSXTGROa4XChtCXEu
-D3yVOoZOOm7JSm60y7ntf/dxZF5xcZXjRe6GkXJAIADOL9E5dOlgTFlojYjpAgMB
-AAGjgY8wgYwwDgYDVR0PAQH/BAQDAgOoMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggr
-BgEFBQcDAjAdBgNVHQ4EFgQUXSgxVNG7knU9Od1iKh3eCjE/P9UwHwYDVR0jBBgw
-FoAU83Ovrk0BzVapM+C/fA25dv/Ju34wGwYDVR0RBBQwEoIQYmxhaC5leGFtcGxl
-LmNvbTANBgkqhkiG9w0BAQsFAAOCAQEAJwwnK+GH+X2CK18qzv3fuPzbsR4pWKTB
-aaSweW83+QUiRgsR6sgdNqYH0bE1BO/nysDC8hj2IH77KtOfJJgcqG8w709022rh
-DtZVB33lU17oZC4LUIhq/Ym0JEwYryKck8ClxJpWYKy/kcNwt/WcoAY+aX07c+a4
-0ACCpzTX8vUAxFxcp6ZCwebbSTbv56KHDxMRUSiWiwcDaLlqECsqfETN6eCN/M6A
-GlPoswzIHjXSrAhI8KADOQf4oHI2cOj7ecJX9EqTq5snxFKblS8B12q1javiQGJS
-7eni6Irw6x/enuPxp2VdPJOxPkMSf/+BcADDQ4mOrFtYg7u7+AvWBw==
+Key             	Value
+---             	-----
+lease_id        	pki/issue/example-dot-com/6d8ab3e2-ce31-8821-81e4-740a498af51d
+lease_duration  	259199
+lease_renewable 	false
+certificate     	-----BEGIN CERTIFICATE-----
+MIIDbDCCAlSgAwIBAgIUPiAyxq+nIE6xlWf7hrzLkPQxtvMwDQYJKoZIhvcNAQEL
+BQAwMzExMC8GA1UEAxMoVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3ViIEF1
+dGhvcml0eTAeFw0xNjA5MjcwMDA5MTNaFw0xNjA5MjcwMTA5NDNaMBsxGTAXBgNV
+BAMTEGJsYWguZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQDJAYB04IVdmSC/TimaA6BbXlvgBTZHL5wBUTmO4iHhenL0eDEXVe2Fd7Yq
+75LiBJmcC96hKbqh5rwS8KwN9ElZI52/mSMC+IvoNlYHAf7shwfsjrVx3q7/bTFg
+lz6wECn1ugysxynmMvgQD/pliRkxTQ7RMh4Qlh75YG3R9BHy9ZddklZp0aNaitts
+0uufHnN1UER/wxBCZdWTUu34KDL9I6yE7Br0slKKHPdEsGlFcMkbZhvjslZ7DGvO
+974S0qtOdKiawJZbpNPg0foGZ3AxesDUlkHmmgzUNes/sjknDYTHEfeXM6Uap0j6
+XvyhCxqdeahb/Vtibg0z9I0IusJbAgMBAAGjgY8wgYwwDgYDVR0PAQH/BAQDAgOo
+MB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEFBQcDAjAdBgNVHQ4EFgQU/5oy0rL7
+TT0wX7KZK7qcXqgayNwwHwYDVR0jBBgwFoAUgM37P8oXmA972ztLfw+b1eIY5now
+GwYDVR0RBBQwEoIQYmxhaC5leGFtcGxlLmNvbTANBgkqhkiG9w0BAQsFAAOCAQEA
+CT2vI6/taeLTw6ZulUhLXEXYXWZu1gF8n2COjZzbZXmHxQAoZ3GtnSNwacPHAyIj
+f3cA9Moo552y39LUtWk+wgFtQokWGK7LXglLaveNUBowOHq/xk0waiIinJcgTG53
+Z/qnbJnTjAOG7JwVJplWUIiS1avCksrHt7heE2EGRGJALqyLZ119+PW6ogtCLUv1
+X8RCTw/UkIF/LT+sLF0bXWy4Hn38Gjwj1MVv1l76cEGOVSHyrYkN+6AMnAP58L5+
+IWE9tN3oac4x7jhbuNpfxazIJ8Q6l/Up5U5Evfbh6N1DI0/gFCP20fMBkHwkuLfZ
+2ekZoSeCgFRDlHGkr7Vv9w==
 -----END CERTIFICATE-----
-issuing_ca              -----BEGIN CERTIFICATE-----
-MIIDUzCCAjugAwIBAgIUaJJpBnXW+GkzJ6k6fQ9mqVKkEmQwDQYJKoZIhvcNAQEL
-BQAwEzERMA8GA1UEAxMIcm9vdC5jb20wHhcNMTUxMTIwMTgxMDU2WhcNMzUxMTE1
-MTcxMDU2WjAbMRkwFwYDVQQDExBpbnRlcm1lZGlhdGUuY29tMIIBIjANBgkqhkiG
-9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzTR8agj+uOYCvOSDsNYYb186aDo9QLPHAr96
-tDPjQFyp5Yjr60I6+say7zRPPGLgd3BealJ9EFeO7qlXeqi5z3H0wLzrMYqcGlok
-2vSzdbs03+0/QXOys2R1Bzb+FOd4VoUSTiZ+a8wf07tmusNJCDE5/kI32+etQa8l
-5a9ZQlwpgIWZSQmQjCA5B/0T6WQVwnELHOAGv+mJk7bAY/LVQkjUHzvimySsUmSb
-sB20BPKhammJUDEcObwuJxA+f7NbkXzEypnR0pGULM32TR5Bmzij/iX33XDt3JKi
-I9e0gJIT7bk91heWXLpEv2/+7g/lcXm/Hl9KvtX5WUtVPNENUQIDAQABo4GWMIGT
-MA4GA1UdDwEB/wQEAwIBrjATBgNVHSUEDDAKBggrBgEFBQcDCTAPBgNVHRMBAf8E
-BTADAQH/MB0GA1UdDgQWBBTzc6+uTQHNVqkz4L98Dbl2/8m7fjAfBgNVHSMEGDAW
-gBSmqzdLJm2brQl3mpyIDRTohpQrMDAbBgNVHREEFDASghBpbnRlcm1lZGlhdGUu
-Y29tMA0GCSqGSIb3DQEBCwUAA4IBAQAubC0cuwbitp2Fq5FgH8Mu/Fzhf5qWftxE
-a7VagVExs2uxP5yD57bWck6vZrks03SVk4GFR9yyIVbOIUAVEm1Rw1/PK77l9/2c
-fYhy0OQVZweO+olOgEfC8gYLaBT5Vo3D1CjV/Vb2VGCct3dmMsXuD04HOy1mTz2p
-3yPx1wPoUYNaEu+7gzvUxh+8AM3JmCcrsaa1R9AsayAXtLuCJm9Fy6bU4I3wbxBp
-zTOT7fmkjpjCV4acfgcPF2F90TfcesHl9oUgNsu4tChABiPENA4h2A4yVku9onaQ
-JrNqv2SnJaYH4OTgtguC0cLB7hvr/Sc73pU55OSs2KZWhLZRWAJv
+issuing_ca      	-----BEGIN CERTIFICATE-----
+MIIDijCCAnKgAwIBAgIUB28DoGwgGFKL7fbOu9S4FalHLn0wDQYJKoZIhvcNAQEL
+BQAwLzEtMCsGA1UEAxMkVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgQXV0aG9y
+aXR5MB4XDTE2MDkyNzAwMDgyMVoXDTI2MDkxNjE2MDg1MVowMzExMC8GA1UEAxMo
+VmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3ViIEF1dGhvcml0eTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAOSCiSij4wy1wiMwvZt+rtU3IaO6ZTn9
+LfIPuGsR5/QSJk37pCZQco1LgoE/rTl+/xu3bDovyHDmgObghC6rzVOX2Tpi7kD+
+DOZpqxOsaS8ebYgxB/XJTSxyEJuSAcpSNLqqAiZivuQXdaD0N7H3Or0awwmKE9mD
+I0g8CF4fPDmuuOG0ASn9fMqXVVt5tXtEqZ9yJYfNOXx3FOPjRVOZf+kvSc31wCKe
+i/KmR0AQOmToKMzq988nLqFPTi9KZB8sEU20cGFeTQFol+m3FTcIru94EPD+nLUn
+xtlLELVspYb/PP3VpvRj9b+DY8FGJ5nfSJl7Rkje+CD4VxJpSadin3kCAwEAAaOB
+mTCBljAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU
+gM37P8oXmA972ztLfw+b1eIY5nowHwYDVR0jBBgwFoAUj4YAIxRwrBy0QMRKLnD0
+kVidIuYwMwYDVR0RBCwwKoIoVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3Vi
+IEF1dGhvcml0eTANBgkqhkiG9w0BAQsFAAOCAQEAA4buJuPNJvA1kiATLw1dVU2J
+HPubk2Kp26Mg+GwLn7Vz45Ub133JCYfF3/zXLFZZ5Yub9gWTtjScrvNfQTAbNGdQ
+BdnUlMmIRmfB7bfckhryR2R9byumeHATgNKZF7h8liNHI7X8tTzZGs6wPdXOLlzR
+TlM3m1RNK8pbSPOkfPb06w9cBRlD8OAbNtJmuypXA6tYyiiMYBhP0QLAO3i4m1ns
+aAjAgEjtkB1rQxW5DxoTArZ0asiIdmIcIGmsVxfDQIjFlRxAkafMs74v+5U5gbBX
+wsOledU0fLl8KLq8W3OXqJwhGLK65fscrP0/omPAcFgzXf+L4VUADM4XhW6Xyg==
 -----END CERTIFICATE-----
-private_key             -----BEGIN RSA PRIVATE KEY-----
-MIIEpQIBAAKCAQEAxH5eYopi7RJMmYimLPj36GgG3lYbWcU2FhQPgeyCJa/Ij0xG
-Q7n+9jjn9Dbv/Eza1emZKKtBLh7wbTYtbrd7rGLelYvZa3KHw/0I59BB+mjmZxOS
-e3PoJrDg4ZcX5S38/LhMraJysaH8DsNuiffrLm7kiJooDG6W0z/wS9p9vSuDSaCn
-YYfFTMTQhT0MYLuQAhHSfRrIjzucAW+4n3SKtB3ElNDjXurmag13ioqn604Onmqe
-BGgC6IJCYbpPAXACb/WkmybMDkl0xkTmuFwobQlxLg98lTqGTjpuyUputMu57X/3
-cWRecXGV40XuhpFyQCAAzi/ROXTpYExZaI2I6QIDAQABAoIBAQC11Rc060kmh6OZ
-BOp6fZ60U+ffQiGnTieCAOhk29+IToYzjWsMa4d0hS6pQVmNyfVMtRJFn0z/CCSH
-e/ZJGcR5vzipfTQjCWZ3yKXAF2mm+AIW6vbIBXeUrmQ8fpzfOVJ+73IN0GGA3hyp
-8NJPHLxnSLl1a+qZrpEmRmnxV+y563Uporr7KriwUTDO+F/4YoJ92deDgW6FTR1/
-vB6QIeSoTa1bXrkz+jvNyFh/Z+c3DKAyndzjCRfMTOygwbxJQdrZv1yNfkNSym6/
-lGjZ6GnG/3hkh9nDldHLNJeJ4FbKyN5dbGnXrj2BI156KDE0jnO88TciX0khlRkp
-efj9LcOBAoGBANB2HvtNp0eKDfGtey8Qxl6HP48mwg3pYLEATZtRowBFkyThfOoJ
-Kf8ANNZHCPI/EilEYT6Xin3gdZNpC19gh3K86bCG8Uvq5TRtahO2oM4CenNOJAhe
-utGfv5TfBBRodSRk2939masuavPLEqORKsBt3GSTv6Z1+Pfa+SjLm5F5AoGBAPFN
-kvwXBvNkJOx594C9RVYmznD8z+IxVgqSIInpvu47SXJOWoS/hEwxfTCzCldl2ejK
-eZ+mhJFud+wMbryF7AsW58+JfXr3lNJj7RquNx5cN+DSDV+1fESm9Me6e8XTxEqH
-+ZoVPe/TRG6zJ+k7S99IDR1rE6D/oEjNpB/NxsbxAoGBAJ0Sc9O9Ni8UWd9hbTEQ
-fbfaRszxUkSzNZUI+nDuuVhKFE40zS93CjrHCAjw60/EsEWB7ZgBDWw9hbo160jJ
-biXJLHhDpWsjqeKwEr6Z3F59xZA+L65S2od6zBs7U1KhRqrOiFCjdndieVoLCJdQ
-mZr27JqoLT8bIyZ2y0iu6iBZAoGADyTQMbP8QrApRRIOf2zhehurXxnurgJspPMw
-yZb63Zao8FyMf8JJOkLs2W6TGpMQzvROF7/ql/n32r+Y/4nkG3oPiE3Xqyz4kQ+m
-ZMNEQEqHUzu7jSMlrmVP/WztsaetrQPFnW7x2ShIJi5mNdP72gJ6mDsNG1CPraIC
-R+CxNfECgYEAkqjs3j8Div/XnjPs3TuYtef7B/vgamzQujVkRR6+WkTvnZ1Hp9ge
-vWrnOH3LbV8kfzzq0nbLK0iF7q4gl0czMJioVusaWrga2xkIfiI4yuHrIGatdTos
-nPDHwoPZeRqBv/9OXSfQkYu+FiJnLEoztMb6f1Z1cPjvbuou2FB1p18=
+ca_chain        	[-----BEGIN CERTIFICATE-----
+MIIDijCCAnKgAwIBAgIUB28DoGwgGFKL7fbOu9S4FalHLn0wDQYJKoZIhvcNAQEL
+BQAwLzEtMCsGA1UEAxMkVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgQXV0aG9y
+aXR5MB4XDTE2MDkyNzAwMDgyMVoXDTI2MDkxNjE2MDg1MVowMzExMC8GA1UEAxMo
+VmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3ViIEF1dGhvcml0eTCCASIwDQYJ
+KoZIhvcNAQEBBQADggEPADCCAQoCggEBAOSCiSij4wy1wiMwvZt+rtU3IaO6ZTn9
+LfIPuGsR5/QSJk37pCZQco1LgoE/rTl+/xu3bDovyHDmgObghC6rzVOX2Tpi7kD+
+DOZpqxOsaS8ebYgxB/XJTSxyEJuSAcpSNLqqAiZivuQXdaD0N7H3Or0awwmKE9mD
+I0g8CF4fPDmuuOG0ASn9fMqXVVt5tXtEqZ9yJYfNOXx3FOPjRVOZf+kvSc31wCKe
+i/KmR0AQOmToKMzq988nLqFPTi9KZB8sEU20cGFeTQFol+m3FTcIru94EPD+nLUn
+xtlLELVspYb/PP3VpvRj9b+DY8FGJ5nfSJl7Rkje+CD4VxJpSadin3kCAwEAAaOB
+mTCBljAOBgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQU
+gM37P8oXmA972ztLfw+b1eIY5nowHwYDVR0jBBgwFoAUj4YAIxRwrBy0QMRKLnD0
+kVidIuYwMwYDVR0RBCwwKoIoVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgU3Vi
+IEF1dGhvcml0eTANBgkqhkiG9w0BAQsFAAOCAQEAA4buJuPNJvA1kiATLw1dVU2J
+HPubk2Kp26Mg+GwLn7Vz45Ub133JCYfF3/zXLFZZ5Yub9gWTtjScrvNfQTAbNGdQ
+BdnUlMmIRmfB7bfckhryR2R9byumeHATgNKZF7h8liNHI7X8tTzZGs6wPdXOLlzR
+TlM3m1RNK8pbSPOkfPb06w9cBRlD8OAbNtJmuypXA6tYyiiMYBhP0QLAO3i4m1ns
+aAjAgEjtkB1rQxW5DxoTArZ0asiIdmIcIGmsVxfDQIjFlRxAkafMs74v+5U5gbBX
+wsOledU0fLl8KLq8W3OXqJwhGLK65fscrP0/omPAcFgzXf+L4VUADM4XhW6Xyg==
+-----END CERTIFICATE----- -----BEGIN CERTIFICATE-----
+MIIDejCCAmKgAwIBAgIUDXJyQ1uJPF5ridDOCvGtVF1F8HUwDQYJKoZIhvcNAQEL
+BQAwJzElMCMGA1UEAxMcVmF1bHQgVGVzdGluZyBSb290IEF1dGhvcml0eTAeFw0x
+NjA5MjcwMDA4MjBaFw0yNjA5MjAyMDA4NTBaMC8xLTArBgNVBAMTJFZhdWx0IFRl
+c3RpbmcgSW50ZXJtZWRpYXRlIEF1dGhvcml0eTCCASIwDQYJKoZIhvcNAQEBBQAD
+ggEPADCCAQoCggEBAKHsRTw3aShwDTbywK7AeXNvz7IrmdOLAsd+svDdIUn/4kWQ
+lAy4uXYncQc/V9bqLjza3tflK7otXT+V5GjbK+WpW5WSp8LkVhKdLRWOnPWJEC+B
+nOucmLR0mFQF1W4Bfx0fYYCLdN/YbjSevPmA0UzlIN/pdQQoxUIvraTHPNBar94K
+zmlMu06qAvl27LXYUE3nAhQaRGq4M39WbAUtRsNKaTU72qTpMsstpnBB1QBT2m2U
+44twFpXZAgfR/hSqcA4NegPWmB5l+E2GhYfihOhVcnFaH2tgXb4MOMUyRH1hNdgZ
+28K5G1ILt2+Rp+NSosA0LI3pV490SJfAxuc0tsUCAwEAAaOBlTCBkjAOBgNVHQ8B
+Af8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUj4YAIxRwrBy0QMRK
+LnD0kVidIuYwHwYDVR0jBBgwFoAULNIU30rP+wMVelJMFNyDtxgtq04wLwYDVR0R
+BCgwJoIkVmF1bHQgVGVzdGluZyBJbnRlcm1lZGlhdGUgQXV0aG9yaXR5MA0GCSqG
+SIb3DQEBCwUAA4IBAQCOjH2n8H1Q5KpaWTm378FKd2YY1nzI/nCwjAQX96VcJUrZ
+W1ofPsTcCASQKwo3HC2ayV46DMiKoJWI+xOux2N+S9uVd+SC4ZloFzSER8cCDRRk
+huVra+cAaljnkJVb4Ojv6vHnXljx9NrcW6KzJzwMf1HzewyG+P1EjD4/kcA5r0Gw
+vuzGXMXmjMATf0LZlklDOHkNLtvnLS8axbXI05TlHIj9y9Y+aQyFYebwip+ZXYju
+pIJFswrsCk5e2G6+UmhV81JH29IvjBi4POgqm2+mrGz5xS/i6flcs/8pn01jlDpC
+knj9MxY9j42z2BKkhHayyuOa0BQm0TTu4S2fhajl
+-----END CERTIFICATE-----]
+private_key     	-----BEGIN RSA PRIVATE KEY-----
+MIIEpgIBAAKCAQEAyQGAdOCFXZkgv04pmgOgW15b4AU2Ry+cAVE5juIh4Xpy9Hgx
+F1XthXe2Ku+S4gSZnAveoSm6oea8EvCsDfRJWSOdv5kjAviL6DZWBwH+7IcH7I61
+cd6u/20xYJc+sBAp9boMrMcp5jL4EA/6ZYkZMU0O0TIeEJYe+WBt0fQR8vWXXZJW
+adGjWorbbNLrnx5zdVBEf8MQQmXVk1Lt+Cgy/SOshOwa9LJSihz3RLBpRXDJG2Yb
+47JWewxrzve+EtKrTnSomsCWW6TT4NH6BmdwMXrA1JZB5poM1DXrP7I5Jw2ExxH3
+lzOlGqdI+l78oQsanXmoW/1bYm4NM/SNCLrCWwIDAQABAoIBAQCCbHMJY1Wl8eIJ
+v5HG2WuHXaaHqVoavo2fXTDXwWryfx1v+zz/Q0YnQBH3shPAi/OQCTOfpw/uVWTb
+dUZul3+wUyfcVmUdXGCLgBY53dWna8Z8e+zHwhISsqtDXV/TpelUBDCNO324XIIR
+Cg0TLO4nyzQ+ESLo6D+Y2DTp8lBjMEkmKTd8CLXR2ycEoVykN98qPZm8keiLGO91
+I8K7aRd8uOyQ6HUfJRlzFHSuwaLReErxGTEPI4t/wVqh2nP2gGBsn3apiJ0ul6Jz
+NlYO5PqiwpeDk4ibhQBpicnm1jnEcynH/WtGuKgMNB0M4SBRBsEguO7WoKx3o+qZ
+iVIaPWDhAoGBAO05UBvyJpAcz/ZNQlaF0EAOhoxNQ3h6+6ZYUE52PgZ/DHftyJPI
+Y+JJNclY91wn91Yk3ROrDi8gqhzA+2Lelxo1kuZDu+m+bpzhVUdJia7tZDNzRIhI
+24eP2GdochooOZ0qjvrik4kuX43amBhQ4RHsBjmX5CnUlL5ZULs8v2xnAoGBANjq
+VLAwiIIqJZEC6BuBvVYKaRWkBCAXvQ3j/OqxHRYu3P68PZ58Q7HrhrCuyQHTph2v
+fzfmEMPbSCrFIrrMRmjUG8wopL7GjZjFl8HOBHFwzFiz+CT5DEC+IJIRkp4HM8F/
+PAzjB2wCdRdSjLTD5ph0/xQIg5xfln7D+wqU0QHtAoGBAKkLF0/ivaIiNftw0J3x
+WxXag/yErlizYpIGCqvuzII6lLr9YdoViT/eJYrmb9Zm0HS9biCu2zuwDijRSBIL
+RieyF40opUaKoi3+0JMtDwTtO2MCd8qaCH3QfkgqAG0tTuj1Q8/6F2JA/myKYamq
+MMhhpYny9+7rAlemM8ZJIqtvAoGBAKOI3zpKDNCdd98A4v7B7H2usZUIJ7gOTZDo
+XqiNyRENWb2PK6GNq/e6SrxvuclvyKA+zFnXULJoYtsj7tAH69lieGaOCc5uoRgZ
+eBU7/euMj/McE6vEO3GgJawaJYCQi3uJMjvA+bp7i81+hehOfU5ZfmmbFaZSBoMh
+u+U5Vu3tAoGBANnBIbHfD3E7rqnqdpH1oRRHLA1VdghzEKgyUTPHNDzPJG87RY3c
+rRqeXepblud3qFjD60xS9BzcBijOvZ4+KHk6VIMpkyqoeNVFCJbBVCw+JGMp88+v
+e9t+2iwryh5+rnq+pg6anmgwHldptJc1XEFZA2UUQ89RP7kOGQF6IkIS
 -----END RSA PRIVATE KEY-----
-private_key_type        rsa
-serial_number           14:c9:de:ee:ba:35:0f:2b:e9:65:5f:94:44:73:0f:b7:3d:ef:bf:d3
+private_key_type	rsa
+serial_number   	3e:20:32:c6:af:a7:20:4e:b1:95:67:fb:86:bc:cb:90:f4:31:b6:f3
 ```
 
 Vault has now generated a new set of credentials using the `example-dot-com`
 role configuration. Here we see the dynamically generated private key and
-certificate. The issuing CA certificate is returned as well.
+certificate. The issuing CA certificate and CA trust chain is returned as well.
 
 Using ACLs, it is possible to restrict using the pki backend such that trusted
 operators can manage the role definitions, and both users and applications are
@@ -371,7 +415,7 @@ subpath for interactive help output.
   </dd>
 </dl>
 
-### /pki/ca/chain
+### /pki/ca_chain
 #### GET
 
 <dl class="api">
@@ -386,7 +430,7 @@ subpath for interactive help output.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/ca/chain`</dd>
+  <dd>`/pki/ca_chain`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -410,10 +454,10 @@ subpath for interactive help output.
   <dt>Description</dt>
   <dd>
     Retrieves one of a selection of certificates. Valid values: `ca` for the CA
-    certificate, `crl` for the current CRL, or a serial number in either
-    hyphen-separated or colon-separated octal format. This endpoint returns
-    the certificate in PEM formatting in the `certificate` key of the JSON
-    object. <br /><br />This is an unauthenticated endpoint.
+    certificate, `crl` for the current CRL, `ca_chain` for the CA trust chain
+    or a serial number in either hyphen-separated or colon-separated octal
+    format. This endpoint returns the certificate in PEM formatting in the
+    `certificate` key of the JSON object. <br /><br />This is an unauthenticated endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -977,6 +1021,7 @@ subpath for interactive help output.
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
         "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+        "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n"],
         "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAnVHfwoKsUG1GDVyWB1AFroaKl2ImMBO8EnvGLRrmobIkQvh+\n...\nQN351pgTphi6nlCkGPzkDuwvtxSxiCWXQcaxrHAL7MiJpPzkIBq1\n-----END RSA PRIVATE KEY-----\n",
         "private_key_type": "rsa",
         "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
@@ -1503,6 +1548,7 @@ subpath for interactive help output.
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
         "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+        "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n"],
         "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
         },
       "auth": null
@@ -1595,6 +1641,7 @@ subpath for interactive help output.
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
         "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+        "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n"],
         "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
         },
       "auth": null
@@ -1661,6 +1708,7 @@ subpath for interactive help output.
       "data": {
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
         "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n",
+        "ca_chain": ["-----BEGIN CERTIFICATE-----\nMIIDUTCCAjmgAwIBAgIJAKM+z4MSfw2mMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNV\n...\nG/7g4koczXLoUM3OQXd5Aq2cs4SS1vODrYmgbioFsQ3eDHd1fg==\n-----END CERTIFICATE-----\n"]
         "serial": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58"
         },
       "auth": null

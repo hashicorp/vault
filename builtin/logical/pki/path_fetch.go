@@ -254,11 +254,13 @@ reply:
 }
 
 const pathFetchHelpSyn = `
-Fetch a CA, CRL, or non-revoked certificate.
+Fetch a CA, CRL, CA Chain, or non-revoked certificate.
 `
 
 const pathFetchHelpDesc = `
 This allows certificates to be fetched. If using the fetch/ prefix any non-revoked certificate can be fetched.
 
 Using "ca" or "crl" as the value fetches the appropriate information in DER encoding. Add "/pem" to either to get PEM encoding.
+
+Using "ca_chain" as the value fetches the certificate authority trust chain in PEM encoding.
 `
