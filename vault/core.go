@@ -1530,7 +1530,7 @@ func (c *Core) ValidateWrappingToken(token string) (bool, error) {
 		return false, nil
 	}
 
-	if te.Policies == nil || len(te.Policies) != 1 {
+	if len(te.Policies) != 1 {
 		return false, nil
 	}
 
