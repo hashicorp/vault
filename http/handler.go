@@ -73,6 +73,8 @@ func wrappingVerificationFunc(core *vault.Core, req *logical.Request) error {
 	if req.Data != nil && req.Data["token"] != nil {
 		if tokenStr, ok := req.Data["token"].(string); !ok {
 			return fmt.Errorf("could not decode token in request body")
+		} else if tokenStr == "" {
+			return fmt.Errorf("empty token in request body")
 		} else {
 			token = tokenStr
 		}

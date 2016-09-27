@@ -40,7 +40,7 @@ func (c *UnwrapCommand) Run(args []string) int {
 		_, err = uuid.ParseUUID(tokenID)
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf(
-				"Given token could not be parsed as a UUID: %s", err))
+				"Given token could not be parsed as a UUID: %v", err))
 			return 1
 		}
 	default:

@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -138,17 +139,18 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	}
 
 	switch resp.StatusCode {
-	case 200: // New method is supported
+	case http.StatusOK: // New method is supported
 		return ParseSecret(resp.Body)
-	case 404: // Fall back to old method
+	case http.StatusNotFound: // Fall back to old method
 	default:
 		return nil, nil
 	}
 
-	origToken := c.c.Token()
-	defer c.c.SetToken(origToken)
-
-	c.c.SetToken(wrappingToken)
+	if wrappingToken == "" {
+		origToken := c.c.Token()
+		defer c.c.SetToken(origToken)
+		c.c.SetToken(wrappingToken)
+	}
 
 	secret, err := c.Read(wrappedResponseLocation)
 	if err != nil {
