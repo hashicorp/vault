@@ -54,6 +54,11 @@ template values are '{{username}}' and
 				Default:     "4h",
 				Description: "The lease length; defaults to 4 hours",
 			},
+			
+			"consistency": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The consistency level for the operations.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -123,11 +128,14 @@ func (b *backend) pathRoleCreate(
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error parsing lease value of %s: %s", leaseRaw, err)), nil
 	}
+	
+	consistencyStr := data.Get("consistency").(string)	
 
 	entry := &roleEntry{
 		Lease:       lease,
 		CreationCQL: creationCQL,
 		RollbackCQL: rollbackCQL,
+		Consistency: consistencyStr,
 	}
 
 	// Store it
@@ -146,6 +154,7 @@ type roleEntry struct {
 	CreationCQL string        `json:"creation_cql" structs:"creation_cql"`
 	Lease       time.Duration `json:"lease" structs:"lease"`
 	RollbackCQL string        `json:"rollback_cql" structs:"rollback_cql"`
+	Consistency string        `json:"consistency" structs:"consistency"`
 }
 
 const pathRoleHelpSyn = `

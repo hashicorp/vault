@@ -67,6 +67,7 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 		Path:      "roles/test",
 		Data: map[string]interface{}{
 			"creation_cql": testRole,
+			"consistency":  "All",
 		},
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gocql/gocql"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -59,6 +60,16 @@ func (b *backend) pathCredsCreateRead(
 	session, err := b.DB(req.Storage)
 	if err != nil {
 		return nil, err
+	}
+	
+	// Set consistency
+	if role.Consistency != "" {
+		consistencyValue, err := gocql.ParseConsistencyWrapper(role.Consistency)
+		if err != nil {
+			return nil, err
+		}
+		
+		session.SetConsistency(consistencyValue)
 	}
 
 	// Execute each query
