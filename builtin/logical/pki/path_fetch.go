@@ -137,7 +137,6 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		if req.Path == "ca_chain" {
 			contentType = "application/pkix-cert"
 		}
-		pemType = "CERTIFICATE"
 	case req.Path == "crl" || req.Path == "crl/pem":
 		serial = "crl"
 		contentType = "application/pkix-crl"
