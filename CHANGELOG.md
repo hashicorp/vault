@@ -58,6 +58,8 @@ BUG FIXES:
  * auth/approle: Fixed panic on deleting approle that doesn't exist [GH-1920]
  * auth/aws-ec2: Allow authentication if the underlying host is in a bad state
    but the instance is running [GH-1884]
+ * auth/token: Fixed metadata getting missed out from token lookup response by
+   gracefully handling token entry upgrade [GH-1924]
  * cli: Don't error on newline in token file [GH-1774]
  * core: Pass back content-type header for forwarded requests [GH-1791]
  * core: Fix panic if the same key was given twice to `generate-root` [GH-1827]
