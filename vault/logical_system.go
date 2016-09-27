@@ -1483,7 +1483,7 @@ func (b *SystemBackend) handleWrappingUnwrap(
 
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseToken(token)
+		_, err := b.Core.tokenStore.UseTokenByID(token)
 		if err != nil {
 			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}
@@ -1599,7 +1599,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
-		_, err := b.Core.tokenStore.UseToken(token)
+		_, err := b.Core.tokenStore.UseTokenByID(token)
 		if err != nil {
 			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
 		}

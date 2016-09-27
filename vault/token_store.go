@@ -757,6 +757,15 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	return te, nil
 }
 
+func (ts *TokenStore) UseTokenByID(id string) (*TokenEntry, error) {
+	te, err := ts.Lookup(id)
+	if err != nil {
+		return te, err
+	}
+
+	return ts.UseToken(te)
+}
+
 // Lookup is used to find a token given its ID. It acquires a read lock, then calls lookupSalted.
 func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"token", "lookup"}, time.Now())
