@@ -227,19 +227,21 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 	var contentType string
 	var body []byte
 
-	if nonEmpty {
-		// Get the header
-		contentTypeRaw, ok := resp.Data[logical.HTTPContentType]
-		if !ok {
-			retErr(w, "no content type given")
-			return
-		}
+	// Get the content type header; don't require it if the body is empty
+	contentTypeRaw, ok := resp.Data[logical.HTTPContentType]
+	if !ok && !nonEmpty {
+		retErr(w, "no content type given")
+		return
+	}
+	if ok {
 		contentType, ok = contentTypeRaw.(string)
 		if !ok {
 			retErr(w, "cannot decode content type")
 			return
 		}
+	}
 
+	if nonEmpty {
 		// Get the body
 		bodyRaw, ok := resp.Data[logical.HTTPRawBody]
 		if !ok {
@@ -254,7 +256,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 	}
 
 	// Write the response
-	if nonEmpty {
+	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}
 	w.WriteHeader(status)
