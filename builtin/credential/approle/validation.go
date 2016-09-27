@@ -29,8 +29,7 @@ type secretIDStorageEntry struct {
 
 	// Number of times this SecretID can be used to perform the login
 	// operation
-	SecretIDNumUses int `json:"secret_id_num_uses"
-structs:"secret_id_num_uses" mapstructure:"secret_id_num_uses"`
+	SecretIDNumUses int `json:"secret_id_num_uses" structs:"secret_id_num_uses" mapstructure:"secret_id_num_uses"`
 
 	// Duration after which this SecretID should expire. This is croleed by
 	// the backend mount's max TTL value.
