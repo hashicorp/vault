@@ -1482,6 +1482,12 @@ func (b *SystemBackend) handleWrappingUnwrap(
 	}
 
 	if thirdParty {
+		// Use the token to decrement the use count to avoid a second operation on the token.
+		_, err := b.Core.tokenStore.UseToken(token)
+		if err != nil {
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+		}
+
 		defer b.Core.tokenStore.Revoke(token)
 	}
 
@@ -1492,7 +1498,7 @@ func (b *SystemBackend) handleWrappingUnwrap(
 	}
 	cubbyResp, err := b.Core.router.Route(cubbyReq)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error looking up wrapping information: %v", err)), nil
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -1506,11 +1512,11 @@ func (b *SystemBackend) handleWrappingUnwrap(
 
 	responseRaw := cubbyResp.Data["response"]
 	if responseRaw == nil {
-		return logical.ErrorResponse("no response found inside the cubbyhole"), nil
+		return nil, fmt.Errorf("no response found inside the cubbyhole")
 	}
 	response, ok := responseRaw.(string)
 	if !ok {
-		return logical.ErrorResponse("could not decode response inside the cubbyhole"), nil
+		return nil, fmt.Errorf("could not decode response inside the cubbyhole")
 	}
 
 	resp := &logical.Response{
@@ -1542,7 +1548,7 @@ func (b *SystemBackend) handleWrappingLookup(
 	}
 	cubbyResp, err := b.Core.router.Route(cubbyReq)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error looking up wrapping information: %v", err)), nil
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -1563,7 +1569,7 @@ func (b *SystemBackend) handleWrappingLookup(
 	if creationTTLRaw != nil {
 		creationTTL, err := creationTTLRaw.(json.Number).Int64()
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error reading creation_ttl value from wrapping information: %v", err)), ErrInternalError
+			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
 		}
 		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
 	}
@@ -1592,6 +1598,11 @@ func (b *SystemBackend) handleWrappingRewrap(
 	}
 
 	if thirdParty {
+		// Use the token to decrement the use count to avoid a second operation on the token.
+		_, err := b.Core.tokenStore.UseToken(token)
+		if err != nil {
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+		}
 		defer b.Core.tokenStore.Revoke(token)
 	}
 
@@ -1603,7 +1614,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 	}
 	cubbyResp, err := b.Core.router.Route(cubbyReq)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error looking up wrapping information: %v", err)), nil
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -1618,11 +1629,11 @@ func (b *SystemBackend) handleWrappingRewrap(
 	// Set the creation TTL on the request
 	creationTTLRaw := cubbyResp.Data["creation_ttl"]
 	if creationTTLRaw == nil {
-		return logical.ErrorResponse("creation_ttl value in wrapping information was nil"), nil
+		return nil, fmt.Errorf("creation_ttl value in wrapping information was nil")
 	}
 	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error reading creation_ttl value from wrapping information: %v", err)), ErrInternalError
+		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
 	}
 
 	// Fetch the original response and return it as the data for the new response
@@ -1633,7 +1644,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 	}
 	cubbyResp, err = b.Core.router.Route(cubbyReq)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error looking up wrapping information: %v", err)), nil
+		return nil, fmt.Errorf("error looking up response: %v", err)
 	}
 	if cubbyResp == nil {
 		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
@@ -1647,7 +1658,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 
 	response := cubbyResp.Data["response"]
 	if response == nil {
-		return logical.ErrorResponse("no response found inside the cubbyhole"), nil
+		return nil, fmt.Errorf("no response found inside the cubbyhole")
 	}
 
 	// Return response in "response"; wrapping code will detect the rewrap and
