@@ -598,7 +598,7 @@ func TestTokenStore_HandleRequest_NonAssignable(t *testing.T) {
 		t.Fatalf("err: %v %v", err, resp)
 	}
 
-	req.Data["policies"] = []string{"default", "foo", cubbyholeResponseWrappingPolicyName}
+	req.Data["policies"] = []string{"default", "foo", responseWrappingPolicyName}
 
 	resp, err = ts.HandleRequest(req)
 	if err != nil {

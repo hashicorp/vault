@@ -520,7 +520,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 	}
-	err := ts.create(te)
+	err = ts.create(te)
 	if err != nil {
 		t.Fatal(err)
 	}

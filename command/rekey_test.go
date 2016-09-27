@@ -177,7 +177,10 @@ func TestRekey_init_pgp(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 30,
 		},
 	}
-	sysBackend := vault.NewSystemBackend(core, bc)
+	sysBackend, err := vault.NewSystemBackend(core, bc)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
