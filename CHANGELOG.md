@@ -25,10 +25,10 @@ FEATURES:
  * **Initial Root Token PGP Encryption**: Similar to `generate-root`, the root
    token created at initialization time can now be PGP encrypted [GH-1883]
  * **Support Chained Intermediate CAs in `pki`**: The `pki` backend now allows,
-   when a CA cert and key are being supplied (as opposed to generated
-   internally), a trust chain of arbitrary length. The chain is returned as a
-   parameter at certificate issue/sign time and is retrievable independently as
-   well. [GH-1694]
+   when a CA cert is being supplied as a signed root or intermediate, a trust
+   chain of arbitrary length. The chain is returned as a parameter at
+   certificate issue/sign time and is retrievable independently as well.
+   [GH-1694]
 
 IMPROVEMENTS:
 
