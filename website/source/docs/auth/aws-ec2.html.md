@@ -274,8 +274,13 @@ $ vault auth-enable aws-ec2
 
 #### Configure the credentials required to make AWS API calls
 
-Note: the client uses the official AWS SDK and will use environment variable or
-IAM role-provided credentials if available. The AWS credentials used require the IAM action `ec2:DescribeInstances` to be allowed.
+If not specified, Vault will attempt to use standard environment variables
+(`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) or IAM EC2 instance role
+credentials if available.
+
+The IAM account or role to which the credentials map must allow the
+`ec2:DescribeInstances` action.  In addition, if IAM Role binding is used (see
+`bound_iam_role_arn` below), `iam:GetInstanceProfile` must also be allowed.
 
 ```
 $ vault write auth/aws-ec2/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
@@ -843,9 +848,11 @@ in its identity document to match the one specified by this parameter.
       <li>
         <span class="param">bound_iam_role_arn</span>
         <span class="param-flags">optional</span>
-If set, defines a constraint on the EC2 instances to be associated with an IAM
-role ARN which has a prefix that matches the value specified by this
-parameter. Note that an exact match is also a prefix.
+	If set, defines a constraint on the authenticating EC2 instance that it
+must match the IAM role ARN specified by this parameter.  The value is
+prefix-matched (as though it were a glob ending in `*`).  The configured
+IAM user or EC2 instance role must be allowed to execute the
+`iam:GetInstanceProfile` action if this is specified.
       </li>
     </ul>
     <ul>
@@ -854,7 +861,8 @@ parameter. Note that an exact match is also a prefix.
         <span class="param-flags">optional</span>
 If set, defines a constraint on the EC2 instances to be associated with an IAM
 instance profile ARN which has a prefix that matches the value specified by
-this parameter. Note that an exact match is also a prefix.
+this parameter. The value is prefix-matched (as though it were a glob ending
+in `*`).
       </li>
     </ul>
     <ul>

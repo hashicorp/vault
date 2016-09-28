@@ -13,13 +13,13 @@ func pathConfigClient(b *backend) *framework.Path {
 			"access_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "AWS Access key with permissions to query EC2 DescribeInstances API.",
+				Description: "AWS Access Key ID for the account used to make AWS API requests.",
 			},
 
 			"secret_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "AWS Secret key with permissions to query EC2 DescribeInstances API.",
+				Description: "AWS Secret Access Key for the account used to make AWS API requests.",
 			},
 
 			"endpoint": &framework.FieldSchema{
