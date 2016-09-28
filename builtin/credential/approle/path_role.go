@@ -604,6 +604,11 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 		return err
 	}
 
+	// If previousRoleID is still intact, don't create another one
+	if previousRoleID != "" {
+		return nil
+	}
+
 	// Create a storage entry for reverse mapping of RoleID to role.
 	// Note that secondary index is created when the roleLock is held.
 	return b.setRoleIDEntry(s, role.RoleID, &roleIDStorageEntry{
@@ -617,7 +622,7 @@ func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEnt
 		return nil, fmt.Errorf("missing role_name")
 	}
 
-	var result roleStorageEntry
+	var role roleStorageEntry
 
 	lock := b.roleLock(roleName)
 
@@ -628,11 +633,11 @@ func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEnt
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
-	} else if err := entry.DecodeJSON(&result); err != nil {
+	} else if err := entry.DecodeJSON(&role); err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &role, nil
 }
 
 // pathRoleCreateUpdate registers a new role with the backend or updates the options
@@ -896,9 +901,15 @@ func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC str
 	d["expiration_time"] = result.ExpirationTime.Format(time.RFC3339Nano)
 	d["last_updated_time"] = result.LastUpdatedTime.Format(time.RFC3339Nano)
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: d,
-	}, nil
+	}
+
+	if _, ok := d["SecretIDNumUses"]; ok {
+		resp.AddWarning("The field SecretIDNumUses is deprecated and will be removed in a future release; refer to secret_id_num_uses instead")
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathRoleSecretIDSecretIDDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
