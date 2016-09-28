@@ -548,6 +548,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.handleWrappingWrap,
 				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
 			},
 
 			&framework.Path{
@@ -562,6 +565,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.handleWrappingUnwrap,
 				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["unwrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["unwrap"][1]),
 			},
 
 			&framework.Path{
@@ -576,6 +582,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.handleWrappingLookup,
 				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["wraplookup"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["wraplookup"][1]),
 			},
 
 			&framework.Path{
@@ -590,6 +599,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.handleWrappingRewrap,
 				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
 			},
 		},
 	}
@@ -2066,5 +2078,28 @@ Enable a new audit backend or disable an existing backend.
 		"Fetches the capabilities of the token associated with the given token, on the given path.",
 		`When there is no access to the token, token accessor can be used to fetch the token's capabilities
 		on a given path.`,
+	},
+
+	"wrap": {
+		"Response-wraps an arbitrary JSON object.",
+		`Round trips the given input data into a response-wrapped token.`,
+	},
+
+	"unwrap": {
+		"Unwraps a response-wrapped token.",
+		`Unwraps a response-wrapped token. Unlike simply reading from cubbyhole/response,
+		this provides additional validation on the token, and rather than a JSON-escaped
+		string, the returned response is the exact same as the contained wrapped response.`,
+	},
+
+	"wraplookup": {
+		"Looks up the properties of a response-wrapped token.",
+		`Returns the creation TTL and creation time of a response-wrapped token.`,
+	},
+
+	"rewrap": {
+		"Rotates a response-wrapped token.",
+		`Rotates a response-wrapped token; the output is a new token with the same
+		response wrapped inside and the same creation TTL. The original token is revoked.`,
 	},
 }
