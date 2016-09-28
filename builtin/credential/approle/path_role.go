@@ -604,6 +604,11 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 		return err
 	}
 
+	// If previousRoleID is still intact, don't create another one
+	if previousRoleID != "" {
+		return nil
+	}
+
 	// Create a storage entry for reverse mapping of RoleID to role.
 	// Note that secondary index is created when the roleLock is held.
 	return b.setRoleIDEntry(s, role.RoleID, &roleIDStorageEntry{
@@ -617,7 +622,7 @@ func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEnt
 		return nil, fmt.Errorf("missing role_name")
 	}
 
-	var result roleStorageEntry
+	var role roleStorageEntry
 
 	lock := b.roleLock(roleName)
 
@@ -628,11 +633,11 @@ func (b *backend) roleEntry(s logical.Storage, roleName string) (*roleStorageEnt
 		return nil, err
 	} else if entry == nil {
 		return nil, nil
-	} else if err := entry.DecodeJSON(&result); err != nil {
+	} else if err := entry.DecodeJSON(&role); err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &role, nil
 }
 
 // pathRoleCreateUpdate registers a new role with the backend or updates the options
