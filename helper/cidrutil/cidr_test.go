@@ -175,6 +175,23 @@ func TestCIDRUtil_Subset(t *testing.T) {
 	if subset {
 		t.Fatalf("expected CIDR %q to not be a subset of CIDR %q", cidr2, cidr1)
 	}
+
+	cidr1 = "192.168.0.128/25"
+	cidr2 = "192.168.0.0/24"
+	subset, err = Subset(cidr1, cidr2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if subset {
+		t.Fatalf("expected CIDR %q to not be a subset of CIDR %q", cidr2, cidr1)
+	}
+	subset, err = Subset(cidr2, cidr1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !subset {
+		t.Fatal("expected CIDR %q to be a subset of CIDR %q", cidr1, cidr2)
+	}
 }
 
 func TestCIDRUtil_SubsetBlocks(t *testing.T) {
