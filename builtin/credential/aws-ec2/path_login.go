@@ -327,7 +327,7 @@ func (b *backend) pathLoginUpdate(
 			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
 		}
 		iamInstanceProfileARN := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
-		if iamInstanceProfileARN != roleEntry.BoundIamInstanceProfileARN {
+		if !strings.HasPrefix(iamInstanceProfileARN, roleEntry.BoundIamInstanceProfileARN) {
 			return logical.ErrorResponse(fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName)), nil
 		}
 	}
@@ -367,7 +367,7 @@ func (b *backend) pathLoginUpdate(
 			return nil, fmt.Errorf("IAM role ARN could not be fetched")
 		}
 
-		if iamRoleARN != roleEntry.BoundIamRoleARN {
+		if !strings.HasPrefix(iamRoleARN, roleEntry.BoundIamRoleARN) {
 			return logical.ErrorResponse(fmt.Sprintf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName)), nil
 		}
 	}

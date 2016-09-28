@@ -843,16 +843,18 @@ in its identity document to match the one specified by this parameter.
       <li>
         <span class="param">bound_iam_role_arn</span>
         <span class="param-flags">optional</span>
-        If set, defines a constraint on the EC2 instances that they should be
-using the IAM role ARN specified by this parameter.
+If set, defines a constraint on the EC2 instances to be associated with an IAM
+role ARN which has a prefix that matches the value specified by this
+parameter. Note that an exact match is also a prefix.
       </li>
     </ul>
-    <ul>
+j   <ul>
       <li>
         <span class="param">bound_iam_instance_profile_arn</span>
         <span class="param-flags">optional</span>
-        If set, defines a constraint on the EC2 instances that they should be
-using the IAM instance profile ARN specified by this parameter.
+If set, defines a constraint on the EC2 instances to be associated with an IAM
+instance profile ARN which has a prefix that matches the value specified by
+this parameter. Note that an exact match is also a prefix.
       </li>
     </ul>
     <ul>
