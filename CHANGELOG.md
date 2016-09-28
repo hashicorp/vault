@@ -14,6 +14,10 @@ DEPRECATIONS/CHANGES:
    HA behavior, so this flag discourages use by default without explicitly
    enabling it. If you are using this functionality, when upgrading, you should
    set `ha_enabled` to `"true"` *before* starting the new versions of Vault.
+ * Default/Max lease/token TTLs are now 32 days: In previous versions of Vault
+   the default was 30 days, but moving it to 32 days allows some operations
+   (e.g. reauthenticating, renewing, etc.) to be performed via a monthly cron
+   job.
 
 FEATURES:
 
