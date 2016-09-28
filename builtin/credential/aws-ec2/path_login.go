@@ -66,6 +66,10 @@ on either the role or the role tag, the 'nonce' holds no significance.`,
 // instanceIamRoleARN fetches the IAM role ARN associated with the given
 // instance profile name
 func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, region string) (string, error) {
+	if instanceProfileName == "" {
+		return "", fmt.Errorf("missing instance profile name")
+	}
+
 	iamClient, err := b.clientIAM(s, region)
 	if err != nil {
 		return "", err
@@ -341,10 +345,18 @@ func (b *backend) pathLoginUpdate(
 		// Fetch the instance profile ARN from the instance description
 		iamInstanceProfileARN := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
 
+		if iamInstanceProfileARN == "" {
+			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is empty")
+		}
+
 		// Extract out the instance profile name from the instance
 		// profile ARN
 		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, ":instance-profile/")
 		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
+
+		if iamInstanceProfileName == "" {
+			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
+		}
 
 		// Use instance profile ARN to fetch the associated role ARN
 		iamRoleARN, err := b.instanceIamRoleARN(req.Storage, iamInstanceProfileName, identityDoc.Region)
