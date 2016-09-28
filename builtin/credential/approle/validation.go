@@ -363,6 +363,7 @@ func (b *backend) nonLockedSecretIDStorageEntry(s logical.Storage, roleNameHMAC,
 		return nil, err
 	}
 
+	// TODO: Remove this upgrade bit in future releases
 	persistNeeded := false
 	if result.SecretIDNumUsesDeprecated != 0 {
 		if result.SecretIDNumUses == 0 ||
