@@ -38,7 +38,7 @@ func TestLogical(t *testing.T) {
 	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"renewable":      false,
-		"lease_duration": json.Number(strconv.Itoa(int((30 * 24 * time.Hour) / time.Second))),
+		"lease_duration": json.Number(strconv.Itoa(int((32 * 24 * time.Hour) / time.Second))),
 		"data": map[string]interface{}{
 			"data": "bar",
 		},

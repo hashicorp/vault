@@ -98,7 +98,7 @@ seconds (one hour) as specified.
     "data": {
       "foo": "bar"
     },
-    "lease_duration": 2592000,
+    "lease_duration": 2764800,
     "lease_id": "",
     "renewable": false
   }
@@ -142,7 +142,7 @@ seconds (one hour) as specified.
     "data": {
       "keys": ["foo", "foo/"]
     },
-    "lease_duration": 2592000,
+    "lease_duration": 2764800,
     "lease_id": "",
     "renewable": false
   }

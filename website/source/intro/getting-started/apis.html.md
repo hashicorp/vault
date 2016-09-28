@@ -189,7 +189,7 @@ This should return a response like this:
 {
   "lease_id": "secret/foo/cc529d06-36c8-be27-31f5-2390e1f6e2ae",
   "renewable": false,
-  "lease_duration": 2592000,
+  "lease_duration": 2764800,
   "data": {
     "bar": "baz"
   },

@@ -159,7 +159,7 @@ As expected, the value previously set is returned to us.
     "data": {
       "keys": ["foo", "foo/"]
     },
-    "lease_duration": 2592000,
+    "lease_duration": 2764800,
     "lease_id": "",
     "renewable": false
   }

@@ -162,7 +162,7 @@ func testAccStepMapUserIdCidr(t *testing.T, cidr string) logicaltest.TestStep {
 
 func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 	checkTTL := func(resp *logical.Response) error {
-		if resp.Auth.LeaseOptions.TTL.String() != "720h0m0s" {
+		if resp.Auth.LeaseOptions.TTL.String() != "768h0m0s" {
 			return fmt.Errorf("invalid TTL")
 		}
 		return nil
@@ -186,7 +186,7 @@ func testAccLogin(t *testing.T, display string) logicaltest.TestStep {
 
 func testAccLoginAppIDInPath(t *testing.T, display string) logicaltest.TestStep {
 	checkTTL := func(resp *logical.Response) error {
-		if resp.Auth.LeaseOptions.TTL.String() != "720h0m0s" {
+		if resp.Auth.LeaseOptions.TTL.String() != "768h0m0s" {
 			return fmt.Errorf("invalid TTL")
 		}
 		return nil

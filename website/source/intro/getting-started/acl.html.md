@@ -80,7 +80,7 @@ $ vault token-create -policy="secret"
 Key            	Value
 token           d97ef000-48cf-45d9-1907-3ea6ce298a29
 token_accessor  71770cc5-14da-f0af-c6ce-17a0ae398d67
-token_duration  2592000
+token_duration  2764800
 token_renewable true
 token_policies  [default secret]
 

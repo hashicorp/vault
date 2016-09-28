@@ -299,7 +299,7 @@ allowed to read.
     "data": {
       "keys": ["dev", "prod"]
     },
-    "lease_duration": 2592000,
+    "lease_duration": 2764800,
     "lease_id": "",
     "renewable": false
   }

@@ -175,7 +175,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----",
         "display_name": "test",
         "policies": "",
-        "ttl": 2592000
+        "ttl": 2764800
       },
       "warnings": null,
       "auth": null

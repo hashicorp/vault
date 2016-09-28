@@ -318,7 +318,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       "lease_duration": 0,
       "data": {
         "creation_time": 1457533232,
-        "creation_ttl": 2592000,
+        "creation_ttl": 2764800,
         "display_name": "token",
         "id": "",
         "meta": null,

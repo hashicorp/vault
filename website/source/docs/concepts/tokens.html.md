@@ -146,7 +146,7 @@ compared to the maximum TTL. This maximum TTL value is dynamically generated
 and can change from renewal to renewal, so the value cannot be displayed when a
 token's information is looked up. It is based on a combination of factors:
 
-1. The system max TTL, which is 30 days but can be changed in Vault's
+1. The system max TTL, which is 32 days but can be changed in Vault's
    configuration file
 2. The max TTL set on a mount using [mount
    tuning](https://www.vaultproject.io/docs/http/sys-mounts.html). This value

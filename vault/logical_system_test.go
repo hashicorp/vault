@@ -506,7 +506,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		Logger: core.logger,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
 	b := NewSystemBackend(core, bc)
@@ -1035,7 +1035,7 @@ func testSystemBackend(t *testing.T) logical.Backend {
 		Logger: c.logger,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
 	return NewSystemBackend(c, bc)
@@ -1047,7 +1047,7 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 		Logger: c.logger,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
 	return c, NewSystemBackend(c, bc), root
