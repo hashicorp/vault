@@ -114,8 +114,9 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	pemBytes := []byte(pemBundle)
 	var pemBlock *pem.Block
 	parsedBundle := &ParsedCertBundle{}
+	var certPath []*CertBlock
 
-	for {
+	for len(pemBytes) > 0 {
 		pemBlock, pemBytes = pem.Decode(pemBytes)
 		if pemBlock == nil {
 			return nil, errutil.UserError{"no data found"}
@@ -155,48 +156,24 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 				parsedBundle.PrivateKeyBytes = pemBlock.Bytes
 			}
 		} else if certificates, err := x509.ParseCertificates(pemBlock.Bytes); err == nil {
-			switch len(certificates) {
-			case 0:
-				return nil, errutil.UserError{"pem block cannot be decoded to a private key or certificate"}
-
-			case 1:
-				if parsedBundle.Certificate != nil {
-					switch {
-					// We just found the issuing CA
-					case bytes.Equal(parsedBundle.Certificate.AuthorityKeyId, certificates[0].SubjectKeyId) && certificates[0].IsCA:
-						parsedBundle.IssuingCABytes = pemBlock.Bytes
-						parsedBundle.IssuingCA = certificates[0]
-
-					// Our saved certificate is actually the issuing CA
-					case bytes.Equal(parsedBundle.Certificate.SubjectKeyId, certificates[0].AuthorityKeyId) && parsedBundle.Certificate.IsCA:
-						parsedBundle.IssuingCA = parsedBundle.Certificate
-						parsedBundle.IssuingCABytes = parsedBundle.CertificateBytes
-						parsedBundle.CertificateBytes = pemBlock.Bytes
-						parsedBundle.Certificate = certificates[0]
-					}
-				} else {
-					switch {
-					// If this case isn't correct, the caller needs to assign
-					// the values to Certificate/CertificateBytes; assumptions
-					// made here will not be valid for all cases.
-					case certificates[0].IsCA:
-						parsedBundle.IssuingCABytes = pemBlock.Bytes
-						parsedBundle.IssuingCA = certificates[0]
-
-					default:
-						parsedBundle.CertificateBytes = pemBlock.Bytes
-						parsedBundle.Certificate = certificates[0]
-					}
-				}
-
-			default:
-				return nil, errutil.UserError{"too many certificates given; provide a maximum of two certificates in the bundle"}
-			}
+			certPath = append(certPath, &CertBlock{
+				Certificate: certificates[0],
+				Bytes:       pemBlock.Bytes,
+			})
 		}
+	}
 
-		if len(pemBytes) == 0 {
-			break
+	for i, certBlock := range certPath {
+		if i == 0 {
+			parsedBundle.Certificate = certBlock.Certificate
+			parsedBundle.CertificateBytes = certBlock.Bytes
+		} else {
+			parsedBundle.CAChain = append(parsedBundle.CAChain, certBlock)
 		}
+	}
+
+	if err := parsedBundle.Verify(); err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf("verification of parsed bundle failed: %s", err)}
 	}
 
 	return parsedBundle, nil

@@ -23,6 +23,20 @@ func pathFetchCA(b *backend) *framework.Path {
 	}
 }
 
+// Returns the CA chain
+func pathFetchCAChain(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: `(cert/)?ca_chain`,
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathFetchRead,
+		},
+
+		HelpSynopsis:    pathFetchHelpSyn,
+		HelpDescription: pathFetchHelpDesc,
+	}
+}
+
 // Returns the CRL in raw format
 func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
@@ -118,6 +132,11 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 		if req.Path == "ca/pem" {
 			pemType = "CERTIFICATE"
 		}
+	case req.Path == "ca_chain" || req.Path == "cert/ca_chain":
+		serial = "ca_chain"
+		if req.Path == "ca_chain" {
+			contentType = "application/pkix-cert"
+		}
 	case req.Path == "crl" || req.Path == "crl/pem":
 		serial = "crl"
 		contentType = "application/pkix-crl"
@@ -133,6 +152,28 @@ func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData)
 	}
 	if len(serial) == 0 {
 		response = logical.ErrorResponse("The serial number must be provided")
+		goto reply
+	}
+
+	if serial == "ca_chain" {
+		caInfo, err := fetchCAInfo(req)
+		switch err.(type) {
+		case errutil.UserError:
+			response = logical.ErrorResponse(funcErr.Error())
+			goto reply
+		case errutil.InternalError:
+			retErr = err
+			goto reply
+		}
+
+		caChain := caInfo.GetCAChain()
+		for _, ca := range caChain {
+			block := pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: ca.Bytes,
+			}
+			certificate = append(certificate, pem.EncodeToMemory(&block)...)
+		}
 		goto reply
 	}
 
@@ -196,7 +237,11 @@ reply:
 			}
 		}
 		retErr = nil
-		response.Data[logical.HTTPStatusCode] = 200
+		if len(certificate) > 0 {
+			response.Data[logical.HTTPStatusCode] = 200
+		} else {
+			response.Data[logical.HTTPStatusCode] = 204
+		}
 	case retErr != nil:
 		response = nil
 	default:
@@ -208,11 +253,13 @@ reply:
 }
 
 const pathFetchHelpSyn = `
-Fetch a CA, CRL, or non-revoked certificate.
+Fetch a CA, CRL, CA Chain, or non-revoked certificate.
 `
 
 const pathFetchHelpDesc = `
 This allows certificates to be fetched. If using the fetch/ prefix any non-revoked certificate can be fetched.
 
 Using "ca" or "crl" as the value fetches the appropriate information in DER encoding. Add "/pem" to either to get PEM encoding.
+
+Using "ca_chain" as the value fetches the certificate authority trust chain in PEM encoding.
 `

@@ -140,15 +140,6 @@ func (b *backend) pathSetSignedIntermediate(
 		}
 	}
 
-	// If only one certificate is provided and it's a CA
-	// the parsing will assign it to the IssuingCA, so move it over
-	if inputBundle.Certificate == nil && inputBundle.IssuingCA != nil {
-		inputBundle.Certificate = inputBundle.IssuingCA
-		inputBundle.IssuingCA = nil
-		inputBundle.CertificateBytes = inputBundle.IssuingCABytes
-		inputBundle.IssuingCABytes = nil
-	}
-
 	if inputBundle.Certificate == nil {
 		return logical.ErrorResponse("supplied certificate could not be successfully parsed"), nil
 	}
@@ -179,21 +170,16 @@ func (b *backend) pathSetSignedIntermediate(
 		return nil, fmt.Errorf("saved key could not be parsed successfully")
 	}
 
-	equal, err := certutil.ComparePublicKeys(parsedCB.PrivateKey.Public(), inputBundle.Certificate.PublicKey)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf(
-			"error matching public keys: %v", err)), nil
-	}
-	if !equal {
-		return logical.ErrorResponse("key in certificate does not match stored key"), nil
-	}
-
 	inputBundle.PrivateKey = parsedCB.PrivateKey
 	inputBundle.PrivateKeyType = parsedCB.PrivateKeyType
 	inputBundle.PrivateKeyBytes = parsedCB.PrivateKeyBytes
 
 	if !inputBundle.Certificate.IsCA {
 		return logical.ErrorResponse("the given certificate is not marked for CA use and cannot be used with this backend"), nil
+	}
+
+	if err := inputBundle.Verify(); err != nil {
+		return nil, fmt.Errorf("verification of parsed bundle failed: %s", err)
 	}
 
 	cb, err = inputBundle.ToCertBundle()

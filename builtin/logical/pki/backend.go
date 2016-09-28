@@ -24,6 +24,7 @@ func Backend() *backend {
 			Unauthenticated: []string{
 				"cert/*",
 				"ca/pem",
+				"ca_chain",
 				"ca",
 				"crl/pem",
 				"crl",
@@ -45,6 +46,7 @@ func Backend() *backend {
 			pathIssue(&b),
 			pathRotateCRL(&b),
 			pathFetchCA(&b),
+			pathFetchCAChain(&b),
 			pathFetchCRL(&b),
 			pathFetchCRLViaCertPath(&b),
 			pathFetchValid(&b),

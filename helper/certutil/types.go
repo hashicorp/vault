@@ -7,6 +7,7 @@
 package certutil
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rsa"
@@ -65,6 +66,13 @@ type ParsedPrivateKeyContainer interface {
 	SetParsedPrivateKey(crypto.Signer, PrivateKeyType, []byte)
 }
 
+// CertBlock contains the DER-encoded certificate and the PEM
+// block's byte array
+type CertBlock struct {
+	Certificate *x509.Certificate
+	Bytes       []byte
+}
+
 // CertBundle contains a key type, a PEM-encoded private key,
 // a PEM-encoded certificate, and a string-encoded serial number,
 // returned from a successful Issue request
@@ -72,6 +80,7 @@ type CertBundle struct {
 	PrivateKeyType PrivateKeyType `json:"private_key_type" structs:"private_key_type" mapstructure:"private_key_type"`
 	Certificate    string         `json:"certificate" structs:"certificate" mapstructure:"certificate"`
 	IssuingCA      string         `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
+	CAChain        []string       `json:"ca_chain" structs:"ca_chain" mapstructure:"ca_chain"`
 	PrivateKey     string         `json:"private_key" structs:"private_key" mapstructure:"private_key"`
 	SerialNumber   string         `json:"serial_number" structs:"serial_number" mapstructure:"serial_number"`
 }
@@ -83,10 +92,9 @@ type ParsedCertBundle struct {
 	PrivateKeyFormat BlockType
 	PrivateKeyBytes  []byte
 	PrivateKey       crypto.Signer
-	IssuingCABytes   []byte
-	IssuingCA        *x509.Certificate
 	CertificateBytes []byte
 	Certificate      *x509.Certificate
+	CAChain          []*CertBlock
 	SerialNumber     *big.Int
 }
 
@@ -106,6 +114,25 @@ type ParsedCSRBundle struct {
 	PrivateKey      crypto.Signer
 	CSRBytes        []byte
 	CSR             *x509.CertificateRequest
+}
+
+// ToPEMBundle converts a string-based certificate bundle
+// to a PEM-based string certificate bundle in trust path
+// order, leaf certificate first
+func (c *CertBundle) ToPEMBundle() string {
+	var result []string
+
+	if len(c.PrivateKey) > 0 {
+		result = append(result, c.PrivateKey)
+	}
+	if len(c.Certificate) > 0 {
+		result = append(result, c.Certificate)
+	}
+	if len(c.CAChain) > 0 {
+		result = append(result, c.CAChain...)
+	}
+
+	return strings.Join(result, "\n")
 }
 
 // ToParsedCertBundle converts a string-based certificate bundle
@@ -162,20 +189,46 @@ func (c *CertBundle) ToParsedCertBundle() (*ParsedCertBundle, error) {
 			return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle"}
 		}
 	}
+	switch {
+	case len(c.CAChain) > 0:
+		for _, cert := range c.CAChain {
+			pemBlock, _ := pem.Decode([]byte(cert))
+			if pemBlock == nil {
+				return nil, errutil.UserError{"Error decoding certificate from cert bundle"}
+			}
 
-	if len(c.IssuingCA) > 0 {
+			parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
+			if err != nil {
+				return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle"}
+			}
+
+			certBlock := &CertBlock{
+				Bytes:       pemBlock.Bytes,
+				Certificate: parsedCert,
+			}
+			result.CAChain = append(result.CAChain, certBlock)
+		}
+
+	// For backwards compabitibility
+	case len(c.IssuingCA) > 0:
 		pemBlock, _ = pem.Decode([]byte(c.IssuingCA))
 		if pemBlock == nil {
-			return nil, errutil.UserError{"Error decoding issuing CA from cert bundle"}
+			return nil, errutil.UserError{"Error decoding ca certificate from cert bundle"}
 		}
-		result.IssuingCABytes = pemBlock.Bytes
-		result.IssuingCA, err = x509.ParseCertificate(result.IssuingCABytes)
-		if err != nil {
-			return nil, errutil.UserError{fmt.Sprintf("Error parsing CA certificate: %s", err)}
-		}
-	}
 
-	result.SerialNumber = result.Certificate.SerialNumber
+		parsedCert, err := x509.ParseCertificate(pemBlock.Bytes)
+		if err != nil {
+			return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle3"}
+		}
+
+		result.SerialNumber = result.Certificate.SerialNumber
+
+		certBlock := &CertBlock{
+			Bytes:       pemBlock.Bytes,
+			Certificate: parsedCert,
+		}
+		result.CAChain = append(result.CAChain, certBlock)
+	}
 
 	// Populate if it isn't there already
 	if len(c.SerialNumber) == 0 && len(c.Certificate) > 0 {
@@ -202,9 +255,11 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 		result.Certificate = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 	}
 
-	if p.IssuingCABytes != nil && len(p.IssuingCABytes) > 0 {
-		block.Bytes = p.IssuingCABytes
-		result.IssuingCA = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+	for _, caCert := range p.CAChain {
+		block.Bytes = caCert.Bytes
+		certificate := strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+
+		result.CAChain = append(result.CAChain, certificate)
 	}
 
 	if p.PrivateKeyBytes != nil && len(p.PrivateKeyBytes) > 0 {
@@ -226,6 +281,55 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 	}
 
 	return result, nil
+}
+
+// Verify checks if the parsed bundle is valid.  It validates the public
+// key of the certificate to the private key and checks the certficate trust
+// chain for path issues.
+func (p *ParsedCertBundle) Verify() error {
+	// If private key exists, check if it matches the public key of cert
+	if p.PrivateKey != nil && p.Certificate != nil {
+		equal, err := ComparePublicKeys(p.Certificate.PublicKey, p.PrivateKey.Public())
+		if err != nil {
+			return fmt.Errorf("could not compare public and private keys: %s", err)
+		}
+		if !equal {
+			return fmt.Errorf("Public key of certificate does not match private key")
+		}
+	}
+
+	certPath := p.GetCertificatePath()
+	if len(certPath) > 1 {
+		for i, caCert := range certPath[1:] {
+			if !caCert.Certificate.IsCA {
+				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
+			}
+			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
+				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%s/%s)",
+					i+1, certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (p *ParsedCertBundle) GetCertificatePath() []*CertBlock {
+	var certPath []*CertBlock
+
+	certPath = append(certPath, &CertBlock{
+		Certificate: p.Certificate,
+		Bytes:       p.CertificateBytes,
+	})
+
+	if len(p.CAChain) > 0 {
+		// Root CA puts itself in the chain
+		if p.CAChain[0].Certificate.SerialNumber != p.Certificate.SerialNumber {
+			certPath = append(certPath, p.CAChain...)
+		}
+	}
+
+	return certPath
 }
 
 // GetSigner returns a crypto.Signer corresponding to the private key
@@ -440,8 +544,10 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 		tlsCert.Certificate = append(tlsCert.Certificate, p.CertificateBytes)
 	}
 
-	if p.IssuingCABytes != nil && len(p.IssuingCABytes) > 0 {
-		tlsCert.Certificate = append(tlsCert.Certificate, p.IssuingCABytes)
+	if len(p.CAChain) > 0 {
+		for _, cert := range p.CAChain {
+			tlsCert.Certificate = append(tlsCert.Certificate, cert.Bytes)
+		}
 
 		// Technically we only need one cert, but this doesn't duplicate code
 		certBundle, err := p.ToCertBundle()
@@ -450,7 +556,7 @@ func (p *ParsedCertBundle) GetTLSConfig(usage TLSUsage) (*tls.Config, error) {
 		}
 
 		caPool := x509.NewCertPool()
-		ok := caPool.AppendCertsFromPEM([]byte(certBundle.IssuingCA))
+		ok := caPool.AppendCertsFromPEM([]byte(certBundle.CAChain[0]))
 		if !ok {
 			return nil, fmt.Errorf("Could not append CA certificate")
 		}

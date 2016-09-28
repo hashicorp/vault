@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
@@ -56,6 +57,25 @@ type creationBundle struct {
 type caInfoBundle struct {
 	certutil.ParsedCertBundle
 	URLs *urlEntries
+}
+
+func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
+	chain := []*certutil.CertBlock{}
+
+	// Include issuing CA in Chain, not including Root Authority
+	if len(b.Certificate.AuthorityKeyId) > 0 &&
+		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId) {
+
+		chain = append(chain, &certutil.CertBlock{
+			Certificate: b.Certificate,
+			Bytes:       b.CertificateBytes,
+		})
+		if b.CAChain != nil && len(b.CAChain) > 0 {
+			chain = append(chain, b.CAChain...)
+		}
+	}
+
+	return chain
 }
 
 var (
@@ -856,11 +876,17 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	}
 
 	if creationInfo.SigningBundle != nil {
-		result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
-		result.IssuingCA = creationInfo.SigningBundle.Certificate
-	} else {
-		result.IssuingCABytes = result.CertificateBytes
-		result.IssuingCA = result.Certificate
+		if len(creationInfo.SigningBundle.Certificate.AuthorityKeyId) > 0 &&
+			!bytes.Equal(creationInfo.SigningBundle.Certificate.AuthorityKeyId, creationInfo.SigningBundle.Certificate.SubjectKeyId) {
+
+			result.CAChain = []*certutil.CertBlock{
+				&certutil.CertBlock{
+					Certificate: creationInfo.SigningBundle.Certificate,
+					Bytes:       creationInfo.SigningBundle.CertificateBytes,
+				},
+			}
+			result.CAChain = append(result.CAChain, creationInfo.SigningBundle.CAChain...)
+		}
 	}
 
 	return result, nil
@@ -1011,8 +1037,7 @@ func signCertificate(creationInfo *creationBundle,
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
 	}
 
-	result.IssuingCABytes = creationInfo.SigningBundle.CertificateBytes
-	result.IssuingCA = creationInfo.SigningBundle.Certificate
+	result.CAChain = creationInfo.SigningBundle.GetCAChain()
 
 	return result, nil
 }
