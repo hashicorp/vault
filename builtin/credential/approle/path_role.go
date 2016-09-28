@@ -901,9 +901,15 @@ func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC str
 	d["expiration_time"] = result.ExpirationTime.Format(time.RFC3339Nano)
 	d["last_updated_time"] = result.LastUpdatedTime.Format(time.RFC3339Nano)
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: d,
-	}, nil
+	}
+
+	if _, ok := d["SecretIDNumUses"]; ok {
+		resp.AddWarning("The field SecretIDNumUses is deprecated and will be removed in a future release")
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathRoleSecretIDSecretIDDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1767,16 +1773,12 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 		return nil, fmt.Errorf("failed to store SecretID: %s", err)
 	}
 
-	resp := &logical.Response{
+	return &logical.Response{
 		Data: map[string]interface{}{
 			"secret_id":          secretID,
 			"secret_id_accessor": secretIDStorage.SecretIDAccessor,
 		},
-	}
-
-	resp.AddWarning("The field SecretIDNumUses is deprecated and will be removed in a future release")
-
-	return resp, nil
+	}, nil
 }
 
 // roleIDLock is used to get a lock from the pre-initialized map
