@@ -108,6 +108,9 @@ func (b *backend) pathConfigClientDelete(
 	// Remove all the cached EC2 client objects in the backend.
 	b.flushCachedEC2Clients()
 
+	// Remove all the cached EC2 client objects in the backend.
+	b.flushCachedIAMClients()
+
 	return nil, nil
 }
 
@@ -175,6 +178,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 
 	if changedCreds {
 		b.flushCachedEC2Clients()
+		b.flushCachedIAMClients()
 	}
 
 	return nil, nil
