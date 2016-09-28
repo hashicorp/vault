@@ -221,7 +221,7 @@ Permission denied
   </dd>
 </dl>
 
-#### Delete
+#### DELETE
 
 <dl class="api">
   <dt>Description</dt>
@@ -279,5 +279,3 @@ Permission denied
 
   </dd>
 </dl>
-
-
