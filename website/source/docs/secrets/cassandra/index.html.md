@@ -241,6 +241,13 @@ subpath for interactive help output.
         The lease value provided as a string duration
         with time suffix. Hour is the largest suffix.
       </li>
+      <li>
+        <span class="param">consistency</span>
+        <span class="param-flags">optional</span>
+        The consistency level value provided as a string. Determines the 
+        consistency level used for operations performed on the Cassandra
+        database. Defaults to a consistency level of Quorum.
+      </li>
     </ul>
   </dd>
 
