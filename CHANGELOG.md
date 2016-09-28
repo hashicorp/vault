@@ -36,6 +36,8 @@ IMPROVEMENTS:
    submitted, rather than ignoring it [GH-1782]
  * api: Add method to call `auth/token/create-orphan` endpoint [GH-1834]
  * api: Rekey operation now redirects from standbys to master [GH-1862]
+ * auth/aws-ec2: IAM bound parameters on the aws-ec2 backend will perform a
+   prefix match instead of exact match [GH-1943]
  * auth/aws-ec2: Added a new constraint `bound_iam_instance_profile_arn` to
    refer to IAM instance profile ARN and fixed the earlier `bound_iam_role_arn`
    to refer to IAM role ARN instead of the instance profile ARN [GH-1913]
