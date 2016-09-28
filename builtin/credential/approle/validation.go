@@ -368,9 +368,12 @@ func (b *backend) nonLockedSecretIDStorageEntry(s logical.Storage, roleNameHMAC,
 		if result.SecretIDNumUses == 0 ||
 			result.SecretIDNumUsesDeprecated < result.SecretIDNumUses {
 			result.SecretIDNumUses = result.SecretIDNumUsesDeprecated
+			persistNeeded = true
 		}
-		result.SecretIDNumUsesDeprecated = 0
-		persistNeeded = true
+		if result.SecretIDNumUses < result.SecretIDNumUsesDeprecated {
+			result.SecretIDNumUsesDeprecated = result.SecretIDNumUses
+			persistNeeded = true
+		}
 	}
 
 	if persistNeeded {

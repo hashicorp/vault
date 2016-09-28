@@ -906,7 +906,7 @@ func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC str
 	}
 
 	if _, ok := d["SecretIDNumUses"]; ok {
-		resp.AddWarning("The field SecretIDNumUses is deprecated and will be removed in a future release")
+		resp.AddWarning("The field SecretIDNumUses is deprecated and will be removed in a future release; refer to secret_id_num_uses instead")
 	}
 
 	return resp, nil
