@@ -49,7 +49,7 @@ func (n *NoopBackend) SpecialPaths() *logical.Paths {
 func (n *NoopBackend) System() logical.SystemView {
 	return logical.StaticSystemView{
 		DefaultLeaseTTLVal: time.Hour * 24,
-		MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		MaxLeaseTTLVal:     time.Hour * 24 * 32,
 	}
 }
 

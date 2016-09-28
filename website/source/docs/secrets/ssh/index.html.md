@@ -536,7 +536,7 @@ username@<IP of remote host>:~$
     "data": {
       "keys": ["dev", "prod"]
     },
-    "lease_duration": 2592000,
+    "lease_duration": 2764800,
     "lease_id": "",
     "renewable": false
   }
@@ -728,7 +728,7 @@ username@<IP of remote host>:~$
 {
   "lease_id": "sshs/creds/c3c2e60c-5a48-415a-9d5a-a41e0e6cdec5/3ee6ad28-383f-d482-2427-70498eba4d96",
   "renewable": false,
-  "lease_duration": 2592000,
+  "lease_duration": 2764800,
   "data": {
             "ip": "127.0.0.1",
             "key": "6d6411fd-f622-ea0a-7e2c-989a745cbbb2",

@@ -530,7 +530,7 @@ func TestSysTuneMount(t *testing.T) {
 				"type":        "generic",
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("259196400"),
-					"max_lease_ttl":     json.Number("259200000"),
+					"max_lease_ttl":     json.Number("276480000"),
 				},
 			},
 			"secret/": map[string]interface{}{
@@ -563,7 +563,7 @@ func TestSysTuneMount(t *testing.T) {
 			"type":        "generic",
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("259196400"),
-				"max_lease_ttl":     json.Number("259200000"),
+				"max_lease_ttl":     json.Number("276480000"),
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -611,10 +611,10 @@ func TestSysTuneMount(t *testing.T) {
 		"auth":           nil,
 		"data": map[string]interface{}{
 			"default_lease_ttl": json.Number("259196400"),
-			"max_lease_ttl":     json.Number("259200000"),
+			"max_lease_ttl":     json.Number("276480000"),
 		},
 		"default_lease_ttl": json.Number("259196400"),
-		"max_lease_ttl":     json.Number("259200000"),
+		"max_lease_ttl":     json.Number("276480000"),
 	}
 
 	testResponseStatus(t, resp, 200)

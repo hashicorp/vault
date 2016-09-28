@@ -62,8 +62,8 @@ func DevConfig(ha bool) *Config {
 
 		Telemetry: &Telemetry{},
 
-		MaxLeaseTTL:     30 * 24 * time.Hour,
-		DefaultLeaseTTL: 30 * 24 * time.Hour,
+		MaxLeaseTTL:     32 * 24 * time.Hour,
+		DefaultLeaseTTL: 32 * 24 * time.Hour,
 	}
 
 	if ha {

@@ -369,7 +369,7 @@ func (n *rawHTTP) SpecialPaths() *logical.Paths {
 func (n *rawHTTP) System() logical.SystemView {
 	return logical.StaticSystemView{
 		DefaultLeaseTTLVal: time.Hour * 24,
-		MaxLeaseTTLVal:     time.Hour * 24 * 30,
+		MaxLeaseTTLVal:     time.Hour * 24 * 32,
 	}
 }
 

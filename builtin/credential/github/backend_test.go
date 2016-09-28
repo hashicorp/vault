@@ -92,7 +92,7 @@ func testConfigWrite(t *testing.T, d map[string]interface{}) logicaltest.TestSte
 
 func TestBackend_basic(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{

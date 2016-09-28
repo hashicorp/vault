@@ -38,7 +38,7 @@ var (
 // Uses the RSA CA key
 func TestBackend_RSAKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -68,7 +68,7 @@ func TestBackend_RSAKey(t *testing.T) {
 // Uses the EC CA key
 func TestBackend_ECKey(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -96,7 +96,7 @@ func TestBackend_ECKey(t *testing.T) {
 
 func TestBackend_CSRValues(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -124,7 +124,7 @@ func TestBackend_CSRValues(t *testing.T) {
 
 func TestBackend_URLsCRUD(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -155,7 +155,7 @@ func TestBackend_URLsCRUD(t *testing.T) {
 // Uses the RSA CA key
 func TestBackend_RSARoles(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -197,7 +197,7 @@ func TestBackend_RSARoles(t *testing.T) {
 // Uses the RSA CA key
 func TestBackend_RSARoles_CSR(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -239,7 +239,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 // Uses the EC CA key
 func TestBackend_ECRoles(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{
@@ -281,7 +281,7 @@ func TestBackend_ECRoles(t *testing.T) {
 // Uses the EC CA key
 func TestBackend_ECRoles_CSR(t *testing.T) {
 	defaultLeaseTTLVal := time.Hour * 24
-	maxLeaseTTLVal := time.Hour * 24 * 30
+	maxLeaseTTLVal := time.Hour * 24 * 32
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{

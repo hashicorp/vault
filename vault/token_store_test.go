@@ -183,7 +183,7 @@ func getBackendConfig(c *Core) *logical.BackendConfig {
 		Logger: c.logger,
 		System: logical.StaticSystemView{
 			DefaultLeaseTTLVal: time.Hour * 24,
-			MaxLeaseTTLVal:     time.Hour * 24 * 30,
+			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
 }

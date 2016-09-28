@@ -37,13 +37,13 @@ func TestSysMountConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedDefaultTTL := 2592000
+	expectedDefaultTTL := 2764800
 	if mountConfig.DefaultLeaseTTL != expectedDefaultTTL {
 		t.Fatalf("Expected default lease TTL: %d, got %d",
 			expectedDefaultTTL, mountConfig.DefaultLeaseTTL)
 	}
 
-	expectedMaxTTL := 2592000
+	expectedMaxTTL := 2764800
 	if mountConfig.MaxLeaseTTL != expectedMaxTTL {
 		t.Fatalf("Expected default lease TTL: %d, got %d",
 			expectedMaxTTL, mountConfig.MaxLeaseTTL)

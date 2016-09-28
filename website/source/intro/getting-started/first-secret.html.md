@@ -63,7 +63,7 @@ As you might expect, secrets can be read with `vault read`:
 ```
 $ vault read secret/hello
 Key             Value
-lease_duration  2592000
+lease_duration  2764800
 excited         yes
 value           world
 ```
