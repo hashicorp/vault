@@ -349,7 +349,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		// Prevent internal policies from being assigned to tokens
 		for _, policy := range te.Policies {
 			if strutil.StrListContains(nonAssignablePolicies, policy) {
-				return logical.ErrorResponse(fmt.Sprintf("cannot assign %s policy", policy)), nil, logical.ErrInvalidRequest
+				return logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), nil, logical.ErrInvalidRequest
 			}
 		}
 

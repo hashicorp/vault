@@ -1220,7 +1220,7 @@ func (ts *TokenStore) handleCreateCommon(
 	// Prevent internal policies from being assigned to tokens
 	for _, policy := range te.Policies {
 		if strutil.StrListContains(nonAssignablePolicies, policy) {
-			return logical.ErrorResponse(fmt.Sprintf("cannot assign %s policy", policy)), nil
+			return logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), nil
 		}
 	}
 
