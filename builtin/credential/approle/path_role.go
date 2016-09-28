@@ -1767,12 +1767,16 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 		return nil, fmt.Errorf("failed to store SecretID: %s", err)
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"secret_id":          secretID,
 			"secret_id_accessor": secretIDStorage.SecretIDAccessor,
 		},
-	}, nil
+	}
+
+	resp.AddWarning("The field SecretIDNumUses is deprecated and will be removed in a future release")
+
+	return resp, nil
 }
 
 // roleIDLock is used to get a lock from the pre-initialized map
