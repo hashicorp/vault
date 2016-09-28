@@ -1542,7 +1542,7 @@ func (b *SystemBackend) handleWrappingLookup(
 	token := data.Get("token").(string)
 
 	if token == "" {
-		return logical.ErrorResponse("no \"token\" value supplied in input"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
 	}
 
 	cubbyReq := &logical.Request{
@@ -1587,7 +1587,7 @@ func (b *SystemBackend) handleWrappingLookup(
 
 func (b *SystemBackend) handleWrappingRewrap(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// If a third party is unwrapping (rather than the calling token being the
+	// If a third party is rewrapping (rather than the calling token being the
 	// wrapping token) we detect this so that we can revoke the original
 	// wrapping token after reading it. Right now wrapped tokens can't unwrap
 	// themselves, but in case we change it, this will be ready to do the right
