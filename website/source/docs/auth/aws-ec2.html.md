@@ -848,7 +848,7 @@ role ARN which has a prefix that matches the value specified by this
 parameter. Note that an exact match is also a prefix.
       </li>
     </ul>
-j   <ul>
+    <ul>
       <li>
         <span class="param">bound_iam_instance_profile_arn</span>
         <span class="param-flags">optional</span>
