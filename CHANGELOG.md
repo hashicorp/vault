@@ -53,6 +53,7 @@ IMPROVEMENTS:
    an idempotent operation. [GH-1903]
  * credential/approle: At least one constraint is required to be enabled while
    creating and updating a role [GH-1882]
+ * secret/cassandra: Added consistency level for use with roles [GH-1931]
  * secret/transit: Use HKDF (RFC 5869) as the key derivation function for new
    keys [GH-1812]
  * secret/transit: Empty plaintext values are now allowed [GH-1874]
