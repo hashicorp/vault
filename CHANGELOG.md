@@ -36,6 +36,9 @@ IMPROVEMENTS:
    submitted, rather than ignoring it [GH-1782]
  * api: Add method to call `auth/token/create-orphan` endpoint [GH-1834]
  * api: Rekey operation now redirects from standbys to master [GH-1862]
+ * auth/aws-ec2: Added a new constraint `bound_iam_instance_profile_arn` to
+   refer to IAM instance profile ARN and fixed the earlier `bound_iam_role_arn`
+   to refer to IAM role ARN instead of the instance profile ARN [GH-1913]
  * auth/aws-ec2: Backend generates the nonce by default and clients can
    explicitly disable reauthentication by setting empty nonce [GH-1889]
  * auth/token: Added warnings if tokens and accessors are used in URLs [GH-1806]
