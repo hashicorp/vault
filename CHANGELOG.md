@@ -22,6 +22,8 @@ FEATURES:
    generate secret IDs should originate from. If an approle already has CIDR
    restrictions specified, the CIDR restrictions on the secret ID should be a
    subset of those specified on the role [GH-1910]
+ * **Initial Root Token PGP Encryption**: Similar to `generate-root`, the root
+   token created at initialization time can now be PGP encrypted [GH-1883]
 
 IMPROVEMENTS:
 
@@ -41,7 +43,6 @@ IMPROVEMENTS:
  * core: Allow list operations to be response-wrapped [GH-1814]
  * core: Provide better protection against timing attacks in Shamir code
    [GH-1877]
- * core: Allow initial root token to be PGP-encrypted [GH-1883]
  * core: Unmounting/disabling backends no longer returns an error if the mount
    didn't exist. This is line with elsewhere in Vault's API where `DELETE` is
    an idempotent operation. [GH-1903]
