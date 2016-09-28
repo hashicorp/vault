@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gocql/gocql"
 	"github.com/fatih/structs"
+	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -55,7 +55,7 @@ template values are '{{username}}' and
 				Default:     "4h",
 				Description: "The lease length; defaults to 4 hours",
 			},
-			
+
 			"consistency": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The consistency level for the operations; defaults to Quorum.",
@@ -129,12 +129,12 @@ func (b *backend) pathRoleCreate(
 		return logical.ErrorResponse(fmt.Sprintf(
 			"Error parsing lease value of %s: %s", leaseRaw, err)), nil
 	}
-	
+
 	consistencyStr := data.Get("consistency").(string)
 	_, err = gocql.ParseConsistencyWrapper(consistencyStr)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
-			"Error parsing consistency value of %s: %s", consistencyStr, err)), nil
+			"Error parsing consistency value of %q: %v", consistencyStr, err)), nil
 	}
 
 	entry := &roleEntry{
