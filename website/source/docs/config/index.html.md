@@ -66,12 +66,12 @@ sending a SIGHUP to the server process. These are denoted below.
   (see below).
 
 * `default_lease_ttl` (optional) - Configures the default lease duration
-  for tokens and secrets. This is a string value using a suffix, e.g. "720h".
+  for tokens and secrets. This is a string value using a suffix, e.g. "768h".
   Default value is 32 days. This value cannot be larger than `max_lease_ttl`.
 
 * `max_lease_ttl` (optional) - Configures the maximum possible
   lease duration for tokens and secrets. This is a string value using a suffix,
-  e.g. "720h". Default value is 32 days.
+  e.g. "768h". Default value is 32 days.
 
 In production it is a risk to run Vault on systems where `mlock` is
 unavailable or the setting has been disabled via the `disable_mlock`.
