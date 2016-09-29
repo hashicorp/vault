@@ -4,28 +4,29 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // This logic was pulled from the http package so that it can be used for
 // encoding wrapped responses as well. It simply translates the logical request
 // to an http response, with the values we want and omitting the values we
 // don't.
-func SanitizeResponse(input *Response) *HTTPResponse {
-	logicalResp := &HTTPResponse{
+func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
+	httpResp := &HTTPResponse{
 		Data:     input.Data,
 		Warnings: input.Warnings(),
 	}
 
 	if input.Secret != nil {
-		logicalResp.LeaseID = input.Secret.LeaseID
-		logicalResp.Renewable = input.Secret.Renewable
-		logicalResp.LeaseDuration = int(input.Secret.TTL.Seconds())
+		httpResp.LeaseID = input.Secret.LeaseID
+		httpResp.Renewable = input.Secret.Renewable
+		httpResp.LeaseDuration = int(input.Secret.TTL.Seconds())
 	}
 
 	// If we have authentication information, then
 	// set up the result structure.
 	if input.Auth != nil {
-		logicalResp.Auth = &HTTPAuth{
+		httpResp.Auth = &HTTPAuth{
 			ClientToken:   input.Auth.ClientToken,
 			Accessor:      input.Auth.Accessor,
 			Policies:      input.Auth.Policies,
@@ -33,6 +34,34 @@ func SanitizeResponse(input *Response) *HTTPResponse {
 			LeaseDuration: int(input.Auth.TTL.Seconds()),
 			Renewable:     input.Auth.Renewable,
 		}
+	}
+
+	return httpResp
+}
+
+func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
+	logicalResp := &Response{
+		Data:     input.Data,
+		warnings: input.Warnings,
+	}
+
+	if input.LeaseID != "" {
+		logicalResp.Secret = &Secret{
+			LeaseID: input.LeaseID,
+		}
+		logicalResp.Secret.Renewable = input.Renewable
+		logicalResp.Secret.TTL = time.Second * time.Duration(input.LeaseDuration)
+	}
+
+	if input.Auth != nil {
+		logicalResp.Auth = &Auth{
+			ClientToken: input.Auth.ClientToken,
+			Accessor:    input.Auth.Accessor,
+			Policies:    input.Auth.Policies,
+			Metadata:    input.Auth.Metadata,
+		}
+		logicalResp.Auth.Renewable = input.Auth.Renewable
+		logicalResp.Auth.TTL = time.Second * time.Duration(input.Auth.LeaseDuration)
 	}
 
 	return logicalResp
