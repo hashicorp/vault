@@ -33,6 +33,9 @@ FEATURES:
    chain of arbitrary length. The chain is returned as a parameter at
    certificate issue/sign time and is retrievable independently as well.
    [GH-1694]
+ * **Response Wrapping Enhancements**: There are new endpoints to look up
+   response wrapped token parameters; wrap arbitrary values; rotate wrapping
+   tokens; and unwrap with enhanced validation. [GH-1927]
 
 IMPROVEMENTS:
 
