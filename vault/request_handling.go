@@ -275,7 +275,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		req.Path == "cubbyhole/response" &&
 		len(te.Policies) == 1 &&
 		te.Policies[0] == responseWrappingPolicyName {
-		resp.AddWarning("Please use sys/wrapping/unwrap to unwrap responses, as it provides additional security checks.")
+		resp.AddWarning("Reading from 'cubbyhole/response' is deprecated. Please use sys/wrapping/unwrap to unwrap responses, as it provides additional security checks and other benefits.")
 	}
 
 	// Return the response and error

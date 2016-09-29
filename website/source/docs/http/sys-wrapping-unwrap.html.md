@@ -14,9 +14,10 @@ description: |-
   <dt>Description</dt>
   <dd>
     Returns the original response inside the given wrapping token. Unlike
-    simply reading `cubbyhole/response`, this endpoint provides additional
-    validation checks on the token, and returns the original value on the wire
-    rather than a JSON string representation of it.
+    simply reading `cubbyhole/response` (which is deprecated), this endpoint
+    provides additional validation checks on the token, returns the original
+    value on the wire rather than a JSON string representation of it, and
+    ensures that the response is properly audit-logged.
   </dd>
 
   <dt>Method</dt>

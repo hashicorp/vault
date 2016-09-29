@@ -22,6 +22,10 @@ DEPRECATIONS/CHANGES:
    getting logged in plaintext in the audit logs as they were part of request
    URLs.  The GET and DELETE operations are now moved to new endpoints (`/lookup`
    and `/destroy`) which consumes the input from the body and not the URL.
+ * Reading wrapped responses from `cubbyhole/response` is deprecated. The
+   `sys/wrapping/unwrap` endpoint should be used instead as it provides
+   additional security, auditing, and other benefits. The ability to read
+   directly will be removed in a future release.
 
 FEATURES:
 
