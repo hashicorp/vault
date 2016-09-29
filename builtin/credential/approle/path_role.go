@@ -79,8 +79,8 @@ type roleIDStorageEntry struct {
 // role/<role_name>/custom-secret-id - For assigning a custom SecretID against an role
 // role/<role_name>/secret-id/lookup - For reading the properties of a secret_id
 // role/<role_name>/secret-id/destroy - For deleting a secret_id
-// role/<role_name>/secret-id-accessor/<secret_id_accessor> - For reading the
-// 		properties of, or deleting a secret_id, using the accessor of secret_id.
+// role/<role_name>/secret-id-accessor/lookup - For reading secret_id using accessor
+// role/<role_name>/secret-id-accessor/destroy - For deleting secret_id using accessor
 func rolePaths(b *backend) []*framework.Path {
 	return []*framework.Path{
 		&framework.Path{
