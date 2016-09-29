@@ -39,14 +39,11 @@ func TestAppRole_SecretIDNumUsesUpgrade(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	secretID := resp.Data["secret_id"].(string)
-	if secretID == "" {
-		t.Fatalf("expected non empty secret ID")
+	secretIDReq.Operation = logical.UpdateOperation
+	secretIDReq.Path = "role/role1/secret-id/lookup"
+	secretIDReq.Data = map[string]interface{}{
+		"secret_id": resp.Data["secret_id"].(string),
 	}
-
-	secretIDReq.Operation = logical.ReadOperation
-	secretIDReq.Path = "role/role1/secret-id/" + secretID
-
 	resp, err = b.HandleRequest(secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)

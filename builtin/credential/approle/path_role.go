@@ -77,7 +77,8 @@ type roleIDStorageEntry struct {
 // role/<role_name>/role-id - For fetching the role_id of an role
 // role/<role_name>/secret-id - For issuing a secret_id against an role, also to list the secret_id_accessorss
 // role/<role_name>/custom-secret-id - For assigning a custom SecretID against an role
-// role/<role_name>/secret-id/<secret_id> - For reading the properties of, or deleting a secret_id
+// role/<role_name>/secret-id/lookup - For reading the properties of a secret_id
+// role/<role_name>/secret-id/destroy - For deleting a secret_id
 // role/<role_name>/secret-id-accessor/<secret_id_accessor> - For reading the
 // 		properties of, or deleting a secret_id, using the accessor of secret_id.
 func rolePaths(b *backend) []*framework.Path {
@@ -373,8 +374,7 @@ the role.`,
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id"][1]),
 		},
 		&framework.Path{
-			Pattern: "role/" +
-				framework.GenericNameRegex("role_name") + "/secret-id/" + framework.GenericNameRegex("secret_id"),
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/lookup/?$",
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -386,15 +386,32 @@ the role.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathRoleSecretIDSecretIDRead,
-				logical.DeleteOperation: b.pathRoleSecretIDSecretIDDelete,
+				logical.UpdateOperation: b.pathRoleSecretIDLookupUpdate,
 			},
-			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-secret-id"][0]),
-			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-secret-id"][1]),
+			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-lookup"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-lookup"][1]),
 		},
 		&framework.Path{
-			Pattern: "role/" +
-				framework.GenericNameRegex("role_name") + "/secret-id-accessor/" + framework.GenericNameRegex("secret_id_accessor"),
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id/destroy/?$",
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+				"secret_id": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "SecretID attached to the role.",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: b.pathRoleSecretIDDestroyUpdateDelete,
+				logical.DeleteOperation: b.pathRoleSecretIDDestroyUpdateDelete,
+			},
+			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-destroy"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-destroy"][1]),
+		},
+		&framework.Path{
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/lookup/?$",
 			Fields: map[string]*framework.FieldSchema{
 				"role_name": &framework.FieldSchema{
 					Type:        framework.TypeString,
@@ -406,8 +423,26 @@ the role.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation:   b.pathRoleSecretIDAccessorRead,
-				logical.DeleteOperation: b.pathRoleSecretIDAccessorDelete,
+				logical.UpdateOperation: b.pathRoleSecretIDAccessorLookupUpdate,
+			},
+			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
+		},
+		&framework.Path{
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/secret-id-accessor/destroy/?$",
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+				"secret_id_accessor": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Accessor of the SecretID",
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: b.pathRoleSecretIDAccessorDestroyUpdateDelete,
+				logical.DeleteOperation: b.pathRoleSecretIDAccessorDestroyUpdateDelete,
 			},
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-secret-id-accessor"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-secret-id-accessor"][1]),
@@ -837,7 +872,7 @@ func (b *backend) pathRoleDelete(req *logical.Request, data *framework.FieldData
 }
 
 // Returns the properties of the SecretID
-func (b *backend) pathRoleSecretIDSecretIDRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDLookupUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -912,7 +947,7 @@ func (b *backend) secretIDCommon(s logical.Storage, entryIndex, secretIDHMAC str
 	return resp, nil
 }
 
-func (b *backend) pathRoleSecretIDSecretIDDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDDestroyUpdateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -969,8 +1004,9 @@ func (b *backend) pathRoleSecretIDSecretIDDelete(req *logical.Request, data *fra
 	return nil, nil
 }
 
-// Returns the properties of the SecretID
-func (b *backend) pathRoleSecretIDAccessorRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+// pathRoleSecretIDAccessorLookupUpdate returns the properties of the SecretID
+// given its accessor
+func (b *backend) pathRoleSecretIDAccessorLookupUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1011,7 +1047,7 @@ func (b *backend) pathRoleSecretIDAccessorRead(req *logical.Request, data *frame
 	return b.secretIDCommon(req.Storage, entryIndex, accessorEntry.SecretIDHMAC)
 }
 
-func (b *backend) pathRoleSecretIDAccessorDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathRoleSecretIDAccessorDestroyUpdateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
 		return logical.ErrorResponse("missing role_name"), nil
@@ -1923,19 +1959,29 @@ that are generated against the role using 'role/<role_name>/secret-id' or
 'role/<role_name>/custom-secret-id' endpoints.`,
 		``,
 	},
-	"role-secret-id-secret-id": {
-		"Read or delete a issued secret_id",
-		`This endpoint is used to either read the properties of a
-secret_id associated to a role or to invalidate it.`,
+	"role-secret-id-lookup": {
+		"Read the properties of an issued secret_id",
+		`This endpoint is used to read the properties of a secret_id associated to a
+role.`},
+	"role-secret-id-destroy": {
+		"Invalidate an issued secret_id",
+		`This endpoint is used to delete the properties of a secret_id associated to a
+role.`},
+	"role-secret-id-accessor-lookup": {
+		"Read an issued secret_id, using its accessor",
+		`This is particularly useful to lookup the non-expiring 'secret_id's.
+The list operation on the 'role/<role_name>/secret-id' endpoint will return
+the 'secret_id_accessor's. This endpoint can be used to read the properties
+of the secret. If the 'secret_id_num_uses' field in the response is 0, it
+represents a non-expiring 'secret_id'.`,
 	},
-	"role-secret-id-accessor": {
-		"Read or delete a issued secret_id, using its accessor",
+	"role-secret-id-accessor-destroy": {
+		"Delete an issued secret_id, using its accessor",
 		`This is particularly useful to clean-up the non-expiring 'secret_id's.
 The list operation on the 'role/<role_name>/secret-id' endpoint will return
 the 'secret_id_accessor's. This endpoint can be used to read the properties
 of the secret. If the 'secret_id_num_uses' field in the response is 0, it
-represents a non-expiring 'secret_id'. This endpoint can be invoked to delete
-the 'secret_id's as well.`,
+represents a non-expiring 'secret_id'.`,
 	},
 	"role-token-ttl": {
 		`Duration in seconds, the lifetime of the token issued by using the SecretID that
