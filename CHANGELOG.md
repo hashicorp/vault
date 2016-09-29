@@ -18,6 +18,10 @@ DEPRECATIONS/CHANGES:
    the default was 30 days, but moving it to 32 days allows some operations
    (e.g. reauthenticating, renewing, etc.) to be performed via a monthly cron
    job.
+ * AppRole Secret ID endpoints changed: Secret ID and Secret ID accessors were
+   getting logged in plaintext in the audit logs as they were part of request
+   URLs.  The GET and DELETE operations are now moved to new endpoints (`/lookup`
+   and `/destroy`) which consumes the input from the body and not the URL.
 
 FEATURES:
 
@@ -75,6 +79,8 @@ BUG FIXES:
  * audit: Fix panic being caused by some values logging as underlying Go types
    instead of formatted strings [GH-1912]
  * auth/approle: Fixed panic on deleting approle that doesn't exist [GH-1920]
+ * auth/approle: Not letting secret IDs and secret ID accessors to get logged
+   in plaintext in audit logs [GH-1947]
  * auth/aws-ec2: Allow authentication if the underlying host is in a bad state
    but the instance is running [GH-1884]
  * auth/token: Fixed metadata getting missed out from token lookup response by
