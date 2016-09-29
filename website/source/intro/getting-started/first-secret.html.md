@@ -34,6 +34,12 @@ $ vault write secret/hello value=world
 Success! Data written to: secret/hello
 ```
 
+If you write to a dev server you should specify vault address as default address use https
+
+```
+$ vault write -address=http://127.0.0.1:8200 secret/hello value=world
+```
+
 This writes the pair `value=world` to the path `secret/hello`. We'll
 cover paths in more detail later, but for now it is important that the
 path is prefixed with `secret/`, otherwise this example won't work. The
