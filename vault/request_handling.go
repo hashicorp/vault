@@ -8,6 +8,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -81,8 +82,28 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		}
 	}
 
+	auditResp := resp
+	// When unwrapping we want to log the actual response that will be written
+	// out. We still want to return the raw value to avoid automatic updating
+	// to any of it.
+	if req.Path == "sys/wrapping/unwrap" &&
+		resp != nil &&
+		resp.Data != nil &&
+		resp.Data[logical.HTTPRawBody] != nil {
+
+		// Decode the JSON
+		httpResp := &logical.HTTPResponse{}
+		err := jsonutil.DecodeJSON(resp.Data[logical.HTTPRawBody].([]byte), httpResp)
+		if err != nil {
+			c.logger.Error("core: failed to unmarshal wrapped HTTP response for audit logging", "error", err)
+			return nil, ErrInternalError
+		}
+
+		auditResp = logical.HTTPResponseToLogicalResponse(httpResp)
+	}
+
 	// Create an audit trail of the response
-	if auditErr := c.auditBroker.LogResponse(auth, req, resp, err); auditErr != nil {
+	if auditErr := c.auditBroker.LogResponse(auth, req, auditResp, err); auditErr != nil {
 		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
 		return nil, ErrInternalError
 	}
@@ -436,7 +457,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 			"response": resp.Data["response"],
 		}
 	} else {
-		httpResponse := logical.SanitizeResponse(resp)
+		httpResponse := logical.LogicalResponseToHTTPResponse(resp)
 
 		// Add the unique identifier of the original request to the response
 		httpResponse.RequestID = req.ID

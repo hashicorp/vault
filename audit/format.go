@@ -297,15 +297,15 @@ type AuditRequest struct {
 
 type AuditResponse struct {
 	Auth     *AuditAuth             `json:"auth,omitempty"`
-	Secret   *AuditSecret           `json:"secret,emitempty"`
-	Data     map[string]interface{} `json:"data"`
-	Redirect string                 `json:"redirect"`
+	Secret   *AuditSecret           `json:"secret,omitempty"`
+	Data     map[string]interface{} `json:"data,omitempty"`
+	Redirect string                 `json:"redirect,omitempty"`
 	WrapInfo *AuditWrapInfo         `json:"wrap_info,omitempty"`
 }
 
 type AuditAuth struct {
-	ClientToken string            `json:"client_token,omitempty"`
-	Accessor    string            `json:"accessor,omitempty"`
+	ClientToken string            `json:"client_token"`
+	Accessor    string            `json:"accessor"`
 	DisplayName string            `json:"display_name"`
 	Policies    []string          `json:"policies"`
 	Metadata    map[string]string `json:"metadata"`

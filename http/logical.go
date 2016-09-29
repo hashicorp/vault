@@ -175,7 +175,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 				},
 			}
 		} else {
-			httpResp = logical.SanitizeResponse(resp)
+			httpResp = logical.LogicalResponseToHTTPResponse(resp)
 			httpResp.RequestID = req.ID
 		}
 
