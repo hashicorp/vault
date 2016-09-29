@@ -426,7 +426,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
-		return NewSystemBackend(c, config), nil
+		return NewSystemBackend(c, config)
 	}
 	c.logicalBackends = logicalBackends
 
@@ -1515,4 +1515,28 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	min, max = c.barrier.KeyLength()
 	max += shamir.ShareOverhead
 	return
+}
+
+func (c *Core) ValidateWrappingToken(token string) (bool, error) {
+	if token == "" {
+		return false, fmt.Errorf("token is empty")
+	}
+
+	te, err := c.tokenStore.Lookup(token)
+	if err != nil {
+		return false, err
+	}
+	if te == nil {
+		return false, nil
+	}
+
+	if len(te.Policies) != 1 {
+		return false, nil
+	}
+
+	if te.Policies[0] != responseWrappingPolicyName {
+		return false, nil
+	}
+
+	return true, nil
 }

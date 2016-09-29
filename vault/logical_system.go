@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -22,7 +23,7 @@ var (
 	}
 )
 
-func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend {
+func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backend, error) {
 	b := &SystemBackend{
 		Core: core,
 	}
@@ -540,12 +541,72 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) logical.Backend
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
+
+			&framework.Path{
+				Pattern: "wrapping/wrap$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleWrappingWrap,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "wrapping/unwrap$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleWrappingUnwrap,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["unwrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["unwrap"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "wrapping/lookup$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleWrappingLookup,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["wraplookup"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["wraplookup"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "wrapping/rewrap$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"token": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleWrappingRewrap,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
+			},
 		},
 	}
 
-	b.Backend.Setup(config)
-
-	return b.Backend
+	return b.Backend.Setup(config)
 }
 
 // SystemBackend implements logical.Backend and is used to interact with
@@ -558,7 +619,11 @@ type SystemBackend struct {
 
 // handleCapabilitiesreturns the ACL capabilities of the token for a given path
 func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	capabilities, err := b.Core.Capabilities(d.Get("token").(string), d.Get("path").(string))
+	token := d.Get("token").(string)
+	if token == "" {
+		token = req.ClientToken
+	}
+	capabilities, err := b.Core.Capabilities(token, d.Get("path").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -660,6 +725,7 @@ func (b *SystemBackend) handleRekeyDelete(
 
 	return nil, nil
 }
+
 func (b *SystemBackend) handleRekeyDeleteBarrier(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	return b.handleRekeyDelete(req, data, false)
@@ -1406,6 +1472,221 @@ func (b *SystemBackend) handleRotate(
 	return nil, nil
 }
 
+func (b *SystemBackend) handleWrappingWrap(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if req.WrapTTL == 0 {
+		return logical.ErrorResponse("endpoint requires response wrapping to be used"), logical.ErrInvalidRequest
+	}
+
+	return &logical.Response{
+		Data: data.Raw,
+	}, nil
+}
+
+func (b *SystemBackend) handleWrappingUnwrap(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// If a third party is unwrapping (rather than the calling token being the
+	// wrapping token) we detect this so that we can revoke the original
+	// wrapping token after reading it
+	var thirdParty bool
+
+	token := data.Get("token").(string)
+	if token != "" {
+		thirdParty = true
+	} else {
+		token = req.ClientToken
+	}
+
+	if thirdParty {
+		// Use the token to decrement the use count to avoid a second operation on the token.
+		_, err := b.Core.tokenStore.UseTokenByID(token)
+		if err != nil {
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+		}
+
+		defer b.Core.tokenStore.Revoke(token)
+	}
+
+	cubbyReq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/response",
+		ClientToken: token,
+	}
+	cubbyResp, err := b.Core.router.Route(cubbyReq)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+	}
+	if cubbyResp == nil {
+		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp, nil
+	}
+	if cubbyResp.Data == nil {
+		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
+	}
+
+	responseRaw := cubbyResp.Data["response"]
+	if responseRaw == nil {
+		return nil, fmt.Errorf("no response found inside the cubbyhole")
+	}
+	response, ok := responseRaw.(string)
+	if !ok {
+		return nil, fmt.Errorf("could not decode response inside the cubbyhole")
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+	if len(response) == 0 {
+		resp.Data[logical.HTTPStatusCode] = 204
+	} else {
+		resp.Data[logical.HTTPStatusCode] = 200
+		resp.Data[logical.HTTPRawBody] = []byte(response)
+		resp.Data[logical.HTTPContentType] = "application/json"
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) handleWrappingLookup(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	token := data.Get("token").(string)
+
+	if token == "" {
+		return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
+	}
+
+	cubbyReq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/wrapinfo",
+		ClientToken: token,
+	}
+	cubbyResp, err := b.Core.router.Route(cubbyReq)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+	}
+	if cubbyResp == nil {
+		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp, nil
+	}
+	if cubbyResp.Data == nil {
+		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
+	}
+
+	creationTTLRaw := cubbyResp.Data["creation_ttl"]
+	creationTime := cubbyResp.Data["creation_time"]
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+	if creationTTLRaw != nil {
+		creationTTL, err := creationTTLRaw.(json.Number).Int64()
+		if err != nil {
+			return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
+		}
+		resp.Data["creation_ttl"] = time.Duration(creationTTL).Seconds()
+	}
+	if creationTime != nil {
+		// This was JSON marshaled so it's already a string in RFC3339 format
+		resp.Data["creation_time"] = cubbyResp.Data["creation_time"]
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) handleWrappingRewrap(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// If a third party is rewrapping (rather than the calling token being the
+	// wrapping token) we detect this so that we can revoke the original
+	// wrapping token after reading it. Right now wrapped tokens can't unwrap
+	// themselves, but in case we change it, this will be ready to do the right
+	// thing.
+	var thirdParty bool
+
+	token := data.Get("token").(string)
+	if token != "" {
+		thirdParty = true
+	} else {
+		token = req.ClientToken
+	}
+
+	if thirdParty {
+		// Use the token to decrement the use count to avoid a second operation on the token.
+		_, err := b.Core.tokenStore.UseTokenByID(token)
+		if err != nil {
+			return nil, fmt.Errorf("error decrementing wrapping token's use-count: %v", err)
+		}
+		defer b.Core.tokenStore.Revoke(token)
+	}
+
+	// Fetch the original TTL
+	cubbyReq := &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/wrapinfo",
+		ClientToken: token,
+	}
+	cubbyResp, err := b.Core.router.Route(cubbyReq)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up wrapping information: %v", err)
+	}
+	if cubbyResp == nil {
+		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp, nil
+	}
+	if cubbyResp.Data == nil {
+		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
+	}
+
+	// Set the creation TTL on the request
+	creationTTLRaw := cubbyResp.Data["creation_ttl"]
+	if creationTTLRaw == nil {
+		return nil, fmt.Errorf("creation_ttl value in wrapping information was nil")
+	}
+	creationTTL, err := cubbyResp.Data["creation_ttl"].(json.Number).Int64()
+	if err != nil {
+		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
+	}
+
+	// Fetch the original response and return it as the data for the new response
+	cubbyReq = &logical.Request{
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/response",
+		ClientToken: token,
+	}
+	cubbyResp, err = b.Core.router.Route(cubbyReq)
+	if err != nil {
+		return nil, fmt.Errorf("error looking up response: %v", err)
+	}
+	if cubbyResp == nil {
+		return logical.ErrorResponse("no information found; wrapping token may be from a previous Vault version"), nil
+	}
+	if cubbyResp != nil && cubbyResp.IsError() {
+		return cubbyResp, nil
+	}
+	if cubbyResp.Data == nil {
+		return logical.ErrorResponse("wrapping information was nil; wrapping token may be from a previous Vault version"), nil
+	}
+
+	response := cubbyResp.Data["response"]
+	if response == nil {
+		return nil, fmt.Errorf("no response found inside the cubbyhole")
+	}
+
+	// Return response in "response"; wrapping code will detect the rewrap and
+	// slot in instead of nesting
+	req.WrapTTL = time.Duration(creationTTL)
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"response": response,
+		},
+	}, nil
+}
+
 func sanitizeMountPath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -1797,5 +2078,28 @@ Enable a new audit backend or disable an existing backend.
 		"Fetches the capabilities of the token associated with the given token, on the given path.",
 		`When there is no access to the token, token accessor can be used to fetch the token's capabilities
 		on a given path.`,
+	},
+
+	"wrap": {
+		"Response-wraps an arbitrary JSON object.",
+		`Round trips the given input data into a response-wrapped token.`,
+	},
+
+	"unwrap": {
+		"Unwraps a response-wrapped token.",
+		`Unwraps a response-wrapped token. Unlike simply reading from cubbyhole/response,
+		this provides additional validation on the token, and rather than a JSON-escaped
+		string, the returned response is the exact same as the contained wrapped response.`,
+	},
+
+	"wraplookup": {
+		"Looks up the properties of a response-wrapped token.",
+		`Returns the creation TTL and creation time of a response-wrapped token.`,
+	},
+
+	"rewrap": {
+		"Rotates a response-wrapped token.",
+		`Rotates a response-wrapped token; the output is a new token with the same
+		response wrapped inside and the same creation TTL. The original token is revoked.`,
 	},
 }

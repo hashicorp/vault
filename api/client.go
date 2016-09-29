@@ -327,17 +327,19 @@ func (c *Client) NewRequest(method, path string) *Request {
 		Params:      make(map[string][]string),
 	}
 
+	var lookupPath string
+	switch {
+	case strings.HasPrefix(path, "/v1/"):
+		lookupPath = strings.TrimPrefix(path, "/v1/")
+	case strings.HasPrefix(path, "v1/"):
+		lookupPath = strings.TrimPrefix(path, "v1/")
+	default:
+		lookupPath = path
+	}
 	if c.wrappingLookupFunc != nil {
-		var lookupPath string
-		switch {
-		case strings.HasPrefix(path, "/v1/"):
-			lookupPath = strings.TrimPrefix(path, "/v1/")
-		case strings.HasPrefix(path, "v1/"):
-			lookupPath = strings.TrimPrefix(path, "v1/")
-		default:
-			lookupPath = path
-		}
 		req.WrapTTL = c.wrappingLookupFunc(method, lookupPath)
+	} else {
+		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
 
 	return req

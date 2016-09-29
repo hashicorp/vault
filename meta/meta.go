@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"flag"
 	"io"
-	"os"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
@@ -51,7 +50,7 @@ func (m *Meta) DefaultWrappingLookupFunc(operation, path string) string {
 		return m.flagWrapTTL
 	}
 
-	return os.Getenv(api.EnvVaultWrapTTL)
+	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
 // Client returns the API client to a Vault server given the configured

@@ -1914,7 +1914,10 @@ path "secret/*" {
 	}
 
 	// Renew the lease
-	req = logical.TestRequest(t, logical.UpdateOperation, "sys/renew/"+resp.Secret.LeaseID)
+	req = logical.TestRequest(t, logical.UpdateOperation, "sys/renew")
+	req.Data = map[string]interface{}{
+		"lease_id": resp.Secret.LeaseID,
+	}
 	req.ClientToken = lresp.Auth.ClientToken
 	_, err = c.HandleRequest(req)
 	if err != nil {

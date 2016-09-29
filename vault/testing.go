@@ -591,8 +591,6 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		DisableMlock:       true,
 	}
 
-	coreConfig.LogicalBackends["generic"] = PassthroughBackendFactory
-
 	if base != nil {
 		// Used to set something non-working to test fallback
 		switch base.ClusterAddr {

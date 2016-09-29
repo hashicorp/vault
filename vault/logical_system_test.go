@@ -509,14 +509,18 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b := NewSystemBackend(core, bc)
+	b, err := NewSystemBackend(core, bc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	exp := ts.expiration
 
 	te := &TokenEntry{
 		ID:   "foo",
 		Path: "auth/github/login/bar",
 	}
-	err := ts.create(te)
+	err = ts.create(te)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1038,7 +1042,13 @@ func testSystemBackend(t *testing.T) logical.Backend {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	return NewSystemBackend(c, bc)
+
+	b, err := NewSystemBackend(c, bc)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return b
 }
 
 func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
@@ -1050,5 +1060,10 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	return c, NewSystemBackend(c, bc), root
+
+	b, err := NewSystemBackend(c, bc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c, b, root
 }
