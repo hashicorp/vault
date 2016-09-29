@@ -557,8 +557,8 @@ the role.
   </dd>
 </dl>
 
-### /auth/approle/role/[role_name]/secret-id/<secret_id>
-#### GET
+### /auth/approle/role/[role_name]/secret-id/lookup
+#### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
@@ -566,14 +566,20 @@ the role.
   </dd>
 
   <dt>Method</dt>
-  <dd>`GET`</dd>
+  <dd>`POST`</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/approle/role/[role_name]/secret-id/<secret_id>`</dd>
+  <dd>`/auth/approle/role/[role_name]/secret-id/lookup`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    None.
+    <ul>
+      <li>
+        <span class="param">secret_id</span>
+        <span class="param-flags">required</span>
+Secret ID attached to the role
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -581,27 +587,26 @@ the role.
 
 ```javascript
 {
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "secret_id_ttl": 600,
-    "secret_id_num_uses": 40,
-    "secret_id_accessor": "5e222f10-278d-a829-4e74-10d71977bb53",
-    "metadata": {},
-    "last_updated_time": "2016-06-29T05:31:09.407042587Z",
-    "expiration_time": "2016-06-29T05:41:09.407042587Z",
-    "creation_time": "2016-06-29T05:31:09.407042587Z"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
+        "request_id": "0d25d8ec-0d16-2842-1dda-c28c25aefd4b",
+        "lease_id": "",
+        "lease_duration": 0,
+        "renewable": false,
+        "data": {
+                "cidr_list": null,
+                "creation_time": "2016-09-28T21:00:46.760570318-04:00",
+                "expiration_time": "0001-01-01T00:00:00Z",
+                "last_updated_time": "2016-09-28T21:00:46.760570318-04:00",
+                "metadata": {},
+                "secret_id_accessor": "b4bea6b2-0214-9f7f-33cf-e732155feadb",
+                "secret_id_num_uses": 10,
+                "secret_id_ttl": 0
+        },
 }
 ```
-
   </dd>
 </dl>
 
+### /auth/approle/role/[role_name]/secret-id/destroy
 #### DELETE
 <dl class="api">
   <dt>Description</dt>
@@ -613,11 +618,17 @@ the role.
   <dd>`DELETE`</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/approle/role/[role_name]/secret-id/<secret_id>`</dd>
+  <dd>`/auth/approle/role/[role_name]/secret-id/destroy`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    None.
+    <ul>
+      <li>
+        <span class="param">secret_id</span>
+        <span class="param-flags">required</span>
+Secret ID attached to the role
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -626,8 +637,8 @@ the role.
   </dd>
 </dl>
 
-### /auth/approle/role/[role_name]/secret-id-accessor/<secret_id_accessor>
-#### GET
+### /auth/approle/role/[role_name]/secret-id-accessor/lookup
+#### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
@@ -636,14 +647,20 @@ the role.
   </dd>
 
   <dt>Method</dt>
-  <dd>`GET`</dd>
+  <dd>`POST`</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/approle/role/[role_name]/secret-id-accessor/<secret_id_accessor>`</dd>
+  <dd>`/auth/approle/role/[role_name]/secret-id-accessor/lookup`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    None.
+    <ul>
+      <li>
+        <span class="param">secret_id_accessor</span>
+        <span class="param-flags">required</span>
+Accessor of the secret ID
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -651,27 +668,27 @@ the role.
 
 ```javascript
 {
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "secret_id_ttl": 600,
-    "secret_id_num_uses": 40,
-    "secret_id_accessor": "5e222f10-278d-a829-4e74-10d71977bb53",
-    "metadata": {},
-    "last_updated_time": "2016-06-29T05:31:09.407042587Z",
-    "expiration_time": "2016-06-29T05:41:09.407042587Z",
-    "creation_time": "2016-06-29T05:31:09.407042587Z"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
+        "request_id": "2132237e-d1b6-d298-6117-b54a2d938d00",
+        "lease_id": "",
+        "lease_duration": 0,
+        "renewable": false,
+        "data": {
+                "cidr_list": null,
+                "creation_time": "2016-09-28T22:09:02.834238344-04:00",
+                "expiration_time": "0001-01-01T00:00:00Z",
+                "last_updated_time": "2016-09-28T22:09:02.834238344-04:00",
+                "metadata": {},
+                "secret_id_accessor": "54ba219d-b539-ac4f-e3cf-763c02f351fb",
+                "secret_id_num_uses": 10,
+                "secret_id_ttl": 0
+        },
 }
 ```
 
   </dd>
 </dl>
 
+### /auth/approle/role/[role_name]/secret-id-accessor/destroy
 #### DELETE
 <dl class="api">
   <dt>Description</dt>
@@ -683,11 +700,17 @@ the role.
   <dd>`DELETE`</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/approle/role/[role_name]/secret-id-accessor/<secret_id_accessor>`</dd>
+  <dd>`/auth/approle/role/[role_name]/secret-id-accessor/destroy`</dd>
 
   <dt>Parameters</dt>
   <dd>
-    None.
+    <ul>
+      <li>
+        <span class="param">secret_id_accessor</span>
+        <span class="param-flags">required</span>
+Accessor of the secret ID
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>

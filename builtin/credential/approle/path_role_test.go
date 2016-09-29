@@ -266,12 +266,19 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
+
 	secretID := resp.Data["secret_id"].(string)
+	if secretID == "" {
+		t.Fatal("expected non empty secret ID")
+	}
 
 	secretIDReq := &logical.Request{
-		Operation: logical.ReadOperation,
+		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Path:      "role/role1/secret-id/" + secretID,
+		Path:      "role/role1/secret-id/lookup",
+		Data: map[string]interface{}{
+			"secret_id": secretID,
+		},
 	}
 	resp, err = b.HandleRequest(secretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -281,13 +288,19 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secretIDReq.Operation = logical.DeleteOperation
-	resp, err = b.HandleRequest(secretIDReq)
+	deleteSecretIDReq := &logical.Request{
+		Operation: logical.DeleteOperation,
+		Storage:   storage,
+		Path:      "role/role1/secret-id/destroy",
+		Data: map[string]interface{}{
+			"secret_id": secretID,
+		},
+	}
+	resp, err = b.HandleRequest(deleteSecretIDReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	secretIDReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(secretIDReq)
 	if resp != nil && resp.IsError() {
 		t.Fatalf("error response:%#v", err, resp)
@@ -325,9 +338,12 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	hmacSecretID := resp.Data["keys"].([]string)[0]
 
 	hmacReq := &logical.Request{
-		Operation: logical.ReadOperation,
+		Operation: logical.UpdateOperation,
 		Storage:   storage,
-		Path:      "role/role1/secret-id-accessor/" + hmacSecretID,
+		Path:      "role/role1/secret-id-accessor/lookup",
+		Data: map[string]interface{}{
+			"secret_id_accessor": hmacSecretID,
+		},
 	}
 	resp, err = b.HandleRequest(hmacReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -337,7 +353,7 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hmacReq.Operation = logical.DeleteOperation
+	hmacReq.Path = "role/role1/secret-id-accessor/destroy"
 	resp, err = b.HandleRequest(hmacReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
