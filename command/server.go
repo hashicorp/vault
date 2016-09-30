@@ -871,6 +871,7 @@ func (c *ServerCommand) Reload(configPath []string) error {
 		for _, relFunc := range (*c.reloadFuncs)["listener|"+lnConfig.Type] {
 			if err := relFunc(lnConfig.Config); err != nil {
 				reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading configuration: %s", err))
+				goto audit
 			}
 		}
 	}
