@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/cli"
 )
@@ -183,9 +182,8 @@ func TestServer_ReloadListener(t *testing.T) {
 		Meta: meta.Meta{
 			Ui: ui,
 		},
-		ShutdownCh:  MakeShutdownCh(),
-		SighupCh:    MakeSighupCh(),
-		ReloadFuncs: map[string][]server.ReloadFunc{},
+		ShutdownCh: MakeShutdownCh(),
+		SighupCh:   MakeSighupCh(),
 	}
 
 	finished := false

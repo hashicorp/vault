@@ -54,7 +54,8 @@ type ServerCommand struct {
 
 	logger log.Logger
 
-	ReloadFuncs map[string][]server.ReloadFunc
+	reloadFuncsLock *sync.RWMutex
+	reloadFuncs     *map[string][]vault.ReloadFunc
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -338,6 +339,10 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
+	// Copy the reload funcs pointers back
+	c.reloadFuncs = coreConfig.ReloadFuncs
+	c.reloadFuncsLock = coreConfig.ReloadFuncsLock
+
 	// Compile server information for output later
 	info["backend"] = config.Backend.Type
 	info["log level"] = logLevel
@@ -374,6 +379,7 @@ func (c *ServerCommand) Run(args []string) int {
 	clusterAddrs := []*net.TCPAddr{}
 
 	// Initialize the listeners
+	c.reloadFuncsLock.Lock()
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
 		if lnConfig.Type == "atlas" {
@@ -396,9 +402,9 @@ func (c *ServerCommand) Run(args []string) int {
 		lns = append(lns, ln)
 
 		if reloadFunc != nil {
-			relSlice := c.ReloadFuncs["listener|"+lnConfig.Type]
+			relSlice := (*c.reloadFuncs)["listener|"+lnConfig.Type]
 			relSlice = append(relSlice, reloadFunc)
-			c.ReloadFuncs["listener|"+lnConfig.Type] = relSlice
+			(*c.reloadFuncs)["listener|"+lnConfig.Type] = relSlice
 		}
 
 		if !disableClustering && lnConfig.Type == "tcp" {
@@ -440,6 +446,7 @@ func (c *ServerCommand) Run(args []string) int {
 			"%s (%s)", lnConfig.Type, strings.Join(propsList, ", "))
 
 	}
+	c.reloadFuncsLock.Unlock()
 	if !disableClustering {
 		if c.logger.IsTrace() {
 			c.logger.Trace("cluster listener addresses synthesized", "cluster_addresses", clusterAddrs)
@@ -855,11 +862,14 @@ func (c *ServerCommand) Reload(configPath []string) error {
 		return retErr
 	}
 
+	c.reloadFuncsLock.RLock()
+	defer c.reloadFuncsLock.RUnlock()
+
 	var reloadErrors *multierror.Error
 	// Call reload on the listeners. This will call each listener with each
 	// config block, but they verify the address.
 	for _, lnConfig := range config.Listeners {
-		for _, relFunc := range c.ReloadFuncs["listener|"+lnConfig.Type] {
+		for _, relFunc := range (*c.reloadFuncs)["listener|"+lnConfig.Type] {
 			if err := relFunc(lnConfig.Config); err != nil {
 				retErr := fmt.Errorf("Error encountered reloading configuration: %s", err)
 				reloadErrors = multierror.Append(retErr)

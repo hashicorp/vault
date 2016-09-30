@@ -5,7 +5,6 @@ import (
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/version"
 
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
@@ -87,9 +86,8 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"ssh":        ssh.Factory,
 					"rabbitmq":   rabbitmq.Factory,
 				},
-				ShutdownCh:  command.MakeShutdownCh(),
-				SighupCh:    command.MakeSighupCh(),
-				ReloadFuncs: map[string][]server.ReloadFunc{},
+				ShutdownCh: command.MakeShutdownCh(),
+				SighupCh:   command.MakeSighupCh(),
 			}, nil
 		},
 

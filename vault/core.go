@@ -89,6 +89,9 @@ var (
 	manualStepDownSleepPeriod = 10 * time.Second
 )
 
+// ReloadFunc are functions that are called when a reload is requested.
+type ReloadFunc func(map[string]string) error
+
 // NonFatalError is an error that can be returned during NewCore that should be
 // displayed but not cause a program exit
 type NonFatalError struct {
@@ -242,6 +245,12 @@ type Core struct {
 	// cachingDisabled indicates whether caches are disabled
 	cachingDisabled bool
 
+	// reloadFuncs is a map containing reload functions
+	reloadFuncs map[string][]ReloadFunc
+
+	// reloadFuncsLock controlls access to the funcs
+	reloadFuncsLock sync.RWMutex
+
 	//
 	// Cluster information
 	//
@@ -322,6 +331,9 @@ type CoreConfig struct {
 	MaxLeaseTTL time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 
 	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
+
+	ReloadFuncs     *map[string][]ReloadFunc
+	ReloadFuncsLock *sync.RWMutex
 }
 
 // NewCore is used to construct a new core
@@ -414,6 +426,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		c.ha = conf.HAPhysical
 	}
+
+	// We create the funcs here, then populate the given config with it so that
+	// the caller can share state
+	conf.ReloadFuncsLock = &c.reloadFuncsLock
+	c.reloadFuncsLock.Lock()
+	c.reloadFuncs = make(map[string][]ReloadFunc)
+	c.reloadFuncsLock.Unlock()
+	conf.ReloadFuncs = &c.reloadFuncs
 
 	// Setup the backends
 	logicalBackends := make(map[string]logical.Factory)
