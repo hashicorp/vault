@@ -69,7 +69,7 @@ func (c *ServerCommand) Run(args []string) int {
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
 	flags.BoolVar(&devHA, "dev-ha", false, "")
-	flags.Usage = func() { c.Ui.Error(c.Help()) }
+	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -128,11 +128,11 @@ func (c *ServerCommand) Run(args []string) int {
 	if !dev {
 		switch {
 		case len(configPath) == 0:
-			c.Ui.Error("At least one config path must be specified with -config")
+			c.Ui.Output("At least one config path must be specified with -config")
 			flags.Usage()
 			return 1
 		case devRootTokenID != "":
-			c.Ui.Error("Root token ID can only be specified with -dev")
+			c.Ui.Output("Root token ID can only be specified with -dev")
 			flags.Usage()
 			return 1
 		}
@@ -149,7 +149,7 @@ func (c *ServerCommand) Run(args []string) int {
 	for _, path := range configPath {
 		current, err := server.LoadConfig(path, c.logger)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
+			c.Ui.Output(fmt.Sprintf(
 				"Error loading configuration from %s: %s", path, err))
 			return 1
 		}
@@ -163,13 +163,13 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Ensure at least one config was found.
 	if config == nil {
-		c.Ui.Error("No configuration files found.")
+		c.Ui.Output("No configuration files found.")
 		return 1
 	}
 
 	// Ensure that a backend is provided
 	if config.Backend == nil {
-		c.Ui.Error("A physical backend must be specified")
+		c.Ui.Output("A physical backend must be specified")
 		return 1
 	}
 
@@ -183,7 +183,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if err := c.setupTelemetry(config); err != nil {
-		c.Ui.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
+		c.Ui.Output(fmt.Sprintf("Error initializing telemetry: %s", err))
 		return 1
 	}
 
@@ -191,7 +191,7 @@ func (c *ServerCommand) Run(args []string) int {
 	backend, err := physical.NewBackend(
 		config.Backend.Type, c.logger, config.Backend.Config)
 	if err != nil {
-		c.Ui.Error(fmt.Sprintf(
+		c.Ui.Output(fmt.Sprintf(
 			"Error initializing backend of type %s: %s",
 			config.Backend.Type, err))
 		return 1
@@ -206,7 +206,7 @@ func (c *ServerCommand) Run(args []string) int {
 	defer func() {
 		err = seal.Finalize()
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			c.Ui.Output(fmt.Sprintf("Error finalizing seals: %v", err))
 		}
 	}()
 
@@ -235,19 +235,19 @@ func (c *ServerCommand) Run(args []string) int {
 		habackend, err := physical.NewBackend(
 			config.HABackend.Type, c.logger, config.HABackend.Config)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
+			c.Ui.Output(fmt.Sprintf(
 				"Error initializing backend of type %s: %s",
 				config.HABackend.Type, err))
 			return 1
 		}
 
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
-			c.Ui.Error("Specified HA backend does not support HA")
+			c.Ui.Output("Specified HA backend does not support HA")
 			return 1
 		}
 
 		if !coreConfig.HAPhysical.HAEnabled() {
-			c.Ui.Error("Specified HA backend has HA support disabled; please consult documentation")
+			c.Ui.Output("Specified HA backend has HA support disabled; please consult documentation")
 			return 1
 		}
 
@@ -282,9 +282,9 @@ func (c *ServerCommand) Run(args []string) int {
 	if ok && coreConfig.RedirectAddr == "" {
 		redirect, err := c.detectRedirect(detect, config)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error detecting redirect address: %s", err))
+			c.Ui.Output(fmt.Sprintf("Error detecting redirect address: %s", err))
 		} else if redirect == "" {
-			c.Ui.Error("Failed to detect redirect address.")
+			c.Ui.Output("Failed to detect redirect address.")
 		} else {
 			coreConfig.RedirectAddr = redirect
 		}
@@ -299,7 +299,7 @@ func (c *ServerCommand) Run(args []string) int {
 	} else if coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "" {
 		u, err := url.ParseRequestURI(coreConfig.RedirectAddr)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error parsing redirect address %s: %v", coreConfig.RedirectAddr, err))
+			c.Ui.Output(fmt.Sprintf("Error parsing redirect address %s: %v", coreConfig.RedirectAddr, err))
 			return 1
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -311,7 +311,7 @@ func (c *ServerCommand) Run(args []string) int {
 			nPort = 443
 		}
 		if nPortErr != nil {
-			c.Ui.Error(fmt.Sprintf("Cannot parse %s as a numeric port: %v", port, nPortErr))
+			c.Ui.Output(fmt.Sprintf("Cannot parse %s as a numeric port: %v", port, nPortErr))
 			return 1
 		}
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
@@ -323,7 +323,7 @@ func (c *ServerCommand) Run(args []string) int {
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.RedirectAddr, err))
+			c.Ui.Output(fmt.Sprintf("Error parsing cluster address %s: %v", coreConfig.RedirectAddr, err))
 			return 1
 		}
 		u.Scheme = "https"
@@ -334,7 +334,7 @@ func (c *ServerCommand) Run(args []string) int {
 	core, newCoreError := vault.NewCore(coreConfig)
 	if newCoreError != nil {
 		if !errwrap.ContainsType(newCoreError, new(vault.NonFatalError)) {
-			c.Ui.Error(fmt.Sprintf("Error initializing core: %s", newCoreError))
+			c.Ui.Output(fmt.Sprintf("Error initializing core: %s", newCoreError))
 			return 1
 		}
 	}
@@ -384,7 +384,7 @@ func (c *ServerCommand) Run(args []string) int {
 	for i, lnConfig := range config.Listeners {
 		if lnConfig.Type == "atlas" {
 			if config.ClusterName == "" {
-				c.Ui.Error("cluster_name is not set in the config and is a required value")
+				c.Ui.Output("cluster_name is not set in the config and is a required value")
 				return 1
 			}
 
@@ -393,7 +393,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, logGate)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
+			c.Ui.Output(fmt.Sprintf(
 				"Error initializing listener of type %s: %s",
 				lnConfig.Type, err))
 			return 1
@@ -413,7 +413,7 @@ func (c *ServerCommand) Run(args []string) int {
 			if addr, ok = lnConfig.Config["cluster_address"]; ok {
 				tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 				if err != nil {
-					c.Ui.Error(fmt.Sprintf(
+					c.Ui.Output(fmt.Sprintf(
 						"Error resolving cluster_address: %s",
 						err))
 					return 1
@@ -422,7 +422,7 @@ func (c *ServerCommand) Run(args []string) int {
 			} else {
 				tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 				if !ok {
-					c.Ui.Error("Failed to parse tcp listener")
+					c.Ui.Output("Failed to parse tcp listener")
 					return 1
 				}
 				clusterAddrs = append(clusterAddrs, &net.TCPAddr{
@@ -505,7 +505,7 @@ func (c *ServerCommand) Run(args []string) int {
 			}
 
 			if err := sd.RunServiceDiscovery(c.WaitGroup, c.ShutdownCh, coreConfig.RedirectAddr, activeFunc, sealedFunc); err != nil {
-				c.Ui.Error(fmt.Sprintf("Error initializing service discovery: %v", err))
+				c.Ui.Output(fmt.Sprintf("Error initializing service discovery: %v", err))
 				return 1
 			}
 		}
@@ -522,7 +522,7 @@ func (c *ServerCommand) Run(args []string) int {
 	if dev {
 		init, err := c.enableDev(core, devRootTokenID)
 		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
+			c.Ui.Output(fmt.Sprintf(
 				"Error initializing dev mode: %s", err))
 			return 1
 		}
@@ -577,13 +577,13 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.ShutdownCh:
 			c.Ui.Output("==> Vault shutdown triggered")
 			if err := core.Shutdown(); err != nil {
-				c.Ui.Error(fmt.Sprintf("Error with core shutdown: %s", err))
+				c.Ui.Output(fmt.Sprintf("Error with core shutdown: %s", err))
 			}
 			shutdownTriggered = true
 		case <-c.SighupCh:
 			c.Ui.Output("==> Vault reload triggered")
 			if err := c.Reload(configPath); err != nil {
-				c.Ui.Error(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
+				c.Ui.Output(fmt.Sprintf("Error(s) were encountered during reload: %s", err))
 			}
 		}
 	}
@@ -838,14 +838,18 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 }
 
 func (c *ServerCommand) Reload(configPath []string) error {
+	c.reloadFuncsLock.RLock()
+	defer c.reloadFuncsLock.RUnlock()
+
+	var reloadErrors *multierror.Error
+
 	// Read the new config
 	var config *server.Config
 	for _, path := range configPath {
 		current, err := server.LoadConfig(path, c.logger)
 		if err != nil {
-			retErr := fmt.Errorf("Error loading configuration from %s: %s", path, err)
-			c.Ui.Error(retErr.Error())
-			return retErr
+			reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error loading configuration from %s: %s", path, err))
+			goto audit
 		}
 
 		if config == nil {
@@ -857,22 +861,31 @@ func (c *ServerCommand) Reload(configPath []string) error {
 
 	// Ensure at least one config was found.
 	if config == nil {
-		retErr := fmt.Errorf("No configuration files found")
-		c.Ui.Error(retErr.Error())
-		return retErr
+		reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("No configuration files found"))
+		goto audit
 	}
 
-	c.reloadFuncsLock.RLock()
-	defer c.reloadFuncsLock.RUnlock()
-
-	var reloadErrors *multierror.Error
 	// Call reload on the listeners. This will call each listener with each
 	// config block, but they verify the address.
 	for _, lnConfig := range config.Listeners {
 		for _, relFunc := range (*c.reloadFuncs)["listener|"+lnConfig.Type] {
 			if err := relFunc(lnConfig.Config); err != nil {
-				retErr := fmt.Errorf("Error encountered reloading configuration: %s", err)
-				reloadErrors = multierror.Append(retErr)
+				reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading configuration: %s", err))
+			}
+		}
+	}
+
+audit:
+	// file audit reload funcs
+	for k, relFuncs := range *c.reloadFuncs {
+		if !strings.HasPrefix(k, "audit_file|") {
+			continue
+		}
+		for _, relFunc := range relFuncs {
+			if relFunc != nil {
+				if err := relFunc(nil); err != nil {
+					reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("Error encountered reloading file audit backend at path %s: %v", strings.TrimPrefix(k, "audit_file|"), err))
+				}
 			}
 		}
 	}

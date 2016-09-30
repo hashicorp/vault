@@ -77,7 +77,7 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
 
 	// Lookup the new backend
-	backend, err := c.newAuditBackend(entry.Type, view, entry.Options)
+	backend, err := c.newAuditBackend(entry, view, entry.Options)
 	if err != nil {
 		return err
 	}
@@ -110,12 +110,14 @@ func (c *Core) disableAudit(path string) (bool, error) {
 	defer c.auditLock.Unlock()
 
 	newTable := c.audit.shallowClone()
-	found := newTable.remove(path)
+	entry := newTable.remove(path)
 
 	// Ensure there was a match
-	if !found {
+	if entry == nil {
 		return false, fmt.Errorf("no matching backend")
 	}
+
+	c.removeAuditReloadFunc(entry)
 
 	// Update the audit table
 	if err := c.persistAudit(newTable); err != nil {
@@ -235,7 +237,7 @@ func (c *Core) setupAudits() error {
 		view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
 
 		// Initialize the backend
-		audit, err := c.newAuditBackend(entry.Type, view, entry.Options)
+		audit, err := c.newAuditBackend(entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("core: failed to create audit entry", "path", entry.Path, "error", err)
 			return errLoadAuditFailed
@@ -254,16 +256,38 @@ func (c *Core) teardownAudits() error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
+	for _, entry := range c.audit.Entries {
+		c.removeAuditReloadFunc(entry)
+	}
+
 	c.audit = nil
 	c.auditBroker = nil
 	return nil
 }
 
+// removeAuditReloadFunc removes the reload func from the working set. The
+// audit lock needs to be held before calling this.
+func (c *Core) removeAuditReloadFunc(entry *MountEntry) {
+	switch entry.Type {
+	case "file":
+		key := "audit_file|" + entry.Path
+		c.reloadFuncsLock.Lock()
+
+		if c.logger.IsDebug() {
+			c.logger.Debug("audit: removing reload function", "path", entry.Path)
+		}
+
+		delete(c.reloadFuncs, key)
+
+		c.reloadFuncsLock.Unlock()
+	}
+}
+
 // newAuditBackend is used to create and configure a new audit backend by name
-func (c *Core) newAuditBackend(t string, view logical.Storage, conf map[string]string) (audit.Backend, error) {
-	f, ok := c.auditBackends[t]
+func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map[string]string) (audit.Backend, error) {
+	f, ok := c.auditBackends[entry.Type]
 	if !ok {
-		return nil, fmt.Errorf("unknown backend type: %s", t)
+		return nil, fmt.Errorf("unknown backend type: %s", entry.Type)
 	}
 	salter, err := salt.NewSalt(view, &salt.Config{
 		HMAC:     sha256.New,
@@ -272,10 +296,36 @@ func (c *Core) newAuditBackend(t string, view logical.Storage, conf map[string]s
 	if err != nil {
 		return nil, fmt.Errorf("core: unable to generate salt: %v", err)
 	}
-	return f(&audit.BackendConfig{
+
+	be, err := f(&audit.BackendConfig{
 		Salt:   salter,
 		Config: conf,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	switch entry.Type {
+	case "file":
+		key := "audit_file|" + entry.Path
+
+		c.reloadFuncsLock.Lock()
+
+		if c.logger.IsDebug() {
+			c.logger.Debug("audit: adding reload function", "path", entry.Path)
+		}
+
+		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]string) error {
+			if c.logger.IsInfo() {
+				c.logger.Info("audit: reloading file audit backend", "path", entry.Path)
+			}
+			return be.Reload()
+		})
+
+		c.reloadFuncsLock.Unlock()
+	}
+
+	return be, err
 }
 
 // defaultAuditTable creates a default audit table
@@ -294,7 +344,7 @@ type backendEntry struct {
 // AuditBroker is used to provide a single ingest interface to auditable
 // events given that multiple backends may be configured.
 type AuditBroker struct {
-	l        sync.RWMutex
+	sync.RWMutex
 	backends map[string]backendEntry
 	logger   log.Logger
 }
@@ -310,8 +360,8 @@ func NewAuditBroker(log log.Logger) *AuditBroker {
 
 // Register is used to add new audit backend to the broker
 func (a *AuditBroker) Register(name string, b audit.Backend, v *BarrierView) {
-	a.l.Lock()
-	defer a.l.Unlock()
+	a.Lock()
+	defer a.Unlock()
 	a.backends[name] = backendEntry{
 		backend: b,
 		view:    v,
@@ -320,23 +370,23 @@ func (a *AuditBroker) Register(name string, b audit.Backend, v *BarrierView) {
 
 // Deregister is used to remove an audit backend from the broker
 func (a *AuditBroker) Deregister(name string) {
-	a.l.Lock()
-	defer a.l.Unlock()
+	a.Lock()
+	defer a.Unlock()
 	delete(a.backends, name)
 }
 
 // IsRegistered is used to check if a given audit backend is registered
 func (a *AuditBroker) IsRegistered(name string) bool {
-	a.l.RLock()
-	defer a.l.RUnlock()
+	a.RLock()
+	defer a.RUnlock()
 	_, ok := a.backends[name]
 	return ok
 }
 
 // GetHash returns a hash using the salt of the given backend
 func (a *AuditBroker) GetHash(name string, input string) (string, error) {
-	a.l.RLock()
-	defer a.l.RUnlock()
+	a.RLock()
+	defer a.RUnlock()
 	be, ok := a.backends[name]
 	if !ok {
 		return "", fmt.Errorf("unknown audit backend %s", name)
@@ -349,8 +399,8 @@ func (a *AuditBroker) GetHash(name string, input string) (string, error) {
 // log the given request and that *at least one* succeeds.
 func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) (retErr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
-	a.l.RLock()
-	defer a.l.RUnlock()
+	a.RLock()
+	defer a.RUnlock()
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.Error("audit: panic during logging", "request_path", req.Path, "error", r)
@@ -389,8 +439,8 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outer
 func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 	resp *logical.Response, err error) (reterr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
-	a.l.RLock()
-	defer a.l.RUnlock()
+	a.RLock()
+	defer a.RUnlock()
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.Error("audit: panic during logging", "request_path", req.Path, "error", r)

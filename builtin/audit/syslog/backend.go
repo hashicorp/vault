@@ -116,3 +116,7 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 	_, err = b.logger.Write(buf.Bytes())
 	return err
 }
+
+func (b *Backend) Reload() error {
+	return nil
+}

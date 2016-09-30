@@ -101,17 +101,18 @@ func (t *MountTable) setTaint(path string, value bool) bool {
 	return false
 }
 
-// remove is used to remove a given path entry
-func (t *MountTable) remove(path string) bool {
+// remove is used to remove a given path entry; returns the entry that was
+// removed
+func (t *MountTable) remove(path string) *MountEntry {
 	n := len(t.Entries)
 	for i := 0; i < n; i++ {
-		if t.Entries[i].Path == path {
+		if entry := t.Entries[i]; entry.Path == path {
 			t.Entries[i], t.Entries[n-1] = t.Entries[n-1], nil
 			t.Entries = t.Entries[:n-1]
-			return true
+			return entry
 		}
 	}
-	return false
+	return nil
 }
 
 // MountEntry is used to represent a mount table entry

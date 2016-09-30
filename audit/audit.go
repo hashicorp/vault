@@ -26,6 +26,9 @@ type Backend interface {
 	// so that a caller can determine if a value in the audit log matches
 	// an expected plaintext value
 	GetHash(string) string
+
+	// Reload is called on SIGHUP for supporting backends.
+	Reload() error
 }
 
 type BackendConfig struct {
