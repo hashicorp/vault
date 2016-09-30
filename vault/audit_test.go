@@ -49,7 +49,7 @@ func (n *NoopAudit) GetHash(data string) string {
 	return n.Config.Salt.GetIdentifiedHMAC(data)
 }
 
-func (n *NoopAudit) Reload() err {
+func (n *NoopAudit) Reload() error {
 	return nil
 }
 
