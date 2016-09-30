@@ -212,7 +212,7 @@ func Gen(w io.Writer, buildTags, pkgName, uid string, useUnsafe bool, ti *TypeIn
 		x.genRefPkgs(t)
 	}
 	if buildTags != "" {
-		x.line("//+build " + buildTags)
+		x.line("// +build " + buildTags)
 		x.line("")
 	}
 	x.line(`

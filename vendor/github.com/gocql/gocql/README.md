@@ -14,7 +14,7 @@ Discussions: https://groups.google.com/forum/#!forum/gocql
 
 Production Stability
 --------------------
-The method in which the driver maintains and discovers hosts in the Cassandra cluster changed when adding support for event driven discovery using serverside events. This has meant many things in the driver internally have been touched and changed, as such if you would like to go back to the historical node discovery the tag `pre-node-events` is a tree which uses the old polling based discovery.
+The method in which the driver maintains and discovers hosts in the Cassandra cluster changed when adding support for event driven discovery using server-side events. This has meant many things in the driver internally have been touched and changed, as such if you would like to go back to the historical node discovery the tag `pre-node-events` is a tree which uses the old polling based discovery.
 
 If you run into bugs related to node discovery using events please open a ticket.
 
@@ -25,8 +25,8 @@ The following matrix shows the versions of Go and Cassandra that are tested with
 
 Go/Cassandra | 2.0.x | 2.1.x | 2.2.x
 -------------| -------| ------| ---------
-1.4  | yes | yes | yes
-1.5  | yes | yes | yes
+1.6  | yes | yes | yes
+1.7  | yes | yes | yes
 
 Gocql has been tested in production against many different versions of Cassandra. Due to limits in our CI setup we only test against the latest 3 major releases, which coincide with the official support from the Apache project.
 
@@ -36,7 +36,7 @@ NOTE: as of Cassandra 3.0 it requires Java 8, currently (06/02/2016) we can not 
 Sunsetting Model
 ----------------
 
-In general, the gocql team will focus on supporting the current and previous versions of Golang. gocql may still work with older versions of Golang, but offical support for these versions will have been sunset.
+In general, the gocql team will focus on supporting the current and previous versions of Go. gocql may still work with older versions of Go, but official support for these versions will have been sunset.
 
 Installation
 ------------
@@ -48,10 +48,10 @@ Features
 --------
 
 * Modern Cassandra client using the native transport
-* Automatic type conversations between Cassandra and Go
+* Automatic type conversions between Cassandra and Go
   * Support for all common types including sets, lists and maps
   * Custom types can implement a `Marshaler` and `Unmarshaler` interface
-  * Strict type conversations without any loss of precision
+  * Strict type conversions without any loss of precision
   * Built-In support for UUIDs (version 1 and 4)
 * Support for logged, unlogged and counter batches
 * Cluster management
@@ -84,9 +84,9 @@ its read buffer is when it Unmarshal's data into supplied types.
 
 Some tips for getting more performance from the driver:
 * Use the TokenAware policy
-* Use many goroutines when doing inserts, the driver is asynchronous but provides a synchronous api, it can execute many queries concurrently
+* Use many goroutines when doing inserts, the driver is asynchronous but provides a synchronous API, it can execute many queries concurrently
 * Tune query page size
-* Reading data from the network to unmarshal will incur a large ammount of allocations, this can adversly affect the garbage collector, tune `GOGC`
+* Reading data from the network to unmarshal will incur a large amount of allocations, this can adversely affect the garbage collector, tune `GOGC`
 * Close iterators after use to recycle byte buffers
 
 Important Default Keyspace Changes
@@ -189,7 +189,7 @@ There are various ways to bind application level data structures to CQL statemen
 * [gocassa](https://github.com/hailocab/gocassa) is an external project that layers on top of gocql to provide convenient query building and data binding.
 * [gocqltable](https://github.com/kristoiv/gocqltable) provides an ORM-style convenience layer to make CRUD operations with gocql easier.
 
-Ecosphere
+Ecosystem
 ---------
 
 The following community maintained tools are known to integrate with gocql:
@@ -197,21 +197,21 @@ The following community maintained tools are known to integrate with gocql:
 * [migrate](https://github.com/mattes/migrate) is a migration handling tool written in Go with Cassandra support.
 * [negronicql](https://github.com/mikebthun/negronicql) is gocql middleware for Negroni.
 * [cqlr](https://github.com/relops/cqlr) adds the ability to auto-bind a CQL iterator to a struct or to bind a struct to an INSERT statement.
-* [cqlc](http://relops.com/cqlc) which generates gocql compliant code from your Cassandra schema so that you can write type safe CQL statements in Go with a natural query syntax.
+* [cqlc](http://relops.com/cqlc) generates gocql compliant code from your Cassandra schema so that you can write type safe CQL statements in Go with a natural query syntax.
 * [gocassa](https://github.com/hailocab/gocassa) provides query building, adds data binding, and provides easy-to-use "recipe" tables for common query use-cases.
-* [gocqltable](https://github.com/kristoiv/gocqltable) is a wrapper around gocql that aims to simplify common operations whilst working the library.
+* [gocqltable](https://github.com/kristoiv/gocqltable) is a wrapper around gocql that aims to simplify common operations.
 * [gockle](https://github.com/willfaught/gockle) provides simple, mockable interfaces that wrap gocql types
 * [scylladb](https://github.com/scylladb/scylla) is a fast Apache Cassandra-compatible NoSQL database
 
 Other Projects
 --------------
 
-* [gocqldriver](https://github.com/tux21b/gocqldriver) is the predecessor of gocql based on Go's "database/sql" package. This project isn't maintained anymore, because Cassandra wasn't a good fit for the traditional "database/sql" API. Use this package instead.
+* [gocqldriver](https://github.com/tux21b/gocqldriver) is the predecessor of gocql based on Go's `database/sql` package. This project isn't maintained anymore, because Cassandra wasn't a good fit for the traditional `database/sql` API. Use this package instead.
 
 SEO
 ---
 
-For some reason, when you google `golang cassandra`, this project doesn't feature very highly in the result list. But if you google `go cassandra`, then we're a bit higher up the list. So this is note to try to convince Google that Golang is an alias for Go.
+For some reason, when you Google `golang cassandra`, this project doesn't feature very highly in the result list. But if you Google `go cassandra`, then we're a bit higher up the list. So this is note to try to convince Google that golang is an alias for Go.
 
 License
 -------

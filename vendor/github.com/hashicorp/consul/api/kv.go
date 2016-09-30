@@ -11,13 +11,35 @@ import (
 
 // KVPair is used to represent a single K/V entry
 type KVPair struct {
-	Key         string
+	// Key is the name of the key. It is also part of the URL path when accessed
+	// via the API.
+	Key string
+
+	// CreateIndex holds the index corresponding the creation of this KVPair. This
+	// is a read-only field.
 	CreateIndex uint64
+
+	// ModifyIndex is used for the Check-And-Set operations and can also be fed
+	// back into the WaitIndex of the QueryOptions in order to perform blocking
+	// queries.
 	ModifyIndex uint64
-	LockIndex   uint64
-	Flags       uint64
-	Value       []byte
-	Session     string
+
+	// LockIndex holds the index corresponding to a lock on this key, if any. This
+	// is a read-only field.
+	LockIndex uint64
+
+	// Flags are any user-defined flags on the key. It is up to the implementer
+	// to check these values, since Consul does not treat them specially.
+	Flags uint64
+
+	// Value is the value for the key. This can be any value, but it will be
+	// base64 encoded upon transport.
+	Value []byte
+
+	// Session is a string representing the ID of the session. Any other
+	// interactions with this key over the same session must specify the same
+	// session ID.
+	Session string
 }
 
 // KVPairs is a list of KVPair objects

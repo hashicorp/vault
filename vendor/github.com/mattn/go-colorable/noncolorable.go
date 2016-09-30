@@ -2,7 +2,6 @@ package colorable
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 )
 
@@ -16,34 +15,36 @@ func NewNonColorable(w io.Writer) io.Writer {
 }
 
 func (w *NonColorable) Write(data []byte) (n int, err error) {
-	er := bytes.NewBuffer(data)
+	er := bytes.NewReader(data)
+	var bw [1]byte
 loop:
 	for {
-		c1, _, err := er.ReadRune()
+		c1, err := er.ReadByte()
 		if err != nil {
 			break loop
 		}
 		if c1 != 0x1b {
-			fmt.Fprint(w.out, string(c1))
+			bw[0] = c1
+			w.out.Write(bw[:])
 			continue
 		}
-		c2, _, err := er.ReadRune()
+		c2, err := er.ReadByte()
 		if err != nil {
-			w.lastbuf.WriteRune(c1)
+			w.lastbuf.WriteByte(c1)
 			break loop
 		}
 		if c2 != 0x5b {
-			w.lastbuf.WriteRune(c1)
-			w.lastbuf.WriteRune(c2)
+			w.lastbuf.WriteByte(c1)
+			w.lastbuf.WriteByte(c2)
 			continue
 		}
 
 		var buf bytes.Buffer
 		for {
-			c, _, err := er.ReadRune()
+			c, err := er.ReadByte()
 			if err != nil {
-				w.lastbuf.WriteRune(c1)
-				w.lastbuf.WriteRune(c2)
+				w.lastbuf.WriteByte(c1)
+				w.lastbuf.WriteByte(c2)
 				w.lastbuf.Write(buf.Bytes())
 				break loop
 			}

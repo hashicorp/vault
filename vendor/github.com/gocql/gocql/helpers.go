@@ -39,6 +39,8 @@ func goType(t TypeInfo) reflect.Type {
 		return reflect.TypeOf(*new(int))
 	case TypeSmallInt:
 		return reflect.TypeOf(*new(int16))
+	case TypeTinyInt:
+		return reflect.TypeOf(*new(int8))
 	case TypeDecimal:
 		return reflect.TypeOf(*new(*inf.Dec))
 	case TypeUUID, TypeTimeUUID:

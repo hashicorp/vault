@@ -414,8 +414,8 @@ type ServerStream interface {
 	// after SendProto. It fails if called multiple times or if
 	// called after SendProto.
 	SendHeader(metadata.MD) error
-	// SetTrailer sets the trailer metadata which will be sent with the
-	// RPC status.
+	// SetTrailer sets the trailer metadata which will be sent with the RPC status.
+	// When called more than once, all the provided metadata will be merged.
 	SetTrailer(metadata.MD)
 	Stream
 }

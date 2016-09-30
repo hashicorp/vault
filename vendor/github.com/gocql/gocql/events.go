@@ -192,12 +192,7 @@ func (s *Session) handleNewNode(host net.IP, port int, waitForBinary bool) {
 		hostInfo.setPeer(addr)
 	}
 
-	if s.cfg.HostFilter != nil {
-		if !s.cfg.HostFilter.Accept(hostInfo) {
-			return
-		}
-	} else if !s.cfg.Discovery.matchFilter(hostInfo) {
-		// TODO: remove this when the host selection policy is more sophisticated
+	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(hostInfo) {
 		return
 	}
 
@@ -254,12 +249,7 @@ func (s *Session) handleNodeUp(ip net.IP, port int, waitForBinary bool) {
 			host.setPeer(addr)
 		}
 
-		if s.cfg.HostFilter != nil {
-			if !s.cfg.HostFilter.Accept(host) {
-				return
-			}
-		} else if !s.cfg.Discovery.matchFilter(host) {
-			// TODO: remove this when the host selection policy is more sophisticated
+		if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
 			return
 		}
 

@@ -270,31 +270,47 @@ func DialContext(ctx context.Context, target string, opts ...DialOption) (conn *
 	if cc.dopts.bs == nil {
 		cc.dopts.bs = DefaultBackoffConfig
 	}
-
-	var (
-		ok    bool
-		addrs []Address
-	)
-	if cc.dopts.balancer == nil {
-		// Connect to target directly if balancer is nil.
-		addrs = append(addrs, Address{Addr: target})
+	creds := cc.dopts.copts.TransportCredentials
+	if creds != nil && creds.Info().ServerName != "" {
+		cc.authority = creds.Info().ServerName
 	} else {
-		if err := cc.dopts.balancer.Start(target); err != nil {
-			return nil, err
+		colonPos := strings.LastIndex(target, ":")
+		if colonPos == -1 {
+			colonPos = len(target)
 		}
-		ch := cc.dopts.balancer.Notify()
-		if ch == nil {
-			// There is no name resolver installed.
-			addrs = append(addrs, Address{Addr: target})
-		} else {
-			addrs, ok = <-ch
-			if !ok || len(addrs) == 0 {
-				return nil, errNoAddr
-			}
-		}
+		cc.authority = target[:colonPos]
 	}
+	var ok bool
 	waitC := make(chan error, 1)
 	go func() {
+		var addrs []Address
+		if cc.dopts.balancer == nil {
+			// Connect to target directly if balancer is nil.
+			addrs = append(addrs, Address{Addr: target})
+		} else {
+			var credsClone credentials.TransportCredentials
+			if creds != nil {
+				credsClone = creds.Clone()
+			}
+			config := BalancerConfig{
+				DialCreds: credsClone,
+			}
+			if err := cc.dopts.balancer.Start(target, config); err != nil {
+				waitC <- err
+				return
+			}
+			ch := cc.dopts.balancer.Notify()
+			if ch == nil {
+				// There is no name resolver installed.
+				addrs = append(addrs, Address{Addr: target})
+			} else {
+				addrs, ok = <-ch
+				if !ok || len(addrs) == 0 {
+					waitC <- errNoAddr
+					return
+				}
+			}
+		}
 		for _, a := range addrs {
 			if err := cc.resetAddrConn(a, false, nil); err != nil {
 				waitC <- err
@@ -321,16 +337,6 @@ func DialContext(ctx context.Context, target string, opts ...DialOption) (conn *
 	// The lbWatcher goroutine will not be created.
 	if ok {
 		go cc.lbWatcher()
-	}
-	creds := cc.dopts.copts.TransportCredentials
-	if creds != nil && creds.Info().ServerName != "" {
-		cc.authority = creds.Info().ServerName
-	} else {
-		colonPos := strings.LastIndex(target, ":")
-		if colonPos == -1 {
-			colonPos = len(target)
-		}
-		cc.authority = target[:colonPos]
 	}
 	return cc, nil
 }
@@ -685,7 +691,7 @@ func (ac *addrConn) resetTransport(closeTransport bool) error {
 			if e, ok := err.(transport.ConnectionError); ok && !e.Temporary() {
 				return err
 			}
-			grpclog.Printf("grpc: addrConn.resetTransport failed to create client transport: %v; Reconnecting to %q", err, ac.addr)
+			grpclog.Printf("grpc: addrConn.resetTransport failed to create client transport: %v; Reconnecting to %v", err, ac.addr)
 			ac.mu.Lock()
 			if ac.state == Shutdown {
 				// ac.tearDown(...) has been invoked.

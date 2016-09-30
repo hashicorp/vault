@@ -731,12 +731,24 @@ func ParsePrivateKey(pemBytes []byte) (Signer, error) {
 	return NewSignerFromKey(key)
 }
 
+// encryptedBlock tells whether a private key is
+// encrypted by examining its Proc-Type header
+// for a mention of ENCRYPTED
+// according to RFC 1421 Section 4.6.1.1.
+func encryptedBlock(block *pem.Block) bool {
+	return strings.Contains(block.Headers["Proc-Type"], "ENCRYPTED")
+}
+
 // ParseRawPrivateKey returns a private key from a PEM encoded private key. It
 // supports RSA (PKCS#1), DSA (OpenSSL), and ECDSA private keys.
 func ParseRawPrivateKey(pemBytes []byte) (interface{}, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
 		return nil, errors.New("ssh: no key found")
+	}
+
+	if encryptedBlock(block) {
+		return nil, errors.New("ssh: cannot decode encrypted private keys")
 	}
 
 	switch block.Type {

@@ -32,6 +32,8 @@ func (cm *CheckManager) initializeTrapURL() error {
 	cm.trapmu.Lock()
 	defer cm.trapmu.Unlock()
 
+	// special case short-circuit: just send to a url, no check management
+	// up to user to ensure that if url is https that it will work (e.g. not self-signed)
 	if cm.checkSubmissionURL != "" {
 		if !cm.enabled {
 			cm.trapURL = cm.checkSubmissionURL
@@ -54,6 +56,9 @@ func (cm *CheckManager) initializeTrapURL() error {
 		if err != nil {
 			return err
 		}
+		if !check.Active {
+			return fmt.Errorf("[ERROR] Check ID %v is not active", check.Cid)
+		}
 		// extract check id from check object returned from looking up using submission url
 		// set m.CheckId to the id
 		// set m.SubmissionUrl to "" to prevent trying to search on it going forward
@@ -74,6 +79,9 @@ func (cm *CheckManager) initializeTrapURL() error {
 		check, err = cm.apih.FetchCheckByID(cm.checkID)
 		if err != nil {
 			return err
+		}
+		if !check.Active {
+			return fmt.Errorf("[ERROR] Check ID %v is not active", check.Cid)
 		}
 	} else {
 		searchCriteria := fmt.Sprintf(
@@ -116,8 +124,19 @@ func (cm *CheckManager) initializeTrapURL() error {
 	cm.checkBundle = checkBundle
 	cm.inventoryMetrics()
 
-	// url to which metrics should be PUT
-	cm.trapURL = api.URLType(checkBundle.Config.SubmissionURL)
+	// determine the trap url to which metrics should be PUT
+	if checkBundle.Type == "httptrap" {
+		cm.trapURL = api.URLType(checkBundle.Config.SubmissionURL)
+	} else {
+		// build a submission_url for non-httptrap checks out of mtev_reverse url
+		if len(checkBundle.ReverseConnectURLs) == 0 {
+			return fmt.Errorf("%s is not an HTTPTRAP check and no reverse connection urls found", checkBundle.Checks[0])
+		}
+		mtevURL := checkBundle.ReverseConnectURLs[0]
+		mtevURL = strings.Replace(mtevURL, "mtev_reverse", "https", 1)
+		mtevURL = strings.Replace(mtevURL, "check", "module/httptrap", 1)
+		cm.trapURL = api.URLType(fmt.Sprintf("%s/%s", mtevURL, checkBundle.Config.ReverseSecret))
+	}
 
 	// used when sending as "ServerName" get around certs not having IP SANS
 	// (cert created with server name as CN but IP used in trap url)

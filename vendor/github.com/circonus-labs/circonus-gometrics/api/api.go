@@ -168,7 +168,6 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 		// errors and may relate to outages on the server side. This will catch
 		// invalid response codes as well, like 0 and 999.
 		if resp.StatusCode == 0 || resp.StatusCode >= 500 {
-			defer resp.Body.Close()
 			body, readErr := ioutil.ReadAll(resp.Body)
 			if readErr != nil {
 				lastHTTPError = fmt.Errorf("- last HTTP error: %d %+v", resp.StatusCode, readErr)

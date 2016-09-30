@@ -873,25 +873,28 @@ func SendHeader(ctx context.Context, md metadata.MD) error {
 	}
 	stream, ok := transport.StreamFromContext(ctx)
 	if !ok {
-		return fmt.Errorf("grpc: failed to fetch the stream from the context %v", ctx)
+		return Errorf(codes.Internal, "grpc: failed to fetch the stream from the context %v", ctx)
 	}
 	t := stream.ServerTransport()
 	if t == nil {
 		grpclog.Fatalf("grpc: SendHeader: %v has no ServerTransport to send header metadata.", stream)
 	}
-	return t.WriteHeader(stream, md)
+	if err := t.WriteHeader(stream, md); err != nil {
+		return toRPCErr(err)
+	}
+	return nil
 }
 
 // SetTrailer sets the trailer metadata that will be sent when an RPC returns.
-// It may be called at most once from a unary RPC handler. The ctx is the RPC
-// handler's Context or one derived from it.
+// When called more than once, all the provided metadata will be merged.
+// The ctx is the RPC handler's Context or one derived from it.
 func SetTrailer(ctx context.Context, md metadata.MD) error {
 	if md.Len() == 0 {
 		return nil
 	}
 	stream, ok := transport.StreamFromContext(ctx)
 	if !ok {
-		return fmt.Errorf("grpc: failed to fetch the stream from the context %v", ctx)
+		return Errorf(codes.Internal, "grpc: failed to fetch the stream from the context %v", ctx)
 	}
 	return stream.SetTrailer(md)
 }

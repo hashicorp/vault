@@ -14,6 +14,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"hash"
@@ -30,6 +31,37 @@ const (
 	sha512Prefix = "sha512"
 	// signatureHeader is the GitHub header key used to pass the HMAC hexdigest.
 	signatureHeader = "X-Hub-Signature"
+	// eventTypeHeader is the Github header key used to pass the event type.
+	eventTypeHeader = "X-Github-Event"
+)
+
+var (
+	// eventTypeMapping maps webhooks types to their corresponding go-github struct types.
+	eventTypeMapping = map[string]string{
+		"commit_comment":                        "CommitCommentEvent",
+		"create":                                "CreateEvent",
+		"delete":                                "DeleteEvent",
+		"deployment":                            "DeploymentEvent",
+		"deployment_status":                     "DeploymentStatusEvent",
+		"fork":                                  "ForkEvent",
+		"gollum":                                "GollumEvent",
+		"integration_installation":              "IntegrationInstallationEvent",
+		"integration_installation_repositories": "IntegrationInstallationRepositoriesEvent",
+		"issue_comment":                         "IssueCommentEvent",
+		"issues":                                "IssuesEvent",
+		"member":                                "MemberEvent",
+		"membership":                            "MembershipEvent",
+		"page_build":                            "PageBuildEvent",
+		"public":                                "PublicEvent",
+		"pull_request_review_comment":           "PullRequestReviewCommentEvent",
+		"pull_request":                          "PullRequestEvent",
+		"push":                                  "PushEvent",
+		"repository":                            "RepositoryEvent",
+		"release":                               "ReleaseEvent",
+		"status":                                "StatusEvent",
+		"team_add":                              "TeamAddEvent",
+		"watch":                                 "WatchEvent",
+	}
 )
 
 // genMAC generates the HMAC signature for a message provided the secret key
@@ -116,4 +148,43 @@ func validateSignature(signature string, payload, secretKey []byte) error {
 		return errors.New("payload signature check failed")
 	}
 	return nil
+}
+
+// WebHookType returns the event type of webhook request r.
+func WebHookType(r *http.Request) string {
+	return r.Header.Get(eventTypeHeader)
+}
+
+// ParseWebHook parses the event payload. For recognized event types, a
+// value of the corresponding struct type will be returned (as returned
+// by Event.Payload()). An error will be returned for unrecognized event
+// types.
+//
+// Example usage:
+//
+//     func (s *GitHubEventMonitor) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+//       payload, err := github.ValidatePayload(r, s.webhookSecretKey)
+//       if err != nil { ... }
+//       event, err := github.ParseWebHook(github.WebHookType(r), payload)
+//       if err != nil { ... }
+//       switch event := event.(type) {
+//       case CommitCommentEvent:
+//           processCommitCommentEvent(event)
+//       case CreateEvent:
+//           processCreateEvent(event)
+//       ...
+//       }
+//     }
+//
+func ParseWebHook(messageType string, payload []byte) (interface{}, error) {
+	eventType, ok := eventTypeMapping[messageType]
+	if !ok {
+		return nil, fmt.Errorf("unknown X-Github-Event in message: %v", messageType)
+	}
+
+	event := Event{
+		Type:       &eventType,
+		RawPayload: (*json.RawMessage)(&payload),
+	}
+	return event.Payload(), nil
 }

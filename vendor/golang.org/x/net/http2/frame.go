@@ -737,7 +737,7 @@ func (f *Framer) WriteSettings(settings ...Setting) error {
 	return f.endWrite()
 }
 
-// WriteSettings writes an empty SETTINGS frame with the ACK bit set.
+// WriteSettingsAck writes an empty SETTINGS frame with the ACK bit set.
 //
 // It will perform exactly one Write to the underlying Writer.
 // It is the caller's responsibility to not call other Write methods concurrently.

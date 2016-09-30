@@ -74,8 +74,7 @@ func (cm *CheckManager) fetchCert() ([]byte, error) {
 	}
 
 	cadata := new(CACert)
-	err = json.Unmarshal(response, cadata)
-	if err != nil {
+	if err := json.Unmarshal(response, cadata); err != nil {
 		return nil, err
 	}
 

@@ -70,7 +70,9 @@ func (a *API) BrokerSearch(query SearchQueryType) ([]Broker, error) {
 	}
 
 	var brokers []Broker
-	json.Unmarshal(result, &brokers)
+	if err := json.Unmarshal(result, &brokers); err != nil {
+		return nil, err
+	}
 
 	return brokers, nil
 }
@@ -83,7 +85,9 @@ func (a *API) FetchBrokerList() ([]Broker, error) {
 	}
 
 	var response []Broker
-	json.Unmarshal(result, &response)
+	if err := json.Unmarshal(result, &response); err != nil {
+		return nil, err
+	}
 
 	return response, nil
 }

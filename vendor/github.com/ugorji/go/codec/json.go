@@ -197,12 +197,20 @@ func (e *jsonEncDriver) EncodeBool(b bool) {
 }
 
 func (e *jsonEncDriver) EncodeFloat32(f float32) {
-	e.w.writeb(strconv.AppendFloat(e.b[:0], float64(f), 'E', -1, 32))
+	e.encodeFloat(float64(f), 32)
 }
 
 func (e *jsonEncDriver) EncodeFloat64(f float64) {
 	// e.w.writestr(strconv.FormatFloat(f, 'E', -1, 64))
-	e.w.writeb(strconv.AppendFloat(e.b[:0], f, 'E', -1, 64))
+	e.encodeFloat(f, 64)
+}
+
+func (e *jsonEncDriver) encodeFloat(f float64, numbits int) {
+	x := strconv.AppendFloat(e.b[:0], f, 'G', -1, numbits)
+	e.w.writeb(x)
+	if bytes.IndexByte(x, 'E') == -1 && bytes.IndexByte(x, '.') == -1 {
+		e.w.writen2('.', '0')
+	}
 }
 
 func (e *jsonEncDriver) EncodeInt(v int64) {

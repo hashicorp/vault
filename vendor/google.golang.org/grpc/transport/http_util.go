@@ -253,6 +253,9 @@ func div(d, r time.Duration) int64 {
 
 // TODO(zhaoq): It is the simplistic and not bandwidth efficient. Improve it.
 func encodeTimeout(t time.Duration) string {
+	if t <= 0 {
+		return "0n"
+	}
 	if d := div(t, time.Nanosecond); d <= maxTimeoutValue {
 		return strconv.FormatInt(d, 10) + "n"
 	}
@@ -349,7 +352,7 @@ func decodeGrpcMessageUnchecked(msg string) string {
 	for i := 0; i < lenMsg; i++ {
 		c := msg[i]
 		if c == percentByte && i+2 < lenMsg {
-			parsed, err := strconv.ParseInt(msg[i+1:i+3], 16, 8)
+			parsed, err := strconv.ParseUint(msg[i+1:i+3], 16, 8)
 			if err != nil {
 				buf.WriteByte(c)
 			} else {

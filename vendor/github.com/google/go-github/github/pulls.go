@@ -44,6 +44,7 @@ type PullRequest struct {
 	PatchURL     *string    `json:"patch_url,omitempty"`
 	Assignee     *User      `json:"assignee,omitempty"`
 	Assignees    []*User    `json:"assignees,omitempty"`
+	Milestone    *Milestone `json:"milestone,omitempty"`
 
 	Head *PullRequestBranch `json:"head,omitempty"`
 	Base *PullRequestBranch `json:"base,omitempty"`

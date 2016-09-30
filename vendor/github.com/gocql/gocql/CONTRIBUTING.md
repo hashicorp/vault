@@ -1,12 +1,12 @@
 # Contributing to gocql
 
-**TL;DR** - this manifesto sets out the bare mimimum requirements for submitting a patch to gocql.
+**TL;DR** - this manifesto sets out the bare minimum requirements for submitting a patch to gocql.
 
 This guide outlines the process of landing patches in gocql and the general approach to maintaining the code base.
 
 ## Background
 
-The goal of the gocql project is to provide a stable and robust CQL driver for Golang. gocql is a community driven project that is coordinated by a small team of core developers.
+The goal of the gocql project is to provide a stable and robust CQL driver for Go. gocql is a community driven project that is coordinated by a small team of core developers.
 
 ## Minimum Requirement Checklist
 
@@ -22,7 +22,7 @@ The following is a check list of requirements that need to be satisfied in order
 * `go fmt` has been applied to the submitted code
 * Functional changes (i.e. new features or changed behavior) are appropriately documented, either as a godoc or in the README (non-functional changes such as bug fixes may not require documentation)
 
-If there are any requirements that can't be reasonably satifisfied, please state this either on the pull request or as part of discussion on the mailing list. Where appropriate, the core team may apply discretion and make an exception to these requirements.
+If there are any requirements that can't be reasonably satisfied, please state this either on the pull request or as part of discussion on the mailing list. Where appropriate, the core team may apply discretion and make an exception to these requirements.
 
 ## Beyond The Checklist
 
@@ -49,11 +49,11 @@ Examples of pull requests that have been accepted without tests include:
 
 ### Sign Off Procedure
 
-Generally speaking, a pull request can get merged by any one of the core gocql team. If your change is minor, chances are that one team member will just go ahead and merge it there and then. As stated earlier, suitable test coverage will increase the likelihood that a single reviewer will assess and merge your change. If your change has no test coverage, or looks like it may have wider implications for the health and stability of the library, the reviewer may elect to refer the change to another team member to acheive consensus before proceeding. Therefore, the tighter and cleaner your patch is, the quicker it will go through the review process.
+Generally speaking, a pull request can get merged by any one of the core gocql team. If your change is minor, chances are that one team member will just go ahead and merge it there and then. As stated earlier, suitable test coverage will increase the likelihood that a single reviewer will assess and merge your change. If your change has no test coverage, or looks like it may have wider implications for the health and stability of the library, the reviewer may elect to refer the change to another team member to achieve consensus before proceeding. Therefore, the tighter and cleaner your patch is, the quicker it will go through the review process.
 
 ### Supported Features
 
-gocql is a low level wire driver for Cassandra CQL. By and large, we would like to keep the functional scope of the library as narrow as possible. We think that gocql should be tight and focussed, and we will be naturally sceptical of things that could just as easily be implemented in a higher layer. Inevitably you will come accross something that could be implemented in a higher layer, save for a minor change to the core API. In this instance, please strike up a conversation with the gocql team. Chances are we will understand what you are trying to acheive and will try to accommodate this in a maintainable way.
+gocql is a low level wire driver for Cassandra CQL. By and large, we would like to keep the functional scope of the library as narrow as possible. We think that gocql should be tight and focused, and we will be naturally skeptical of things that could just as easily be implemented in a higher layer. Inevitably you will come across something that could be implemented in a higher layer, save for a minor change to the core API. In this instance, please strike up a conversation with the gocql team. Chances are we will understand what you are trying to achieve and will try to accommodate this in a maintainable way.
 
 ### Longer Term Evolution
 
@@ -61,7 +61,7 @@ There are some long term plans for gocql that have to be taken into account when
 
 ## Officially Supported Server Versions
 
-Currently, the officiallly supported versions of the Cassandra server include:
+Currently, the officially supported versions of the Cassandra server include:
 
 * 1.2.18
 * 2.0.9

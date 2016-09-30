@@ -70,7 +70,8 @@ func main() {
 	//       desired set this explicitly so that the current hostname will not be used.
 	cmc.CheckManager.Check.InstanceID = ""
 	// Search tag - a specific tag which, when coupled with the instanceId serves to identify the
-	// origin and/or grouping of the metrics
+	// origin and/or grouping of the metrics. Multiple tags may be used, separate with comma.
+    // (e.g. service:consul,service_role:server)
 	// default: service:application name (e.g. service:consul)
 	cmc.CheckManager.Check.SearchTag = ""
 	// Check secret, default: generated when a check needs to be created

@@ -246,7 +246,13 @@ func (m *CirconusMetrics) Flush() {
 		}
 	}
 
-	m.submit(output, newMetrics)
+	if len(output) > 0 {
+		m.submit(output, newMetrics)
+	} else {
+		if m.Debug {
+			m.Log.Println("[DEBUG] No metrics to send, skipping")
+		}
+	}
 
 	m.flushmu.Lock()
 	m.flushing = false

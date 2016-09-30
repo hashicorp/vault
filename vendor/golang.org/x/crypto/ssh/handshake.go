@@ -371,7 +371,16 @@ func (t *handshakeTransport) enterKeyExchangeLocked(otherInitPacket []byte) erro
 	}
 
 	// We don't send FirstKexFollows, but we handle receiving it.
-	if otherInit.FirstKexFollows && algs.kex != otherInit.KexAlgos[0] {
+	//
+	// RFC 4253 section 7 defines the kex and the agreement method for
+	// first_kex_packet_follows. It states that the guessed packet
+	// should be ignored if the "kex algorithm and/or the host
+	// key algorithm is guessed wrong (server and client have
+	// different preferred algorithm), or if any of the other
+	// algorithms cannot be agreed upon". The other algorithms have
+	// already been checked above so the kex algorithm and host key
+	// algorithm are checked here.
+	if otherInit.FirstKexFollows && (clientInit.KexAlgos[0] != serverInit.KexAlgos[0] || clientInit.ServerHostKeyAlgos[0] != serverInit.ServerHostKeyAlgos[0]) {
 		// other side sent a kex message for the wrong algorithm,
 		// which we have to ignore.
 		if _, err := t.conn.readPacket(); err != nil {
