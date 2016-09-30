@@ -560,10 +560,10 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/aws/roles/?list=true`</dd>
+  <dd>`/aws/roles` (LIST) or `/aws/roles/?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>

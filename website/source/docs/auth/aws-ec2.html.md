@@ -565,10 +565,10 @@ The response will be in JSON. For example:
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/certificates?list=true`</dd>
+  <dd>`/auth/aws-ec2/config/certificates` (LIST) or `/auth/aws-ec2/config/certificates?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -974,10 +974,10 @@ in `*`).
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/roles?list=true`</dd>
+  <dd>`/auth/aws-ec2/roles` (LIST) or `/auth/aws-ec2/roles?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1295,10 +1295,10 @@ tag, the `nonce` holds no significance.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/roletag-blacklist?list=true`</dd>
+  <dd>`/auth/aws-ec2/roletag-blacklist` (LIST) or `/auth/aws-ec2/roletag-blacklist?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1440,11 +1440,10 @@ tag, the `nonce` holds no significance.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/identity-whitelist?list=true`</dd>
-
+  <dd>`/auth/aws-ec2/identity-whitelist` (LIST) or `/auth/aws-ec2/identity-whitelist?list=true` (GET)</dd>
   <dt>Parameters</dt>
   <dd>
     None.

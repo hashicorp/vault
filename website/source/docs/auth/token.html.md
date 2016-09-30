@@ -41,7 +41,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
 ## API
 
 ### /auth/token/accessors
-#### LIST or GET 
+#### LIST
 
 <dl class="api">
   <dt>Description</dt>
@@ -52,11 +52,10 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 
   <dt>Method</dt>
-  <dd>LIST or GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/accessors` (LIST)<dd>
-  <dd>`/auth/token/accessors?list=true` (GET)<dd>
+  <dd>`/auth/token/accessors` (LIST) or `/auth/token/accessors?list=true` (GET)<dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -684,10 +683,10 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/roles?list=true`<dd>
+  <dd>`/auth/token/roles` (LIST) or `/auth/token/roles?list=true` (GET)<dd>
 
   <dt>Parameters</dt>
   <dd>

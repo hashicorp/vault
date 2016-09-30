@@ -386,10 +386,10 @@ applications are restricted in the credentials they are allowed to read.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/mongodb/roles/?list=true`</dd>
+  <dd>`/mongodb/roles` (LIST) or `/mongodb/roles/?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>

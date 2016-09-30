@@ -137,10 +137,10 @@ As expected, the value previously set is returned to us.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/cubbyhole/<path>?list=true`</dd>
+  <dd>`/cubbyhole/<path>` (LIST) or `/cubbyhole/<path>?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>

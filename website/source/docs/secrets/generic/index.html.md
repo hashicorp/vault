@@ -120,10 +120,10 @@ seconds (one hour) as specified.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/secret/<path>?list=true`</dd>
+  <dd>`/secret/<path>` (LIST) or `/secret/<path>?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>

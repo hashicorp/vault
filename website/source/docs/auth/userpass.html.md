@@ -295,3 +295,37 @@ necessary.
 
   </dd>
 </dl>
+
+### /auth/userpass/users
+#### LIST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+List the users registered with the backend.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>LIST/GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/userpass/users` (LIST) `/auth/userpass/users?list=true` (GET)</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+   ```javascript
+[
+        "devuser",
+	"produser"
+]
+   ```
+
+  </dd>
+</dl>
+
+
