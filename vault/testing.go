@@ -346,6 +346,10 @@ func (n *noopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical
 	return nil
 }
 
+func (n *noopAudit) Reload() error {
+	return nil
+}
+
 type rawHTTP struct{}
 
 func (n *rawHTTP) HandleRequest(req *logical.Request) (*logical.Response, error) {

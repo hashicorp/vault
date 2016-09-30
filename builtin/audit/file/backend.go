@@ -91,8 +91,8 @@ type Backend struct {
 	formatter    audit.AuditFormatter
 	formatConfig audit.FormatterConfig
 
-	once sync.Once
-	f    *os.File
+	fileLock sync.RWMutex
+	f        *os.File
 }
 
 func (b *Backend) GetHash(data string) string {
@@ -100,6 +100,9 @@ func (b *Backend) GetHash(data string) string {
 }
 
 func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
+	b.fileLock.Lock()
+	defer b.fileLock.Unlock()
+
 	if err := b.open(); err != nil {
 		return err
 	}
@@ -112,6 +115,10 @@ func (b *Backend) LogResponse(
 	req *logical.Request,
 	resp *logical.Response,
 	err error) error {
+
+	b.fileLock.Lock()
+	defer b.fileLock.Unlock()
+
 	if err := b.open(); err != nil {
 		return err
 	}
@@ -119,6 +126,7 @@ func (b *Backend) LogResponse(
 	return b.formatter.FormatResponse(b.f, b.formatConfig, auth, req, resp, err)
 }
 
+// The file lock must be held before calling this
 func (b *Backend) open() error {
 	if b.f != nil {
 		return nil
@@ -134,4 +142,23 @@ func (b *Backend) open() error {
 	}
 
 	return nil
+}
+
+func (b *Backend) Reload() error {
+	b.fileLock.Lock()
+	defer b.fileLock.Unlock()
+
+	if b.f == nil {
+		return b.open()
+	}
+
+	err := b.f.Close()
+	// Set to nil here so that even if we error out, on the next access open()
+	// will be tried
+	b.f = nil
+	if err != nil {
+		return err
+	}
+
+	return b.open()
 }
