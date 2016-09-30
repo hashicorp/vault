@@ -9,7 +9,17 @@ description: |-
 # Audit Backend: File
 
 The `file` audit backend writes audit logs to a file. This is a very simple audit
-backend: it appends logs to a file. It does not currently assist with any log rotation.
+backend: it appends logs to a file.
+
+## Rotation
+
+The backend does not currently assist with any log rotation. There are very
+stable and feature-filled log rotation tools already, so we recommend using
+existing tools.
+
+As of 0.6.2, sending a `SIGHUP` to the Vault process will cause `file` audit
+backends to close and re-open their underlying file, which can assist with log
+rotation needs.
 
 ## Format
 

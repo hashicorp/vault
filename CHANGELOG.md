@@ -51,6 +51,8 @@ IMPROVEMENTS:
    submitted, rather than ignoring it [GH-1782]
  * api: Add method to call `auth/token/create-orphan` endpoint [GH-1834]
  * api: Rekey operation now redirects from standbys to master [GH-1862]
+ * audit/file: Sending a `SIGHUP` to Vault now causes Vault to close and
+   re-open the log file, making it easier to rotate audit logs [GH-1953]
  * auth/aws-ec2: IAM bound parameters on the aws-ec2 backend will perform a
    prefix match instead of exact match [GH-1943]
  * auth/aws-ec2: Added a new constraint `bound_iam_instance_profile_arn` to
