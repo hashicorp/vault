@@ -26,6 +26,10 @@ DEPRECATIONS/CHANGES:
    `sys/wrapping/unwrap` endpoint should be used instead as it provides
    additional security, auditing, and other benefits. The ability to read
    directly will be removed in a future release.
+ * Request Forwarding is now on by default: in 0.6.1 this required toggling on,
+   but is now enabled by default. This can be disabled via the
+   `"disable_clustering"` parameter in Vault's config, or per-request with the
+   `X-Vault-No-Request-Forwarding` header.
 
 FEATURES:
 
