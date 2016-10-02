@@ -239,9 +239,7 @@ page](https://www.vaultproject.io/docs/concepts/ha.html).
 
   * `disable_clustering` (optional) - This controls whether clustering features
     (currently, request forwarding) are enabled. Setting this on a node will
-    disable these features _when that node is the active node_. In 0.6.1 this
-    is `"true"` (note the quotes) by default, but will become `"false"` by
-    default in the next release.
+    disable these features _when that node is the active node_.
 
 #### Backend Reference: Consul
 

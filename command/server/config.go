@@ -443,8 +443,7 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 		delete(m, "cluster_addr")
 	}
 
-	//TODO: Change this in the future
-	disableClustering := true
+	var disableClustering bool
 	var err error
 	if v, ok := m["disable_clustering"]; ok {
 		disableClustering, err = strconv.ParseBool(v)
@@ -499,8 +498,7 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		delete(m, "cluster_addr")
 	}
 
-	//TODO: Change this in the future
-	disableClustering := true
+	var disableClustering bool
 	var err error
 	if v, ok := m["disable_clustering"]; ok {
 		disableClustering, err = strconv.ParseBool(v)

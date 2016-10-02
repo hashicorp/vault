@@ -106,15 +106,9 @@ redirect loop and as such is not a recommended setup when it can be avoided.
 
 ## Request Forwarding
 
-Request forwarding is in beta in 0.6.1 and disabled by default; in a future
-release, it will be enabled by default. To enable request forwarding on a 0.6.1
-server, set the value of the key `disable_clustering` to `"false"` (note the
-quotes) in the `backend` block (or `ha_backend` block if using split data/HA
-backends).
-
-If request forwarding is enabled, clients can still force the older/fallback
-redirection behavior if desired by setting the `X-Vault-No-Request-Forwarding`
-header to any non-empty value.
+If request forwarding is enabled (turned on by default in 0.6.2), clients can
+still force the older/fallback redirection behavior if desired by setting the
+`X-Vault-No-Request-Forwarding` header to any non-empty value.
 
 Successful cluster setup requires a few configuration parameters, although some
 can be automatically determined.
@@ -127,6 +121,9 @@ contain a `cluster_address` on which Vault listens for server-to-server cluster
 requests. If this value is not set, its IP address will be automatically set to
 same as the `address` value, and its port will be automatically set to the same
 as the `address` value plus one (so by default, port `8201`).
+
+Note that *only* active nodes have active listeners. When a node becomes active
+it will start cluster listeners, and when it becomes standby it will stop them.
 
 ### Per-Node Cluster Address
 

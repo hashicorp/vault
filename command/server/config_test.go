@@ -43,7 +43,6 @@ func TestLoadConfigFile(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
-			DisableClustering: true,
 		},
 
 		HABackend: &Backend{
@@ -52,6 +51,7 @@ func TestLoadConfigFile(t *testing.T) {
 			Config: map[string]string{
 				"bar": "baz",
 			},
+			DisableClustering: true,
 		},
 
 		Telemetry: &Telemetry{
@@ -225,6 +225,7 @@ func TestLoadConfigDir(t *testing.T) {
 			Config: map[string]string{
 				"foo": "bar",
 			},
+			DisableClustering: true,
 		},
 
 		Telemetry: &Telemetry{

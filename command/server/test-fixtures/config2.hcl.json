@@ -19,7 +19,7 @@
   "ha_backend":{
     "consul":{
       "bar":"baz",
-      "disable_clustering": "false"
+      "disable_clustering": "true"
     }
   },
   "cache_size": 45678,

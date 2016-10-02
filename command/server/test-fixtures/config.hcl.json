@@ -13,7 +13,8 @@
 	}],
 	"backend": {
 		"consul": {
-			"foo": "bar"
+			"foo": "bar",
+			"disable_clustering": "true"
 		}
 	},
 	"telemetry": {
