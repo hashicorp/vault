@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/strutil"
@@ -23,6 +24,11 @@ func secretCreds(b *backend) *framework.Secret {
 			"password": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Password",
+			},
+
+			"rolename": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Rolename",
 			},
 		},
 
@@ -63,17 +69,21 @@ func (b *backend) secretCredsRevoke(
 	}
 
 	// Get the role
-	pathParts := strings.Split(req.Path, "/")
-	if len(pathParts) < 1 {
-		return nil, fmt.Errorf("Role name could not be determined")
+	// pathParts := strings.Split(req.Path, "/")
+	log.Println("InternalData")
+	log.Printf("%+v", req.Secret.InternalData)
+	rolenameRaw, ok := req.Secret.InternalData["rolename"]
+	if !ok {
+		return nil, fmt.Errorf("secret is missing rollname internal data")
 	}
-	name := pathParts[len(pathParts)-1]
-	role, err := b.Role(req.Storage, name)
+	rolename, ok := rolenameRaw.(string)
+
+	role, err := b.Role(req.Storage, rolename)
 	if err != nil {
 		return nil, err
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
+		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", rolename)), nil
 	}
 
 	// Start a transaction
@@ -82,6 +92,12 @@ func (b *backend) secretCredsRevoke(
 		return nil, err
 	}
 	defer tx.Rollback()
+
+	// Check for an empty revokeSQL string
+	// set it to a default query if the string is empty
+	if role.RevokeSQL == "" {
+		role.RevokeSQL = "REVOKE ALL PRIVILEGES, GRANT OPTION FROM '" + username + "'@'%'; DROP USER '" + username + "'@'%'"
+	}
 
 	for _, query := range strutil.ParseArbitraryStringSlice(role.RevokeSQL, ";") {
 		query = strings.TrimSpace(query)
