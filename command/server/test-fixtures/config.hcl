@@ -20,7 +20,7 @@ backend "consul" {
 ha_backend "consul" {
     bar = "baz"
     advertise_addr = "snafu"
-    disable_clustering = "false"
+    disable_clustering = "true"
 }
 
 telemetry {
