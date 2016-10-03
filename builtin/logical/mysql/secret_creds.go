@@ -2,7 +2,6 @@ package mysql
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/strutil"
@@ -68,10 +67,7 @@ func (b *backend) secretCredsRevoke(
 		return nil, err
 	}
 
-	// Get the role
-	// pathParts := strings.Split(req.Path, "/")
-	log.Println("InternalData")
-	log.Printf("%+v", req.Secret.InternalData)
+	// Get the role name
 	rolenameRaw, ok := req.Secret.InternalData["rolename"]
 	if !ok {
 		return nil, fmt.Errorf("secret is missing rollname internal data")
