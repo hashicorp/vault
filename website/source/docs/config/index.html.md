@@ -46,6 +46,10 @@ sending a SIGHUP to the server process. These are denoted below.
   configuration options as documented below. If not set, HA will be attempted
   on the backend given in the `backend` parameter.
 
+* `cluster_name` (optional) - An identifier for your Vault cluster. If omitted,
+  Vault will generate a value for `cluster_name`. If connecting to Vault
+  Enterprise, this value will be used in the interface.
+
 * `listener` (required) - Configures how Vault is listening for API requests.
   "tcp" and "atlas" are valid values. A full reference for the
    inner syntax is below.
@@ -94,7 +98,7 @@ sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
 For the `listener` section, the only required listener is "tcp".
 Regardless of future plans, this is the recommended listener,
 as it allows for HA mode. If you wish to use the Vault
-Enterprise interface in HashiCorp Atlas, you may add an "atlas" listener block
+Enterprise interface in HashiCorp Atlas, you may add an ["atlas" listener block](#connecting-to-vault-enterprise-in-hashicorp-atlas)
 in addition to the "tcp" one.
 
 The supported options are:
@@ -148,9 +152,13 @@ The "atlas" `listener` supports these options:
   * `token` (required) - A token from Atlas used to authenticate SCADA session. Generate
       one in the [Atlas](https://atlas.hashicorp.com/settings/tokens).
 
-Additionally, the global `cluster_name` will be used to identify your cluster
-inside of your infrastructure in the Vault Enterprise interface. This allows
-the connection of multiple clusters to a single `infrastructure`.
+Additionally, the [`cluster_name`](#cluster_name) config option will be used to
+identify your cluster members inside the infrastructure in the Vault Enterprise
+interface. It is important for operators to use the same value for
+`cluster_name` across cluster members because Vault overwrites this value
+internally on instance instantiation.
+
+This allows the connection of multiple clusters to a single `infrastructure`.
 
 For more on Vault Enterprise, see the [help documentation](https://atlas.hashicorptest.com/help/vault/features).
 
