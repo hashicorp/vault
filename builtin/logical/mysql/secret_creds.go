@@ -11,6 +11,20 @@ import (
 
 const SecretCredsType = "creds"
 
+// Default Revoke and Drop user SQL statment
+// Revoking permissions for the user is done before the
+// drop, because MySQL explicitly documents that open user connections
+// will not be closed. By revoking all grants, at least we ensure
+// that the open connection is useless.
+// Dropping the user will only affect the next connection
+// This is not a prepared statement because not all commands are supported
+// 1295: This command is not supported in the prepared statement protocol yet
+// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
+const defaultRevokeSQL = `
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
+DROP USER '{{name}}'@'%'
+`
+
 func secretCreds(b *backend) *framework.Secret {
 	return &framework.Secret{
 		Type: SecretCredsType,
@@ -25,9 +39,9 @@ func secretCreds(b *backend) *framework.Secret {
 				Description: "Password",
 			},
 
-			"rolename": &framework.FieldSchema{
+			"role": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Rolename",
+				Description: "Role",
 			},
 		},
 
@@ -68,18 +82,22 @@ func (b *backend) secretCredsRevoke(
 	}
 
 	// Get the role name
-	rolenameRaw, ok := req.Secret.InternalData["rolename"]
-	if !ok {
-		return nil, fmt.Errorf("secret is missing rollname internal data")
-	}
-	rolename, ok := rolenameRaw.(string)
+	roleNameRaw, ok := req.Secret.InternalData["role"]
+	roleName, ok := roleNameRaw.(string)
 
-	role, err := b.Role(req.Storage, rolename)
-	if err != nil {
-		return nil, err
+	// init role entry struct
+	var role = &roleEntry{}
+	if roleName != "" {
+		role, err = b.Role(req.Storage, roleName)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", rolename)), nil
+
+	// Check for an empty revokeSQL string
+	// set it to a default query if the string is empty
+	if role.RevokeSQL == "" {
+		role.RevokeSQL = defaultRevokeSQL
 	}
 
 	// Start a transaction
@@ -89,31 +107,13 @@ func (b *backend) secretCredsRevoke(
 	}
 	defer tx.Rollback()
 
-	// Check for an empty revokeSQL string
-	// set it to a default query if the string is empty
-	if role.RevokeSQL == "" {
-		role.RevokeSQL = "REVOKE ALL PRIVILEGES, GRANT OPTION FROM '" + username + "'@'%'; DROP USER '" + username + "'@'%'"
-	}
-
 	for _, query := range strutil.ParseArbitraryStringSlice(role.RevokeSQL, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
 		}
 
-		// convert {{name}} to username value because we can't use
-		// prepared statements for REVOKE and DROP commands
-		// Generates the following error
-		// 1295: This command is not supported in the prepared statement protocol yet
-		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 		query = strings.Replace(query, "{{name}}", username, -1)
-
-		// Revoke all permissions for the user. This is done before the
-		// drop, because MySQL explicitly documents that open user connections
-		// will not be closed. By revoking all grants, at least we ensure
-		// that the open connection is useless.
-		// Drop this user. This only affects the next connection, which is
-		// why we do the revoke initially.
 		_, err = tx.Exec(query)
 		if err != nil {
 			return nil, err
