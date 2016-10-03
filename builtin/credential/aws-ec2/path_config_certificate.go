@@ -18,14 +18,15 @@ type dsaSignature struct {
 	R, S *big.Int
 }
 
-// As per AWS documentation, this public key is valid for US East (N. Virginia),
-// US West (Oregon), US West (N. California), EU (Ireland), EU (Frankfurt),
-// Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia Pacific (Singapore),
-// Asia Pacific (Sydney), and South America (Sao Paulo).
+// This certificate is used to verify the PKCS#7 signature of the instance
+// identity document. As per AWS documentation, this public key is valid for
+// US East (N. Virginia), US West (Oregon), US West (N. California), EU
+// (Ireland), EU (Frankfurt), Asia Pacific (Tokyo), Asia Pacific (Seoul), Asia
+// Pacific (Singapore), Asia Pacific (Sydney), and South America (Sao Paulo).
 //
 // It's also the same certificate, but for some reason listed separately, for
 // GovCloud (US)
-const genericAWSPublicCertificate = `-----BEGIN CERTIFICATE-----
+const genericAWSPublicCertificatePkcs7 = `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
 VQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQzAeFw0xMjAxMDUxMjU2MTJaFw0z
@@ -44,6 +45,28 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 7HX32MxXYruse9ACFBNGmdX2ZBrVNGrN9N2f6ROk0k9K
 -----END CERTIFICATE-----
 `
+
+// This certificate is used to verify the instance identity document using the
+// RSA digest of the same
+const genericAWSPublicCertificateIdentity = `-----BEGIN CERTIFICATE-----
+MIIDIjCCAougAwIBAgIJAKnL4UEDMN/FMA0GCSqGSIb3DQEBBQUAMGoxCzAJBgNV
+BAYTAlVTMRMwEQYDVQQIEwpXYXNoaW5ndG9uMRAwDgYDVQQHEwdTZWF0dGxlMRgw
+FgYDVQQKEw9BbWF6b24uY29tIEluYy4xGjAYBgNVBAMTEWVjMi5hbWF6b25hd3Mu
+Y29tMB4XDTE0MDYwNTE0MjgwMloXDTI0MDYwNTE0MjgwMlowajELMAkGA1UEBhMC
+VVMxEzARBgNVBAgTCldhc2hpbmd0b24xEDAOBgNVBAcTB1NlYXR0bGUxGDAWBgNV
+BAoTD0FtYXpvbi5jb20gSW5jLjEaMBgGA1UEAxMRZWMyLmFtYXpvbmF3cy5jb20w
+gZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJAoGBAIe9GN//SRK2knbjySG0ho3yqQM3
+e2TDhWO8D2e8+XZqck754gFSo99AbT2RmXClambI7xsYHZFapbELC4H91ycihvrD
+jbST1ZjkLQgga0NE1q43eS68ZeTDccScXQSNivSlzJZS8HJZjgqzBlXjZftjtdJL
+XeE4hwvo0sD4f3j9AgMBAAGjgc8wgcwwHQYDVR0OBBYEFCXWzAgVyrbwnFncFFIs
+77VBdlE4MIGcBgNVHSMEgZQwgZGAFCXWzAgVyrbwnFncFFIs77VBdlE4oW6kbDBq
+MQswCQYDVQQGEwJVUzETMBEGA1UECBMKV2FzaGluZ3RvbjEQMA4GA1UEBxMHU2Vh
+dHRsZTEYMBYGA1UEChMPQW1hem9uLmNvbSBJbmMuMRowGAYDVQQDExFlYzIuYW1h
+em9uYXdzLmNvbYIJAKnL4UEDMN/FMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEF
+BQADgYEAFYcz1OgEhQBXIwIdsgCOS8vEtiJYF+j9uO6jz7VOmJqO+pRlAbRlvY8T
+C1haGgSI/A1uZUKs/Zfnph0oEI0/hu1IIJ/SKBDtN5lvmZ/IzbOPIJWirlsllQIQ
+7zvWbGd9c9+Rm3p04oTvhup99la7kZqevJK0QRdD/6NpCKsqP/0=
+-----END CERTIFICATE-----`
 
 // pathListCertificates creates a path that enables listing of all
 // the AWS public certificates registered with Vault.
@@ -136,9 +159,11 @@ func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error)
 }
 
 // awsPublicCertificates returns a slice of all the parsed AWS public
-// certificates, that were registered using `config/certificate/<cert_name>` endpoint.
-// This method will also append default certificate in the backend, to the slice.
-func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate, error) {
+// certificates, which are used to verify either the SHA256 RSA signature, or
+// the PKCS7 signatures of the instance identity documents. This method will
+// append the certificates registered using `config/certificate/<cert_name>`
+// endpoint, along with the default certificate in the backend.
+func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509.Certificate, error) {
 	// Lock at beginning and use internal method so that we are consistent as
 	// we iterate through
 	b.configMutex.RLock()
@@ -146,8 +171,13 @@ func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate,
 
 	var certs []*x509.Certificate
 
+	defaultCert := genericAWSPublicCertificateIdentity
+	if isPkcs {
+		defaultCert = genericAWSPublicCertificatePkcs7
+	}
+
 	// Append the generic certificate provided in the AWS EC2 instance metadata documentation.
-	decodedCert, err := decodePEMAndParseCertificate(genericAWSPublicCertificate)
+	decodedCert, err := decodePEMAndParseCertificate(defaultCert)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +208,7 @@ func (b *backend) awsPublicCertificates(s logical.Storage) ([]*x509.Certificate,
 	return certs, nil
 }
 
-// awsPublicCertificate is used to get the configured AWS Public Key that is used
+// lockedAWSPublicCertificateEntry is used to get the configured AWS Public Key that is used
 // to verify the PKCS#7 signature of the instance identity document.
 func (b *backend) lockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
 	b.configMutex.RLock()
