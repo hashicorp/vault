@@ -126,7 +126,7 @@ func TestBackend_basic(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	// for wildcard base mysql user
+	// for wildcard based mysql user
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
@@ -153,7 +153,7 @@ func TestBackend_basicHostRevoke(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	// for wildcard base mysql user
+	// for host based mysql user
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
@@ -185,7 +185,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
 			testAccStepRole(t, false),
-			testAccStepReadRole(t, "web", testRoleHost),
+			testAccStepReadRole(t, "web", testRoleWildCard),
 			testAccStepDeleteRole(t, "web"),
 			testAccStepReadRole(t, "web", ""),
 		},
@@ -251,21 +251,20 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
 
 	if wildCard == true {
-		return logicaltest.TestStep{
-			Operation: logical.UpdateOperation,
-			Path:      "roles/web",
-			Data: map[string]interface{}{
-				"sql": testRoleWildCard,
-			},
+		pathData := map[string]interface{}{
+			"sql": testRoleHost,
+		}
+	} else {
+		pathData := map[string]interface{}{
+			"sql":        testRoleHost,
+			"revoke_sql": testRevokeSQL,
 		}
 	}
+
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
-		Data: map[string]interface{}{
-			"sql":        testRoleHost,
-			"revoke_sql": testRevokeSQL,
-		},
+		Data:      pathData,
 	}
 
 }
