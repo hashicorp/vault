@@ -47,7 +47,7 @@ sending a SIGHUP to the server process. These are denoted below.
   on the backend given in the `backend` parameter.
 
 * `listener` (required) - Configures how Vault is listening for API requests.
-  "tcp" is currently the only option available. A full reference for the
+  "tcp" and "atlas" are valid values. A full reference for the
    inner syntax is below.
 
 * `cache_size` (optional) - If set, the size of the read cache used
@@ -91,9 +91,11 @@ sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
 
 ## Listener Reference
 
-For the `listener` section, the only supported listener currently
-is "tcp". Regardless of future plans, this is the recommended listener,
-since it allows for HA mode.
+For the `listener` section, the only required listener is "tcp".
+Regardless of future plans, this is the recommended listener,
+as it allows for HA mode. If you wish to use the Vault
+Enterprise interface in HashiCorp Atlas, you may add an "atlas" listener block
+in addition to the "tcp" one.
 
 The supported options are:
 
@@ -124,6 +126,34 @@ The supported options are:
       or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
       are generally considered less secure; avoid using these if
       possible.
+
+### Connecting to Vault Enterprise in HashiCorp Atlas
+
+Adding an "atlas" block will initiate a long-running connection to the
+[SCADA](https://scada.hashicorp.com) service. The SCADA connection allows the
+Vault Enterprise interface to securely communicate with and operate on your
+Vault cluster.
+
+The "atlas" `listener` supports these options:
+
+  * `endpoint` (optional) - The endpoint address used for Vault Enterprise interface
+      integration. Defaults to the public Vault Enterprise endpoints on Atlas.
+
+  * `infrastructure` (required) - Used to provide the Atlas infrastructure name and
+      the SCADA connection. The format of this is `username/environment`.
+
+  * `node_id` (required) - The identifier for an individual node—used in
+      the Vault Enterprise dashboard.
+
+  * `token` (required) - A token from Atlas used to authenticate SCADA session. Generate
+      one in the [Atlas](https://atlas.hashicorp.com/settings/tokens).
+
+Additionally, the global `cluster_name` will be used to identify your cluster
+inside of your infrastructure in the Vault Enterprise interface. This allows
+the connection of multiple clusters to a single `infrastructure`.
+
+For more on Vault Enterprise, see the [help documentation](https://atlas.hashicorptest.com/help/vault/features).
+
 
 ## Telemetry Reference
 
