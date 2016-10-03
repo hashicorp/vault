@@ -184,10 +184,14 @@ func TestBackend_roleCrud(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepRole(t, false),
+			// test SQL with wildcard based user
+			testAccStepRole(t, true),
 			testAccStepReadRole(t, "web", testRoleWildCard),
 			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", ""),
+			// test SQL with host  based user
+			testAccStepRole(t, false),
+			testAccStepReadRole(t, "web", testRoleHost),
+			testAccStepDeleteRole(t, "web"),
 		},
 	})
 }
@@ -250,12 +254,13 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 
 func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
 
+	pathData := make(map[string]interface{})
 	if wildCard == true {
-		pathData := map[string]interface{}{
-			"sql": testRoleHost,
+		pathData = map[string]interface{}{
+			"sql": testRoleWildCard,
 		}
 	} else {
-		pathData := map[string]interface{}{
+		pathData = map[string]interface{}{
 			"sql":        testRoleHost,
 			"revoke_sql": testRevokeSQL,
 		}
