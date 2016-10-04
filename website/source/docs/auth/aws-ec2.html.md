@@ -324,8 +324,7 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/role/
 
 ```
 curl -X POST "http://127.0.0.1:8200/v1/auth/aws-ec2/login" -d
-'{"role":"dev-role","pkcs7":"'$(curl -s
-http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
+'{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
 ```
 
 
@@ -486,8 +485,11 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Registers an AWS public key that is used to verify the PKCS#7 signature of the
-    EC2 instance metadata.
+    Registers an AWS public key to be used to verify the instance identity
+    documents. While the PKCS#7 signature of the identity documents have DSA
+    digest, the identity signature will have RSA digest, and hence the public keys
+    for each type varies respectively. Indicate the type of the public key using
+    the "type" parameter.
   </dd>
 
   <dt>Method</dt>
@@ -1172,7 +1174,9 @@ instance can be allowed to gain in a worst-case scenario.
         <span class="param">identity</span>
         <span class="param-flags">required</span>
         Base64 encoded EC2 instance identity document. This needs to be supplied along
-        with 'signature' parameter.
+        with the `signature` parameter. If using `curl` for fetching the identity
+        document, consider using the option `-w 0` while piping the output to
+        `base64` binary.
       </li>
     </ul>
     <ul>
@@ -1180,7 +1184,7 @@ instance can be allowed to gain in a worst-case scenario.
         <span class="param">signature</span>
         <span class="param-flags">required</span>
         Base64 encoded SHA256 RSA signature of the instance identity document. This
-        needs to be supplied along with 'identity' parameter.
+        needs to be supplied along with `identity` parameter.
       </li>
     </ul>
     <ul>

@@ -57,7 +57,9 @@ on either the role or the role tag, the 'nonce' holds no significance.`,
 			"identity": {
 				Type: framework.TypeString,
 				Description: `Base64 encoded EC2 instance identity document. This needs to be supplied along
-with 'signature' parameter.`,
+with the 'signature' parameter. If using 'curl' for fetching the identity
+document, consider using the option '-w 0' while piping the output to 'base64'
+binary.`,
 			},
 			"signature": {
 				Type: framework.TypeString,
