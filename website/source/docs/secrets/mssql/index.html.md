@@ -280,10 +280,10 @@ allowed to read.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/roles/?list=true`</dd>
+  <dd>`/mssql/roles` (LIST) or `/mssql/roles/?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>

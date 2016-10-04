@@ -496,10 +496,10 @@ subpath for interactive help output.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/certs/?list=true`</dd>
+  <dd>`/pki/certs` (LIST) or `/pki/certs?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1285,10 +1285,10 @@ subpath for interactive help output.
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/pki/roles/?list=true`</dd>
+  <dd>`/pki/roles` (LIST) or `/pki/roles?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>

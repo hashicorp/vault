@@ -171,10 +171,10 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
   </dd>
 
   <dt>Method</dt>
-  <dd>`/auth/approle/role` (LIST) or `/auth/approle/role?list=true` (GET)</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`LIST/GET`</dd>
+  <dd>`/auth/approle/role` (LIST) or `/auth/approle/role?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -218,7 +218,7 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST`</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]`</dd>
@@ -316,7 +316,7 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
   </dd>
 
   <dt>Method</dt>
-  <dd>`GET`</dd>
+  <dd>GET</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]`</dd>
@@ -363,7 +363,7 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
   </dd>
 
   <dt>Method</dt>
-  <dd>`DELETE`</dd>
+  <dd>DELETE</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]`</dd>
@@ -388,7 +388,7 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
   </dd>
 
   <dt>Method</dt>
-  <dd>`GET`</dd>
+  <dd>GET</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/role-id`</dd>
@@ -426,7 +426,7 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST`</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/role-id`</dd>
@@ -462,7 +462,7 @@ $ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50be
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST`</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id`</dd>
@@ -521,7 +521,7 @@ the role.
   </dd>
 
   <dt>Method</dt>
-  <dd>`LIST/GET`</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id` (LIST) or `/auth/approle/role/[role_name]/secret-id?list=true` (GET)</dd>
@@ -566,7 +566,7 @@ the role.
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST`</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id/lookup`</dd>
@@ -615,7 +615,7 @@ Secret ID attached to the role
   </dd>
 
   <dt>Method</dt>
-  <dd>`DELETE`</dd>
+  <dd>DELETE</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id/destroy`</dd>
@@ -647,7 +647,7 @@ Secret ID attached to the role
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST`</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id-accessor/lookup`</dd>
@@ -697,7 +697,7 @@ Accessor of the secret ID
   </dd>
 
   <dt>Method</dt>
-  <dd>`DELETE`</dd>
+  <dd>DELETE</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id-accessor/destroy`</dd>
@@ -730,7 +730,7 @@ Accessor of the secret ID
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST`</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/custom-secret-id`</dd>
@@ -800,7 +800,7 @@ the role.
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST`</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/login`</dd>
@@ -869,7 +869,7 @@ the role.
   </dd>
 
   <dt>Method</dt>
-  <dd>`POST/GET/DELETE`</dd>
+  <dd>POST/GET/DELETE</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/[field_name]`</dd>

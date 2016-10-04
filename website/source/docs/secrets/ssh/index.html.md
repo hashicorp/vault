@@ -517,10 +517,10 @@ username@<IP of remote host>:~$
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/roles/?list=true`</dd>
+  <dd>`/ssh/roles` (LIST) or `/ssh/roles?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
