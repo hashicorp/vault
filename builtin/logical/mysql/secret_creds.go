@@ -82,22 +82,33 @@ func (b *backend) secretCredsRevoke(
 	}
 
 	// Get the role name
+	// we may not always have role data in the secret InternalData
+	// so don't exit if the roleNameRaw fails. Instead it is set
+	// as an empty string
+	var roleName string
 	roleNameRaw, ok := req.Secret.InternalData["role"]
-	roleName, ok := roleNameRaw.(string)
+	if !ok {
+		roleName = ""
+	} else {
+		roleName, ok = roleNameRaw.(string)
+	}
+	// init default revoke sql string.
+	// this will replaced by a user provided one if one exists
+	// otherwise this is what will be used when lease is revoked
+	revokeSQL := defaultRevokeSQL
 
-	// init role entry struct
-	var role = &roleEntry{}
+	// if we were successful in finding a role name
+	// create role entry from that name
 	if roleName != "" {
 		role, err = b.Role(req.Storage, roleName)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	// Check for an empty revokeSQL string
-	// set it to a default query if the string is empty
-	if role.RevokeSQL == "" {
-		role.RevokeSQL = defaultRevokeSQL
+		// Check for a revokeSQL string
+		// if one exists use that instead of the default
+		if role.RevokeSQL != "" {
+			revokeSQL = role.RevokeSQL
+		}
 	}
 
 	// Start a transaction
@@ -107,12 +118,15 @@ func (b *backend) secretCredsRevoke(
 	}
 	defer tx.Rollback()
 
-	for _, query := range strutil.ParseArbitraryStringSlice(role.RevokeSQL, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(revokeSQL, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
 		}
 
+		// This is not a prepared statement because not all commands are supported
+		// 1295: This command is not supported in the prepared statement protocol yet
+		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
 		query = strings.Replace(query, "{{name}}", username, -1)
 		_, err = tx.Exec(query)
 		if err != nil {
