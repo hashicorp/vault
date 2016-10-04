@@ -512,6 +512,16 @@ The response will be in JSON. For example:
         AWS Public key required to verify PKCS7 signature of the EC2 instance metadata.
       </li>
     </ul>
+    <ul>
+      <li>
+        <span class="param">type</span>
+        <span class="param-flags">required</span>
+Takes the value of either "pkcs7" or "identity", indicating the type of
+document which the given certificate should be used to verify. Note that the
+PKCS#7 document will have a DSA digest and the identity signature will have an
+RSA signature.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -1131,9 +1141,11 @@ instance can be allowed to gain in a worst-case scenario.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-   Fetch a token. This endpoint verifies the pkcs#7 signature of the instance identity document.
-   Verifies that the instance is actually in a running state. Cross checks the constraints defined
-   on the role with which the login is being performed.
+Fetch a token. This endpoint verifies the pkcs7 signature of the instance
+identity document.  Verifies that the instance is actually in a running state.
+Cross checks the constraints defined on the role with which the login is being
+performed. As an alternative to pkcs7 signature, the identity document along
+with its RSA digest can be supplied to this endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -1156,9 +1168,27 @@ instance can be allowed to gain in a worst-case scenario.
     </ul>
     <ul>
       <li>
+        <span class="param">identity</span>
+        <span class="param-flags">required</span>
+Base64 encoded EC2 instance identity document. This needs to be supplied along
+with 'signature' parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">signature</span>
+        <span class="param-flags">required</span>
+Base64 encoded SHA256 RSA signature of the instance identity document. This
+needs to be supplied along with 'identity' parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
         <span class="param">pkcs7</span>
         <span class="param-flags">required</span>
-        PKCS7 signature of the identity document with all `\n` characters removed.
+PKCS7 signature of the identity document with all `\n` characters removed.
+Either this needs to be set *OR* both `identity` and `signature` needs to be
+set.
       </li>
     </ul>
     <ul>

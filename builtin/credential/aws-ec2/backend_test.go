@@ -562,6 +562,7 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
+		"type": "pkcs7",
 		"aws_public_cert": `LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM3VENDQXEwQ0NRQ1d1a2paNVY0YVp6QUpC
 Z2NxaGtqT09BUURNRnd4Q3pBSkJnTlZCQVlUQWxWVE1Sa3cKRndZRFZRUUlFeEJYWVhOb2FXNW5k
 Rzl1SUZOMFlYUmxNUkF3RGdZRFZRUUhFd2RUWldGMGRHeGxNU0F3SGdZRApWUVFLRXhkQmJXRjZi
@@ -586,9 +587,9 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 
 	certReq.Data = data
 	// test create operation
-	_, err = b.HandleRequest(certReq)
-	if err != nil {
-		t.Fatal(err)
+	resp, err := b.HandleRequest(certReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	certReq.Data = nil
@@ -606,7 +607,7 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 
 	certReq.Operation = logical.ReadOperation
 	// test read operation
-	resp, err := b.HandleRequest(certReq)
+	resp, err = b.HandleRequest(certReq)
 	expectedCert := `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD

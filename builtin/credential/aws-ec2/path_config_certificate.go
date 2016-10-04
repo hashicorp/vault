@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
@@ -87,13 +88,20 @@ func pathConfigCertificate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/certificate/" + framework.GenericNameRegex("cert_name"),
 		Fields: map[string]*framework.FieldSchema{
-			"cert_name": &framework.FieldSchema{
+			"cert_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the certificate.",
 			},
-			"aws_public_cert": &framework.FieldSchema{
+			"aws_public_cert": {
 				Type:        framework.TypeString,
 				Description: "AWS Public cert required to verify PKCS7 signature of the EC2 instance metadata.",
+			},
+			"type": {
+				Type: framework.TypeString,
+				Description: `Takes the value of either "pkcs7" or "identity", indicating the type of
+document which the given certificate should be used to verify. Note that the
+PKCS#7 document will have a DSA digest and the identity signature will have an
+RSA signature.`,
 			},
 		},
 
@@ -126,7 +134,7 @@ func (b *backend) pathConfigCertificateExistenceCheck(req *logical.Request, data
 	return entry != nil, nil
 }
 
-// pathCertificatesList is used to list all the AWS public certificates registered with Vault.
+// pathCertificatesList is used to list all the AWS public certificates registered with Vault
 func (b *backend) pathCertificatesList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.RLock()
@@ -139,15 +147,15 @@ func (b *backend) pathCertificatesList(
 	return logical.ListResponse(certs), nil
 }
 
-// Decodes the PEM encoded certiticate and parses it into a x509 cert.
+// Decodes the PEM encoded certiticate and parses it into a x509 cert
 func decodePEMAndParseCertificate(certificate string) (*x509.Certificate, error) {
-	// Decode the PEM block and error out if a block is not detected in the first attempt.
+	// Decode the PEM block and error out if a block is not detected in the first attempt
 	decodedPublicCert, rest := pem.Decode([]byte(certificate))
 	if len(rest) != 0 {
 		return nil, fmt.Errorf("invalid certificate; should be one PEM block only")
 	}
 
-	// Check if the certificate can be parsed.
+	// Check if the certificate can be parsed
 	publicCert, err := x509.ParseCertificate(decodedPublicCert.Bytes)
 	if err != nil {
 		return nil, err
@@ -176,20 +184,20 @@ func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509
 		defaultCert = genericAWSPublicCertificatePkcs7
 	}
 
-	// Append the generic certificate provided in the AWS EC2 instance metadata documentation.
+	// Append the generic certificate provided in the AWS EC2 instance metadata documentation
 	decodedCert, err := decodePEMAndParseCertificate(defaultCert)
 	if err != nil {
 		return nil, err
 	}
 	certs = append(certs, decodedCert)
 
-	// Get the list of all the registered certificates.
+	// Get the list of all the registered certificates
 	registeredCerts, err := s.List("config/certificate/")
 	if err != nil {
 		return nil, err
 	}
 
-	// Iterate through each certificate, parse and append it to a slice.
+	// Iterate through each certificate, parse and append it to a slice
 	for _, cert := range registeredCerts {
 		certEntry, err := b.nonLockedAWSPublicCertificateEntry(s, cert)
 		if err != nil {
@@ -208,8 +216,50 @@ func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509
 	return certs, nil
 }
 
-// lockedAWSPublicCertificateEntry is used to get the configured AWS Public Key that is used
-// to verify the PKCS#7 signature of the instance identity document.
+// lockedSetAWSPublicCertificateEntry is used to store the AWS public key in
+// the storage. This method acquires lock before creating or updating a storage
+// entry.
+func (b *backend) lockedSetAWSPublicCertificateEntry(s logical.Storage, certName string, certEntry *awsPublicCert) error {
+	if certName == "" {
+		return fmt.Errorf("missing certificate name")
+	}
+
+	if certEntry == nil {
+		return fmt.Errorf("nil AWS public key certificate")
+	}
+
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
+	return b.nonLockedSetAWSPublicCertificateEntry(s, certName, certEntry)
+}
+
+// nonLockedSetAWSPublicCertificateEntry is used to store the AWS public key in
+// the storage. This method does not acquire lock before reading the storage.
+// If locking is desired, use lockedSetAWSPublicCertificateEntry instead.
+func (b *backend) nonLockedSetAWSPublicCertificateEntry(s logical.Storage, certName string, certEntry *awsPublicCert) error {
+	if certName == "" {
+		return fmt.Errorf("missing certificate name")
+	}
+
+	if certEntry == nil {
+		return fmt.Errorf("nil AWS public key certificate")
+	}
+
+	entry, err := logical.StorageEntryJSON("config/certificate/"+certName, certEntry)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		return fmt.Errorf("failed to create storage entry for AWS public key certificate")
+	}
+
+	return s.Put(entry)
+}
+
+// lockedAWSPublicCertificateEntry is used to get the configured AWS Public Key
+// that is used to verify the PKCS#7 signature of the instance identity
+// document.
 func (b *backend) lockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
@@ -217,7 +267,9 @@ func (b *backend) lockedAWSPublicCertificateEntry(s logical.Storage, certName st
 	return b.nonLockedAWSPublicCertificateEntry(s, certName)
 }
 
-// Internal version of the above that does no locking
+// nonLockedAWSPublicCertificateEntry reads the certificate information from
+// the storage. This method does not acquire lock before reading the storage.
+// If locking is desired, use lockedAWSPublicCertificateEntry instead.
 func (b *backend) nonLockedAWSPublicCertificateEntry(s logical.Storage, certName string) (*awsPublicCert, error) {
 	entry, err := s.Get("config/certificate/" + certName)
 	if err != nil {
@@ -226,16 +278,30 @@ func (b *backend) nonLockedAWSPublicCertificateEntry(s logical.Storage, certName
 	if entry == nil {
 		return nil, nil
 	}
-
-	var result awsPublicCert
-	if err := entry.DecodeJSON(&result); err != nil {
+	var certEntry awsPublicCert
+	if err := entry.DecodeJSON(&certEntry); err != nil {
 		return nil, err
 	}
-	return &result, nil
+
+	// Handle upgrade for certificate type
+	persistNeeded := false
+	if certEntry.Type == "" {
+		certEntry.Type = "pkcs7"
+		persistNeeded = true
+	}
+
+	if persistNeeded {
+		if err := b.nonLockedSetAWSPublicCertificateEntry(s, certName, &certEntry); err != nil {
+			return nil, err
+		}
+	}
+
+	return &certEntry, nil
 }
 
-// pathConfigCertificateDelete is used to delete the previously configured AWS Public Key
-// that is used to verify the PKCS#7 signature of the instance identity document.
+// pathConfigCertificateDelete is used to delete the previously configured AWS
+// Public Key that is used to verify the PKCS#7 signature of the instance
+// identity document.
 func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
@@ -248,8 +314,8 @@ func (b *backend) pathConfigCertificateDelete(req *logical.Request, data *framew
 	return nil, req.Storage.Delete("config/certificate/" + certName)
 }
 
-// pathConfigCertificateRead is used to view the configured AWS Public Key that is
-// used to verify the PKCS#7 signature of the instance identity document.
+// pathConfigCertificateRead is used to view the configured AWS Public Key that
+// is used to verify the PKCS#7 signature of the instance identity document.
 func (b *backend) pathConfigCertificateRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	certName := data.Get("cert_name").(string)
@@ -270,19 +336,31 @@ func (b *backend) pathConfigCertificateRead(
 	}, nil
 }
 
-// pathConfigCertificateCreateUpdate is used to register an AWS Public Key that is
-// used to verify the PKCS#7 signature of the instance identity document.
+// pathConfigCertificateCreateUpdate is used to register an AWS Public Key that
+// is used to verify the PKCS#7 signature of the instance identity document.
 func (b *backend) pathConfigCertificateCreateUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	certName := data.Get("cert_name").(string)
 	if certName == "" {
-		return logical.ErrorResponse("missing cert_name"), nil
+		return logical.ErrorResponse("missing certificate name"), nil
+	}
+
+	certType := data.Get("type").(string)
+	if certType == "" {
+		return logical.ErrorResponse("missing certificate type"), nil
+	}
+
+	switch strings.ToLower(certType) {
+	case "pkcs7":
+	case "identity":
+	default:
+		return logical.ErrorResponse("invalid certificate type"), nil
 	}
 
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
-	// Check if there is already a certificate entry registered.
+	// Check if there is already a certificate entry registered
 	certEntry, err := b.nonLockedAWSPublicCertificateEntry(req.Storage, certName)
 	if err != nil {
 		return nil, err
@@ -291,7 +369,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		certEntry = &awsPublicCert{}
 	}
 
-	// Check if the value is provided by the client.
+	// Check if the value is provided by the client
 	certStrData, ok := data.GetOk("aws_public_cert")
 	if ok {
 		if certBytes, err := base64.StdEncoding.DecodeString(certStrData.(string)); err == nil {
@@ -305,12 +383,12 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		return logical.ErrorResponse("missing aws_public_cert"), nil
 	}
 
-	// If explicitly set to empty string, error out.
+	// If explicitly set to empty string, error out
 	if certEntry.AWSPublicCert == "" {
 		return logical.ErrorResponse("invalid aws_public_cert"), nil
 	}
 
-	// Verify the certificate by decoding it and parsing it.
+	// Verify the certificate by decoding it and parsing it
 	publicCert, err := decodePEMAndParseCertificate(certEntry.AWSPublicCert)
 	if err != nil {
 		return nil, err
@@ -319,14 +397,11 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		return logical.ErrorResponse("invalid certificate; failed to decode and parse certificate"), nil
 	}
 
-	// Ensure that we have not
-	// If none of the checks fail, save the provided certificate.
-	entry, err := logical.StorageEntryJSON("config/certificate/"+certName, certEntry)
-	if err != nil {
-		return nil, err
-	}
+	// Add the certificate type to the storage entry
+	certEntry.Type = certType
 
-	if err := req.Storage.Put(entry); err != nil {
+	// If none of the checks fail, save the provided certificate
+	if err := b.nonLockedSetAWSPublicCertificateEntry(req.Storage, certName, certEntry); err != nil {
 		return nil, err
 	}
 
@@ -337,6 +412,7 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 // of the instnace identity document.
 type awsPublicCert struct {
 	AWSPublicCert string `json:"aws_public_cert" structs:"aws_public_cert" mapstructure:"aws_public_cert"`
+	Type          string `json:"type" structs:"type" mapstructure:"type"`
 }
 
 const pathConfigCertificateSyn = `

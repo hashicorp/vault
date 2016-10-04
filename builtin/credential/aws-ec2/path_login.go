@@ -55,12 +55,14 @@ reauthentication. Note that, when 'disallow_reauthentication' option is enabled
 on either the role or the role tag, the 'nonce' holds no significance.`,
 			},
 			"identity": {
-				Type:        framework.TypeString,
-				Description: `Base64 encoded EC2 instance identity document.`,
+				Type: framework.TypeString,
+				Description: `Base64 encoded EC2 instance identity document. This needs to be supplied along
+with 'signature' parameter.`,
 			},
 			"signature": {
-				Type:        framework.TypeString,
-				Description: `Base64 encoded SHA256 RSA signature of the instance identity document.`,
+				Type: framework.TypeString,
+				Description: `Base64 encoded SHA256 RSA signature of the instance identity document. This
+needs to be supplied along with 'identity' parameter.`,
 			},
 		},
 
