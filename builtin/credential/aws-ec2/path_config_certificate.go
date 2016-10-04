@@ -98,10 +98,12 @@ func pathConfigCertificate(b *backend) *framework.Path {
 			},
 			"type": {
 				Type: framework.TypeString,
-				Description: `Takes the value of either "pkcs7" or "identity", indicating the type of
-document which the given certificate should be used to verify. Note that the
-PKCS#7 document will have a DSA digest and the identity signature will have an
-RSA signature.`,
+				Description: `
+Takes the value of either "pkcs7" or "identity", indicating the type of
+document which can be verified using the given certificate. The reason is that
+the PKCS#7 document will have a DSA digest and the identity signature will have
+an RSA signature, and accordingly the public certificates to verify those also
+vary.`,
 			},
 		},
 
@@ -206,11 +208,15 @@ func (b *backend) awsPublicCertificates(s logical.Storage, isPkcs bool) ([]*x509
 		if certEntry == nil {
 			return nil, fmt.Errorf("certificate storage has a nil entry under the name:%s\n", cert)
 		}
-		decodedCert, err := decodePEMAndParseCertificate(certEntry.AWSPublicCert)
-		if err != nil {
-			return nil, err
+		// Append relevant certificates only
+		if (isPkcs && certEntry.Type == "pkcs7") ||
+			(!isPkcs && certEntry.Type == "identity") {
+			decodedCert, err := decodePEMAndParseCertificate(certEntry.AWSPublicCert)
+			if err != nil {
+				return nil, err
+			}
+			certs = append(certs, decodedCert)
 		}
-		certs = append(certs, decodedCert)
 	}
 
 	return certs, nil

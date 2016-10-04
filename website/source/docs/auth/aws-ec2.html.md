@@ -517,9 +517,10 @@ The response will be in JSON. For example:
         <span class="param">type</span>
         <span class="param-flags">required</span>
 Takes the value of either "pkcs7" or "identity", indicating the type of
-document which the given certificate should be used to verify. Note that the
-PKCS#7 document will have a DSA digest and the identity signature will have an
-RSA signature.
+document which can be verified using the given certificate. The reason is that
+the PKCS#7 document will have a DSA digest and the identity signature will have
+an RSA signature, and accordingly the public certificates to verify those also
+vary.
       </li>
     </ul>
   </dd>
