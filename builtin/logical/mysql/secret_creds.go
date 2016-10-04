@@ -90,12 +90,15 @@ func (b *backend) secretCredsRevoke(
 	if !ok {
 		roleName = ""
 	} else {
-		roleName, ok = roleNameRaw.(string)
+		roleName, _ = roleNameRaw.(string)
 	}
 	// init default revoke sql string.
 	// this will replaced by a user provided one if one exists
 	// otherwise this is what will be used when lease is revoked
 	revokeSQL := defaultRevokeSQL
+
+	// init bool to track if we should responding with warning about nil role
+	nonNilResponse := false
 
 	// if we were successful in finding a role name
 	// create role entry from that name
@@ -104,9 +107,14 @@ func (b *backend) secretCredsRevoke(
 		if err != nil {
 			return nil, err
 		}
+
+		if role == nil {
+			nonNilResponse = true
+		}
+
 		// Check for a revokeSQL string
 		// if one exists use that instead of the default
-		if role.RevokeSQL != "" {
+		if role.RevokeSQL != "" && role != nil {
 			revokeSQL = role.RevokeSQL
 		}
 	}
@@ -139,5 +147,17 @@ func (b *backend) secretCredsRevoke(
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+
+	// Let the user know that since we had a nil role we used the default SQL revocation statment
+	if nonNilResponse == true {
+		// unable to get role continuing with default sql statements for revoking users
+		var resp *logical.Response
+		resp = &logical.Response{}
+		resp.AddWarning("Role " + roleName + "cannot be found. Using default SQL for revoking user")
+
+		// return non-nil response and nil error
+		return resp, nil
+	}
+
 	return nil, nil
 }
