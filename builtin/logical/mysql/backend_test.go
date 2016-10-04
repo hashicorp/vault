@@ -126,11 +126,39 @@ func TestBackend_basic(t *testing.T) {
 		"connection_url": connURL,
 	}
 
+	// for wildcard based mysql user
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepRole(t),
+			testAccStepRole(t, true),
+			testAccStepReadCreds(t, "web"),
+		},
+	})
+}
+
+func TestBackend_basicHostRevoke(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	// for host based mysql user
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, connData, false),
+			testAccStepRole(t, false),
 			testAccStepReadCreds(t, "web"),
 		},
 	})
@@ -156,10 +184,14 @@ func TestBackend_roleCrud(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, connData, false),
-			testAccStepRole(t),
-			testAccStepReadRole(t, "web", testRole),
+			// test SQL with wildcard based user
+			testAccStepRole(t, true),
+			testAccStepReadRole(t, "web", testRoleWildCard),
 			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", ""),
+			// test SQL with host  based user
+			testAccStepRole(t, false),
+			testAccStepReadRole(t, "web", testRoleHost),
+			testAccStepDeleteRole(t, "web"),
 		},
 	})
 }
@@ -209,7 +241,7 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 					return err
 				}
 				if len(e.Error) == 0 {
-					return fmt.Errorf("expected error, but write succeeded.")
+					return fmt.Errorf("expected error, but write succeeded")
 				}
 				return nil
 			} else if resp != nil && resp.IsError() {
@@ -220,14 +252,26 @@ func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool)
 	}
 }
 
-func testAccStepRole(t *testing.T) logicaltest.TestStep {
+func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
+
+	pathData := make(map[string]interface{})
+	if wildCard == true {
+		pathData = map[string]interface{}{
+			"sql": testRoleWildCard,
+		}
+	} else {
+		pathData = map[string]interface{}{
+			"sql":        testRoleHost,
+			"revoke_sql": testRevokeSQL,
+		}
+	}
+
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "roles/web",
-		Data: map[string]interface{}{
-			"sql": testRole,
-		},
+		Data:      pathData,
 	}
+
 }
 
 func testAccStepDeleteRole(t *testing.T, n string) logicaltest.TestStep {
@@ -310,7 +354,15 @@ func testAccStepReadLease(t *testing.T) logicaltest.TestStep {
 	}
 }
 
-const testRole = `
+const testRoleWildCard = `
 CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';
 GRANT SELECT ON *.* TO '{{name}}'@'%';
+`
+const testRoleHost = `
+CREATE USER '{{name}}'@'10.1.1.2' IDENTIFIED BY '{{password}}';
+GRANT SELECT ON *.* TO '{{name}}'@'10.1.1.2';
+`
+const testRevokeSQL = `
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'10.1.1.2'; 
+DROP USER '{{name}}'@'10.1.1.2';
 `

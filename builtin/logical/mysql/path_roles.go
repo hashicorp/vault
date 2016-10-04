@@ -37,6 +37,11 @@ func pathRoles(b *backend) *framework.Path {
 				Description: "SQL string to create a user. See help for more info.",
 			},
 
+			"revoke_sql": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "SQL string to revoke a user. See help for more info.",
+			},
+
 			"username_length": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Description: "number of characters to truncate generated mysql usernames to (default 16)",
@@ -112,7 +117,8 @@ func (b *backend) pathRoleRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"sql": role.SQL,
+			"sql":        role.SQL,
+			"revoke_sql": role.RevokeSQL,
 		},
 	}, nil
 }
@@ -131,6 +137,7 @@ func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	sql := data.Get("sql").(string)
+	revoke_sql := data.Get("revoke_sql").(string)
 	username_length := data.Get("username_length").(int)
 	rolename_length := data.Get("rolename_length").(int)
 	displayname_length := data.Get("displayname_length").(int)
@@ -162,6 +169,7 @@ func (b *backend) pathRoleCreate(
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
 		SQL:               sql,
+		RevokeSQL:         revoke_sql,
 		UsernameLength:    username_length,
 		DisplaynameLength: displayname_length,
 		RolenameLength:    rolename_length,
@@ -177,6 +185,7 @@ func (b *backend) pathRoleCreate(
 
 type roleEntry struct {
 	SQL               string `json:"sql"`
+	RevokeSQL         string `json:"revoke_sql"`
 	UsernameLength    int    `json:"username_length"`
 	DisplaynameLength int    `json:"displayname_length"`
 	RolenameLength    int    `json:"rolename_length"`
