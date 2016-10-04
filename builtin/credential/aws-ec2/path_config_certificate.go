@@ -97,13 +97,14 @@ func pathConfigCertificate(b *backend) *framework.Path {
 				Description: "AWS Public cert required to verify PKCS7 signature of the EC2 instance metadata.",
 			},
 			"type": {
-				Type: framework.TypeString,
+				Type:    framework.TypeString,
+				Default: "pkcs7",
 				Description: `
 Takes the value of either "pkcs7" or "identity", indicating the type of
 document which can be verified using the given certificate. The reason is that
 the PKCS#7 document will have a DSA digest and the identity signature will have
 an RSA signature, and accordingly the public certificates to verify those also
-vary.`,
+vary. Defaults to "pkcs7".`,
 			},
 		},
 
@@ -351,18 +352,6 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 		return logical.ErrorResponse("missing certificate name"), nil
 	}
 
-	certType := data.Get("type").(string)
-	if certType == "" {
-		return logical.ErrorResponse("missing certificate type"), nil
-	}
-
-	switch strings.ToLower(certType) {
-	case "pkcs7":
-	case "identity":
-	default:
-		return logical.ErrorResponse("invalid certificate type"), nil
-	}
-
 	b.configMutex.Lock()
 	defer b.configMutex.Unlock()
 
@@ -373,6 +362,21 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 	}
 	if certEntry == nil {
 		certEntry = &awsPublicCert{}
+	}
+
+	// Check if type information is provided
+	certTypeRaw, ok := data.GetOk("type")
+	if ok {
+		certEntry.Type = strings.ToLower(certTypeRaw.(string))
+	} else if req.Operation == logical.CreateOperation {
+		certEntry.Type = data.Get("type").(string)
+	}
+
+	switch certEntry.Type {
+	case "pkcs7":
+	case "identity":
+	default:
+		return logical.ErrorResponse(fmt.Sprintf("invalid certificate type %q", certEntry.Type)), nil
 	}
 
 	// Check if the value is provided by the client
@@ -402,9 +406,6 @@ func (b *backend) pathConfigCertificateCreateUpdate(
 	if publicCert == nil {
 		return logical.ErrorResponse("invalid certificate; failed to decode and parse certificate"), nil
 	}
-
-	// Add the certificate type to the storage entry
-	certEntry.Type = certType
 
 	// If none of the checks fail, save the provided certificate
 	if err := b.nonLockedSetAWSPublicCertificateEntry(req.Storage, certName, certEntry); err != nil {
