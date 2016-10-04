@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -155,7 +155,39 @@ func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 	return nil
 }
 
-// nodePath returns an etcd filepath based on the given key.
+// cleanupLogicalPath is used to remove all empty nodes, begining with deepest one,
+// aborting on first non-empty one, up to top-level node.
+func (c *ZookeeperBackend) cleanupLogicalPath(path string) error {
+	nodes := strings.Split(path, "/")
+	for i := len(nodes) - 1; i > 0; i-- {
+		fullPath := c.path + strings.Join(nodes[:i], "/")
+
+		_, stat, err := c.client.Exists(fullPath)
+		if err != nil {
+			return fmt.Errorf("Failed to acquire node data: %s", err)
+		}
+
+		if stat.DataLength > 0 && stat.NumChildren > 0 {
+			msgFmt := "Node %s is both of data and leaf type ??"
+			panic(fmt.Sprintf(msgFmt, fullPath))
+		} else if stat.DataLength > 0 {
+			msgFmt := "Node %s is a data node, this is either a bug or " +
+				"backend data is corrupted"
+			panic(fmt.Sprintf(msgFmt, fullPath))
+		} else if stat.NumChildren > 0 {
+			return nil
+		} else {
+			// Empty node, lets clean it up!
+			if err := c.client.Delete(fullPath, -1); err != nil {
+				msgFmt := "Removal of node `%s` failed: `%v`"
+				return fmt.Errorf(msgFmt, fullPath, err)
+			}
+		}
+	}
+	return nil
+}
+
+// nodePath returns an zk path based on the given key.
 func (c *ZookeeperBackend) nodePath(key string) string {
 	return filepath.Join(c.path, filepath.Dir(key), ZKNodeFilePrefix+filepath.Base(key))
 }
@@ -211,9 +243,12 @@ func (c *ZookeeperBackend) Delete(key string) error {
 	err := c.client.Delete(fullPath, -1)
 
 	// Mask if the node does not exist
-	if err == zk.ErrNoNode {
-		err = nil
+	if err != nil && err != zk.ErrNoNode {
+		return fmt.Errorf("Failed to remove `%s`: %v", fullPath, err)
 	}
+
+	err = c.cleanupLogicalPath(key)
+
 	return err
 }
 
@@ -229,15 +264,28 @@ func (c *ZookeeperBackend) List(prefix string) ([]string, error) {
 	// If the path nodes are missing, no children!
 	if err == zk.ErrNoNode {
 		return []string{}, nil
+	} else if err != nil {
+		return []string{}, err
 	}
 
 	children := []string{}
 	for _, key := range result {
-		// Check if this entry has any child entries,
+		childPath := fullPath + "/" + key
+		_, stat, err := c.client.Exists(childPath)
+		if err != nil {
+			// Node is ought to exists, so it must be something different
+			return []string{}, err
+		}
+
+		// Check if this entry is a leaf of a node,
 		// and append the slash which is what Vault depends on
 		// for iteration
-		nodeChildren, _, _ := c.client.Children(fullPath + "/" + key)
-		if nodeChildren != nil && len(nodeChildren) > 0 {
+		if stat.DataLength > 0 && stat.NumChildren > 0 {
+			msgFmt := "Node %s is both of data and leaf type ??"
+			panic(fmt.Sprintf(msgFmt, childPath))
+		} else if stat.DataLength == 0 {
+			// No, we cannot differentiate here on number of children as node
+			// can have all it leafs remoed, and it still is a node.
 			children = append(children, key+"/")
 		} else {
 			children = append(children, key[1:])
