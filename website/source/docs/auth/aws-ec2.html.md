@@ -324,8 +324,7 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/role/
 
 ```
 curl -X POST "http://127.0.0.1:8200/v1/auth/aws-ec2/login" -d
-'{"role":"dev-role","pkcs7":"'$(curl -s
-http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
+'{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
 ```
 
 
@@ -486,8 +485,11 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Registers an AWS public key that is used to verify the PKCS#7 signature of the
-    EC2 instance metadata.
+    Registers an AWS public key to be used to verify the instance identity
+    documents. While the PKCS#7 signature of the identity documents have DSA
+    digest, the identity signature will have RSA digest, and hence the public keys
+    for each type varies respectively. Indicate the type of the public key using
+    the "type" parameter.
   </dd>
 
   <dt>Method</dt>
@@ -510,6 +512,17 @@ The response will be in JSON. For example:
         <span class="param">aws_public_cert</span>
         <span class="param-flags">required</span>
         AWS Public key required to verify PKCS7 signature of the EC2 instance metadata.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">type</span>
+        <span class="param-flags">optional</span>
+        Takes the value of either "pkcs7" or "identity", indicating the type of
+        document which can be verified using the given certificate. The PKCS#7 document
+        will have a DSA digest and the identity signature will have an RSA signature,
+        and accordingly the public certificates to verify those also vary. Defaults to
+        "pkcs7".
       </li>
     </ul>
   </dd>
@@ -1131,9 +1144,11 @@ instance can be allowed to gain in a worst-case scenario.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-   Fetch a token. This endpoint verifies the pkcs#7 signature of the instance identity document.
-   Verifies that the instance is actually in a running state. Cross checks the constraints defined
-   on the role with which the login is being performed.
+    Fetch a token. This endpoint verifies the pkcs7 signature of the instance
+    identity document.  Verifies that the instance is actually in a running state.
+    Cross checks the constraints defined on the role with which the login is being
+    performed. As an alternative to pkcs7 signature, the identity document along
+    with its RSA digest can be supplied to this endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -1156,25 +1171,45 @@ instance can be allowed to gain in a worst-case scenario.
     </ul>
     <ul>
       <li>
+        <span class="param">identity</span>
+        <span class="param-flags">required</span>
+        Base64 encoded EC2 instance identity document. This needs to be supplied along
+        with the `signature` parameter. If using `curl` for fetching the identity
+        document, consider using the option `-w 0` while piping the output to
+        `base64` binary.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">signature</span>
+        <span class="param-flags">required</span>
+        Base64 encoded SHA256 RSA signature of the instance identity document. This
+        needs to be supplied along with `identity` parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
         <span class="param">pkcs7</span>
         <span class="param-flags">required</span>
         PKCS7 signature of the identity document with all `\n` characters removed.
+        Either this needs to be set *OR* both `identity` and `signature` need to be
+        set.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
-The nonce to be used for subsequent login requests. If this parameter is not
-specified at all and if reauthentication is allowed, then the backend will
-generate a random nonce, attaches it to the instance's identity-whitelist entry
-and returns the nonce back as part of auth metadata. This value should be used
-with further login requests, to establish client authenticity. Clients can
-choose to set a custom nonce if preferred, in which case, it is recommended
-that clients provide a strong nonce.  If a nonce is provided but with an empty
-value, it indicates intent to disable reauthentication. Note that, when
-`disallow_reauthentication` option is enabled on either the role or the role
-tag, the `nonce` holds no significance.
+        The nonce to be used for subsequent login requests. If this parameter is not
+        specified at all and if reauthentication is allowed, then the backend will
+        generate a random nonce, attaches it to the instance's identity-whitelist entry
+        and returns the nonce back as part of auth metadata. This value should be used
+        with further login requests, to establish client authenticity. Clients can
+        choose to set a custom nonce if preferred, in which case, it is recommended
+        that clients provide a strong nonce.  If a nonce is provided but with an empty
+        value, it indicates intent to disable reauthentication. Note that, when
+        `disallow_reauthentication` option is enabled on either the role or the role
+        tag, the `nonce` holds no significance.
       </li>
     </ul>
   </dd>

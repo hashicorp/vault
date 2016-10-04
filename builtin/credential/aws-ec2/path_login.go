@@ -2,6 +2,8 @@ package awsec2
 
 import (
 	"crypto/subtle"
+	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"strings"
@@ -26,7 +28,7 @@ func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
 		Fields: map[string]*framework.FieldSchema{
-			"role": &framework.FieldSchema{
+			"role": {
 				Type: framework.TypeString,
 				Description: `Name of the role against which the login is being attempted.
 If 'role' is not specified, then the login endpoint looks for a role
@@ -34,12 +36,12 @@ bearing the name of the AMI ID of the EC2 instance that is trying to login.
 If a matching role is not found, login fails.`,
 			},
 
-			"pkcs7": &framework.FieldSchema{
+			"pkcs7": {
 				Type:        framework.TypeString,
 				Description: "PKCS7 signature of the identity document.",
 			},
 
-			"nonce": &framework.FieldSchema{
+			"nonce": {
 				Type: framework.TypeString,
 				Description: `The nonce to be used for subsequent login requests.
 If this parameter is not specified at all and if reauthentication is allowed,
@@ -51,6 +53,18 @@ case, it is recommended that clients provide a strong nonce.  If a nonce is
 provided but with an empty value, it indicates intent to disable
 reauthentication. Note that, when 'disallow_reauthentication' option is enabled
 on either the role or the role tag, the 'nonce' holds no significance.`,
+			},
+			"identity": {
+				Type: framework.TypeString,
+				Description: `Base64 encoded EC2 instance identity document. This needs to be supplied along
+with the 'signature' parameter. If using 'curl' for fetching the identity
+document, consider using the option '-w 0' while piping the output to 'base64'
+binary.`,
+			},
+			"signature": {
+				Type: framework.TypeString,
+				Description: `Base64 encoded SHA256 RSA signature of the instance identity document. This
+needs to be supplied along with 'identity' parameter.`,
 			},
 		},
 
@@ -100,8 +114,8 @@ func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, reg
 	return *profile.InstanceProfile.Roles[0].Arn, nil
 }
 
-// validateInstance queries the status of the EC2 instance using AWS EC2 API and
-// checks if the instance is running and is healthy.
+// validateInstance queries the status of the EC2 instance using AWS EC2 API
+// and checks if the instance is running and is healthy
 func (b *backend) validateInstance(s logical.Storage, instanceID, region string) (*ec2.DescribeInstancesOutput, error) {
 	// Create an EC2 client to pull the instance information
 	ec2Client, err := b.clientEC2(s, region)
@@ -120,7 +134,7 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region string)
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error fetching description for instance ID %s: %s\n", instanceID, err)
+		return nil, fmt.Errorf("error fetching description for instance ID %q: %q\n", instanceID, err)
 	}
 	if status == nil {
 		return nil, fmt.Errorf("nil output from describe instances")
@@ -144,9 +158,9 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region string)
 	return status, nil
 }
 
-// validateMetadata matches the given client nonce and pending time with the one cached
-// in the identity whitelist during the previous login. But, if reauthentication is
-// disabled, login attempt is failed immediately.
+// validateMetadata matches the given client nonce and pending time with the
+// one cached in the identity whitelist during the previous login. But, if
+// reauthentication is disabled, login attempt is failed immediately.
 func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelistIdentity, roleEntry *awsRoleEntry) error {
 	// For sanity
 	if !storedIdentity.DisallowReauthentication && storedIdentity.ClientNonce == "" {
@@ -171,23 +185,23 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 		return err
 	}
 
-	// When the presented client nonce does not match the cached entry, it is
-	// either that a rogue client is trying to login or that a valid client
-	// suffered a migration. The migration is detected via pendingTime in the
-	// instance metadata, which sadly is only updated when an instance is
-	// stopped and started but *not* when the instance is rebooted. If reboot
-	// survivability is needed, either instrumentation to delete the instance
-	// ID from the whitelist is necessary, or the client must durably store
-	// the nonce.
+	// When the presented client nonce does not match the cached entry, it
+	// is either that a rogue client is trying to login or that a valid
+	// client suffered a migration. The migration is detected via
+	// pendingTime in the instance metadata, which sadly is only updated
+	// when an instance is stopped and started but *not* when the instance
+	// is rebooted. If reboot survivability is needed, either
+	// instrumentation to delete the instance ID from the whitelist is
+	// necessary, or the client must durably store the nonce.
 	//
 	// If the `allow_instance_migration` property of the registered role is
 	// enabled, then the client nonce mismatch is ignored, as long as the
-	// pending time in the presented instance identity document is newer than
-	// the cached pending time. The new pendingTime is stored and used for
-	// future checks.
+	// pending time in the presented instance identity document is newer
+	// than the cached pending time. The new pendingTime is stored and used
+	// for future checks.
 	//
-	// This is a weak criterion and hence the `allow_instance_migration` option
-	// should be used with caution.
+	// This is a weak criterion and hence the `allow_instance_migration`
+	// option should be used with caution.
 	if subtle.ConstantTimeCompare([]byte(clientNonce), []byte(storedIdentity.ClientNonce)) != 1 {
 		if !roleEntry.AllowInstanceMigration {
 			return fmt.Errorf("client nonce mismatch")
@@ -197,38 +211,79 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 		}
 	}
 
-	// Ensure that the 'pendingTime' on the given identity document is not before the
-	// 'pendingTime' that was used for previous login. This disallows old metadata documents
-	// from being used to perform login.
+	// Ensure that the 'pendingTime' on the given identity document is not
+	// before the 'pendingTime' that was used for previous login. This
+	// disallows old metadata documents from being used to perform login.
 	if givenPendingTime.Before(storedPendingTime) {
 		return fmt.Errorf("instance meta-data is older than the one used for previous login")
 	}
 	return nil
 }
 
+// Verifies the integrity of the instance identity document using its SHA256
+// RSA signature. After verification, returns the unmarshaled instance identity
+// document.
+func (b *backend) verifyInstanceIdentitySignature(s logical.Storage, identityBytes, signatureBytes []byte) (*identityDocument, error) {
+	if len(identityBytes) == 0 {
+		return nil, fmt.Errorf("missing instance identity document")
+	}
+
+	if len(signatureBytes) == 0 {
+		return nil, fmt.Errorf("missing SHA256 RSA signature of the instance identity document")
+	}
+
+	// Get the public certificates that are used to verify the signature.
+	// This returns a slice of certificates containing the default
+	// certificate and all the registered certificates via
+	// 'config/certificate/<cert_name>' endpoint, for verifying the RSA
+	// digest.
+	publicCerts, err := b.awsPublicCertificates(s, false)
+	if err != nil {
+		return nil, err
+	}
+	if publicCerts == nil || len(publicCerts) == 0 {
+		return nil, fmt.Errorf("certificates to verify the signature are not found")
+	}
+
+	// Check if any of the certs registered at the backend can verify the
+	// signature
+	for _, cert := range publicCerts {
+		err := cert.CheckSignature(x509.SHA256WithRSA, identityBytes, signatureBytes)
+		if err == nil {
+			var identityDoc identityDocument
+			if decErr := jsonutil.DecodeJSON(identityBytes, &identityDoc); decErr != nil {
+				return nil, decErr
+			}
+			return &identityDoc, nil
+		}
+	}
+
+	return nil, fmt.Errorf("instance identity verification using SHA256 RSA signature is unsuccessful")
+}
+
 // Verifies the correctness of the authenticated attributes present in the PKCS#7
 // signature. After verification, extracts the instance identity document from the
 // signature, parses it and returns it.
 func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*identityDocument, error) {
-	// Insert the header and footer for the signature to be able to pem decode it.
+	// Insert the header and footer for the signature to be able to pem decode it
 	pkcs7B64 = fmt.Sprintf("-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----", pkcs7B64)
 
-	// Decode the PEM encoded signature.
+	// Decode the PEM encoded signature
 	pkcs7BER, pkcs7Rest := pem.Decode([]byte(pkcs7B64))
 	if len(pkcs7Rest) != 0 {
 		return nil, fmt.Errorf("failed to decode the PEM encoded PKCS#7 signature")
 	}
 
-	// Parse the signature from asn1 format into a struct.
+	// Parse the signature from asn1 format into a struct
 	pkcs7Data, err := pkcs7.Parse(pkcs7BER.Bytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse the BER encoded PKCS#7 signature: %s\n", err)
+		return nil, fmt.Errorf("failed to parse the BER encoded PKCS#7 signature: %v\n", err)
 	}
 
 	// Get the public certificates that are used to verify the signature.
 	// This returns a slice of certificates containing the default certificate
 	// and all the registered certificates via 'config/certificate/<cert_name>' endpoint
-	publicCerts, err := b.awsPublicCertificates(s)
+	publicCerts, err := b.awsPublicCertificates(s, true)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +301,7 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 		return nil, fmt.Errorf("failed to verify the signature")
 	}
 
-	// Check if the signature has content inside of it.
+	// Check if the signature has content inside of it
 	if len(pkcs7Data.Content) == 0 {
 		return nil, fmt.Errorf("instance identity document could not be found in the signature")
 	}
@@ -265,60 +320,95 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 // option is enabled on the registered role.
 func (b *backend) pathLoginUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	identityDocB64 := data.Get("identity").(string)
+	var identityDocBytes []byte
+	var err error
+	if identityDocB64 != "" {
+		identityDocBytes, err = base64.StdEncoding.DecodeString(identityDocB64)
+		if err != nil || len(identityDocBytes) == 0 {
+			return logical.ErrorResponse("failed to base64 decode the instance identity document"), nil
+		}
+	}
+
+	signatureB64 := data.Get("signature").(string)
+	var signatureBytes []byte
+	if signatureB64 != "" {
+		signatureBytes, err = base64.StdEncoding.DecodeString(signatureB64)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64 decode the SHA256 RSA signature of the instance identity document"), nil
+		}
+	}
 
 	pkcs7B64 := data.Get("pkcs7").(string)
-	if pkcs7B64 == "" {
-		return logical.ErrorResponse("missing pkcs7"), nil
+
+	// Either the pkcs7 signature of the instance identity document, or
+	// the identity document itself along with its SHA256 RSA signature
+	// needs to be provided.
+	if pkcs7B64 == "" && (len(identityDocBytes) == 0 && len(signatureBytes) == 0) {
+		return logical.ErrorResponse("either pkcs7 or a tuple containing the instance identity document and its SHA256 RSA signature needs to be provided"), nil
+	} else if pkcs7B64 != "" && (len(identityDocBytes) != 0 && len(signatureBytes) != 0) {
+		return logical.ErrorResponse("both pkcs7 and a tuple containing the instance identity document and its SHA256 RSA signature is supplied; provide only one"), nil
 	}
 
-	// Verify the signature of the identity document.
-	identityDoc, err := b.parseIdentityDocument(req.Storage, pkcs7B64)
-	if err != nil {
-		return nil, err
-	}
-	if identityDoc == nil {
-		return logical.ErrorResponse("failed to extract instance identity document from PKCS#7 signature"), nil
+	// Verify the signature of the identity document and unmarshal it
+	var identityDocParsed *identityDocument
+	if pkcs7B64 != "" {
+		identityDocParsed, err = b.parseIdentityDocument(req.Storage, pkcs7B64)
+		if err != nil {
+			return nil, err
+		}
+		if identityDocParsed == nil {
+			return logical.ErrorResponse("failed to verify the instance identity document using pkcs7"), nil
+		}
+	} else {
+		identityDocParsed, err = b.verifyInstanceIdentitySignature(req.Storage, identityDocBytes, signatureBytes)
+		if err != nil {
+			return nil, err
+		}
+		if identityDocParsed == nil {
+			return logical.ErrorResponse("failed to verify the instance identity document using the SHA256 RSA digest"), nil
+		}
 	}
 
 	roleName := data.Get("role").(string)
 
-	// If roleName is not supplied, a role in the name of the instance's AMI ID will be looked for.
+	// If roleName is not supplied, a role in the name of the instance's AMI ID will be looked for
 	if roleName == "" {
-		roleName = identityDoc.AmiID
+		roleName = identityDocParsed.AmiID
 	}
 
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
 	// and fetching the instance description. Validation succeeds only if the
 	// instance is in 'running' state.
-	instanceDesc, err := b.validateInstance(req.Storage, identityDoc.InstanceID, identityDoc.Region)
+	instanceDesc, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %v", err)), nil
 	}
 
-	// Get the entry for the role used by the instance.
+	// Get the entry for the role used by the instance
 	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
 	if roleEntry == nil {
-		return logical.ErrorResponse(fmt.Sprintf("entry for role '%s' not found", roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("entry for role %q not found", roleName)), nil
 	}
 
 	// Verify that the AMI ID of the instance trying to login matches the
-	// AMI ID specified as a constraint on the role.
-	if roleEntry.BoundAmiID != "" && identityDoc.AmiID != roleEntry.BoundAmiID {
-		return logical.ErrorResponse(fmt.Sprintf("AMI ID '%s' does not belong to role '%s'", identityDoc.AmiID, roleName)), nil
+	// AMI ID specified as a constraint on the role
+	if roleEntry.BoundAmiID != "" && identityDocParsed.AmiID != roleEntry.BoundAmiID {
+		return logical.ErrorResponse(fmt.Sprintf("AMI ID %q does not belong to role %q", identityDocParsed.AmiID, roleName)), nil
 	}
 
 	// Verify that the AccountID of the instance trying to login matches the
-	// AccountID specified as a constraint on the role.
-	if roleEntry.BoundAccountID != "" && identityDoc.AccountID != roleEntry.BoundAccountID {
-		return logical.ErrorResponse(fmt.Sprintf("Account ID '%s' does not belong to role '%s'", identityDoc.AccountID, roleName)), nil
+	// AccountID specified as a constraint on the role
+	if roleEntry.BoundAccountID != "" && identityDocParsed.AccountID != roleEntry.BoundAccountID {
+		return logical.ErrorResponse(fmt.Sprintf("Account ID %q does not belong to role %q", identityDocParsed.AccountID, roleName)), nil
 	}
 
 	// Check if the IAM instance profile ARN of the instance trying to
 	// login, matches the IAM instance profile ARN specified as a constraint
-	// on the role
+	// on the role.
 	if roleEntry.BoundIamInstanceProfileARN != "" {
 		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
 			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
@@ -359,7 +449,7 @@ func (b *backend) pathLoginUpdate(
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
-		iamRoleARN, err := b.instanceIamRoleARN(req.Storage, iamInstanceProfileName, identityDoc.Region)
+		iamRoleARN, err := b.instanceIamRoleARN(req.Storage, iamInstanceProfileName, identityDocParsed.Region)
 		if err != nil {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
 		}
@@ -373,7 +463,7 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	// Get the entry from the identity whitelist, if there is one
-	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDoc.InstanceID)
+	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDocParsed.InstanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +501,7 @@ func (b *backend) pathLoginUpdate(
 		// of the identity document is not before the pending time of the document
 		// with which previous login was made. If 'allow_instance_migration' is
 		// enabled on the registered role, client nonce requirement is relaxed.
-		if err = validateMetadata(clientNonce, identityDoc.PendingTime, storedIdentity, roleEntry); err != nil {
+		if err = validateMetadata(clientNonce, identityDocParsed.PendingTime, storedIdentity, roleEntry); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 
@@ -454,10 +544,12 @@ func (b *backend) pathLoginUpdate(
 	rTagMaxTTL := time.Duration(0)
 
 	if roleEntry.RoleTag != "" {
+		//
 		// Role tag is enabled on the role.
+		//
 
-		// Overwrite the policies with the ones returned from processing the role tag.
-		resp, err := b.handleRoleTagLogin(req.Storage, identityDoc, roleName, roleEntry, instanceDesc)
+		// Overwrite the policies with the ones returned from processing the role tag
+		resp, err := b.handleRoleTagLogin(req.Storage, identityDocParsed, roleName, roleEntry, instanceDesc)
 		if err != nil {
 			return nil, err
 		}
@@ -479,10 +571,10 @@ func (b *backend) pathLoginUpdate(
 			disallowReauthentication = resp.DisallowReauthentication
 		}
 
-		// Cache the value of role tag's max_ttl value.
+		// Cache the value of role tag's max_ttl value
 		rTagMaxTTL = resp.MaxTTL
 
-		// Scope the shortestMaxTTL to the value set on the role tag.
+		// Scope the shortestMaxTTL to the value set on the role tag
 		if resp.MaxTTL > time.Duration(0) && resp.MaxTTL < shortestMaxTTL {
 			shortestMaxTTL = resp.MaxTTL
 		}
@@ -491,7 +583,7 @@ func (b *backend) pathLoginUpdate(
 		}
 	}
 
-	// Save the login attempt in the identity whitelist.
+	// Save the login attempt in the identity whitelist
 	currentTime := time.Now()
 	if storedIdentity == nil {
 		// Role, ClientNonce and CreationTime of the identity entry,
@@ -507,7 +599,7 @@ func (b *backend) pathLoginUpdate(
 	// ExpirationTime may change.
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
-	storedIdentity.PendingTime = identityDoc.PendingTime
+	storedIdentity.PendingTime = identityDocParsed.PendingTime
 	storedIdentity.DisallowReauthentication = disallowReauthentication
 
 	// Don't cache the nonce if DisallowReauthentication is set
@@ -520,7 +612,7 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("client nonce exceeding the limit of 128 characters"), nil
 	}
 
-	if err = setWhitelistIdentityEntry(req.Storage, identityDoc.InstanceID, storedIdentity); err != nil {
+	if err = setWhitelistIdentityEntry(req.Storage, identityDocParsed.InstanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
@@ -528,11 +620,11 @@ func (b *backend) pathLoginUpdate(
 		Auth: &logical.Auth{
 			Policies: policies,
 			Metadata: map[string]string{
-				"instance_id":      identityDoc.InstanceID,
-				"region":           identityDoc.Region,
+				"instance_id":      identityDocParsed.InstanceID,
+				"region":           identityDocParsed.Region,
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
-				"ami_id":           identityDoc.AmiID,
+				"ami_id":           identityDocParsed.AmiID,
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
@@ -565,24 +657,25 @@ func (b *backend) pathLoginUpdate(
 
 }
 
-// handleRoleTagLogin is used to fetch the role tag of the instance and verifies it to be correct.
-// Then the policies for the login request will be set off of the role tag, if certain creteria satisfies.
-func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDocument, roleName string, roleEntry *awsRoleEntry, instanceDesc *ec2.DescribeInstancesOutput) (*roleTagLoginResponse, error) {
-	if identityDoc == nil {
-		return nil, fmt.Errorf("nil identityDoc")
+// handleRoleTagLogin is used to fetch the role tag of the instance and
+// verifies it to be correct.  Then the policies for the login request will be
+// set off of the role tag, if certain creteria satisfies.
+func (b *backend) handleRoleTagLogin(s logical.Storage, identityDocParsed *identityDocument, roleName string, roleEntry *awsRoleEntry, instanceDesc *ec2.DescribeInstancesOutput) (*roleTagLoginResponse, error) {
+	if identityDocParsed == nil {
+		return nil, fmt.Errorf("nil parsed identity document")
 	}
 	if roleEntry == nil {
-		return nil, fmt.Errorf("nil roleEntry")
+		return nil, fmt.Errorf("nil role entry")
 	}
 	if instanceDesc == nil {
-		return nil, fmt.Errorf("nil instanceDesc")
+		return nil, fmt.Errorf("nil instance description")
 	}
 
 	// Input validation on instanceDesc is not performed here considering
 	// that it would have been done in validateInstance method.
 	tags := instanceDesc.Reservations[0].Instances[0].Tags
 	if tags == nil || len(tags) == 0 {
-		return nil, fmt.Errorf("missing tag with key %s on the instance", roleEntry.RoleTag)
+		return nil, fmt.Errorf("missing tag with key %q on the instance", roleEntry.RoleTag)
 	}
 
 	// Iterate through the tags attached on the instance and look for
@@ -598,10 +691,10 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	// If 'role_tag' is enabled on the role, and if a corresponding tag is not found
 	// to be attached to the instance, fail.
 	if rTagValue == "" {
-		return nil, fmt.Errorf("missing tag with key %s on the instance", roleEntry.RoleTag)
+		return nil, fmt.Errorf("missing tag with key %q on the instance", roleEntry.RoleTag)
 	}
 
-	// Parse the role tag into a struct, extract the plaintext part of it and verify its HMAC.
+	// Parse the role tag into a struct, extract the plaintext part of it and verify its HMAC
 	rTag, err := b.parseAndVerifyRoleTagValue(s, rTagValue)
 	if err != nil {
 		return nil, err
@@ -613,12 +706,12 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 		return nil, fmt.Errorf("role on the tag is not matching the role supplied")
 	}
 
-	// If instance_id was set on the role tag, check if the same instance is attempting to login.
-	if rTag.InstanceID != "" && rTag.InstanceID != identityDoc.InstanceID {
+	// If instance_id was set on the role tag, check if the same instance is attempting to login
+	if rTag.InstanceID != "" && rTag.InstanceID != identityDocParsed.InstanceID {
 		return nil, fmt.Errorf("role tag is being used by an unauthorized instance.")
 	}
 
-	// Check if the role tag is blacklisted.
+	// Check if the role tag is blacklisted
 	blacklistEntry, err := b.lockedBlacklistRoleTagEntry(s, rTagValue)
 	if err != nil {
 		return nil, err
@@ -639,7 +732,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDoc *identityDoc
 	}, nil
 }
 
-// pathLoginRenew is used to renew an authenticated token.
+// pathLoginRenew is used to renew an authenticated token
 func (b *backend) pathLoginRenew(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := req.Auth.Metadata["instance_id"]
@@ -655,7 +748,7 @@ func (b *backend) pathLoginRenew(
 	// Cross check that the instance is still in 'running' state
 	_, err := b.validateInstance(req.Storage, instanceID, region)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify instance ID '%s': %s", instanceID, err)
+		return nil, fmt.Errorf("failed to verify instance ID %q: %q", instanceID, err)
 	}
 
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, instanceID)
@@ -663,10 +756,10 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 	if storedIdentity == nil {
-		return nil, fmt.Errorf("failed to verify the whitelist identity entry for instance ID: %s", instanceID)
+		return nil, fmt.Errorf("failed to verify the whitelist identity entry for instance ID: %q", instanceID)
 	}
 
-	// Ensure that role entry is not deleted.
+	// Ensure that role entry is not deleted
 	roleEntry, err := b.lockedAWSRole(req.Storage, storedIdentity.Role)
 	if err != nil {
 		return nil, err
@@ -683,7 +776,7 @@ func (b *backend) pathLoginRenew(
 		return nil, err
 	}
 
-	// Re-evaluate the maxTTL bounds.
+	// Re-evaluate the maxTTL bounds
 	shortestMaxTTL := b.System().MaxLeaseTTL()
 	longestMaxTTL := b.System().MaxLeaseTTL()
 	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < shortestMaxTTL {
@@ -699,7 +792,7 @@ func (b *backend) pathLoginRenew(
 		longestMaxTTL = rTagMaxTTL
 	}
 
-	// Cap the TTL value.
+	// Cap the TTL value
 	shortestTTL := b.System().DefaultLeaseTTL()
 	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
 		shortestTTL = roleEntry.TTL
@@ -708,7 +801,7 @@ func (b *backend) pathLoginRenew(
 		shortestTTL = shortestMaxTTL
 	}
 
-	// Only LastUpdatedTime and ExpirationTime change and all other fields remain the same.
+	// Only LastUpdatedTime and ExpirationTime change and all other fields remain the same
 	currentTime := time.Now()
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
@@ -720,7 +813,8 @@ func (b *backend) pathLoginRenew(
 	return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
 }
 
-// Struct to represent items of interest from the EC2 instance identity document.
+// identityDocument represents the items of interest from the EC2 instance
+// identity document
 type identityDocument struct {
 	Tags        map[string]interface{} `json:"tags,omitempty" structs:"tags" mapstructure:"tags"`
 	InstanceID  string                 `json:"instanceId,omitempty" structs:"instanceId" mapstructure:"instanceId"`
@@ -730,6 +824,8 @@ type identityDocument struct {
 	PendingTime string                 `json:"pendingTime,omitempty" structs:"pendingTime" mapstructure:"pendingTime"`
 }
 
+// roleTagLoginResponse represents the return values required after the process
+// of verifying a role tag login
 type roleTagLoginResponse struct {
 	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
