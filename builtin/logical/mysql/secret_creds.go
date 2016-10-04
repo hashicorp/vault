@@ -84,7 +84,7 @@ func (b *backend) secretCredsRevoke(
 	// Get the role name
 	// we may not always have role data in the secret InternalData
 	// so don't exit if the roleNameRaw fails. Instead it is set
-	// as an empty string
+	// as an empty string.
 	var roleName string
 	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
@@ -100,7 +100,7 @@ func (b *backend) secretCredsRevoke(
 	// if we were successful in finding a role name
 	// create role entry from that name
 	if roleName != "" {
-		role, err = b.Role(req.Storage, roleName)
+		role, err := b.Role(req.Storage, roleName)
 		if err != nil {
 			return nil, err
 		}
