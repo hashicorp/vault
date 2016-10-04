@@ -3,8 +3,10 @@ package physical
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -31,19 +33,55 @@ func newFileBackend(conf map[string]string) (Backend, error) {
 	return &FileBackend{Path: path}, nil
 }
 
-func (b *FileBackend) Delete(k string) error {
+func (b *FileBackend) Delete(path string) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	path, key := b.path(k)
-	path = filepath.Join(path, key)
+	basePath, key := b.path(path)
+	fullPath := filepath.Join(basePath, key)
 
-	err := os.Remove(path)
-	if err != nil && os.IsNotExist(err) {
-		err = nil
+	err := os.Remove(fullPath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("Failed to remove `%s`: %v", fullPath, err)
 	}
 
+	err = b.cleanupLogicalPath(path)
+
 	return err
+}
+
+// cleanupLogicalPath is used to remove all empty nodes, begining with deepest
+// one, aborting on first non-empty one, up to top-level node.
+func (b *FileBackend) cleanupLogicalPath(path string) error {
+	nodes := strings.Split(path, "/")
+	for i := len(nodes) - 1; i > 0; i-- {
+		fullPath := b.Path + "/" + strings.Join(nodes[:i], "/")
+
+		dir, err := os.Open(fullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			} else {
+				return err
+			}
+		}
+
+		list, err := dir.Readdir(1)
+		dir.Close()
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		// If we have no entries, it's an empty directory; remove it
+		if err == io.EOF || list == nil || len(list) == 0 {
+			err = os.Remove(fullPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (b *FileBackend) Get(k string) (*Entry, error) {
