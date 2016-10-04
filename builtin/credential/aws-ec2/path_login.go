@@ -221,13 +221,12 @@ func validateMetadata(clientNonce, pendingTime string, storedIdentity *whitelist
 // Verifies the integrity of the instance identity document using its SHA256
 // RSA signature. After verification, returns the unmarshaled instance identity
 // document.
-func (b *backend) verifyInstanceIdentitySignature(s logical.Storage, identityBytes []byte, signature string) (*identityDocument, error) {
+func (b *backend) verifyInstanceIdentitySignature(s logical.Storage, identityBytes, signatureBytes []byte) (*identityDocument, error) {
 	if len(identityBytes) == 0 {
 		return nil, fmt.Errorf("missing instance identity document")
 	}
 
-	signature = strings.TrimSpace(signature)
-	if signature == "" {
+	if len(signatureBytes) == 0 {
 		return nil, fmt.Errorf("missing SHA256 RSA signature of the instance identity document")
 	}
 
@@ -247,7 +246,7 @@ func (b *backend) verifyInstanceIdentitySignature(s logical.Storage, identityByt
 	// Check if any of the certs registered at the backend can verify the
 	// signature
 	for _, cert := range publicCerts {
-		err := cert.CheckSignature(x509.SHA256WithRSA, identityBytes, []byte(signature))
+		err := cert.CheckSignature(x509.SHA256WithRSA, identityBytes, signatureBytes)
 		if err == nil {
 			var identityDoc identityDocument
 			if decErr := jsonutil.DecodeJSON(identityBytes, &identityDoc); decErr != nil {
@@ -330,13 +329,12 @@ func (b *backend) pathLoginUpdate(
 	}
 
 	signatureB64 := data.Get("signature").(string)
-	signature := ""
+	var signatureBytes []byte
 	if signatureB64 != "" {
-		signatureBytes, err := base64.StdEncoding.DecodeString(signatureB64)
+		signatureBytes, err = base64.StdEncoding.DecodeString(signatureB64)
 		if err != nil {
 			return logical.ErrorResponse("failed to base64 decode the SHA256 RSA signature of the instance identity document"), nil
 		}
-		signature = string(signatureBytes)
 	}
 
 	pkcs7B64 := data.Get("pkcs7").(string)
@@ -344,9 +342,9 @@ func (b *backend) pathLoginUpdate(
 	// Either the pkcs7 signature of the instance identity document, or
 	// the identity document itself along with its SHA256 RSA signature
 	// needs to be provided.
-	if pkcs7B64 == "" && (len(identityDocBytes) == 0 && signature == "") {
+	if pkcs7B64 == "" && (len(identityDocBytes) == 0 && len(signatureBytes) == 0) {
 		return logical.ErrorResponse("either pkcs7 or a tuple containing the instance identity document and its SHA256 RSA signature needs to be provided"), nil
-	} else if pkcs7B64 != "" && (len(identityDocBytes) != 0 && signature != "") {
+	} else if pkcs7B64 != "" && (len(identityDocBytes) != 0 && len(signatureBytes) != 0) {
 		return logical.ErrorResponse("both pkcs7 and a tuple containing the instance identity document and its SHA256 RSA signature is supplied; provide only one"), nil
 	}
 
@@ -361,7 +359,7 @@ func (b *backend) pathLoginUpdate(
 			return logical.ErrorResponse("failed to verify the instance identity document using pkcs7"), nil
 		}
 	} else {
-		identityDocParsed, err = b.verifyInstanceIdentitySignature(req.Storage, identityDocBytes, signature)
+		identityDocParsed, err = b.verifyInstanceIdentitySignature(req.Storage, identityDocBytes, signatureBytes)
 		if err != nil {
 			return nil, err
 		}
