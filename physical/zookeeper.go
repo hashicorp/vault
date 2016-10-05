@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -162,20 +163,21 @@ func (c *ZookeeperBackend) ensurePath(path string, value []byte) error {
 // cleanupLogicalPath is used to remove all empty nodes, begining with deepest one,
 // aborting on first non-empty one, up to top-level node.
 func (c *ZookeeperBackend) cleanupLogicalPath(path string) error {
-	nodes := strings.Split(path, "/")
+	pathSeparator := fmt.Sprintf("%c", os.PathSeparator)
+	nodes := strings.Split(path, pathSeparator)
 	for i := len(nodes) - 1; i > 0; i-- {
-		fullPath := c.path + strings.Join(nodes[:i], "/")
+		fullPath := c.path + strings.Join(nodes[:i], pathSeparator)
 
 		_, stat, err := c.client.Exists(fullPath)
 		if err != nil {
-			return fmt.Errorf("Failed to acquire node data: %s", err)
+			return fmt.Errorf("Failed to acquire node data: %v", err)
 		}
 
 		if stat.DataLength > 0 && stat.NumChildren > 0 {
-			msgFmt := "Node %s is both of data and leaf type ??"
+			msgFmt := "Node %q is both of data and leaf type ??"
 			panic(fmt.Sprintf(msgFmt, fullPath))
 		} else if stat.DataLength > 0 {
-			msgFmt := "Node %s is a data node, this is either a bug or " +
+			msgFmt := "Node %q is a data node, this is either a bug or " +
 				"backend data is corrupted"
 			panic(fmt.Sprintf(msgFmt, fullPath))
 		} else if stat.NumChildren > 0 {
@@ -183,7 +185,7 @@ func (c *ZookeeperBackend) cleanupLogicalPath(path string) error {
 		} else {
 			// Empty node, lets clean it up!
 			if err := c.client.Delete(fullPath, -1); err != nil {
-				msgFmt := "Removal of node `%s` failed: `%v`"
+				msgFmt := "Removal of node %q failed: `%v`"
 				return fmt.Errorf(msgFmt, fullPath, err)
 			}
 		}
@@ -242,18 +244,20 @@ func (c *ZookeeperBackend) Get(key string) (*Entry, error) {
 func (c *ZookeeperBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"zookeeper", "delete"}, time.Now())
 
+	if key == "" {
+		return nil
+	}
+
 	// Delete the full path
 	fullPath := c.nodePath(key)
 	err := c.client.Delete(fullPath, -1)
 
 	// Mask if the node does not exist
 	if err != nil && err != zk.ErrNoNode {
-		return fmt.Errorf("Failed to remove `%s`: %v", fullPath, err)
+		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
 	}
 
-	err = c.cleanupLogicalPath(key)
-
-	return err
+	return c.cleanupLogicalPath(key)
 }
 
 // List is used ot list all the keys under a given
@@ -285,7 +289,7 @@ func (c *ZookeeperBackend) List(prefix string) ([]string, error) {
 		// and append the slash which is what Vault depends on
 		// for iteration
 		if stat.DataLength > 0 && stat.NumChildren > 0 {
-			msgFmt := "Node %s is both of data and leaf type ??"
+			msgFmt := "Node %q is both of data and leaf type ??"
 			panic(fmt.Sprintf(msgFmt, childPath))
 		} else if stat.DataLength == 0 {
 			// No, we cannot differentiate here on number of children as node
