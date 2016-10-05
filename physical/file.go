@@ -34,6 +34,10 @@ func newFileBackend(conf map[string]string) (Backend, error) {
 }
 
 func (b *FileBackend) Delete(path string) error {
+	if path == "" {
+		return nil
+	}
+
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -42,7 +46,7 @@ func (b *FileBackend) Delete(path string) error {
 
 	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("Failed to remove `%s`: %v", fullPath, err)
+		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
 	}
 
 	err = b.cleanupLogicalPath(path)
@@ -53,9 +57,9 @@ func (b *FileBackend) Delete(path string) error {
 // cleanupLogicalPath is used to remove all empty nodes, begining with deepest
 // one, aborting on first non-empty one, up to top-level node.
 func (b *FileBackend) cleanupLogicalPath(path string) error {
-	nodes := strings.Split(path, "/")
+	nodes := strings.Split(path, fmt.Sprintf("%c", os.PathSeparator))
 	for i := len(nodes) - 1; i > 0; i-- {
-		fullPath := b.Path + "/" + strings.Join(nodes[:i], "/")
+		fullPath := filepath.Join(b.Path, filepath.Join(nodes[:i]...))
 
 		dir, err := os.Open(fullPath)
 		if err != nil {
