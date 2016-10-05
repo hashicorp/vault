@@ -27,34 +27,34 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
 
-			"sql": &framework.FieldSchema{
+			"sql": {
 				Type:        framework.TypeString,
 				Description: "SQL string to create a user. See help for more info.",
 			},
 
-			"revoke_sql": &framework.FieldSchema{
+			"revoke_sql": {
 				Type:        framework.TypeString,
 				Description: "SQL string to revoke a user. See help for more info.",
 			},
 
-			"username_length": &framework.FieldSchema{
+			"username_length": {
 				Type:        framework.TypeInt,
 				Description: "number of characters to truncate generated mysql usernames to (default 16)",
 				Default:     16,
 			},
 
-			"rolename_length": &framework.FieldSchema{
+			"rolename_length": {
 				Type:        framework.TypeInt,
 				Description: "number of characters to truncate the rolename portion of generated mysql usernames to (default 4)",
 				Default:     4,
 			},
 
-			"displayname_length": &framework.FieldSchema{
+			"displayname_length": {
 				Type:        framework.TypeInt,
 				Description: "number of characters to truncate the displayname portion of generated mysql usernames to (default 4)",
 				Default:     4,
@@ -136,11 +136,6 @@ func (b *backend) pathRoleList(
 func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	sql := data.Get("sql").(string)
-	revoke_sql := data.Get("revoke_sql").(string)
-	username_length := data.Get("username_length").(int)
-	rolename_length := data.Get("rolename_length").(int)
-	displayname_length := data.Get("displayname_length").(int)
 
 	// Get our connection
 	db, err := b.DB(req.Storage)
@@ -149,6 +144,7 @@ func (b *backend) pathRoleCreate(
 	}
 
 	// Test the query by trying to prepare it
+	sql := data.Get("sql").(string)
 	for _, query := range strutil.ParseArbitraryStringSlice(sql, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
@@ -169,10 +165,10 @@ func (b *backend) pathRoleCreate(
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
 		SQL:               sql,
-		RevokeSQL:         revoke_sql,
-		UsernameLength:    username_length,
-		DisplaynameLength: displayname_length,
-		RolenameLength:    rolename_length,
+		RevokeSQL:         data.Get("revoke_sql").(string),
+		UsernameLength:    data.Get("username_length").(int),
+		DisplaynameLength: data.Get("displayname_length").(int),
+		RolenameLength:    data.Get("rolename_length").(int),
 	})
 	if err != nil {
 		return nil, err
@@ -184,11 +180,11 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	SQL               string `json:"sql"`
-	RevokeSQL         string `json:"revoke_sql"`
-	UsernameLength    int    `json:"username_length"`
-	DisplaynameLength int    `json:"displayname_length"`
-	RolenameLength    int    `json:"rolename_length"`
+	SQL               string `json:"sql" mapstructure:"sql" structs:"sql"`
+	RevokeSQL         string `json:"revoke_sql" mapstructure:"revoke_sql" structs:"revoke_sql"`
+	UsernameLength    int    `json:"username_length" mapstructure:"username_length" structs:"username_length"`
+	DisplaynameLength int    `json:"displayname_length" mapstructure:"displayname_length" structs:"displayname_length"`
+	RolenameLength    int    `json:"rolename_length" mapstructure:"rolename_length" structs:"rolename_length"`
 }
 
 const pathRoleHelpSyn = `

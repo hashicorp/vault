@@ -11,15 +11,11 @@ import (
 
 const SecretCredsType = "creds"
 
-// Default Revoke and Drop user SQL statment
-// Revoking permissions for the user is done before the
-// drop, because MySQL explicitly documents that open user connections
-// will not be closed. By revoking all grants, at least we ensure
-// that the open connection is useless.
-// Dropping the user will only affect the next connection
-// This is not a prepared statement because not all commands are supported
-// 1295: This command is not supported in the prepared statement protocol yet
-// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
+// defaultRevokeSQL is a default SQL statement for revoking a user. Revoking
+// permissions for the user is done before the drop, because MySQL explicitly
+// documents that open user connections will not be closed. By revoking all
+// grants, at least we ensure that the open connection is useless. Dropping the
+// user will only affect the next connection.
 const defaultRevokeSQL = `
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 DROP USER '{{name}}'@'%'
@@ -67,6 +63,7 @@ func (b *backend) secretCredsRenew(
 
 func (b *backend) secretCredsRevoke(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var resp *logical.Response
 
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
@@ -81,42 +78,30 @@ func (b *backend) secretCredsRevoke(
 		return nil, err
 	}
 
-	// Get the role name
-	// we may not always have role data in the secret InternalData
-	// so don't exit if the roleNameRaw fails. Instead it is set
-	// as an empty string.
-	var roleName string
+	roleName := ""
 	roleNameRaw, ok := req.Secret.InternalData["role"]
-	if !ok {
-		roleName = ""
-	} else {
-		roleName, _ = roleNameRaw.(string)
+	if ok {
+		roleName = roleNameRaw.(string)
 	}
-	// init default revoke sql string.
-	// this will replaced by a user provided one if one exists
-	// otherwise this is what will be used when lease is revoked
-	revokeSQL := defaultRevokeSQL
 
-	// init bool to track if we should responding with warning about nil role
-	nonNilResponse := false
-
-	// if we were successful in finding a role name
-	// create role entry from that name
+	var role *roleEntry
 	if roleName != "" {
-		role, err := b.Role(req.Storage, roleName)
+		role, err = b.Role(req.Storage, roleName)
 		if err != nil {
 			return nil, err
 		}
+	}
 
-		if role == nil {
-			nonNilResponse = true
-		}
+	// Use a default SQL statement for revocation if one cannot be fetched from the role
+	revokeSQL := defaultRevokeSQL
 
-		// Check for a revokeSQL string
-		// if one exists use that instead of the default
-		if role.RevokeSQL != "" && role != nil {
-			revokeSQL = role.RevokeSQL
+	if role != nil && role.RevokeSQL != "" {
+		revokeSQL = role.RevokeSQL
+	} else {
+		if resp == nil {
+			resp = &logical.Response{}
 		}
+		resp.AddWarning(fmt.Sprintf("Role %q cannot be found. Using default SQL for revoking user.", roleName))
 	}
 
 	// Start a transaction
@@ -148,16 +133,5 @@ func (b *backend) secretCredsRevoke(
 		return nil, err
 	}
 
-	// Let the user know that since we had a nil role we used the default SQL revocation statment
-	if nonNilResponse == true {
-		// unable to get role continuing with default sql statements for revoking users
-		var resp *logical.Response
-		resp = &logical.Response{}
-		resp.AddWarning("Role " + roleName + "cannot be found. Using default SQL for revoking user")
-
-		// return non-nil response and nil error
-		return resp, nil
-	}
-
-	return nil, nil
+	return resp, nil
 }
