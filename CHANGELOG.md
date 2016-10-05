@@ -58,7 +58,8 @@ FEATURES:
    [GH-1694]
  * **Response Wrapping Enhancements**: There are new endpoints to look up
    response wrapped token parameters; wrap arbitrary values; rotate wrapping
-   tokens; and unwrap with enhanced validation. [GH-1927]
+   tokens; and unwrap with enhanced validation. In addition, list operations
+   can now be response-wrapped. [GH-1927]
  * Transit features: The `transit` backend now supports generating random bytes
    and SHA sums; HMACs; and signing and verification functionality using EC
    keys (P-256 curve)
