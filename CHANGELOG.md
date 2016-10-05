@@ -36,6 +36,11 @@ DEPRECATIONS/CHANGES:
    `"disable_clustering"` parameter in Vault's
    [config](https://www.vaultproject.io/docs/config/index.html), or per-request
    with the `X-Vault-No-Request-Forwarding` header.
+ * In prior versions a bug caused the `bound_iam_role_arn` value in the
+   `aws-ec2` authentication backend to actually use the instance profile ARN.
+   This has been corrected, but as a result there is a behavior change. To
+   match using the instance profile ARN, a new parameter
+   `bound_iam_instance_profile_arn` has been added.
 
 FEATURES:
 
