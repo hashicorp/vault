@@ -40,7 +40,9 @@ DEPRECATIONS/CHANGES:
    `aws-ec2` authentication backend to actually use the instance profile ARN.
    This has been corrected, but as a result there is a behavior change. To
    match using the instance profile ARN, a new parameter
-   `bound_iam_instance_profile_arn` has been added.
+   `bound_iam_instance_profile_arn` has been added. Existing roles will
+   automatically transfer the value over to the correct parameter, but the next
+   time the role is updated, the new meanings will take effect.
 
 FEATURES:
 
