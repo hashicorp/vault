@@ -116,7 +116,9 @@ BUG FIXES:
  * core: Pass back content-type header for forwarded requests [GH-1791]
  * core: Fix panic if the same key was given twice to `generate-root` [GH-1827]
  * core: Fix potential deadlock on unmount/remount [GH-1793]
- * physical: Remove empty directories from the `file` storage backend [GH-1821]
+ * physical/file: Remove empty directories from the `file` storage backend [GH-1821]
+ * physical/zookeeper: Remove empty directories from the `zookeeper` storage
+   backend and add a fix to the `file` storage backend's logic [GH-1964]
  * secret/aws: Added update operation to `aws/sts` path to consider `ttl`
    parameter [39b75c6]
  * secret/aws: Mark STS secrets as non-renewable [GH-1804]
