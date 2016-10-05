@@ -261,8 +261,8 @@ func testAccStepRole(t *testing.T, wildCard bool) logicaltest.TestStep {
 		}
 	} else {
 		pathData = map[string]interface{}{
-			"sql":        testRoleHost,
-			"revoke_sql": testRevokeSQL,
+			"sql":            testRoleHost,
+			"revocation_sql": testRevocationSQL,
 		}
 	}
 
@@ -362,7 +362,7 @@ const testRoleHost = `
 CREATE USER '{{name}}'@'10.1.1.2' IDENTIFIED BY '{{password}}';
 GRANT SELECT ON *.* TO '{{name}}'@'10.1.1.2';
 `
-const testRevokeSQL = `
+const testRevocationSQL = `
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'10.1.1.2'; 
 DROP USER '{{name}}'@'10.1.1.2';
 `

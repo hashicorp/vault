@@ -11,12 +11,12 @@ import (
 
 const SecretCredsType = "creds"
 
-// defaultRevokeSQL is a default SQL statement for revoking a user. Revoking
+// defaultRevocationSQL is a default SQL statement for revoking a user. Revoking
 // permissions for the user is done before the drop, because MySQL explicitly
 // documents that open user connections will not be closed. By revoking all
 // grants, at least we ensure that the open connection is useless. Dropping the
 // user will only affect the next connection.
-const defaultRevokeSQL = `
+const defaultRevocationSQL = `
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 DROP USER '{{name}}'@'%'
 `
@@ -33,11 +33,6 @@ func secretCreds(b *backend) *framework.Secret {
 			"password": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Password",
-			},
-
-			"role": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Role",
 			},
 		},
 
@@ -93,10 +88,10 @@ func (b *backend) secretCredsRevoke(
 	}
 
 	// Use a default SQL statement for revocation if one cannot be fetched from the role
-	revokeSQL := defaultRevokeSQL
+	revocationSQL := defaultRevocationSQL
 
-	if role != nil && role.RevokeSQL != "" {
-		revokeSQL = role.RevokeSQL
+	if role != nil && role.RevocationSQL != "" {
+		revocationSQL = role.RevocationSQL
 	} else {
 		if resp == nil {
 			resp = &logical.Response{}
@@ -111,7 +106,7 @@ func (b *backend) secretCredsRevoke(
 	}
 	defer tx.Rollback()
 
-	for _, query := range strutil.ParseArbitraryStringSlice(revokeSQL, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(revocationSQL, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue

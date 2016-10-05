@@ -233,6 +233,39 @@ func TestBackend_roleReadOnly(t *testing.T) {
 	})
 }
 
+func TestBackend_roleReadOnly_revocationSQL(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, connURL := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
+	connData := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfig(t, connData, false),
+			testAccStepCreateRoleWithRevocationSQL(t, "web", testRole, defaultRevocationSQL, false),
+			testAccStepCreateRoleWithRevocationSQL(t, "web-readonly", testReadOnlyRole, defaultRevocationSQL, false),
+			testAccStepReadRole(t, "web-readonly", testReadOnlyRole),
+			testAccStepCreateTable(t, b, config.StorageView, "web", connURL),
+			testAccStepReadCreds(t, b, config.StorageView, "web-readonly", connURL),
+			testAccStepDropTable(t, b, config.StorageView, "web", connURL),
+			testAccStepDeleteRole(t, "web-readonly"),
+			testAccStepDeleteRole(t, "web"),
+			testAccStepReadRole(t, "web-readonly", ""),
+		},
+	})
+}
+
 func testAccStepConfig(t *testing.T, d map[string]interface{}, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -268,6 +301,18 @@ func testAccStepCreateRole(t *testing.T, name string, sql string, expectFail boo
 		Path:      path.Join("roles", name),
 		Data: map[string]interface{}{
 			"sql": sql,
+		},
+		ErrorOk: expectFail,
+	}
+}
+
+func testAccStepCreateRoleWithRevocationSQL(t *testing.T, name, sql, revocationSQL string, expectFail bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      path.Join("roles", name),
+		Data: map[string]interface{}{
+			"sql":            sql,
+			"revocation_sql": revocationSQL,
 		},
 		ErrorOk: expectFail,
 	}
@@ -341,6 +386,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 					InternalData: map[string]interface{}{
 						"secret_type": "creds",
 						"username":    d.Username,
+						"role":        name,
 					},
 				},
 			})
@@ -543,7 +589,8 @@ GRANT CONNECT ON DATABASE "postgres" TO "{{name}}";
 `
 
 var testBlockStatementRoleSlice = []string{
-	`DO $$
+	`
+DO $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname='foo-role') THEN
       CREATE ROLE "foo-role";
@@ -556,9 +603,18 @@ BEGIN
       GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA foo TO "foo-role";
    END IF;
 END
-$$`,
+$$
+`,
 	`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}';`,
 	`GRANT "foo-role" TO "{{name}}";`,
 	`ALTER ROLE "{{name}}" SET search_path = foo;`,
 	`GRANT CONNECT ON DATABASE "postgres" TO "{{name}}";`,
 }
+
+const defaultRevocationSQL = `
+REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {{name}};
+REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {{name}};
+REVOKE USAGE ON SCHEMA public FROM {{name}};
+
+DROP ROLE IF EXISTS {{name}};
+`

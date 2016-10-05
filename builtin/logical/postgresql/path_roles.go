@@ -26,14 +26,19 @@ func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
 
-			"sql": &framework.FieldSchema{
+			"sql": {
 				Type:        framework.TypeString,
 				Description: "SQL string to create a user. See help for more info.",
+			},
+
+			"revocation_sql": {
+				Type:        framework.TypeString,
+				Description: "SQL string to revoke a user. This is in beta; use with caution.",
 			},
 		},
 
@@ -85,11 +90,19 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"sql": role.SQL,
 		},
-	}, nil
+	}
+
+	// TODO: This is separate because this is in beta in 0.6.2, so we don't
+	// want it to show up in the general case.
+	if role.RevocationSQL != "" {
+		resp.Data["revocation_sql"] = role.RevocationSQL
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathRoleList(
@@ -134,7 +147,8 @@ func (b *backend) pathRoleCreate(
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		SQL: sql,
+		SQL:           sql,
+		RevocationSQL: data.Get("revocation_sql").(string),
 	})
 	if err != nil {
 		return nil, err
@@ -147,7 +161,8 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	SQL string `json:"sql"`
+	SQL           string `json:"sql" mapstructure:"sql" structs:"sql"`
+	RevocationSQL string `json:"revocation_sql" mapstructure:"revocation_sql" structs:"revocation_sql"`
 }
 
 const pathRoleHelpSyn = `
