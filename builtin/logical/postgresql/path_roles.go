@@ -96,8 +96,8 @@ func (b *backend) pathRoleRead(
 		},
 	}
 
-	// This is separate because this is in beta in 0.6.2, so we don't want it
-	// to show up in the general case.
+	// TODO: This is separate because this is in beta in 0.6.2, so we don't
+	// want it to show up in the general case.
 	if role.RevocationSQL != "" {
 		resp.Data["revocation_sql"] = role.RevocationSQL
 	}
