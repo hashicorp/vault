@@ -249,7 +249,7 @@ func (b *backend) secretCredsRevoke(
 			}
 
 			stmt, err := tx.Prepare(Query(query, map[string]string{
-				"name": pq.QuoteIdentifier(username),
+				"name": username,
 			}))
 			if err != nil {
 				return nil, err
