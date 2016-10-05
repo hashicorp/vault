@@ -28,6 +28,18 @@ const (
 	recoveryKeyPath = "core/recovery-key"
 )
 
+type KeyNotFoundError struct {
+	Err error
+}
+
+func (e *KeyNotFoundError) WrappedErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *KeyNotFoundError) Error() string {
+	return e.Err.Error()
+}
+
 type Seal interface {
 	SetCore(*Core)
 	Init() error
