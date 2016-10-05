@@ -1,4 +1,4 @@
-## 0.6.2 (Unreleased)
+## 0.6.2 (October 5, 2016)
 
 DEPRECATIONS/CHANGES:
 
