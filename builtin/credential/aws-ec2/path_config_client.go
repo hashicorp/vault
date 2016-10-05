@@ -193,11 +193,15 @@ type clientConfig struct {
 }
 
 const pathConfigClientHelpSyn = `
-Configure the client credentials that are used to query instance details from AWS EC2 API.
+Configure AWS IAM credentials that are used to query instance and role details from the AWS API.
 `
 
 const pathConfigClientHelpDesc = `
-aws-ec2 auth backend makes DescribeInstances API call to retrieve information regarding
-the instance that performs login. The aws_secret_key and aws_access_key registered with
-Vault should have the permissions to make the API call.
+The aws-ec2 auth backend makes AWS API queries to retrieve information
+regarding EC2 instances that perform login operations. The 'aws_secret_key' and
+'aws_access_key' parameters configured here should map to an AWS IAM user that
+has permission to make the following API queries:
+
+* ec2:DescribeInstances
+* iam:GetInstanceProfile (if IAM Role binding is used)
 `
