@@ -242,13 +242,17 @@ func (c *ZookeeperBackend) Get(key string) (*Entry, error) {
 func (c *ZookeeperBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"zookeeper", "delete"}, time.Now())
 
+	if key == "" {
+		return nil
+	}
+
 	// Delete the full path
 	fullPath := c.nodePath(key)
 	err := c.client.Delete(fullPath, -1)
 
 	// Mask if the node does not exist
 	if err != nil && err != zk.ErrNoNode {
-		return fmt.Errorf("Failed to remove `%s`: %v", fullPath, err)
+		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
 	}
 
 	err = c.cleanupLogicalPath(key)
@@ -285,7 +289,7 @@ func (c *ZookeeperBackend) List(prefix string) ([]string, error) {
 		// and append the slash which is what Vault depends on
 		// for iteration
 		if stat.DataLength > 0 && stat.NumChildren > 0 {
-			msgFmt := "Node %s is both of data and leaf type ??"
+			msgFmt := "Node %q is both of data and leaf type ??"
 			panic(fmt.Sprintf(msgFmt, childPath))
 		} else if stat.DataLength == 0 {
 			// No, we cannot differentiate here on number of children as node
