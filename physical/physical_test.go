@@ -151,6 +151,32 @@ func testBackend(t *testing.T, b Backend) {
 		t.Fatalf("missing child")
 	}
 
+	// Removal of nested secret should not leave artifacts
+	e = &Entry{Key: "foo/nested1/nested2/nested3", Value: []byte("baz")}
+	err = b.Put(e)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	err = b.Delete("foo/nested1/nested2/nested3")
+	if err != nil {
+		t.Fatalf("failed to remove nested secret: %v", err)
+	}
+
+	keys, err = b.List("foo/")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if len(keys) != 1 {
+		t.Fatalf("there should be only one key left after deleting nested "+
+			"secret: %v", keys)
+	}
+
+	if keys[0] != "bar" {
+		t.Fatalf("bad keys after deleting nested: %v", keys)
+	}
+
 	// Make a second nested entry to test prefix removal
 	e = &Entry{Key: "foo/zip", Value: []byte("zap")}
 	err = b.Put(e)

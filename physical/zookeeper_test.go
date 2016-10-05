@@ -33,6 +33,9 @@ func TestZookeeperBackend(t *testing.T) {
 	}
 
 	defer func() {
+		client.Delete(randPath+"/foo/nested1/nested2/nested3", -1)
+		client.Delete(randPath+"/foo/nested1/nested2", -1)
+		client.Delete(randPath+"/foo/nested1", -1)
 		client.Delete(randPath+"/foo/bar/baz", -1)
 		client.Delete(randPath+"/foo/bar", -1)
 		client.Delete(randPath+"/foo", -1)
