@@ -18,10 +18,15 @@ DEPRECATIONS/CHANGES:
    the default was 30 days, but moving it to 32 days allows some operations
    (e.g. reauthenticating, renewing, etc.) to be performed via a monthly cron
    job.
- * AppRole Secret ID endpoints changed: Secret ID and Secret ID accessors were
-   getting logged in plaintext in the audit logs as they were part of request
-   URLs.  The GET and DELETE operations are now moved to new endpoints (`/lookup`
-   and `/destroy`) which consumes the input from the body and not the URL.
+ * AppRole Secret ID endpoints changed: Secret ID and Secret ID accessors are
+   no longer part of request URLs. The GET and DELETE operations are now moved
+   to new endpoints (`/lookup` and `/destroy`) which consumes the input from
+   the body and not the URL.
+ * AppRole requires at least one constraint: previously it was sufficient to
+   turn off all AppRole authentication constraints (secret ID, CIDR block) and
+   use the role ID only. It is now required that at least one additional
+   constraint is enabled. Existing roles are unaffected, but any new roles or
+   updated roles will require this.
  * Reading wrapped responses from `cubbyhole/response` is deprecated. The
    `sys/wrapping/unwrap` endpoint should be used instead as it provides
    additional security, auditing, and other benefits. The ability to read
