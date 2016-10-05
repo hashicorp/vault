@@ -28,8 +28,9 @@ DEPRECATIONS/CHANGES:
    directly will be removed in a future release.
  * Request Forwarding is now on by default: in 0.6.1 this required toggling on,
    but is now enabled by default. This can be disabled via the
-   `"disable_clustering"` parameter in Vault's config, or per-request with the
-   `X-Vault-No-Request-Forwarding` header.
+   `"disable_clustering"` parameter in Vault's
+   [config](https://www.vaultproject.io/docs/config/index.html), or per-request
+   with the `X-Vault-No-Request-Forwarding` header.
 
 FEATURES:
 
@@ -50,7 +51,7 @@ FEATURES:
    tokens; and unwrap with enhanced validation. [GH-1927]
  * Transit features: The `transit` backend now supports generating random bytes
    and SHA sums; HMACs; and signing and verification functionality using EC
-   keys (P-256)
+   keys (P-256 curve)
 
 IMPROVEMENTS:
 
