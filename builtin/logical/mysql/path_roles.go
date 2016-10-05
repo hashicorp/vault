@@ -37,7 +37,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: "SQL string to create a user. See help for more info.",
 			},
 
-			"revoke_sql": {
+			"revocation_sql": {
 				Type:        framework.TypeString,
 				Description: "SQL string to revoke a user. See help for more info.",
 			},
@@ -117,8 +117,8 @@ func (b *backend) pathRoleRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"sql":        role.SQL,
-			"revoke_sql": role.RevokeSQL,
+			"sql":            role.SQL,
+			"revocation_sql": role.RevocationSQL,
 		},
 	}, nil
 }
@@ -165,7 +165,7 @@ func (b *backend) pathRoleCreate(
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
 		SQL:               sql,
-		RevokeSQL:         data.Get("revoke_sql").(string),
+		RevocationSQL:     data.Get("revocation_sql").(string),
 		UsernameLength:    data.Get("username_length").(int),
 		DisplaynameLength: data.Get("displayname_length").(int),
 		RolenameLength:    data.Get("rolename_length").(int),
@@ -181,7 +181,7 @@ func (b *backend) pathRoleCreate(
 
 type roleEntry struct {
 	SQL               string `json:"sql" mapstructure:"sql" structs:"sql"`
-	RevokeSQL         string `json:"revoke_sql" mapstructure:"revoke_sql" structs:"revoke_sql"`
+	RevocationSQL     string `json:"revocation_sql" mapstructure:"revocation_sql" structs:"revocation_sql"`
 	UsernameLength    int    `json:"username_length" mapstructure:"username_length" structs:"username_length"`
 	DisplaynameLength int    `json:"displayname_length" mapstructure:"displayname_length" structs:"displayname_length"`
 	RolenameLength    int    `json:"rolename_length" mapstructure:"rolename_length" structs:"rolename_length"`
