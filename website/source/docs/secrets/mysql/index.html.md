@@ -248,11 +248,19 @@ the default on versions prior to that.
       <li>
         <span class="param">sql</span>
         <span class="param-flags">required</span>
-        The SQL statements executed to create and configure the role. Must be
-        a semicolon-separated string, a base64-encoded semicolon-separated
+        The SQL statements executed to create and configure a user. Must be a
+        semicolon-separated string, a base64-encoded semicolon-separated
         string, a serialized JSON string array, or a base64-encoded serialized
         JSON string array.  The '{{name}}' and '{{password}}' values will be
         substituted.
+      </li>
+      <li>
+        <span class="param">revocation_sql</span>
+        <span class="param-flags">optional</span>
+        The SQL statements executed to revoke a user. Must be a
+        semicolon-separated string, a base64-encoded semicolon-separated
+        string, a serialized JSON string array, or a base64-encoded serialized
+        JSON string array. The '{{name}}' value will be substituted.
       </li>
       <li>
         <span class="param">rolename_length</span>
