@@ -1,4 +1,4 @@
-Vault [![Build Status](https://travis-ci.org/hashicorp/vault.svg)](https://travis-ci.org/hashicorp/vault)
+Vault [![Build Status](https://travis-ci.org/hashicorp/vault.svg)](https://travis-ci.org/hashicorp/vault) [![Join the chat at https://gitter.im/hashicorp-vault/Lobby](https://badges.gitter.im/hashicorp-vault/Lobby.svg)](https://gitter.im/hashicorp-vault/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 =========
 **Please note**: We take Vault's security and our users' trust very seriously. If you believe you have found a security issue in Vault, _please responsibly disclose_ by contacting us at [security@hashicorp.com](mailto:security@hashicorp.com).
 
