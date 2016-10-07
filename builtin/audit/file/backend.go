@@ -53,6 +53,17 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		}
 		logRaw = b
 	}
+	
+	// Check if permissions is provided
+	var permissions os.FileMode
+	permissions = 0600
+	if permRaw, ok := conf.Config["permissions"]; ok {
+		p, err := strconv.ParseUint(permRaw, 8, 32)
+		if err != nil {
+			return nil, err
+		}
+		permissions = os.FileMode(p)
+	}
 
 	b := &Backend{
 		path: path,
@@ -60,6 +71,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 			Raw:          logRaw,
 			Salt:         conf.Salt,
 			HMACAccessor: hmacAccessor,
+			Permissions:  permissions,
 		},
 	}
 
@@ -131,12 +143,18 @@ func (b *Backend) open() error {
 	if b.f != nil {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(b.path), 0600); err != nil {
+	if err := os.MkdirAll(filepath.Dir(b.path), b.formatConfig.Permissions); err != nil {
 		return err
 	}
 
 	var err error
-	b.f, err = os.OpenFile(b.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	b.f, err = os.OpenFile(b.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, b.formatConfig.Permissions)
+	if err != nil {
+		return err
+	}
+	
+	// Change the file mode in case the log file already existed
+	err = os.Chmod(b.path, b.formatConfig.Permissions)
 	if err != nil {
 		return err
 	}
