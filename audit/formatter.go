@@ -22,7 +22,7 @@ type FormatterConfig struct {
 	Raw          bool
 	Salt         *salt.Salt
 	HMACAccessor bool
-	Permissions  os.FileMode
+	Mode         os.FileMode
 
 	// This should only ever be used in a testing context
 	OmitTime bool
