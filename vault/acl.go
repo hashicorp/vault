@@ -47,24 +47,27 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
-				tree.Insert(pc.Prefix, pc.CapabilitiesBitmap)
+				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			existing := raw.(uint32)
+			perm := raw.(Permissions)
+			existing := perm.CapabilitiesBitmap
 
 			switch {
 			case existing&DenyCapabilityInt > 0:
 				// If we are explicitly denied in the existing capability set,
 				// don't save anything else
 
-			case pc.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			case pc.Permissions.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If this new policy explicitly denies, only save the deny value
-				tree.Insert(pc.Prefix, DenyCapabilityInt)
+				pc.Permissions.CapabilitesBitmap = DenyCapabilityInt
+				tree.Insert(pc.Prefix, pc.Permissions)
 
 			default:
 				// Insert the capabilities in this new policy into the existing
 				// value
-				tree.Insert(pc.Prefix, existing|pc.CapabilitiesBitmap)
+				pc.Permissions.CapabilitesBitmap = existing | pc.Permissions.CapabilitesBitmap
+				tree.Insert(pc.Prefix, pc.Permissions)
 			}
 		}
 	}
@@ -80,8 +83,10 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
+
 	if ok {
-		capabilities = raw.(uint32)
+		perm := raw.(Permissions)
+		capbilities := perm.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -90,7 +95,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		capabilities = raw.(uint32)
+		perm := raw.(Permissions)
+		capbilities := perm.CapabilitiesBitmap
 	}
 
 CHECK:
@@ -124,11 +130,18 @@ CHECK:
 // AllowOperation is used to check if the given operation is permitted. The
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
+
+// change arguments to hold a full request that holds the operation, path, and parameter
+// that is to be modified.
 func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool) {
 	// Fast-path root
 	if a.root {
 		return true, true
 	}
+
+	///////////////////////////////////////////////////////////////////////////////////
+	// Parse Request and set variables
+	///////////////////////////////////////////////////////////////////////////////////
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
