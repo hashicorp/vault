@@ -131,6 +131,9 @@ func (b *backend) pathRoleCreate(
 	}
 
 	consistencyStr := data.Get("consistency").(string)
+	if consistencyStr == "" {
+		consistencyStr = "Quorum"
+	}
 	_, err = gocql.ParseConsistencyWrapper(consistencyStr)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(

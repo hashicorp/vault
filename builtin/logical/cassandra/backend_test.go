@@ -35,7 +35,7 @@ func TestBackend_roleCrud(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
-			testAccStepRole(t),
+			testAccStepRoleWithOptions(t),
 			testAccStepReadRole(t, "test", testRole),
 			testAccStepDeleteRole(t, "test"),
 			testAccStepReadRole(t, "test", ""),
@@ -67,6 +67,17 @@ func testAccStepRole(t *testing.T) logicaltest.TestStep {
 		Path:      "roles/test",
 		Data: map[string]interface{}{
 			"creation_cql": testRole,
+		},
+	}
+}
+
+func testAccStepRoleWithOptions(t *testing.T) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test2",
+		Data: map[string]interface{}{
+			"creation_cql": testRole,
+			"lease":        "30s",
 			"consistency":  "All",
 		},
 	}
