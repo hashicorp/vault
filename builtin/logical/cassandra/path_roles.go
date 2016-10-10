@@ -58,6 +58,7 @@ template values are '{{username}}' and
 
 			"consistency": &framework.FieldSchema{
 				Type:        framework.TypeString,
+				Default:     "Quorum",
 				Description: "The consistency level for the operations; defaults to Quorum.",
 			},
 		},
@@ -131,9 +132,6 @@ func (b *backend) pathRoleCreate(
 	}
 
 	consistencyStr := data.Get("consistency").(string)
-	if consistencyStr == "" {
-		consistencyStr = "Quorum"
-	}
 	_, err = gocql.ParseConsistencyWrapper(consistencyStr)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(

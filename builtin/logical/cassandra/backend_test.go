@@ -35,10 +35,14 @@ func TestBackend_roleCrud(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
+			testAccStepRole(t),
 			testAccStepRoleWithOptions(t),
 			testAccStepReadRole(t, "test", testRole),
+			testAccStepReadRole(t, "test2", testRole),
 			testAccStepDeleteRole(t, "test"),
+			testAccStepDeleteRole(t, "test2"),
 			testAccStepReadRole(t, "test", ""),
+			testAccStepReadRole(t, "test2", ""),
 		},
 	})
 }
