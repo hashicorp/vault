@@ -27,7 +27,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		Config: config,
 	})
 	if err != nil {
-		t.Fatalf(err)
+		t.Fatal(err)
 	}
 	defer os.Remove(file)
 
@@ -61,7 +61,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Config: config,
 	})
 	if err != nil {
-		t.Fatalf(err)
+		t.Fatal(err)
 	}
 
 	info, err := os.Stat(file)
