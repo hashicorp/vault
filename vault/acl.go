@@ -133,6 +133,7 @@ CHECK:
 
 // change arguments to hold a full request that holds the operation, path, and parameter
 // that is to be modified.
+//func (a *ACL) AllowOperation(req Request) (allowed bool, sudo bool) {
 func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool) {
 	// Fast-path root
 	if a.root {
@@ -140,8 +141,10 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	}
 
 	///////////////////////////////////////////////////////////////////////////////////
-	// Parse Request and set variables
+	// Parse Request and set variables to check on
 	///////////////////////////////////////////////////////////////////////////////////
+	op := req.Operation
+	path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
@@ -169,24 +172,37 @@ CHECK:
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
 	sudo = capabilities&SudoCapabilityInt > 0
+	operationAllowed := false
 	switch op {
 	case logical.ReadOperation:
-		allowed = capabilities&ReadCapabilityInt > 0
+		operationAllowed = capabilities&ReadCapabilityInt > 0
 	case logical.ListOperation:
-		allowed = capabilities&ListCapabilityInt > 0
+		operationAllowed = capabilities&ListCapabilityInt > 0
 	case logical.UpdateOperation:
-		allowed = capabilities&UpdateCapabilityInt > 0
+		operationAllowed = capabilities&UpdateCapabilityInt > 0
 	case logical.DeleteOperation:
-		allowed = capabilities&DeleteCapabilityInt > 0
+		operationAllowed = capabilities&DeleteCapabilityInt > 0
 	case logical.CreateOperation:
-		allowed = capabilities&CreateCapabilityInt > 0
+		operationAllowed = capabilities&CreateCapabilityInt > 0
 
 	// These three re-use UpdateCapabilityInt since that's the most appropriate capability/operation mapping
 	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
-		allowed = capabilities&UpdateCapabilityInt > 0
+		operationAllowed = capabilities&UpdateCapabilityInt > 0
 
 	default:
 		return false, false
 	}
+
+	if !operationAllowed {
+		return false, sudo
+	}
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+	// need to know how to access parameter/parameters. If only one it is trivial to look it up,
+	//   if there are many, have to loop through and check each one.
+	///////////////////////////////////////////////////////////////////////////////////////////////////////
+	//check whether parameter change is allowed
+
+	//if raw.AllowOperation[param_trying_to_be_set]
+
 	return
 }
