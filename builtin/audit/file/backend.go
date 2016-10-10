@@ -53,10 +53,9 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		}
 		logRaw = b
 	}
-	
+
 	// Check if mode is provided
-	var mode os.FileMode
-	mode = 0600
+	mode := os.FileMode(0600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
 		m, err := strconv.ParseUint(modeRaw, 8, 32)
 		if err != nil {
@@ -67,11 +66,11 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 
 	b := &Backend{
 		path: path,
+		mode: mode,
 		formatConfig: audit.FormatterConfig{
 			Raw:          logRaw,
 			Salt:         conf.Salt,
 			HMACAccessor: hmacAccessor,
-			Mode:         mode,
 		},
 	}
 
@@ -105,6 +104,7 @@ type Backend struct {
 
 	fileLock sync.RWMutex
 	f        *os.File
+	mode     os.FileMode
 }
 
 func (b *Backend) GetHash(data string) string {
@@ -143,18 +143,18 @@ func (b *Backend) open() error {
 	if b.f != nil {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(b.path), b.formatConfig.Mode); err != nil {
+	if err := os.MkdirAll(filepath.Dir(b.path), b.mode); err != nil {
 		return err
 	}
 
 	var err error
-	b.f, err = os.OpenFile(b.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, b.formatConfig.Mode)
+	b.f, err = os.OpenFile(b.path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, b.mode)
 	if err != nil {
 		return err
 	}
-	
+
 	// Change the file mode in case the log file already existed
-	err = os.Chmod(b.path, b.formatConfig.Mode)
+	err = os.Chmod(b.path, b.mode)
 	if err != nil {
 		return err
 	}

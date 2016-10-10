@@ -1,7 +1,9 @@
 package file
 
 import (
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
 
@@ -15,7 +17,10 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 	modeStr := "0777"
 	mode, err := strconv.ParseUint(modeStr, 8, 32)
 
-	file := "auditTest.txt"
+	path, err := ioutil.TempDir("", "test")
+	defer os.RemoveAll(path)
+
+	file := filepath.Join(path, "auditTest.txt")
 
 	config := map[string]string{
 		"path": file,
@@ -34,26 +39,25 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 	info, _ := os.Stat(file)
 	createdMode := info.Mode()
 	if createdMode != os.FileMode(mode) {
-		t.Fatalf("File Mode does not match.")
+		t.Fatalf("File mode does not match.")
 	}
 }
 
 func TestAuditFile_fileModeExisting(t *testing.T) {
 	salter, _ := salt.NewSalt(nil, nil)
 
-	mode := os.FileMode(0600)
-
-	file := "auditTest.txt"
-
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0777)
+	f, err := ioutil.TempFile("", "test")
+	if err != nil {
+		t.Fatalf("Failure to create test file.")
+	}
+	defer os.Remove(f.Name())
 	err = f.Close()
 	if err != nil {
 		t.Fatalf("Failure to close the file.")
 	}
-	defer os.Remove(file)
 
 	config := map[string]string{
-		"path": file,
+		"path": f.Name(),
 	}
 
 	_, err = Factory(&audit.BackendConfig{
@@ -64,12 +68,12 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	info, err := os.Stat(file)
+	info, err := os.Stat(f.Name())
 	if err != nil {
 		t.Fatalf("cannot retrieve file mode from `Stat`")
 	}
 	createdMode := info.Mode()
-	if createdMode != mode {
-		t.Fatalf("File Mode does not match.")
+	if createdMode != os.FileMode(0600) {
+		t.Fatalf("File mode does not match.")
 	}
 }

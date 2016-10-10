@@ -2,7 +2,6 @@ package audit
 
 import (
 	"io"
-	"os"
 
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -22,7 +21,6 @@ type FormatterConfig struct {
 	Raw          bool
 	Salt         *salt.Salt
 	HMACAccessor bool
-	Mode         os.FileMode
 
 	// This should only ever be used in a testing context
 	OmitTime bool
