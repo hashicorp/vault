@@ -73,8 +73,9 @@ Following are the configuration options available for the backend.
 	  <li>
         <span class="param">mode</span>
         <span class="param-flags">optional</span>
-            An unsigned integer, if provided, represents the file mode and
-            permissions. This option defaults to `0600`.
+            A string containing an octal number representing the bit pattern
+            for the file mode, similar to `chmod`. This option defaults to
+            `0600`.
       </li>
       <li>
         <span class="param">format</span>
