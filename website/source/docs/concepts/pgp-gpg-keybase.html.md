@@ -52,9 +52,9 @@ Keybase handles a few of the tedious steps. The output will be the similar to
 the following:
 
 ```
-Key 1: c1c04c03d5f43b6432ea77f3010800...
-Key 2: 612b611295f255baa2eb702a5e254f...
-Key 3: ebfd78302325e2631bcc21e11cae00...
+Unseal Key 1: wcFMA8Y7Gkh7UHHbARAAEiSVSkZ...
+Unseal Key 2: wcBMA9lVpPwUtdiVAQgAgAPYW+K...
+Unseal Key 3: wcBMAwPQjN0wwgX/AQgAiWOUZqV...
 ...
 ```
 
@@ -67,10 +67,13 @@ plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
 ```
-$ echo "c1c0..." | xxd -r -p | keybase pgp decrypt
+# NOTE: On macOS, try "base64 -D"
+$ echo "wcFM..." | base64 -d | keybase pgp decrypt
 ```
 
-And replace `c1c0...` with the encrypted key.
+And replace `wcFM...` with the encrypted key. (Vault's API and command line
+client encode the encrypted keys in Base64 format, which can be converted back
+to binary with the ``base64`` tool.)
 
 You will be prompted to enter your Keybase passphrase. The output will be the
 plain-text unseal key.
@@ -100,22 +103,21 @@ To create a new PGP key, run, following the prompts:
 $ gpg --gen-key
 ```
 
-To import an existing key, download the public key onto disk and run:
+To export your own key, run:
+
+```
+# $MY_KEY_ID is usually your email address, e.g., "me@example.com"
+$ gpg --export -a $MY_KEY_ID > my_pgp_key.asc
+```
+
+(Optional) To import an existing key, download the public key onto disk and run:
 
 ```
 $ gpg --import key.asc
 ```
 
-Once you have imported the users' public keys, you need to save their values
-to disk as either base64 or binary key files. For example:
-
-```
-$ gpg --export 348FFC4C | base64 > seth.asc
-```
-
-These key files must exist on disk in base64 (the "standard" base64 character set,
-without ASCII armoring) or binary. Once saved to disk, the path to these files
-can be specified as an argument to the `-pgp-keys` flag.
+Once you possess all the desired keys, the paths to the key files can be
+specified as an argument to the `-pgp-keys` flag.
 
 ```
 $ vault init -key-shares=3 -key-threshold=2 \
@@ -125,9 +127,9 @@ $ vault init -key-shares=3 -key-threshold=2 \
 The result should look something like this:
 
 ```
-Key 1: c1c04c03d5f43b6432ea77f3010800...
-Key 2: 612b611295f255baa2eb702a5e254f...
-Key 3: ebfd78302325e2631bcc21e11cae00...
+Unseal Key 1: wcFMA8Y7Gkh7UHHbARAAEiSVSkZ...
+Unseal Key 2: wcBMA9lVpPwUtdiVAQgAgAPYW+K...
+Unseal Key 3: wcBMAwPQjN0wwgX/AQgAiWOUZqV...
 ...
 ```
 
@@ -138,19 +140,20 @@ in the `-pgp-keys` attribute. As such, the first key belongs to Jeff, the second
 to Vishal, and the third to Seth. These keys can be distributed over almost any
 medium, although common sense and judgement are best advised.
 
-### Unsealing with a GPG
+### Unsealing with GPG
 Assuming you have been given an unseal key that was encrypted using your public
 PGP key, you are now tasked with entering your unseal key. To get the
 plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
 ```
-$ echo "c1c0..." | xxd -r -p | gpg -d
+# NOTE: On macOS, try "base64 -D"
+$ echo "wcFM..." | base64 -d | gpg -d
 ```
 
-And replace `c1c0...` with the encrypted key. (Vault's API and command line client
-return the encrypted keys as ASCII hexdumps of the binary data, which can be
-converted back to binary with the ``xxd`` tool.)
+And replace `wcFM...` with the encrypted key. (Vault's API and command line
+client encode the encrypted keys in Base64 format, which can be converted back
+to binary with the ``base64`` tool.)
 
 If you encrypted your private PGP key with a passphrase, you may be prompted to
 enter it.  After you enter your password, the output will be the plain-text
