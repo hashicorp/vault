@@ -9,6 +9,19 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func (b *backend) pathListKeys() *framework.Path {
+	return &framework.Path{
+		Pattern: "keys/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathKeysList,
+		},
+
+		HelpSynopsis:    pathPolicyHelpSyn,
+		HelpDescription: pathPolicyHelpDesc,
+	}
+}
+
 func (b *backend) pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name"),
@@ -59,6 +72,16 @@ impact the ciphertext's security.`,
 		HelpSynopsis:    pathPolicyHelpSyn,
 		HelpDescription: pathPolicyHelpDesc,
 	}
+}
+
+func (b *backend) pathKeysList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
 }
 
 func (b *backend) pathPolicyWrite(
