@@ -607,7 +607,7 @@ Secret ID attached to the role
 </dl>
 
 ### /auth/approle/role/[role_name]/secret-id/destroy
-#### DELETE
+#### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
@@ -615,7 +615,7 @@ Secret ID attached to the role
   </dd>
 
   <dt>Method</dt>
-  <dd>DELETE</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id/destroy`</dd>
@@ -689,7 +689,7 @@ Accessor of the secret ID
 </dl>
 
 ### /auth/approle/role/[role_name]/secret-id-accessor/destroy
-#### DELETE
+#### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
@@ -697,7 +697,7 @@ Accessor of the secret ID
   </dd>
 
   <dt>Method</dt>
-  <dd>DELETE</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id-accessor/destroy`</dd>
