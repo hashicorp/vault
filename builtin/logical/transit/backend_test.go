@@ -28,6 +28,7 @@ func TestBackend_basic(t *testing.T) {
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", false),
+			testAccStepListPolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
@@ -54,6 +55,7 @@ func TestBackend_upsert(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepReadPolicy(t, "test", true, false),
 			testAccStepEncryptUpsert(t, "test", testPlaintext, decryptData),
+			testAccStepListPolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 		},
@@ -66,6 +68,7 @@ func TestBackend_datakey(t *testing.T) {
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", false),
+			testAccStepListPolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepWriteDatakey(t, "test", false, 256, dataKeyInfo),
 			testAccStepDecryptDatakey(t, "test", dataKeyInfo),
@@ -81,6 +84,7 @@ func TestBackend_rotation(t *testing.T) {
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", false),
+			testAccStepListPolicy(t, "test"),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 0, encryptHistory),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 1, encryptHistory),
 			testAccStepRotate(t, "test"), // now v2
@@ -138,6 +142,7 @@ func TestBackend_basic_derived(t *testing.T) {
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", true),
+			testAccStepListPolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", false, true),
 			testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
@@ -154,6 +159,29 @@ func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest
 		Path:      "keys/" + name,
 		Data: map[string]interface{}{
 			"derived": derived,
+		},
+	}
+}
+
+func testAccStepListPolicy(t *testing.T, name string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "keys",
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return fmt.Errorf("missing response")
+			}
+
+			var d struct {
+				Keys []string `mapstructure:"keys"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			if d.Keys[0] != name {
+				return fmt.Errorf("bad name: %#v", d)
+			}
+			return nil
 		},
 	}
 }
