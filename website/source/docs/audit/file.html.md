@@ -70,6 +70,13 @@ Following are the configuration options available for the backend.
             A boolean, if set, enables the hashing of token accessor. Defaults
             to `true`. This option is useful only when `log_raw` is `false`.
       </li>
+	  <li>
+        <span class="param">mode</span>
+        <span class="param-flags">optional</span>
+            A string containing an octal number representing the bit pattern
+            for the file mode, similar to `chmod`. This option defaults to
+            `0600`.
+      </li>
       <li>
         <span class="param">format</span>
         <span class="param-flags">optional</span>

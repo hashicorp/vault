@@ -58,6 +58,7 @@ template values are '{{username}}' and
 
 			"consistency": &framework.FieldSchema{
 				Type:        framework.TypeString,
+				Default:     "Quorum",
 				Description: "The consistency level for the operations; defaults to Quorum.",
 			},
 		},
