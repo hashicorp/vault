@@ -51,18 +51,18 @@ devkit:
 	@# paths/mounts that are unavailabe from Dockerfile. So ATM the best
 	@# solution seems to be having one aditionall "build step" in Makefiles
 	@# devkit target
-	if $$(docker images | grep mesosphere/vault-devkit | grep -q latest); then \
+	if $$(docker images | grep mesosphereci/vault-devkit | grep -q latest); then \
 		echo "+ Devkit image already build"; \
 	else \
 		echo "+ Building devkit image"; \
-		docker rmi -f mesosphere/vault-devkit:latest; \
-		docker build --rm --force-rm -t mesosphere/vault-devkit:latest ./docker/ ||\
+		docker rmi -f mesosphereci/vault-devkit:latest; \
+		docker build --rm --force-rm -t mesosphereci/vault-devkit:latest ./docker/ ||\
 		exit 1 ; \
 	fi
 
 .PHONY: update-devkit
 update-devkit: clean-devkit-container
-	docker build -t mesosphere/vault-devkit:latest ./docker/
+	docker build -t mesosphereci/vault-devkit:latest ./docker/
 
 # ZK super creds: 'super:secret'
 .PHONY: aux
@@ -99,7 +99,7 @@ shell: clean-devkit-container devkit
 	docker run --rm -it \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		--privileged \
-		mesosphere/vault-devkit:latest /bin/bash
+		mesosphereci/vault-devkit:latest /bin/bash
 
 .PHONY: shell-aux
 shell-aux: clean-devkit-container devkit aux
@@ -108,13 +108,13 @@ shell-aux: clean-devkit-container devkit aux
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
 		--privileged \
-		mesosphere/vault-devkit:latest /bin/bash
+		mesosphereci/vault-devkit:latest /bin/bash
 
 .PHONY: run
 run: clean-devkit-container devkit build
 	docker run -d \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 	@echo "+ vault running in background, issue 'docker logs -f vault-devkit' for logs"
 
 .PHONY: stop
@@ -131,7 +131,7 @@ build:  clean-containers devkit generate
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				VAULT_DEV_BUILD=1 sh -c "./scripts/build.sh"'
 
@@ -144,7 +144,7 @@ testplain: clean-containers devkit aux generate
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				VAULT_TOKEN= TF_ACC= \
 				go test $(TEST) $(TESTARGS) -timeout=120s -parallel=4'
@@ -155,7 +155,7 @@ testacc: clean-containers devkit aux generate
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				if [ "$(TEST)" = "./..." ]; then \
 					echo "ERROR: Set TEST to a specific package"; \
@@ -169,7 +169,7 @@ testrace: clean-containers devkit aux generate
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				CGO_ENABLED=1 VAULT_TOKEN= \
 				TF_ACC= go test -race $(TEST) $(TESTARGS)'
@@ -179,7 +179,7 @@ cover: clean-containers devkit aux
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				./scripts/coverage.sh --html'
 
@@ -189,7 +189,7 @@ cover: clean-containers devkit aux
 vet: clean-containers devkit
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				go list -f '{{.Dir}}' ./... | grep -v /vendor/ \
 					| grep -v '.*github.com/hashicorp/vault$$' \
@@ -205,6 +205,6 @@ vet: clean-containers devkit
 generate: clean-containers devkit
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
-		mesosphere/vault-devkit:latest \
+		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				go generate $(go list ./... | grep -v /vendor/)'

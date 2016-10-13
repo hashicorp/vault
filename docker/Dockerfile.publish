@@ -1,4 +1,4 @@
-FROM mesosphere/vault-devkit:latest
+FROM mesosphereci/vault-devkit:latest
 
 ENV USER root
 
