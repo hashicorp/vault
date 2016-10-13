@@ -1,0 +1,10 @@
+FROM mesosphere/vault-devkit:latest
+
+ENV USER root
+
+COPY ./bin/vault /go/bin/vault
+
+EXPOSE 8200
+
+WORKDIR /tmp
+CMD ["/go/bin/vault", "server", "-dev"]
