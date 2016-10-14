@@ -56,13 +56,22 @@ type Policy struct {
 	Raw   string
 }
 
+type Permissions struct {
+	CapabilitiesBitmap uint32 `hcl:"-"`
+	AllowedParams      map[string]bool
+	DisallowedParams   map[string]bool
+}
+
+/*
+ */
 // PathCapabilities represents a policy for a path in the namespace.
 type PathCapabilities struct {
-	Prefix             string
-	Policy             string
-	Capabilities       []string
-	CapabilitiesBitmap uint32 `hcl:"-"`
-	Glob               bool
+	Prefix       string
+	Policy       string
+	Capabilities []string
+	//CapabilitiesBitmap uint32 `hcl:"-"`
+	AclCapabilites *Permissions
+	Glob           bool
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -107,16 +116,19 @@ func Parse(rules string) (*Policy, error) {
 }
 
 func parsePaths(result *Policy, list *ast.ObjectList) error {
+	// specifically how can we access the key value pairs for
+	// permissions
 	paths := make([]*PathCapabilities, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
 		if len(item.Keys) > 0 {
-			key = item.Keys[0].Token.Value().(string)
+			key = item.Keys[0].Token.Value().(string) // "secret/foo"
 		}
 
 		valid := []string{
 			"policy",
 			"capabilities",
+			"permissions", // added here to validate
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -156,21 +168,30 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		}
 
 		// Initialize the map
-		pc.CapabilitiesBitmap = 0
+		pc.Permissions.CapabilitiesBitmap = 0
 		for _, cap := range pc.Capabilities {
 			switch cap {
 			// If it's deny, don't include any other capability
 			case DenyCapability:
 				pc.Capabilities = []string{DenyCapability}
-				pc.CapabilitiesBitmap = DenyCapabilityInt
+				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
 			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
-				pc.CapabilitiesBitmap |= cap2Int[cap]
+				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability '%s'", key, cap)
 			}
 		}
 
+		//////////////////////////////////////////////////////////////////////////////
+
+		// filter out permissions from list object
+		// if  p := item.Filter("permissions"); len(p.Whatever) > 0 {
+		// }
+
+		// go through p and initialize pc.Permissions.Allowed/Disallowed
+
+		//////////////////////////////////////////////////////////////////////////////
 	PathFinished:
 
 		paths = append(paths, &pc)
