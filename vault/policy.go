@@ -56,7 +56,6 @@ type Policy struct {
 	Raw   string
 }
 
-
 /*
  */
 // PathCapabilities represents a policy for a path in the namespace.
@@ -118,7 +117,10 @@ func Parse(rules string) (*Policy, error) {
 func parsePaths(result *Policy, list *ast.ObjectList) error {
 	// specifically how can we access the key value pairs for
 	// permissions
+<<<<<<< HEAD
   fmt.Println(list);
+=======
+>>>>>>> a433f41cfb5b15b98e662f10654cc56f8cba8fd9
 	paths := make([]*PathCapabilities, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
