@@ -60,13 +60,13 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 			case pc.Permissions.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If this new policy explicitly denies, only save the deny value
-				pc.Permissions.CapabilitesBitmap = DenyCapabilityInt
+				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				tree.Insert(pc.Prefix, pc.Permissions)
 
 			default:
 				// Insert the capabilities in this new policy into the existing
 				// value
-				pc.Permissions.CapabilitesBitmap = existing | pc.Permissions.CapabilitesBitmap
+				pc.Permissions.CapabilitiesBitmap = existing | pc.Permissions.CapabilitiesBitmap
 				tree.Insert(pc.Prefix, pc.Permissions)
 			}
 		}
@@ -85,8 +85,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	raw, ok := a.exactRules.Get(path)
 
 	if ok {
-		perm := raw.(Permissions)
-		capbilities := perm.CapabilitiesBitmap
+    perm := raw.(Permissions)
+    capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -95,8 +95,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		perm := raw.(Permissions)
-		capbilities := perm.CapabilitiesBitmap
+    perm := raw.(Permissions)
+		capabilities = perm.CapabilitiesBitmap
 	}
 
 CHECK:
@@ -143,8 +143,8 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	///////////////////////////////////////////////////////////////////////////////////
 	// Parse Request and set variables to check on
 	///////////////////////////////////////////////////////////////////////////////////
-	op := req.Operation
-	path := req.Path
+	//op = req.Operation
+	//path = req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {

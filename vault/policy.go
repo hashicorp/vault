@@ -56,12 +56,6 @@ type Policy struct {
 	Raw   string
 }
 
-type Permissions struct {
-	CapabilitiesBitmap uint32 `hcl:"-"`
-	AllowedParams      map[string]bool
-	DisallowedParams   map[string]bool
-}
-
 /*
  */
 // PathCapabilities represents a policy for a path in the namespace.
@@ -69,9 +63,14 @@ type PathCapabilities struct {
 	Prefix       string
 	Policy       string
 	Capabilities []string
-	//CapabilitiesBitmap uint32 `hcl:"-"`
-	AclCapabilites *Permissions
-	Glob           bool
+	Permissions  *Permissions
+	Glob         bool
+}
+
+type Permissions struct {
+	CapabilitiesBitmap uint32 `hcl:"-"`
+	AllowedParams      map[string]bool
+	DisallowedParams   map[string]bool
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -118,6 +117,10 @@ func Parse(rules string) (*Policy, error) {
 func parsePaths(result *Policy, list *ast.ObjectList) error {
 	// specifically how can we access the key value pairs for
 	// permissions
+<<<<<<< HEAD
+  fmt.Println(list);
+=======
+>>>>>>> a433f41cfb5b15b98e662f10654cc56f8cba8fd9
 	paths := make([]*PathCapabilities, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
@@ -166,6 +169,8 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 				return fmt.Errorf("path %q: invalid policy '%s'", key, pc.Policy)
 			}
 		}
+
+    pc.Permissions = new(Permissions)
 
 		// Initialize the map
 		pc.Permissions.CapabilitiesBitmap = 0
