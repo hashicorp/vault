@@ -18,8 +18,8 @@ VETARGS?=-asmdecl \
 VAULT_LOCAL_PATH := $(CURDIR)
 VAULT_CTR_MOUNT := /go/src/github.com/hashicorp/vault/
 
-ZK_IP = $(shell docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault-zk)
-CONSUL_IP = $(shell docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault-consul)
+ZK_IP = $(shell docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault-test-zk)
+CONSUL_IP = $(shell docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault-test-consul)
 
 BACKEND_ENVS := -e ZOOKEEPER_ADDR=$(ZK_IP):2181 \
 				-e CONSUL_ADDR=$(CONSUL_IP):8500
@@ -30,8 +30,8 @@ DEVKIT_COMMON_DOCKER_OPTS := --name vault-devkit \
 
 .PHONY: clean-aux-containers
 clean-aux-containers:
-	-docker rm -vf vault-consul > /dev/null 2>&1
-	-docker rm -vf vault-zk > /dev/null 2>&1
+	-docker rm -vf vault-test-consul > /dev/null 2>&1
+	-docker rm -vf vault-test-zk > /dev/null 2>&1
 
 .PHONY: clean-devkit-container
 clean-devkit-container:
@@ -41,7 +41,7 @@ clean-devkit-container:
 clean-containers: clean-devkit-container clean-aux-containers
 
 .PHONY: clean
-clean:
+clean: clean-containers
 	@echo "+ Cleaning up binaries..."
 	-sudo rm -vf $(VAULT_LOCAL_PATH)/bin/*
 
@@ -56,41 +56,41 @@ devkit:
 	else \
 		echo "+ Building devkit image"; \
 		docker rmi -f mesosphereci/vault-devkit:latest; \
-		docker build --rm --force-rm -t mesosphereci/vault-devkit:latest ./docker/ ||\
+		docker build --rm --force-rm -t mesosphereci/vault-devkit:latest -f Dockerfile ./ ||\
 		exit 1 ; \
 	fi
 
 .PHONY: update-devkit
 update-devkit: clean-devkit-container
-	docker build -t mesosphereci/vault-devkit:latest ./docker/
+	docker build -t mesosphereci/vault-devkit:latest -f Dockerfile ./
 
 # ZK super creds: 'super:secret'
 .PHONY: aux
 aux:
-	$(eval ZK_CID := $(shell docker ps -a -q -f name=vault-zk))
-	$(eval CONSUL_CID := $(shell docker ps -a -q -f name=vault-consul))
+	$(eval ZK_CID := $(shell docker ps -a -q -f name=vault-test-zk))
+	$(eval CONSUL_CID := $(shell docker ps -a -q -f name=vault-test-consul))
 	if [[ -z "$(ZK_CID)" ]]; then \
 		docker run -d \
 			-p 2181:2181 -p 2888:2888 -p 3888:3888 \
 			-e ZOOKEEPER_TICK_TIME=100 \
 			-e JVMFLAGS=-Dzookeeper.DigestAuthenticationProvider.superDigest=super:lK75jTNcA+U9vtVEw5vB51mj/w4= \
-			--name=vault-zk \
+			--name=vault-test-zk \
 			digitalwonderland/zookeeper:latest; \
 	else \
-		docker start vault-zk; \
+		docker start vault-test-zk; \
 	fi
 	if [[ -z "$(CONSUL_CID)" ]]; then \
 		docker run -d \
-			--name=vault-consul \
+			--name=vault-test-consul \
 			-p 8400:8400 \
 			-p 8500:8500 \
 			-p 8600:53/udp \
 			-h node1 \
 			progrium/consul \
 				-server -bootstrap -ui-dir /ui; \
-		grep -m 1 "joined, marking health alive" <(docker logs -f `docker ps -a -q -f name=vault-consul`); \
+		grep -m 1 "joined, marking health alive" <(docker logs -f `docker ps -a -q -f name=vault-test-consul`); \
 	else \
-		docker start vault-consul; \
+		docker start vault-test-consul; \
 	fi
 
 .PHONY: shell

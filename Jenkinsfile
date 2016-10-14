@@ -27,14 +27,14 @@ node ('mesos'){
             sh 'make testplain'
 
         stage 'make testrace'
-            sh 'make testplain'
+            sh 'make testrace'
 
         stage 'make build'
             sh 'make build'
 
         stage 'Build mesosphereci/vault container'
 
-            sh "docker build --rm --force-rm -t ${nameByBranch} -f ./docker/Dockerfile.publish ./"
+            sh "docker build --rm --force-rm -t ${nameByBranch} -f ./Dockerfile.publish ./"
             sh "docker tag ${nameByBranch} ${nameByCommit}"
 
         stage 'Push to docker registry'
@@ -56,7 +56,7 @@ node ('mesos'){
 
     } finally {
         stage 'Cleanup docker containers'
-            sh 'make clean-containers'
+            sh 'make clean'
             sh "docker rmi -f ${nameByBranch} || true"
             sh "docker rmi -f ${nameByCommit} || true"
     }
