@@ -63,7 +63,7 @@ type PathCapabilities struct {
 	Prefix       string
 	Policy       string
 	Capabilities []string
-	Permissions  *Permissions
+  Permissions  *Permissions `hcl:"-"`
 	Glob         bool
 }
 
@@ -117,10 +117,6 @@ func Parse(rules string) (*Policy, error) {
 func parsePaths(result *Policy, list *ast.ObjectList) error {
 	// specifically how can we access the key value pairs for
 	// permissions
-<<<<<<< HEAD
-  fmt.Println(list);
-=======
->>>>>>> a433f41cfb5b15b98e662f10654cc56f8cba8fd9
 	paths := make([]*PathCapabilities, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
@@ -140,6 +136,11 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		var pc PathCapabilities
 		pc.Prefix = key
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
+		}
+
+		var pm Permissions
+		if err := hcl.DecodeObject(&pm, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
 
