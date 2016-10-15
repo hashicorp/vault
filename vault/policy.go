@@ -117,17 +117,12 @@ func Parse(rules string) (*Policy, error) {
 func parsePaths(result *Policy, list *ast.ObjectList) error {
 	// specifically how can we access the key value pairs for
 	// permissions
-<<<<<<< HEAD
-  fmt.Println(list);
-=======
->>>>>>> a433f41cfb5b15b98e662f10654cc56f8cba8fd9
 	paths := make([]*PathCapabilities, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
 		if len(item.Keys) > 0 {
 			key = item.Keys[0].Token.Value().(string) // "secret/foo"
 		}
-
 		valid := []string{
 			"policy",
 			"capabilities",
@@ -138,11 +133,14 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		}
 
 		var pc PathCapabilities
+
+		// allocate memory so that DecodeObject can initialize the Permissions struct
+		pc.Permissions = new(Permissions)
+
 		pc.Prefix = key
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
-
 		// Strip a leading '/' as paths in Vault start after the / in the API path
 		if len(pc.Prefix) > 0 && pc.Prefix[0] == '/' {
 			pc.Prefix = pc.Prefix[1:]
@@ -170,8 +168,6 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			}
 		}
 
-    pc.Permissions = new(Permissions)
-
 		// Initialize the map
 		pc.Permissions.CapabilitiesBitmap = 0
 		for _, cap := range pc.Capabilities {
@@ -188,15 +184,6 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			}
 		}
 
-		//////////////////////////////////////////////////////////////////////////////
-
-		// filter out permissions from list object
-		// if  p := item.Filter("permissions"); len(p.Whatever) > 0 {
-		// }
-
-		// go through p and initialize pc.Permissions.Allowed/Disallowed
-
-		//////////////////////////////////////////////////////////////////////////////
 	PathFinished:
 
 		paths = append(paths, &pc)
