@@ -285,6 +285,7 @@ subpath for interactive help output.
         "creation_cql": "CREATE USER...",
         "rollback_cql": "DROP USER...",
         "lease": "12h",
+        "consistency": "Quorum"
       }
     }
     ```
