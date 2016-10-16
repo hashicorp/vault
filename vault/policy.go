@@ -63,14 +63,14 @@ type PathCapabilities struct {
 	Prefix       string
 	Policy       string
 	Capabilities []string
-  Permissions  *Permissions `hcl:"-"`
+  Permissions  *Permissions
 	Glob         bool
 }
 
 type Permissions struct {
-	CapabilitiesBitmap uint32 `hcl:"-"`
-	AllowedParams      map[string]bool
-	DisallowedParams   map[string]bool
+	CapabilitiesBitmap   uint32
+	AllowedParameters    map[string][]string
+	DisallowedParameters map[string][]string
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -123,7 +123,6 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		if len(item.Keys) > 0 {
 			key = item.Keys[0].Token.Value().(string) // "secret/foo"
 		}
-
 		valid := []string{
 			"policy",
 			"capabilities",
@@ -134,13 +133,12 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		}
 
 		var pc PathCapabilities
+
+		// allocate memory so that DecodeObject can initialize the Permissions struct
+		pc.Permissions = new(Permissions)
+
 		pc.Prefix = key
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
-		}
-
-		var pm Permissions
-		if err := hcl.DecodeObject(&pm, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
 
@@ -171,8 +169,6 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			}
 		}
 
-    pc.Permissions = new(Permissions)
-
 		// Initialize the map
 		pc.Permissions.CapabilitiesBitmap = 0
 		for _, cap := range pc.Capabilities {
@@ -189,15 +185,6 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			}
 		}
 
-		//////////////////////////////////////////////////////////////////////////////
-
-		// filter out permissions from list object
-		// if  p := item.Filter("permissions"); len(p.Whatever) > 0 {
-		// }
-
-		// go through p and initialize pc.Permissions.Allowed/Disallowed
-
-		//////////////////////////////////////////////////////////////////////////////
 	PathFinished:
 
 		paths = append(paths, &pc)

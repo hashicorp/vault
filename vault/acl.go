@@ -43,15 +43,15 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			if pc.Glob {
 				tree = a.globRules
 			}
-
+      
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
 				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			perm := raw.(Permissions)
-			existing := perm.CapabilitiesBitmap
+			permissions := raw.(Permissions)
+			existing := permissions.CapabilitiesBitmap
 
 			switch {
 			case existing&DenyCapabilityInt > 0:
@@ -69,6 +69,45 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				pc.Permissions.CapabilitiesBitmap = existing | pc.Permissions.CapabilitiesBitmap
 				tree.Insert(pc.Prefix, pc.Permissions)
 			}
+
+      // Merge allowed parameters
+      for key, value := range permissions.AllowedParameters {
+        // Add new parameter
+        if val, ok := pc.Permissions.AllowedParameters[key]; !ok {
+          pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key];
+          continue
+        }
+
+        // Take more general allowed
+        if (permissions.DisallowedParameters[key] == []) || (pc.Permissions.DisallowedParameters[key] == []) {
+          pc.Permissions.DisallowedParameters[key] = []
+          continue
+        }
+
+        // Merge allowed values for matching parameters
+        pc.Permissions.AllowedParamters[key] = append(val, value)
+      }
+
+      // Merge disallowed parameters
+      for key, value := range permissions.DisallowedParameters {
+        // Add new parameter
+        if val, ok := pc.Permissions.DisallowedParameters[key]; !ok {
+          pc.Permissions.DisallowedParameters[key] = permissions.DisallowedParameters[key];
+          continue
+        }
+
+        // Take more general disallowed
+        if (permissions.DisallowedParameters[key] == []) || (pc.Permissions.DisallowedParameters[key] == []) {
+          pc.Permissions.DisallowedParameters[key] = []
+          continue
+        }
+
+        // Merge disallowed values for matching parameters
+        pc.Permissions.DisallowedParamters[key] = append(val, value)
+      }
+      
+			tree.Insert(pc.Prefix, pc.Permissions)
+
 		}
 	}
 	return a, nil
