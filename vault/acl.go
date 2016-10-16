@@ -73,37 +73,41 @@ func NewACL(policies []*Policy) (*ACL, error) {
       // Merge allowed parameters
       for key, value := range permissions.AllowedParameters {
         // Add new parameter
-        if val, ok := pc.Permissions.AllowedParameters[key]; !ok {
+        if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
           pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key];
           continue
         }
 
         // Take more general allowed
-        if (permissions.DisallowedParameters[key] == []) || (pc.Permissions.DisallowedParameters[key] == []) {
-          pc.Permissions.DisallowedParameters[key] = []
+        if (len(permissions.AllowedParameters[key]) == 0) || (len(pc.Permissions.AllowedParameters[key]) == 0) {
+          pc.Permissions.AllowedParameters[key] = nil
           continue
         }
 
         // Merge allowed values for matching parameters
-        pc.Permissions.AllowedParamters[key] = append(val, value)
+        for _, element := range value {
+          pc.Permissions.AllowedParameters[key] = append(pc.Permissions.AllowedParameters[key], element)
+        }
       }
 
       // Merge disallowed parameters
-      for key, value := range permissions.DisallowedParameters {
+      for key, value := range permissions.DeniedParameters {
         // Add new parameter
-        if val, ok := pc.Permissions.DisallowedParameters[key]; !ok {
-          pc.Permissions.DisallowedParameters[key] = permissions.DisallowedParameters[key];
+        if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
+          pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key];
           continue
         }
 
         // Take more general disallowed
-        if (permissions.DisallowedParameters[key] == []) || (pc.Permissions.DisallowedParameters[key] == []) {
-          pc.Permissions.DisallowedParameters[key] = []
+        if (len(permissions.DeniedParameters[key]) == 0) || (len(pc.Permissions.DeniedParameters[key]) == 0) {
+          pc.Permissions.DeniedParameters[key] = nil
           continue
         }
 
         // Merge disallowed values for matching parameters
-        pc.Permissions.DisallowedParamters[key] = append(val, value)
+        for _, element := range value {
+          pc.Permissions.DeniedParameters[key] = append(pc.Permissions.DeniedParameters[key], element)
+        }
       }
       
 			tree.Insert(pc.Prefix, pc.Permissions)
@@ -172,8 +176,7 @@ CHECK:
 
 // change arguments to hold a full request that holds the operation, path, and parameter
 // that is to be modified.
-//func (a *ACL) AllowOperation(req Request) (allowed bool, sudo bool) {
-func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool) {
+func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 	// Fast-path root
 	if a.root {
 		return true, true
@@ -182,8 +185,8 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	///////////////////////////////////////////////////////////////////////////////////
 	// Parse Request and set variables to check on
 	///////////////////////////////////////////////////////////////////////////////////
-	//op = req.Operation
-	//path = req.Path
+  op := req.Operation
+  path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
