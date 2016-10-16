@@ -231,7 +231,7 @@ allowed to read.
       "data": {
         "max_ttl": "5h",
         "ttl": "1h",
-	"ttl_max": "5h"
+        "ttl_max": "5h"
       },
       "wrap_info": null,
       "warnings": ["The field ttl_max is deprecated and will be removed in a future release. Use max_ttl instead."],
