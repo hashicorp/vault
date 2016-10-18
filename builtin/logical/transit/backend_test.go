@@ -27,7 +27,9 @@ func TestBackend_basic(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
+			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", false),
+			testAccStepListPolicy(t, "test", false),
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
@@ -53,7 +55,9 @@ func TestBackend_upsert(t *testing.T) {
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepListPolicy(t, "test", true),
 			testAccStepEncryptUpsert(t, "test", testPlaintext, decryptData),
+			testAccStepListPolicy(t, "test", false),
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 		},
@@ -65,7 +69,9 @@ func TestBackend_datakey(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
+			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", false),
+			testAccStepListPolicy(t, "test", false),
 			testAccStepReadPolicy(t, "test", false, false),
 			testAccStepWriteDatakey(t, "test", false, 256, dataKeyInfo),
 			testAccStepDecryptDatakey(t, "test", dataKeyInfo),
@@ -80,7 +86,9 @@ func TestBackend_rotation(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
+			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", false),
+			testAccStepListPolicy(t, "test", false),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 0, encryptHistory),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 1, encryptHistory),
 			testAccStepRotate(t, "test"), // now v2
@@ -128,6 +136,7 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepEnableDeletion(t, "test"),
 			testAccStepDeletePolicy(t, "test"),
 			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepListPolicy(t, "test", true),
 		},
 	})
 }
@@ -137,7 +146,9 @@ func TestBackend_basic_derived(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Factory: Factory,
 		Steps: []logicaltest.TestStep{
+			testAccStepListPolicy(t, "test", true),
 			testAccStepWritePolicy(t, "test", true),
+			testAccStepListPolicy(t, "test", false),
 			testAccStepReadPolicy(t, "test", false, true),
 			testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
@@ -154,6 +165,42 @@ func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest
 		Path:      "keys/" + name,
 		Data: map[string]interface{}{
 			"derived": derived,
+		},
+	}
+}
+
+func testAccStepListPolicy(t *testing.T, name string, expectNone bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "keys",
+		Check: func(resp *logical.Response) error {
+			if resp == nil {
+				return fmt.Errorf("missing response")
+			}
+			if expectNone {
+				keysRaw, ok := resp.Data["keys"]
+				if ok || keysRaw != nil {
+					return fmt.Errorf("response data when expecting none")
+				}
+				return nil
+			}
+			if len(resp.Data) == 0 {
+				return fmt.Errorf("no data returned")
+			}
+
+			var d struct {
+				Keys []string `mapstructure:"keys"`
+			}
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
+			}
+			if len(d.Keys) > 0 && d.Keys[0] != name {
+				return fmt.Errorf("bad name: %#v", d)
+			}
+			if len(d.Keys) != 1 {
+				return fmt.Errorf("only 1 key expected, %d returned", len(d.Keys))
+			}
+			return nil
 		},
 	}
 }
