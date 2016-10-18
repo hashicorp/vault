@@ -232,7 +232,7 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 		}
 		keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", keyName))
 		if err != nil || keyEntry == nil {
-			return logical.ErrorResponse(fmt.Sprintf("invalid 'key': '%s'", keyName)), nil
+			return logical.ErrorResponse(fmt.Sprintf("invalid 'key': %q", keyName)), nil
 		}
 
 		installScript := d.Get("install_script").(string)
