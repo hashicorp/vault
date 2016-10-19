@@ -55,10 +55,10 @@ func (b *backend) pathCredsCreateWrite(
 
 	role, err := b.getRole(req.Storage, roleName)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving role: %s", err)
+		return nil, fmt.Errorf("error retrieving role: %v", err)
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Role '%s' not found", roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Role %q not found", roleName)), nil
 	}
 
 	// username is an optional parameter.
@@ -89,7 +89,7 @@ func (b *backend) pathCredsCreateWrite(
 	// Validate the IP address
 	ipAddr := net.ParseIP(ipRaw)
 	if ipAddr == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ipRaw)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Invalid IP %q", ipRaw)), nil
 	}
 
 	// Check if the IP belongs to the registered list of CIDR blocks under the role
@@ -97,7 +97,7 @@ func (b *backend) pathCredsCreateWrite(
 
 	zeroAddressEntry, err := b.getZeroAddressRoles(req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving zero-address roles: %s", err)
+		return nil, fmt.Errorf("error retrieving zero-address roles: %v", err)
 	}
 	var zeroAddressRoles []string
 	if zeroAddressEntry != nil {
@@ -106,7 +106,7 @@ func (b *backend) pathCredsCreateWrite(
 
 	err = validateIP(ip, roleName, role.CIDRList, role.ExcludeCIDRList, zeroAddressRoles)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error validating IP: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Error validating IP: %v", err)), nil
 	}
 
 	var result *logical.Response
@@ -171,22 +171,22 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 	// Fetch the host key to be used for dynamic key installation
 	keyEntry, err := req.Storage.Get(fmt.Sprintf("keys/%s", role.KeyName))
 	if err != nil {
-		return "", "", fmt.Errorf("key '%s' not found. err:%s", role.KeyName, err)
+		return "", "", fmt.Errorf("key %q not found. err: %v", role.KeyName, err)
 	}
 
 	if keyEntry == nil {
-		return "", "", fmt.Errorf("key '%s' not found", role.KeyName)
+		return "", "", fmt.Errorf("key %q not found", role.KeyName)
 	}
 
 	var hostKey sshHostKey
 	if err := keyEntry.DecodeJSON(&hostKey); err != nil {
-		return "", "", fmt.Errorf("error reading the host key: %s", err)
+		return "", "", fmt.Errorf("error reading the host key: %v", err)
 	}
 
 	// Generate a new RSA key pair with the given key length.
 	dynamicPublicKey, dynamicPrivateKey, err := generateRSAKeys(role.KeyBits)
 	if err != nil {
-		return "", "", fmt.Errorf("error generating key: %s", err)
+		return "", "", fmt.Errorf("error generating key: %v", err)
 	}
 
 	if len(role.KeyOptionSpecs) != 0 {
@@ -196,7 +196,7 @@ func (b *backend) GenerateDynamicCredential(req *logical.Request, role *sshRole,
 	// Add the public key to authorized_keys file in target machine
 	err = b.installPublicKeyInTarget(role.AdminUser, username, ip, role.Port, hostKey.Key, dynamicPublicKey, role.InstallScript, true)
 	if err != nil {
-		return "", "", fmt.Errorf("error adding public key to authorized_keys file in target")
+		return "", "", fmt.Errorf("failed to add public key to authorized_keys file in target: %v", err)
 	}
 	return dynamicPublicKey, dynamicPrivateKey, nil
 }

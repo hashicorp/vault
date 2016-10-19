@@ -32,7 +32,7 @@ func (b *backend) pathLookupWrite(req *logical.Request, d *framework.FieldData) 
 	}
 	ip := net.ParseIP(ipAddr)
 	if ip == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Invalid IP '%s'", ip.String())), nil
+		return logical.ErrorResponse(fmt.Sprintf("Invalid IP %q", ip.String())), nil
 	}
 
 	// Get all the roles created in the backend.

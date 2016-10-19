@@ -72,7 +72,7 @@ func (b *backend) pathConfigZeroAddressWrite(req *logical.Request, d *framework.
 			return nil, err
 		}
 		if role == nil {
-			return logical.ErrorResponse(fmt.Sprintf("Role [%s] does not exist", item)), nil
+			return logical.ErrorResponse(fmt.Sprintf("Role %q does not exist", item)), nil
 		}
 	}
 
