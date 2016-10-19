@@ -219,6 +219,7 @@ func (c *ServerCommand) Run(args []string) int {
 		Seal:               seal,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
+		EnableCORS:         config.EnableCORS,
 		LogicalBackends:    c.LogicalBackends,
 		Logger:             c.logger,
 		DisableCache:       config.DisableCache,

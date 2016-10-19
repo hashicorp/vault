@@ -27,6 +27,9 @@ type Config struct {
 	DisableCache bool `hcl:"disable_cache"`
 	DisableMlock bool `hcl:"disable_mlock"`
 
+	EnableCORS     bool   `hcl:"enable_cors"`
+	AllowedDomains string `hcl:"allowed_domains"`
+
 	Telemetry *Telemetry `hcl:"telemetry"`
 
 	MaxLeaseTTL        time.Duration `hcl:"-"`
@@ -288,6 +291,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	}
 
 	valid := []string{
+		"allowed_domains",
 		"atlas",
 		"backend",
 		"ha_backend",
@@ -295,6 +299,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"cache_size",
 		"disable_cache",
 		"disable_mlock",
+		"enable_cors",
 		"telemetry",
 		"default_lease_ttl",
 		"max_lease_ttl",
