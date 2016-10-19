@@ -55,10 +55,10 @@ func (b *backend) secretDynamicKeyRevoke(req *logical.Request, d *framework.Fiel
 	// Fetch the host key using the key name
 	hostKey, err := b.getKey(req.Storage, intSec.HostKeyName)
 	if err != nil {
-		return nil, fmt.Errorf("key '%s' not found error:%s", intSec.HostKeyName, err)
+		return nil, fmt.Errorf("key %q not found error: %v", intSec.HostKeyName, err)
 	}
 	if hostKey == nil {
-		return nil, fmt.Errorf("key '%s' not found", intSec.HostKeyName)
+		return nil, fmt.Errorf("key %q not found", intSec.HostKeyName)
 	}
 
 	// Remove the public key from authorized_keys file in target machine

@@ -417,21 +417,3 @@ func WrapHandlerForClustering(handler http.Handler, logger log.Logger) func() (h
 		return handler, mux
 	}
 }
-
-// WrapListenersForClustering takes in Vault's cluster addresses and returns a
-// setup function that creates the new listeners
-func WrapListenersForClustering(addrs []string, logger log.Logger) func() ([]net.Listener, error) {
-	return func() ([]net.Listener, error) {
-		ret := make([]net.Listener, 0, len(addrs))
-		// Loop over the existing listeners and start listeners on appropriate ports
-		for _, addr := range addrs {
-			ln, err := net.Listen("tcp", addr)
-			if err != nil {
-				return nil, err
-			}
-			ret = append(ret, ln)
-		}
-
-		return ret, nil
-	}
-}

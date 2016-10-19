@@ -1,3 +1,16 @@
+## Next (Unreleased)
+
+IMPROVEMENTS:
+
+ * transit: Add listing of keys [GH-1987]
+
+BUG FIXES:
+
+ * api/unwrap, command/unwrap: Fix compatibility of `unwrap` command with Vault
+   0.6.1 and older [GH-2014]
+ * command/ssh: Use temporary file for identity and ensure its deletion before
+   the command returns [GH-2016]
+
 ## 0.6.2 (October 5, 2016)
 
 DEPRECATIONS/CHANGES:

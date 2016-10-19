@@ -228,6 +228,42 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of keys. Only the key names are returned.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>LIST/GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/keys` (LIST) or `/transit/keys?list=true` (GET)</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+  ```javascript
+  {
+    "data": {
+      "keys": ["foo", "bar"]
+    },
+    "lease_duration": 0,
+    "lease_id": "",
+    "renewable": false
+  }
+  ```
+
+  </dd>
+</dl>
+
 #### DELETE
 
 <dl class="api">

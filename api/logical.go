@@ -146,7 +146,7 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 		return nil, nil
 	}
 
-	if wrappingToken == "" {
+	if wrappingToken != "" {
 		origToken := c.c.Token()
 		defer c.c.SetToken(origToken)
 		c.c.SetToken(wrappingToken)
