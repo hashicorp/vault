@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -58,6 +59,11 @@ func Handler(core *vault.Core) http.Handler {
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
 
+	// Wrap the handler in another handler to ensure
+	// CORS headers are added to the requests if enabled.
+	if useCORS, allowedDomains := core.AllowCORS(); useCORS {
+		handler = handleCORS(handler, allowedDomains)
+	}
 	return handler
 }
 
@@ -114,6 +120,36 @@ func parseRequest(r *http.Request, out interface{}) error {
 		return fmt.Errorf("Failed to parse JSON input: %s", err)
 	}
 	return err
+}
+
+// handleCORS adds required headers to properly respond to request that
+// require Cross Origin Resource Sharing (CORS) headers.
+func handleCORS(handler http.Handler, allowedDomains *regexp.Regexp) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var allowedOrigin string
+
+		origin := r.Header.Get("Origin")
+
+		if allowedDomains.MatchString(origin) && len(origin) > 0 {
+			allowedOrigin = origin
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.Header().Set("Access-Control-Allow-Methods", "OPTIONS,GET,PUT,POST,DELETE,LIST")
+			w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With,Content-Type,Accept,Origin,Authorization,X-Vault-Token")
+			w.Header().Set("Access-Control-Max-Age", "1800")
+			w.Header().Set("Content-Type", "text/plain")
+
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		handler.ServeHTTP(w, r)
+		return
+	})
 }
 
 // handleRequestForwarding determines whether to forward a request or not,
