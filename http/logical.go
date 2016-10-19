@@ -26,7 +26,7 @@ func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Reque
 		return nil, http.StatusNotFound, nil
 	}
 
-	w = handleCORS(w, r.Method)
+	handleCORS(w, r.Method)
 
 	// Determine the operation
 	var op logical.Operation
@@ -152,21 +152,20 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 }
 
 // handleCORS adds required headers to properly response to Cross Origin Resource Sharing (CORS) requests.
-func handleCORS(w http.ResponseWriter, method string) http.ResponseWriter {
+func handleCORS(w http.ResponseWriter, method string) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	if method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Methods", "OPTIONS,GET,PUT,POST,DELETE,LIST")
-		w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With,Content-Type,Accept,Origin,Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With,Content-Type,Accept,Origin,Authorization,X-Vault-Token")
 		w.Header().Set("Access-Control-Max-Age", "1800")
 
 		w.Header().Del("Content-Type")
 		w.Header().Set("Content-Type", "text/plain")
 	}
 
-	return w
 }
 
 func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request, dataOnly bool, resp *logical.Response) {
