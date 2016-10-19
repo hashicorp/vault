@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sync"
 	"time"
 
@@ -128,6 +129,12 @@ type activeAdvertisement struct {
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
 type Core struct {
+	// enableCORS determines if CORS headers should be returned on the HTTP reponses.
+	enableCORS bool
+
+	// allowedDomains is a regex that determines which domains are allowed to make cross-domain requests
+	allowedDomains *regexp.Regexp
+
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
@@ -296,6 +303,10 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
+	AllowedDomains string `json:"allowed_domains" structs:"allowed_domains" mapstructure:"allowed_domains"`
+
+	EnableCORS bool `json:"enable_cors" structs:"enable_cors" mapstructure:"enable_cors"`
+
 	LogicalBackends map[string]logical.Factory `json:"logical_backends" structs:"logical_backends" mapstructure:"logical_backends"`
 
 	CredentialBackends map[string]logical.Factory `json:"credential_backends" structs:"credential_backends" mapstructure:"credential_backends"`
@@ -405,6 +416,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
+		enableCORS:                       conf.EnableCORS,
 		redirectAddr:                     conf.RedirectAddr,
 		clusterAddr:                      conf.ClusterAddr,
 		physical:                         conf.Physical,
@@ -421,6 +433,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		localClusterCertPool:             x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+	}
+
+	if c.enableCORS {
+		if conf.AllowedDomains == "" {
+			c.allowedDomains, _ = regexp.Compile(".*")
+		} else {
+			c.allowedDomains, err = regexp.Compile(conf.AllowedDomains)
+			if err != nil {
+				return nil, fmt.Errorf("invalid regexp specified: %v", err)
+			}
+		}
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -607,6 +630,15 @@ func (c *Core) Standby() (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	return c.standby, nil
+}
+
+// AllowCORS checks if Vault should insert CORS headers on responses. It returns a bool
+// and a *regexp.Regexp that is used to validate if the origin of the request is allowed.
+func (c *Core) AllowCORS() (bool, *regexp.Regexp) {
+	if c.enableCORS {
+		return c.enableCORS, c.allowedDomains
+	}
+	return false, nil
 }
 
 // Leader is used to get the current active leader
