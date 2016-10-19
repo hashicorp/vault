@@ -54,11 +54,20 @@ sent over this TLS-protected communication channel, and acted upon by the
 active node. The active node then returns a response to the standby, which
 sends the response back to the requesting client.
 
+## Request Forwarding
+
+If request forwarding is enabled (turned on by default in 0.6.2), clients can
+still force the older/fallback redirection behavior (see below) if desired by
+setting the `X-Vault-No-Request-Forwarding` header to any non-empty value.
+
+Successful cluster setup requires a few configuration parameters, although some
+can be automatically determined.
+
 ## Client Redirection
 
-This is currently the only mode enabled by default. When a standby node
-receives a request, it will redirect the client using a `307` status code to
-the _active node's_ redirect address.
+If `X-Vault-No-Request-Forwarding` header in the request is set to a non-empty
+value, the standby nodes will redirect the client using a `307` status code to
+the *active node's* redirect address.
 
 This is also the fallback method used when request forwarding is turned off or
 there is an error performing the forwarding. As such, a redirect address is
@@ -103,15 +112,6 @@ balancer. Clients that reach a standby node will be redirected back to the load
 balancer; at that point hopefully the load balancer's configuration will have
 been updated to know the address of the current leader. This can cause a
 redirect loop and as such is not a recommended setup when it can be avoided.
-
-## Request Forwarding
-
-If request forwarding is enabled (turned on by default in 0.6.2), clients can
-still force the older/fallback redirection behavior if desired by setting the
-`X-Vault-No-Request-Forwarding` header to any non-empty value.
-
-Successful cluster setup requires a few configuration parameters, although some
-can be automatically determined.
 
 ### Per-Node Cluster Listener Addresses
 
