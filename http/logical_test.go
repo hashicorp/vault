@@ -16,6 +16,36 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+func TestLogical_cors(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	expHeaders := map[string]string{
+		"Access-Control-Allow-Origin":      addr,
+		"Access-Control-Allow-Credentials": "true",
+	}
+
+	// WRITE
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+		"data": "bar",
+	})
+	testResponseStatus(t, resp, 204)
+
+	for expHeader, expected := range expHeaders {
+		actual := resp.Header.Get(expHeader)
+		if actual == "" {
+			t.Fatalf("bad:\nHeader: %#v was not on response.", expHeader)
+		}
+
+		if actual != expected {
+			t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
+		}
+	}
+
+}
+
 func TestLogical(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)

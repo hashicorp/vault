@@ -13,6 +13,43 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+func TestHandler_cors(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	// Test preflight requests
+	req, err := http.NewRequest("OPTIONS", addr+"/v1/sys/seal-status", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set("Origin", addr)
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expHeaders := map[string]string{
+		"Access-Control-Allow-Origin":      addr,
+		"Access-Control-Allow-Headers":     "X-Requested-With,Content-Type,Accept,Origin,Authorization,X-Vault-Token",
+		"Access-Control-Allow-Credentials": "true",
+	}
+
+	for expHeader, expected := range expHeaders {
+		actual := resp.Header.Get(expHeader)
+		if actual == "" {
+			t.Fatalf("bad:\nHeader: %#v was not on response.", expHeader)
+		}
+
+		if actual != expected {
+			t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n", expected, actual)
+		}
+	}
+}
+
 // We use this test to verify header auth
 func TestSysMounts_headerAuth(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
