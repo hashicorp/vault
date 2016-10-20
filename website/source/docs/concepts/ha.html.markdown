@@ -90,10 +90,10 @@ In both cases, the `redirect_addr` should be a full URL including scheme
 
 When clients are able to access Vault directly, the `redirect_addr` for each
 node should be that node's address. For instance, if there are two Vault nodes
-`A` (accessed via `https://a.vault.mycompany.com`) and `B` (accessed via
-`https://b.vault.mycompany.com`), node `A` would set its `redirect_addr` to
-`https://a.vault.mycompany.com` and node `B` would set its `redirect_addr` to
-`https://b.vault.mycompany.com`.
+`A` (accessed via `https://a.vault.mycompany.com:8200`) and `B` (accessed via
+`https://b.vault.mycompany.com:8200`), node `A` would set its `redirect_addr`
+to `https://a.vault.mycompany.com:8200` and node `B` would set its
+`redirect_addr` to `https://b.vault.mycompany.com:8200`.
 
 This way, when `A` is the active node, any requests received by node `B` will
 cause it to redirect the client to node `A`'s `redirect_addr` at
