@@ -435,13 +435,13 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 	}
 
-	if c.enableCORS {
+	if conf.EnableCORS {
 		if conf.AllowedOrigins == "" {
 			c.allowedOrigins, _ = regexp.Compile(".*")
 		} else {
-			c.allowedOrigins, err = regexp.Compile(conf.AllowedOrigins)
+			c.allowedOrigins, err = regexp.Compile(".*")
 			if err != nil {
-				return nil, fmt.Errorf("invalid regexp specified: %v", err)
+				return nil, fmt.Errorf("invalid regexp: %v", err)
 			}
 		}
 	}
@@ -498,6 +498,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	storedKeyErr := c.UnsealWithStoredKeys()
 
 	return c, storedKeyErr
+}
+
+func (c *Core) CORSInfo() (bool, *regexp.Regexp) {
+	return c.enableCORS, c.allowedOrigins
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -630,15 +634,6 @@ func (c *Core) Standby() (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	return c.standby, nil
-}
-
-// AllowCORS checks if Vault should insert CORS headers on responses. It returns a bool
-// and a *regexp.Regexp that is used to validate if the origin of the request is allowed.
-func (c *Core) AllowCORS() (bool, *regexp.Regexp) {
-	if c.enableCORS {
-		return c.enableCORS, c.allowedOrigins
-	}
-	return false, nil
 }
 
 // Leader is used to get the current active leader
