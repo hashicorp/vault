@@ -6,3 +6,5 @@ telemetry {
 
 default_lease_ttl = "10h"
 cluster_name = "testcluster"
+enable_cors     = true
+allowed_origins = "http://localhost:8[0-9]{3}"

@@ -5,5 +5,7 @@
         }
     },
 
-    "max_lease_ttl": "10h"
+    "max_lease_ttl": "10h",
+    "enable_cors": true,
+    "allowed_origins": "http://localhost:8[0-9]{3}"
 }
