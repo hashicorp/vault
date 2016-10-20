@@ -28,7 +28,7 @@ type Config struct {
 	DisableMlock bool `hcl:"disable_mlock"`
 
 	EnableCORS     bool   `hcl:"enable_cors"`
-	AllowedDomains string `hcl:"allowed_domains"`
+	AllowedOrigins string `hcl:"allowed_origins"`
 
 	Telemetry *Telemetry `hcl:"telemetry"`
 
@@ -291,7 +291,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	}
 
 	valid := []string{
-		"allowed_domains",
+		"allowed_origins",
 		"atlas",
 		"backend",
 		"ha_backend",

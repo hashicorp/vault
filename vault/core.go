@@ -132,8 +132,8 @@ type Core struct {
 	// enableCORS determines if CORS headers should be returned on the HTTP reponses.
 	enableCORS bool
 
-	// allowedDomains is a regex that determines which domains are allowed to make cross-domain requests
-	allowedDomains *regexp.Regexp
+	// allowedOrigins is a regex that determines which domains are allowed to make cross-domain requests
+	allowedOrigins *regexp.Regexp
 
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
@@ -303,7 +303,7 @@ type Core struct {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	AllowedDomains string `json:"allowed_domains" structs:"allowed_domains" mapstructure:"allowed_domains"`
+	AllowedOrigins string `json:"allowed_origins" structs:"allowed_origins" mapstructure:"allowed_origins"`
 
 	EnableCORS bool `json:"enable_cors" structs:"enable_cors" mapstructure:"enable_cors"`
 
@@ -436,10 +436,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	if c.enableCORS {
-		if conf.AllowedDomains == "" {
-			c.allowedDomains, _ = regexp.Compile(".*")
+		if conf.AllowedOrigins == "" {
+			c.allowedOrigins, _ = regexp.Compile(".*")
 		} else {
-			c.allowedDomains, err = regexp.Compile(conf.AllowedDomains)
+			c.allowedOrigins, err = regexp.Compile(conf.AllowedOrigins)
 			if err != nil {
 				return nil, fmt.Errorf("invalid regexp specified: %v", err)
 			}
@@ -636,7 +636,7 @@ func (c *Core) Standby() (bool, error) {
 // and a *regexp.Regexp that is used to validate if the origin of the request is allowed.
 func (c *Core) AllowCORS() (bool, *regexp.Regexp) {
 	if c.enableCORS {
-		return c.enableCORS, c.allowedDomains
+		return c.enableCORS, c.allowedOrigins
 	}
 	return false, nil
 }

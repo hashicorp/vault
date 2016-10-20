@@ -61,8 +61,8 @@ func Handler(core *vault.Core) http.Handler {
 
 	// Wrap the handler in another handler to ensure
 	// CORS headers are added to the requests if enabled.
-	if useCORS, allowedDomains := core.AllowCORS(); useCORS {
-		handler = handleCORS(handler, allowedDomains)
+	if useCORS, allowedOrigins := core.AllowCORS(); useCORS {
+		handler = handleCORS(handler, allowedOrigins)
 	}
 	return handler
 }
@@ -124,13 +124,13 @@ func parseRequest(r *http.Request, out interface{}) error {
 
 // handleCORS adds required headers to properly respond to request that
 // require Cross Origin Resource Sharing (CORS) headers.
-func handleCORS(handler http.Handler, allowedDomains *regexp.Regexp) http.Handler {
+func handleCORS(handler http.Handler, allowedOrigins *regexp.Regexp) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var allowedOrigin string
 
 		origin := r.Header.Get("Origin")
 
-		if allowedDomains.MatchString(origin) && len(origin) > 0 {
+		if allowedOrigins.MatchString(origin) && len(origin) > 0 {
 			allowedOrigin = origin
 		}
 
