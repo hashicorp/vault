@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -219,7 +220,6 @@ func (c *ServerCommand) Run(args []string) int {
 		Seal:               seal,
 		AuditBackends:      c.AuditBackends,
 		CredentialBackends: c.CredentialBackends,
-		EnableCORS:         config.EnableCORS,
 		LogicalBackends:    c.LogicalBackends,
 		Logger:             c.logger,
 		DisableCache:       config.DisableCache,
@@ -228,6 +228,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
+		EnableCORS:         config.EnableCORS,
 	}
 
 	var disableClustering bool
@@ -517,6 +518,13 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	handler := vaulthttp.Handler(core)
+
+	// Wrap the handler in another handler to ensure
+	// CORS headers are added to the requests if enabled.
+	if coreConfig.EnableCORS {
+		allowedOrigins, _ := regexp.Compile(coreConfig.AllowedOrigins)
+		handler = vaulthttp.HandleCORS(handler, allowedOrigins)
+	}
 
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set

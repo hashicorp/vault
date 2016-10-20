@@ -59,11 +59,11 @@ func Handler(core *vault.Core) http.Handler {
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
 
-	// Wrap the handler in another handler to ensure
-	// CORS headers are added to the requests if enabled.
-	if useCORS, allowedOrigins := core.AllowCORS(); useCORS {
-		handler = handleCORS(handler, allowedOrigins)
-	}
+	// // Wrap the handler in another handler to ensure
+	// // CORS headers are added to the requests if enabled.
+	// if useCORS, allowedOrigins := core.AllowCORS(); useCORS {
+	// 	handler = handleCORS(handler, allowedOrigins)
+	// }
 	return handler
 }
 
@@ -122,9 +122,9 @@ func parseRequest(r *http.Request, out interface{}) error {
 	return err
 }
 
-// handleCORS adds required headers to properly respond to request that
+// HandleCORS adds required headers to properly respond to request that
 // require Cross Origin Resource Sharing (CORS) headers.
-func handleCORS(handler http.Handler, allowedOrigins *regexp.Regexp) http.Handler {
+func HandleCORS(handler http.Handler, allowedOrigins *regexp.Regexp) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var allowedOrigin string
 
