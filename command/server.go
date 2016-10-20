@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -518,13 +517,6 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	handler := vaulthttp.Handler(core)
-
-	// Wrap the handler in another handler to ensure
-	// CORS headers are added to the requests if enabled.
-	if coreConfig.EnableCORS {
-		allowedOrigins, _ := regexp.Compile(coreConfig.AllowedOrigins)
-		handler = vaulthttp.HandleCORS(handler, allowedOrigins)
-	}
 
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
