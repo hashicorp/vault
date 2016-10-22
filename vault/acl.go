@@ -50,7 +50,7 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			permissions := raw.(Permissions)
+			permissions := raw.(*Permissions)
 			existing := permissions.CapabilitiesBitmap
 
 			switch {
@@ -70,44 +70,25 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 			}
 
+			// look for a * in allowed parameters
+
 			// Merge allowed parameters
-			for key, value := range permissions.AllowedParameters {
+			for key, _ := range permissions.AllowedParameters {
 				// Add new parameter
 				if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
 					pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key]
 					continue
 				}
-
-				// Take more general allowed
-				if (len(permissions.AllowedParameters[key]) == 0) || (len(pc.Permissions.AllowedParameters[key]) == 0) {
-					pc.Permissions.AllowedParameters[key] = nil
-					continue
-				}
-
-				// Merge allowed values for matching parameters
-				for _, element := range value {
-					pc.Permissions.AllowedParameters[key] = append(pc.Permissions.AllowedParameters[key], element)
-				}
 			}
 
 			// Merge disallowed parameters
-			for key, value := range permissions.DeniedParameters {
+			for key, _ := range permissions.DeniedParameters {
 				// Add new parameter
 				if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
 					pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
 					continue
 				}
 
-				// Take more general disallowed
-				if (len(permissions.DeniedParameters[key]) == 0) || (len(pc.Permissions.DeniedParameters[key]) == 0) {
-					pc.Permissions.DeniedParameters[key] = nil
-					continue
-				}
-
-				// Merge disallowed values for matching parameters
-				for _, element := range value {
-					pc.Permissions.DeniedParameters[key] = append(pc.Permissions.DeniedParameters[key], element)
-				}
 			}
 
 			tree.Insert(pc.Prefix, pc.Permissions)
@@ -128,7 +109,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	raw, ok := a.exactRules.Get(path)
 
 	if ok {
-		perm := raw.(Permissions)
+		perm := raw.(*Permissions)
 		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
@@ -138,7 +119,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		perm := raw.(Permissions)
+		perm := raw.(*Permissions)
 		capabilities = perm.CapabilitiesBitmap
 	}
 
@@ -240,23 +221,22 @@ CHECK:
 		return false, sudo
 	}
 
-	var denied = permissions.DeniedParameters.(map[string]struct{})
-
-	// Check parameter permissions for operations that can modify only.
+	// Only check parameter permissions for operations that can modify parameters.
 	if op == logical.UpdateOperation || op == logical.DeleteOperation || op == logical.CreateOperation {
 		// Check if all parameters have been denied
-		if _, ok := denied["*"]; ok {
+		if _, ok := permissions.DeniedParameters["*"]; ok {
 			return false, sudo
 		}
-		for _, value := range req.Data {
-			// Check if parameter has explictly been denied
-			if _, ok := denied[value]; ok {
+
+		for parameter, _ := range req.Data {
+			// Check if parameter has explictly denied
+			if _, ok := permissions.DeniedParameters[parameter]; ok {
 				return false, sudo
 			}
 			// Specfic parameters have been allowed
 			if len(permissions.AllowedParameters) > 0 {
 				// Requested parameter is not in allowed list
-				if _, ok := permissions.AllowedParameters[value]; !ok {
+				if _, ok := permissions.AllowedParameters[parameter]; !ok {
 					return false, sudo
 				}
 			}
@@ -264,5 +244,5 @@ CHECK:
 		return true, sudo
 	}
 
-	return
+	return operationAllowed, sudo
 }
