@@ -63,14 +63,14 @@ type PathCapabilities struct {
 	Prefix       string
 	Policy       string
 	Capabilities []string
-  Permissions  *Permissions
+	Permissions  *Permissions
 	Glob         bool
 }
 
 type Permissions struct {
-	CapabilitiesBitmap   uint32
-	AllowedParameters    map[string][]string
-	DeniedParameters map[string][]string
+	CapabilitiesBitmap uint32
+	AllowedParameters  map[string][]string
+	DeniedParameters   map[string][]string
 }
 
 // Parse is used to parse the specified ACL rules into an
