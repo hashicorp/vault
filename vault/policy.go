@@ -68,9 +68,9 @@ type PathCapabilities struct {
 }
 
 type Permissions struct {
-	CapabilitiesBitmap uint32 `hcl:"-"`
-	AllowedParams      map[string]bool
-	DisallowedParams   map[string]bool
+	CapabilitiesBitmap uint32
+	AllowedParameters  map[string]struct{}
+	DeniedParameters   map[string]struct{}
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -141,6 +141,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
+
 		// Strip a leading '/' as paths in Vault start after the / in the API path
 		if len(pc.Prefix) > 0 && pc.Prefix[0] == '/' {
 			pc.Prefix = pc.Prefix[1:]
@@ -183,6 +184,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 				return fmt.Errorf("path %q: invalid capability '%s'", key, cap)
 			}
 		}
+		fmt.Println(pc.Permissions)
 
 	PathFinished:
 

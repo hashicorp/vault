@@ -50,8 +50,8 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			perm := raw.(Permissions)
-			existing := perm.CapabilitiesBitmap
+			permissions := raw.(Permissions)
+			existing := permissions.CapabilitiesBitmap
 
 			switch {
 			case existing&DenyCapabilityInt > 0:
@@ -69,6 +69,30 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				pc.Permissions.CapabilitiesBitmap = existing | pc.Permissions.CapabilitiesBitmap
 				tree.Insert(pc.Prefix, pc.Permissions)
 			}
+
+			// look for a * in allowed parameters
+
+			// Merge allowed parameters
+			for key, _ := range permissions.AllowedParameters {
+				// Add new parameter
+				if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
+					pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key]
+					continue
+				}
+			}
+
+			// Merge disallowed parameters
+			for key, _ := range permissions.DeniedParameters {
+				// Add new parameter
+				if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
+					pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
+					continue
+				}
+
+			}
+
+			tree.Insert(pc.Prefix, pc.Permissions)
+
 		}
 	}
 	return a, nil
@@ -85,8 +109,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	raw, ok := a.exactRules.Get(path)
 
 	if ok {
-    perm := raw.(Permissions)
-    capabilities = perm.CapabilitiesBitmap
+		perm := raw.(Permissions)
+		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -95,7 +119,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-    perm := raw.(Permissions)
+		perm := raw.(Permissions)
 		capabilities = perm.CapabilitiesBitmap
 	}
 
@@ -133,8 +157,7 @@ CHECK:
 
 // change arguments to hold a full request that holds the operation, path, and parameter
 // that is to be modified.
-//func (a *ACL) AllowOperation(req Request) (allowed bool, sudo bool) {
-func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool) {
+func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 	// Fast-path root
 	if a.root {
 		return true, true
@@ -143,8 +166,8 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	///////////////////////////////////////////////////////////////////////////////////
 	// Parse Request and set variables to check on
 	///////////////////////////////////////////////////////////////////////////////////
-	//op = req.Operation
-	//path = req.Path
+	op := req.Operation
+	path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
@@ -196,11 +219,9 @@ CHECK:
 	if !operationAllowed {
 		return false, sudo
 	}
-	///////////////////////////////////////////////////////////////////////////////////////////////////////
-	// need to know how to access parameter/parameters. If only one it is trivial to look it up,
-	//   if there are many, have to loop through and check each one.
-	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	//check whether parameter change is allowed
+	if op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.DeleteOperation {
+	}
 
 	//if raw.AllowOperation[param_trying_to_be_set]
 
