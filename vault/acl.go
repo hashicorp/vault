@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/logical"
 )
@@ -21,7 +20,6 @@ type ACL struct {
 
 // New is used to construct a policy based ACL from a set of policies.
 func NewACL(policies []*Policy) (*ACL, error) {
-	fmt.Println("wakka")
 	// Initialize
 	a := &ACL{
 		exactRules: radix.New(),
@@ -179,16 +177,11 @@ CHECK:
 // change arguments to hold a full request that holds the operation, path, and parameter
 // that is to be modified.
 func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
-	fmt.Println(req.Operation)
-	fmt.Println(req.Data)
 	// Fast-path root
 	if a.root {
 		return true, true
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////
-	// Parse Request and set variables to check on
-	///////////////////////////////////////////////////////////////////////////////////
 	op := req.Operation
 	path := req.Path
 
@@ -197,11 +190,14 @@ func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 		return true, false
 	}
 
+	var permissions *Permissions
+
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
-		capabilities = raw.(uint32)
+		permissions = raw.(*Permissions)
+		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -210,7 +206,8 @@ func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 	if !ok {
 		return false, false
 	} else {
-		capabilities = raw.(uint32)
+		permissions = raw.(*Permissions)
+		capabilities = permissions.CapabilitiesBitmap
 	}
 
 CHECK:
@@ -243,21 +240,23 @@ CHECK:
 		return false, sudo
 	}
 
+	var denied = permissions.DeniedParameters.(map[string]struct{})
+
 	// Check parameter permissions for operations that can modify only.
 	if op == logical.UpdateOperation || op == logical.DeleteOperation || op == logical.CreateOperation {
 		// Check if all parameters have been denied
-		if _, ok := raw.DeniedParameter["*"]; ok {
+		if _, ok := denied["*"]; ok {
 			return false, sudo
 		}
 		for _, value := range req.Data {
 			// Check if parameter has explictly been denied
-			if _, ok := raw.DeniedParameters[value]; ok {
+			if _, ok := denied[value]; ok {
 				return false, sudo
 			}
 			// Specfic parameters have been allowed
-			if len(raw.AllowedParameters) > 0 {
+			if len(permissions.AllowedParameters) > 0 {
 				// Requested parameter is not in allowed list
-				if _, ok := raw.AllowedParameter[value]; !ok {
+				if _, ok := permissions.AllowedParameters[value]; !ok {
 					return false, sudo
 				}
 			}
