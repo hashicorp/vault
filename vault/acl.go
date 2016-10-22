@@ -43,7 +43,7 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			if pc.Glob {
 				tree = a.globRules
 			}
-      
+
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
@@ -70,46 +70,27 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 			}
 
-      // Merge allowed parameters
-      for key, value := range permissions.AllowedParameters {
-        // Add new parameter
-        if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
-          pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key];
-          continue
-        }
+			// look for a * in allowed parameters
 
-        // Take more general allowed
-        if (len(permissions.AllowedParameters[key]) == 0) || (len(pc.Permissions.AllowedParameters[key]) == 0) {
-          pc.Permissions.AllowedParameters[key] = nil
-          continue
-        }
+			// Merge allowed parameters
+			for key, _ := range permissions.AllowedParameters {
+				// Add new parameter
+				if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
+					pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key]
+					continue
+				}
+			}
 
-        // Merge allowed values for matching parameters
-        for _, element := range value {
-          pc.Permissions.AllowedParameters[key] = append(pc.Permissions.AllowedParameters[key], element)
-        }
-      }
+			// Merge disallowed parameters
+			for key, _ := range permissions.DeniedParameters {
+				// Add new parameter
+				if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
+					pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
+					continue
+				}
 
-      // Merge disallowed parameters
-      for key, value := range permissions.DeniedParameters {
-        // Add new parameter
-        if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
-          pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key];
-          continue
-        }
+			}
 
-        // Take more general disallowed
-        if (len(permissions.DeniedParameters[key]) == 0) || (len(pc.Permissions.DeniedParameters[key]) == 0) {
-          pc.Permissions.DeniedParameters[key] = nil
-          continue
-        }
-
-        // Merge disallowed values for matching parameters
-        for _, element := range value {
-          pc.Permissions.DeniedParameters[key] = append(pc.Permissions.DeniedParameters[key], element)
-        }
-      }
-      
 			tree.Insert(pc.Prefix, pc.Permissions)
 
 		}
@@ -128,8 +109,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	raw, ok := a.exactRules.Get(path)
 
 	if ok {
-    perm := raw.(Permissions)
-    capabilities = perm.CapabilitiesBitmap
+		perm := raw.(Permissions)
+		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -138,7 +119,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-    perm := raw.(Permissions)
+		perm := raw.(Permissions)
 		capabilities = perm.CapabilitiesBitmap
 	}
 
@@ -185,8 +166,8 @@ func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 	///////////////////////////////////////////////////////////////////////////////////
 	// Parse Request and set variables to check on
 	///////////////////////////////////////////////////////////////////////////////////
-  op := req.Operation
-  path := req.Path
+	op := req.Operation
+	path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
@@ -238,11 +219,9 @@ CHECK:
 	if !operationAllowed {
 		return false, sudo
 	}
-	///////////////////////////////////////////////////////////////////////////////////////////////////////
-	// need to know how to access parameter/parameters. If only one it is trivial to look it up,
-	//   if there are many, have to loop through and check each one.
-	///////////////////////////////////////////////////////////////////////////////////////////////////////
 	//check whether parameter change is allowed
+	if op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.DeleteOperation {
+	}
 
 	//if raw.AllowOperation[param_trying_to_be_set]
 

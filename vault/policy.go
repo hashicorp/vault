@@ -63,14 +63,14 @@ type PathCapabilities struct {
 	Prefix       string
 	Policy       string
 	Capabilities []string
-  Permissions  *Permissions
+	Permissions  *Permissions
 	Glob         bool
 }
 
 type Permissions struct {
-	CapabilitiesBitmap   uint32
-	AllowedParameters    map[string][]string
-	DeniedParameters map[string][]string
+	CapabilitiesBitmap uint32
+	AllowedParameters  map[string]struct{}
+	DeniedParameters   map[string]struct{}
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -184,6 +184,7 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 				return fmt.Errorf("path %q: invalid capability '%s'", key, cap)
 			}
 		}
+		fmt.Println(pc.Permissions)
 
 	PathFinished:
 
