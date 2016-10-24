@@ -52,7 +52,7 @@ func TestPolicy_Parse(t *testing.T) {
 		&PathCapabilities{"", "deny",
 			[]string{
 				"deny",
-			}, DenyCapabilityInt, true},
+			}, &Permissions{CapabilitiesBitmap: DenyCapabilityInt}, true},
 		&PathCapabilities{"stage/", "sudo",
 			[]string{
 				"create",
@@ -61,23 +61,23 @@ func TestPolicy_Parse(t *testing.T) {
 				"delete",
 				"list",
 				"sudo",
-			}, CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt |
-				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt, true},
+			}, &Permissions{CapabilitiesBitmap: (CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt |
+				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt)}, true},
 		&PathCapabilities{"prod/version", "read",
 			[]string{
 				"read",
 				"list",
-			}, ReadCapabilityInt | ListCapabilityInt, false},
+			}, &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)}, false},
 		&PathCapabilities{"foo/bar", "read",
 			[]string{
 				"read",
 				"list",
-			}, ReadCapabilityInt | ListCapabilityInt, false},
+			}, &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)}, false},
 		&PathCapabilities{"foo/bar", "",
 			[]string{
 				"create",
 				"sudo",
-			}, CreateCapabilityInt | SudoCapabilityInt, false},
+			}, &Permissions{CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt)}, false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
 		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)

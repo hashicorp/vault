@@ -184,7 +184,6 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 				return fmt.Errorf("path %q: invalid capability '%s'", key, cap)
 			}
 		}
-		fmt.Println(pc.Permissions)
 
 	PathFinished:
 

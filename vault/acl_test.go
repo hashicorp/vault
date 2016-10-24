@@ -59,7 +59,10 @@ func TestACL_Root(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	allowed, rootPrivs := acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.UpdateOperation
+	request.Path = "sys/mount/foo"
+	allowed, rootPrivs := acl.AllowOperation(request)
 	if !rootPrivs {
 		t.Fatalf("expected root")
 	}
@@ -81,7 +84,10 @@ func TestACL_Single(t *testing.T) {
 
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.ReadOperation
+	request.Path = "sys/mount/foo"
+	_, rootPrivs := acl.AllowOperation(request)
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -117,7 +123,10 @@ func TestACL_Single(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		request := new(logical.Request)
+		request.Operation = tc.op
+		request.Path = tc.path
+		allowed, rootPrivs := acl.AllowOperation(request)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
@@ -148,7 +157,10 @@ func TestACL_Layered(t *testing.T) {
 func testLayeredACL(t *testing.T, acl *ACL) {
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.ReadOperation
+	request.Path = "sys/mount/foo"
+	_, rootPrivs := acl.AllowOperation(request)
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -189,7 +201,10 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		request := new(logical.Request)
+		request.Operation = tc.op
+		request.Path = tc.path
+		allowed, rootPrivs := acl.AllowOperation(request)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}

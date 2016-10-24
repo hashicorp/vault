@@ -50,7 +50,7 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			permissions := raw.(Permissions)
+			permissions := raw.(*Permissions)
 			existing := permissions.CapabilitiesBitmap
 
 			switch {
@@ -109,7 +109,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	raw, ok := a.exactRules.Get(path)
 
 	if ok {
-		perm := raw.(Permissions)
+		perm := raw.(*Permissions)
 		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
@@ -119,7 +119,7 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		perm := raw.(Permissions)
+		perm := raw.(*Permissions)
 		capabilities = perm.CapabilitiesBitmap
 	}
 
@@ -163,9 +163,6 @@ func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 		return true, true
 	}
 
-	///////////////////////////////////////////////////////////////////////////////////
-	// Parse Request and set variables to check on
-	///////////////////////////////////////////////////////////////////////////////////
 	op := req.Operation
 	path := req.Path
 
@@ -174,11 +171,14 @@ func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 		return true, false
 	}
 
+	var permissions *Permissions
+
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
-		capabilities = raw.(uint32)
+		permissions = raw.(*Permissions)
+		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -187,7 +187,8 @@ func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 	if !ok {
 		return false, false
 	} else {
-		capabilities = raw.(uint32)
+		permissions = raw.(*Permissions)
+		capabilities = permissions.CapabilitiesBitmap
 	}
 
 CHECK:
@@ -219,11 +220,29 @@ CHECK:
 	if !operationAllowed {
 		return false, sudo
 	}
-	//check whether parameter change is allowed
-	if op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.DeleteOperation {
+
+	// Only check parameter permissions for operations that can modify parameters.
+	if op == logical.UpdateOperation || op == logical.DeleteOperation || op == logical.CreateOperation {
+		// Check if all parameters have been denied
+		if _, ok := permissions.DeniedParameters["*"]; ok {
+			return false, sudo
+		}
+
+		for parameter, _ := range req.Data {
+			// Check if parameter has explictly denied
+			if _, ok := permissions.DeniedParameters[parameter]; ok {
+				return false, sudo
+			}
+			// Specfic parameters have been allowed
+			if len(permissions.AllowedParameters) > 0 {
+				// Requested parameter is not in allowed list
+				if _, ok := permissions.AllowedParameters[parameter]; !ok {
+					return false, sudo
+				}
+			}
+		}
+		return true, sudo
 	}
 
-	//if raw.AllowOperation[param_trying_to_be_set]
-
-	return
+	return operationAllowed, sudo
 }
