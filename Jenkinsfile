@@ -1,6 +1,9 @@
 #!/usr/bin/env groovy
 
 node ('mesos'){
+    stage 'Cleanup workspace'
+        deleteDir()
+
     stage 'Checkout'
         checkout scm
 
