@@ -41,7 +41,7 @@ func (b *backend) pathRotateWrite(
 	}
 
 	// Rotate the policy
-	err = p.rotate(req.Storage)
+	err = p.Rotate(req.Storage)
 
 	return nil, err
 }

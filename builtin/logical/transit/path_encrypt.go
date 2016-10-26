@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -116,7 +117,7 @@ func (b *backend) pathEncryptWrite(
 	}
 
 	// Get the policy
-	var p *policy
+	var p *keysutil.Policy
 	var lock *sync.RWMutex
 	var upserted bool
 	if req.Operation == logical.CreateOperation {
@@ -125,17 +126,17 @@ func (b *backend) pathEncryptWrite(
 			return logical.ErrorResponse("convergent encryption requires derivation to be enabled, so context is required"), nil
 		}
 
-		polReq := policyRequest{
-			storage:    req.Storage,
-			name:       name,
-			derived:    len(context) != 0,
-			convergent: convergent,
+		polReq := keysutil.PolicyRequest{
+			Storage:    req.Storage,
+			Name:       name,
+			Derived:    len(context) != 0,
+			Convergent: convergent,
 		}
 
 		keyType := d.Get("type").(string)
 		switch keyType {
 		case "aes256-gcm96":
-			polReq.keyType = keyType_AES256_GCM96
+			polReq.KeyType = keysutil.KeyType_AES256_GCM96
 		case "ecdsa-p256":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		default:
