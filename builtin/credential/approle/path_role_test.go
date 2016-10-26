@@ -111,6 +111,77 @@ func TestAppRole_RoleConstraints(t *testing.T) {
 	}
 }
 
+func TestAppRole_RoleIDUpdate(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"role_id":            "role-id-123",
+		"policies":           "a,b",
+		"secret_id_num_uses": 10,
+		"secret_id_ttl":      300,
+		"token_ttl":          400,
+		"token_max_ttl":      500,
+	}
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/testrole1",
+		Storage:   storage,
+		Data:      roleData,
+	}
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	roleIDUpdateReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/testrole1/role-id",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"role_id": "customroleid",
+		},
+	}
+	resp, err = b.HandleRequest(roleIDUpdateReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	secretIDReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/testrole1/secret-id",
+	}
+	resp, err = b.HandleRequest(secretIDReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	secretID := resp.Data["secret_id"].(string)
+
+	loginData := map[string]interface{}{
+		"role_id":   "customroleid",
+		"secret_id": secretID,
+	}
+	loginReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginData,
+		Connection: &logical.Connection{
+			RemoteAddr: "127.0.0.1",
+		},
+	}
+	resp, err = b.HandleRequest(loginReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	if resp.Auth == nil {
+		t.Fatalf("expected a non-nil auth object in the response")
+	}
+}
+
 func TestAppRole_RoleIDUniqueness(t *testing.T) {
 	var resp *logical.Response
 	var err error
