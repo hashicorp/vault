@@ -10,6 +10,7 @@ BUG FIXES:
    0.6.1 and older [GH-2014]
  * command/ssh: Use temporary file for identity and ensure its deletion before
    the command returns [GH-2016]
+ * auth/approle: Creating the index for the role_id properly [GH-2004]
 
 ## 0.6.2 (October 5, 2016)
 
