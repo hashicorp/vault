@@ -1,31 +1,30 @@
-package transit
+package keysutil
 
 import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 )
 
 var (
-	keysArchive []keysutil.KeyEntry
+	keysArchive []KeyEntry
 )
 
 func resetKeysArchive() {
-	keysArchive = []keysutil.KeyEntry{keysutil.KeyEntry{}}
+	keysArchive = []KeyEntry{KeyEntry{}}
 }
 
 func Test_KeyUpgrade(t *testing.T) {
-	testKeyUpgradeCommon(t, keysutil.NewLockManager(false))
-	testKeyUpgradeCommon(t, keysutil.NewLockManager(true))
+	testKeyUpgradeCommon(t, NewLockManager(false))
+	testKeyUpgradeCommon(t, NewLockManager(true))
 }
 
-func testKeyUpgradeCommon(t *testing.T, lm *keysutil.LockManager) {
+func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	storage := &logical.InmemStorage{}
-	p, lock, upserted, err := lm.GetPolicyUpsert(keysutil.PolicyRequest{
+	p, lock, upserted, err := lm.GetPolicyUpsert(PolicyRequest{
 		Storage: storage,
-		KeyType: keysutil.KeyType_AES256_GCM96,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if lock != nil {
@@ -59,11 +58,11 @@ func testKeyUpgradeCommon(t *testing.T, lm *keysutil.LockManager) {
 }
 
 func Test_ArchivingUpgrade(t *testing.T) {
-	testArchivingUpgradeCommon(t, keysutil.NewLockManager(false))
-	testArchivingUpgradeCommon(t, keysutil.NewLockManager(true))
+	testArchivingUpgradeCommon(t, NewLockManager(false))
+	testArchivingUpgradeCommon(t, NewLockManager(true))
 }
 
-func testArchivingUpgradeCommon(t *testing.T, lm *keysutil.LockManager) {
+func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	resetKeysArchive()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -72,9 +71,9 @@ func testArchivingUpgradeCommon(t *testing.T, lm *keysutil.LockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(keysutil.PolicyRequest{
+	p, lock, _, err := lm.GetPolicyUpsert(PolicyRequest{
 		Storage: storage,
-		KeyType: keysutil.KeyType_AES256_GCM96,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if err != nil {
@@ -192,11 +191,11 @@ func testArchivingUpgradeCommon(t *testing.T, lm *keysutil.LockManager) {
 }
 
 func Test_Archiving(t *testing.T) {
-	testArchivingCommon(t, keysutil.NewLockManager(false))
-	testArchivingCommon(t, keysutil.NewLockManager(true))
+	testArchivingCommon(t, NewLockManager(false))
+	testArchivingCommon(t, NewLockManager(true))
 }
 
-func testArchivingCommon(t *testing.T, lm *keysutil.LockManager) {
+func testArchivingCommon(t *testing.T, lm *LockManager) {
 	resetKeysArchive()
 
 	// First, we generate a policy and rotate it a number of times. Each time // we'll ensure that we have the expected number of keys in the archive and
@@ -204,9 +203,9 @@ func testArchivingCommon(t *testing.T, lm *keysutil.LockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(keysutil.PolicyRequest{
+	p, lock, _, err := lm.GetPolicyUpsert(PolicyRequest{
 		Storage: storage,
-		KeyType: keysutil.KeyType_AES256_GCM96,
+		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	})
 	if lock != nil {
@@ -272,7 +271,7 @@ func testArchivingCommon(t *testing.T, lm *keysutil.LockManager) {
 }
 
 func checkKeys(t *testing.T,
-	p *keysutil.Policy,
+	p *Policy,
 	storage logical.Storage,
 	action string,
 	archiveVer, latestVer, keysSize int) {
