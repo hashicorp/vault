@@ -38,6 +38,10 @@ These libraries are provided by the community.
 
 * [VaultSharp](https://github.com/rajanadar/VaultSharp)
   * `Install-Package VaultSharp`
+  
+### Clojure
+
+* [vault-clj](https://github.com/amperity/vault-clj)
 
 ### Elixir
 
