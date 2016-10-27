@@ -123,7 +123,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	// If we're caching, expire from the cache since we modified it
 	// under-the-hood
 	if lm.CacheActive() {
-		lm.CacheDelete("test")
+		delete(lm.cache, "test")
 	}
 
 	// Now get the policy again; the upgrade should happen automatically
@@ -141,7 +141,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	// Let's check some deletion logic while we're at it
 
 	// The policy should be in there
-	if lm.CacheActive() && lm.Cache("test") == nil {
+	if lm.CacheActive() && lm.cache["test"] == nil {
 		t.Fatal("nil policy in cache")
 	}
 
@@ -152,7 +152,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// The policy should still be in there
-	if lm.CacheActive() && lm.Cache("test") == nil {
+	if lm.CacheActive() && lm.cache["test"] == nil {
 		t.Fatal("nil policy in cache")
 	}
 
@@ -177,7 +177,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	}
 
 	// The policy should *not* be in there
-	if lm.CacheActive() && lm.Cache("test") != nil {
+	if lm.CacheActive() && lm.cache["test"] != nil {
 		t.Fatal("non-nil policy in cache")
 	}
 

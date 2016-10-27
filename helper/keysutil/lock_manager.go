@@ -68,14 +68,6 @@ func (lm *LockManager) CacheActive() bool {
 	return lm.cache != nil
 }
 
-func (lm *LockManager) CacheDelete(name string) {
-	delete(lm.cache, name)
-}
-
-func (lm *LockManager) Cache(name string) *Policy {
-	return lm.cache[name]
-}
-
 func (lm *LockManager) policyLock(name string, lockType bool) *sync.RWMutex {
 	lm.locksMutex.RLock()
 	lock := lm.locks[name]
