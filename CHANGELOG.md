@@ -3,6 +3,8 @@
 IMPROVEMENTS:
 
  * transit: Add listing of keys [GH-1987]
+ * secret/postgresql: Added `revocation_sql` parameter on the role endpoint to
+   enable customization of user revocation SQL statements [GH-2033]
 
 BUG FIXES:
 
