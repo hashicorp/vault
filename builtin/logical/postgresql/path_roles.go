@@ -37,8 +37,11 @@ func pathRoles(b *backend) *framework.Path {
 			},
 
 			"revocation_sql": {
-				Type:        framework.TypeString,
-				Description: "SQL string to revoke a user. This is in beta; use with caution.",
+				Type: framework.TypeString,
+				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
+string, a base64-encoded semicolon-separated string, a serialized JSON string
+array, or a base64-encoded serialized JSON string array. The '{{name}}' value
+will be substituted.`,
 			},
 		},
 
@@ -90,19 +93,12 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
-	resp := &logical.Response{
+	return &logical.Response{
 		Data: map[string]interface{}{
-			"sql": role.SQL,
+			"sql":            role.SQL,
+			"revocation_sql": role.RevocationSQL,
 		},
-	}
-
-	// TODO: This is separate because this is in beta in 0.6.2, so we don't
-	// want it to show up in the general case.
-	if role.RevocationSQL != "" {
-		resp.Data["revocation_sql"] = role.RevocationSQL
-	}
-
-	return resp, nil
+	}, nil
 }
 
 func (b *backend) pathRoleList(
@@ -193,4 +189,12 @@ Example of a decent SQL query to use:
 
 Note the above user would be able to access everything in schema public.
 For more complex GRANT clauses, see the PostgreSQL manual.
+
+The "revocation_sql" parameter customizes the SQL string used to revoke a user.
+Example of a decent revocation SQL query to use:
+
+	REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {{name}};
+	REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {{name}};
+	REVOKE USAGE ON SCHEMA public FROM {{name}};
+	DROP ROLE IF EXISTS {{name}};
 `
