@@ -207,11 +207,6 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 
 	// Check if the value held by role ARN field is actually an instance profile ARN
 	if result.BoundIamRoleARN != "" && strings.Contains(result.BoundIamRoleARN, ":instance-profile/") {
-		// For sanity
-		if result.BoundIamInstanceProfileARN != "" {
-			return nil, fmt.Errorf("bound_iam_role_arn contains instance profile ARN and bound_iam_instance_profile_arn is non empty")
-		}
-
 		// If yes, move it to the correct field
 		result.BoundIamInstanceProfileARN = result.BoundIamRoleARN
 
