@@ -93,19 +93,12 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
-	resp := &logical.Response{
+	return &logical.Response{
 		Data: map[string]interface{}{
-			"sql": role.SQL,
+			"sql":            role.SQL,
+			"revocation_sql": role.RevocationSQL,
 		},
-	}
-
-	// TODO: This is separate because this is in beta in 0.6.2, so we don't
-	// want it to show up in the general case.
-	if role.RevocationSQL != "" {
-		resp.Data["revocation_sql"] = role.RevocationSQL
-	}
-
-	return resp, nil
+	}, nil
 }
 
 func (b *backend) pathRoleList(
