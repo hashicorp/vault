@@ -1,4 +1,4 @@
-package transit
+package keysutil
 
 import (
 	"bytes"
@@ -33,14 +33,14 @@ import (
 // Careful with iota; don't put anything before it in this const block because
 // we need the default of zero to be the old-style KDF
 const (
-	kdf_hmac_sha256_counter = iota // built-in helper
-	kdf_hkdf_sha256                // golang.org/x/crypto/hkdf
+	Kdf_hmac_sha256_counter = iota // built-in helper
+	Kdf_hkdf_sha256                // golang.org/x/crypto/hkdf
 )
 
 // Or this one...we need the default of zero to be the original AES256-GCM96
 const (
-	keyType_AES256_GCM96 = iota
-	keyType_ECDSA_P256
+	KeyType_AES256_GCM96 = iota
+	KeyType_ECDSA_P256
 )
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
@@ -53,7 +53,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 		return true
 	}
 	return false
@@ -61,7 +61,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 		return true
 	}
 	return false
@@ -69,7 +69,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case keyType_ECDSA_P256:
+	case KeyType_ECDSA_P256:
 		return true
 	}
 	return false
@@ -77,7 +77,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 		return true
 	}
 	return false
@@ -85,17 +85,17 @@ func (kt KeyType) DerivationSupported() bool {
 
 func (kt KeyType) String() string {
 	switch kt {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 		return "aes256-gcm96"
-	case keyType_ECDSA_P256:
+	case KeyType_ECDSA_P256:
 		return "ecdsa-p256"
 	}
 
 	return "[unknown]"
 }
 
-// keyEntry stores the key and metadata
-type keyEntry struct {
+// KeyEntry stores the key and metadata
+type KeyEntry struct {
 	AESKey             []byte   `json:"key"`
 	HMACKey            []byte   `json:"hmac_key"`
 	CreationTime       int64    `json:"creation_time"`
@@ -106,11 +106,11 @@ type keyEntry struct {
 }
 
 // keyEntryMap is used to allow JSON marshal/unmarshal
-type keyEntryMap map[int]keyEntry
+type keyEntryMap map[int]KeyEntry
 
 // MarshalJSON implements JSON marshaling
 func (kem keyEntryMap) MarshalJSON() ([]byte, error) {
-	intermediate := map[string]keyEntry{}
+	intermediate := map[string]KeyEntry{}
 	for k, v := range kem {
 		intermediate[strconv.Itoa(k)] = v
 	}
@@ -119,7 +119,7 @@ func (kem keyEntryMap) MarshalJSON() ([]byte, error) {
 
 // MarshalJSON implements JSON unmarshaling
 func (kem keyEntryMap) UnmarshalJSON(data []byte) error {
-	intermediate := map[string]keyEntry{}
+	intermediate := map[string]KeyEntry{}
 	if err := jsonutil.DecodeJSON(data, &intermediate); err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (kem keyEntryMap) UnmarshalJSON(data []byte) error {
 }
 
 // Policy is the struct used to store metadata
-type policy struct {
+type Policy struct {
 	Name string      `json:"name"`
 	Key  []byte      `json:"key,omitempty"` //DEPRECATED
 	Keys keyEntryMap `json:"keys"`
@@ -171,10 +171,10 @@ type policy struct {
 // ArchivedKeys stores old keys. This is used to keep the key loading time sane
 // when there are huge numbers of rotations.
 type archivedKeys struct {
-	Keys []keyEntry `json:"keys"`
+	Keys []KeyEntry `json:"keys"`
 }
 
-func (p *policy) loadArchive(storage logical.Storage) (*archivedKeys, error) {
+func (p *Policy) LoadArchive(storage logical.Storage) (*archivedKeys, error) {
 	archive := &archivedKeys{}
 
 	raw, err := storage.Get("archive/" + p.Name)
@@ -182,7 +182,7 @@ func (p *policy) loadArchive(storage logical.Storage) (*archivedKeys, error) {
 		return nil, err
 	}
 	if raw == nil {
-		archive.Keys = make([]keyEntry, 0)
+		archive.Keys = make([]KeyEntry, 0)
 		return archive, nil
 	}
 
@@ -193,7 +193,7 @@ func (p *policy) loadArchive(storage logical.Storage) (*archivedKeys, error) {
 	return archive, nil
 }
 
-func (p *policy) storeArchive(archive *archivedKeys, storage logical.Storage) error {
+func (p *Policy) storeArchive(archive *archivedKeys, storage logical.Storage) error {
 	// Encode the policy
 	buf, err := json.Marshal(archive)
 	if err != nil {
@@ -215,7 +215,7 @@ func (p *policy) storeArchive(archive *archivedKeys, storage logical.Storage) er
 // handleArchiving manages the movement of keys to and from the policy archive.
 // This should *ONLY* be called from Persist() since it assumes that the policy
 // will be persisted afterwards.
-func (p *policy) handleArchiving(storage logical.Storage) error {
+func (p *Policy) handleArchiving(storage logical.Storage) error {
 	// We need to move keys that are no longer accessible to archivedKeys, and keys
 	// that now need to be accessible back here.
 	//
@@ -241,7 +241,7 @@ func (p *policy) handleArchiving(storage logical.Storage) error {
 			p.MinDecryptionVersion, p.LatestVersion)
 	}
 
-	archive, err := p.loadArchive(storage)
+	archive, err := p.LoadArchive(storage)
 	if err != nil {
 		return err
 	}
@@ -263,7 +263,7 @@ func (p *policy) handleArchiving(storage logical.Storage) error {
 	// key version
 	if len(archive.Keys) < p.LatestVersion+1 {
 		// Increase the size of the archive slice
-		newKeys := make([]keyEntry, p.LatestVersion+1)
+		newKeys := make([]KeyEntry, p.LatestVersion+1)
 		copy(newKeys, archive.Keys)
 		archive.Keys = newKeys
 	}
@@ -289,7 +289,7 @@ func (p *policy) handleArchiving(storage logical.Storage) error {
 	return nil
 }
 
-func (p *policy) Persist(storage logical.Storage) error {
+func (p *Policy) Persist(storage logical.Storage) error {
 	err := p.handleArchiving(storage)
 	if err != nil {
 		return err
@@ -313,11 +313,11 @@ func (p *policy) Persist(storage logical.Storage) error {
 	return nil
 }
 
-func (p *policy) Serialize() ([]byte, error) {
+func (p *Policy) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
-func (p *policy) needsUpgrade() bool {
+func (p *Policy) NeedsUpgrade() bool {
 	// Ensure we've moved from Key -> Keys
 	if p.Key != nil && len(p.Key) > 0 {
 		return true
@@ -352,11 +352,11 @@ func (p *policy) needsUpgrade() bool {
 	return false
 }
 
-func (p *policy) upgrade(storage logical.Storage) error {
+func (p *Policy) Upgrade(storage logical.Storage) error {
 	persistNeeded := false
 	// Ensure we've moved from Key -> Keys
 	if p.Key != nil && len(p.Key) > 0 {
-		p.migrateKeyToKeysMap()
+		p.MigrateKeyToKeysMap()
 		persistNeeded = true
 	}
 
@@ -409,7 +409,7 @@ func (p *policy) upgrade(storage logical.Storage) error {
 // on the policy. If derivation is disabled the raw key is used and no context
 // is required, otherwise the KDF mode is used with the context to derive the
 // proper key.
-func (p *policy) DeriveKey(context []byte, ver int) ([]byte, error) {
+func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	if !p.Type.DerivationSupported() {
 		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.Type)}
 	}
@@ -433,11 +433,11 @@ func (p *policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	}
 
 	switch p.KDF {
-	case kdf_hmac_sha256_counter:
+	case Kdf_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
 		return kdf.CounterMode(prf, prfLen, p.Keys[ver].AESKey, context, 256)
-	case kdf_hkdf_sha256:
+	case Kdf_hkdf_sha256:
 		reader := hkdf.New(sha256.New, p.Keys[ver].AESKey, nil, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(32)
@@ -458,14 +458,14 @@ func (p *policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	}
 }
 
-func (p *policy) Encrypt(context, nonce []byte, value string) (string, error) {
+func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
 
 	// Guard against a potentially invalid key type
 	switch p.Type {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -484,7 +484,7 @@ func (p *policy) Encrypt(context, nonce []byte, value string) (string, error) {
 
 	// Guard against a potentially invalid key type
 	switch p.Type {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -539,7 +539,7 @@ func (p *policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	return encoded, nil
 }
 
-func (p *policy) Decrypt(context, nonce []byte, value string) (string, error) {
+func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -585,7 +585,7 @@ func (p *policy) Decrypt(context, nonce []byte, value string) (string, error) {
 
 	// Guard against a potentially invalid key type
 	switch p.Type {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 	default:
 		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -626,7 +626,7 @@ func (p *policy) Decrypt(context, nonce []byte, value string) (string, error) {
 	return base64.StdEncoding.EncodeToString(plain), nil
 }
 
-func (p *policy) HMACKey(version int) ([]byte, error) {
+func (p *Policy) HMACKey(version int) ([]byte, error) {
 	if version < p.MinDecryptionVersion {
 		return nil, fmt.Errorf("key version disallowed by policy (minimum is %d)", p.MinDecryptionVersion)
 	}
@@ -642,14 +642,14 @@ func (p *policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *policy) Sign(hashedInput []byte) (string, error) {
+func (p *Policy) Sign(hashedInput []byte) (string, error) {
 	if !p.Type.SigningSupported() {
 		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
 
 	var sig []byte
 	switch p.Type {
-	case keyType_ECDSA_P256:
+	case KeyType_ECDSA_P256:
 		keyParams := p.Keys[p.LatestVersion]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
@@ -685,7 +685,7 @@ func (p *policy) Sign(hashedInput []byte) (string, error) {
 	return encoded, nil
 }
 
-func (p *policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
+func (p *Policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -714,7 +714,7 @@ func (p *policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
 	}
 
 	switch p.Type {
-	case keyType_ECDSA_P256:
+	case KeyType_ECDSA_P256:
 		asn1Sig, err := base64.StdEncoding.DecodeString(splitVerSig[1])
 		if err != nil {
 			return false, errutil.UserError{Err: "invalid base64 signature value"}
@@ -744,7 +744,7 @@ func (p *policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
 	return false, errutil.InternalError{Err: "no valid key type found"}
 }
 
-func (p *policy) rotate(storage logical.Storage) error {
+func (p *Policy) Rotate(storage logical.Storage) error {
 	if p.Keys == nil {
 		// This is an initial key rotation when generating a new policy. We
 		// don't need to call migrate here because if we've called getPolicy to
@@ -753,7 +753,7 @@ func (p *policy) rotate(storage logical.Storage) error {
 	}
 
 	p.LatestVersion += 1
-	entry := keyEntry{
+	entry := KeyEntry{
 		CreationTime: time.Now().Unix(),
 	}
 
@@ -764,7 +764,7 @@ func (p *policy) rotate(storage logical.Storage) error {
 	entry.HMACKey = hmacKey
 
 	switch p.Type {
-	case keyType_AES256_GCM96:
+	case KeyType_AES256_GCM96:
 		// Generate a 256bit key
 		newKey, err := uuid.GenerateRandomBytes(32)
 		if err != nil {
@@ -772,7 +772,7 @@ func (p *policy) rotate(storage logical.Storage) error {
 		}
 		entry.AESKey = newKey
 
-	case keyType_ECDSA_P256:
+	case KeyType_ECDSA_P256:
 		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return err
@@ -807,9 +807,9 @@ func (p *policy) rotate(storage logical.Storage) error {
 	return p.Persist(storage)
 }
 
-func (p *policy) migrateKeyToKeysMap() {
+func (p *Policy) MigrateKeyToKeysMap() {
 	p.Keys = keyEntryMap{
-		1: keyEntry{
+		1: KeyEntry{
 			AESKey:       p.Key,
 			CreationTime: time.Now().Unix(),
 		},

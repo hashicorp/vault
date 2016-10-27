@@ -124,7 +124,7 @@ func TestTransit_HMAC(t *testing.T) {
 	req.Data["input"] = "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
 	// Rotate
-	err = p.rotate(storage)
+	err = p.Rotate(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
