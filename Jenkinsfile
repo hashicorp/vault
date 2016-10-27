@@ -1,6 +1,51 @@
 #!/usr/bin/env groovy
 
-node ('mesos'){
+// Based on https://stackoverflow.com/questions/36837683/how-to-perform-actions-for-failed-builds-in-jenkinsfile
+def pipeline(String label, Closure body) {
+     node(label) {
+        wrap([$class: 'TimestamperBuildWrapper']) {
+            // This borks:
+            // "Scripts not permitted to use staticMethod org.codehaus.groovy.runtime.DefaultGroovyMethods minus java.lang.String java.lang.Object"
+            //
+            // def branch_url = "${env.BUILD_URL}" - "${env.BUILD_NUMBER}/"
+            def branch_url = env.BUILD_URL.substring(0, env.BUILD_URL.length() - (env.BUILD_NUMBER.length() +1))
+            def slack_msg_body = "Build url: ${env.BUILD_URL}\nBranch url: ${branch_url}"
+            def mail_msg_body = "Build url: ${env.BUILD_URL}<br />\r\nBranch url: ${branch_url}"
+            def msg = "Build number `${env.BUILD_NUMBER}` succeded."
+            def color = "good"
+            def prefix = "[SUCCESS]"
+
+            try {
+                body.call()
+            } catch (Exception e) {
+                msg = "Build number `${env.BUILD_NUMBER}` failed."
+                color = "danger"
+                prefix = "[FAILURE]"
+
+                throw e; // rethrow so the build is considered failed
+            } finally {
+                withCredentials([[$class: 'StringBinding',
+                                  credentialsId: '8b793652-f26a-422f-a9ba-0d1e47eb9d89',
+                                  variable: 'SLACK_TOKEN']
+                                 ]) {
+                    slackSend (channel: '#dcos-security-ci',
+                        message: "`${env.JOB_NAME}` ${msg}\n\n${slack_msg_body}",
+                        teamDomain: 'mesosphere',
+                        token: "${env.SLACK_TOKEN}",
+                        color: color,
+                        )
+                }
+
+                mail (subject: "[${env.JOB_NAME}]${prefix} ${msg}",
+                    body: "${mail_msg_body}",
+                    to: 'dcos-security-ci@mesosphere.io')
+            }
+        }
+    }
+}
+
+pipeline ('mesos'){
+
     stage 'Cleanup workspace'
         deleteDir()
 
