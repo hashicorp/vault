@@ -140,7 +140,7 @@ $ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"type":"approle"}' http://12
 #### Create an AppRole with desired set of policies.
 
 ```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-policy,test-policy"}' http://localhost:8200/v1/auth/approle/role/testrole
+$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-policy,test-policy"}' http://127.0.0.1:8200/v1/auth/approle/role/testrole
 ```
 
 #### Fetch the identifier of the role.
