@@ -115,7 +115,7 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	redirectURL := url.URL{
 		Scheme:   advertiseURL.Scheme,
 		Host:     advertiseURL.Host,
-		Path:     reqURL.Path,
+		Path:     advertiseURL.Path + reqURL.Path,
 		RawQuery: reqURL.RawQuery,
 	}
 
