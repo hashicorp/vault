@@ -256,8 +256,10 @@ func (c *Core) teardownAudits() error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
-	for _, entry := range c.audit.Entries {
-		c.removeAuditReloadFunc(entry)
+	if c.audit != nil {
+		for _, entry := range c.audit.Entries {
+			c.removeAuditReloadFunc(entry)
+		}
 	}
 
 	c.audit = nil
