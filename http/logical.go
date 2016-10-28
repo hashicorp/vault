@@ -72,16 +72,13 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
-	req, err := requestAuth(core, r, &logical.Request{
+	req := requestAuth(core, r, &logical.Request{
 		ID:         request_id,
 		Operation:  op,
 		Path:       path,
 		Data:       data,
 		Connection: getConnection(r),
 	})
-	if err != nil {
-		return nil, http.StatusUnauthorized, errwrap.Wrapf("failed to fetch client token and/or its accessor: {{err}}", err)
-	}
 
 	req, err = requestWrapTTL(r, req)
 	if err != nil {
