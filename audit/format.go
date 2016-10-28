@@ -64,8 +64,17 @@ func (f *AuditFormatter) FormatRequest(
 		if err := Hash(config.Salt, auth); err != nil {
 			return err
 		}
+
+		// Cache and restore accessor in the request
+		var clientTokenAccessor string
+		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
+			clientTokenAccessor = req.ClientTokenAccessor
+		}
 		if err := Hash(config.Salt, req); err != nil {
 			return err
+		}
+		if clientTokenAccessor != "" {
+			req.ClientTokenAccessor = clientTokenAccessor
 		}
 	}
 
@@ -168,6 +177,7 @@ func (f *AuditFormatter) FormatResponse(
 			auth.Accessor = accessor
 		}
 
+		// Cache and restore accessor in the request
 		var clientTokenAccessor string
 		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
 			clientTokenAccessor = req.ClientTokenAccessor
