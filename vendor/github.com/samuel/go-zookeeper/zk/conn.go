@@ -44,9 +44,9 @@ const (
 type watchType int
 
 const (
-	watchTypeData  = iota
-	watchTypeExist = iota
-	watchTypeChild = iota
+	watchTypeData = iota
+	watchTypeExist
+	watchTypeChild
 )
 
 type watchPathType struct {
@@ -80,6 +80,7 @@ type Conn struct {
 	server         string     // remember the address/port of the current server
 	conn           net.Conn
 	eventChan      chan Event
+	eventCallback  EventCallback // may be nil
 	shouldQuit     chan struct{}
 	pingInterval   time.Duration
 	recvTimeout    time.Duration
@@ -236,6 +237,18 @@ func WithHostProvider(hostProvider HostProvider) connOption {
 	}
 }
 
+// EventCallback is a function that is called when an Event occurs.
+type EventCallback func(Event)
+
+// WithEventCallback returns a connection option that specifies an event
+// callback.
+// The callback must not block - doing so would delay the ZK go routines.
+func WithEventCallback(cb EventCallback) connOption {
+	return func(c *Conn) {
+		c.eventCallback = cb
+	}
+}
+
 func (c *Conn) Close() {
 	close(c.shouldQuit)
 
@@ -245,9 +258,14 @@ func (c *Conn) Close() {
 	}
 }
 
-// States returns the current state of the connection.
+// State returns the current state of the connection.
 func (c *Conn) State() State {
 	return State(atomic.LoadInt32((*int32)(&c.state)))
+}
+
+// SessionID returns the current session id of the connection.
+func (c *Conn) SessionID() int64 {
+	return atomic.LoadInt64(&c.sessionID)
 }
 
 // SetLogger sets the logger to be used for printing errors.
@@ -265,8 +283,16 @@ func (c *Conn) setTimeouts(sessionTimeoutMs int32) {
 
 func (c *Conn) setState(state State) {
 	atomic.StoreInt32((*int32)(&c.state), int32(state))
+	c.sendEvent(Event{Type: EventSession, State: state, Server: c.Server()})
+}
+
+func (c *Conn) sendEvent(evt Event) {
+	if c.eventCallback != nil {
+		c.eventCallback(evt)
+	}
+
 	select {
-	case c.eventChan <- Event{Type: EventSession, State: state, Server: c.Server()}:
+	case c.eventChan <- evt:
 	default:
 		// panic("zk: event channel full - it must be monitored and never allowed to be full")
 	}
@@ -378,7 +404,7 @@ func (c *Conn) loop() {
 			c.logger.Printf("Authentication failed: %s", err)
 			c.conn.Close()
 		case err == nil:
-			c.logger.Printf("Authenticated: id=%d, timeout=%d", c.sessionID, c.sessionTimeoutMs)
+			c.logger.Printf("Authenticated: id=%d, timeout=%d", c.SessionID(), c.sessionTimeoutMs)
 			c.hostProvider.Connected()        // mark success
 			c.closeChan = make(chan struct{}) // channel to tell send loop stop
 			reauthChan := make(chan struct{}) // channel to tell send loop that authdata has been resubmitted
@@ -522,7 +548,7 @@ func (c *Conn) authenticate() error {
 		ProtocolVersion: protocolVersion,
 		LastZxidSeen:    c.lastZxid,
 		TimeOut:         c.sessionTimeoutMs,
-		SessionID:       c.sessionID,
+		SessionID:       c.SessionID(),
 		Passwd:          c.passwd,
 	})
 	if err != nil {
@@ -562,15 +588,15 @@ func (c *Conn) authenticate() error {
 		return err
 	}
 	if r.SessionID == 0 {
-		c.sessionID = 0
+		atomic.StoreInt64(&c.sessionID, int64(0))
 		c.passwd = emptyPassword
 		c.lastZxid = 0
 		c.setState(StateExpired)
 		return ErrSessionExpired
 	}
 
+	atomic.StoreInt64(&c.sessionID, r.SessionID)
 	c.setTimeouts(r.TimeOut)
-	c.sessionID = r.SessionID
 	c.passwd = r.Passwd
 	c.setState(StateHasSession)
 
@@ -678,7 +704,7 @@ func (c *Conn) recvLoop(conn net.Conn) error {
 
 		if res.Xid == -1 {
 			res := &watcherEvent{}
-			_, err := decodePacket(buf[16:16+blen], res)
+			_, err := decodePacket(buf[16:blen], res)
 			if err != nil {
 				return err
 			}
@@ -688,10 +714,7 @@ func (c *Conn) recvLoop(conn net.Conn) error {
 				Path:  res.Path,
 				Err:   nil,
 			}
-			select {
-			case c.eventChan <- ev:
-			default:
-			}
+			c.sendEvent(ev)
 			wTypes := make([]watchType, 0, 2)
 			switch res.Type {
 			case EventNodeCreated:
@@ -735,7 +758,7 @@ func (c *Conn) recvLoop(conn net.Conn) error {
 				if res.Err != 0 {
 					err = res.Err.toError()
 				} else {
-					_, err = decodePacket(buf[16:16+blen], req.recvStruct)
+					_, err = decodePacket(buf[16:blen], req.recvStruct)
 				}
 				if req.recvFunc != nil {
 					req.recvFunc(req, &res, err)
@@ -965,6 +988,7 @@ func (c *Conn) Sync(path string) (string, error) {
 type MultiResponse struct {
 	Stat   *Stat
 	String string
+	Error  error
 }
 
 // Multi executes multiple ZooKeeper operations or none of them. The provided
@@ -995,7 +1019,7 @@ func (c *Conn) Multi(ops ...interface{}) ([]MultiResponse, error) {
 	_, err := c.request(opMulti, req, res, nil)
 	mr := make([]MultiResponse, len(res.Ops))
 	for i, op := range res.Ops {
-		mr[i] = MultiResponse{Stat: op.Stat, String: op.String}
+		mr[i] = MultiResponse{Stat: op.Stat, String: op.String, Error: op.Err.toError()}
 	}
 	return mr, err
 }
