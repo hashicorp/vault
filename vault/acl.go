@@ -50,6 +50,8 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
+
+			// these are the ones already in the tree
 			permissions := raw.(*Permissions)
 			existing := permissions.CapabilitiesBitmap
 
@@ -70,7 +72,19 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 			}
 
-			// look for a * in allowed parameters
+			// look for a * in allowed parameters for the node already in the tree
+			if _, ok := permissions.AllowedParameters["*"]; ok {
+				pc.Permissions.AllowedParameters = make(map[string]struct{})
+				pc.Permissions.AllowedParameters["*"] = struct{}{}
+				goto CHECK_DENIED
+			}
+
+			// look for a * in allowed parameters for the path capability we are merging
+			if _, ok := pc.Permissions.AllowedParameters["*"]; ok {
+				pc.Permissions.AllowedParameters = make(map[string]struct{})
+				pc.Permissions.AllowedParameters["*"] = struct{}{}
+				goto CHECK_DENIED
+			}
 
 			// Merge allowed parameters
 			for key, _ := range permissions.AllowedParameters {
@@ -81,7 +95,23 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				}
 			}
 
-			// Merge disallowed parameters
+		CHECK_DENIED:
+
+			// look for a * in denied parameters for the node already in the tree
+			if _, ok := permissions.DeniedParameters["*"]; ok {
+				pc.Permissions.DeniedParameters = make(map[string]struct{})
+				pc.Permissions.DeniedParameters["*"] = struct{}{}
+				goto INSERT
+			}
+
+			// look for a * in denied parameters for the path capability we are merging
+			if _, ok := pc.Permissions.DeniedParameters["*"]; ok {
+				pc.Permissions.DeniedParameters = make(map[string]struct{})
+				pc.Permissions.DeniedParameters["*"] = struct{}{}
+				goto INSERT
+			}
+
+			// Merge denied parameters
 			for key, _ := range permissions.DeniedParameters {
 				// Add new parameter
 				if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
@@ -90,6 +120,8 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				}
 
 			}
+
+		INSERT:
 
 			tree.Insert(pc.Prefix, pc.Permissions)
 
@@ -154,15 +186,11 @@ CHECK:
 // AllowOperation is used to check if the given operation is permitted. The
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
-
-// change arguments to hold a full request that holds the operation, path, and parameter
-// that is to be modified.
 func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 	// Fast-path root
 	if a.root {
 		return true, true
 	}
-
 	op := req.Operation
 	path := req.Path
 
