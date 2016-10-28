@@ -89,13 +89,14 @@ func (f *AuditFormatter) FormatRequest(
 		},
 
 		Request: AuditRequest{
-			ID:          req.ID,
-			ClientToken: req.ClientToken,
-			Operation:   req.Operation,
-			Path:        req.Path,
-			Data:        req.Data,
-			RemoteAddr:  getRemoteAddr(req),
-			WrapTTL:     int(req.WrapTTL / time.Second),
+			ID:                  req.ID,
+			ClientToken:         req.ClientToken,
+			ClientTokenAccessor: req.ClientTokenAccessor,
+			Operation:           req.Operation,
+			Path:                req.Path,
+			Data:                req.Data,
+			RemoteAddr:          getRemoteAddr(req),
+			WrapTTL:             int(req.WrapTTL / time.Second),
 		},
 	}
 
@@ -167,8 +168,15 @@ func (f *AuditFormatter) FormatResponse(
 			auth.Accessor = accessor
 		}
 
+		var clientTokenAccessor string
+		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
+			clientTokenAccessor = req.ClientTokenAccessor
+		}
 		if err := Hash(config.Salt, req); err != nil {
 			return err
+		}
+		if clientTokenAccessor != "" {
+			req.ClientTokenAccessor = clientTokenAccessor
 		}
 
 		// Cache and restore accessor in the response
@@ -241,13 +249,14 @@ func (f *AuditFormatter) FormatResponse(
 		},
 
 		Request: AuditRequest{
-			ID:          req.ID,
-			ClientToken: req.ClientToken,
-			Operation:   req.Operation,
-			Path:        req.Path,
-			Data:        req.Data,
-			RemoteAddr:  getRemoteAddr(req),
-			WrapTTL:     int(req.WrapTTL / time.Second),
+			ID:                  req.ID,
+			ClientToken:         req.ClientToken,
+			ClientTokenAccessor: req.ClientTokenAccessor,
+			Operation:           req.Operation,
+			Path:                req.Path,
+			Data:                req.Data,
+			RemoteAddr:          getRemoteAddr(req),
+			WrapTTL:             int(req.WrapTTL / time.Second),
 		},
 
 		Response: AuditResponse{
@@ -286,13 +295,14 @@ type AuditResponseEntry struct {
 }
 
 type AuditRequest struct {
-	ID          string                 `json:"id"`
-	Operation   logical.Operation      `json:"operation"`
-	ClientToken string                 `json:"client_token"`
-	Path        string                 `json:"path"`
-	Data        map[string]interface{} `json:"data"`
-	RemoteAddr  string                 `json:"remote_address"`
-	WrapTTL     int                    `json:"wrap_ttl"`
+	ID                  string                 `json:"id"`
+	Operation           logical.Operation      `json:"operation"`
+	ClientToken         string                 `json:"client_token"`
+	ClientTokenAccessor string                 `json:"client_token_accessor"`
+	Path                string                 `json:"path"`
+	Data                map[string]interface{} `json:"data"`
+	RemoteAddr          string                 `json:"remote_address"`
+	WrapTTL             int                    `json:"wrap_ttl"`
 }
 
 type AuditResponse struct {

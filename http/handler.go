@@ -245,13 +245,22 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
-func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
+func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// Attach the header value if we have it
 	if v := r.Header.Get(AuthHeaderName); v != "" {
 		req.ClientToken = v
+		te, err := core.LookupToken(v)
+		if err != nil {
+			return nil, err
+		}
+		if te == nil {
+			return nil, fmt.Errorf("invalid client token")
+		}
+
+		req.ClientTokenAccessor = te.Accessor
 	}
 
-	return req
+	return req, nil
 }
 
 // requestWrapTTL adds the WrapTTL value to the logical.Request if it
