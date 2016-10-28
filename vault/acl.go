@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/logical"
 )
@@ -76,14 +75,14 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// look for a * in allowed parameters for the node already in the tree
 			if _, ok := permissions.AllowedParameters["*"]; ok {
 				pc.Permissions.AllowedParameters = make(map[string]struct{})
-				pc.Permissions.AllowedParameters["*"] = nil
+				pc.Permissions.AllowedParameters["*"] = struct{}{}
 				goto CHECK_DENIED
 			}
 
 			// look for a * in allowed parameters for the path capability we are merging
 			if _, ok := pc.Permissions.AllowedParameters["*"]; ok {
 				pc.Permissions.AllowedParameters = make(map[string]struct{})
-				pc.Permissions.AllowedParameters["*"] = nil
+				pc.Permissions.AllowedParameters["*"] = struct{}{}
 				goto CHECK_DENIED
 			}
 
@@ -101,14 +100,14 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// look for a * in denied parameters for the node already in the tree
 			if _, ok := permissions.DeniedParameters["*"]; ok {
 				pc.Permissions.DeniedParameters = make(map[string]struct{})
-				pc.Permissions.DeniedParameters["*"] = nil
+				pc.Permissions.DeniedParameters["*"] = struct{}{}
 				goto INSERT
 			}
 
 			// look for a * in denied parameters for the path capability we are merging
 			if _, ok := pc.Permissions.DeniedParameters["*"]; ok {
 				pc.Permissions.DeniedParameters = make(map[string]struct{})
-				pc.Permissions.DeniedParameters["*"] = nil
+				pc.Permissions.DeniedParameters["*"] = struct{}{}
 				goto INSERT
 			}
 
