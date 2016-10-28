@@ -51,6 +51,7 @@ These libraries are provided by the community.
 
 * [vault-java](https://github.com/jhaals/vault-java)
 * [vault-java-driver](https://github.com/BetterCloud/vault-java-driver)
+* [Spring Vault](https://github.com/spring-projects/spring-vault)
 
 ### Kotlin
 
