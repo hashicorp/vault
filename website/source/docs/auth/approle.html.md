@@ -146,7 +146,7 @@ $ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-policy,test-
 #### Fetch the identifier of the role.
 
 ```javascript
-$ curl -X GET -H "X-Vault-Token:$VAULT_TOKEN" http://localhost:8200/v1/auth/approle/role/testrole/role-id | jq .
+$ curl -X GET -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/role-id | jq .
 ```
 
 ```javascript
@@ -167,7 +167,7 @@ $ curl -X GET -H "X-Vault-Token:$VAULT_TOKEN" http://localhost:8200/v1/auth/appr
 #### Create a new secret identifier under the role.
 
 ```javascript
-$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" http://localhost:8200/v1/auth/approle/role/testrole/secret-id | jq .
+$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id | jq .
 ```
 
 ```javascript
@@ -191,7 +191,7 @@ $ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" http://localhost:8200/v1/auth/app
 ```javascript
 $ curl -X POST \
      -d '{"role_id":"988a9dfd-ea69-4a53-6cb6-9d6b86474bba","secret_id":"37b74931-c4cd-d49a-9246-ccc62d682a25"}' \
-     http://localhost:8200/v1/auth/approle/login | jq .
+     http://127.0.0.1:8200/v1/auth/approle/login | jq .
 ```
 
 ```javascript
