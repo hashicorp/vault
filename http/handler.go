@@ -245,10 +245,19 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
-func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
+func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logical.Request {
 	// Attach the header value if we have it
 	if v := r.Header.Get(AuthHeaderName); v != "" {
 		req.ClientToken = v
+
+		// Also attach the accessor if we have it. This doesn't fail if it
+		// doesn't exist because the request may be to an unauthenticated
+		// endpoint/login endpoint where a bad current token doesn't matter, or
+		// a token from a Vault version pre-accessors.
+		te, err := core.LookupToken(v)
+		if err == nil && te != nil {
+			req.ClientTokenAccessor = te.Accessor
+		}
 	}
 
 	return req
