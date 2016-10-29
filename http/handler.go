@@ -253,16 +253,11 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logic
 		// Also attach the accessor if we have it. This doesn't fail if it
 		// doesn't exist because the request may be to an unauthenticated
 		// endpoint/login endpoint where a bad current token doesn't matter, or
-		// a token pre-accessors.
+		// a token from a Vault version pre-accessors.
 		te, err := core.LookupToken(v)
-		if err != nil {
-			return req
+		if err == nil && te != nil {
+			req.ClientTokenAccessor = te.Accessor
 		}
-		if te == nil {
-			return req
-		}
-
-		req.ClientTokenAccessor = te.Accessor
 	}
 
 	return req
