@@ -11,4 +11,4 @@ description: |-
 Welcome to the Vault documentation! This documentation is more of a reference
 guide for all available features and options of Vault. If you're just getting
 started with Vault, please start with the
-[introduction and getting started guide](/intro/index.html) instead.
+[introduction](/intro/index.html) instead, and work your way up to the [Getting Started](intro/getting-started/index.html) guide.
