@@ -94,7 +94,7 @@ func (l *Lock) Lock() error {
 		}
 
 		lowestSeq := seq
-		prevSeq := 0
+		prevSeq := -1
 		prevSeqPath := ""
 		for _, p := range children {
 			s, err := parseSeq(p)
