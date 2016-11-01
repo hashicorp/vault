@@ -55,8 +55,9 @@ sending a SIGHUP to the server process. These are denoted below.
    inner syntax is below.
 
 * `cache_size` (optional) - If set, the size of the read cache used
-  by the physical storage subsystem will be set to this value, in bytes.
-  Defaults to 1048576 (1MB).
+  by the physical storage subsystem will be set to this value. The
+  value is in number of entries so the total cache size is dependent
+  on the entries being stored. Defaults to 32k entries.
 
 * `disable_cache` (optional) - A boolean. If true, this will disable all caches
   within Vault, including the read cache used by the physical storage

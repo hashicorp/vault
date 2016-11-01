@@ -9,7 +9,7 @@ import (
 
 const (
 	// DefaultCacheSize is used if no cache size is specified for NewCache
-	DefaultCacheSize = 1024 * 1024
+	DefaultCacheSize = 32 * 1024
 )
 
 // Cache is used to wrap an underlying physical backend
