@@ -146,11 +146,11 @@ func TestACL_Layered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	
-  acl, err := NewACL([]*Policy{policy1, policy2})
+
+	acl, err := NewACL([]*Policy{policy1, policy2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
-  }
+	}
 	testLayeredACL(t, acl)
 }
 func testLayeredACL(t *testing.T, acl *ACL) {
@@ -213,20 +213,38 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	}
 }
 
-//commenting out for compilation
-/*func TestNewAclMerge(t *testing.T) {
-  policy, err := Parse(permissionsPolicy2)
-  if err != nil {
+func TestNewAclMerge(t *testing.T) {
+	policy, err := Parse(permissionsPolicy2)
+	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	acl, err := NewACL([]*Policy{policy})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	
-  
-  
-}*/
+
+	type tcase struct {
+		request   logical.Request
+		allowed   bool
+		rootPrivs bool
+	}
+
+	tcases := []tcase{
+		{logical.Request{Path: "foo/bar", Data: map[string]struct{}{"baz": {}}, Operation: logical.CreateOperation}, false, false},
+		{logical.Request{Path: "foo/bar", Data: map[string]struct{}{"zip": {}}, Operation: logical.CreateOperation}, false, false},
+	}
+
+	for _, tc := range tcases {
+		allowed, rootPrivs := acl.AllowOperation(tc.request)
+		if allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+		if rootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+	}
+
+}
 
 var tokenCreationPolicy = `
 name = "tokenCreation"
@@ -284,6 +302,7 @@ path "foo/bar" {
 	capabilities = ["deny"]
 }
 `
+
 //allow operation testing
 var permissionsPolicy = `
 name = "dev"
@@ -367,6 +386,7 @@ path "cold/weather" {
 	}
 }
 `
+
 //test merging
 
 var permissionsPolicy2 = `
