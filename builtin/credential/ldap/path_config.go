@@ -240,6 +240,9 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid 'tls_max_version'")
 	}
+	if cfg.TLSMaxVersion < cfg.TLSMinVersion {
+		return nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
+	}
 
 	startTLS := d.Get("starttls").(bool)
 	if startTLS {
