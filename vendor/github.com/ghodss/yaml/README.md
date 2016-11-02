@@ -4,13 +4,13 @@
 
 ## Introduction
 
-A wrapper around [candiedyaml](https://github.com/cloudfoundry-incubator/candiedyaml) designed to enable a better way of handling YAML when marshaling to and from structs.
+A wrapper around [go-yaml](https://github.com/go-yaml/yaml) designed to enable a better way of handling YAML when marshaling to and from structs.
 
-In short, this library first converts YAML to JSON using candiedyaml and then uses `json.Marshal` and `json.Unmarshal` to convert to or from the struct. This means that it effectively reuses the JSON struct tags as well as the custom JSON methods `MarshalJSON` and `UnmarshalJSON` unlike candiedyaml. For a detailed overview of the rationale behind this method, [see this blog post](http://ghodss.com/2014/the-right-way-to-handle-yaml-in-golang/).
+In short, this library first converts YAML to JSON using go-yaml and then uses `json.Marshal` and `json.Unmarshal` to convert to or from the struct. This means that it effectively reuses the JSON struct tags as well as the custom JSON methods `MarshalJSON` and `UnmarshalJSON` unlike go-yaml. For a detailed overview of the rationale behind this method, [see this blog post](http://ghodss.com/2014/the-right-way-to-handle-yaml-in-golang/).
 
 ## Compatibility
 
-This package uses [candiedyaml](https://github.com/cloudfoundry-incubator/candiedyaml) and therefore supports [everything candiedyaml supports](https://github.com/cloudfoundry-incubator/candiedyaml#candiedyaml).
+This package uses [go-yaml](https://github.com/go-yaml/yaml) and therefore supports [everything go-yaml supports](https://github.com/go-yaml/yaml#compatibility).
 
 ## Caveats
 

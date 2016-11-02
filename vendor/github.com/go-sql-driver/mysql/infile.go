@@ -173,7 +173,8 @@ func (mc *mysqlConn) handleInFileRequest(name string) (err error) {
 
 	// read OK packet
 	if err == nil {
-		return mc.readResultOK()
+		_, err = mc.readResultOK()
+		return err
 	}
 
 	mc.readPacket()

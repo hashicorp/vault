@@ -50,7 +50,7 @@ type RepositoryCreateForkOptions struct {
 
 // CreateFork creates a fork of the specified repository.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/forks/#list-forks
+// GitHub API docs: https://developer.github.com/v3/repos/forks/#create-a-fork
 func (s *RepositoriesService) CreateFork(owner, repo string, opt *RepositoryCreateForkOptions) (*Repository, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/forks", owner, repo)
 	u, err := addOptions(u, opt)

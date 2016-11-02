@@ -92,7 +92,8 @@ func (c *Client) KV() *KV {
 	return &KV{c}
 }
 
-// Get is used to lookup a single key
+// Get is used to lookup a single key. The returned pointer
+// to the KVPair will be nil if the key does not exist.
 func (k *KV) Get(key string, q *QueryOptions) (*KVPair, *QueryMeta, error) {
 	resp, qm, err := k.getInternal(key, nil, q)
 	if err != nil {

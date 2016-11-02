@@ -39,7 +39,7 @@ func ConnectToMySQL(tries int, delay time.Duration, connector func(url string) b
 
 	for try := 0; try <= tries; try++ {
 		time.Sleep(delay)
-		url := fmt.Sprintf("%s:%s@tcp(%s:%d)/mysql", MySQLUsername, MySQLPassword, ip, port)
+		url := fmt.Sprintf("%s:%s@tcp(%s:%d)/mysql?parseTime=true", MySQLUsername, MySQLPassword, ip, port)
 		if connector(url) {
 			return c, nil
 		}

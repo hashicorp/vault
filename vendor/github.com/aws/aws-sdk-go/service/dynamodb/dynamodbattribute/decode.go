@@ -94,6 +94,22 @@ func UnmarshalList(l []*dynamodb.AttributeValue, out interface{}) error {
 	return NewDecoder().Decode(&dynamodb.AttributeValue{L: l}, out)
 }
 
+// UnmarshalListOfMaps is an alias for Unmarshal func which unmarshals a
+// slice of maps of attribute values.
+//
+// This is useful for when you need to unmarshal the Items from a DynamoDB
+// Query API call.
+//
+// The output value provided must be a non-nil pointer
+func UnmarshalListOfMaps(l []map[string]*dynamodb.AttributeValue, out interface{}) error {
+	items := make([]*dynamodb.AttributeValue, len(l))
+	for i, m := range l {
+		items[i] = &dynamodb.AttributeValue{M: m}
+	}
+
+	return UnmarshalList(items, out)
+}
+
 // A Decoder provides unmarshaling AttributeValues to Go value types.
 type Decoder struct {
 	MarshalOptions

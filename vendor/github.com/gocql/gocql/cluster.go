@@ -23,13 +23,27 @@ func (p PoolConfig) buildPool(session *Session) *policyConnPool {
 }
 
 // ClusterConfig is a struct to configure the default cluster implementation
-// of gocoql. It has a variety of attributes that can be used to modify the
+// of gocql. It has a variety of attributes that can be used to modify the
 // behavior to fit the most common use cases. Applications that require a
 // different setup must implement their own cluster.
 type ClusterConfig struct {
-	Hosts             []string          // addresses for the initial connections
-	CQLVersion        string            // CQL version (default: 3.0.0)
-	ProtoVersion      int               // version of the native protocol (default: 2)
+	// addresses for the initial connections. It is recomended to use the value set in
+	// the Cassandra config for broadcast_address or listen_address, an IP address not
+	// a domain name. This is because events from Cassandra will use the configured IP
+	// address, which is used to index connected hosts. If the domain name specified
+	// resolves to more than 1 IP address then the driver may connect multiple times to
+	// the same host, and will not mark the node being down or up from events.
+	Hosts      []string
+	CQLVersion string // CQL version (default: 3.0.0)
+
+	// ProtoVersion sets the version of the native protocol to use, this will
+	// enable features in the driver for specific protocol versions, generally this
+	// should be set to a known version (2,3,4) for the cluster being connected to.
+	//
+	// If it is 0 or unset (the default) then the driver will attempt to discover the
+	// highest supported protocol for the cluster. In clusters with nodes of different
+	// versions the protocol selected is not defined (ie, it can be any of the supported in the cluster)
+	ProtoVersion      int
 	Timeout           time.Duration     // connection timeout (default: 600ms)
 	Port              int               // port (default: 9042)
 	Keyspace          string            // initial keyspace (optional)
@@ -100,11 +114,18 @@ type ClusterConfig struct {
 }
 
 // NewCluster generates a new config for the default cluster implementation.
+//
+// The supplied hosts are used to initially connect to the cluster then the rest of
+// the ring will be automatically discovered. It is recomended to use the value set in
+// the Cassandra config for broadcast_address or listen_address, an IP address not
+// a domain name. This is because events from Cassandra will use the configured IP
+// address, which is used to index connected hosts. If the domain name specified
+// resolves to more than 1 IP address then the driver may connect multiple times to
+// the same host, and will not mark the node being down or up from events.
 func NewCluster(hosts ...string) *ClusterConfig {
 	cfg := &ClusterConfig{
 		Hosts:                  hosts,
 		CQLVersion:             "3.0.0",
-		ProtoVersion:           2,
 		Timeout:                600 * time.Millisecond,
 		Port:                   9042,
 		NumConns:               2,

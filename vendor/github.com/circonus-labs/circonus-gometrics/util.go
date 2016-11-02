@@ -84,7 +84,9 @@ func (m *CirconusMetrics) snapshot() (c map[string]uint64, g map[string]string, 
 
 	h = make(map[string]*circonusllhist.Histogram, len(m.histograms))
 	for n, hist := range m.histograms {
+		hist.rw.Lock()
 		h[n] = hist.hist.CopyAndReset()
+		hist.rw.Unlock()
 	}
 
 	t = make(map[string]string, len(m.text)+len(m.textFuncs))
@@ -94,6 +96,25 @@ func (m *CirconusMetrics) snapshot() (c map[string]uint64, g map[string]string, 
 
 	for n, f := range m.textFuncs {
 		t[n] = f()
+	}
+
+	if m.resetCounters {
+		m.counters = make(map[string]uint64)
+		m.counterFuncs = make(map[string]func() uint64)
+	}
+
+	if m.resetGauges {
+		m.gauges = make(map[string]string)
+		m.gaugeFuncs = make(map[string]func() int64)
+	}
+
+	if m.resetHistograms {
+		m.histograms = make(map[string]*Histogram)
+	}
+
+	if m.resetText {
+		m.text = make(map[string]string)
+		m.textFuncs = make(map[string]func() string)
 	}
 
 	return
