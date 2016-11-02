@@ -1,0 +1,24 @@
+package: github.com/compose/canoe
+import:
+- package: github.com/cenk/backoff
+  version: ~1.0.0
+- package: github.com/coreos/etcd
+  version: ~3.0.3
+  subpackages:
+  - etcdserver/stats
+  - pkg/types
+  - raft
+  - raft/raftpb
+  - rafthttp
+  - snap
+  - wal
+  - wal/walpb
+- package: github.com/gorilla/mux
+  version: ~1.1.0
+- package: github.com/satori/go.uuid
+  version: ~1.1.0
+- package: github.com/Sirupsen/logrus
+  version: ~0.10.0
+- package: golang.org/x/net
+  subpackages:
+  - context

@@ -128,6 +128,7 @@ var builtinBackends = map[string]Factory{
 	"mysql":      newMySQLBackend,
 	"postgresql": newPostgreSQLBackend,
 	"swift":      newSwiftBackend,
+	"canoe":      newCanoeBackend,
 }
 
 // PermitPool is a wrapper around a semaphore library to keep things

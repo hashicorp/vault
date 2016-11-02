@@ -188,9 +188,6 @@ func ConfigureServer(s *http.Server, conf *Server) error {
 	if !haveNPN {
 		s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, NextProtoTLS)
 	}
-	// h2-14 is temporary (as of 2015-03-05) while we wait for all browsers
-	// to switch to "h2".
-	s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, "h2-14")
 
 	if s.TLSNextProto == nil {
 		s.TLSNextProto = map[string]func(*http.Server, *tls.Conn, http.Handler){}
@@ -205,7 +202,6 @@ func ConfigureServer(s *http.Server, conf *Server) error {
 		})
 	}
 	s.TLSNextProto[NextProtoTLS] = protoHandler
-	s.TLSNextProto["h2-14"] = protoHandler // temporary; see above.
 	return nil
 }
 

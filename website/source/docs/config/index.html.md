@@ -235,6 +235,9 @@ to help you, but may refer you to the backend author.
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
     This backend supports HA. This is a community-supported backend.
 
+  * `canoe` - Store data in a raft backed key/value store.
+    This backend supports HA. This is a community-supported backend.
+
   * `dynamodb` - Store data in a [DynamoDB](https://aws.amazon.com/dynamodb/) table.
     This backend optionally supports HA. This is a community-supported backend.
 
@@ -509,6 +512,48 @@ backend "zookeeper" {
 The above example allows access from localhost only - as this is the `ip` no
 auth_info is required since Zookeeper uses the address of the client for the
 ACL check.
+
+#### Backend Reference: canoe (Community-Supported)
+
+For canoe, the following options are supported:
+
+  * `raft_port` (required) - The port responsible for communicating raft messages.
+
+  * `config_port` (required) - The port responsible for cluster configuration.
+
+  * `peers` (conditionally optional) - Other peers in the cluster to connect to.
+    These should be comma delimited addresses.
+    Of the form "http://<remote_addr1>:<remote_config_port1>,http://<remote_addr2>:<remote_config_port2>"
+    Note: You need only have a single node here of an existing cluster
+    Either `peers` or `bootstrap_node` must be specified
+
+  * `bootstrap_node` (conditionally optional) - Is this the cluster's bootstrap node?
+    There can only ever be a single bootstrap node in a cluster until canoe adds the option
+    for an initial cluster set
+
+  * `data_dir` (optional - recommended) - The directory to persist data.
+    Defaults to no data storage. This means that if the cluster goes down
+    you can't recover data, and any node which goes down will need special
+    attention to bring back. Highly recommended to set this value
+
+  * `id` (optional) - The id assigned to this node.
+    If not set then it will be assigned to a UUID
+
+  * `cluster_id` (optional) - The id assigned to this cluster.
+    Defaults to 0x100
+
+
+  * `snapshot_interval` (optional) - How often, in seconds, to take a snapshot.
+    If this is set to <1 then snapshotting is disabled
+    Default: 30
+
+  * `snapshot_min_committed_logs` (optional) - The minimum number of committed logs
+    that must be processed before a snapshot is taken
+    Default: 20
+
+  * `max_retained_snapshots` (optional) - How many snapshot files to retain
+    Default: 3
+
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
