@@ -293,7 +293,10 @@ func TestBackend_crud(t *testing.T) {
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepWritePolicy(t, "test", testPolicy, ""),
+			testAccStepWritePolicy(t, "test2", testPolicy, ""),
+			testAccStepWritePolicy(t, "test3", testPolicy, ""),
 			testAccStepReadPolicy(t, "test", testPolicy, 0),
+			testAccStepListPolicy(t, []string{"test", "test2", "test3"}),
 			testAccStepDeletePolicy(t, "test"),
 		},
 	})
@@ -437,6 +440,20 @@ func testAccStepReadPolicy(t *testing.T, name string, policy string, lease time.
 			}
 			if l != lease {
 				return fmt.Errorf("mismatch: %v %v", l, lease)
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepListPolicy(t *testing.T, names []string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ListOperation,
+		Path:      "roles/",
+		Check: func(resp *logical.Response) error {
+			respKeys := resp.Data["keys"].([]string)
+			if !reflect.DeepEqual(respKeys, names) {
+				return fmt.Errorf("mismatch: %#v %#v", respKeys, names)
 			}
 			return nil
 		},
