@@ -2,11 +2,10 @@
 
 IMPROVEMENTS:
 
- * transit: Add listing of keys [GH-1987]
+ * secret/consul: Added listing functionality to roles [GH-2065]
  * secret/postgresql: Added `revocation_sql` parameter on the role endpoint to
    enable customization of user revocation SQL statements [GH-2033]
- * doc/getting-started: API section is updated to have examples of AppRole
-   instead of AppID [GH-1990]
+ * secret/transit: Add listing of keys [GH-1987]
 
 BUG FIXES:
 
