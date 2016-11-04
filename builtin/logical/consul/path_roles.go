@@ -59,7 +59,7 @@ Defaults to 'client'.`,
 
 func (b *backend) pathRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	entries, err := req.Storage.List("policy/")
 	if err != nil {
 		return nil, err
 	}
