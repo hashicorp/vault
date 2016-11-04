@@ -580,8 +580,8 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dt>Description</dt>
   <dd>
     Revokes the token used to call it and all child tokens.
-    When the token is revoked, all secrets generated with
-    it are also revoked.
+    When the token is revoked, all dynamic secrets generated
+    with it are also revoked.
   </dd>
 
   <dt>Method</dt>
