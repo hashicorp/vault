@@ -29,7 +29,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		format = "json"
 	}
 	switch format {
-	case "json", "jsonx":
+	case "cee", "json", "jsonx":
 	default:
 		return nil, fmt.Errorf("unknown format type %s", format)
 	}
@@ -75,6 +75,8 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	}
 
 	switch format {
+	case "cee":
+		b.formatter.AuditFormatWriter = &audit.CEEFormatWriter{}
 	case "json":
 		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{}
 	case "jsonx":
