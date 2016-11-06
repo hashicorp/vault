@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/logical"
 )
@@ -51,7 +50,6 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			fmt.Println("There is an existing policy")
 
 			// these are the ones already in the tree
 			permissions := raw.(*Permissions)
@@ -88,12 +86,13 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				goto CHECK_DENIED
 			}
 
+			if pc.Permissions.AllowedParameters == nil {
+				pc.Permissions.AllowedParameters = make(map[string]struct{})
+			}
 			// Merge allowed parameters
-			for key, _ := range permissions.AllowedParameters {
+			for key, value := range permissions.AllowedParameters {
 				// Add new parameter
-				if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
-					pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key]
-				}
+				pc.Permissions.AllowedParameters[key] = value
 			}
 
 		CHECK_DENIED:
@@ -112,18 +111,13 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				goto INSERT
 			}
 
-			fmt.Printf("Entering Merge Denied with a map of: %v\n", permissions.DeniedParameters)
+			if pc.Permissions.DeniedParameters == nil {
+				pc.Permissions.DeniedParameters = make(map[string]struct{})
+			}
 			// Merge denied parameters
 			for key, value := range permissions.DeniedParameters {
 				// Add new parameter
-				fmt.Println("Checking if already in map")
 				pc.Permissions.DeniedParameters[key] = value
-				/*
-					if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
-						fmt.Printf("DeniedParameter: %v\n", key)
-						pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
-					}
-				*/
 			}
 
 		INSERT:
@@ -192,7 +186,6 @@ CHECK:
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
 func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
-	//fmt.Printf("Operation: %v\nPath: %v\nData: %v\n", req.Operation, req.Path, req.Data)
 	// Fast-path root
 	if a.root {
 		return true, true
@@ -255,7 +248,6 @@ CHECK:
 		return false, sudo
 	}
 
-	fmt.Printf("DeniedParameters: %v\n", permissions.DeniedParameters)
 	// Only check parameter permissions for operations that can modify parameters.
 	if op == logical.UpdateOperation || op == logical.DeleteOperation || op == logical.CreateOperation {
 		// Check if all parameters have been denied
@@ -267,6 +259,10 @@ CHECK:
 			// Check if parameter has explictly denied
 			if _, ok := permissions.DeniedParameters[parameter]; ok {
 				return false, sudo
+			}
+			// Check if all parameters have been allowed.
+			if _, ok := permissions.AllowedParameters["*"]; ok {
+				return true, sudo
 			}
 			// Specfic parameters have been allowed
 			if len(permissions.AllowedParameters) > 0 {

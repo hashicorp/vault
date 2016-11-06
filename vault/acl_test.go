@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -216,7 +215,6 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 
 func TestPolicyMerge(t *testing.T) {
 	policy, err := Parse(permissionsPolicy2)
-	fmt.Printf("Policy is being printed: \n%v", policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -235,7 +233,41 @@ func TestPolicyMerge(t *testing.T) {
 
 	tcases := []tcase{
 		{logical.UpdateOperation, "foo/bar", "baz", false, false},
-		//{logical.Request{Path: "foo/bar", Data: map[string]interface{}{"zip": ""}, Operation: logical.CreateOperation}, false, false},
+		{logical.UpdateOperation, "foo/bar", "zip", false, false},
+		{logical.CreateOperation, "foo/bar", "baz", false, false},
+		{logical.CreateOperation, "foo/bar", "zip", false, false},
+		{logical.DeleteOperation, "foo/bar", "baz", false, false},
+		{logical.DeleteOperation, "foo/bar", "zip", false, false},
+		{logical.UpdateOperation, "hello/universe", "bob", true, false},
+		{logical.UpdateOperation, "hello/universe", "tom", true, false},
+		{logical.CreateOperation, "hello/universe", "bob", true, false},
+		{logical.CreateOperation, "hello/universe", "tom", true, false},
+		{logical.DeleteOperation, "hello/universe", "bob", true, false},
+		{logical.DeleteOperation, "hello/universe", "tom", true, false},
+		{logical.UpdateOperation, "rainy/day", "bob", true, false},
+		{logical.UpdateOperation, "rainy/day", "tom", true, false},
+		{logical.CreateOperation, "rainy/day", "bob", true, false},
+		{logical.CreateOperation, "rainy/day", "tom", true, false},
+		{logical.DeleteOperation, "rainy/day", "bob", true, false},
+		{logical.DeleteOperation, "rainy/day", "tom", true, false},
+		{logical.UpdateOperation, "cool/bike", "frank", false, false},
+		{logical.UpdateOperation, "cool/bike", "two", false, false},
+		{logical.CreateOperation, "cool/bike", "frank", false, false},
+		{logical.CreateOperation, "cool/bike", "four", false, false},
+		{logical.DeleteOperation, "cool/bike", "frank", false, false},
+		{logical.DeleteOperation, "cool/bike", "six", false, false},
+		{logical.UpdateOperation, "clean/bed", "one", false, false},
+		{logical.UpdateOperation, "clean/bed", "two", false, false},
+		{logical.CreateOperation, "clean/bed", "three", false, false},
+		{logical.CreateOperation, "clean/bed", "four", false, false},
+		{logical.DeleteOperation, "clean/bed", "five", false, false},
+		{logical.DeleteOperation, "clean/bed", "six", false, false},
+		{logical.UpdateOperation, "coca/cola", "john", false, false},
+		{logical.UpdateOperation, "coca/cola", "two", false, false},
+		{logical.CreateOperation, "coca/cola", "john", false, false},
+		{logical.CreateOperation, "coca/cola", "four", false, false},
+		{logical.DeleteOperation, "coca/cola", "john", false, false},
+		{logical.DeleteOperation, "coca/cola", "six", false, false},
 	}
 
 	for _, tc := range tcases {
@@ -263,7 +295,7 @@ name = "ops"
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		denied_parameters = {
+		deniedparameters = {
 			"baz" = {}
 		}
 	}
@@ -271,7 +303,7 @@ path "foo/bar" {
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		denied_parameters = {
+		deniedparameters = {
 			"zip" = {}
 		}
 	}
@@ -279,7 +311,7 @@ path "foo/bar" {
 path "hello/universe" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"bob" = {}
 		}
 	}
@@ -287,7 +319,7 @@ path "hello/universe" {
 path "hello/universe" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"tom" = {}
 		}
   }
@@ -295,7 +327,7 @@ path "hello/universe" {
 path "rainy/day" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"bob" = {}
 		}
 	}
@@ -303,7 +335,7 @@ path "rainy/day" {
 path "rainy/day" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"*" = {}
 		}
   }
@@ -311,7 +343,7 @@ path "rainy/day" {
 path "cool/bike" {
 	policy = "write"
 	permissions = {
-		denied_parameters = {
+		deniedparameters = {
 			"frank" = {}
 		}
 	}
@@ -319,7 +351,7 @@ path "cool/bike" {
 path "cool/bike" {
 	policy = "write"
 	permissions = {
-		denied_parameters = {
+		deniedparameters = {
 			"*" = {}
 		}
   }
@@ -327,7 +359,7 @@ path "cool/bike" {
 path "clean/bed" {
 	policy = "write"
 	permissions = {
-		denied_parameters = {
+		deniedparameters = {
 			"*" = {}
 		}
 	}
@@ -335,7 +367,7 @@ path "clean/bed" {
 path "clean/bed" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"*" = {}
 		}
   }
@@ -343,7 +375,7 @@ path "clean/bed" {
 path "coca/cola" {
 	policy = "write"
 	permissions = {
-		denied_parameters = {
+		deniedparameters = {
 			"john" = {}
 		}
 	}
@@ -351,7 +383,7 @@ path "coca/cola" {
 path "coca/cola" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"john" = {}
 		}
   }
@@ -421,7 +453,7 @@ path "dev/*" {
 	policy = "write"
 	
   permissions = {
-  	allowed_parameters = {
+  	allowedparameters = {
   		"zip" = {}
   	}
   }
@@ -429,7 +461,7 @@ path "dev/*" {
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		denied_parameters = {
+		deniedparameters = {
 			"zap" = {}
 		}
   }
@@ -437,10 +469,10 @@ path "foo/bar" {
 path "foo/baz" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"hello" = {}
 		}
-		denied_parameters = {
+		deniedparameters = {
 			"zap" = {}
 		}
   }
@@ -448,10 +480,10 @@ path "foo/baz" {
 path "broken/phone" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 		  "steve" = {}
 		}
-		denied_parameters = {
+		deniedparameters = {
 		  "steve" = {}
 		}
 	}
@@ -459,10 +491,10 @@ path "broken/phone" {
 path "hello/world" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"*" = {}
 		}
-		denied_parameters = {
+		deniedparameters = {
 			"*" = {}
 		}
   }
@@ -470,10 +502,10 @@ path "hello/world" {
 path "tree/fort" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"*" = {}
 		}
-		denied_parameters = {
+		deniedparameters = {
 			"beer" = {}
 		}
   }
@@ -481,10 +513,10 @@ path "tree/fort" {
 path "fruit/apple" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {
+		allowedparameters = {
 			"pear" = {}
 		}
-		denied_parameters = {
+		deniedparameters = {
 			"*" = {}
 		}
   }
@@ -492,8 +524,8 @@ path "fruit/apple" {
 path "cold/weather" {
 	policy = "write"
 	permissions = {
-		allowed_parameters = {}
-		denied_parameters = {}
+		allowedparameters = {}
+		deniedparameters = {}
 	}
 }
 `
