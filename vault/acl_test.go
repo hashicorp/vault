@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -215,6 +216,7 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 
 func TestPolicyMerge(t *testing.T) {
 	policy, err := Parse(permissionsPolicy2)
+	fmt.Printf("Policy is being printed: \n%v", policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

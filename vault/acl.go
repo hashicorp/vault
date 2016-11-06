@@ -112,15 +112,18 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				goto INSERT
 			}
 
-			fmt.Println("Entering Merge Denied")
+			fmt.Printf("Entering Merge Denied with a map of: %v\n", permissions.DeniedParameters)
 			// Merge denied parameters
-			for key, _ := range permissions.DeniedParameters {
+			for key, value := range permissions.DeniedParameters {
 				// Add new parameter
 				fmt.Println("Checking if already in map")
-				if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
-					fmt.Printf("DeniedParameter: %v\n", key)
-					pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
-				}
+				pc.Permissions.DeniedParameters[key] = value
+				/*
+					if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
+						fmt.Printf("DeniedParameter: %v\n", key)
+						pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
+					}
+				*/
 			}
 
 		INSERT:
@@ -189,7 +192,7 @@ CHECK:
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
 func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
-	fmt.Printf("Operation: %v\nPath: %v\nData: %v\n", req.Operation, req.Path, req.Data)
+	//fmt.Printf("Operation: %v\nPath: %v\nData: %v\n", req.Operation, req.Path, req.Data)
 	// Fast-path root
 	if a.root {
 		return true, true
