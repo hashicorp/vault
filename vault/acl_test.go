@@ -266,6 +266,56 @@ func TestPolicyMerge(t *testing.T) {
 		}
 	}
 }
+func TestAllowOperation(t *testing.T) {
+  policy, err := Parse(permissionsPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	acl, err := NewACL([]*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+  toperations := []logical.Operation {
+    logical.UpdateOperation,
+    logical.DeleteOperation,
+    logical.CreateOperation,
+  }
+	type tcase struct {
+		path  string
+		parameter string
+		allowed   bool
+		rootPrivs bool
+	}
+	
+	tcases := []tcase{
+		{"dev/ops", "zip", true, false},
+		{"foo/bar", "zap", false, false},
+		{"foo/baz", "hello", true, false},
+		{"foo/baz", "zap", false, false},
+		{"broken/phone", "steve", false, false},
+		{"hello/world", "one", false, false},
+		{"tree/fort", "one", true, false},
+		{"tree/fort", "beer", false, false},
+		{"fruit/apple", "pear", false, false},
+		{"fruit/apple", "one", false, false},
+		{"cold/weather", "four", true, false},
+  }
+  
+  for _, tc := range tcases {
+		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
+		request.Data[tc.parameter] = ""
+		for _, op := range toperations {
+			request.Operation = op
+			allowed, rootPrivs := acl.AllowOperation(&request)
+			if allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+			}
+			if rootPrivs != tc.rootPrivs {
+				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+			}
+		}
+	}
+}
 
 //test merging
 
