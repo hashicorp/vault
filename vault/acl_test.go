@@ -224,68 +224,47 @@ func TestPolicyMerge(t *testing.T) {
 	}
 
 	type tcase struct {
-		op        logical.Operation
-		pathName  string
+		path      string
 		parameter string
 		allowed   bool
 		rootPrivs bool
 	}
 
+	toperations := []logical.Operation{
+		logical.UpdateOperation,
+		logical.CreateOperation,
+		logical.DeleteOperation,
+	}
+
 	tcases := []tcase{
-		{logical.UpdateOperation, "foo/bar", "baz", false, false},
-		{logical.UpdateOperation, "foo/bar", "zip", false, false},
-		{logical.CreateOperation, "foo/bar", "baz", false, false},
-		{logical.CreateOperation, "foo/bar", "zip", false, false},
-		{logical.DeleteOperation, "foo/bar", "baz", false, false},
-		{logical.DeleteOperation, "foo/bar", "zip", false, false},
-		{logical.UpdateOperation, "hello/universe", "bob", true, false},
-		{logical.UpdateOperation, "hello/universe", "tom", true, false},
-		{logical.CreateOperation, "hello/universe", "bob", true, false},
-		{logical.CreateOperation, "hello/universe", "tom", true, false},
-		{logical.DeleteOperation, "hello/universe", "bob", true, false},
-		{logical.DeleteOperation, "hello/universe", "tom", true, false},
-		{logical.UpdateOperation, "rainy/day", "bob", true, false},
-		{logical.UpdateOperation, "rainy/day", "tom", true, false},
-		{logical.CreateOperation, "rainy/day", "bob", true, false},
-		{logical.CreateOperation, "rainy/day", "tom", true, false},
-		{logical.DeleteOperation, "rainy/day", "bob", true, false},
-		{logical.DeleteOperation, "rainy/day", "tom", true, false},
-		{logical.UpdateOperation, "cool/bike", "frank", false, false},
-		{logical.UpdateOperation, "cool/bike", "two", false, false},
-		{logical.CreateOperation, "cool/bike", "frank", false, false},
-		{logical.CreateOperation, "cool/bike", "four", false, false},
-		{logical.DeleteOperation, "cool/bike", "frank", false, false},
-		{logical.DeleteOperation, "cool/bike", "six", false, false},
-		{logical.UpdateOperation, "clean/bed", "one", false, false},
-		{logical.UpdateOperation, "clean/bed", "two", false, false},
-		{logical.CreateOperation, "clean/bed", "three", false, false},
-		{logical.CreateOperation, "clean/bed", "four", false, false},
-		{logical.DeleteOperation, "clean/bed", "five", false, false},
-		{logical.DeleteOperation, "clean/bed", "six", false, false},
-		{logical.UpdateOperation, "coca/cola", "john", false, false},
-		{logical.UpdateOperation, "coca/cola", "two", false, false},
-		{logical.CreateOperation, "coca/cola", "john", false, false},
-		{logical.CreateOperation, "coca/cola", "four", false, false},
-		{logical.DeleteOperation, "coca/cola", "john", false, false},
-		{logical.DeleteOperation, "coca/cola", "six", false, false},
+		{"foo/bar", "baz", false, false},
+		{"foo/bar", "zip", false, false},
+		{"hello/universe", "bob", true, false},
+		{"hello/universe", "tom", true, false},
+		{"rainy/day", "bob", true, false},
+		{"rainy/day", "tom", true, false},
+		{"cool/bike", "four", false, false},
+		{"cool/bike", "frank", false, false},
+		{"clean/bed", "one", false, false},
+		{"clean/bed", "two", false, false},
+		{"coca/cola", "john", false, false},
+		{"coca/cola", "two", false, false},
 	}
 
 	for _, tc := range tcases {
-		request := new(logical.Request)
-		request.Operation = tc.op
-		request.Path = tc.pathName
-		paramMap := make(map[string]interface{})
-		paramMap[tc.parameter] = ""
-		request.Data = paramMap
-		allowed, rootPrivs := acl.AllowOperation(request)
-		if allowed != tc.allowed {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
-		}
-		if rootPrivs != tc.rootPrivs {
-			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
+		request.Data[tc.parameter] = ""
+		for _, op := range toperations {
+			request.Operation = op
+			allowed, rootPrivs := acl.AllowOperation(&request)
+			if allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+			}
+			if rootPrivs != tc.rootPrivs {
+				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+			}
 		}
 	}
-
 }
 
 //test merging
