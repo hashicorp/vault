@@ -86,13 +86,13 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				goto CHECK_DENIED
 			}
 
+			if pc.Permissions.AllowedParameters == nil {
+				pc.Permissions.AllowedParameters = make(map[string]struct{})
+			}
 			// Merge allowed parameters
-			for key, _ := range permissions.AllowedParameters {
+			for key, value := range permissions.AllowedParameters {
 				// Add new parameter
-				if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
-					pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key]
-					continue
-				}
+				pc.Permissions.AllowedParameters[key] = value
 			}
 
 		CHECK_DENIED:
@@ -111,14 +111,13 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				goto INSERT
 			}
 
+			if pc.Permissions.DeniedParameters == nil {
+				pc.Permissions.DeniedParameters = make(map[string]struct{})
+			}
 			// Merge denied parameters
-			for key, _ := range permissions.DeniedParameters {
+			for key, value := range permissions.DeniedParameters {
 				// Add new parameter
-				if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
-					pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
-					continue
-				}
-
+				pc.Permissions.DeniedParameters[key] = value
 			}
 
 		INSERT:
@@ -260,6 +259,10 @@ CHECK:
 			// Check if parameter has explictly denied
 			if _, ok := permissions.DeniedParameters[parameter]; ok {
 				return false, sudo
+			}
+			// Check if all parameters have been allowed.
+			if _, ok := permissions.AllowedParameters["*"]; ok {
+				return true, sudo
 			}
 			// Specfic parameters have been allowed
 			if len(permissions.AllowedParameters) > 0 {

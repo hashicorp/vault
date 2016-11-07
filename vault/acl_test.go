@@ -146,11 +146,11 @@ func TestACL_Layered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	
-  acl, err := NewACL([]*Policy{policy1, policy2})
+
+	acl, err := NewACL([]*Policy{policy1, policy2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
-  }
+	}
 	testLayeredACL(t, acl)
 }
 func testLayeredACL(t *testing.T, acl *ACL) {
@@ -213,21 +213,182 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	}
 }
 
-//commenting out for compilation
-/*func TestNewAclMerge(t *testing.T) {
-  policy, err := Parse(permissionsPolicy2)
-  if err != nil {
+func TestPolicyMerge(t *testing.T) {
+	policy, err := Parse(permissionsPolicy2)
+	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	acl, err := NewACL([]*Policy{policy})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	
-  
-  
-}*/
 
+	type tcase struct {
+		op        logical.Operation
+		pathName  string
+		parameter string
+		allowed   bool
+		rootPrivs bool
+	}
+
+	tcases := []tcase{
+		{logical.UpdateOperation, "foo/bar", "baz", false, false},
+		{logical.UpdateOperation, "foo/bar", "zip", false, false},
+		{logical.CreateOperation, "foo/bar", "baz", false, false},
+		{logical.CreateOperation, "foo/bar", "zip", false, false},
+		{logical.DeleteOperation, "foo/bar", "baz", false, false},
+		{logical.DeleteOperation, "foo/bar", "zip", false, false},
+		{logical.UpdateOperation, "hello/universe", "bob", true, false},
+		{logical.UpdateOperation, "hello/universe", "tom", true, false},
+		{logical.CreateOperation, "hello/universe", "bob", true, false},
+		{logical.CreateOperation, "hello/universe", "tom", true, false},
+		{logical.DeleteOperation, "hello/universe", "bob", true, false},
+		{logical.DeleteOperation, "hello/universe", "tom", true, false},
+		{logical.UpdateOperation, "rainy/day", "bob", true, false},
+		{logical.UpdateOperation, "rainy/day", "tom", true, false},
+		{logical.CreateOperation, "rainy/day", "bob", true, false},
+		{logical.CreateOperation, "rainy/day", "tom", true, false},
+		{logical.DeleteOperation, "rainy/day", "bob", true, false},
+		{logical.DeleteOperation, "rainy/day", "tom", true, false},
+		{logical.UpdateOperation, "cool/bike", "frank", false, false},
+		{logical.UpdateOperation, "cool/bike", "two", false, false},
+		{logical.CreateOperation, "cool/bike", "frank", false, false},
+		{logical.CreateOperation, "cool/bike", "four", false, false},
+		{logical.DeleteOperation, "cool/bike", "frank", false, false},
+		{logical.DeleteOperation, "cool/bike", "six", false, false},
+		{logical.UpdateOperation, "clean/bed", "one", false, false},
+		{logical.UpdateOperation, "clean/bed", "two", false, false},
+		{logical.CreateOperation, "clean/bed", "three", false, false},
+		{logical.CreateOperation, "clean/bed", "four", false, false},
+		{logical.DeleteOperation, "clean/bed", "five", false, false},
+		{logical.DeleteOperation, "clean/bed", "six", false, false},
+		{logical.UpdateOperation, "coca/cola", "john", false, false},
+		{logical.UpdateOperation, "coca/cola", "two", false, false},
+		{logical.CreateOperation, "coca/cola", "john", false, false},
+		{logical.CreateOperation, "coca/cola", "four", false, false},
+		{logical.DeleteOperation, "coca/cola", "john", false, false},
+		{logical.DeleteOperation, "coca/cola", "six", false, false},
+	}
+
+	for _, tc := range tcases {
+		request := new(logical.Request)
+		request.Operation = tc.op
+		request.Path = tc.pathName
+		paramMap := make(map[string]interface{})
+		paramMap[tc.parameter] = ""
+		request.Data = paramMap
+		allowed, rootPrivs := acl.AllowOperation(request)
+		if allowed != tc.allowed {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+		if rootPrivs != tc.rootPrivs {
+			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+	}
+
+}
+
+//test merging
+
+var permissionsPolicy2 = `
+name = "ops"
+path "foo/bar" {
+	policy = "write"
+	permissions = {
+		deniedparameters = {
+			"baz" = {}
+		}
+	}
+}
+path "foo/bar" {
+	policy = "write"
+	permissions = {
+		deniedparameters = {
+			"zip" = {}
+		}
+	}
+}
+path "hello/universe" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"bob" = {}
+		}
+	}
+}
+path "hello/universe" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"tom" = {}
+		}
+  }
+}
+path "rainy/day" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"bob" = {}
+		}
+	}
+}
+path "rainy/day" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"*" = {}
+		}
+  }
+}
+path "cool/bike" {
+	policy = "write"
+	permissions = {
+		deniedparameters = {
+			"frank" = {}
+		}
+	}
+}
+path "cool/bike" {
+	policy = "write"
+	permissions = {
+		deniedparameters = {
+			"*" = {}
+		}
+  }
+}
+path "clean/bed" {
+	policy = "write"
+	permissions = {
+		deniedparameters = {
+			"*" = {}
+		}
+	}
+}
+path "clean/bed" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"*" = {}
+		}
+  }
+}
+path "coca/cola" {
+	policy = "write"
+	permissions = {
+		deniedparameters = {
+			"john" = {}
+		}
+	}
+}
+path "coca/cola" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"john" = {}
+		}
+  }
+}
+`
 var tokenCreationPolicy = `
 name = "tokenCreation"
 path "auth/token/create*" {
@@ -284,187 +445,87 @@ path "foo/bar" {
 	capabilities = ["deny"]
 }
 `
+
 //allow operation testing
 var permissionsPolicy = `
 name = "dev"
 path "dev/*" {
 	policy = "write"
 	
-  permissionss = {
-  	allowed_parameters {
-  		"zip": {}
+  permissions = {
+  	allowedparameters = {
+  		"zip" = {}
   	}
   }
 }
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		denied_parameters {
-			"zap": {}
+		deniedparameters = {
+			"zap" = {}
 		}
   }
 }
 path "foo/baz" {
 	policy = "write"
 	permissions = {
-		allowed_parameters {
-			"hello": {}
+		allowedparameters = {
+			"hello" = {}
 		}
-		denied_parameters {
-			"zap": {}
+		deniedparameters = {
+			"zap" = {}
 		}
   }
 }
 path "broken/phone" {
-  policy = "write"
-  permissions = {
-    allowed_parameters {
-      "steve": {}
-    }
-    denied_parameters {
-      "steve": {}
-    }
-  }
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+		  "steve" = {}
+		}
+		deniedparameters = {
+		  "steve" = {}
+		}
+	}
 }
 path "hello/world" {
 	policy = "write"
 	permissions = {
-		allowed_parameters {
-			"*": {}
+		allowedparameters = {
+			"*" = {}
 		}
-		denied_parameters {
-			"*": {}
+		deniedparameters = {
+			"*" = {}
 		}
   }
 }
 path "tree/fort" {
 	policy = "write"
 	permissions = {
-		allowed_parameters {
-			"*": {}
+		allowedparameters = {
+			"*" = {}
 		}
-		denied_parameters {
-			"beer": {}
+		deniedparameters = {
+			"beer" = {}
 		}
   }
 }
 path "fruit/apple" {
 	policy = "write"
 	permissions = {
-		allowed_parameters {
-			"pear": {}
+		allowedparameters = {
+			"pear" = {}
 		}
-		denied_parameters {
-			"*": {}
+		deniedparameters = {
+			"*" = {}
 		}
   }
 }
 path "cold/weather" {
 	policy = "write"
 	permissions = {
-		allowed_parameters{}
-		denied_parameters{}
+		allowedparameters = {}
+		deniedparameters = {}
 	}
-}
-`
-//test merging
-
-var permissionsPolicy2 = `
-name = "ops"
-path "foo/bar" {
-	policy = "write"
-	permissions = {
-		denied_parameters {
-			"baz": {}
-		}
-	}
-}
-path "foo/bar" {
-	policy = "write"
-	permissions = {
-		denied_parameters {
-			"zip": {}
-		}
-  }
-}
-path "hello/universe" {
-	policy = "write"
-	permissions = {
-		allowed_parameters {
-			"bob": {}
-		}
-	}
-}
-path "hello/universe" {
-	policy = "write"
-	permissions = {
-		allowed_parameters {
-			"tom": {}
-		}
-  }
-}
-path "rainy/day" {
-	policy = "write"
-	permissions = {
-		allowed_parameters {
-			"bob": {}
-		}
-	}
-}
-path "rainy/day" {
-	policy = "write"
-	permissions = {
-		allowed_parameters {
-			"*": {}
-		}
-  }
-}
-path "cool/bike" {
-	policy = "write"
-	permissions = {
-		denied_parameters {
-			"frank": {}
-		}
-	}
-}
-path "cool/bike" {
-	policy = "write"
-	permissions = {
-		denied_parameters {
-			"*": {}
-		}
-  }
-}
-path "clean/bed" {
-	policy = "write"
-	permissions = {
-		denied_parameters {
-			"*": {}
-		}
-	}
-}
-path "clean/bed" {
-	policy = "write"
-	permissions = {
-		allowed_parameters {
-			"*": {}
-		}
-  }
-}
-path "coca/cola" {
-	policy = "write"
-	permissions = {
-		denied_parameters {
-			"john": {}
-		}
-	}
-}
-path "coca/cola" {
-	policy = "write"
-	permissions = {
-		allowed_parameters {
-			"john": {}
-		}
-  }
 }
 `
