@@ -619,7 +619,7 @@ The current implementation is limited to a maximum of 4 MBytes per blob/file.
 
 #### Backend Reference: Swift (Community-Supported)
 
-For Swift, the following options are supported:
+For Swift, the following options are supported for v1.0 auth endpoints:
 
   * `container` (required) - The name of the Swift container to use. It must be provided, but it can also be sourced from the `OS_CONTAINER` environment variable.
 
