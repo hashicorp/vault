@@ -1,61 +1,33 @@
-/*
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+package yaml
 
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package candiedyaml
-
-/*
- * Set the writer error and return 0.
- */
-
+// Set the writer error and return false.
 func yaml_emitter_set_writer_error(emitter *yaml_emitter_t, problem string) bool {
 	emitter.error = yaml_WRITER_ERROR
 	emitter.problem = problem
-
 	return false
 }
 
-/*
- * Flush the output buffer.
- */
-
+// Flush the output buffer.
 func yaml_emitter_flush(emitter *yaml_emitter_t) bool {
 	if emitter.write_handler == nil {
-		panic("Write handler must be set") /* Write handler must be set. */
-	}
-	if emitter.encoding == yaml_ANY_ENCODING {
-		panic("Encoding must be set") /* Output encoding must be set. */
+		panic("write handler not set")
 	}
 
-	/* Check if the buffer is empty. */
-
+	// Check if the buffer is empty.
 	if emitter.buffer_pos == 0 {
 		return true
 	}
 
-	/* If the output encoding is UTF-8, we don't need to recode the buffer. */
-
+	// If the output encoding is UTF-8, we don't need to recode the buffer.
 	if emitter.encoding == yaml_UTF8_ENCODING {
-		if err := emitter.write_handler(emitter,
-			emitter.buffer[:emitter.buffer_pos]); err != nil {
+		if err := emitter.write_handler(emitter, emitter.buffer[:emitter.buffer_pos]); err != nil {
 			return yaml_emitter_set_writer_error(emitter, "write error: "+err.Error())
 		}
 		emitter.buffer_pos = 0
 		return true
 	}
 
-	/* Recode the buffer into the raw buffer. */
-
+	// Recode the buffer into the raw buffer.
 	var low, high int
 	if emitter.encoding == yaml_UTF16LE_ENCODING {
 		low, high = 0, 1
@@ -65,14 +37,10 @@ func yaml_emitter_flush(emitter *yaml_emitter_t) bool {
 
 	pos := 0
 	for pos < emitter.buffer_pos {
+		// See the "reader.c" code for more details on UTF-8 encoding.  Note
+		// that we assume that the buffer contains a valid UTF-8 sequence.
 
-		/*
-		 * See the "reader.c" code for more details on UTF-8 encoding.  Note
-		 * that we assume that the buffer contains a valid UTF-8 sequence.
-		 */
-
-		/* Read the next UTF-8 character. */
-
+		// Read the next UTF-8 character.
 		octet := emitter.buffer[pos]
 
 		var w int
@@ -87,24 +55,20 @@ func yaml_emitter_flush(emitter *yaml_emitter_t) bool {
 		case octet&0xF8 == 0xF0:
 			w, value = 4, rune(octet&0x07)
 		}
-
 		for k := 1; k < w; k++ {
 			octet = emitter.buffer[pos+k]
 			value = (value << 6) + (rune(octet) & 0x3F)
 		}
-
 		pos += w
 
-		/* Write the character. */
-
+		// Write the character.
 		if value < 0x10000 {
 			var b [2]byte
 			b[high] = byte(value >> 8)
 			b[low] = byte(value & 0xFF)
 			emitter.raw_buffer = append(emitter.raw_buffer, b[0], b[1])
 		} else {
-			/* Write the character using a surrogate pair (check "reader.c"). */
-
+			// Write the character using a surrogate pair (check "reader.c").
 			var b [4]byte
 			value -= 0x10000
 			b[high] = byte(0xD8 + (value >> 18))
@@ -115,13 +79,10 @@ func yaml_emitter_flush(emitter *yaml_emitter_t) bool {
 		}
 	}
 
-	/* Write the raw buffer. */
-
 	// Write the raw buffer.
 	if err := emitter.write_handler(emitter, emitter.raw_buffer); err != nil {
 		return yaml_emitter_set_writer_error(emitter, "write error: "+err.Error())
 	}
-
 	emitter.buffer_pos = 0
 	emitter.raw_buffer = emitter.raw_buffer[:0]
 	return true

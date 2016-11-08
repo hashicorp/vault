@@ -16,7 +16,7 @@ import (
 
 type PrepareRequestFunc func(*vault.Core, *logical.Request) error
 
-func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Request, int, error) {
+func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, int, error) {
 	// Determine the path...
 	if !strings.HasPrefix(r.URL.Path, "/v1/") {
 		return nil, http.StatusNotFound, nil
@@ -72,13 +72,14 @@ func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Reque
 		return nil, http.StatusBadRequest, errwrap.Wrapf("failed to generate identifier for the request: {{err}}", err)
 	}
 
-	req := requestAuth(r, &logical.Request{
+	req := requestAuth(core, r, &logical.Request{
 		ID:         request_id,
 		Operation:  op,
 		Path:       path,
 		Data:       data,
 		Connection: getConnection(r),
 	})
+
 	req, err = requestWrapTTL(r, req)
 	if err != nil {
 		return nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
@@ -89,7 +90,7 @@ func buildLogicalRequest(w http.ResponseWriter, r *http.Request) (*logical.Reque
 
 func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, statusCode, err := buildLogicalRequest(w, r)
+		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return

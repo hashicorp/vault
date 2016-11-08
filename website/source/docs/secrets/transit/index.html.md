@@ -861,7 +861,12 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">signature</span>
         <span class="param-flags">required</span>
-        The signature output from the `/transit/sign` function.
+        The signature output from the `/transit/sign` function. Either this must be supplied or `hmac` must be supplied.
+      </li>
+      <li>
+        <span class="param">hmac</span>
+        <span class="param-flags">required</span>
+        The signature output from the `/transit/hmac` function. Either this must be supplied or `signature` must be supplied.
       </li>
       <li>
         <span class="param">algorithm</span>

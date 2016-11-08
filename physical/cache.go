@@ -9,7 +9,7 @@ import (
 
 const (
 	// DefaultCacheSize is used if no cache size is specified for NewCache
-	DefaultCacheSize = 1024 * 1024
+	DefaultCacheSize = 32 * 1024
 )
 
 // Cache is used to wrap an underlying physical backend
@@ -45,7 +45,9 @@ func (c *Cache) Purge() {
 
 func (c *Cache) Put(entry *Entry) error {
 	err := c.backend.Put(entry)
-	c.lru.Add(entry.Key, entry)
+	if err == nil {
+		c.lru.Add(entry.Key, entry)
+	}
 	return err
 }
 
@@ -78,7 +80,9 @@ func (c *Cache) Get(key string) (*Entry, error) {
 
 func (c *Cache) Delete(key string) error {
 	err := c.backend.Delete(key)
-	c.lru.Remove(key)
+	if err == nil {
+		c.lru.Remove(key)
+	}
 	return err
 }
 

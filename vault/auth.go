@@ -350,6 +350,17 @@ func (c *Core) teardownCredentials() error {
 	c.authLock.Lock()
 	defer c.authLock.Unlock()
 
+	if c.auth != nil {
+		authTable := c.auth.shallowClone()
+		for _, e := range authTable.Entries {
+			prefix := e.Path
+			b, ok := c.router.root.Get(prefix)
+			if ok {
+				b.(*routeEntry).backend.Cleanup()
+			}
+		}
+	}
+
 	c.auth = nil
 	c.tokenStore = nil
 	return nil

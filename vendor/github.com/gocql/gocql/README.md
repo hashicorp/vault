@@ -2,36 +2,27 @@ gocql
 =====
 
 [![Join the chat at https://gitter.im/gocql/gocql](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/gocql/gocql?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/gocql/gocql.png?branch=master)](https://travis-ci.org/gocql/gocql)
-[![GoDoc](http://godoc.org/github.com/gocql/gocql?status.png)](http://godoc.org/github.com/gocql/gocql)
+[![Build Status](https://travis-ci.org/gocql/gocql.svg?branch=master)](https://travis-ci.org/gocql/gocql)
+[![GoDoc](https://godoc.org/github.com/gocql/gocql?status.svg)](https://godoc.org/github.com/gocql/gocql)
 
 Package gocql implements a fast and robust Cassandra client for the
 Go programming language.
 
-Project Website: http://gocql.github.io/<br>
-API documentation: http://godoc.org/github.com/gocql/gocql<br>
+Project Website: https://gocql.github.io/<br>
+API documentation: https://godoc.org/github.com/gocql/gocql<br>
 Discussions: https://groups.google.com/forum/#!forum/gocql
-
-Production Stability
---------------------
-The method in which the driver maintains and discovers hosts in the Cassandra cluster changed when adding support for event driven discovery using server-side events. This has meant many things in the driver internally have been touched and changed, as such if you would like to go back to the historical node discovery the tag `pre-node-events` is a tree which uses the old polling based discovery.
-
-If you run into bugs related to node discovery using events please open a ticket.
 
 Supported Versions
 ------------------
 
 The following matrix shows the versions of Go and Cassandra that are tested with the integration test suite as part of the CI build:
 
-Go/Cassandra | 2.0.x | 2.1.x | 2.2.x
+Go/Cassandra | 2.1.x | 2.2.x | 3.0.x
 -------------| -------| ------| ---------
 1.6  | yes | yes | yes
 1.7  | yes | yes | yes
 
 Gocql has been tested in production against many different versions of Cassandra. Due to limits in our CI setup we only test against the latest 3 major releases, which coincide with the official support from the Apache project.
-
-NOTE: as of Cassandra 3.0 it requires Java 8, currently (06/02/2016) we can not install Java 8 in Travis to run the integration tests. To run on Cassandra >=3.0 enable protocol 4 and it should work fine, if not please report bugs.
-
 
 Sunsetting Model
 ----------------
@@ -72,7 +63,7 @@ Features
   * Support for tuple types
   * Support for client side timestamps by default
   * Support for UDTs via a custom marshaller or struct tags
-* Support for Cassandra 2.2+ [binary protocol version 4](https://github.com/apache/cassandra/blob/trunk/doc/native_protocol_v4.spec)
+* Support for Cassandra 3.0+ [binary protocol version 4](https://github.com/apache/cassandra/blob/trunk/doc/native_protocol_v4.spec)
 * An API to access the schema metadata of a given keyspace
 
 Performance

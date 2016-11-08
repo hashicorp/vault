@@ -17,6 +17,50 @@ import (
 	"github.com/circonus-labs/circonus-gometrics/api"
 )
 
+// UpdateCheck determines if the check needs to be updated (new metrics, tags, etc.)
+func (cm *CheckManager) UpdateCheck(newMetrics map[string]*api.CheckBundleMetric) {
+	// only if check manager is enabled
+	if !cm.enabled {
+		return
+	}
+
+	// only if checkBundle has been populated
+	if cm.checkBundle == nil {
+		return
+	}
+
+	cm.addNewMetrics(newMetrics)
+
+	if len(cm.metricTags) > 0 {
+		for metricName, metricTags := range cm.metricTags {
+			// note: if a tag has been added (queued) for a metric which never gets sent
+			//       the tags will be discarded. (setting tags does not *create* metrics.)
+			cm.AddMetricTags(metricName, metricTags, false)
+			cm.mtmu.Lock()
+			delete(cm.metricTags, metricName)
+			cm.mtmu.Unlock()
+		}
+	}
+
+	if cm.forceCheckUpdate {
+
+		newCheckBundle, err := cm.apih.UpdateCheckBundle(cm.checkBundle)
+		if err != nil {
+			cm.Log.Printf("[ERROR] updating check bundle %v", err)
+			return
+		}
+
+		cm.forceCheckUpdate = false
+		cm.cbmu.Lock()
+		cm.checkBundle = newCheckBundle
+		cm.cbmu.Unlock()
+		cm.inventoryMetrics()
+
+		cm.cbmu.Unlock()
+	}
+
+}
+
 // Initialize CirconusMetrics instance. Attempt to find a check otherwise create one.
 // use cases:
 //
@@ -86,7 +130,7 @@ func (cm *CheckManager) initializeTrapURL() error {
 	} else {
 		searchCriteria := fmt.Sprintf(
 			"(active:1)(host:\"%s\")(type:\"%s\")(tags:%s)",
-			cm.checkInstanceID, cm.checkType, cm.checkSearchTag)
+			cm.checkInstanceID, cm.checkType, strings.Join(cm.checkSearchTag, ","))
 		checkBundle, err = cm.checkBundleSearch(searchCriteria)
 		if err != nil {
 			return err
@@ -204,7 +248,7 @@ func (cm *CheckManager) createNewCheck() (*api.CheckBundle, *api.Broker, error) 
 		Notes:       "",
 		Period:      60,
 		Status:      statusActive,
-		Tags:        append([]string{string(cm.checkSearchTag)}, cm.checkTags...),
+		Tags:        append(cm.checkSearchTag, cm.checkTags...),
 		Target:      string(cm.checkInstanceID),
 		Timeout:     10,
 		Type:        string(cm.checkType),

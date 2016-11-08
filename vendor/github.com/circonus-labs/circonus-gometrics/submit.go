@@ -21,9 +21,9 @@ import (
 )
 
 func (m *CirconusMetrics) submit(output map[string]interface{}, newMetrics map[string]*api.CheckBundleMetric) {
-	if len(newMetrics) > 0 {
-		m.check.AddNewMetrics(newMetrics)
-	}
+
+	// update check if there are any new metrics or, if metric tags have been added since last submit
+	m.check.UpdateCheck(newMetrics)
 
 	str, err := json.Marshal(output)
 	if err != nil {
@@ -107,10 +107,16 @@ func (m *CirconusMetrics) trapCall(payload []byte) (int, error) {
 			DisableCompression:  true,
 		}
 	}
-	client.RetryWaitMin = 10 * time.Millisecond
-	client.RetryWaitMax = 50 * time.Millisecond
+	client.RetryWaitMin = 1 * time.Second
+	client.RetryWaitMax = 5 * time.Second
 	client.RetryMax = 3
-	client.Logger = m.Log
+	// retryablehttp only groks log or no log
+	// but, outputs everything as [DEBUG] messages
+	if m.Debug {
+		client.Logger = m.Log
+	} else {
+		client.Logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	}
 	client.CheckRetry = retryPolicy
 
 	attempts := -1

@@ -640,7 +640,7 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 	}
 
 	// If previousRoleID is still intact, don't create another one
-	if previousRoleID != "" {
+	if previousRoleID != "" && previousRoleID == role.RoleID {
 		return nil
 	}
 

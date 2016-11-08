@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -381,7 +382,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uin
 				secret, err := doResp(resp)
 				if err != nil {
 					// This could well happen since the min version is jumping around
-					if strings.Contains(err.Error(), transit.ErrTooOld) {
+					if strings.Contains(err.Error(), keysutil.ErrTooOld) {
 						mySuccessfulOps++
 						continue
 					}

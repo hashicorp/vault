@@ -1,5 +1,7 @@
 package gocql
 
+import "fmt"
+
 // HostFilter interface is used when a host is discovered via server sent events.
 type HostFilter interface {
 	// Called when a new host is discovered, returning true will cause the host
@@ -38,12 +40,18 @@ func DataCentreHostFilter(dataCentre string) HostFilter {
 // WhiteListHostFilter filters incoming hosts by checking that their address is
 // in the initial hosts whitelist.
 func WhiteListHostFilter(hosts ...string) HostFilter {
-	m := make(map[string]bool, len(hosts))
-	for _, host := range hosts {
-		m[host] = true
+	hostInfos, err := addrsToHosts(hosts, 9042)
+	if err != nil {
+		// dont want to panic here, but rather not break the API
+		panic(fmt.Errorf("unable to lookup host info from address: %v", err))
+	}
+
+	m := make(map[string]bool, len(hostInfos))
+	for _, host := range hostInfos {
+		m[string(host.peer)] = true
 	}
 
 	return HostFilterFunc(func(host *HostInfo) bool {
-		return m[host.Peer()]
+		return m[string(host.Peer())]
 	})
 }

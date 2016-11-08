@@ -247,6 +247,16 @@ subpath for interactive help output.
         values will be substituted.
       </li>
     </ul>
+    <ul>
+      <li>
+        <span class="param">revocation_sql</span>
+        <span class="param-flags">optional</span>
+        SQL statements to be executed to revoke a user. Must be a semicolon-separated
+        string, a base64-encoded semicolon-separated string, a serialized JSON string
+        array, or a base64-encoded serialized JSON string array. The '{{name}}' value
+        will be substituted.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>

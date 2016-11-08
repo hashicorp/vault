@@ -130,9 +130,10 @@ func (p *policyConnPool) SetHosts(hosts []*HostInfo) {
 			// don't create a connection pool for a down host
 			continue
 		}
-		if _, exists := p.hostConnPools[host.Peer()]; exists {
+		ip := host.Peer().String()
+		if _, exists := p.hostConnPools[ip]; exists {
 			// still have this host, so don't remove it
-			delete(toRemove, host.Peer())
+			delete(toRemove, ip)
 			continue
 		}
 
@@ -155,7 +156,7 @@ func (p *policyConnPool) SetHosts(hosts []*HostInfo) {
 		createCount--
 		if pool.Size() > 0 {
 			// add pool onyl if there a connections available
-			p.hostConnPools[pool.host.Peer()] = pool
+			p.hostConnPools[string(pool.host.Peer())] = pool
 		}
 	}
 
@@ -177,9 +178,10 @@ func (p *policyConnPool) Size() int {
 	return count
 }
 
-func (p *policyConnPool) getPool(addr string) (pool *hostConnPool, ok bool) {
+func (p *policyConnPool) getPool(host *HostInfo) (pool *hostConnPool, ok bool) {
+	ip := host.Peer().String()
 	p.mu.RLock()
-	pool, ok = p.hostConnPools[addr]
+	pool, ok = p.hostConnPools[ip]
 	p.mu.RUnlock()
 	return
 }
@@ -196,8 +198,9 @@ func (p *policyConnPool) Close() {
 }
 
 func (p *policyConnPool) addHost(host *HostInfo) {
+	ip := host.Peer().String()
 	p.mu.Lock()
-	pool, ok := p.hostConnPools[host.Peer()]
+	pool, ok := p.hostConnPools[ip]
 	if !ok {
 		pool = newHostConnPool(
 			p.session,
@@ -207,22 +210,23 @@ func (p *policyConnPool) addHost(host *HostInfo) {
 			p.keyspace,
 		)
 
-		p.hostConnPools[host.Peer()] = pool
+		p.hostConnPools[ip] = pool
 	}
 	p.mu.Unlock()
 
 	pool.fill()
 }
 
-func (p *policyConnPool) removeHost(addr string) {
+func (p *policyConnPool) removeHost(ip net.IP) {
+	k := ip.String()
 	p.mu.Lock()
-	pool, ok := p.hostConnPools[addr]
+	pool, ok := p.hostConnPools[k]
 	if !ok {
 		p.mu.Unlock()
 		return
 	}
 
-	delete(p.hostConnPools, addr)
+	delete(p.hostConnPools, k)
 	p.mu.Unlock()
 
 	go pool.Close()
@@ -234,10 +238,10 @@ func (p *policyConnPool) hostUp(host *HostInfo) {
 	p.addHost(host)
 }
 
-func (p *policyConnPool) hostDown(addr string) {
+func (p *policyConnPool) hostDown(ip net.IP) {
 	// TODO(zariel): mark host as down so we can try to connect to it later, for
 	// now just treat it has removed.
-	p.removeHost(addr)
+	p.removeHost(ip)
 }
 
 // hostConnPool is a connection pool for a single host.
@@ -272,7 +276,7 @@ func newHostConnPool(session *Session, host *HostInfo, port, size int,
 		session:  session,
 		host:     host,
 		port:     port,
-		addr:     JoinHostPort(host.Peer(), port),
+		addr:     (&net.TCPAddr{IP: host.Peer(), Port: host.Port()}).String(),
 		size:     size,
 		keyspace: keyspace,
 		conns:    make([]*Conn, 0, size),
@@ -396,7 +400,7 @@ func (pool *hostConnPool) fill() {
 
 			// this is calle with the connetion pool mutex held, this call will
 			// then recursivly try to lock it again. FIXME
-			go pool.session.handleNodeDown(net.ParseIP(pool.host.Peer()), pool.port)
+			go pool.session.handleNodeDown(pool.host.Peer(), pool.port)
 			return
 		}
 
@@ -477,7 +481,7 @@ func (pool *hostConnPool) connect() (err error) {
 	// try to connect
 	var conn *Conn
 	for i := 0; i < maxAttempts; i++ {
-		conn, err = pool.session.connect(pool.addr, pool, pool.host)
+		conn, err = pool.session.connect(pool.host, pool)
 		if err == nil {
 			break
 		}

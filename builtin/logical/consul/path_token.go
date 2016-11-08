@@ -55,8 +55,9 @@ func (b *backend) pathTokenRead(
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	// Generate a random name for the token
-	tokenName := fmt.Sprintf("Vault %s %d", req.DisplayName, time.Now().Unix())
+	// Generate a name for the token
+	tokenName := fmt.Sprintf("Vault %s %s %d", name, req.DisplayName, time.Now().UnixNano())
+
 	// Create it
 	token, _, err := c.ACL().Create(&api.ACLEntry{
 		Name:  tokenName,

@@ -100,7 +100,7 @@ type HostInfo struct {
 	// TODO(zariel): reduce locking maybe, not all values will change, but to ensure
 	// that we are thread safe use a mutex to access all fields.
 	mu         sync.RWMutex
-	peer       string
+	peer       net.IP
 	port       int
 	dataCenter string
 	rack       string
@@ -116,16 +116,16 @@ func (h *HostInfo) Equal(host *HostInfo) bool {
 	host.mu.RLock()
 	defer host.mu.RUnlock()
 
-	return h.peer == host.peer && h.hostId == host.hostId
+	return h.peer.Equal(host.peer)
 }
 
-func (h *HostInfo) Peer() string {
+func (h *HostInfo) Peer() net.IP {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.peer
 }
 
-func (h *HostInfo) setPeer(peer string) *HostInfo {
+func (h *HostInfo) setPeer(peer net.IP) *HostInfo {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.peer = peer
@@ -314,7 +314,11 @@ func (r *ringDescriber) GetHosts() (hosts []*HostInfo, partitioner string, err e
 			return nil, "", err
 		}
 	} else {
-		iter := r.session.control.query(legacyLocalQuery)
+		iter := r.session.control.withConn(func(c *Conn) *Iter {
+			localHost = c.host
+			return c.query(legacyLocalQuery)
+		})
+
 		if iter == nil {
 			return r.prevHosts, r.prevPartitioner, nil
 		}
@@ -324,15 +328,6 @@ func (r *ringDescriber) GetHosts() (hosts []*HostInfo, partitioner string, err e
 		if err = iter.Close(); err != nil {
 			return nil, "", err
 		}
-
-		addr, _, err := net.SplitHostPort(r.session.control.addr())
-		if err != nil {
-			// this should not happen, ever, as this is the address that was dialed by conn, here
-			// a panic makes sense, please report a bug if it occurs.
-			panic(err)
-		}
-
-		localHost.peer = addr
 	}
 
 	localHost.port = r.session.cfg.Port

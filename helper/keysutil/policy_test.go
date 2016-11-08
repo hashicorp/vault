@@ -1,4 +1,4 @@
-package transit
+package keysutil
 
 import (
 	"reflect"
@@ -8,24 +8,24 @@ import (
 )
 
 var (
-	keysArchive []keyEntry
+	keysArchive []KeyEntry
 )
 
 func resetKeysArchive() {
-	keysArchive = []keyEntry{keyEntry{}}
+	keysArchive = []KeyEntry{KeyEntry{}}
 }
 
 func Test_KeyUpgrade(t *testing.T) {
-	testKeyUpgradeCommon(t, newLockManager(false))
-	testKeyUpgradeCommon(t, newLockManager(true))
+	testKeyUpgradeCommon(t, NewLockManager(false))
+	testKeyUpgradeCommon(t, NewLockManager(true))
 }
 
-func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
+func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	storage := &logical.InmemStorage{}
-	p, lock, upserted, err := lm.GetPolicyUpsert(policyRequest{
-		storage: storage,
-		keyType: keyType_AES256_GCM96,
-		name:    "test",
+	p, lock, upserted, err := lm.GetPolicyUpsert(PolicyRequest{
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
 	})
 	if lock != nil {
 		defer lock.RUnlock()
@@ -45,7 +45,7 @@ func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
 
 	p.Key = p.Keys[1].AESKey
 	p.Keys = nil
-	p.migrateKeyToKeysMap()
+	p.MigrateKeyToKeysMap()
 	if p.Key != nil {
 		t.Fatal("policy.Key is not nil")
 	}
@@ -58,11 +58,11 @@ func testKeyUpgradeCommon(t *testing.T, lm *lockManager) {
 }
 
 func Test_ArchivingUpgrade(t *testing.T) {
-	testArchivingUpgradeCommon(t, newLockManager(false))
-	testArchivingUpgradeCommon(t, newLockManager(true))
+	testArchivingUpgradeCommon(t, NewLockManager(false))
+	testArchivingUpgradeCommon(t, NewLockManager(true))
 }
 
-func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
+func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	resetKeysArchive()
 
 	// First, we generate a policy and rotate it a number of times. Each time
@@ -71,10 +71,10 @@ func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(policyRequest{
-		storage: storage,
-		keyType: keyType_AES256_GCM96,
-		name:    "test",
+	p, lock, _, err := lm.GetPolicyUpsert(PolicyRequest{
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +89,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
 	checkKeys(t, p, storage, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
-		err = p.rotate(storage)
+		err = p.Rotate(storage)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -191,11 +191,11 @@ func testArchivingUpgradeCommon(t *testing.T, lm *lockManager) {
 }
 
 func Test_Archiving(t *testing.T) {
-	testArchivingCommon(t, newLockManager(false))
-	testArchivingCommon(t, newLockManager(true))
+	testArchivingCommon(t, NewLockManager(false))
+	testArchivingCommon(t, NewLockManager(true))
 }
 
-func testArchivingCommon(t *testing.T, lm *lockManager) {
+func testArchivingCommon(t *testing.T, lm *LockManager) {
 	resetKeysArchive()
 
 	// First, we generate a policy and rotate it a number of times. Each time // we'll ensure that we have the expected number of keys in the archive and
@@ -203,10 +203,10 @@ func testArchivingCommon(t *testing.T, lm *lockManager) {
 	// zero and latest, respectively
 
 	storage := &logical.InmemStorage{}
-	p, lock, _, err := lm.GetPolicyUpsert(policyRequest{
-		storage: storage,
-		keyType: keyType_AES256_GCM96,
-		name:    "test",
+	p, lock, _, err := lm.GetPolicyUpsert(PolicyRequest{
+		Storage: storage,
+		KeyType: KeyType_AES256_GCM96,
+		Name:    "test",
 	})
 	if lock != nil {
 		defer lock.RUnlock()
@@ -223,7 +223,7 @@ func testArchivingCommon(t *testing.T, lm *lockManager) {
 	checkKeys(t, p, storage, "initial", 1, 1, 1)
 
 	for i := 2; i <= 10; i++ {
-		err = p.rotate(storage)
+		err = p.Rotate(storage)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -271,7 +271,7 @@ func testArchivingCommon(t *testing.T, lm *lockManager) {
 }
 
 func checkKeys(t *testing.T,
-	p *policy,
+	p *Policy,
 	storage logical.Storage,
 	action string,
 	archiveVer, latestVer, keysSize int) {
@@ -282,7 +282,7 @@ func checkKeys(t *testing.T,
 			"but keys archive is of size %d", latestVer, latestVer+1, len(keysArchive))
 	}
 
-	archive, err := p.loadArchive(storage)
+	archive, err := p.LoadArchive(storage)
 	if err != nil {
 		t.Fatal(err)
 	}

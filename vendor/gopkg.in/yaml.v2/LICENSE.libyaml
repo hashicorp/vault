@@ -1,3 +1,15 @@
+The following files were ported to Go from C files of libyaml, and thus
+are still covered by their original copyright and license:
+
+    apic.go
+    emitterc.go
+    parserc.go
+    readerc.go
+    scannerc.go
+    writerc.go
+    yamlh.go
+    yamlprivateh.go
+
 Copyright (c) 2006 Kirill Simonov
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of

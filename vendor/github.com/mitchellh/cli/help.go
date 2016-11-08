@@ -26,7 +26,7 @@ func BasicHelpFunc(app string) HelpFunc {
 		// key length so they can be aligned properly.
 		keys := make([]string, 0, len(commands))
 		maxKeyLen := 0
-		for key, _ := range commands {
+		for key := range commands {
 			if len(key) > maxKeyLen {
 				maxKeyLen = len(key)
 			}

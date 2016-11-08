@@ -177,11 +177,11 @@ func TestTransit_SignVerify(t *testing.T) {
 	signRequest(req, true, "")
 
 	// Rotate and set min decryption version
-	err = p.rotate(storage)
+	err = p.Rotate(storage)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = p.rotate(storage)
+	err = p.Rotate(storage)
 	if err != nil {
 		t.Fatal(err)
 	}

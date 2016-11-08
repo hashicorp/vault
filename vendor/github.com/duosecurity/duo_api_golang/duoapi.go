@@ -70,6 +70,7 @@ type DuoApi struct {
 type apiOptions struct {
 	timeout  time.Duration
 	insecure bool
+	proxy    func(*http.Request) (*url.URL, error)
 }
 
 // Optional parameter for NewDuoApi, used to configure timeouts on API calls.
@@ -87,6 +88,14 @@ func SetInsecure() func(*apiOptions) {
 	}
 }
 
+// Optional parameter for NewDuoApi, used to configure an HTTP Connect proxy
+// server for all outbound communications.
+func SetProxy(proxy func(*http.Request) (*url.URL, error)) func(*apiOptions) {
+	return func(opts *apiOptions) {
+		opts.proxy = proxy
+	}
+}
+
 // Build an return a DuoApi struct.
 // ikey is your Duo integration key
 // skey is your Duo integration secret key
@@ -94,7 +103,7 @@ func SetInsecure() func(*apiOptions) {
 // userAgent allows you to specify the user agent string used when making
 //           the web request to Duo.
 // options are optional parameters.  Use SetTimeout() to specify a timeout value
-//         for Rest API calls.
+//         for Rest API calls.  Use SetProxy() to specify proxy settings for Duo API calls.
 //
 // Example: duoapi.NewDuoApi(ikey,skey,host,userAgent,duoapi.SetTimeout(10*time.Second))
 func NewDuoApi(ikey string,
@@ -102,7 +111,7 @@ func NewDuoApi(ikey string,
 	host string,
 	userAgent string,
 	options ...func(*apiOptions)) *DuoApi {
-	opts := apiOptions{}
+	opts := apiOptions{proxy: http.ProxyFromEnvironment}
 	for _, o := range options {
 		o(&opts)
 	}
@@ -112,7 +121,7 @@ func NewDuoApi(ikey string,
 	certPool.AppendCertsFromPEM([]byte(duoPinnedCert))
 
 	tr := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
+		Proxy: opts.proxy,
 		TLSClientConfig: &tls.Config{
 			RootCAs:            certPool,
 			InsecureSkipVerify: opts.insecure,

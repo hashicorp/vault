@@ -100,6 +100,12 @@ Default: cn`,
 				Default:     "tls12",
 				Description: "Minimum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
+
+			"tls_max_version": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "tls12",
+				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -225,6 +231,19 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 		return nil, fmt.Errorf("invalid 'tls_min_version'")
 	}
 
+	cfg.TLSMaxVersion = d.Get("tls_max_version").(string)
+	if cfg.TLSMaxVersion == "" {
+		return nil, fmt.Errorf("failed to get 'tls_max_version' value")
+	}
+
+	_, ok = tlsutil.TLSLookup[cfg.TLSMaxVersion]
+	if !ok {
+		return nil, fmt.Errorf("invalid 'tls_max_version'")
+	}
+	if cfg.TLSMaxVersion < cfg.TLSMinVersion {
+		return nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
+	}
+
 	startTLS := d.Get("starttls").(bool)
 	if startTLS {
 		cfg.StartTLS = startTLS
@@ -280,6 +299,7 @@ type ConfigEntry struct {
 	BindPassword  string `json:"bindpass" structs:"bindpass" mapstructure:"bindpass"`
 	DiscoverDN    bool   `json:"discoverdn" structs:"discoverdn" mapstructure:"discoverdn"`
 	TLSMinVersion string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
+	TLSMaxVersion string `json:"tls_max_version" structs:"tls_max_version" mapstructure:"tls_max_version"`
 }
 
 func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
@@ -293,6 +313,14 @@ func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
 			return nil, fmt.Errorf("invalid 'tls_min_version' in config")
 		}
 		tlsConfig.MinVersion = tlsMinVersion
+	}
+
+	if c.TLSMaxVersion != "" {
+		tlsMaxVersion, ok := tlsutil.TLSLookup[c.TLSMaxVersion]
+		if !ok {
+			return nil, fmt.Errorf("invalid 'tls_max_version' in config")
+		}
+		tlsConfig.MaxVersion = tlsMaxVersion
 	}
 
 	if c.InsecureTLS {
