@@ -14,6 +14,7 @@ BUG FIXES:
    instance-profile ARN [GH-2035]
  * api/unwrap, command/unwrap: Fix compatibility of `unwrap` command with Vault
    0.6.1 and older [GH-2014]
+ * api/unwrap, command/unwrap: Fix error when no client token exists [GH-2077]
  * command/ssh: Use temporary file for identity and ensure its deletion before
    the command returns [GH-2016]
 
