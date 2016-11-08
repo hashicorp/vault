@@ -115,7 +115,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+1)
 					continue
 				}
-				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
+				t.Fatalf("error: %v\nlisteners are\n%s\n%s\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
 			}
 			if expectFail {
 				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+1)

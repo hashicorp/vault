@@ -96,21 +96,20 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 		return nil
 
 	case adv.ClusterKeyParams == nil:
-		c.logger.Error("core/loadClusterTLS: no key params found")
+		c.logger.Error("core.cluster.: failed to load cluster TLS: no key params found")
 		return fmt.Errorf("no local cluster key params found")
 
 	case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
-		c.logger.Error("core/loadClusterTLS: failed to parse local cluster key due to missing params")
+		c.logger.Error("core.cluster: failed to load cluster TLS: failed to parse local cluster key due to missing params")
 		return fmt.Errorf("failed to parse local cluster key")
 
 	case adv.ClusterKeyParams.Type != corePrivateKeyTypeP521:
-		c.logger.Error("core/loadClusterTLS: unknown local cluster key type", "key_type", adv.ClusterKeyParams.Type)
+		c.logger.Error("core.cluster: failed to load cluster TLS: unknown local cluster key type", "key_type", adv.ClusterKeyParams.Type)
 		return fmt.Errorf("failed to find valid local cluster key type")
 
 	case adv.ClusterCert == nil || len(adv.ClusterCert) == 0:
-		c.logger.Error("core/loadClusterTLS: no local cluster cert found")
+		c.logger.Error("core.cluster: failed to load cluster TLS: no local cluster cert found")
 		return fmt.Errorf("no local cluster cert found")
-
 	}
 
 	// Prevent data races with the TLS parameters
@@ -130,7 +129,7 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 
 	cert, err := x509.ParseCertificate(c.localClusterCert)
 	if err != nil {
-		c.logger.Error("core/loadClusterTLS: failed parsing local cluster certificate", "error", err)
+		c.logger.Error("core.cluster: failed to load cluster TLS: failed parsing local cluster certificate", "error", err)
 		return fmt.Errorf("error parsing local cluster certificate: %v", err)
 	}
 
@@ -146,7 +145,7 @@ func (c *Core) setupCluster() error {
 	// Check if storage index is already present or not
 	cluster, err := c.Cluster()
 	if err != nil {
-		c.logger.Error("core: failed to get cluster details", "error", err)
+		c.logger.Error("core.cluster: failed to get cluster details", "error", err)
 		return err
 	}
 
@@ -159,33 +158,26 @@ func (c *Core) setupCluster() error {
 	if cluster.Name == "" {
 		// If cluster name is not supplied, generate one
 		if c.clusterName == "" {
-			c.logger.Trace("core: cluster name not found/set, generating new")
+			c.logger.Trace("core.cluster: cluster name not found or set, generating new")
 			clusterNameBytes, err := uuid.GenerateRandomBytes(4)
 			if err != nil {
-				c.logger.Error("core: failed to generate cluster name", "error", err)
+				c.logger.Error("core.cluster: failed to generate cluster name", "error", err)
 				return err
 			}
-
 			c.clusterName = fmt.Sprintf("vault-cluster-%08x", clusterNameBytes)
 		}
 
 		cluster.Name = c.clusterName
-		if c.logger.IsDebug() {
-			c.logger.Debug("core: cluster name set", "name", cluster.Name)
-		}
 		modified = true
 	}
 
 	if cluster.ID == "" {
-		c.logger.Trace("core: cluster ID not found, generating new")
+		c.logger.Trace("core.cluster: cluster ID not found, generating new")
 		// Generate a clusterID
 		cluster.ID, err = uuid.GenerateUUID()
 		if err != nil {
-			c.logger.Error("core: failed to generate cluster identifier", "error", err)
+			c.logger.Error("core.cluster: failed to generate cluster identifier", "error", err)
 			return err
-		}
-		if c.logger.IsDebug() {
-			c.logger.Debug("core: cluster ID set", "id", cluster.ID)
 		}
 		modified = true
 	}
@@ -198,10 +190,10 @@ func (c *Core) setupCluster() error {
 
 		// Create a private key
 		{
-			c.logger.Trace("core: generating cluster private key")
+			c.logger.Trace("core.cluster: generating cluster private key")
 			key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 			if err != nil {
-				c.logger.Error("core: failed to generate local cluster key", "error", err)
+				c.logger.Error("core.cluster: failed to generate local cluster key", "error", err)
 				return err
 			}
 
@@ -210,7 +202,7 @@ func (c *Core) setupCluster() error {
 
 		// Create a certificate
 		{
-			c.logger.Trace("core: generating local cluster certificate")
+			c.logger.Trace("core.cluster: generating local cluster certificate")
 
 			host, err := uuid.GenerateUUID()
 			if err != nil {
@@ -237,13 +229,13 @@ func (c *Core) setupCluster() error {
 
 			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)
 			if err != nil {
-				c.logger.Error("core: error generating self-signed cert", "error", err)
+				c.logger.Error("core.cluster: error generating self-signed cert", "error", err)
 				return fmt.Errorf("unable to generate local cluster certificate: %v", err)
 			}
 
 			_, err = x509.ParseCertificate(certBytes)
 			if err != nil {
-				c.logger.Error("core: error parsing self-signed cert", "error", err)
+				c.logger.Error("core.cluster: error parsing self-signed cert", "error", err)
 				return fmt.Errorf("error parsing generated certificate: %v", err)
 			}
 
@@ -255,7 +247,7 @@ func (c *Core) setupCluster() error {
 		// Encode the cluster information into as a JSON string
 		rawCluster, err := json.Marshal(cluster)
 		if err != nil {
-			c.logger.Error("core: failed to encode cluster details", "error", err)
+			c.logger.Error("core.cluster: failed to encode cluster details", "error", err)
 			return err
 		}
 
@@ -265,11 +257,13 @@ func (c *Core) setupCluster() error {
 			Value: rawCluster,
 		})
 		if err != nil {
-			c.logger.Error("core: failed to store cluster details", "error", err)
+			c.logger.Error("core.cluster: failed to store cluster details", "error", err)
 			return err
 		}
 	}
 
+	// Provide the cluster name and ID as they are potentially new
+	c.logger.Debug("core.cluster: setup complete", "name", cluster.Name, "id", cluster.ID)
 	return nil
 }
 
@@ -284,27 +278,25 @@ func (c *Core) SetClusterSetupFuncs(handler func() (http.Handler, http.Handler))
 // be built in the same mechanism or started independently.
 func (c *Core) startClusterListener() error {
 	if c.clusterHandlerSetupFunc == nil {
-		c.logger.Error("core/startClusterListener: cluster handler setup function has not been set")
+		c.logger.Error("core.cluster: handler setup function has not been set")
 		return fmt.Errorf("cluster handler setup function has not been set")
 	}
 
 	if c.clusterAddr == "" {
-		c.logger.Info("core/startClusterListener: clustering disabled, not starting listeners")
+		c.logger.Info("core.cluster: clustering disabled, not starting listeners")
 		return nil
 	}
 
 	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
-		c.logger.Warn("core/startClusterListener: clustering not disabled but no addresses to listen on")
+		c.logger.Warn("core.cluster: clustering not disabled but no addresses to listen on")
 		return fmt.Errorf("cluster addresses not found")
 	}
 
-	c.logger.Trace("core/startClusterListener: starting listeners")
-
+	c.logger.Trace("core.cluster: starting cluster listeners")
 	err := c.startForwarding()
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -312,11 +304,11 @@ func (c *Core) startClusterListener() error {
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
 	if c.clusterAddr == "" {
-		c.logger.Trace("core/stopClusterListener: clustering disabled, nothing to do")
+		c.logger.Trace("core.cluster: clustering disabled, nothing to do")
 		return
 	}
 
-	c.logger.Info("core/stopClusterListener: stopping listeners")
+	c.logger.Trace("core.cluster: stopping cluster listeners")
 
 	// Tell the goroutine managing the listeners to perform the shutdown
 	// process
@@ -325,9 +317,9 @@ func (c *Core) stopClusterListener() {
 	// The reason for this loop-de-loop is that we may be unsealing again
 	// quickly, and if the listeners are not yet closed, we will get socket
 	// bind errors. This ensures proper ordering.
-	c.logger.Trace("core/stopClusterListener: waiting for success notification")
+	c.logger.Trace("core.cluster: waiting for cluster listener shutdown")
 	<-c.clusterListenerShutdownSuccessCh
-	c.logger.Info("core/stopClusterListener: success")
+	c.logger.Info("core.cluster: successfully stopped cluster listeners")
 }
 
 // ClusterTLSConfig generates a TLS configuration based on the local cluster
