@@ -110,17 +110,17 @@ func TestBackend_basic(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, false),
-			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
-			testAccLogin(t, []string{"root"}),
+			testAccMap(t, "default", "fakepol"),
+			testAccMap(t, "oWnErs", "fakepol"),
+			testAccLogin(t, []string{"fakepol"}),
 			testAccStepConfig(t, true),
-			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
-			testAccLogin(t, []string{"root"}),
+			testAccMap(t, "default", "fakepol"),
+			testAccMap(t, "oWnErs", "fakepol"),
+			testAccLogin(t, []string{"fakepol"}),
 			testAccStepConfigWithBaseURL(t),
-			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
-			testAccLogin(t, []string{"root"}),
+			testAccMap(t, "default", "fakepol"),
+			testAccMap(t, "oWnErs", "fakepol"),
+			testAccLogin(t, []string{"fakepol"}),
 		},
 	})
 }
@@ -183,6 +183,6 @@ func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth(keys),
+		Check: logicaltest.TestCheckAuth([]string{"default", "fakepol"}),
 	}
 }
