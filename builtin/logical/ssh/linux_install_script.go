@@ -7,8 +7,8 @@ const (
 #!/bin/bash
 #
 # This is a default script which installs or uninstalls an RSA public key to/from
-# authoried_keys file in a typical linux machine. 
-# 
+# authorized_keys file in a typical linux machine.
+#
 # If the platform differs or if the binaries used in this script are not available
 # in target machine, use the 'install_script' parameter with 'roles/' endpoint to
 # register a custom script (applicable for Dynamic type only).
@@ -51,7 +51,7 @@ fi
 
 # Create the .ssh directory and authorized_keys file if it does not exist
 SSH_DIR=$(dirname $AUTH_KEYS_FILE)
-sudo mkdir -p "$SSH_DIR"                                                            
+sudo mkdir -p "$SSH_DIR"
 sudo touch "$AUTH_KEYS_FILE"
 
 # Remove the key from authorized_keys file if it is already present.
