@@ -115,22 +115,22 @@ func (c *Core) startForwarding() error {
 					continue
 				}
 
-				switch tlsConn.ConnectionState().NegotiatedProtocol {
+				proto := tlsConn.ConnectionState().NegotiatedProtocol
+				switch proto {
 				case "h2":
-					c.logger.Trace("core.cluster: got h2 cluster connection")
+					c.logger.Trace("core.cluster: negotiated cluster connection", "protocol", proto)
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: wrappedHandler,
 					})
 
 				case "req_fw_sb-act_v1":
-					c.logger.Trace("core.cluster: got req_fw_sb-act_v1 cluster connection")
+					c.logger.Trace("core.cluster: negotiated cluster connection", "protocol", proto)
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: c.rpcServer,
 					})
 
 				default:
-					c.logger.Warn("core.cluster: unknown negotiated cluster protocol", "protocol",
-						tlsConn.ConnectionState().NegotiatedProtocol)
+					c.logger.Warn("core.cluster: unknown cluster connection protocol negotiated", "protocol", proto)
 					conn.Close()
 					continue
 				}
