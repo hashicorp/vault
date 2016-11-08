@@ -96,21 +96,20 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 		return nil
 
 	case adv.ClusterKeyParams == nil:
-		c.logger.Error("core/loadClusterTLS: no key params found")
+		c.logger.Error("core: failed to load cluster TLS: no key params found")
 		return fmt.Errorf("no local cluster key params found")
 
 	case adv.ClusterKeyParams.X == nil, adv.ClusterKeyParams.Y == nil, adv.ClusterKeyParams.D == nil:
-		c.logger.Error("core/loadClusterTLS: failed to parse local cluster key due to missing params")
+		c.logger.Error("core: failed to load cluster TLS: failed to parse local cluster key due to missing params")
 		return fmt.Errorf("failed to parse local cluster key")
 
 	case adv.ClusterKeyParams.Type != corePrivateKeyTypeP521:
-		c.logger.Error("core/loadClusterTLS: unknown local cluster key type", "key_type", adv.ClusterKeyParams.Type)
+		c.logger.Error("core: failed to load cluster TLS: unknown local cluster key type", "key_type", adv.ClusterKeyParams.Type)
 		return fmt.Errorf("failed to find valid local cluster key type")
 
 	case adv.ClusterCert == nil || len(adv.ClusterCert) == 0:
-		c.logger.Error("core/loadClusterTLS: no local cluster cert found")
+		c.logger.Error("core: failed to load cluster TLS: no local cluster cert found")
 		return fmt.Errorf("no local cluster cert found")
-
 	}
 
 	// Prevent data races with the TLS parameters
@@ -130,7 +129,7 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 
 	cert, err := x509.ParseCertificate(c.localClusterCert)
 	if err != nil {
-		c.logger.Error("core/loadClusterTLS: failed parsing local cluster certificate", "error", err)
+		c.logger.Error("core: failed to load cluster TLS: failed parsing local cluster certificate", "error", err)
 		return fmt.Errorf("error parsing local cluster certificate: %v", err)
 	}
 
@@ -284,27 +283,25 @@ func (c *Core) SetClusterSetupFuncs(handler func() (http.Handler, http.Handler))
 // be built in the same mechanism or started independently.
 func (c *Core) startClusterListener() error {
 	if c.clusterHandlerSetupFunc == nil {
-		c.logger.Error("core/startClusterListener: cluster handler setup function has not been set")
+		c.logger.Error("core: cluster handler setup function has not been set")
 		return fmt.Errorf("cluster handler setup function has not been set")
 	}
 
 	if c.clusterAddr == "" {
-		c.logger.Info("core/startClusterListener: clustering disabled, not starting listeners")
+		c.logger.Info("core: clustering disabled, not starting listeners")
 		return nil
 	}
 
 	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
-		c.logger.Warn("core/startClusterListener: clustering not disabled but no addresses to listen on")
+		c.logger.Warn("core: clustering not disabled but no addresses to listen on")
 		return fmt.Errorf("cluster addresses not found")
 	}
 
-	c.logger.Trace("core/startClusterListener: starting listeners")
-
+	c.logger.Trace("core: starting cluster listeners")
 	err := c.startForwarding()
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -312,11 +309,11 @@ func (c *Core) startClusterListener() error {
 // assumed that the state lock is held while this is run.
 func (c *Core) stopClusterListener() {
 	if c.clusterAddr == "" {
-		c.logger.Trace("core/stopClusterListener: clustering disabled, nothing to do")
+		c.logger.Trace("core: clustering disabled, nothing to do")
 		return
 	}
 
-	c.logger.Info("core/stopClusterListener: stopping listeners")
+	c.logger.Trace("core: stopping cluster listeners")
 
 	// Tell the goroutine managing the listeners to perform the shutdown
 	// process
@@ -325,9 +322,9 @@ func (c *Core) stopClusterListener() {
 	// The reason for this loop-de-loop is that we may be unsealing again
 	// quickly, and if the listeners are not yet closed, we will get socket
 	// bind errors. This ensures proper ordering.
-	c.logger.Trace("core/stopClusterListener: waiting for success notification")
+	c.logger.Trace("core: waiting for cluster listener shutdown")
 	<-c.clusterListenerShutdownSuccessCh
-	c.logger.Info("core/stopClusterListener: success")
+	c.logger.Info("core: successfully stopped cluster listeners")
 }
 
 // ClusterTLSConfig generates a TLS configuration based on the local cluster
