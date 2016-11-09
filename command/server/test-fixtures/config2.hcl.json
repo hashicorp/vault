@@ -1,6 +1,4 @@
 {
-  "enable_cors": true,
-  "allowed_origins": "http://localhost:8[0-9]{3}"
   "listener":[
     {
       "tcp":{

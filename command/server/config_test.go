@@ -19,8 +19,6 @@ func TestLoadConfigFile(t *testing.T) {
 	}
 
 	expected := &Config{
-		EnableCORS:     true,
-		AllowedOrigins: "http://localhost:8[0-9]{3}",
 		Listeners: []*Listener{
 			&Listener{
 				Type: "atlas",
@@ -85,8 +83,6 @@ func TestLoadConfigFile_json(t *testing.T) {
 	}
 
 	expected := &Config{
-		EnableCORS:     true,
-		AllowedOrigins: "http://localhost:8[0-9]{3}",
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
