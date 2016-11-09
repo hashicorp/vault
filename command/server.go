@@ -227,7 +227,6 @@ func (c *ServerCommand) Run(args []string) int {
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
-		EnableCORS:         config.EnableCORS,
 	}
 
 	var disableClustering bool
