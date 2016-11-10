@@ -149,6 +149,13 @@ type Telemetry struct {
 	// narrow down the search results when neither a Submission URL or Check ID is provided.
 	// Default: service:app (e.g. service:consul)
 	CirconusCheckSearchTag string `hcl:"circonus_check_search_tag"`
+	// CirconusCheckTags is a comma separated list of tags to apply to the check. Note that
+	// the value of CirconusCheckSearchTag will always be added to the check.
+	// Default: none
+	CirconusCheckTags string `mapstructure:"circonus_check_tags"`
+	// CirconusCheckDisplayName is the name for the check which will be displayed in the Circonus UI.
+	// Default: value of CirconusCheckInstanceID
+	CirconusCheckDisplayName string `mapstructure:"circonus_check_display_name"`
 	// CirconusBrokerID is an explicit broker to use when creating a new check. The numeric portion
 	// of broker._cid. If metric management is enabled and neither a Submission URL nor Check ID
 	// is provided, an attempt will be made to search for an existing check using Instance ID and
@@ -597,6 +604,8 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"circonus_check_force_metric_activation",
 		"circonus_check_instance_id",
 		"circonus_check_search_tag",
+		"circonus_check_display_name",
+		"circonus_check_tags",
 		"circonus_broker_id",
 		"circonus_broker_select_tag",
 		"disable_hostname",
