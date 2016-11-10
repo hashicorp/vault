@@ -37,58 +37,38 @@ func (cm *CheckManager) AddMetricTags(metricName string, tags []string, appendTa
 		return tagsUpdated
 	}
 
-	metricFound := false
+	if _, exists := cm.metricTags[metricName]; !exists {
+		foundMetric := false
 
-	for metricIdx, metric := range cm.checkBundle.Metrics {
-		if metric.Name == metricName {
-			metricFound = true
-			numNewTags := countNewTags(metric.Tags, tags)
-
-			if numNewTags == 0 {
-				if appendTags {
-					break // no new tags to add
-				} else if len(metric.Tags) == len(tags) {
-					break // no new tags and old/new same length
-				}
+		for _, metric := range cm.checkBundle.Metrics {
+			if metric.Name == metricName {
+				foundMetric = true
+				cm.metricTags[metricName] = metric.Tags
+				break
 			}
+		}
 
-			if appendTags {
-				metric.Tags = append(metric.Tags, tags...)
-			} else {
-				metric.Tags = tags
-			}
-
-			cm.cbmu.Lock()
-			cm.checkBundle.Metrics[metricIdx] = metric
-			cm.cbmu.Unlock()
-
-			tagsUpdated = true
+		if !foundMetric {
+			cm.metricTags[metricName] = []string{}
 		}
 	}
 
-	if tagsUpdated {
-		if cm.Debug {
-			action := "Set"
-			if appendTags {
-				action = "Added"
-			}
-			cm.Log.Printf("[DEBUG] %s metric tag(s) %s %v\n", action, metricName, tags)
+	action := "no new"
+	if appendTags {
+		numNewTags := countNewTags(cm.metricTags[metricName], tags)
+		if numNewTags > 0 {
+			action = "Added"
+			cm.metricTags[metricName] = append(cm.metricTags[metricName], tags...)
+			tagsUpdated = true
 		}
-		cm.cbmu.Lock()
-		cm.forceCheckUpdate = true
-		cm.cbmu.Unlock()
 	} else {
-		if !metricFound {
-			if _, exists := cm.metricTags[metricName]; !exists {
-				if cm.Debug {
-					cm.Log.Printf("[DEBUG] Queing metric tag(s) %s %v\n", metricName, tags)
-				}
-				// queue the tags, the metric is new (e.g. not in the check yet)
-				cm.mtmu.Lock()
-				cm.metricTags[metricName] = append(cm.metricTags[metricName], tags...)
-				cm.mtmu.Unlock()
-			}
-		}
+		action = "Set"
+		cm.metricTags[metricName] = tags
+		tagsUpdated = true
+	}
+
+	if cm.Debug {
+		cm.Log.Printf("[DEBUG] %s metric tag(s) %s %v\n", action, metricName, tags)
 	}
 
 	return tagsUpdated
@@ -103,6 +83,7 @@ func (cm *CheckManager) addNewMetrics(newMetrics map[string]*api.CheckBundleMetr
 	}
 
 	cm.cbmu.Lock()
+	defer cm.cbmu.Unlock()
 
 	numCurrMetrics := len(cm.checkBundle.Metrics)
 	numNewMetrics := len(newMetrics)
@@ -125,8 +106,6 @@ func (cm *CheckManager) addNewMetrics(newMetrics map[string]*api.CheckBundleMetr
 	if updatedCheckBundle {
 		cm.forceCheckUpdate = true
 	}
-
-	cm.cbmu.Unlock()
 
 	return updatedCheckBundle
 }

@@ -267,26 +267,26 @@
 		{
 			"checksumSHA1": "szvY4u7TlXkrQ3PW8wmyJaIFy0U=",
 			"path": "github.com/circonus-labs/circonus-gometrics",
-			"revision": "f8e2e2ff37c349aed537b70c9430ded0ea473248",
-			"revisionTime": "2016-11-01T19:28:51Z"
+			"revision": "d17a8420c36e800fcb46bbd4d2a15b93c68605ea",
+			"revisionTime": "2016-11-09T19:23:37Z"
 		},
 		{
-			"checksumSHA1": "dCnZd/wjQjTnUBTBEDpe0Y2pvTA=",
+			"checksumSHA1": "WUE6oF152uN5FcLmmq+nO3Yl7pU=",
 			"path": "github.com/circonus-labs/circonus-gometrics/api",
-			"revision": "f8e2e2ff37c349aed537b70c9430ded0ea473248",
-			"revisionTime": "2016-11-01T19:28:51Z"
+			"revision": "d17a8420c36e800fcb46bbd4d2a15b93c68605ea",
+			"revisionTime": "2016-11-09T19:23:37Z"
 		},
 		{
-			"checksumSHA1": "B0hN7c1dJ8n3MoZLktuWJoaYxRs=",
+			"checksumSHA1": "beRBHHy2+V6Ht4cACIMmZOCnzgg=",
 			"path": "github.com/circonus-labs/circonus-gometrics/checkmgr",
-			"revision": "f8e2e2ff37c349aed537b70c9430ded0ea473248",
-			"revisionTime": "2016-11-01T19:28:51Z"
+			"revision": "d17a8420c36e800fcb46bbd4d2a15b93c68605ea",
+			"revisionTime": "2016-11-09T19:23:37Z"
 		},
 		{
-			"checksumSHA1": "C4Z7+l5GOpOCW5DcvNYzheGvQRE=",
+			"checksumSHA1": "IP3nkm1BmkAxGYpgeGuUfJYypy8=",
 			"path": "github.com/circonus-labs/circonusllhist",
-			"revision": "d724266ae5270ae8b87a5d2e8081f04e307c3c18",
-			"revisionTime": "2016-05-26T04:38:13Z"
+			"revision": "0e8e86d926b63602c762b8b5647fe14ae2ba6757",
+			"revisionTime": "2016-11-10T01:51:05Z"
 		},
 		{
 			"checksumSHA1": "vcncrPAdKKpLjl5O5lAdrFU6NOc=",
