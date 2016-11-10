@@ -194,14 +194,22 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 		}
 	}
 
-	policiesList, err := b.Map.Policies(req.Storage, teamNames...)
+	groupPoliciesList, err := b.TeamMap.Policies(req.Storage, teamNames...)
+
 	if err != nil {
 		return nil, nil, err
 	}
+
+	userPoliciesList, err := b.UserMap.Policies(req.Storage, []string{*user.Login}...)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return &verifyCredentialsResp{
 		User:     user,
 		Org:      org,
-		Policies: policiesList,
+		Policies: append(groupPoliciesList, userPoliciesList...),
 	}, nil, nil
 }
 
