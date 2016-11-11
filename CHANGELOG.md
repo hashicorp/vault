@@ -21,6 +21,8 @@ BUG FIXES:
  * api/unwrap, command/unwrap: Fix error when no client token exists [GH-2077]
  * command/ssh: Use temporary file for identity and ensure its deletion before
    the command returns [GH-2016]
+ * core: Fix bug where a failure to come up as active node (e.g. if an audit
+   backend failed) could lead to deadlock [GH-2083]
 
 ## 0.6.2 (October 5, 2016)
 
