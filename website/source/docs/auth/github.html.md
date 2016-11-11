@@ -122,6 +122,18 @@ The above would make anyone in the `dev` team receive tokens with the policy
 You can then auth with a user that is a member of the `dev` team using a
 Personal Access Token with the `read:org` scope.
 
+You can also create mappings for specific users in a similar fashion with the 
+`map/users/<user>` endpoint.
+Example:
+
+```
+$ vault write auth/github/map/users/user1 value=user1-policy
+Success! Data written to: auth/github/map/teams/user1
+```
+
+Now a user with GitHub username `user1` will be assigned the `user1-policy` on authentication, 
+in addition to any team policies.
+
 GitHub token can also be supplied from the env variable `VAULT_AUTH_GITHUB_TOKEN`.
 
 ```
