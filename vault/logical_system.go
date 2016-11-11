@@ -1679,10 +1679,12 @@ func (b *SystemBackend) handleWrappingRewrap(
 
 	// Return response in "response"; wrapping code will detect the rewrap and
 	// slot in instead of nesting
-	req.WrapTTL = time.Duration(creationTTL)
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"response": response,
+		},
+		WrapInfo: &logical.WrapInfo{
+			TTL: time.Duration(creationTTL),
 		},
 	}, nil
 }
