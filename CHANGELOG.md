@@ -2,6 +2,10 @@
 
 IMPROVEMENTS:
 
+ * auth/github: Policies can now be assigned to users as well as to teams
+   [GH-2079]
+ * core: Response wrapping is now allowed to be specified by backend responses
+   (requires backends gaining support) [GH-2088]
  * secret/consul: Added listing functionality to roles [GH-2065]
  * secret/postgresql: Added `revocation_sql` parameter on the role endpoint to
    enable customization of user revocation SQL statements [GH-2033]
