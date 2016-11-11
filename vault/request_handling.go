@@ -186,12 +186,29 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	// Route the request
 	resp, err := c.router.Route(req)
 	if resp != nil {
-		// We don't allow backends to specify this, so ensure it's not set
-		resp.WrapInfo = nil
+		// If wrapping is used, use the shortest between the request and response
+		var wrapTTL time.Duration
 
-		if req.WrapTTL != 0 {
+		// Ensure no wrap info information is set other than, possibly, the TTL
+		if resp.WrapInfo != nil {
+			if resp.WrapInfo.TTL > 0 {
+				wrapTTL = resp.WrapInfo.TTL
+			}
+			resp.WrapInfo = nil
+		}
+
+		if req.WrapTTL > 0 {
+			switch {
+			case wrapTTL == 0:
+				wrapTTL = req.WrapTTL
+			case req.WrapTTL < wrapTTL:
+				wrapTTL = req.WrapTTL
+			}
+		}
+
+		if wrapTTL > 0 {
 			resp.WrapInfo = &logical.WrapInfo{
-				TTL: req.WrapTTL,
+				TTL: wrapTTL,
 			}
 		}
 	}
@@ -306,14 +323,32 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	// Route the request
 	resp, err := c.router.Route(req)
 	if resp != nil {
-		// We don't allow backends to specify this, so ensure it's not set
-		resp.WrapInfo = nil
+		// If wrapping is used, use the shortest between the request and response
+		var wrapTTL time.Duration
 
-		if req.WrapTTL != 0 {
-			resp.WrapInfo = &logical.WrapInfo{
-				TTL: req.WrapTTL,
+		// Ensure no wrap info information is set other than, possibly, the TTL
+		if resp.WrapInfo != nil {
+			if resp.WrapInfo.TTL > 0 {
+				wrapTTL = resp.WrapInfo.TTL
+			}
+			resp.WrapInfo = nil
+		}
+
+		if req.WrapTTL > 0 {
+			switch {
+			case wrapTTL == 0:
+				wrapTTL = req.WrapTTL
+			case req.WrapTTL < wrapTTL:
+				wrapTTL = req.WrapTTL
 			}
 		}
+
+		if wrapTTL > 0 {
+			resp.WrapInfo = &logical.WrapInfo{
+				TTL: wrapTTL,
+			}
+		}
+
 	}
 
 	// A login request should never return a secret!
