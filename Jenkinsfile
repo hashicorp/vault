@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 // Based on https://stackoverflow.com/questions/36837683/how-to-perform-actions-for-failed-builds-in-jenkinsfile
-def pipeline(String label, Closure body) {
+def task_wrapper(String label, Closure body) {
      node(label) {
         wrap([$class: 'TimestamperBuildWrapper']) {
             // This borks:
@@ -9,8 +9,7 @@ def pipeline(String label, Closure body) {
             //
             // def branch_url = "${env.BUILD_URL}" - "${env.BUILD_NUMBER}/"
             def branch_url = env.BUILD_URL.substring(0, env.BUILD_URL.length() - (env.BUILD_NUMBER.length() +1))
-            def slack_msg_body = "Build url: ${env.BUILD_URL}\nBranch url: ${branch_url}"
-            def mail_msg_body = "Build url: ${env.BUILD_URL}<br />\r\nBranch url: ${branch_url}"
+            def msg_body = "Build url: ${env.BUILD_URL}\nBranch url: ${branch_url}"
             def msg = "Build number `${env.BUILD_NUMBER}` succeded."
             def color = "good"
             def prefix = "[SUCCESS]"
@@ -29,7 +28,7 @@ def pipeline(String label, Closure body) {
                                   variable: 'SLACK_TOKEN']
                                  ]) {
                     slackSend (channel: '#dcos-security-ci',
-                        message: "`${env.JOB_NAME}` ${msg}\n\n${slack_msg_body}",
+                        message: "`${env.JOB_NAME}` ${msg}\n\n${msg_body}",
                         teamDomain: 'mesosphere',
                         token: "${env.SLACK_TOKEN}",
                         color: color,
@@ -37,14 +36,14 @@ def pipeline(String label, Closure body) {
                 }
 
                 mail (subject: "[${env.JOB_NAME}]${prefix} ${msg}",
-                    body: "${mail_msg_body}",
+                    body: "${msg_body}",
                     to: 'dcos-security-ci@mesosphere.io')
             }
         }
     }
 }
 
-pipeline ('mesos'){
+task_wrapper ('mesos'){
 
     stage 'Cleanup workspace'
         deleteDir()
