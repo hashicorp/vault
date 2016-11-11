@@ -269,6 +269,9 @@ type Core struct {
 	clusterListenerAddrs []*net.TCPAddr
 	// The setup function that gives us the handler to use
 	clusterHandlerSetupFunc func() (http.Handler, http.Handler)
+	// Tracks whether cluster listeners are running, e.g. it's safe to send a
+	// shutdown down the channel
+	clusterListenersRunning bool
 	// Shutdown channel for the cluster listeners
 	clusterListenerShutdownCh chan struct{}
 	// Shutdown success channel. We need this to be done serially to ensure

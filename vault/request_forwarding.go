@@ -145,6 +145,10 @@ func (c *Core) startForwarding() error {
 
 	// This is in its own goroutine so that we don't block the main thread, and
 	// thus we use atomic and channels to coordinate
+	// However, because you can't query the status of a channel, we set a bool
+	// here while we have the state lock to know whether to actually send a
+	// shutdown (e.g. whether the channel will block). See issue #2083.
+	c.clusterListenersRunning = true
 	go func() {
 		// If we get told to shut down...
 		<-c.clusterListenerShutdownCh
