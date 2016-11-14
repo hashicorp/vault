@@ -4,6 +4,10 @@ IMPROVEMENTS:
 
  * auth/github: Policies can now be assigned to users as well as to teams
    [GH-2079]
+ * cli: Set the number of retries on 500 down to 0 by default (no retrying). It
+   can be very confusing to users when there is a pause while the retries
+   happen if they haven't explicitly set it. With request forwarding the need
+   for this is lessened anyways. [GH-2093]
  * core: Response wrapping is now allowed to be specified by backend responses
    (requires backends gaining support) [GH-2088]
  * secret/consul: Added listing functionality to roles [GH-2065]
