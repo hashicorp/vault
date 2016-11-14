@@ -9,12 +9,17 @@ import (
 )
 
 func tcpListenerFactory(config map[string]string, _ io.Writer) (net.Listener, map[string]string, vault.ReloadFunc, error) {
+	bind_proto := "tcp"
 	addr, ok := config["address"]
 	if !ok {
 		addr = "127.0.0.1:8200"
 	}
 
-	ln, err := net.Listen("tcp", addr)
+	if addr == "0.0.0.0" {
+		bind_proto = "tcp4"
+	}
+
+	ln, err := net.Listen(bind_proto, addr)
 	if err != nil {
 		return nil, nil, nil, err
 	}
