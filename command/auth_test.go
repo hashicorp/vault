@@ -10,10 +10,12 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
+	tokenAPI "github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/cli"
+	"github.com/mitchellh/go-homedir"
 )
 
 func TestAuth_methods(t *testing.T) {
@@ -72,6 +74,11 @@ func TestAuth_token(t *testing.T) {
 	helper, err := c.TokenHelper()
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+
+	switch h := helper.(type) {
+	case *tokenAPI.InternalTokenHelper:
+		h.SetVaultAddress(addr)
 	}
 
 	actual, err := helper.Get()
@@ -171,6 +178,11 @@ func TestAuth_method(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	switch h := helper.(type) {
+	case *tokenAPI.InternalTokenHelper:
+		h.SetVaultAddress(addr)
+	}
+
 	actual, err := helper.Get()
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -182,6 +194,9 @@ func TestAuth_method(t *testing.T) {
 }
 
 func testAuthInit(t *testing.T) {
+	// InternalTokenHelper evaluates the user's homedir, which changes for each test case
+	homedir.DisableCache = true
+
 	td, err := ioutil.TempDir("", "vault")
 	if err != nil {
 		t.Fatalf("err: %s", err)

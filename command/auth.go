@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	tokenAPI "github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/kv-builder"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/meta"
@@ -157,6 +158,11 @@ func (c *AuthCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf(
 			"Error initializing client to auth: %s", err))
 		return 1
+	}
+
+	switch tokenHelper := tokenHelper.(type) {
+	case *tokenAPI.InternalTokenHelper:
+		tokenHelper.SetVaultAddress(client.Address())
 	}
 
 	if authPath != "" {

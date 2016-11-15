@@ -289,6 +289,15 @@ func (c *Client) SetAddress(addr string) error {
 	return nil
 }
 
+// Address returns the Vault address used by this client. It will
+// return the empty string if there is no address set.
+func (c *Client) Address() string {
+	if c.addr == nil {
+		return ""
+	}
+	return c.addr.String()
+}
+
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {

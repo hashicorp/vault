@@ -21,7 +21,12 @@ The following table describes them:
   </tr>
   <tr>
     <td><tt>VAULT_TOKEN</tt></td>
-    <td>The Vault authentication token.  If not specified, the token located in <tt>$HOME/.vault-token</tt> will be used if it exists.</td>
+    <td>The Vault authentication token.  If not specified, the token will be searched for in one of the following locations:
+        <ul>
+          <li><tt>$HOME/.vault-token-SUFFIX</tt>, where SUFFIX is a hash of the hostname and port of the Vault server</li>
+          <li><tt>$HOME/.vault-token</tt></li>
+        </ul>
+    </td>
   </tr>
   <tr>
     <td><tt>VAULT_ADDR</tt></td>

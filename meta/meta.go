@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
+	tokenAPI "github.com/hashicorp/vault/command/token"
 	"github.com/mitchellh/cli"
 )
 
@@ -15,7 +15,7 @@ import (
 // default FlagSet returned by Meta.FlagSet.
 type FlagSetFlags uint
 
-type TokenHelperFunc func() (token.TokenHelper, error)
+type TokenHelperFunc func() (tokenAPI.TokenHelper, error)
 
 const (
 	FlagSetNone    FlagSetFlags = 0
@@ -105,6 +105,10 @@ func (m *Meta) Client() (*api.Client, error) {
 			tokenHelper, err := m.TokenHelper()
 			if err != nil {
 				return nil, err
+			}
+			switch tokenHelper := tokenHelper.(type) {
+			case *tokenAPI.InternalTokenHelper:
+				tokenHelper.SetVaultAddress(client.Address())
 			}
 			token, err = tokenHelper.Get()
 			if err != nil {
