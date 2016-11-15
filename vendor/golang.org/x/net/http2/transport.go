@@ -199,6 +199,7 @@ type clientStream struct {
 	bytesRemain int64 // -1 means unknown; owned by transportResponseBody.Read
 	readErr     error // sticky read error; owned by transportResponseBody.Read
 	stopReqBody error // if non-nil, stop writing req body; guarded by cc.mu
+	didReset    bool  // whether we sent a RST_STREAM to the server; guarded by cc.mu
 
 	peerReset chan struct{} // closed on peer reset
 	resetErr  error         // populated before peerReset is closed
@@ -226,12 +227,23 @@ func (cs *clientStream) awaitRequestCancel(req *http.Request) {
 	}
 	select {
 	case <-req.Cancel:
+		cs.cancelStream()
 		cs.bufPipe.CloseWithError(errRequestCanceled)
-		cs.cc.writeStreamReset(cs.ID, ErrCodeCancel, nil)
 	case <-ctx.Done():
+		cs.cancelStream()
 		cs.bufPipe.CloseWithError(ctx.Err())
-		cs.cc.writeStreamReset(cs.ID, ErrCodeCancel, nil)
 	case <-cs.done:
+	}
+}
+
+func (cs *clientStream) cancelStream() {
+	cs.cc.mu.Lock()
+	didReset := cs.didReset
+	cs.didReset = true
+	cs.cc.mu.Unlock()
+
+	if !didReset {
+		cs.cc.writeStreamReset(cs.ID, ErrCodeCancel, nil)
 	}
 }
 
@@ -1666,9 +1678,10 @@ func (rl *clientConnReadLoop) processData(f *DataFrame) error {
 			cc.bw.Flush()
 			cc.wmu.Unlock()
 		}
+		didReset := cs.didReset
 		cc.mu.Unlock()
 
-		if len(data) > 0 {
+		if len(data) > 0 && !didReset {
 			if _, err := cs.bufPipe.Write(data); err != nil {
 				rl.endStreamError(cs, err)
 				return err
