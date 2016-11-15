@@ -3,6 +3,7 @@ package server
 import (
 	"io"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/vault"
@@ -15,7 +16,9 @@ func tcpListenerFactory(config map[string]string, _ io.Writer) (net.Listener, ma
 		addr = "127.0.0.1:8200"
 	}
 
-	if addr == "0.0.0.0" {
+	// If they've passed 0.0.0.0, we only want to bind on IPv4
+	// rather than golang's dual stack default
+	if strings.HasPrefix(addr, "0.0.0.0:") {
 		bind_proto = "tcp4"
 	}
 
