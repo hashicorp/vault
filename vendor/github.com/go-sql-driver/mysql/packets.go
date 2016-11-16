@@ -25,9 +25,9 @@ import (
 
 // Read packet to buffer 'data'
 func (mc *mysqlConn) readPacket() ([]byte, error) {
-	var payload []byte
+	var prevData []byte
 	for {
-		// Read packet header
+		// read packet header
 		data, err := mc.buf.readNext(4)
 		if err != nil {
 			errLog.Print(err)
@@ -35,16 +35,10 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 			return nil, driver.ErrBadConn
 		}
 
-		// Packet Length [24 bit]
+		// packet length [24 bit]
 		pktLen := int(uint32(data[0]) | uint32(data[1])<<8 | uint32(data[2])<<16)
 
-		if pktLen < 1 {
-			errLog.Print(ErrMalformPkt)
-			mc.Close()
-			return nil, driver.ErrBadConn
-		}
-
-		// Check Packet Sync [8 bit]
+		// check packet sync [8 bit]
 		if data[3] != mc.sequence {
 			if data[3] > mc.sequence {
 				return nil, ErrPktSyncMul
@@ -53,7 +47,20 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 		}
 		mc.sequence++
 
-		// Read packet body [pktLen bytes]
+		// packets with length 0 terminate a previous packet which is a
+		// multiple of (2^24)−1 bytes long
+		if pktLen == 0 {
+			// there was no previous packet
+			if prevData == nil {
+				errLog.Print(ErrMalformPkt)
+				mc.Close()
+				return nil, driver.ErrBadConn
+			}
+
+			return prevData, nil
+		}
+
+		// read packet body [pktLen bytes]
 		data, err = mc.buf.readNext(pktLen)
 		if err != nil {
 			errLog.Print(err)
@@ -61,18 +68,17 @@ func (mc *mysqlConn) readPacket() ([]byte, error) {
 			return nil, driver.ErrBadConn
 		}
 
-		isLastPacket := (pktLen < maxPacketSize)
+		// return data if this was the last packet
+		if pktLen < maxPacketSize {
+			// zero allocations for non-split packets
+			if prevData == nil {
+				return data, nil
+			}
 
-		// Zero allocations for non-splitting packets
-		if isLastPacket && payload == nil {
-			return data, nil
+			return append(prevData, data...), nil
 		}
 
-		payload = append(payload, data...)
-
-		if isLastPacket {
-			return payload, nil
-		}
+		prevData = append(prevData, data...)
 	}
 }
 
@@ -700,11 +706,15 @@ func (rows *textRows) readRow(dest []driver.Value) error {
 	if data[0] == iEOF && len(data) == 5 {
 		// server_status [2 bytes]
 		rows.mc.status = readStatus(data[3:])
-		if err := rows.mc.discardResults(); err != nil {
-			return err
+		err = rows.mc.discardResults()
+		if err == nil {
+			err = io.EOF
+		} else {
+			// connection unusable
+			rows.mc.Close()
 		}
 		rows.mc = nil
-		return io.EOF
+		return err
 	}
 	if data[0] == iERR {
 		rows.mc = nil
@@ -1105,11 +1115,15 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 		// EOF Packet
 		if data[0] == iEOF && len(data) == 5 {
 			rows.mc.status = readStatus(data[3:])
-			if err := rows.mc.discardResults(); err != nil {
-				return err
+			err = rows.mc.discardResults()
+			if err == nil {
+				err = io.EOF
+			} else {
+				// connection unusable
+				rows.mc.Close()
 			}
 			rows.mc = nil
-			return io.EOF
+			return err
 		}
 		rows.mc = nil
 

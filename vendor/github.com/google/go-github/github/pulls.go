@@ -253,12 +253,16 @@ type PullRequestMergeResult struct {
 
 // PullRequestOptions lets you define how a pull request will be merged.
 type PullRequestOptions struct {
-	Squash bool
+	CommitTitle string
+
+	// The merge method to use. Possible values include: "merge", "squash", and "rebase" with the default being merge.
+	MergeMethod string
 }
 
 type pullRequestMergeRequest struct {
 	CommitMessage *string `json:"commit_message"`
-	Squash        *bool   `json:"squash,omitempty"`
+	CommitTitle   *string `json:"commit_title,omitempty"`
+	MergeMethod   *string `json:"merge_method,omitempty"`
 }
 
 // Merge a pull request (Merge Button™).
@@ -269,7 +273,8 @@ func (s *PullRequestsService) Merge(owner string, repo string, number int, commi
 
 	pullRequestBody := &pullRequestMergeRequest{CommitMessage: &commitMessage}
 	if options != nil {
-		pullRequestBody.Squash = &options.Squash
+		pullRequestBody.CommitTitle = &options.CommitTitle
+		pullRequestBody.MergeMethod = &options.MergeMethod
 	}
 	req, err := s.client.NewRequest("PUT", u, pullRequestBody)
 

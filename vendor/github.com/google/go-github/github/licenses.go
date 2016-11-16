@@ -10,8 +10,29 @@ import "fmt"
 // LicensesService handles communication with the license related
 // methods of the GitHub API.
 //
-// GitHub API docs: http://developer.github.com/v3/pulls/
+// GitHub API docs: https://developer.github.com/v3/licenses/
 type LicensesService service
+
+// RepositoryLicense represents the license for a repository.
+type RepositoryLicense struct {
+	Name *string `json:"name,omitempty"`
+	Path *string `json:"path,omitempty"`
+
+	SHA         *string  `json:"sha,omitempty"`
+	Size        *int     `json:"size,omitempty"`
+	URL         *string  `json:"url,omitempty"`
+	HTMLURL     *string  `json:"html_url,omitempty"`
+	GitURL      *string  `json:"git_url,omitempty"`
+	DownloadURL *string  `json:"download_url,omitempty"`
+	Type        *string  `json:"type,omitempty"`
+	Content     *string  `json:"content,omitempty"`
+	Encoding    *string  `json:"encoding,omitempty"`
+	License     *License `json:"license,omitempty"`
+}
+
+func (l RepositoryLicense) String() string {
+	return Stringify(l)
+}
 
 // License represents an open source license.
 type License struct {
@@ -19,14 +40,14 @@ type License struct {
 	Name *string `json:"name,omitempty"`
 	URL  *string `json:"url,omitempty"`
 
+	SPDXID         *string   `json:"spdx_id,omitempty"`
 	HTMLURL        *string   `json:"html_url,omitempty"`
 	Featured       *bool     `json:"featured,omitempty"`
 	Description    *string   `json:"description,omitempty"`
-	Category       *string   `json:"category,omitempty"`
 	Implementation *string   `json:"implementation,omitempty"`
-	Required       *[]string `json:"required,omitempty"`
-	Permitted      *[]string `json:"permitted,omitempty"`
-	Forbidden      *[]string `json:"forbidden,omitempty"`
+	Permissions    *[]string `json:"permissions,omitempty"`
+	Conditions     *[]string `json:"conditions,omitempty"`
+	Limitations    *[]string `json:"limitations,omitempty"`
 	Body           *string   `json:"body,omitempty"`
 }
 

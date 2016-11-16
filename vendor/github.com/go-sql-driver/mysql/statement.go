@@ -24,7 +24,10 @@ type mysqlStmt struct {
 
 func (stmt *mysqlStmt) Close() error {
 	if stmt.mc == nil || stmt.mc.netConn == nil {
-		errLog.Print(ErrInvalidConn)
+		// driver.Stmt.Close can be called more than once, thus this function
+		// has to be idempotent.
+		// See also Issue #450 and golang/go#16019.
+		//errLog.Print(ErrInvalidConn)
 		return driver.ErrBadConn
 	}
 
