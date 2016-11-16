@@ -175,6 +175,11 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 						t.Errorf("Default mismatch: userattr. Expected: '%s', received :'%s'", defaultUserAttr, cfg["userattr"])
 					}
 
+					defaultDenyNullBind := false
+					if cfg["denynullbind"] != defaultDenyNullBind {
+						t.Errorf("Default mismatch: denynullbind. Expected: '%s', received :'%s'", defaultDenyNullBind, cfg["denynullbind"])
+					}
+
 					return nil
 				},
 			},
@@ -364,6 +369,7 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
 	}
 }
+
 
 func testAccStepLoginNoGroupDN(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{

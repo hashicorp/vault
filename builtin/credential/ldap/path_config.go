@@ -106,6 +106,11 @@ Default: cn`,
 				Default:     "tls12",
 				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
+			"denynullbind": &framework.FieldSchema{
+				Type:		 framework.TypeBool,
+				Default:	 false,
+				Description:  "Denies an unauthenticated LDAP bind request if the user's password is empty",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -256,6 +261,10 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	if bindPass != "" {
 		cfg.BindPassword = bindPass
 	}
+	denyNullBind := d.Get("denynullbind").(bool)
+	if denyNullBind {
+		cfg.DenyNullBind = denyNullBind
+	}
 	discoverDN := d.Get("discoverdn").(bool)
 	if discoverDN {
 		cfg.DiscoverDN = discoverDN
@@ -297,6 +306,7 @@ type ConfigEntry struct {
 	StartTLS      bool   `json:"starttls" structs:"starttls" mapstructure:"starttls"`
 	BindDN        string `json:"binddn" structs:"binddn" mapstructure:"binddn"`
 	BindPassword  string `json:"bindpass" structs:"bindpass" mapstructure:"bindpass"`
+	DenyNullBind  bool   `json:"denynullbind" structs:"denynullbind" mapstructure:"denynullbind"`
 	DiscoverDN    bool   `json:"discoverdn" structs:"discoverdn" mapstructure:"discoverdn"`
 	TLSMinVersion string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 	TLSMaxVersion string `json:"tls_max_version" structs:"tls_max_version" mapstructure:"tls_max_version"`
