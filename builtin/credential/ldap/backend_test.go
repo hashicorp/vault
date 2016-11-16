@@ -176,8 +176,8 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 					}
 
 					defaultDenyNullBind := false
-					if cfg["denynullbind"] != defaultDenyNullBind {
-						t.Errorf("Default mismatch: denynullbind. Expected: '%s', received :'%s'", defaultDenyNullBind, cfg["denynullbind"])
+					if cfg["deny_null_bind"] != defaultDenyNullBind {
+						t.Errorf("Default mismatch: deny_null_bind. Expected: '%s', received :'%s'", defaultDenyNullBind, cfg["deny_null_bind"])
 					}
 
 					return nil
