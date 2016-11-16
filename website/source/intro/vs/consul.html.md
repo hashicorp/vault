@@ -13,7 +13,7 @@ and configuration that is distributed and highly available. Consul also
 supports an ACL system to restrict access to keys and service information.
 
 While Consul can be used to store secret information and gate access using
-ACLs, it is not designed for that purpose. As such, data is not encrypted
+ACLs, it is not designed for that purpose. As such, Consul does not encrypt data
 in transit nor at rest, it does not have pluggable authentication mechanisms,
 and there is no per-request auditing mechanism.
 
