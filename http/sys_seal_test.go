@@ -327,7 +327,7 @@ func TestSysSeal_Permissions(t *testing.T) {
 
 	// We expect this to fail since it needs update
 	httpResp = testHttpPut(t, "child", addr+"/v1/sys/seal", nil)
-	testResponseStatus(t, httpResp, 500)
+	testResponseStatus(t, httpResp, 403)
 
 	// Now modify to add all needed capabilities
 	req = &logical.Request{
