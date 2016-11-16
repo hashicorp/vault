@@ -47,6 +47,11 @@ These libraries are provided by the community.
 
 * [vaultex](https://hex.pm/packages/vaultex)
 
+### Haskell
+
+* [vault-tool](https://hackage.haskell.org/package/vault-tool)
+  * `cabal install vault-tool`
+
 ### Java
 
 * [Spring Vault](https://github.com/spring-projects/spring-vault)
