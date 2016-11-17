@@ -30,7 +30,7 @@ const (
 	// MaxRequestSize is the maximum accepted request size. This is to prevent
 	// a denial of service attack where no Content-Length is provided and the server
 	// is fed ever more data until it exhausts memory.
-	MaxRequestSize = 8 * 1024 * 1024
+	MaxRequestSize = 32 * 1024 * 1024
 )
 
 // Handler returns an http.Handler for the API. This can be used on
