@@ -231,3 +231,16 @@ func TestLogical_RawHTTP(t *testing.T) {
 		t.Fatalf("Bad: %s", body.Bytes())
 	}
 }
+
+func TestLogical_RequestSizeLimit(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	// Write a very large object, should fail
+	resp := testHttpPut(t, token, addr+"/v1/secret/foo", map[string]interface{}{
+		"data": make([]byte, MaxRequestSize),
+	})
+	testResponseStatus(t, resp, 413)
+}
