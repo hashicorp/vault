@@ -29,13 +29,11 @@ func makePolynomial(intercept, degree uint8) (polynomial, error) {
 	// Ensure the intercept is set
 	p.coefficients[0] = intercept
 
-	// Assign random co-efficients to the polynomial, ensuring
-	// the highest order co-efficient is non-zero
-	for p.coefficients[degree] == 0 {
-		if _, err := rand.Read(p.coefficients[1:]); err != nil {
-			return p, err
-		}
+	// Assign random co-efficients to the polynomial
+	if _, err := rand.Read(p.coefficients[1:]); err != nil {
+		return p, err
 	}
+
 	return p, nil
 }
 
