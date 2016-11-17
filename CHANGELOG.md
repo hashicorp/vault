@@ -1,5 +1,10 @@
 ## Next (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * http: impose a maximum request size of 32MB to prevent a denial of service
+   with arbitrarily large requests. [GH-2108]
+
 IMPROVEMENTS:
 
  * auth/github: Policies can now be assigned to users as well as to teams
@@ -172,11 +177,11 @@ DEPRECATIONS/CHANGES:
  * Status codes for sealed/uninitialized Vaults have changed to `503`/`501`
    respectively. See the [version-specific upgrade
    guide](https://www.vaultproject.io/docs/install/upgrade-to-0.6.1.html) for
-   more details. 
+   more details.
  * Root tokens (tokens with the `root` policy) can no longer be created except
    by another root token or the `generate-root` endpoint.
  * Issued certificates from the `pki` backend against new roles created or
-   modified after upgrading will contain a set of default key usages. 
+   modified after upgrading will contain a set of default key usages.
  * The `dynamodb` physical data store no longer supports HA by default. It has
    some non-ideal behavior around failover that was causing confusion. See the
    [documentation](https://www.vaultproject.io/docs/config/index.html#ha_enabled)
@@ -246,7 +251,7 @@ IMPROVEMENTS:
    the request portion of the response. [GH-1650]
  * auth/aws-ec2: Added a new constraint `bound_account_id` to the role
    [GH-1523]
- * auth/aws-ec2: Added a new constraint `bound_iam_role_arn` to the role 
+ * auth/aws-ec2: Added a new constraint `bound_iam_role_arn` to the role
    [GH-1522]
  * auth/aws-ec2: Added `ttl` field for the role [GH-1703]
  * auth/ldap, secret/cassandra, physical/consul: Clients with `tls.Config`
@@ -290,7 +295,7 @@ IMPROVEMENTS:
    configuration [GH-1581]
  * secret/mssql,mysql,postgresql: Reading of connection settings is supported
    in all the sql backends [GH-1515]
- * secret/mysql: Added optional maximum idle connections value to MySQL 
+ * secret/mysql: Added optional maximum idle connections value to MySQL
    connection configuration [GH-1635]
  * secret/mysql: Use a combination of the role name and token display name in
    generated user names and allow the length to be controlled [GH-1604]
@@ -633,7 +638,7 @@ BUG FIXES:
    during renewals [GH-1176]
 
 ## 0.5.1 (February 25th, 2016)
- 
+
 DEPRECATIONS/CHANGES:
 
  * RSA keys less than 2048 bits are no longer supported in the PKI backend.
@@ -663,7 +668,7 @@ IMPROVEMENTS:
  * api/health: Add the server's time in UTC to health responses [GH-1117]
  * command/rekey and command/generate-root: These now return the status at
    attempt initialization time, rather than requiring a separate fetch for the
-   nonce [GH-1054] 
+   nonce [GH-1054]
  * credential/cert: Don't require root/sudo tokens for the `certs/` and `crls/`
    paths; use normal ACL behavior instead [GH-468]
  * credential/github: The validity of the token used for login will be checked
@@ -793,7 +798,7 @@ FEATURES:
    documentation](https://vaultproject.io/docs/config/index.html) for details.
    [GH-945]
  * **STS Support in AWS Secret Backend**: You can now use the AWS secret
-   backend to fetch STS tokens rather than IAM users. [GH-927] 
+   backend to fetch STS tokens rather than IAM users. [GH-927]
  * **Speedups in the transit backend**: The `transit` backend has gained a
    cache, and now loads only the working set of keys (e.g. from the
    `min_decryption_version` to the current key version) into its working set.
