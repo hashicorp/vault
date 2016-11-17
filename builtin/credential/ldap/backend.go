@@ -111,7 +111,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
-		return nil, logical.ErrorResponse("Password cannot be of zero length when passwordless binds are being denied"), nil
+		return nil, logical.ErrorResponse("password cannot be of zero length when passwordless binds are being denied"), nil
 	}
 
 	// Try to bind as the login user. This is where the actual authentication takes place.
