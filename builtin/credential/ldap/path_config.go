@@ -108,8 +108,8 @@ Default: cn`,
 			},
 			"deny_null_bind": &framework.FieldSchema{
 				Type:		 framework.TypeBool,
-				Default:	 false,
-				Description:  "Denies an unauthenticated LDAP bind request if the user's password is empty",
+				Default:	 true,
+				Description: "Denies an unauthenticated LDAP bind request if the user's password is empty",
 			},
 		},
 
