@@ -35,6 +35,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			Root: []string{
 				"auth/*",
 				"remount",
+				"config/*",
 				"revoke-prefix/*",
 				"audit",
 				"audit/*",
@@ -64,6 +65,30 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["capabilities_accessor"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/cors$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"enable": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Description: "Enables or disables CORS headers on requests.",
+					},
+					"allowed_origins": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "A regular expression describing origins that may make cross-origin requests.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleCORSStatus,
+					logical.UpdateOperation: b.handleCORSEnable,
+					logical.DeleteOperation: b.handleCORSDisable,
+				},
+
+				HelpDescription: "CORS does stuff.",
+				HelpSynopsis:    "CORS is CORS",
 			},
 
 			&framework.Path{
@@ -617,7 +642,51 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
-// handleCapabilitiesreturns the ACL capabilities of the token for a given path
+// corsStatus returns the current CORS configuration as a logical.Response
+func (b *SystemBackend) corsStatusResponse(corsConf *CORSConfig) *logical.Response {
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":         corsConf.Enabled(),
+			"allowed_origins": corsConf.AllowedOrigins().String(),
+		},
+	}
+}
+
+// handleCORSEnable sets the regexp that describes origins that are allowed
+// to make cross-origin requests and sets the CORS enabled flag to true
+func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	corsConf, err := b.Core.CORSConfig()
+	if err != nil {
+		corsConf = newCORSConfig()
+	}
+
+	s := d.Get("allowed_origins")
+
+	corsConf.EnableCORS(s.(string))
+
+	return b.corsStatusResponse(corsConf), nil
+}
+
+// handleCORSDisable clears the allowed origins regexp and sets the CORS enabled flag to false
+func (b *SystemBackend) handleCORSDisable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	corsConf, _ := b.Core.CORSConfig()
+
+	corsConf.Disable()
+
+	return b.corsStatusResponse(corsConf), nil
+}
+
+// handleCORSStatus returns the current CORS configuration
+func (b *SystemBackend) handleCORSStatus(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	corsConf, err := b.Core.CORSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return b.corsStatusResponse(corsConf), nil
+}
+
+// handleCapabilities returns the ACL capabilities of the token for a given path
 func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	token := d.Get("token").(string)
 	if token == "" {
@@ -635,8 +704,8 @@ func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.Fi
 	}, nil
 }
 
-// handleCapabilitiesAccessor returns the ACL capabilities of the token associted
-// with the given accessor for a given path.
+// handleCapabilitiesAccessor returns the ACL capabilities of the
+// token associted with the given accessor for a given path.
 func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	accessor := d.Get("accessor").(string)
 	if accessor == "" {

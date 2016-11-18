@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"sync"
 	"time"
 
@@ -129,12 +128,6 @@ type activeAdvertisement struct {
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
 type Core struct {
-	// enableCORS determines if CORS headers should be returned on the HTTP reponses.
-	enableCORS bool
-
-	// allowedOrigins is a regex that determines which domains are allowed to make cross-domain requests
-	allowedOrigins *regexp.Regexp
-
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
@@ -299,14 +292,13 @@ type Core struct {
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
 	rpcForwardingClient RequestForwardingClient
+
+	// CORS Information
+	corsConfig *CORSConfig
 }
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	AllowedOrigins string `json:"allowed_origins" structs:"allowed_origins" mapstructure:"allowed_origins"`
-
-	EnableCORS bool `json:"enable_cors" structs:"enable_cors" mapstructure:"enable_cors"`
-
 	LogicalBackends map[string]logical.Factory `json:"logical_backends" structs:"logical_backends" mapstructure:"logical_backends"`
 
 	CredentialBackends map[string]logical.Factory `json:"credential_backends" structs:"credential_backends" mapstructure:"credential_backends"`
@@ -416,7 +408,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
-		enableCORS:                       conf.EnableCORS,
 		redirectAddr:                     conf.RedirectAddr,
 		clusterAddr:                      conf.ClusterAddr,
 		physical:                         conf.Physical,
@@ -435,20 +426,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 	}
 
-	if conf.EnableCORS {
-		if conf.AllowedOrigins == "" {
-			c.allowedOrigins, _ = regexp.Compile(".*")
-		} else {
-			c.allowedOrigins, err = regexp.Compile(".*")
-			if err != nil {
-				return nil, fmt.Errorf("invalid regexp: %v", err)
-			}
-		}
-	}
-
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
 		c.ha = conf.HAPhysical
 	}
+
+	// c.corsConfig = newCORSConfig()
 
 	// We create the funcs here, then populate the given config with it so that
 	// the caller can share state
@@ -500,10 +482,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	return c, storedKeyErr
 }
 
-func (c *Core) CORSInfo() (bool, *regexp.Regexp) {
-	return c.enableCORS, c.allowedOrigins
-}
-
 // Shutdown is invoked when the Vault instance is about to be terminated. It
 // should not be accessible as part of an API call as it will cause an availability
 // problem. It is only used to gracefully quit in the case of HA so that failover
@@ -517,6 +495,13 @@ func (c *Core) Shutdown() error {
 
 	// Seal the Vault, causes a leader stepdown
 	return c.sealInternal()
+}
+
+func (c *Core) CORSConfig() (*CORSConfig, error) {
+	if c.corsConfig == nil {
+		return nil, errors.New("CORS is not configured")
+	}
+	return c.corsConfig, nil
 }
 
 // LookupToken returns the properties of the token from the token store. This
