@@ -48,7 +48,7 @@ type Config struct {
 	redirectSetup sync.Once
 
 	// MaxRetries controls the maximum number of times to retry when a 5xx error
-	// occurs. Set to 0 or less to disable retrying.
+	// occurs. Set to 0 or less to disable retrying. Defaults to 0.
 	MaxRetries int
 }
 
@@ -98,8 +98,6 @@ func DefaultConfig() *Config {
 	if v := os.Getenv(EnvVaultAddress); v != "" {
 		config.Address = v
 	}
-
-	config.MaxRetries = pester.DefaultClient.MaxRetries
 
 	return config
 }

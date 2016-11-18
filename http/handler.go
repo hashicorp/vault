@@ -26,6 +26,11 @@ const (
 	// NoRequestForwardingHeaderName is the name of the header telling Vault
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
+
+	// MaxRequestSize is the maximum accepted request size. This is to prevent
+	// a denial of service attack where no Content-Length is provided and the server
+	// is fed ever more data until it exhausts memory.
+	MaxRequestSize = 32 * 1024 * 1024
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -109,7 +114,10 @@ func stripPrefix(prefix, path string) (string, bool) {
 }
 
 func parseRequest(r *http.Request, out interface{}) error {
-	err := jsonutil.DecodeJSONFromReader(r.Body, out)
+	// Limit the maximum number of bytes to MaxRequestSize to protect
+	// against an indefinite amount of data being read.
+	limit := &io.LimitedReader{R: r.Body, N: MaxRequestSize}
+	err := jsonutil.DecodeJSONFromReader(limit, out)
 	if err != nil && err != io.EOF {
 		return fmt.Errorf("Failed to parse JSON input: %s", err)
 	}

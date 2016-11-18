@@ -49,6 +49,13 @@ func (m *Request) String() string            { return proto.CompactTextString(m)
 func (*Request) ProtoMessage()               {}
 func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
+func (m *Request) GetMethod() string {
+	if m != nil {
+		return m.Method
+	}
+	return ""
+}
+
 func (m *Request) GetUrl() *URL {
 	if m != nil {
 		return m.Url
@@ -59,6 +66,34 @@ func (m *Request) GetUrl() *URL {
 func (m *Request) GetHeaderEntries() map[string]*HeaderEntry {
 	if m != nil {
 		return m.HeaderEntries
+	}
+	return nil
+}
+
+func (m *Request) GetBody() []byte {
+	if m != nil {
+		return m.Body
+	}
+	return nil
+}
+
+func (m *Request) GetHost() string {
+	if m != nil {
+		return m.Host
+	}
+	return ""
+}
+
+func (m *Request) GetRemoteAddr() string {
+	if m != nil {
+		return m.RemoteAddr
+	}
+	return ""
+}
+
+func (m *Request) GetPeerCertificates() [][]byte {
+	if m != nil {
+		return m.PeerCertificates
 	}
 	return nil
 }
@@ -83,6 +118,55 @@ func (m *URL) String() string            { return proto.CompactTextString(m) }
 func (*URL) ProtoMessage()               {}
 func (*URL) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
+func (m *URL) GetScheme() string {
+	if m != nil {
+		return m.Scheme
+	}
+	return ""
+}
+
+func (m *URL) GetOpaque() string {
+	if m != nil {
+		return m.Opaque
+	}
+	return ""
+}
+
+func (m *URL) GetHost() string {
+	if m != nil {
+		return m.Host
+	}
+	return ""
+}
+
+func (m *URL) GetPath() string {
+	if m != nil {
+		return m.Path
+	}
+	return ""
+}
+
+func (m *URL) GetRawPath() string {
+	if m != nil {
+		return m.RawPath
+	}
+	return ""
+}
+
+func (m *URL) GetRawQuery() string {
+	if m != nil {
+		return m.RawQuery
+	}
+	return ""
+}
+
+func (m *URL) GetFragment() string {
+	if m != nil {
+		return m.Fragment
+	}
+	return ""
+}
+
 type HeaderEntry struct {
 	Values []string `protobuf:"bytes,1,rep,name=values" json:"values,omitempty"`
 }
@@ -91,6 +175,13 @@ func (m *HeaderEntry) Reset()                    { *m = HeaderEntry{} }
 func (m *HeaderEntry) String() string            { return proto.CompactTextString(m) }
 func (*HeaderEntry) ProtoMessage()               {}
 func (*HeaderEntry) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *HeaderEntry) GetValues() []string {
+	if m != nil {
+		return m.Values
+	}
+	return nil
+}
 
 type Response struct {
 	// Not used right now but reserving in case it turns out that streaming
@@ -107,6 +198,20 @@ func (m *Response) Reset()                    { *m = Response{} }
 func (m *Response) String() string            { return proto.CompactTextString(m) }
 func (*Response) ProtoMessage()               {}
 func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *Response) GetStatusCode() uint32 {
+	if m != nil {
+		return m.StatusCode
+	}
+	return 0
+}
+
+func (m *Response) GetBody() []byte {
+	if m != nil {
+		return m.Body
+	}
+	return nil
+}
 
 func (m *Response) GetHeaderEntries() map[string]*HeaderEntry {
 	if m != nil {

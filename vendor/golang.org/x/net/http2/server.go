@@ -188,9 +188,6 @@ func ConfigureServer(s *http.Server, conf *Server) error {
 	if !haveNPN {
 		s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, NextProtoTLS)
 	}
-	// h2-14 is temporary (as of 2015-03-05) while we wait for all browsers
-	// to switch to "h2".
-	s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, "h2-14")
 
 	if s.TLSNextProto == nil {
 		s.TLSNextProto = map[string]func(*http.Server, *tls.Conn, http.Handler){}
@@ -205,7 +202,6 @@ func ConfigureServer(s *http.Server, conf *Server) error {
 		})
 	}
 	s.TLSNextProto[NextProtoTLS] = protoHandler
-	s.TLSNextProto["h2-14"] = protoHandler // temporary; see above.
 	return nil
 }
 
@@ -390,8 +386,8 @@ type serverConn struct {
 	advMaxStreams         uint32 // our SETTINGS_MAX_CONCURRENT_STREAMS advertised the client
 	curClientStreams      uint32 // number of open streams initiated by the client
 	curPushedStreams      uint32 // number of open streams initiated by server push
-	maxStreamID           uint32 // max ever seen from client
-	maxPushPromiseID      uint32 // ID of the last push promise, or 0 if there have been no pushes
+	maxClientStreamID     uint32 // max ever seen from client (odd), or 0 if there have been no client requests
+	maxPushPromiseID      uint32 // ID of the last push promise (even), or 0 if there have been no pushes
 	streams               map[uint32]*stream
 	initialWindowSize     int32
 	maxFrameSize          int32
@@ -481,8 +477,14 @@ func (sc *serverConn) state(streamID uint32) (streamState, *stream) {
 	// a client sends a HEADERS frame on stream 7 without ever sending a
 	// frame on stream 5, then stream 5 transitions to the "closed"
 	// state when the first frame for stream 7 is sent or received."
-	if streamID <= sc.maxStreamID {
-		return stateClosed, nil
+	if streamID%2 == 1 {
+		if streamID <= sc.maxClientStreamID {
+			return stateClosed, nil
+		}
+	} else {
+		if streamID <= sc.maxPushPromiseID {
+			return stateClosed, nil
+		}
 	}
 	return stateIdle, nil
 }
@@ -740,7 +742,7 @@ func (sc *serverConn) serve() {
 			return
 		case <-gracefulShutdownCh:
 			gracefulShutdownCh = nil
-			sc.goAwayIn(ErrCodeNo, 0)
+			sc.startGracefulShutdown()
 		case <-sc.shutdownTimerCh:
 			sc.vlogf("GOAWAY close timer fired; closing conn from %v", sc.conn.RemoteAddr())
 			return
@@ -1015,7 +1017,7 @@ func (sc *serverConn) scheduleFrameWrite() {
 			sc.needToSendGoAway = false
 			sc.startFrameWrite(FrameWriteRequest{
 				write: &writeGoAway{
-					maxStreamID: sc.maxStreamID,
+					maxStreamID: sc.maxClientStreamID,
 					code:        sc.goAwayCode,
 				},
 			})
@@ -1040,6 +1042,13 @@ func (sc *serverConn) scheduleFrameWrite() {
 		break
 	}
 	sc.inFrameScheduleLoop = false
+}
+
+// startGracefulShutdown sends a GOAWAY with ErrCodeNo to tell the
+// client we're gracefully shutting down. The connection isn't closed
+// until all current streams are done.
+func (sc *serverConn) startGracefulShutdown() {
+	sc.goAwayIn(ErrCodeNo, 0)
 }
 
 func (sc *serverConn) goAway(code ErrCode) {
@@ -1164,6 +1173,8 @@ func (sc *serverConn) processFrame(f Frame) error {
 		return sc.processResetStream(f)
 	case *PriorityFrame:
 		return sc.processPriority(f)
+	case *GoAwayFrame:
+		return sc.processGoAway(f)
 	case *PushPromiseFrame:
 		// A client cannot push. Thus, servers MUST treat the receipt of a PUSH_PROMISE
 		// frame as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
@@ -1189,7 +1200,7 @@ func (sc *serverConn) processPing(f *PingFrame) error {
 		// PROTOCOL_ERROR."
 		return ConnectionError(ErrCodeProtocol)
 	}
-	if sc.inGoAway {
+	if sc.inGoAway && sc.goAwayCode != ErrCodeNo {
 		return nil
 	}
 	sc.writeFrame(FrameWriteRequest{write: writePingAck{f}})
@@ -1198,9 +1209,6 @@ func (sc *serverConn) processPing(f *PingFrame) error {
 
 func (sc *serverConn) processWindowUpdate(f *WindowUpdateFrame) error {
 	sc.serveG.check()
-	if sc.inGoAway {
-		return nil
-	}
 	switch {
 	case f.StreamID != 0: // stream-level flow control
 		state, st := sc.state(f.StreamID)
@@ -1233,9 +1241,6 @@ func (sc *serverConn) processWindowUpdate(f *WindowUpdateFrame) error {
 
 func (sc *serverConn) processResetStream(f *RSTStreamFrame) error {
 	sc.serveG.check()
-	if sc.inGoAway {
-		return nil
-	}
 
 	state, st := sc.state(f.StreamID)
 	if state == stateIdle {
@@ -1265,12 +1270,15 @@ func (sc *serverConn) closeStream(st *stream, err error) {
 	} else {
 		sc.curClientStreams--
 	}
-	if sc.curClientStreams+sc.curPushedStreams == 0 {
-		sc.setConnState(http.StateIdle)
-	}
 	delete(sc.streams, st.id)
-	if len(sc.streams) == 0 && sc.srv.IdleTimeout != 0 {
-		sc.idleTimer.Reset(sc.srv.IdleTimeout)
+	if len(sc.streams) == 0 {
+		sc.setConnState(http.StateIdle)
+		if sc.srv.IdleTimeout != 0 {
+			sc.idleTimer.Reset(sc.srv.IdleTimeout)
+		}
+		if h1ServerKeepAlivesDisabled(sc.hs) {
+			sc.startGracefulShutdown()
+		}
 	}
 	if p := st.body; p != nil {
 		// Return any buffered unread bytes worth of conn-level flow control.
@@ -1293,9 +1301,6 @@ func (sc *serverConn) processSettings(f *SettingsFrame) error {
 			// hang up on them anyway.
 			return ConnectionError(ErrCodeProtocol)
 		}
-		return nil
-	}
-	if sc.inGoAway {
 		return nil
 	}
 	if err := f.ForeachSetting(sc.processSetting); err != nil {
@@ -1369,7 +1374,7 @@ func (sc *serverConn) processSettingInitialWindowSize(val uint32) error {
 
 func (sc *serverConn) processData(f *DataFrame) error {
 	sc.serveG.check()
-	if sc.inGoAway {
+	if sc.inGoAway && sc.goAwayCode != ErrCodeNo {
 		return nil
 	}
 	data := f.Data()
@@ -1448,6 +1453,20 @@ func (sc *serverConn) processData(f *DataFrame) error {
 	return nil
 }
 
+func (sc *serverConn) processGoAway(f *GoAwayFrame) error {
+	sc.serveG.check()
+	if f.ErrCode != ErrCodeNo {
+		sc.logf("http2: received GOAWAY %+v, starting graceful shutdown", f)
+	} else {
+		sc.vlogf("http2: received GOAWAY %+v, starting graceful shutdown", f)
+	}
+	sc.startGracefulShutdown()
+	// http://tools.ietf.org/html/rfc7540#section-6.8
+	// We should not create any new streams, which means we should disable push.
+	sc.pushEnabled = false
+	return nil
+}
+
 // isPushed reports whether the stream is server-initiated.
 func (st *stream) isPushed() bool {
 	return st.id%2 == 0
@@ -1508,10 +1527,10 @@ func (sc *serverConn) processHeaders(f *MetaHeadersFrame) error {
 	// endpoint has opened or reserved. [...]  An endpoint that
 	// receives an unexpected stream identifier MUST respond with
 	// a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
-	if id <= sc.maxStreamID {
+	if id <= sc.maxClientStreamID {
 		return ConnectionError(ErrCodeProtocol)
 	}
-	sc.maxStreamID = id
+	sc.maxClientStreamID = id
 
 	if sc.idleTimer != nil {
 		sc.idleTimer.Stop()
@@ -1847,15 +1866,17 @@ func (sc *serverConn) runHandler(rw *responseWriter, req *http.Request, handler 
 		rw.rws.stream.cancelCtx()
 		if didPanic {
 			e := recover()
-			// Same as net/http:
-			const size = 64 << 10
-			buf := make([]byte, size)
-			buf = buf[:runtime.Stack(buf, false)]
 			sc.writeFrameFromHandler(FrameWriteRequest{
 				write:  handlerPanicRST{rw.rws.stream.id},
 				stream: rw.rws.stream,
 			})
-			sc.logf("http2: panic serving %v: %v\n%s", sc.conn.RemoteAddr(), e, buf)
+			// Same as net/http:
+			if shouldLogPanic(e) {
+				const size = 64 << 10
+				buf := make([]byte, size)
+				buf = buf[:runtime.Stack(buf, false)]
+				sc.logf("http2: panic serving %v: %v\n%s", sc.conn.RemoteAddr(), e, buf)
+			}
 			return
 		}
 		rw.handlerDone()
@@ -2267,8 +2288,9 @@ func (w *responseWriter) CloseNotify() <-chan bool {
 	if ch == nil {
 		ch = make(chan bool, 1)
 		rws.closeNotifierCh = ch
+		cw := rws.stream.cw
 		go func() {
-			rws.stream.cw.Wait() // wait for close
+			cw.Wait() // wait for close
 			ch <- true
 		}()
 	}
@@ -2421,7 +2443,7 @@ func (w *responseWriter) push(target string, opts pushOptions) error {
 	}
 	for k := range opts.Header {
 		if strings.HasPrefix(k, ":") {
-			return fmt.Errorf("promised request headers cannot include psuedo header %q", k)
+			return fmt.Errorf("promised request headers cannot include pseudo header %q", k)
 		}
 		// These headers are meaningful only if the request has a body,
 		// but PUSH_PROMISE requests cannot have a body.
@@ -2514,6 +2536,12 @@ func (sc *serverConn) startPush(msg startPushRequest) {
 
 		// http://tools.ietf.org/html/rfc7540#section-5.1.1.
 		// Streams initiated by the server MUST use even-numbered identifiers.
+		// A server that is unable to establish a new stream identifier can send a GOAWAY
+		// frame so that the client is forced to open a new connection for new streams.
+		if sc.maxPushPromiseID+2 >= 1<<31 {
+			sc.startGracefulShutdown()
+			return 0, ErrPushLimitReached
+		}
 		sc.maxPushPromiseID += 2
 		promisedID := sc.maxPushPromiseID
 
@@ -2660,3 +2688,17 @@ func h1ServerShutdownChan(hs *http.Server) <-chan struct{} {
 
 // optional test hook for h1ServerShutdownChan.
 var testh1ServerShutdownChan func(hs *http.Server) <-chan struct{}
+
+// h1ServerKeepAlivesDisabled reports whether hs has its keep-alives
+// disabled. See comments on h1ServerShutdownChan above for why
+// the code is written this way.
+func h1ServerKeepAlivesDisabled(hs *http.Server) bool {
+	var x interface{} = hs
+	type I interface {
+		doKeepAlives() bool
+	}
+	if hs, ok := x.(I); ok {
+		return !hs.doKeepAlives()
+	}
+	return false
+}

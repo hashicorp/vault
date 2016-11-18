@@ -68,7 +68,9 @@ func (c *Core) startForwarding() error {
 		go func() {
 			defer shutdownWg.Done()
 
-			c.logger.Info("core/startClusterListener: starting listener")
+			if c.logger.IsInfo() {
+				c.logger.Info("core/startClusterListener: starting listener", "listener_address", laddr)
+			}
 
 			// Create a TCP listener. We do this separately and specifically
 			// with TCP so that we can set deadlines.
@@ -143,6 +145,10 @@ func (c *Core) startForwarding() error {
 
 	// This is in its own goroutine so that we don't block the main thread, and
 	// thus we use atomic and channels to coordinate
+	// However, because you can't query the status of a channel, we set a bool
+	// here while we have the state lock to know whether to actually send a
+	// shutdown (e.g. whether the channel will block). See issue #2083.
+	c.clusterListenersRunning = true
 	go func() {
 		// If we get told to shut down...
 		<-c.clusterListenerShutdownCh

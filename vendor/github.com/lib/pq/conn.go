@@ -1507,10 +1507,21 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 				dest[i] = decode(&conn.parameterStatus, rs.rb.next(l), rs.colTyps[i], rs.colFmts[i])
 			}
 			return
+		case 'T':
+			rs.colNames, rs.colFmts, rs.colTyps = parsePortalRowDescribe(&rs.rb)
+			return io.EOF
 		default:
 			errorf("unexpected message after execute: %q", t)
 		}
 	}
+}
+
+func (rs *rows) HasNextResultSet() bool {
+	return !rs.done
+}
+
+func (rs *rows) NextResultSet() error {
+	return nil
 }
 
 // QuoteIdentifier quotes an "identifier" (e.g. a table or a column name) to be

@@ -35,3 +35,7 @@ func configureServer18(h1 *http.Server, h2 *Server) error {
 	}
 	return nil
 }
+
+func shouldLogPanic(panicValue interface{}) bool {
+	return panicValue != nil && panicValue != http.ErrAbortHandler
+}

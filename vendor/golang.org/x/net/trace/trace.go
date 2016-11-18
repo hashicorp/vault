@@ -752,7 +752,7 @@ func (tr *trace) addEvent(x interface{}, recyclable, sensitive bool) {
 		and very unlikely to be the fault of this code.
 
 		The most likely scenario is that some code elsewhere is using
-		a requestz.Trace after its Finish method is called.
+		a trace.Trace after its Finish method is called.
 		You can temporarily set the DebugUseAfterFinish var
 		to help discover where that is; do not leave that var set,
 		since it makes this package much less efficient.

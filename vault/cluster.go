@@ -316,6 +316,10 @@ func (c *Core) stopClusterListener() {
 		return
 	}
 
+	if !c.clusterListenersRunning {
+		c.logger.Info("core/stopClusterListener: listeners not running")
+		return
+	}
 	c.logger.Info("core/stopClusterListener: stopping listeners")
 
 	// Tell the goroutine managing the listeners to perform the shutdown
@@ -327,6 +331,8 @@ func (c *Core) stopClusterListener() {
 	// bind errors. This ensures proper ordering.
 	c.logger.Trace("core/stopClusterListener: waiting for success notification")
 	<-c.clusterListenerShutdownSuccessCh
+	c.clusterListenersRunning = false
+
 	c.logger.Info("core/stopClusterListener: success")
 }
 

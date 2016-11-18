@@ -26,6 +26,11 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusNotFound, nil
 	}
 
+	// Verify the content length does not exceed the maximum size
+	if r.ContentLength >= MaxRequestSize {
+		return nil, http.StatusRequestEntityTooLarge, nil
+	}
+
 	// Determine the operation
 	var op logical.Operation
 	switch r.Method {

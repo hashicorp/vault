@@ -25,7 +25,9 @@ type WriteScheduler interface {
 	// https://tools.ietf.org/html/rfc7540#section-5.1
 	AdjustStream(streamID uint32, priority PriorityParam)
 
-	// Push queues a frame in the scheduler.
+	// Push queues a frame in the scheduler. In most cases, this will not be
+	// called with wr.StreamID()!=0 unless that stream is currently open. The one
+	// exception is RST_STREAM frames, which may be sent on idle or closed streams.
 	Push(wr FrameWriteRequest)
 
 	// Pop dequeues the next frame to write. Returns false if no frames can
@@ -62,6 +64,13 @@ type FrameWriteRequest struct {
 // 0 is used for non-stream frames such as PING and SETTINGS.
 func (wr FrameWriteRequest) StreamID() uint32 {
 	if wr.stream == nil {
+		if se, ok := wr.write.(StreamError); ok {
+			// (*serverConn).resetStream doesn't set
+			// stream because it doesn't necessarily have
+			// one. So special case this type of write
+			// message.
+			return se.StreamID
+		}
 		return 0
 	}
 	return wr.stream.id
@@ -142,17 +151,13 @@ func (wr FrameWriteRequest) Consume(n int32) (FrameWriteRequest, FrameWriteReque
 
 // String is for debugging only.
 func (wr FrameWriteRequest) String() string {
-	var streamID uint32
-	if wr.stream != nil {
-		streamID = wr.stream.id
-	}
 	var des string
 	if s, ok := wr.write.(fmt.Stringer); ok {
 		des = s.String()
 	} else {
 		des = fmt.Sprintf("%T", wr.write)
 	}
-	return fmt.Sprintf("[FrameWriteRequest stream=%d, ch=%v, writer=%v]", streamID, wr.done != nil, des)
+	return fmt.Sprintf("[FrameWriteRequest stream=%d, ch=%v, writer=%v]", wr.StreamID(), wr.done != nil, des)
 }
 
 // writeQueue is used by implementations of WriteScheduler.

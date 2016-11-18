@@ -576,6 +576,9 @@ var logLevelName = map[int64]string{
 }
 
 func logf(c *context, level int64, format string, args ...interface{}) {
+	if c == nil {
+		panic("not an App Engine context")
+	}
 	s := fmt.Sprintf(format, args...)
 	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
 	c.addLogLine(&logpb.UserAppLogLine{

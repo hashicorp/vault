@@ -209,6 +209,22 @@ type IssuesEvent struct {
 	Sender  *User       `json:"sender,omitempty"`
 }
 
+// LabelEvent is triggered when a repository's label is created, edited, or deleted.
+// The Webhook event name is "label"
+//
+// GitHub docs: https://developer.github.com/v3/activity/events/types/#labelevent
+type LabelEvent struct {
+	// Action is the action that was performed. Possible values are:
+	// "created", "edited", "deleted"
+	Action *string `json:"action,omitempty"`
+	Label  *Label  `json:"label,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Changes *EditChange   `json:"changes,omitempty"`
+	Repo    *Repository   `json:"repository,omitempty"`
+	Org     *Organization `json:"organization,omitempty"`
+}
+
 // MemberEvent is triggered when a user is added as a collaborator to a repository.
 // The Webhook event name is "member".
 //
@@ -241,6 +257,23 @@ type MembershipEvent struct {
 	// The following fields are only populated by Webhook events.
 	Org    *Organization `json:"organization,omitempty"`
 	Sender *User         `json:"sender,omitempty"`
+}
+
+// MilestoneEvent is triggered when a milestone is created, closed, opened, edited, or deleted.
+// The Webhook event name is "milestone".
+//
+// Github docs: https://developer.github.com/v3/activity/events/types/#milestoneevent
+type MilestoneEvent struct {
+	// Action is the action that was performed. Possible values are:
+	// "created", "closed", "opened", "edited", "deleted"
+	Action    *string    `json:"action,omitempty"`
+	Milestone *Milestone `json:"milestone,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Changes *EditChange   `json:"changes,omitempty"`
+	Repo    *Repository   `json:"repository,omitempty"`
+	Sender  *User         `json:"sender,omitempty"`
+	Org     *Organization `json:"organization,omitempty"`
 }
 
 // PageBuildEvent represents an attempted build of a GitHub Pages site, whether

@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -145,10 +146,10 @@ func (cm *CheckManager) brokerSupportsCheckType(checkType CheckTypeType, details
 
 // Is the broker valid (active, supports check type, and reachable)
 func (cm *CheckManager) isValidBroker(broker *api.Broker) bool {
-	brokerPort := 0
+	brokerHost := ""
+	brokerPort := ""
 	valid := false
 	for _, detail := range broker.Details {
-		brokerPort = 43191
 
 		// broker must be active
 		if detail.Status != statusActive {
@@ -166,8 +167,24 @@ func (cm *CheckManager) isValidBroker(broker *api.Broker) bool {
 			continue
 		}
 
+		if detail.ExternalPort != 0 {
+			brokerPort = strconv.Itoa(detail.ExternalPort)
+		} else {
+			if detail.Port != 0 {
+				brokerPort = strconv.Itoa(detail.Port)
+			} else {
+				brokerPort = "43191"
+			}
+		}
+
+		if detail.ExternalHost != "" {
+			brokerHost = detail.ExternalHost
+		} else {
+			brokerHost = detail.IP
+		}
+
 		// broker must be reachable and respond within designated time
-		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", detail.IP, brokerPort), cm.brokerMaxResponseTime)
+		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", brokerHost, brokerPort), cm.brokerMaxResponseTime)
 		if err != nil {
 			if detail.CN != "trap.noit.circonus.net" {
 				if cm.Debug {
@@ -176,8 +193,8 @@ func (cm *CheckManager) isValidBroker(broker *api.Broker) bool {
 				continue // not able to reach the broker (or respone slow enough for it to be considered not usable)
 			}
 			// if circonus trap broker, try port 443
-			brokerPort = 443
-			conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%d", detail.CN, brokerPort), cm.brokerMaxResponseTime)
+			brokerPort = "443"
+			conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%s", detail.CN, brokerPort), cm.brokerMaxResponseTime)
 			if err != nil {
 				if cm.Debug {
 					cm.Log.Printf("[DEBUG] Broker '%s' unable to connect %v\n", broker.Name, err)

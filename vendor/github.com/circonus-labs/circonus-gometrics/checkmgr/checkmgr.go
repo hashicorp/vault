@@ -138,6 +138,7 @@ type CheckManager struct {
 	checkType             CheckTypeType
 	checkID               api.IDType
 	checkInstanceID       CheckInstanceIDType
+	checkTarget           string
 	checkSearchTag        api.TagType
 	checkSecret           CheckSecretType
 	checkTags             api.TagType
@@ -258,6 +259,7 @@ func NewCheckManager(cfg *Config) (*CheckManager, error) {
 	if cm.checkInstanceID == "" {
 		cm.checkInstanceID = CheckInstanceIDType(fmt.Sprintf("%s:%s", hn, an))
 	}
+	cm.checkTarget = hn
 
 	if cfg.Check.SearchTag == "" {
 		cm.checkSearchTag = []string{fmt.Sprintf("service:%s", an)}
@@ -270,7 +272,7 @@ func NewCheckManager(cfg *Config) (*CheckManager, error) {
 	}
 
 	if cm.checkDisplayName == "" {
-		cm.checkDisplayName = CheckDisplayNameType(fmt.Sprintf("%s /cgm", string(cm.checkInstanceID)))
+		cm.checkDisplayName = CheckDisplayNameType(fmt.Sprintf("%s", string(cm.checkInstanceID)))
 	}
 
 	dur := cfg.Check.MaxURLAge
