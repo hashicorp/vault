@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -54,16 +53,11 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
 	mux.Handle("/v1/sys/capabilities-self", handleRequestForwarding(core, handleLogical(core, true, nil)))
 	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, true, nil)))
-	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	mux.Handle("/v1/", handleCORS(core, handleRequestForwarding(core, handleLogical(core, false, nil))))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
 
-	// Wrap the handler in another handler to ensure
-	// CORS headers are added to the requests if enabled.
-	if useCORS, allowedOrigins := core.CORSInfo(); useCORS {
-		handler = handleCORS(handler, allowedOrigins)
-	}
 	return handler
 }
 
@@ -124,29 +118,19 @@ func parseRequest(r *http.Request, out interface{}) error {
 
 // HandleCORS adds required headers to properly respond to request that
 // require Cross Origin Resource Sharing (CORS) headers.
-func handleCORS(handler http.Handler, allowedOrigins *regexp.Regexp) http.Handler {
+func handleCORS(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var allowedOrigin string
+		var corsConf *vault.CORSConfig
 
-		origin := r.Header.Get("Origin")
+		corsConf, _ = core.CORSConfig()
 
-		if allowedOrigins.MatchString(origin) && len(origin) > 0 {
-			allowedOrigin = origin
+		if corsConf.Enabled() {
+			err := corsConf.ApplyHeaders(w, r)
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+			}
 		}
 
-		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		// Handle preflight requests
-		if r.Method == "OPTIONS" {
-			w.Header().Set("Access-Control-Allow-Methods", "OPTIONS,GET,PUT,POST,DELETE,LIST")
-			w.Header().Set("Access-Control-Allow-Headers", "X-Requested-With,Content-Type,Accept,Origin,Authorization,X-Vault-Token")
-			w.Header().Set("Access-Control-Max-Age", "1800")
-			w.Header().Set("Content-Type", "text/plain")
-
-			w.WriteHeader(http.StatusOK)
-			return
-		}
 		handler.ServeHTTP(w, r)
 		return
 	})
