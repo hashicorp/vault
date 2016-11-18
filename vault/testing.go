@@ -121,8 +121,6 @@ func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 		CredentialBackends: noopBackends,
 		DisableMlock:       true,
 		Logger:             logger,
-		EnableCORS:         true,
-		AllowedOrigins:     ".*",
 	}
 	if testSeal != nil {
 		conf.Seal = testSeal
