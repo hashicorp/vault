@@ -77,6 +77,12 @@ func (e *EncryptedKey) Decrypt(priv *PrivateKey, config *Config) error {
 		c1 := new(big.Int).SetBytes(e.encryptedMPI1.bytes)
 		c2 := new(big.Int).SetBytes(e.encryptedMPI2.bytes)
 		b, err = elgamal.Decrypt(priv.PrivateKey.(*elgamal.PrivateKey), c1, c2)
+	case PubKeyAlgoECDH:
+		ecdh, ok := priv.PrivateKey.(*ecdhPrivateKey)
+		if !ok {
+			return errors.InvalidArgumentError("bad internal ECDH key")
+		}
+		b, err = ecdh.Decrypt(e.encryptedMPI1.bytes)
 	default:
 		err = errors.InvalidArgumentError("cannot decrypted encrypted session key with private key of type " + strconv.Itoa(int(priv.PubKeyAlgo)))
 	}

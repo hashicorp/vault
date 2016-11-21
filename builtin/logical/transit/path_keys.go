@@ -5,9 +5,23 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+func (b *backend) pathListKeys() *framework.Path {
+	return &framework.Path{
+		Pattern: "keys/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathKeysList,
+		},
+
+		HelpSynopsis:    pathPolicyHelpSyn,
+		HelpDescription: pathPolicyHelpDesc,
+	}
+}
 
 func (b *backend) pathKeys() *framework.Path {
 	return &framework.Path{
@@ -61,6 +75,16 @@ impact the ciphertext's security.`,
 	}
 }
 
+func (b *backend) pathKeysList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
+}
+
 func (b *backend) pathPolicyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
@@ -72,17 +96,17 @@ func (b *backend) pathPolicyWrite(
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
 	}
 
-	polReq := policyRequest{
-		storage:    req.Storage,
-		name:       name,
-		derived:    derived,
-		convergent: convergent,
+	polReq := keysutil.PolicyRequest{
+		Storage:    req.Storage,
+		Name:       name,
+		Derived:    derived,
+		Convergent: convergent,
 	}
 	switch keyType {
 	case "aes256-gcm96":
-		polReq.keyType = keyType_AES256_GCM96
+		polReq.KeyType = keysutil.KeyType_AES256_GCM96
 	case "ecdsa-p256":
-		polReq.keyType = keyType_ECDSA_P256
+		polReq.KeyType = keysutil.KeyType_ECDSA_P256
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -135,10 +159,10 @@ func (b *backend) pathPolicyRead(
 
 	if p.Derived {
 		switch p.KDF {
-		case kdf_hmac_sha256_counter:
+		case keysutil.Kdf_hmac_sha256_counter:
 			resp.Data["kdf"] = "hmac-sha256-counter"
 			resp.Data["kdf_mode"] = "hmac-sha256-counter"
-		case kdf_hkdf_sha256:
+		case keysutil.Kdf_hkdf_sha256:
 			resp.Data["kdf"] = "hkdf_sha256"
 		}
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption
@@ -148,14 +172,14 @@ func (b *backend) pathPolicyRead(
 	}
 
 	switch p.Type {
-	case keyType_AES256_GCM96:
+	case keysutil.KeyType_AES256_GCM96:
 		retKeys := map[string]int64{}
 		for k, v := range p.Keys {
 			retKeys[strconv.Itoa(k)] = v.CreationTime
 		}
 		resp.Data["keys"] = retKeys
 
-	case keyType_ECDSA_P256:
+	case keysutil.KeyType_ECDSA_P256:
 		type ecdsaKey struct {
 			Name      string `json:"name"`
 			PublicKey string `json:"public_key"`

@@ -64,6 +64,14 @@ it is *very important* that you set this option **before** upgrading your Vault
 instances. Without doing so, each Vault instance will believe that it is
 standalone and there could be consistency issues.
 
+## LDAP Auth Backend Forgets Bind Password and Insecure TLS Settings
+
+Due to a bug, these two settings are forgotten if they have been configured in
+the LDAP backend prior to 0.6.1. If you are using these settings with LDAP,
+please be sure to re-submit your LDAP configuration to Vault after the upgrade,
+so ensure that you have a valid token to do so before upgrading if you are
+relying on LDAP authentication for permissions to modify the backend itself.
+
 ## LDAP Auth Backend Does Not Search `memberOf`
 
 The LDAP backend went from a model where all permutations of storing and

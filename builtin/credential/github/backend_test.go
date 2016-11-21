@@ -110,17 +110,21 @@ func TestBackend_basic(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t, false),
-			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
-			testAccLogin(t, []string{"root"}),
+			testAccMap(t, "default", "fakepol"),
+			testAccMap(t, "oWnErs", "fakepol"),
+			testAccLogin(t, []string{"default", "fakepol"}),
 			testAccStepConfig(t, true),
-			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
-			testAccLogin(t, []string{"root"}),
+			testAccMap(t, "default", "fakepol"),
+			testAccMap(t, "oWnErs", "fakepol"),
+			testAccLogin(t, []string{"default", "fakepol"}),
 			testAccStepConfigWithBaseURL(t),
-			testAccMap(t, "default", "root"),
-			testAccMap(t, "oWnErs", "root"),
-			testAccLogin(t, []string{"root"}),
+			testAccMap(t, "default", "fakepol"),
+			testAccMap(t, "oWnErs", "fakepol"),
+			testAccLogin(t, []string{"default", "fakepol"}),
+			testAccMap(t, "default", "fakepol"),
+			testAccStepConfig(t, true),
+			mapUserToPolicy(t, os.Getenv("GITHUB_USER"), "userpolicy"),
+			testAccLogin(t, []string{"default", "fakepol", "userpolicy"}),
 		},
 	})
 }
@@ -174,7 +178,17 @@ func testAccMap(t *testing.T, k string, v string) logicaltest.TestStep {
 	}
 }
 
-func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
+func mapUserToPolicy(t *testing.T, k string, v string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "map/users/" + k,
+		Data: map[string]interface{}{
+			"value": v,
+		},
+	}
+}
+
+func testAccLogin(t *testing.T, policies []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login",
@@ -183,6 +197,6 @@ func testAccLogin(t *testing.T, keys []string) logicaltest.TestStep {
 		},
 		Unauthenticated: true,
 
-		Check: logicaltest.TestCheckAuth(keys),
+		Check: logicaltest.TestCheckAuth(policies),
 	}
 }

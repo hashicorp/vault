@@ -4,13 +4,15 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"fmt"
-	"golang.org/x/net/context"
 	"log"
 	"math/rand"
 	"net"
+	"regexp"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 var (
@@ -89,6 +91,8 @@ func (c *controlConn) heartBeat() {
 	}
 }
 
+var hostLookupPreferV4 = false
+
 func hostInfo(addr string, defaultPort int) (*HostInfo, error) {
 	var port int
 	host, portStr, err := net.SplitHostPort(addr)
@@ -102,55 +106,120 @@ func hostInfo(addr string, defaultPort int) (*HostInfo, error) {
 		}
 	}
 
-	return &HostInfo{peer: host, port: port}, nil
-}
+	ip := net.ParseIP(host)
+	if ip == nil {
+		ips, err := net.LookupIP(host)
+		if err != nil {
+			return nil, err
+		} else if len(ips) == 0 {
+			return nil, fmt.Errorf("No IP's returned from DNS lookup for %q", addr)
+		}
 
-func (c *controlConn) shuffleDial(endpoints []string) (conn *Conn, err error) {
-	perm := randr.Perm(len(endpoints))
-	shuffled := make([]string, len(endpoints))
+		if hostLookupPreferV4 {
+			for _, v := range ips {
+				if v4 := v.To4(); v4 != nil {
+					ip = v4
+					break
+				}
+			}
+			if ip == nil {
+				ip = ips[0]
+			}
+		} else {
+			// TODO(zariel): should we check that we can connect to any of the ips?
+			ip = ips[0]
+		}
 
-	for i, endpoint := range endpoints {
-		shuffled[perm[i]] = endpoint
 	}
 
+	return &HostInfo{peer: ip, port: port}, nil
+}
+
+func shuffleHosts(hosts []*HostInfo) []*HostInfo {
+	perm := randr.Perm(len(hosts))
+	shuffled := make([]*HostInfo, len(hosts))
+
+	for i, host := range hosts {
+		shuffled[perm[i]] = host
+	}
+
+	return shuffled
+}
+
+func (c *controlConn) shuffleDial(endpoints []*HostInfo) (*Conn, error) {
 	// shuffle endpoints so not all drivers will connect to the same initial
 	// node.
-	for _, addr := range shuffled {
-		if addr == "" {
-			return nil, fmt.Errorf("invalid address: %q", addr)
-		}
+	shuffled := shuffleHosts(endpoints)
 
-		port := c.session.cfg.Port
-		addr = JoinHostPort(addr, port)
-
-		var host *HostInfo
-		host, err = hostInfo(addr, port)
-		if err != nil {
-			return nil, fmt.Errorf("invalid address: %q: %v", addr, err)
-		}
-
-		hostInfo, _ := c.session.ring.addHostIfMissing(host)
-		conn, err = c.session.connect(addr, c, hostInfo)
+	var err error
+	for _, host := range shuffled {
+		var conn *Conn
+		conn, err = c.session.connect(host, c)
 		if err == nil {
-			return conn, err
+			return conn, nil
 		}
 
-		log.Printf("gocql: unable to dial control conn %v: %v\n", addr, err)
+		log.Printf("gocql: unable to dial control conn %v: %v\n", host.Peer(), err)
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return conn, nil
+	return nil, err
 }
 
-func (c *controlConn) connect(endpoints []string) error {
-	if len(endpoints) == 0 {
+// this is going to be version dependant and a nightmare to maintain :(
+var protocolSupportRe = regexp.MustCompile(`the lowest supported version is \d+ and the greatest is (\d+)$`)
+
+func parseProtocolFromError(err error) int {
+	// I really wish this had the actual info in the error frame...
+	matches := protocolSupportRe.FindAllStringSubmatch(err.Error(), -1)
+	if len(matches) != 1 || len(matches[0]) != 2 {
+		if verr, ok := err.(*protocolError); ok {
+			return int(verr.frame.Header().version.version())
+		}
+		return 0
+	}
+
+	max, err := strconv.Atoi(matches[0][1])
+	if err != nil {
+		return 0
+	}
+
+	return max
+}
+
+func (c *controlConn) discoverProtocol(hosts []*HostInfo) (int, error) {
+	hosts = shuffleHosts(hosts)
+
+	connCfg := *c.session.connCfg
+	connCfg.ProtoVersion = 4 // TODO: define maxProtocol
+
+	handler := connErrorHandlerFn(func(c *Conn, err error, closed bool) {
+		// we should never get here, but if we do it means we connected to a
+		// host successfully which means our attempted protocol version worked
+	})
+
+	var err error
+	for _, host := range hosts {
+		var conn *Conn
+		conn, err = Connect(host, &connCfg, handler, c.session)
+		if err == nil {
+			conn.Close()
+			return connCfg.ProtoVersion, nil
+		}
+
+		if proto := parseProtocolFromError(err); proto > 0 {
+			return proto, nil
+		}
+	}
+
+	return 0, err
+}
+
+func (c *controlConn) connect(hosts []*HostInfo) error {
+	if len(hosts) == 0 {
 		return errors.New("control: no endpoints specified")
 	}
 
-	conn, err := c.shuffleDial(endpoints)
+	conn, err := c.shuffleDial(hosts)
 	if err != nil {
 		return fmt.Errorf("control: unable to connect to initial hosts: %v", err)
 	}
@@ -229,29 +298,28 @@ func (c *controlConn) reconnect(refreshring bool) {
 	// TODO: simplify this function, use session.ring to get hosts instead of the
 	// connection pool
 
-	addr := c.addr()
+	var host *HostInfo
 	oldConn := c.conn.Load().(*Conn)
 	if oldConn != nil {
+		host = oldConn.host
 		oldConn.Close()
 	}
 
 	var newConn *Conn
-	if addr != "" {
+	if host != nil {
 		// try to connect to the old host
-		conn, err := c.session.connect(addr, c, oldConn.host)
+		conn, err := c.session.connect(host, c)
 		if err != nil {
 			// host is dead
 			// TODO: this is replicated in a few places
-			ip, portStr, _ := net.SplitHostPort(addr)
-			port, _ := strconv.Atoi(portStr)
-			c.session.handleNodeDown(net.ParseIP(ip), port)
+			c.session.handleNodeDown(host.Peer(), host.Port())
 		} else {
 			newConn = conn
 		}
 	}
 
-	// TODO: should have our own roundrobbin for hosts so that we can try each
-	// in succession and guantee that we get a different host each time.
+	// TODO: should have our own round-robin for hosts so that we can try each
+	// in succession and guarantee that we get a different host each time.
 	if newConn == nil {
 		host := c.session.ring.rrHost()
 		if host == nil {
@@ -260,7 +328,7 @@ func (c *controlConn) reconnect(refreshring bool) {
 		}
 
 		var err error
-		newConn, err = c.session.connect(host.Peer(), c, host)
+		newConn, err = c.session.connect(host, c)
 		if err != nil {
 			// TODO: add log handler for things like this
 			return
@@ -350,29 +418,28 @@ func (c *controlConn) query(statement string, values ...interface{}) (iter *Iter
 	return
 }
 
-func (c *controlConn) fetchHostInfo(addr net.IP, port int) (*HostInfo, error) {
+func (c *controlConn) fetchHostInfo(ip net.IP, port int) (*HostInfo, error) {
 	// TODO(zariel): we should probably move this into host_source or atleast
 	// share code with it.
-	hostname, _, err := net.SplitHostPort(c.addr())
-	if err != nil {
-		return nil, fmt.Errorf("unable to fetch host info, invalid conn addr: %q: %v", c.addr(), err)
+	localHost := c.host()
+	if localHost == nil {
+		return nil, errors.New("unable to fetch host info, invalid conn host")
 	}
 
-	isLocal := hostname == addr.String()
+	isLocal := localHost.Peer().Equal(ip)
 
 	var fn func(*HostInfo) error
 
+	// TODO(zariel): fetch preferred_ip address (is it >3.x only?)
 	if isLocal {
 		fn = func(host *HostInfo) error {
-			// TODO(zariel): should we fetch rpc_address from here?
 			iter := c.query("SELECT data_center, rack, host_id, tokens, release_version FROM system.local WHERE key='local'")
 			iter.Scan(&host.dataCenter, &host.rack, &host.hostId, &host.tokens, &host.version)
 			return iter.Close()
 		}
 	} else {
 		fn = func(host *HostInfo) error {
-			// TODO(zariel): should we fetch rpc_address from here?
-			iter := c.query("SELECT data_center, rack, host_id, tokens, release_version FROM system.peers WHERE peer=?", addr)
+			iter := c.query("SELECT data_center, rack, host_id, tokens, release_version FROM system.peers WHERE peer=?", ip)
 			iter.Scan(&host.dataCenter, &host.rack, &host.hostId, &host.tokens, &host.version)
 			return iter.Close()
 		}
@@ -380,12 +447,12 @@ func (c *controlConn) fetchHostInfo(addr net.IP, port int) (*HostInfo, error) {
 
 	host := &HostInfo{
 		port: port,
+		peer: ip,
 	}
 
 	if err := fn(host); err != nil {
 		return nil, err
 	}
-	host.peer = addr.String()
 
 	return host, nil
 }
@@ -396,12 +463,12 @@ func (c *controlConn) awaitSchemaAgreement() error {
 	}).err
 }
 
-func (c *controlConn) addr() string {
+func (c *controlConn) host() *HostInfo {
 	conn := c.conn.Load().(*Conn)
 	if conn == nil {
-		return ""
+		return nil
 	}
-	return conn.addr
+	return conn.host
 }
 
 func (c *controlConn) close() {

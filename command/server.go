@@ -820,6 +820,8 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 		cfg.CheckManager.Check.ForceMetricActivation = telConfig.CirconusCheckForceMetricActivation
 		cfg.CheckManager.Check.InstanceID = telConfig.CirconusCheckInstanceID
 		cfg.CheckManager.Check.SearchTag = telConfig.CirconusCheckSearchTag
+		cfg.CheckManager.Check.DisplayName = telConfig.CirconusCheckDisplayName
+		cfg.CheckManager.Check.Tags = telConfig.CirconusCheckTags
 		cfg.CheckManager.Broker.ID = telConfig.CirconusBrokerID
 		cfg.CheckManager.Broker.SelectTag = telConfig.CirconusBrokerSelectTag
 

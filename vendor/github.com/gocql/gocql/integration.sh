@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -eux
 
 function run_tests() {
 	local clusterSize=3
@@ -47,7 +47,10 @@ function run_tests() {
 		proto=2
 	elif [[ $version == 2.1.* ]]; then
 		proto=3
-	elif [[ $version == 2.2.* ]]; then
+	elif [[ $version == 2.2.* || $version == 3.0.* ]]; then
+		proto=4
+		ccm updateconf 'enable_user_defined_functions: true'
+	elif [[ $version == 3.*.* ]]; then
 		proto=4
 		ccm updateconf 'enable_user_defined_functions: true'
 	fi
@@ -55,13 +58,13 @@ function run_tests() {
 	sleep 1s
 
 	ccm list
-	ccm start
+	ccm start --wait-for-binary-proto
 	ccm status
 	ccm node1 nodetool status
 
-	local args="-v -gocql.timeout=60s -runssl -proto=$proto -rf=3 -clusterSize=$clusterSize -autowait=2000ms -compressor=snappy -gocql.cversion=$version -cluster=$(ccm liveset) ./..."
+	local args="-gocql.timeout=60s -runssl -proto=$proto -rf=3 -clusterSize=$clusterSize -autowait=2000ms -compressor=snappy -gocql.cversion=$version -cluster=$(ccm liveset) ./..."
 
-	go test -v -tags unit
+    go test -v -tags unit
 
 	if [ "$auth" = true ]
 	then

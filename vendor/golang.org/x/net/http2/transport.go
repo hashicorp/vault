@@ -199,6 +199,7 @@ type clientStream struct {
 	bytesRemain int64 // -1 means unknown; owned by transportResponseBody.Read
 	readErr     error // sticky read error; owned by transportResponseBody.Read
 	stopReqBody error // if non-nil, stop writing req body; guarded by cc.mu
+	didReset    bool  // whether we sent a RST_STREAM to the server; guarded by cc.mu
 
 	peerReset chan struct{} // closed on peer reset
 	resetErr  error         // populated before peerReset is closed
@@ -226,12 +227,23 @@ func (cs *clientStream) awaitRequestCancel(req *http.Request) {
 	}
 	select {
 	case <-req.Cancel:
+		cs.cancelStream()
 		cs.bufPipe.CloseWithError(errRequestCanceled)
-		cs.cc.writeStreamReset(cs.ID, ErrCodeCancel, nil)
 	case <-ctx.Done():
+		cs.cancelStream()
 		cs.bufPipe.CloseWithError(ctx.Err())
-		cs.cc.writeStreamReset(cs.ID, ErrCodeCancel, nil)
 	case <-cs.done:
+	}
+}
+
+func (cs *clientStream) cancelStream() {
+	cs.cc.mu.Lock()
+	didReset := cs.didReset
+	cs.didReset = true
+	cs.cc.mu.Unlock()
+
+	if !didReset {
+		cs.cc.writeStreamReset(cs.ID, ErrCodeCancel, nil)
 	}
 }
 
@@ -624,45 +636,28 @@ func (cc *ClientConn) responseHeaderTimeout() time.Duration {
 // Certain headers are special-cased as okay but not transmitted later.
 func checkConnHeaders(req *http.Request) error {
 	if v := req.Header.Get("Upgrade"); v != "" {
-		return errors.New("http2: invalid Upgrade request header")
+		return fmt.Errorf("http2: invalid Upgrade request header: %q", req.Header["Upgrade"])
 	}
-	if v := req.Header.Get("Transfer-Encoding"); (v != "" && v != "chunked") || len(req.Header["Transfer-Encoding"]) > 1 {
-		return errors.New("http2: invalid Transfer-Encoding request header")
+	if vv := req.Header["Transfer-Encoding"]; len(vv) > 0 && (len(vv) > 1 || vv[0] != "" && vv[0] != "chunked") {
+		return fmt.Errorf("http2: invalid Transfer-Encoding request header: %q", vv)
 	}
-	if v := req.Header.Get("Connection"); (v != "" && v != "close" && v != "keep-alive") || len(req.Header["Connection"]) > 1 {
-		return errors.New("http2: invalid Connection request header")
+	if vv := req.Header["Connection"]; len(vv) > 0 && (len(vv) > 1 || vv[0] != "" && vv[0] != "close" && vv[0] != "keep-alive") {
+		return fmt.Errorf("http2: invalid Connection request header: %q", vv)
 	}
 	return nil
 }
 
-func bodyAndLength(req *http.Request) (body io.Reader, contentLen int64) {
-	body = req.Body
-	if body == nil {
-		return nil, 0
+// actualContentLength returns a sanitized version of
+// req.ContentLength, where 0 actually means zero (not unknown) and -1
+// means unknown.
+func actualContentLength(req *http.Request) int64 {
+	if req.Body == nil {
+		return 0
 	}
 	if req.ContentLength != 0 {
-		return req.Body, req.ContentLength
+		return req.ContentLength
 	}
-
-	// We have a body but a zero content length. Test to see if
-	// it's actually zero or just unset.
-	var buf [1]byte
-	n, rerr := body.Read(buf[:])
-	if rerr != nil && rerr != io.EOF {
-		return errorReader{rerr}, -1
-	}
-	if n == 1 {
-		// Oh, guess there is data in this Body Reader after all.
-		// The ContentLength field just wasn't set.
-		// Stitch the Body back together again, re-attaching our
-		// consumed byte.
-		if rerr == io.EOF {
-			return bytes.NewReader(buf[:]), 1
-		}
-		return io.MultiReader(bytes.NewReader(buf[:]), body), -1
-	}
-	// Body is actually zero bytes.
-	return nil, 0
+	return -1
 }
 
 func (cc *ClientConn) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -686,8 +681,9 @@ func (cc *ClientConn) RoundTrip(req *http.Request) (*http.Response, error) {
 		return nil, errClientConnUnusable
 	}
 
-	body, contentLen := bodyAndLength(req)
+	body := req.Body
 	hasBody := body != nil
+	contentLen := actualContentLength(req)
 
 	// TODO(bradfitz): this is a copy of the logic in net/http. Unify somewhere?
 	var requestedGzip bool
@@ -1682,9 +1678,10 @@ func (rl *clientConnReadLoop) processData(f *DataFrame) error {
 			cc.bw.Flush()
 			cc.wmu.Unlock()
 		}
+		didReset := cs.didReset
 		cc.mu.Unlock()
 
-		if len(data) > 0 {
+		if len(data) > 0 && !didReset {
 			if _, err := cs.bufPipe.Write(data); err != nil {
 				rl.endStreamError(cs, err)
 				return err

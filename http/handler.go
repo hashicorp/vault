@@ -26,6 +26,11 @@ const (
 	// NoRequestForwardingHeaderName is the name of the header telling Vault
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
+
+	// MaxRequestSize is the maximum accepted request size. This is to prevent
+	// a denial of service attack where no Content-Length is provided and the server
+	// is fed ever more data until it exhausts memory.
+	MaxRequestSize = 32 * 1024 * 1024
 )
 
 // Handler returns an http.Handler for the API. This can be used on
@@ -109,7 +114,10 @@ func stripPrefix(prefix, path string) (string, bool) {
 }
 
 func parseRequest(r *http.Request, out interface{}) error {
-	err := jsonutil.DecodeJSONFromReader(r.Body, out)
+	// Limit the maximum number of bytes to MaxRequestSize to protect
+	// against an indefinite amount of data being read.
+	limit := &io.LimitedReader{R: r.Body, N: MaxRequestSize}
+	err := jsonutil.DecodeJSONFromReader(limit, out)
 	if err != nil && err != io.EOF {
 		return fmt.Errorf("Failed to parse JSON input: %s", err)
 	}
@@ -245,10 +253,19 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 }
 
 // requestAuth adds the token to the logical.Request if it exists.
-func requestAuth(r *http.Request, req *logical.Request) *logical.Request {
+func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logical.Request {
 	// Attach the header value if we have it
 	if v := r.Header.Get(AuthHeaderName); v != "" {
 		req.ClientToken = v
+
+		// Also attach the accessor if we have it. This doesn't fail if it
+		// doesn't exist because the request may be to an unauthenticated
+		// endpoint/login endpoint where a bad current token doesn't matter, or
+		// a token from a Vault version pre-accessors.
+		te, err := core.LookupToken(v)
+		if err == nil && te != nil {
+			req.ClientTokenAccessor = te.Accessor
+		}
 	}
 
 	return req

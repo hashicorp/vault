@@ -17,6 +17,68 @@ import (
 	"github.com/circonus-labs/circonus-gometrics/api"
 )
 
+// UpdateCheck determines if the check needs to be updated (new metrics, tags, etc.)
+func (cm *CheckManager) UpdateCheck(newMetrics map[string]*api.CheckBundleMetric) {
+	// only if check manager is enabled
+	if !cm.enabled {
+		return
+	}
+
+	// only if checkBundle has been populated
+	if cm.checkBundle == nil {
+		return
+	}
+
+	// only if there is *something* to update
+	if !cm.forceCheckUpdate && len(newMetrics) == 0 && len(cm.metricTags) == 0 {
+		return
+	}
+
+	// refresh check bundle (in case there were changes made by other apps or in UI)
+	checkBundle, err := cm.apih.FetchCheckBundleByCID(api.CIDType(cm.checkBundle.Cid))
+	if err != nil {
+		cm.Log.Printf("[ERROR] unable to fetch up-to-date check bundle %v", err)
+		return
+	}
+	cm.cbmu.Lock()
+	cm.checkBundle = checkBundle
+	cm.cbmu.Unlock()
+
+	cm.addNewMetrics(newMetrics)
+
+	if len(cm.metricTags) > 0 {
+		// note: if a tag has been added (queued) for a metric which never gets sent
+		//       the tags will be discarded. (setting tags does not *create* metrics.)
+		for metricName, metricTags := range cm.metricTags {
+			for metricIdx, metric := range cm.checkBundle.Metrics {
+				if metric.Name == metricName {
+					cm.checkBundle.Metrics[metricIdx].Tags = metricTags
+					break
+				}
+			}
+			cm.mtmu.Lock()
+			delete(cm.metricTags, metricName)
+			cm.mtmu.Unlock()
+		}
+		cm.forceCheckUpdate = true
+	}
+
+	if cm.forceCheckUpdate {
+		newCheckBundle, err := cm.apih.UpdateCheckBundle(cm.checkBundle)
+		if err != nil {
+			cm.Log.Printf("[ERROR] updating check bundle %v", err)
+			return
+		}
+
+		cm.forceCheckUpdate = false
+		cm.cbmu.Lock()
+		cm.checkBundle = newCheckBundle
+		cm.cbmu.Unlock()
+		cm.inventoryMetrics()
+	}
+
+}
+
 // Initialize CirconusMetrics instance. Attempt to find a check otherwise create one.
 // use cases:
 //
@@ -85,8 +147,8 @@ func (cm *CheckManager) initializeTrapURL() error {
 		}
 	} else {
 		searchCriteria := fmt.Sprintf(
-			"(active:1)(host:\"%s\")(type:\"%s\")(tags:%s)",
-			cm.checkInstanceID, cm.checkType, cm.checkSearchTag)
+			"(active:1)(host:\"%s\")(type:\"%s\")(tags:%s)(notes:%s)",
+			cm.checkTarget, cm.checkType, strings.Join(cm.checkSearchTag, ","), fmt.Sprintf("cgm_instanceid=%s", cm.checkInstanceID))
 		checkBundle, err = cm.checkBundleSearch(searchCriteria)
 		if err != nil {
 			return err
@@ -201,11 +263,11 @@ func (cm *CheckManager) createNewCheck() (*api.CheckBundle, *api.Broker, error) 
 		DisplayName: string(cm.checkDisplayName),
 		Metrics:     []api.CheckBundleMetric{},
 		MetricLimit: 0,
-		Notes:       "",
+		Notes:       fmt.Sprintf("cgm_instanceid=%s", cm.checkInstanceID),
 		Period:      60,
 		Status:      statusActive,
-		Tags:        append([]string{string(cm.checkSearchTag)}, cm.checkTags...),
-		Target:      string(cm.checkInstanceID),
+		Tags:        append(cm.checkSearchTag, cm.checkTags...),
+		Target:      cm.checkTarget,
 		Timeout:     10,
 		Type:        string(cm.checkType),
 	}

@@ -135,6 +135,15 @@ Default:        false
 
 `allowCleartextPasswords=true` allows using the [cleartext client side plugin](http://dev.mysql.com/doc/en/cleartext-authentication-plugin.html) if required by an account, such as one defined with the [PAM authentication plugin](http://dev.mysql.com/doc/en/pam-authentication-plugin.html). Sending passwords in clear text may be a security problem in some configurations. To avoid problems if there is any possibility that the password would be intercepted, clients should connect to MySQL Server using a method that protects the password. Possibilities include [TLS / SSL](#tls), IPsec, or a private network.
 
+##### `allowNativePasswords`
+
+```
+Type:           bool
+Valid Values:   true, false
+Default:        false
+```
+`allowNativePasswords=true` allows the usage of the mysql native password method.
+
 ##### `allowOldPasswords`
 
 ```
@@ -221,6 +230,14 @@ Note that this sets the location for time.Time values but does not change MySQL'
 
 Please keep in mind, that param values must be [url.QueryEscape](http://golang.org/pkg/net/url/#QueryEscape)'ed. Alternatively you can manually replace the `/` with `%2F`. For example `US/Pacific` would be `loc=US%2FPacific`.
 
+##### `maxAllowedPacket`
+```
+Type:          decimal number
+Default:       0
+```
+
+Max packet size allowed in bytes. Use `maxAllowedPacket=0` to automatically fetch the `max_allowed_packet` variable from server.
+
 ##### `multiStatements`
 
 ```
@@ -232,7 +249,6 @@ Default:        false
 Allow multiple statements in one query. While this allows batch queries, it also greatly increases the risk of SQL injections. Only the result of the first query is returned, all other results are silently discarded.
 
 When `multiStatements` is used, `?` parameters must only be used in the first statement.
-
 
 ##### `parseTime`
 
@@ -254,7 +270,6 @@ Default:        0
 
 I/O read timeout. The value must be a decimal number with an unit suffix ( *"ms"*, *"s"*, *"m"*, *"h"* ), such as *"30s"*, *"0.5m"* or *"1m30s"*.
 
-
 ##### `strict`
 
 ```
@@ -263,10 +278,11 @@ Valid Values:   true, false
 Default:        false
 ```
 
-`strict=true` enables the strict mode in which MySQL warnings are treated as errors.
+`strict=true` enables a driver-side strict mode in which MySQL warnings are treated as errors. This mode should not be used in production as it may lead to data corruption in certain situations.
 
-By default MySQL also treats notes as warnings. Use [`sql_notes=false`](http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_sql_notes) to ignore notes. See the [examples](#examples) for an DSN example.
+A server-side strict mode, which is safe for production use, can be set via the [`sql_mode`](https://dev.mysql.com/doc/refman/5.7/en/sql-mode.html) system variable.
 
+By default MySQL also treats notes as warnings. Use [`sql_notes=false`](http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_sql_notes) to ignore notes.
 
 ##### `timeout`
 
@@ -277,7 +293,6 @@ Default:        OS default
 
 *Driver* side connection timeout. The value must be a decimal number with an unit suffix ( *"ms"*, *"s"*, *"m"*, *"h"* ), such as *"30s"*, *"0.5m"* or *"1m30s"*. To set a server side timeout, use the parameter [`wait_timeout`](http://dev.mysql.com/doc/refman/5.6/en/server-system-variables.html#sysvar_wait_timeout).
 
-
 ##### `tls`
 
 ```
@@ -287,7 +302,6 @@ Default:        false
 ```
 
 `tls=true` enables TLS / SSL encrypted connection to the server. Use `skip-verify` if you want to use a self-signed or invalid certificate (server side). Use a custom value registered with [`mysql.RegisterTLSConfig`](http://godoc.org/github.com/go-sql-driver/mysql#RegisterTLSConfig).
-
 
 ##### `writeTimeout`
 
@@ -301,13 +315,21 @@ I/O write timeout. The value must be a decimal number with an unit suffix ( *"ms
 
 ##### System Variables
 
-All other parameters are interpreted as system variables:
-  * `autocommit`: `"SET autocommit=<value>"`
-  * [`time_zone`](https://dev.mysql.com/doc/refman/5.5/en/time-zone-support.html): `"SET time_zone=<value>"`
-  * [`tx_isolation`](https://dev.mysql.com/doc/refman/5.5/en/server-system-variables.html#sysvar_tx_isolation): `"SET tx_isolation=<value>"`
-  * `param`: `"SET <param>=<value>"`
+Any other parameters are interpreted as system variables:
+  * `<boolean_var>=<value>`: `SET <boolean_var>=<value>`
+  * `<enum_var>=<value>`: `SET <enum_var>=<value>`
+  * `<string_var>=%27<value>%27`: `SET <string_var>='<value>'`
 
-*The values must be [url.QueryEscape](http://golang.org/pkg/net/url/#QueryEscape)'ed!*
+Rules:
+* The values for string variables must be quoted with '
+* The values must also be [url.QueryEscape](http://golang.org/pkg/net/url/#QueryEscape)'ed!
+ (which implies values of string variables must be wrapped with `%27`)
+
+Examples:
+  * `autocommit=1`: `SET autocommit=1`
+  * [`time_zone=%27Europe%2FParis%27`](https://dev.mysql.com/doc/refman/5.5/en/time-zone-support.html): `SET time_zone='Europe/Paris'`
+  * [`tx_isolation=%27REPEATABLE-READ%27`](https://dev.mysql.com/doc/refman/5.5/en/server-system-variables.html#sysvar_tx_isolation): `SET tx_isolation='REPEATABLE-READ'`
+
 
 #### Examples
 ```
@@ -322,9 +344,9 @@ root:pw@unix(/tmp/mysql.sock)/myDatabase?loc=Local
 user:password@tcp(localhost:5555)/dbname?tls=skip-verify&autocommit=true
 ```
 
-Use the [strict mode](#strict) but ignore notes:
+Treat warnings as errors by setting the system variable [`sql_mode`](https://dev.mysql.com/doc/refman/5.7/en/sql-mode.html):
 ```
-user:password@/dbname?strict=true&sql_notes=false
+user:password@/dbname?sql_mode=TRADITIONAL
 ```
 
 TCP via IPv6:
@@ -337,9 +359,14 @@ TCP on a remote host, e.g. Amazon RDS:
 id:password@tcp(your-amazonaws-uri.com:3306)/dbname
 ```
 
-Google Cloud SQL on App Engine:
+Google Cloud SQL on App Engine (First Generation MySQL Server):
 ```
 user@cloudsql(project-id:instance-name)/dbname
+```
+
+Google Cloud SQL on App Engine (Second Generation MySQL Server):
+```
+user@cloudsql(project-id:regionname:instance-name)/dbname
 ```
 
 TCP using default port (3306) on localhost:

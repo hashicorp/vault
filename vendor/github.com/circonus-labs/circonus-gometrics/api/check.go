@@ -69,9 +69,9 @@ func (a *API) FetchCheckBySubmissionURL(submissionURL URLType) (*Check, error) {
 	}
 	uuid := pathParts[0]
 
-	query := SearchQueryType(fmt.Sprintf("f__check_uuid=%s", uuid))
+	filter := SearchFilterType(fmt.Sprintf("f__check_uuid=%s", uuid))
 
-	checks, err := a.CheckSearch(query)
+	checks, err := a.CheckFilterSearch(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -98,11 +98,28 @@ func (a *API) FetchCheckBySubmissionURL(submissionURL URLType) (*Check, error) {
 
 }
 
-// CheckSearch returns a list of checks matching a query/filter
+// CheckSearch returns a list of checks matching a search query
 func (a *API) CheckSearch(query SearchQueryType) ([]Check, error) {
-	queryURL := fmt.Sprintf("/check?%s", string(query))
+	queryURL := fmt.Sprintf("/check?search=%s", string(query))
 
 	result, err := a.Get(queryURL)
+	if err != nil {
+		return nil, err
+	}
+
+	var checks []Check
+	if err := json.Unmarshal(result, &checks); err != nil {
+		return nil, err
+	}
+
+	return checks, nil
+}
+
+// CheckFilterSearch returns a list of checks matching a filter
+func (a *API) CheckFilterSearch(filter SearchFilterType) ([]Check, error) {
+	filterURL := fmt.Sprintf("/check?%s", string(filter))
+
+	result, err := a.Get(filterURL)
 	if err != nil {
 		return nil, err
 	}

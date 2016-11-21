@@ -7,18 +7,21 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // BrokerDetail instance attributes
 type BrokerDetail struct {
-	CN      string   `json:"cn"`
-	IP      string   `json:"ipaddress"`
-	MinVer  int      `json:"minimum_version_required"`
-	Modules []string `json:"modules"`
-	Port    int      `json:"port"`
-	Skew    string   `json:"skew"`
-	Status  string   `json:"status"`
-	Version int      `json:"version"`
+	CN           string   `json:"cn"`
+	ExternalHost string   `json:"external_host"`
+	ExternalPort int      `json:"external_port"`
+	IP           string   `json:"ipaddress"`
+	MinVer       int      `json:"minimum_version_required"`
+	Modules      []string `json:"modules"`
+	Port         int      `json:"port"`
+	Skew         string   `json:"skew"`
+	Status       string   `json:"status"`
+	Version      int      `json:"version"`
 }
 
 // Broker definition
@@ -55,8 +58,8 @@ func (a *API) FetchBrokerByCID(cid CIDType) (*Broker, error) {
 }
 
 // FetchBrokerListByTag return list of brokers with a specific tag
-func (a *API) FetchBrokerListByTag(searchTag SearchTagType) ([]Broker, error) {
-	query := SearchQueryType(fmt.Sprintf("f__tags_has=%s", searchTag))
+func (a *API) FetchBrokerListByTag(searchTag TagType) ([]Broker, error) {
+	query := SearchQueryType(fmt.Sprintf("f__tags_has=%s", strings.Replace(strings.Join(searchTag, ","), ",", "&f__tags_has=", -1)))
 	return a.BrokerSearch(query)
 }
 

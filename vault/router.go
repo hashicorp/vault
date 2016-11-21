@@ -263,12 +263,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		req.ID = originalReqID
 		req.Storage = nil
 		req.ClientToken = clientToken
-
-		// Only the rewrap endpoint is allowed to declare a wrap TTL on a
-		// request that did not come from the client
-		if req.Path != "sys/wrapping/rewrap" {
-			req.WrapTTL = originalWrapTTL
-		}
+		req.WrapTTL = originalWrapTTL
 	}()
 
 	// Invoke the backend

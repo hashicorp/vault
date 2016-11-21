@@ -52,11 +52,20 @@ Keybase handles a few of the tedious steps. The output will be the similar to
 the following:
 
 ```
-Key 1: c1c04c03d5f43b6432ea77f3010800...
-Key 2: 612b611295f255baa2eb702a5e254f...
-Key 3: ebfd78302325e2631bcc21e11cae00...
+Key 1: wcBMA37rwGt6FS1VAQgAk1q8XQh6yc...
+Key 2: wcBMA0wwnMXgRzYYAQgAavqbTCxZGD...
+Key 3: wcFMA2DjqDb4YhTAARAAeTFyYxPmUd...
 ...
 ```
+
+The output should be rather long in comparison to a regular unseal key. These
+keys are encrypted, and only the user holding the corresponding private key can
+decrypt the value. The keys are encrypted in the order in which specified in
+the `-pgp-keys` attribute. As such, the keys belong to respective Keybase
+accounts of `jefferai`, `vishalnayak`, and `sethvargo`. These keys can be
+distributed over almost any medium, although common sense and judgement are
+best advised. The encrypted keys are base64 encoded before returning.
+
 
 ### Unsealing with Keybase
 As a user, the easiest way to decrypt your unseal key is with the Keybase CLI
@@ -67,10 +76,10 @@ plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
 ```
-$ echo "c1c0..." | xxd -r -p | keybase pgp decrypt
+$ echo "wcBMA37..." | base64 -d | keybase pgp decrypt
 ```
 
-And replace `c1c0...` with the encrypted key.
+And replace `wcBMA37...` with the encrypted key.
 
 You will be prompted to enter your Keybase passphrase. The output will be the
 plain-text unseal key.
@@ -125,9 +134,9 @@ $ vault init -key-shares=3 -key-threshold=2 \
 The result should look something like this:
 
 ```
-Key 1: c1c04c03d5f43b6432ea77f3010800...
-Key 2: 612b611295f255baa2eb702a5e254f...
-Key 3: ebfd78302325e2631bcc21e11cae00...
+Key 1: wcBMA37rwGt6FS1VAQgAk1q8XQh6yc...
+Key 2: wcBMA0wwnMXgRzYYAQgAavqbTCxZGD...
+Key 3: wcFMA2DjqDb4YhTAARAAeTFyYxPmUd...
 ...
 ```
 
@@ -136,7 +145,8 @@ keys are encrypted, and only the user holding the corresponding private key
 can decrypt the value. The keys are encrypted in the order in which specified
 in the `-pgp-keys` attribute. As such, the first key belongs to Jeff, the second
 to Vishal, and the third to Seth. These keys can be distributed over almost any
-medium, although common sense and judgement are best advised.
+medium, although common sense and judgement are best advised. The encrypted
+keys are base64 encoded before returning.
 
 ### Unsealing with a GPG
 Assuming you have been given an unseal key that was encrypted using your public
@@ -145,12 +155,10 @@ plain-text unseal key, you must decrypt the value given to you by the
 initializer. To get the plain-text value, run the following command:
 
 ```
-$ echo "c1c0..." | xxd -r -p | gpg -d
+$ echo "wcBMA37..." | base64 -d | gpg -dq 
 ```
 
-And replace `c1c0...` with the encrypted key. (Vault's API and command line client
-return the encrypted keys as ASCII hexdumps of the binary data, which can be
-converted back to binary with the ``xxd`` tool.)
+And replace `wcBMA37...` with the encrypted key. 
 
 If you encrypted your private PGP key with a passphrase, you may be prompted to
 enter it.  After you enter your password, the output will be the plain-text

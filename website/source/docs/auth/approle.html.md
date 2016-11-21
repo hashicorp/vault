@@ -131,34 +131,91 @@ token_policies  [default]
 
 ### Via the API
 
-#### Enable AppRole authentication
+#### Enable the AppRole authentication.
 
-```shell
-$ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/sys/auth/approle" -d '{"type":"approle"}'
+```javascript
+$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"type":"approle"}' http://127.0.0.1:8200/v1/sys/auth/approle
 ```
 
-#### Create a role
+#### Create an AppRole with desired set of policies.
 
-```shell
-$ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/role/testrole" -d '{"secret_id_ttl":"10m", "token_ttl":"20m", "token_max_ttl":"30m", "secret_id_num_uses":40}'
+```javascript
+$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" -d '{"policies":"dev-policy,test-policy"}' http://127.0.0.1:8200/v1/auth/approle/role/testrole
 ```
 
-#### Fetch the RoleID of the AppRole
+#### Fetch the identifier of the role.
 
-```shell
-$ curl -XGET -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/role/testrole/role-id"
+```javascript
+$ curl -X GET -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/role-id | jq .
 ```
 
-#### Get a SecretID issued against the AppRole
-
-```shell
-$ curl -XPOST -H "X-Vault-Token:xxx" "http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id"
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "wrap_info": null,
+  "data": {
+    "role_id": "988a9dfd-ea69-4a53-6cb6-9d6b86474bba"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": "",
+  "request_id": "ef5c9b3f-e15e-0527-5457-79b4ecfe7b60"
+}
 ```
 
-#### Login to get a Vault Token
+#### Create a new secret identifier under the role.
 
-```shell
-$ curl -XPOST "http://127.0.0.1:8200/v1/auth/approle/login" -d '{"role_id":"50bec295-3535-0ddc-b729-e4d0773717b3","secret_id":"0c36edb2-8b34-c077-9e3a-9bdcbb4ab0df"}'
+```javascript
+$ curl -X POST -H "X-Vault-Token:$VAULT_TOKEN" http://127.0.0.1:8200/v1/auth/approle/role/testrole/secret-id | jq .
+```
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "wrap_info": null,
+  "data": {
+    "secret_id_accessor": "45946873-1d96-a9d4-678c-9229f74386a5",
+    "secret_id": "37b74931-c4cd-d49a-9246-ccc62d682a25"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": "",
+  "request_id": "c98fa1c2-7565-fd45-d9de-0b43c307f2aa"
+}
+```
+
+#### Perform the login operation to fetch a new Vault token.
+
+```javascript
+$ curl -X POST \
+     -d '{"role_id":"988a9dfd-ea69-4a53-6cb6-9d6b86474bba","secret_id":"37b74931-c4cd-d49a-9246-ccc62d682a25"}' \
+     http://127.0.0.1:8200/v1/auth/approle/login | jq .
+```
+
+```javascript
+{
+  "auth": {
+    "renewable": true,
+    "lease_duration": 2764800,
+    "metadata": {},
+    "policies": [
+      "default",
+      "dev-policy",
+      "test-policy"
+    ],
+    "accessor": "5d7fb475-07cb-4060-c2de-1ca3fcbf0c56",
+    "client_token": "98a4c7ab-b1fe-361b-ba0b-e307aacfd587"
+  },
+  "warnings": null,
+  "wrap_info": null,
+  "data": null,
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": "",
+  "request_id": "988fb8db-ce3b-0167-0ac7-1a568b902d75"
+}
 ```
 
 ## API
@@ -607,7 +664,7 @@ Secret ID attached to the role
 </dl>
 
 ### /auth/approle/role/[role_name]/secret-id/destroy
-#### DELETE
+#### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
@@ -615,7 +672,7 @@ Secret ID attached to the role
   </dd>
 
   <dt>Method</dt>
-  <dd>DELETE</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id/destroy`</dd>
@@ -689,7 +746,7 @@ Accessor of the secret ID
 </dl>
 
 ### /auth/approle/role/[role_name]/secret-id-accessor/destroy
-#### DELETE
+#### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
@@ -697,7 +754,7 @@ Accessor of the secret ID
   </dd>
 
   <dt>Method</dt>
-  <dd>DELETE</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/approle/role/[role_name]/secret-id-accessor/destroy`</dd>

@@ -228,6 +228,42 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
+#### LIST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns a list of keys. Only the key names are returned.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>LIST/GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/keys` (LIST) or `/transit/keys?list=true` (GET)</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+  ```javascript
+  {
+    "data": {
+      "keys": ["foo", "bar"]
+    },
+    "lease_duration": 0,
+    "lease_id": "",
+    "renewable": false
+  }
+  ```
+
+  </dd>
+</dl>
+
 #### DELETE
 
 <dl class="api">
@@ -825,7 +861,12 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">signature</span>
         <span class="param-flags">required</span>
-        The signature output from the `/transit/sign` function.
+        The signature output from the `/transit/sign` function. Either this must be supplied or `hmac` must be supplied.
+      </li>
+      <li>
+        <span class="param">hmac</span>
+        <span class="param-flags">required</span>
+        The signature output from the `/transit/hmac` function. Either this must be supplied or `signature` must be supplied.
       </li>
       <li>
         <span class="param">algorithm</span>

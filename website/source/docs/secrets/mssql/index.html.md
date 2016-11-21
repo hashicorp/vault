@@ -201,6 +201,47 @@ allowed to read.
   </dd>
 </dl>
 
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Queries the lease configuration.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/mssql/config/lease`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+     None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": {
+        "max_ttl": "5h",
+        "ttl": "1h",
+        "ttl_max": "5h"
+      },
+      "wrap_info": null,
+      "warnings": ["The field ttl_max is deprecated and will be removed in a future release. Use max_ttl instead."],
+      "auth": null
+    }
+    ```
+
+  </dd>
+</dl>
+
 ### /mssql/roles/
 #### POST
 

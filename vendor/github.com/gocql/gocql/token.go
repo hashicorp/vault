@@ -184,7 +184,7 @@ func (t *tokenRing) String() string {
 		buf.WriteString("]")
 		buf.WriteString(t.tokens[i].String())
 		buf.WriteString(":")
-		buf.WriteString(t.hosts[i].Peer())
+		buf.WriteString(t.hosts[i].Peer().String())
 	}
 	buf.WriteString("\n}")
 	return string(buf.Bytes())
@@ -204,14 +204,21 @@ func (t *tokenRing) GetHostForToken(token token) *HostInfo {
 		return nil
 	}
 
+	l := len(t.tokens)
+	// no host tokens, no available hosts
+	if l == 0 {
+		return nil
+	}
+
 	// find the primary replica
 	ringIndex := sort.Search(
-		len(t.tokens),
+		l,
 		func(i int) bool {
 			return !t.tokens[i].Less(token)
 		},
 	)
-	if ringIndex == len(t.tokens) {
+
+	if ringIndex == l {
 		// wrap around to the first in the ring
 		ringIndex = 0
 	}

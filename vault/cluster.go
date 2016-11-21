@@ -316,6 +316,10 @@ func (c *Core) stopClusterListener() {
 		return
 	}
 
+	if !c.clusterListenersRunning {
+		c.logger.Info("core/stopClusterListener: listeners not running")
+		return
+	}
 	c.logger.Info("core/stopClusterListener: stopping listeners")
 
 	// Tell the goroutine managing the listeners to perform the shutdown
@@ -327,6 +331,8 @@ func (c *Core) stopClusterListener() {
 	// bind errors. This ensures proper ordering.
 	c.logger.Trace("core/stopClusterListener: waiting for success notification")
 	<-c.clusterListenerShutdownSuccessCh
+	c.clusterListenersRunning = false
+
 	c.logger.Info("core/stopClusterListener: success")
 }
 
@@ -415,23 +421,5 @@ func WrapHandlerForClustering(handler http.Handler, logger log.Logger) func() (h
 		})
 
 		return handler, mux
-	}
-}
-
-// WrapListenersForClustering takes in Vault's cluster addresses and returns a
-// setup function that creates the new listeners
-func WrapListenersForClustering(addrs []string, logger log.Logger) func() ([]net.Listener, error) {
-	return func() ([]net.Listener, error) {
-		ret := make([]net.Listener, 0, len(addrs))
-		// Loop over the existing listeners and start listeners on appropriate ports
-		for _, addr := range addrs {
-			ln, err := net.Listen("tcp", addr)
-			if err != nil {
-				return nil, err
-			}
-			ret = append(ret, ln)
-		}
-
-		return ret, nil
 	}
 }

@@ -45,7 +45,7 @@ type ColumnMetadata struct {
 	Table           string
 	Name            string
 	ComponentIndex  int
-	Kind            string
+	Kind            ColumnKind
 	Validator       string
 	Type            TypeInfo
 	ClusteringOrder string
@@ -67,13 +67,64 @@ type ColumnIndexMetadata struct {
 	Options map[string]interface{}
 }
 
-// Column kind values
+type ColumnKind int
+
 const (
-	PARTITION_KEY  = "partition_key"
-	CLUSTERING_KEY = "clustering_key"
-	REGULAR        = "regular"
-	COMPACT_VALUE  = "compact_value"
+	ColumnUnkownKind ColumnKind = iota
+	ColumnPartitionKey
+	ColumnClusteringKey
+	ColumnRegular
+	ColumnCompact
+	ColumnStatic
 )
+
+func (c ColumnKind) String() string {
+	switch c {
+	case ColumnPartitionKey:
+		return "partition_key"
+	case ColumnClusteringKey:
+		return "clustering_key"
+	case ColumnRegular:
+		return "regular"
+	case ColumnCompact:
+		return "compact"
+	case ColumnStatic:
+		return "static"
+	default:
+		return fmt.Sprintf("unkown_column_%d", c)
+	}
+}
+
+func (c *ColumnKind) UnmarshalCQL(typ TypeInfo, p []byte) error {
+	if typ.Type() != TypeVarchar {
+		return unmarshalErrorf("unable to marshall %s into ColumnKind, expected Varchar", typ)
+	}
+
+	kind, err := columnKindFromSchema(string(p))
+	if err != nil {
+		return err
+	}
+	*c = kind
+
+	return nil
+}
+
+func columnKindFromSchema(kind string) (ColumnKind, error) {
+	switch kind {
+	case "partition_key":
+		return ColumnPartitionKey, nil
+	case "clustering_key", "clustering":
+		return ColumnClusteringKey, nil
+	case "regular":
+		return ColumnRegular, nil
+	case "compact_value":
+		return ColumnCompact, nil
+	case "static":
+		return ColumnStatic, nil
+	default:
+		return -1, fmt.Errorf("unknown column kind: %q", kind)
+	}
+}
 
 // default alias values
 const (
@@ -243,7 +294,7 @@ func compileV1Metadata(tables []TableMetadata) {
 				Table:          table.Name,
 				Name:           alias,
 				Type:           keyValidatorParsed.types[i],
-				Kind:           PARTITION_KEY,
+				Kind:           ColumnPartitionKey,
 				ComponentIndex: i,
 			}
 
@@ -288,7 +339,7 @@ func compileV1Metadata(tables []TableMetadata) {
 				Name:           alias,
 				Type:           comparatorParsed.types[i],
 				Order:          order,
-				Kind:           CLUSTERING_KEY,
+				Kind:           ColumnClusteringKey,
 				ComponentIndex: i,
 			}
 
@@ -308,7 +359,7 @@ func compileV1Metadata(tables []TableMetadata) {
 				Table:    table.Name,
 				Name:     alias,
 				Type:     defaultValidatorParsed.types[0],
-				Kind:     REGULAR,
+				Kind:     ColumnRegular,
 			}
 			table.Columns[alias] = column
 		}
@@ -320,22 +371,22 @@ func compileV2Metadata(tables []TableMetadata) {
 	for i := range tables {
 		table := &tables[i]
 
-		clusteringColumnCount := componentColumnCountOfType(table.Columns, CLUSTERING_KEY)
+		clusteringColumnCount := componentColumnCountOfType(table.Columns, ColumnClusteringKey)
 		table.ClusteringColumns = make([]*ColumnMetadata, clusteringColumnCount)
 
 		if table.KeyValidator != "" {
 			keyValidatorParsed := parseType(table.KeyValidator)
 			table.PartitionKey = make([]*ColumnMetadata, len(keyValidatorParsed.types))
 		} else { // Cassandra 3.x+
-			partitionKeyCount := componentColumnCountOfType(table.Columns, PARTITION_KEY)
+			partitionKeyCount := componentColumnCountOfType(table.Columns, ColumnPartitionKey)
 			table.PartitionKey = make([]*ColumnMetadata, partitionKeyCount)
 		}
 
 		for _, columnName := range table.OrderedColumns {
 			column := table.Columns[columnName]
-			if column.Kind == PARTITION_KEY {
+			if column.Kind == ColumnPartitionKey {
 				table.PartitionKey[column.ComponentIndex] = column
-			} else if column.Kind == CLUSTERING_KEY {
+			} else if column.Kind == ColumnClusteringKey {
 				table.ClusteringColumns[column.ComponentIndex] = column
 			}
 		}
@@ -343,7 +394,7 @@ func compileV2Metadata(tables []TableMetadata) {
 }
 
 // returns the count of coluns with the given "kind" value.
-func componentColumnCountOfType(columns map[string]*ColumnMetadata, kind string) int {
+func componentColumnCountOfType(columns map[string]*ColumnMetadata, kind ColumnKind) int {
 	maxComponentIndex := -1
 	for _, column := range columns {
 		if column.Kind == kind && column.ComponentIndex > maxComponentIndex {
@@ -541,19 +592,11 @@ func getTableMetadata(session *Session, keyspaceName string) ([]TableMetadata, e
 	return tables, nil
 }
 
-// query for only the column metadata in the specified keyspace from system.schema_columns
-func getColumnMetadata(
-	session *Session,
-	keyspaceName string,
-) ([]ColumnMetadata, error) {
-	// Deal with differences in protocol versions
-	var stmt string
-	var scan func(*Iter, *ColumnMetadata, *[]byte) bool
-	if session.cfg.ProtoVersion == 1 {
-		// V1 does not support the type column, and all returned rows are
-		// of kind "regular".
-		stmt = `
-			SELECT
+func (s *Session) scanColumnMetadataV1(keyspace string) ([]ColumnMetadata, error) {
+	// V1 does not support the type column, and all returned rows are
+	// of kind "regular".
+	const stmt = `
+		SELECT
 				columnfamily_name,
 				column_name,
 				component_index,
@@ -562,54 +605,57 @@ func getColumnMetadata(
 				index_type,
 				index_options
 			FROM system.schema_columns
-			WHERE keyspace_name = ?
-			`
-		scan = func(
-			iter *Iter,
-			column *ColumnMetadata,
-			indexOptionsJSON *[]byte,
-		) bool {
-			// all columns returned by V1 are regular
-			column.Kind = REGULAR
-			return iter.Scan(
-				&column.Table,
-				&column.Name,
-				&column.ComponentIndex,
-				&column.Validator,
-				&column.Index.Name,
-				&column.Index.Type,
-				&indexOptionsJSON,
-			)
+			WHERE keyspace_name = ?`
+
+	var columns []ColumnMetadata
+
+	rows := s.control.query(stmt, keyspace).Scanner()
+	for rows.Next() {
+		var (
+			column           = ColumnMetadata{Keyspace: keyspace}
+			indexOptionsJSON []byte
+		)
+
+		// all columns returned by V1 are regular
+		column.Kind = ColumnRegular
+
+		err := rows.Scan(&column.Table,
+			&column.Name,
+			&column.ComponentIndex,
+			&column.Validator,
+			&column.Index.Name,
+			&column.Index.Type,
+			&indexOptionsJSON)
+
+		if err != nil {
+			return nil, err
 		}
-	} else if session.useSystemSchema { // Cassandra 3.x+
-		stmt = `
-			SELECT
-				table_name,
-				column_name,
-				clustering_order,
-				type,
-				kind,
-				position
-			FROM system_schema.columns
-			WHERE keyspace_name = ?
-			`
-		scan = func(
-			iter *Iter,
-			column *ColumnMetadata,
-			indexOptionsJSON *[]byte,
-		) bool {
-			return iter.Scan(
-				&column.Table,
-				&column.Name,
-				&column.ClusteringOrder,
-				&column.Validator,
-				&column.Kind,
-				&column.ComponentIndex,
-			)
+
+		if len(indexOptionsJSON) > 0 {
+			err := json.Unmarshal(indexOptionsJSON, &column.Index.Options)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"Invalid JSON value '%s' as index_options for column '%s' in table '%s': %v",
+					indexOptionsJSON,
+					column.Name,
+					column.Table,
+					err)
+			}
 		}
-	} else {
-		// V2+ supports the type column
-		stmt = `
+
+		columns = append(columns, column)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return columns, nil
+}
+
+func (s *Session) scanColumnMetadataV2(keyspace string) ([]ColumnMetadata, error) {
+	// V2+ supports the type column
+	const stmt = `
 			SELECT
 				columnfamily_name,
 				column_name,
@@ -620,57 +666,112 @@ func getColumnMetadata(
 				index_options,
 				type
 			FROM system.schema_columns
-			WHERE keyspace_name = ?
-			`
-		scan = func(
-			iter *Iter,
-			column *ColumnMetadata,
-			indexOptionsJSON *[]byte,
-		) bool {
-			return iter.Scan(
-				&column.Table,
-				&column.Name,
-				&column.ComponentIndex,
-				&column.Validator,
-				&column.Index.Name,
-				&column.Index.Type,
-				&indexOptionsJSON,
-				&column.Kind,
-			)
+			WHERE keyspace_name = ?`
+
+	var columns []ColumnMetadata
+
+	rows := s.control.query(stmt, keyspace).Scanner()
+	for rows.Next() {
+		var (
+			column           = ColumnMetadata{Keyspace: keyspace}
+			indexOptionsJSON []byte
+		)
+
+		err := rows.Scan(&column.Table,
+			&column.Name,
+			&column.ComponentIndex,
+			&column.Validator,
+			&column.Index.Name,
+			&column.Index.Type,
+			&indexOptionsJSON,
+			&column.Kind,
+		)
+
+		if err != nil {
+			return nil, err
 		}
-	}
 
-	// get the columns metadata
-	columns := []ColumnMetadata{}
-	column := ColumnMetadata{Keyspace: keyspaceName}
-
-	var indexOptionsJSON []byte
-
-	iter := session.control.query(stmt, keyspaceName)
-
-	for scan(iter, &column, &indexOptionsJSON) {
-		var err error
-
-		// decode the index options
-		if indexOptionsJSON != nil {
-			err = json.Unmarshal(indexOptionsJSON, &column.Index.Options)
+		if len(indexOptionsJSON) > 0 {
+			err := json.Unmarshal(indexOptionsJSON, &column.Index.Options)
 			if err != nil {
-				iter.Close()
 				return nil, fmt.Errorf(
 					"Invalid JSON value '%s' as index_options for column '%s' in table '%s': %v",
 					indexOptionsJSON,
 					column.Name,
 					column.Table,
-					err,
-				)
+					err)
 			}
 		}
 
 		columns = append(columns, column)
-		column = ColumnMetadata{Keyspace: keyspaceName}
 	}
 
-	err := iter.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return columns, nil
+
+}
+
+func (s *Session) scanColumnMetadataSystem(keyspace string) ([]ColumnMetadata, error) {
+	const stmt = `
+			SELECT
+				table_name,
+				column_name,
+				clustering_order,
+				type,
+				kind,
+				position
+			FROM system_schema.columns
+			WHERE keyspace_name = ?`
+
+	var columns []ColumnMetadata
+
+	rows := s.control.query(stmt, keyspace).Scanner()
+	for rows.Next() {
+		column := ColumnMetadata{Keyspace: keyspace}
+
+		err := rows.Scan(&column.Table,
+			&column.Name,
+			&column.ClusteringOrder,
+			&column.Validator,
+			&column.Kind,
+			&column.ComponentIndex,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		columns = append(columns, column)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// TODO(zariel): get column index info from system_schema.indexes
+
+	return columns, nil
+}
+
+// query for only the column metadata in the specified keyspace from system.schema_columns
+func getColumnMetadata(session *Session, keyspaceName string) ([]ColumnMetadata, error) {
+	var (
+		columns []ColumnMetadata
+		err     error
+	)
+
+	// Deal with differences in protocol versions
+	if session.cfg.ProtoVersion == 1 {
+		columns, err = session.scanColumnMetadataV1(keyspaceName)
+	} else if session.useSystemSchema { // Cassandra 3.x+
+		columns, err = session.scanColumnMetadataSystem(keyspaceName)
+	} else {
+		columns, err = session.scanColumnMetadataV2(keyspaceName)
+	}
+
 	if err != nil && err != ErrNotFound {
 		return nil, fmt.Errorf("Error querying column schema: %v", err)
 	}

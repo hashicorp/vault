@@ -18,33 +18,35 @@ type PullRequestsService service
 
 // PullRequest represents a GitHub pull request on a repository.
 type PullRequest struct {
-	ID           *int       `json:"id,omitempty"`
-	Number       *int       `json:"number,omitempty"`
-	State        *string    `json:"state,omitempty"`
-	Title        *string    `json:"title,omitempty"`
-	Body         *string    `json:"body,omitempty"`
-	CreatedAt    *time.Time `json:"created_at,omitempty"`
-	UpdatedAt    *time.Time `json:"updated_at,omitempty"`
-	ClosedAt     *time.Time `json:"closed_at,omitempty"`
-	MergedAt     *time.Time `json:"merged_at,omitempty"`
-	User         *User      `json:"user,omitempty"`
-	Merged       *bool      `json:"merged,omitempty"`
-	Mergeable    *bool      `json:"mergeable,omitempty"`
-	MergedBy     *User      `json:"merged_by,omitempty"`
-	Comments     *int       `json:"comments,omitempty"`
-	Commits      *int       `json:"commits,omitempty"`
-	Additions    *int       `json:"additions,omitempty"`
-	Deletions    *int       `json:"deletions,omitempty"`
-	ChangedFiles *int       `json:"changed_files,omitempty"`
-	URL          *string    `json:"url,omitempty"`
-	HTMLURL      *string    `json:"html_url,omitempty"`
-	IssueURL     *string    `json:"issue_url,omitempty"`
-	StatusesURL  *string    `json:"statuses_url,omitempty"`
-	DiffURL      *string    `json:"diff_url,omitempty"`
-	PatchURL     *string    `json:"patch_url,omitempty"`
-	Assignee     *User      `json:"assignee,omitempty"`
-	Assignees    []*User    `json:"assignees,omitempty"`
-	Milestone    *Milestone `json:"milestone,omitempty"`
+	ID                *int       `json:"id,omitempty"`
+	Number            *int       `json:"number,omitempty"`
+	State             *string    `json:"state,omitempty"`
+	Title             *string    `json:"title,omitempty"`
+	Body              *string    `json:"body,omitempty"`
+	CreatedAt         *time.Time `json:"created_at,omitempty"`
+	UpdatedAt         *time.Time `json:"updated_at,omitempty"`
+	ClosedAt          *time.Time `json:"closed_at,omitempty"`
+	MergedAt          *time.Time `json:"merged_at,omitempty"`
+	User              *User      `json:"user,omitempty"`
+	Merged            *bool      `json:"merged,omitempty"`
+	Mergeable         *bool      `json:"mergeable,omitempty"`
+	MergedBy          *User      `json:"merged_by,omitempty"`
+	Comments          *int       `json:"comments,omitempty"`
+	Commits           *int       `json:"commits,omitempty"`
+	Additions         *int       `json:"additions,omitempty"`
+	Deletions         *int       `json:"deletions,omitempty"`
+	ChangedFiles      *int       `json:"changed_files,omitempty"`
+	URL               *string    `json:"url,omitempty"`
+	HTMLURL           *string    `json:"html_url,omitempty"`
+	IssueURL          *string    `json:"issue_url,omitempty"`
+	StatusesURL       *string    `json:"statuses_url,omitempty"`
+	DiffURL           *string    `json:"diff_url,omitempty"`
+	PatchURL          *string    `json:"patch_url,omitempty"`
+	ReviewCommentsURL *string    `json:"review_comments_url,omitempty"`
+	ReviewCommentURL  *string    `json:"review_comment_url,omitempty"`
+	Assignee          *User      `json:"assignee,omitempty"`
+	Assignees         []*User    `json:"assignees,omitempty"`
+	Milestone         *Milestone `json:"milestone,omitempty"`
 
 	Head *PullRequestBranch `json:"head,omitempty"`
 	Base *PullRequestBranch `json:"base,omitempty"`
@@ -251,12 +253,16 @@ type PullRequestMergeResult struct {
 
 // PullRequestOptions lets you define how a pull request will be merged.
 type PullRequestOptions struct {
-	Squash bool
+	CommitTitle string
+
+	// The merge method to use. Possible values include: "merge", "squash", and "rebase" with the default being merge.
+	MergeMethod string
 }
 
 type pullRequestMergeRequest struct {
 	CommitMessage *string `json:"commit_message"`
-	Squash        *bool   `json:"squash,omitempty"`
+	CommitTitle   *string `json:"commit_title,omitempty"`
+	MergeMethod   *string `json:"merge_method,omitempty"`
 }
 
 // Merge a pull request (Merge Button™).
@@ -267,7 +273,8 @@ func (s *PullRequestsService) Merge(owner string, repo string, number int, commi
 
 	pullRequestBody := &pullRequestMergeRequest{CommitMessage: &commitMessage}
 	if options != nil {
-		pullRequestBody.Squash = &options.Squash
+		pullRequestBody.CommitTitle = &options.CommitTitle
+		pullRequestBody.MergeMethod = &options.MergeMethod
 	}
 	req, err := s.client.NewRequest("PUT", u, pullRequestBody)
 

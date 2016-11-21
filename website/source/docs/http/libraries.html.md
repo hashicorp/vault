@@ -39,12 +39,22 @@ These libraries are provided by the community.
 * [VaultSharp](https://github.com/rajanadar/VaultSharp)
   * `Install-Package VaultSharp`
 
+### Clojure
+
+* [vault-clj](https://github.com/amperity/vault-clj)
+
 ### Elixir
 
 * [vaultex](https://hex.pm/packages/vaultex)
 
+### Haskell
+
+* [vault-tool](https://hackage.haskell.org/package/vault-tool)
+  * `cabal install vault-tool`
+
 ### Java
 
+* [Spring Vault](https://github.com/spring-projects/spring-vault)
 * [vault-java](https://github.com/jhaals/vault-java)
 * [vault-java-driver](https://github.com/BetterCloud/vault-java-driver)
 

@@ -23,7 +23,7 @@ import (
 func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, err error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, keyBits)
 	if err != nil {
-		return "", "", fmt.Errorf("error generating RSA key-pair: %s", err)
+		return "", "", fmt.Errorf("error generating RSA key-pair: %v", err)
 	}
 
 	privateKeyRsa = string(pem.EncodeToMemory(&pem.Block{
@@ -33,7 +33,7 @@ func generateRSAKeys(keyBits int) (publicKeyRsa string, privateKeyRsa string, er
 
 	sshPublicKey, err := ssh.NewPublicKey(privateKey.Public())
 	if err != nil {
-		return "", "", fmt.Errorf("error generating RSA key-pair: %s", err)
+		return "", "", fmt.Errorf("error generating RSA key-pair: %v", err)
 	}
 	publicKeyRsa = "ssh-rsa " + base64.StdEncoding.EncodeToString(sshPublicKey.Marshal())
 	return
@@ -61,7 +61,7 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 
 	err = comm.Upload(publicKeyFileName, bytes.NewBufferString(dynamicPublicKey), nil)
 	if err != nil {
-		return fmt.Errorf("error uploading public key: %s", err)
+		return fmt.Errorf("error uploading public key: %v", err)
 	}
 
 	// Transfer the script required to install or uninstall the key to the remote
@@ -70,14 +70,14 @@ func (b *backend) installPublicKeyInTarget(adminUser, username, ip string, port 
 	scriptFileName := fmt.Sprintf("%s.sh", publicKeyFileName)
 	err = comm.Upload(scriptFileName, bytes.NewBufferString(installScript), nil)
 	if err != nil {
-		return fmt.Errorf("error uploading install script: %s", err)
+		return fmt.Errorf("error uploading install script: %v", err)
 	}
 
 	// Create a session to run remote command that triggers the script to install
 	// or uninstall the key.
 	session, err := comm.NewSession()
 	if err != nil {
-		return fmt.Errorf("unable to create SSH Session using public keys: %s", err)
+		return fmt.Errorf("unable to create SSH Session using public keys: %v", err)
 	}
 	if session == nil {
 		return fmt.Errorf("invalid session object")
@@ -116,15 +116,15 @@ func roleContainsIP(s logical.Storage, roleName string, ip string) (bool, error)
 
 	roleEntry, err := s.Get(fmt.Sprintf("roles/%s", roleName))
 	if err != nil {
-		return false, fmt.Errorf("error retrieving role '%s'", err)
+		return false, fmt.Errorf("error retrieving role %v", err)
 	}
 	if roleEntry == nil {
-		return false, fmt.Errorf("role '%s' not found", roleName)
+		return false, fmt.Errorf("role %q not found", roleName)
 	}
 
 	var role sshRole
 	if err := roleEntry.DecodeJSON(&role); err != nil {
-		return false, fmt.Errorf("error decoding role '%s'", roleName)
+		return false, fmt.Errorf("error decoding role %q", roleName)
 	}
 
 	if matched, err := cidrListContainsIP(ip, role.CIDRList); err != nil {
@@ -143,7 +143,7 @@ func cidrListContainsIP(ip, cidrList string) (bool, error) {
 	for _, item := range strings.Split(cidrList, ",") {
 		_, cidrIPNet, err := net.ParseCIDR(item)
 		if err != nil {
-			return false, fmt.Errorf("invalid CIDR entry '%s'", item)
+			return false, fmt.Errorf("invalid CIDR entry %q", item)
 		}
 		if cidrIPNet.Contains(net.ParseIP(ip)) {
 			return true, nil

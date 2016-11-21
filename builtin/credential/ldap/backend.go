@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-ldap/ldap"
 	"github.com/hashicorp/vault/helper/mfa"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -157,6 +158,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 			policies = append(policies, group.Policies...)
 		}
 	}
+
+	// Policies from each group may overlap
+	policies = strutil.RemoveDuplicates(policies)
 
 	if len(policies) == 0 {
 		errStr := "user is not a member of any authorized group"

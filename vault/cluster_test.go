@@ -16,6 +16,10 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
+var (
+	clusterTestPausePeriod = 2 * time.Second
+)
+
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
@@ -109,16 +113,16 @@ func TestCluster_ListenForRequests(t *testing.T) {
 				t.Fatal("%s not a TCP port", tcpAddr.String())
 			}
 
-			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+1), tlsConfig)
+			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+10), tlsConfig)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+1)
+					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+10)
 					continue
 				}
 				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
 			}
 			if expectFail {
-				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+1)
+				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+10)
 			}
 			err = conn.Handshake()
 			if err != nil {
@@ -131,11 +135,11 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			case connState.NegotiatedProtocol != "h2" || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+1)
+			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+10)
 		}
 	}
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	checkListenersFunc(false)
 
 	err := cores[0].StepDown(&logical.Request{
@@ -149,7 +153,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 
 	// StepDown doesn't wait during actual preSeal so give time for listeners
 	// to close
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	checkListenersFunc(true)
 
 	// After this period it should be active again
@@ -160,7 +164,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	// After sealing it should be inactive again
 	checkListenersFunc(true)
 }
@@ -230,13 +234,13 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	_ = cores[2].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
 		ClientToken: root,
 	})
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[1].Core)
 	testCluster_ForwardRequests(t, cores[0], "core2")
 	testCluster_ForwardRequests(t, cores[2], "core2")
@@ -250,13 +254,13 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	_ = cores[0].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
 		ClientToken: root,
 	})
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[2].Core)
 	testCluster_ForwardRequests(t, cores[0], "core3")
 	testCluster_ForwardRequests(t, cores[1], "core3")
@@ -270,13 +274,13 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	_ = cores[1].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
 		ClientToken: root,
 	})
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[0].Core)
 	testCluster_ForwardRequests(t, cores[1], "core1")
 	testCluster_ForwardRequests(t, cores[2], "core1")
@@ -290,13 +294,13 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	_ = cores[2].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
 		ClientToken: root,
 	})
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[1].Core)
 	testCluster_ForwardRequests(t, cores[0], "core2")
 	testCluster_ForwardRequests(t, cores[2], "core2")
@@ -310,13 +314,13 @@ func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	_ = cores[0].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
 		ClientToken: root,
 	})
-	time.Sleep(2 * time.Second)
+	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[2].Core)
 	testCluster_ForwardRequests(t, cores[0], "core3")
 	testCluster_ForwardRequests(t, cores[1], "core3")

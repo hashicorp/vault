@@ -39,7 +39,7 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-const _ = grpc.SupportPackageIsVersion3
+const _ = grpc.SupportPackageIsVersion4
 
 // Client API for RequestForwarding service
 
@@ -102,7 +102,7 @@ var _RequestForwarding_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: fileDescriptor0,
+	Metadata: "request_forwarding_service.proto",
 }
 
 func init() { proto.RegisterFile("request_forwarding_service.proto", fileDescriptor0) }

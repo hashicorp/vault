@@ -25,10 +25,11 @@ type CheckBundleConfig struct {
 
 // CheckBundleMetric individual metric configuration
 type CheckBundleMetric struct {
-	Name   string `json:"name"`
-	Type   string `json:"type"`
-	Units  string `json:"units"`
-	Status string `json:"status"`
+	Name   string   `json:"name"`
+	Type   string   `json:"type"`
+	Units  string   `json:"units"`
+	Status string   `json:"status"`
+	Tags   []string `json:"tags"`
 }
 
 // CheckBundle definition
@@ -116,7 +117,7 @@ func (a *API) CreateCheckBundle(config CheckBundle) (*CheckBundle, error) {
 // UpdateCheckBundle updates a check bundle configuration
 func (a *API) UpdateCheckBundle(config *CheckBundle) (*CheckBundle, error) {
 	if a.Debug {
-		a.Log.Printf("[DEBUG] Updating check bundle with new metrics.")
+		a.Log.Printf("[DEBUG] Updating check bundle.")
 	}
 
 	cfgJSON, err := json.Marshal(config)

@@ -13,12 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
@@ -269,6 +269,9 @@ type Core struct {
 	clusterListenerAddrs []*net.TCPAddr
 	// The setup function that gives us the handler to use
 	clusterHandlerSetupFunc func() (http.Handler, http.Handler)
+	// Tracks whether cluster listeners are running, e.g. it's safe to send a
+	// shutdown down the channel
+	clusterListenersRunning bool
 	// Shutdown channel for the cluster listeners
 	clusterListenerShutdownCh chan struct{}
 	// Shutdown success channel. We need this to be done serially to ensure
@@ -490,6 +493,23 @@ func (c *Core) Shutdown() error {
 
 	// Seal the Vault, causes a leader stepdown
 	return c.sealInternal()
+}
+
+// LookupToken returns the properties of the token from the token store. This
+// is particularly useful to fetch the accessor of the client token and get it
+// populated in the logical request along with the client token. The accessor
+// of the client token can get audit logged.
+func (c *Core) LookupToken(token string) (*TokenEntry, error) {
+	if token == "" {
+		return nil, fmt.Errorf("missing client token")
+	}
+
+	// Many tests don't have a token store running
+	if c.tokenStore == nil {
+		return nil, nil
+	}
+
+	return c.tokenStore.Lookup(token)
 }
 
 func (c *Core) fetchACLandTokenEntry(req *logical.Request) (*ACL, *TokenEntry, error) {

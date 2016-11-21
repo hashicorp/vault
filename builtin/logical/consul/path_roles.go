@@ -9,6 +9,16 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+func pathListRoles(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "roles/?$",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ListOperation: b.pathRoleList,
+		},
+	}
+}
+
 func pathRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
@@ -45,6 +55,16 @@ Defaults to 'client'.`,
 			logical.DeleteOperation: pathRolesDelete,
 		},
 	}
+}
+
+func (b *backend) pathRoleList(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List("policy/")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(entries), nil
 }
 
 func pathRolesRead(

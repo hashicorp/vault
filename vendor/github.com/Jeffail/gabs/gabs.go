@@ -31,8 +31,7 @@ import (
 	"strings"
 )
 
-/*---------------------------------------------------------------------------------------------------
- */
+//--------------------------------------------------------------------------------------------------
 
 var (
 	// ErrOutOfBounds - Index out of bounds.
@@ -63,40 +62,30 @@ var (
 	ErrInvalidBuffer = errors.New("input buffer contained invalid JSON")
 )
 
-/*---------------------------------------------------------------------------------------------------
- */
+//--------------------------------------------------------------------------------------------------
 
-/*
-Container - an internal structure that holds a reference to the core interface map of the parsed
-json. Use this container to move context.
-*/
+// Container - an internal structure that holds a reference to the core interface map of the parsed
+// json. Use this container to move context.
 type Container struct {
 	object interface{}
 }
 
-/*
-Data - Return the contained data as an interface{}.
-*/
+// Data - Return the contained data as an interface{}.
 func (g *Container) Data() interface{} {
 	return g.object
 }
 
-/*---------------------------------------------------------------------------------------------------
- */
+//--------------------------------------------------------------------------------------------------
 
-/*
-Path - Search for a value using dot notation.
-*/
+// Path - Search for a value using dot notation.
 func (g *Container) Path(path string) *Container {
 	return g.Search(strings.Split(path, ".")...)
 }
 
-/*
-Search - Attempt to find and return an object within the JSON structure by specifying the hierarchy
-of field names to locate the target. If the search encounters an array and has not reached the end
-target then it will iterate each object of the array for the target and return all of the results in
-a JSON array.
-*/
+// Search - Attempt to find and return an object within the JSON structure by specifying the
+// hierarchy of field names to locate the target. If the search encounters an array and has not
+// reached the end target then it will iterate each object of the array for the target and return
+// all of the results in a JSON array.
 func (g *Container) Search(hierarchy ...string) *Container {
 	var object interface{}
 
@@ -124,31 +113,22 @@ func (g *Container) Search(hierarchy ...string) *Container {
 	return &Container{object}
 }
 
-/*
-S - Shorthand method, does the same thing as Search.
-*/
+// S - Shorthand method, does the same thing as Search.
 func (g *Container) S(hierarchy ...string) *Container {
 	return g.Search(hierarchy...)
 }
 
-/*
-Exists - Checks whether a path exists.
-*/
+// Exists - Checks whether a path exists.
 func (g *Container) Exists(hierarchy ...string) bool {
 	return g.Search(hierarchy...).Data() != nil
 }
 
-/*
-ExistsP - Checks whether a dot notation path exists.
-*/
+// ExistsP - Checks whether a dot notation path exists.
 func (g *Container) ExistsP(path string) bool {
 	return g.Exists(strings.Split(path, ".")...)
 }
 
-/*
-Index - Attempt to find and return an object with a JSON array by specifying the index of the
-target.
-*/
+// Index - Attempt to find and return an object within a JSON array by index.
 func (g *Container) Index(index int) *Container {
 	if array, ok := g.Data().([]interface{}); ok {
 		if index >= len(array) {
@@ -159,11 +139,9 @@ func (g *Container) Index(index int) *Container {
 	return &Container{nil}
 }
 
-/*
-Children - Return a slice of all the children of the array. This also works for objects, however,
-the children returned for an object will NOT be in order and you lose the names of the returned
-objects this way.
-*/
+// Children - Return a slice of all the children of the array. This also works for objects, however,
+// the children returned for an object will NOT be in order and you lose the names of the returned
+// objects this way.
 func (g *Container) Children() ([]*Container, error) {
 	if array, ok := g.Data().([]interface{}); ok {
 		children := make([]*Container, len(array))
@@ -182,9 +160,7 @@ func (g *Container) Children() ([]*Container, error) {
 	return nil, ErrNotObjOrArray
 }
 
-/*
-ChildrenMap - Return a map of all the children of an object.
-*/
+// ChildrenMap - Return a map of all the children of an object.
 func (g *Container) ChildrenMap() (map[string]*Container, error) {
 	if mmap, ok := g.Data().(map[string]interface{}); ok {
 		children := map[string]*Container{}
@@ -196,14 +172,11 @@ func (g *Container) ChildrenMap() (map[string]*Container, error) {
 	return nil, ErrNotObj
 }
 
-/*---------------------------------------------------------------------------------------------------
- */
+//--------------------------------------------------------------------------------------------------
 
-/*
-Set - Set the value of a field at a JSON path, any parts of the path that do not exist will be
-constructed, and if a collision occurs with a non object type whilst iterating the path an error is
-returned.
-*/
+// Set - Set the value of a field at a JSON path, any parts of the path that do not exist will be
+// constructed, and if a collision occurs with a non object type whilst iterating the path an error
+// is returned.
 func (g *Container) Set(value interface{}, path ...string) (*Container, error) {
 	if len(path) == 0 {
 		g.object = value
@@ -229,16 +202,12 @@ func (g *Container) Set(value interface{}, path ...string) (*Container, error) {
 	return &Container{object}, nil
 }
 
-/*
-SetP - Does the same as Set, but using a dot notation JSON path.
-*/
+// SetP - Does the same as Set, but using a dot notation JSON path.
 func (g *Container) SetP(value interface{}, path string) (*Container, error) {
 	return g.Set(value, strings.Split(path, ".")...)
 }
 
-/*
-SetIndex - Set a value of an array element based on the index.
-*/
+// SetIndex - Set a value of an array element based on the index.
 func (g *Container) SetIndex(value interface{}, index int) (*Container, error) {
 	if array, ok := g.Data().([]interface{}); ok {
 		if index >= len(array) {
@@ -250,80 +219,60 @@ func (g *Container) SetIndex(value interface{}, index int) (*Container, error) {
 	return &Container{nil}, ErrNotArray
 }
 
-/*
-Object - Create a new JSON object at a path. Returns an error if the path contains a collision with
-a non object type.
-*/
+// Object - Create a new JSON object at a path. Returns an error if the path contains a collision
+// with a non object type.
 func (g *Container) Object(path ...string) (*Container, error) {
 	return g.Set(map[string]interface{}{}, path...)
 }
 
-/*
-ObjectP - Does the same as Object, but using a dot notation JSON path.
-*/
+// ObjectP - Does the same as Object, but using a dot notation JSON path.
 func (g *Container) ObjectP(path string) (*Container, error) {
 	return g.Object(strings.Split(path, ".")...)
 }
 
-/*
-ObjectI - Create a new JSON object at an array index. Returns an error if the object is not an array
-or the index is out of bounds.
-*/
+// ObjectI - Create a new JSON object at an array index. Returns an error if the object is not an
+// array or the index is out of bounds.
 func (g *Container) ObjectI(index int) (*Container, error) {
 	return g.SetIndex(map[string]interface{}{}, index)
 }
 
-/*
-Array - Create a new JSON array at a path. Returns an error if the path contains a collision with
-a non object type.
-*/
+// Array - Create a new JSON array at a path. Returns an error if the path contains a collision with
+// a non object type.
 func (g *Container) Array(path ...string) (*Container, error) {
 	return g.Set([]interface{}{}, path...)
 }
 
-/*
-ArrayP - Does the same as Array, but using a dot notation JSON path.
-*/
+// ArrayP - Does the same as Array, but using a dot notation JSON path.
 func (g *Container) ArrayP(path string) (*Container, error) {
 	return g.Array(strings.Split(path, ".")...)
 }
 
-/*
-ArrayI - Create a new JSON array at an array index. Returns an error if the object is not an array
-or the index is out of bounds.
-*/
+// ArrayI - Create a new JSON array at an array index. Returns an error if the object is not an
+// array or the index is out of bounds.
 func (g *Container) ArrayI(index int) (*Container, error) {
 	return g.SetIndex([]interface{}{}, index)
 }
 
-/*
-ArrayOfSize - Create a new JSON array of a particular size at a path. Returns an error if the path
-contains a collision with a non object type.
-*/
+// ArrayOfSize - Create a new JSON array of a particular size at a path. Returns an error if the
+// path contains a collision with a non object type.
 func (g *Container) ArrayOfSize(size int, path ...string) (*Container, error) {
 	a := make([]interface{}, size)
 	return g.Set(a, path...)
 }
 
-/*
-ArrayOfSizeP - Does the same as ArrayOfSize, but using a dot notation JSON path.
-*/
+// ArrayOfSizeP - Does the same as ArrayOfSize, but using a dot notation JSON path.
 func (g *Container) ArrayOfSizeP(size int, path string) (*Container, error) {
 	return g.ArrayOfSize(size, strings.Split(path, ".")...)
 }
 
-/*
-ArrayOfSizeI - Create a new JSON array of a particular size at an array index. Returns an error if
-the object is not an array or the index is out of bounds.
-*/
+// ArrayOfSizeI - Create a new JSON array of a particular size at an array index. Returns an error
+// if the object is not an array or the index is out of bounds.
 func (g *Container) ArrayOfSizeI(size, index int) (*Container, error) {
 	a := make([]interface{}, size)
 	return g.SetIndex(a, index)
 }
 
-/*
-Delete - Delete an element at a JSON path, an error is returned if the element does not exist.
-*/
+// Delete - Delete an element at a JSON path, an error is returned if the element does not exist.
 func (g *Container) Delete(path ...string) error {
 	var object interface{}
 
@@ -346,24 +295,19 @@ func (g *Container) Delete(path ...string) error {
 	return nil
 }
 
-/*
-DeleteP - Does the same as Delete, but using a dot notation JSON path.
-*/
+// DeleteP - Does the same as Delete, but using a dot notation JSON path.
 func (g *Container) DeleteP(path string) error {
 	return g.Delete(strings.Split(path, ".")...)
 }
 
-/*---------------------------------------------------------------------------------------------------
- */
+//--------------------------------------------------------------------------------------------------
 
 /*
 Array modification/search - Keeping these options simple right now, no need for anything more
 complicated since you can just cast to []interface{}, modify and then reassign with Set.
 */
 
-/*
-ArrayAppend - Append a value onto a JSON array.
-*/
+// ArrayAppend - Append a value onto a JSON array.
 func (g *Container) ArrayAppend(value interface{}, path ...string) error {
 	array, ok := g.Search(path...).Data().([]interface{})
 	if !ok {
@@ -374,16 +318,12 @@ func (g *Container) ArrayAppend(value interface{}, path ...string) error {
 	return err
 }
 
-/*
-ArrayAppendP - Append a value onto a JSON array using a dot notation JSON path.
-*/
+// ArrayAppendP - Append a value onto a JSON array using a dot notation JSON path.
 func (g *Container) ArrayAppendP(value interface{}, path string) error {
 	return g.ArrayAppend(value, strings.Split(path, ".")...)
 }
 
-/*
-ArrayRemove - Remove an element from a JSON array.
-*/
+// ArrayRemove - Remove an element from a JSON array.
 func (g *Container) ArrayRemove(index int, path ...string) error {
 	if index < 0 {
 		return ErrOutOfBounds
@@ -401,16 +341,12 @@ func (g *Container) ArrayRemove(index int, path ...string) error {
 	return err
 }
 
-/*
-ArrayRemoveP - Remove an element from a JSON array using a dot notation JSON path.
-*/
+// ArrayRemoveP - Remove an element from a JSON array using a dot notation JSON path.
 func (g *Container) ArrayRemoveP(index int, path string) error {
 	return g.ArrayRemove(index, strings.Split(path, ".")...)
 }
 
-/*
-ArrayElement - Access an element from a JSON array.
-*/
+// ArrayElement - Access an element from a JSON array.
 func (g *Container) ArrayElement(index int, path ...string) (*Container, error) {
 	if index < 0 {
 		return &Container{nil}, ErrOutOfBounds
@@ -425,16 +361,12 @@ func (g *Container) ArrayElement(index int, path ...string) (*Container, error) 
 	return &Container{nil}, ErrOutOfBounds
 }
 
-/*
-ArrayElementP - Access an element from a JSON array using a dot notation JSON path.
-*/
+// ArrayElementP - Access an element from a JSON array using a dot notation JSON path.
 func (g *Container) ArrayElementP(index int, path string) (*Container, error) {
 	return g.ArrayElement(index, strings.Split(path, ".")...)
 }
 
-/*
-ArrayCount - Count the number of elements in a JSON array.
-*/
+// ArrayCount - Count the number of elements in a JSON array.
 func (g *Container) ArrayCount(path ...string) (int, error) {
 	if array, ok := g.Search(path...).Data().([]interface{}); ok {
 		return len(array), nil
@@ -442,19 +374,14 @@ func (g *Container) ArrayCount(path ...string) (int, error) {
 	return 0, ErrNotArray
 }
 
-/*
-ArrayCountP - Count the number of elements in a JSON array using a dot notation JSON path.
-*/
+// ArrayCountP - Count the number of elements in a JSON array using a dot notation JSON path.
 func (g *Container) ArrayCountP(path string) (int, error) {
 	return g.ArrayCount(strings.Split(path, ".")...)
 }
 
-/*---------------------------------------------------------------------------------------------------
- */
+//--------------------------------------------------------------------------------------------------
 
-/*
-Bytes - Converts the contained object back to a JSON []byte blob.
-*/
+// Bytes - Converts the contained object back to a JSON []byte blob.
 func (g *Container) Bytes() []byte {
 	if g.object != nil {
 		if bytes, err := json.Marshal(g.object); err == nil {
@@ -464,9 +391,7 @@ func (g *Container) Bytes() []byte {
 	return []byte("{}")
 }
 
-/*
-BytesIndent - Converts the contained object back to a JSON []byte blob formatted with prefix and indent.
-*/
+// BytesIndent - Converts the contained object to a JSON []byte blob formatted with prefix, indent.
 func (g *Container) BytesIndent(prefix string, indent string) []byte {
 	if g.object != nil {
 		if bytes, err := json.MarshalIndent(g.object, prefix, indent); err == nil {
@@ -476,37 +401,27 @@ func (g *Container) BytesIndent(prefix string, indent string) []byte {
 	return []byte("{}")
 }
 
-/*
-String - Converts the contained object back to a JSON formatted string.
-*/
+// String - Converts the contained object to a JSON formatted string.
 func (g *Container) String() string {
 	return string(g.Bytes())
 }
 
-/*
-StringIndent - Converts the contained object back to a JSON formatted string with prefix and indent.
-*/
+// StringIndent - Converts the contained object back to a JSON formatted string with prefix, indent.
 func (g *Container) StringIndent(prefix string, indent string) string {
 	return string(g.BytesIndent(prefix, indent))
 }
 
-/*
-New - Create a new gabs JSON object.
-*/
+// New - Create a new gabs JSON object.
 func New() *Container {
 	return &Container{map[string]interface{}{}}
 }
 
-/*
-Consume - Gobble up an already converted JSON object, or a fresh map[string]interface{} object.
-*/
+// Consume - Gobble up an already converted JSON object, or a fresh map[string]interface{} object.
 func Consume(root interface{}) (*Container, error) {
 	return &Container{root}, nil
 }
 
-/*
-ParseJSON - Convert a string into a representation of the parsed JSON.
-*/
+// ParseJSON - Convert a string into a representation of the parsed JSON.
 func ParseJSON(sample []byte) (*Container, error) {
 	var gabs Container
 
@@ -517,9 +432,7 @@ func ParseJSON(sample []byte) (*Container, error) {
 	return &gabs, nil
 }
 
-/*
-ParseJSONDecoder - Convert a json.Decoder into a representation of the parsed JSON.
-*/
+// ParseJSONDecoder - Convert a json.Decoder into a representation of the parsed JSON.
 func ParseJSONDecoder(decoder *json.Decoder) (*Container, error) {
 	var gabs Container
 
@@ -530,9 +443,7 @@ func ParseJSONDecoder(decoder *json.Decoder) (*Container, error) {
 	return &gabs, nil
 }
 
-/*
-ParseJSONFile - Read a file and convert into a representation of the parsed JSON.
-*/
+// ParseJSONFile - Read a file and convert into a representation of the parsed JSON.
 func ParseJSONFile(path string) (*Container, error) {
 	if len(path) > 0 {
 		cBytes, err := ioutil.ReadFile(path)
@@ -550,9 +461,7 @@ func ParseJSONFile(path string) (*Container, error) {
 	return nil, ErrInvalidPath
 }
 
-/*
-ParseJSONBuffer - Read the contents of a buffer into a representation of the parsed JSON.
-*/
+// ParseJSONBuffer - Read the contents of a buffer into a representation of the parsed JSON.
 func ParseJSONBuffer(buffer io.Reader) (*Container, error) {
 	var gabs Container
 	jsonDecoder := json.NewDecoder(buffer)
@@ -563,83 +472,4 @@ func ParseJSONBuffer(buffer io.Reader) (*Container, error) {
 	return &gabs, nil
 }
 
-/*---------------------------------------------------------------------------------------------------
- */
-
-// DEPRECATED METHODS
-
-/*
-Push - DEPRECATED: Push a value onto a JSON array.
-*/
-func (g *Container) Push(target string, value interface{}) error {
-	if mmap, ok := g.Data().(map[string]interface{}); ok {
-		arrayTarget := mmap[target]
-		if array, ok := arrayTarget.([]interface{}); ok {
-			mmap[target] = append(array, value)
-		} else {
-			return ErrNotArray
-		}
-	} else {
-		return ErrNotObj
-	}
-	return nil
-}
-
-/*
-RemoveElement - DEPRECATED: Remove a value from a JSON array.
-*/
-func (g *Container) RemoveElement(target string, index int) error {
-	if index < 0 {
-		return ErrOutOfBounds
-	}
-	if mmap, ok := g.Data().(map[string]interface{}); ok {
-		arrayTarget := mmap[target]
-		if array, ok := arrayTarget.([]interface{}); ok {
-			if index < len(array) {
-				mmap[target] = append(array[:index], array[index+1:]...)
-			} else {
-				return ErrOutOfBounds
-			}
-		} else {
-			return ErrNotArray
-		}
-	} else {
-		return ErrNotObj
-	}
-	return nil
-}
-
-/*
-GetElement - DEPRECATED: Get the desired element from a JSON array
-*/
-func (g *Container) GetElement(target string, index int) *Container {
-	if index < 0 {
-		return &Container{nil}
-	}
-	if mmap, ok := g.Data().(map[string]interface{}); ok {
-		arrayTarget := mmap[target]
-		if array, ok := arrayTarget.([]interface{}); ok {
-			if index < len(array) {
-				return &Container{array[index]}
-			}
-		}
-	}
-	return &Container{nil}
-}
-
-/*
-CountElements - DEPRECATED: Count the elements of a JSON array, returns -1 if the target is not an
-array
-*/
-func (g *Container) CountElements(target string) int {
-	if mmap, ok := g.Data().(map[string]interface{}); ok {
-		arrayTarget := mmap[target]
-		if array, ok := arrayTarget.([]interface{}); ok {
-			return len(array)
-		}
-	}
-	return -1
-}
-
-/*---------------------------------------------------------------------------------------------------
- */
+//--------------------------------------------------------------------------------------------------

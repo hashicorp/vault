@@ -121,7 +121,7 @@ will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
 				"secret_id_ttl": &framework.FieldSchema{
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued SecretID should expire. Defaults
-to 0, in which case the value will fall back to the system/mount defaults.`,
+to 0, meaning no expiration.`,
 				},
 				"token_ttl": &framework.FieldSchema{
 					Type: framework.TypeDurationSecond,
@@ -249,7 +249,7 @@ addresses which can perform the login operation`,
 				"secret_id_ttl": &framework.FieldSchema{
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued SecretID should expire. Defaults
-to 0, in which case the value will fall back to the system/mount defaults.`,
+to 0, meaning no expiration.`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -640,7 +640,7 @@ func (b *backend) setRoleEntry(s logical.Storage, roleName string, role *roleSto
 	}
 
 	// If previousRoleID is still intact, don't create another one
-	if previousRoleID != "" {
+	if previousRoleID != "" && previousRoleID == role.RoleID {
 		return nil
 	}
 

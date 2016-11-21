@@ -28,39 +28,42 @@ Examples
 
 Here is an example of using the package:
 
-    func SlowMethod() {
-        // Profiling the runtime of a method
-        defer metrics.MeasureSince([]string{"SlowMethod"}, time.Now())
-    }
+```go
+func SlowMethod() {
+    // Profiling the runtime of a method
+    defer metrics.MeasureSince([]string{"SlowMethod"}, time.Now())
+}
 
-    // Configure a statsite sink as the global metrics sink
-    sink, _ := metrics.NewStatsiteSink("statsite:8125")
-    metrics.NewGlobal(metrics.DefaultConfig("service-name"), sink)
+// Configure a statsite sink as the global metrics sink
+sink, _ := metrics.NewStatsiteSink("statsite:8125")
+metrics.NewGlobal(metrics.DefaultConfig("service-name"), sink)
 
-    // Emit a Key/Value pair
-    metrics.EmitKey([]string{"questions", "meaning of life"}, 42)
-
+// Emit a Key/Value pair
+metrics.EmitKey([]string{"questions", "meaning of life"}, 42)
+```
 
 Here is an example of setting up an signal handler:
 
-    // Setup the inmem sink and signal handler
-    inm := metrics.NewInmemSink(10*time.Second, time.Minute)
-    sig := metrics.DefaultInmemSignal(inm)
-    metrics.NewGlobal(metrics.DefaultConfig("service-name"), inm)
+```go
+// Setup the inmem sink and signal handler
+inm := metrics.NewInmemSink(10*time.Second, time.Minute)
+sig := metrics.DefaultInmemSignal(inm)
+metrics.NewGlobal(metrics.DefaultConfig("service-name"), inm)
 
-    // Run some code
-    inm.SetGauge([]string{"foo"}, 42)
-    inm.EmitKey([]string{"bar"}, 30)
+// Run some code
+inm.SetGauge([]string{"foo"}, 42)
+inm.EmitKey([]string{"bar"}, 30)
 
-    inm.IncrCounter([]string{"baz"}, 42)
-    inm.IncrCounter([]string{"baz"}, 1)
-    inm.IncrCounter([]string{"baz"}, 80)
+inm.IncrCounter([]string{"baz"}, 42)
+inm.IncrCounter([]string{"baz"}, 1)
+inm.IncrCounter([]string{"baz"}, 80)
 
-    inm.AddSample([]string{"method", "wow"}, 42)
-    inm.AddSample([]string{"method", "wow"}, 100)
-    inm.AddSample([]string{"method", "wow"}, 22)
+inm.AddSample([]string{"method", "wow"}, 42)
+inm.AddSample([]string{"method", "wow"}, 100)
+inm.AddSample([]string{"method", "wow"}, 22)
 
-    ....
+....
+```
 
 When a signal comes in, output like the following will be dumped to stderr:
 
