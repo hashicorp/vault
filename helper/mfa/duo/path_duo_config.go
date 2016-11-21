@@ -62,6 +62,7 @@ func pathDuoConfigWrite(
 	}
 	entry, err := logical.StorageEntryJSON("duo/config", DuoConfig{
 		UsernameFormat: username_format,
+		UserAgent:      d.Get("user_agent").(string),
 		PushInfo:       d.Get("push_info").(string),
 	})
 	if err != nil {
@@ -89,6 +90,7 @@ func pathDuoConfigRead(
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"username_format": config.UsernameFormat,
+			"user_agent":      config.UserAgent,
 			"push_info":       config.PushInfo,
 		},
 	}, nil
