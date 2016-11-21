@@ -111,6 +111,11 @@ func duoHandler(duoConfig *DuoConfig, duoAuthClient AuthClient, request *duoAuth
 	if request.method == "" {
 		request.method = "auto"
 	}
+	if request.method == "auto" || request.method == "push" {
+		if duoConfig.PushInfo != "" {
+			options = append(options, authapi.AuthPushinfo(duoConfig.PushInfo))
+		}
+	}
 	if request.passcode != "" {
 		request.method = "passcode"
 		options = append(options, authapi.AuthPasscode(request.passcode))
