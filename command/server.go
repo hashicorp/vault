@@ -350,7 +350,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
-		mlock.Supported(), !config.DisableMlock)
+		mlock.Supported(), !config.DisableMlock && mlock.Supported())
 	infoKeys = append(infoKeys, "log level", "mlock", "backend")
 
 	if config.HABackend != nil {
