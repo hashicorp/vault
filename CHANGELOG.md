@@ -30,6 +30,8 @@ BUG FIXES:
  * api/unwrap, command/unwrap: Fix error when no client token exists [GH-2077]
  * command/ssh: Use temporary file for identity and ensure its deletion before
    the command returns [GH-2016]
+ * cli: Fix error printing values with `-field` if the values contained
+   formatting directives [GH-2109]
  * core: Fix bug where a failure to come up as active node (e.g. if an audit
    backend failed) could lead to deadlock [GH-2083]
  * physical/mysql: Fix potential crash during setup due to a query failure
