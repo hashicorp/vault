@@ -350,7 +350,7 @@ func (c *ServerCommand) Run(args []string) int {
 	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
-		mlock.Supported(), !config.DisableMlock)
+		mlock.Supported(), !config.DisableMlock && mlock.Supported())
 	infoKeys = append(infoKeys, "log level", "mlock", "backend")
 
 	if config.HABackend != nil {
@@ -464,8 +464,10 @@ func (c *ServerCommand) Run(args []string) int {
 
 	defer c.cleanupGuard.Do(listenerCloseFunc)
 
-	infoKeys = append(infoKeys, "version")
-	info["version"] = version.GetVersion().FullVersionNumber()
+	infoKeys = append(infoKeys, "version", "version_sha")
+	verInfo := version.GetVersion()
+	info["version"] = verInfo.FullVersionNumber()
+	info["version_sha"] = strings.Trim(verInfo.Revision, "'")
 
 	// Server configuration output
 	padding := 24

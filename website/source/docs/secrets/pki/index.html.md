@@ -996,8 +996,9 @@ subpath for interactive help output.
       <span class="param-flags">optional</span>
         Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
         defaults to `pem`. If `der`, the output is base64 encoded. If
-        `pem_bundle`, the `certificate` field will contain the private key,
-        certificate, and issuing CA, concatenated.
+        `pem_bundle`, the `certificate` field will contain the private key and
+        certificate, concatenated; if the issuing CA is not a Vault-derived
+        self-signed root, this will be included as well.
       </li>
       <li>
         <span class="param">exclude_cn_from_sans</span>
@@ -1393,8 +1394,9 @@ subpath for interactive help output.
         <span class="param-flags">optional</span>
         Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
         defaults to `pem`. If `der`, the output is base64 encoded. If
-        `pem_bundle`, the `certificate` field will contain the private key (if exported),
-        certificate, and issuing CA, concatenated.
+        `pem_bundle`, the `certificate` field will contain the private key (if
+        exported) and certificate, concatenated; if the issuing CA is not a
+        Vault-derived self-signed root, this will be included as well.
       </li>
       <li>
         <span class="param">key_type</span>
@@ -1503,8 +1505,9 @@ subpath for interactive help output.
       <span class="param-flags">optional</span>
         Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
         defaults to `pem`. If `der`, the output is base64 encoded. If
-        `pem_bundle`, the `certificate` field will contain the certificate and
-        issuing CA, concatenated.
+        `pem_bundle`, the `certificate` field will contain the certificate and,
+        if the issuing CA is not a Vault-derived self-signed root, it will be
+        concatenated with the certificate.
       </li>
       <li>
         <span class="param">max_path_length</span>
@@ -1616,8 +1619,9 @@ subpath for interactive help output.
         <span class="param-flags">optional</span>
         Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
         defaults to `pem`. If `der`, the output is base64 encoded. If
-        `pem_bundle`, the `certificate` field will contain the certificate and
-        issuing CA, concatenated.
+        `pem_bundle`, the `certificate` field will contain the certificate and,
+        if the issuing CA is not a Vault-derived self-signed root, it will be
+        concatenated with the certificate.
       </li>
       <li>
         <span class="param">exclude_cn_from_sans</span>
@@ -1691,8 +1695,9 @@ subpath for interactive help output.
       <span class="param-flags">optional</span>
         Format for returned data. Can be `pem`, `der`, or `pem_bundle`;
         defaults to `pem`. If `der`, the output is base64 encoded. If
-        `pem_bundle`, the `certificate` field will contain the certificate and
-        issuing CA, concatenated.
+        `pem_bundle`, the `certificate` field will contain the certificate and,
+        if the issuing CA is not a Vault-derived self-signed root, it will be
+        concatenated with the certificate.
       </li>
     </ul>
   </dd>
