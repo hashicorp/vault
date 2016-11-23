@@ -643,47 +643,46 @@ type SystemBackend struct {
 }
 
 // corsStatus returns the current CORS configuration as a logical.Response
-func (b *SystemBackend) corsStatusResponse(corsConf *CORSConfig) *logical.Response {
+func (b *SystemBackend) corsStatusResponse() (*logical.Response, error) {
+	corsConf := b.Core.corsConfig
+	if corsConf == nil {
+		return nil, errCORSNotConfigured
+	}
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"enabled":         corsConf.Enabled(),
 			"allowed_origins": corsConf.AllowedOrigins().String(),
 		},
-	}
+	}, nil
 }
 
 // handleCORSEnable sets the regexp that describes origins that are allowed
 // to make cross-origin requests and sets the CORS enabled flag to true
 func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	corsConf, err := b.Core.CORSConfig()
-	if err != nil {
-		corsConf = newCORSConfig()
+	if b.Core.corsConfig == nil {
+		b.Core.corsConfig = newCORSConfig()
 	}
-
 	s := d.Get("allowed_origins")
 
-	corsConf.EnableCORS(s.(string))
+	b.Core.corsConfig.Enable(s.(string))
 
-	return b.corsStatusResponse(corsConf), nil
+	return b.corsStatusResponse()
 }
 
 // handleCORSDisable clears the allowed origins regexp and sets the CORS enabled flag to false
 func (b *SystemBackend) handleCORSDisable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	corsConf, _ := b.Core.CORSConfig()
+	b.Core.corsConfig = nil
 
-	corsConf.Disable()
-
-	return b.corsStatusResponse(corsConf), nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"enabled": false,
+		},
+	}, nil
 }
 
 // handleCORSStatus returns the current CORS configuration
 func (b *SystemBackend) handleCORSStatus(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	corsConf, err := b.Core.CORSConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	return b.corsStatusResponse(corsConf), nil
+	return b.corsStatusResponse()
 }
 
 // handleCapabilities returns the ACL capabilities of the token for a given path
