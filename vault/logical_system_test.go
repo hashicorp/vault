@@ -17,6 +17,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	expected := []string{
 		"auth/*",
 		"remount",
+		"config/*",
 		"revoke-prefix/*",
 		"audit",
 		"audit/*",
@@ -29,6 +30,57 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
+}
+
+func TestSystemConfigCORS(t *testing.T) {
+	b := testSystemBackend(t)
+	req := logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	_, err := b.HandleRequest(req)
+	if err != errCORSNotConfigured {
+		t.Fatalf("expected: %v\nactual: %v", errCORSNotConfigured, err)
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "config/cors")
+	req.Data["allowed_origins"] = "http://.+:[0-9]{4}"
+	actual, err := b.HandleRequest(req)
+
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"allowed_origins": "http://.+:[0-9]{4}",
+			"enabled":         true,
+		},
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("UPDATE FAILED -- bad: %#v", actual)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("READ FAILED -- bad: %#v", actual)
+	}
+
+	expected = &logical.Response{
+		Data: map[string]interface{}{
+			"enabled": false,
+		},
+	}
+
+	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
+	actual, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("DELETE FAILED -- bad: %#v", actual)
+	}
+
 }
 
 func TestSystemBackend_mounts(t *testing.T) {
