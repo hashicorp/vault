@@ -433,8 +433,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.ha = conf.HAPhysical
 	}
 
-	// c.corsConfig = newCORSConfig()
-
 	// We create the funcs here, then populate the given config with it so that
 	// the caller can share state
 	conf.ReloadFuncsLock = &c.reloadFuncsLock
@@ -500,9 +498,10 @@ func (c *Core) Shutdown() error {
 	return c.sealInternal()
 }
 
+// CORSConfig returns the current CORS configuration
 func (c *Core) CORSConfig() (*CORSConfig, error) {
 	if c.corsConfig == nil {
-		return nil, errors.New("CORS is not configured")
+		return nil, errCORSNotConfigured
 	}
 	return c.corsConfig, nil
 }
