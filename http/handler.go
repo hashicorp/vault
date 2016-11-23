@@ -128,17 +128,12 @@ func parseRequest(r *http.Request, out interface{}) error {
 // require Cross Origin Resource Sharing (CORS) headers.
 func handleCORS(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var corsConf *vault.CORSConfig
-
-		corsConf, _ = core.CORSConfig()
-
-		if corsConf.Enabled() {
-			err := corsConf.ApplyHeaders(w, r)
-			if err != nil {
-				respondError(w, http.StatusInternalServerError, err)
+		corsConf, err := core.CORSConfig()
+		if err == nil {
+			if corsConf.Enabled() {
+				corsConf.ApplyHeaders(w, r)
 			}
 		}
-
 		handler.ServeHTTP(w, r)
 		return
 	})
