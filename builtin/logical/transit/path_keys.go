@@ -4,6 +4,7 @@ import (
 	"crypto/elliptic"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"strconv"
 
 	"github.com/hashicorp/vault/helper/keysutil"
@@ -136,6 +137,22 @@ func (b *backend) pathPolicyExport(
 		resp.Data["keys"] = retKeys
 
 	case keysutil.KeyType_ECDSA_P256:
+		type ecdsaKey struct {
+			X *big.Int `json:"x"`
+			Y *big.Int `json:"y"`
+			D *big.Int `json:"d"`
+		}
+
+		retKeys := map[string]ecdsaKey{}
+		for k, v := range p.Keys {
+			retKeys[strconv.Itoa(k)] = ecdsaKey{
+				X: v.EC_X,
+				Y: v.EC_Y,
+				D: v.EC_D,
+			}
+		}
+		resp.Data["keys"] = retKeys
+
 	default:
 		return nil, fmt.Errorf("unknown key type %v", p.Type)
 	}
