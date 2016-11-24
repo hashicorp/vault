@@ -12,3 +12,7 @@ func configureServer18(h1 *http.Server, h2 *Server) error {
 	// No IdleTimeout to sync prior to Go 1.8.
 	return nil
 }
+
+func shouldLogPanic(panicValue interface{}) bool {
+	return panicValue != nil
+}

@@ -318,8 +318,8 @@ func (c *controlConn) reconnect(refreshring bool) {
 		}
 	}
 
-	// TODO: should have our own roundrobbin for hosts so that we can try each
-	// in succession and guantee that we get a different host each time.
+	// TODO: should have our own round-robin for hosts so that we can try each
+	// in succession and guarantee that we get a different host each time.
 	if newConn == nil {
 		host := c.session.ring.rrHost()
 		if host == nil {

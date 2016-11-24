@@ -199,6 +199,8 @@ func WithTimeout(d time.Duration) DialOption {
 }
 
 // WithDialer returns a DialOption that specifies a function to use for dialing network addresses.
+// If FailOnNonTempDialError() is set to true, and an error is returned by f, gRPC checks the error's
+// Temporary() method to decide if it should try to reconnect to the network address.
 func WithDialer(f func(string, time.Duration) (net.Conn, error)) DialOption {
 	return func(o *dialOptions) {
 		o.copts.Dialer = func(ctx context.Context, addr string) (net.Conn, error) {
@@ -207,6 +209,17 @@ func WithDialer(f func(string, time.Duration) (net.Conn, error)) DialOption {
 			}
 			return f(addr, 0)
 		}
+	}
+}
+
+// FailOnNonTempDialError returns a DialOption that specified if gRPC fails on non-temporary dial errors.
+// If f is true, and dialer returns a non-temporary error, gRPC will fail the connection to the network
+// address and won't try to reconnect.
+// The default value of FailOnNonTempDialError is false.
+// This is an EXPERIMENTAL API.
+func FailOnNonTempDialError(f bool) DialOption {
+	return func(o *dialOptions) {
+		o.copts.FailOnNonTempDialError = f
 	}
 }
 

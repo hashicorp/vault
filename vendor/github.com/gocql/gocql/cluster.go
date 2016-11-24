@@ -6,6 +6,8 @@ package gocql
 
 import (
 	"errors"
+	"log"
+	"net"
 	"time"
 )
 
@@ -74,6 +76,10 @@ type ClusterConfig struct {
 	// the filter will be ignored. If set will take precedence over any options set
 	// via Discovery
 	HostFilter HostFilter
+
+	// AddressTranslator will translate addresses found on peer discovery and/or
+	// node change events.
+	AddressTranslator AddressTranslator
 
 	// If IgnorePeerAddr is true and the address in system.peers does not match
 	// the supplied host by either initial hosts or discovered via events then the
@@ -144,6 +150,21 @@ func NewCluster(hosts ...string) *ClusterConfig {
 // session object that can be used to interact with the database.
 func (cfg *ClusterConfig) CreateSession() (*Session, error) {
 	return NewSession(*cfg)
+}
+
+// translateAddressPort is a helper method that will use the given AddressTranslator
+// if defined, to translate the given address and port into a possibly new address
+// and port, If no AddressTranslator or if an error occurs, the given address and
+// port will be returned.
+func (cfg *ClusterConfig) translateAddressPort(addr net.IP, port int) (net.IP, int) {
+	if cfg.AddressTranslator == nil || len(addr) == 0 {
+		return addr, port
+	}
+	newAddr, newPort := cfg.AddressTranslator.Translate(addr, port)
+	if gocqlDebug {
+		log.Printf("gocql: translating address '%v:%d' to '%v:%d'", addr, port, newAddr, newPort)
+	}
+	return newAddr, newPort
 }
 
 var (

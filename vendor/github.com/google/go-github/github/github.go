@@ -68,6 +68,7 @@ const (
 	mediaTypeReactionsPreview = "application/vnd.github.squirrel-girl-preview"
 
 	// https://developer.github.com/changes/2016-04-01-squash-api-preview/
+	// https://developer.github.com/changes/2016-09-26-pull-request-merge-api-update/
 	mediaTypeSquashPreview = "application/vnd.github.polaris-preview+json"
 
 	// https://developer.github.com/changes/2016-04-04-git-signing-api-preview/
@@ -78,9 +79,6 @@ const (
 
 	// https://developer.github.com/changes/2016-06-14-repository-invitations/
 	mediaTypeRepositoryInvitationsPreview = "application/vnd.github.swamp-thing-preview+json"
-
-	// https://developer.github.com/changes/2016-04-21-oauth-authorizations-grants-api-preview/
-	mediaTypeOAuthGrantAuthorizationsPreview = "application/vnd.github.damage-preview+json"
 
 	// https://developer.github.com/changes/2016-07-06-github-pages-preiew-api/
 	mediaTypePagesPreview = "application/vnd.github.mister-fantastic-preview+json"
@@ -126,6 +124,7 @@ type Client struct {
 	Integrations   *IntegrationsService
 	Issues         *IssuesService
 	Organizations  *OrganizationsService
+	Projects       *ProjectsService
 	PullRequests   *PullRequestsService
 	Repositories   *RepositoriesService
 	Search         *SearchService
@@ -199,6 +198,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Licenses = (*LicensesService)(&c.common)
 	c.Migrations = (*MigrationService)(&c.common)
 	c.Organizations = (*OrganizationsService)(&c.common)
+	c.Projects = (*ProjectsService)(&c.common)
 	c.PullRequests = (*PullRequestsService)(&c.common)
 	c.Reactions = (*ReactionsService)(&c.common)
 	c.Repositories = (*RepositoriesService)(&c.common)

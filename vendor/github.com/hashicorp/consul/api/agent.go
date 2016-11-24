@@ -73,6 +73,7 @@ type AgentServiceCheck struct {
 	HTTP              string `json:",omitempty"`
 	TCP               string `json:",omitempty"`
 	Status            string `json:",omitempty"`
+	TLSSkipVerify     string `json:",omitempty"`
 
 	// In Consul 0.7 and later, checks that are associated with a service
 	// may also contain this optional DeregisterCriticalServiceAfter field,

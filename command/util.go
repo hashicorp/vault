@@ -79,7 +79,7 @@ func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 		// directly print the message. If mitchellh/cli exposes method
 		// to print without CR, this check needs to be removed.
 		if reflect.TypeOf(ui).String() == "*cli.BasicUi" {
-			fmt.Fprintf(os.Stdout, fmt.Sprintf("%v", val))
+			fmt.Fprintf(os.Stdout, "%v", val)
 		} else {
 			ui.Output(fmt.Sprintf("%v", val))
 		}

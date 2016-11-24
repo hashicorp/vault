@@ -567,7 +567,11 @@ func (ctx *signingCtx) buildCanonicalHeaders(r rule, header http.Header) {
 }
 
 func (ctx *signingCtx) buildCanonicalString() {
-	ctx.Request.URL.RawQuery = strings.Replace(ctx.Query.Encode(), "+", "%20", -1)
+	query := ctx.Query
+	for key := range query {
+		sort.Strings(query[key])
+	}
+	ctx.Request.URL.RawQuery = strings.Replace(query.Encode(), "+", "%20", -1)
 
 	uri := getURIPath(ctx.Request.URL)
 

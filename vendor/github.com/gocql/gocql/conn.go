@@ -172,7 +172,9 @@ func Connect(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler, ses
 	}
 
 	// TODO(zariel): handle ipv6 zone
-	addr := (&net.TCPAddr{IP: host.Peer(), Port: host.Port()}).String()
+	translatedPeer, translatedPort := session.cfg.translateAddressPort(host.Peer(), host.Port())
+	addr := (&net.TCPAddr{IP: translatedPeer, Port: translatedPort}).String()
+	//addr := (&net.TCPAddr{IP: host.Peer(), Port: host.Port()}).String()
 
 	if cfg.tlsConfig != nil {
 		// the TLS config is safe to be reused by connections but it must not
