@@ -2,6 +2,7 @@ package transit
 
 import (
 	"crypto/elliptic"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 
@@ -62,6 +63,13 @@ you ensure that all nonces are unique for a
 given context. Failing to do so will severely
 impact the ciphertext's security.`,
 			},
+
+			"exportable": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Enables keys to be exportable.
+This allows for all the valid keys
+in the key ring to be exported.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -73,6 +81,66 @@ impact the ciphertext's security.`,
 		HelpSynopsis:    pathPolicyHelpSyn,
 		HelpDescription: pathPolicyHelpDesc,
 	}
+}
+
+func (b *backend) pathExportKeys() *framework.Path {
+	return &framework.Path{
+		Pattern: "export/" + framework.GenericNameRegex("name"),
+		Fields: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the key",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathPolicyExport,
+		},
+
+		HelpSynopsis:    pathPolicyHelpSyn,
+		HelpDescription: pathPolicyHelpDesc,
+	}
+}
+
+func (b *backend) pathPolicyExport(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+
+	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
+	if lock != nil {
+		defer lock.RUnlock()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, nil
+	}
+
+	if !p.Exportable {
+		return logical.ErrorResponse("key is not exportable"), nil
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"name": p.Name,
+		},
+	}
+
+	switch p.Type {
+	case keysutil.KeyType_AES256_GCM96:
+		retKeys := map[string]string{}
+		for k, v := range p.Keys {
+			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.AESKey)
+		}
+		resp.Data["keys"] = retKeys
+
+	case keysutil.KeyType_ECDSA_P256:
+	default:
+		return nil, fmt.Errorf("unknown key type %v", p.Type)
+	}
+
+	return resp, nil
 }
 
 func (b *backend) pathKeysList(
@@ -91,6 +159,7 @@ func (b *backend) pathPolicyWrite(
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
+	exportable := d.Get("exportable").(bool)
 
 	if !derived && convergent {
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
@@ -101,6 +170,7 @@ func (b *backend) pathPolicyWrite(
 		Name:       name,
 		Derived:    derived,
 		Convergent: convergent,
+		Exportable: exportable,
 	}
 	switch keyType {
 	case "aes256-gcm96":
@@ -154,6 +224,7 @@ func (b *backend) pathPolicyRead(
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
 			"latest_version":         p.LatestVersion,
+			"exportable":             p.Exportable,
 		},
 	}
 
