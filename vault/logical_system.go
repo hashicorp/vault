@@ -87,8 +87,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					logical.DeleteOperation: b.handleCORSDisable,
 				},
 
-				HelpDescription: "CORS does stuff.",
-				HelpSynopsis:    "CORS is CORS",
+				HelpDescription: strings.TrimSpace(sysHelp["config/cors"][0]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["config/cors"][1]),
 			},
 
 			&framework.Path{
@@ -1777,6 +1777,21 @@ as well as perform core operations.
 
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{
+	"config/cors": {
+		"Configures or returns the current configuration of CORS settings.",
+		`
+This path responds to the following HTTP methods.
+
+    GET /
+        Returns the configuration of the CORS setting.
+
+    POST /
+        Sets the regular expression which describes origins that can make cross-origin requests.
+
+    DELETE /
+        Clears the CORS configuration and disables acceptance of CORS requests.
+		`,
+	},
 	"init": {
 		"Initializes or returns the initialization status of the Vault.",
 		`
