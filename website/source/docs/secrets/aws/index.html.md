@@ -305,7 +305,7 @@ Finally, let's create a "deploy" policy using the arn of our role to assume:
 
 ```text
 $ vault write aws/roles/deploy \
-    policy=arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:role/RoleNameToAssume
+    arn=arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:role/RoleNameToAssume
 ```
 
 To generate a new set of STS assumed role credentials, we again read from
