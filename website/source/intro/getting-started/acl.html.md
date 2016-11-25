@@ -102,7 +102,7 @@ $ vault write secret/foo value=yes
 Error writing data to secret/foo: Error making API request.
 
 URL: PUT http://127.0.0.1:8200/v1/secret/foo
-Code: 400. Errors:
+Code: 403. Errors:
 
 * permission denied
 ```
