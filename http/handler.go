@@ -113,13 +113,13 @@ func stripPrefix(prefix, path string) (string, bool) {
 	return path, true
 }
 
-func parseRequest(r *http.Request, out interface{}) error {
+func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error {
 	// Limit the maximum number of bytes to MaxRequestSize to protect
 	// against an indefinite amount of data being read.
-	limit := &io.LimitedReader{R: r.Body, N: MaxRequestSize}
+	limit := http.MaxBytesReader(w, r.Body, MaxRequestSize)
 	err := jsonutil.DecodeJSONFromReader(limit, out)
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("Failed to parse JSON input: %s", err)
+		return errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
 	return err
 }
@@ -297,6 +297,11 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	// Adjust status code when sealed
 	if errwrap.Contains(err, vault.ErrSealed.Error()) {
 		status = http.StatusServiceUnavailable
+	}
+
+	// Adjust status code on
+	if errwrap.Contains(err, "http: request body too large") {
+		status = http.StatusRequestEntityTooLarge
 	}
 
 	// Allow HTTPCoded error passthrough to specify a code
