@@ -1,11 +1,14 @@
 package transit
 
 import (
+	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
-	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -128,34 +131,40 @@ func (b *backend) pathPolicyExport(
 		},
 	}
 
+	retKeys := map[string]string{}
 	switch p.Type {
 	case keysutil.KeyType_AES256_GCM96:
-		retKeys := map[string]string{}
 		for k, v := range p.Keys {
 			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.AESKey)
 		}
-		resp.Data["keys"] = retKeys
 
 	case keysutil.KeyType_ECDSA_P256:
-		type ecdsaKey struct {
-			X *big.Int `json:"x"`
-			Y *big.Int `json:"y"`
-			D *big.Int `json:"d"`
-		}
-
-		retKeys := map[string]ecdsaKey{}
 		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = ecdsaKey{
-				X: v.EC_X,
-				Y: v.EC_Y,
+			privKey := &ecdsa.PrivateKey{
+				PublicKey: ecdsa.PublicKey{
+					Curve: elliptic.P256(),
+					X:     v.EC_X,
+					Y:     v.EC_Y,
+				},
 				D: v.EC_D,
 			}
+
+			ecder, err := x509.MarshalECPrivateKey(privKey)
+			if err != nil {
+				return nil, fmt.Errorf("unable to marshal private key")
+			}
+
+			block := pem.Block{
+				Type:  "EC PRIVATE KEY",
+				Bytes: ecder,
+			}
+			retKeys[strconv.Itoa(k)] = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
 		}
-		resp.Data["keys"] = retKeys
 
 	default:
 		return nil, fmt.Errorf("unknown key type %v", p.Type)
 	}
+	resp.Data["keys"] = retKeys
 
 	return resp, nil
 }
