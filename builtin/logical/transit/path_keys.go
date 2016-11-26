@@ -86,7 +86,7 @@ in the key ring to be exported.`,
 
 func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: "export/" + framework.GenericNameRegex("name"),
+		Pattern: "key-export/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,

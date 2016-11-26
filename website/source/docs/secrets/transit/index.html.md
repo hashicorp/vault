@@ -89,6 +89,7 @@ Key                     Value
 type                    aes256-gcm96
 deletion_allowed        false
 derived                 false
+exportable              false
 keys                    map[1:1.459861712e+09]
 latest_version          1
 min_decryption_version  1
@@ -175,6 +176,11 @@ only encrypt or decrypt using the named keys they need access to.
         key, and the key space for nonces is 96 bit -- not as large as the AES
         key itself. Defaults to false.
       </li>
+      <li>
+        <span class="param">exportable</span>
+        <span class="param-flags">optional</span>
+        Boolean flag indicating if the key is exportable.
+      </li>
     </ul>
   </dd>
 
@@ -216,6 +222,7 @@ only encrypt or decrypt using the named keys they need access to.
         "type": "aes256-gcm96",
         "deletion_allowed": false,
         "derived": false,
+        "exportable": false,
         "keys": {
           "1": 1442851412
         },
@@ -363,6 +370,46 @@ only encrypt or decrypt using the named keys they need access to.
   <dt>Returns</dt>
   <dd>
     A `204` response code.
+  </dd>
+</dl>
+
+### /transit/key-export/
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the named encryption key. The `keys` object shows the value of the
+    key for each version. Depending on the type of key, different information
+    may be returned. The key must be exportable to support this operation.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/key-export/<name>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+        "name": "foo",
+        "keys": {
+          "1": "eyXYGHbTmugUJn6EtYD/yVEoF6pCxm4R/cMEutUm3MY=",
+          "2": "Euzymqx6iXjS3/NuGKDCiM2Ev6wdhnU+rBiKnJ7YpHE="
+        }
+      }
+    }
+    ```
+
   </dd>
 </dl>
 
