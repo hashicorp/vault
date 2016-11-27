@@ -89,7 +89,7 @@ in the key ring to be exported.`,
 
 func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: "key-export/" + framework.GenericNameRegex("name"),
+		Pattern: "key-export/" + framework.GenericNameRegex("name") + "(/hmac)?",
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -132,6 +132,16 @@ func (b *backend) pathPolicyExport(
 	}
 
 	retKeys := map[string]string{}
+
+	// Return HMAC keys, if requesting signing keys
+	if strings.HasSuffix(req.Path, "/hmac") {
+		for k, v := range p.Keys {
+			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.HMACKey)
+		}
+		resp.Data["keys"] = retKeys
+		return resp, nil
+	}
+
 	switch p.Type {
 	case keysutil.KeyType_AES256_GCM96:
 		for k, v := range p.Keys {
@@ -148,7 +158,6 @@ func (b *backend) pathPolicyExport(
 				},
 				D: v.EC_D,
 			}
-
 			ecder, err := x509.MarshalECPrivateKey(privKey)
 			if err != nil {
 				return nil, fmt.Errorf("unable to marshal private key")

@@ -32,13 +32,11 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 
 	req.Path = "keys/foo/rotate"
 	// v2
-	// valid versions: 1, 2
 	_, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// v3
-	// valid versions: 1, 2, 3
 	_, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatal(err)
@@ -58,7 +56,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 			t.Error("no keys returned from export")
 		}
 
-		keys, ok := rsp.Data["keys"].(map[string]string)
+		keys, ok := rsp.Data["keys"].(map[string]interface{})
 		if !ok {
 			t.Error("could not cast to keys object")
 		}
@@ -67,9 +65,9 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 		}
 	}
 
+	// valid versions: 1, 2, 3
 	verifyExportCount(3)
 
-	// valid versions: 3
 	req = &logical.Request{
 		Storage:   storage,
 		Operation: logical.UpdateOperation,
@@ -82,10 +80,9 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	// valid versions: 3
 	verifyExportCount(1)
 
-	// valid versions: 2, 3
 	req = &logical.Request{
 		Storage:   storage,
 		Operation: logical.UpdateOperation,
@@ -98,7 +95,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	// valid versions: 2, 3
 	verifyExportCount(2)
 
 	req = &logical.Request{
@@ -107,11 +104,10 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 		Path:      "keys/foo/rotate",
 	}
 	// v4
-	// valid versions: 2, 3, 4
 	_, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	// valid versions: 2, 3, 4
 	verifyExportCount(3)
 }
