@@ -1,14 +1,9 @@
 package transit
 
 import (
-	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -85,97 +80,6 @@ in the key ring to be exported.`,
 		HelpSynopsis:    pathPolicyHelpSyn,
 		HelpDescription: pathPolicyHelpDesc,
 	}
-}
-
-func (b *backend) pathExportKeys() *framework.Path {
-	return &framework.Path{
-		Pattern: "key-export/" + framework.GenericNameRegex("name") + "(/hmac)?",
-		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Name of the key",
-			},
-		},
-
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathPolicyExport,
-		},
-
-		HelpSynopsis:    pathPolicyHelpSyn,
-		HelpDescription: pathPolicyHelpDesc,
-	}
-}
-
-func (b *backend) pathPolicyExport(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	name := d.Get("name").(string)
-
-	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
-	if lock != nil {
-		defer lock.RUnlock()
-	}
-	if err != nil {
-		return nil, err
-	}
-	if p == nil {
-		return nil, nil
-	}
-
-	if !p.Exportable {
-		return logical.ErrorResponse("key is not exportable"), nil
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"name": p.Name,
-		},
-	}
-
-	retKeys := map[string]string{}
-
-	// Return HMAC keys, if requesting signing keys
-	if strings.HasSuffix(req.Path, "/hmac") {
-		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.HMACKey)
-		}
-		resp.Data["keys"] = retKeys
-		return resp, nil
-	}
-
-	switch p.Type {
-	case keysutil.KeyType_AES256_GCM96:
-		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.AESKey)
-		}
-
-	case keysutil.KeyType_ECDSA_P256:
-		for k, v := range p.Keys {
-			privKey := &ecdsa.PrivateKey{
-				PublicKey: ecdsa.PublicKey{
-					Curve: elliptic.P256(),
-					X:     v.EC_X,
-					Y:     v.EC_Y,
-				},
-				D: v.EC_D,
-			}
-			ecder, err := x509.MarshalECPrivateKey(privKey)
-			if err != nil {
-				return nil, fmt.Errorf("unable to marshal private key")
-			}
-
-			block := pem.Block{
-				Type:  "EC PRIVATE KEY",
-				Bytes: ecder,
-			}
-			retKeys[strconv.Itoa(k)] = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
-		}
-
-	default:
-		return nil, fmt.Errorf("unknown key type %v", p.Type)
-	}
-	resp.Data["keys"] = retKeys
-
-	return resp, nil
 }
 
 func (b *backend) pathKeysList(
