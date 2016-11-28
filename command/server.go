@@ -464,10 +464,13 @@ func (c *ServerCommand) Run(args []string) int {
 
 	defer c.cleanupGuard.Do(listenerCloseFunc)
 
-	infoKeys = append(infoKeys, "version", "version_sha")
+	infoKeys = append(infoKeys, "version")
 	verInfo := version.GetVersion()
 	info["version"] = verInfo.FullVersionNumber()
-	info["version_sha"] = strings.Trim(verInfo.Revision, "'")
+	if verInfo.Revision != "" {
+		info["version_sha"] = strings.Trim(verInfo.Revision, "'")
+		infoKeys = append(infoKeys, "version_sha")
+	}
 
 	// Server configuration output
 	padding := 24
