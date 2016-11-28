@@ -187,6 +187,12 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"tree": func() (cli.Command, error) {
+			return &command.TreeCommand{
+				Meta: *metaPtr,
+			}, nil
+		},
+
 		"write": func() (cli.Command, error) {
 			return &command.WriteCommand{
 				Meta: *metaPtr,
