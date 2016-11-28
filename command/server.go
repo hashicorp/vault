@@ -466,10 +466,15 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys = append(infoKeys, "version")
 	verInfo := version.GetVersion()
-	info["version"] = verInfo.FullVersionNumber()
+	info["version"] = verInfo.FullVersionNumber(false)
 	if verInfo.Revision != "" {
-		info["version_sha"] = strings.Trim(verInfo.Revision, "'")
-		infoKeys = append(infoKeys, "version_sha")
+		info["version sha"] = strings.Trim(verInfo.Revision, "'")
+		infoKeys = append(infoKeys, "version sha")
+	}
+	infoKeys = append(infoKeys, "cgo")
+	info["cgo"] = "disabled"
+	if version.CgoEnabled {
+		info["cgo"] = "enabled"
 	}
 
 	// Server configuration output

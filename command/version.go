@@ -16,7 +16,7 @@ func (c *VersionCommand) Help() string {
 }
 
 func (c *VersionCommand) Run(_ []string) int {
-	c.Ui.Output(c.VersionInfo.FullVersionNumber())
+	c.Ui.Output(c.VersionInfo.FullVersionNumber(true))
 	return 0
 }
 
