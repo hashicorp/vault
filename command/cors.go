@@ -26,16 +26,20 @@ func (c *CorsCommand) Run(args []string) int {
 		return 1
 	}
 
-	allowedOrigins, err := regexp.Compile(allowedStr)
-	if err != nil {
-		return 1
-	}
-
 	corsRequest := &api.CORSRequest{}
-	if !disable {
-		corsRequest.AllowedOrigins = allowedOrigins.String()
-	} else {
-		corsRequest.Enabled = false
+
+	if !status {
+		allowedOrigins, err := regexp.Compile(allowedStr)
+		if err != nil {
+			return 1
+		}
+
+		if !disable {
+			corsRequest.AllowedOrigins = allowedOrigins.String()
+			corsRequest.Enabled = true
+		} else {
+			corsRequest.Enabled = false
+		}
 	}
 
 	return c.runCORS(status, corsRequest)
@@ -49,6 +53,7 @@ func (c *CorsCommand) runCORS(status bool, corsRequest *api.CORSRequest) int {
 		return 1
 	}
 
+	// Get the current CORS configuration.
 	if status {
 		resp, err := client.Sys().CORSStatus()
 		if err != nil {
@@ -56,24 +61,26 @@ func (c *CorsCommand) runCORS(status bool, corsRequest *api.CORSRequest) int {
 				"Error getting CORS configuration: %s", err))
 			return 1
 		}
-
-		if corsRequest.Enabled == false {
-			_, err := client.Sys().DisableCORS()
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error disabling CORS: %s", err))
-				return 1
-			}
-		}
-
 		c.Ui.Output(
-			fmt.Sprintf("CORS Configuration\nEnabled: %t\nAllowed Origins: %s\n",
+			fmt.Sprintf("Enabled: %t\nAllowed Origins: %s",
 				resp.Enabled,
 				resp.AllowedOrigins,
 			))
 		return 0
 	}
 
+	// Disable (i.e. clear) the CORS configuration.
+	if corsRequest.Enabled == false {
+		_, err := client.Sys().DisableCORS()
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf(
+				"Error disabling CORS: %s", err))
+			return 1
+		}
+		return 0
+	}
+
+	// Update the CORS configuration.
 	_, err = client.Sys().ConfigureCORS(corsRequest)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
