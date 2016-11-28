@@ -25,6 +25,7 @@ BUG FIXES:
  * auth/approle: Creating the index for the role_id properly [GH-2004]
  * auth/aws-ec2: Handle the case of multiple upgrade attempts when setting the
    instance-profile ARN [GH-2035]
+ * auth/ldap: Avoid leaking connections on login [GH-2130]
  * api/unwrap, command/unwrap: Fix compatibility of `unwrap` command with Vault
    0.6.1 and older [GH-2014]
  * api/unwrap, command/unwrap: Fix error when no client token exists [GH-2077]
