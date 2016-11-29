@@ -79,12 +79,23 @@ needs to be supplied along with 'identity' parameter.`,
 
 // instanceIamRoleARN fetches the IAM role ARN associated with the given
 // instance profile name
-func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, region string) (string, error) {
+func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, region, accountID string) (string, error) {
 	if instanceProfileName == "" {
 		return "", fmt.Errorf("missing instance profile name")
 	}
 
-	iamClient, err := b.clientIAM(s, region)
+	// Check if an STS configuration exists for the AWS account
+	sts, err := b.lockedAwsStsEntry(s, accountID)
+	if err != nil {
+		return "", fmt.Errorf("error fetching STS config for account ID %q: %q\n", accountID, err)
+	}
+	// An empty STS role signifies the master account
+	stsRole := ""
+	if sts != nil {
+		stsRole = sts.StsRole
+	}
+
+	iamClient, err := b.clientIAM(s, region, stsRole)
 	if err != nil {
 		return "", err
 	}
@@ -116,12 +127,14 @@ func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, reg
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API
 // and checks if the instance is running and is healthy
-func (b *backend) validateInstance(s logical.Storage, instanceID, region string, accountID string) (*ec2.DescribeInstancesOutput, error) {
+func (b *backend) validateInstance(s logical.Storage, instanceID, region, accountID string) (*ec2.DescribeInstancesOutput, error) {
+
+	// Check if an STS configuration exists for the AWS account
 	sts, err := b.lockedAwsStsEntry(s, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching STS config for account ID %q: %q\n", accountID, err)
 	}
-
+	// An empty STS role signifies the master account
 	stsRole := ""
 	if sts != nil {
 		stsRole = sts.StsRole
@@ -459,7 +472,7 @@ func (b *backend) pathLoginUpdate(
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
-		iamRoleARN, err := b.instanceIamRoleARN(req.Storage, iamInstanceProfileName, identityDocParsed.Region)
+		iamRoleARN, err := b.instanceIamRoleARN(req.Storage, iamInstanceProfileName, identityDocParsed.Region, identityDocParsed.AccountID)
 		if err != nil {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
 		}

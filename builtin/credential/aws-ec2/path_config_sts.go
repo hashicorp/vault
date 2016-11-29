@@ -42,6 +42,7 @@ func pathConfigSts(b *backend) *framework.Path {
 			logical.CreateOperation: b.pathConfigStsCreateUpdate,
 			logical.UpdateOperation: b.pathConfigStsCreateUpdate,
 			logical.ReadOperation:   b.pathConfigStsRead,
+			logical.DeleteOperation: b.pathConfigStsDelete,
 		},
 	}
 }
@@ -49,12 +50,12 @@ func pathConfigSts(b *backend) *framework.Path {
 // Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
 // Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
 func (b *backend) pathConfigStsExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	accountId := data.Get("account_id").(string)
-	if accountId == "" {
+	accountID := data.Get("account_id").(string)
+	if accountID == "" {
 		return false, fmt.Errorf("missing account_id")
 	}
 
-	entry, err := b.lockedAwsStsEntry(req.Storage, accountId)
+	entry, err := b.lockedAwsStsEntry(req.Storage, accountID)
 	if err != nil {
 		return false, err
 	}
@@ -134,12 +135,12 @@ func (b *backend) lockedAwsStsEntry(s logical.Storage, accountID string) (*awsSt
 }
 
 func (b *backend) pathConfigStsRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	accountId := data.Get("account_id").(string)
-	if accountId == "" {
+	accountID := data.Get("account_id").(string)
+	if accountID == "" {
 		return logical.ErrorResponse("missing account id"), nil
 	}
 
-	stsEntry, err := b.lockedAwsStsEntry(req.Storage, accountId)
+	stsEntry, err := b.lockedAwsStsEntry(req.Storage, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -153,8 +154,8 @@ func (b *backend) pathConfigStsRead(req *logical.Request, data *framework.FieldD
 }
 
 func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	accountId := data.Get("account_id").(string)
-	if accountId == "" {
+	accountID := data.Get("account_id").(string)
+	if accountID == "" {
 		return logical.ErrorResponse("missing AWS account ID"), nil
 	}
 
@@ -162,7 +163,7 @@ func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framewor
 	defer b.configMutex.Unlock()
 
 	// Check if an STS role is already registered
-	stsEntry, err := b.nonLockedAwsStsEntry(req.Storage, accountId)
+	stsEntry, err := b.nonLockedAwsStsEntry(req.Storage, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,9 +184,22 @@ func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framewor
 	}
 
 	// save the provided STS role
-	if err := b.nonLockedSetAwsStsEntry(req.Storage, accountId, stsEntry); err != nil {
+	if err := b.nonLockedSetAwsStsEntry(req.Storage, accountID, stsEntry); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
+}
+
+// pathConfigStsDelete is used to delete a previously configured STS configuration
+func (b *backend) pathConfigStsDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.configMutex.Lock()
+	defer b.configMutex.Unlock()
+
+	accountID := data.Get("account_id").(string)
+	if accountID == "" {
+		return logical.ErrorResponse("missing account_id"), nil
+	}
+
+	return nil, req.Storage.Delete("config/sts/" + accountID)
 }
