@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -60,6 +61,25 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 	}, nil
 }
 
+// getStsClientConfig returns an aws-sdk-go config, with assumed credentials
+// It uses getClientConfig to obtain config for the master account, which is
+// then used to obtain a set of assumed credentials.
+func (b *backend) getStsClientConfig(s logical.Storage, region string, stsRole string) (*aws.Config, error) {
+	config, err := b.getClientConfig(s, region)
+	if err != nil {
+		return nil, err
+	}
+	assumedCredentials := stscreds.NewCredentials(session.New(config), stsRole)
+	// Test that we actually have permissions to assume the role
+	if _, err = assumedCredentials.Get(); err != nil {
+		return nil, err
+	}
+
+	config.Credentials = assumedCredentials
+
+	return config, nil
+}
+
 // flushCachedEC2Clients deletes all the cached ec2 client objects from the backend.
 // If the client credentials configuration is deleted or updated in the backend, all
 // the cached EC2 client objects will be flushed. Config mutex lock should be
@@ -83,12 +103,12 @@ func (b *backend) flushCachedIAMClients() {
 }
 
 // clientEC2 creates a client to interact with AWS EC2 API
-func (b *backend) clientEC2(s logical.Storage, region string) (*ec2.EC2, error) {
+func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*ec2.EC2, error) {
 	b.configMutex.RLock()
-	if b.EC2ClientsMap[region] != nil {
+	if b.EC2ClientsMap[region][stsRole] != nil {
 		defer b.configMutex.RUnlock()
 		// If the client object was already created, return it
-		return b.EC2ClientsMap[region], nil
+		return b.EC2ClientsMap[region][stsRole], nil
 	}
 
 	// Release the read lock and acquire the write lock
@@ -97,19 +117,27 @@ func (b *backend) clientEC2(s logical.Storage, region string) (*ec2.EC2, error) 
 	defer b.configMutex.Unlock()
 
 	// If the client gets created while switching the locks, return it
-	if b.EC2ClientsMap[region] != nil {
-		return b.EC2ClientsMap[region], nil
+	if b.EC2ClientsMap[region][stsRole] != nil {
+		return b.EC2ClientsMap[region][stsRole], nil
 	}
 
 	// Create an AWS config object using a chain of providers
-	awsConfig, err := b.getClientConfig(s, region)
+	var awsConfig *aws.Config
+	var err error
+	// the empty stsRole signifies the master account
+	if stsRole == "" {
+		awsConfig, err = b.getClientConfig(s, region)
+	} else {
+		awsConfig, err = b.getStsClientConfig(s, region, stsRole)
+	}
+
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a new EC2 client object, cache it and return the same
-	b.EC2ClientsMap[region] = ec2.New(session.New(awsConfig))
-	return b.EC2ClientsMap[region], nil
+	b.EC2ClientsMap[region] = map[string]*ec2.EC2{stsRole: ec2.New(session.New(awsConfig))}
+	return b.EC2ClientsMap[region][stsRole], nil
 }
 
 // clientIAM creates a client to interact with AWS IAM API

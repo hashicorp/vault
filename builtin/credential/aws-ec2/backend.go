@@ -49,7 +49,7 @@ type backend struct {
 	// overhead of creating a client object for every login request. When
 	// the credentials are modified or deleted, all the cached client objects
 	// will be flushed.
-	EC2ClientsMap map[string]*ec2.EC2
+	EC2ClientsMap map[string]map[string]*ec2.EC2
 
 	// Map to hold the IAM client objects indexed by region. This avoids
 	// the overhead of creating a client object for every login request.
@@ -71,7 +71,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		// If there is a real need, this can be made configurable.
 		tidyCooldownPeriod: time.Hour,
 		Salt:               salt,
-		EC2ClientsMap:      make(map[string]*ec2.EC2),
+		EC2ClientsMap:      make(map[string]map[string]*ec2.EC2),
 		IAMClientsMap:      make(map[string]*iam.IAM),
 	}
 
@@ -92,6 +92,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathRoleTag(b),
 			pathConfigClient(b),
 			pathConfigCertificate(b),
+			pathConfigSts(b),
+			pathListSts(b),
 			pathConfigTidyRoletagBlacklist(b),
 			pathConfigTidyIdentityWhitelist(b),
 			pathListCertificates(b),

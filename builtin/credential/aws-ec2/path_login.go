@@ -116,9 +116,19 @@ func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, reg
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API
 // and checks if the instance is running and is healthy
-func (b *backend) validateInstance(s logical.Storage, instanceID, region string) (*ec2.DescribeInstancesOutput, error) {
+func (b *backend) validateInstance(s logical.Storage, instanceID, region string, accountID string) (*ec2.DescribeInstancesOutput, error) {
+	sts, err := b.lockedAwsStsEntry(s, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching STS config for account ID %q: %q\n", accountID, err)
+	}
+
+	stsRole := ""
+	if sts != nil {
+		stsRole = sts.StsRole
+	}
+
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := b.clientEC2(s, region)
+	ec2Client, err := b.clientEC2(s, region, stsRole)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +390,7 @@ func (b *backend) pathLoginUpdate(
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
 	// and fetching the instance description. Validation succeeds only if the
 	// instance is in 'running' state.
-	instanceDesc, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region)
+	instanceDesc, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region, identityDocParsed.AccountID)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %v", err)), nil
 	}
@@ -745,8 +755,13 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("unable to fetch region from metadata during renewal")
 	}
 
+	accountID := req.Auth.Metadata["account_id"]
+	if accountID == "" {
+		return nil, fmt.Errorf("unable to fetch account_id from metadata during renewal")
+	}
+
 	// Cross check that the instance is still in 'running' state
-	_, err := b.validateInstance(req.Storage, instanceID, region)
+	_, err := b.validateInstance(req.Storage, instanceID, region, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify instance ID %q: %q", instanceID, err)
 	}
