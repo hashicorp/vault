@@ -62,7 +62,7 @@ func (c *UnwrapCommand) Run(args []string) int {
 		return 1
 	}
 	if secret == nil {
-		c.Ui.Error("Secret returned was nil")
+		c.Ui.Error("Server gave empty response or secret returned was empty")
 		return 1
 	}
 
