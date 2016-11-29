@@ -1,7 +1,5 @@
 package api
 
-import "fmt"
-
 func (c *Sys) CORSStatus() (*CORSResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/config/cors")
 	resp, err := c.c.RawRequest(r)
@@ -23,7 +21,6 @@ func (c *Sys) ConfigureCORS(req *CORSRequest) (*CORSResponse, error) {
 
 	resp, err := c.c.RawRequest(r)
 	if err != nil {
-		fmt.Printf("r = %#v\n", r)
 		return nil, err
 	}
 	defer resp.Body.Close()
