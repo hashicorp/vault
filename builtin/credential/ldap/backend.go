@@ -162,6 +162,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 	}
 
+	policies = append(policies, user.Policies...)
 	// Policies from each group may overlap
 	policies = strutil.RemoveDuplicates(policies)
 
