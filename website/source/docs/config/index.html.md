@@ -554,11 +554,10 @@ ACL check.
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
-The DynamoDB optionally supports HA. Because Dynamo does not support session
-lifetimes on its locks, a Vault node that has failed, rather than shut down in
-an orderly fashion, will require manual cleanup rather than failing over
-automatically. See the documentation of `recovery_mode` to better understand
-this process. To enable HA, set the `ha_enabled` option.
+DynamoDB optionally supports HA. Because Dynamo uses the time on the Vault
+node to implement the session lifetimes on its locks, significant clock skew
+on the Vault nodes could cause contention issues on the lock.
+To enable HA, set the `ha_enabled` option.
 
 The DynamoDB backend has the following options:
 
@@ -599,21 +598,10 @@ The DynamoDB backend has the following options:
     DynamoDB. Defaults to `"128"`.
 
   * `ha_enabled` (optional) - Setting this to `"1"`, `"t"`, or `"true"` will
-    enable HA mode. Please ensure you have read the documentation for the
-    `recovery_mode` option before enabling this. This option can also be
-    provided via the environment variable `DYNAMODB_HA_ENABLED`. If you are
-    upgrading from a version of Vault where HA support was enabled by default,
-    it is _very important_ that you set this parameter _before_ upgrading!
-
-  * `recovery_mode` (optional) - When the Vault leader crashes or is killed
-    without being able to shut down properly, no other node can become the new
-    leader because the DynamoDB table still holds the old leader's lock record.
-    To recover from this situation, one can start a single Vault node with this
-    option set to `"1"`, `"t"`, or `"true"` and the node will remove the old
-    lock from DynamoDB. It is important that only one node is running in
-    recovery mode! After this node has become the leader, other nodes can be
-    started with regular configuration. This option can also be provided via
-    the environment variable `RECOVERY_MODE`.
+    enable HA mode. This option can also be provided via the environment
+    variable `DYNAMODB_HA_ENABLED`. If you are upgrading from a version of
+    Vault where HA support was enabled by default, it is _very important_
+    that you set this parameter _before_ upgrading!
 
 For more information about the read/write capacity of DynamoDB tables, see the
 [official AWS DynamoDB
