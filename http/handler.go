@@ -124,16 +124,23 @@ func parseRequest(r *http.Request, out interface{}) error {
 	return err
 }
 
-// HandleCORS adds required headers to properly respond to request that
-// require Cross Origin Resource Sharing (CORS) headers.
+// HandleCORS adds required headers to properly respond to
+// requests that require Cross Origin Resource Sharing (CORS) headers.
 func handleCORS(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		corsConf, err := core.CORSConfig()
-		if err == nil {
-			if corsConf.Enabled() {
-				corsConf.ApplyHeaders(w, r)
-			}
+		corsConf := core.CORSConfig()
+		statusCode := corsConf.ApplyHeaders(w, r)
+
+		if statusCode != http.StatusOK {
+			respondRaw(w, r, &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPStatusCode: statusCode,
+					logical.HTTPRawBody:    []byte(""),
+				},
+			})
+			return
 		}
+
 		handler.ServeHTTP(w, r)
 		return
 	})
