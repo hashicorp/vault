@@ -409,6 +409,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
 	}
 
+	// Get a default CORS config.
+	corsConfig := newCORSConfig()
+
 	// Setup the core
 	c := &Core{
 		redirectAddr:                     conf.RedirectAddr,
@@ -427,6 +430,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		localClusterCertPool:             x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+		corsConfig:                       corsConfig,
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -499,11 +503,8 @@ func (c *Core) Shutdown() error {
 }
 
 // CORSConfig returns the current CORS configuration
-func (c *Core) CORSConfig() (*CORSConfig, error) {
-	if c.corsConfig == nil {
-		return nil, errCORSNotConfigured
-	}
-	return c.corsConfig, nil
+func (c *Core) CORSConfig() *CORSConfig {
+	return c.corsConfig
 }
 
 // LookupToken returns the properties of the token from the token store. This
