@@ -101,6 +101,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse("invalid connection returned from LDAP dial"), nil
 	}
 
+	// Clean connection
+	defer c.Close()
+
 	bindDN, err := b.getBindDN(cfg, c, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil

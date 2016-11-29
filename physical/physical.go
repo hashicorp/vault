@@ -130,8 +130,7 @@ var builtinBackends = map[string]Factory{
 	"swift":      newSwiftBackend,
 }
 
-// PermitPool is a wrapper around a semaphore library to keep things
-// agnostic
+// PermitPool is used to limit maximum outstanding requests
 type PermitPool struct {
 	sem chan int
 }

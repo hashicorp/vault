@@ -10,6 +10,9 @@ var (
 	GitCommit   string
 	GitDescribe string
 
+	// Whether cgo is enabled or not; set at build time
+	CgoEnabled bool
+
 	Version           = "unknown"
 	VersionPrerelease = "unknown"
 )
@@ -52,7 +55,7 @@ func (c *VersionInfo) VersionNumber() string {
 	return version
 }
 
-func (c *VersionInfo) FullVersionNumber() string {
+func (c *VersionInfo) FullVersionNumber(rev bool) string {
 	var versionString bytes.Buffer
 
 	if Version == "unknown" && VersionPrerelease == "unknown" {
@@ -62,10 +65,9 @@ func (c *VersionInfo) FullVersionNumber() string {
 	fmt.Fprintf(&versionString, "Vault v%s", c.Version)
 	if c.VersionPrerelease != "" {
 		fmt.Fprintf(&versionString, "-%s", c.VersionPrerelease)
-
-		if c.Revision != "" {
-			fmt.Fprintf(&versionString, " (%s)", c.Revision)
-		}
+	}
+	if rev && c.Revision != "" {
+		fmt.Fprintf(&versionString, " (%s)", c.Revision)
 	}
 
 	return versionString.String()
