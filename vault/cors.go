@@ -18,16 +18,24 @@ type CORSConfig struct {
 }
 
 func newCORSConfig() *CORSConfig {
+	// defaultOrigins, err := regexp.Compile(expr)
+	defaultOrigins := &regexp.Regexp{}
 	return &CORSConfig{
 		enabled:        false,
-		allowedOrigins: &regexp.Regexp{},
+		allowedOrigins: defaultOrigins,
 		allowedHeaders: &map[string]string{
-			"Access-Control-Allow-Headers": "X-Requested-With,Content-Type,Accept,Origin,Authorization,X-Vault-Token",
+			"Access-Control-Allow-Headers": "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
 			"Access-Control-Max-Age":       "1800",
 			"Content-Type":                 "text/plain",
 		},
 		allowCredentials: true,
-		allowedMethods:   &[]string{http.MethodOptions},
+		allowedMethods: &[]string{
+			http.MethodDelete,
+			http.MethodGet,
+			http.MethodOptions,
+			http.MethodPost,
+			http.MethodPut,
+		},
 	}
 }
 
@@ -54,34 +62,58 @@ func (c *CORSConfig) Enable(s string) error {
 // Disable sets CORS to disabled and clears the allowed origins
 func (c *CORSConfig) Disable() {
 	c = nil
-	// c.enabled = false
-	// c.allowedOrigins = &regexp.Regexp{}
 }
 
 func (c *CORSConfig) AllowedMethods() []string {
 	return *c.allowedMethods
 }
 
-func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) {
-	// check that the origin is valid & set the header.
+// ApplyHeaders examines the CORS configuration and the request to determine
+// if the CORS headers should be returned with the response.
+func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
+	// If CORS is not enabled, just return a 200
+	if !c.enabled {
+		return http.StatusOK
+	}
+
+	// Return a 403 if the origin is not
+	// allowed to make cross-origin requests.
 	origin := r.Header.Get("Origin")
-	if c.validOrigin(origin) {
+	if !c.validOrigin(origin) {
+		return http.StatusForbidden
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+
+	// apply headers for preflight requests
+	if r.Method == http.MethodOptions {
+		methodAllowed := false
+		requestedMethod := r.Header.Get("Access-Control-Request-Method")
+		for _, method := range c.AllowedMethods() {
+			if method == requestedMethod {
+				methodAllowed = true
+				continue
+			}
+		}
+
+		if !methodAllowed {
+			return http.StatusMethodNotAllowed
+		}
 
 		methods := strings.Join(c.AllowedMethods(), ",")
-		w.Header().Set("Allow", methods)
+		w.Header().Set("Access-Control-Allow-Methods", methods)
 
 		// add the credentials header if allowed.
 		if c.allowCredentials {
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 		}
 
-		// apply headers for preflight requests
-		if r.Method == http.MethodOptions {
-			for k, v := range *c.allowedHeaders {
-				w.Header().Set(k, v)
-			}
+		for k, v := range *c.allowedHeaders {
+			w.Header().Set(k, v)
 		}
 	}
+
+	return http.StatusOK
 }
 
 func (c *CORSConfig) AllowedOrigins() *regexp.Regexp {
@@ -89,10 +121,6 @@ func (c *CORSConfig) AllowedOrigins() *regexp.Regexp {
 }
 
 func (c *CORSConfig) validOrigin(origin string) bool {
-	if len(origin) == 0 {
-		return false
-	}
-
 	if c.allowedOrigins == nil {
 		return false
 	}
