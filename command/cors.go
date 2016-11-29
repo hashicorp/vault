@@ -34,11 +34,11 @@ func (c *CorsCommand) Run(args []string) int {
 			return 1
 		}
 
-		if !disable {
+		if disable {
+			corsRequest.Enabled = false
+		} else {
 			corsRequest.AllowedOrigins = allowedOrigins.String()
 			corsRequest.Enabled = true
-		} else {
-			corsRequest.Enabled = false
 		}
 	}
 
