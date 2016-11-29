@@ -54,6 +54,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		op = logical.UpdateOperation
 	case "LIST":
 		op = logical.ListOperation
+	case "OPTIONS":
 	default:
 		return nil, http.StatusMethodNotAllowed, nil
 	}
@@ -95,6 +96,10 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback PrepareRequestFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Bubble up CORS preflight requests to the CORS handler.
+		if r.Method == "OPTIONS" {
+			return
+		}
 		req, statusCode, err := buildLogicalRequest(core, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
