@@ -179,7 +179,7 @@ func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*
 	}
 
 	// Create a new IAM client object, cache it and return the same
-	if _, ok := b.EC2ClientsMap[region]; !ok {
+	if _, ok := b.IAMClientsMap[region]; !ok {
 		b.IAMClientsMap[region] = map[string]*iam.IAM{stsRole: iam.New(session.New(awsConfig))}
 	} else {
 		b.IAMClientsMap[region][stsRole] = iam.New(session.New(awsConfig))
