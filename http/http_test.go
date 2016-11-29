@@ -46,7 +46,7 @@ func testHttpData(t *testing.T, method string, token string, addr string, body i
 	}
 
 	// Get the address of the local listener in order to attach it to an Origin header.
-	// This will allow for the testing of requests the require CORS, without using a browser.
+	// This will allow for the testing of requests that require CORS, without using a browser.
 	hostURLRegexp, _ := regexp.Compile("http[s]?://.+:[0-9]+")
 	req.Header.Set("Origin", hostURLRegexp.FindString(addr))
 
