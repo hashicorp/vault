@@ -455,12 +455,16 @@ only encrypt or decrypt using the named keys they need access to.
         <span class="param-flags">required</span>
         The plaintext to encrypt, provided as a base64-encoded string.
       </li>
+    </ul>
+    <ul>
       <li>
         <span class="param">context</span>
         <span class="param-flags">optional</span>
         The key derivation context, provided as a base64-encoded string.
         Must be provided if derivation is enabled.
       </li>
+    </ul>
+    <ul>
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
@@ -470,6 +474,62 @@ only encrypt or decrypt using the named keys they need access to.
         must be exactly 96 bits (12 bytes) long and the user must ensure that
         for any given context (and thus, any given encryption key) this nonce
         value is **never reused**.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">batch</span>
+        <span class="param-flags">optional</span>
+        Base64 encoded list of items to be encrypted in a single batch. The size of the
+        input is limited to 4MB. When this parameter is set, the parameters
+        'plaintext', 'context' and 'nonce' will be ignored. JSON format for the input
+        goes like this:
+
+```javascript
+[
+  {
+    "context": "context1",
+    "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
+  },
+  {
+    "context": "context2",
+    "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
+  },
+  ...
+]
+```
+
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">type</span>
+        <span class="param-flags">optional</span>
+	This parameter is required if encryption key is expected to be created.
+        When performing an upsert operation, the type of key to create.  Currently,
+        "aes256-gcm96" (symmetric) is the only type supported. Defaults to
+        "aes256-gcm96".
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">convergent_encryption</span>
+        <span class="param-flags">optional</span>
+        Whether to support convergent encryption. This is only supported when using a
+        key with key derivation enabled and will require all requests to carry both a
+        context and 96-bit (12-byte) nonce. The given nonce will be used in place of a
+        randomly generated nonce. As a result, when the same context and nonce are
+        supplied, the same ciphertext is generated. It is *very important* when using
+        this mode that you ensure that all nonces are unique for a given context.
+        Failing to do so will severely impact the ciphertext's security.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">derived</span>
+        <span class="param-flags">optional</span>
+        Enables key derivation mode. This allows for per-transaction unique keys for
+        encryption operations.
       </li>
     </ul>
   </dd>
