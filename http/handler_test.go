@@ -14,27 +14,75 @@ import (
 )
 
 func TestHandler_cors(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
+	core, _, _ := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	// Test preflight requests
-	req, err := http.NewRequest("OPTIONS", addr+"/v1/sys/seal-status", nil)
+	// Enable CORS and allow from any origin for testing.
+	corsConfig := core.CORSConfig()
+	err := corsConfig.Enable(addr)
+	if err != nil {
+		t.Fatalf("Error enabling CORS: %s", err)
+	}
+
+	req, err := http.NewRequest(http.MethodOptions, addr+"/v1/", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	req.Header.Set(AuthHeaderName, token)
-	req.Header.Set("Origin", addr)
+	req.Header.Set("Origin", "BAD ORIGIN")
 
+	// Requests from unacceptable origins will be rejected with a 403.
 	client := cleanhttp.DefaultClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("Bad status:\nexpected: 403 Forbidden\nactual: %s", resp.Status)
+	}
+
+	//
+	// Test preflight requests
+	//
+
+	// Set a valid origin
+	req.Header.Set("Origin", addr)
+
+	// Server should NOT accept arbitrary methods.
+	req.Header.Set("Access-Control-Request-Method", "FOO")
+
+	client = cleanhttp.DefaultClient()
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Fail if an arbitrary method is accepted.
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("Bad status:\nexpected: 405 Method Not Allowed\nactual: %s", resp.Status)
+	}
+
+	// Server SHOULD accept acceptable methods.
+	req.Header.Set("Access-Control-Request-Method", http.MethodPost)
+
+	client = cleanhttp.DefaultClient()
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Fail if an acceptable method is NOT accepted.
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("Bad status:\nexpected: 200 OK\nactual: %s", resp.Status)
+	}
+
+	//
+	// Test that the CORS headers are applied correctly.
+	//
 	expHeaders := map[string]string{
 		"Access-Control-Allow-Origin":      addr,
-		"Access-Control-Allow-Headers":     "X-Requested-With,Content-Type,Accept,Origin,Authorization,X-Vault-Token",
+		"Access-Control-Allow-Headers":     "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
 		"Access-Control-Allow-Credentials": "true",
 	}
 
