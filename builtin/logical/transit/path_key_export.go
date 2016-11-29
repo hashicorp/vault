@@ -17,9 +17,17 @@ import (
 
 func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: "key-export/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version") + "(/hmac)?",
+		Pattern: "export/" + framework.GenericNameRegex("export_type") + "/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version"),
 		Fields: map[string]*framework.FieldSchema{
+			"export_type": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Type of key to export (encryption, signing)",
+			},
 			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of the key",
+			},
+			"version": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Name of the key",
 			},
@@ -36,7 +44,13 @@ func (b *backend) pathExportKeys() *framework.Path {
 
 func (b *backend) pathPolicyExport(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	exportType := d.Get("export_type").(string)
 	name := d.Get("name").(string)
+	version := d.Get("version").(string)
+
+	if exportType != "encryption" && exportType != "signing" {
+		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
+	}
 
 	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
 	if lock != nil {
@@ -59,51 +73,70 @@ func (b *backend) pathPolicyExport(
 		},
 	}
 
-	// Return HMAC keys, if requesting signing keys
-	if strings.HasSuffix(req.Path, "/hmac") {
-		retKeys := map[string]string{}
-		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.HMACKey)
+	if version != "" {
+		var versionValue int
+		if version == "latest" {
+			versionValue = p.LatestVersion
+		} else {
+			version = strings.TrimPrefix(version, "v")
+			versionValue, err = strconv.Atoi(version)
+			if err != nil {
+				return logical.ErrorResponse("invalid key version"), logical.ErrInvalidRequest
+			}
 		}
-		resp.Data["keys"] = retKeys
+		resp.Data["version"] = versionValue
+
+		key, ok := p.Keys[versionValue]
+		if !ok {
+			return logical.ErrorResponse("version does not exist or is no longer valid"), logical.ErrInvalidRequest
+		}
+
+		switch exportType {
+		case "signing":
+			resp.Data["key"] = strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey))
+		case "encryption":
+			switch p.Type {
+			case keysutil.KeyType_AES256_GCM96:
+				resp.Data["key"] = strings.TrimSpace(base64.StdEncoding.EncodeToString(key.AESKey))
+			case keysutil.KeyType_ECDSA_P256:
+				ecKey, err := keyEntryToECPrivateKey(key)
+				if err != nil {
+					return nil, err
+				}
+				resp.Data["key"] = ecKey
+			default:
+				return nil, fmt.Errorf("unknown key type %v", p.Type)
+			}
+		}
+
 		return resp, nil
 	}
 
-	switch p.Type {
-	case keysutil.KeyType_AES256_GCM96:
-		retKeys := map[string]string{}
+	retKeys := map[string]string{}
+	switch exportType {
+	case "signing":
 		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.AESKey)
+			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.HMACKey)
 		}
-		resp.Data["keys"] = retKeys
-
-	case keysutil.KeyType_ECDSA_P256:
-		retKeys := map[string]string{}
-		for k, v := range p.Keys {
-			privKey := &ecdsa.PrivateKey{
-				PublicKey: ecdsa.PublicKey{
-					Curve: elliptic.P256(),
-					X:     v.EC_X,
-					Y:     v.EC_Y,
-				},
-				D: v.EC_D,
+	case "encryption":
+		switch p.Type {
+		case keysutil.KeyType_AES256_GCM96:
+			for k, v := range p.Keys {
+				retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.AESKey)
 			}
-			ecder, err := x509.MarshalECPrivateKey(privKey)
-			if err != nil {
-				return nil, err
+		case keysutil.KeyType_ECDSA_P256:
+			for k, v := range p.Keys {
+				ecKey, err := keyEntryToECPrivateKey(v)
+				if err != nil {
+					return nil, err
+				}
+				retKeys[strconv.Itoa(k)] = ecKey
 			}
-
-			block := pem.Block{
-				Type:  "EC PRIVATE KEY",
-				Bytes: ecder,
-			}
-			retKeys[strconv.Itoa(k)] = strings.TrimSpace(string(pem.EncodeToMemory(&block)))
+		default:
+			return nil, fmt.Errorf("unknown key type %v", p.Type)
 		}
-		resp.Data["keys"] = retKeys
-
-	default:
-		return nil, fmt.Errorf("unknown key type %v", p.Type)
 	}
+	resp.Data["keys"] = retKeys
 
 	return resp, nil
 }
@@ -130,7 +163,7 @@ func keyEntryToECPrivateKey(k keysutil.KeyEntry) (string, error) {
 	return strings.TrimSpace(string(pem.EncodeToMemory(&block))), nil
 }
 
-const pathExportHelpSyn = `Export named encryption key`
+const pathExportHelpSyn = `Export named encryption or signing key`
 
 const pathExportHelpDesc = `
 This path is used to export the named keys that are configured as
