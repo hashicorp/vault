@@ -157,7 +157,9 @@ The following HTTP status codes are used throughout the API.
 - `400` - Invalid request, missing or invalid data. See the
    "validation" section for more details on the error response.
 - `403` - Forbidden, your authentication details are either
-   incorrect or you don't have access to this feature.
+   incorrect, you don't have access to this feature, or - if CORS is
+   enabled - you made a cross-origin request from an origin that is
+   not allowed to make such requests.
 - `404` - Invalid path. This can both mean that the path truly
    doesn't exist or that you don't have permission to view a
    specific path. We use 404 in some cases to avoid state leakage.
