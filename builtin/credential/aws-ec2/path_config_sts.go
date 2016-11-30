@@ -19,6 +19,9 @@ func pathListSts(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathStsList,
 		},
+
+		HelpSynopsis:    pathListStsHelpSyn,
+		HelpDescription: pathListStsHelpDesc,
 	}
 }
 
@@ -27,12 +30,15 @@ func pathConfigSts(b *backend) *framework.Path {
 		Pattern: "config/sts/" + framework.GenericNameRegex("account_id"),
 		Fields: map[string]*framework.FieldSchema{
 			"account_id": {
-				Type:        framework.TypeString,
-				Description: "AWS account ID for account for which STS role will be assumed",
+				Type: framework.TypeString,
+				Description: `AWS account ID to be associated with STS role. If set,
+Vault will use assumed credentials to verify any login attempts from EC2
+instances in this account.`,
 			},
 			"sts_role": {
-				Type:        framework.TypeString,
-				Description: "AWS ARN for STS role to be assumed",
+				Type: framework.TypeString,
+				Description: `AWS ARN for STS role to be assumed when interacting with the account specified.
+The Vault server must have permissions to assume this role.`,
 			},
 		},
 
@@ -44,6 +50,9 @@ func pathConfigSts(b *backend) *framework.Path {
 			logical.ReadOperation:   b.pathConfigStsRead,
 			logical.DeleteOperation: b.pathConfigStsDelete,
 		},
+
+		HelpSynopsis:    pathConfigStsSyn,
+		HelpDescription: pathConfigStsDesc,
 	}
 }
 
@@ -75,6 +84,9 @@ func (b *backend) pathStsList(
 	return logical.ListResponse(sts), nil
 }
 
+// nonLockedSetAwsStsEntry creates or updates an STS role association with the given accountID
+// This method does not acquire the write lock before creating or updating. If locking is
+// desired, use lockedSetAwsStsEntry instead
 func (b *backend) nonLockedSetAwsStsEntry(s logical.Storage, accountID string, stsEntry *awsStsEntry) error {
 	if accountID == "" {
 		return fmt.Errorf("missing AWS account ID")
@@ -96,6 +108,8 @@ func (b *backend) nonLockedSetAwsStsEntry(s logical.Storage, accountID string, s
 	return s.Put(entry)
 }
 
+// lockedSetAwsStsEntry creates or updates an STS role association with the given accountID
+// This method acquired the write lock before creating or updating the STS entry.
 func (b *backend) lockedSetAwsStsEntry(s logical.Storage, accountID string, stsEntry *awsStsEntry) error {
 	if accountID == "" {
 		return fmt.Errorf("missing AWS account ID")
@@ -111,6 +125,9 @@ func (b *backend) lockedSetAwsStsEntry(s logical.Storage, accountID string, stsE
 	return b.nonLockedSetAwsStsEntry(s, accountID, stsEntry)
 }
 
+// nonLockedAwsStsEntry returns the STS role associated with the given accountID.
+// This method does not acquire the read lock before returning information. If locking is
+// desired, use lockedAwsStsEntry instead
 func (b *backend) nonLockedAwsStsEntry(s logical.Storage, accountID string) (*awsStsEntry, error) {
 	entry, err := s.Get("config/sts/" + accountID)
 	if err != nil {
@@ -127,6 +144,8 @@ func (b *backend) nonLockedAwsStsEntry(s logical.Storage, accountID string) (*aw
 	return &stsEntry, nil
 }
 
+// lockedAwsStsEntry returns the STS role associated with the given accountID.
+// This method acquires the read lock before returning the association.
 func (b *backend) lockedAwsStsEntry(s logical.Storage, accountID string) (*awsStsEntry, error) {
 	b.configMutex.RLock()
 	defer b.configMutex.RUnlock()
@@ -134,6 +153,7 @@ func (b *backend) lockedAwsStsEntry(s logical.Storage, accountID string) (*awsSt
 	return b.nonLockedAwsStsEntry(s, accountID)
 }
 
+// pathConfigStsRead is used to return information about an STS role/AWS accountID association
 func (b *backend) pathConfigStsRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accountID := data.Get("account_id").(string)
 	if accountID == "" {
@@ -153,6 +173,7 @@ func (b *backend) pathConfigStsRead(req *logical.Request, data *framework.FieldD
 	}, nil
 }
 
+// pathConfigStsCreateUpdate is used to associate an STS role with a given AWS accountID
 func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	accountID := data.Get("account_id").(string)
 	if accountID == "" {
@@ -203,3 +224,24 @@ func (b *backend) pathConfigStsDelete(req *logical.Request, data *framework.Fiel
 
 	return nil, req.Storage.Delete("config/sts/" + accountID)
 }
+
+const pathConfigStsSyn = `
+Specify STS roles to be assumed for certain AWS accounts.
+`
+
+const pathConfigStsDesc = `
+Allows the explicit association of STS roles to satellite AWS accounts (i.e. those
+which are not the account in which the Vault server is running.) Login attempts from
+EC2 instances running in these accounts will be verified using credentials obtained
+by assumption of these STS roles.
+
+The environment in which the Vault server resides must have access to assume the
+given STS roles.
+`
+const pathListStsHelpSyn = `
+List all the AWS account/STS role relationships registered with Vault.
+`
+
+const pathListStsHelpDesc = `
+AWS accounts will be listed by account ID, along with their respective role names.
+`

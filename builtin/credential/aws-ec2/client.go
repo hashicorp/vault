@@ -62,8 +62,9 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 }
 
 // getStsClientConfig returns an aws-sdk-go config, with assumed credentials
-// It uses getClientConfig to obtain config for the master account, which is
-// then used to obtain a set of assumed credentials.
+// It uses getClientConfig to obtain config for the runtime environemnt, which is
+// then used to obtain a set of assumed credentials. The credentials will expire
+// after 15 minutes but will auto-refresh.
 func (b *backend) getStsClientConfig(s logical.Storage, region string, stsRole string) (*aws.Config, error) {
 	config, err := b.getClientConfig(s, region)
 	if err != nil {
