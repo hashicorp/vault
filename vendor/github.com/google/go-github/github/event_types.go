@@ -327,6 +327,26 @@ type PullRequestEvent struct {
 	Sender  *User       `json:"sender,omitempty"`
 }
 
+// PullRequestReviewEvent is triggered when a review is submitted on a pull
+// request.
+// The Webhook event name is "pull_request_review".
+//
+// GitHub docs: https://developer.github.com/v3/activity/events/types/#pullrequestreviewevent
+type PullRequestReviewEvent struct {
+	// Action is always "submitted".
+	Action      *string            `json:"action,omitempty"`
+	Review      *PullRequestReview `json:"review,omitempty"`
+	PullRequest *PullRequest       `json:"pull_request,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Repo   *Repository `json:"repository,omitempty"`
+	Sender *User       `json:"sender,omitempty"`
+
+	// The following field is only present when the webhook is triggered on
+	// a repository belonging to an organization.
+	Organization *Organization `json:"organization,omitempty"`
+}
+
 // PullRequestReviewCommentEvent is triggered when a comment is created on a
 // portion of the unified diff of a pull request.
 // The Webhook event name is "pull_request_review_comment".

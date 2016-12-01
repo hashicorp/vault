@@ -117,6 +117,7 @@ type Client struct {
 
 	// Services used for talking to different parts of the GitHub API.
 	Activity       *ActivityService
+	Admin          *AdminService
 	Authorizations *AuthorizationsService
 	Gists          *GistsService
 	Git            *GitService
@@ -189,6 +190,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent, UploadURL: uploadURL}
 	c.common.client = c
 	c.Activity = (*ActivityService)(&c.common)
+	c.Admin = (*AdminService)(&c.common)
 	c.Authorizations = (*AuthorizationsService)(&c.common)
 	c.Gists = (*GistsService)(&c.common)
 	c.Git = (*GitService)(&c.common)

@@ -393,6 +393,12 @@ cfg.WriteTo(writer)
 cfg.WriteToIndent(writer, "\t")
 ```
 
+默认情况下，空格将被用于对齐键值之间的等号以美化输出结果，以下代码可以禁用该功能：
+
+```go
+ini.PrettyFormat = false
+``` 
+
 ### 高级用法
 
 #### 递归读取键值

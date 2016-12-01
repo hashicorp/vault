@@ -4,6 +4,11 @@ import (
 	"fmt"
 )
 
+// Error represents an SQL Server error. This
+// type includes methods for reading the contents
+// of the struct, which allows calling programs
+// to check for specific error conditions without
+// having to import this package directly.
 type Error struct {
 	Number     int32
 	State      uint8
@@ -16,6 +21,35 @@ type Error struct {
 
 func (e Error) Error() string {
 	return "mssql: " + e.Message
+}
+
+// SQLErrorNumber returns the SQL Server error number.
+func (e Error) SQLErrorNumber() int32 {
+	return e.Number
+}
+
+func (e Error) SQLErrorState() uint8 {
+	return e.State
+}
+
+func (e Error) SQLErrorClass() uint8 {
+	return e.Class
+}
+
+func (e Error) SQLErrorMessage() string {
+	return e.Message
+}
+
+func (e Error) SQLErrorServerName() string {
+	return e.ServerName
+}
+
+func (e Error) SQLErrorProcName() string {
+	return e.ProcName
+}
+
+func (e Error) SQLErrorLineNo() int32 {
+	return e.LineNo
 }
 
 type StreamError struct {

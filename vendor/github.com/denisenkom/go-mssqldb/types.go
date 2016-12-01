@@ -8,6 +8,7 @@ import (
 	"math"
 	"strconv"
 	"time"
+	"reflect"
 )
 
 // fixed-length data types
@@ -207,7 +208,7 @@ func decodeDateTime(buf []byte) time.Time {
 		0, 0, secs, ns, time.UTC)
 }
 
-func readFixedType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
+func readFixedType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	r.ReadFull(ti.Buffer)
 	buf := ti.Buffer
 	switch ti.TypeId {
@@ -241,12 +242,7 @@ func readFixedType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
 	panic("shoulnd't get here")
 }
 
-func writeFixedType(w io.Writer, ti typeInfo, buf []byte) (err error) {
-	_, err = w.Write(buf)
-	return
-}
-
-func readByteLenType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
+func readByteLenType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	size := r.byte()
 	if size == 0 {
 		return nil
@@ -341,7 +337,7 @@ func writeByteLenType(w io.Writer, ti typeInfo, buf []byte) (err error) {
 	return
 }
 
-func readShortLenType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
+func readShortLenType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	size := r.uint16()
 	if size == 0xffff {
 		return nil
@@ -384,12 +380,12 @@ func writeShortLenType(w io.Writer, ti typeInfo, buf []byte) (err error) {
 	return
 }
 
-func readLongLenType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
+func readLongLenType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	// information about this format can be found here:
 	// http://msdn.microsoft.com/en-us/library/dd304783.aspx
 	// and here:
 	// http://msdn.microsoft.com/en-us/library/dd357254.aspx
-	textptrsize := r.byte()
+	textptrsize := int(r.byte())
 	if textptrsize == 0 {
 		return nil
 	}
@@ -418,7 +414,7 @@ func readLongLenType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
 
 // reads variant value
 // http://msdn.microsoft.com/en-us/library/dd303302.aspx
-func readVariantType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
+func readVariantType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	size := r.int32()
 	if size == 0 {
 		return nil
@@ -510,7 +506,7 @@ func readVariantType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
 
 // partially length prefixed stream
 // http://msdn.microsoft.com/en-us/library/dd340469.aspx
-func readPLPType(ti *typeInfo, r *tdsBuffer) (res interface{}) {
+func readPLPType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	size := r.uint64()
 	var buf *bytes.Buffer
 	switch size {
@@ -650,8 +646,6 @@ func readVarLen(ti *typeInfo, r *tdsBuffer) {
 				r.UsVarChar()
 			}
 			ti.Reader = readLongLenType
-		case typeXml:
-			panic("XMLTYPE not implemented")
 		case typeVariant:
 			ti.Reader = readVariantType
 		}
@@ -703,7 +697,8 @@ func decodeDecimal(prec uint8, scale uint8, buf []byte) []byte {
 
 // http://msdn.microsoft.com/en-us/library/ee780895.aspx
 func decodeDateInt(buf []byte) (days int) {
-	return int(buf[0]) + int(buf[1])*256 + int(buf[2])*256*256
+	days = int(buf[0]) + int(buf[1])*256 + int(buf[2])*256*256
+	return
 }
 
 func decodeDate(buf []byte) time.Time {
@@ -793,6 +788,101 @@ func decodeUdt(ti typeInfo, buf []byte) int {
 	panic("Not implemented")
 }
 
+// makes go/sql type instance as described below
+// It should return
+// the value type that can be used to scan types into. For example, the database
+// column type "bigint" this should return "reflect.TypeOf(int64(0))".
+func makeGoLangScanType(ti typeInfo) reflect.Type {
+	switch ti.TypeId {
+	case typeInt4:
+		return reflect.TypeOf(int64(0))
+	case typeInt8:
+		return reflect.TypeOf(int64(0))
+	case typeFlt4:
+		return reflect.TypeOf(float64(0))
+	case typeIntN:
+		switch ti.Size {
+		case 1:
+			return reflect.TypeOf(int64(0))
+		case 2:
+			return reflect.TypeOf(int64(0))
+		case 4:
+			return reflect.TypeOf(int64(0))
+		case 8:
+			return reflect.TypeOf(int64(0))
+		default:
+			panic("invalid size of INTNTYPE")
+		}
+	case typeFlt8:
+		return reflect.TypeOf(float64(0))
+	case typeFltN:
+		switch ti.Size {
+		case 4:
+			return reflect.TypeOf(float64(0))
+		case 8:
+			return reflect.TypeOf(float64(0))
+		default:
+			panic("invalid size of FLNNTYPE")
+		}
+	case typeBigVarBin:
+		return reflect.TypeOf([]byte{})
+	case typeVarChar:
+		return reflect.TypeOf("")
+	case typeNVarChar:
+		return reflect.TypeOf("")
+	case typeBit, typeBitN:
+		return reflect.TypeOf(true)
+	case typeDecimalN, typeNumericN:
+		return reflect.TypeOf([]byte{})
+	case typeMoneyN:
+		switch ti.Size {
+		case 4:
+			return reflect.TypeOf([]byte{})
+		case 8:
+			return reflect.TypeOf([]byte{})
+		default:
+			panic("invalid size of MONEYN")
+		}
+	case typeDateTimeN:
+		switch ti.Size {
+		case 4:
+			return reflect.TypeOf(time.Time{})
+		case 8:
+			return reflect.TypeOf(time.Time{})
+		default:
+			panic("invalid size of DATETIMEN")
+		}
+	case typeDateTime2N:
+		return reflect.TypeOf(time.Time{})
+	case typeDateN:
+		return reflect.TypeOf(time.Time{})
+	case typeTimeN:
+		return reflect.TypeOf(time.Time{})
+	case typeDateTimeOffsetN:
+		return reflect.TypeOf(time.Time{})
+	case typeBigVarChar:
+		return reflect.TypeOf("")
+	case typeBigChar:
+		return reflect.TypeOf("")
+	case typeNChar:
+		return reflect.TypeOf("")
+	case typeGuid:
+		return reflect.TypeOf([]byte{})
+	case typeXml:
+		return reflect.TypeOf("")
+	case typeText:
+		return reflect.TypeOf("")
+	case typeNText:
+		return reflect.TypeOf("")
+	case typeImage:
+		return reflect.TypeOf([]byte{})
+	case typeVariant:
+		return reflect.TypeOf(nil)
+	default:
+		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
+	}
+}
+
 func makeDecl(ti typeInfo) string {
 	switch ti.TypeId {
 	case typeInt8:
@@ -825,13 +915,13 @@ func makeDecl(ti typeInfo) string {
 		}
 	case typeBigVarBin:
 		if ti.Size > 8000 || ti.Size == 0 {
-			return fmt.Sprintf("varbinary(max)")
+			return "varbinary(max)"
 		} else {
 			return fmt.Sprintf("varbinary(%d)", ti.Size)
 		}
 	case typeNVarChar:
 		if ti.Size > 8000 || ti.Size == 0 {
-			return fmt.Sprintf("nvarchar(max)")
+			return "nvarchar(max)"
 		} else {
 			return fmt.Sprintf("nvarchar(%d)", ti.Size/2)
 		}
@@ -841,6 +931,321 @@ func makeDecl(ti typeInfo) string {
 		return "datetime"
 	case typeDateTimeOffsetN:
 		return fmt.Sprintf("datetimeoffset(%d)", ti.Scale)
+	default:
+		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
+	}
+}
+
+// makes go/sql type name as described below
+// RowsColumnTypeDatabaseTypeName may be implemented by Rows. It should return the
+// database system type name without the length. Type names should be uppercase.
+// Examples of returned types: "VARCHAR", "NVARCHAR", "VARCHAR2", "CHAR", "TEXT",
+// "DECIMAL", "SMALLINT", "INT", "BIGINT", "BOOL", "[]BIGINT", "JSONB", "XML",
+// "TIMESTAMP".
+func makeGoLangTypeName(ti typeInfo) string {
+	switch ti.TypeId {
+	case typeInt4:
+		return "INT"
+	case typeInt8:
+		return "BIGINT"
+	case typeFlt4:
+		return "REAL"
+	case typeIntN:
+		switch ti.Size {
+		case 1:
+			return "TINYINT"
+		case 2:
+			return "SMALLINT"
+		case 4:
+			return "INT"
+		case 8:
+			return "BIGINT"
+		default:
+			panic("invalid size of INTNTYPE")
+		}
+	case typeFlt8:
+		return "FLOAT"
+	case typeFltN:
+		switch ti.Size {
+		case 4:
+			return "REAL"
+		case 8:
+			return "FLOAT"
+		default:
+			panic("invalid size of FLNNTYPE")
+		}
+	case typeBigVarBin:
+		return "VARBINARY"
+	case typeVarChar:
+		return "VARCHAR"
+	case typeNVarChar:
+		return "NVARCHAR"
+	case typeBit, typeBitN:
+		return "BIT"
+	case typeDecimalN, typeNumericN:
+		return "DECIMAL"
+	case typeMoneyN:
+		switch ti.Size {
+		case 4:
+			return "SMALLMONEY"
+		case 8:
+			return "MONEY"
+		default:
+			panic("invalid size of MONEYN")
+		}
+	case typeDateTimeN:
+		switch ti.Size {
+		case 4:
+			return "SMALLDATETIME"
+		case 8:
+			return "DATETIME"
+		default:
+			panic("invalid size of DATETIMEN")
+		}
+	case typeDateTime2N:
+		return "DATETIME2"
+	case typeDateN:
+		return "DATE"
+	case typeTimeN:
+		return "TIME"
+	case typeDateTimeOffsetN:
+		return "DATETIMEOFFSET"
+	case typeBigVarChar:
+		return "VARCHAR"
+	case typeBigChar:
+		return "CHAR"
+	case typeNChar:
+		return "NCHAR"
+	case typeGuid:
+		return "UNIQUEIDENTIFIER"
+	case typeXml:
+		return "XML"
+	case typeText:
+		return "TEXT"
+	case typeNText:
+		return "NTEXT"
+	case typeImage:
+		return "IMAGE"
+	case typeVariant:
+		return "SQL_VARIANT"
+	default:
+		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
+	}
+}
+
+// makes go/sql type length as described below
+// It should return the length
+// of the column type if the column is a variable length type. If the column is
+// not a variable length type ok should return false.
+// If length is not limited other than system limits, it should return math.MaxInt64.
+// The following are examples of returned values for various types:
+//   TEXT          (math.MaxInt64, true)
+//   varchar(10)   (10, true)
+//   nvarchar(10)  (10, true)
+//   decimal       (0, false)
+//   int           (0, false)
+//   bytea(30)     (30, true)
+func makeGoLangTypeLength(ti typeInfo) (int64, bool) {
+	switch ti.TypeId {
+	case typeInt4:
+		return 0, false
+	case typeInt8:
+		return 0, false
+	case typeFlt4:
+		return 0, false
+	case typeIntN:
+		switch ti.Size {
+		case 1:
+			return 0, false
+		case 2:
+			return 0, false
+		case 4:
+			return 0, false
+		case 8:
+			return 0, false
+		default:
+			panic("invalid size of INTNTYPE")
+		}
+	case typeFlt8:
+		return 0, false
+	case typeFltN:
+		switch ti.Size {
+		case 4:
+			return 0, false
+		case 8:
+			return 0, false
+		default:
+			panic("invalid size of FLNNTYPE")
+		}
+	case typeBit, typeBitN:
+		return 0, false
+	case typeDecimalN, typeNumericN:
+		return 0, false
+	case typeMoneyN:
+		switch ti.Size {
+		case 4:
+			return 0, false
+		case 8:
+			return 0, false
+		default:
+			panic("invalid size of MONEYN")
+		}
+	case typeDateTimeN:
+		switch ti.Size {
+		case 4:
+			return 0, false
+		case 8:
+			return 0, false
+		default:
+			panic("invalid size of DATETIMEN")
+		}
+	case typeDateTime2N:
+		return 0, false
+	case typeDateN:
+		return 0, false
+	case typeTimeN:
+		return 0, false
+	case typeDateTimeOffsetN:
+		return 0, false
+	case typeBigVarBin:
+		if ti.Size == 0xffff {
+			return 2147483645, true
+		} else {
+			return int64(ti.Size), true
+		}
+	case typeVarChar:
+		return int64(ti.Size), true
+	case typeBigVarChar:
+		if ti.Size == 0xffff {
+			return 2147483645, true
+		} else {
+			return int64(ti.Size), true
+		}
+	case typeBigChar:
+		return int64(ti.Size), true
+	case typeNVarChar:
+		if ti.Size == 0xffff {
+			return 2147483645 / 2, true
+		} else {
+			return int64(ti.Size) / 2, true
+		}
+	case typeNChar:
+		return int64(ti.Size) / 2, true
+	case typeGuid:
+		return 0, false
+	case typeXml:
+		return 1073741822, true
+	case typeText:
+		return 2147483647, true
+	case typeNText:
+		return 1073741823, true
+	case typeImage:
+		return 2147483647, true
+	case typeVariant:
+		return 0, false
+	default:
+		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
+	}
+}
+
+// makes go/sql type precision and scale as described below
+// It should return the length
+// of the column type if the column is a variable length type. If the column is
+// not a variable length type ok should return false.
+// If length is not limited other than system limits, it should return math.MaxInt64.
+// The following are examples of returned values for various types:
+//   TEXT          (math.MaxInt64, true)
+//   varchar(10)   (10, true)
+//   nvarchar(10)  (10, true)
+//   decimal       (0, false)
+//   int           (0, false)
+//   bytea(30)     (30, true)
+func makeGoLangTypePrecisionScale(ti typeInfo) (int64, int64, bool) {
+	switch ti.TypeId {
+	case typeInt4:
+		return 0, 0, false
+	case typeInt8:
+		return 0, 0, false
+	case typeFlt4:
+		return 0, 0, false
+	case typeIntN:
+		switch ti.Size {
+		case 1:
+			return 0, 0, false
+		case 2:
+			return 0, 0, false
+		case 4:
+			return 0, 0, false
+		case 8:
+			return 0, 0, false
+		default:
+			panic("invalid size of INTNTYPE")
+		}
+	case typeFlt8:
+		return 0, 0, false
+	case typeFltN:
+		switch ti.Size {
+		case 4:
+			return 0, 0, false
+		case 8:
+			return 0, 0, false
+		default:
+			panic("invalid size of FLNNTYPE")
+		}
+	case typeBit, typeBitN:
+		return 0, 0, false
+	case typeDecimalN, typeNumericN:
+		return int64(ti.Prec), int64(ti.Scale), true
+	case typeMoneyN:
+		switch ti.Size {
+		case 4:
+			return 0, 0, false
+		case 8:
+			return 0, 0, false
+		default:
+			panic("invalid size of MONEYN")
+		}
+	case typeDateTimeN:
+		switch ti.Size {
+		case 4:
+			return 0, 0, false
+		case 8:
+			return 0, 0, false
+		default:
+			panic("invalid size of DATETIMEN")
+		}
+	case typeDateTime2N:
+		return 0, 0, false
+	case typeDateN:
+		return 0, 0, false
+	case typeTimeN:
+		return 0, 0, false
+	case typeDateTimeOffsetN:
+		return 0, 0, false
+	case typeBigVarBin:
+		return 0, 0, false
+	case typeVarChar:
+		return 0, 0, false
+	case typeBigVarChar:
+		return 0, 0, false
+	case typeBigChar:
+		return 0, 0, false
+	case typeNVarChar:
+		return 0, 0, false
+	case typeNChar:
+		return 0, 0, false
+	case typeGuid:
+		return 0, 0, false
+	case typeXml:
+		return 0, 0, false
+	case typeText:
+		return 0, 0, false
+	case typeNText:
+		return 0, 0, false
+	case typeImage:
+		return 0, 0, false
+	case typeVariant:
+		return 0, 0, false
 	default:
 		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
 	}

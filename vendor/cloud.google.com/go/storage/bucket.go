@@ -246,6 +246,9 @@ func (it *ObjectIterator) fetch(pageSize int, pageToken string) (string, error) 
 		return err
 	})
 	if err != nil {
+		if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusNotFound {
+			err = ErrBucketNotExist
+		}
 		return "", err
 	}
 	for _, item := range resp.Items {

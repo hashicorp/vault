@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -855,7 +854,7 @@ func (t *typeParser) parse() typeParserResult {
 				var name string
 				decoded, err := hex.DecodeString(*param.name)
 				if err != nil {
-					log.Printf(
+					Logger.Printf(
 						"Error parsing type '%s', contains collection name '%s' with an invalid format: %v",
 						t.input,
 						*param.name,

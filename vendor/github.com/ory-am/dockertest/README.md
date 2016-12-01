@@ -8,6 +8,9 @@ Dockertest uses [Docker](https://www.docker.com/toolbox) to spin up images on Wi
 Dockertest is based on [docker.go](https://github.com/camlistore/camlistore/blob/master/pkg/test/dockertest/docker.go)
 from [camlistore](https://github.com/camlistore/camlistore).
 
+**IMPORTANT**  
+We strongly encourage you to move to [dockertest v3](https://github.com/ory-am/dockertest/tree/v3) for new and existing projects. It has a much cleaner API, less dependencies and is less prone to errors. V3 will be eventually merged into master.
+
 Dockertest currently supports these backends:
 * PostgreSQL
 * MySQL

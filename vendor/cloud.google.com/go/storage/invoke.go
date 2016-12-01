@@ -15,6 +15,7 @@
 package storage
 
 import (
+	"cloud.google.com/go/internal"
 	gax "github.com/googleapis/gax-go"
 	"golang.org/x/net/context"
 	"google.golang.org/api/googleapi"
@@ -23,24 +24,20 @@ import (
 // runWithRetry calls the function until it returns nil or a non-retryable error, or
 // the context is done.
 func runWithRetry(ctx context.Context, call func() error) error {
-	var backoff gax.Backoff // use defaults for gax exponential backoff
-	for {
-		err := call()
+	return internal.Retry(ctx, gax.Backoff{}, func() (stop bool, err error) {
+		err = call()
 		if err == nil {
-			return nil
+			return true, nil
 		}
 		e, ok := err.(*googleapi.Error)
 		if !ok {
-			return err
+			return true, err
 		}
 		// Retry on 429 and 5xx, according to
 		// https://cloud.google.com/storage/docs/exponential-backoff.
 		if e.Code == 429 || (e.Code >= 500 && e.Code < 600) {
-			if err := gax.Sleep(ctx, backoff.Pause()); err != nil {
-				return err
-			}
-			continue
+			return false, nil
 		}
-		return err
-	}
+		return true, err
+	})
 }
