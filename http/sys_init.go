@@ -38,7 +38,7 @@ func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req InitRequest
-	if err := parseRequest(r, &req); err != nil {
+	if err := parseRequest(r, w, &req); err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
 	}
