@@ -9,6 +9,11 @@ DEPRECATIONS/CHANGES:
    default. The new `deny_null_bind` parameter can be set to `false` to allow
    these. [GH-2103]
 
+FEATURES:
+
+ * **Google Cloud Storage Physical Backend**: You can now use GCS for storing
+   Vault data [GH-2099]
+
 IMPROVEMENTS:
 
  * auth/github: Policies can now be assigned to users as well as to teams
