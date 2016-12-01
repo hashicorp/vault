@@ -52,7 +52,7 @@ func (b *backend) pathTokenRead(
 		return nil, intErr
 	}
 	if userErr != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return logical.ErrorResponse(userErr.Error()), nil
 	}
 
 	// Generate a name for the token
