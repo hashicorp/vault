@@ -287,6 +287,11 @@ func (c *Client) SetAddress(addr string) error {
 	return nil
 }
 
+// Address returns the URL address of the Vault client
+func (c *Client) Address() string {
+	return c.addr.String()
+}
+
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
 // for a given operation and path
 func (c *Client) SetWrappingLookupFunc(lookupFunc WrappingLookupFunc) {

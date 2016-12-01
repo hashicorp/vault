@@ -74,6 +74,29 @@ func (c *InitCommand) Run(args []string) int {
 			return 1
 		}
 
+		// Fetch Vault's protocol scheme from the client
+		vaultclient, err := c.Client()
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to fetch Vault client: %v", err))
+			return 1
+		}
+
+		if vaultclient.Address() == "" {
+			c.Ui.Error("Failed to fetch Vault client address")
+			return 1
+		}
+
+		clientURL, err := url.Parse(vaultclient.Address())
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Failed to parse Vault address: %v", err))
+			return 1
+		}
+
+		if clientURL == nil {
+			c.Ui.Error("Failed to parse Vault client address")
+			return 1
+		}
+
 		var uninitializedVaults []string
 		var initializedVault string
 
@@ -82,7 +105,7 @@ func (c *InitCommand) Run(args []string) int {
 		Loop:
 			for _, service := range services {
 				vaultAddress := &url.URL{
-					Scheme: consulConfig.Scheme,
+					Scheme: clientURL.Scheme,
 					Host:   fmt.Sprintf("%s:%d", service.ServiceAddress, service.ServicePort),
 				}
 
