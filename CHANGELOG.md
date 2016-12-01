@@ -2,8 +2,12 @@
 
 DEPRECATIONS/CHANGES:
 
- * http: impose a maximum request size of 32MB to prevent a denial of service
-   with arbitrarily large requests. [GH-2108]
+ * Request size limitation: A maximum request size of 32MB is imposed to
+   prevent a denial of service attack with arbitrarily large requests [GH-2108]
+ * LDAP denies passwordless binds by default: In new LDAP mounts, or when
+   existing LDAP mounts are rewritten, passwordless binds will be denied by
+   default. The new `deny_null_bind` parameter can be set to `false` to allow
+   these. [GH-2103]
 
 IMPROVEMENTS:
 
