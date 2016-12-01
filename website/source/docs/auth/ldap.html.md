@@ -132,6 +132,7 @@ There are two alternate methods of resolving the user object used to authenticat
 * `discoverdn` (bool, optional) - If true, use anonymous bind to discover the bind DN of a user
 * `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 * `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
+* `deny_null_bind` (bool, optional) - This option prevents users from bypassing authentication when providing an empty password. The default is `true`.
 
 #### Binding - User Principal Name (AD)
 
