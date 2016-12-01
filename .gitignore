@@ -43,6 +43,8 @@ Vagrantfile
 
 # Configs
 *.hcl
+*.crt
+*.key
 
 .DS_Store
 .idea
