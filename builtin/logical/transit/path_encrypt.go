@@ -13,10 +13,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-const (
-	MB int = 1048 * 1048
-)
-
 type BatchEncryptionItemRequest struct {
 	Context   string `json:"context" structs:"context" mapstructure:"context"`
 	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
@@ -49,7 +45,7 @@ func (b *backend) pathEncrypt() *framework.Path {
 
 			"nonce": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Base64 encoded nonce for when convergent encryption is used",
+				Description: "Base64 encoded nonce for when v1 convergent encryption is used",
 			},
 
 			"type": &framework.FieldSchema{
@@ -87,10 +83,9 @@ operations.`,
 				Type:    framework.TypeString,
 				Default: "",
 				Description: `
-Base64 encoded list of items to be encrypted in a single batch. The size of the
-input is limited to 4MB. When this parameter is set, the parameters
-'plaintext', 'context' and 'nonce' will be ignored. JSON format for the input
-goes like this:
+Base64 encoded list of items to be encrypted in a single batch. When this
+parameter is set, if the parameters 'plaintext', 'context' and 'nonce' are also
+set, they will be ignored. JSON format for the input goes like this:
 
 [
   {
@@ -185,11 +180,6 @@ func (b *backend) pathEncryptWrite(
 	}
 
 	if len(batchInput) != 0 {
-		// The size of the batch input is limited to 4MB
-		if len(batchInput) > 4*MB {
-			return logical.ErrorResponse("Input for batch encryption should be less than 4MB"), logical.ErrInvalidRequest
-		}
-
 		var batchInputArray []interface{}
 		if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
 			return nil, err
