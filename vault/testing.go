@@ -627,6 +627,10 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		}
 	}
 
+	if base.Logger != nil {
+		coreConfig.Logger = base.Logger
+	}
+
 	c1, err := NewCore(coreConfig)
 	if err != nil {
 		t.Fatalf("err: %v", err)
