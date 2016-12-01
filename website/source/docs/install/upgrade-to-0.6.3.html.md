@@ -16,4 +16,6 @@ for Vault 0.6.3. Please read it carefully.
 When using the LDAP Auth Backend, `deny_null_bind` has a default value of
 `true`, preventing a successful user authentication when an empty password
 is provided. If you utilize passwordless LDAP binds, `deny_null_bind` must
-be set to `false`.
+be set to `false`. Upgrades will keep previous behavior until the LDAP
+configuration information is rewritten, at which point the new behavior
+will be utilized.
