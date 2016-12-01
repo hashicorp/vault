@@ -42,6 +42,7 @@ BUG FIXES:
    backend failed) could lead to deadlock [GH-2083]
  * physical/mysql: Fix potential crash during setup due to a query failure
    [GH-2105]
+ * secret/consul: Fix panic on user error [GH-2145]
 
 ## 0.6.2 (October 5, 2016)
 
