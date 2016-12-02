@@ -35,7 +35,7 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, req *http.Request) {
 
 	resp, err := core.HandleRequest(lreq)
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, err)
+		respondErrorCommon(w, resp, err)
 		return
 	}
 
