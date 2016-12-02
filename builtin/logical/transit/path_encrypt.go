@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -20,7 +19,7 @@ type BatchEncryptionItemRequest struct {
 }
 
 type BatchEncryptionItemResponse struct {
-	CipherText string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
+	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
 	Error      string `json:"error" structs:"error" mapstructure:"error"`
 }
 
@@ -131,13 +130,17 @@ func (b *backend) pathEncryptWrite(
 	name := d.Get("name").(string)
 	var err error
 
-	convergent := d.Get("convergent_encryption").(bool)
-
 	// Get the policy
 	var p *keysutil.Policy
 	var lock *sync.RWMutex
 	var upserted bool
 	if req.Operation == logical.CreateOperation {
+		convergent := d.Get("convergent_encryption").(bool)
+		derived := d.Get("derived").(bool)
+		if convergent && !derived {
+			return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
+		}
+
 		polReq := keysutil.PolicyRequest{
 			Storage:    req.Storage,
 			Name:       name,
@@ -177,160 +180,127 @@ func (b *backend) pathEncryptWrite(
 		if err != nil {
 			return logical.ErrorResponse("failed to base64-decode batch"), logical.ErrInvalidRequest
 		}
+	} else {
+		valueRaw, ok := d.GetOk("plaintext")
+		if !ok {
+			return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
+		}
+
+		var singleItemBatch []BatchEncryptionItemRequest
+		singleItemBatch = append(singleItemBatch, BatchEncryptionItemRequest{
+			Plaintext: valueRaw.(string),
+			Context:   d.Get("context").(string),
+			Nonce:     d.Get("nonce").(string),
+		})
+		batchInput, err = jsonutil.EncodeJSON(singleItemBatch)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode batch input")
+		}
+
 	}
 
-	if len(batchInput) != 0 {
-		var batchInputArray []interface{}
-		if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
-			return nil, err
+	var batchInputArray []interface{}
+	if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
+		return nil, err
+	}
+
+	var batchItems []BatchEncryptionItemRequest
+	var batchResponseItems []BatchEncryptionItemResponse
+
+	// Process batch request items. If encryption of any request
+	// item fails, respectively mark the error in the response
+	// collection and continue to process other items.
+	for _, batchItem := range batchInputArray {
+		var item BatchEncryptionItemRequest
+		if err := mapstructure.Decode(batchItem, &item); err != nil {
+			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+				Error: fmt.Sprintf("failed to decode the request: %v", err),
+			})
+			continue
+		}
+		batchItems = append(batchItems, item)
+
+		if item.Plaintext == "" {
+			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+				Error: "missing plaintext to encrypt",
+			})
+			continue
 		}
 
-		var batchItems []BatchEncryptionItemRequest
-		var batchResponseItems []BatchEncryptionItemResponse
-
-		// Process batch request items. If encryption of any request
-		// item fails, respectively mark the error in the response
-		// collection and continue to process other items.
-		for _, batchItem := range batchInputArray {
-			var item BatchEncryptionItemRequest
-			if err := mapstructure.Decode(batchItem, &item); err != nil {
-				batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-					Error: fmt.Sprintf("failed to decode the request: %v", err),
-				})
-				continue
-			}
-			batchItems = append(batchItems, item)
-
-			if item.Plaintext == "" {
-				batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-					Error: "missing plaintext to encrypt",
-				})
-				continue
-			}
-
-			// Decode the context
-			var itemContext []byte
-			if len(item.Context) != 0 {
-				itemContext, err = base64.StdEncoding.DecodeString(item.Context)
-				if err != nil {
-					batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-						Error: "failed to base64-decode context",
-					})
-					continue
-				}
-			}
-
-			// Decode the nonce
-			var itemNonce []byte
-			if len(item.Nonce) != 0 {
-				itemNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
-				if err != nil {
-					batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-						Error: "failed to base64-decode nonce",
-					})
-					continue
-				}
-			}
-
-			ciphertext, err := p.Encrypt(itemContext, itemNonce, item.Plaintext)
+		// Decode the context
+		var itemContext []byte
+		if len(item.Context) != 0 {
+			itemContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
 				batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-					Error: fmt.Sprintf("encryption failed: %s", err.Error()),
+					Error: "failed to base64-decode context",
 				})
 				continue
 			}
+		}
 
-			if ciphertext == "" {
+		// Decode the nonce
+		var itemNonce []byte
+		if len(item.Nonce) != 0 {
+			itemNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
+			if err != nil {
 				batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-					Error: "empty ciphertext returned",
+					Error: "failed to base64-decode nonce",
 				})
 				continue
 			}
+		}
 
+		ciphertext, err := p.Encrypt(itemContext, itemNonce, item.Plaintext)
+		if err != nil {
 			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-				CipherText: ciphertext,
+				Error: err.Error(),
 			})
+			continue
 		}
 
-		if len(batchItems) != len(batchResponseItems) {
-			return nil, fmt.Errorf("number of request and the response items does not match")
+		if ciphertext == "" {
+			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+				Error: "empty ciphertext returned",
+			})
+			continue
 		}
 
+		batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+			Ciphertext: ciphertext,
+		})
+	}
+
+	if len(batchItems) != len(batchResponseItems) {
+		return nil, fmt.Errorf("number of request and the response items does not match")
+	}
+
+	if len(batchResponseItems) == 0 {
+		return nil, fmt.Errorf("number of response items cannot be zero")
+	}
+
+	resp := &logical.Response{}
+	if len(batchInputRaw) != 0 {
 		batchResponseJSON, err := jsonutil.EncodeJSON(batchResponseItems)
 		if err != nil {
 			return nil, fmt.Errorf("failed to JSON encode batch response")
 		}
-
-		// Generate the response
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"data": batchResponseJSON,
-			},
+		resp.Data = map[string]interface{}{
+			"data": batchResponseJSON,
+		}
+	} else {
+		if batchResponseItems[0].Error != "" {
+			return nil, fmt.Errorf(batchResponseItems[0].Error)
 		}
 
-		if req.Operation == logical.CreateOperation && !upserted {
-			resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
+		resp.Data = map[string]interface{}{
+			"ciphertext": batchResponseItems[0].Ciphertext,
 		}
-		return resp, nil
-	}
-
-	valueRaw, ok := d.GetOk("plaintext")
-	if !ok {
-		return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
-	}
-	value := valueRaw.(string)
-
-	// Decode the context if any
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
-		}
-	}
-
-	if convergent && len(context) == 0 {
-		return logical.ErrorResponse("convergent encryption requires derivation to be enabled, so context is required"), nil
-	}
-
-	// Decode the nonce if any
-	nonceRaw := d.Get("nonce").(string)
-	var nonce []byte
-	if len(nonceRaw) != 0 {
-		nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode nonce"), logical.ErrInvalidRequest
-		}
-	}
-
-	ciphertext, err := p.Encrypt(context, nonce, value)
-	if err != nil {
-		switch err.(type) {
-		case errutil.UserError:
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-		case errutil.InternalError:
-			return nil, err
-		default:
-			return nil, err
-		}
-	}
-
-	if ciphertext == "" {
-		return nil, fmt.Errorf("empty ciphertext returned")
-	}
-
-	// Generate the response
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"ciphertext": ciphertext,
-		},
 	}
 
 	if req.Operation == logical.CreateOperation && !upserted {
 		resp.AddWarning("Attempted creation of the key during the encrypt operation, but it was created beforehand")
 	}
-
 	return resp, nil
 }
 
