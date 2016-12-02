@@ -24,6 +24,8 @@ IMPROVEMENTS:
    for this is lessened anyways. [GH-2093]
  * core: Response wrapping is now allowed to be specified by backend responses
    (requires backends gaining support) [GH-2088]
+ * physical/consul: When announcing service, use the scheme of the Vault server
+   rather than the Consul client [GH-2146]
  * secret/consul: Added listing functionality to roles [GH-2065]
  * secret/postgresql: Added `revocation_sql` parameter on the role endpoint to
    enable customization of user revocation SQL statements [GH-2033]
