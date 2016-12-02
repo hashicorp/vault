@@ -27,6 +27,9 @@ const (
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
 
+	// NoCORS is the name of the header telling Vault not to use CORS handler.
+	NoCORS = "X-Vault-No-CORS"
+
 	// MaxRequestSize is the maximum accepted request size. This is to prevent
 	// a denial of service attack where no Content-Length is provided and the server
 	// is fed ever more data until it exhausts memory.
@@ -58,10 +61,11 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/wrapping/unwrap", handleRequestForwarding(core, handleLogical(core, false, wrappingVerificationFunc)))
 	mux.Handle("/v1/sys/capabilities-self", handleRequestForwarding(core, handleLogical(core, true, nil)))
 	mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, true, nil)))
-	mux.Handle("/v1/", handleCORS(core, handleRequestForwarding(core, handleLogical(core, false, nil))))
+	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 
 	// Wrap the handler in another handler to trigger all help paths.
 	handler := handleHelpHandler(mux, core)
+	handler = handleCORS(core, handler)
 
 	return handler
 }
@@ -128,6 +132,15 @@ func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error
 // requests that require Cross Origin Resource Sharing (CORS) headers.
 func handleCORS(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(NoCORS) != "" {
+			// CORS explicitly disabled. This is so the Vault client does not reject requests.
+			// A browser could do this, but AJAX is still doing to want them if the request is
+			// cross-origin, so it would be kind of silly to do it.
+			core.Logger().Trace("http/handleCORS: CORS disabled by client request")
+			handler.ServeHTTP(w, r)
+			return
+		}
+
 		corsConf := core.CORSConfig()
 		statusCode := corsConf.ApplyHeaders(w, r)
 
