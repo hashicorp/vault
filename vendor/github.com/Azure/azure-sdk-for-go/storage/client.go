@@ -128,6 +128,7 @@ func NewBasicClient(accountName, accountKey string) (Client, error) {
 		return NewEmulatorClient()
 	}
 	return NewClient(accountName, accountKey, DefaultBaseURL, DefaultAPIVersion, defaultUseHTTPS)
+
 }
 
 //NewEmulatorClient contructs a Client intended to only work with Azure

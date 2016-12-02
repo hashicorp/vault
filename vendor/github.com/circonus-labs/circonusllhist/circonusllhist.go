@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -240,6 +242,27 @@ func NewNoLocks() *Histogram {
 		used:     0,
 		bvs:      make([]Bin, DEFAULT_HIST_SIZE),
 		useLocks: false,
+	}
+}
+
+// NewFromStrings returns a Histogram created from DecStrings strings
+func NewFromStrings(strs []string, locks bool) (*Histogram, error) {
+
+	bin, err := stringsToBin(strs)
+	if err != nil {
+		return nil, err
+	}
+
+	return newFromBins(bin, locks), nil
+}
+
+// NewFromBins returns a Histogram created from a bins struct slice
+func newFromBins(bins []Bin, locks bool) *Histogram {
+	return &Histogram{
+		allocd:   uint16(len(bins) + 10), // pad it with 10
+		used:     uint16(len(bins)),
+		bvs:      bins,
+		useLocks: locks,
 	}
 }
 
@@ -629,4 +652,38 @@ func (h *Histogram) DecStrings() []string {
 		out[i] = buffer.String()
 	}
 	return out
+}
+
+// takes the output of DecStrings and deserializes it into a Bin struct slice
+func stringsToBin(strs []string) ([]Bin, error) {
+
+	bins := make([]Bin, len(strs))
+	for i, str := range strs {
+
+		// H[0.0e+00]=1
+
+		// H[0.0e+00]= <1>
+		countString := strings.Split(str, "=")[1]
+		countInt, err := strconv.ParseInt(countString, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		// H[ <0.0> e+00]=1
+		valString := strings.Split(strings.Split(strings.Split(str, "=")[0], "e")[0], "[")[1]
+		valInt, err := strconv.ParseFloat(valString, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		// H[0.0e <+00> ]=1
+		expString := strings.Split(strings.Split(strings.Split(str, "=")[0], "e")[1], "]")[0]
+		expInt, err := strconv.ParseInt(expString, 10, 8)
+		if err != nil {
+			return nil, err
+		}
+		bins[i] = *NewBinRaw(int8(valInt*10), int8(expInt), uint64(countInt))
+	}
+
+	return bins, nil
 }

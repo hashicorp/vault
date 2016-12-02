@@ -4,13 +4,17 @@ The workflow is pretty standard:
 
 1. Fork it
 2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push -u origin my-new-feature`)
-5. Create new Pull Request
+3. Run integration tests (see below)
+4. Commit your changes (`git commit -am 'Add some feature'`)
+5. Push to the branch (`git push -u origin my-new-feature`)
+6. Submit a pull request
 
 ## Running Tests
 
-First run `bin/ci/before_build.sh` that will create a vhost and user(s) needed
+The test suite assumes you have a RabbitMQ node running on localhost and that
+`rabbitmqctl` is available in `PATH` (or `RABBITHOLE_RABBITMQCTL` points to it).
+
+Before running the tests, make sure to run `bin/ci/before_build.sh` that will create a vhost and user(s) needed
 by the test suite.
 
 The project uses [Ginkgo](http://onsi.github.io/ginkgo/) and [Gomega](https://github.com/onsi/gomega).

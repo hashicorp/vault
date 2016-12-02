@@ -78,6 +78,10 @@ These libraries are provided by the community.
 
 * [HVAC](https://github.com/ianunruh/hvac)
   * `pip install hvac`
+  
+### Rust
+
+* [HashicorpVault](https://crates.io/crates/hashicorp_vault)
 
 ### Scala
  * [scala-vault](https://github.com/janstenpickle/scala-vault)

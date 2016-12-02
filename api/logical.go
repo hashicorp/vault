@@ -135,12 +135,16 @@ func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	}
 
 	resp, err := c.c.RawRequest(r)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		if resp != nil && resp.StatusCode != 404 {
+			return nil, err
+		}
+	}
 	if resp == nil {
 		return nil, nil
-	}
-	defer resp.Body.Close()
-	if err != nil && resp.StatusCode != 404 {
-		return nil, err
 	}
 
 	switch resp.StatusCode {

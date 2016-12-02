@@ -400,6 +400,12 @@ cfg.WriteTo(writer)
 cfg.WriteToIndent(writer, "\t")
 ```
 
+By default, spaces are used to align "=" sign between key and values, to disable that:
+
+```go
+ini.PrettyFormat = false
+``` 
+
 ## Advanced Usage
 
 ### Recursive Values

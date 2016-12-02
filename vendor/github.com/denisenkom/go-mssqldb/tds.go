@@ -621,11 +621,13 @@ func sendSqlBatch72(buf *tdsBuffer,
 	headers []headerStruct) (err error) {
 	buf.BeginPacket(packSQLBatch)
 
-	writeAllHeaders(buf, headers)
+	if err = writeAllHeaders(buf, headers); err != nil {
+		return
+	}
 
 	_, err = buf.Write(str2ucs2(sqltext))
 	if err != nil {
-		return err
+		return
 	}
 	return buf.FinishPacket()
 }
@@ -650,16 +652,40 @@ type connectParams struct {
 	workstation            string
 	appname                string
 	typeFlags              uint8
+	failOverPartner        string
+	failOverPort           uint64
 }
 
-func parseConnectParams(params map[string]string) (*connectParams, error) {
+func splitConnectionString(dsn string) (res map[string]string) {
+	res = map[string]string{}
+	parts := strings.Split(dsn, ";")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+		lst := strings.SplitN(part, "=", 2)
+		name := strings.TrimSpace(strings.ToLower(lst[0]))
+		if len(name) == 0 {
+			continue
+		}
+		var value string = ""
+		if len(lst) > 1 {
+			value = strings.TrimSpace(lst[1])
+		}
+		res[name] = value
+	}
+	return res
+}
+
+func parseConnectParams(dsn string) (connectParams, error) {
+	params := splitConnectionString(dsn)
 	var p connectParams
 	strlog, ok := params["log"]
 	if ok {
 		var err error
 		p.logFlags, err = strconv.ParseUint(strlog, 10, 0)
 		if err != nil {
-			return nil, fmt.Errorf("Invalid log parameter '%s': %s", strlog, err.Error())
+			return p, fmt.Errorf("Invalid log parameter '%s': %s", strlog, err.Error())
 		}
 	}
 	server := params["server"]
@@ -674,35 +700,18 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 	p.database = params["database"]
 	p.user = params["user id"]
 	p.password = params["password"]
+
 	p.port = 1433
-	if p.instance != "" {
-		p.instance = strings.ToUpper(p.instance)
-		instances, err := getInstances(p.host)
-		if err != nil {
-			f := "Unable to get instances from Sql Server Browser on host %v: %v"
-			return nil, fmt.Errorf(f, p.host, err.Error())
-		}
-		strport, ok := instances[p.instance]["tcp"]
-		if !ok {
-			f := "No instance matching '%v' returned from host '%v'"
-			return nil, fmt.Errorf(f, p.instance, p.host)
-		}
+	strport, ok := params["port"]
+	if ok {
+		var err error
 		p.port, err = strconv.ParseUint(strport, 0, 16)
 		if err != nil {
-			f := "Invalid tcp port returned from Sql Server Browser '%v': %v"
-			return nil, fmt.Errorf(f, strport, err.Error())
-		}
-	} else {
-		strport, ok := params["port"]
-		if ok {
-			var err error
-			p.port, err = strconv.ParseUint(strport, 0, 16)
-			if err != nil {
-				f := "Invalid tcp port '%v': %v"
-				return nil, fmt.Errorf(f, strport, err.Error())
-			}
+			f := "Invalid tcp port '%v': %v"
+			return p, fmt.Errorf(f, strport, err.Error())
 		}
 	}
+
 	p.dial_timeout = 5 * time.Second
 	p.conn_timeout = 30 * time.Second
 	strconntimeout, ok := params["connection timeout"]
@@ -710,7 +719,7 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 		timeout, err := strconv.ParseUint(strconntimeout, 0, 16)
 		if err != nil {
 			f := "Invalid connection timeout '%v': %v"
-			return nil, fmt.Errorf(f, strconntimeout, err.Error())
+			return p, fmt.Errorf(f, strconntimeout, err.Error())
 		}
 		p.conn_timeout = time.Duration(timeout) * time.Second
 	}
@@ -719,7 +728,7 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 		timeout, err := strconv.ParseUint(strdialtimeout, 0, 16)
 		if err != nil {
 			f := "Invalid dial timeout '%v': %v"
-			return nil, fmt.Errorf(f, strdialtimeout, err.Error())
+			return p, fmt.Errorf(f, strdialtimeout, err.Error())
 		}
 		p.dial_timeout = time.Duration(timeout) * time.Second
 	}
@@ -728,7 +737,7 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 		timeout, err := strconv.ParseUint(keepAlive, 0, 16)
 		if err != nil {
 			f := "Invalid keepAlive value '%s': %s"
-			return nil, fmt.Errorf(f, keepAlive, err.Error())
+			return p, fmt.Errorf(f, keepAlive, err.Error())
 		}
 		p.keepAlive = time.Duration(timeout) * time.Second
 	}
@@ -741,7 +750,7 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 			p.encrypt, err = strconv.ParseBool(encrypt)
 			if err != nil {
 				f := "Invalid encrypt '%s': %s"
-				return nil, fmt.Errorf(f, encrypt, err.Error())
+				return p, fmt.Errorf(f, encrypt, err.Error())
 			}
 		}
 	} else {
@@ -753,7 +762,7 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 		p.trustServerCertificate, err = strconv.ParseBool(trust)
 		if err != nil {
 			f := "Invalid trust server certificate '%s': %s"
-			return nil, fmt.Errorf(f, trust, err.Error())
+			return p, fmt.Errorf(f, trust, err.Error())
 		}
 	}
 	p.certificate = params["certificate"]
@@ -762,14 +771,14 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 		p.hostInCertificate = p.host
 	}
 
-	serverSPN, ok := params["ServerSPN"]
+	serverSPN, ok := params["serverspn"]
 	if ok {
 		p.serverSPN = serverSPN
 	} else {
 		p.serverSPN = fmt.Sprintf("MSSQLSvc/%s:%d", p.host, p.port)
 	}
 
-	workstation, ok := params["Workstation ID"]
+	workstation, ok := params["workstation id"]
 	if ok {
 		p.workstation = workstation
 	} else {
@@ -792,7 +801,22 @@ func parseConnectParams(params map[string]string) (*connectParams, error) {
 		}
 	}
 
-	return &p, nil
+	failOverPartner, ok := params["failoverpartner"]
+	if ok {
+		p.failOverPartner = failOverPartner
+	}
+
+	failOverPort, ok := params["failoverport"]
+	if ok {
+		var err error
+		p.failOverPort, err = strconv.ParseUint(failOverPort, 0, 16)
+		if err != nil {
+			f := "Invalid tcp port '%v': %v"
+			return p, fmt.Errorf(f, failOverPort, err.Error())
+		}
+	}
+
+	return p, nil
 }
 
 type Auth interface {
@@ -804,7 +828,7 @@ type Auth interface {
 // SQL Server AlwaysOn Availability Group Listeners are bound by DNS to a
 // list of IP addresses.  So if there is more than one, try them all and
 // use the first one that allows a connection.
-func dialConnection(p *connectParams) (conn net.Conn, err error) {
+func dialConnection(p connectParams) (conn net.Conn, err error) {
 	var ips []net.IP
 	ips, err = net.LookupIP(p.host)
 	if err != nil {
@@ -867,10 +891,26 @@ func dialConnection(p *connectParams) (conn net.Conn, err error) {
 	return conn, err
 }
 
-func connect(params map[string]string) (res *tdsSession, err error) {
-	p, err := parseConnectParams(params)
-	if err != nil {
-		return nil, err
+func connect(p connectParams) (res *tdsSession, err error) {
+	res = nil
+	// if instance is specified use instance resolution service
+	if p.instance != "" {
+		p.instance = strings.ToUpper(p.instance)
+		instances, err := getInstances(p.host)
+		if err != nil {
+			f := "Unable to get instances from Sql Server Browser on host %v: %v"
+			return nil, fmt.Errorf(f, p.host, err.Error())
+		}
+		strport, ok := instances[p.instance]["tcp"]
+		if !ok {
+			f := "No instance matching '%v' returned from host '%v'"
+			return nil, fmt.Errorf(f, p.instance, p.host)
+		}
+		p.port, err = strconv.ParseUint(strport, 0, 16)
+		if err != nil {
+			f := "Invalid tcp port returned from Sql Server Browser '%v': %v"
+			return nil, fmt.Errorf(f, strport, err.Error())
+		}
 	}
 
 initiate_connection:

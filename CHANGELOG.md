@@ -2,8 +2,17 @@
 
 DEPRECATIONS/CHANGES:
 
- * http: impose a maximum request size of 32MB to prevent a denial of service
-   with arbitrarily large requests. [GH-2108]
+ * Request size limitation: A maximum request size of 32MB is imposed to
+   prevent a denial of service attack with arbitrarily large requests [GH-2108]
+ * LDAP denies passwordless binds by default: In new LDAP mounts, or when
+   existing LDAP mounts are rewritten, passwordless binds will be denied by
+   default. The new `deny_null_bind` parameter can be set to `false` to allow
+   these. [GH-2103]
+
+FEATURES:
+
+ * **Google Cloud Storage Physical Backend**: You can now use GCS for storing
+   Vault data [GH-2099]
 
 IMPROVEMENTS:
 
@@ -38,6 +47,7 @@ BUG FIXES:
    backend failed) could lead to deadlock [GH-2083]
  * physical/mysql: Fix potential crash during setup due to a query failure
    [GH-2105]
+ * secret/consul: Fix panic on user error [GH-2145]
 
 ## 0.6.2 (October 5, 2016)
 

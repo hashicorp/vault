@@ -1,4 +1,4 @@
-## HEAD
+## Version 1.3 (2016-12-01)
 
 Changes:
 
@@ -8,6 +8,8 @@ Changes:
  - TLS ServerName defaults to the host (#283)
  - Refactoring (#400, #410, #437)
  - Adjusted documentation for second generation CloudSQL (#485)
+ - Documented DSN system var quoting rules (#502)
+ - Made statement.Close() calls idempotent to avoid errors in Go 1.6+ (#512)
 
 New Features:
 
@@ -21,6 +23,7 @@ New Features:
  - Support for JSON field type (#414)
  - Support for multi-statements and multi-results (#411, #431)
  - DSN parameter to set the driver-side max_allowed_packet value manually (#489)
+ - Native password authentication plugin support (#494, #524)
 
 Bugfixes:
 
@@ -38,6 +41,8 @@ Bugfixes:
  - Fixed parsing of floats into float64 when placeholders are used (#434)
  - Fixed DSN tests with Go 1.7+ (#459)
  - Handle ERR packets while waiting for EOF (#473)
+ - Invalidate connection on error while discarding additional results (#513)
+ - Allow terminating packets of length 0 (#516)
 
 
 ## Version 1.2 (2014-06-03)
