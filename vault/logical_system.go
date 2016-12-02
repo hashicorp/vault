@@ -671,13 +671,9 @@ func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.Fiel
 
 // handleCORSDisable clears the allowed origins regexp and sets the CORS enabled flag to false
 func (b *SystemBackend) handleCORSDisable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.Core.corsConfig = nil
+	b.Core.CORSConfig().Disable()
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"enabled": false,
-		},
-	}, nil
+	return b.corsStatusResponse()
 }
 
 // handleCORSStatus returns the current CORS configuration
