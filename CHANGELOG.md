@@ -8,6 +8,13 @@ DEPRECATIONS/CHANGES:
    existing LDAP mounts are rewritten, passwordless binds will be denied by
    default. The new `deny_null_bind` parameter can be set to `false` to allow
    these. [GH-2103]
+ * Any audit backend activated satisfies conditions: Previously, when a new
+   Vault node was taking over service in an HA cluster, all audit backends were
+   required to be loaded successfully to take over active duty. This behavior
+   now matches the behavior of the audit logging system itself: at least one
+   audit backend must successfully be loaded. The server log contains an error
+   when this occurs. This helps keep a Vault HA cluster working when there is a
+   misconfiguration on a standby node. [GH-2083]
 
 FEATURES:
 

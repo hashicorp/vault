@@ -232,6 +232,8 @@ func (c *Core) setupAudits() error {
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
 
+	var successCount int
+
 	for _, entry := range c.audit.Entries {
 		// Create a barrier view using the UUID
 		view := NewBarrierView(c.barrier, auditBarrierPrefix+entry.UUID+"/")
@@ -240,12 +242,19 @@ func (c *Core) setupAudits() error {
 		audit, err := c.newAuditBackend(entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("core: failed to create audit entry", "path", entry.Path, "error", err)
-			return errLoadAuditFailed
+			continue
 		}
 
 		// Mount the backend
 		broker.Register(entry.Path, audit, view)
+
+		successCount += 1
 	}
+
+	if len(c.audit.Entries) > 0 && successCount == 0 {
+		return errLoadAuditFailed
+	}
+
 	c.auditBroker = broker
 	return nil
 }
