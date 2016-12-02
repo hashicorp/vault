@@ -19,7 +19,10 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	username, ok := m["username"]
 	if !ok {
-		return "", fmt.Errorf("'username' var must be set")
+		username = usernameFromEnv()
+		if username == "" {
+			return "", fmt.Errorf("'username' var must be set. cannot default to environment variables 'LOGNAME' or 'USER' as neither are set")
+		}
 	}
 	password, ok := m["password"]
 	if !ok {
@@ -73,4 +76,14 @@ which MFA backend is in use, read "auth/[mount]/mfa_config".
     `
 
 	return strings.TrimSpace(help)
+}
+
+func usernameFromEnv() string {
+	if logname, ok := os.LookupEnv("LOGNAME"); ok {
+		return logname
+	}
+	if user, ok := os.LookupEnv("USER"); ok {
+		return user
+	}
+	return ""
 }
