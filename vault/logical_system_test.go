@@ -34,13 +34,8 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 
 func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
-	req := logical.TestRequest(t, logical.ReadOperation, "config/cors")
-	_, err := b.HandleRequest(req)
-	if err != errCORSNotConfigured {
-		t.Fatalf("expected: %v\nactual: %v", errCORSNotConfigured, err)
-	}
 
-	req = logical.TestRequest(t, logical.UpdateOperation, "config/cors")
+	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
 	req.Data["allowed_origins"] = "http://.+:[0-9]{4}"
 	actual, err := b.HandleRequest(req)
 
@@ -67,7 +62,8 @@ func TestSystemConfigCORS(t *testing.T) {
 
 	expected = &logical.Response{
 		Data: map[string]interface{}{
-			"enabled": false,
+			"enabled":         false,
+			"allowed_origins": "",
 		},
 	}
 
