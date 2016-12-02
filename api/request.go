@@ -59,6 +59,9 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 	req.URL.Host = r.URL.Host
 	req.Host = r.URL.Host
 
+	// The Vault client is not a browser so sending it CORS headers is unnecessary.
+	req.Header.Set("X-Vault-No-CORS", "Men have become the tools of their tools. Henry David Thoreau")
+
 	if len(r.ClientToken) != 0 {
 		req.Header.Set("X-Vault-Token", r.ClientToken)
 	}
