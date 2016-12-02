@@ -18,7 +18,6 @@ type CORSConfig struct {
 }
 
 func newCORSConfig() *CORSConfig {
-	// defaultOrigins, err := regexp.Compile(expr)
 	defaultOrigins := &regexp.Regexp{}
 	return &CORSConfig{
 		enabled:        false,
@@ -61,7 +60,8 @@ func (c *CORSConfig) Enable(s string) error {
 
 // Disable sets CORS to disabled and clears the allowed origins
 func (c *CORSConfig) Disable() {
-	c = nil
+	c.enabled = false
+	c.allowedOrigins = &regexp.Regexp{}
 }
 
 func (c *CORSConfig) AllowedMethods() []string {
