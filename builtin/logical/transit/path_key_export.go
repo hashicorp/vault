@@ -48,7 +48,7 @@ func (b *backend) pathPolicyExport(
 	name := d.Get("name").(string)
 	version := d.Get("version").(string)
 
-	if exportType != "encryption" && exportType != "signing" {
+	if exportType != "encryptor" && exportType != "signer" {
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
 
@@ -92,9 +92,9 @@ func (b *backend) pathPolicyExport(
 		}
 
 		switch exportType {
-		case "signing":
+		case "signer":
 			resp.Data["key"] = strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey))
-		case "encryption":
+		case "encryptor":
 			switch p.Type {
 			case keysutil.KeyType_AES256_GCM96:
 				resp.Data["key"] = strings.TrimSpace(base64.StdEncoding.EncodeToString(key.AESKey))
@@ -114,11 +114,11 @@ func (b *backend) pathPolicyExport(
 
 	retKeys := map[string]string{}
 	switch exportType {
-	case "signing":
+	case "signer":
 		for k, v := range p.Keys {
 			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.HMACKey)
 		}
-	case "encryption":
+	case "encryptor":
 		switch p.Type {
 		case keysutil.KeyType_AES256_GCM96:
 			for k, v := range p.Keys {
