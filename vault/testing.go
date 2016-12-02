@@ -625,10 +625,9 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 				coreConfig.AuditBackends[k] = v
 			}
 		}
-	}
-
-	if base.Logger != nil {
-		coreConfig.Logger = base.Logger
+		if base.Logger != nil {
+			coreConfig.Logger = base.Logger
+		}
 	}
 
 	c1, err := NewCore(coreConfig)
