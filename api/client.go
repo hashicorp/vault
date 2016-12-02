@@ -287,7 +287,7 @@ func (c *Client) SetAddress(addr string) error {
 	return nil
 }
 
-// Address returns the URL address of the Vault client
+// Address returns the Vault URL the client is configured to connect to
 func (c *Client) Address() string {
 	return c.addr.String()
 }
