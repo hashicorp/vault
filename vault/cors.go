@@ -84,6 +84,7 @@ func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Vary", "Origin")
 
 	// apply headers for preflight requests
 	if r.Method == http.MethodOptions {

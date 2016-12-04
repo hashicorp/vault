@@ -84,6 +84,7 @@ func TestHandler_cors(t *testing.T) {
 		"Access-Control-Allow-Origin":      addr,
 		"Access-Control-Allow-Headers":     "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
 		"Access-Control-Allow-Credentials": "true",
+		"Vary": "Origin",
 	}
 
 	for expHeader, expected := range expHeaders {
