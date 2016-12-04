@@ -134,7 +134,7 @@ func handleCORS(core *vault.Core, handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get(NoCORS) != "" {
 			// CORS explicitly disabled. This is so the Vault client does not reject requests.
-			// A browser could do this, but AJAX is still doing to want them if the request is
+			// A browser could do this, but AJAX is still going to want them if the request is
 			// cross-origin, so it would be kind of silly to do it.
 			core.Logger().Trace("http/handleCORS: CORS disabled by client request")
 			handler.ServeHTTP(w, r)
