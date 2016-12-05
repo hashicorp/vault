@@ -453,27 +453,26 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">plaintext</span>
         <span class="param-flags">required</span>
-        The plaintext to encrypt, provided as a base64-encoded string.
+        Base64 encoded plaintext value to be encrypted.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">context</span>
         <span class="param-flags">optional</span>
-        The key derivation context, provided as a base64-encoded string.
-        Must be provided if derivation is enabled.
+        Base64 encoded context for key derivation. Required if key derivation
+        is enabled.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
-        The nonce value, provided as base64 encoded. Must be provided if
-        convergent encryption is enabled for this key and the key was generated
-        with Vault 0.6.1. Not required for keys created in 0.6.2+. The value
-        must be exactly 96 bits (12 bytes) long and the user must ensure that
-        for any given context (and thus, any given encryption key) this nonce
-        value is **never reused**.
+        Base64 encoded nonce value. Must be provided if convergent encryption is
+        enabled for this key and the key was generated with Vault 0.6.1. Not required
+        for keys created in 0.6.2+. The value must be exactly 96 bits (12 bytes) long
+        and the user must ensure that for any given context (and thus, any given
+        encryption key) this nonce value is **never reused**.
       </li>
     </ul>
     <ul>
@@ -505,8 +504,8 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">type</span>
         <span class="param-flags">optional</span>
-	This parameter is required if encryption key is expected to be created.
-        When performing an upsert operation, the type of key to create.  Currently,
+        This parameter is required when encryption key is expected to be created.
+        When performing an upsert operation, the type of key to create. Currently,
         "aes256-gcm96" (symmetric) is the only type supported. Defaults to
         "aes256-gcm96".
       </li>
@@ -515,21 +514,14 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">convergent_encryption</span>
         <span class="param-flags">optional</span>
-        Whether to support convergent encryption. This is only supported when using a
-        key with key derivation enabled and will require all requests to carry both a
-        context and 96-bit (12-byte) nonce. The given nonce will be used in place of a
-        randomly generated nonce. As a result, when the same context and nonce are
-        supplied, the same ciphertext is generated. It is *very important* when using
-        this mode that you ensure that all nonces are unique for a given context.
-        Failing to do so will severely impact the ciphertext's security.
-      </li>
-    </ul>
-    <ul>
-      <li>
-        <span class="param">derived</span>
-        <span class="param-flags">optional</span>
-        Enables key derivation mode. This allows for per-transaction unique keys for
-        encryption operations.
+        This parameter will only be used when a key is expected to be created.  Whether
+        to support convergent encryption. This is only supported when using a key with
+        key derivation enabled and will require all requests to carry both a context
+        and 96-bit (12-byte) nonce. The given nonce will be used in place of a randomly
+        generated nonce. As a result, when the same context and nonce are supplied, the
+        same ciphertext is generated. It is *very important* when using this mode that
+        you ensure that all nonces are unique for a given context.  Failing to do so
+        will severely impact the ciphertext's security.
       </li>
     </ul>
   </dd>

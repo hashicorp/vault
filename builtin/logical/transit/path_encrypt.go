@@ -13,15 +13,29 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// BatchEncryptionItemRequest represents an item in the batch encryption
+// request.
 type BatchEncryptionItemRequest struct {
-	Context   string `json:"context" structs:"context" mapstructure:"context"`
+	// Context for key derivation. This is required for derived keys.
+	Context string `json:"context" structs:"context" mapstructure:"context"`
+
+	// Plaintext for encryption
 	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
-	Nonce     string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
+
+	// Nonce to be used when v1 convergent encryption is used
+	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 }
 
+// BatchEncryptionItemResponse represents an item in the batch encryption
+// response.
 type BatchEncryptionItemResponse struct {
+	// Ciphertext for the plaintext present in the corresponding batch
+	// request item.
 	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
-	Error      string `json:"error" structs:"error" mapstructure:"error"`
+
+	// Error, if set represents a failure encountered which encrypting a
+	// corresponding batch request item.
+	Error string `json:"error" structs:"error" mapstructure:"error"`
 }
 
 func (b *backend) pathEncrypt() *framework.Path {
@@ -35,17 +49,23 @@ func (b *backend) pathEncrypt() *framework.Path {
 
 			"plaintext": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Plaintext value to encrypt",
+				Description: "Base64 encoded plaintext value to be encrypted",
 			},
 
 			"context": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Base64 encoded context for key derivation. Required for derived keys.",
+				Description: "Base64 encoded context for key derivation. Required if key derivation is enabled",
 			},
 
 			"nonce": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Base64 encoded nonce for when v1 convergent encryption is used",
+				Type: framework.TypeString,
+				Description: `
+Base64 encoded nonce value. Must be provided if convergent encryption is
+enabled for this key and the key was generated with Vault 0.6.1. Not required
+for keys created in 0.6.2+. The value must be exactly 96 bits (12 bytes) long
+and the user must ensure that for any given context (and thus, any given
+encryption key) this nonce value is **never reused**.
+`,
 			},
 
 			"type": &framework.FieldSchema{
@@ -317,9 +337,10 @@ func (b *backend) pathEncryptWrite(
 	return resp, nil
 }
 
-const pathEncryptHelpSyn = `Encrypt a plaintext value using a named key`
+const pathEncryptHelpSyn = `Encrypt a plaintext value or a batch of plaintext
+blocks using a named key`
 
 const pathEncryptHelpDesc = `
-This path uses the named key from the request path to encrypt a user
-provided plaintext. The plaintext must be base64 encoded.
+This path uses the named key from the request path to encrypt a user provided
+plaintext or a batch of plaintext blocks. The plaintext must be base64 encoded.
 `
