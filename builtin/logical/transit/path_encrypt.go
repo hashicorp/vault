@@ -319,13 +319,12 @@ func (b *backend) pathEncryptWrite(
 			return nil, fmt.Errorf("failed to JSON encode batch response")
 		}
 		resp.Data = map[string]interface{}{
-			"data": batchResponseJSON,
+			"data": string(batchResponseJSON),
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
 			return nil, fmt.Errorf(batchResponseItems[0].Error)
 		}
-
 		resp.Data = map[string]interface{}{
 			"ciphertext": batchResponseItems[0].Ciphertext,
 		}
