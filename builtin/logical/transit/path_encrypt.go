@@ -71,14 +71,6 @@ you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
 
-			"derived": &framework.FieldSchema{
-				Type: framework.TypeBool,
-				Description: `
-This parameter will only be used when a key is expected to be created.  Enables
-key derivation mode. This allows for per-transaction unique keys for encryption
-operations.`,
-			},
-
 			"batch": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
@@ -131,49 +123,6 @@ func (b *backend) pathEncryptWrite(
 	name := d.Get("name").(string)
 	var err error
 
-	// Get the policy
-	var p *keysutil.Policy
-	var lock *sync.RWMutex
-	var upserted bool
-	if req.Operation == logical.CreateOperation {
-		convergent := d.Get("convergent_encryption").(bool)
-		derived := d.Get("derived").(bool)
-		if convergent && !derived {
-			return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
-		}
-
-		polReq := keysutil.PolicyRequest{
-			Storage:    req.Storage,
-			Name:       name,
-			Derived:    d.Get("derived").(bool),
-			Convergent: convergent,
-		}
-
-		keyType := d.Get("type").(string)
-		switch keyType {
-		case "aes256-gcm96":
-			polReq.KeyType = keysutil.KeyType_AES256_GCM96
-		case "ecdsa-p256":
-			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
-		default:
-			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
-		}
-
-		p, lock, upserted, err = b.lm.GetPolicyUpsert(polReq)
-
-	} else {
-		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
-	}
-	if lock != nil {
-		defer lock.RUnlock()
-	}
-	if err != nil {
-		return nil, err
-	}
-	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
-	}
-
 	batchInputRaw := d.Get("batch").(string)
 	var batchInput []byte
 	if len(batchInputRaw) != 0 {
@@ -206,21 +155,80 @@ func (b *backend) pathEncryptWrite(
 	}
 
 	var batchItems []BatchEncryptionItemRequest
+	var contextSet bool
+
+	// Before processing the batch request items, get the policy. If the
+	// policy is supposed to be upserted, then determine if 'derived' is to
+	// be set or not, based on the presence of 'context' field in all the
+	// input items.
+	for _, batchItem := range batchInputArray {
+		var item BatchEncryptionItemRequest
+		if err := mapstructure.Decode(batchItem, &item); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to decode the request: %v", err)), logical.ErrInvalidRequest
+		}
+		batchItems = append(batchItems, item)
+
+		if item.Context != "" && !contextSet {
+			contextSet = true
+		}
+
+		if item.Context == "" && contextSet {
+			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
+		}
+	}
+
+	if len(batchItems) == 0 {
+		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
+	}
+
+	// Get the policy
+	var p *keysutil.Policy
+	var lock *sync.RWMutex
+	var upserted bool
+	if req.Operation == logical.CreateOperation {
+		convergent := d.Get("convergent_encryption").(bool)
+		if convergent && !contextSet {
+			return logical.ErrorResponse("convergent encryption requires derivation to be enabled, so context is required"), nil
+		}
+
+		polReq := keysutil.PolicyRequest{
+			Storage:    req.Storage,
+			Name:       name,
+			Derived:    contextSet,
+			Convergent: convergent,
+		}
+
+		keyType := d.Get("type").(string)
+		switch keyType {
+		case "aes256-gcm96":
+			polReq.KeyType = keysutil.KeyType_AES256_GCM96
+		case "ecdsa-p256":
+			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
+		}
+
+		p, lock, upserted, err = b.lm.GetPolicyUpsert(polReq)
+
+	} else {
+		p, lock, err = b.lm.GetPolicyShared(req.Storage, name)
+	}
+	if lock != nil {
+		defer lock.RUnlock()
+	}
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+	}
+
 	var batchResponseItems []BatchEncryptionItemResponse
 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
-	for _, batchItem := range batchInputArray {
-		var item BatchEncryptionItemRequest
-		if err := mapstructure.Decode(batchItem, &item); err != nil {
-			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-				Error: fmt.Sprintf("failed to decode the request: %v", err),
-			})
-			continue
-		}
-		batchItems = append(batchItems, item)
-
+	for _, item := range batchItems {
 		if item.Plaintext == "" {
 			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
 				Error: "missing plaintext to encrypt",
