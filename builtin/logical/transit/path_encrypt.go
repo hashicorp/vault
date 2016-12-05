@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -253,10 +254,14 @@ func (b *backend) pathEncryptWrite(
 
 		ciphertext, err := p.Encrypt(itemContext, itemNonce, item.Plaintext)
 		if err != nil {
-			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-				Error: err.Error(),
-			})
-			continue
+			switch err.(type) {
+			case errutil.UserError:
+				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			case errutil.InternalError:
+				return nil, err
+			default:
+				return nil, err
+			}
 		}
 
 		if ciphertext == "" {
