@@ -249,13 +249,6 @@ func (b *backend) pathEncryptWrite(
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
 	for _, item := range batchItems {
-		if item.Plaintext == "" {
-			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
-				Error: "missing plaintext to encrypt",
-			})
-			continue
-		}
-
 		// Decode the context
 		var itemContext []byte
 		if len(item.Context) != 0 {
