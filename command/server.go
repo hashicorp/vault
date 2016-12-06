@@ -209,7 +209,7 @@ func (c *ServerCommand) Run(args []string) int {
 		if seal != nil {
 			err = seal.Finalize()
 			if err != nil {
-				c.Ui.Output(fmt.Sprintf("Error finalizing seals: %v", err))
+				c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
 		}
 	}()
