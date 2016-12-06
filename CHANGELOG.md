@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.6.3 (December 6, 2016)
 
 DEPRECATIONS/CHANGES:
 
