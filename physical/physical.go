@@ -128,10 +128,10 @@ var builtinBackends = map[string]Factory{
 	"mysql":      newMySQLBackend,
 	"postgresql": newPostgreSQLBackend,
 	"swift":      newSwiftBackend,
+	"gcs":     newGCSBackend,
 }
 
-// PermitPool is a wrapper around a semaphore library to keep things
-// agnostic
+// PermitPool is used to limit maximum outstanding requests
 type PermitPool struct {
 	sem chan int
 }

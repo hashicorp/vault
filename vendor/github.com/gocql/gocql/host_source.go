@@ -2,7 +2,6 @@ package gocql
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -343,7 +342,7 @@ func (r *ringDescriber) GetHosts() (hosts []*HostInfo, partitioner string, err e
 		host := &HostInfo{port: r.session.cfg.Port}
 		err := rows.Scan(&host.peer, &host.dataCenter, &host.rack, &host.hostId, &host.tokens, &host.version)
 		if err != nil {
-			log.Println(err)
+			Logger.Println(err)
 			continue
 		}
 

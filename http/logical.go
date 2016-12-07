@@ -26,11 +26,6 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusNotFound, nil
 	}
 
-	// Verify the content length does not exceed the maximum size
-	if r.ContentLength >= MaxRequestSize {
-		return nil, http.StatusRequestEntityTooLarge, nil
-	}
-
 	// Determine the operation
 	var op logical.Operation
 	switch r.Method {
@@ -61,7 +56,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	// Parse the request if we can
 	var data map[string]interface{}
 	if op == logical.UpdateOperation {
-		err := parseRequest(r, &data)
+		err := parseRequest(r, w, &data)
 		if err == io.EOF {
 			data = nil
 			err = nil

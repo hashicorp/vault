@@ -1,4 +1,4 @@
-// +build android nacl netbsd plan9 windows
+// +build android darwin nacl netbsd plan9 windows
 
 package mlock
 

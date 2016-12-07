@@ -235,50 +235,71 @@ type bytesEncWriter struct {
 }
 
 func (z *bytesEncWriter) writeb(s []byte) {
-	if len(s) > 0 {
-		c := z.grow(len(s))
-		copy(z.b[c:], s)
+	if len(s) == 0 {
+		return
 	}
+	oc, a := z.growNoAlloc(len(s))
+	if a {
+		z.growAlloc(len(s), oc)
+	}
+	copy(z.b[oc:], s)
 }
 
 func (z *bytesEncWriter) writestr(s string) {
-	if len(s) > 0 {
-		c := z.grow(len(s))
-		copy(z.b[c:], s)
+	if len(s) == 0 {
+		return
 	}
+	oc, a := z.growNoAlloc(len(s))
+	if a {
+		z.growAlloc(len(s), oc)
+	}
+	copy(z.b[oc:], s)
 }
 
 func (z *bytesEncWriter) writen1(b1 byte) {
-	c := z.grow(1)
-	z.b[c] = b1
+	oc, a := z.growNoAlloc(1)
+	if a {
+		z.growAlloc(1, oc)
+	}
+	z.b[oc] = b1
 }
 
 func (z *bytesEncWriter) writen2(b1 byte, b2 byte) {
-	c := z.grow(2)
-	z.b[c+1] = b2
-	z.b[c] = b1
+	oc, a := z.growNoAlloc(2)
+	if a {
+		z.growAlloc(2, oc)
+	}
+	z.b[oc+1] = b2
+	z.b[oc] = b1
 }
 
 func (z *bytesEncWriter) atEndOfEncode() {
 	*(z.out) = z.b[:z.c]
 }
 
-func (z *bytesEncWriter) grow(n int) (oldcursor int) {
+// have a growNoalloc(n int), which can be inlined.
+// if allocation is needed, then call growAlloc(n int)
+
+func (z *bytesEncWriter) growNoAlloc(n int) (oldcursor int, allocNeeded bool) {
 	oldcursor = z.c
-	z.c = oldcursor + n
+	z.c = z.c + n
 	if z.c > len(z.b) {
 		if z.c > cap(z.b) {
-			// appendslice logic (if cap < 1024, *2, else *1.25): more expensive. many copy calls.
-			// bytes.Buffer model (2*cap + n): much better
-			// bs := make([]byte, 2*cap(z.b)+n)
-			bs := make([]byte, growCap(cap(z.b), 1, n))
-			copy(bs, z.b[:oldcursor])
-			z.b = bs
+			allocNeeded = true
 		} else {
 			z.b = z.b[:cap(z.b)]
 		}
 	}
 	return
+}
+
+func (z *bytesEncWriter) growAlloc(n int, oldcursor int) {
+	// appendslice logic (if cap < 1024, *2, else *1.25): more expensive. many copy calls.
+	// bytes.Buffer model (2*cap + n): much better
+	// bs := make([]byte, 2*cap(z.b)+n)
+	bs := make([]byte, growCap(cap(z.b), 1, n))
+	copy(bs, z.b[:oldcursor])
+	z.b = bs
 }
 
 // ---------------------------------------------
@@ -1058,20 +1079,6 @@ func (e *Encoder) MustEncode(v interface{}) {
 	e.encode(v)
 	e.w.atEndOfEncode()
 }
-
-// comment out these (Must)Write methods. They were only put there to support cbor.
-// However, users already have access to the streams, and can write directly.
-//
-// // Write allows users write to the Encoder stream directly.
-// func (e *Encoder) Write(bs []byte) (err error) {
-// 	defer panicToErr(&err)
-// 	e.w.writeb(bs)
-// 	return
-// }
-// // MustWrite is like write, but panics if unable to Write.
-// func (e *Encoder) MustWrite(bs []byte) {
-// 	e.w.writeb(bs)
-// }
 
 func (e *Encoder) encode(iv interface{}) {
 	// if ics, ok := iv.(Selfer); ok {

@@ -501,27 +501,52 @@ func (s *RepositoriesService) ListTags(owner string, repo string, opt *ListOptio
 
 // Branch represents a repository branch
 type Branch struct {
-	Name       *string     `json:"name,omitempty"`
-	Commit     *Commit     `json:"commit,omitempty"`
-	Protection *Protection `json:"protection,omitempty"`
+	Name      *string `json:"name,omitempty"`
+	Commit    *Commit `json:"commit,omitempty"`
+	Protected *bool   `json:"protected,omitempty"`
 }
 
-// Protection represents a repository branch's protection
+// Protection represents a repository branch's protection.
 type Protection struct {
-	Enabled              *bool                 `json:"enabled,omitempty"`
-	RequiredStatusChecks *RequiredStatusChecks `json:"required_status_checks,omitempty"`
+	RequiredStatusChecks *RequiredStatusChecks `json:"required_status_checks"`
+	Restrictions         *BranchRestrictions   `json:"restrictions"`
 }
 
-// RequiredStatusChecks represents the protection status of a individual branch
+// ProtectionRequest represents a request to create/edit a branch's protection.
+type ProtectionRequest struct {
+	RequiredStatusChecks *RequiredStatusChecks      `json:"required_status_checks"`
+	Restrictions         *BranchRestrictionsRequest `json:"restrictions"`
+}
+
+// RequiredStatusChecks represents the protection status of a individual branch.
 type RequiredStatusChecks struct {
-	// Who required status checks apply to.
-	// Possible values are:
-	//     off
-	//     non_admins
-	//     everyone
-	EnforcementLevel *string `json:"enforcement_level,omitempty"`
-	// The list of status checks which are required
+	// Enforce required status checks for repository administrators.
+	IncludeAdmins *bool `json:"include_admins,omitempty"`
+	// Require branches to be up to date before merging.
+	Strict *bool `json:"strict,omitempty"`
+	// The list of status checks to require in order to merge into this
+	// branch.
 	Contexts *[]string `json:"contexts,omitempty"`
+}
+
+// BranchRestrictions represents the restriction that only certain users or
+// teams may push to a branch.
+type BranchRestrictions struct {
+	// The list of user logins with push access.
+	Users []*User `json:"users,omitempty"`
+	// The list of team slugs with push access.
+	Teams []*Team `json:"teams,omitempty"`
+}
+
+// BranchRestrictionsRequest represents the request to create/edit the
+// restriction that only certain users or teams may push to a branch. It is
+// separate from BranchRestrictions above because the request structure is
+// different from the response structure.
+type BranchRestrictionsRequest struct {
+	// The list of user logins with push access.
+	Users *[]string `json:"users,omitempty"`
+	// The list of team slugs with push access.
+	Teams *[]string `json:"teams,omitempty"`
 }
 
 // ListBranches lists branches for the specified repository.
@@ -539,6 +564,7 @@ func (s *RepositoriesService) ListBranches(owner string, repo string, opt *ListO
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	branches := new([]*Branch)
@@ -560,6 +586,7 @@ func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *R
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	b := new(Branch)
@@ -571,25 +598,64 @@ func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *R
 	return b, resp, err
 }
 
-// EditBranch edits the branch (currently only Branch Protection)
+// GetBranchProtection gets the protection of a given branch.
 //
-// GitHub API docs: https://developer.github.com/v3/repos/#enabling-and-disabling-branch-protection
-func (s *RepositoriesService) EditBranch(owner, repo, branchName string, branch *Branch) (*Branch, *Response, error) {
-	u := fmt.Sprintf("repos/%v/%v/branches/%v", owner, repo, branchName)
-	req, err := s.client.NewRequest("PATCH", u, branch)
+// GitHub API docs: https://developer.github.com/v3/repos/branches/#get-branch-protection
+func (s *RepositoriesService) GetBranchProtection(owner, repo, branch string) (*Protection, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection", owner, repo, branch)
+	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
-	b := new(Branch)
-	resp, err := s.client.Do(req, b)
+	p := new(Protection)
+	resp, err := s.client.Do(req, p)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return b, resp, err
+	return p, resp, err
+}
+
+// UpdateBranchProtection updates the protection of a given branch.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/branches/#update-branch-protection
+func (s *RepositoriesService) UpdateBranchProtection(owner, repo, branch string, preq *ProtectionRequest) (*Protection, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection", owner, repo, branch)
+	req, err := s.client.NewRequest("PUT", u, preq)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches
+	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
+
+	p := new(Protection)
+	resp, err := s.client.Do(req, p)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return p, resp, err
+}
+
+// RemoveBranchProtection removes the protection of a given branch.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/branches/#remove-branch-protection
+func (s *RepositoriesService) RemoveBranchProtection(owner, repo, branch string) (*Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection", owner, repo, branch)
+	req, err := s.client.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches
+	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
+
+	return s.client.Do(req, nil)
 }
 
 // License gets the contents of a repository's license if one is detected.

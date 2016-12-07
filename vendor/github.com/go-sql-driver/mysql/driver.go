@@ -101,7 +101,7 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	}
 
 	// Handle response to auth packet, switch methods if possible
-	if err = handleAuthResult(mc); err != nil {
+	if err = handleAuthResult(mc, cipher); err != nil {
 		// Authentication failed and MySQL has already closed the connection
 		// (https://dev.mysql.com/doc/internals/en/authentication-fails.html).
 		// Do not send COM_QUIT, just cleanup and return the error.
@@ -134,7 +134,7 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	return mc, nil
 }
 
-func handleAuthResult(mc *mysqlConn) error {
+func handleAuthResult(mc *mysqlConn, oldCipher []byte) error {
 	// Read Result Packet
 	cipher, err := mc.readResultOK()
 	if err == nil {
@@ -150,6 +150,13 @@ func handleAuthResult(mc *mysqlConn) error {
 		// Retry with old authentication method. Note: there are edge cases
 		// where this should work but doesn't; this is currently "wontfix":
 		// https://github.com/go-sql-driver/mysql/issues/184
+
+		// If CLIENT_PLUGIN_AUTH capability is not supported, no new cipher is
+		// sent and we have to keep using the cipher sent in the init packet.
+		if cipher == nil {
+			cipher = oldCipher
+		}
+
 		if err = mc.writeOldAuthPacket(cipher); err != nil {
 			return err
 		}

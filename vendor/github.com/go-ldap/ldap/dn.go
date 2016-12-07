@@ -83,9 +83,19 @@ func ParseDN(str string) (*DN, error) {
 	attribute := new(AttributeTypeAndValue)
 	escaping := false
 
+	unescapedTrailingSpaces := 0
+	stringFromBuffer := func() string {
+		s := buffer.String()
+		s = s[0 : len(s)-unescapedTrailingSpaces]
+		buffer.Reset()
+		unescapedTrailingSpaces = 0
+		return s
+	}
+
 	for i := 0; i < len(str); i++ {
 		char := str[i]
 		if escaping {
+			unescapedTrailingSpaces = 0
 			escaping = false
 			switch char {
 			case ' ', '"', '#', '+', ',', ';', '<', '=', '>', '\\':
@@ -107,10 +117,10 @@ func ParseDN(str string) (*DN, error) {
 			buffer.WriteByte(dst[0])
 			i++
 		} else if char == '\\' {
+			unescapedTrailingSpaces = 0
 			escaping = true
 		} else if char == '=' {
-			attribute.Type = buffer.String()
-			buffer.Reset()
+			attribute.Type = stringFromBuffer()
 			// Special case: If the first character in the value is # the
 			// following data is BER encoded so we can just fast forward
 			// and decode.
@@ -133,7 +143,7 @@ func ParseDN(str string) (*DN, error) {
 			}
 		} else if char == ',' || char == '+' {
 			// We're done with this RDN or value, push it
-			attribute.Value = buffer.String()
+			attribute.Value = stringFromBuffer()
 			rdn.Attributes = append(rdn.Attributes, attribute)
 			attribute = new(AttributeTypeAndValue)
 			if char == ',' {
@@ -141,8 +151,17 @@ func ParseDN(str string) (*DN, error) {
 				rdn = new(RelativeDN)
 				rdn.Attributes = make([]*AttributeTypeAndValue, 0)
 			}
-			buffer.Reset()
+		} else if char == ' ' && buffer.Len() == 0 {
+			// ignore unescaped leading spaces
+			continue
 		} else {
+			if char == ' ' {
+				// Track unescaped spaces in case they are trailing and we need to remove them
+				unescapedTrailingSpaces++
+			} else {
+				// Reset if we see a non-space char
+				unescapedTrailingSpaces = 0
+			}
 			buffer.WriteByte(char)
 		}
 	}
@@ -150,7 +169,7 @@ func ParseDN(str string) (*DN, error) {
 		if len(attribute.Type) == 0 {
 			return nil, errors.New("DN ended with incomplete type, value pair")
 		}
-		attribute.Value = buffer.String()
+		attribute.Value = stringFromBuffer()
 		rdn.Attributes = append(rdn.Attributes, attribute)
 		dn.RDNs = append(dn.RDNs, rdn)
 	}
