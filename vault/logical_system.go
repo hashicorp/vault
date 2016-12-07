@@ -651,7 +651,7 @@ func (b *SystemBackend) corsStatusResponse() (*logical.Response, error) {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"enabled":         corsConf.Enabled(),
-			"allowed_origins": corsConf.AllowedOrigins().String(),
+			"allowed_origins": corsConf.AllowedOrigins(),
 		},
 	}, nil
 }
@@ -664,7 +664,10 @@ func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.Fiel
 	}
 	s := d.Get("allowed_origins")
 
-	b.Core.corsConfig.Enable(s.(string))
+	err := b.Core.corsConfig.Enable(s.(string))
+	if err != nil {
+		return nil, err
+	}
 
 	return b.corsStatusResponse()
 }

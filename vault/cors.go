@@ -11,14 +11,14 @@ var errCORSNotConfigured = errors.New("CORS is not configured")
 
 type CORSConfig struct {
 	enabled          bool
-	allowedOrigins   *regexp.Regexp
+	allowedOrigins   *[]string
 	allowedHeaders   *map[string]string
 	allowedMethods   *[]string
 	allowCredentials bool
 }
 
 func newCORSConfig() *CORSConfig {
-	defaultOrigins := &regexp.Regexp{}
+	defaultOrigins := &[]string{}
 	return &CORSConfig{
 		enabled:        false,
 		allowedOrigins: defaultOrigins,
@@ -43,16 +43,13 @@ func (c *CORSConfig) Enabled() bool {
 }
 
 func (c *CORSConfig) Enable(s string) error {
-	if s == "" {
-		return errors.New("regexp cannot be an empty string")
+	if matched, _ := regexp.MatchString(`\*`, s); matched && len(s) > 1 {
+		return errors.New("wildcard must be only value")
 	}
 
-	allowedOrigins, err := regexp.Compile(s)
-	if err != nil {
-		return err
-	}
+	allowedOrigins := strings.Split(s, " ")
 
-	c.allowedOrigins = allowedOrigins
+	c.allowedOrigins = &allowedOrigins
 	c.enabled = true
 
 	return nil
@@ -61,7 +58,7 @@ func (c *CORSConfig) Enable(s string) error {
 // Disable sets CORS to disabled and clears the allowed origins
 func (c *CORSConfig) Disable() {
 	c.enabled = false
-	c.allowedOrigins = &regexp.Regexp{}
+	c.allowedOrigins = &[]string{}
 }
 
 func (c *CORSConfig) AllowedMethods() []string {
@@ -117,8 +114,8 @@ func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
 	return http.StatusOK
 }
 
-func (c *CORSConfig) AllowedOrigins() *regexp.Regexp {
-	return c.allowedOrigins
+func (c *CORSConfig) AllowedOrigins() string {
+	return strings.Join(*c.allowedOrigins, " ")
 }
 
 func (c *CORSConfig) validOrigin(origin string) bool {
@@ -126,8 +123,14 @@ func (c *CORSConfig) validOrigin(origin string) bool {
 		return false
 	}
 
-	if c.allowedOrigins.MatchString(origin) {
+	if len(*c.allowedOrigins) == 1 && (*c.allowedOrigins)[0] == "*" {
 		return true
+	}
+
+	for _, allowedOrigin := range *c.allowedOrigins {
+		if origin == allowedOrigin {
+			return true
+		}
 	}
 
 	return false

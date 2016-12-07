@@ -32,13 +32,11 @@ policy or `sudo` capability on the path.
 
   <dt>Returns</dt>
   <dd>
-    The "allowed_origins" parameter is a regular expression describing origins
-    that are permitted to make cross-origin requests.
 
     ```javascript
     {
       "enabled": true,
-      "allowed_origins": "http://.+:[0-9]{4}"
+      "allowed_origins": "http://www.example.com"
     }
     ```
 
@@ -58,8 +56,9 @@ policy or `sudo` capability on the path.
 <dl>
   <dt>Description</dt>
   <dd>
-    Configures the Vault server to return CORS headers for origins which match
-    the `allowed_origins` regular expression.
+    Configures the Vault server to return CORS headers for origins that are
+    permitted to make cross-origin requests based on the `allowed_origins`
+    parameter.
   </dd>
 
   <dt>Method</dt>
@@ -74,21 +73,19 @@ policy or `sudo` capability on the path.
       <li>
         <span class="param">allowed_origins</span>
         <span class="param-flags">required</span>
-        A valid regular expression describing origins that are permitted to
-        make cross-origin requests.
+        Valid values are either a wildcard (*) or a space-separated list of
+        exact origins that are permitted to make cross-origin requests.
       </li>
     </ul>
   </dd>
 
   <dt>Returns</dt>
   <dd>
-    The "allowed_origins" parameter is a valid regular expression describing
-    origins that are permitted to make cross-origin requests.
 
     ```javascript
     {
       "enabled": true,
-      "allowed_origins": "http[s]?://.+:[0-9]{4}"
+      "allowed_origins": "*"
     }
     ```
 

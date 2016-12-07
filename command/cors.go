@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -29,15 +28,10 @@ func (c *CorsCommand) Run(args []string) int {
 	corsRequest := &api.CORSRequest{}
 
 	if !status {
-		allowedOrigins, err := regexp.Compile(allowedStr)
-		if err != nil {
-			return 1
-		}
-
 		if disable {
 			corsRequest.Enabled = false
 		} else {
-			corsRequest.AllowedOrigins = allowedOrigins.String()
+			corsRequest.AllowedOrigins = allowedStr
 			corsRequest.Enabled = true
 		}
 	}
@@ -97,8 +91,8 @@ Usage: vault cors [options]
 
   Configures the HTTP server to return CORS headers.
 
-  This command connects to a Vault server and can enable CORS, disable CORS, or change
-  the regular expression for origins that are allowed to make cross-origin requests.
+  This command connects to a Vault server and can enable CORS, disable CORS, or
+  change the list of origins that are allowed to make cross-origin requests.
 
 General Options:
 ` + meta.GeneralOptionsUsage() + `
@@ -106,13 +100,14 @@ Cors Options:
 
   -status                   Returns the current CORS configuration.
 
-  -allowed-origins=""       A regular expression that describes the origins
-                            that should be allowed to make cross-origin
-                            requests and be served CORS headers. A return code
-                            of 0 means the regular expressions is valid, and
-                            Vault will now serve CORS headers to clients from
-                            matching origins; a return code of 1 means an error
-                            was encountered.
+  -allowed-origins=""       Setting allowed-origins enables the CORS functionality
+                            Values for allowed-origins can either be "*" or s
+                            space-separated list of origins that should be
+                            allowed to make cross-origin requests and be served
+                            CORS headers. A return code of 0 means the regular
+                            expressions is valid, and Vault will now serve CORS
+                            headers to clients from matching origins; a return
+                            code of 1 means an error was encountered.
 
   -disable                  Stop serving CORS headers for all origins.
 `
