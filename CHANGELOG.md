@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.6.3 (December 6, 2016)
 
 DEPRECATIONS/CHANGES:
 
@@ -18,6 +18,12 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * **Web UI (Enterprise)**: Vault Enterprise now contains a built-in web UI
+   that offers access to a number of features, including init/unsealing/sealing,
+   authentication via userpass or LDAP, and K/V reading/writing. The capability
+   set of the UI will be expanding rapidly in further releases. To enable it,
+   set `ui = true` in the top level of Vault's configuration file and point a
+   web browser at your Vault address.
  * **Google Cloud Storage Physical Backend**: You can now use GCS for storing
    Vault data [GH-2099]
 

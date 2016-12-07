@@ -78,6 +78,10 @@ sending a SIGHUP to the server process. These are denoted below.
   lease duration for tokens and secrets. This is a string value using a suffix,
   e.g. "768h". Default value is 32 days.
 
+* `ui` (optional, Vault Enterprise only) - If set `true`, enables the built-in
+  web-based UI. Once enabled, the UI will be available to browsers at the
+  standard Vault address.
+
 In production it is a risk to run Vault on systems where `mlock` is
 unavailable or the setting has been disabled via the `disable_mlock`.
 Disabling `mlock` is not recommended unless the systems running Vault only

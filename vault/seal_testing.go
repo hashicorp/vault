@@ -15,6 +15,10 @@ type TestSeal struct {
 	recoveryConfig *SealConfig
 }
 
+func newTestSeal(t *testing.T) Seal {
+	return &TestSeal{}
+}
+
 func (d *TestSeal) checkCore() error {
 	if d.defseal.core == nil {
 		return fmt.Errorf("seal does not have a core set")
