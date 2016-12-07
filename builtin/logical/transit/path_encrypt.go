@@ -171,11 +171,11 @@ func (b *backend) pathEncryptWrite(
 
 	var batchInputArray []interface{}
 	if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid input: %v", err)
 	}
 
 	var batchItems []BatchEncryptionItemRequest
-	var contextSet bool
+	contextSet := true
 
 	// Before processing the batch request items, get the policy. If the
 	// policy is supposed to be upserted, then determine if 'derived' is to
@@ -184,15 +184,15 @@ func (b *backend) pathEncryptWrite(
 	for _, batchItem := range batchInputArray {
 		var item BatchEncryptionItemRequest
 		if err := mapstructure.Decode(batchItem, &item); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to decode the request: %v", err)), logical.ErrInvalidRequest
+			return logical.ErrorResponse(fmt.Sprintf("failed to parse the input: %v", err)), logical.ErrInvalidRequest
 		}
 		batchItems = append(batchItems, item)
 
-		if item.Context != "" && !contextSet {
-			contextSet = true
+		if item.Context == "" && contextSet {
+			contextSet = false
 		}
 
-		if item.Context == "" && contextSet {
+		if item.Context != "" && !contextSet {
 			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 		}
 	}
