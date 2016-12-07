@@ -1254,11 +1254,15 @@ func (ts *TokenStore) handleCreateCommon(
 	// the client has root or sudo privileges
 	case !isSudo:
 		// Sanitize passed-in and parent policies before comparison
-		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
-		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, true)
+		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, false)
+		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, false)
 
 		if !strutil.StrListSubset(sanitizedParentPolicies, sanitizedInputPolicies) {
 			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
+		}
+
+		if !strutil.StrListContains(sanitizedParentPolicies, "default") {
+			data.NoDefaultPolicy = true
 		}
 	}
 
