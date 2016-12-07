@@ -249,6 +249,22 @@ func (b *backend) pathEncryptWrite(
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
 	for _, item := range batchItems {
+		// Decode the plaintext
+		if len(item.Plaintext) == 0 {
+			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+				Error: "missing plaintext to encrypt",
+			})
+			continue
+		}
+
+		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
+		if err != nil {
+			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+				Error: "failed to base64-decode plaintext",
+			})
+			continue
+		}
+
 		// Decode the context
 		var itemContext []byte
 		if len(item.Context) != 0 {

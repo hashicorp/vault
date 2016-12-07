@@ -437,8 +437,8 @@ func TestTransit_BatchEncryptionCase8(t *testing.T) {
 		Data:      batchData,
 	}
 	resp, err = b.HandleRequest(batchReq)
-	if err == nil {
-		t.Fatal("expected an error")
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
 	plaintext := "simple plaintext"
