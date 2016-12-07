@@ -42,8 +42,8 @@ path "foo/bar" {
 	capabilities = ["create", "sudo"]
 	permissions = {
 	  allowedparameters = {
-	    "zip" = {}
-	    "zap" = {}
+	    "zip" = []
+	    "zap" = []
 	  }
 	}
 }
@@ -53,8 +53,8 @@ path "baz/bar" {
 	capabilities = ["create", "sudo"]
 	permissions = {
 	  deniedparameters = {
-	    "zip" = {}
-	    "zap" = {}
+	    "zip" = []
+	    "zap" = []
 	  }
 	}
 }
@@ -64,12 +64,12 @@ path "biz/bar" {
 	capabilities = ["create", "sudo"]
 	permissions = {
 	  allowedparameters = {
-	    "zim" = {}
-	    "zam" = {}
+	    "zim" = []
+	    "zam" = []
 	  }
 	  deniedparameters = {
-	    "zip" = {}
-	    "zap" = {}
+	    "zip" = []
+	    "zap" = []
 	  }
 	}
 }
@@ -120,19 +120,19 @@ func TestPolicy_Parse(t *testing.T) {
 				"create",
 				"sudo",
 			}, &Permissions{(CreateCapabilityInt | SudoCapabilityInt),
-				map[string]struct{}{"zip": {}, "zap": {}}, nil}, false},
+				map[string][]interface{}{"zip": {}, "zap": {}}, nil}, false},
 		&PathCapabilities{"baz/bar", "",
 			[]string{
 				"create",
 				"sudo",
 			}, &Permissions{(CreateCapabilityInt | SudoCapabilityInt),
-				nil, map[string]struct{}{"zip": {}, "zap": {}}}, false},
+				nil, map[string][]interface{}{"zip": {}, "zap": {}}}, false},
 		&PathCapabilities{"biz/bar", "",
 			[]string{
 				"create",
 				"sudo",
 			}, &Permissions{(CreateCapabilityInt | SudoCapabilityInt),
-				map[string]struct{}{"zim": {}, "zam": {}}, map[string]struct{}{"zip": {}, "zap": {}}}, false},
+				map[string][]interface{}{"zim": {}, "zam": {}}, map[string][]interface{}{"zip": {}, "zap": {}}}, false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
 		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)

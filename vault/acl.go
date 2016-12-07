@@ -52,72 +52,63 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			}
 
 			// these are the ones already in the tree
-			permissions := raw.(*Permissions)
-			existing := permissions.CapabilitiesBitmap
+			existingPerms := raw.(*Permissions)
 
 			switch {
-			case existing&DenyCapabilityInt > 0:
+			case existingPerms.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If we are explicitly denied in the existing capability set,
 				// don't save anything else
+				continue
 
 			case pc.Permissions.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If this new policy explicitly denies, only save the deny value
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
-				tree.Insert(pc.Prefix, pc.Permissions)
+				pc.Permissions.AllowedParameters = nil
+				pc.Permissions.DeniedParameters = nil
+				goto INSERT
 
 			default:
 				// Insert the capabilities in this new policy into the existing
 				// value
-				pc.Permissions.CapabilitiesBitmap = existing | pc.Permissions.CapabilitiesBitmap
-				tree.Insert(pc.Prefix, pc.Permissions)
+				pc.Permissions.CapabilitiesBitmap = existingPerms.CapabilitiesBitmap | pc.Permissions.CapabilitiesBitmap
 			}
 
-			// look for a * in allowed parameters for the node already in the tree
-			if _, ok := permissions.AllowedParameters["*"]; ok {
-				pc.Permissions.AllowedParameters = make(map[string]struct{})
-				pc.Permissions.AllowedParameters["*"] = struct{}{}
-				goto CHECK_DENIED
-			}
-
-			// look for a * in allowed parameters for the path capability we are merging
-			if _, ok := pc.Permissions.AllowedParameters["*"]; ok {
-				pc.Permissions.AllowedParameters = make(map[string]struct{})
-				pc.Permissions.AllowedParameters["*"] = struct{}{}
-				goto CHECK_DENIED
-			}
-
-			if pc.Permissions.AllowedParameters == nil {
-				pc.Permissions.AllowedParameters = make(map[string]struct{})
-			}
-			// Merge allowed parameters
-			for key, value := range permissions.AllowedParameters {
-				// Add new parameter
-				pc.Permissions.AllowedParameters[key] = value
+			if len(existingPerms.AllowedParameters) > 0 {
+				if pc.Permissions.AllowedParameters == nil {
+					pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(existingPerms.AllowedParameters))
+				}
+				if _, ok := pc.Permissions.AllowedParameters["*"]; ok {
+					goto CHECK_DENIED
+				}
+				for key, value := range existingPerms.AllowedParameters {
+					if key == "*" {
+						pc.Permissions.AllowedParameters = map[string][]interface{}{
+							"*": []interface{}{},
+						}
+						goto CHECK_DENIED
+					}
+					pc.Permissions.AllowedParameters[key] = value
+				}
 			}
 
 		CHECK_DENIED:
 
-			// look for a * in denied parameters for the node already in the tree
-			if _, ok := permissions.DeniedParameters["*"]; ok {
-				pc.Permissions.DeniedParameters = make(map[string]struct{})
-				pc.Permissions.DeniedParameters["*"] = struct{}{}
-				goto INSERT
-			}
-
-			// look for a * in denied parameters for the path capability we are merging
-			if _, ok := pc.Permissions.DeniedParameters["*"]; ok {
-				pc.Permissions.DeniedParameters = make(map[string]struct{})
-				pc.Permissions.DeniedParameters["*"] = struct{}{}
-				goto INSERT
-			}
-
-			if pc.Permissions.DeniedParameters == nil {
-				pc.Permissions.DeniedParameters = make(map[string]struct{})
-			}
-			// Merge denied parameters
-			for key, value := range permissions.DeniedParameters {
-				// Add new parameter
-				pc.Permissions.DeniedParameters[key] = value
+			if len(existingPerms.DeniedParameters) > 0 {
+				if pc.Permissions.DeniedParameters == nil {
+					pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(existingPerms.DeniedParameters))
+				}
+				if _, ok := pc.Permissions.DeniedParameters["*"]; ok {
+					goto INSERT
+				}
+				for key, value := range existingPerms.DeniedParameters {
+					if key == "*" {
+						pc.Permissions.DeniedParameters = map[string][]interface{}{
+							"*": []interface{}{},
+						}
+						break
+					}
+					pc.Permissions.DeniedParameters[key] = value
+				}
 			}
 
 		INSERT:
@@ -254,18 +245,20 @@ CHECK:
 		if _, ok := permissions.DeniedParameters["*"]; ok {
 			return false, sudo
 		}
-
+		allowedAll := false
+		if _, ok := permissions.AllowedParameters["*"]; ok {
+			allowedAll = true
+		}
+		if len(permissions.DeniedParameters) == 0 && allowedAll {
+			return true, sudo
+		}
 		for parameter, _ := range req.Data {
 			// Check if parameter has explictly denied
 			if _, ok := permissions.DeniedParameters[parameter]; ok {
 				return false, sudo
 			}
-			// Check if all parameters have been allowed.
-			if _, ok := permissions.AllowedParameters["*"]; ok {
-				return true, sudo
-			}
 			// Specfic parameters have been allowed
-			if len(permissions.AllowedParameters) > 0 {
+			if len(permissions.AllowedParameters) > 0 && !allowedAll {
 				// Requested parameter is not in allowed list
 				if _, ok := permissions.AllowedParameters[parameter]; !ok {
 					return false, sudo
