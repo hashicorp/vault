@@ -36,6 +36,43 @@ path "/foo/bar" {
 path "foo/bar" {
 	capabilities = ["create", "sudo"]
 }
+
+# Check that only allowedparameters are being added to foobar
+path "foo/bar" {
+	capabilities = ["create", "sudo"]
+	permissions = {
+	  allowedparameters = {
+	    "zip" = {}
+	    "zap" = {}
+	  }
+	}
+}
+
+# Check that only deniedparameters are being added to bazbar
+path "baz/bar" {
+	capabilities = ["create", "sudo"]
+	permissions = {
+	  deniedparameters = {
+	    "zip" = {}
+	    "zap" = {}
+	  }
+	}
+}
+
+# Check that both allowed and denied parameters are being added to bizbar
+path "biz/bar" {
+	capabilities = ["create", "sudo"]
+	permissions = {
+	  allowedparameters = {
+	    "zim" = {}
+	    "zam" = {}
+	  }
+	  deniedparameters = {
+	    "zip" = {}
+	    "zap" = {}
+	  }
+	}
+}
 `)
 
 func TestPolicy_Parse(t *testing.T) {
@@ -52,7 +89,7 @@ func TestPolicy_Parse(t *testing.T) {
 		&PathCapabilities{"", "deny",
 			[]string{
 				"deny",
-			}, DenyCapabilityInt, true},
+			}, &Permissions{CapabilitiesBitmap: DenyCapabilityInt}, true},
 		&PathCapabilities{"stage/", "sudo",
 			[]string{
 				"create",
@@ -61,23 +98,41 @@ func TestPolicy_Parse(t *testing.T) {
 				"delete",
 				"list",
 				"sudo",
-			}, CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt |
-				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt, true},
+			}, &Permissions{CapabilitiesBitmap: (CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt |
+				DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt)}, true},
 		&PathCapabilities{"prod/version", "read",
 			[]string{
 				"read",
 				"list",
-			}, ReadCapabilityInt | ListCapabilityInt, false},
+			}, &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)}, false},
 		&PathCapabilities{"foo/bar", "read",
 			[]string{
 				"read",
 				"list",
-			}, ReadCapabilityInt | ListCapabilityInt, false},
+			}, &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)}, false},
 		&PathCapabilities{"foo/bar", "",
 			[]string{
 				"create",
 				"sudo",
-			}, CreateCapabilityInt | SudoCapabilityInt, false},
+			}, &Permissions{CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt)}, false},
+		&PathCapabilities{"foo/bar", "",
+			[]string{
+				"create",
+				"sudo",
+			}, &Permissions{(CreateCapabilityInt | SudoCapabilityInt),
+				map[string]struct{}{"zip": {}, "zap": {}}, nil}, false},
+		&PathCapabilities{"baz/bar", "",
+			[]string{
+				"create",
+				"sudo",
+			}, &Permissions{(CreateCapabilityInt | SudoCapabilityInt),
+				nil, map[string]struct{}{"zip": {}, "zap": {}}}, false},
+		&PathCapabilities{"biz/bar", "",
+			[]string{
+				"create",
+				"sudo",
+			}, &Permissions{(CreateCapabilityInt | SudoCapabilityInt),
+				map[string]struct{}{"zim": {}, "zam": {}}, map[string]struct{}{"zip": {}, "zap": {}}}, false},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {
 		t.Errorf("expected \n\n%#v\n\n to be \n\n%#v\n\n", p.Paths, expect)

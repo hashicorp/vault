@@ -59,12 +59,15 @@ func TestACL_Root(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	allowed, rootPrivs := acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.UpdateOperation
+	request.Path = "sys/mount/foo"
+	allowed, rootPrivs := acl.AllowOperation(request)
 	if !rootPrivs {
 		t.Fatalf("expected root")
 	}
 	if !allowed {
-		t.Fatalf("expected permission")
+		t.Fatalf("expected permissions")
 	}
 }
 
@@ -81,7 +84,10 @@ func TestACL_Single(t *testing.T) {
 
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.ReadOperation
+	request.Path = "sys/mount/foo"
+	_, rootPrivs := acl.AllowOperation(request)
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -117,7 +123,10 @@ func TestACL_Single(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		request := new(logical.Request)
+		request.Operation = tc.op
+		request.Path = tc.path
+		allowed, rootPrivs := acl.AllowOperation(request)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
@@ -137,18 +146,20 @@ func TestACL_Layered(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-
-	acl, err := NewACL([]*Policy{policy1, policy2})
+	
+  acl, err := NewACL([]*Policy{policy1, policy2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
-	}
+  }
 	testLayeredACL(t, acl)
 }
-
 func testLayeredACL(t *testing.T, acl *ACL) {
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.ReadOperation
+	request.Path = "sys/mount/foo"
+	_, rootPrivs := acl.AllowOperation(request)
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -189,7 +200,10 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		request := new(logical.Request)
+		request.Operation = tc.op
+		request.Path = tc.path
+		allowed, rootPrivs := acl.AllowOperation(request)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
@@ -198,6 +212,21 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 		}
 	}
 }
+
+//commenting out for compilation
+/*func TestNewAclMerge(t *testing.T) {
+  policy, err := Parse(permissionsPolicy2)
+  if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	acl, err := NewACL([]*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	
+  
+  
+}*/
 
 var tokenCreationPolicy = `
 name = "tokenCreation"
@@ -253,5 +282,189 @@ path "sys/seal" {
 }
 path "foo/bar" {
 	capabilities = ["deny"]
+}
+`
+//allow operation testing
+var permissionsPolicy = `
+name = "dev"
+path "dev/*" {
+	policy = "write"
+	
+  permissionss = {
+  	allowed_parameters {
+  		"zip": {}
+  	}
+  }
+}
+path "foo/bar" {
+	policy = "write"
+	permissions = {
+		denied_parameters {
+			"zap": {}
+		}
+  }
+}
+path "foo/baz" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"hello": {}
+		}
+		denied_parameters {
+			"zap": {}
+		}
+  }
+}
+path "broken/phone" {
+  policy = "write"
+  permissions = {
+    allowed_parameters {
+      "steve": {}
+    }
+    denied_parameters {
+      "steve": {}
+    }
+  }
+}
+path "hello/world" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"*": {}
+		}
+		denied_parameters {
+			"*": {}
+		}
+  }
+}
+path "tree/fort" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"*": {}
+		}
+		denied_parameters {
+			"beer": {}
+		}
+  }
+}
+path "fruit/apple" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"pear": {}
+		}
+		denied_parameters {
+			"*": {}
+		}
+  }
+}
+path "cold/weather" {
+	policy = "write"
+	permissions = {
+		allowed_parameters{}
+		denied_parameters{}
+	}
+}
+`
+//test merging
+
+var permissionsPolicy2 = `
+name = "ops"
+path "foo/bar" {
+	policy = "write"
+	permissions = {
+		denied_parameters {
+			"baz": {}
+		}
+	}
+}
+path "foo/bar" {
+	policy = "write"
+	permissions = {
+		denied_parameters {
+			"zip": {}
+		}
+  }
+}
+path "hello/universe" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"bob": {}
+		}
+	}
+}
+path "hello/universe" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"tom": {}
+		}
+  }
+}
+path "rainy/day" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"bob": {}
+		}
+	}
+}
+path "rainy/day" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"*": {}
+		}
+  }
+}
+path "cool/bike" {
+	policy = "write"
+	permissions = {
+		denied_parameters {
+			"frank": {}
+		}
+	}
+}
+path "cool/bike" {
+	policy = "write"
+	permissions = {
+		denied_parameters {
+			"*": {}
+		}
+  }
+}
+path "clean/bed" {
+	policy = "write"
+	permissions = {
+		denied_parameters {
+			"*": {}
+		}
+	}
+}
+path "clean/bed" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"*": {}
+		}
+  }
+}
+path "coca/cola" {
+	policy = "write"
+	permissions = {
+		denied_parameters {
+			"john": {}
+		}
+	}
+}
+path "coca/cola" {
+	policy = "write"
+	permissions = {
+		allowed_parameters {
+			"john": {}
+		}
+  }
 }
 `
