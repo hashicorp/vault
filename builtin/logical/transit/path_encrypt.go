@@ -14,7 +14,7 @@ import (
 )
 
 // BatchEncryptionItemRequest represents an item in the batch encryption
-// request.
+// request
 type BatchEncryptionItemRequest struct {
 	// Context for key derivation. This is required for derived keys.
 	Context string `json:"context" structs:"context" mapstructure:"context"`
@@ -27,14 +27,14 @@ type BatchEncryptionItemRequest struct {
 }
 
 // BatchEncryptionItemResponse represents an item in the batch encryption
-// response.
+// response
 type BatchEncryptionItemResponse struct {
 	// Ciphertext for the plaintext present in the corresponding batch
-	// request item.
+	// request item
 	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
 
 	// Error, if set represents a failure encountered which encrypting a
-	// corresponding batch request item.
+	// corresponding batch request item
 	Error string `json:"error" structs:"error" mapstructure:"error"`
 }
 
@@ -92,8 +92,7 @@ will severely impact the ciphertext's security.`,
 			},
 
 			"batch": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "",
+				Type: framework.TypeString,
 				Description: `
 Base64 encoded list of items to be encrypted in a single batch. When this
 parameter is set, if the parameters 'plaintext', 'context' and 'nonce' are also
@@ -148,7 +147,7 @@ func (b *backend) pathEncryptWrite(
 	if len(batchInputRaw) != 0 {
 		batchInput, err = base64.StdEncoding.DecodeString(batchInputRaw)
 		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode batch"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("failed to base64-decode batch input"), logical.ErrInvalidRequest
 		}
 	} else {
 		valueRaw, ok := d.GetOk("plaintext")
@@ -162,6 +161,7 @@ func (b *backend) pathEncryptWrite(
 			Context:   d.Get("context").(string),
 			Nonce:     d.Get("nonce").(string),
 		})
+
 		batchInput, err = jsonutil.EncodeJSON(singleItemBatch)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode batch input")
@@ -314,7 +314,7 @@ func (b *backend) pathEncryptWrite(
 	}
 
 	if len(batchItems) != len(batchResponseItems) {
-		return nil, fmt.Errorf("number of request and the response items does not match")
+		return nil, fmt.Errorf("number of request and the number of response items do not match")
 	}
 
 	if len(batchResponseItems) == 0 {
