@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/awsutil"
 )
 
 type CLIHandler struct{}
@@ -40,37 +40,31 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		headerValue = ""
 	}
 
-	var stsSession *session.Session
-	var err error
-
-	access_key, ok := m["aws_access_key_id"]
-	if ok {
-		secret_key, ok := m["aws_secret_access_key"]
-		if !ok {
-			return "", fmt.Errorf("Explicitly specified aws_access_key_id but not aws_secret_access_key. Please specify them both.")
-		}
-		token, ok := m["aws_security_token"]
-		if !ok {
-			token = ""
-		}
-		staticCreds := credentials.NewStaticCredentials(access_key, secret_key, token)
-		stsSession, err = session.NewSessionWithOptions(session.Options{
-			Config: aws.Config{Credentials: staticCreds},
-		})
-		if err != nil {
-			return "", err
-		}
-	} else {
-		stsSession, err = session.NewSession()
-		if err != nil {
-			return "", err
-		}
+	credConfig := &awsutil.CredentialsConfig{
+		AccessKey:    m["aws_access_key_id"],
+		SecretKey:    m["aws_secret_access_key"],
+		SessionToken: m["aws_security_token"],
 	}
+	creds, err := credConfig.GenerateCredentialChain()
+	if err != nil {
+		return "", err
+	}
+	if creds == nil {
+		return "", fmt.Errorf("could not compile valid credential providers from static config, environemnt, shared, or instance metadata")
+	}
+
+	stsSession, err := session.NewSessionWithOptions(session.Options{
+		Config: aws.Config{Credentials: creds},
+	})
+	if err != nil {
+		return "", err
+	}
+
 	var params *sts.GetCallerIdentityInput
 	svc := sts.New(stsSession)
 	stsRequest, _ := svc.GetCallerIdentityRequest(params)
 	if headerValue != "" {
-		stsRequest.HTTPRequest.Header.Add("X-Vault-Server", headerValue)
+		stsRequest.HTTPRequest.Header.Add(magicVaultHeader, headerValue)
 	}
 	stsRequest.Sign()
 	headersJson, err := json.Marshal(transformHeaders(stsRequest.HTTPRequest.Header))
@@ -129,7 +123,7 @@ Key/Value Pairs:
   aws_access_key_id=<access key>      Explicitly specified AWS access key
   aws_secret_access_key=<secret key>  Explicitly specified AWS secret key
   aws_security_token=<token>          Security token for temporary credentials
-  header_value                        The Value of the X-Vault-Server header.
+  header_value                        The Value of the X-Vault-AWSIAM-Server-ID header.
   role                                The name of the role you're requesting a token for
   `
 

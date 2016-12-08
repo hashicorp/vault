@@ -32,17 +32,17 @@ func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 
 	parsedUserResponse, err := parseGetCallerIdentityResponse(responseFromUser)
 	if parsed_arn := parsedUserResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedUserArn {
-		t.Errorf("Expected to parse arn %#v, got %#v", expectedUserArn, parsed_arn)
+		t.Errorf("expected to parse arn %#v, got %#v", expectedUserArn, parsed_arn)
 	}
 
 	parsedRoleResponse, err := parseGetCallerIdentityResponse(responseFromAssumedRole)
 	if parsed_arn := parsedRoleResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedRoleArn {
-		t.Errorf("Expected to parn arn %#v; got %#v", expectedRoleArn, parsed_arn)
+		t.Errorf("expected to parn arn %#v; got %#v", expectedRoleArn, parsed_arn)
 	}
 
 	_, err = parseGetCallerIdentityResponse("SomeRandomGibberish")
 	if err == nil {
-		t.Errorf("Expected to NOT parse random giberish, but didn't get an error")
+		t.Errorf("expected to NOT parse random giberish, but didn't get an error")
 	}
 }
 
@@ -56,10 +56,10 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 		t.Fatal(err)
 	}
 	if xformedUser != userArn {
-		t.Fatalf("Expected to transform ARN %#v into %#v but got %#v instead", userArn, userArn, xformedUser)
+		t.Fatalf("expected to transform ARN %#v into %#v but got %#v instead", userArn, userArn, xformedUser)
 	}
 	if sessionName != "MyUserName" {
-		t.Fatalf("Expected to extract MyUserName from ARN %#v but got %#v instead", userArn, sessionName)
+		t.Fatalf("expected to extract MyUserName from ARN %#v but got %#v instead", userArn, sessionName)
 	}
 
 	xformedRole, sessionName, err := parseIamArn(assumedRoleArn)
@@ -67,10 +67,10 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 		t.Fatal(err)
 	}
 	if xformedRole != baseRoleArn {
-		t.Fatalf("Expected to transform ARN %#v into %#v but got %#v instead", assumedRoleArn, baseRoleArn, xformedRole)
+		t.Fatalf("expected to transform ARN %#v into %#v but got %#v instead", assumedRoleArn, baseRoleArn, xformedRole)
 	}
 	if sessionName != "RoleName" {
-		t.Fatalf("Expected to extract principal name of RoleName from ARN %#v but got %#v instead", assumedRoleArn, sessionName)
+		t.Fatalf("expected to extract principal name of RoleName from ARN %#v but got %#v instead", assumedRoleArn, sessionName)
 	}
 }
 
@@ -78,16 +78,16 @@ func TestBackend_ensureVaultHeaderValue(t *testing.T) {
 	const canaryHeaderValue = "Vault-Server"
 	requestUrl, err := url.Parse("https://sts.amazonaws.com/")
 	if err != nil {
-		t.Fatalf("Error parsing test URL: %s", err)
+		t.Fatalf("error parsing test URL: %s", err)
 	}
 	postHeadersMissing := map[string]string{
 		"Host":          "Foo",
-		"Authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-server, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
+		"Authorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
 	}
 	postHeadersInvalid := map[string]string{
 		"Host":           "Foo",
 		magicVaultHeader: "InvalidValue",
-		"Authorization":  "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-server, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
+		"Authorization":  "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
 	}
 	postHeadersUnsigned := map[string]string{
 		"Host":           "Foo",
@@ -97,26 +97,26 @@ func TestBackend_ensureVaultHeaderValue(t *testing.T) {
 	postHeadersValid := map[string]string{
 		"Host":           "Foo",
 		magicVaultHeader: canaryHeaderValue,
-		"Authorization":  "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-server, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
+		"Authorization":  "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7",
 	}
 
 	found, errMsg := ensureVaultHeaderValue(postHeadersMissing, requestUrl, canaryHeaderValue)
 	if found {
-		t.Error("Validated POST request with missing Vault header")
+		t.Error("validated POST request with missing Vault header")
 	}
 
 	found, errMsg = ensureVaultHeaderValue(postHeadersInvalid, requestUrl, canaryHeaderValue)
 	if found {
-		t.Error("Validated POST request with invalid Vault header value")
+		t.Error("validated POST request with invalid Vault header value")
 	}
 
 	found, errMsg = ensureVaultHeaderValue(postHeadersUnsigned, requestUrl, canaryHeaderValue)
 	if found {
-		t.Error("Validated POST request with unsigned Vault header")
+		t.Error("validated POST request with unsigned Vault header")
 	}
 
 	found, errMsg = ensureVaultHeaderValue(postHeadersValid, requestUrl, canaryHeaderValue)
 	if !found {
-		t.Errorf("Did NOT validate valid POST request: %s", errMsg)
+		t.Errorf("did NOT validate valid POST request: %s", errMsg)
 	}
 }

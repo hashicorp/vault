@@ -33,7 +33,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		if resp.IsError() {
 			t.Fatalf("failed to read client config entry")
 		} else if resp.Data["endpoint"] != nil || resp.Data["vault_header_value"] != nil {
-			t.Fatalf("Returned endpoint or vault_header_value non-nil")
+			t.Fatalf("returned endpoint or vault_header_value non-nil")
 		}
 	}
 
@@ -67,7 +67,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		t.Fatal("failed to read the client config entry")
 	}
 	if resp.Data["vault_header_value"] != data["vault_header_value"] {
-		t.Fatalf("Expected vault_header_value: '%#v'; returned vault_header_value: '%#v'",
+		t.Fatalf("expected vault_header_value: '%#v'; returned vault_header_value: '%#v'",
 			data["vault_header_value"], resp.Data["vault_header_value"])
 	}
 }

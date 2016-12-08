@@ -54,8 +54,9 @@ the similarity ends there. The following is a comparison of the two entities:
 
 ## Authentication Workflow
 
-AWS has introduced the [`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html)
-API method to allow you to validate the identity of a caller. The client signs
+The AWS STS API includes a method,
+[`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html),
+which allow you to validate the identity of a caller. The client signs
 a `GetCallerIdentity` query using the [AWS Signature v4
 algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and
 submits that signed query to the Vault server. The Vault server then forwards
@@ -66,7 +67,7 @@ network-level access to send requests to the STS endpoint.
 
 Each signed AWS request includes the current timestamp to mitigate the risk of
 replay attacks. In addition, Vault allows you to require an additional header,
-`X-Vault-Server`, to be present to mitigate against different types of replay
+`X-Vault-AWSIAM-Server-ID`, to be present to mitigate against different types of replay
 attacks (such as a signed `GetCallerIdentity` request stolen from a dev Vault
 instance and used to authenticate to a prod Vault instance). Vault further
 requires that this header be one of the headers included in the AWS signature
@@ -102,7 +103,7 @@ $ vault auth-enable aws-iam
 $ vault write auth/aws-iam/role/dev-role bound_iam_principal=arn:aws:iam::123456789012:role/my_role policies=prod,dev max_ttl=500h
 ```
 
-#### Configure a required X-Vault-Server Header (recommended)
+#### Configure a required X-Vault-AWSIAM-Server-ID Header (recommended)
 
 ```
 $ vault write auth/aws-iam/client/config vault_header_vaule=vault.example.xom
@@ -161,7 +162,7 @@ func main() {
         svc := sts.New(sess)
         var params *sts.GetCallerIdentityInput
         stsRequest, _ := svc.GetCallerIdentityRequest(params)
-        stsRequest.HTTPRequest.Header.Add("X-Vault-Server", "vault.example.com")
+        stsRequest.HTTPRequest.Header.Add("X-Vault-AWSIAM-Server-ID", "vault.example.com")
         stsRequest.Sign()
 
         headersJson, err := json.Marshal(transformHeaders(stsRequest.HTTPRequest.Header))
@@ -262,7 +263,7 @@ us-east-1](http://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region).
       <li>
         <span class="param">vault_header_value</span>
         <span class="param-flags">optional</span>
-        Value to require be present in the X-Vault-Server header. If not set, then
+        Value to require be present in the X-Vault-AWSIAM-Server-ID header. If not set, then
         no value is required or validated. If set, clients must include an X-VaultServer
         header in the headers of login requests, and further the X-VaultServer must be
         among the signed headers validated by AWS. This is to protect against different types

@@ -36,7 +36,6 @@ to 0, in whcih case the value will fall back to the system/mount defaults.`,
 			},
 			"policies": {
 				Type:        framework.TypeString,
-				Default:     "default",
 				Description: "Policies to be set on tokens issued using this role.",
 			},
 		},
@@ -83,6 +82,10 @@ func (b *backend) lockedAWSRole(s logical.Storage, role string) (*awsRoleEntry, 
 }
 
 func (b *backend) nonLockedAWSRole(s logical.Storage, role string) (*awsRoleEntry, error) {
+	if role == "" {
+		return nil, fmt.Errorf("missing role name")
+	}
+
 	entry, err := s.Get("role/" + strings.ToLower(role))
 	if err != nil {
 		return nil, err
@@ -131,7 +134,7 @@ func (b *backend) pathRoleCreateUpdate(
 
 	// We do this here to permit updating an existing role
 	if roleEntry.BoundIamPrincipal == "" {
-		return logical.ErrorResponse("Must bind to an IAM Principal"), nil
+		return logical.ErrorResponse("must bind to an IAM Principal"), nil
 	}
 
 	policiesStr, ok := data.GetOk("policies")

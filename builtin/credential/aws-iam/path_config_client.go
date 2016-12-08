@@ -18,7 +18,7 @@ func pathConfigClient(b *backend) *framework.Path {
 			"vault_header_value": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Value to require in the X-Vault-Server request header",
+				Description: "Value to require in the X-Vault-AWSIAM-Server-ID request header",
 			},
 		},
 
@@ -101,14 +101,18 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry = &clientConfig{}
 	}
 
-	endpointStr := data.Get("endpoint").(string)
-	if endpointStr != "" {
-		configEntry.Endpoint = endpointStr
+	endpointStr, ok := data.GetOk("endpoint")
+	if ok {
+		configEntry.Endpoint = endpointStr.(string)
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.Endpoint = data.Get("endpoint").(string)
 	}
 
-	headerValueStr := data.Get("vault_header_value").(string)
-	if headerValueStr != "" {
-		configEntry.HeaderValue = headerValueStr
+	headerValueStr, ok := data.GetOk("vault_header_value")
+	if ok {
+		configEntry.HeaderValue = headerValueStr.(string)
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.HeaderValue = data.Get("vault_header_value").(string)
 	}
 
 	entry, err := logical.StorageEntryJSON("config/client", configEntry)

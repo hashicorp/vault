@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	//"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -72,7 +72,7 @@ func (b *backend) pathLoginUpdate(
 
 	// In the future, might consider supporting GET
 	if method != "POST" {
-		return logical.ErrorResponse("Invalid method; currently only 'POST' is supported"), nil
+		return logical.ErrorResponse("invalid method; currently only 'POST' is supported"), nil
 	}
 
 	rawUrl := data.Get("url").(string)
@@ -114,13 +114,13 @@ func (b *backend) pathLoginUpdate(
 
 	config, err := b.lockedClientConfigEntry(req.Storage)
 	if err != nil {
-		return logical.ErrorResponse("Error getting configuration"), nil
+		return logical.ErrorResponse("error getting configuration"), nil
 	}
 
 	if config.HeaderValue != "" {
 		ok, msg := ensureVaultHeaderValue(headers, parsedUrl, config.HeaderValue)
 		if !ok {
-			return logical.ErrorResponse(fmt.Sprintf("Error validating %s header: %s", magicVaultHeader, msg)), nil
+			return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %s", magicVaultHeader, msg)), nil
 		}
 	}
 
@@ -131,11 +131,11 @@ func (b *backend) pathLoginUpdate(
 
 	clientArn, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error making upstream request: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %s", err)), nil
 	}
 	canonicalArn, principalName, err := parseIamArn(clientArn)
 	if err != nil {
-		return logical.ErrorResponse("Unrecognized IAM principal type"), nil
+		return logical.ErrorResponse("unrecognized IAM principal type"), nil
 	}
 
 	roleName := data.Get("role").(string)
@@ -202,7 +202,7 @@ func (b *backend) pathLoginRenew(
 
 	roleName := req.Auth.InternalData["role_name"].(string)
 	if roleName == "" {
-		return nil, fmt.Errorf("Error retrieving role_name during renewal")
+		return nil, fmt.Errorf("error retrieving role_name during renewal")
 	}
 	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
 	if err != nil {
@@ -213,7 +213,7 @@ func (b *backend) pathLoginRenew(
 	}
 
 	if roleEntry.BoundIamPrincipal != canonicalArn {
-		return nil, fmt.Errorf("Role no longer bound to arn '%s'", canonicalArn)
+		return nil, fmt.Errorf("role no longer bound to arn '%s'", canonicalArn)
 	}
 
 	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
@@ -235,24 +235,30 @@ func parseIamArn(iamArn string) (string, string, error) {
 	if parts[0] == "assumed-role" {
 		transformedArn = fmt.Sprintf("arn:aws:iam::%s:role/%s", fullParts[4], principalName)
 	} else if parts[0] != "user" {
-		return "", "", fmt.Errorf("Unrecognized principal type: '%s'", parts[0])
+		return "", "", fmt.Errorf("unrecognized principal type: '%s'", parts[0])
 	}
 	return transformedArn, principalName, nil
 }
 
 func ensureVaultHeaderValue(headers map[string]string, requestUrl *url.URL, requiredHeaderValue string) (bool, string) {
-	providedValue, ok := headers[magicVaultHeader]
-	if !ok {
-		return false, fmt.Sprintf("Didn't find %s", magicVaultHeader)
+	providedValue := ""
+	for k, v := range headers {
+		if strings.ToLower(magicVaultHeader) == strings.ToLower(k) {
+			providedValue = v
+			break
+		}
+	}
+	if providedValue == "" {
+		return false, fmt.Sprintf("didn't find %s", magicVaultHeader)
 	}
 
 	// NOT doing a constant time compare here since the value is NOT intended to be secret
 	if providedValue != requiredHeaderValue {
-		return false, fmt.Sprintf("Expected %s but got %s", requiredHeaderValue, providedValue)
+		return false, fmt.Sprintf("expected %s but got %s", requiredHeaderValue, providedValue)
 	}
 
 	if authzHeader, ok := headers["Authorization"]; ok {
-		// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-server, Signature=...
+		// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
 		// We need to extract out the SignedHeaders
 		re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
 		signedHeaders := string(re.FindSubmatch([]byte(authzHeader))[1])
@@ -326,24 +332,26 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers map[string]string) (string, error) {
 	// TODO: Some validation to ensure we're calling STS, instead of acting as an unintended network proxy
 	request := buildHttpRequest(method, endpoint, parsedUrl, body, headers)
-	client := &http.Client{}
+	client := cleanhttp.DefaultClient()
 	response, err := client.Do(request)
-	defer response.Body.Close()
 	if err != nil {
-		return "", fmt.Errorf("Error making request: %s", err)
+		return "", fmt.Errorf("error making request: %s", err)
+	}
+	if response != nil {
+		defer response.Body.Close()
 	}
 	// we check for status code afterwards to also print out response body
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if response.StatusCode != 200 {
-		return "", fmt.Errorf("Received error code %s from STS: %s", response.StatusCode, string(responseBody))
+		return "", fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
 	}
 	callerIdentityResponse, err := parseGetCallerIdentityResponse(string(responseBody))
 	if err != nil {
-		return "", fmt.Errorf("Error parsing STS response")
+		return "", fmt.Errorf("error parsing STS response")
 	}
 	clientArn := callerIdentityResponse.GetCallerIdentityResult[0].Arn
 	if clientArn == "" {
-		return "", fmt.Errorf("No ARN validated")
+		return "", fmt.Errorf("no ARN validated")
 	}
 	return clientArn, nil
 }
@@ -373,4 +381,4 @@ An AWS IAM principal is authenticated using the AWS STS GetCallerIdentity API me
 
 `
 
-const magicVaultHeader = "X-Vault-Server"
+const magicVaultHeader = "X-Vault-AWSIAM-Server-Id"
