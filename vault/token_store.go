@@ -1217,10 +1217,6 @@ func (ts *TokenStore) handleCreateCommon(
 	// If we have a role, and the role defines policies, we don't even consider
 	// parent policies; the role allowed policies trumps all
 	case role != nil && len(role.AllowedPolicies) > 0:
-		if len(role.DisallowedPolicies) > 0 {
-			resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
-		}
-
 		sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, false)
 
 		if len(data.Policies) == 0 {
@@ -1240,6 +1236,10 @@ func (ts *TokenStore) handleCreateCommon(
 		if !strutil.StrListContains(sanitizedRolePolicies, "default") {
 			data.NoDefaultPolicy = true
 		}
+
+		// This will ensure that both AllowedPolicies and
+		// DisallowedPolicies are checked
+		fallthrough
 
 	case role != nil && len(role.DisallowedPolicies) > 0:
 		if len(data.Policies) == 0 {
@@ -1984,13 +1984,6 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), false)
 	}
 
-	if len(entry.AllowedPolicies) > 0 && len(entry.DisallowedPolicies) > 0 {
-		if resp == nil {
-			resp = &logical.Response{}
-		}
-		resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
-	}
-
 	// Store it
 	jsonEntry, err := logical.StorageEntryJSON(fmt.Sprintf("%s%s", rolesPrefix, name), entry)
 	if err != nil {
@@ -2024,12 +2017,9 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenAllowedPoliciesHelp = `If set, tokens can be created with any subset of the policies in this
 list, rather than the normal semantics of tokens being a subset of the
 calling token's policies. The parameter is a comma-delimited string of
-policy names. If this and 'disallowed_policies' are both set, only this
-option takes effect.`
+policy names.`
 	tokenDisallowedPoliciesHelp = `If set, successful token creation via this role will require that
-no policies in the given list are requested. If both
-'disallowed_policies' and 'allowed_policies' are set, this option has
-no effect. The parameter is a comma-delimited string of policy names.`
+no policies in the given list are requested. The parameter is a comma-delimited string of policy names.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role
