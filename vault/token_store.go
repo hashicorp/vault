@@ -1220,23 +1220,25 @@ func (ts *TokenStore) handleCreateCommon(
 		if len(role.DisallowedPolicies) > 0 {
 			resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
 		}
+
+		sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, false)
+
 		if len(data.Policies) == 0 {
-			data.Policies = role.AllowedPolicies
+			data.Policies = sanitizedRolePolicies
 		} else {
 			// Sanitize passed-in and role policies before comparison
 			sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, false)
-			sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, false)
 
 			if !strutil.StrListSubset(sanitizedRolePolicies, sanitizedInputPolicies) {
 				return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", sanitizedInputPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
 			}
+		}
 
-			// If AllowedPolicies does not have "default" policy in
-			// it, then the token being created should not have it
-			// either.
-			if !strutil.StrListContains(sanitizedRolePolicies, "default") {
-				data.NoDefaultPolicy = true
-			}
+		// If AllowedPolicies does not have "default" policy in
+		// it, then the token being created should not have it
+		// either.
+		if !strutil.StrListContains(sanitizedRolePolicies, "default") {
+			data.NoDefaultPolicy = true
 		}
 
 	case role != nil && len(role.DisallowedPolicies) > 0:
@@ -1270,7 +1272,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// When a role is not in use, only permit policies to be a subset unless
 	// the client has root or sudo privileges
-	case !isSudo:
+	case role == nil && !isSudo:
 		// Sanitize passed-in and parent policies before comparison
 		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, false)
 		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, false)
