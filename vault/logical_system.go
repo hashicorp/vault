@@ -43,7 +43,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			Unauthenticated: []string{
-				"wrapping/jwtkey",
+				"wrapping/pubkey",
 			},
 		},
 
@@ -547,10 +547,10 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "wrapping/jwtkey$",
+				Pattern: "wrapping/pubkey$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleWrappingJWTKey,
+					logical.ReadOperation: b.handleWrappingPubkey,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
@@ -1487,15 +1487,15 @@ func (b *SystemBackend) handleRotate(
 	return nil, nil
 }
 
-func (b *SystemBackend) handleWrappingJWTKey(
+func (b *SystemBackend) handleWrappingPubkey(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	x, _ := b.Core.wrappingJWTKey.X.MarshalText()
 	y, _ := b.Core.wrappingJWTKey.Y.MarshalText()
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"x":     string(x),
-			"y":     string(y),
-			"curve": "P-521",
+			"jwt_x":     string(x),
+			"jwt_y":     string(y),
+			"jwt_curve": "P-521",
 		},
 	}, nil
 }
