@@ -7,6 +7,43 @@ import (
 	"testing"
 )
 
+func TestStrUtil_StrListDelete(t *testing.T) {
+	output := StrListDelete([]string{"item1", "item2", "item3"}, "item1")
+	if StrListContains(output, "item1") {
+		t.Fatal("bad: 'item1' should not have been present")
+	}
+
+	output = StrListDelete([]string{"item1", "item2", "item3"}, "item2")
+	if StrListContains(output, "item2") {
+		t.Fatal("bad: 'item2' should not have been present")
+	}
+
+	output = StrListDelete([]string{"item1", "item2", "item3"}, "item3")
+	if StrListContains(output, "item3") {
+		t.Fatal("bad: 'item3' should not have been present")
+	}
+
+	output = StrListDelete([]string{"item1", "item1", "item3"}, "item1")
+	if !StrListContains(output, "item1") {
+		t.Fatal("bad: 'item1' should have been present")
+	}
+
+	output = StrListDelete(output, "item1")
+	if StrListContains(output, "item1") {
+		t.Fatal("bad: 'item1' should not have been present")
+	}
+
+	output = StrListDelete(output, "random")
+	if len(output) != 1 {
+		t.Fatal("bad: expected: 1, actual: %d", len(output))
+	}
+
+	output = StrListDelete(output, "item3")
+	if StrListContains(output, "item3") {
+		t.Fatal("bad: 'item3' should not have been present")
+	}
+}
+
 func TestStrutil_EquivalentSlices(t *testing.T) {
 	slice1 := []string{"test2", "test1", "test3"}
 	slice2 := []string{"test3", "test2", "test1"}

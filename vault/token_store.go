@@ -1224,11 +1224,18 @@ func (ts *TokenStore) handleCreateCommon(
 			data.Policies = role.AllowedPolicies
 		} else {
 			// Sanitize passed-in and role policies before comparison
-			sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
-			sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, true)
+			sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, false)
+			sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, false)
 
 			if !strutil.StrListSubset(sanitizedRolePolicies, sanitizedInputPolicies) {
 				return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", sanitizedInputPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+			}
+
+			// If AllowedPolicies does not have "default" policy in
+			// it, then the token being created should not have it
+			// either.
+			if !strutil.StrListContains(sanitizedRolePolicies, "default") {
+				data.NoDefaultPolicy = true
 			}
 		}
 
@@ -1236,7 +1243,7 @@ func (ts *TokenStore) handleCreateCommon(
 		if len(data.Policies) == 0 {
 			data.Policies = parent.Policies
 		}
-		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
+		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, false)
 
 		// Do not voluntarily add 'default' to the list of items to check on
 		sanitizedRolePolicies := policyutil.SanitizePolicies(role.DisallowedPolicies, false)
@@ -1247,7 +1254,18 @@ func (ts *TokenStore) handleCreateCommon(
 			}
 		}
 
+		// If DisallowedPolicies has "default" policy in it, then the
+		// token being created should not have it.
+		if strutil.StrListContains(sanitizedRolePolicies, "default") {
+			data.NoDefaultPolicy = true
+		}
+
 	case len(data.Policies) == 0:
+		parent.Policies = policyutil.SanitizePolicies(parent.Policies, false)
+		if !strutil.StrListContains(parent.Policies, "default") {
+			data.NoDefaultPolicy = true
+		}
+
 		data.Policies = parent.Policies
 
 	// When a role is not in use, only permit policies to be a subset unless
@@ -1261,6 +1279,8 @@ func (ts *TokenStore) handleCreateCommon(
 			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 		}
 
+		// If parent token does not have "default" policy, then the
+		// child token should not have it either.
 		if !strutil.StrListContains(sanitizedParentPolicies, "default") {
 			data.NoDefaultPolicy = true
 		}
@@ -1268,6 +1288,15 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Do not add the 'default' policy if requested not to.
 	te.Policies = policyutil.SanitizePolicies(data.Policies, !data.NoDefaultPolicy)
+
+	// If 'data.Policies' already had the 'default' policy attached, then
+	// SanitizePolicies would not have removed it. If NoDefaultPolicy is
+	// set, then it has to be ensured that 'default' policy is not attached
+	// to the token being created. After one round of sanitizing, there
+	// won't be any duplicates in the list of policies, so remove it once.
+	if data.NoDefaultPolicy {
+		te.Policies = strutil.StrListDelete(te.Policies, "default")
+	}
 
 	// Prevent internal policies from being assigned to tokens
 	for _, policy := range te.Policies {

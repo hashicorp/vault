@@ -239,3 +239,27 @@ func EquivalentSlices(a, b []string) bool {
 
 	return true
 }
+
+// StrListDelete removes the first occurance of the given item from the slice
+// of strings if the item exists.
+func StrListDelete(s []string, d string) []string {
+	if s == nil {
+		return s
+	}
+
+	foundIndex := -1
+	for index, element := range s {
+		if element == d {
+			foundIndex = index
+			break
+		}
+	}
+	if foundIndex != -1 {
+		s[foundIndex] = s[len(s)-1]
+		s = s[:len(s)-1]
+	}
+
+	sort.Strings(s)
+
+	return s
+}

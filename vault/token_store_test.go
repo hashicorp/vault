@@ -2664,3 +2664,91 @@ func TestTokenStore_Periodic(t *testing.T) {
 		}
 	}
 }
+
+func TestTokenStore_NoDefaultPolicy(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	core, ts, _, root := TestCoreWithTokenStore(t)
+	ps := core.policyStore
+	policy, _ := Parse(tokenCreationPolicy)
+	policy.Name = "policy1"
+	if err := ps.SetPolicy(policy); err != nil {
+		t.Fatal(err)
+	}
+
+	// Root token creates a token with desired policy. The created token
+	// should also have 'default' attached to it.
+	tokenData := map[string]interface{}{
+		"policies": []string{"policy1"},
+	}
+	tokenReq := &logical.Request{
+		Path:        "create",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data:        tokenData,
+	}
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy, default]; actual: %s", resp.Auth.Policies)
+	}
+
+	newToken := resp.Auth.ClientToken
+
+	// Root token creates a token with desired policy, but also requests
+	// that the token to not have 'default' policy. The resulting token
+	// should not have 'default' policy on it.
+	tokenData["no_default_policy"] = true
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
+	}
+
+	// A non-root token which has 'default' policy attached requests for a
+	// child token. Child token should also have 'default' policy attached.
+	tokenReq.ClientToken = newToken
+	tokenReq.Data = nil
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
+	}
+
+	// A non-root token which has 'default' policy attached, request for a
+	// child token to not have 'default' policy.
+	tokenReq.Data = map[string]interface{}{
+		"no_default_policy": true,
+	}
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
+	}
+
+	// This is a non-root token which does not have 'default' policy
+	// attached
+	newToken = resp.Auth.ClientToken
+	tokenReq.Data = nil
+	tokenReq.ClientToken = newToken
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
+	}
+}
