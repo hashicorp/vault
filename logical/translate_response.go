@@ -88,6 +88,7 @@ type HTTPAuth struct {
 }
 
 type HTTPWrapInfo struct {
+	JWT             string `json:"jwt"`
 	Token           string `json:"token"`
 	TTL             int    `json:"ttl"`
 	CreationTime    string `json:"creation_time"`

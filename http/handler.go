@@ -91,20 +91,7 @@ func wrappingVerificationFunc(core *vault.Core, req *logical.Request) error {
 		return fmt.Errorf("invalid request")
 	}
 
-	var token string
-	if req.Data != nil && req.Data["token"] != nil {
-		if tokenStr, ok := req.Data["token"].(string); !ok {
-			return fmt.Errorf("could not decode token in request body")
-		} else if tokenStr == "" {
-			return fmt.Errorf("empty token in request body")
-		} else {
-			token = tokenStr
-		}
-	} else {
-		token = req.ClientToken
-	}
-
-	valid, err := core.ValidateWrappingToken(token)
+	valid, err := core.ValidateWrappingToken(req)
 	if err != nil {
 		return fmt.Errorf("error validating wrapping token: %v", err)
 	}

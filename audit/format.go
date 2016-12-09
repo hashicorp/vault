@@ -245,6 +245,7 @@ func (f *AuditFormatter) FormatResponse(
 			Token:           resp.WrapInfo.Token,
 			CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
+			JWT:             resp.WrapInfo.JWT,
 		}
 	}
 
@@ -340,6 +341,7 @@ type AuditWrapInfo struct {
 	Token           string `json:"token"`
 	CreationTime    string `json:"creation_time"`
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
+	JWT             string `json:"jwt"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

@@ -59,6 +59,8 @@ func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 			val = secret.WrapInfo.CreationTime.Format(time.RFC3339Nano)
 		case "wrapped_accessor":
 			val = secret.WrapInfo.WrappedAccessor
+		case "jwt":
+			val = secret.WrapInfo.JWT
 		default:
 			val = secret.Data[field]
 		}

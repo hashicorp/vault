@@ -84,6 +84,12 @@ func (c *Core) Cluster() (*Cluster, error) {
 		cluster.Name = c.clusterName
 	}
 
+	// Cache this
+	// NOTE: We need kto think carefully about when this can be relied upon.
+	// Currently this is being cached for request forwarding to avoid a lookup
+	// to populate the cluster ID for the audience.
+	c.cluster = &cluster
+
 	return &cluster, nil
 }
 
@@ -269,6 +275,8 @@ func (c *Core) setupCluster() error {
 			return err
 		}
 	}
+
+	c.cluster = cluster
 
 	return nil
 }

@@ -41,6 +41,10 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"raw/*",
 				"rotate",
 			},
+
+			Unauthenticated: []string{
+				"wrapping/jwtkey",
+			},
 		},
 
 		Paths: []*framework.Path{
@@ -540,6 +544,17 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "wrapping/jwtkey$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleWrappingJWTKey,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
 			},
 
 			&framework.Path{
@@ -1472,6 +1487,19 @@ func (b *SystemBackend) handleRotate(
 	return nil, nil
 }
 
+func (b *SystemBackend) handleWrappingJWTKey(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	x, _ := b.Core.wrappingJWTKey.X.MarshalText()
+	y, _ := b.Core.wrappingJWTKey.Y.MarshalText()
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"x":     string(x),
+			"y":     string(y),
+			"curve": "P-521",
+		},
+	}, nil
+}
+
 func (b *SystemBackend) handleWrappingWrap(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	if req.WrapTTL == 0 {
@@ -1495,6 +1523,10 @@ func (b *SystemBackend) handleWrappingUnwrap(
 		thirdParty = true
 	} else {
 		token = req.ClientToken
+	}
+
+	if wt := b.Core.parseVaultTokenFromJWT(token); wt != nil {
+		token = *wt
 	}
 
 	if thirdParty {
@@ -1557,6 +1589,10 @@ func (b *SystemBackend) handleWrappingLookup(
 		return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
 	}
 
+	if wt := b.Core.parseVaultTokenFromJWT(token); wt != nil {
+		token = *wt
+	}
+
 	cubbyReq := &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "cubbyhole/wrapinfo",
@@ -1611,6 +1647,10 @@ func (b *SystemBackend) handleWrappingRewrap(
 		thirdParty = true
 	} else {
 		token = req.ClientToken
+	}
+
+	if wt := b.Core.parseVaultTokenFromJWT(token); wt != nil {
+		token = *wt
 	}
 
 	if thirdParty {

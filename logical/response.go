@@ -43,6 +43,11 @@ type WrapInfo struct {
 	// If the contained response is the output of a token creation call, the
 	// created token's accessor will be accessible here
 	WrappedAccessor string `json:"wrapped_accessor" structs:"wrapped_accessor" mapstructure:"wrapped_accessor"`
+
+	// The JWT variant of the wrapped token that carries with it other wrapped
+	// information (like expiration time) and can optionally include other
+	// information
+	JWT string `json:"jwt" structs:"jwt" mapstructure:"jwt"`
 }
 
 // Response is a struct that stores the response of a request.
