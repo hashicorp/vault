@@ -579,6 +579,31 @@ only encrypt or decrypt using the named keys they need access to.
         0.6.2+.
       </li>
     </ul>
+    <ul>
+      <li>
+        <span class="param">batch</span>
+        <span class="param-flags">optional</span>
+        Base64 encoded list of items to be decrypted in a single batch. When this
+        parameter is set, if the parameters 'ciphertext', 'context' and 'nonce' are
+        also set, they will be ignored. JSON format for the input goes like this:
+
+
+```javascript
+[
+  {
+    "context": "context1",
+    "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
+  },
+  {
+    "context": "context2",
+    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
+  },
+  ...
+]
+```
+
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
