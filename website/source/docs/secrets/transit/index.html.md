@@ -567,16 +567,15 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">context</span>
         <span class="param-flags">optional</span>
-        The key derivation context, provided as a base64-encoded string.
-        Must be provided if derivation is enabled.
+        Base64 encoded context for key derivation. Required if key derivation is
+        enabled.
       </li>
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
-        The nonce value used during encryption, provided as base64 encoded.
-        Must be provided if convergent encryption is enabled for this key and
-        the key was created with Vault 0.6.1. Not required for keys created in
-        0.6.2+.
+        Base64 encoded nonce value used during encryption. Must be provided if
+        convergent encryption is enabled for this key and the key was generated with
+        Vault 0.6.1. Not required for keys created in 0.6.2+.
       </li>
     </ul>
     <ul>

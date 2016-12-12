@@ -46,18 +46,24 @@ func (b *backend) pathDecrypt() *framework.Path {
 			},
 
 			"ciphertext": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Ciphertext value to decrypt",
+				Type: framework.TypeString,
+				Description: `
+The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
 			"context": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Context for key derivation. Required for derived keys.",
+				Type: framework.TypeString,
+				Description: `
+Base64 encoded context for key derivation. Required if key derivation is
+enabled.`,
 			},
 
 			"nonce": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Nonce for when convergent encryption is used",
+				Type: framework.TypeString,
+				Description: `
+Base64 encoded nonce value used during encryption. Must be provided if
+convergent encryption is enabled for this key and the key was generated with
+Vault 0.6.1. Not required for keys created in 0.6.2+.`,
 			},
 
 			"batch": &framework.FieldSchema{
