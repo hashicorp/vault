@@ -188,6 +188,10 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			}
 		}
 
+		// It is likely that 'header' already has 'Cache-Control' set.
+		// Overwriting here to ensure that it is not missed out.
+		w.Header().Set("Cache-Control", "no-store")
+
 		w.WriteHeader(statusCode)
 		w.Write(retBytes)
 		return
@@ -249,6 +253,9 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// because we don't actually know if its permanent and
 	// the request method should be preserved.
 	w.Header().Set("Location", finalURL.String())
+
+	w.Header().Set("Cache-Control", "no-store")
+
 	w.WriteHeader(307)
 }
 
@@ -310,6 +317,7 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	}
 
 	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(status)
 
 	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
@@ -362,6 +370,7 @@ func respondErrorCommon(w http.ResponseWriter, resp *logical.Response, err error
 
 func respondOk(w http.ResponseWriter, body interface{}) {
 	w.Header().Add("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 
 	if body == nil {
 		w.WriteHeader(http.StatusNoContent)
