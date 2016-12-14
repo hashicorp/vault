@@ -9,6 +9,26 @@ import (
 	"testing"
 )
 
+func TestForwardingUtil_CacheControlNoStore(t *testing.T) {
+	w := NewRPCResponseWriter()
+
+	if w == nil {
+		t.Fatalf("response writer is nil")
+	}
+
+	header := w.Header()
+
+	actual := header.Get("Cache-Control")
+
+	if actual == "" {
+		t.Fatalf("missing 'Cache-Control' header entry in response writer")
+	}
+
+	if actual != "no-store" {
+		t.Fatalf("bad: Cache-Control. Expected: 'no-store', Actual: %q", actual)
+	}
+}
+
 func Test_ForwardedRequest_GenerateParse(t *testing.T) {
 	testForwardedRequestGenerateParse(t)
 }
