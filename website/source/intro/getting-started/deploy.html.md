@@ -44,10 +44,11 @@ Within the configuration file, there are two primary configurations:
   * `listener` - One or more listeners determine how Vault listens for
     API requests. In the example above we're listening on localhost port
     8200 without TLS. In your environment set `VAULT_ADDR=http://127.0.0.1:8200`
-    so the Vault client will connect without TLS. 
+    so the Vault client will connect without TLS.
 
-For now, copy and paste the configuration above to `example.hcl`. It will
-configure Vault to expect an instance of Consul running locally.
+For now, copy and paste the configuration above to a file called
+`example.hcl`. It will configure Vault to expect an instance of Consul
+running locally.
 
 Starting a local Consul instance takes only a few minutes. Just follow the
 [Consul Getting Started Guide](https://www.consul.io/intro/getting-started/install.html)
@@ -181,9 +182,10 @@ keys are required to unseal the Vault. The Vault can be unsealed from
 multiple computers and the keys should never be together. A single malicious
 operator does not have enough keys to be malicious.
 
-Continue with `vault unseal` to complete unsealing the Vault. Note that
-all 3 keys must be different, but they can be any other keys. As long as
-they're correct, you should soon see output like this:
+Continue with `vault unseal` to complete unsealing the Vault. To unseal
+the vault you must use three _different_ keys, the same key repeated
+will not work. As you use keys, as long as they are correct, you should
+soon see output like this:
 
 ```
 $ vault unseal

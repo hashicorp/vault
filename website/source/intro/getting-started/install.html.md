@@ -24,7 +24,7 @@ After downloading Vault, unzip the package. Vault runs as a single binary
 named `vault`. Any other files in the package can be safely removed and
 Vault will still function.
 
-The final step is to make sure that `vault` is available on the PATH.
+The final step is to make sure that the `vault` binary is available on the `PATH`.
 See [this page](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux)
 for instructions on setting the PATH on Linux and Mac.
 [This page](https://stackoverflow.com/questions/1618280/where-can-i-set-path-to-make-exe-on-windows)
@@ -33,7 +33,7 @@ contains instructions for setting the PATH on Windows.
 ## Verifying the Installation
 
 After installing Vault, verify the installation worked by opening a new
-terminal session and checking that `vault` is available. By executing
+terminal session and checking that the `vault` binary is available. By executing
 `vault`, you should see help output similar to the following:
 
 ```
@@ -78,8 +78,14 @@ All other commands:
     version          Prints the Vault version
 ```
 
-If you get an error that Vault could not be found, then your PATH environment
-variable was not setup properly. Please go back and ensure that your PATH
+If you get an error that the binary could not be found, then your `PATH` environment
+variable was not setup properly. Please go back and ensure that your `PATH`
 variable contains the directory where Vault was installed.
 
 Otherwise, Vault is installed and ready to go!
+
+## Next
+
+Now Vault is installed we can start our first Vault server! [Let's do
+that now](/intro/getting-started/dev-server.html).
+
