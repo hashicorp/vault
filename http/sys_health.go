@@ -50,7 +50,6 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(code)
 
 	// Generate the response
@@ -66,7 +65,6 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 
 	if body != nil {
 		w.Header().Add("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
 	}
 	w.WriteHeader(code)
 }

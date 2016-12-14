@@ -201,7 +201,6 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) {
 	retErr := func(w http.ResponseWriter, err string) {
 		w.Header().Set("X-Vault-Raw-Error", err)
-		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(nil)
 	}
@@ -261,7 +260,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}
-	w.Header().Set("Cache-Control", "no-store")
+
 	w.WriteHeader(status)
 	w.Write(body)
 }
