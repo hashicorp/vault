@@ -6,8 +6,10 @@ import (
 	"errors"
 )
 
+type packetType uint8
+
 type header struct {
-	PacketType uint8
+	PacketType packetType
 	Status     uint8
 	Size       uint16
 	Spid       uint16
@@ -21,7 +23,7 @@ type tdsBuffer struct {
 	transport   io.ReadWriteCloser
 	size        uint16
 	final       bool
-	packet_type uint8
+	packet_type packetType
 	afterFirst  func()
 }
 
@@ -84,8 +86,8 @@ func (w *tdsBuffer) WriteByte(b byte) error {
 	return nil
 }
 
-func (w *tdsBuffer) BeginPacket(packet_type byte) {
-	w.buf[0] = packet_type
+func (w *tdsBuffer) BeginPacket(packet_type packetType) {
+	w.buf[0] = byte(packet_type)
 	w.buf[1] = 0 // packet is incomplete
 	w.buf[4] = 0 // spid
 	w.buf[5] = 0
@@ -124,7 +126,7 @@ func (r *tdsBuffer) readNextPacket() error {
 	return nil
 }
 
-func (r *tdsBuffer) BeginRead() (uint8, error) {
+func (r *tdsBuffer) BeginRead() (packetType, error) {
 	err := r.readNextPacket()
 	if err != nil {
 		return 0, err

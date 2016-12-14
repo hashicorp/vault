@@ -175,3 +175,70 @@ func ParseDN(str string) (*DN, error) {
 	}
 	return dn, nil
 }
+
+// Equal returns true if the DNs are equal as defined by rfc4517 4.2.15 (distinguishedNameMatch).
+// Returns true if they have the same number of relative distinguished names
+// and corresponding relative distinguished names (by position) are the same.
+func (d *DN) Equal(other *DN) bool {
+	if len(d.RDNs) != len(other.RDNs) {
+		return false
+	}
+	for i := range d.RDNs {
+		if !d.RDNs[i].Equal(other.RDNs[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// AncestorOf returns true if the other DN consists of at least one RDN followed by all the RDNs of the current DN.
+// "ou=widgets,o=acme.com" is an ancestor of "ou=sprockets,ou=widgets,o=acme.com"
+// "ou=widgets,o=acme.com" is not an ancestor of "ou=sprockets,ou=widgets,o=foo.com"
+// "ou=widgets,o=acme.com" is not an ancestor of "ou=widgets,o=acme.com"
+func (d *DN) AncestorOf(other *DN) bool {
+	if len(d.RDNs) >= len(other.RDNs) {
+		return false
+	}
+	// Take the last `len(d.RDNs)` RDNs from the other DN to compare against
+	otherRDNs := other.RDNs[len(other.RDNs)-len(d.RDNs):]
+	for i := range d.RDNs {
+		if !d.RDNs[i].Equal(otherRDNs[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+// Equal returns true if the RelativeDNs are equal as defined by rfc4517 4.2.15 (distinguishedNameMatch).
+// Relative distinguished names are the same if and only if they have the same number of AttributeTypeAndValues
+// and each attribute of the first RDN is the same as the attribute of the second RDN with the same attribute type.
+// The order of attributes is not significant.
+// Case of attribute types is not significant.
+func (r *RelativeDN) Equal(other *RelativeDN) bool {
+	if len(r.Attributes) != len(other.Attributes) {
+		return false
+	}
+	return r.hasAllAttributes(other.Attributes) && other.hasAllAttributes(r.Attributes)
+}
+
+func (r *RelativeDN) hasAllAttributes(attrs []*AttributeTypeAndValue) bool {
+	for _, attr := range attrs {
+		found := false
+		for _, myattr := range r.Attributes {
+			if myattr.Equal(attr) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+// Equal returns true if the AttributeTypeAndValue is equivalent to the specified AttributeTypeAndValue
+// Case of the attribute type is not significant
+func (a *AttributeTypeAndValue) Equal(other *AttributeTypeAndValue) bool {
+	return strings.EqualFold(a.Type, other.Type) && a.Value == other.Value
+}

@@ -101,7 +101,7 @@ func (cm *CheckManager) selectBroker() (*api.Broker, error) {
 
 	for _, broker := range brokerList {
 		if cm.isValidBroker(&broker) {
-			validBrokers[broker.Cid] = broker
+			validBrokers[broker.CID] = broker
 			if broker.Type == "enterprise" {
 				haveEnterprise = true
 			}

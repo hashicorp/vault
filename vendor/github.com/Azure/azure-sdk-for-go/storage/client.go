@@ -387,11 +387,8 @@ func (c Client) exec(verb, url string, headers map[string]string, body io.Reader
 	if err != nil {
 		return nil, err
 	}
-	headers["Authorization"] = authHeader
-	if err != nil {
-		return nil, err
-	}
 
+	headers["Authorization"] = authHeader
 	req, err := http.NewRequest(verb, url, body)
 	if err != nil {
 		return nil, errors.New("azure/storage: error creating request: " + err.Error())
@@ -428,12 +425,13 @@ func (c Client) exec(verb, url string, headers map[string]string, body io.Reader
 			return nil, err
 		}
 
+		requestID := resp.Header.Get("x-ms-request-id")
 		if len(respBody) == 0 {
-			// no error in response body
-			err = fmt.Errorf("storage: service returned without a response body (%s)", resp.Status)
+			// no error in response body, might happen in HEAD requests
+			err = serviceErrFromStatusCode(resp.StatusCode, resp.Status, requestID)
 		} else {
 			// response contains storage service error object, unmarshal
-			storageErr, errIn := serviceErrFromXML(respBody, resp.StatusCode, resp.Header.Get("x-ms-request-id"))
+			storageErr, errIn := serviceErrFromXML(respBody, resp.StatusCode, requestID)
 			if err != nil { // error unmarshaling the error response
 				err = errIn
 			}
@@ -482,8 +480,8 @@ func (c Client) execInternalJSON(verb, url string, headers map[string]string, bo
 		}
 
 		if len(respBody) == 0 {
-			// no error in response body
-			err = fmt.Errorf("storage: service returned without a response body (%d)", resp.StatusCode)
+			// no error in response body, might happen in HEAD requests
+			err = serviceErrFromStatusCode(resp.StatusCode, resp.Status, resp.Header.Get("x-ms-request-id"))
 			return respToRet, err
 		}
 		// try unmarshal as odata.error json
@@ -533,6 +531,15 @@ func serviceErrFromXML(body []byte, statusCode int, requestID string) (AzureStor
 	storageErr.StatusCode = statusCode
 	storageErr.RequestID = requestID
 	return storageErr, nil
+}
+
+func serviceErrFromStatusCode(code int, status string, requestID string) AzureStorageServiceError {
+	return AzureStorageServiceError{
+		StatusCode: code,
+		Code:       status,
+		RequestID:  requestID,
+		Message:    "no response body was available for error status code",
+	}
 }
 
 func (e AzureStorageServiceError) Error() string {

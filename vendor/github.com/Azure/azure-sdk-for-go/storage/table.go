@@ -45,7 +45,7 @@ func (c *TableServiceClient) QueryTables() ([]AzureTable, error) {
 	headers := c.getStandardHeaders()
 	headers["Content-Length"] = "0"
 
-	resp, err := c.client.execTable("GET", uri, headers, nil)
+	resp, err := c.client.execTable(http.MethodGet, uri, headers, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,9 @@ func (c *TableServiceClient) QueryTables() ([]AzureTable, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.body)
+	if _, err := buf.ReadFrom(resp.body); err != nil {
+		return nil, err
+	}
 
 	var respArray queryTablesResponse
 	if err := json.Unmarshal(buf.Bytes(), &respArray); err != nil {
@@ -88,7 +90,7 @@ func (c *TableServiceClient) CreateTable(table AzureTable) error {
 
 	headers["Content-Length"] = fmt.Sprintf("%d", buf.Len())
 
-	resp, err := c.client.execTable("POST", uri, headers, buf)
+	resp, err := c.client.execTable(http.MethodPost, uri, headers, buf)
 
 	if err != nil {
 		return err
@@ -114,7 +116,7 @@ func (c *TableServiceClient) DeleteTable(table AzureTable) error {
 
 	headers["Content-Length"] = "0"
 
-	resp, err := c.client.execTable("DELETE", uri, headers, nil)
+	resp, err := c.client.execTable(http.MethodDelete, uri, headers, nil)
 
 	if err != nil {
 		return err

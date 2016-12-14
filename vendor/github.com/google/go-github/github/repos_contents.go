@@ -267,8 +267,12 @@ func (s *RepositoriesService) GetArchiveLink(owner, repo string, archiveformat a
 	} else {
 		resp, err = s.client.client.Transport.RoundTrip(req)
 	}
-	if err != nil || resp.StatusCode != http.StatusFound {
-		return nil, newResponse(resp), err
+	if err != nil {
+		return nil, nil, err
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusFound {
+		return nil, newResponse(resp), fmt.Errorf("unexpected status code: %s", resp.Status)
 	}
 	parsedURL, err := url.Parse(resp.Header.Get("Location"))
 	return parsedURL, newResponse(resp), err
