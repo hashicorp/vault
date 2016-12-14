@@ -84,6 +84,8 @@ variable contains the directory where Vault was installed.
 
 Otherwise, Vault is installed and ready to go!
 
+## Next
+
 Now Vault is installed we can start our first Vault server! [Let's do
 that now](/intro/getting-started/dev-server.html).
 
