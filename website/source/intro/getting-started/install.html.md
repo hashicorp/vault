@@ -83,3 +83,7 @@ variable was not setup properly. Please go back and ensure that your PATH
 variable contains the directory where Vault was installed.
 
 Otherwise, Vault is installed and ready to go!
+
+Now Vault is installed we can start our first Vault server! [Let's do
+that now](/intro/getting-started/dev-server.html).
+
