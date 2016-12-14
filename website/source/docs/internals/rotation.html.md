@@ -52,7 +52,7 @@ but standby instances can still assume an active role after either operation. Th
 done by providing an online upgrade path for standby instances. If the current encryption
 key is `N` and a rotation installs `N+1`, Vault creates a special "upgrade" key, which
 provides the `N+1` encryption key protected by the `N` key. This upgrade key is only available
-for a few minutes enabling standby instances do a periodic check for upgrades.
+for a few minutes enabling standby instances to do a periodic check for upgrades.
 This allows standby instances to update their keys and stay in-sync with the active Vault
 without requiring operators to perform another unseal.
 

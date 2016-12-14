@@ -7,6 +7,7 @@ package checkmgr
 import (
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -65,7 +66,7 @@ func (cm *CheckManager) loadCACert() {
 // fetchCert fetches CA certificate using Circonus API
 func (cm *CheckManager) fetchCert() ([]byte, error) {
 	if !cm.enabled {
-		return circonusCA, nil
+		return nil, errors.New("check manager is not enabled")
 	}
 
 	response, err := cm.apih.Get("/pki/ca.crt")

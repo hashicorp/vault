@@ -82,6 +82,27 @@ func (s *RepositoriesService) ListDeployments(owner, repo string, opt *Deploymen
 	return *deployments, resp, err
 }
 
+// GetDeployment returns a single deployment of a repository.
+//
+// GitHub API docs: https://developer.github.com/v3/repos/deployments/
+// Note: GetDeployment uses the undocumented GitHub API endpoint /repos/:owner/:repo/deployments/:id.
+func (s *RepositoriesService) GetDeployment(owner, repo string, deploymentID int) (*Deployment, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/deployments/%v", owner, repo, deploymentID)
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	deployment := new(Deployment)
+	resp, err := s.client.Do(req, deployment)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return deployment, resp, err
+}
+
 // CreateDeployment creates a new deployment for a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/deployments/#create-a-deployment

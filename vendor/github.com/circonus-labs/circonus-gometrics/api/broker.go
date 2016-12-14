@@ -7,6 +7,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -26,7 +28,7 @@ type BrokerDetail struct {
 
 // Broker definition
 type Broker struct {
-	Cid       string         `json:"_cid"`
+	CID       string         `json:"_cid"`
 	Details   []BrokerDetail `json:"_details"`
 	Latitude  string         `json:"_latitude"`
 	Longitude string         `json:"_longitude"`
@@ -35,15 +37,27 @@ type Broker struct {
 	Type      string         `json:"_type"`
 }
 
+var baseBrokerPath = "/broker"
+
 // FetchBrokerByID fetch a broker configuration by [group]id
 func (a *API) FetchBrokerByID(id IDType) (*Broker, error) {
-	cid := CIDType(fmt.Sprintf("/broker/%d", id))
+	cid := CIDType(fmt.Sprintf("%s/%d", baseBrokerPath, id))
 	return a.FetchBrokerByCID(cid)
 }
 
 // FetchBrokerByCID fetch a broker configuration by cid
 func (a *API) FetchBrokerByCID(cid CIDType) (*Broker, error) {
-	result, err := a.Get(string(cid))
+	if matched, err := regexp.MatchString("^"+baseBrokerPath+"/[0-9]+$", string(cid)); err != nil {
+		return nil, err
+	} else if !matched {
+		return nil, fmt.Errorf("Invalid broker CID %v", cid)
+	}
+
+	reqURL := url.URL{
+		Path: string(cid),
+	}
+
+	result, err := a.Get(reqURL.String())
 	if err != nil {
 		return nil, err
 	}

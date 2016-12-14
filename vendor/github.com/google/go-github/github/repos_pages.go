@@ -30,7 +30,7 @@ type PagesBuild struct {
 	Commit    *string     `json:"commit,omitempty"`
 	Duration  *int        `json:"duration,omitempty"`
 	CreatedAt *Timestamp  `json:"created_at,omitempty"`
-	UpdatedAt *Timestamp  `json:"created_at,omitempty"`
+	UpdatedAt *Timestamp  `json:"updated_at,omitempty"`
 }
 
 // GetPagesInfo fetches information about a GitHub Pages site.
