@@ -22,7 +22,7 @@
     <div class="log">{{renderedLogs}}</div>
 
     <form {{action "submitText" on="submit"}}>
-        {{#unless isLoading}}${{/unless}} {{input value=currentText class="shell" spellcheck="false"}}
+        {{#unless isLoading}}${{/unless}} {{input value=currentText class="shell" autocomplete="off" spellcheck="false"}}
     </form>
 
     {{#if isLoading}}
