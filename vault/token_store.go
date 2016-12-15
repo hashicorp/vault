@@ -1272,7 +1272,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// When a role is not in use, only permit policies to be a subset unless
 	// the client has root or sudo privileges
-	case role == nil && !isSudo:
+	case !isSudo:
 		// Sanitize passed-in and parent policies before comparison
 		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, false)
 		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, false)

@@ -2746,9 +2746,8 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
-	// By default, creating tokens on roles should append the 'default' policy
-	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
-		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
 	}
 
 	// If 'allowed_policies' in role does not have 'default' in it, the
