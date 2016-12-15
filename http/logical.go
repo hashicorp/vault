@@ -260,6 +260,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}
+
 	w.WriteHeader(status)
 	w.Write(body)
 }

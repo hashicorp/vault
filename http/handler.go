@@ -61,9 +61,26 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 
 	// Wrap the handler in another handler to trigger all help paths.
-	handler := handleHelpHandler(mux, core)
+	helpWrappedHandler := wrapHelpHandler(mux, core)
 
-	return handler
+	// Wrap the help wrapped handler with another layer with a generic
+	// handler
+	genericWrappedHandler := wrapGenericHandler(helpWrappedHandler)
+
+	return genericWrappedHandler
+}
+
+// wrapGenericHandler wraps the handler with an extra layer of handler where
+// tasks that should be commonly handled for all the requests and/or responses
+// are performed.
+func wrapGenericHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set the Cache-Control header for all the responses returned
+		// by Vault
+		w.Header().Set("Cache-Control", "no-store")
+		h.ServeHTTP(w, r)
+		return
+	})
 }
 
 // A lookup on a token that is about to expire returns nil, which means by the

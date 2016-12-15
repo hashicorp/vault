@@ -398,6 +398,12 @@ func WrapHandlerForClustering(handler http.Handler, logger log.Logger) func() (h
 				}
 
 				w.Header().Add("Content-Type", "application/json")
+
+				// The response writer here is different from
+				// the one set in Vault's HTTP handler.
+				// Hence, set the Cache-Control explicitly.
+				w.Header().Set("Cache-Control", "no-store")
+
 				w.WriteHeader(http.StatusInternalServerError)
 
 				type errorResponse struct {
