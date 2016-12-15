@@ -107,8 +107,8 @@ Default: cn`,
 				Description: "Maximum TLS version to use. Accepted values are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'",
 			},
 			"deny_null_bind": &framework.FieldSchema{
-				Type:		 framework.TypeBool,
-				Default:	 true,
+				Type:        framework.TypeBool,
+				Default:     true,
 				Description: "Denies an unauthenticated LDAP bind request if the user's password is empty; defaults to true",
 			},
 		},
@@ -366,6 +366,13 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 			port = "389"
 		}
 		conn, err = ldap.Dial("tcp", host+":"+port)
+		if err != nil {
+			break
+		}
+		if conn == nil {
+			err = fmt.Errorf("empty connection after dialing")
+			break
+		}
 		if c.StartTLS {
 			tlsConfig, err = c.GetTLSConfig(host)
 			if err != nil {
