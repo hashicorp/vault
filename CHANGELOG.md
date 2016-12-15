@@ -1,3 +1,10 @@
+## 0.6.4 (Unreleased)
+
+BUG FIXES:
+
+ * auth/ldap: Don't panic if dialing returns an error and starttls is enabled;
+   instead, return the error [GH-2188]
+
 ## 0.6.3 (December 6, 2016)
 
 DEPRECATIONS/CHANGES:
