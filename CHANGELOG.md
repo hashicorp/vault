@@ -1,5 +1,10 @@
 ## 0.6.4 (Unreleased)
 
+IMPROVEMENTS:
+
+ * http: Vault now sets a `no-store` cache control header to make it more
+   secure in setups that are not end-to-end encrypted [GH-2183]
+
 BUG FIXES:
 
  * auth/ldap: Don't panic if dialing returns an error and starttls is enabled;
