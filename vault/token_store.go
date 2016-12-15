@@ -722,7 +722,7 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	defer lock.Unlock()
 
 	// Call lookupSalted instead of Lookup to avoid deadlocking since Lookup grabs a read lock
-	te, err := ts.lookupSalted(ts.SaltID(te.ID))
+	te, err := ts.lookupSalted(ts.SaltID(te.ID), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh entry: %v", err)
 	}
@@ -783,11 +783,13 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	lock.RLock()
 	defer lock.RUnlock()
 
-	return ts.lookupSalted(ts.SaltID(id))
+	return ts.lookupSalted(ts.SaltID(id), false)
 }
 
-// lookupSlated is used to find a token given its salted ID
-func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
+// lookupSalted is used to find a token given its salted ID. If tainted is
+// true, entries that are awating deferred deletion (num uses has been set to
+// -1) will be returned anyways.
+func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
 	path := lookupPrefix + saltedId
 	raw, err := ts.view.Get(path)
@@ -807,7 +809,7 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 	}
 
 	// This is a token that is awaiting deferred revocation
-	if entry.NumUses == -1 {
+	if entry.NumUses == -1 && !tainted {
 		return nil, nil
 	}
 
@@ -871,7 +873,7 @@ func (ts *TokenStore) Revoke(id string) error {
 // any child tokens will be orphaned.
 func (ts *TokenStore) revokeSalted(saltedId string) error {
 	// Lookup the token first
-	entry, err := ts.lookupSalted(saltedId)
+	entry, err := ts.lookupSalted(saltedId, true)
 	if err != nil {
 		return err
 	}
@@ -993,7 +995,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 	// If we hit an error, assume it's a pre-struct straight token ID
 	if err != nil {
 		aEntry.TokenID = string(entry.Value)
-		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID))
+		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID), false)
 		if err != nil {
 			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
 		}
