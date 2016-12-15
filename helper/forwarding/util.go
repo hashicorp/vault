@@ -178,7 +178,6 @@ func NewRPCResponseWriter() *RPCResponseWriter {
 		statusCode: 200,
 	}
 	//w.header.Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Cache-Control", "no-store")
 	return w
 }
 
