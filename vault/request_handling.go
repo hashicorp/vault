@@ -187,27 +187,35 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
+		var wrapFormat string
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
 			if resp.WrapInfo.TTL > 0 {
 				wrapTTL = resp.WrapInfo.TTL
 			}
+			wrapFormat = resp.WrapInfo.Format
 			resp.WrapInfo = nil
 		}
 
-		if req.WrapTTL > 0 {
-			switch {
-			case wrapTTL == 0:
-				wrapTTL = req.WrapTTL
-			case req.WrapTTL < wrapTTL:
-				wrapTTL = req.WrapTTL
+		if req.WrapInfo != nil {
+			if req.WrapInfo.TTL > 0 {
+				switch {
+				case wrapTTL == 0:
+					wrapTTL = req.WrapInfo.TTL
+				case req.WrapInfo.TTL < wrapTTL:
+					wrapTTL = req.WrapInfo.TTL
+				}
+			}
+			if req.WrapInfo.Format != "" && wrapFormat == "" {
+				wrapFormat = req.WrapInfo.Format
 			}
 		}
 
 		if wrapTTL > 0 {
-			resp.WrapInfo = &logical.WrapInfo{
-				TTL: wrapTTL,
+			resp.WrapInfo = &logical.ResponseWrapInfo{
+				TTL:    wrapTTL,
+				Format: wrapFormat,
 			}
 		}
 	}
@@ -324,30 +332,37 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
+		var wrapFormat string
 
 		// Ensure no wrap info information is set other than, possibly, the TTL
 		if resp.WrapInfo != nil {
 			if resp.WrapInfo.TTL > 0 {
 				wrapTTL = resp.WrapInfo.TTL
 			}
+			wrapFormat = resp.WrapInfo.Format
 			resp.WrapInfo = nil
 		}
 
-		if req.WrapTTL > 0 {
-			switch {
-			case wrapTTL == 0:
-				wrapTTL = req.WrapTTL
-			case req.WrapTTL < wrapTTL:
-				wrapTTL = req.WrapTTL
+		if req.WrapInfo != nil {
+			if req.WrapInfo.TTL > 0 {
+				switch {
+				case wrapTTL == 0:
+					wrapTTL = req.WrapInfo.TTL
+				case req.WrapInfo.TTL < wrapTTL:
+					wrapTTL = req.WrapInfo.TTL
+				}
+			}
+			if req.WrapInfo.Format != "" && wrapFormat == "" {
+				wrapFormat = req.WrapInfo.Format
 			}
 		}
 
 		if wrapTTL > 0 {
-			resp.WrapInfo = &logical.WrapInfo{
-				TTL: wrapTTL,
+			resp.WrapInfo = &logical.ResponseWrapInfo{
+				TTL:    wrapTTL,
+				Format: wrapFormat,
 			}
 		}
-
 	}
 
 	// A login request should never return a secret!

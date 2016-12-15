@@ -44,7 +44,9 @@ func TestCopy_request(t *testing.T) {
 		Data: map[string]interface{}{
 			"foo": "bar",
 		},
-		WrapTTL: 60 * time.Second,
+		WrapInfo: &logical.RequestWrapInfo{
+			TTL: 60 * time.Second,
+		},
 	}
 	arg := expected
 

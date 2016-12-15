@@ -19,9 +19,13 @@ const (
 	// AuthHeaderName is the name of the header containing the token.
 	AuthHeaderName = "X-Vault-Token"
 
-	// WrapHeaderName is the name of the header containing a directive to wrap the
-	// response.
+	// WrapTTLHeaderName is the name of the header containing a directive to
+	// wrap the response
 	WrapTTLHeaderName = "X-Vault-Wrap-TTL"
+
+	// WrapFormatHeaderName is the name of the header containing the format to
+	// wrap in; has no effect if the wrap TTL is not set
+	WrapFormatHeaderName = "X-Vault-Wrap-Format"
 
 	// NoRequestForwardingHeaderName is the name of the header telling Vault
 	// not to use request forwarding
@@ -275,9 +279,8 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logic
 	return req
 }
 
-// requestWrapTTL adds the WrapTTL value to the logical.Request if it
-// exists.
-func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, error) {
+// requestWrapInfo adds the WrapInfo value to the logical.Request if wrap info exists
+func requestWrapInfo(r *http.Request, req *logical.Request) (*logical.Request, error) {
 	// First try for the header value
 	wrapTTL := r.Header.Get(WrapTTLHeaderName)
 	if wrapTTL == "" {
@@ -292,7 +295,16 @@ func requestWrapTTL(r *http.Request, req *logical.Request) (*logical.Request, er
 	if int64(dur) < 0 {
 		return req, fmt.Errorf("requested wrap ttl cannot be negative")
 	}
-	req.WrapTTL = dur
+
+	req.WrapInfo = &logical.RequestWrapInfo{
+		TTL: dur,
+	}
+
+	wrapFormat := r.Header.Get(WrapFormatHeaderName)
+	switch wrapFormat {
+	case "jwt":
+		req.WrapInfo.Format = "jwt"
+	}
 
 	return req, nil
 }

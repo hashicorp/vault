@@ -131,27 +131,30 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 		resp.WrapInfo.WrappedAccessor = resp.Auth.Accessor
 	}
 
-	// Create the JWT
-	claims := jws.Claims{}
-	// Use this to ensure we don't try to unwrap at the wrong cluster
-	claims.SetIssuer(cluster.ID)
-	// Map the JWT ID to the token ID for ease ofuse
-	claims.SetJWTID(te.ID)
-	// Set the issue time to the creation time
-	claims.SetIssuedAt(creationTime)
-	// Set the expiration to the TTL
-	claims.SetExpiration(creationTime.Add(resp.WrapInfo.TTL))
-	if resp.Auth != nil {
-		claims.Set("accessor", resp.Auth.Accessor)
+	switch resp.WrapInfo.Format {
+	case "jwt":
+		// Create the JWT
+		claims := jws.Claims{}
+		// Use this to ensure we don't try to unwrap at the wrong cluster
+		claims.SetIssuer(cluster.ID)
+		// Map the JWT ID to the token ID for ease ofuse
+		claims.SetJWTID(te.ID)
+		// Set the issue time to the creation time
+		claims.SetIssuedAt(creationTime)
+		// Set the expiration to the TTL
+		claims.SetExpiration(creationTime.Add(resp.WrapInfo.TTL))
+		if resp.Auth != nil {
+			claims.Set("accessor", resp.Auth.Accessor)
+		}
+		claims.Set("type", "wrapping")
+		jwt := jws.NewJWT(claims, crypto.SigningMethodES512)
+		serWebToken, err := jwt.Serialize(c.wrappingJWTKey)
+		if err != nil {
+			c.logger.Error("core: failed to serialize JWT", "error", err)
+			return nil, ErrInternalError
+		}
+		resp.WrapInfo.Token = string(serWebToken)
 	}
-	claims.Set("type", "wrapping")
-	jwt := jws.NewJWT(claims, crypto.SigningMethodES512)
-	serWebToken, err := jwt.Serialize(c.wrappingJWTKey)
-	if err != nil {
-		c.logger.Error("core: failed to serialize JWT", "error", err)
-		return nil, ErrInternalError
-	}
-	resp.WrapInfo.JWT = string(serWebToken)
 
 	cubbyReq := &logical.Request{
 		Operation:   logical.CreateOperation,

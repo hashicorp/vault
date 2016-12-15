@@ -39,7 +39,6 @@ type Secret struct {
 // contained is an authentication token, the accessor for the token will be
 // available in WrappedAccessor.
 type SecretWrapInfo struct {
-	JWT             string    `json:"jwt"`
 	Token           string    `json:"token"`
 	TTL             int       `json:"ttl"`
 	CreationTime    time.Time `json:"creation_time"`

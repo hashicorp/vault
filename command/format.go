@@ -184,7 +184,6 @@ func (t TableFormatter) OutputSecret(ui cli.Ui, secret, s *api.Secret) error {
 		if s.WrapInfo.WrappedAccessor != "" {
 			input = append(input, fmt.Sprintf("wrapped_accessor: %s %s", config.Delim, s.WrapInfo.WrappedAccessor))
 		}
-		input = append(input, fmt.Sprintf("jwt: %s %s", config.Delim, s.WrapInfo.JWT))
 	}
 
 	if s.Data != nil && len(s.Data) > 0 {

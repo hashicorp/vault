@@ -80,7 +80,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		Connection: getConnection(r),
 	})
 
-	req, err = requestWrapTTL(r, req)
+	req, err = requestWrapInfo(r, req)
 	if err != nil {
 		return nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
 	}
@@ -169,7 +169,6 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 		if resp.WrapInfo != nil && resp.WrapInfo.Token != "" {
 			httpResp = &logical.HTTPResponse{
 				WrapInfo: &logical.HTTPWrapInfo{
-					JWT:             resp.WrapInfo.JWT,
 					Token:           resp.WrapInfo.Token,
 					TTL:             int(resp.WrapInfo.TTL.Seconds()),
 					CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),

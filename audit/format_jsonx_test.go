@@ -28,7 +28,9 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 				Connection: &logical.Connection{
 					RemoteAddr: "127.0.0.1",
 				},
-				WrapTTL: 60 * time.Second,
+				WrapInfo: &logical.RequestWrapInfo{
+					WrapTTL: 60 * time.Second,
+				},
 			},
 			errors.New("this is an error"),
 			"",

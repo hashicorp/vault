@@ -43,7 +43,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			Unauthenticated: []string{
-				"wrapping/pubkey",
+				"wrapping/jwtkey",
 			},
 		},
 
@@ -1502,7 +1502,7 @@ func (b *SystemBackend) handleWrappingPubkey(
 
 func (b *SystemBackend) handleWrappingWrap(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.WrapTTL == 0 {
+	if req.WrapInfo == nil || req.WrapInfo.TTL == 0 {
 		return logical.ErrorResponse("endpoint requires response wrapping to be used"), logical.ErrInvalidRequest
 	}
 
@@ -1723,7 +1723,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 		Data: map[string]interface{}{
 			"response": response,
 		},
-		WrapInfo: &logical.WrapInfo{
+		WrapInfo: &logical.ResponseWrapInfo{
 			TTL: time.Duration(creationTTL),
 		},
 	}, nil

@@ -87,6 +87,14 @@ func (f *AuditFormatter) FormatRequest(
 		errString = err.Error()
 	}
 
+	var reqWrapInfo *AuditRequestWrapInfo
+	if req.WrapInfo != nil {
+		reqWrapInfo = &AuditRequestWrapInfo{
+			TTL:    int(req.WrapInfo.TTL / time.Second),
+			Format: req.WrapInfo.Format,
+		}
+	}
+
 	reqEntry := &AuditRequestEntry{
 		Type:  "request",
 		Error: errString,
@@ -105,7 +113,7 @@ func (f *AuditFormatter) FormatRequest(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			WrapTTL:             int(req.WrapTTL / time.Second),
+			WrapInfo:            reqWrapInfo,
 		},
 	}
 
@@ -238,14 +246,21 @@ func (f *AuditFormatter) FormatResponse(
 		}
 	}
 
-	var respWrapInfo *AuditWrapInfo
+	var reqWrapInfo *AuditRequestWrapInfo
+	if req.WrapInfo != nil {
+		reqWrapInfo = &AuditRequestWrapInfo{
+			TTL:    int(req.WrapInfo.TTL / time.Second),
+			Format: req.WrapInfo.Format,
+		}
+	}
+
+	var respWrapInfo *AuditResponseWrapInfo
 	if resp.WrapInfo != nil {
-		respWrapInfo = &AuditWrapInfo{
+		respWrapInfo = &AuditResponseWrapInfo{
 			TTL:             int(resp.WrapInfo.TTL / time.Second),
 			Token:           resp.WrapInfo.Token,
 			CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
-			JWT:             resp.WrapInfo.JWT,
 		}
 	}
 
@@ -267,7 +282,7 @@ func (f *AuditFormatter) FormatResponse(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			WrapTTL:             int(req.WrapTTL / time.Second),
+			WrapInfo:            reqWrapInfo,
 		},
 
 		Response: AuditResponse{
@@ -313,7 +328,7 @@ type AuditRequest struct {
 	Path                string                 `json:"path"`
 	Data                map[string]interface{} `json:"data"`
 	RemoteAddr          string                 `json:"remote_address"`
-	WrapTTL             int                    `json:"wrap_ttl"`
+	WrapInfo            *AuditRequestWrapInfo  `json:"wrap_info,omitempty"`
 }
 
 type AuditResponse struct {
@@ -321,7 +336,7 @@ type AuditResponse struct {
 	Secret   *AuditSecret           `json:"secret,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
-	WrapInfo *AuditWrapInfo         `json:"wrap_info,omitempty"`
+	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
 }
 
 type AuditAuth struct {
@@ -336,12 +351,16 @@ type AuditSecret struct {
 	LeaseID string `json:"lease_id"`
 }
 
-type AuditWrapInfo struct {
+type AuditRequestWrapInfo struct {
+	TTL    int    `json:"ttl"`
+	Format string `json:"format"`
+}
+
+type AuditResponseWrapInfo struct {
 	TTL             int    `json:"ttl"`
 	Token           string `json:"token"`
 	CreationTime    string `json:"creation_time"`
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
-	JWT             string `json:"jwt"`
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

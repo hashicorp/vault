@@ -6,6 +6,18 @@ import (
 	"time"
 )
 
+// RequestWrapInfo is a struct that stores information about desired response
+// wrapping behavior
+type RequestWrapInfo struct {
+	// Setting to non-zero specifies that the response should be wrapped.
+	// Specifies the desired TTL of the wrapping token.
+	TTL time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+
+	// The format to use for the wrapped response; if not specified it's a bare
+	// token
+	Format string `json:"format" structs:"format" mapstructure:"format"`
+}
+
 // Request is a struct that stores the parameters and context
 // of a request being made to Vault. It is used to abstract
 // the details of the higher level request protocol from the handlers.
@@ -61,9 +73,8 @@ type Request struct {
 	// request path with the MountPoint trimmed off.
 	MountPoint string `json:"mount_point" structs:"mount_point" mapstructure:"mount_point"`
 
-	// WrapTTL contains the requested TTL of the token used to wrap the
-	// response in a cubbyhole.
-	WrapTTL time.Duration `json:"wrap_ttl" struct:"wrap_ttl" mapstructure:"wrap_ttl"`
+	// WrapInfo contains requested response wrapping parameters
+	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
 }
 
 // Get returns a data field and guards for nil Data

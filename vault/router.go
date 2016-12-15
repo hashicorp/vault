@@ -252,8 +252,14 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	// Cache the identifier of the request
 	originalReqID := req.ID
 
-	// Cache the wrap TTL of the request
-	originalWrapTTL := req.WrapTTL
+	// Cache the wrap info of the request
+	var wrapInfo *logical.RequestWrapInfo
+	if req.WrapInfo != nil {
+		wrapInfo = &logical.RequestWrapInfo{
+			TTL:    req.WrapInfo.TTL,
+			Format: req.WrapInfo.Format,
+		}
+	}
 
 	// Reset the request before returning
 	defer func() {
@@ -263,7 +269,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		req.ID = originalReqID
 		req.Storage = nil
 		req.ClientToken = clientToken
-		req.WrapTTL = originalWrapTTL
+		req.WrapInfo = wrapInfo
 	}()
 
 	// Invoke the backend
