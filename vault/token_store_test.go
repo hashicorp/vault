@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -2992,6 +2993,8 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	var resp *logical.Response
 	var err error
+	cubbyFuncLock := &sync.RWMutex{}
+	cubbyFuncLock.Lock()
 
 	exp := mockExpiration(t)
 	ts := exp.tokenStore
@@ -3073,6 +3076,7 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	origDestroyCubbyhole := ts.cubbyholeDestroyer
+
 	ts.cubbyholeDestroyer = func(*TokenStore, string) error {
 		return fmt.Errorf("keep it frosty")
 	}
@@ -3099,9 +3103,12 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		time.Sleep(1 * time.Second)
 		return fmt.Errorf("keep it frosty")
 	}
+	cubbyFuncLock.Unlock()
 
 	go func() {
+		cubbyFuncLock.RLock()
 		err := ts.revokeSalted(saltTut)
+		cubbyFuncLock.RUnlock()
 		if err == nil {
 			t.Fatalf("expected error")
 		}
@@ -3124,6 +3131,8 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Put back to normal
+	cubbyFuncLock.Lock()
+	defer cubbyFuncLock.Unlock()
 	ts.cubbyholeDestroyer = origDestroyCubbyhole
 
 	err = ts.revokeSalted(saltTut)
