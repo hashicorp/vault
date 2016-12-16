@@ -25,7 +25,7 @@ func newCORSConfig() *CORSConfig {
 		allowedHeaders: &map[string]string{
 			"Access-Control-Allow-Headers": "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
 			"Access-Control-Max-Age":       "1800",
-			"Content-Type":                 "text/plain",
+			// "Content-Type":                 "text/plain",
 		},
 		allowCredentials: true,
 		allowedMethods: &[]string{

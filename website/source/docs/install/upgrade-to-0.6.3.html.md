@@ -3,7 +3,7 @@ layout: "install"
 page_title: "Upgrading to Vault 0.6.3"
 sidebar_current: "docs-install-upgrade-to-0.6.3"
 description: |-
-  Learn how to upgrade to Vault 0.63.
+  Learn how to upgrade to Vault 0.6.3.
 ---
 
 # Overview

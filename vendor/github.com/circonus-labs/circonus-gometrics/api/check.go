@@ -6,10 +6,8 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
-	"regexp"
 	"strings"
 )
 
@@ -20,30 +18,22 @@ type CheckDetails struct {
 
 // Check definition
 type Check struct {
-	CID            string       `json:"_cid"`
+	Cid            string       `json:"_cid"`
 	Active         bool         `json:"_active"`
-	BrokerCID      string       `json:"_broker"`
-	CheckBundleCID string       `json:"_check_bundle"`
+	BrokerCid      string       `json:"_broker"`
+	CheckBundleCid string       `json:"_check_bundle"`
 	CheckUUID      string       `json:"_check_uuid"`
 	Details        CheckDetails `json:"_details"`
 }
 
-var baseCheckPath = "/check"
-
 // FetchCheckByID fetch a check configuration by id
 func (a *API) FetchCheckByID(id IDType) (*Check, error) {
-	cid := CIDType(fmt.Sprintf("%s/%d", baseCheckPath, int(id)))
+	cid := CIDType(fmt.Sprintf("/check/%d", int(id)))
 	return a.FetchCheckByCID(cid)
 }
 
 // FetchCheckByCID fetch a check configuration by cid
 func (a *API) FetchCheckByCID(cid CIDType) (*Check, error) {
-	if matched, err := regexp.MatchString("^"+baseCheckPath+"/[0-9]+$", string(cid)); err != nil {
-		return nil, err
-	} else if !matched {
-		return nil, fmt.Errorf("Invalid check CID %v", cid)
-	}
-
 	result, err := a.Get(string(cid))
 	if err != nil {
 		return nil, err
@@ -59,9 +49,6 @@ func (a *API) FetchCheckByCID(cid CIDType) (*Check, error) {
 
 // FetchCheckBySubmissionURL fetch a check configuration by submission_url
 func (a *API) FetchCheckBySubmissionURL(submissionURL URLType) (*Check, error) {
-	if string(submissionURL) == "" {
-		return nil, errors.New("[ERROR] Invalid submission URL (blank)")
-	}
 
 	u, err := url.Parse(string(submissionURL))
 	if err != nil {
@@ -112,18 +99,10 @@ func (a *API) FetchCheckBySubmissionURL(submissionURL URLType) (*Check, error) {
 }
 
 // CheckSearch returns a list of checks matching a search query
-func (a *API) CheckSearch(searchCriteria SearchQueryType) ([]Check, error) {
-	reqURL := url.URL{
-		Path: baseCheckPath,
-	}
+func (a *API) CheckSearch(query SearchQueryType) ([]Check, error) {
+	queryURL := fmt.Sprintf("/check?search=%s", string(query))
 
-	if searchCriteria != "" {
-		q := url.Values{}
-		q.Set("search", string(searchCriteria))
-		reqURL.RawQuery = q.Encode()
-	}
-
-	result, err := a.Get(reqURL.String())
+	result, err := a.Get(queryURL)
 	if err != nil {
 		return nil, err
 	}
@@ -136,13 +115,8 @@ func (a *API) CheckSearch(searchCriteria SearchQueryType) ([]Check, error) {
 	return checks, nil
 }
 
-// CheckFilterSearch returns a list of checks matching a filter (filtering allows looking for
-// things within sub-elements e.g. details)
+// CheckFilterSearch returns a list of checks matching a filter
 func (a *API) CheckFilterSearch(filter SearchFilterType) ([]Check, error) {
-	if filter == "" {
-		return nil, errors.New("[ERROR] invalid filter supplied (blank)")
-	}
-
 	filterURL := fmt.Sprintf("/check?%s", string(filter))
 
 	result, err := a.Get(filterURL)

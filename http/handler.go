@@ -64,10 +64,27 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 
 	// Wrap the handler in another handler to trigger all help paths.
-	handler := handleHelpHandler(mux, core)
-	handler = handleCORS(core, handler)
+	helpWrappedHandler := wrapHelpHandler(mux, core)
+	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 
-	return handler
+	// Wrap the help wrapped handler with another layer with a generic
+	// handler
+	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
+
+	return genericWrappedHandler
+}
+
+// wrapGenericHandler wraps the handler with an extra layer of handler where
+// tasks that should be commonly handled for all the requests and/or responses
+// are performed.
+func wrapGenericHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set the Cache-Control header for all the responses returned
+		// by Vault
+		w.Header().Set("Cache-Control", "no-store")
+		h.ServeHTTP(w, r)
+		return
+	})
 }
 
 // A lookup on a token that is about to expire returns nil, which means by the
@@ -126,37 +143,6 @@ func parseRequest(r *http.Request, w http.ResponseWriter, out interface{}) error
 		return errwrap.Wrapf("failed to parse JSON input: {{err}}", err)
 	}
 	return err
-}
-
-// HandleCORS adds required headers to properly respond to
-// requests that require Cross Origin Resource Sharing (CORS) headers.
-func handleCORS(core *vault.Core, handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get(NoCORS) != "" {
-			// CORS explicitly disabled. This is so the Vault client does not reject requests.
-			// A browser could do this, but AJAX is still going to want them if the request is
-			// cross-origin, so it would be kind of silly to do it.
-			core.Logger().Trace("http/handleCORS: CORS disabled by client request")
-			handler.ServeHTTP(w, r)
-			return
-		}
-
-		corsConf := core.CORSConfig()
-		statusCode := corsConf.ApplyHeaders(w, r)
-
-		if statusCode != http.StatusOK {
-			respondRaw(w, r, &logical.Response{
-				Data: map[string]interface{}{
-					logical.HTTPStatusCode: statusCode,
-					logical.HTTPRawBody:    []byte(""),
-				},
-			})
-			return
-		}
-
-		handler.ServeHTTP(w, r)
-		return
-	})
 }
 
 // handleRequestForwarding determines whether to forward a request or not,

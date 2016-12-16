@@ -16,7 +16,6 @@ import (
 	"time"
 	"unicode/utf16"
 	"unicode/utf8"
-	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 )
 
 func parseInstances(msg []byte) map[string]map[string]string {
@@ -80,16 +79,11 @@ const (
 )
 
 // packet types
-// https://msdn.microsoft.com/en-us/library/dd304214.aspx
 const (
-	packSQLBatch packetType = 1
+	packSQLBatch    = 1
 	packRPCRequest  = 3
 	packReply       = 4
-
-	// 2.2.1.7 Attention: https://msdn.microsoft.com/en-us/library/dd341449.aspx
-	// 4.19.2 Out-of-Band Attention Signal: https://msdn.microsoft.com/en-us/library/dd305167.aspx
-	packAttention   = 6
-
+	packCancel      = 6
 	packBulkLoadBCP = 7
 	packTransMgrReq = 14
 	packNormal      = 15
@@ -125,7 +119,7 @@ type tdsSession struct {
 	columns      []columnStruct
 	tranid       uint64
 	logFlags     uint64
-	log          optionalLogger
+	log          *Logger
 	routedServer string
 	routedPort   uint16
 }
@@ -137,7 +131,6 @@ const (
 	logSQL         = 8
 	logParams      = 16
 	logTransaction = 32
-	logDebug       = 64
 )
 
 type columnStruct struct {
@@ -639,13 +632,6 @@ func sendSqlBatch72(buf *tdsBuffer,
 	return buf.FinishPacket()
 }
 
-// 2.2.1.7 Attention: https://msdn.microsoft.com/en-us/library/dd341449.aspx
-// 4.19.2 Out-of-Band Attention Signal: https://msdn.microsoft.com/en-us/library/dd305167.aspx
-func sendAttention(buf *tdsBuffer) (error) {
-	buf.BeginPacket(packAttention)
-	return buf.FinishPacket()
-}
-
 type connectParams struct {
 	logFlags               uint64
 	port                   uint64
@@ -726,8 +712,7 @@ func parseConnectParams(dsn string) (connectParams, error) {
 		}
 	}
 
-	// https://msdn.microsoft.com/en-us/library/dd341108.aspx
-	p.dial_timeout = 15 * time.Second
+	p.dial_timeout = 5 * time.Second
 	p.conn_timeout = 30 * time.Second
 	strconntimeout, ok := params["connection timeout"]
 	if ok {
@@ -747,11 +732,6 @@ func parseConnectParams(dsn string) (connectParams, error) {
 		}
 		p.dial_timeout = time.Duration(timeout) * time.Second
 	}
-
-	// default keep alive should be 30 seconds according to spec:
-	// https://msdn.microsoft.com/en-us/library/dd341108.aspx
-	p.keepAlive = 30 * time.Second
-
 	keepAlive, ok := params["keepalive"]
 	if ok {
 		timeout, err := strconv.ParseUint(keepAlive, 0, 16)
@@ -1048,7 +1028,7 @@ initiate_connection:
 	var sspi_msg []byte
 continue_login:
 	tokchan := make(chan tokenStruct, 5)
-	go processResponse(context.Background(), &sess, tokchan)
+	go processResponse(&sess, tokchan)
 	success := false
 	for tok := range tokchan {
 		switch token := tok.(type) {

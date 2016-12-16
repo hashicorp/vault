@@ -98,7 +98,7 @@ func (c *TableServiceClient) QueryTableEntities(tableName AzureTable, previousCo
 
 	headers["Content-Length"] = "0"
 
-	resp, err := c.client.execTable(http.MethodGet, uri, headers, nil)
+	resp, err := c.client.execTable("GET", uri, headers, nil)
 
 	if err != nil {
 		return nil, nil, err
@@ -106,9 +106,12 @@ func (c *TableServiceClient) QueryTableEntities(tableName AzureTable, previousCo
 
 	contToken := extractContinuationTokenFromHeaders(resp.headers)
 
+	if err != nil {
+		return nil, contToken, err
+	}
 	defer resp.body.Close()
 
-	if err = checkRespCode(resp.statusCode, []int{http.StatusOK}); err != nil {
+	if err := checkRespCode(resp.statusCode, []int{http.StatusOK}); err != nil {
 		return nil, contToken, err
 	}
 
@@ -124,11 +127,13 @@ func (c *TableServiceClient) QueryTableEntities(tableName AzureTable, previousCo
 // The function fails if there is an entity with the same
 // PartitionKey and RowKey in the table.
 func (c *TableServiceClient) InsertEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, false, http.MethodPost); err != nil {
+	var err error
+
+	if sc, err := c.execTable(table, entity, false, "POST"); err != nil {
 		return checkRespCode(sc, []int{http.StatusCreated})
 	}
 
-	return nil
+	return err
 }
 
 func (c *TableServiceClient) execTable(table AzureTable, entity TableEntity, specifyKeysInURL bool, method string) (int, error) {
@@ -147,7 +152,10 @@ func (c *TableServiceClient) execTable(table AzureTable, entity TableEntity, spe
 
 	headers["Content-Length"] = fmt.Sprintf("%d", buf.Len())
 
-	resp, err := c.client.execTable(method, uri, headers, &buf)
+	var err error
+	var resp *odataResponse
+
+	resp, err = c.client.execTable(method, uri, headers, &buf)
 
 	if err != nil {
 		return 0, err
@@ -162,10 +170,12 @@ func (c *TableServiceClient) execTable(table AzureTable, entity TableEntity, spe
 // one passed as parameter. The function fails if there is no entity
 // with the same PartitionKey and RowKey in the table.
 func (c *TableServiceClient) UpdateEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, true, http.MethodPut); err != nil {
+	var err error
+
+	if sc, err := c.execTable(table, entity, true, "PUT"); err != nil {
 		return checkRespCode(sc, []int{http.StatusNoContent})
 	}
-	return nil
+	return err
 }
 
 // MergeEntity merges the contents of an entity with the
@@ -173,10 +183,12 @@ func (c *TableServiceClient) UpdateEntity(table AzureTable, entity TableEntity) 
 // The function fails if there is no entity
 // with the same PartitionKey and RowKey in the table.
 func (c *TableServiceClient) MergeEntity(table AzureTable, entity TableEntity) error {
+	var err error
+
 	if sc, err := c.execTable(table, entity, true, "MERGE"); err != nil {
 		return checkRespCode(sc, []int{http.StatusNoContent})
 	}
-	return nil
+	return err
 }
 
 // DeleteEntityWithoutCheck deletes the entity matching by
@@ -202,7 +214,7 @@ func (c *TableServiceClient) DeleteEntity(table AzureTable, entity TableEntity, 
 	headers["Content-Length"] = "0"
 	headers["If-Match"] = ifMatch
 
-	resp, err := c.client.execTable(http.MethodDelete, uri, headers, nil)
+	resp, err := c.client.execTable("DELETE", uri, headers, nil)
 
 	if err != nil {
 		return err
@@ -219,19 +231,23 @@ func (c *TableServiceClient) DeleteEntity(table AzureTable, entity TableEntity, 
 // InsertOrReplaceEntity inserts an entity in the specified table
 // or replaced the existing one.
 func (c *TableServiceClient) InsertOrReplaceEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, true, http.MethodPut); err != nil {
+	var err error
+
+	if sc, err := c.execTable(table, entity, true, "PUT"); err != nil {
 		return checkRespCode(sc, []int{http.StatusNoContent})
 	}
-	return nil
+	return err
 }
 
 // InsertOrMergeEntity inserts an entity in the specified table
 // or merges the existing one.
 func (c *TableServiceClient) InsertOrMergeEntity(table AzureTable, entity TableEntity) error {
+	var err error
+
 	if sc, err := c.execTable(table, entity, true, "MERGE"); err != nil {
 		return checkRespCode(sc, []int{http.StatusNoContent})
 	}
-	return nil
+	return err
 }
 
 func injectPartitionAndRowKeys(entity TableEntity, buf *bytes.Buffer) error {
@@ -324,12 +340,8 @@ func deserializeEntity(retType reflect.Type, reader io.Reader) ([]TableEntity, e
 		}
 
 		// Reset PartitionKey and RowKey
-		if err := tEntries[i].SetPartitionKey(pKey); err != nil {
-			return nil, err
-		}
-		if err := tEntries[i].SetRowKey(rKey); err != nil {
-			return nil, err
-		}
+		tEntries[i].SetPartitionKey(pKey)
+		tEntries[i].SetRowKey(rKey)
 	}
 
 	return tEntries, nil

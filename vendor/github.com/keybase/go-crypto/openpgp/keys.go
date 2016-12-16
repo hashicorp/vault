@@ -5,7 +5,6 @@
 package openpgp
 
 import (
-	"crypto/hmac"
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/packet"
@@ -68,22 +67,13 @@ type Key struct {
 
 // A KeyRing provides access to public and private keys.
 type KeyRing interface {
-
 	// KeysById returns the set of keys that have the given key id.
-	// fp can be optionally supplied, which is the full key fingerprint.
-	// If it's provided, then it must match. This comes up in the case
-	// of GPG subpacket 33.
-	KeysById(id uint64, fp []byte) []Key
-
+	KeysById(id uint64) []Key
 	// KeysByIdAndUsage returns the set of keys with the given id
 	// that also meet the key usage given by requiredUsage.
 	// The requiredUsage is expressed as the bitwise-OR of
 	// packet.KeyFlag* values.
-	// fp can be optionally supplied, which is the full key fingerprint.
-	// If it's provided, then it must match. This comes up in the case
-	// of GPG subpacket 33.
-	KeysByIdUsage(id uint64, fp []byte, requiredUsage byte) []Key
-
+	KeysByIdUsage(id uint64, requiredUsage byte) []Key
 	// DecryptionKeys returns all private keys that are valid for
 	// decryption.
 	DecryptionKeys() []Key
@@ -195,23 +185,10 @@ func (e *Entity) signingKey(now time.Time) (Key, bool) {
 // An EntityList contains one or more Entities.
 type EntityList []*Entity
 
-func keyMatchesIdAndFingerprint(key *packet.PublicKey, id uint64, fp []byte) bool {
-	if key.KeyId != id {
-		return false
-	}
-	if fp == nil {
-		return true
-	}
-	return hmac.Equal(fp, key.Fingerprint[:])
-}
-
 // KeysById returns the set of keys that have the given key id.
-// fp can be optionally supplied, which is the full key fingerprint.
-// If it's provided, then it must match. This comes up in the case
-// of GPG subpacket 33.
-func (el EntityList) KeysById(id uint64, fp []byte) (keys []Key) {
+func (el EntityList) KeysById(id uint64) (keys []Key) {
 	for _, e := range el {
-		if keyMatchesIdAndFingerprint(e.PrimaryKey, id, fp) {
+		if e.PrimaryKey.KeyId == id {
 			var selfSig *packet.Signature
 			for _, ident := range e.Identities {
 				if selfSig == nil {
@@ -225,7 +202,7 @@ func (el EntityList) KeysById(id uint64, fp []byte) (keys []Key) {
 		}
 
 		for _, subKey := range e.Subkeys {
-			if keyMatchesIdAndFingerprint(subKey.PublicKey, id, fp) {
+			if subKey.PublicKey.KeyId == id {
 
 				// If there's both a a revocation and a sig, then take the
 				// revocation. Otherwise, we can proceed with the sig.
@@ -244,11 +221,8 @@ func (el EntityList) KeysById(id uint64, fp []byte) (keys []Key) {
 // KeysByIdAndUsage returns the set of keys with the given id that also meet
 // the key usage given by requiredUsage.  The requiredUsage is expressed as
 // the bitwise-OR of packet.KeyFlag* values.
-// fp can be optionally supplied, which is the full key fingerprint.
-// If it's provided, then it must match. This comes up in the case
-// of GPG subpacket 33.
-func (el EntityList) KeysByIdUsage(id uint64, fp []byte, requiredUsage byte) (keys []Key) {
-	for _, key := range el.KeysById(id, fp) {
+func (el EntityList) KeysByIdUsage(id uint64, requiredUsage byte) (keys []Key) {
+	for _, key := range el.KeysById(id) {
 		if len(key.Entity.Revocations) > 0 {
 			continue
 		}
@@ -289,7 +263,7 @@ func (el EntityList) KeysByIdUsage(id uint64, fp []byte, requiredUsage byte) (ke
 			// For a primary RSA key without any key flags, be as permissiable
 			// as possible.
 			case key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoRSA &&
-				keyMatchesIdAndFingerprint(key.Entity.PrimaryKey, id, fp):
+				key.Entity.PrimaryKey.KeyId == id:
 				usage = (packet.KeyFlagCertify | packet.KeyFlagSign |
 					packet.KeyFlagEncryptCommunications | packet.KeyFlagEncryptStorage)
 			}

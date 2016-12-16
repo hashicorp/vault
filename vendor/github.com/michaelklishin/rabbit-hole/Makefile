@@ -7,7 +7,7 @@ all: test
 .PHONY: test
 
 test: install-dependencies
-	go test -race -v
+	go test -v
 
 cover: install-dependencies install-cover
 	go test -v -test.coverprofile="$(COVER_FILE).prof"

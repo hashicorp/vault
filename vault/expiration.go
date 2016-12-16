@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
@@ -214,9 +214,11 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 		return err
 	}
 
-	// Delete the secondary index
-	if err := m.removeIndexByToken(le.ClientToken, le.LeaseID); err != nil {
-		return err
+	// Delete the secondary index, but only if it's a leased secret (not auth)
+	if le.Secret != nil {
+		if err := m.removeIndexByToken(le.ClientToken, le.LeaseID); err != nil {
+			return err
+		}
 	}
 
 	// Clear the expiration handler
@@ -266,16 +268,20 @@ func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 		}
 	}
 
-	tokenLeaseID := path.Join(te.Path, m.tokenStore.SaltID(te.ID))
+	if te.Path != "" {
+		tokenLeaseID := path.Join(te.Path, m.tokenStore.SaltID(te.ID))
 
-	// We want to skip the revokeEntry call as that will call back into
-	// revocation logic in the token store, which is what is running this
-	// function in the first place -- it'd be a deadlock loop. Since the only
-	// place that this function is called is revokeSalted in the token store,
-	// we're already revoking the token, so we just want to clean up the lease.
-	// This avoids spurious revocations later in the log when the timer runs
-	// out, and eases up resource usage.
-	return m.revokeCommon(tokenLeaseID, false, true)
+		// We want to skip the revokeEntry call as that will call back into
+		// revocation logic in the token store, which is what is running this
+		// function in the first place -- it'd be a deadlock loop. Since the only
+		// place that this function is called is revokeSalted in the token store,
+		// we're already revoking the token, so we just want to clean up the lease.
+		// This avoids spurious revocations later in the log when the timer runs
+		// out, and eases up resource usage.
+		return m.revokeCommon(tokenLeaseID, false, true)
+	}
+
+	return nil
 }
 
 func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error {

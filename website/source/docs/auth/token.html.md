@@ -131,7 +131,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">no_default_policy</span>
         <span class="param-flags">optional</span>
-        If true the `default` policy will not be a part of this token's
+        If true the `default` policy will not be contained in this token's
         policy set.
       </li>
       <li>
@@ -736,16 +736,18 @@ of the header should be "X-Vault-Token" and the value should be the token.
         If set, tokens can be created with any subset of the policies in this
         list, rather than the normal semantics of tokens being a subset of the
         calling token's policies. The parameter is a comma-delimited string of
-        policy names. If this and `disallowed_policies` are both set, only this
-        option takes effect.
+        policy names. If at creation time `no_default_policy` is not set and
+        `"default"` is not contained in `disallowed_policies`, the `"default"`
+        policy will be added to the created token automatically.
       </li>
       <li>
         <span class="param">disallowed_policies</span>
         <span class="param-flags">optional</span>
-        If set, successful token creation via this role will require that
-        no policies in the given list are requested. If both `disallowed_policies`
-        and `allowed_policies` are set, this option has no effect. The parameter
-        is a comma-delimited string of policy names.
+        If set, successful token creation via this role will require that no
+        policies in the given list are requested. The parameter is a
+        comma-delimited string of policy names. Adding `"default"` to this list
+        will prevent `"default"` from being added automatically to created
+        tokens.
       </li>
       <li>
         <span class="param">orphan</span>
@@ -800,4 +802,33 @@ of the header should be "X-Vault-Token" and the value should be the token.
     A `204` return code.
   </dd>
 </dl>
+
+### /auth/token/tidy
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Performs some maintenance tasks to clean up invalid entries that may remain
+    in the token store. Generally, running this is not needed unless upgrade
+    notes or support personnel suggest it. This may perform a lot of I/O to the
+    storage backend so should be used sparingly.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/tidy`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
 
