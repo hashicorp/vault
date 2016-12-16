@@ -803,3 +803,32 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
+### /auth/token/tidy
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Performs some maintenance tasks to clean up invalid entries that may remain
+    in the token store. Generally, running this is not needed unless upgrade
+    notes or support personnel suggest it. This may perform a lot of I/O to the
+    storage backend so should be used sparingly.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/token/tidy`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+
