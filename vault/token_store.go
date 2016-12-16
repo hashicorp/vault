@@ -1118,6 +1118,11 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 		return nil, fmt.Errorf("failed to fetch accessor entries: %v", err)
 	}
 
+	parentList, err := ts.view.List(parentPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
+	}
+
 	var cleanupErrors *multierror.Error
 
 	// For each of the accessor, see if the token ID associated with it is
@@ -1136,23 +1141,23 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 		if accessorEntry.TokenID == "" {
 			// If deletion of accessor fails, move on to the next
 			// item since this is just a best-effort operation
-			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			err = ts.view.Delete(accessorPrefix + "/" + saltedAccessor)
 			if err != nil {
 				cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
 				continue
 			}
 		}
 
-		te, err := ts.lookupSalted(ts.SaltID(accessorEntry.TokenID))
+		saltedId := ts.SaltID(accessorEntry.TokenID)
 
-		// If token entry is not fetched for whatever reason, assume
-		// that the token is no more valid and conclude that accessor
-		// for this token should not exist, the leases associated with
-		// the token should not exist as well. Also, in case token
-		// entry exists, and if NumUses in the token entry is marked as
-		// -3, it a hint that the previous revocation operation had
-		// failed. In that case, attempt a retry operation.
-		if err != nil || te == nil || (te != nil && te.NumUses == -3) {
+		// Look up tainted variants so we only find entries that truly don't
+		// exist
+		te, err := ts.lookupSalted(saltedId, true)
+
+		// If token entry is not found assume that the token is not valid any
+		// more and conclude that accessor, leases, and secondary index entries
+		// for this token should not exist as well.
+		if te == nil {
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of cleanup, it is sufficient if the token
 			// entry only has ID set.
@@ -1163,25 +1168,31 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 			// Attempt to revoke the token. This will also revoke
 			// the leases associated with the token.
 			err := ts.expiration.RevokeByToken(tokenEntry)
+			if err != nil {
+				cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to revoke leases of expired token: %v", err))
+				continue
+			}
 
-			// Since we are attempting to retry the token
-			// revocation only when token entry had NumUses marked
-			// to -3, it is safe to assume that failure of
-			// revocation retry attempt would leave the NumUses
-			// with -3 again, so that it can be retried. Since it
-			// will be handled during the next invocation of this
-			// endpoint, ignoring the error case here.
-
-			if err == nil {
-				// If deletion of accessor fails, move on to the next
-				// item since this is just a best-effort operation
-				err = ts.view.Delete(accessorPrefix + saltedAccessor)
-				if err != nil {
-					cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
-					continue
+			// Scan through the secondary index entries; if there is an entry
+			// with the token's salt ID at the end, remove it
+			for _, v := range parentList {
+				if strings.HasSuffix(v, "/"+saltedId) {
+					err = ts.view.Delete(parentPrefix + "/" + v)
+					if err != nil {
+						cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
+					}
 				}
 			}
 
+			// If deletion of accessor fails, move on to the next item since
+			// this is just a best-effort operation. We do this last so that on
+			// next run if something above failed we still have the accessor
+			// entry to try again.
+			err = ts.view.Delete(accessorPrefix + "/" + saltedAccessor)
+			if err != nil {
+				cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
+				continue
+			}
 		}
 	}
 
