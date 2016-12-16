@@ -1,5 +1,10 @@
 ## 0.6.4 (Unreleased)
 
+FEATURES:
+
+  * **Policy UI (Enterprise)**: Vault Enterprise UI now supports viewing,
+    creating, and editing policies.
+
 IMPROVEMENTS:
 
  * http: Vault now sets a `no-store` cache control header to make it more
@@ -9,6 +14,9 @@ BUG FIXES:
 
  * auth/ldap: Don't panic if dialing returns an error and starttls is enabled;
    instead, return the error [GH-2188]
+ * ui (Enterprise): Submitting an unseal key now properly resets the
+   form so a browser refresh isn't required to continue.
+
 
 ## 0.6.3 (December 6, 2016)
 
