@@ -3,7 +3,6 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"sync"
@@ -1121,8 +1120,6 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 
 	var cleanupErrors *multierror.Error
 
-	log.Printf("len(saltedAccessorList): %d\n", len(saltedAccessorList))
-
 	// For each of the accessor, see if the token ID associated with it is
 	// a valid one. If not, delete the leases associated with that token
 	// and delete the accessor as well.
@@ -1133,6 +1130,9 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 			continue
 		}
 
+		// A valid accessor storage entry should always have a token ID
+		// in it. If not, it is an invalid accessor entry and needs to
+		// be deleted.
 		if accessorEntry.TokenID == "" {
 			// If deletion of accessor fails, move on to the next
 			// item since this is just a best-effort operation
@@ -1147,11 +1147,11 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 
 		// If token entry is not fetched for whatever reason, assume
 		// that the token is no more valid and conclude that accessor
-		// for this token should not exist along with the leases
-		// associated with the token. Also, in case token entry exists
-		// and if NumUses in the token entry is marked as -3, it a hint
-		// that the previous revocation operation failed. In that case,
-		// attempt a retry operation.
+		// for this token should not exist, the leases associated with
+		// the token should not exist as well. Also, in case token
+		// entry exists, and if NumUses in the token entry is marked as
+		// -3, it a hint that the previous revocation operation had
+		// failed. In that case, attempt a retry operation.
 		if err != nil || te == nil || (te != nil && te.NumUses == -3) {
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of cleanup, it is sufficient if the token
@@ -1177,7 +1177,7 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 				// item since this is just a best-effort operation
 				err = ts.view.Delete(accessorPrefix + saltedAccessor)
 				if err != nil {
-					cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
+					cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
 					continue
 				}
 			}
@@ -2208,13 +2208,14 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 
 const (
 	tokenCleanupHelp = `
-This endpoint cleans up the storage and lease entries.
+This endpoint performs cleanup tasks that can be run if certain error
+conditions have occurred.
 `
 	tokenCleanupDesc = `
-This is provided to be able to cleanup accessor storage entries that were
-supposed to be deleted and the lease entries that were supposed to be expired.
-This endpoint needs to be invoked when Vault is upgraded from versions less
-than 0.6.4.
+This endpoint performs cleanup tasks that can be run to clean up token and
+lease entries after certain error conditions. Usually running this is not
+necessary, and is only required if upgrade notes or support personnel suggest
+it.
 `
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
