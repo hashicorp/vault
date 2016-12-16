@@ -19,8 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/credentials/endpointcreds"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/private/endpoints"
 )
 
 // A Defaults provides a collection of default values for SDK clients.
@@ -56,8 +56,7 @@ func Config() *aws.Config {
 		WithMaxRetries(aws.UseServiceDefaultRetries).
 		WithLogger(aws.NewDefaultLogger()).
 		WithLogLevel(aws.LogOff).
-		WithSleepDelay(time.Sleep).
-		WithEndpointResolver(endpoints.DefaultResolver())
+		WithSleepDelay(time.Sleep)
 }
 
 // Handlers returns the default request handlers.
@@ -121,14 +120,11 @@ func ecsCredProvider(cfg aws.Config, handlers request.Handlers, uri string) cred
 }
 
 func ec2RoleProvider(cfg aws.Config, handlers request.Handlers) credentials.Provider {
-	resolver := cfg.EndpointResolver
-	if resolver == nil {
-		resolver = endpoints.DefaultResolver()
-	}
+	endpoint, signingRegion := endpoints.EndpointForRegion(ec2metadata.ServiceName,
+		aws.StringValue(cfg.Region), true, false)
 
-	e, _ := resolver.EndpointFor(endpoints.Ec2metadataServiceID, "")
 	return &ec2rolecreds.EC2RoleProvider{
-		Client:       ec2metadata.NewClient(cfg, handlers, e.URL, e.SigningRegion),
+		Client:       ec2metadata.NewClient(cfg, handlers, endpoint, signingRegion),
 		ExpiryWindow: 5 * time.Minute,
 	}
 }

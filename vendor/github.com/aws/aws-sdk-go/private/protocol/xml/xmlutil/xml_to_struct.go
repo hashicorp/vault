@@ -2,7 +2,6 @@ package xmlutil
 
 import (
 	"encoding/xml"
-	"fmt"
 	"io"
 	"sort"
 )
@@ -13,9 +12,6 @@ type XMLNode struct {
 	Children map[string][]*XMLNode `json:",omitempty"`
 	Text     string                `json:",omitempty"`
 	Attr     []xml.Attr            `json:",omitempty"`
-
-	namespaces map[string]string
-	parent     *XMLNode
 }
 
 // NewXMLElement returns a pointer to a new XMLNode initialized to default values.
@@ -63,52 +59,41 @@ func XMLToStruct(d *xml.Decoder, s *xml.StartElement) (*XMLNode, error) {
 				slice = []*XMLNode{}
 			}
 			node, e := XMLToStruct(d, &el)
-			out.findNamespaces()
 			if e != nil {
 				return out, e
 			}
 			node.Name = typed.Name
-			node.findNamespaces()
-			tempOut := *out
-			// Save into a temp variable, simply because out gets squashed during
-			// loop iterations
-			node.parent = &tempOut
+			node.Attr = out.Attr
+			node = adaptNode(node)
 			slice = append(slice, node)
 			out.Children[name] = slice
 		case xml.EndElement:
 			if s != nil && s.Name.Local == typed.Name.Local { // matching end token
 				return out, nil
 			}
-			out = &XMLNode{}
 		}
 	}
 	return out, nil
 }
 
-func (n *XMLNode) findNamespaces() {
+func adaptNode(node *XMLNode) *XMLNode {
 	ns := map[string]string{}
-	for _, a := range n.Attr {
+	for _, a := range node.Attr {
 		if a.Name.Space == "xmlns" {
 			ns[a.Value] = a.Name.Local
+			break
 		}
 	}
 
-	n.namespaces = ns
-}
-
-func (n *XMLNode) findElem(name string) (string, bool) {
-	for node := n; node != nil; node = node.parent {
-		for _, a := range node.Attr {
-			namespace := a.Name.Space
-			if v, ok := node.namespaces[namespace]; ok {
-				namespace = v
-			}
-			if name == fmt.Sprintf("%s:%s", namespace, a.Name.Local) {
-				return a.Value, true
-			}
+	for i, a := range node.Attr {
+		if a.Name.Space == "xmlns" {
+			continue
+		}
+		if v, ok := ns[node.Attr[i].Name.Space]; ok {
+			node.Attr[i].Name.Space = v
 		}
 	}
-	return "", false
+	return node
 }
 
 // StructToXML writes an XMLNode to a xml.Encoder as tokens.

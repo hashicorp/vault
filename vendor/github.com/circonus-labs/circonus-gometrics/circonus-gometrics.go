@@ -101,7 +101,7 @@ type CirconusMetrics struct {
 func NewCirconusMetrics(cfg *Config) (*CirconusMetrics, error) {
 
 	if cfg == nil {
-		return nil, errors.New("invalid configuration (nil)")
+		return nil, errors.New("Invalid configuration (nil).")
 	}
 
 	cm := &CirconusMetrics{
@@ -114,84 +114,66 @@ func NewCirconusMetrics(cfg *Config) (*CirconusMetrics, error) {
 		textFuncs:    make(map[string]func() string),
 	}
 
-	// Logging
-	{
-		cm.Debug = cfg.Debug
-		cm.Log = cfg.Log
+	cm.Debug = cfg.Debug
+	cm.Log = cfg.Log
 
-		if cm.Debug && cfg.Log == nil {
-			cm.Log = log.New(os.Stderr, "", log.LstdFlags)
-		}
-		if cm.Log == nil {
-			cm.Log = log.New(ioutil.Discard, "", log.LstdFlags)
-		}
+	if cm.Debug && cfg.Log == nil {
+		cm.Log = log.New(os.Stderr, "", log.LstdFlags)
+	}
+	if cm.Log == nil {
+		cm.Log = log.New(ioutil.Discard, "", log.LstdFlags)
 	}
 
-	// Flush Interval
-	{
-		fi := defaultFlushInterval
-		if cfg.Interval != "" {
-			fi = cfg.Interval
-		}
-
-		dur, err := time.ParseDuration(fi)
-		if err != nil {
-			return nil, err
-		}
-		cm.flushInterval = dur
+	fi := defaultFlushInterval
+	if cfg.Interval != "" {
+		fi = cfg.Interval
 	}
 
-	// metric resets
+	dur, err := time.ParseDuration(fi)
+	if err != nil {
+		return nil, err
+	}
+	cm.flushInterval = dur
+
+	var setting bool
 
 	cm.resetCounters = true
 	if cfg.ResetCounters != "" {
-		setting, err := strconv.ParseBool(cfg.ResetCounters)
-		if err != nil {
-			return nil, err
+		if setting, err = strconv.ParseBool(cfg.ResetCounters); err == nil {
+			cm.resetCounters = setting
 		}
-		cm.resetCounters = setting
 	}
 
 	cm.resetGauges = true
 	if cfg.ResetGauges != "" {
-		setting, err := strconv.ParseBool(cfg.ResetGauges)
-		if err != nil {
-			return nil, err
+		if setting, err = strconv.ParseBool(cfg.ResetGauges); err == nil {
+			cm.resetGauges = setting
 		}
-		cm.resetGauges = setting
 	}
 
 	cm.resetHistograms = true
 	if cfg.ResetHistograms != "" {
-		setting, err := strconv.ParseBool(cfg.ResetHistograms)
-		if err != nil {
-			return nil, err
+		if setting, err = strconv.ParseBool(cfg.ResetHistograms); err == nil {
+			cm.resetHistograms = setting
 		}
-		cm.resetHistograms = setting
 	}
 
 	cm.resetText = true
 	if cfg.ResetText != "" {
-		setting, err := strconv.ParseBool(cfg.ResetText)
-		if err != nil {
-			return nil, err
+		if setting, err = strconv.ParseBool(cfg.ResetText); err == nil {
+			cm.resetText = setting
 		}
-		cm.resetText = setting
 	}
 
-	// check manager
-	{
-		cfg.CheckManager.Debug = cm.Debug
-		cfg.CheckManager.Log = cm.Log
+	cfg.CheckManager.Debug = cm.Debug
+	cfg.CheckManager.Log = cm.Log
 
-		check, err := checkmgr.NewCheckManager(&cfg.CheckManager)
-		if err != nil {
-			return nil, err
-		}
-		cm.check = check
+	check, err := checkmgr.NewCheckManager(&cfg.CheckManager)
+	if err != nil {
+		return nil, err
 	}
+	cm.check = check
 
-	// initialize
 	if _, err := cm.check.GetTrap(); err != nil {
 		return nil, err
 	}

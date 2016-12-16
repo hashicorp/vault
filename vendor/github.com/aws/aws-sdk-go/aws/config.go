@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 // UseServiceDefaultRetries instructs the config to use the service's own
@@ -48,10 +47,6 @@ type Config struct {
 	// @note You must still provide a `Region` value when specifying an
 	//   endpoint for a client.
 	Endpoint *string
-
-	// The resolver to use for looking up endpoints for AWS service clients
-	// to use based on region.
-	EndpointResolver endpoints.Resolver
 
 	// The region to send requests to. This parameter is required and must
 	// be configured globally or on a per-client basis unless otherwise
@@ -240,13 +235,6 @@ func (c *Config) WithEndpoint(endpoint string) *Config {
 	return c
 }
 
-// WithEndpointResolver sets a config EndpointResolver value returning a
-// Config pointer for chaining.
-func (c *Config) WithEndpointResolver(resolver endpoints.Resolver) *Config {
-	c.EndpointResolver = resolver
-	return c
-}
-
 // WithRegion sets a config Region value returning a Config pointer for
 // chaining.
 func (c *Config) WithRegion(region string) *Config {
@@ -367,10 +355,6 @@ func mergeInConfig(dst *Config, other *Config) {
 
 	if other.Endpoint != nil {
 		dst.Endpoint = other.Endpoint
-	}
-
-	if other.EndpointResolver != nil {
-		dst.EndpointResolver = other.EndpointResolver
 	}
 
 	if other.Region != nil {

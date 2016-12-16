@@ -45,10 +45,9 @@ type writeContext interface {
 	HeaderEncoder() (*hpack.Encoder, *bytes.Buffer)
 }
 
-// writeEndsStream reports whether w writes a frame that will transition
-// the stream to a half-closed local state. This returns false for RST_STREAM,
-// which closes the entire stream (not just the local half).
-func writeEndsStream(w writeFramer) bool {
+// endsStream reports whether the given frame writer w will locally
+// close the stream.
+func endsStream(w writeFramer) bool {
 	switch v := w.(type) {
 	case *writeData:
 		return v.endStream
@@ -58,7 +57,7 @@ func writeEndsStream(w writeFramer) bool {
 		// This can only happen if the caller reuses w after it's
 		// been intentionally nil'ed out to prevent use. Keep this
 		// here to catch future refactoring breaking it.
-		panic("writeEndsStream called on nil writeFramer")
+		panic("endsStream called on nil writeFramer")
 	}
 	return false
 }
