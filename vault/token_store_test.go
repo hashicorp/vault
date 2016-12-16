@@ -3174,67 +3174,70 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
 	}
 
-	// Create a regular token
-	tokenReq := &logical.Request{
-		Operation:   logical.UpdateOperation,
-		Path:        "create",
-		ClientToken: root,
-		Data: map[string]interface{}{
-			"policies": []string{"policy1"},
-		},
-	}
-	resp, err = ts.HandleRequest(tokenReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
-	}
-	tut := resp.Auth.ClientToken
+	for i := 1; i <= 100; i++ {
+		// Create a regular token
+		tokenReq := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			Path:        "create",
+			ClientToken: root,
+			Data: map[string]interface{}{
+				"policies": []string{"policy1"},
+			},
+		}
+		resp, err = ts.HandleRequest(tokenReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
+		tut := resp.Auth.ClientToken
 
-	// Creation of another token should end up with 2 valid accessors at
-	// the storage
-	resp, err = ts.HandleRequest(accessorListReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
-	}
+		// Creation of another token should end up with incrementing
+		// the number of accessors
+		// the storage
+		resp, err = ts.HandleRequest(accessorListReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
 
-	numberOfAccessors = len(resp.Data["keys"].([]string))
-	if numberOfAccessors != 2 {
-		t.Fatalf("bad: number of accessors. Expected: 2, Actual: %d", numberOfAccessors)
-	}
+		numberOfAccessors = len(resp.Data["keys"].([]string))
+		if numberOfAccessors != i+1 {
+			t.Fatalf("bad: number of accessors. Expected: %d, Actual: %d", i+1, numberOfAccessors)
+		}
 
-	// Revoke the token while leaking other items associated with the
-	// token. Do this by doing what revokeSalted used to do before it was
-	// fixed, i.e., by deleting the storage entry for token and its
-	// cubbyhole and by not deleting its secondary index, its accessor and
-	// associated leases.
+		// Revoke the token while leaking other items associated with the
+		// token. Do this by doing what revokeSalted used to do before it was
+		// fixed, i.e., by deleting the storage entry for token and its
+		// cubbyhole and by not deleting its secondary index, its accessor and
+		// associated leases.
 
-	saltedTut := ts.SaltID(tut)
-	_, err = ts.lookupSalted(saltedTut, true)
-	if err != nil {
-		t.Fatalf("failed to lookup token: %v", err)
-	}
+		saltedTut := ts.SaltID(tut)
+		_, err = ts.lookupSalted(saltedTut, true)
+		if err != nil {
+			t.Fatalf("failed to lookup token: %v", err)
+		}
 
-	// Destroy the token index
-	path := lookupPrefix + saltedTut
-	if ts.view.Delete(path); err != nil {
-		t.Fatalf("failed to delete token entry: %v", err)
-	}
+		// Destroy the token index
+		path := lookupPrefix + saltedTut
+		if ts.view.Delete(path); err != nil {
+			t.Fatalf("failed to delete token entry: %v", err)
+		}
 
-	// Destroy the cubby space
-	err = ts.destroyCubbyhole(saltedTut)
-	if err != nil {
-		t.Fatalf("failed to destroyCubbyhole: %v", err)
-	}
+		// Destroy the cubby space
+		err = ts.destroyCubbyhole(saltedTut)
+		if err != nil {
+			t.Fatalf("failed to destroyCubbyhole: %v", err)
+		}
 
-	// Leaking of accessor should have resulted in no change to the number
-	// of accessors
-	resp, err = ts.HandleRequest(accessorListReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%v", err, resp)
-	}
+		// Leaking of accessor should have resulted in no change to the number
+		// of accessors
+		resp, err = ts.HandleRequest(accessorListReq)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%v", err, resp)
+		}
 
-	numberOfAccessors = len(resp.Data["keys"].([]string))
-	if numberOfAccessors != 2 {
-		t.Fatalf("bad: number of accessors. Expected: 2, Actual: %d", numberOfAccessors)
+		numberOfAccessors = len(resp.Data["keys"].([]string))
+		if numberOfAccessors != i+1 {
+			t.Fatalf("bad: number of accessors. Expected: %d, Actual: %d", i+1, numberOfAccessors)
+		}
 	}
 
 	tidyReq := &logical.Request{
@@ -3253,7 +3256,7 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
-	// Tidy should have removed the dangling accessor entry
+	// Tidy should have removed all the dangling accessor entries
 	resp, err = ts.HandleRequest(accessorListReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%v", err, resp)
