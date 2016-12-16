@@ -37,7 +37,7 @@ Successfully mounted 'mysql' at 'mysql'!
 ```
 
 Next, we must configure Vault to know how to connect to the MySQL
-instance. This is done by providing a DSN (Data Source Name):
+instance. This is done by providing a [DSN (Data Source Name)](https://github.com/go-sql-driver/mysql#dsn-data-source-name):
 
 ```
 $ vault write mysql/config/connection \
