@@ -1282,7 +1282,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 			for _, finalPolicy := range finalPolicies {
 				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
-					return logical.ErrorResponse(fmt.Sprintf("token policy (%s) is disallowed by this role", finalPolicy)), logical.ErrInvalidRequest
+					return logical.ErrorResponse(fmt.Sprintf("token policy %q is disallowed by this role", finalPolicy)), logical.ErrInvalidRequest
 				}
 			}
 		}
@@ -1294,9 +1294,10 @@ func (ts *TokenStore) handleCreateCommon(
 		// Only inherit "default" if the parent already has it, so don't touch addDefault here
 		data.Policies = policyutil.SanitizePolicies(parent.Policies, policyutil.DoNotAddDefaultPolicy)
 
-	// When a role is not in use, only permit policies to be a subset unless
-	// the client has root or sudo privileges. Default is added in this case if
-	// the parent has it, unless the client specified for it not to be added.
+	// When a role is not in use or does not specify allowed/disallowed, only
+	// permit policies to be a subset unless the client has root or sudo
+	// privileges. Default is added in this case if the parent has it, unless
+	// the client specified for it not to be added.
 	case !isSudo:
 		// Sanitize passed-in and parent policies before comparison
 		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, policyutil.DoNotAddDefaultPolicy)
