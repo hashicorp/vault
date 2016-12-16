@@ -1866,7 +1866,7 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	req.ClientToken = parentToken
 	resp, err = ts.HandleRequest(req)
 	if err == nil || resp != nil && !resp.IsError() {
-		t.Fatal("expected an error response")
+		t.Fatalf("expected an error response, got %#v", resp)
 	}
 
 	req = logical.TestRequest(t, logical.UpdateOperation, "create/test23")
@@ -1935,6 +1935,69 @@ func TestTokenStore_RoleAllowedPolicies(t *testing.T) {
 	}
 	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
+	}
+
+	// When allowed_policies is blank, should fall back to a subset of the parent policies
+	req = logical.TestRequest(t, logical.UpdateOperation, "roles/test")
+	req.ClientToken = root
+	req.Data = map[string]interface{}{
+		"allowed_policies": "",
+	}
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp != nil {
+		t.Fatalf("expected a nil response")
+	}
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root
+	req.Data["policies"] = []string{"test1", "test2", "test3"}
+	resp, err = ts.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatal("got nil response")
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: ClientToken; resp:%#v", resp)
+	}
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "test1", "test2", "test3"}) {
+		t.Fatalf("bad: %#v", resp.Auth.Policies)
+	}
+	parentToken := resp.Auth.ClientToken
+
+	req.Data = map[string]interface{}{}
+	req.ClientToken = parentToken
+
+	req.Path = "create/test"
+	req.Data["policies"] = []string{"foo"}
+	resp, err = ts.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	req.Data["policies"] = []string{"test2"}
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	delete(req.Data, "policies")
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+	if resp.Auth.ClientToken == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "test1", "test2", "test3"}) {
+		t.Fatalf("bad: %#v", resp.Auth.Policies)
 	}
 }
 
@@ -2702,8 +2765,25 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// A non-root token which has 'default' policy attached, request for a
-	// child token to not have 'default' policy.
+	// child token to not have 'default' policy; this should still have default
+	// since it will inherit parent policies and no_default_policy is for
+	// automatic adding
 	tokenReq.Data = map[string]interface{}{
+		"no_default_policy": true,
+	}
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
+	}
+
+	// In this case "default" shouldn't exist because we are not inheriting
+	// parent policies
+	tokenReq.Data = map[string]interface{}{
+		"policies":          []string{"policy1"},
 		"no_default_policy": true,
 	}
 	resp, err = ts.HandleRequest(tokenReq)
@@ -2751,11 +2831,32 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// If 'allowed_policies' in role does not have 'default' in it, the
-	// tokens generated using that role should not have 'default' policy
+	// tokens generated using that role should still have the 'default' policy
 	// attached to them.
 	roleReq.Operation = logical.UpdateOperation
 	roleReq.Data = map[string]interface{}{
 		"allowed_policies": "policy1",
+	}
+	resp, err = ts.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
+		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
+	}
+
+	// If 'allowed_policies' in role does not have 'default' in it, the
+	// tokens generated using that role should not have 'default' policy
+	// attached to them if disallowed_policies contains "default"
+	roleReq.Operation = logical.UpdateOperation
+	roleReq.Data = map[string]interface{}{
+		"allowed_policies":    "policy1",
+		"disallowed_policies": "default",
 	}
 	resp, err = ts.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -2821,7 +2922,27 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
-	expected := []string{"allowed1"}
+	expected := []string{"allowed1", "default"}
+	if !reflect.DeepEqual(resp.Auth.Policies, expected) {
+		t.Fatalf("bad: expected:%#v actual:%#v", expected, resp.Auth.Policies)
+	}
+
+	// Try again with automatic default adding turned off
+	tokenReq = &logical.Request{
+		Path:        "create/role1",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies":          []string{"allowed1"},
+			"no_default_policy": true,
+		},
+	}
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	expected = []string{"allowed1"}
 	if !reflect.DeepEqual(resp.Auth.Policies, expected) {
 		t.Fatalf("bad: expected:%#v actual:%#v", expected, resp.Auth.Policies)
 	}
