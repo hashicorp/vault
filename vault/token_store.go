@@ -875,8 +875,6 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 		return err
 	}
 
-	var lock *sync.RWMutex
-
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
@@ -885,10 +883,10 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 		return err
 	}
 	if entry == nil {
-		goto nuke
+		return nil
 	}
 
-	lock = ts.getTokenLock(entry.ID)
+	lock := ts.getTokenLock(entry.ID)
 	lock.Lock()
 
 	// Lookup the token first
@@ -900,7 +898,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 
 	if entry == nil {
 		lock.Unlock()
-		goto nuke
+		return nil
 	}
 
 	// On failure we write -3, so if we hit -2 here we're already running a
@@ -967,8 +965,6 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
-
-nuke:
 
 	// Now that the entry is not usable for any revocation tasks, nuke it
 	path := lookupPrefix + saltedId
