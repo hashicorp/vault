@@ -1175,10 +1175,12 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 
 			// Scan through the secondary index entries; if there is an entry
 			// with the token's salt ID at the end, remove it
+		parentloop:
 			for _, parent := range parentList {
 				children, err := ts.view.List(parentPrefix + parent)
 				if err != nil {
 					cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to read child index entry: %v", err))
+					continue
 				}
 
 				for _, child := range children {
@@ -1187,7 +1189,8 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 						if err != nil {
 							cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
 						}
-						break
+						// We won't find it under more than one parent
+						break parentloop
 					}
 				}
 			}
