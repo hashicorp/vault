@@ -214,9 +214,11 @@ func (m *ExpirationManager) revokeCommon(leaseID string, force, skipToken bool) 
 		return err
 	}
 
-	// Delete the secondary index
-	if err := m.removeIndexByToken(le.ClientToken, le.LeaseID); err != nil {
-		return err
+	// Delete the secondary index, but only if it's a leased secret (not auth)
+	if le.Secret != nil {
+		if err := m.removeIndexByToken(le.ClientToken, le.LeaseID); err != nil {
+			return err
+		}
 	}
 
 	// Clear the expiration handler

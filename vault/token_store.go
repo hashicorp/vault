@@ -40,6 +40,20 @@ const (
 
 	// rolesPrefix is the prefix used to store role information
 	rolesPrefix = "roles/"
+
+	// tokenRevocationDeferred indicates that the token should not be used
+	// again but is currently fulfilling its final use
+	tokenRevocationDeferred = -1
+
+	// tokenRevocationInProgress indicates that revocation of that token/its
+	// leases is ongoing
+	tokenRevocationInProgress = -2
+
+	// tokenRevocationFailed indicates that revocation failed; the entry is
+	// kept around so that when the cleanup function is run it can be tried
+	// again (or when the revocation function is run again), but all other uses
+	// will report the token invalid
+	tokenRevocationFailed = -3
 )
 
 var (
@@ -48,6 +62,14 @@ var (
 
 	// pathSuffixSanitize is used to ensure a path suffix in a role is valid.
 	pathSuffixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
+
+	destroyCubbyhole = func(ts *TokenStore, saltedID string) error {
+		if ts.cubbyholeBackend == nil {
+			// Should only ever happen in testing
+			return nil
+		}
+		return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+	}
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -66,6 +88,8 @@ type TokenStore struct {
 	policyLookupFunc func(string) (*Policy, error)
 
 	tokenLocks map[string]*sync.RWMutex
+
+	cubbyholeDestroyer func(*TokenStore, string) error
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -76,7 +100,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Initialize the store
 	t := &TokenStore{
-		view: view,
+		view:               view,
+		cubbyholeDestroyer: destroyCubbyhole,
 	}
 
 	if c.policyStore != nil {
@@ -460,7 +485,13 @@ type TokenEntry struct {
 	// Used for operators to be able to associate with the source
 	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`
 
-	// Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	// Used to restrict the number of uses (zero is unlimited). This is to
+	// support one-time-tokens (generalized). There are a few special values:
+	// if it's -1 it has run through its use counts and is executing its final
+	// use; if it's -2 it is tainted, which means revocation is currently
+	// running on it; and if it's -3 it's also tainted but revocation
+	// previously ran and failed, so this hints the cleanup function to try it
+	// again.
 	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
 
 	// Time of token creation
@@ -722,7 +753,7 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	defer lock.Unlock()
 
 	// Call lookupSalted instead of Lookup to avoid deadlocking since Lookup grabs a read lock
-	te, err := ts.lookupSalted(ts.SaltID(te.ID))
+	te, err := ts.lookupSalted(ts.SaltID(te.ID), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh entry: %v", err)
 	}
@@ -746,18 +777,9 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		te.NumUses -= 1
 	}
 
-	// Marshal the entry
-	enc, err := json.Marshal(te)
+	err = ts.storeCommon(te, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode entry: %v", err)
-	}
-
-	// Write under the primary ID
-	saltedId := ts.SaltID(te.ID)
-	path := lookupPrefix + saltedId
-	le := &logical.StorageEntry{Key: path, Value: enc}
-	if err := ts.view.Put(le); err != nil {
-		return nil, fmt.Errorf("failed to persist entry: %v", err)
+		return nil, err
 	}
 
 	return te, nil
@@ -783,11 +805,13 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	lock.RLock()
 	defer lock.RUnlock()
 
-	return ts.lookupSalted(ts.SaltID(id))
+	return ts.lookupSalted(ts.SaltID(id), false)
 }
 
-// lookupSlated is used to find a token given its salted ID
-func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
+// lookupSalted is used to find a token given its salted ID. If tainted is
+// true, entries that are in some revocation state (currently, indicated by num
+// uses < 0), the entry will be returned anyways
+func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
 	path := lookupPrefix + saltedId
 	raw, err := ts.view.Get(path)
@@ -806,8 +830,8 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 		return nil, fmt.Errorf("failed to decode entry: %v", err)
 	}
 
-	// This is a token that is awaiting deferred revocation
-	if entry.NumUses == -1 {
+	// This is a token that is awaiting deferred revocation or tainted
+	if entry.NumUses < 0 && !tainted {
 		return nil, nil
 	}
 
@@ -869,46 +893,109 @@ func (ts *TokenStore) Revoke(id string) error {
 
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
-func (ts *TokenStore) revokeSalted(saltedId string) error {
+func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
+	// Protect the entry lookup/writing with locks. The rub here is that we
+	// don't know the ID until we look it up once, so first we look it up, then
+	// do a locked lookup.
+	entry, err := ts.lookupSalted(saltedId, true)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		return nil
+	}
+
+	lock := ts.getTokenLock(entry.ID)
+	lock.Lock()
+
 	// Lookup the token first
-	entry, err := ts.lookupSalted(saltedId)
+	entry, err = ts.lookupSalted(saltedId, true)
+	if err != nil {
+		lock.Unlock()
+		return err
+	}
+
+	if entry == nil {
+		lock.Unlock()
+		return nil
+	}
+
+	// On failure we write -3, so if we hit -2 here we're already running a
+	// revocation operation. This can happen due to e.g. recursion into this
+	// function via the expiration manager's RevokeByToken.
+	if entry.NumUses == tokenRevocationInProgress {
+		lock.Unlock()
+		return nil
+	}
+
+	// This acts as a WAL. lookupSalted will no longer return this entry,
+	// so the token cannot be used, but this way we can keep the entry
+	// around until after the rest of this function is attempted, and a
+	// cleanup function can key off of this value to try again.
+	entry.NumUses = tokenRevocationInProgress
+	err = ts.storeCommon(entry, false)
+	lock.Unlock()
 	if err != nil {
 		return err
 	}
 
-	// Nuke the primary key first
-	path := lookupPrefix + saltedId
-	if ts.view.Delete(path); err != nil {
-		return fmt.Errorf("failed to delete entry: %v", err)
+	// If we are returning an error, mark the entry with -3 to indicate
+	// failed revocation. This way we don't try to clean up during active
+	// revocation (-2).
+	defer func() {
+		if ret != nil {
+			lock.Lock()
+			defer lock.Unlock()
+
+			// Lookup the token again to make sure something else didn't
+			// revoke in the interim
+			entry, err := ts.lookupSalted(saltedId, true)
+			if err != nil {
+				return
+			}
+
+			// If it exists just taint to -3 rather than trying to figure
+			// out what it means if it's already -3 after the -2 above
+			if entry != nil {
+				entry.NumUses = tokenRevocationFailed
+				ts.storeCommon(entry, false)
+			}
+		}
+	}()
+
+	// Destroy the token's cubby. This should go first as it's a
+	// security-sensitive item.
+	err = ts.cubbyholeDestroyer(ts, saltedId)
+	if err != nil {
+		return err
+	}
+
+	// Revoke all secrets under this token. This should go first as it's a
+	// security-sensitive item.
+	if err := ts.expiration.RevokeByToken(entry); err != nil {
+		return err
 	}
 
 	// Clear the secondary index if any
-	if entry != nil && entry.Parent != "" {
+	if entry.Parent != "" {
 		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		if ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
 
 	// Clear the accessor index if any
-	if entry != nil && entry.Accessor != "" {
+	if entry.Accessor != "" {
 		path := accessorPrefix + ts.SaltID(entry.Accessor)
-		if ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
 
-	// Revoke all secrets under this token
-	if entry != nil {
-		if err := ts.expiration.RevokeByToken(entry); err != nil {
-			return err
-		}
-	}
-
-	// Destroy the cubby space
-	err = ts.destroyCubbyhole(saltedId)
-	if err != nil {
-		return err
+	// Now that the entry is not usable for any revocation tasks, nuke it
+	path := lookupPrefix + saltedId
+	if err = ts.view.Delete(path); err != nil {
+		return fmt.Errorf("failed to delete entry: %v", err)
 	}
 
 	return nil
@@ -993,7 +1080,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 	// If we hit an error, assume it's a pre-struct straight token ID
 	if err != nil {
 		aEntry.TokenID = string(entry.Value)
-		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID))
+		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID), false)
 		if err != nil {
 			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
 		}
@@ -1637,8 +1724,13 @@ func (ts *TokenStore) handleLookup(
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	lock := ts.getTokenLock(id)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	// Lookup the token
-	out, err := ts.Lookup(id)
+	saltedId := ts.SaltID(id)
+	out, err := ts.lookupSalted(saltedId, true)
 
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest

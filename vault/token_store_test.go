@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -547,7 +548,7 @@ func TestTokenStore_UseToken(t *testing.T) {
 	if te == nil {
 		t.Fatalf("token entry for use #2 was nil")
 	}
-	if te.NumUses != -1 {
+	if te.NumUses != tokenRevocationDeferred {
 		t.Fatalf("token entry after use #2 did not have revoke flag")
 	}
 	ts.Revoke(te.ID)
@@ -2985,5 +2986,165 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 	resp, err = ts.HandleRequest(tokenReq)
 	if err == nil {
 		t.Fatalf("expected an error")
+	}
+}
+
+// Issue 2189
+func TestTokenStore_RevokeUseCountToken(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	cubbyFuncLock := &sync.RWMutex{}
+	cubbyFuncLock.Lock()
+
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+	root, _ := exp.tokenStore.rootToken()
+
+	tokenReq := &logical.Request{
+		Path:        "create",
+		ClientToken: root.ID,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"num_uses": 1,
+		},
+	}
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	tut := resp.Auth.ClientToken
+	saltTut := ts.SaltID(tut)
+	te, err := ts.lookupSalted(saltTut, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != 1 {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+
+	te, err = ts.UseToken(te)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != tokenRevocationDeferred {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+
+	// Should return no entry because it's tainted
+	te, err = ts.lookupSalted(saltTut, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te != nil {
+		t.Fatalf("%#v", te)
+	}
+
+	// But it should show up in an API lookup call
+	req := &logical.Request{
+		Path:        "lookup-self",
+		ClientToken: tut,
+		Operation:   logical.UpdateOperation,
+	}
+	resp, err = ts.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Data == nil || resp.Data["num_uses"] == nil {
+		t.Fatal("nil resp or data")
+	}
+	if resp.Data["num_uses"].(int) != -1 {
+		t.Fatalf("bad: %v", resp.Data["num_uses"])
+	}
+
+	// Should return tainted entries
+	te, err = ts.lookupSalted(saltTut, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != tokenRevocationDeferred {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+
+	origDestroyCubbyhole := ts.cubbyholeDestroyer
+
+	ts.cubbyholeDestroyer = func(*TokenStore, string) error {
+		return fmt.Errorf("keep it frosty")
+	}
+
+	err = ts.revokeSalted(saltTut)
+	if err == nil {
+		t.Fatalf("expected err")
+	}
+
+	// Since revocation failed we should see the tokenRevocationFailed canary value
+	te, err = ts.lookupSalted(saltTut, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != tokenRevocationFailed {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+
+	// Check the race condition situation by making the process sleep
+	ts.cubbyholeDestroyer = func(*TokenStore, string) error {
+		time.Sleep(1 * time.Second)
+		return fmt.Errorf("keep it frosty")
+	}
+	cubbyFuncLock.Unlock()
+
+	go func() {
+		cubbyFuncLock.RLock()
+		err := ts.revokeSalted(saltTut)
+		cubbyFuncLock.RUnlock()
+		if err == nil {
+			t.Fatalf("expected error")
+		}
+	}()
+
+	// Give time for the function to start and grab locks
+	time.Sleep(200 * time.Millisecond)
+	te, err = ts.lookupSalted(saltTut, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != tokenRevocationInProgress {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+
+	// Let things catch up
+	time.Sleep(2 * time.Second)
+
+	// Put back to normal
+	cubbyFuncLock.Lock()
+	defer cubbyFuncLock.Unlock()
+	ts.cubbyholeDestroyer = origDestroyCubbyhole
+
+	err = ts.revokeSalted(saltTut)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	te, err = ts.lookupSalted(saltTut, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te != nil {
+		t.Fatal("found entry")
 	}
 }
