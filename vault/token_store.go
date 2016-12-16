@@ -869,12 +869,6 @@ func (ts *TokenStore) Revoke(id string) error {
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
 func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
-	// Destroy the cubby
-	err := ts.destroyCubbyhole(saltedId)
-	if err != nil {
-		return err
-	}
-
 	// Protect the entry lookup/writing with locks. The rub here is that we
 	// don't know the ID until we look it up once, so first we look it up, then
 	// do a locked lookup.
@@ -944,8 +938,15 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 		}
 	}()
 
-	// Revoke all secrets under this token. This should go first as it's
-	// the security-sensitive item.
+	// Destroy the token's cubby. This should go first as it's a
+	// security-sensitive item.
+	err := ts.destroyCubbyhole(saltedId)
+	if err != nil {
+		return err
+	}
+
+	// Revoke all secrets under this token. This should go first as it's a
+	// security-sensitive item.
 	if err := ts.expiration.RevokeByToken(entry); err != nil {
 		return err
 	}
