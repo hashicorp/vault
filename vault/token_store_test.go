@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -3265,5 +3266,127 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	numberOfAccessors = len(resp.Data["keys"].([]string))
 	if numberOfAccessors != 1 {
 		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+}
+
+func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+
+	// Create new token
+	root, err := ts.rootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root.ID
+	req.Data["policies"] = []string{"default"}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	// Create a new token
+	auth := &logical.Auth{
+		ClientToken: resp.Auth.ClientToken,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	tut := resp.Auth.ClientToken
+
+	req = &logical.Request{
+		Path:        "prod/aws/foo",
+		ClientToken: tut,
+	}
+	resp = &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Hour,
+			},
+		},
+	}
+
+	leases := []string{}
+
+	for i := 0; i < 10; i++ {
+		leaseId, err := exp.Register(req, resp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		leases = append(leases, leaseId)
+	}
+
+	sort.Strings(leases)
+
+	storedLeases, err := exp.lookupByToken(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(storedLeases)
+	if !reflect.DeepEqual(leases, storedLeases) {
+		t.Fatalf("bad: %#v vs %#v", leases, storedLeases)
+	}
+
+	// Now, delete the token entry. The leases should still exist.
+	saltedTut := ts.SaltID(tut)
+	te, err := ts.lookupSalted(saltedTut, true)
+	if err != nil {
+		t.Fatalf("failed to lookup token: %v", err)
+	}
+	if te == nil {
+		t.Fatal("got nil token entry")
+	}
+
+	// Destroy the token index
+	path := lookupPrefix + saltedTut
+	if ts.view.Delete(path); err != nil {
+		t.Fatalf("failed to delete token entry: %v", err)
+	}
+	te, err = ts.lookupSalted(saltedTut, true)
+	if err != nil {
+		t.Fatalf("failed to lookup token: %v", err)
+	}
+	if te != nil {
+		t.Fatal("got token entry")
+	}
+
+	// Verify leases still exist
+	storedLeases, err = exp.lookupByToken(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(storedLeases)
+	if !reflect.DeepEqual(leases, storedLeases) {
+		t.Fatalf("bad: %#v vs %#v", leases, storedLeases)
+	}
+
+	// Call tidy
+	ts.handleTidy(nil, nil)
+
+	// Verify leases are gone
+	storedLeases, err = exp.lookupByToken(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(storedLeases) > 0 {
+		t.Fatal("found leases")
 	}
 }
