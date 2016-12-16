@@ -247,19 +247,11 @@ func StrListDelete(s []string, d string) []string {
 		return s
 	}
 
-	foundIndex := -1
 	for index, element := range s {
 		if element == d {
-			foundIndex = index
-			break
+			return append(s[:index], s[index+1:]...)
 		}
 	}
-	if foundIndex != -1 {
-		s[foundIndex] = s[len(s)-1]
-		s = s[:len(s)-1]
-	}
-
-	sort.Strings(s)
 
 	return s
 }
