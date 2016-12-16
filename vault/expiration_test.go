@@ -705,10 +705,23 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	// N.B.: Vault doesn't allow both a secret and auth to be returned, but the
+	// reason for both is that auth needs to be included in order to use the
+	// token store as it's the only mounted backend, *but* RegisterAuth doesn't
+	// actually create the index by token, only Register (for a Secret) does.
+	// So without the Secret we don't do anything when removing the index which
+	// (at the time of writing) now fails because a bug causing every token
+	// expiration to do an extra delete to a non-existent key has been fixed,
+	// and this test relies on this nonstandard behavior.
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
 		Auth: &logical.Auth{
 			ClientToken: root.ID,
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Minute,
+			},
+		},
+		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
 				TTL: time.Minute,
 			},
@@ -725,7 +738,7 @@ func TestExpiration_revokeEntry_token(t *testing.T) {
 	if err := exp.createIndexByToken(le.ClientToken, le.LeaseID); err != nil {
 		t.Fatalf("error creating secondary index: %v", err)
 	}
-	exp.updatePending(le, le.Auth.LeaseTotal())
+	exp.updatePending(le, le.Secret.LeaseTotal())
 
 	indexEntry, err := exp.indexByToken(le.ClientToken, le.LeaseID)
 	if err != nil {
