@@ -1141,7 +1141,7 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 		if accessorEntry.TokenID == "" {
 			// If deletion of accessor fails, move on to the next
 			// item since this is just a best-effort operation
-			err = ts.view.Delete(accessorPrefix + "/" + saltedAccessor)
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
 			if err != nil {
 				cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
 				continue
@@ -1177,10 +1177,11 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 			// with the token's salt ID at the end, remove it
 			for _, v := range parentList {
 				if strings.HasSuffix(v, "/"+saltedId) {
-					err = ts.view.Delete(parentPrefix + "/" + v)
+					err = ts.view.Delete(parentPrefix + v)
 					if err != nil {
 						cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
 					}
+					break
 				}
 			}
 
@@ -1194,6 +1195,12 @@ func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldD
 				continue
 			}
 		}
+	}
+
+	// Later request handling code seems to check if the type is multierror so
+	// if we haven't added any errors we need to just return a normal nil error
+	if cleanupErrors == nil {
+		return nil, nil
 	}
 
 	return nil, cleanupErrors
