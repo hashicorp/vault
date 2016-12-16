@@ -784,7 +784,7 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 }
 
 // lookupSalted is used to find a token given its salted ID. If tainted is
-// true, entries that are awating deferred deletion (num uses has been set to
+// true, entries that are awaiting deferred deletion (num uses has been set to
 // -1) will be returned anyways.
 func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
