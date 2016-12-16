@@ -162,9 +162,6 @@ func TestPolynomial_Random(t *testing.T) {
 	if p.coefficients[0] != 42 {
 		t.Fatalf("bad: %v", p.coefficients)
 	}
-	if p.coefficients[2] == 0 {
-		t.Fatalf("bad: %v", p.coefficients)
-	}
 }
 
 func TestPolynomial_Eval(t *testing.T) {
