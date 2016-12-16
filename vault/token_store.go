@@ -3,12 +3,14 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -453,6 +455,17 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),
 				HelpDescription: strings.TrimSpace(tokenRenewHelp),
+			},
+
+			&framework.Path{
+				Pattern: "cleanup$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleCleanup,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenCleanupHelp),
+				HelpDescription: strings.TrimSpace(tokenCleanupDesc),
 			},
 		},
 	}
@@ -1095,6 +1108,84 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 	}
 
 	return aEntry, nil
+}
+
+// handleCleanup handles the cleaning up of leaked accessor storage entries and
+// cleaning up of leases that are associated to tokens that are expired.
+func (ts *TokenStore) handleCleanup(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// List out all the accessors
+	saltedAccessorList, err := ts.view.List(accessorPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch accessor entries: %v", err)
+	}
+
+	var cleanupErrors *multierror.Error
+
+	log.Printf("len(saltedAccessorList): %d\n", len(saltedAccessorList))
+
+	// For each of the accessor, see if the token ID associated with it is
+	// a valid one. If not, delete the leases associated with that token
+	// and delete the accessor as well.
+	for _, saltedAccessor := range saltedAccessorList {
+		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
+		if err != nil {
+			cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
+			continue
+		}
+
+		if accessorEntry.TokenID == "" {
+			// If deletion of accessor fails, move on to the next
+			// item since this is just a best-effort operation
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			if err != nil {
+				cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
+				continue
+			}
+		}
+
+		te, err := ts.lookupSalted(ts.SaltID(accessorEntry.TokenID))
+
+		// If token entry is not fetched for whatever reason, assume
+		// that the token is no more valid and conclude that accessor
+		// for this token should not exist along with the leases
+		// associated with the token. Also, in case token entry exists
+		// and if NumUses in the token entry is marked as -3, it a hint
+		// that the previous revocation operation failed. In that case,
+		// attempt a retry operation.
+		if err != nil || te == nil || (te != nil && te.NumUses == -3) {
+			// RevokeByToken expects a '*TokenEntry'. For the
+			// purposes of cleanup, it is sufficient if the token
+			// entry only has ID set.
+			tokenEntry := &TokenEntry{
+				ID: accessorEntry.TokenID,
+			}
+
+			// Attempt to revoke the token. This will also revoke
+			// the leases associated with the token.
+			err := ts.expiration.RevokeByToken(tokenEntry)
+
+			// Since we are attempting to retry the token
+			// revocation only when token entry had NumUses marked
+			// to -3, it is safe to assume that failure of
+			// revocation retry attempt would leave the NumUses
+			// with -3 again, so that it can be retried. Since it
+			// will be handled during the next invocation of this
+			// endpoint, ignoring the error case here.
+
+			if err == nil {
+				// If deletion of accessor fails, move on to the next
+				// item since this is just a best-effort operation
+				err = ts.view.Delete(accessorPrefix + saltedAccessor)
+				if err != nil {
+					cleanupErrors = multierror.Append(cleanupErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
+					continue
+				}
+			}
+
+		}
+	}
+
+	return nil, cleanupErrors
 }
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
@@ -2116,6 +2207,15 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 }
 
 const (
+	tokenCleanupHelp = `
+This endpoint cleans up the storage and lease entries.
+`
+	tokenCleanupDesc = `
+This is provided to be able to cleanup accessor storage entries that were
+supposed to be deleted and the lease entries that were supposed to be expired.
+This endpoint needs to be invoked when Vault is upgraded from versions less
+than 0.6.4.
+`
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
