@@ -1118,12 +1118,35 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		return nil, fmt.Errorf("failed to fetch accessor entries: %v", err)
 	}
 
+	var tidyErrors *multierror.Error
+
+	// First, clean up secondary index entries that are no longer valid
 	parentList, err := ts.view.List(parentPrefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
 	}
 
-	var tidyErrors *multierror.Error
+	// Scan through the secondary index entries; if there is an entry
+	// with the token's salt ID at the end, remove it
+	for _, parent := range parentList {
+		children, err := ts.view.List(parentPrefix + parent)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
+			continue
+		}
+
+		for _, child := range children {
+			// Look up tainted entries so we can be sure that if this isn't
+			// found, it doesn't exist
+			te, _ := ts.lookupSalted(child, true)
+			if te == nil {
+				err = ts.view.Delete(parentPrefix + parent + "/" + child)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
+				}
+			}
+		}
+	}
 
 	// For each of the accessor, see if the token ID associated with it is
 	// a valid one. If not, delete the leases associated with that token
@@ -1173,33 +1196,11 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 				continue
 			}
 
-			// Scan through the secondary index entries; if there is an entry
-			// with the token's salt ID at the end, remove it
-		parentloop:
-			for _, parent := range parentList {
-				children, err := ts.view.List(parentPrefix + parent)
-				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
-					continue
-				}
-
-				for _, child := range children {
-					if child == saltedId {
-						err = ts.view.Delete(parentPrefix + parent + "/" + child)
-						if err != nil {
-							tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
-						}
-						// We won't find it under more than one parent
-						break parentloop
-					}
-				}
-			}
-
 			// If deletion of accessor fails, move on to the next item since
 			// this is just a best-effort operation. We do this last so that on
 			// next run if something above failed we still have the accessor
 			// entry to try again.
-			err = ts.view.Delete(accessorPrefix + "/" + saltedAccessor)
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
 			if err != nil {
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
 				continue
