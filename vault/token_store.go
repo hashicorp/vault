@@ -40,6 +40,20 @@ const (
 
 	// rolesPrefix is the prefix used to store role information
 	rolesPrefix = "roles/"
+
+	// tokenRevocationDeferred indicates that the token should not be used
+	// again but is currently fulfilling its final use
+	tokenRevocationDeferred = -1
+
+	// tokenRevocationInProgress indicates that revocation of that token/its
+	// leases is ongoing
+	tokenRevocationInProgress = -2
+
+	// tokenRevocationFailed indicates that revocation failed; the entry is
+	// kept around so that when the cleanup function is run it can be tried
+	// again (or when the revocation function is run again), but all other uses
+	// will report the token invalid
+	tokenRevocationFailed = -3
 )
 
 var (
@@ -48,6 +62,14 @@ var (
 
 	// pathSuffixSanitize is used to ensure a path suffix in a role is valid.
 	pathSuffixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
+
+	destroyCubbyhole = func(ts *TokenStore, saltedID string) error {
+		if ts.cubbyholeBackend == nil {
+			// Should only ever happen in testing
+			return nil
+		}
+		return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+	}
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -66,6 +88,8 @@ type TokenStore struct {
 	policyLookupFunc func(string) (*Policy, error)
 
 	tokenLocks map[string]*sync.RWMutex
+
+	cubbyholeDestroyer func(*TokenStore, string) error
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -76,7 +100,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Initialize the store
 	t := &TokenStore{
-		view: view,
+		view:               view,
+		cubbyholeDestroyer: destroyCubbyhole,
 	}
 
 	if c.policyStore != nil {
@@ -898,7 +923,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 	// On failure we write -3, so if we hit -2 here we're already running a
 	// revocation operation. This can happen due to e.g. recursion into this
 	// function via the expiration manager's RevokeByToken.
-	if entry.NumUses == -2 {
+	if entry.NumUses == tokenRevocationInProgress {
 		lock.Unlock()
 		return nil
 	}
@@ -907,7 +932,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 	// so the token cannot be used, but this way we can keep the entry
 	// around until after the rest of this function is attempted, and a
 	// cleanup function can key off of this value to try again.
-	entry.NumUses = -2
+	entry.NumUses = tokenRevocationInProgress
 	err = ts.storeCommon(entry, false)
 	lock.Unlock()
 	if err != nil {
@@ -932,7 +957,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 			// If it exists just taint to -3 rather than trying to figure
 			// out what it means if it's already -3 after the -2 above
 			if entry != nil {
-				entry.NumUses = -3
+				entry.NumUses = tokenRevocationFailed
 				ts.storeCommon(entry, false)
 			}
 		}
@@ -940,7 +965,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 
 	// Destroy the token's cubby. This should go first as it's a
 	// security-sensitive item.
-	err := ts.destroyCubbyhole(saltedId)
+	err = ts.cubbyholeDestroyer(ts, saltedId)
 	if err != nil {
 		return err
 	}
@@ -954,7 +979,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 	// Clear the secondary index if any
 	if entry.Parent != "" {
 		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		if ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
@@ -962,14 +987,14 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 	// Clear the accessor index if any
 	if entry.Accessor != "" {
 		path := accessorPrefix + ts.SaltID(entry.Accessor)
-		if ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
 
 	// Now that the entry is not usable for any revocation tasks, nuke it
 	path := lookupPrefix + saltedId
-	if ts.view.Delete(path); err != nil {
+	if err = ts.view.Delete(path); err != nil {
 		return fmt.Errorf("failed to delete entry: %v", err)
 	}
 
@@ -1699,8 +1724,13 @@ func (ts *TokenStore) handleLookup(
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	lock := ts.getTokenLock(id)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	// Lookup the token
-	out, err := ts.Lookup(id)
+	saltedId := ts.SaltID(id)
+	out, err := ts.lookupSalted(saltedId, true)
 
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
