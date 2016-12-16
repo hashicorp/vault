@@ -2765,9 +2765,7 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// A non-root token which has 'default' policy attached, request for a
-	// child token to not have 'default' policy; this should still have default
-	// since it will inherit parent policies and no_default_policy is for
-	// automatic adding
+	// child token to not have 'default' policy while not sending a list
 	tokenReq.Data = map[string]interface{}{
 		"no_default_policy": true,
 	}
@@ -2776,8 +2774,8 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 		t.Fatalf("err: %v, resp: %v", err, resp)
 	}
 
-	if !reflect.DeepEqual(resp.Auth.Policies, []string{"default", "policy1"}) {
-		t.Fatalf("bad: policies: expected: [default policy1]; actual: %s", resp.Auth.Policies)
+	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
+		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
 	}
 
 	// In this case "default" shouldn't exist because we are not inheriting

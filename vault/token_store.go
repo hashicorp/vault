@@ -1215,6 +1215,11 @@ func (ts *TokenStore) handleCreateCommon(
 
 	var addDefault bool
 
+	// N.B.: The logic here uses various calculations as to whether default
+	// should be added. In the end we decided that if NoDefaultPolicy is set it
+	// should be stripped out regardless, *but*, the logic of when it should
+	// and shouldn't be added is kept because we want to do subset comparisons
+	// based on adding default when it's correct to do so.
 	switch {
 	case role != nil && (len(role.AllowedPolicies) > 0 || len(role.DisallowedPolicies) > 0):
 		// Holds the final set of policies as they get munged
@@ -1244,7 +1249,8 @@ func (ts *TokenStore) handleCreateCommon(
 		// that is used
 		if len(role.AllowedPolicies) > 0 {
 			// Note that if "default" is already in allowed, and also in
-			// disallowed, this will still result in an error.
+			// disallowed, this will still result in an error later since this
+			// doesn't strip out default
 			sanitizedRolePolicies = policyutil.SanitizePolicies(role.AllowedPolicies, localAddDefault)
 
 			if len(finalPolicies) == 0 {
@@ -1255,10 +1261,14 @@ func (ts *TokenStore) handleCreateCommon(
 				}
 			}
 		} else {
-			// Check against parent policies, or assign parent policies
+			// Check against parent policies, or assign parent policies. As
+			// this is a role, add default unless explicitly disabled.
 			if len(finalPolicies) == 0 {
 				finalPolicies = policyutil.SanitizePolicies(parent.Policies, localAddDefault)
 			} else {
+				// If we added default based on the fact that this is using a
+				// role, we need to add it here too to ensure that the subset
+				// matching works.
 				sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, localAddDefault)
 				if !strutil.StrListSubset(sanitizedParentPolicies, finalPolicies) {
 					return logical.ErrorResponse("child policies must be subset of parent when role contains no allowed_policies"), logical.ErrInvalidRequest
@@ -1310,6 +1320,11 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	te.Policies = policyutil.SanitizePolicies(data.Policies, addDefault)
+
+	// Yes, this is a little inefficient to do it like this, but meh
+	if data.NoDefaultPolicy {
+		te.Policies = strutil.StrListDelete(te.Policies, "default")
+	}
 
 	// Prevent internal policies from being assigned to tokens
 	for _, policy := range te.Policies {

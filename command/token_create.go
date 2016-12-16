@@ -156,11 +156,7 @@ Token Options:
                           your token. Requires a root/sudo token to use.
 
   -no-default-policy      If specified, the token will not have the "default"
-                          policy automatically included in its policy set. If
-                          "default" is added to the policy set via other means,
-                          such as not specifying policies and inheriting the
-                          parent token's set, this flag does not have an
-                          effect.
+                          policy included in its policy set.
 
   -policy="name"          Policy to associate with this token. This can be
                           specified multiple times.

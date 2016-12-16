@@ -131,8 +131,8 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">no_default_policy</span>
         <span class="param-flags">optional</span>
-        If true the `default` policy will not be automatically added to this
-        token's policy set.
+        If true the `default` policy will not be contained in this token's
+        policy set.
       </li>
       <li>
         <span class="param">renewable</span>
