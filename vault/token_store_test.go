@@ -2987,3 +2987,69 @@ func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
 		t.Fatalf("expected an error")
 	}
 }
+
+// Issue 2189
+func TestTokenStore_RevokeUseCountToken(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	tokenReq := &logical.Request{
+		Path:        "create",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"num_uses": 1,
+		},
+	}
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	tut := resp.Auth.ClientToken
+	saltTut := ts.SaltID(tut)
+	te, err := ts.lookupSalted(saltTut, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != 1 {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+
+	te, err = ts.UseToken(te)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != -1 {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+
+	// Should return no entry because it's tainted
+	te, err = ts.lookupSalted(saltTut, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te != nil {
+		t.Fatalf("%#v", te)
+	}
+
+	// Should return tainted entries
+	te, err = ts.lookupSalted(saltTut, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if te == nil {
+		t.Fatal("nil entry")
+	}
+	if te.NumUses != -1 {
+		t.Fatalf("bad: %d", te.NumUses)
+	}
+}
