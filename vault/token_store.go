@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -50,7 +51,7 @@ const (
 	tokenRevocationInProgress = -2
 
 	// tokenRevocationFailed indicates that revocation failed; the entry is
-	// kept around so that when the cleanup function is run it can be tried
+	// kept around so that when the tidy function is run it can be tried
 	// again (or when the revocation function is run again), but all other uses
 	// will report the token invalid
 	tokenRevocationFailed = -3
@@ -454,6 +455,17 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),
 				HelpDescription: strings.TrimSpace(tokenRenewHelp),
 			},
+
+			&framework.Path{
+				Pattern: "tidy$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleTidy,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenTidyHelp),
+				HelpDescription: strings.TrimSpace(tokenTidyDesc),
+			},
 		},
 	}
 
@@ -490,7 +502,7 @@ type TokenEntry struct {
 	// if it's -1 it has run through its use counts and is executing its final
 	// use; if it's -2 it is tainted, which means revocation is currently
 	// running on it; and if it's -3 it's also tainted but revocation
-	// previously ran and failed, so this hints the cleanup function to try it
+	// previously ran and failed, so this hints the tidy function to try it
 	// again.
 	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
 
@@ -556,7 +568,7 @@ type accessorEntry struct {
 
 // SetExpirationManager is used to provide the token store with
 // an expiration manager. This is used to manage prefix based revocation
-// of tokens and to cleanup entries when removed from the token store.
+// of tokens and to tidy entries when removed from the token store.
 func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
 }
@@ -931,7 +943,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 	// This acts as a WAL. lookupSalted will no longer return this entry,
 	// so the token cannot be used, but this way we can keep the entry
 	// around until after the rest of this function is attempted, and a
-	// cleanup function can key off of this value to try again.
+	// tidy function can key off of this value to try again.
 	entry.NumUses = tokenRevocationInProgress
 	err = ts.storeCommon(entry, false)
 	lock.Unlock()
@@ -1095,6 +1107,114 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 	}
 
 	return aEntry, nil
+}
+
+// handleTidy handles the cleaning up of leaked accessor storage entries and
+// cleaning up of leases that are associated to tokens that are expired.
+func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// List out all the accessors
+	saltedAccessorList, err := ts.view.List(accessorPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch accessor entries: %v", err)
+	}
+
+	var tidyErrors *multierror.Error
+
+	// First, clean up secondary index entries that are no longer valid
+	parentList, err := ts.view.List(parentPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
+	}
+
+	// Scan through the secondary index entries; if there is an entry
+	// with the token's salt ID at the end, remove it
+	for _, parent := range parentList {
+		children, err := ts.view.List(parentPrefix + parent)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
+			continue
+		}
+
+		for _, child := range children {
+			// Look up tainted entries so we can be sure that if this isn't
+			// found, it doesn't exist
+			te, _ := ts.lookupSalted(child, true)
+			if te == nil {
+				err = ts.view.Delete(parentPrefix + parent + "/" + child)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
+				}
+			}
+		}
+	}
+
+	// For each of the accessor, see if the token ID associated with it is
+	// a valid one. If not, delete the leases associated with that token
+	// and delete the accessor as well.
+	for _, saltedAccessor := range saltedAccessorList {
+		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
+			continue
+		}
+
+		// A valid accessor storage entry should always have a token ID
+		// in it. If not, it is an invalid accessor entry and needs to
+		// be deleted.
+		if accessorEntry.TokenID == "" {
+			// If deletion of accessor fails, move on to the next
+			// item since this is just a best-effort operation
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
+				continue
+			}
+		}
+
+		saltedId := ts.SaltID(accessorEntry.TokenID)
+
+		// Look up tainted variants so we only find entries that truly don't
+		// exist
+		te, err := ts.lookupSalted(saltedId, true)
+
+		// If token entry is not found assume that the token is not valid any
+		// more and conclude that accessor, leases, and secondary index entries
+		// for this token should not exist as well.
+		if te == nil {
+			// RevokeByToken expects a '*TokenEntry'. For the
+			// purposes of tidying, it is sufficient if the token
+			// entry only has ID set.
+			tokenEntry := &TokenEntry{
+				ID: accessorEntry.TokenID,
+			}
+
+			// Attempt to revoke the token. This will also revoke
+			// the leases associated with the token.
+			err := ts.expiration.RevokeByToken(tokenEntry)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke leases of expired token: %v", err))
+				continue
+			}
+
+			// If deletion of accessor fails, move on to the next item since
+			// this is just a best-effort operation. We do this last so that on
+			// next run if something above failed we still have the accessor
+			// entry to try again.
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
+				continue
+			}
+		}
+	}
+
+	// Later request handling code seems to check if the type is multierror so
+	// if we haven't added any errors we need to just return a normal nil error
+	if tidyErrors == nil {
+		return nil, nil
+	}
+
+	return nil, tidyErrors
 }
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
@@ -2116,6 +2236,16 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 }
 
 const (
+	tokenTidyHelp = `
+This endpoint performs cleanup tasks that can be run if certain error
+conditions have occurred.
+`
+	tokenTidyDesc = `
+This endpoint performs cleanup tasks that can be run to clean up token and
+lease entries after certain error conditions. Usually running this is not
+necessary, and is only required if upgrade notes or support personnel suggest
+it.
+`
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well

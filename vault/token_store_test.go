@@ -3148,3 +3148,119 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 		t.Fatal("found entry")
 	}
 }
+
+// Create a token, delete the token entry while leaking accessors, invoke tidy
+// and check if the dangling accessor entry is getting removed
+func TestTokenStore_HandleTidyCase1(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	// List the number of accessors. Since there is only root token
+	// present, the list operation should return only one key.
+	accessorListReq := &logical.Request{
+		Operation:   logical.ListOperation,
+		Path:        "accessors",
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	numberOfAccessors := len(resp.Data["keys"].([]string))
+	if numberOfAccessors != 1 {
+		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+
+	// Create a regular token
+	tokenReq := &logical.Request{
+		Operation:   logical.UpdateOperation,
+		Path:        "create",
+		ClientToken: root,
+		Data: map[string]interface{}{
+			"policies": []string{"policy1"},
+		},
+	}
+	resp, err = ts.HandleRequest(tokenReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+	tut := resp.Auth.ClientToken
+
+	// Creation of another token should end up with 2 valid accessors at
+	// the storage
+	resp, err = ts.HandleRequest(accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	numberOfAccessors = len(resp.Data["keys"].([]string))
+	if numberOfAccessors != 2 {
+		t.Fatalf("bad: number of accessors. Expected: 2, Actual: %d", numberOfAccessors)
+	}
+
+	// Revoke the token while leaking other items associated with the
+	// token. Do this by doing what revokeSalted used to do before it was
+	// fixed, i.e., by deleting the storage entry for token and its
+	// cubbyhole and by not deleting its secondary index, its accessor and
+	// associated leases.
+
+	saltedTut := ts.SaltID(tut)
+	_, err = ts.lookupSalted(saltedTut, true)
+	if err != nil {
+		t.Fatalf("failed to lookup token: %v", err)
+	}
+
+	// Destroy the token index
+	path := lookupPrefix + saltedTut
+	if ts.view.Delete(path); err != nil {
+		t.Fatalf("failed to delete token entry: %v", err)
+	}
+
+	// Destroy the cubby space
+	err = ts.destroyCubbyhole(saltedTut)
+	if err != nil {
+		t.Fatalf("failed to destroyCubbyhole: %v", err)
+	}
+
+	// Leaking of accessor should have resulted in no change to the number
+	// of accessors
+	resp, err = ts.HandleRequest(accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	numberOfAccessors = len(resp.Data["keys"].([]string))
+	if numberOfAccessors != 2 {
+		t.Fatalf("bad: number of accessors. Expected: 2, Actual: %d", numberOfAccessors)
+	}
+
+	tidyReq := &logical.Request{
+		Path:        "tidy",
+		Operation:   logical.UpdateOperation,
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(tidyReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("resp: %#v", resp)
+	}
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	// Tidy should have removed the dangling accessor entry
+	resp, err = ts.HandleRequest(accessorListReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	numberOfAccessors = len(resp.Data["keys"].([]string))
+	if numberOfAccessors != 1 {
+		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+}
