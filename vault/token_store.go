@@ -622,7 +622,7 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
-	entry.Policies = policyutil.SanitizePolicies(entry.Policies, false)
+	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
 
 	err := ts.createAccessor(entry)
 	if err != nil {
@@ -1213,57 +1213,119 @@ func (ts *TokenStore) handleCreateCommon(
 
 	resp := &logical.Response{}
 
+	var addDefault bool
+
+	// N.B.: The logic here uses various calculations as to whether default
+	// should be added. In the end we decided that if NoDefaultPolicy is set it
+	// should be stripped out regardless, *but*, the logic of when it should
+	// and shouldn't be added is kept because we want to do subset comparisons
+	// based on adding default when it's correct to do so.
 	switch {
-	// If we have a role, and the role defines policies, we don't even consider
-	// parent policies; the role allowed policies trumps all
-	case role != nil && len(role.AllowedPolicies) > 0:
-		if len(role.DisallowedPolicies) > 0 {
-			resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
+	case role != nil && (len(role.AllowedPolicies) > 0 || len(role.DisallowedPolicies) > 0):
+		// Holds the final set of policies as they get munged
+		var finalPolicies []string
+
+		// We don't make use of the global one because roles with allowed or
+		// disallowed set do their own policy rules
+		var localAddDefault bool
+
+		// If the request doesn't say not to add "default" and if "default"
+		// isn't in the disallowed list, add it. This is in line with the idea
+		// that roles, when allowed/disallowed ar set, allow a subset of
+		// policies to be set disjoint from the parent token's policies.
+		if !data.NoDefaultPolicy && !strutil.StrListContains(role.DisallowedPolicies, "default") {
+			localAddDefault = true
 		}
-		if len(data.Policies) == 0 {
-			data.Policies = role.AllowedPolicies
+
+		// Start with passed-in policies as a baseline, if they exist
+		if len(data.Policies) > 0 {
+			finalPolicies = policyutil.SanitizePolicies(data.Policies, localAddDefault)
+		}
+
+		var sanitizedRolePolicies []string
+
+		// First check allowed policies; if policies are specified they will be
+		// checked, otherwise if an allowed set exists that will be the set
+		// that is used
+		if len(role.AllowedPolicies) > 0 {
+			// Note that if "default" is already in allowed, and also in
+			// disallowed, this will still result in an error later since this
+			// doesn't strip out default
+			sanitizedRolePolicies = policyutil.SanitizePolicies(role.AllowedPolicies, localAddDefault)
+
+			if len(finalPolicies) == 0 {
+				finalPolicies = sanitizedRolePolicies
+			} else {
+				if !strutil.StrListSubset(sanitizedRolePolicies, finalPolicies) {
+					return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+				}
+			}
 		} else {
-			// Sanitize passed-in and role policies before comparison
-			sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
-			sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, true)
-
-			if !strutil.StrListSubset(sanitizedRolePolicies, sanitizedInputPolicies) {
-				return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", sanitizedInputPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+			// Check against parent policies, or assign parent policies. As
+			// this is a role, add default unless explicitly disabled.
+			if len(finalPolicies) == 0 {
+				finalPolicies = policyutil.SanitizePolicies(parent.Policies, localAddDefault)
+			} else {
+				// If we added default based on the fact that this is using a
+				// role, we need to add it here too to ensure that the subset
+				// matching works.
+				sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, localAddDefault)
+				if !strutil.StrListSubset(sanitizedParentPolicies, finalPolicies) {
+					return logical.ErrorResponse("child policies must be subset of parent when role contains no allowed_policies"), logical.ErrInvalidRequest
+				}
 			}
 		}
 
-	case role != nil && len(role.DisallowedPolicies) > 0:
-		if len(data.Policies) == 0 {
-			data.Policies = parent.Policies
-		}
-		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
+		if len(role.DisallowedPolicies) > 0 {
+			// We don't add the default here because we only want to disallow it if it's explicitly set
+			sanitizedRolePolicies = policyutil.SanitizePolicies(role.DisallowedPolicies, policyutil.DoNotAddDefaultPolicy)
 
-		// Do not voluntarily add 'default' to the list of items to check on
-		sanitizedRolePolicies := policyutil.SanitizePolicies(role.DisallowedPolicies, false)
-
-		for _, inputPolicy := range sanitizedInputPolicies {
-			if strutil.StrListContains(sanitizedRolePolicies, inputPolicy) {
-				return logical.ErrorResponse(fmt.Sprintf("token policy (%s) is disallowed by this role", inputPolicy)), logical.ErrInvalidRequest
+			for _, finalPolicy := range finalPolicies {
+				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
+					return logical.ErrorResponse(fmt.Sprintf("token policy %q is disallowed by this role", finalPolicy)), logical.ErrInvalidRequest
+				}
 			}
 		}
 
+		data.Policies = finalPolicies
+
+	// No policies specified, inherit parent
 	case len(data.Policies) == 0:
-		data.Policies = parent.Policies
+		// Only inherit "default" if the parent already has it, so don't touch addDefault here
+		data.Policies = policyutil.SanitizePolicies(parent.Policies, policyutil.DoNotAddDefaultPolicy)
 
-	// When a role is not in use, only permit policies to be a subset unless
-	// the client has root or sudo privileges
+	// When a role is not in use or does not specify allowed/disallowed, only
+	// permit policies to be a subset unless the client has root or sudo
+	// privileges. Default is added in this case if the parent has it, unless
+	// the client specified for it not to be added.
 	case !isSudo:
 		// Sanitize passed-in and parent policies before comparison
-		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
-		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, true)
+		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, policyutil.DoNotAddDefaultPolicy)
+		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, policyutil.DoNotAddDefaultPolicy)
 
 		if !strutil.StrListSubset(sanitizedParentPolicies, sanitizedInputPolicies) {
 			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 		}
+
+		// If the parent has default, and they haven't requested not to get it,
+		// add it. Note that if they have explicitly put "default" in
+		// data.Policies it will still be added because NoDefaultPolicy
+		// controls *automatic* adding.
+		if !data.NoDefaultPolicy && strutil.StrListContains(parent.Policies, "default") {
+			addDefault = true
+		}
+
+	// Add default by default in this case unless requested not to
+	case isSudo:
+		addDefault = !data.NoDefaultPolicy
 	}
 
-	// Do not add the 'default' policy if requested not to.
-	te.Policies = policyutil.SanitizePolicies(data.Policies, !data.NoDefaultPolicy)
+	te.Policies = policyutil.SanitizePolicies(data.Policies, addDefault)
+
+	// Yes, this is a little inefficient to do it like this, but meh
+	if data.NoDefaultPolicy {
+		te.Policies = strutil.StrListDelete(te.Policies, "default")
+	}
 
 	// Prevent internal policies from being assigned to tokens
 	for _, policy := range te.Policies {
@@ -1937,23 +1999,16 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 
 	allowedPoliciesStr, ok := data.GetOk("allowed_policies")
 	if ok {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(allowedPoliciesStr.(string), ","), false)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(allowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
 	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("allowed_policies").(string), ","), false)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("allowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
 	}
 
 	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
 	if ok {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(disallowedPoliciesStr.(string), ","), false)
+		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(disallowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
 	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), false)
-	}
-
-	if len(entry.AllowedPolicies) > 0 && len(entry.DisallowedPolicies) > 0 {
-		if resp == nil {
-			resp = &logical.Response{}
-		}
-		resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
+		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
 	}
 
 	// Store it
@@ -1989,12 +2044,9 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenAllowedPoliciesHelp = `If set, tokens can be created with any subset of the policies in this
 list, rather than the normal semantics of tokens being a subset of the
 calling token's policies. The parameter is a comma-delimited string of
-policy names. If this and 'disallowed_policies' are both set, only this
-option takes effect.`
+policy names.`
 	tokenDisallowedPoliciesHelp = `If set, successful token creation via this role will require that
-no policies in the given list are requested. If both
-'disallowed_policies' and 'allowed_policies' are set, this option has
-no effect. The parameter is a comma-delimited string of policy names.`
+no policies in the given list are requested. The parameter is a comma-delimited string of policy names.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role
