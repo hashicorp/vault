@@ -2885,6 +2885,22 @@ func TestTokenStore_NoDefaultPolicy(t *testing.T) {
 	if !reflect.DeepEqual(resp.Auth.Policies, []string{"policy1"}) {
 		t.Fatalf("bad: policies: expected: [policy1]; actual: %s", resp.Auth.Policies)
 	}
+
+	// Ensure that if default is in both allowed and disallowed, disallowed wins
+	roleReq.Data = map[string]interface{}{
+		"allowed_policies":    "default",
+		"disallowed_policies": "default",
+	}
+	resp, err = ts.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
+
+	delete(tokenReq.Data, "policies")
+	resp, err = ts.HandleRequest(tokenReq)
+	if err == nil || (resp != nil && !resp.IsError()) {
+		t.Fatalf("err: %v, resp: %v", err, resp)
+	}
 }
 
 func TestTokenStore_AllowedDisallowedPolicies(t *testing.T) {
