@@ -149,7 +149,7 @@ func (b *backend) pathCAGenerateRoot(
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally")
+		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
 	}
 
 	// For ease of later use, also store just the certificate at a known
