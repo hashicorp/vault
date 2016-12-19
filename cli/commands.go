@@ -4,6 +4,7 @@ import (
 	"os"
 
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	auditStdout "github.com/hashicorp/vault/builtin/audit/stdout"
 	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
 	"github.com/hashicorp/vault/version"
 
@@ -62,6 +63,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 				Meta: *metaPtr,
 				AuditBackends: map[string]audit.Factory{
 					"file":   auditFile.Factory,
+					"stdout": auditStdout.Factory,
 					"syslog": auditSyslog.Factory,
 				},
 				CredentialBackends: map[string]logical.Factory{
