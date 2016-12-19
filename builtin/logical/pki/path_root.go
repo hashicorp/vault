@@ -281,7 +281,7 @@ func (b *backend) pathCASignIntermediate(
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally")
+		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
 	}
 
 	if parsedBundle.Certificate.MaxPathLen == 0 {
