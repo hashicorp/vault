@@ -1,4 +1,4 @@
-package file
+package syslog
 
 import (
 	"bytes"
@@ -112,7 +112,7 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 		return err
 	}
 
-	// Write otu to syslog
+	// Write out to syslog
 	_, err = b.logger.Write(buf.Bytes())
 	return err
 }
