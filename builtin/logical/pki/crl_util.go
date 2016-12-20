@@ -31,7 +31,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 	alreadyRevoked := false
 	var revInfo revocationInfo
 
-	certEntry, err := fetchCertBySerial(req, "revoked/", serial)
+	revEntry, err := fetchCertBySerial(req, "revoked/", serial)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -40,15 +40,9 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 			return nil, err
 		}
 	}
-	if certEntry != nil {
+	if revEntry != nil {
 		// Set the revocation info to the existing values
 		alreadyRevoked = true
-
-		revEntry, err := req.Storage.Get("revoked/" + serial)
-		if revEntry == nil || err != nil {
-			return nil, fmt.Errorf("Error getting existing revocation info")
-		}
-
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("Error decoding existing revocation info")
@@ -56,7 +50,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 	}
 
 	if !alreadyRevoked {
-		certEntry, err = fetchCertBySerial(req, "certs/", serial)
+		certEntry, err := fetchCertBySerial(req, "certs/", serial)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -92,12 +86,12 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
 
-		certEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
+		revEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating revocation entry")
 		}
 
-		err = req.Storage.Put(certEntry)
+		err = req.Storage.Put(revEntry)
 		if err != nil {
 			return nil, fmt.Errorf("Error saving revoked certificate to new location")
 		}
