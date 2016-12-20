@@ -61,6 +61,11 @@ func (b *backend) pathTidyWrite(
 		}
 
 		for _, serial := range serials {
+			//
+			// Newer serials will be base64 encoded. For tidying
+			// purposes, it does not matter if serial is encoded or
+			// not.
+			//
 			certEntry, err := req.Storage.Get("certs/" + serial)
 			if err != nil {
 				return nil, fmt.Errorf("error fetching certificate %s: %s", serial, err)
@@ -100,6 +105,11 @@ func (b *backend) pathTidyWrite(
 
 		var revInfo revocationInfo
 		for _, serial := range revokedSerials {
+			//
+			// Newer serials will be base64 encoded. For tidying
+			// purposes, it does not matter if serial is encoded or
+			// not.
+			//
 			revokedEntry, err := req.Storage.Get("revoked/" + serial)
 			if err != nil {
 				return nil, fmt.Errorf("unable to fetch revoked cert with serial %s: %s", serial, err)

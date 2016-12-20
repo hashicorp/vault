@@ -225,7 +225,7 @@ func (b *backend) pathIssueSignCert(
 	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 
 	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "certs/" + cb.SerialNumber,
+		Key:   "certs/" + base64.URLEncoding.EncodeToString([]byte(cb.SerialNumber)),
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {

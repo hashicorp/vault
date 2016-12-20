@@ -196,11 +196,11 @@ func (b *backend) pathSetSignedIntermediate(
 		return nil, err
 	}
 
-	entry.Key = "certs/" + cb.SerialNumber
+	entry.Key = "certs/" + base64.URLEncoding.EncodeToString([]byte(cb.SerialNumber))
 	entry.Value = inputBundle.CertificateBytes
 	err = req.Storage.Put(entry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
 	}
 
 	// For ease of later use, also store just the certificate at a known
