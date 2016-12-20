@@ -1,7 +1,6 @@
 package database
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -31,8 +30,6 @@ func secretCreds(b *databaseBackend) *framework.Secret {
 }
 
 func (b *databaseBackend) secretCredsRenew(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	dbName := d.Get("name").(string)
-
 	// Get the username from the internal data
 	usernameRaw, ok := req.Secret.InternalData["username"]
 	if !ok {
@@ -40,25 +37,33 @@ func (b *databaseBackend) secretCredsRenew(req *logical.Request, d *framework.Fi
 	}
 	username, ok := usernameRaw.(string)
 
-	// Get our connection
-	db, ok := b.connections[dbName]
+	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
-		return nil, errors.New(fmt.Sprintf("Could not find connection with name %s", dbName))
+		return nil, fmt.Errorf("Could not find role with name: %s", req.Secret.InternalData["role"])
 	}
 
-	// Get the lease information
-	lease, err := b.Lease(req.Storage)
+	role, err := b.Role(req.Storage, roleNameRaw.(string))
 	if err != nil {
 		return nil, err
 	}
-	if lease == nil {
-		lease = &configLease{}
+	if role == nil {
+		return nil, fmt.Errorf("Could not find role with name: %s", req.Secret.InternalData["role"])
 	}
 
-	f := framework.LeaseExtend(lease.Lease, lease.LeaseMax, b.System())
+	f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
 	resp, err := f(req, d)
 	if err != nil {
 		return nil, err
+	}
+
+	// Grab the read lock
+	b.RLock()
+	defer b.RUnlock()
+
+	// Get our connection
+	db, ok := b.connections[role.DBName]
+	if !ok {
+		return nil, fmt.Errorf("Could not find connection with name %s", role.DBName)
 	}
 
 	// Make sure we increase the VALID UNTIL endpoint for this user.
@@ -124,23 +129,9 @@ func (b *databaseBackend) secretCredsRevoke(req *logical.Request, d *framework.F
 		return nil, fmt.Errorf("Could not find database with name: %s", role.DBName)
 	}
 
-	// TODO: Maybe move this down into db package?
-	switch revocationSQL {
-
-	// This is the default revocation logic. If revocation SQL is provided it
-	// is simply executed as-is.
-	case "":
-		err := db.DefaultRevokeUser(username)
-		if err != nil {
-			return nil, err
-		}
-
-	// We have revocation SQL, execute directly, within a transaction
-	default:
-		err := db.CustomRevokeUser(username, revocationSQL)
-		if err != nil {
-			return nil, err
-		}
+	err = db.RevokeUser(username, revocationSQL)
+	if err != nil {
+		return nil, err
 	}
 
 	return resp, nil

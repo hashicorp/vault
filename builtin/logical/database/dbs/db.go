@@ -1,10 +1,11 @@
 package dbs
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -16,11 +17,47 @@ var (
 	ErrUnsupportedDatabaseType = errors.New("Unsupported database type")
 )
 
-func Factory(conf ConnectionConfig) (DatabaseType, error) {
-	switch conf.ConnectionType {
+func Factory(conf *DatabaseConfig) (DatabaseType, error) {
+	switch conf.DatabaseType {
 	case postgreSQLTypeName:
+		var details *sqlConnectionDetails
+		err := mapstructure.Decode(conf.ConnectionDetails, &details)
+		if err != nil {
+			return nil, err
+		}
+
+		connProducer := &sqlConnectionProducer{
+			config:      conf,
+			connDetails: details,
+		}
+
+		credsProducer := &sqlCredentialsProducer{
+			displayNameLen: 23,
+			usernameLen:    63,
+		}
+
 		return &PostgreSQL{
-			config: conf,
+			ConnectionProducer:  connProducer,
+			CredentialsProducer: credsProducer,
+		}, nil
+
+	case cassandraTypeName:
+		var details *cassandraConnectionDetails
+		err := mapstructure.Decode(conf.ConnectionDetails, &details)
+		if err != nil {
+			return nil, err
+		}
+
+		connProducer := &cassandraConnectionProducer{
+			config:      conf,
+			connDetails: details,
+		}
+
+		credsProducer := &cassandraCredentialsProducer{}
+
+		return &Cassandra{
+			ConnectionProducer:  connProducer,
+			CredentialsProducer: credsProducer,
 		}, nil
 	}
 
@@ -29,21 +66,19 @@ func Factory(conf ConnectionConfig) (DatabaseType, error) {
 
 type DatabaseType interface {
 	Type() string
-	Connection() (*sql.DB, error)
-	Close()
-	Reset(ConnectionConfig) (*sql.DB, error)
-	CreateUser(createStmt, username, password, expiration string) error
+	CreateUser(createStmt, rollbackStmt, username, password, expiration string) error
 	RenewUser(username, expiration string) error
-	CustomRevokeUser(username, revocationSQL string) error
-	DefaultRevokeUser(username string) error
+	RevokeUser(username, revocationStmt string) error
+
+	ConnectionProducer
+	CredentialsProducer
 }
 
-type ConnectionConfig struct {
-	ConnectionType     string            `json:"type" structs:"type" mapstructure:"type"`
-	ConnectionURL      string            `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
-	ConnectionDetails  map[string]string `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
-	MaxOpenConnections int               `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
-	MaxIdleConnections int               `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
+type DatabaseConfig struct {
+	DatabaseType       string                 `json:"type" structs:"type" mapstructure:"type"`
+	ConnectionDetails  map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
+	MaxOpenConnections int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
+	MaxIdleConnections int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 }
 
 // Query templates a query for us.

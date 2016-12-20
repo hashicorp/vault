@@ -22,7 +22,6 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 		Paths: []*framework.Path{
 			pathConfigConnection(&b),
-			pathConfigLease(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathRoleCreate(&b),
@@ -59,24 +58,6 @@ func (b *databaseBackend) resetAllDBs() {
 	for _, db := range b.connections {
 		db.Close()
 	}
-}
-
-// Lease returns the lease information
-func (b *databaseBackend) Lease(s logical.Storage) (*configLease, error) {
-	entry, err := s.Get("config/lease")
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return nil, nil
-	}
-
-	var result configLease
-	if err := entry.DecodeJSON(&result); err != nil {
-		return nil, err
-	}
-
-	return &result, nil
 }
 
 func (b *databaseBackend) Role(s logical.Storage, n string) (*roleEntry, error) {

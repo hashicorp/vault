@@ -1,6 +1,9 @@
 package database
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -44,6 +47,24 @@ func pathRoles(b *databaseBackend) *framework.Path {
 							array, or a base64-encoded serialized JSON string array. The '{{name}}' value
 							will be substituted.`,
 			},
+
+			"rollback_statement": {
+				Type: framework.TypeString,
+				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
+							string, a base64-encoded semicolon-separated string, a serialized JSON string
+							array, or a base64-encoded serialized JSON string array. The '{{name}}' value
+							will be substituted.`,
+			},
+
+			"default_ttl": {
+				Type:        framework.TypeString,
+				Description: "Default ttl for role.",
+			},
+
+			"max_ttl": {
+				Type:        framework.TypeString,
+				Description: "Maximum time a credential is valid for",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -79,6 +100,9 @@ func (b *databaseBackend) pathRoleRead(req *logical.Request, data *framework.Fie
 		Data: map[string]interface{}{
 			"creation_statment":    role.CreationStatement,
 			"revocation_statement": role.RevocationStatement,
+			"rollback_statement":   role.RollbackStatement,
+			"default_ttl":          role.DefaultTTL.String(),
+			"max_ttl":              role.MaxTTL.String(),
 		},
 	}, nil
 }
@@ -97,6 +121,20 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 	dbName := data.Get("db_name").(string)
 	creationStmt := data.Get("creation_statement").(string)
 	revocationStmt := data.Get("revocation_statement").(string)
+	rollbackStmt := data.Get("rollback_statement").(string)
+	defaultTTLRaw := data.Get("default_ttl").(string)
+	maxTTLRaw := data.Get("max_ttl").(string)
+
+	defaultTTL, err := time.ParseDuration(defaultTTLRaw)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid default_ttl: %s", err)), nil
+	}
+	maxTTL, err := time.ParseDuration(maxTTLRaw)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid max_ttl: %s", err)), nil
+	}
 
 	// TODO: Think about preparing the statments to test.
 
@@ -105,6 +143,9 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 		DBName:              dbName,
 		CreationStatement:   creationStmt,
 		RevocationStatement: revocationStmt,
+		RollbackStatement:   rollbackStmt,
+		DefaultTTL:          defaultTTL,
+		MaxTTL:              maxTTL,
 	})
 	if err != nil {
 		return nil, err
@@ -117,9 +158,12 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 }
 
 type roleEntry struct {
-	DBName              string `json:"db_name" mapstructure:"db_name" structs:"db_name"`
-	CreationStatement   string `json:"creation_statment" mapstructure:"creation_statement" structs:"creation_statment"`
-	RevocationStatement string `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
+	DBName              string        `json:"db_name" mapstructure:"db_name" structs:"db_name"`
+	CreationStatement   string        `json:"creation_statment" mapstructure:"creation_statement" structs:"creation_statment"`
+	RevocationStatement string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
+	RollbackStatement   string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
+	DefaultTTL          time.Duration `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
+	MaxTTL              time.Duration `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
 }
 
 const pathRoleHelpSyn = `

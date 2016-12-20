@@ -11,9 +11,10 @@ import (
 )
 
 type PostgreSQL struct {
-	db     *sql.DB
-	config ConnectionConfig
+	db *sql.DB
 
+	ConnectionProducer
+	CredentialsProducer
 	sync.RWMutex
 }
 
@@ -21,74 +22,18 @@ func (p *PostgreSQL) Type() string {
 	return postgreSQLTypeName
 }
 
-func (p *PostgreSQL) Connection() (*sql.DB, error) {
-	// Grab the write lock
-	p.Lock()
-	defer p.Unlock()
-
-	// If we already have a DB, we got it!
-	if p.db != nil {
-		if err := p.db.Ping(); err == nil {
-			return p.db, nil
-		}
-		// If the ping was unsuccessful, close it and ignore errors as we'll be
-		// reestablishing anyways
-		p.db.Close()
-	}
-
-	// Otherwise, attempt to make connection
-	conn := p.config.ConnectionURL
-
-	// Ensure timezone is set to UTC for all the conenctions
-	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
-		if strings.Contains(conn, "?") {
-			conn += "&timezone=utc"
-		} else {
-			conn += "?timezone=utc"
-		}
-	} else {
-		conn += " timezone=utc"
-	}
-
-	var err error
-	p.db, err = sql.Open("postgres", conn)
+func (p *PostgreSQL) getConnection() (*sql.DB, error) {
+	db, err := p.Connection()
 	if err != nil {
 		return nil, err
 	}
 
-	// Set some connection pool settings. We don't need much of this,
-	// since the request rate shouldn't be high.
-	p.db.SetMaxOpenConns(p.config.MaxOpenConnections)
-	p.db.SetMaxIdleConns(p.config.MaxIdleConnections)
-
-	return p.db, nil
+	return db.(*sql.DB), nil
 }
 
-func (p *PostgreSQL) Close() {
-	// Grab the write lock
-	p.Lock()
-	defer p.Unlock()
-
-	if p.db != nil {
-		p.db.Close()
-	}
-
-	p.db = nil
-}
-
-func (p *PostgreSQL) Reset(config ConnectionConfig) (*sql.DB, error) {
-	// Grab the write lock
-	p.Lock()
-	p.config = config
-	p.Unlock()
-
-	p.Close()
-	return p.Connection()
-}
-
-func (p *PostgreSQL) CreateUser(createStmt, username, password, expiration string) error {
+func (p *PostgreSQL) CreateUser(createStmt, rollbackStmt, username, password, expiration string) error {
 	// Get the connection
-	db, err := p.Connection()
+	db, err := p.getConnection()
 	if err != nil {
 		return err
 	}
@@ -144,7 +89,7 @@ func (p *PostgreSQL) CreateUser(createStmt, username, password, expiration strin
 }
 
 func (p *PostgreSQL) RenewUser(username, expiration string) error {
-	db, err := p.Connection()
+	db, err := p.getConnection()
 	if err != nil {
 		return err
 	}
@@ -170,14 +115,23 @@ func (p *PostgreSQL) RenewUser(username, expiration string) error {
 	return nil
 }
 
-func (p *PostgreSQL) CustomRevokeUser(username, revocationSQL string) error {
-	db, err := p.Connection()
+func (p *PostgreSQL) RevokeUser(username, revocationStmt string) error {
+	// Grab the read lock
+	p.RLock()
+	defer p.RUnlock()
+
+	if revocationStmt == "" {
+		return p.defaultRevokeUser(username)
+	}
+
+	return p.customRevokeUser(username, revocationStmt)
+}
+
+func (p *PostgreSQL) customRevokeUser(username, revocationStmt string) error {
+	db, err := p.getConnection()
 	if err != nil {
 		return err
 	}
-	// TODO: this is Racey
-	p.RLock()
-	defer p.RUnlock()
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -187,7 +141,7 @@ func (p *PostgreSQL) CustomRevokeUser(username, revocationSQL string) error {
 		tx.Rollback()
 	}()
 
-	for _, query := range strutil.ParseArbitraryStringSlice(revocationSQL, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(revocationStmt, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
@@ -213,12 +167,8 @@ func (p *PostgreSQL) CustomRevokeUser(username, revocationSQL string) error {
 	return nil
 }
 
-func (p *PostgreSQL) DefaultRevokeUser(username string) error {
-	// Grab the read lock
-	p.RLock()
-	defer p.RUnlock()
-
-	db, err := p.Connection()
+func (p *PostgreSQL) defaultRevokeUser(username string) error {
+	db, err := p.getConnection()
 	if err != nil {
 		return err
 	}

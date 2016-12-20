@@ -79,7 +79,7 @@ func (b *databaseBackend) pathConnectionRead(req *logical.Request, data *framewo
 		return nil, nil
 	}
 
-	var config dbs.ConnectionConfig
+	var config dbs.DatabaseConfig
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
@@ -89,8 +89,8 @@ func (b *databaseBackend) pathConnectionRead(req *logical.Request, data *framewo
 }
 
 func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	connURL := data.Get("connection_url").(string)
 	connType := data.Get("connection_type").(string)
+	connDetails := data.Get("connection_details").(map[string]interface{})
 
 	maxOpenConns := data.Get("max_open_connections").(int)
 	if maxOpenConns == 0 {
@@ -105,9 +105,9 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 		maxIdleConns = maxOpenConns
 	}
 
-	config := dbs.ConnectionConfig{
-		ConnectionType:     connType,
-		ConnectionURL:      connURL,
+	config := &dbs.DatabaseConfig{
+		DatabaseType:       connType,
+		ConnectionDetails:  connDetails,
 		MaxOpenConnections: maxOpenConns,
 		MaxIdleConnections: maxIdleConns,
 	}
