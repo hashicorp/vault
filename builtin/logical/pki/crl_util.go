@@ -86,7 +86,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
 
-		revEntry, err := logical.StorageEntryJSON("revoked/"+serial, revInfo)
+		revEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating revocation entry")
 		}
