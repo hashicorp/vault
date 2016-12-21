@@ -16,14 +16,6 @@ import (
 
 type CLIHandler struct{}
 
-func transformHeaders(input map[string][]string) map[string]string {
-	retval := map[string]string{}
-	for k, v := range input {
-		retval[k] = v[0]
-	}
-	return retval
-}
-
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	mount, ok := m["mount"]
 	if !ok {
@@ -67,7 +59,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		stsRequest.HTTPRequest.Header.Add(magicVaultHeader, headerValue)
 	}
 	stsRequest.Sign()
-	headersJson, err := json.Marshal(transformHeaders(stsRequest.HTTPRequest.Header))
+	headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
 	if err != nil {
 		return "", err
 	}

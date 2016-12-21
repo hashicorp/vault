@@ -20,14 +20,22 @@ such as Hologram.
 
 The AWS-IAM and AWS-EC2 authentication backends serve similar purposes. Both
 look to authenticate some type of AWS entity to Vault. However, in many ways,
-the similarity ends there. The following is a comparison of the two entities:
+the similarity ends there. The following is a comparison of the two backends:
 
 * What type of entity is authenticated:
-  * The AWS-EC2 backend authenticates AWS EC2 instances only.
+  * The AWS-EC2 backend authenticates AWS EC2 instances only and is specialized
+    to handle EC2 instances, such as restricting access to EC2 instances from
+    a particular AMI, EC2 instances in a particular instance profile, or EC2
+    instances with a specialized tag value (via the role_tag feature).
   * The AWS-IAM backend authenticates AWS IAM principals. This can include
     IAM users, IAM roles assumed from other accounts, AWS Lambdas that are
     launched in an IAM role, or even EC2 instances that are launched in an
-    EC2 instance profile.
+    IAM instance profile. However, because it authenticates more generalized
+    IAM principals, this backend doesn't offer more granular controls
+    beyond binding to a given IAM principal (e.g., it can ensure that a given
+    credential comes from a particular IAM role, but not that that credential
+    came from an EC2 instance launched in an instance profile mapped to that
+    role, and not that that EC2 instance was launched from a particular AMI).
 * How the entities are authenticated
   * The AWS-EC2 backend authenticates instances by making use of the EC2 instance
     identity document, which is a cryptographically signed document containing
@@ -50,7 +58,12 @@ the similarity ends there. The following is a comparison of the two entities:
     roles, or developer laptops using [AdRoll's Hologram](https://github.com/AdRoll/hologram)
     then you would need to use the AWS-IAM backend.
   * If you have EC2 instances which are already in an IAM instance profile, then
-    you could use either backend.
+    you could use either backend. If you need more granular filtering beyond just
+    the instance profile of given EC2 instances (such as filtering based off
+    the AMI the instance was launched from), then you would need to either
+    use the AWS-EC2 backend or launch your EC2 instances into unique instance
+    profiles for each different Vault role you would want them to authenticate
+    to.
 
 ## Authentication Workflow
 
@@ -73,8 +86,19 @@ instance and used to authenticate to a prod Vault instance). Vault further
 requires that this header be one of the headers included in the AWS signature
 and relies upon AWS to authenticate that signature.
 
-While the AWS API endpoints support both signed GET and POST requests, for
-simplicity, the aws-iam backend supports only POST requests.
+While AWS API endpoints support both signed GET and POST requests, for
+simplicity, the aws-iam backend supports only POST requests. It also does not
+support `presigned` requests, i.e., requests with `X-Amz-Credential`,
+`X-Amz-signature`, and `X-Amz-SignedHeaders` GET query parameter containing the
+authenticating information.
+
+It's also important to note that Amazon does NOT appear to include any sort
+of authorization around calls to `GetCallerIdentity`. For example, if you have
+an IAM policy on your credential that requires all access to be MFA authenticated,
+non-MFA authenticated credentials (i.e., raw credentials, not those retrieved
+by calling `GetSessionToken` and supplying an MFA code) will still be able to
+authenticate to Vault using this backend. It does not appear possible to enforce
+an IAM principal to be MFA authenticated while authenticating to Vault.
 
 ## Authorization Workflow
 
@@ -87,6 +111,13 @@ you are simultaneously _two_ different principals: `arn:aws:iam::123456789012:ro
 *and* `arn:aws:sts::123456789012:assumed-role/MyRoleName/RoleSessionName`. In
 this case, you should bind the former ARN to your Vault roles.
 
+Please note that token renew operations do NOT revalidate any of the credentials
+that were initially used to authenticate to the aws-iam backend, nor do they
+validate that the caller still has the same IAM authorizations. If you are
+concerned by this, you should set a low `ttl` and `max_ttl` on the mount point to
+force clients to sign new `GetCallerIdentity` requests which will ensure clients
+still hold valid credentials.
+
 ## Authentication
 
 ### Via the CLI
@@ -98,6 +129,11 @@ $ vault auth-enable aws-iam
 ```
 
 #### Configure the policies on the role.
+
+Note that if you're using EC2 instances in an IAM Instance Profile, you need
+to supply the IAM role ARN, not the instance profile arn (i.e., if your bound
+IAM principal looks like `arn:aws:iam::123456789012:instance-profile/my_role`
+then you're passing in the instance profile ARN rather than the role ARN).
 
 ```
 $ vault write auth/aws-iam/role/dev-role bound_iam_principal=arn:aws:iam::123456789012:role/my_role policies=prod,dev max_ttl=500h
@@ -118,7 +154,7 @@ $ vault auth -method=aws-iam header_value=vault.example.com role=dev-role
 ```
 
 This assumes you have AWS credentials configured in the standard locations AWS SDKs search for credentials
-(environment variables, ~/.aws/credentials, EC2 instance profile in that order). If you do not have
+(environment variables, ~/.aws/credentials, IAM instance profile in that order). If you do not have
 IAM credentials available at any of these locations, you can explicitly pass them in on the command line
 (though this is not recommended):
 ```
@@ -144,14 +180,6 @@ import (
         "github.com/aws/aws-sdk-go/service/sts"
 )
 
-func transformHeaders(input map[string][]string) map[string]string {
-        retval := map[string]string{}
-        for k, v := range input {
-                retval[k] = v[0]
-        }
-        return retval
-}
-
 func main() {
         sess, err := session.NewSession()
         if err != nil {
@@ -165,7 +193,7 @@ func main() {
         stsRequest.HTTPRequest.Header.Add("X-Vault-AWSIAM-Server-ID", "vault.example.com")
         stsRequest.Sign()
 
-        headersJson, err := json.Marshal(transformHeaders(stsRequest.HTTPRequest.Header))
+        headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
         if err != nil {
                 fmt.Println(fmt.Errorf("Error:", err))
                 return
@@ -180,11 +208,12 @@ func main() {
         fmt.Println("headers=" + base64.StdEncoding.EncodeToString(headersJson))
         fmt.Println("body=" + base64.StdEncoding.EncodeToString(requestBody))
 }
+
 ```
 Using this, we can get the values to pass in to the `vault write` operation:
 
 ```
-$ vault write auth/aws-iam/login role=dev method=POST url=https://sts.amazonaws.com/ headers=eyJBdXRob3JpemF0aW9uIjoiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiIsIkNvbnRlbnQtTGVuZ3RoIjoiNDMiLCJDb250ZW50LVR5cGUiOiJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQ7IGNoYXJzZXQ9dXRmLTgiLCJVc2VyLUFnZW50IjoiYXdzLXNkay1nby8xLjQuMTIgKGdvMS43LjE7IGxpbnV4OyBhbWQ2NCkiLCJYLUFtei1EYXRlIjoiMjAxNjA5MzBUMDQzMTIxWiIsIlgtVmF1bHQtU2VydmVyIjoidmF1bHQuZGV2Lmp0aG9tcHNvbi5pbyJ9 body=QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==
+$ vault write auth/aws-iam/login role=dev method=POST url=https://sts.amazonaws.com/ headers=eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ== body=QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==
 ```
 
 ### Via the API
@@ -204,7 +233,7 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-iam/role/
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws-iam/login" -d '{"role":"dev", "method": "POST", "url": "https://sts.amazonaws.com/", "body": "QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==", "headers": "eyJBdXRob3JpemF0aW9uIjoiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiIsIkNvbnRlbnQtTGVuZ3RoIjoiNDMiLCJDb250ZW50LVR5cGUiOiJhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQ7IGNoYXJzZXQ9dXRmLTgiLCJVc2VyLUFnZW50IjoiYXdzLXNkay1nby8xLjQuMTIgKGdvMS43LjE7IGxpbnV4OyBhbWQ2NCkiLCJYLUFtei1EYXRlIjoiMjAxNjA5MzBUMDQzMTIxWiIsIlgtVmF1bHQtU2VydmVyIjoidmF1bHQuZGV2Lmp0aG9tcHNvbi5pbyJ9" }'
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws-iam/login" -d '{"role":"dev", "method": "POST", "url": "https://sts.amazonaws.com/", "body": "QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==", "headers": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==" }'
 ```
 
 

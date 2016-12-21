@@ -16,7 +16,7 @@ import (
 )
 
 func buildLoginData(request *http.Request, roleName string) (map[string]interface{}, error) {
-	headersJson, err := json.Marshal(transformHeaders(request.Header))
+	headersJson, err := json.Marshal(request.Header)
 	if err != nil {
 		return nil, err
 	}

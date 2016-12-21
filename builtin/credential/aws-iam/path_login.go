@@ -105,7 +105,7 @@ func (b *backend) pathLoginUpdate(
 	if err != nil {
 		return logical.ErrorResponse("headers is invalid base64"), nil
 	}
-	var headers map[string]string
+	var headers http.Header
 	err = jsonutil.DecodeJSON(headersJson, &headers)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("headers '%s' is invalid JSON: %s", headersJson, err)), nil
@@ -117,16 +117,18 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse("error getting configuration"), nil
 	}
 
-	if config.HeaderValue != "" {
-		ok, msg := ensureVaultHeaderValue(headers, parsedUrl, config.HeaderValue)
-		if !ok {
-			return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %s", magicVaultHeader, msg)), nil
-		}
-	}
+	endpoint := "https://sts.amazonaws.com"
 
-	endpoint := config.Endpoint
-	if endpoint == "" {
-		endpoint = "https://sts.amazonaws.com"
+	if config != nil {
+		if config.HeaderValue != "" {
+			ok, msg := ensureVaultHeaderValue(headers, parsedUrl, config.HeaderValue)
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %s", magicVaultHeader, msg)), nil
+			}
+		}
+		if config.Endpoint != "" {
+			endpoint = config.Endpoint
+		}
 	}
 
 	clientArn, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
@@ -240,11 +242,11 @@ func parseIamArn(iamArn string) (string, string, error) {
 	return transformedArn, principalName, nil
 }
 
-func ensureVaultHeaderValue(headers map[string]string, requestUrl *url.URL, requiredHeaderValue string) (bool, string) {
+func ensureVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) (bool, string) {
 	providedValue := ""
 	for k, v := range headers {
 		if strings.ToLower(magicVaultHeader) == strings.ToLower(k) {
-			providedValue = v
+			providedValue = strings.Join(v, ",")
 			break
 		}
 	}
@@ -257,11 +259,19 @@ func ensureVaultHeaderValue(headers map[string]string, requestUrl *url.URL, requ
 		return false, fmt.Sprintf("expected %s but got %s", requiredHeaderValue, providedValue)
 	}
 
-	if authzHeader, ok := headers["Authorization"]; ok {
+	if authzHeaders, ok := headers["Authorization"]; ok {
 		// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
 		// We need to extract out the SignedHeaders
 		re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
-		signedHeaders := string(re.FindSubmatch([]byte(authzHeader))[1])
+		authzHeader := strings.Join(authzHeaders, ",")
+		matches := re.FindSubmatch([]byte(authzHeader))
+		if len(matches) < 1 {
+			return false, "vault header wasn't signed"
+		}
+		if len(matches) > 2 {
+			return false, "found multiple SignedHeaders components"
+		}
+		signedHeaders := string(matches[1])
 		return ensureHeaderIsSigned(signedHeaders, magicVaultHeader)
 	}
 	// TODO: If we support GET requests, then we need to parse the X-Amz-SignedHeaders
@@ -269,7 +279,7 @@ func ensureVaultHeaderValue(headers map[string]string, requestUrl *url.URL, requ
 	return false, "Missing Authorization header"
 }
 
-func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers map[string]string) *http.Request {
+func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) *http.Request {
 	// This is all a bit complicated because the AWS signature algorithm requires that
 	// the Host header be included in the signed headers. See
 	// http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
@@ -307,13 +317,16 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 		return nil
 	}
 	request.Host = parsedUrl.Host
-	for k, v := range headers {
-		request.Header.Add(k, v)
+	for k, vals := range headers {
+		for _, val := range vals {
+			request.Header.Add(k, val)
+		}
 	}
 	return request
 }
 
 func ensureHeaderIsSigned(signedHeaders, headerToSign string) (bool, string) {
+	// Not doing a constant time compare here, the values aren't secret
 	for _, header := range strings.Split(signedHeaders, ";") {
 		if header == strings.ToLower(headerToSign) {
 			return true, ""
@@ -329,8 +342,11 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	return result, err
 }
 
-func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers map[string]string) (string, error) {
-	// TODO: Some validation to ensure we're calling STS, instead of acting as an unintended network proxy
+func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (string, error) {
+	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
+	// The protection against this is that this method will only call the endpoint specified in the
+	// client config (defaulting to sts.amazonaws.com), so it would require a Vault admin to override
+	// the endpoint to talk to alternate web addresses
 	request := buildHttpRequest(method, endpoint, parsedUrl, body, headers)
 	client := cleanhttp.DefaultClient()
 	response, err := client.Do(request)
