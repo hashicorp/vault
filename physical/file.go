@@ -52,8 +52,11 @@ func (b *FileBackend) Delete(path string) error {
 	basePath, fileName := b.path(path)
 	fullPath := filepath.Join(basePath, "_"+fileName)
 
+	// For backwards compatibility, try to delete the file without base64 URL
+	// encoding the file name. If such a file does not exist, it could mean
+	// that the file name is encoded. Try deleting the file with the encoded
+	// file name.
 	err := os.Remove(fullPath)
-
 	if err != nil && os.IsNotExist(err) {
 		fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
 		err = os.Remove(fullPath)
@@ -109,8 +112,9 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 	basePath, fileName := b.path(k)
 	fullPath := filepath.Join(basePath, "_"+fileName)
 
+	// If non-encoded file name is a valid storage entry, read it out.
+	// Otherwise, encode the file name and look for the storage entry.
 	f, err := os.Open(fullPath)
-
 	if err != nil && os.IsNotExist(err) {
 		fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
 		f, err = os.Open(fullPath)
@@ -133,19 +137,39 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 }
 
 func (b *FileBackend) Put(entry *Entry) error {
+	if entry == nil {
+		return fmt.Errorf("nil entry")
+	}
+
+	var err error
 	basePath, fileName := b.path(entry.Key)
 
-	fileName = base64.URLEncoding.EncodeToString([]byte(fileName))
+	// New storage entries will have their file names base64 URL encoded. If a
+	// file with a non-encoded file name exists, it indicates that this is an
+	// update operation. To avoid duplication of storage entries, delete the
+	// old entry first.
+	fullPath := filepath.Join(basePath, "_"+fileName)
+	if _, err = os.Stat(fullPath); !os.IsNotExist(err) {
+		err = b.Delete(entry.Key)
+		if err != nil {
+			return fmt.Errorf("failed to remove old entry: %v", err)
+		}
+	}
 
 	b.l.Lock()
 	defer b.l.Unlock()
 
 	// Make the parent tree
-	if err := os.MkdirAll(basePath, 0755); err != nil {
+	if err = os.MkdirAll(basePath, 0755); err != nil {
 		return err
 	}
 
-	fullPath := filepath.Join(basePath, "_"+fileName)
+	// base64 URL encode the file name to make all the characters compatible by
+	// the host OS (specially Windows). However, the basePath can contain
+	// disallowed characters.  Encoding all the directory names and the file
+	// name is an over kill, and encoding all at once will flatten the file
+	// system, which *may* not be desire.
+	fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
 
 	// JSON encode the entry and write it
 	f, err := os.OpenFile(
@@ -188,6 +212,8 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	for i, name := range names {
 		if name[0] == '_' {
 			names[i] = name[1:]
+			// If the file name is encoded, decode it to retain the list output
+			// meaningful.
 			nameDecodedBytes, err := base64.URLEncoding.DecodeString(names[i])
 			if err == nil {
 				names[i] = string(nameDecodedBytes)
