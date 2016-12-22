@@ -49,18 +49,14 @@ func (b *FileBackend) Delete(path string) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	basePath, key := b.path(path)
-	fullPath := filepath.Join(basePath, "_"+key)
+	basePath, fileName := b.path(path)
+	fullPath := filepath.Join(basePath, "_"+fileName)
 
 	err := os.Remove(fullPath)
 
-	// if the file does not exist and if the key is base64 URL encoded, try to delete the file with decoded key
 	if err != nil && os.IsNotExist(err) {
-		keyDecodedBytes, err := base64.URLEncoding.DecodeString(key)
-		if err == nil {
-			fullPath = filepath.Join(basePath, "_"+string(keyDecodedBytes))
-			err = os.Remove(fullPath)
-		}
+		fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
+		err = os.Remove(fullPath)
 	}
 
 	if err != nil && !os.IsNotExist(err) {
@@ -110,13 +106,13 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	path, key := b.path(k)
-	fullPath := filepath.Join(path, "_"+key)
+	basePath, fileName := b.path(k)
+	fullPath := filepath.Join(basePath, "_"+fileName)
 
 	f, err := os.Open(fullPath)
 
 	if err != nil && os.IsNotExist(err) {
-		fullPath = filepath.Join(path, "_"+base64.URLEncoding.EncodeToString([]byte(key)))
+		fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
 		f, err = os.Open(fullPath)
 	}
 
@@ -137,19 +133,19 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 }
 
 func (b *FileBackend) Put(entry *Entry) error {
-	path, key := b.path(entry.Key)
+	basePath, fileName := b.path(entry.Key)
 
-	key = base64.URLEncoding.EncodeToString([]byte(key))
+	fileName = base64.URLEncoding.EncodeToString([]byte(fileName))
 
 	b.l.Lock()
 	defer b.l.Unlock()
 
 	// Make the parent tree
-	if err := os.MkdirAll(path, 0755); err != nil {
+	if err := os.MkdirAll(basePath, 0755); err != nil {
 		return err
 	}
 
-	fullPath := filepath.Join(path, "_"+key)
+	fullPath := filepath.Join(basePath, "_"+fileName)
 
 	// JSON encode the entry and write it
 	f, err := os.OpenFile(
@@ -192,7 +188,10 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	for i, name := range names {
 		if name[0] == '_' {
 			names[i] = name[1:]
-			// TODO: Decode the name
+			nameDecodedBytes, err := base64.URLEncoding.DecodeString(names[i])
+			if err == nil {
+				names[i] = string(nameDecodedBytes)
+			}
 		} else {
 			names[i] = name + "/"
 		}
@@ -202,8 +201,6 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 }
 
 func (b *FileBackend) path(k string) (string, string) {
-	path := filepath.Join(b.Path, k)
-	key := filepath.Base(path)
-	path = filepath.Dir(path)
-	return path, key
+	fullPath := filepath.Join(b.Path, k)
+	return filepath.Dir(fullPath), filepath.Base(fullPath)
 }
