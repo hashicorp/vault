@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -49,9 +50,19 @@ func (b *FileBackend) Delete(path string) error {
 	defer b.l.Unlock()
 
 	basePath, key := b.path(path)
-	fullPath := filepath.Join(basePath, key)
+	fullPath := filepath.Join(basePath, "_"+key)
 
 	err := os.Remove(fullPath)
+
+	// if the file does not exist and if the key is base64 URL encoded, try to delete the file with decoded key
+	if err != nil && os.IsNotExist(err) {
+		keyDecodedBytes, err := base64.URLEncoding.DecodeString(key)
+		if err == nil {
+			fullPath = filepath.Join(basePath, "_"+string(keyDecodedBytes))
+			err = os.Remove(fullPath)
+		}
+	}
+
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
 	}
@@ -100,14 +111,19 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 	defer b.l.Unlock()
 
 	path, key := b.path(k)
-	path = filepath.Join(path, key)
+	fullPath := filepath.Join(path, "_"+key)
 
-	f, err := os.Open(path)
+	f, err := os.Open(fullPath)
+
+	if err != nil && os.IsNotExist(err) {
+		fullPath = filepath.Join(path, "_"+base64.URLEncoding.EncodeToString([]byte(key)))
+		f, err = os.Open(fullPath)
+	}
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-
 		return nil, err
 	}
 	defer f.Close()
@@ -123,6 +139,8 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 func (b *FileBackend) Put(entry *Entry) error {
 	path, key := b.path(entry.Key)
 
+	key = base64.URLEncoding.EncodeToString([]byte(key))
+
 	b.l.Lock()
 	defer b.l.Unlock()
 
@@ -131,9 +149,11 @@ func (b *FileBackend) Put(entry *Entry) error {
 		return err
 	}
 
+	fullPath := filepath.Join(path, "_"+key)
+
 	// JSON encode the entry and write it
 	f, err := os.OpenFile(
-		filepath.Join(path, key),
+		fullPath,
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600)
 	if err != nil {
@@ -172,6 +192,7 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	for i, name := range names {
 		if name[0] == '_' {
 			names[i] = name[1:]
+			// TODO: Decode the name
 		} else {
 			names[i] = name + "/"
 		}
@@ -184,5 +205,5 @@ func (b *FileBackend) path(k string) (string, string) {
 	path := filepath.Join(b.Path, k)
 	key := filepath.Base(path)
 	path = filepath.Dir(path)
-	return path, "_" + key
+	return path, key
 }
