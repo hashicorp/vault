@@ -167,8 +167,8 @@ func (b *FileBackend) Put(entry *Entry) error {
 	// base64 URL encode the file name to make all the characters compatible by
 	// the host OS (specially Windows). However, the basePath can contain
 	// disallowed characters.  Encoding all the directory names and the file
-	// name is an over kill, and encoding all at once will flatten the file
-	// system, which *may* not be desire.
+	// name is an over kill, and encoding the fullPath will flatten the
+	// storage, which *may* not be desired.
 	fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
 
 	// JSON encode the entry and write it
