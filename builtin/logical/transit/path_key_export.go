@@ -15,6 +15,12 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const (
+	exportTypeEncryptionKey = "encryption-key"
+	exportTypeSigningKey    = "signing-key"
+	exportTypeHMACKey       = "hmac-key"
+)
+
 func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "export/" + framework.GenericNameRegex("export_type") + "/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version"),
@@ -48,7 +54,11 @@ func (b *backend) pathPolicyExport(
 	name := d.Get("name").(string)
 	version := d.Get("version").(string)
 
-	if exportType != "encryptor" && exportType != "signer" {
+	switch exportType {
+	case exportTypeEncryptionKey:
+	case exportTypeSigningKey:
+	case exportTypeHMACKey:
+	default:
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
 
@@ -65,6 +75,17 @@ func (b *backend) pathPolicyExport(
 
 	if !p.Exportable {
 		return logical.ErrorResponse("key is not exportable"), nil
+	}
+
+	switch exportType {
+	case exportTypeEncryptionKey:
+		if !p.Type.EncryptionSupported() {
+			return logical.ErrorResponse("encryption not supported for the key"), logical.ErrInvalidRequest
+		}
+	case exportTypeSigningKey:
+		if !p.Type.SigningSupported() {
+			return logical.ErrorResponse("signing not supported for the key"), logical.ErrInvalidRequest
+		}
 	}
 
 	resp := &logical.Response{
@@ -91,54 +112,49 @@ func (b *backend) pathPolicyExport(
 			return logical.ErrorResponse("version does not exist or is no longer valid"), logical.ErrInvalidRequest
 		}
 
-		switch exportType {
-		case "signer":
-			resp.Data["key"] = strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey))
-		case "encryptor":
-			switch p.Type {
-			case keysutil.KeyType_AES256_GCM96:
-				resp.Data["key"] = strings.TrimSpace(base64.StdEncoding.EncodeToString(key.AESKey))
-			case keysutil.KeyType_ECDSA_P256:
-				ecKey, err := keyEntryToECPrivateKey(key)
-				if err != nil {
-					return nil, err
-				}
-				resp.Data["key"] = ecKey
-			default:
-				return nil, fmt.Errorf("unknown key type %v", p.Type)
-			}
+		exportKey, err := getExportKey(p, key, exportType)
+		if err != nil {
+			return nil, err
 		}
+		resp.Data["key"] = exportKey
 
 		return resp, nil
 	}
 
 	retKeys := map[string]string{}
-	switch exportType {
-	case "signer":
-		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.HMACKey)
+	for k, v := range p.Keys {
+		exportKey, err := getExportKey(p, v, exportType)
+		if err != nil {
+			return nil, err
 		}
-	case "encryptor":
-		switch p.Type {
-		case keysutil.KeyType_AES256_GCM96:
-			for k, v := range p.Keys {
-				retKeys[strconv.Itoa(k)] = base64.StdEncoding.EncodeToString(v.AESKey)
-			}
-		case keysutil.KeyType_ECDSA_P256:
-			for k, v := range p.Keys {
-				ecKey, err := keyEntryToECPrivateKey(v)
-				if err != nil {
-					return nil, err
-				}
-				retKeys[strconv.Itoa(k)] = ecKey
-			}
-		default:
-			return nil, fmt.Errorf("unknown key type %v", p.Type)
-		}
+		retKeys[strconv.Itoa(k)] = exportKey
 	}
 	resp.Data["keys"] = retKeys
 
 	return resp, nil
+}
+
+func getExportKey(policy *keysutil.Policy, key keysutil.KeyEntry, exportType string) (string, error) {
+	switch exportType {
+	case exportTypeHMACKey:
+		return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey)), nil
+	case exportTypeEncryptionKey:
+		switch policy.Type {
+		case keysutil.KeyType_AES256_GCM96:
+			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.AESKey)), nil
+		}
+	case exportTypeSigningKey:
+		switch policy.Type {
+		case keysutil.KeyType_ECDSA_P256:
+			ecKey, err := keyEntryToECPrivateKey(key)
+			if err != nil {
+				return "", err
+			}
+			return ecKey, nil
+		}
+	}
+
+	return "", fmt.Errorf("unknown key type %v", policy.Type)
 }
 
 func keyEntryToECPrivateKey(k keysutil.KeyEntry) (string, error) {
