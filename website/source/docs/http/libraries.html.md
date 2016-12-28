@@ -36,6 +36,8 @@ These libraries are provided by the community.
 
 ### C&#35;
 
+* [Vault.NET](https://github.com/Chatham/Vault.NET)
+  * `Install-Package Vault`
 * [VaultSharp](https://github.com/rajanadar/VaultSharp)
   * `Install-Package VaultSharp`
 
@@ -78,7 +80,7 @@ These libraries are provided by the community.
 
 * [HVAC](https://github.com/ianunruh/hvac)
   * `pip install hvac`
-  
+
 ### Rust
 
 * [HashicorpVault](https://crates.io/crates/hashicorp_vault)
