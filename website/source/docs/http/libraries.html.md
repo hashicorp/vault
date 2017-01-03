@@ -49,6 +49,10 @@ These libraries are provided by the community.
 
 * [vaultex](https://hex.pm/packages/vaultex)
 
+### Go
+
+* [vc](https://github.com/adfinis-sygroup/vault-client)
+
 ### Haskell
 
 * [vault-tool](https://hackage.haskell.org/package/vault-tool)
