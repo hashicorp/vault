@@ -46,7 +46,7 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 		Path:        "wraptest/foo",
 		ClientToken: root,
 		Operation:   logical.ReadOperation,
-		WrapInfo: &logical.RequestWrappingInfo{
+		WrapInfo: &logical.RequestWrapInfo{
 			TTL: time.Duration(15 * time.Second),
 		},
 	}
@@ -122,7 +122,7 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 	req = &logical.Request{
 		Path:      "auth/userpass/login/test",
 		Operation: logical.UpdateOperation,
-		WrapInfo: &logical.RequestWrappingInfo{
+		WrapInfo: &logical.RequestWrapInfo{
 			TTL: time.Duration(15 * time.Second),
 		},
 		Data: map[string]interface{}{

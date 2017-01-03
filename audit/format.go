@@ -87,14 +87,6 @@ func (f *AuditFormatter) FormatRequest(
 		errString = err.Error()
 	}
 
-	var reqWrapInfo *AuditRequestWrapInfo
-	if req.WrapInfo != nil {
-		reqWrapInfo = &AuditRequestWrapInfo{
-			TTL:    int(req.WrapInfo.TTL / time.Second),
-			Format: req.WrapInfo.Format,
-		}
-	}
-
 	reqEntry := &AuditRequestEntry{
 		Type:  "request",
 		Error: errString,
@@ -113,8 +105,11 @@ func (f *AuditFormatter) FormatRequest(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			WrapInfo:            reqWrapInfo,
 		},
+	}
+
+	if req.WrapInfo != nil {
+		reqEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
 	if !config.OmitTime {
@@ -246,14 +241,6 @@ func (f *AuditFormatter) FormatResponse(
 		}
 	}
 
-	var reqWrapInfo *AuditRequestWrapInfo
-	if req.WrapInfo != nil {
-		reqWrapInfo = &AuditRequestWrapInfo{
-			TTL:    int(req.WrapInfo.TTL / time.Second),
-			Format: req.WrapInfo.Format,
-		}
-	}
-
 	var respWrapInfo *AuditResponseWrapInfo
 	if resp.WrapInfo != nil {
 		respWrapInfo = &AuditResponseWrapInfo{
@@ -282,7 +269,6 @@ func (f *AuditFormatter) FormatResponse(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			WrapInfo:            reqWrapInfo,
 		},
 
 		Response: AuditResponse{
@@ -292,6 +278,10 @@ func (f *AuditFormatter) FormatResponse(
 			Redirect: resp.Redirect,
 			WrapInfo: respWrapInfo,
 		},
+	}
+
+	if req.WrapInfo != nil {
+		respEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
 	if !config.OmitTime {
@@ -328,7 +318,7 @@ type AuditRequest struct {
 	Path                string                 `json:"path"`
 	Data                map[string]interface{} `json:"data"`
 	RemoteAddr          string                 `json:"remote_address"`
-	WrapInfo            *AuditRequestWrapInfo  `json:"wrap_info,omitempty"`
+	WrapTTL             int                    `json:"wrap_ttl"`
 }
 
 type AuditResponse struct {
@@ -349,11 +339,6 @@ type AuditAuth struct {
 
 type AuditSecret struct {
 	LeaseID string `json:"lease_id"`
-}
-
-type AuditRequestWrapInfo struct {
-	TTL    int    `json:"ttl"`
-	Format string `json:"format"`
 }
 
 type AuditResponseWrapInfo struct {

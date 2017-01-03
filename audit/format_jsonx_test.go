@@ -29,7 +29,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 					RemoteAddr: "127.0.0.1",
 				},
 				WrapInfo: &logical.RequestWrapInfo{
-					WrapTTL: 60 * time.Second,
+					TTL: 60 * time.Second,
 				},
 			},
 			errors.New("this is an error"),
