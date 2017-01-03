@@ -19,6 +19,12 @@
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "xFtqcXoLV+TzdA4IgRPb3GMmi3E=",
+			"path": "bitbucket.org/ww/goautoneg",
+			"revision": "75cd24fc2f2c",
+			"revisionTime": "2012-07-07T11:04:53Z"
+		},
+		{
 			"checksumSHA1": "ZLRh6zW4/DnVsGpgtt+ZiIaEFKc=",
 			"path": "cloud.google.com/go/compute/metadata",
 			"revision": "3713d73fb56ab419eb61d25274e778c7a0f33356",
@@ -283,6 +289,12 @@
 			"revisionTime": "2016-11-30T20:22:39Z"
 		},
 		{
+			"checksumSHA1": "4QnLdmB1kG3N+KlDd1N+G9TWAGQ=",
+			"path": "github.com/beorn7/perks/quantile",
+			"revision": "b965b613227fddccbfffe13eae360ed3fa822f8d",
+			"revisionTime": "2015-02-23T13:51:52Z"
+		},
+		{
 			"checksumSHA1": "Isa9x3nvIJ12hvgdvUUBty+yplU=",
 			"path": "github.com/bgentry/speakeasy",
 			"revision": "675b82c74c0ed12283ee81ba8a534c8982c07b85",
@@ -313,10 +325,46 @@
 			"revisionTime": "2016-11-21T13:51:53Z"
 		},
 		{
+			"checksumSHA1": "7uspQtEpYuBxaxrBTcxa+ZfiuJo=",
+			"path": "github.com/coreos/etcd/auth/authpb",
+			"revision": "1fcc0128a06d95bf0a29d177c916c9c512452bfa",
+			"revisionTime": "2016-12-30T20:26:58Z"
+		},
+		{
 			"checksumSHA1": "fD5l709voaF+GGsD1Vtk+G+1RPY=",
 			"path": "github.com/coreos/etcd/client",
 			"revision": "9647012cb192deedeb9451ecc445d43cf6fdbf05",
 			"revisionTime": "2016-12-01T18:39:40Z"
+		},
+		{
+			"checksumSHA1": "U68fyOCzP9MjSZ/yTcqIm/aSHFw=",
+			"path": "github.com/coreos/etcd/clientv3",
+			"revision": "1fcc0128a06d95bf0a29d177c916c9c512452bfa",
+			"revisionTime": "2016-12-30T20:26:58Z"
+		},
+		{
+			"checksumSHA1": "77qmlZb2Us0Qlu/OHKMdZ8RajEo=",
+			"path": "github.com/coreos/etcd/clientv3/concurrency",
+			"revision": "1fcc0128a06d95bf0a29d177c916c9c512452bfa",
+			"revisionTime": "2016-12-30T20:26:58Z"
+		},
+		{
+			"checksumSHA1": "5yRlK3cXaDLqOQGtE5oGgKW9+zI=",
+			"path": "github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes",
+			"revision": "1fcc0128a06d95bf0a29d177c916c9c512452bfa",
+			"revisionTime": "2016-12-30T20:26:58Z"
+		},
+		{
+			"checksumSHA1": "Vu09CLLQRRgKmh4nRXk5dq9uQ3w=",
+			"path": "github.com/coreos/etcd/etcdserver/etcdserverpb",
+			"revision": "1fcc0128a06d95bf0a29d177c916c9c512452bfa",
+			"revisionTime": "2016-12-30T20:26:58Z"
+		},
+		{
+			"checksumSHA1": "PAnQN6F8iZuIfu9HHOORyVFaaOA=",
+			"path": "github.com/coreos/etcd/mvcc/mvccpb",
+			"revision": "1fcc0128a06d95bf0a29d177c916c9c512452bfa",
+			"revisionTime": "2016-12-30T20:26:58Z"
 		},
 		{
 			"checksumSHA1": "ga3jt9r+dQBMSXG0gnpNcXp2xYA=",
@@ -445,6 +493,12 @@
 			"revisionTime": "2016-11-29T20:35:43Z"
 		},
 		{
+			"checksumSHA1": "Wn3FA8HfnWdpPFEOedL6WoRodzc=",
+			"path": "github.com/golang/protobuf/jsonpb",
+			"revision": "8616e8ee5e20a1704615e6c8d7afcdac06087a67",
+			"revisionTime": "2016-06-08T21:55:45Z"
+		},
+		{
 			"checksumSHA1": "kBeNcaKk56FguvPSUCEaH6AxpRc=",
 			"path": "github.com/golang/protobuf/proto",
 			"revision": "8ee79997227bf9b34611aee7946ae64735e6fd93",
@@ -473,6 +527,30 @@
 			"path": "github.com/googleapis/gax-go",
 			"revision": "da06d194a00e19ce00d9011a13931c3f6f6887c7",
 			"revisionTime": "2016-11-07T00:24:06Z"
+		},
+		{
+			"checksumSHA1": "OJPSJ4GBgH/XOFtYu2VM1g7rtjk=",
+			"path": "github.com/grpc-ecosystem/go-grpc-prometheus",
+			"revision": "6b7015e65d366bf3f19b2b2a000a831940f0f7e0",
+			"revisionTime": "2016-09-10T22:24:44Z"
+		},
+		{
+			"checksumSHA1": "m1ZcuEjYXGa1TVwnZBUdnL3kzhQ=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime",
+			"revision": "a8f25bd1ab549f8b87afd48aa9181221e9d439bb",
+			"revisionTime": "2016-07-23T12:46:39Z"
+		},
+		{
+			"checksumSHA1": "GN9lH15GbtcX7xx70TjRYXi23Uk=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/runtime/internal",
+			"revision": "a8f25bd1ab549f8b87afd48aa9181221e9d439bb",
+			"revisionTime": "2016-07-23T12:46:39Z"
+		},
+		{
+			"checksumSHA1": "vqiK5r5dntV7JNZ+ZsGlD0Samos=",
+			"path": "github.com/grpc-ecosystem/grpc-gateway/utilities",
+			"revision": "a8f25bd1ab549f8b87afd48aa9181221e9d439bb",
+			"revisionTime": "2016-07-23T12:46:39Z"
 		},
 		{
 			"checksumSHA1": "O0r0hj4YL+jSRNjnshkeH4GY+4s=",
@@ -727,6 +805,12 @@
 			"revisionTime": "2016-11-23T14:36:37Z"
 		},
 		{
+			"checksumSHA1": "Q2vw4HZBbnU8BLFt8VrzStwqSJg=",
+			"path": "github.com/matttproud/golang_protobuf_extensions/pbutil",
+			"revision": "fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a",
+			"revisionTime": "2015-04-06T17:39:34Z"
+		},
+		{
 			"checksumSHA1": "hBgLmZ/4mCxmnH88mqFKBkpJFUY=",
 			"path": "github.com/mgutz/ansi",
 			"revision": "c286dcecd19ff979eeb73ea444e479b903f2cfcb",
@@ -797,6 +881,36 @@
 			"path": "github.com/pborman/uuid",
 			"revision": "3d4f2ba23642d3cfd06bd4b54cf03d99d95c0f1b",
 			"revisionTime": "2016-10-05T15:16:09Z"
+		},
+		{
+			"checksumSHA1": "1xhzW4dDfGCmYSgcgW2jLgXhx8k=",
+			"path": "github.com/prometheus/client_golang/prometheus",
+			"revision": "e51041b3fa41cece0dca035740ba6411905be473",
+			"revisionTime": "2015-10-08T14:32:47Z"
+		},
+		{
+			"checksumSHA1": "DvwvOlPNAgRntBzt3b3OSRMS2N4=",
+			"path": "github.com/prometheus/client_model/go",
+			"revision": "fa8ad6fec33561be4280a8f0514318c79d7f6cb6",
+			"revisionTime": "2015-02-12T10:17:44Z"
+		},
+		{
+			"checksumSHA1": "fb/BtFX1ZGMvS5m7BrB+oDdCFic=",
+			"path": "github.com/prometheus/common/expfmt",
+			"revision": "ffe929a3f4c4faeaa10f2b9535c2b1be3ad15650",
+			"revisionTime": "2015-10-14T05:50:50Z"
+		},
+		{
+			"checksumSHA1": "E2I+ZblmucP+Ys4RILg3aLIR7+M=",
+			"path": "github.com/prometheus/common/model",
+			"revision": "ffe929a3f4c4faeaa10f2b9535c2b1be3ad15650",
+			"revisionTime": "2015-10-14T05:50:50Z"
+		},
+		{
+			"checksumSHA1": "LT1E4XNIPt6i3zPsBCjdwMXqahs=",
+			"path": "github.com/prometheus/procfs",
+			"revision": "454a56f35412459b5e684fd5ec0f9211b94f002a",
+			"revisionTime": "2015-09-28T17:39:26Z"
 		},
 		{
 			"checksumSHA1": "6U1/66VaDVjh/hiz+UPnASgxGV8=",
