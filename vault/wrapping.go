@@ -92,16 +92,6 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	}
 
 	var err error
-	cluster := c.cluster
-	if cluster == nil {
-		cluster, err = c.Cluster()
-		if err != nil {
-			return nil, err
-		}
-		if cluster == nil {
-			return nil, fmt.Errorf("cluster information could not be loaded")
-		}
-	}
 
 	// If we are wrapping, the first part (performed in this functions) happens
 	// before auditing so that resp.WrapInfo.Token can contain the HMAC'd
@@ -135,8 +125,6 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	case "jwt":
 		// Create the JWT
 		claims := jws.Claims{}
-		// Use this to ensure we don't try to unwrap at the wrong cluster
-		claims.SetIssuer(cluster.ID)
 		// Map the JWT ID to the token ID for ease ofuse
 		claims.SetJWTID(te.ID)
 		// Set the issue time to the creation time
@@ -250,17 +238,6 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 	}
 
 	var err error
-	cluster := c.cluster
-
-	if cluster == nil {
-		cluster, err = c.Cluster()
-		if err != nil {
-			return false, err
-		}
-		if cluster == nil {
-			return false, fmt.Errorf("cluster information could not be loaded")
-		}
-	}
 
 	var token string
 	if req.Data != nil && req.Data["token"] != nil {
@@ -281,7 +258,6 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		// If there's an error we simply fall back to attempting to use it as a regular token
 		if err == nil && wt != nil {
 			validator := &jwt.Validator{}
-			validator.SetIssuer(c.cluster.ID)
 			validator.SetClaim("type", "wrapping")
 			if err = wt.Validate(&c.wrappingJWTKey.PublicKey, crypto.SigningMethodES512, []*jwt.Validator{validator}...); err != nil {
 				return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)

@@ -258,8 +258,6 @@ type Core struct {
 	//
 	// Cluster information
 	//
-	// The cluster object currently in use
-	cluster *Cluster
 	// Name
 	clusterName string
 	// Used to modify cluster TLS params
