@@ -11,6 +11,7 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAwsEc2 "github.com/hashicorp/vault/builtin/credential/aws-ec2"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
+	credChefNode "github.com/hashicorp/vault/builtin/credential/chef-node"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -65,13 +66,14 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"syslog": auditSyslog.Factory,
 				},
 				CredentialBackends: map[string]logical.Factory{
-					"approle":  credAppRole.Factory,
-					"cert":     credCert.Factory,
-					"aws-ec2":  credAwsEc2.Factory,
-					"app-id":   credAppId.Factory,
-					"github":   credGitHub.Factory,
-					"userpass": credUserpass.Factory,
-					"ldap":     credLdap.Factory,
+					"approle":   credAppRole.Factory,
+					"cert":      credCert.Factory,
+					"aws-ec2":   credAwsEc2.Factory,
+					"app-id":    credAppId.Factory,
+					"github":    credGitHub.Factory,
+					"userpass":  credUserpass.Factory,
+					"ldap":      credLdap.Factory,
+					"chef-node": credChefNode.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,
@@ -107,10 +109,11 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 			return &command.AuthCommand{
 				Meta: *metaPtr,
 				Handlers: map[string]command.AuthHandler{
-					"github":   &credGitHub.CLIHandler{},
-					"userpass": &credUserpass.CLIHandler{},
-					"ldap":     &credLdap.CLIHandler{},
-					"cert":     &credCert.CLIHandler{},
+					"github":    &credGitHub.CLIHandler{},
+					"userpass":  &credUserpass.CLIHandler{},
+					"ldap":      &credLdap.CLIHandler{},
+					"cert":      &credCert.CLIHandler{},
+					"chef-node": &credChefNode.CLIHandler{},
 				},
 			}, nil
 		},

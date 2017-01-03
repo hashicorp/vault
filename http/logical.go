@@ -278,6 +278,7 @@ func getConnection(r *http.Request) (connection *logical.Connection) {
 	connection = &logical.Connection{
 		RemoteAddr: remoteAddr,
 		ConnState:  r.TLS,
+		Header:     r.Header,
 	}
 	return
 }
