@@ -147,6 +147,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 			claims.Set("accessor", resp.Auth.Accessor)
 		}
 		claims.Set("type", "wrapping")
+		claims.Set("addr", c.redirectAddr)
 		jwt := jws.NewJWT(claims, crypto.SigningMethodES512)
 		serWebToken, err := jwt.Serialize(c.wrappingJWTKey)
 		if err != nil {
