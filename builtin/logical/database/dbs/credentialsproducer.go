@@ -20,24 +20,24 @@ type sqlCredentialsProducer struct {
 	usernameLen    int
 }
 
-func (scg *sqlCredentialsProducer) GenerateUsername(displayName string) (string, error) {
+func (scp *sqlCredentialsProducer) GenerateUsername(displayName string) (string, error) {
 	// Generate the username, password and expiration. PG limits user to 63 characters
-	if scg.displayNameLen > 0 && len(displayName) > scg.displayNameLen {
-		displayName = displayName[:scg.displayNameLen]
+	if scp.displayNameLen > 0 && len(displayName) > scp.displayNameLen {
+		displayName = displayName[:scp.displayNameLen]
 	}
 	userUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", err
 	}
 	username := fmt.Sprintf("%s-%s", displayName, userUUID)
-	if scg.usernameLen > 0 && len(username) > scg.usernameLen {
-		username = username[:scg.usernameLen]
+	if scp.usernameLen > 0 && len(username) > scp.usernameLen {
+		username = username[:scp.usernameLen]
 	}
 
 	return username, nil
 }
 
-func (scg *sqlCredentialsProducer) GeneratePassword() (string, error) {
+func (scp *sqlCredentialsProducer) GeneratePassword() (string, error) {
 	password, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", err
@@ -46,7 +46,7 @@ func (scg *sqlCredentialsProducer) GeneratePassword() (string, error) {
 	return password, nil
 }
 
-func (scg *sqlCredentialsProducer) GenerateExpiration(ttl time.Duration) string {
+func (scp *sqlCredentialsProducer) GenerateExpiration(ttl time.Duration) string {
 	return time.Now().
 		Add(ttl).
 		Format("2006-01-02 15:04:05-0700")

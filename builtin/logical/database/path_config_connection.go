@@ -124,7 +124,7 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 
 		// Don't allow the connection type to change
 		if b.connections[name].Type() != connType {
-			return logical.ErrorResponse("can not change type of existing connection"), nil
+			return logical.ErrorResponse("Can not change type of existing connection."), nil
 		}
 
 		db = b.connections[name]
