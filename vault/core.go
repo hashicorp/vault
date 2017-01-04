@@ -508,6 +508,15 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 		return nil, fmt.Errorf("missing client token")
 	}
 
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
+	}
+
 	// Many tests don't have a token store running
 	if c.tokenStore == nil {
 		return nil, nil
