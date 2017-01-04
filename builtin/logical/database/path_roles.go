@@ -35,12 +35,12 @@ func pathRoles(b *databaseBackend) *framework.Path {
 				Description: "Name of the database this role acts on.",
 			},
 
-			"creation_statement": {
+			"creation_statements": {
 				Type:        framework.TypeString,
 				Description: "SQL string to create a user. See help for more info.",
 			},
 
-			"revocation_statement": {
+			"revocation_statements": {
 				Type: framework.TypeString,
 				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
 							string, a base64-encoded semicolon-separated string, a serialized JSON string
@@ -48,7 +48,7 @@ func pathRoles(b *databaseBackend) *framework.Path {
 							will be substituted.`,
 			},
 
-			"rollback_statement": {
+			"rollback_statements": {
 				Type: framework.TypeString,
 				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
 							string, a base64-encoded semicolon-separated string, a serialized JSON string
@@ -98,11 +98,11 @@ func (b *databaseBackend) pathRoleRead(req *logical.Request, data *framework.Fie
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"creation_statment":    role.CreationStatement,
-			"revocation_statement": role.RevocationStatement,
-			"rollback_statement":   role.RollbackStatement,
-			"default_ttl":          role.DefaultTTL.String(),
-			"max_ttl":              role.MaxTTL.String(),
+			"creation_statments":    role.CreationStatements,
+			"revocation_statements": role.RevocationStatements,
+			"rollback_statements":   role.RollbackStatements,
+			"default_ttl":           role.DefaultTTL.String(),
+			"max_ttl":               role.MaxTTL.String(),
 		},
 	}, nil
 }
@@ -119,9 +119,9 @@ func (b *databaseBackend) pathRoleList(req *logical.Request, d *framework.FieldD
 func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	dbName := data.Get("db_name").(string)
-	creationStmt := data.Get("creation_statement").(string)
-	revocationStmt := data.Get("revocation_statement").(string)
-	rollbackStmt := data.Get("rollback_statement").(string)
+	creationStmts := data.Get("creation_statements").(string)
+	revocationStmts := data.Get("revocation_statements").(string)
+	rollbackStmts := data.Get("rollback_statements").(string)
 	defaultTTLRaw := data.Get("default_ttl").(string)
 	maxTTLRaw := data.Get("max_ttl").(string)
 
@@ -140,12 +140,12 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		DBName:              dbName,
-		CreationStatement:   creationStmt,
-		RevocationStatement: revocationStmt,
-		RollbackStatement:   rollbackStmt,
-		DefaultTTL:          defaultTTL,
-		MaxTTL:              maxTTL,
+		DBName:               dbName,
+		CreationStatements:   creationStmts,
+		RevocationStatements: revocationStmts,
+		RollbackStatements:   rollbackStmts,
+		DefaultTTL:           defaultTTL,
+		MaxTTL:               maxTTL,
 	})
 	if err != nil {
 		return nil, err
@@ -158,12 +158,12 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 }
 
 type roleEntry struct {
-	DBName              string        `json:"db_name" mapstructure:"db_name" structs:"db_name"`
-	CreationStatement   string        `json:"creation_statment" mapstructure:"creation_statement" structs:"creation_statment"`
-	RevocationStatement string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
-	RollbackStatement   string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
-	DefaultTTL          time.Duration `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
-	MaxTTL              time.Duration `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
+	DBName               string        `json:"db_name" mapstructure:"db_name" structs:"db_name"`
+	CreationStatements   string        `json:"creation_statment" mapstructure:"creation_statement" structs:"creation_statment"`
+	RevocationStatements string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
+	RollbackStatements   string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
+	DefaultTTL           time.Duration `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
+	MaxTTL               time.Duration `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
 }
 
 const pathRoleHelpSyn = `

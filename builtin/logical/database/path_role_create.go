@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	_ "github.com/lib/pq"
 )
 
 func pathRoleCreate(b *databaseBackend) *framework.Path {
@@ -68,7 +67,7 @@ func (b *databaseBackend) pathRoleCreateRead(req *logical.Request, data *framewo
 
 	expiration := db.GenerateExpiration(role.DefaultTTL)
 
-	err = db.CreateUser(role.CreationStatement, role.RollbackStatement, username, password, expiration)
+	err = db.CreateUser(role.CreationStatements, role.RollbackStatements, username, password, expiration)
 	if err != nil {
 		return nil, err
 	}

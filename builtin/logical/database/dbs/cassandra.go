@@ -9,6 +9,11 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 )
 
+const (
+	defaultCreationCQL = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;`
+	defaultRollbackCQL = `DROP USER '{{username}}';`
+)
+
 type Cassandra struct {
 	// Session is goroutine safe, however, since we reinitialize
 	// it when connection info changes, we want to make sure we
@@ -31,7 +36,7 @@ func (c *Cassandra) getConnection() (*gocql.Session, error) {
 	return session.(*gocql.Session), nil
 }
 
-func (c *Cassandra) CreateUser(createStmt, rollbackStmt, username, password, expiration string) error {
+func (c *Cassandra) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
 	// Get the connection
 	session, err := c.getConnection()
 	if err != nil {
@@ -54,7 +59,7 @@ func (c *Cassandra) CreateUser(createStmt, rollbackStmt, username, password, exp
 	}*/
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(createStmt, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(createStmts, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
@@ -65,7 +70,7 @@ func (c *Cassandra) CreateUser(createStmt, rollbackStmt, username, password, exp
 			"password": password,
 		})).Exec()
 		if err != nil {
-			for _, query := range strutil.ParseArbitraryStringSlice(rollbackStmt, ";") {
+			for _, query := range strutil.ParseArbitraryStringSlice(rollbackStmts, ";") {
 				query = strings.TrimSpace(query)
 				if len(query) == 0 {
 					continue
@@ -88,7 +93,7 @@ func (c *Cassandra) RenewUser(username, expiration string) error {
 	return nil
 }
 
-func (c *Cassandra) RevokeUser(username, revocationSQL string) error {
+func (c *Cassandra) RevokeUser(username, revocationStmts string) error {
 	session, err := c.getConnection()
 	if err != nil {
 		return err

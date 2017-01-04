@@ -31,7 +31,7 @@ func (p *PostgreSQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (p *PostgreSQL) CreateUser(createStmt, rollbackStmt, username, password, expiration string) error {
+func (p *PostgreSQL) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
 	// Get the connection
 	db, err := p.getConnection()
 	if err != nil {
@@ -56,7 +56,7 @@ func (p *PostgreSQL) CreateUser(createStmt, rollbackStmt, username, password, ex
 	// Return the secret
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(createStmt, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(createStmts, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
@@ -115,19 +115,19 @@ func (p *PostgreSQL) RenewUser(username, expiration string) error {
 	return nil
 }
 
-func (p *PostgreSQL) RevokeUser(username, revocationStmt string) error {
+func (p *PostgreSQL) RevokeUser(username, revocationStmts string) error {
 	// Grab the read lock
 	p.RLock()
 	defer p.RUnlock()
 
-	if revocationStmt == "" {
+	if revocationStmts == "" {
 		return p.defaultRevokeUser(username)
 	}
 
-	return p.customRevokeUser(username, revocationStmt)
+	return p.customRevokeUser(username, revocationStmts)
 }
 
-func (p *PostgreSQL) customRevokeUser(username, revocationStmt string) error {
+func (p *PostgreSQL) customRevokeUser(username, revocationStmts string) error {
 	db, err := p.getConnection()
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (p *PostgreSQL) customRevokeUser(username, revocationStmt string) error {
 		tx.Rollback()
 	}()
 
-	for _, query := range strutil.ParseArbitraryStringSlice(revocationStmt, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(revocationStmts, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue

@@ -8,7 +8,10 @@ import (
 	"sync"
 	"time"
 
+	// Import sql drivers
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
