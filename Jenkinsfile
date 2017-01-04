@@ -44,6 +44,34 @@ def task_wrapper(String label, Closure body) {
 }
 
 task_wrapper ('mesos'){
+    // Unfortunatelly we cannot use flyweight executor here:
+    // https://issues.jenkins-ci.org/browse/JENKINS-27386
+    // and esp. https://issues.jenkins-ci.org/browse/JENKINS-32314
+    stage "Verify author"
+        def authed_users = ["ktf", "dberzano"]
+
+        echo "Changeset from `" + env.CHANGE_AUTHOR + "`"
+
+        timeout(time: 24, unit: 'HOURS') {
+            if (authed_users.contains(env.CHANGE_AUTHOR)) {
+                // Let's not spam our slack channels with too much info.
+                echo "PR comes from authorized user, testing it now!"
+            } else {
+                withCredentials([[$class: 'StringBinding',
+                                    credentialsId: '8b793652-f26a-422f-a9ba-0d1e47eb9d89',
+                                    variable: 'SLACK_TOKEN']
+                                    ]) {
+                    def branch_url = env.BUILD_URL.substring(0, env.BUILD_URL.length() - (env.BUILD_NUMBER.length() +1))
+                    slackSend (channel: '#dcos-security-ci',
+                        message: "`${env.JOB_NAME}` has a new build from user `${env.CHANGE_AUTHOR}` waiting for ACK\n Build URL: `${branch_url}`",
+                        teamDomain: 'mesosphere',
+                        token: "${env.SLACK_TOKEN}",
+                        color: "danger",
+                        )
+                    userInput = input(message: 'Build the PR ?')
+                }
+            }
+        }
 
     stage 'Cleanup workspace'
         deleteDir()
@@ -51,60 +79,5 @@ task_wrapper ('mesos'){
     stage 'Checkout'
         checkout scm
 
-        // http://stackoverflow.com/questions/35554983/git-variables-in-jenkins-workflow-plugin
-        // https://issues.jenkins-ci.org/browse/JENKINS-35230
-        def gitCommit = sh(returnStdout: true, script: 'git rev-parse HEAD').trim()
-
-        def nameByBranch = "mesosphereci/vault:${env.BRANCH_NAME}"
-        def nameByCommit = "mesosphereci/vault:${gitCommit}"
-
-        // Some debugging:
-        sh 'env | sort '
-        echo "Name of the container to be published, by branch: ${nameByBranch}"
-        echo "Name of the container to be published, by commit: ${nameByCommit}"
-
-    stage 'Prepare devkit'
-        sh 'make update-devkit'
-
-    try {
-        stage 'Prepare aux-containers'
-            sh 'make aux'
-
-        stage 'make testplain'
-            sh 'make testplain'
-
-        stage 'make testrace'
-            sh 'make testrace'
-
-        stage 'make build'
-            sh 'make build'
-
-        stage 'Build mesosphereci/vault container'
-
-            sh "docker build --rm --force-rm -t ${nameByBranch} -f ./Dockerfile.publish ./"
-            sh "docker tag ${nameByBranch} ${nameByCommit}"
-
-        stage 'Push to docker registry'
-            withCredentials(
-            [[$class: 'StringBinding',
-              credentialsId: '7bdd2775-2911-41ba-918f-59c8ae52326d',
-              variable: 'DOCKER_HUB_USERNAME'],
-             [$class: 'StringBinding',
-              credentialsId: '42f2e3fb-3f4f-47b2-a128-10ac6d0f6825',
-              variable: 'DOCKER_HUB_PASSWORD'],
-             [$class: 'StringBinding',
-              credentialsId: '4551c307-10ae-40f9-a0ac-f1bb44206b5b',
-              variable: 'DOCKER_HUB_EMAIL']
-            ]) {
-                sh "docker login -u '${env.DOCKER_HUB_USERNAME}' -p '${env.DOCKER_HUB_PASSWORD}'"
-            }
-            sh "docker push ${nameByBranch}"
-            sh "docker push ${nameByCommit}"
-
-    } finally {
-        stage 'Cleanup docker containers'
-            sh 'make clean'
-            sh "docker rmi -f ${nameByBranch} || true"
-            sh "docker rmi -f ${nameByCommit} || true"
-    }
+    load 'Jenkinsfile-insecure.groovy'
 }
