@@ -546,16 +546,19 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
 
-			&framework.Path{
-				Pattern: "wrapping/pubkey$",
+			/*
+				// Disabled for the moment as we don't support this externally
+				&framework.Path{
+					Pattern: "wrapping/pubkey$",
 
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleWrappingPubkey,
+					Callbacks: map[logical.Operation]framework.OperationFunc{
+						logical.ReadOperation: b.handleWrappingPubkey,
+					},
+
+					HelpSynopsis:    strings.TrimSpace(sysHelp["wrappubkey"][0]),
+					HelpDescription: strings.TrimSpace(sysHelp["wrappubkey"][1]),
 				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["wrappubkey"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["wrappubkey"][1]),
-			},
+			*/
 
 			&framework.Path{
 				Pattern: "wrapping/wrap$",
@@ -1495,7 +1498,7 @@ func (b *SystemBackend) handleWrappingPubkey(
 		Data: map[string]interface{}{
 			"jwt_x":     string(x),
 			"jwt_y":     string(y),
-			"jwt_curve": "P-521",
+			"jwt_curve": corePrivateKeyTypeP521,
 		},
 	}, nil
 }
