@@ -207,6 +207,8 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 					wrapTTL = req.WrapInfo.TTL
 				}
 			}
+			// If the wrap format hasn't been set by the response, set it to
+			// the request format
 			if req.WrapInfo.Format != "" && wrapFormat == "" {
 				wrapFormat = req.WrapInfo.Format
 			}

@@ -44,8 +44,8 @@ type ResponseWrapInfo struct {
 	// created token's accessor will be accessible here
 	WrappedAccessor string `json:"wrapped_accessor" structs:"wrapped_accessor" mapstructure:"wrapped_accessor"`
 
-	// The format to use. This doesn't get audited or returned, is only internal.
-	Format string `json:"-" structs:"-" mapstructure:"format"`
+	// The format to use. This doesn't get returned, it's only internal.
+	Format string `json:"format" structs:"format" mapstructure:"format"`
 }
 
 // Response is a struct that stores the response of a request.

@@ -252,7 +252,8 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		token = req.ClientToken
 	}
 
-	// Check for it being a JWT. If it is, and it is valid, we extract the internal client token from it and set the
+	// Check for it being a JWT. If it is, and it is valid, we extract the
+	// internal client token from it and use that during lookup.
 	if strings.Count(token, ".") == 2 {
 		wt, err := jws.ParseJWT([]byte(token))
 		// If there's an error we simply fall back to attempting to use it as a regular token
