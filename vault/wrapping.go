@@ -274,10 +274,10 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return false, ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return false, ErrStandby
 	}
 
 	te, err := c.tokenStore.Lookup(token)
