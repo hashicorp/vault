@@ -43,7 +43,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			Unauthenticated: []string{
-				"wrapping/jwtkey",
+				"wrapping/pubkey",
 			},
 		},
 
@@ -553,8 +553,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					logical.ReadOperation: b.handleWrappingPubkey,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["wrap"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["wrap"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["wrappubkey"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["wrappubkey"][1]),
 			},
 
 			&framework.Path{
@@ -2125,6 +2125,11 @@ Enable a new audit backend or disable an existing backend.
 	"wrap": {
 		"Response-wraps an arbitrary JSON object.",
 		`Round trips the given input data into a response-wrapped token.`,
+	},
+
+	"wrappubkey": {
+		"Returns pubkeys used in some wrapping formats.",
+		"Returns pubkeys used in some wrapping formats.",
 	},
 
 	"unwrap": {
