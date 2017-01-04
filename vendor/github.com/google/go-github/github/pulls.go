@@ -6,6 +6,7 @@
 package github
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 )
@@ -134,6 +135,32 @@ func (s *PullRequestsService) Get(owner string, repo string, number int) (*PullR
 	return pull, resp, err
 }
 
+// GetRaw gets raw (diff or patch) format of a pull request.
+func (s *PullRequestsService) GetRaw(owner string, repo string, number int, opt RawOptions) (string, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/pulls/%d", owner, repo, number)
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return "", nil, err
+	}
+
+	switch opt.Type {
+	case Diff:
+		req.Header.Set("Accept", mediaTypeV3Diff)
+	case Patch:
+		req.Header.Set("Accept", mediaTypeV3Patch)
+	default:
+		return "", nil, fmt.Errorf("unsupported raw type %d", opt.Type)
+	}
+
+	ret := new(bytes.Buffer)
+	resp, err := s.client.Do(req, ret)
+	if err != nil {
+		return "", resp, err
+	}
+
+	return ret.String(), resp, err
+}
+
 // NewPullRequest represents a new pull request to be created.
 type NewPullRequest struct {
 	Title *string `json:"title,omitempty"`
@@ -253,36 +280,40 @@ type PullRequestMergeResult struct {
 
 // PullRequestOptions lets you define how a pull request will be merged.
 type PullRequestOptions struct {
-	CommitTitle string
+	CommitTitle string // Extra detail to append to automatic commit message. (Optional.)
+	SHA         string // SHA that pull request head must match to allow merge. (Optional.)
 
-	// The merge method to use. Possible values include: "merge", "squash", and "rebase" with the default being merge.
+	// The merge method to use. Possible values include: "merge", "squash", and "rebase" with the default being merge. (Optional.)
 	MergeMethod string
 }
 
 type pullRequestMergeRequest struct {
-	CommitMessage *string `json:"commit_message"`
-	CommitTitle   *string `json:"commit_title,omitempty"`
-	MergeMethod   *string `json:"merge_method,omitempty"`
+	CommitMessage string `json:"commit_message"`
+	CommitTitle   string `json:"commit_title,omitempty"`
+	MergeMethod   string `json:"merge_method,omitempty"`
+	SHA           string `json:"sha,omitempty"`
 }
 
 // Merge a pull request (Merge Button™).
+// commitMessage is the title for the automatic commit message.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#merge-a-pull-request-merge-buttontrade
 func (s *PullRequestsService) Merge(owner string, repo string, number int, commitMessage string, options *PullRequestOptions) (*PullRequestMergeResult, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d/merge", owner, repo, number)
 
-	pullRequestBody := &pullRequestMergeRequest{CommitMessage: &commitMessage}
+	pullRequestBody := &pullRequestMergeRequest{CommitMessage: commitMessage}
 	if options != nil {
-		pullRequestBody.CommitTitle = &options.CommitTitle
-		pullRequestBody.MergeMethod = &options.MergeMethod
+		pullRequestBody.CommitTitle = options.CommitTitle
+		pullRequestBody.MergeMethod = options.MergeMethod
+		pullRequestBody.SHA = options.SHA
 	}
 	req, err := s.client.NewRequest("PUT", u, pullRequestBody)
-
-	// TODO: This header will be unnecessary when the API is no longer in preview.
-	req.Header.Set("Accept", mediaTypeSquashPreview)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// TODO: This header will be unnecessary when the API is no longer in preview.
+	req.Header.Set("Accept", mediaTypeSquashPreview)
 
 	mergeResult := new(PullRequestMergeResult)
 	resp, err := s.client.Do(req, mergeResult)

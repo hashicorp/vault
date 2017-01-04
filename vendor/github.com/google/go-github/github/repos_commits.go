@@ -20,7 +20,6 @@ type RepositoryCommit struct {
 	Author      *User    `json:"author,omitempty"`
 	Committer   *User    `json:"committer,omitempty"`
 	Parents     []Commit `json:"parents,omitempty"`
-	Message     *string  `json:"message,omitempty"`
 	HTMLURL     *string  `json:"html_url,omitempty"`
 	URL         *string  `json:"url,omitempty"`
 	CommentsURL *string  `json:"comments_url,omitempty"`
@@ -48,13 +47,16 @@ func (c CommitStats) String() string {
 
 // CommitFile represents a file modified in a commit.
 type CommitFile struct {
-	SHA       *string `json:"sha,omitempty"`
-	Filename  *string `json:"filename,omitempty"`
-	Additions *int    `json:"additions,omitempty"`
-	Deletions *int    `json:"deletions,omitempty"`
-	Changes   *int    `json:"changes,omitempty"`
-	Status    *string `json:"status,omitempty"`
-	Patch     *string `json:"patch,omitempty"`
+	SHA         *string `json:"sha,omitempty"`
+	Filename    *string `json:"filename,omitempty"`
+	Additions   *int    `json:"additions,omitempty"`
+	Deletions   *int    `json:"deletions,omitempty"`
+	Changes     *int    `json:"changes,omitempty"`
+	Status      *string `json:"status,omitempty"`
+	Patch       *string `json:"patch,omitempty"`
+	BlobURL     *string `json:"blob_url,omitempty"`
+	RawURL      *string `json:"raw_url,omitempty"`
+	ContentsURL *string `json:"contents_url,omitempty"`
 }
 
 func (c CommitFile) String() string {

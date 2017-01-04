@@ -250,7 +250,6 @@ func (f FileServiceClient) ListDirsAndFiles(path string, params ListDirsAndFiles
 	if err != nil {
 		return out, err
 	}
-
 	defer resp.body.Close()
 	err = xmlUnmarshal(resp.body, &out)
 	return out, err
@@ -302,7 +301,6 @@ func (f FileServiceClient) ListShares(params ListSharesParameters) (ShareListRes
 	if err != nil {
 		return out, err
 	}
-
 	defer resp.body.Close()
 	err = xmlUnmarshal(resp.body, &out)
 	return out, err
@@ -400,7 +398,6 @@ func (f FileServiceClient) modifyRange(path string, bytes io.Reader, fileRange F
 	if err != nil {
 		return err
 	}
-
 	defer resp.body.Close()
 	return checkRespCode(resp.statusCode, []int{http.StatusCreated})
 }
@@ -428,6 +425,10 @@ func (f FileServiceClient) GetFile(path string, fileRange *FileRange) (*FileStre
 	}
 
 	props, err := getFileProps(resp.headers)
+	if err != nil {
+		return nil, err
+	}
+
 	md := getFileMDFromHeaders(resp.headers)
 	return &FileStream{Body: resp.body, Properties: props, Metadata: md}, nil
 }

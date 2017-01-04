@@ -97,6 +97,7 @@ func NewAPI(ac *Config) (*API, error) {
 		au = fmt.Sprintf("https://%s/v2", ac.URL)
 	}
 	if last := len(au) - 1; last >= 0 && au[last] == '/' {
+		// strip off trailing '/'
 		au = au[:last]
 	}
 	apiURL, err := url.Parse(au)
@@ -143,10 +144,13 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 	dataReader := bytes.NewReader(data)
 	reqURL := a.apiURL.String()
 
+	if reqPath == "" {
+		return nil, errors.New("Invalid URL path")
+	}
 	if reqPath[:1] != "/" {
 		reqURL += "/"
 	}
-	if reqPath[:3] == "/v2" {
+	if len(reqPath) >= 3 && reqPath[:3] == "/v2" {
 		reqURL += reqPath[3:len(reqPath)]
 	} else {
 		reqURL += reqPath
@@ -172,7 +176,9 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 		// errors and may relate to outages on the server side. This will catch
 		// invalid response codes as well, like 0 and 999.
 		// Retry on 429 (rate limit) as well.
-		if resp.StatusCode == 0 || resp.StatusCode >= 500 || resp.StatusCode == 429 {
+		if resp.StatusCode == 0 || // wtf?!
+			resp.StatusCode >= 500 || // rutroh
+			resp.StatusCode == 429 { // rate limit
 			body, readErr := ioutil.ReadAll(resp.Body)
 			if readErr != nil {
 				lastHTTPError = fmt.Errorf("- last HTTP error: %d %+v", resp.StatusCode, readErr)

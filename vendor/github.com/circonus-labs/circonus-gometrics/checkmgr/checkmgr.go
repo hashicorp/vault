@@ -59,12 +59,15 @@ type CheckConfig struct {
 	// used to search for a check to use
 	// used as check.target when creating a check
 	InstanceID string
+	// explicitly set check.target (default: instance id)
+	TargetHost string
+	// a custom display name for the check (as viewed in UI Checks)
+	// default: instance id
+	DisplayName string
 	// unique check searching tag (or tags)
 	// used to search for a check to use (combined with instanceid)
 	// used as a regular tag when creating a check
 	SearchTag string
-	// a custom display name for the check (as viewed in UI Checks)
-	DisplayName string
 	// httptrap check secret (for creating a check)
 	Secret string
 	// additional tags to add to a check (when creating a check)
@@ -115,6 +118,9 @@ type CheckTypeType string
 // CheckInstanceIDType check instance id
 type CheckInstanceIDType string
 
+// CheckTargetType check target/host
+type CheckTargetType string
+
 // CheckSecretType check secret
 type CheckSecretType string
 
@@ -138,7 +144,7 @@ type CheckManager struct {
 	checkType             CheckTypeType
 	checkID               api.IDType
 	checkInstanceID       CheckInstanceIDType
-	checkTarget           string
+	checkTarget           CheckTargetType
 	checkSearchTag        api.TagType
 	checkSecret           CheckSecretType
 	checkTags             api.TagType
@@ -178,7 +184,7 @@ type Trap struct {
 func NewCheckManager(cfg *Config) (*CheckManager, error) {
 
 	if cfg == nil {
-		return nil, errors.New("Invalid Check Manager configuration (nil).")
+		return nil, errors.New("invalid Check Manager configuration (nil)")
 	}
 
 	cm := &CheckManager{
@@ -200,7 +206,7 @@ func NewCheckManager(cfg *Config) (*CheckManager, error) {
 	// Blank API Token *disables* check management
 	if cfg.API.TokenKey == "" {
 		if cm.checkSubmissionURL == "" {
-			return nil, errors.New("Invalid check manager configuration (no API token AND no submission url).")
+			return nil, errors.New("invalid check manager configuration (no API token AND no submission url)")
 		}
 		if err := cm.initializeTrapURL(); err != nil {
 			return nil, err
@@ -238,6 +244,7 @@ func NewCheckManager(cfg *Config) (*CheckManager, error) {
 	cm.checkID = api.IDType(id)
 
 	cm.checkInstanceID = CheckInstanceIDType(cfg.Check.InstanceID)
+	cm.checkTarget = CheckTargetType(cfg.Check.TargetHost)
 	cm.checkDisplayName = CheckDisplayNameType(cfg.Check.DisplayName)
 	cm.checkSecret = CheckSecretType(cfg.Check.Secret)
 
@@ -259,7 +266,12 @@ func NewCheckManager(cfg *Config) (*CheckManager, error) {
 	if cm.checkInstanceID == "" {
 		cm.checkInstanceID = CheckInstanceIDType(fmt.Sprintf("%s:%s", hn, an))
 	}
-	cm.checkTarget = hn
+	if cm.checkDisplayName == "" {
+		cm.checkDisplayName = CheckDisplayNameType(cm.checkInstanceID)
+	}
+	if cm.checkTarget == "" {
+		cm.checkTarget = CheckTargetType(cm.checkInstanceID)
+	}
 
 	if cfg.Check.SearchTag == "" {
 		cm.checkSearchTag = []string{fmt.Sprintf("service:%s", an)}
@@ -269,10 +281,6 @@ func NewCheckManager(cfg *Config) (*CheckManager, error) {
 
 	if cfg.Check.Tags != "" {
 		cm.checkTags = strings.Split(strings.Replace(cfg.Check.Tags, " ", "", -1), ",")
-	}
-
-	if cm.checkDisplayName == "" {
-		cm.checkDisplayName = CheckDisplayNameType(fmt.Sprintf("%s", string(cm.checkInstanceID)))
 	}
 
 	dur := cfg.Check.MaxURLAge

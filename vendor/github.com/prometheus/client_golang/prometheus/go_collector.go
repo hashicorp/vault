@@ -17,7 +17,7 @@ type goCollector struct {
 
 // NewGoCollector returns a collector which exports metrics about the current
 // go process.
-func NewGoCollector() *goCollector {
+func NewGoCollector() Collector {
 	return &goCollector{
 		goroutines: NewGauge(GaugeOpts{
 			Namespace: "go",
@@ -48,7 +48,7 @@ func NewGoCollector() *goCollector {
 			}, {
 				desc: NewDesc(
 					memstatNamespace("sys_bytes"),
-					"Number of bytes obtained by system. Sum of all system allocations.",
+					"Number of bytes obtained from system.",
 					nil, nil,
 				),
 				eval:    func(ms *runtime.MemStats) float64 { return float64(ms.Sys) },
@@ -111,12 +111,12 @@ func NewGoCollector() *goCollector {
 				valType: GaugeValue,
 			}, {
 				desc: NewDesc(
-					memstatNamespace("heap_released_bytes_total"),
-					"Total number of heap bytes released to OS.",
+					memstatNamespace("heap_released_bytes"),
+					"Number of heap bytes released to OS.",
 					nil, nil,
 				),
 				eval:    func(ms *runtime.MemStats) float64 { return float64(ms.HeapReleased) },
-				valType: CounterValue,
+				valType: GaugeValue,
 			}, {
 				desc: NewDesc(
 					memstatNamespace("heap_objects"),
@@ -211,7 +211,7 @@ func NewGoCollector() *goCollector {
 					"Number of seconds since 1970 of last garbage collection.",
 					nil, nil,
 				),
-				eval:    func(ms *runtime.MemStats) float64 { return float64(ms.LastGC*10 ^ 9) },
+				eval:    func(ms *runtime.MemStats) float64 { return float64(ms.LastGC) / 1e9 },
 				valType: GaugeValue,
 			},
 		},
