@@ -55,6 +55,15 @@ the value of max_ttl.`,
 name in a request`,
 			},
 
+			"allowed_ous": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, clients can request certificates for
+OU's (OrganizationalUnits) in this list. See the documentation for more
+information. This parameter accepts a comma-separated list
+of domains.`,
+			},
+
 			"allowed_domains": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
@@ -315,6 +324,7 @@ func (b *backend) pathRoleCreate(
 		TTL:                 data.Get("ttl").(string),
 		AllowLocalhost:      data.Get("allow_localhost").(bool),
 		AllowedDomains:      data.Get("allowed_domains").(string),
+		AllowedOUs:          data.Get("allowed_ous").(string),
 		AllowBareDomains:    data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:     data.Get("allow_subdomains").(bool),
 		AllowAnyName:        data.Get("allow_any_name").(bool),
@@ -426,6 +436,7 @@ type roleEntry struct {
 	AllowLocalhost        bool   `json:"allow_localhost" structs:"allow_localhost" mapstructure:"allow_localhost"`
 	AllowedBaseDomain     string `json:"allowed_base_domain" structs:"allowed_base_domain" mapstructure:"allowed_base_domain"`
 	AllowedDomains        string `json:"allowed_domains" structs:"allowed_domains" mapstructure:"allowed_domains"`
+	AllowedOUs            string `json:"allowed_ous" structs:"allowed_ous" mapstructure:"allowed_ous"`
 	AllowBaseDomain       bool   `json:"allow_base_domain" structs:"allow_base_domain" mapstructure:"allow_base_domain"`
 	AllowBareDomains      bool   `json:"allow_bare_domains" structs:"allow_bare_domains" mapstructure:"allow_bare_domains"`
 	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`

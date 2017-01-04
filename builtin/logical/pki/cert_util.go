@@ -33,6 +33,7 @@ const (
 
 type creationBundle struct {
 	CommonName     string
+	OU             []string
 	DNSNames       []string
 	EmailAddresses []string
 	IPAddresses    []net.IP
@@ -369,6 +370,35 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 	return "", nil
 }
 
+// Given a set of requested OUs for a certificate, verifies that all of them match
+// the 'allowed_ous' set in the role for controlling issuance.
+// If one does not pass, it is returned.
+func validateOUs(req *logical.Request, ous []string, role *roleEntry) string {
+	if role.AllowedOUs == "" {
+		return ""
+	}
+	for _, ou := range ous {
+		valid := false
+		for _, currOU := range strings.Split(role.AllowedOUs, ",") {
+			// If there is, say, a trailing comma, ignore it
+			if currOU == "" {
+				continue
+			}
+			if ou == currOU {
+				valid = true
+			}
+		}
+		if valid {
+			continue
+		}
+		// the requested ou was not in the AllowedOUs
+		return ou
+	}
+
+	// all requested OUs are allowed
+	return ""
+}
+
 func generateCert(b *backend,
 	role *roleEntry,
 	signingBundle *caInfoBundle,
@@ -621,6 +651,24 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
+	// Validate OU in CSR subject or in the request
+	var ou []string
+	{
+		if csr != nil {
+			ou = csr.Subject.OrganizationalUnit
+			b.Logger().Debug("got csr with OU: %s", ou)
+		}
+		if len(ou) == 0 {
+			ou = append(ou, data.Get("ou").(string))
+		}
+
+		badOU := validateOUs(req, ou, role)
+		if len(badOU) != 0 {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"subject OU %s not allowed by this role", badOU)}
+		}
+	}
+
 	// Get and verify any IP SANs
 	ipAddresses := []net.IP{}
 	var ipAltInt interface{}
@@ -717,6 +765,7 @@ func generateCreationBundle(b *backend,
 
 	creationBundle := &creationBundle{
 		CommonName:     cn,
+		OU:             ou,
 		DNSNames:       dnsNames,
 		EmailAddresses: emailAddresses,
 		IPAddresses:    ipAddresses,
@@ -805,9 +854,9 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error getting subject key ID: %s", err)}
 	}
-
 	subject := pkix.Name{
-		CommonName: creationInfo.CommonName,
+		CommonName:         creationInfo.CommonName,
+		OrganizationalUnit: creationInfo.OU,
 	}
 
 	certTemplate := &x509.Certificate{
