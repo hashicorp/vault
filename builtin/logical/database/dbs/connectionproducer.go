@@ -78,6 +78,7 @@ func (cp *sqlConnectionProducer) Connection() (interface{}, error) {
 	// since the request rate shouldn't be high.
 	cp.db.SetMaxOpenConns(cp.config.MaxOpenConnections)
 	cp.db.SetMaxIdleConns(cp.config.MaxIdleConnections)
+	cp.db.SetConnMaxLifetime(cp.config.MaxConnectionLifetime)
 
 	return cp.db, nil
 }
@@ -127,7 +128,7 @@ type cassandraConnectionDetails struct {
 	ProtocolVersion int    `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
 	ConnectTimeout  int    `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
 	TLSMinVersion   string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
-	Consistancy     string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
+	Consistency     string `json:"consistency" structs:"consistency" mapstructure:"consistency"`
 }
 
 type cassandraConnectionProducer struct {
@@ -246,6 +247,16 @@ func (cp *cassandraConnectionProducer) createSession(cfg *cassandraConnectionDet
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
 		return nil, fmt.Errorf("Error creating session: %s", err)
+	}
+
+	// Set consistency
+	if cfg.Consistency != "" {
+		consistencyValue, err := gocql.ParseConsistencyWrapper(cfg.Consistency)
+		if err != nil {
+			return nil, err
+		}
+
+		session.SetConsistency(consistencyValue)
 	}
 
 	// Verify the info

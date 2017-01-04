@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -75,10 +76,11 @@ type DatabaseType interface {
 }
 
 type DatabaseConfig struct {
-	DatabaseType       string                 `json:"type" structs:"type" mapstructure:"type"`
-	ConnectionDetails  map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
-	MaxOpenConnections int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
-	MaxIdleConnections int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
+	DatabaseType          string                 `json:"type" structs:"type" mapstructure:"type"`
+	ConnectionDetails     map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
+	MaxOpenConnections    int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
+	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
+	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
 }
 
 // Query templates a query for us.

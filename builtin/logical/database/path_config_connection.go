@@ -2,12 +2,12 @@ package database
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/builtin/logical/database/dbs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	_ "github.com/lib/pq"
 )
 
 func pathConfigConnection(b *databaseBackend) *framework.Path {
@@ -22,11 +22,6 @@ func pathConfigConnection(b *databaseBackend) *framework.Path {
 			"connection_type": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "DB type (e.g. postgres)",
-			},
-
-			"connection_url": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "DB connection string",
 			},
 
 			"connection_details": &framework.FieldSchema{
@@ -54,6 +49,12 @@ a zero uses the value of max_open_connections
 and a negative value disables idle connections.
 If larger than max_open_connections it will be
 reduced to the same size.`,
+			},
+
+			"max_connection_lifetime": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `Maximum amount of time a connection may be reused;
+				a zero or negative value reuses connections forever.`,
 			},
 		},
 
@@ -105,11 +106,19 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 		maxIdleConns = maxOpenConns
 	}
 
+	maxConnLifetimeRaw := data.Get("max_connection_lifetime").(string)
+	maxConnLifetime, err := time.ParseDuration(maxConnLifetimeRaw)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid max_connection_lifetime: %s", err)), nil
+	}
+
 	config := &dbs.DatabaseConfig{
-		DatabaseType:       connType,
-		ConnectionDetails:  connDetails,
-		MaxOpenConnections: maxOpenConns,
-		MaxIdleConnections: maxIdleConns,
+		DatabaseType:          connType,
+		ConnectionDetails:     connDetails,
+		MaxOpenConnections:    maxOpenConns,
+		MaxIdleConnections:    maxIdleConns,
+		MaxConnectionLifetime: maxConnLifetime,
 	}
 
 	name := data.Get("name").(string)
@@ -118,7 +127,6 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 	b.Lock()
 	defer b.Unlock()
 
-	var err error
 	var db dbs.DatabaseType
 	if _, ok := b.connections[name]; ok {
 
