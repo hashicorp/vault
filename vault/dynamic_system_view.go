@@ -74,3 +74,8 @@ func (d dynamicSystemView) Tainted() bool {
 func (d dynamicSystemView) CachingDisabled() bool {
 	return d.core.cachingDisabled
 }
+
+// IsPrimary checks if this is a primary Vault instance.
+func (d dynamicSystemView) IsPrimary() bool {
+	return true
+}
