@@ -271,6 +271,15 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 		return false, fmt.Errorf("token is empty")
 	}
 
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
+	}
+
 	te, err := c.tokenStore.Lookup(token)
 	if err != nil {
 		return false, err
