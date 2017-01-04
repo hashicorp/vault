@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/meta"
 )
@@ -37,12 +36,6 @@ func (c *UnwrapCommand) Run(args []string) int {
 	case 0:
 	case 1:
 		tokenID = args[0]
-		_, err = uuid.ParseUUID(tokenID)
-		if err != nil {
-			c.Ui.Error(fmt.Sprintf(
-				"Given token could not be parsed as a UUID: %v", err))
-			return 1
-		}
 	default:
 		c.Ui.Error("Unwrap expects zero or one argument (the ID of the wrapping token)")
 		flags.Usage()

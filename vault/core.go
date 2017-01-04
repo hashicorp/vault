@@ -251,6 +251,10 @@ type Core struct {
 	// reloadFuncsLock controlls access to the funcs
 	reloadFuncsLock sync.RWMutex
 
+	// wrappingJWTKey is the key used for generating JWTs containing response
+	// wrapping information
+	wrappingJWTKey *ecdsa.PrivateKey
+
 	//
 	// Cluster information
 	//
@@ -820,7 +824,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
-		// cluster right now
+		// cluster right now. This also populates the cached cluster object.
 		if err := c.setupCluster(); err != nil {
 			c.logger.Error("core: cluster setup failed", "error", err)
 			c.barrier.Seal()
@@ -1138,6 +1142,9 @@ func (c *Core) postUnseal() (retErr error) {
 		if err := c.scheduleUpgradeCleanup(); err != nil {
 			return err
 		}
+	}
+	if err := c.ensureWrappingKey(); err != nil {
+		return err
 	}
 	if err := c.loadMounts(); err != nil {
 		return err
@@ -1555,28 +1562,4 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	min, max = c.barrier.KeyLength()
 	max += shamir.ShareOverhead
 	return
-}
-
-func (c *Core) ValidateWrappingToken(token string) (bool, error) {
-	if token == "" {
-		return false, fmt.Errorf("token is empty")
-	}
-
-	te, err := c.tokenStore.Lookup(token)
-	if err != nil {
-		return false, err
-	}
-	if te == nil {
-		return false, nil
-	}
-
-	if len(te.Policies) != 1 {
-		return false, nil
-	}
-
-	if te.Policies[0] != responseWrappingPolicyName {
-		return false, nil
-	}
-
-	return true, nil
 }

@@ -46,7 +46,9 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 		Path:        "wraptest/foo",
 		ClientToken: root,
 		Operation:   logical.ReadOperation,
-		WrapTTL:     time.Duration(15 * time.Second),
+		WrapInfo: &logical.RequestWrapInfo{
+			TTL: time.Duration(15 * time.Second),
+		},
 	}
 	resp, err = core.HandleRequest(req)
 	if err != nil {
@@ -120,7 +122,9 @@ func TestRequestHandling_LoginWrapping(t *testing.T) {
 	req = &logical.Request{
 		Path:      "auth/userpass/login/test",
 		Operation: logical.UpdateOperation,
-		WrapTTL:   time.Duration(15 * time.Second),
+		WrapInfo: &logical.RequestWrapInfo{
+			TTL: time.Duration(15 * time.Second),
+		},
 		Data: map[string]interface{}{
 			"password": "foo",
 		},

@@ -29,7 +29,8 @@ const (
 	// Storage path where the local cluster name and identifier are stored
 	coreLocalClusterInfoPath = "core/cluster/local/info"
 
-	corePrivateKeyTypeP521 = "p521"
+	corePrivateKeyTypeP521    = "p521"
+	corePrivateKeyTypeED25519 = "ed25519"
 
 	// Internal so as not to log a trace message
 	IntNoForwardingHeaderName = "X-Vault-Internal-No-Request-Forwarding"
@@ -39,11 +40,13 @@ var (
 	ErrCannotForward = errors.New("cannot forward request; no connection or address not known")
 )
 
+// This can be one of a few key types so the different params may or may not be filled
 type clusterKeyParams struct {
-	Type string   `json:"type"`
-	X    *big.Int `json:"x"`
-	Y    *big.Int `json:"y"`
-	D    *big.Int `json:"d"`
+	Type       string   `json:"type"`
+	X          *big.Int `json:"x,omitempty"`
+	Y          *big.Int `json:"y,omitempty"`
+	D          *big.Int `json:"d,omitempty"`
+	ED25519Key []byte   `json:"ed25519_key,omitempty"`
 }
 
 type activeConnection struct {
