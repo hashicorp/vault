@@ -240,7 +240,9 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 	var err error
 
 	var token string
+	var thirdParty bool
 	if req.Data != nil && req.Data["token"] != nil {
+		thirdParty = true
 		if tokenStr, ok := req.Data["token"].(string); !ok {
 			return false, fmt.Errorf("could not decode token in request body")
 		} else if tokenStr == "" {
@@ -264,6 +266,14 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 				return false, errwrap.Wrapf("wrapping token signature could not be validated: {{err}}", err)
 			}
 			token, _ = wt.Claims().JWTID()
+			// We override the given request client token so that the rest of
+			// Vault sees the real value. This also ensures audit logs are
+			// consistent with the actual token that was issued.
+			if !thirdParty {
+				req.ClientToken = token
+			} else {
+				req.Data["token"] = token
+			}
 		}
 	}
 
@@ -297,22 +307,4 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 	}
 
 	return true, nil
-}
-
-// parseVaultTokenFromJWT returns a string iff the token was a JWT and we could
-// extract the original token ID from inside
-func (c *Core) parseVaultTokenFromJWT(token string) *string {
-	var result string
-	if strings.Count(token, ".") != 2 {
-		return nil
-	}
-
-	wt, err := jws.ParseJWT([]byte(token))
-	if err != nil || wt == nil {
-		return nil
-	}
-
-	result, _ = wt.Claims().JWTID()
-
-	return &result
 }

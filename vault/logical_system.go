@@ -1528,10 +1528,6 @@ func (b *SystemBackend) handleWrappingUnwrap(
 		token = req.ClientToken
 	}
 
-	if wt := b.Core.parseVaultTokenFromJWT(token); wt != nil {
-		token = *wt
-	}
-
 	if thirdParty {
 		// Use the token to decrement the use count to avoid a second operation on the token.
 		_, err := b.Core.tokenStore.UseTokenByID(token)
@@ -1592,10 +1588,6 @@ func (b *SystemBackend) handleWrappingLookup(
 		return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
 	}
 
-	if wt := b.Core.parseVaultTokenFromJWT(token); wt != nil {
-		token = *wt
-	}
-
 	cubbyReq := &logical.Request{
 		Operation:   logical.ReadOperation,
 		Path:        "cubbyhole/wrapinfo",
@@ -1650,10 +1642,6 @@ func (b *SystemBackend) handleWrappingRewrap(
 		thirdParty = true
 	} else {
 		token = req.ClientToken
-	}
-
-	if wt := b.Core.parseVaultTokenFromJWT(token); wt != nil {
-		token = *wt
 	}
 
 	if thirdParty {

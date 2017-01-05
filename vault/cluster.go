@@ -42,11 +42,10 @@ var (
 
 // This can be one of a few key types so the different params may or may not be filled
 type clusterKeyParams struct {
-	Type       string   `json:"type"`
-	X          *big.Int `json:"x,omitempty"`
-	Y          *big.Int `json:"y,omitempty"`
-	D          *big.Int `json:"d,omitempty"`
-	ED25519Key []byte   `json:"ed25519_key,omitempty"`
+	Type string   `json:"type"`
+	X    *big.Int `json:"x,omitempty"`
+	Y    *big.Int `json:"y,omitempty"`
+	D    *big.Int `json:"d,omitempty"`
 }
 
 type activeConnection struct {
