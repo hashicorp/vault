@@ -287,9 +287,6 @@ func (c *EtcdLock) Value() (bool, string, error) {
 	if len(resp.Kvs) == 0 {
 		return false, "", nil
 	}
-	if len(resp.Kvs) > 1 {
-		return false, "", errors.New("unexpected number of keys from a get request")
-	}
 
 	return true, string(resp.Kvs[0].Value), nil
 }
