@@ -350,6 +350,11 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	}
 
 	if len(c.barrierRekeyConfig.PGPKeys) > 0 {
+		if len(results.SecretShares) != len(c.barrierRekeyConfig.PGPKeys) {
+			c.logger.Error(fmt.Sprintf("core: mismatch between the number of PGP keys %q and the number of shares %q", len(c.barrierRekeyConfig.PGPKeys), len(results.SecretShares)))
+			return nil, fmt.Errorf("mismatch between the number of PGP keys %q and the number of shares %q", len(c.barrierRekeyConfig.PGPKeys), len(results.SecretShares))
+		}
+
 		hexEncodedShares := make([][]byte, len(results.SecretShares))
 		for i, _ := range results.SecretShares {
 			hexEncodedShares[i] = []byte(hex.EncodeToString(results.SecretShares[i]))
