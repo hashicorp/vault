@@ -307,7 +307,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 			c.logger.Error("core/ForwardRequest: got nil forwarding RPC request")
 			return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
 		}
-		resp, err := c.rpcForwardingClient.HandleRequest(context.Background(), freq, grpc.FailFast(true))
+		resp, err := c.rpcForwardingClient.ForwardRequest(context.Background(), freq, grpc.FailFast(true))
 		if err != nil {
 			c.logger.Error("core/ForwardRequest: error during forwarded RPC request", "error", err)
 			return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
@@ -354,7 +354,7 @@ type forwardedRequestRPCServer struct {
 	handler http.Handler
 }
 
-func (s *forwardedRequestRPCServer) HandleRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
+func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
 	// Parse an http.Request out of it
 	req, err := forwarding.ParseForwardedRequest(freq)
 	if err != nil {
