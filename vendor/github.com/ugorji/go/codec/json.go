@@ -931,6 +931,11 @@ func (d *jsonDecDriver) DecodeBytes(bs []byte, isstring, zerocopy bool) (bsOut [
 	if isstring {
 		return d.bs
 	}
+	// if appendStringAsBytes returned a zero-len slice, then treat as nil.
+	// This should only happen for null, and "".
+	if len(d.bs) == 0 {
+		return nil
+	}
 	bs0 := d.bs
 	slen := base64.StdEncoding.DecodedLen(len(bs0))
 	if slen <= cap(bs) {
@@ -968,6 +973,14 @@ func (d *jsonDecDriver) appendStringAsBytes() {
 		}
 		d.tok = b
 	}
+
+	// handle null as a string
+	if d.tok == 'n' {
+		d.readStrIdx(10, 13) // ull
+		d.bs = d.bs[:0]
+		return
+	}
+
 	if d.tok != '"' {
 		d.d.errorf("json: expect char '%c' but got char '%c'", '"', d.tok)
 	}

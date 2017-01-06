@@ -3,10 +3,13 @@ package mssql
 import (
 	"encoding/binary"
 	"io"
+	"errors"
 )
 
+type packetType uint8
+
 type header struct {
-	PacketType uint8
+	PacketType packetType
 	Status     uint8
 	Size       uint16
 	Spid       uint16
@@ -20,7 +23,7 @@ type tdsBuffer struct {
 	transport   io.ReadWriteCloser
 	size        uint16
 	final       bool
-	packet_type uint8
+	packet_type packetType
 	afterFirst  func()
 }
 
@@ -35,21 +38,28 @@ func newTdsBuffer(bufsize int, transport io.ReadWriteCloser) *tdsBuffer {
 }
 
 func (w *tdsBuffer) flush() (err error) {
+	// writing packet size
 	binary.BigEndian.PutUint16(w.buf[2:], w.pos)
+
+	// writing packet into underlying transport
 	if _, err = w.transport.Write(w.buf[:w.pos]); err != nil {
 		return err
 	}
+
+	// execute afterFirst hook if it is set
 	if w.afterFirst != nil {
 		w.afterFirst()
 		w.afterFirst = nil
 	}
+
 	w.pos = 8
+	// packet number
 	w.buf[6] += 1
 	return nil
 }
 
-func (w *tdsBuffer) Write(p []byte) (nn int, err error) {
-	total := 0
+func (w *tdsBuffer) Write(p []byte) (total int, err error) {
+	total = 0
 	for {
 		copied := copy(w.buf[w.pos:], p)
 		w.pos += uint16(copied)
@@ -58,11 +68,11 @@ func (w *tdsBuffer) Write(p []byte) (nn int, err error) {
 			break
 		}
 		if err = w.flush(); err != nil {
-			return total, err
+			return
 		}
 		p = p[copied:]
 	}
-	return total, nil
+	return
 }
 
 func (w *tdsBuffer) WriteByte(b byte) error {
@@ -76,8 +86,8 @@ func (w *tdsBuffer) WriteByte(b byte) error {
 	return nil
 }
 
-func (w *tdsBuffer) BeginPacket(packet_type byte) {
-	w.buf[0] = packet_type
+func (w *tdsBuffer) BeginPacket(packet_type packetType) {
+	w.buf[0] = byte(packet_type)
 	w.buf[1] = 0 // packet is incomplete
 	w.buf[4] = 0 // spid
 	w.buf[5] = 0
@@ -86,15 +96,9 @@ func (w *tdsBuffer) BeginPacket(packet_type byte) {
 	w.pos = 8
 }
 
-func (w *tdsBuffer) FinishPacket() (err error) {
-	w.buf[1] = 1 // packet is complete
-	binary.BigEndian.PutUint16(w.buf[2:], w.pos)
-	_, err = w.transport.Write(w.buf[:w.pos])
-	if w.afterFirst != nil {
-		w.afterFirst()
-		w.afterFirst = nil
-	}
-	return err
+func (w *tdsBuffer) FinishPacket() error {
+	w.buf[1] = 1 // this is last packet
+	return w.flush()
 }
 
 func (r *tdsBuffer) readNextPacket() error {
@@ -105,6 +109,12 @@ func (r *tdsBuffer) readNextPacket() error {
 		return err
 	}
 	offset := uint16(binary.Size(header))
+	if int(header.Size) > len(r.buf) {
+		return errors.New("Invalid packet size, it is longer than buffer size")
+	}
+	if int(offset) > int(header.Size) {
+		return errors.New("Invalid packet size, it is shorter than header size")
+	}
 	_, err = io.ReadFull(r.transport, r.buf[offset:header.Size])
 	if err != nil {
 		return err
@@ -116,7 +126,7 @@ func (r *tdsBuffer) readNextPacket() error {
 	return nil
 }
 
-func (r *tdsBuffer) BeginRead() (uint8, error) {
+func (r *tdsBuffer) BeginRead() (packetType, error) {
 	err := r.readNextPacket()
 	if err != nil {
 		return 0, err
@@ -196,17 +206,19 @@ func (r *tdsBuffer) readUcs2(numchars int) string {
 	return res
 }
 
-func (r *tdsBuffer) Read(buf []byte) (n int, err error) {
+func (r *tdsBuffer) Read(buf []byte) (copied int, err error) {
+	copied = 0
+	err = nil
 	if r.pos == r.size {
 		if r.final {
 			return 0, io.EOF
 		}
 		err = r.readNextPacket()
 		if err != nil {
-			return 0, err
+			return
 		}
 	}
-	copied := copy(buf, r.buf[r.pos:r.size])
+	copied = copy(buf, r.buf[r.pos:r.size])
 	r.pos += uint16(copied)
-	return copied, nil
+	return
 }

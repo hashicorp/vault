@@ -38,10 +38,6 @@ package codec
 // a length prefix, or if it used explicit breaks. If length-prefixed, we assume that
 // it has to be binary, and we do not even try to read separators.
 //
-// The only codec that may suffer (slightly) is cbor, and only when decoding indefinite-length.
-// It may suffer because we treat it like a text-based codec, and read separators.
-// However, this read is a no-op and the cost is insignificant.
-//
 // Philosophy
 // ------------
 // On decode, this codec will update containers appropriately:

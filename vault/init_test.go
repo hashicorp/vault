@@ -15,7 +15,7 @@ func TestCore_Init(t *testing.T) {
 	c, conf := testCore_NewTestCore(t, nil)
 	testCore_Init_Common(t, c, conf, &SealConfig{SecretShares: 5, SecretThreshold: 3}, nil)
 
-	c, conf = testCore_NewTestCore(t, &TestSeal{})
+	c, conf = testCore_NewTestCore(t, newTestSeal(t))
 	bc, rc := TestSealDefConfigs()
 	rc.SecretShares = 4
 	rc.SecretThreshold = 2

@@ -162,7 +162,7 @@ type DetailedExchangeInfo struct {
 }
 
 func (c *Client) GetExchange(vhost, exchange string) (rec *DetailedExchangeInfo, err error) {
-	req, err := newGETRequest(c, "exchanges/"+url.QueryEscape(vhost)+"/"+exchange)
+	req, err := newGETRequest(c, "exchanges/"+url.QueryEscape(vhost)+"/"+url.QueryEscape(exchange))
 	if err != nil {
 		return nil, err
 	}

@@ -305,6 +305,7 @@ Validators with parameters
 
 ```go
 "length(min|max)": ByteLength,
+"runelength(min|max)": RuneLegth,
 "matches(pattern)": StringMatches,
 ```
 

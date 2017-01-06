@@ -276,6 +276,27 @@ type MilestoneEvent struct {
 	Org     *Organization `json:"organization,omitempty"`
 }
 
+// OrganizationEvent is triggered when a user is added, removed, or invited to an organization.
+// Events of this type are not visible in timelines. These events are only used to trigger organization hooks.
+// Webhook event name is "organization".
+//
+// Github docs: https://developer.github.com/v3/activity/events/types/#organizationevent
+type OrganizationEvent struct {
+	// Action is the action that was performed.
+	// Can be one of "member_added", "member_removed", or "member_invited".
+	Action *string `json:"action,omitempty"`
+
+	// Invitaion is the invitation for the user or email if the action is "member_invited".
+	Invitation *Invitation `json:"invitation,omitempty"`
+
+	// Membership is the membership between the user and the organization.
+	// Not present when the action is "member_invited".
+	Membership *Membership `json:"membership,omitempty"`
+
+	Organization *Organization `json:"organization,omitempty"`
+	Sender       *User         `json:"sender,omitempty"`
+}
+
 // PageBuildEvent represents an attempted build of a GitHub Pages site, whether
 // successful or not.
 // The Webhook event name is "page_build".
@@ -293,6 +314,18 @@ type PageBuildEvent struct {
 	ID     *int        `json:"id,omitempty"`
 	Repo   *Repository `json:"repository,omitempty"`
 	Sender *User       `json:"sender,omitempty"`
+}
+
+// PingEvent is triggered when a Webhook is added to GitHub.
+//
+// GitHub docs: https://developer.github.com/webhooks/#ping-event
+type PingEvent struct {
+	// Random string of GitHub zen.
+	Zen *string `json:"zen,omitempty"`
+	// The ID of the webhook that triggered the ping.
+	HookID *int `json:"hook_id,omitempty"`
+	// The webhook configuration.
+	Hook *Hook `json:"hook,omitempty"`
 }
 
 // PublicEvent is triggered when a private repository is open sourced.
@@ -325,6 +358,26 @@ type PullRequestEvent struct {
 	Changes *EditChange `json:"changes,omitempty"`
 	Repo    *Repository `json:"repository,omitempty"`
 	Sender  *User       `json:"sender,omitempty"`
+}
+
+// PullRequestReviewEvent is triggered when a review is submitted on a pull
+// request.
+// The Webhook event name is "pull_request_review".
+//
+// GitHub docs: https://developer.github.com/v3/activity/events/types/#pullrequestreviewevent
+type PullRequestReviewEvent struct {
+	// Action is always "submitted".
+	Action      *string            `json:"action,omitempty"`
+	Review      *PullRequestReview `json:"review,omitempty"`
+	PullRequest *PullRequest       `json:"pull_request,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Repo   *Repository `json:"repository,omitempty"`
+	Sender *User       `json:"sender,omitempty"`
+
+	// The following field is only present when the webhook is triggered on
+	// a repository belonging to an organization.
+	Organization *Organization `json:"organization,omitempty"`
 }
 
 // PullRequestReviewCommentEvent is triggered when a comment is created on a
@@ -398,7 +451,7 @@ func (p PushEventCommit) String() string {
 	return Stringify(p)
 }
 
-// PushEventRepository represents the repo object in a PushEvent payload
+// PushEventRepository represents the repo object in a PushEvent payload.
 type PushEventRepository struct {
 	ID              *int                `json:"id,omitempty"`
 	Name            *string             `json:"name,omitempty"`
@@ -430,7 +483,7 @@ type PushEventRepository struct {
 	HTMLURL *string `json:"html_url,omitempty"`
 }
 
-// PushEventRepoOwner is a basic reporesntation of user/org in a PushEvent payload
+// PushEventRepoOwner is a basic representation of user/org in a PushEvent payload.
 type PushEventRepoOwner struct {
 	Name  *string `json:"name,omitempty"`
 	Email *string `json:"email,omitempty"`

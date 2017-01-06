@@ -13,6 +13,39 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+func TestHandler_CacheControlNoStore(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	req, err := http.NewRequest("GET", addr+"/v1/sys/mounts", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(AuthHeaderName, token)
+	req.Header.Set(WrapTTLHeaderName, "60s")
+
+	client := cleanhttp.DefaultClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if resp == nil {
+		t.Fatalf("nil response")
+	}
+
+	actual := resp.Header.Get("Cache-Control")
+
+	if actual == "" {
+		t.Fatalf("missing 'Cache-Control' header entry in response writer")
+	}
+
+	if actual != "no-store" {
+		t.Fatalf("bad: Cache-Control. Expected: 'no-store', Actual: %q", actual)
+	}
+}
+
 // We use this test to verify header auth
 func TestSysMounts_headerAuth(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)

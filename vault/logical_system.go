@@ -41,6 +41,10 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"raw/*",
 				"rotate",
 			},
+
+			Unauthenticated: []string{
+				"wrapping/pubkey",
+			},
 		},
 
 		Paths: []*framework.Path{
@@ -541,6 +545,20 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rotate"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["rotate"][1]),
 			},
+
+			/*
+				// Disabled for the moment as we don't support this externally
+				&framework.Path{
+					Pattern: "wrapping/pubkey$",
+
+					Callbacks: map[logical.Operation]framework.OperationFunc{
+						logical.ReadOperation: b.handleWrappingPubkey,
+					},
+
+					HelpSynopsis:    strings.TrimSpace(sysHelp["wrappubkey"][0]),
+					HelpDescription: strings.TrimSpace(sysHelp["wrappubkey"][1]),
+				},
+			*/
 
 			&framework.Path{
 				Pattern: "wrapping/wrap$",
@@ -1472,9 +1490,22 @@ func (b *SystemBackend) handleRotate(
 	return nil, nil
 }
 
+func (b *SystemBackend) handleWrappingPubkey(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	x, _ := b.Core.wrappingJWTKey.X.MarshalText()
+	y, _ := b.Core.wrappingJWTKey.Y.MarshalText()
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"jwt_x":     string(x),
+			"jwt_y":     string(y),
+			"jwt_curve": corePrivateKeyTypeP521,
+		},
+	}, nil
+}
+
 func (b *SystemBackend) handleWrappingWrap(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if req.WrapTTL == 0 {
+	if req.WrapInfo == nil || req.WrapInfo.TTL == 0 {
 		return logical.ErrorResponse("endpoint requires response wrapping to be used"), logical.ErrInvalidRequest
 	}
 
@@ -1683,7 +1714,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 		Data: map[string]interface{}{
 			"response": response,
 		},
-		WrapInfo: &logical.WrapInfo{
+		WrapInfo: &logical.ResponseWrapInfo{
 			TTL: time.Duration(creationTTL),
 		},
 	}, nil
@@ -2085,6 +2116,11 @@ Enable a new audit backend or disable an existing backend.
 	"wrap": {
 		"Response-wraps an arbitrary JSON object.",
 		`Round trips the given input data into a response-wrapped token.`,
+	},
+
+	"wrappubkey": {
+		"Returns pubkeys used in some wrapping formats.",
+		"Returns pubkeys used in some wrapping formats.",
 	},
 
 	"unwrap": {

@@ -275,7 +275,7 @@ func (ps *PolicyStore) ListPolicies() ([]string, error) {
 	defer metrics.MeasureSince([]string{"policy", "list_policies"}, time.Now())
 	// Scan the view, since the policy names are the same as the
 	// key names.
-	keys, err := CollectKeys(ps.view)
+	keys, err := logical.CollectKeys(ps.view)
 
 	for _, nonAssignable := range nonAssignablePolicies {
 		deleteIndex := -1

@@ -242,7 +242,7 @@ func checkSourceAddress(addr net.Addr, sourceAddr string) error {
 	}
 
 	if allowedIP := net.ParseIP(sourceAddr); allowedIP != nil {
-		if bytes.Equal(allowedIP, tcpAddr.IP) {
+		if allowedIP.Equal(tcpAddr.IP) {
 			return nil
 		}
 	} else {

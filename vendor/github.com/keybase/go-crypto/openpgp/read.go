@@ -7,6 +7,7 @@ package openpgp // import "github.com/keybase/go-crypto/openpgp"
 
 import (
 	"crypto"
+	"crypto/hmac"
 	_ "crypto/sha256"
 	"hash"
 	"io"
@@ -122,7 +123,7 @@ ParsePackets:
 			if p.KeyId == 0 {
 				keys = keyring.DecryptionKeys()
 			} else {
-				keys = keyring.KeysById(p.KeyId)
+				keys = keyring.KeysById(p.KeyId, nil)
 			}
 			for _, k := range keys {
 				pubKeys = append(pubKeys, keyEnvelopePair{k, p})
@@ -255,7 +256,7 @@ FindLiteralData:
 
 			md.IsSigned = true
 			md.SignedByKeyId = p.KeyId
-			keys := keyring.KeysByIdUsage(p.KeyId, packet.KeyFlagSign)
+			keys := keyring.KeysByIdUsage(p.KeyId, nil, packet.KeyFlagSign)
 			if len(keys) > 0 {
 				md.SignedBy = &keys[0]
 			}
@@ -336,7 +337,16 @@ func (scr *signatureCheckReader) Read(buf []byte) (n int, err error) {
 
 		var ok bool
 		if scr.md.Signature, ok = p.(*packet.Signature); ok {
-			scr.md.SignatureError = scr.md.SignedBy.PublicKey.VerifySignature(scr.h, scr.md.Signature)
+			var err error
+			if fingerprint := scr.md.Signature.IssuerFingerprint; fingerprint != nil {
+				if !hmac.Equal(fingerprint, scr.md.SignedBy.PublicKey.Fingerprint[:]) {
+					err = errors.StructuralError("bad key fingerprint")
+				}
+			}
+			if err == nil {
+				err = scr.md.SignedBy.PublicKey.VerifySignature(scr.h, scr.md.Signature)
+			}
+			scr.md.SignatureError = err
 		} else if scr.md.SignatureV3, ok = p.(*packet.SignatureV3); ok {
 			scr.md.SignatureError = scr.md.SignedBy.PublicKey.VerifySignatureV3(scr.h, scr.md.SignatureV3)
 		} else {
@@ -367,6 +377,7 @@ func CheckDetachedSignature(keyring KeyRing, signed, signature io.Reader) (signe
 
 func checkDetachedSignature(keyring KeyRing, signed, signature io.Reader) (signer *Entity, issuer *uint64, err error) {
 	var issuerKeyId uint64
+	var issuerFingerprint []byte
 	var hashFunc crypto.Hash
 	var sigType packet.SignatureType
 	var keys []Key
@@ -390,6 +401,7 @@ func checkDetachedSignature(keyring KeyRing, signed, signature io.Reader) (signe
 			issuerKeyId = *sig.IssuerKeyId
 			hashFunc = sig.Hash
 			sigType = sig.SigType
+			issuerFingerprint = sig.IssuerFingerprint
 		case *packet.SignatureV3:
 			issuerKeyId = sig.IssuerKeyId
 			hashFunc = sig.Hash
@@ -398,7 +410,7 @@ func checkDetachedSignature(keyring KeyRing, signed, signature io.Reader) (signe
 			return nil, nil, errors.StructuralError("non signature packet found")
 		}
 
-		keys = keyring.KeysByIdUsage(issuerKeyId, packet.KeyFlagSign)
+		keys = keyring.KeysByIdUsage(issuerKeyId, issuerFingerprint, packet.KeyFlagSign)
 		if len(keys) > 0 {
 			break
 		}

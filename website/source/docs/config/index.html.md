@@ -78,6 +78,10 @@ sending a SIGHUP to the server process. These are denoted below.
   lease duration for tokens and secrets. This is a string value using a suffix,
   e.g. "768h". Default value is 32 days.
 
+* `ui` (optional, Vault Enterprise only) - If set `true`, enables the built-in
+  web-based UI. Once enabled, the UI will be available to browsers at the
+  standard Vault address.
+
 In production it is a risk to run Vault on systems where `mlock` is
 unavailable or the setting has been disabled via the `disable_mlock`.
 Disabling `mlock` is not recommended unless the systems running Vault only
@@ -247,6 +251,9 @@ to help you, but may refer you to the backend author.
   * `s3` - Store data within an S3 bucket [S3](https://aws.amazon.com/s3/).
     This backend does not support HA. This is a community-supported backend.
 
+  * `gcs` - Store data within a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
+    This backend does not support HA. This is a community-supported backend.
+
   * `azure` - Store data in an Azure Storage container [Azure](https://azure.microsoft.com/en-us/services/storage/).
     This backend does not support HA. This is a community-supported backend.
 
@@ -273,10 +280,11 @@ All HA backends support the following options. These are discussed in much more
 detail in the [High Availability concepts
 page](https://www.vaultproject.io/docs/concepts/ha.html).
 
-  * `redirect_addr` (optional) - This is the address to advertise to other
+  * `redirect_addr` (required) - This is the address to advertise to other
     Vault servers in the cluster for client redirection. This can also be
     set via the `VAULT_REDIRECT_ADDR` environment variable, which takes
-    precedence.
+    precedence. Some HA backends may be able to autodetect this value, but if
+    not it is required to be manually specified.
 
   * `cluster_addr` (optional) - This is the address to advertise to other Vault
     servers in the cluster for request forwarding. This can also be set via the
@@ -610,6 +618,17 @@ make S3 API calls.  Leaving the `access_key` and `secret_key` fields empty
 will cause Vault to attempt to retrieve credentials from the metadata service.
 You are responsible for ensuring your instance is launched with the appropriate
 profile enabled. Vault will handle renewing profile credentials as they rotate.
+
+#### Backend Reference: Google Cloud Storage (Community-Supported)
+
+For Google Cloud Storage, the following options are supported:
+
+  * `bucket` (required) - The name of the Google Cloud Storage bucket to use. It must be provided, but it can also be sourced from the `GOOGLE_STORAGE_BUCKET` environment variable.
+
+  * `credentials_file` - (required) The path to a GCP [service account](https://cloud.google.com/compute/docs/access/service-accounts) private key file in [JSON format](https://cloud.google.com/storage/docs/authentication#generating-a-private-key). It must be provided, but it can also be sourced from the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+
+  * `max_parallel` (optional) - The maximum number of concurrent requests to Google Cloud Storage.
+    Defaults to `"128"`.
 
 #### Backend Reference: Azure (Community-Supported)
 

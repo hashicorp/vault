@@ -206,11 +206,18 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
-		err = seal.Finalize()
-		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error finalizing seals: %v", err))
+		if seal != nil {
+			err = seal.Finalize()
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
 		}
 	}()
+
+	if seal == nil {
+		c.Ui.Error(fmt.Sprintf("Could not create seal"))
+		return 1
+	}
 
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
@@ -464,10 +471,18 @@ func (c *ServerCommand) Run(args []string) int {
 
 	defer c.cleanupGuard.Do(listenerCloseFunc)
 
-	infoKeys = append(infoKeys, "version", "version_sha")
+	infoKeys = append(infoKeys, "version")
 	verInfo := version.GetVersion()
-	info["version"] = verInfo.FullVersionNumber()
-	info["version_sha"] = strings.Trim(verInfo.Revision, "'")
+	info["version"] = verInfo.FullVersionNumber(false)
+	if verInfo.Revision != "" {
+		info["version sha"] = strings.Trim(verInfo.Revision, "'")
+		infoKeys = append(infoKeys, "version sha")
+	}
+	infoKeys = append(infoKeys, "cgo")
+	info["cgo"] = "disabled"
+	if version.CgoEnabled {
+		info["cgo"] = "enabled"
+	}
 
 	// Server configuration output
 	padding := 24

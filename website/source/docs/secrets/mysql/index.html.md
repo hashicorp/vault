@@ -37,7 +37,7 @@ Successfully mounted 'mysql' at 'mysql'!
 ```
 
 Next, we must configure Vault to know how to connect to the MySQL
-instance. This is done by providing a DSN (Data Source Name):
+instance. This is done by providing a [DSN (Data Source Name)](https://github.com/go-sql-driver/mysql#dsn-data-source-name):
 
 ```
 $ vault write mysql/config/connection \
@@ -49,6 +49,8 @@ In this case, we've configured Vault with the user "root" and password "root,
 connecting to an instance at "192.168.33.10" on port 3306. It is not necessary
 that Vault has the root user, but the user must have privileges to create
 other users, namely the `GRANT OPTION` privilege.
+
+For using UNIX socket use: `root:root@unix(/path/to/socket)/`.
 
 Optionally, we can configure the lease settings for credentials generated
 by Vault. This is done by writing to the `config/lease` key:

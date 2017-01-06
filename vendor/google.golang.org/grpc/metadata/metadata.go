@@ -141,6 +141,8 @@ func NewContext(ctx context.Context, md MD) context.Context {
 }
 
 // FromContext returns the MD in ctx if it exists.
+// The returned md should be immutable, writing to it may cause races.
+// Modification should be made to the copies of the returned md.
 func FromContext(ctx context.Context) (md MD, ok bool) {
 	md, ok = ctx.Value(mdKey{}).(MD)
 	return

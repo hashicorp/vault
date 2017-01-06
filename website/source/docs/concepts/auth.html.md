@@ -31,7 +31,7 @@ multiple authentication backends to gain access.
 
 This allows you to enable human-friendly as well as machine-friendly
 backends at the same time. For example, for humans you might use the
-"github" auth backend, and for machines you might use the "app-id" backend.
+"github" auth backend, and for machines you might use the "approle" backend.
 
 ## Tokens
 

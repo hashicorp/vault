@@ -5,7 +5,10 @@
 
 package github
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Team represents a team within a GitHub organization.  Teams are used to
 // manage access to an organization's repositories.
@@ -39,6 +42,19 @@ type Team struct {
 
 func (t Team) String() string {
 	return Stringify(t)
+}
+
+// Invitation represents a team member's inviation status
+type Invitation struct {
+	ID        *int       `json:"id,omitempty"`
+	Login     *string    `json:"login,omitempty"`
+	Email     *string    `json:"email,omitempty"`
+	Role      *string    `json:"role,omitempty"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+}
+
+func (i Invitation) String() string {
+	return Stringify(i)
 }
 
 // ListTeams lists all of the teams for an organization.
@@ -376,4 +392,33 @@ func (s *OrganizationsService) RemoveTeamMembership(team int, user string) (*Res
 	}
 
 	return s.client.Do(req, nil)
+}
+
+// ListPendingTeamInvitations get pending invitaion list in team.
+// Warning: The API may change without advance notice during the preview period.
+// Preview features are not supported for production use.
+//
+// GitHub API docs: https://developer.github.com/v3/orgs/teams/#list-pending-team-invitations
+func (s *OrganizationsService) ListPendingTeamInvitations(team int, opt *ListOptions) ([]*Invitation, *Response, error) {
+	u := fmt.Sprintf("teams/%v/invitations", team)
+	u, err := addOptions(u, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeOrgMembershipPreview)
+
+	pendingInvitations := new([]*Invitation)
+	resp, err := s.client.Do(req, pendingInvitations)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return *pendingInvitations, resp, err
 }

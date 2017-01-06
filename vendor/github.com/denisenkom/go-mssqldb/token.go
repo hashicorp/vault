@@ -5,6 +5,9 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"golang.org/x/net/context"
+	"net"
+	"errors"
 )
 
 // token ids
@@ -25,6 +28,7 @@ const (
 )
 
 // done flags
+// https://msdn.microsoft.com/en-us/library/dd340421.aspx
 const (
 	doneFinal    = 0
 	doneMore     = 1
@@ -42,11 +46,28 @@ const (
 	envTypLanguage           = 2
 	envTypCharset            = 3
 	envTypPacketSize         = 4
+	envSortId                = 5
+	envSortFlags             = 6
+	envSqlCollation          = 7
 	envTypBeginTran          = 8
 	envTypCommitTran         = 9
 	envTypRollbackTran       = 10
+	envEnlistDTC             = 11
+	envDefectTran            = 12
 	envDatabaseMirrorPartner = 13
+	envPromoteTran           = 15
+	envTranMgrAddr           = 16
+	envTranEnded             = 17
+	envResetConnAck          = 18
+	envStartedInstanceName   = 19
 	envRouting               = 20
+)
+
+// COLMETADATA flags
+// https://msdn.microsoft.com/en-us/library/dd357363.aspx
+const (
+	colFlagNullable = 1
+	// TODO implement more flags
 )
 
 // interface for all tokens
@@ -60,6 +81,19 @@ type doneStruct struct {
 	Status   uint16
 	CurCmd   uint16
 	RowCount uint64
+	errors   []Error
+}
+
+func (d doneStruct) isError() bool {
+	return d.Status&doneError != 0 || len(d.errors) > 0
+}
+
+func (d doneStruct) getError() Error {
+	if len(d.errors) > 0 {
+		return d.errors[len(d.errors) - 1]
+	} else {
+		return Error{Message: "Request failed but didn't provide reason"}
+	}
 }
 
 type doneInProcStruct doneStruct
@@ -109,6 +143,30 @@ func processEnvChg(sess *tdsSession) {
 			if err != nil {
 				badStreamPanic(err)
 			}
+		case envTypLanguage:
+			//currently ignored
+			// old value
+			_, err = readBVarChar(r)
+			if err != nil {
+				badStreamPanic(err)
+			}
+			// new value
+			_, err = readBVarChar(r)
+			if err != nil {
+				badStreamPanic(err)
+			}
+		case envTypCharset:
+			//currently ignored
+			// old value
+			_, err = readBVarChar(r)
+			if err != nil {
+				badStreamPanic(err)
+			}
+			// new value
+			_, err = readBVarChar(r)
+			if err != nil {
+				badStreamPanic(err)
+			}
 		case envTypPacketSize:
 			packetsize, err := readBVarChar(r)
 			if err != nil {
@@ -126,6 +184,36 @@ func processEnvChg(sess *tdsSession) {
 				newbuf := make([]byte, packetsizei)
 				copy(newbuf, sess.buf.buf)
 				sess.buf.buf = newbuf
+			}
+		case envSortId:
+			// currently ignored
+			// old value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// new value
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+		case envSortFlags:
+			// currently ignored
+			// old value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// new value
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+		case envSqlCollation:
+			// currently ignored
+			// old value
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// new value
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
 			}
 		case envTypBeginTran:
 			tranid, err := readBVarByte(r)
@@ -160,6 +248,26 @@ func processEnvChg(sess *tdsSession) {
 				}
 			}
 			sess.tranid = 0
+		case envEnlistDTC:
+			// currently ignored
+			// old value
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// new value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+		case envDefectTran:
+			// currently ignored
+			// old value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// new value
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
 		case envDatabaseMirrorPartner:
 			sess.partner, err = readBVarChar(r)
 			if err != nil {
@@ -167,6 +275,57 @@ func processEnvChg(sess *tdsSession) {
 			}
 			_, err = readBVarChar(r)
 			if err != nil {
+				badStreamPanic(err)
+			}
+		case envPromoteTran:
+			// currently ignored
+			// old value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// dtc token
+			// spec says it should be L_VARBYTE, so this code might be wrong
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+		case envTranMgrAddr:
+			// currently ignored
+			// old value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// XACT_MANAGER_ADDRESS = B_VARBYTE
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+		case envTranEnded:
+			// currently ignored
+			// old value, B_VARBYTE
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+		case envResetConnAck:
+			// currently ignored
+			// old value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+		case envStartedInstanceName:
+			// currently ignored
+			// old value, should be 0
+			if _, err = readBVarChar(r); err != nil {
+				badStreamPanic(err)
+			}
+			// instance name
+			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
 		case envRouting:
@@ -199,15 +358,9 @@ func processEnvChg(sess *tdsSession) {
 			sess.routedServer = newServer
 			sess.routedPort = newPort
 		default:
-			// ignore unknown env change types
-			_, err = readBVarByte(r)
-			if err != nil {
-				badStreamPanic(err)
-			}
-			_, err = readBVarByte(r)
-			if err != nil {
-				badStreamPanic(err)
-			}
+			// ignore rest of records because we don't know how to skip those
+			sess.log.Printf("WARN: Unknown ENVCHANGE record detected with type id = %d\n", envtype)
+			break
 		}
 
 	}
@@ -229,6 +382,7 @@ func parseOrder(r *tdsBuffer) (res orderStruct) {
 	return res
 }
 
+// https://msdn.microsoft.com/en-us/library/dd340421.aspx
 func parseDone(r *tdsBuffer) (res doneStruct) {
 	res.Status = r.uint16()
 	res.CurCmd = r.uint16()
@@ -236,6 +390,7 @@ func parseDone(r *tdsBuffer) (res doneStruct) {
 	return res
 }
 
+// https://msdn.microsoft.com/en-us/library/dd340553.aspx
 func parseDoneInProc(r *tdsBuffer) (res doneInProcStruct) {
 	res.Status = r.uint16()
 	res.CurCmd = r.uint16()
@@ -344,15 +499,22 @@ func parseInfo(r *tdsBuffer) (res Error) {
 	return
 }
 
-func processResponse(sess *tdsSession, ch chan tokenStruct) {
+func processSingleResponse(sess *tdsSession, ch chan tokenStruct) {
 	defer func() {
 		if err := recover(); err != nil {
+			if sess.logFlags&logErrors != 0 {
+				sess.log.Printf("ERROR: Intercepted panick %v", err)
+			}
 			ch <- err
 		}
 		close(ch)
 	}()
+
 	packet_type, err := sess.buf.BeginRead()
 	if err != nil {
+		if sess.logFlags&logErrors != 0 {
+			sess.log.Printf("ERROR: BeginRead failed %v", err)
+		}
 		ch <- err
 		return
 	}
@@ -360,10 +522,12 @@ func processResponse(sess *tdsSession, ch chan tokenStruct) {
 		badStreamPanicf("invalid response packet type, expected REPLY, actual: %d", packet_type)
 	}
 	var columns []columnStruct
-	var lastError Error
-	var failed bool
+	errs := make([]Error, 0, 5)
 	for {
 		token := sess.buf.byte()
+		if sess.logFlags&logDebug != 0 {
+			sess.log.Printf("got token id %d", token)
+		}
 		switch token {
 		case tokenSSPI:
 			ch <- parseSSPIMsg(sess.buf)
@@ -385,17 +549,16 @@ func processResponse(sess *tdsSession, ch chan tokenStruct) {
 			ch <- done
 		case tokenDone, tokenDoneProc:
 			done := parseDone(sess.buf)
-			if sess.logFlags&logRows != 0 && done.Status&doneCount != 0 {
-				sess.log.Printf("(%d row(s) affected)\n", done.RowCount)
-			}
-			if done.Status&doneError != 0 || failed {
-				ch <- lastError
-				return
+			done.errors = errs
+			if sess.logFlags&logDebug != 0 {
+				sess.log.Printf("got DONE or DONEPROC status=%d", done.Status)
 			}
 			if done.Status&doneSrvError != 0 {
-				lastError.Message = "Server Error"
-				ch <- lastError
+				ch <- errors.New("SQL Server had internal error")
 				return
+			}
+			if sess.logFlags&logRows != 0 && done.Status&doneCount != 0 {
+				sess.log.Printf("(%d row(s) affected)\n", done.RowCount)
 			}
 			ch <- done
 			if done.Status&doneMore == 0 {
@@ -415,18 +578,116 @@ func processResponse(sess *tdsSession, ch chan tokenStruct) {
 		case tokenEnvChange:
 			processEnvChg(sess)
 		case tokenError:
-			lastError = parseError72(sess.buf)
-			failed = true
+			err := parseError72(sess.buf)
+			if sess.logFlags&logDebug != 0 {
+				sess.log.Printf("got ERROR %d %s", err.Number, err.Message)
+			}
+			errs = append(errs, err)
 			if sess.logFlags&logErrors != 0 {
-				sess.log.Println(lastError.Message)
+				sess.log.Println(err.Message)
 			}
 		case tokenInfo:
 			info := parseInfo(sess.buf)
+			if sess.logFlags&logDebug != 0 {
+				sess.log.Printf("got INFO %d %s", info.Number, info.Message)
+			}
 			if sess.logFlags&logMessages != 0 {
 				sess.log.Println(info.Message)
 			}
 		default:
 			badStreamPanicf("Unknown token type: %d", token)
+		}
+	}
+}
+
+func processResponse(ctx context.Context, sess *tdsSession, ch chan tokenStruct) {
+	defer func() {
+		close(ch)
+	}()
+	doneChan := ctx.Done()
+	cancelInProgress := false
+	cancelledByContext := false
+	var cancelError error
+
+	// loop over multiple responses
+	for {
+		if sess.logFlags&logDebug != 0 {
+			sess.log.Println("initiating resonse reading")
+		}
+		tokChan := make(chan tokenStruct)
+		go processSingleResponse(sess, tokChan)
+		// loop over multiple tokens in response
+		tokensLoop:
+		for {
+			select {
+			case tok, ok := <-tokChan:
+				if ok {
+					if cancelInProgress {
+						switch tok := tok.(type) {
+						case doneStruct:
+							if tok.Status&doneAttn != 0 {
+								if sess.logFlags&logDebug != 0 {
+									sess.log.Println("got cancellation confirmation from server")
+								}
+								if cancelledByContext {
+									ch <- ctx.Err()
+								} else {
+									ch <- cancelError
+								}
+								return
+							}
+						}
+					} else {
+						if err, ok := tok.(net.Error); ok && err.Timeout() {
+							cancelError = err
+							if sess.logFlags&logDebug != 0 {
+								sess.log.Println("got timeout error, sending attention signal to server")
+							}
+							err := sendAttention(sess.buf)
+							if err != nil {
+								if sess.logFlags&logErrors != 0 {
+									sess.log.Println("Failed to send attention signal %v", err)
+								}
+								ch <- err
+								return
+							}
+							doneChan = nil
+							cancelInProgress = true
+							cancelledByContext = false
+						} else {
+							ch <- tok
+						}
+					}
+				} else {
+					// response finished
+					if cancelInProgress {
+						if sess.logFlags&logDebug != 0 {
+							sess.log.Println("response finished but waiting for attention ack")
+						}
+						break tokensLoop
+					} else {
+						if sess.logFlags&logDebug != 0 {
+							sess.log.Println("response finished")
+						}
+						return
+					}
+				}
+			case <-doneChan:
+				if sess.logFlags&logDebug != 0 {
+					sess.log.Println("got cancel message, sending attention signal to server")
+				}
+				err := sendAttention(sess.buf)
+				if err != nil {
+					if sess.logFlags&logErrors != 0 {
+						sess.log.Println("Failed to send attention signal %v", err)
+					}
+					ch <- err
+					return
+				}
+				doneChan = nil
+				cancelInProgress = true
+				cancelledByContext = true
+			}
 		}
 	}
 }

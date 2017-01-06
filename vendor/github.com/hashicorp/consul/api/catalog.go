@@ -16,6 +16,8 @@ type CatalogService struct {
 	ServiceTags              []string
 	ServicePort              int
 	ServiceEnableTagOverride bool
+	CreateIndex              uint64
+	ModifyIndex              uint64
 }
 
 type CatalogNode struct {

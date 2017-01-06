@@ -108,6 +108,57 @@ func TestCore_EnableAudit(t *testing.T) {
 	}
 }
 
+func TestCore_EnableAudit_MixedFailures(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
+	}
+
+	c.auditBackends["fail"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return nil, fmt.Errorf("failing enabling")
+	}
+
+	c.audit = &MountTable{
+		Type: auditTableType,
+		Entries: []*MountEntry{
+			&MountEntry{
+				Table: auditTableType,
+				Path:  "noop/",
+				Type:  "noop",
+				UUID:  "abcd",
+			},
+			&MountEntry{
+				Table: auditTableType,
+				Path:  "noop2/",
+				Type:  "noop",
+				UUID:  "bcde",
+			},
+		},
+	}
+
+	// Both should set up successfully
+	err := c.setupAudits()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// We expect this to work because the other entry is still valid
+	c.audit.Entries[0].Type = "fail"
+	err = c.setupAudits()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// No audit backend set up successfully, so expect error
+	c.audit.Entries[1].Type = "fail"
+	err = c.setupAudits()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func TestCore_DisableAudit(t *testing.T) {
 	c, key, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {

@@ -6,7 +6,6 @@ package gocql
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -307,7 +306,7 @@ func (t *tokenAwareHostPolicy) resetTokenRing() {
 	hosts := t.hosts.get()
 	tokenRing, err := newTokenRing(t.partitioner, hosts)
 	if err != nil {
-		log.Printf("Unable to update the token ring due to error: %s", err)
+		Logger.Printf("Unable to update the token ring due to error: %s", err)
 		return
 	}
 
