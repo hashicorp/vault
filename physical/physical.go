@@ -45,6 +45,12 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
+// Purgable is an optional interface for backends that support
+// purging of their caches.
+type Purgable interface {
+	Purge()
+}
+
 // RedirectDetect is an optional interface that an HABackend
 // can implement. If they do, a redirect address can be automatically
 // detected.

@@ -2,6 +2,7 @@ package logical
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
@@ -36,4 +37,68 @@ func StorageEntryJSON(k string, v interface{}) (*StorageEntry, error) {
 		Key:   k,
 		Value: encodedBytes,
 	}, nil
+}
+
+type ClearableView interface {
+	List(string) ([]string, error)
+	Delete(string) error
+}
+
+// ScanView is used to scan all the keys in a view iteratively
+func ScanView(view ClearableView, cb func(path string)) error {
+	frontier := []string{""}
+	for len(frontier) > 0 {
+		n := len(frontier)
+		current := frontier[n-1]
+		frontier = frontier[:n-1]
+
+		// List the contents
+		contents, err := view.List(current)
+		if err != nil {
+			return fmt.Errorf("list failed at path '%s': %v", current, err)
+		}
+
+		// Handle the contents in the directory
+		for _, c := range contents {
+			fullPath := current + c
+			if strings.HasSuffix(c, "/") {
+				frontier = append(frontier, fullPath)
+			} else {
+				cb(fullPath)
+			}
+		}
+	}
+	return nil
+}
+
+// CollectKeys is used to collect all the keys in a view
+func CollectKeys(view ClearableView) ([]string, error) {
+	// Accumulate the keys
+	var existing []string
+	cb := func(path string) {
+		existing = append(existing, path)
+	}
+
+	// Scan for all the keys
+	if err := ScanView(view, cb); err != nil {
+		return nil, err
+	}
+	return existing, nil
+}
+
+// ClearView is used to delete all the keys in a view
+func ClearView(view ClearableView) error {
+	// Collect all the keys
+	keys, err := CollectKeys(view)
+	if err != nil {
+		return err
+	}
+
+	// Delete all the keys
+	for _, key := range keys {
+		if err := view.Delete(key); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -267,8 +267,8 @@ type Core struct {
 	localClusterPrivateKey crypto.Signer
 	// The local cluster cert
 	localClusterCert []byte
-	// The cert pool containing the self-signed CA as a trusted CA
-	localClusterCertPool *x509.CertPool
+	// The cert pool containing trusted cluster CAs
+	clusterCertPool *x509.CertPool
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
 	// The setup function that gives us the handler to use
@@ -378,16 +378,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
 
-	// Wrap the backend in a cache unless disabled
-	if !conf.DisableCache {
-		_, isCache := conf.Physical.(*physical.Cache)
-		_, isInmem := conf.Physical.(*physical.InmemBackend)
-		if !isCache && !isInmem {
-			cache := physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
-			conf.Physical = cache
-		}
-	}
-
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
 		if err := mlock.LockMemory(); err != nil {
@@ -425,9 +415,14 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		maxLeaseTTL:                      conf.MaxLeaseTTL,
 		cachingDisabled:                  conf.DisableCache,
 		clusterName:                      conf.ClusterName,
-		localClusterCertPool:             x509.NewCertPool(),
+		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+	}
+
+	// Wrap the backend in a cache unless disabled
+	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
+		c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -714,7 +709,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	if !oldAdv {
 		// Ensure we are using current values
-		err = c.loadClusterTLS(adv)
+		err = c.loadLocalClusterTLS(adv)
 		if err != nil {
 			return false, "", err
 		}
@@ -1134,8 +1129,10 @@ func (c *Core) postUnseal() (retErr error) {
 		}
 	}()
 	c.logger.Info("core: post-unseal setup starting")
-	if cache, ok := c.physical.(*physical.Cache); ok {
-		cache.Purge()
+
+	// Purge the backend if supported
+	if purgable, ok := c.physical.(physical.Purgable); ok {
+		purgable.Purge()
 	}
 	// HA mode requires us to handle keyring rotation and rekeying
 	if c.ha != nil {
@@ -1232,8 +1229,9 @@ func (c *Core) preSeal() error {
 	if err := c.unloadMounts(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error unloading mounts: {{err}}", err))
 	}
-	if cache, ok := c.physical.(*physical.Cache); ok {
-		cache.Purge()
+	// Purge the backend if supported
+	if purgable, ok := c.physical.(physical.Purgable); ok {
+		purgable.Purge()
 	}
 	c.logger.Info("core: pre-seal teardown complete")
 	return result

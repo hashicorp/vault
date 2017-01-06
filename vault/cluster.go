@@ -20,6 +20,7 @@ import (
 
 	"golang.org/x/net/http2"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -43,9 +44,9 @@ var (
 // This can be one of a few key types so the different params may or may not be filled
 type clusterKeyParams struct {
 	Type string   `json:"type"`
-	X    *big.Int `json:"x,omitempty"`
-	Y    *big.Int `json:"y,omitempty"`
-	D    *big.Int `json:"d,omitempty"`
+	X    *big.Int `json:"x" structs:"x" mapstructure:"x"`
+	Y    *big.Int `json:"y" structs:"y" mapstructure:"y"`
+	D    *big.Int `json:"d" structs:"d" mapstructure:"d"`
 }
 
 type activeConnection struct {
@@ -62,8 +63,8 @@ type Cluster struct {
 	ID string `json:"id" structs:"id" mapstructure:"id"`
 }
 
-// Cluster fetches the details of either local or global cluster based on the
-// input. This method errors out when Vault is sealed.
+// Cluster fetches the details of the local cluster. This method errors out
+// when Vault is sealed.
 func (c *Core) Cluster() (*Cluster, error) {
 	var cluster Cluster
 
@@ -91,7 +92,7 @@ func (c *Core) Cluster() (*Cluster, error) {
 
 // This sets our local cluster cert and private key based on the advertisement.
 // It also ensures the cert is in our local cluster cert pool.
-func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
+func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) error {
 	switch {
 	case adv.ClusterAddr == "":
 		// Clustering disabled on the server, don't try to look for params
@@ -136,7 +137,7 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 		return fmt.Errorf("error parsing local cluster certificate: %v", err)
 	}
 
-	c.localClusterCertPool.AddCert(cert)
+	c.clusterCertPool.AddCert(cert)
 
 	return nil
 }
@@ -145,6 +146,10 @@ func (c *Core) loadClusterTLS(adv activeAdvertisement) error {
 // Entries will be created only if they are not already present. If clusterName
 // is not supplied, this method will auto-generate it.
 func (c *Core) setupCluster() error {
+	// Prevent data races with the TLS parameters
+	c.clusterParamsLock.Lock()
+	defer c.clusterParamsLock.Unlock()
+
 	// Check if storage index is already present or not
 	cluster, err := c.Cluster()
 	if err != nil {
@@ -194,10 +199,6 @@ func (c *Core) setupCluster() error {
 
 	// If we're using HA, generate server-to-server parameters
 	if c.ha != nil {
-		// Prevent data races with the TLS parameters
-		c.clusterParamsLock.Lock()
-		defer c.clusterParamsLock.Unlock()
-
 		// Create a private key
 		{
 			c.logger.Trace("core: generating cluster private key")
@@ -240,13 +241,13 @@ func (c *Core) setupCluster() error {
 			certBytes, err := x509.CreateCertificate(rand.Reader, template, template, c.localClusterPrivateKey.Public(), c.localClusterPrivateKey)
 			if err != nil {
 				c.logger.Error("core: error generating self-signed cert", "error", err)
-				return fmt.Errorf("unable to generate local cluster certificate: %v", err)
+				return errwrap.Wrapf("unable to generate local cluster certificate: {{err}}", err)
 			}
 
 			_, err = x509.ParseCertificate(certBytes)
 			if err != nil {
 				c.logger.Error("core: error parsing self-signed cert", "error", err)
-				return fmt.Errorf("error parsing generated certificate: %v", err)
+				return errwrap.Wrapf("error parsing generated certificate: {{err}}", err)
 			}
 
 			c.localClusterCert = certBytes
@@ -363,7 +364,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 	}
 
 	// This is idempotent, so be sure it's been added
-	c.localClusterCertPool.AddCert(parsedCert)
+	c.clusterCertPool.AddCert(parsedCert)
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{
@@ -372,10 +373,10 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 				PrivateKey:  c.localClusterPrivateKey,
 			},
 		},
-		RootCAs:    c.localClusterCertPool,
+		RootCAs:    c.clusterCertPool,
 		ServerName: parsedCert.Subject.CommonName,
 		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  c.localClusterCertPool,
+		ClientCAs:  c.clusterCertPool,
 	}
 
 	return tlsConfig, nil

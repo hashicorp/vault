@@ -261,7 +261,7 @@ func (c *Core) unmount(path string) (bool, error) {
 	}
 
 	// Clear the data in the view
-	if err := ClearView(view); err != nil {
+	if err := logical.ClearView(view); err != nil {
 		return true, err
 	}
 

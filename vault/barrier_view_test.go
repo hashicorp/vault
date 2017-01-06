@@ -202,7 +202,7 @@ func TestBarrierView_Scan(t *testing.T) {
 	}
 
 	// Collect the keys
-	if err := ScanView(view, cb); err != nil {
+	if err := logical.ScanView(view, cb); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -235,7 +235,7 @@ func TestBarrierView_CollectKeys(t *testing.T) {
 	}
 
 	// Collect the keys
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -269,12 +269,12 @@ func TestBarrierView_ClearView(t *testing.T) {
 	}
 
 	// Clear the keys
-	if err := ClearView(view); err != nil {
+	if err := logical.ClearView(view); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Collect the keys
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
