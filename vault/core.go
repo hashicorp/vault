@@ -817,6 +817,10 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 	defer memzero(masterKey)
 
+	return c.unsealInternal(masterKey)
+}
+
+func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	// Attempt to unlock
 	if err := c.barrier.Unseal(masterKey); err != nil {
 		return false, err
