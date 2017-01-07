@@ -1,4 +1,4 @@
-// +build vault
+// +build vault,!ent
 
 package vault
 
