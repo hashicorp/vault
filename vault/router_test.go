@@ -57,6 +57,10 @@ func (n *NoopBackend) Cleanup() {
 	// noop
 }
 
+func (n *NoopBackend) InvalidateKey(string) {
+	// noop
+}
+
 func TestRouter_Mount(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)
