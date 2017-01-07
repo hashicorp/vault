@@ -593,11 +593,13 @@ func TestTokenStore_Revoke(t *testing.T) {
 }
 
 func TestTokenStore_Revoke_Leases(t *testing.T) {
-	_, ts, _, _ := TestCoreWithTokenStore(t)
+	c, ts, _, _ := TestCoreWithTokenStore(t)
+
+	view := NewBarrierView(c.barrier, "noop/")
 
 	// Mount a noop backend
 	noop := &NoopBackend{}
-	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, nil)
+	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, view)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.create(ent); err != nil {
