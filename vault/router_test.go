@@ -14,11 +14,12 @@ import (
 type NoopBackend struct {
 	sync.Mutex
 
-	Root     []string
-	Login    []string
-	Paths    []string
-	Requests []*logical.Request
-	Response *logical.Response
+	Root          []string
+	Login         []string
+	Paths         []string
+	Requests      []*logical.Request
+	Response      *logical.Response
+	Invalidations []string
 }
 
 func (n *NoopBackend) HandleRequest(req *logical.Request) (*logical.Response, error) {
