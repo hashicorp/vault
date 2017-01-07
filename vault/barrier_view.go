@@ -68,6 +68,9 @@ func (v *BarrierView) Get(key string) (*logical.StorageEntry, error) {
 
 // logical.Storage impl.
 func (v *BarrierView) Put(entry *logical.StorageEntry) error {
+	if v.readonly {
+		return logical.ErrReadOnly
+	}
 	if err := v.sanityCheck(entry.Key); err != nil {
 		return err
 	}
@@ -80,6 +83,9 @@ func (v *BarrierView) Put(entry *logical.StorageEntry) error {
 
 // logical.Storage impl.
 func (v *BarrierView) Delete(key string) error {
+	if v.readonly {
+		return logical.ErrReadOnly
+	}
 	if err := v.sanityCheck(key); err != nil {
 		return err
 	}
