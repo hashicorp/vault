@@ -35,6 +35,8 @@ type Backend interface {
 	// existence check function was found, the item exists or not.
 	HandleExistenceCheck(*Request) (bool, bool, error)
 
+	// Cleanup is invoked during an unmount of a backend to allow it to
+	// handle any cleanup like connection closing or releasing of file handles.
 	Cleanup()
 }
 
