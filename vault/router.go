@@ -17,12 +17,18 @@ type Router struct {
 	l              sync.RWMutex
 	root           *radix.Tree
 	tokenStoreSalt *salt.Salt
+
+	// storagePrefix maps the prefix used for storage (ala the BarrierView)
+	// to the backend. This is used to map a key back into the backend that owns it.
+	// For example, logical/uuid1/foobar -> secrets/ (generic backend) + foobar
+	storagePrefix *radix.Tree
 }
 
 // NewRouter returns a new router
 func NewRouter() *Router {
 	r := &Router{
-		root: radix.New(),
+		root:          radix.New(),
+		storagePrefix: radix.New(),
 	}
 	return r
 }
@@ -69,6 +75,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		loginPaths:  pathsToRadix(paths.Unauthenticated),
 	}
 	r.root.Insert(prefix, re)
+	r.storagePrefix.Insert(storageView.prefix, re)
 
 	return nil
 }
@@ -78,12 +85,19 @@ func (r *Router) Unmount(prefix string) error {
 	r.l.Lock()
 	defer r.l.Unlock()
 
-	// Call backend's Cleanup routine
-	re, ok := r.root.Get(prefix)
-	if ok {
-		re.(*routeEntry).backend.Cleanup()
+	// Fast-path out if the backend doesn't exist
+	raw, ok := r.root.Get(prefix)
+	if !ok {
+		return nil
 	}
+
+	// Call backend's Cleanup routine
+	re := raw.(*routeEntry)
+	re.backend.Cleanup()
+
+	// Purge from the radix trees
 	r.root.Delete(prefix)
+	r.storagePrefix.Delete(re.storageView.prefix)
 	return nil
 }
 
@@ -180,6 +194,23 @@ func (r *Router) MatchingSystemView(path string) logical.SystemView {
 		return nil
 	}
 	return raw.(*routeEntry).backend.System()
+}
+
+// MatchingStoragePrefix returns the mount path matching and storage prefix
+// matching the given path
+func (r *Router) MatchingStoragePrefix(path string) (string, string, bool) {
+	r.l.RLock()
+	_, raw, ok := r.storagePrefix.LongestPrefix(path)
+	r.l.RUnlock()
+	if !ok {
+		return "", "", false
+	}
+
+	// Extract the mount path and storage prefix
+	re := raw.(*routeEntry)
+	mountPath := re.mountEntry.Path
+	prefix := re.storageView.prefix
+	return mountPath, prefix, true
 }
 
 // Route is used to route a given request

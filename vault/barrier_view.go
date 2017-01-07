@@ -15,8 +15,9 @@ import (
 // BarrierView implements logical.Storage so it can be passed in as the
 // durable storage mechanism for logical views.
 type BarrierView struct {
-	barrier BarrierStorage
-	prefix  string
+	barrier  BarrierStorage
+	prefix   string
+	readonly bool
 }
 
 // NewBarrierView takes an underlying security barrier and returns
@@ -68,6 +69,9 @@ func (v *BarrierView) Get(key string) (*logical.StorageEntry, error) {
 
 // logical.Storage impl.
 func (v *BarrierView) Put(entry *logical.StorageEntry) error {
+	if v.readonly {
+		return logical.ErrReadOnly
+	}
 	if err := v.sanityCheck(entry.Key); err != nil {
 		return err
 	}
@@ -80,6 +84,9 @@ func (v *BarrierView) Put(entry *logical.StorageEntry) error {
 
 // logical.Storage impl.
 func (v *BarrierView) Delete(key string) error {
+	if v.readonly {
+		return logical.ErrReadOnly
+	}
 	if err := v.sanityCheck(key); err != nil {
 		return err
 	}
@@ -89,7 +96,7 @@ func (v *BarrierView) Delete(key string) error {
 // SubView constructs a nested sub-view using the given prefix
 func (v *BarrierView) SubView(prefix string) *BarrierView {
 	sub := v.expandKey(prefix)
-	return &BarrierView{barrier: v.barrier, prefix: sub}
+	return &BarrierView{barrier: v.barrier, prefix: sub, readonly: v.readonly}
 }
 
 // expandKey is used to expand to the full key path with the prefix

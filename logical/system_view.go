@@ -30,6 +30,11 @@ type SystemView interface {
 	// Returns true if caching is disabled. If true, no caches should be used,
 	// despite known slowdowns.
 	CachingDisabled() bool
+
+	// IsPrimary checks if this is a primary Vault instance. This
+	// can be used to avoid writes on secondaries and to avoid doing
+	// lazy upgrades which may cause writes.
+	IsPrimary() bool
 }
 
 type StaticSystemView struct {
@@ -38,6 +43,7 @@ type StaticSystemView struct {
 	SudoPrivilegeVal   bool
 	TaintedVal         bool
 	CachingDisabledVal bool
+	Primary            bool
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -58,4 +64,8 @@ func (d StaticSystemView) Tainted() bool {
 
 func (d StaticSystemView) CachingDisabled() bool {
 	return d.CachingDisabledVal
+}
+
+func (d StaticSystemView) IsPrimary() bool {
+	return d.Primary
 }

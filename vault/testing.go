@@ -381,6 +381,10 @@ func (n *rawHTTP) Cleanup() {
 	// noop
 }
 
+func (n *rawHTTP) InvalidateKey(string) {
+	// noop
+}
+
 func GenerateRandBytes(length int) ([]byte, error) {
 	if length < 0 {
 		return nil, fmt.Errorf("length must be >= 0")
