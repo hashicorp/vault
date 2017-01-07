@@ -38,6 +38,11 @@ type Backend interface {
 	// Cleanup is invoked during an unmount of a backend to allow it to
 	// handle any cleanup like connection closing or releasing of file handles.
 	Cleanup()
+
+	// InvalidateKey may be invoked when an object is modified that belongs
+	// to the backend. The backend can use this to clear any caches or reset
+	// internal state as needed.
+	InvalidateKey(key string)
 }
 
 // BackendConfig is provided to the factory to initialize the backend
