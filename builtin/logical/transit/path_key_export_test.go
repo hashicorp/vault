@@ -46,7 +46,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 		req = &logical.Request{
 			Storage:   storage,
 			Operation: logical.ReadOperation,
-			Path:      "key-export/foo",
+			Path:      "export/encryption-key/foo",
 		}
 		rsp, err := b.HandleRequest(req)
 		if err != nil {
@@ -56,7 +56,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 			t.Error("no keys returned from export")
 		}
 
-		keys, ok := rsp.Data["keys"].(map[string]interface{})
+		keys, ok := rsp.Data["keys"].(map[string]string)
 		if !ok {
 			t.Error("could not cast to keys object")
 		}

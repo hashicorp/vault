@@ -175,7 +175,6 @@ func keyEntryToECPrivateKey(k keysutil.KeyEntry) (string, error) {
 		Type:  "EC PRIVATE KEY",
 		Bytes: ecder,
 	}
-
 	return strings.TrimSpace(string(pem.EncodeToMemory(&block))), nil
 }
 
