@@ -373,22 +373,25 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
-### /transit/key-export/
+### /transit/export/encryption-key/<name>(/<version>)
+### /transit/export/signing-key/<name>(/<version>)
+### /transit/export/hmac-key/<name>(/<version>)
 #### GET
 
 <dl class="api">
   <dt>Description</dt>
   <dd>
     Returns the named encryption key. The `keys` object shows the value of the
-    key for each version. Depending on the type of key, different information
-    may be returned. The key must be exportable to support this operation.
+    key for each version. If `version` is specified, the specific version will
+    be returned. Depending on the type of key, different information may be
+    returned. The key must be exportable to support this operation.
   </dd>
 
   <dt>Method</dt>
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/transit/key-export/<name>`</dd>
+  <dd>`/transit/export/<key type>/<name>/<version>`</dd>
 
   <dt>Parameters</dt>
   <dd>
