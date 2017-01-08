@@ -52,7 +52,7 @@ func pathSign(b *backend) *framework.Path {
 
 func pathSignVerbatim(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "sign-verbatim/" + framework.GenericNameRegex("role"),
+		Pattern: "sign-verbatim" + framework.OptionalParamRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathSignVerbatim,
