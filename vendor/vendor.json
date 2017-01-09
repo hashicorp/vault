@@ -889,12 +889,6 @@
 			"revisionTime": "2016-12-29T21:13:11Z"
 		},
 		{
-			"checksumSHA1": "OzjmTdiiKEaU+KznnMweDDrJd4I=",
-			"path": "github.com/ory-am/dockertest",
-			"revision": "911d4fa1cc9bfef27c518e100ff9a92e721fc1d4",
-			"revisionTime": "2016-11-25T09:43:23Z"
-		},
-		{
 			"checksumSHA1": "N5RwWgt0CCgyVin0kYbipyoy6O8=",
 			"path": "github.com/pborman/uuid",
 			"revision": "5007efa264d92316c43112bc573e754bc889b7b1",
@@ -1343,6 +1337,12 @@
 			"path": "gopkg.in/mgo.v2/internal/scram",
 			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
 			"revisionTime": "2016-08-18T02:01:20Z"
+		},
+		{
+			"checksumSHA1": "YCPcVG3Kac1aaDpbPUtsZ/BXNgg=",
+			"path": "gopkg.in/ory-am/dockertest.v2",
+			"revision": "edb9d9444e6868c1b1e279098b628e7b8e6f0714",
+			"revisionTime": "2016-10-18T17:13:38Z"
 		},
 		{
 			"checksumSHA1": "12GqsW8PiRPnezDDy0v4brZrndM=",

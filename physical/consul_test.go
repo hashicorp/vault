@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/strutil"
-	"github.com/ory-am/dockertest"
+	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
 type consulConf map[string]string
