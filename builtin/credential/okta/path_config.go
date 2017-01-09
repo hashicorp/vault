@@ -30,8 +30,11 @@ are using Okta development accounts.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigRead,
+			logical.CreateOperation: b.pathConfigWrite,
 			logical.UpdateOperation: b.pathConfigWrite,
 		},
+
+		ExistenceCheck: b.pathConfigExistenceCheck,
 
 		HelpSynopsis: pathConfigHelp,
 	}
@@ -42,6 +45,9 @@ func (b *backend) Config(s logical.Storage) (*ConfigEntry, error) {
 	entry, err := s.Get("config")
 	if err != nil {
 		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
 	}
 
 	var result ConfigEntry
@@ -77,30 +83,60 @@ func (b *backend) pathConfigRead(
 
 func (b *backend) pathConfigWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
 	org := d.Get("organization").(string)
-	token := d.Get("token").(string)
-	baseURL := d.Get("base_url").(string)
-	if len(baseURL) != 0 {
-		_, err := url.Parse(baseURL)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
-		}
-	}
-
-	entry, err := logical.StorageEntryJSON("config", ConfigEntry{
-		Org:     org,
-		Token:   token,
-		BaseURL: baseURL,
-	})
+	cfg, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(entry); err != nil {
+
+	// Due to the existence check, entry will only be nil if it's a create
+	// operation, so just create a new one
+	if cfg == nil {
+		cfg = &ConfigEntry{
+			Org: org,
+		}
+	}
+
+	token, ok := d.GetOk("token")
+	if ok {
+		cfg.Token = token.(string)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.Token = d.Get("token").(string)
+	}
+
+	baseURL, ok := d.GetOk("base_url")
+	if ok {
+		baseURLString := baseURL.(string)
+		if len(baseURLString) != 0 {
+			_, err = url.Parse(baseURLString)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("Error parsing given base_url: %s", err)), nil
+			}
+			cfg.BaseURL = baseURLString
+		}
+	} else if req.Operation == logical.CreateOperation {
+		cfg.BaseURL = d.Get("base_url").(string)
+	}
+
+	jsonCfg, err := logical.StorageEntryJSON("config", cfg)
+	if err != nil {
+		return nil, err
+	}
+	if err := req.Storage.Put(jsonCfg); err != nil {
 		return nil, err
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathConfigExistenceCheck(
+	req *logical.Request, d *framework.FieldData) (bool, error) {
+	cfg, err := b.Config(req.Storage)
+	if err != nil {
+		return false, err
+	}
+
+	return cfg != nil, nil
 }
 
 // OktaClient creates a basic okta client connection

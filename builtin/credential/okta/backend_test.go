@@ -6,13 +6,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/logformat"
+	log "github.com/mgutz/logxi/v1"
+
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
 func TestBackend_Config(t *testing.T) {
 	b, err := Factory(&logical.BackendConfig{
-		Logger: nil,
+		Logger: logformat.NewVaultLogger(log.LevelTrace),
 		System: &logical.StaticSystemView{},
 	})
 	if err != nil {
@@ -36,7 +39,7 @@ func TestBackend_Config(t *testing.T) {
 		PreCheck:       func() { testAccPreCheck(t) },
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
-			testConfigWrite(t, configData),
+			testConfigCreate(t, configData),
 			testLoginWrite(t, username, "wrong", "E0000004", 0),
 			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0),
 			testAccUserGroups(t, username, "local_group,local_group2"),
@@ -44,11 +47,11 @@ func TestBackend_Config(t *testing.T) {
 			testLoginWrite(t, username, password, "", 2),
 			testAccGroups(t, "Everyone", "everyone_group_policy,every_group_policy2"),
 			testLoginWrite(t, username, password, "", 2),
-			testConfigWrite(t, configDataToken),
+			testConfigUpdate(t, configDataToken),
+			testConfigRead(t, configData),
 			testLoginWrite(t, username, password, "", 4),
 			testAccGroups(t, "TestGroup", "testgroup_group_policy"),
 			testLoginWrite(t, username, password, "", 5),
-			testConfigRead(t, configData),
 		},
 	})
 }
@@ -79,7 +82,15 @@ func testLoginWrite(t *testing.T, username, password, reason string, policies in
 	}
 }
 
-func testConfigWrite(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+func testConfigCreate(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.CreateOperation,
+		Path:      "config",
+		Data:      d,
+	}
+}
+
+func testConfigUpdate(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
