@@ -955,6 +955,11 @@
 			"revisionTime": "2016-12-29T17:44:48Z"
 		},
 		{
+			"checksumSHA1": "reJ+wO9qzH/7r2vXQE5MiTvg8+w=",
+			"path": "github.com/sstarcher/go-okta",
+			"revision": "388b6aef4eed400621bd3e3a98d831ef1368582d",
+			"revisionTime": "2016-10-03T17:19:47Z"
+		},
 			"checksumSHA1": "MWqyOvDMkW+XYe2RJ5mplvut+aE=",
 			"path": "github.com/ugorji/go/codec",
 			"revision": "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74",
