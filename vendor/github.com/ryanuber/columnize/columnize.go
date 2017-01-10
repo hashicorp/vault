@@ -97,6 +97,15 @@ func elementsFromLine(config *Config, line string) []interface{} {
 	return elements
 }
 
+// runeLen calculates the number of visible "characters" in a string
+func runeLen(s string) int {
+	l := 0
+	for _ = range s {
+		l++
+	}
+	return l
+}
+
 // widthsFromLines examines a list of strings and determines how wide each
 // column should be considering all of the elements that need to be printed
 // within it.
@@ -106,7 +115,7 @@ func widthsFromLines(config *Config, lines []string) []int {
 	for _, line := range lines {
 		elems := elementsFromLine(config, line)
 		for i := 0; i < len(elems); i++ {
-			l := len(elems[i].(string))
+			l := runeLen(elems[i].(string))
 			if len(widths) <= i {
 				widths = append(widths, l)
 			} else if widths[i] < l {

@@ -1,3 +1,9 @@
+## 0.6.5 (Unreleased)
+
+BUG FIXES:
+
+ * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
+
 ## 0.6.4 (December 16, 2016)
 
 SECURITY:
@@ -5,20 +11,20 @@ SECURITY:
 Further details about these security issues can be found in the 0.6.4 upgrade
 guide.
 
-  * `default` Policy Privilege Escalation: If a parent token did not have the
-    `default` policy attached to its token, it could still create children with
-    the `default` policy. This is no longer allowed (unless the parent has
-    `sudo` capability for the creation path). In most cases this is low
-    severity since the access grants in the `default` policy are meant to be
-    access grants that are acceptable for all tokens to have.
-  * Leases Not Expired When Limited Use Token Runs Out of Uses: When using
-    limited-use tokens to create leased secrets, if the limited-use token was
-    revoked due to running out of uses (rather than due to TTL expiration or
-    explicit revocation) it would fail to revoke the leased secrets. These
-    secrets would still be revoked when their TTL expired, limiting the
-    severity of this issue. An endpoint has been added (`auth/token/tidy`) that
-    can perform housekeeping tasks on the token store; one of its tasks can
-    detect this situation and revoke the associated leases.
+ * `default` Policy Privilege Escalation: If a parent token did not have the
+   `default` policy attached to its token, it could still create children with
+   the `default` policy. This is no longer allowed (unless the parent has
+   `sudo` capability for the creation path). In most cases this is low severity
+   since the access grants in the `default` policy are meant to be access
+   grants that are acceptable for all tokens to have.
+ * Leases Not Expired When Limited Use Token Runs Out of Uses: When using
+   limited-use tokens to create leased secrets, if the limited-use token was
+   revoked due to running out of uses (rather than due to TTL expiration or
+   explicit revocation) it would fail to revoke the leased secrets. These
+   secrets would still be revoked when their TTL expired, limiting the severity
+   of this issue. An endpoint has been added (`auth/token/tidy`) that can
+   perform housekeeping tasks on the token store; one of its tasks can detect
+   this situation and revoke the associated leases.
 
 FEATURES:
 

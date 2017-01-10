@@ -39,8 +39,8 @@ func (w WeeklyStats) String() string {
 // deletions and commit counts.
 //
 // If this is the first time these statistics are requested for the given
-// repository, this method will return a non-nil error and a status code of
-// 202. This is because this is the status that github returns to signify that
+// repository, this method will return an *AcceptedError and a status code of
+// 202. This is because this is the status that GitHub returns to signify that
 // it is now computing the requested statistics. A follow up request, after a
 // delay of a second or so, should result in a successful request.
 //
@@ -78,8 +78,8 @@ func (w WeeklyCommitActivity) String() string {
 // starting on Sunday.
 //
 // If this is the first time these statistics are requested for the given
-// repository, this method will return a non-nil error and a status code of
-// 202. This is because this is the status that github returns to signify that
+// repository, this method will return an *AcceptedError and a status code of
+// 202. This is because this is the status that GitHub returns to signify that
 // it is now computing the requested statistics. A follow up request, after a
 // delay of a second or so, should result in a successful request.
 //
@@ -103,6 +103,12 @@ func (s *RepositoriesService) ListCommitActivity(owner, repo string) ([]*WeeklyC
 // ListCodeFrequency returns a weekly aggregate of the number of additions and
 // deletions pushed to a repository.  Returned WeeklyStats will contain
 // additions and deletions, but not total commits.
+//
+// If this is the first time these statistics are requested for the given
+// repository, this method will return an *AcceptedError and a status code of
+// 202. This is because this is the status that GitHub returns to signify that
+// it is now computing the requested statistics. A follow up request, after a
+// delay of a second or so, should result in a successful request.
 //
 // GitHub API Docs: https://developer.github.com/v3/repos/statistics/#code-frequency
 func (s *RepositoriesService) ListCodeFrequency(owner, repo string) ([]*WeeklyStats, *Response, error) {
@@ -152,11 +158,10 @@ func (r RepositoryParticipation) String() string {
 // The array order is oldest week (index 0) to most recent week.
 //
 // If this is the first time these statistics are requested for the given
-// repository, this method will return a non-nil error and a status code
-// of 202. This is because this is the status that github returns to
-// signify that it is now computing the requested statistics. A follow
-// up request, after a delay of a second or so, should result in a
-// successful request.
+// repository, this method will return an *AcceptedError and a status code of
+// 202. This is because this is the status that GitHub returns to signify that
+// it is now computing the requested statistics. A follow up request, after a
+// delay of a second or so, should result in a successful request.
 //
 // GitHub API Docs: https://developer.github.com/v3/repos/statistics/#participation
 func (s *RepositoriesService) ListParticipation(owner, repo string) (*RepositoryParticipation, *Response, error) {
@@ -184,6 +189,12 @@ type PunchCard struct {
 }
 
 // ListPunchCard returns the number of commits per hour in each day.
+//
+// If this is the first time these statistics are requested for the given
+// repository, this method will return an *AcceptedError and a status code of
+// 202. This is because this is the status that GitHub returns to signify that
+// it is now computing the requested statistics. A follow up request, after a
+// delay of a second or so, should result in a successful request.
 //
 // GitHub API Docs: https://developer.github.com/v3/repos/statistics/#punch-card
 func (s *RepositoriesService) ListPunchCard(owner, repo string) ([]*PunchCard, *Response, error) {

@@ -180,6 +180,19 @@ func (c *Client) ListQueues() (rec []QueueInfo, err error) {
 	return rec, nil
 }
 
+func (c *Client) ListQueuesWithParameters(params url.Values) (rec []QueueInfo, err error) {
+	req, err := newGETRequestWithParameters(c, "queues", params)
+	if err != nil {
+		return []QueueInfo{}, err
+	}
+
+	if err = executeAndParseRequest(c, req, &rec); err != nil {
+		return []QueueInfo{}, err
+	}
+
+	return rec, nil
+}
+
 //
 // GET /api/queues/{vhost}
 //
@@ -202,7 +215,24 @@ func (c *Client) ListQueuesIn(vhost string) (rec []QueueInfo, err error) {
 //
 
 func (c *Client) GetQueue(vhost, queue string) (rec *DetailedQueueInfo, err error) {
-	req, err := newGETRequest(c, "queues/"+url.QueryEscape(vhost)+"/"+queue)
+	req, err := newGETRequest(c, "queues/"+url.QueryEscape(vhost)+"/"+url.QueryEscape(queue))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if err = executeAndParseRequest(c, req, &rec); err != nil {
+		return nil, err
+	}
+
+	return rec, nil
+}
+
+//
+// GET /api/queues/{vhost}/{name}?{query}
+
+func (c *Client) GetQueueWithParameters(vhost, queue string, qs url.Values) (rec *DetailedQueueInfo, err error) {
+	req, err := newGETRequestWithParameters(c, "queues/"+url.QueryEscape(vhost)+"/"+url.QueryEscape(queue), qs)
 	if err != nil {
 		return nil, err
 	}

@@ -280,10 +280,11 @@ All HA backends support the following options. These are discussed in much more
 detail in the [High Availability concepts
 page](https://www.vaultproject.io/docs/concepts/ha.html).
 
-  * `redirect_addr` (optional) - This is the address to advertise to other
+  * `redirect_addr` (required) - This is the address to advertise to other
     Vault servers in the cluster for client redirection. This can also be
     set via the `VAULT_REDIRECT_ADDR` environment variable, which takes
-    precedence.
+    precedence. Some HA backends may be able to autodetect this value, but if
+    not it is required to be manually specified.
 
   * `cluster_addr` (optional) - This is the address to advertise to other Vault
     servers in the cluster for request forwarding. This can also be set via the

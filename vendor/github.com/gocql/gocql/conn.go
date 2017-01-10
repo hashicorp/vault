@@ -990,7 +990,7 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 			}
 
 			if len(values) != info.request.actualColCount {
-				return &Iter{err: fmt.Errorf("gocql: batch statment %d expected %d values send got %d", i, info.request.actualColCount, len(values))}
+				return &Iter{err: fmt.Errorf("gocql: batch statement %d expected %d values send got %d", i, info.request.actualColCount, len(values))}
 			}
 
 			b.preparedID = info.id

@@ -17,6 +17,11 @@ import (
 type IssuesService service
 
 // Issue represents a GitHub issue on a repository.
+//
+// Note: As far as the GitHub API is concerned, every pull request is an issue,
+// but not every issue is a pull request. Some endpoints, events, and webhooks
+// may also return pull requests via this struct. If PullRequestLinks is nil,
+// this is an issue, and if PullRequestLinks is not nil, this is a pull request.
 type Issue struct {
 	ID               *int              `json:"id,omitempty"`
 	Number           *int              `json:"number,omitempty"`

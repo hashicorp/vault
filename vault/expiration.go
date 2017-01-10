@@ -119,7 +119,7 @@ func (m *ExpirationManager) Restore() error {
 	defer m.pendingLock.Unlock()
 
 	// Accumulate existing leases
-	existing, err := CollectKeys(m.idView)
+	existing, err := logical.CollectKeys(m.idView)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
@@ -292,7 +292,7 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 
 	// Accumulate existing leases
 	sub := m.idView.SubView(prefix)
-	existing, err := CollectKeys(sub)
+	existing, err := logical.CollectKeys(sub)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}

@@ -28,7 +28,7 @@ const (
 	HTTPStatusCode = "http_status_code"
 )
 
-type WrapInfo struct {
+type ResponseWrapInfo struct {
 	// Setting to non-zero specifies that the response should be wrapped.
 	// Specifies the desired TTL of the wrapping token.
 	TTL time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
@@ -43,6 +43,9 @@ type WrapInfo struct {
 	// If the contained response is the output of a token creation call, the
 	// created token's accessor will be accessible here
 	WrappedAccessor string `json:"wrapped_accessor" structs:"wrapped_accessor" mapstructure:"wrapped_accessor"`
+
+	// The format to use. This doesn't get returned, it's only internal.
+	Format string `json:"format" structs:"format" mapstructure:"format"`
 }
 
 // Response is a struct that stores the response of a request.
@@ -75,7 +78,7 @@ type Response struct {
 	warnings []string `json:"warnings" structs:"warnings" mapstructure:"warnings"`
 
 	// Information for wrapping the response in a cubbyhole
-	WrapInfo *WrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
+	WrapInfo *ResponseWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
 }
 
 func init() {
@@ -120,7 +123,7 @@ func init() {
 			if err != nil {
 				return nil, fmt.Errorf("error copying WrapInfo: %v", err)
 			}
-			ret.WrapInfo = retWrapInfo.(*WrapInfo)
+			ret.WrapInfo = retWrapInfo.(*ResponseWrapInfo)
 		}
 
 		return &ret, nil

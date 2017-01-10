@@ -11,12 +11,15 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
+	"time"
 	"unicode"
 	"unicode/utf8"
 )
 
 var fieldsRequiredByDefault bool
+
+const maxURLRuneCount = 2083
+const minURLRuneCount = 3
 
 // SetFieldsRequiredByDefault causes validation to fail when struct fields
 // do not include validations or are not explicitly marked as exempt (using `valid:"-"` or `valid:"email,optional"`).
@@ -44,7 +47,7 @@ func IsEmail(str string) bool {
 
 // IsURL check if the string is an URL.
 func IsURL(str string) bool {
-	if str == "" || len(str) >= 2083 || len(str) <= 3 || strings.HasPrefix(str, ".") {
+	if str == "" || utf8.RuneCountInString(str) >= maxURLRuneCount || len(str) <= minURLRuneCount || strings.HasPrefix(str, ".") {
 		return false
 	}
 	u, err := url.Parse(str)
@@ -620,6 +623,15 @@ func IsSemver(str string) bool {
 	return rxSemver.MatchString(str)
 }
 
+func IsTime(str string, format string) bool {
+	_, err := time.Parse(format, str)
+	return err == nil
+}
+
+func IsRFC3339(str string) bool {
+	return IsTime(str, time.RFC3339)
+}
+
 // ByteLength check string's length
 func ByteLength(str string, params ...string) bool {
 	if len(params) == 2 {
@@ -629,6 +641,12 @@ func ByteLength(str string, params ...string) bool {
 	}
 
 	return false
+}
+
+// RuneLength check string's length
+// Alias for StringLength
+func RuneLength(str string, params ...string) bool {
+	return StringLength(str, params...)
 }
 
 // StringMatches checks if a string matches a given pattern.

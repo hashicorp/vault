@@ -103,6 +103,10 @@ func (s *ActivityService) GetRepositorySubscription(owner, repo string) (*Subscr
 // SetRepositorySubscription sets the subscription for the specified repository
 // for the authenticated user.
 //
+// To watch a repository, set subscription.Subscribed to true.
+// To ignore notifications made within a repository, set subscription.Ignored to true.
+// To stop watching a repository, use DeleteRepositorySubscription.
+//
 // GitHub API Docs: https://developer.github.com/v3/activity/watching/#set-a-repository-subscription
 func (s *ActivityService) SetRepositorySubscription(owner, repo string, subscription *Subscription) (*Subscription, *Response, error) {
 	u := fmt.Sprintf("repos/%s/%s/subscription", owner, repo)
@@ -123,6 +127,9 @@ func (s *ActivityService) SetRepositorySubscription(owner, repo string, subscrip
 
 // DeleteRepositorySubscription deletes the subscription for the specified
 // repository for the authenticated user.
+//
+// This is used to stop watching a repository. To control whether or not to
+// receive notifications from a repository, use SetRepositorySubscription.
 //
 // GitHub API Docs: https://developer.github.com/v3/activity/watching/#delete-a-repository-subscription
 func (s *ActivityService) DeleteRepositorySubscription(owner, repo string) (*Response, error) {

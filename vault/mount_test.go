@@ -187,7 +187,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// View should be empty
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -305,7 +305,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// View should not be empty
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

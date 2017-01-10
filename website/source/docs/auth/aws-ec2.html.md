@@ -305,7 +305,7 @@ pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmew
 #### Enable AWS EC2 authentication in Vault.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '{"type":"aws"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '{"type":"aws-ec2"}'
 ```
 
 #### Configure the credentials required to make AWS API calls.

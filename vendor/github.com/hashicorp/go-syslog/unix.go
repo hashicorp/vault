@@ -28,6 +28,23 @@ func NewLogger(p Priority, facility, tag string) (Syslogger, error) {
 	return &builtinLogger{l}, nil
 }
 
+// DialLogger is used to construct a new Syslogger that establishes connection to remote syslog server
+func DialLogger(network, raddr string, p Priority, facility, tag string) (Syslogger, error) {
+	fPriority, err := facilityPriority(facility)
+	if err != nil {
+		return nil, err
+	}
+
+	priority := syslog.Priority(p) | fPriority
+
+	l, err := dialBuiltin(network, raddr, priority, tag)
+	if err != nil {
+		return nil, err
+	}
+
+	return &builtinLogger{l}, nil
+}
+
 // WriteLevel writes out a message at the given priority
 func (b *builtinLogger) WriteLevel(p Priority, buf []byte) error {
 	var err error

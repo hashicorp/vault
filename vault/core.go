@@ -251,6 +251,10 @@ type Core struct {
 	// reloadFuncsLock controlls access to the funcs
 	reloadFuncsLock sync.RWMutex
 
+	// wrappingJWTKey is the key used for generating JWTs containing response
+	// wrapping information
+	wrappingJWTKey *ecdsa.PrivateKey
+
 	//
 	// Cluster information
 	//
@@ -263,8 +267,8 @@ type Core struct {
 	localClusterPrivateKey crypto.Signer
 	// The local cluster cert
 	localClusterCert []byte
-	// The cert pool containing the self-signed CA as a trusted CA
-	localClusterCertPool *x509.CertPool
+	// The cert pool containing trusted cluster CAs
+	clusterCertPool *x509.CertPool
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
 	// The setup function that gives us the handler to use
@@ -377,16 +381,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
 
-	// Wrap the backend in a cache unless disabled
-	if !conf.DisableCache {
-		_, isCache := conf.Physical.(*physical.Cache)
-		_, isInmem := conf.Physical.(*physical.InmemBackend)
-		if !isCache && !isInmem {
-			cache := physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
-			conf.Physical = cache
-		}
-	}
-
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
 		if err := mlock.LockMemory(); err != nil {
@@ -427,10 +421,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		maxLeaseTTL:                      conf.MaxLeaseTTL,
 		cachingDisabled:                  conf.DisableCache,
 		clusterName:                      conf.ClusterName,
-		localClusterCertPool:             x509.NewCertPool(),
+		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 		corsConfig:                       corsConfig,
+	}
+
+	// Wrap the backend in a cache unless disabled
+	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
+		c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -514,6 +513,15 @@ func (c *Core) CORSConfig() *CORSConfig {
 func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	if token == "" {
 		return nil, fmt.Errorf("missing client token")
+	}
+
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	if c.sealed {
+		return nil, ErrSealed
+	}
+	if c.standby {
+		return nil, ErrStandby
 	}
 
 	// Many tests don't have a token store running
@@ -713,7 +721,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	if !oldAdv {
 		// Ensure we are using current values
-		err = c.loadClusterTLS(adv)
+		err = c.loadLocalClusterTLS(adv)
 		if err != nil {
 			return false, "", err
 		}
@@ -821,6 +829,10 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 	defer memzero(masterKey)
 
+	return c.unsealInternal(masterKey)
+}
+
+func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	// Attempt to unlock
 	if err := c.barrier.Unseal(masterKey); err != nil {
 		return false, err
@@ -832,7 +844,7 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {
 		// We still need to set up cluster info even if it's not part of a
-		// cluster right now
+		// cluster right now. This also populates the cached cluster object.
 		if err := c.setupCluster(); err != nil {
 			c.logger.Error("core: cluster setup failed", "error", err)
 			c.barrier.Seal()
@@ -1133,8 +1145,10 @@ func (c *Core) postUnseal() (retErr error) {
 		}
 	}()
 	c.logger.Info("core: post-unseal setup starting")
-	if cache, ok := c.physical.(*physical.Cache); ok {
-		cache.Purge()
+
+	// Purge the backend if supported
+	if purgable, ok := c.physical.(physical.Purgable); ok {
+		purgable.Purge()
 	}
 	// HA mode requires us to handle keyring rotation and rekeying
 	if c.ha != nil {
@@ -1150,6 +1164,9 @@ func (c *Core) postUnseal() (retErr error) {
 		if err := c.scheduleUpgradeCleanup(); err != nil {
 			return err
 		}
+	}
+	if err := c.ensureWrappingKey(); err != nil {
+		return err
 	}
 	if err := c.loadMounts(); err != nil {
 		return err
@@ -1228,8 +1245,9 @@ func (c *Core) preSeal() error {
 	if err := c.unloadMounts(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error unloading mounts: {{err}}", err))
 	}
-	if cache, ok := c.physical.(*physical.Cache); ok {
-		cache.Purge()
+	// Purge the backend if supported
+	if purgable, ok := c.physical.(physical.Purgable); ok {
+		purgable.Purge()
 	}
 	c.logger.Info("core: pre-seal teardown complete")
 	return result
@@ -1567,28 +1585,4 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	min, max = c.barrier.KeyLength()
 	max += shamir.ShareOverhead
 	return
-}
-
-func (c *Core) ValidateWrappingToken(token string) (bool, error) {
-	if token == "" {
-		return false, fmt.Errorf("token is empty")
-	}
-
-	te, err := c.tokenStore.Lookup(token)
-	if err != nil {
-		return false, err
-	}
-	if te == nil {
-		return false, nil
-	}
-
-	if len(te.Policies) != 1 {
-		return false, nil
-	}
-
-	if te.Policies[0] != responseWrappingPolicyName {
-		return false, nil
-	}
-
-	return true, nil
 }

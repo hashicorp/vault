@@ -3,15 +3,12 @@ package pq
 import (
 	"bufio"
 	"crypto/md5"
-	"crypto/tls"
-	"crypto/x509"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/user"
@@ -718,6 +715,8 @@ func decideColumnFormats(colTyps []oid.Oid, forceText bool) (colFmts []format, c
 		case oid.T_int4:
 			fallthrough
 		case oid.T_int2:
+			fallthrough
+		case oid.T_uuid:
 			colFmts[i] = formatBinary
 			allText = false
 
@@ -1000,41 +999,11 @@ func (cn *conn) recv1() (t byte, r *readBuf) {
 }
 
 func (cn *conn) ssl(o values) {
-	verifyCaOnly := false
-	tlsConf := tls.Config{}
-	switch mode := o.Get("sslmode"); mode {
-	// "require" is the default.
-	case "", "require":
-		// We must skip TLS's own verification since it requires full
-		// verification since Go 1.3.
-		tlsConf.InsecureSkipVerify = true
-
-		// From http://www.postgresql.org/docs/current/static/libpq-ssl.html:
-		// Note: For backwards compatibility with earlier versions of PostgreSQL, if a
-		// root CA file exists, the behavior of sslmode=require will be the same as
-		// that of verify-ca, meaning the server certificate is validated against the
-		// CA. Relying on this behavior is discouraged, and applications that need
-		// certificate validation should always use verify-ca or verify-full.
-		if _, err := os.Stat(o.Get("sslrootcert")); err == nil {
-			verifyCaOnly = true
-		} else {
-			o.Set("sslrootcert", "")
-		}
-	case "verify-ca":
-		// We must skip TLS's own verification since it requires full
-		// verification since Go 1.3.
-		tlsConf.InsecureSkipVerify = true
-		verifyCaOnly = true
-	case "verify-full":
-		tlsConf.ServerName = o.Get("host")
-	case "disable":
+	upgrade := ssl(o)
+	if upgrade == nil {
+		// Nothing to do
 		return
-	default:
-		errorf(`unsupported sslmode %q; only "require" (default), "verify-full", "verify-ca", and "disable" supported`, mode)
 	}
-
-	cn.setupSSLClientCertificates(&tlsConf, o)
-	cn.setupSSLCA(&tlsConf, o)
 
 	w := cn.writeBuf(0)
 	w.int32(80877103)
@@ -1050,114 +1019,7 @@ func (cn *conn) ssl(o values) {
 		panic(ErrSSLNotSupported)
 	}
 
-	client := tls.Client(cn.c, &tlsConf)
-	if verifyCaOnly {
-		cn.verifyCA(client, &tlsConf)
-	}
-	cn.c = client
-}
-
-// verifyCA carries out a TLS handshake to the server and verifies the
-// presented certificate against the effective CA, i.e. the one specified in
-// sslrootcert or the system CA if sslrootcert was not specified.
-func (cn *conn) verifyCA(client *tls.Conn, tlsConf *tls.Config) {
-	err := client.Handshake()
-	if err != nil {
-		panic(err)
-	}
-	certs := client.ConnectionState().PeerCertificates
-	opts := x509.VerifyOptions{
-		DNSName:       client.ConnectionState().ServerName,
-		Intermediates: x509.NewCertPool(),
-		Roots:         tlsConf.RootCAs,
-	}
-	for i, cert := range certs {
-		if i == 0 {
-			continue
-		}
-		opts.Intermediates.AddCert(cert)
-	}
-	_, err = certs[0].Verify(opts)
-	if err != nil {
-		panic(err)
-	}
-}
-
-// This function sets up SSL client certificates based on either the "sslkey"
-// and "sslcert" settings (possibly set via the environment variables PGSSLKEY
-// and PGSSLCERT, respectively), or if they aren't set, from the .postgresql
-// directory in the user's home directory.  If the file paths are set
-// explicitly, the files must exist.  The key file must also not be
-// world-readable, or this function will panic with
-// ErrSSLKeyHasWorldPermissions.
-func (cn *conn) setupSSLClientCertificates(tlsConf *tls.Config, o values) {
-	var missingOk bool
-
-	sslkey := o.Get("sslkey")
-	sslcert := o.Get("sslcert")
-	if sslkey != "" && sslcert != "" {
-		// If the user has set an sslkey and sslcert, they *must* exist.
-		missingOk = false
-	} else {
-		// Automatically load certificates from ~/.postgresql.
-		user, err := user.Current()
-		if err != nil {
-			// user.Current() might fail when cross-compiling.  We have to
-			// ignore the error and continue without client certificates, since
-			// we wouldn't know where to load them from.
-			return
-		}
-
-		sslkey = filepath.Join(user.HomeDir, ".postgresql", "postgresql.key")
-		sslcert = filepath.Join(user.HomeDir, ".postgresql", "postgresql.crt")
-		missingOk = true
-	}
-
-	// Check that both files exist, and report the error or stop, depending on
-	// which behaviour we want.  Note that we don't do any more extensive
-	// checks than this (such as checking that the paths aren't directories);
-	// LoadX509KeyPair() will take care of the rest.
-	keyfinfo, err := os.Stat(sslkey)
-	if err != nil && missingOk {
-		return
-	} else if err != nil {
-		panic(err)
-	}
-	_, err = os.Stat(sslcert)
-	if err != nil && missingOk {
-		return
-	} else if err != nil {
-		panic(err)
-	}
-
-	// If we got this far, the key file must also have the correct permissions
-	kmode := keyfinfo.Mode()
-	if kmode != kmode&0600 {
-		panic(ErrSSLKeyHasWorldPermissions)
-	}
-
-	cert, err := tls.LoadX509KeyPair(sslcert, sslkey)
-	if err != nil {
-		panic(err)
-	}
-	tlsConf.Certificates = []tls.Certificate{cert}
-}
-
-// Sets up RootCAs in the TLS configuration if sslrootcert is set.
-func (cn *conn) setupSSLCA(tlsConf *tls.Config, o values) {
-	if sslrootcert := o.Get("sslrootcert"); sslrootcert != "" {
-		tlsConf.RootCAs = x509.NewCertPool()
-
-		cert, err := ioutil.ReadFile(sslrootcert)
-		if err != nil {
-			panic(err)
-		}
-
-		ok := tlsConf.RootCAs.AppendCertsFromPEM(cert)
-		if !ok {
-			errorf("couldn't parse pem in sslrootcert")
-		}
-	}
+	cn.c = upgrade(cn.c)
 }
 
 // isDriverSetting returns true iff a setting is purely for configuring the

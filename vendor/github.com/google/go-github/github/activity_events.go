@@ -63,8 +63,12 @@ func (e *Event) Payload() (payload interface{}) {
 		payload = &MembershipEvent{}
 	case "MilestoneEvent":
 		payload = &MilestoneEvent{}
+	case "OrganizationEvent":
+		payload = &OrganizationEvent{}
 	case "PageBuildEvent":
 		payload = &PageBuildEvent{}
+	case "PingEvent":
+		payload = &PingEvent{}
 	case "PublicEvent":
 		payload = &PublicEvent{}
 	case "PullRequestEvent":
