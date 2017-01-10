@@ -154,6 +154,10 @@ func (b *backend) pathPolicyRead(
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
 			"latest_version":         p.LatestVersion,
+			"supports_encryption":    p.Type.EncryptionSupported(),
+			"supports_decryption":    p.Type.DecryptionSupported(),
+			"supports_signing":       p.Type.SigningSupported(),
+			"supports_derivation":    p.Type.DerivationSupported(),
 		},
 	}
 
