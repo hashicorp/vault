@@ -147,6 +147,7 @@ func (e *MountEntry) Clone() *MountEntry {
 		UUID:        e.UUID,
 		Config:      e.Config,
 		Options:     optClone,
+		Tainted:     e.Tainted,
 	}
 }
 
