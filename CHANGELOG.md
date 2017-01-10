@@ -3,6 +3,8 @@
 BUG FIXES:
 
  * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
+ * secret/pki: When using `sign-verbatim`, don't require a role and use the
+   CSR's common name [GH-2243]
 
 ## 0.6.4 (December 16, 2016)
 
