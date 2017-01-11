@@ -7,6 +7,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/fatih/structs"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -36,6 +37,7 @@ API-compatible authentication server.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathConfigWrite,
+			logical.ReadOperation: b.pathConfigRead,
 		},
 	}
 }
@@ -75,10 +77,10 @@ func (b *backend) pathConfigWrite(
 	}
 
 	entry, err := logical.StorageEntryJSON("config", config{
-		Org:     organization,
-		BaseURL: baseURL,
-		TTL:     ttl,
-		MaxTTL:  maxTTL,
+		Organization:	organization,
+		BaseURL: 	baseURL,
+		TTL:     	ttl,
+		MaxTTL:  	maxTTL,
 	})
 
 	if err != nil {
@@ -90,6 +92,25 @@ func (b *backend) pathConfigWrite(
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathConfigRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.Config(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+
+	if config == nil {
+		return nil, fmt.Errorf("configuration object not found")
+	}
+
+	config.TTL /= time.Second
+	config.MaxTTL /= time.Second
+
+	resp := &logical.Response{
+		Data: structs.New(config).Map(),
+	}
+	return resp, nil
 }
 
 // Config returns the configuration for this backend.
@@ -110,8 +131,8 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 }
 
 type config struct {
-	Org     string        `json:"organization"`
-	BaseURL string        `json:"base_url"`
-	TTL     time.Duration `json:"ttl"`
-	MaxTTL  time.Duration `json:"max_ttl"`
+	Organization string        `json:"organization" structs:"organization" mapstructure:"organization"`
+	BaseURL      string        `json:"base_url" structs:"base_url" mapstructure:"base_url"`
+	TTL          time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+	MaxTTL       time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
 }
