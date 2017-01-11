@@ -358,12 +358,19 @@ of the header should be "X-Vault-Token" and the value should be the token.
     ```javascript
     {
       "data": {
+        "accessor": "REDACTED",
+	"creation_time": 1484093665,
+	"creation_ttl": 3600,
+	"display_name": "github-armon",
+	"explicit_max_ttl": 0,
         "id": "ClientToken",
-        "policies": ["web", "stage"],
-        "path": "auth/github/login",
         "meta": {"user": "armon", "organization": "hashicorp"},
-        "display_name": "github-armon",
-        "num_uses": 0,
+	"num_uses": 0,
+	"orphan": true,
+	"path": "auth/github/login",
+	"policies": ["web", "stage"],
+	"renewable": true,
+	"ttl": 3655
       }
     }
     ```
