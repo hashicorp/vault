@@ -1088,6 +1088,8 @@ func (c *Core) sealInternal() error {
 
 	// Do pre-seal teardown if HA is not enabled
 	if c.ha == nil {
+		// Even in a non-HA context we key off of this for some things
+		c.standby = true
 		if err := c.preSeal(); err != nil {
 			c.logger.Error("core: pre-seal teardown failed", "error", err)
 			return fmt.Errorf("internal error")
