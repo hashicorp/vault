@@ -77,10 +77,10 @@ func (b *backend) pathConfigWrite(
 	}
 
 	entry, err := logical.StorageEntryJSON("config", config{
-		Org:     organization,
-		BaseURL: baseURL,
-		TTL:     ttl,
-		MaxTTL:  maxTTL,
+		Organization:	organization,
+		BaseURL: 	baseURL,
+		TTL:     	ttl,
+		MaxTTL:  	maxTTL,
 	})
 
 	if err != nil {
@@ -99,6 +99,11 @@ func (b *backend) pathConfigRead(req *logical.Request, data *framework.FieldData
 	if err != nil {
 		return nil, err
 	}
+
+	if config == nil {
+		return nil, fmt.Errorf("configuration object not found")
+	}
+
 	config.TTL /= time.Second
 	config.MaxTTL /= time.Second
 
@@ -126,8 +131,8 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 }
 
 type config struct {
-	Org     string        `json:"organization" structs:"organization" mapstructure:"organization"`
-	BaseURL string        `json:"base_url" structs:"base_url" mapstructure:"base_url"`
-	TTL     time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
-	MaxTTL  time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
+	Organization string        `json:"organization" structs:"organization" mapstructure:"organization"`
+	BaseURL      string        `json:"base_url" structs:"base_url" mapstructure:"base_url"`
+	TTL          time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
+	MaxTTL       time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
 }
