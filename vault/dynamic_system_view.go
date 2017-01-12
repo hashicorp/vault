@@ -6,6 +6,12 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+var (
+	sysViewIsPrimaryFunc = func() bool {
+		return true
+	}
+)
+
 type dynamicSystemView struct {
 	core       *Core
 	mountEntry *MountEntry
@@ -73,4 +79,9 @@ func (d dynamicSystemView) Tainted() bool {
 // CachingDisabled indicates whether to use caching behavior
 func (d dynamicSystemView) CachingDisabled() bool {
 	return d.core.cachingDisabled
+}
+
+// Checks if this is a primary Vault instance.
+func (d dynamicSystemView) IsPrimary() bool {
+	return sysViewIsPrimaryFunc()
 }
