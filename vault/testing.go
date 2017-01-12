@@ -70,6 +70,12 @@ func TestCore(t *testing.T) *Core {
 	return TestCoreWithSeal(t, nil)
 }
 
+// TestCoreNewSeal returns an in-memory, ininitialized core with the new seal
+// configuration.
+func TestCoreNewSeal(t *testing.T) *Core {
+	return TestCoreWithSeal(t, &TestSeal{})
+}
+
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
