@@ -10,6 +10,22 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
+// Test to check if the API errors out when wrong number of PGP keys are
+// supplied for rekey
+func TestSysRekeyInit_pgpKeysEntriesForRekey(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		"secret_shares":    5,
+		"secret_threshold": 3,
+		"pgp_keys":         []string{"pgpkey1"},
+	})
+	testResponseStatus(t, resp, 400)
+}
+
 func TestSysRekeyInit_Status(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
