@@ -7,8 +7,10 @@ import (
 )
 
 var (
-	sysViewIsPrimaryFunc = func() bool {
-		return true
+	sysViewIsPrimaryFunc = func(c *Core) func() bool {
+		return func() bool {
+			return true
+		}
 	}
 )
 
@@ -83,5 +85,5 @@ func (d dynamicSystemView) CachingDisabled() bool {
 
 // Checks if this is a primary Vault instance.
 func (d dynamicSystemView) IsPrimary() bool {
-	return sysViewIsPrimaryFunc()
+	return sysViewIsPrimaryFunc(d.core)()
 }
