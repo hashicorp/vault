@@ -1,5 +1,9 @@
 ## 0.6.5 (Unreleased)
 
+IMPROVEMENTS:
+
+ * auth/github: Support listing teams and users [GH-2261]
+
 BUG FIXES:
 
  * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
