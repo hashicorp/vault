@@ -2,7 +2,6 @@ package logical
 
 import (
 	"crypto/tls"
-	"net/http"
 )
 
 // Connection represents the connection information for a request. This
@@ -13,5 +12,4 @@ type Connection struct {
 
 	// ConnState is the TLS connection state if applicable.
 	ConnState *tls.ConnectionState
-	Header    http.Header
 }

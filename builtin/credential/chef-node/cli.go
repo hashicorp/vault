@@ -2,7 +2,6 @@ package chefNode
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 
 	"github.com/hashicorp/vault/api"
@@ -26,11 +25,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		return "", fmt.Errorf("Chef client key must be provided as value for 'client_key token")
 	}
 	path := fmt.Sprintf("auth/%s/login", mount)
-	r := c.NewRequest("POST", "/v1/"+path)
-	hr, err := r.ToHTTP()
-	if err != nil {
-		return "", err
-	}
 
 	conf := &config{
 		ClientKey:  clientKey,
@@ -38,29 +32,32 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	}
 
 	// Use the vault logical path
-	mungedURL := &url.URL{
-		Scheme: hr.URL.Scheme,
-		Host:   hr.URL.Host,
-		Path:   path,
+	mungedURL, err := url.Parse(c.Address())
+	if err != nil {
+		return "", err
 	}
+	mungedURL.Path = path
 
-	headers, err := authHeaders(conf, mungedURL, "POST")
+	headers, err := authHeaders(conf, mungedURL, "POST", false)
 	if err != nil {
 		return "", err
 	}
 
-	hr.Header = headers
-	client := &http.Client{}
-	resp, err := client.Do(hr)
+	sigVer := headers.Get("X-Ops-Sign")
+	sig := headers.Get("X-Ops-Authorization")
+	ts := headers.Get("X-Ops-Timestamp")
+
+	secret, err := c.Logical().Write(path, map[string]interface{}{
+		"signature_version": sigVer,
+		"signature":         sig,
+		"client_name":       clientName,
+		"timestamp":         ts,
+	})
 	if err != nil {
 		return "", err
 	}
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	secret, err := api.ParseSecret(resp.Body)
-	if err != nil {
-		return "", nil
+	if secret == nil {
+		return "", fmt.Errorf("empty response from credential provider")
 	}
 
 	return secret.Auth.ClientToken, nil

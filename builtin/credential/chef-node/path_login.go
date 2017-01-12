@@ -31,7 +31,24 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
-		Fields:  map[string]*framework.FieldSchema{},
+		Fields: map[string]*framework.FieldSchema{
+			"signature_version": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "X-Ops-Sign",
+			},
+			"client_name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "X-Ops-UserId",
+			},
+			"timestamp": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "X-Ops-Timestamp",
+			},
+			"signature": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "X-Ops-Authorization-* concatinated together",
+			},
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathLogin,
 		},
@@ -39,19 +56,24 @@ func pathLogin(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLogin(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	key, err := b.retrievePubKey(req)
+	client := data.Get("client_name").(string)
+	ts := data.Get("timestamp").(string)
+	sig := data.Get("signature").(string)
+	sigVer := data.Get("signature_version").(string)
+
+	key, err := b.retrievePubKey(req, client)
 	if err != nil {
 		return nil, err
 	}
 
-	auth := authenticate(req, key)
+	auth := authenticate(client, ts, sig, sigVer, key, req.MountPoint+req.Path)
 	if !auth {
 		return logical.ErrorResponse("Couldn't authenticate client"), nil
 	}
 
 	allowedSkew := time.Minute * 5
 	now := time.Now().UTC()
-	headerTime, err := time.Parse(time.RFC3339, req.Connection.Header.Get("X-Ops-Timestamp"))
+	headerTime, err := time.Parse(time.RFC3339, data.Get("timestamp").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +82,7 @@ func (b *backend) pathLogin(req *logical.Request, data *framework.FieldData) (*l
 		return nil, fmt.Errorf("clock skew is too great for request")
 	}
 
-	policies, err := b.getNodePolicies(req)
+	policies, err := b.getNodePolicies(req, client)
 	if err != nil {
 		return nil, err
 	}
@@ -68,12 +90,16 @@ func (b *backend) pathLogin(req *logical.Request, data *framework.FieldData) (*l
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Policies:    policies,
-			DisplayName: req.Connection.Header.Get("X-Ops-Userid"),
+			DisplayName: client,
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 			},
 			InternalData: map[string]interface{}{
-				"headers": req.Connection.Header,
+				"request_path":      req.MountPoint + req.Path,
+				"signature_version": data.Get("signature_version"),
+				"signature":         data.Get("signature"),
+				"client_name":       data.Get("client_name"),
+				"timestamp":         data.Get("timestamp"),
 			},
 		},
 	}, nil
@@ -84,29 +110,23 @@ func (b *backend) pathLoginRenew(req *logical.Request, d *framework.FieldData) (
 		return nil, fmt.Errorf("request auth was nil")
 	}
 
-	headers := req.Auth.InternalData["headers"].(map[string]interface{})
-	parsedHeader := make(http.Header)
-	for k, v := range headers {
-		headerStrings := make([]string, len(v.([]interface{})))
-		for j, w := range v.([]interface{}) {
-			headerStrings[j] = w.(string)
-		}
-		parsedHeader[k] = headerStrings
-	}
+	reqPath := req.Auth.InternalData["request_path"].(string)
+	sig := req.Auth.InternalData["signature"].(string)
+	sigVer := req.Auth.InternalData["signature_version"].(string)
+	client := req.Auth.InternalData["client_name"].(string)
+	ts := req.Auth.InternalData["timestamp"].(string)
 
-	req.Connection.Header = parsedHeader
-
-	key, err := b.retrievePubKey(req)
+	key, err := b.retrievePubKey(req, client)
 	if err != nil {
 		return nil, err
 	}
 
-	auth := authenticate(req, key)
+	auth := authenticate(client, ts, sig, sigVer, key, reqPath)
 	if !auth {
 		return nil, fmt.Errorf("couldn't authenticate renew request")
 	}
 
-	policies, err := b.getNodePolicies(req)
+	policies, err := b.getNodePolicies(req, client)
 	if err != nil {
 		return nil, fmt.Errorf("coulnd't retrieve current policy list")
 	}
@@ -136,8 +156,8 @@ func constructAuthorization(h http.Header) string {
 	return ret.String()
 }
 
-func (b *backend) getNodePolicies(req *logical.Request) ([]string, error) {
-	nodeInfo, err := b.retrieveNodeInfo(req)
+func (b *backend) getNodePolicies(req *logical.Request, node string) ([]string, error) {
+	nodeInfo, err := b.retrieveNodeInfo(req, node)
 	if err != nil {
 		return nil, err
 	}
@@ -184,12 +204,7 @@ func (b *backend) getNodePolicies(req *logical.Request) ([]string, error) {
 	return allPol, nil
 }
 
-func (b *backend) retrieveNodeInfo(req *logical.Request) (*nodeResponse, error) {
-	targetName := req.Connection.Header.Get("X-Ops-Userid")
-	if targetName == "" {
-		return nil, fmt.Errorf("Couldn't find client id to lookup public key")
-	}
-
+func (b *backend) retrieveNodeInfo(req *logical.Request, targetName string) (*nodeResponse, error) {
 	config, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err
@@ -200,7 +215,7 @@ func (b *backend) retrieveNodeInfo(req *logical.Request) (*nodeResponse, error) 
 		return nil, err
 	}
 
-	headers, err := authHeaders(config, nodeURL, "GET")
+	headers, err := authHeaders(config, nodeURL, "GET", true)
 	if err != nil {
 		return nil, err
 	}
@@ -231,11 +246,7 @@ func (b *backend) retrieveNodeInfo(req *logical.Request) (*nodeResponse, error) 
 	return &jb, nil
 }
 
-func (b *backend) retrievePubKey(req *logical.Request) (*rsa.PublicKey, error) {
-	targetName := req.Connection.Header.Get("X-Ops-Userid")
-	if targetName == "" {
-		return nil, fmt.Errorf("Couldn't find client id to lookup public key")
-	}
+func (b *backend) retrievePubKey(req *logical.Request, targetName string) (*rsa.PublicKey, error) {
 	config, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err
@@ -246,7 +257,7 @@ func (b *backend) retrievePubKey(req *logical.Request) (*rsa.PublicKey, error) {
 		return nil, err
 	}
 
-	headers, err := authHeaders(config, keyURL, "GET")
+	headers, err := authHeaders(config, keyURL, "GET", true)
 	if err != nil {
 		return nil, err
 	}
@@ -278,26 +289,29 @@ func (b *backend) retrievePubKey(req *logical.Request) (*rsa.PublicKey, error) {
 	return key, nil
 }
 
-func authenticate(req *logical.Request, key *rsa.PublicKey) bool {
-	h := req.Connection.Header
-	sig, _ := base64.StdEncoding.DecodeString(constructAuthorization(h))
-	hashedPath := sha1.Sum([]byte(req.MountPoint + req.Path))
+func authenticate(client string, ts string, sig string, sigVer string, key *rsa.PublicKey, path string) bool {
+	bodyHash := sha1.Sum([]byte(""))
+	hashedPath := sha1.Sum([]byte(path))
 	headers := []string{
-		"Method:" + h.Get("Method"),
+		"Method:POST",
 		"Hashed Path:" + base64.StdEncoding.EncodeToString(hashedPath[:]),
-		"X-Ops-Content-Hash:" + h.Get("X-Ops-Content-Hash"),
-		"X-Ops-Timestamp:" + h.Get("X-Ops-Timestamp"),
-		"X-Ops-UserId:" + h.Get("X-Ops-Userid"),
+		"X-Ops-Content-Hash:" + base64.StdEncoding.EncodeToString(bodyHash[:]),
+		"X-Ops-Timestamp:" + ts,
+		"X-Ops-UserId:" + client,
 	}
 	headerString := strings.Join(headers, "\n")
-	err := rsa.VerifyPKCS1v15(key, crypto.Hash(0), []byte(headerString), sig)
+	decSig, err := base64.StdEncoding.DecodeString(sig)
+	if err != nil {
+		return false
+	}
+	err = rsa.VerifyPKCS1v15(key, crypto.Hash(0), []byte(headerString), decSig)
 	if err != nil {
 		return false
 	}
 	return true
 }
 
-func authHeaders(conf *config, url *url.URL, method string) (http.Header, error) {
+func authHeaders(conf *config, url *url.URL, method string, split bool) (http.Header, error) {
 	hashedPath := sha1.Sum([]byte(url.EscapedPath()))
 	// So far nothing we do requires a body
 	bodyHash := sha1.Sum([]byte(""))
@@ -320,10 +334,14 @@ func authHeaders(conf *config, url *url.URL, method string) (http.Header, error)
 	if err != nil {
 		return nil, err
 	}
-	splitSig := splitOn60(base64.StdEncoding.EncodeToString(sig))
 	ret := make(http.Header)
-	for i := range splitSig {
-		ret.Set(fmt.Sprintf("X-Ops-Authorization-%d", i+1), splitSig[i])
+	if split {
+		splitSig := splitOn60(base64.StdEncoding.EncodeToString(sig))
+		for i := range splitSig {
+			ret.Set(fmt.Sprintf("X-Ops-Authorization-%d", i+1), splitSig[i])
+		}
+	} else {
+		ret.Set("X-Ops-Authorization", base64.StdEncoding.EncodeToString(sig))
 	}
 	ret.Set("X-Ops-Sign", "algorithm=sha1;version=1.0;")
 	ret.Set("Method", method)
