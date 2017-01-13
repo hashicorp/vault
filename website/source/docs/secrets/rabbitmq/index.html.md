@@ -74,7 +74,7 @@ For example, lets create a "readwrite" virtual host role:
 ```text
 $ vault write rabbitmq/roles/readwrite \
     vhosts='{"/":{"write": ".*", "read": ".*"}}'
-Success! Data written to: rabbitmq/roles/readonly
+Success! Data written to: rabbitmq/roles/readwrite
 ```
 
 By writing to the `roles/readwrite` path we are defining the `readwrite` role.
