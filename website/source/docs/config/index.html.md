@@ -331,7 +331,7 @@ For Consul, the following options are supported:
     are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.
 
   * `require_consistent` (optional) - If true, then all read requests to Consul
-    will use consistant mode. See [consistancy
+    will use consistent mode. See [consistency
     modes](https://www.consul.io/docs/agent/http.html#consistency-modes) in Consul
     for tradeoffs. Defaults to "false".
 
