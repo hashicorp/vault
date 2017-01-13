@@ -387,6 +387,11 @@ func (n *rawHTTP) Cleanup() {
 	// noop
 }
 
+func (n *rawHTTP) Initialize() error {
+	// noop
+	return nil
+}
+
 func (n *rawHTTP) InvalidateKey(string) {
 	// noop
 }

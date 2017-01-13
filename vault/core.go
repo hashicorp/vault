@@ -299,6 +299,10 @@ type Core struct {
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
 	rpcForwardingClient RequestForwardingClient
+
+	// replicationState keeps the current replication state cached for quick
+	// lookup
+	replicationState logical.ReplicationState
 }
 
 // CoreConfig is used to parameterize a core

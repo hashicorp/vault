@@ -6,14 +6,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-var (
-	sysViewIsPrimaryFunc = func(c *Core) func() bool {
-		return func() bool {
-			return true
-		}
-	}
-)
-
 type dynamicSystemView struct {
 	core       *Core
 	mountEntry *MountEntry
@@ -84,6 +76,10 @@ func (d dynamicSystemView) CachingDisabled() bool {
 }
 
 // Checks if this is a primary Vault instance.
-func (d dynamicSystemView) IsPrimary() bool {
-	return sysViewIsPrimaryFunc(d.core)()
+func (d dynamicSystemView) ReplicationState() logical.ReplicationState {
+	var state logical.ReplicationState
+	d.core.clusterParamsLock.RLock()
+	state = d.core.replicationState
+	d.core.clusterParamsLock.RUnlock()
+	return state
 }
