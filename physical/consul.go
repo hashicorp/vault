@@ -67,6 +67,7 @@ type ConsulBackend struct {
 	serviceTags         []string
 	disableRegistration bool
 	checkTimeout        time.Duration
+	requireConsistent   bool
 
 	notifyActiveCh chan notifyEvent
 	notifySealedCh chan notifyEvent
@@ -193,6 +194,16 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		}
 	}
 
+	requireConsistentRaw, ok := conf["require_consistent"]
+	var requireConsistent bool
+	if ok {
+		b, err := strconv.ParseBool(requireConsistentRaw)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing require_consistent parameter: {{err}}", err)
+		}
+		requireConsistent = b
+	}
+
 	// Setup the backend
 	c := &ConsulBackend{
 		path:                path,
@@ -204,6 +215,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
+		requireConsistent:   requireConsistent,
 	}
 	return c, nil
 }
@@ -285,7 +297,14 @@ func (c *ConsulBackend) Get(key string) (*Entry, error) {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	pair, _, err := c.kv.Get(c.path+key, nil)
+	var queryOptions *api.QueryOptions
+	if c.requireConsistent {
+		queryOptions = &api.QueryOptions{
+			RequireConsistent: c.requireConsistent,
+		}
+	}
+
+	pair, _, err := c.kv.Get(c.path+key, queryOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -348,9 +367,10 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 		return nil, fmt.Errorf("failed to create lock: %v", err)
 	}
 	cl := &ConsulLock{
-		client: c.client,
-		key:    c.path + key,
-		lock:   lock,
+		client:            c.client,
+		key:               c.path + key,
+		lock:              lock,
+		requireConsistent: c.requireConsistent,
 	}
 	return cl, nil
 }
@@ -377,9 +397,10 @@ func (c *ConsulBackend) DetectHostAddr() (string, error) {
 
 // ConsulLock is used to provide the Lock interface backed by Consul
 type ConsulLock struct {
-	client *api.Client
-	key    string
-	lock   *api.Lock
+	client            *api.Client
+	key               string
+	lock              *api.Lock
+	requireConsistent bool
 }
 
 func (c *ConsulLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
@@ -393,7 +414,14 @@ func (c *ConsulLock) Unlock() error {
 func (c *ConsulLock) Value() (bool, string, error) {
 	kv := c.client.KV()
 
-	pair, _, err := kv.Get(c.key, nil)
+	var queryOptions *api.QueryOptions
+	if c.requireConsistent {
+		queryOptions = &api.QueryOptions{
+			RequireConsistent: c.requireConsistent,
+		}
+	}
+
+	pair, _, err := kv.Get(c.key, queryOptions)
 	if err != nil {
 		return false, "", err
 	}
