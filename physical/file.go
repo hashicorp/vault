@@ -12,6 +12,7 @@ import (
 
 	log "github.com/mgutz/logxi/v1"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -49,21 +50,16 @@ func (b *FileBackend) Delete(path string) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	basePath, fileName := b.path(path)
-	fullPath := filepath.Join(basePath, "_"+fileName)
-
-	// For backwards compatibility, try to delete the file without base64 URL
-	// encoding the file name. If such a file does not exist, it could mean
-	// that the file name is encoded. Try deleting the file with the encoded
-	// file name.
-	err := os.Remove(fullPath)
+	_, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(path)
+	err := os.Remove(fullPathPrefixedEncodedFileName)
 	if err != nil && os.IsNotExist(err) {
-		fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
-		err = os.Remove(fullPath)
+		// For backwards compatibility, try to delete the file without base64
+		// URL encoding the file name.
+		err = os.Remove(fullPathPrefixedFileName)
 	}
 
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
+		return fmt.Errorf("Failed to remove %q: %v", fullPathPrefixedFileName, err)
 	}
 
 	err = b.cleanupLogicalPath(path)
@@ -105,19 +101,16 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 	return nil
 }
 
-func (b *FileBackend) Get(k string) (*Entry, error) {
+func (b *FileBackend) Get(path string) (*Entry, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	basePath, fileName := b.path(k)
-	fullPath := filepath.Join(basePath, "_"+fileName)
-
-	// If non-encoded file name is a valid storage entry, read it out.
-	// Otherwise, encode the file name and look for the storage entry.
-	f, err := os.Open(fullPath)
+	_, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(path)
+	f, err := os.Open(fullPathPrefixedEncodedFileName)
 	if err != nil && os.IsNotExist(err) {
-		fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
-		f, err = os.Open(fullPath)
+		// For backwards compatibility, if non-encoded file name is a valid
+		// storage entry, read it out.
+		f, err = os.Open(fullPathPrefixedFileName)
 	}
 
 	if err != nil {
@@ -137,51 +130,60 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 }
 
 func (b *FileBackend) Put(entry *Entry) error {
+	var retErr error
 	if entry == nil {
-		return fmt.Errorf("nil entry")
+		retErr = multierror.Append(retErr, fmt.Errorf("nil entry"))
+		return retErr
 	}
 
-	var err error
-	basePath, fileName := b.path(entry.Key)
-
-	// New storage entries will have their file names base64 URL encoded. If a
-	// file with a non-encoded file name exists, it indicates that this is an
-	// update operation. To avoid duplication of storage entries, delete the
-	// old entry first.
-	fullPath := filepath.Join(basePath, "_"+fileName)
-	if _, err = os.Stat(fullPath); !os.IsNotExist(err) {
-		err = b.Delete(entry.Key)
-		if err != nil {
-			return fmt.Errorf("failed to remove old entry: %v", err)
-		}
-	}
+	basePath, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(entry.Key)
 
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	// Make the parent tree
-	if err = os.MkdirAll(basePath, 0755); err != nil {
-		return err
+	// New storage entries will have their file names base64 URL encoded. If a
+	// file with a non-encoded file name exists, it indicates that this is an
+	// update operation. To avoid duplication of storage entries, delete the
+	// old entry in the defer function.
+	if _, err := os.Stat(fullPathPrefixedFileName); !os.IsNotExist(err) {
+		defer func() {
+			err := os.Remove(fullPathPrefixedFileName)
+			if err != nil && !os.IsNotExist(err) {
+				retErr = multierror.Append(retErr, fmt.Errorf("failed to remove old entry: %v", err))
+				return
+			}
+			err = b.cleanupLogicalPath(entry.Key)
+			if err != nil {
+				retErr = multierror.Append(retErr, fmt.Errorf("failed to cleanup the after removing old entry: %v", err))
+				return
+			}
+		}()
 	}
 
-	// base64 URL encode the file name to make all the characters compatible by
-	// the host OS (specially Windows). However, the basePath can contain
-	// disallowed characters.  Encoding all the directory names and the file
-	// name is an over kill, and encoding the fullPath will flatten the
-	// storage, which *may* not be desired.
-	fullPath = filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
+	// Make the parent tree
+	if err := os.MkdirAll(basePath, 0755); err != nil {
+		retErr = multierror.Append(retErr, err)
+		return retErr
+	}
 
 	// JSON encode the entry and write it
 	f, err := os.OpenFile(
-		fullPath,
+		fullPathPrefixedEncodedFileName,
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600)
 	if err != nil {
-		return err
+		retErr = multierror.Append(retErr, err)
+		return retErr
 	}
 	defer f.Close()
 	enc := json.NewEncoder(f)
-	return enc.Encode(entry)
+
+	err = enc.Encode(entry)
+	if err != nil {
+		retErr = multierror.Append(retErr, err)
+		return retErr
+	}
+	return nil
 }
 
 func (b *FileBackend) List(prefix string) ([]string, error) {
@@ -226,7 +228,21 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	return names, nil
 }
 
-func (b *FileBackend) path(k string) (string, string) {
-	fullPath := filepath.Join(b.Path, k)
-	return filepath.Dir(fullPath), filepath.Base(fullPath)
+func (b *FileBackend) path(path string) (string, string, string) {
+	fullPath := filepath.Join(b.Path, path)
+
+	basePath := filepath.Dir(fullPath)
+
+	fileName := filepath.Base(fullPath)
+
+	fullPathPrefixedFileName := filepath.Join(basePath, "_"+fileName)
+
+	// base64 URL encode the file name to make all the characters compatible by
+	// the host OS (specially Windows). However, the basePath can contain
+	// disallowed characters.  Encoding all the directory names and the file
+	// name is an over kill, and encoding the fullPath will flatten the
+	// storage, which *may* not be desired.
+	fullPathPrefixedEncodedFileName := filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
+
+	return basePath, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName
 }
