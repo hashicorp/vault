@@ -367,9 +367,10 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 		return nil, fmt.Errorf("failed to create lock: %v", err)
 	}
 	cl := &ConsulLock{
-		client: c.client,
-		key:    c.path + key,
-		lock:   lock,
+		client:            c.client,
+		key:               c.path + key,
+		lock:              lock,
+		requireConsistent: c.requireConsistent,
 	}
 	return cl, nil
 }
@@ -396,9 +397,10 @@ func (c *ConsulBackend) DetectHostAddr() (string, error) {
 
 // ConsulLock is used to provide the Lock interface backed by Consul
 type ConsulLock struct {
-	client *api.Client
-	key    string
-	lock   *api.Lock
+	client            *api.Client
+	key               string
+	lock              *api.Lock
+	requireConsistent bool
 }
 
 func (c *ConsulLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
@@ -412,7 +414,14 @@ func (c *ConsulLock) Unlock() error {
 func (c *ConsulLock) Value() (bool, string, error) {
 	kv := c.client.KV()
 
-	pair, _, err := kv.Get(c.key, nil)
+	var queryOptions *api.QueryOptions
+	if c.requireConsistent {
+		queryOptions = &api.QueryOptions{
+			RequireConsistent: c.requireConsistent,
+		}
+	}
+
+	pair, _, err := kv.Get(c.key, queryOptions)
 	if err != nil {
 		return false, "", err
 	}
