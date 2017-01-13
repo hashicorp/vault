@@ -18,4 +18,5 @@ branches:
     - travis-testing
 
 script:
+  - make bootstrap
   - make test testrace
