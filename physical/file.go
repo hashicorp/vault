@@ -59,7 +59,7 @@ func (b *FileBackend) Delete(path string) error {
 	}
 
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("Failed to remove %q: %v", fullPathPrefixedFileName, err)
+		return fmt.Errorf("Failed to remove %q: %v", path, err)
 	}
 
 	err = b.cleanupLogicalPath(path)
