@@ -8,24 +8,45 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
+	"reflect"
 	"strings"
 	"time"
-	"reflect"
 	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 )
 
-var driverInstance = &MssqlDriver{}
+var driverInstance = &MssqlDriver{processQueryText: true}
+var driverInstanceNoProcess = &MssqlDriver{processQueryText: false}
 
 func init() {
 	sql.Register("mssql", driverInstance)
+	sql.Register("sqlserver", driverInstanceNoProcess)
+}
+
+// Abstract the dialer for testing and for non-TCP based connections.
+type dialer interface {
+	Dial(addr string) (net.Conn, error)
+}
+
+var createDialer func(p *connectParams) dialer
+
+type tcpDialer struct {
+	nd *net.Dialer
+}
+
+func (d tcpDialer) Dial(addr string) (net.Conn, error) {
+	return d.nd.Dial("tcp", addr)
 }
 
 type MssqlDriver struct {
 	log optionalLogger
+
+	processQueryText bool
 }
 
 func SetLogger(logger Logger) {
 	driverInstance.SetLogger(logger)
+	driverInstanceNoProcess.SetLogger(logger)
 }
 
 func (d *MssqlDriver) SetLogger(logger Logger) {
@@ -33,8 +54,10 @@ func (d *MssqlDriver) SetLogger(logger Logger) {
 }
 
 type MssqlConn struct {
-	sess *tdsSession
+	sess           *tdsSession
 	transactionCtx context.Context
+
+	processQueryText bool
 }
 
 func (c *MssqlConn) simpleProcessResp(ctx context.Context) error {
@@ -141,7 +164,7 @@ func (d *MssqlDriver) open(dsn string) (*MssqlConn, error) {
 		return nil, err
 	}
 
-	sess, err := connect(params)
+	sess, err := connect(d.log, params)
 	if err != nil {
 		// main server failed, try fail-over partner
 		if params.failOverPartner == "" {
@@ -153,14 +176,14 @@ func (d *MssqlDriver) open(dsn string) (*MssqlConn, error) {
 			params.port = params.failOverPort
 		}
 
-		sess, err = connect(params)
+		sess, err = connect(d.log, params)
 		if err != nil {
 			// fail-over partner also failed, now fail
 			return nil, err
 		}
 	}
 
-	conn := &MssqlConn{sess, context.Background()}
+	conn := &MssqlConn{sess, context.Background(), d.processQueryText}
 	conn.sess.log = d.log
 	return conn, nil
 }
@@ -187,8 +210,11 @@ func (c *MssqlConn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (c *MssqlConn) prepareContext(ctx context.Context, query string) (*MssqlStmt, error) {
-	q, paramCount := parseParams(query)
-	return &MssqlStmt{c, q, paramCount, nil}, nil
+	paramCount := -1
+	if c.processQueryText {
+		query, paramCount = parseParams(query)
+	}
+	return &MssqlStmt{c, query, paramCount, nil}, nil
 }
 
 func (s *MssqlStmt) Close() error {
@@ -265,17 +291,17 @@ func (s *MssqlStmt) sendQuery(args []namedValue) (err error) {
 }
 
 type namedValue struct {
-	Name string
+	Name    string
 	Ordinal int
-	Value driver.Value
+	Value   driver.Value
 }
 
 func convertOldArgs(args []driver.Value) []namedValue {
 	list := make([]namedValue, len(args))
 	for i, v := range args {
 		list[i] = namedValue{
-			Ordinal: i+1,
-			Value: v,
+			Ordinal: i + 1,
+			Value:   v,
 		}
 	}
 	return list
@@ -341,11 +367,11 @@ func (s *MssqlStmt) processExec(ctx context.Context) (res driver.Result, err err
 		switch token := token.(type) {
 		case doneInProcStruct:
 			if token.Status&doneCount != 0 {
-				rowCount = int64(token.RowCount)
+				rowCount += int64(token.RowCount)
 			}
 		case doneStruct:
 			if token.Status&doneCount != 0 {
-				rowCount = int64(token.RowCount)
+				rowCount += int64(token.RowCount)
 			}
 			if token.isError() {
 				return nil, token.getError()
@@ -380,7 +406,7 @@ func (rc *MssqlRows) Columns() (res []string) {
 	return
 }
 
-func (rc *MssqlRows) Next(dest []driver.Value) (error) {
+func (rc *MssqlRows) Next(dest []driver.Value) error {
 	if rc.nextCols != nil {
 		return io.EOF
 	}
@@ -464,7 +490,7 @@ func (r *MssqlRows) ColumnTypePrecisionScale(index int) (int64, int64, bool) {
 // to be not nullable.
 // If the column nullability is unknown, ok should be false.
 func (r *MssqlRows) ColumnTypeNullable(index int) (nullable, ok bool) {
-	nullable = r.cols[index].Flags & colFlagNullable != 0
+	nullable = r.cols[index].Flags&colFlagNullable != 0
 	ok = true
 	return
 }

@@ -45,6 +45,7 @@ import (
 	"golang.org/x/net/trace"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/transport"
 )
 
@@ -219,6 +220,14 @@ func WithDialer(f func(string, time.Duration) (net.Conn, error)) DialOption {
 			}
 			return f(addr, 0)
 		}
+	}
+}
+
+// WithStatsHandler returns a DialOption that specifies the stats handler
+// for all the RPCs and underlying network connections in this ClientConn.
+func WithStatsHandler(h stats.Handler) DialOption {
+	return func(o *dialOptions) {
+		o.copts.StatsHandler = h
 	}
 }
 

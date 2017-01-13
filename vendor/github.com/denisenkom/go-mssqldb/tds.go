@@ -9,11 +9,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
 	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
@@ -82,13 +84,13 @@ const (
 // packet types
 // https://msdn.microsoft.com/en-us/library/dd304214.aspx
 const (
-	packSQLBatch packetType = 1
-	packRPCRequest  = 3
-	packReply       = 4
+	packSQLBatch   packetType = 1
+	packRPCRequest            = 3
+	packReply                 = 4
 
 	// 2.2.1.7 Attention: https://msdn.microsoft.com/en-us/library/dd341449.aspx
 	// 4.19.2 Out-of-Band Attention Signal: https://msdn.microsoft.com/en-us/library/dd305167.aspx
-	packAttention   = 6
+	packAttention = 6
 
 	packBulkLoadBCP = 7
 	packTransMgrReq = 14
@@ -641,7 +643,7 @@ func sendSqlBatch72(buf *tdsBuffer,
 
 // 2.2.1.7 Attention: https://msdn.microsoft.com/en-us/library/dd341449.aspx
 // 4.19.2 Out-of-Band Attention Signal: https://msdn.microsoft.com/en-us/library/dd305167.aspx
-func sendAttention(buf *tdsBuffer) (error) {
+func sendAttention(buf *tdsBuffer) error {
 	buf.BeginPacket(packAttention)
 	return buf.FinishPacket()
 }
@@ -691,9 +693,241 @@ func splitConnectionString(dsn string) (res map[string]string) {
 	return res
 }
 
+// Splits a URL in the ODBC format
+func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
+	res := map[string]string{}
+
+	type parserState int
+	const (
+		// Before the start of a key
+		parserStateBeforeKey parserState = iota
+
+		// Inside a key
+		parserStateKey
+
+		// Beginning of a value. May be bare or braced
+		parserStateBeginValue
+
+		// Inside a bare value
+		parserStateBareValue
+
+		// Inside a braced value
+		parserStateBracedValue
+
+		// A closing brace inside a braced value.
+		// May be the end of the value or an escaped closing brace, depending on the next character
+		parserStateBracedValueClosingBrace
+
+		// After a value. Next character should be a semi-colon or whitespace.
+		parserStateEndValue
+	)
+
+	var state = parserStateBeforeKey
+
+	var key string
+	var value string
+
+	for i, c := range dsn {
+		switch state {
+		case parserStateBeforeKey:
+			switch {
+			case c == '=':
+				return res, fmt.Errorf("Unexpected character = at index %d. Expected start of key or semi-colon or whitespace.", i)
+			case !unicode.IsSpace(c) && c != ';':
+				state = parserStateKey
+				key += string(c)
+			}
+
+		case parserStateKey:
+			switch c {
+			case '=':
+				key = normalizeOdbcKey(key)
+				if len(key) == 0 {
+					return res, fmt.Errorf("Unexpected end of key at index %d.", i)
+				}
+
+				state = parserStateBeginValue
+
+			case ';':
+				// Key without value
+				key = normalizeOdbcKey(key)
+				if len(key) == 0 {
+					return res, fmt.Errorf("Unexpected end of key at index %d.", i)
+				}
+
+				res[key] = value
+				key = ""
+				value = ""
+				state = parserStateBeforeKey
+
+			default:
+				key += string(c)
+			}
+
+		case parserStateBeginValue:
+			switch {
+			case c == '{':
+				state = parserStateBracedValue
+			case c == ';':
+				// Empty value
+				res[key] = value
+				key = ""
+				state = parserStateBeforeKey
+			case unicode.IsSpace(c):
+				// Ignore whitespace
+			default:
+				state = parserStateBareValue
+				value += string(c)
+			}
+
+		case parserStateBareValue:
+			if c == ';' {
+				res[key] = strings.TrimRightFunc(value, unicode.IsSpace)
+				key = ""
+				value = ""
+				state = parserStateBeforeKey
+			} else {
+				value += string(c)
+			}
+
+		case parserStateBracedValue:
+			if c == '}' {
+				state = parserStateBracedValueClosingBrace
+			} else {
+				value += string(c)
+			}
+
+		case parserStateBracedValueClosingBrace:
+			if c == '}' {
+				// Escaped closing brace
+				value += string(c)
+				state = parserStateBracedValue
+				continue
+			}
+
+			// End of braced value
+			res[key] = value
+			key = ""
+			value = ""
+
+			// This character is the first character past the end,
+			// so it needs to be parsed like the parserStateEndValue state.
+			state = parserStateEndValue
+			switch {
+			case c == ';':
+				state = parserStateBeforeKey
+			case unicode.IsSpace(c):
+				// Ignore whitespace
+			default:
+				return res, fmt.Errorf("Unexpected character %c at index %d. Expected semi-colon or whitespace.", c, i)
+			}
+
+		case parserStateEndValue:
+			switch {
+			case c == ';':
+				state = parserStateBeforeKey
+			case unicode.IsSpace(c):
+				// Ignore whitespace
+			default:
+				return res, fmt.Errorf("Unexpected character %c at index %d. Expected semi-colon or whitespace.", c, i)
+			}
+		}
+	}
+
+	switch state {
+	case parserStateBeforeKey: // Okay
+	case parserStateKey: // Unfinished key. Treat as key without value.
+		key = normalizeOdbcKey(key)
+		if len(key) == 0 {
+			return res, fmt.Errorf("Unexpected end of key at index %d.", len(dsn))
+		}
+		res[key] = value
+	case parserStateBeginValue: // Empty value
+		res[key] = value
+	case parserStateBareValue:
+		res[key] = strings.TrimRightFunc(value, unicode.IsSpace)
+	case parserStateBracedValue:
+		return res, fmt.Errorf("Unexpected end of braced value at index %d.", len(dsn))
+	case parserStateBracedValueClosingBrace: // End of braced value
+		res[key] = value
+	case parserStateEndValue: // Okay
+	}
+
+	return res, nil
+}
+
+// Normalizes the given string as an ODBC-format key
+func normalizeOdbcKey(s string) string {
+	return strings.ToLower(strings.TrimRightFunc(s, unicode.IsSpace))
+}
+
+// Splits a URL of the form sqlserver://username:password@host/instance?param1=value&param2=value
+func splitConnectionStringURL(dsn string) (map[string]string, error) {
+	res := map[string]string{}
+
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return res, err
+	}
+
+	if u.Scheme != "sqlserver" {
+		return res, fmt.Errorf("scheme %s is not recognized", u.Scheme)
+	}
+
+	if u.User != nil {
+		res["user id"] = u.User.Username()
+		p, exists := u.User.Password()
+		if exists {
+			res["password"] = p
+		}
+	}
+
+	host, port, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		host = u.Host
+	}
+
+	if len(u.Path) > 0 {
+		res["server"] = host + "\\" + u.Path[1:]
+	} else {
+		res["server"] = host
+	}
+
+	if len(port) > 0 {
+		res["port"] = port
+	}
+
+	query := u.Query()
+	for k, v := range query {
+		if len(v) > 1 {
+			return res, fmt.Errorf("key %s provided more than once", k)
+		}
+		res[k] = v[0]
+	}
+
+	return res, nil
+}
+
 func parseConnectParams(dsn string) (connectParams, error) {
-	params := splitConnectionString(dsn)
 	var p connectParams
+
+	var params map[string]string
+	if strings.HasPrefix(dsn, "odbc:") {
+		parameters, err := splitConnectionStringOdbc(dsn[len("odbc:"):])
+		if err != nil {
+			return p, err
+		}
+		params = parameters
+	} else if strings.HasPrefix(dsn, "sqlserver://") {
+		parameters, err := splitConnectionStringURL(dsn)
+		if err != nil {
+			return p, err
+		}
+		params = parameters
+	} else {
+		params = splitConnectionString(dsn)
+	}
+
 	strlog, ok := params["log"]
 	if ok {
 		var err error
@@ -859,9 +1093,9 @@ func dialConnection(p connectParams) (conn net.Conn, err error) {
 		ips = []net.IP{ip}
 	}
 	if len(ips) == 1 {
-		d := createDialer(p)
+		d := createDialer(&p)
 		addr := net.JoinHostPort(ips[0].String(), strconv.Itoa(int(p.port)))
-		conn, err = d.Dial("tcp", addr)
+		conn, err = d.Dial(addr)
 
 	} else {
 		//Try Dials in parallel to avoid waiting for timeouts.
@@ -870,9 +1104,9 @@ func dialConnection(p connectParams) (conn net.Conn, err error) {
 		portStr := strconv.Itoa(int(p.port))
 		for _, ip := range ips {
 			go func(ip net.IP) {
-				d := createDialer(p)
+				d := createDialer(&p)
 				addr := net.JoinHostPort(ip.String(), portStr)
-				conn, err := d.Dial("tcp", addr)
+				conn, err := d.Dial(addr)
 				if err == nil {
 					connChan <- conn
 				} else {
@@ -911,7 +1145,7 @@ func dialConnection(p connectParams) (conn net.Conn, err error) {
 	return conn, err
 }
 
-func connect(p connectParams) (res *tdsSession, err error) {
+func connect(log optionalLogger, p connectParams) (res *tdsSession, err error) {
 	res = nil
 	// if instance is specified use instance resolution service
 	if p.instance != "" {
@@ -944,6 +1178,7 @@ initiate_connection:
 	outbuf := newTdsBuffer(4096, toconn)
 	sess := tdsSession{
 		buf:      outbuf,
+		log:      log,
 		logFlags: p.logFlags,
 	}
 
