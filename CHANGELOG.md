@@ -3,6 +3,7 @@
 IMPROVEMENTS:
 
  * auth/github: Support listing teams and users [GH-2261]
+ * physical/consul: Add option for using consistent mode on Consul gets [GH-2270]
 
 BUG FIXES:
 
