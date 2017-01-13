@@ -145,7 +145,8 @@ func (b *FileBackend) Put(entry *Entry) error {
 	// file with a non-encoded file name exists, it indicates that this is an
 	// update operation. To avoid duplication of storage entries, delete the
 	// old entry in the defer function.
-	if _, err := os.Stat(fullPathPrefixedFileName); !os.IsNotExist(err) {
+	info, err := os.Stat(fullPathPrefixedFileName)
+	if err == nil && info != nil {
 		defer func() {
 			err := os.Remove(fullPathPrefixedFileName)
 			if err != nil && !os.IsNotExist(err) {
