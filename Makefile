@@ -2,7 +2,7 @@ TEST?=$$(go list ./... | grep -v /vendor/)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox \
-  layeh.com/radius
+	layeh.com/radius
 BUILD_TAGS?=vault
 
 default: dev 
