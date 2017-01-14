@@ -168,28 +168,31 @@ func (s *S3Backend) Delete(key string) error {
 func (s *S3Backend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"s3", "list"}, time.Now())
 
-	resp, err := s.client.ListObjects(&s3.ListObjectsInput{
+	params := &s3.ListObjectsV2Input{
 		Bucket: aws.String(s.bucket),
 		Prefix: aws.String(prefix),
-	})
-	if err != nil {
-		return nil, err
-	}
-	if resp == nil {
-		return nil, fmt.Errorf("nil response from S3 but no error")
 	}
 
 	keys := []string{}
-	for _, key := range resp.Contents {
-		key := strings.TrimPrefix(*key.Key, prefix)
 
-		if i := strings.Index(key, "/"); i == -1 {
-			// Add objects only from the current 'folder'
-			keys = append(keys, key)
-		} else if i != -1 {
-			// Add truncated 'folder' paths
-			keys = appendIfMissing(keys, key[:i+1])
-		}
+	err := s.client.ListObjectsV2Pages(params,
+		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+			for _, key := range page.Contents {
+				key := strings.TrimPrefix(*key.Key, prefix)
+
+				if i := strings.Index(key, "/"); i == -1 {
+					// Add objects only from the current 'folder'
+					keys = append(keys, key)
+				} else if i != -1 {
+					// Add truncated 'folder' paths
+					keys = appendIfMissing(keys, key[:i+1])
+				}
+			}
+			return true
+		})
+
+	if err != nil {
+		return nil, err
 	}
 
 	sort.Strings(keys)

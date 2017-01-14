@@ -87,8 +87,8 @@ func dirUnix() (string, error) {
 	cmd := exec.Command("getent", "passwd", strconv.Itoa(os.Getuid()))
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		// If "getent" is missing, ignore it
-		if err == exec.ErrNotFound {
+		// If the error is ErrNotFound, we ignore it. Otherwise, return it.
+		if err != exec.ErrNotFound {
 			return "", err
 		}
 	} else {

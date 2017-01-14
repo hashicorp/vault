@@ -1,3 +1,55 @@
+## 0.6.5 (Unreleased)
+
+IMPROVEMENTS:
+
+ * auth/github: Support listing teams and users [GH-2261]
+ * physical/consul: Add option for using consistent mode on Consul gets [GH-2270]
+
+BUG FIXES:
+
+ * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
+ * secret/pki: When using `sign-verbatim`, don't require a role and use the
+   CSR's common name [GH-2243]
+
+## 0.6.4 (December 16, 2016)
+
+SECURITY:
+
+Further details about these security issues can be found in the 0.6.4 upgrade
+guide.
+
+ * `default` Policy Privilege Escalation: If a parent token did not have the
+   `default` policy attached to its token, it could still create children with
+   the `default` policy. This is no longer allowed (unless the parent has
+   `sudo` capability for the creation path). In most cases this is low severity
+   since the access grants in the `default` policy are meant to be access
+   grants that are acceptable for all tokens to have.
+ * Leases Not Expired When Limited Use Token Runs Out of Uses: When using
+   limited-use tokens to create leased secrets, if the limited-use token was
+   revoked due to running out of uses (rather than due to TTL expiration or
+   explicit revocation) it would fail to revoke the leased secrets. These
+   secrets would still be revoked when their TTL expired, limiting the severity
+   of this issue. An endpoint has been added (`auth/token/tidy`) that can
+   perform housekeeping tasks on the token store; one of its tasks can detect
+   this situation and revoke the associated leases.
+
+FEATURES:
+
+  * **Policy UI (Enterprise)**: Vault Enterprise UI now supports viewing,
+    creating, and editing policies.
+
+IMPROVEMENTS:
+
+ * http: Vault now sets a `no-store` cache control header to make it more
+   secure in setups that are not end-to-end encrypted [GH-2183]
+
+BUG FIXES:
+
+ * auth/ldap: Don't panic if dialing returns an error and starttls is enabled;
+   instead, return the error [GH-2188]
+ * ui (Enterprise): Submitting an unseal key now properly resets the
+   form so a browser refresh isn't required to continue.
+
 ## 0.6.3 (December 6, 2016)
 
 DEPRECATIONS/CHANGES:

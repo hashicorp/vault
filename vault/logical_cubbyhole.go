@@ -60,7 +60,7 @@ func (b *CubbyholeBackend) revoke(saltedToken string) error {
 		return fmt.Errorf("cubbyhole: client token empty during revocation")
 	}
 
-	if err := ClearView(b.storageView.(*BarrierView).SubView(saltedToken + "/")); err != nil {
+	if err := logical.ClearView(b.storageView.(*BarrierView).SubView(saltedToken + "/")); err != nil {
 		return err
 	}
 

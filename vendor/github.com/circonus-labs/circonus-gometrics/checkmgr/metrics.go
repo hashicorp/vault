@@ -33,41 +33,55 @@ func (cm *CheckManager) ActivateMetric(name string) bool {
 func (cm *CheckManager) AddMetricTags(metricName string, tags []string, appendTags bool) bool {
 	tagsUpdated := false
 
-	if len(tags) == 0 {
+	if appendTags && len(tags) == 0 {
 		return tagsUpdated
 	}
 
-	if _, exists := cm.metricTags[metricName]; !exists {
+	currentTags, exists := cm.metricTags[metricName]
+	if !exists {
 		foundMetric := false
 
 		for _, metric := range cm.checkBundle.Metrics {
 			if metric.Name == metricName {
 				foundMetric = true
-				cm.metricTags[metricName] = metric.Tags
+				currentTags = metric.Tags
 				break
 			}
 		}
 
 		if !foundMetric {
-			cm.metricTags[metricName] = []string{}
+			currentTags = []string{}
 		}
 	}
 
-	action := "no new"
+	action := ""
 	if appendTags {
-		numNewTags := countNewTags(cm.metricTags[metricName], tags)
+		numNewTags := countNewTags(currentTags, tags)
 		if numNewTags > 0 {
 			action = "Added"
-			cm.metricTags[metricName] = append(cm.metricTags[metricName], tags...)
+			currentTags = append(currentTags, tags...)
 			tagsUpdated = true
 		}
 	} else {
-		action = "Set"
-		cm.metricTags[metricName] = tags
-		tagsUpdated = true
+		if len(tags) != len(currentTags) {
+			action = "Set"
+			currentTags = tags
+			tagsUpdated = true
+		} else {
+			numNewTags := countNewTags(currentTags, tags)
+			if numNewTags > 0 {
+				action = "Set"
+				currentTags = tags
+				tagsUpdated = true
+			}
+		}
 	}
 
-	if cm.Debug {
+	if tagsUpdated {
+		cm.metricTags[metricName] = currentTags
+	}
+
+	if cm.Debug && action != "" {
 		cm.Log.Printf("[DEBUG] %s metric tag(s) %s %v\n", action, metricName, tags)
 	}
 

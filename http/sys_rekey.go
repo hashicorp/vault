@@ -113,6 +113,11 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 		return
 	}
 
+	if len(req.PGPKeys) > 0 && len(req.PGPKeys) != req.SecretShares-req.StoredShares {
+		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey"))
+		return
+	}
+
 	// Initialize the rekey
 	err := core.RekeyInit(&vault.SealConfig{
 		SecretShares:    req.SecretShares,

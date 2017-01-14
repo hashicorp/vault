@@ -36,7 +36,7 @@ func (p Project) String() string {
 //
 // GitHub API docs: https://developer.github.com/v3/projects/#get-a-project
 func (s *ProjectsService) GetProject(id int) (*Project, *Response, error) {
-	u := fmt.Sprintf("/projects/%v", id)
+	u := fmt.Sprintf("projects/%v", id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
@@ -68,7 +68,7 @@ type ProjectOptions struct {
 //
 // GitHub API docs: https://developer.github.com/v3/projects/#update-a-project
 func (s *ProjectsService) UpdateProject(id int, opt *ProjectOptions) (*Project, *Response, error) {
-	u := fmt.Sprintf("/projects/%v", id)
+	u := fmt.Sprintf("projects/%v", id)
 	req, err := s.client.NewRequest("PATCH", u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -90,7 +90,7 @@ func (s *ProjectsService) UpdateProject(id int, opt *ProjectOptions) (*Project, 
 //
 // GitHub API docs: https://developer.github.com/v3/projects/#delete-a-project
 func (s *ProjectsService) DeleteProject(id int) (*Response, error) {
-	u := fmt.Sprintf("/projects/%v", id)
+	u := fmt.Sprintf("projects/%v", id)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
@@ -116,8 +116,8 @@ type ProjectColumn struct {
 // ListProjectColumns lists the columns of a GitHub Project for a repo.
 //
 // GitHub API docs: https://developer.github.com/v3/projects/columns/#list-project-columns
-func (s *ProjectsService) ListProjectColumns(projectId int, opt *ListOptions) ([]*ProjectColumn, *Response, error) {
-	u := fmt.Sprintf("/projects/%v/columns", projectId)
+func (s *ProjectsService) ListProjectColumns(projectID int, opt *ListOptions) ([]*ProjectColumn, *Response, error) {
+	u := fmt.Sprintf("projects/%v/columns", projectID)
 	u, err := addOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -144,7 +144,7 @@ func (s *ProjectsService) ListProjectColumns(projectId int, opt *ListOptions) ([
 //
 // GitHub API docs: https://developer.github.com/v3/projects/columns/#get-a-project-column
 func (s *ProjectsService) GetProjectColumn(id int) (*ProjectColumn, *Response, error) {
-	u := fmt.Sprintf("/projects/columns/%v", id)
+	u := fmt.Sprintf("projects/columns/%v", id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
@@ -173,8 +173,8 @@ type ProjectColumnOptions struct {
 // CreateProjectColumn creates a column for the specified (by number) project.
 //
 // GitHub API docs: https://developer.github.com/v3/projects/columns/#create-a-project-column
-func (s *ProjectsService) CreateProjectColumn(projectId int, opt *ProjectColumnOptions) (*ProjectColumn, *Response, error) {
-	u := fmt.Sprintf("/projects/%v/columns", projectId)
+func (s *ProjectsService) CreateProjectColumn(projectID int, opt *ProjectColumnOptions) (*ProjectColumn, *Response, error) {
+	u := fmt.Sprintf("projects/%v/columns", projectID)
 	req, err := s.client.NewRequest("POST", u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -196,7 +196,7 @@ func (s *ProjectsService) CreateProjectColumn(projectId int, opt *ProjectColumnO
 //
 // GitHub API docs: https://developer.github.com/v3/projects/columns/#update-a-project-column
 func (s *ProjectsService) UpdateProjectColumn(columnID int, opt *ProjectColumnOptions) (*ProjectColumn, *Response, error) {
-	u := fmt.Sprintf("/projects/columns/%v", columnID)
+	u := fmt.Sprintf("projects/columns/%v", columnID)
 	req, err := s.client.NewRequest("PATCH", u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -218,7 +218,7 @@ func (s *ProjectsService) UpdateProjectColumn(columnID int, opt *ProjectColumnOp
 //
 // GitHub API docs: https://developer.github.com/v3/projects/columns/#delete-a-project-column
 func (s *ProjectsService) DeleteProjectColumn(columnID int) (*Response, error) {
-	u := fmt.Sprintf("/projects/columns/%v", columnID)
+	u := fmt.Sprintf("projects/columns/%v", columnID)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
@@ -242,7 +242,7 @@ type ProjectColumnMoveOptions struct {
 //
 // GitHub API docs: https://developer.github.com/v3/projects/columns/#move-a-project-column
 func (s *ProjectsService) MoveProjectColumn(columnID int, opt *ProjectColumnMoveOptions) (*Response, error) {
-	u := fmt.Sprintf("/projects/columns/%v/moves", columnID)
+	u := fmt.Sprintf("projects/columns/%v/moves", columnID)
 	req, err := s.client.NewRequest("POST", u, opt)
 	if err != nil {
 		return nil, err
@@ -270,7 +270,7 @@ type ProjectCard struct {
 //
 // GitHub API docs: https://developer.github.com/v3/projects/cards/#list-project-cards
 func (s *ProjectsService) ListProjectCards(columnID int, opt *ListOptions) ([]*ProjectCard, *Response, error) {
-	u := fmt.Sprintf("/projects/columns/%v/cards", columnID)
+	u := fmt.Sprintf("projects/columns/%v/cards", columnID)
 	u, err := addOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -297,7 +297,7 @@ func (s *ProjectsService) ListProjectCards(columnID int, opt *ListOptions) ([]*P
 //
 // GitHub API docs: https://developer.github.com/v3/projects/cards/#get-a-project-card
 func (s *ProjectsService) GetProjectCard(columnID int) (*ProjectCard, *Response, error) {
-	u := fmt.Sprintf("/projects/columns/cards/%v", columnID)
+	u := fmt.Sprintf("projects/columns/cards/%v", columnID)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
@@ -332,7 +332,7 @@ type ProjectCardOptions struct {
 //
 // GitHub API docs: https://developer.github.com/v3/projects/cards/#create-a-project-card
 func (s *ProjectsService) CreateProjectCard(columnID int, opt *ProjectCardOptions) (*ProjectCard, *Response, error) {
-	u := fmt.Sprintf("/projects/columns/%v/cards", columnID)
+	u := fmt.Sprintf("projects/columns/%v/cards", columnID)
 	req, err := s.client.NewRequest("POST", u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -354,7 +354,7 @@ func (s *ProjectsService) CreateProjectCard(columnID int, opt *ProjectCardOption
 //
 // GitHub API docs: https://developer.github.com/v3/projects/cards/#update-a-project-card
 func (s *ProjectsService) UpdateProjectCard(cardID int, opt *ProjectCardOptions) (*ProjectCard, *Response, error) {
-	u := fmt.Sprintf("/projects/columns/cards/%v", cardID)
+	u := fmt.Sprintf("projects/columns/cards/%v", cardID)
 	req, err := s.client.NewRequest("PATCH", u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -376,7 +376,7 @@ func (s *ProjectsService) UpdateProjectCard(cardID int, opt *ProjectCardOptions)
 //
 // GitHub API docs: https://developer.github.com/v3/projects/cards/#delete-a-project-card
 func (s *ProjectsService) DeleteProjectCard(cardID int) (*Response, error) {
-	u := fmt.Sprintf("/projects/columns/cards/%v", cardID)
+	u := fmt.Sprintf("projects/columns/cards/%v", cardID)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
@@ -404,7 +404,7 @@ type ProjectCardMoveOptions struct {
 //
 // GitHub API docs: https://developer.github.com/v3/projects/cards/#move-a-project-card
 func (s *ProjectsService) MoveProjectCard(cardID int, opt *ProjectCardMoveOptions) (*Response, error) {
-	u := fmt.Sprintf("/projects/columns/cards/%v/moves", cardID)
+	u := fmt.Sprintf("projects/columns/cards/%v/moves", cardID)
 	req, err := s.client.NewRequest("POST", u, opt)
 	if err != nil {
 		return nil, err

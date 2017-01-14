@@ -80,7 +80,8 @@ sending a SIGHUP to the server process. These are denoted below.
 
 * `ui` (optional, Vault Enterprise only) - If set `true`, enables the built-in
   web-based UI. Once enabled, the UI will be available to browsers at the
-  standard Vault address.
+  standard Vault address. This can also be set via the `VAULT_UI` 
+  environment variable, which takes precedence. 
 
 In production it is a risk to run Vault on systems where `mlock` is
 unavailable or the setting has been disabled via the `disable_mlock`.
@@ -280,10 +281,11 @@ All HA backends support the following options. These are discussed in much more
 detail in the [High Availability concepts
 page](https://www.vaultproject.io/docs/concepts/ha.html).
 
-  * `redirect_addr` (optional) - This is the address to advertise to other
+  * `redirect_addr` (required) - This is the address to advertise to other
     Vault servers in the cluster for client redirection. This can also be
     set via the `VAULT_REDIRECT_ADDR` environment variable, which takes
-    precedence.
+    precedence. Some HA backends may be able to autodetect this value, but if
+    not it is required to be manually specified.
 
   * `cluster_addr` (optional) - This is the address to advertise to other Vault
     servers in the cluster for request forwarding. This can also be set via the
@@ -327,6 +329,11 @@ For Consul, the following options are supported:
 
   * `tls_min_version` (optional) - Minimum TLS version to use. Accepted values
     are 'tls10', 'tls11' or 'tls12'. Defaults to 'tls12'.
+
+  * `require_consistent` (optional) - If true, then all read requests to Consul
+    will use consistent mode. See [consistency
+    modes](https://www.consul.io/docs/agent/http.html#consistency-modes) in Consul
+    for tradeoffs. Defaults to "false".
 
 The following settings should be set according to your [Consul encryption
 settings](https://www.consul.io/docs/agent/encryption.html):

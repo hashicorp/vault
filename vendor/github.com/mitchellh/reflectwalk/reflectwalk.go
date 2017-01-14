@@ -39,6 +39,13 @@ type SliceWalker interface {
 	SliceElem(int, reflect.Value) error
 }
 
+// ArrayWalker implementations are able to handle array elements found
+// within complex structures.
+type ArrayWalker interface {
+	Array(reflect.Value) error
+	ArrayElem(int, reflect.Value) error
+}
+
 // StructWalker is an interface that has methods that are called for
 // structs when a Walk is done.
 type StructWalker interface {
@@ -179,6 +186,9 @@ func walk(v reflect.Value, w interface{}) (err error) {
 	case reflect.Struct:
 		err = walkStruct(v, w)
 		return
+	case reflect.Array:
+		err = walkArray(v, w)
+		return
 	default:
 		panic("unsupported type: " + k.String())
 	}
@@ -281,6 +291,49 @@ func walkSlice(v reflect.Value, w interface{}) (err error) {
 	ew, ok = w.(EnterExitWalker)
 	if ok {
 		ew.Exit(Slice)
+	}
+
+	return nil
+}
+
+func walkArray(v reflect.Value, w interface{}) (err error) {
+	ew, ok := w.(EnterExitWalker)
+	if ok {
+		ew.Enter(Array)
+	}
+
+	if aw, ok := w.(ArrayWalker); ok {
+		if err := aw.Array(v); err != nil {
+			return err
+		}
+	}
+
+	for i := 0; i < v.Len(); i++ {
+		elem := v.Index(i)
+
+		if aw, ok := w.(ArrayWalker); ok {
+			if err := aw.ArrayElem(i, elem); err != nil {
+				return err
+			}
+		}
+
+		ew, ok := w.(EnterExitWalker)
+		if ok {
+			ew.Enter(ArrayElem)
+		}
+
+		if err := walk(elem, w); err != nil {
+			return err
+		}
+
+		if ok {
+			ew.Exit(ArrayElem)
+		}
+	}
+
+	ew, ok = w.(EnterExitWalker)
+	if ok {
+		ew.Exit(Array)
 	}
 
 	return nil

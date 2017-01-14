@@ -65,6 +65,7 @@ type Signature struct {
 	PreferredKeyServer                                      string
 	IssuerKeyId                                             *uint64
 	IsPrimaryId                                             *bool
+	IssuerFingerprint                                       []byte
 
 	// FlagsValid is set if any flags were given. See RFC 4880, section
 	// 5.2.3.21 for details.
@@ -233,6 +234,7 @@ const (
 	reasonForRevocationSubpacket signatureSubpacketType = 29
 	featuresSubpacket            signatureSubpacketType = 30
 	embeddedSignatureSubpacket   signatureSubpacketType = 32
+	issuerFingerprint            signatureSubpacketType = 33
 )
 
 // parseSignatureSubpacket parses a single subpacket. len(subpacket) is >= 1.
@@ -420,6 +422,10 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 		}
 	case prefKeyServerSubpacket:
 		sig.PreferredKeyServer = string(subpacket[:])
+	case issuerFingerprint:
+		// The first byte is how many bytes the fingerprint is, but we'll just
+		// read until the end of the subpacket, so we'll ignore it.
+		sig.IssuerFingerprint = append([]byte{}, subpacket[1:]...)
 	default:
 		if isCritical {
 			err = errors.UnsupportedError("unknown critical signature subpacket type " + strconv.Itoa(int(packetType)))

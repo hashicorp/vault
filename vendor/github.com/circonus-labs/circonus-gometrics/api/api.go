@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package api provides methods for interacting with the Circonus API
 package api
 
 import (
@@ -35,20 +34,20 @@ type TokenKeyType string
 // TokenAppType - Circonus API Token app name
 type TokenAppType string
 
-// IDType Circonus object id (numeric portion of cid)
-type IDType int
-
 // CIDType Circonus object cid
-type CIDType string
+type CIDType *string
+
+// IDType Circonus object id
+type IDType int
 
 // URLType submission url type
 type URLType string
 
-// SearchQueryType search query
+// SearchQueryType search query (see: https://login.circonus.com/resources/api#searching)
 type SearchQueryType string
 
-// SearchFilterType search filter
-type SearchFilterType string
+// SearchFilterType search filter (see: https://login.circonus.com/resources/api#filtering)
+type SearchFilterType map[string][]string
 
 // TagType search/select/custom tag(s) type
 type TagType []string
@@ -71,8 +70,18 @@ type API struct {
 	Log    *log.Logger
 }
 
-// NewAPI returns a new Circonus API
+// NewClient returns a new Circonus API (alias for New)
+func NewClient(ac *Config) (*API, error) {
+	return New(ac)
+}
+
+// NewAPI returns a new Circonus API (alias for New)
 func NewAPI(ac *Config) (*API, error) {
+	return New(ac)
+}
+
+// New returns a new Circonus API
+func New(ac *Config) (*API, error) {
 
 	if ac == nil {
 		return nil, errors.New("Invalid API configuration (nil)")
@@ -97,6 +106,7 @@ func NewAPI(ac *Config) (*API, error) {
 		au = fmt.Sprintf("https://%s/v2", ac.URL)
 	}
 	if last := len(au) - 1; last >= 0 && au[last] == '/' {
+		// strip off trailing '/'
 		au = au[:last]
 	}
 	apiURL, err := url.Parse(au)
@@ -143,10 +153,13 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 	dataReader := bytes.NewReader(data)
 	reqURL := a.apiURL.String()
 
+	if reqPath == "" {
+		return nil, errors.New("Invalid URL path")
+	}
 	if reqPath[:1] != "/" {
 		reqURL += "/"
 	}
-	if reqPath[:3] == "/v2" {
+	if len(reqPath) >= 3 && reqPath[:3] == "/v2" {
 		reqURL += reqPath[3:len(reqPath)]
 	} else {
 		reqURL += reqPath
@@ -172,7 +185,9 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 		// errors and may relate to outages on the server side. This will catch
 		// invalid response codes as well, like 0 and 999.
 		// Retry on 429 (rate limit) as well.
-		if resp.StatusCode == 0 || resp.StatusCode >= 500 || resp.StatusCode == 429 {
+		if resp.StatusCode == 0 || // wtf?!
+			resp.StatusCode >= 500 || // rutroh
+			resp.StatusCode == 429 { // rate limit
 			body, readErr := ioutil.ReadAll(resp.Body)
 			if readErr != nil {
 				lastHTTPError = fmt.Errorf("- last HTTP error: %d %+v", resp.StatusCode, readErr)

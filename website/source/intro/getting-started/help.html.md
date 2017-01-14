@@ -8,14 +8,14 @@ description: |-
 
 # Built-in Help
 
-You've now worked with `vault write` and `vault read` for multiple paths:
-generic secret backend with `secret/` and dynamic AWS credentials with the
-AWS backend provider at `aws/`. In both cases, the usage of read/write and
-the paths to use differed. AWS in particular had special paths like
-`aws/config`.
+You've now worked with `vault write` and `vault read` for multiple
+paths: the generic secret backend with `secret/` and dynamic AWS
+credentials with the AWS backend provider at `aws/`. In both cases, the
+structure and usage of each backend differed, for example the AWS
+backend has special paths like `aws/config`.
 
 Instead of having to memorize or reference documentation constantly
-to determine what paths to use, we built a help system directly into
+to determine what paths to use, we've built a help system directly into
 Vault. This help system can be accessed via the API or the command-line and
 generates human-readable help for any mounted backend.
 
@@ -28,7 +28,8 @@ For this, we'll assume you have the AWS backend mounted. If not, mount
 it with `vault mount aws`. Even if you don't have an AWS account, you
 can still mount the AWS backend.
 
-With the backend mounted, let's learn about it with `vault path-help`:
+With the backend mounted, let's learn about it with the `vault
+path-help` command:
 
 ```
 $ vault path-help aws
@@ -100,8 +101,8 @@ The access keys will have a lease associated with them. The access keys
 can be revoked by using the lease ID.
 ```
 
-Within a path, we're given the parameters that this path requires.
-Some parameters come from the route itself. In this case, the "name"
+Within a path, we are given the parameters that this path requires.
+Some parameters come from the route itself. In this case, the `name`
 parameter is a named capture from the route regular expression.
 
 There is also a description of what that path does.

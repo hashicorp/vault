@@ -84,7 +84,7 @@ API permissions.
 
 The AWS backend requires an IAM policy to associate created credentials
 with. For this example, we'll write just one policy, but you can associate
-many policies with the backend. Save a file named "policy.json" with the following contents:
+many policies with the backend. Save a file named `policy.json` with the following contents:
 
 ```javascript
 {

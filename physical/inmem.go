@@ -24,6 +24,7 @@ func NewInmem(logger log.Logger) *InmemBackend {
 	in := &InmemBackend{
 		root:       radix.New(),
 		permitPool: NewPermitPool(DefaultParallelOperations),
+		logger:     logger,
 	}
 	return in
 }

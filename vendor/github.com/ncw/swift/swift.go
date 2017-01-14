@@ -1141,6 +1141,19 @@ func (file *ObjectCreateFile) Close() error {
 	return nil
 }
 
+// Headers returns the response headers from the created object if the upload
+// has been completed. The Close() method must be called on an ObjectCreateFile
+// before this method.
+func (file *ObjectCreateFile) Headers() (Headers, error) {
+	// error out if upload is not complete.
+	select {
+	case <-file.done:
+	default:
+		return nil, fmt.Errorf("Cannot get metadata, object upload failed or has not yet completed.")
+	}
+	return file.headers, nil
+}
+
 // Check it satisfies the interface
 var _ io.WriteCloser = &ObjectCreateFile{}
 

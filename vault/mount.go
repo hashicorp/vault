@@ -147,6 +147,7 @@ func (e *MountEntry) Clone() *MountEntry {
 		UUID:        e.UUID,
 		Config:      e.Config,
 		Options:     optClone,
+		Tainted:     e.Tainted,
 	}
 }
 
@@ -195,6 +196,7 @@ func (c *Core) mount(me *MountEntry) error {
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
 		c.mountsLock.Unlock()
+		c.logger.Error("core: failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
 	c.mounts = newTable
@@ -261,7 +263,7 @@ func (c *Core) unmount(path string) (bool, error) {
 	}
 
 	// Clear the data in the view
-	if err := ClearView(view); err != nil {
+	if err := logical.ClearView(view); err != nil {
 		return true, err
 	}
 
@@ -286,6 +288,7 @@ func (c *Core) removeMountEntry(path string) error {
 
 	// Update the mount table
 	if err := c.persistMounts(newTable); err != nil {
+		c.logger.Error("core: failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
 
@@ -304,6 +307,7 @@ func (c *Core) taintMountEntry(path string) error {
 
 	// Update the mount table
 	if err := c.persistMounts(c.mounts); err != nil {
+		c.logger.Error("core: failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
 
@@ -372,6 +376,7 @@ func (c *Core) remount(src, dst string) error {
 		ent.Path = src
 		ent.Tainted = true
 		c.mountsLock.Unlock()
+		c.logger.Error("core: failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
 	c.mountsLock.Unlock()
@@ -462,6 +467,7 @@ func (c *Core) loadMounts() error {
 	}
 
 	if err := c.persistMounts(c.mounts); err != nil {
+		c.logger.Error("core: failed to persist mount table", "error", err)
 		return errLoadMountsFailed
 	}
 	return nil

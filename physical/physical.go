@@ -45,6 +45,12 @@ type HABackend interface {
 	HAEnabled() bool
 }
 
+// Purgable is an optional interface for backends that support
+// purging of their caches.
+type Purgable interface {
+	Purge()
+}
+
 // RedirectDetect is an optional interface that an HABackend
 // can implement. If they do, a redirect address can be automatically
 // detected.
@@ -128,7 +134,7 @@ var builtinBackends = map[string]Factory{
 	"mysql":      newMySQLBackend,
 	"postgresql": newPostgreSQLBackend,
 	"swift":      newSwiftBackend,
-	"gcs":     newGCSBackend,
+	"gcs":        newGCSBackend,
 }
 
 // PermitPool is used to limit maximum outstanding requests

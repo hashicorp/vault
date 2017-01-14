@@ -40,24 +40,3 @@ func randbytes(n int) []byte {
 	}
 	return buf
 }
-
-// strListContains looks for a string in a list of strings.
-func strListContains(haystack []string, needle string) bool {
-	for _, item := range haystack {
-		if item == needle {
-			return true
-		}
-	}
-	return false
-}
-
-// strListSubset checks if a given list is a subset
-// of another set
-func strListSubset(super, sub []string) bool {
-	for _, item := range sub {
-		if !strListContains(super, item) {
-			return false
-		}
-	}
-	return true
-}

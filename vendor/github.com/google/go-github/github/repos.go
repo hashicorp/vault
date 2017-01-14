@@ -501,9 +501,9 @@ func (s *RepositoriesService) ListTags(owner string, repo string, opt *ListOptio
 
 // Branch represents a repository branch
 type Branch struct {
-	Name      *string `json:"name,omitempty"`
-	Commit    *Commit `json:"commit,omitempty"`
-	Protected *bool   `json:"protected,omitempty"`
+	Name      *string           `json:"name,omitempty"`
+	Commit    *RepositoryCommit `json:"commit,omitempty"`
+	Protected *bool             `json:"protected,omitempty"`
 }
 
 // Protection represents a repository branch's protection.

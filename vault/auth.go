@@ -145,7 +145,7 @@ func (c *Core) disableCredential(path string) (bool, error) {
 
 	// Clear the data in the view
 	if view != nil {
-		if err := ClearView(view); err != nil {
+		if err := logical.ClearView(view); err != nil {
 			return true, err
 		}
 	}

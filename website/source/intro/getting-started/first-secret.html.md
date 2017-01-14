@@ -17,7 +17,7 @@ but there is also a complete
 [HTTP API](/docs/http/index.html)
 that can be used to programmatically do anything with Vault.
 
-Secrets written to Vault are encrypted and then written to the backend
+Secrets written to Vault are encrypted and then written to backend
 storage. For our dev server, backend storage is in-memory, but in production
 this would more likely be on disk or in [Consul](https://www.consul.io).
 Vault encrypts the value before it is ever handed to the storage driver.
@@ -47,14 +47,14 @@ Success! Data written to: secret/hello
 ```
 
 `vault write` is a very powerful command. In addition to writing data
-directly from the command-line, it can read values and keypairs from
-stdin as well as files. For more information, see the
+directly from the command-line, it can read values and key pairs from
+`STDIN` as well as files. For more information, see the
 [vault write documentation](/docs/commands/read-write.html).
 
-~> **Warning:** The documentation uses the "key=value" based entry
+~> **Warning:** The documentation uses the `key=value` based entry
 throughout, but it is more secure to use files if possible. Sending
 data via the CLI is often logged in shell history. For real secrets,
-please use files. See the link above for more information.
+please use files. See the link above about reading in from `STDIN` for more information.
 
 ## Reading a Secret
 
@@ -69,8 +69,9 @@ excited         	yes
 value           	world
 ```
 
-As you can see, the values we wrote are given back to us. Vault read
-the data from storage and decrypted it.
+As you can see, the values we wrote are given back to us. Vault reads
+the data from storage and decrypts it.
+
 The output format is purposefully whitespace separated to make it easy
 to pipe into a tool like `awk`.
 
@@ -99,7 +100,7 @@ for which the lease is valid, in seconds.
 
 You can see our data mirrored
 here as well. The JSON output is very useful for scripts. For example below
-we use the `jq` tool to extract the "excited" value:
+we use the `jq` tool to extract the value of the `excited` secret:
 
 ```
 $ vault read -format=json secret/hello | jq -r .data.excited

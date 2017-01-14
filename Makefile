@@ -61,7 +61,7 @@ bootstrap:
 	done
 
 proto:
-	protoc -I helper/forwarding -I vault -I ../../.. vault/request_forwarding_service.proto --go_out=plugins=grpc:vault
+	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
 
 .PHONY: bin default generate test vet bootstrap

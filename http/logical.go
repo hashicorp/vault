@@ -80,7 +80,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		Connection: getConnection(r),
 	})
 
-	req, err = requestWrapTTL(r, req)
+	req, err = requestWrapInfo(r, req)
 	if err != nil {
 		return nil, http.StatusBadRequest, errwrap.Wrapf("error parsing X-Vault-Wrap-TTL header: {{err}}", err)
 	}
@@ -260,6 +260,7 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}
+
 	w.WriteHeader(status)
 	w.Write(body)
 }

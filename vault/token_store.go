@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -40,6 +41,20 @@ const (
 
 	// rolesPrefix is the prefix used to store role information
 	rolesPrefix = "roles/"
+
+	// tokenRevocationDeferred indicates that the token should not be used
+	// again but is currently fulfilling its final use
+	tokenRevocationDeferred = -1
+
+	// tokenRevocationInProgress indicates that revocation of that token/its
+	// leases is ongoing
+	tokenRevocationInProgress = -2
+
+	// tokenRevocationFailed indicates that revocation failed; the entry is
+	// kept around so that when the tidy function is run it can be tried
+	// again (or when the revocation function is run again), but all other uses
+	// will report the token invalid
+	tokenRevocationFailed = -3
 )
 
 var (
@@ -48,6 +63,14 @@ var (
 
 	// pathSuffixSanitize is used to ensure a path suffix in a role is valid.
 	pathSuffixSanitize = regexp.MustCompile("\\w[\\w-.]+\\w")
+
+	destroyCubbyhole = func(ts *TokenStore, saltedID string) error {
+		if ts.cubbyholeBackend == nil {
+			// Should only ever happen in testing
+			return nil
+		}
+		return ts.cubbyholeBackend.revoke(salt.SaltID(ts.cubbyholeBackend.saltUUID, saltedID, salt.SHA1Hash))
+	}
 )
 
 // TokenStore is used to manage client tokens. Tokens are used for
@@ -66,6 +89,8 @@ type TokenStore struct {
 	policyLookupFunc func(string) (*Policy, error)
 
 	tokenLocks map[string]*sync.RWMutex
+
+	cubbyholeDestroyer func(*TokenStore, string) error
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -76,7 +101,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 	// Initialize the store
 	t := &TokenStore{
-		view: view,
+		view:               view,
+		cubbyholeDestroyer: destroyCubbyhole,
 	}
 
 	if c.policyStore != nil {
@@ -429,6 +455,17 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				HelpSynopsis:    strings.TrimSpace(tokenRenewHelp),
 				HelpDescription: strings.TrimSpace(tokenRenewHelp),
 			},
+
+			&framework.Path{
+				Pattern: "tidy$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: t.handleTidy,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(tokenTidyHelp),
+				HelpDescription: strings.TrimSpace(tokenTidyDesc),
+			},
 		},
 	}
 
@@ -460,7 +497,13 @@ type TokenEntry struct {
 	// Used for operators to be able to associate with the source
 	DisplayName string `json:"display_name" mapstructure:"display_name" structs:"display_name"`
 
-	// Used to restrict the number of uses (zero is unlimited). This is to support one-time-tokens (generalized).
+	// Used to restrict the number of uses (zero is unlimited). This is to
+	// support one-time-tokens (generalized). There are a few special values:
+	// if it's -1 it has run through its use counts and is executing its final
+	// use; if it's -2 it is tainted, which means revocation is currently
+	// running on it; and if it's -3 it's also tainted but revocation
+	// previously ran and failed, so this hints the tidy function to try it
+	// again.
 	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
 
 	// Time of token creation
@@ -525,7 +568,7 @@ type accessorEntry struct {
 
 // SetExpirationManager is used to provide the token store with
 // an expiration manager. This is used to manage prefix based revocation
-// of tokens and to cleanup entries when removed from the token store.
+// of tokens and to tidy entries when removed from the token store.
 func (ts *TokenStore) SetExpirationManager(exp *ExpirationManager) {
 	ts.expiration = exp
 }
@@ -622,7 +665,7 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
-	entry.Policies = policyutil.SanitizePolicies(entry.Policies, false)
+	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
 
 	err := ts.createAccessor(entry)
 	if err != nil {
@@ -722,7 +765,7 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 	defer lock.Unlock()
 
 	// Call lookupSalted instead of Lookup to avoid deadlocking since Lookup grabs a read lock
-	te, err := ts.lookupSalted(ts.SaltID(te.ID))
+	te, err := ts.lookupSalted(ts.SaltID(te.ID), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh entry: %v", err)
 	}
@@ -746,18 +789,9 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		te.NumUses -= 1
 	}
 
-	// Marshal the entry
-	enc, err := json.Marshal(te)
+	err = ts.storeCommon(te, false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to encode entry: %v", err)
-	}
-
-	// Write under the primary ID
-	saltedId := ts.SaltID(te.ID)
-	path := lookupPrefix + saltedId
-	le := &logical.StorageEntry{Key: path, Value: enc}
-	if err := ts.view.Put(le); err != nil {
-		return nil, fmt.Errorf("failed to persist entry: %v", err)
+		return nil, err
 	}
 
 	return te, nil
@@ -783,11 +817,13 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 	lock.RLock()
 	defer lock.RUnlock()
 
-	return ts.lookupSalted(ts.SaltID(id))
+	return ts.lookupSalted(ts.SaltID(id), false)
 }
 
-// lookupSlated is used to find a token given its salted ID
-func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
+// lookupSalted is used to find a token given its salted ID. If tainted is
+// true, entries that are in some revocation state (currently, indicated by num
+// uses < 0), the entry will be returned anyways
+func (ts *TokenStore) lookupSalted(saltedId string, tainted bool) (*TokenEntry, error) {
 	// Lookup token
 	path := lookupPrefix + saltedId
 	raw, err := ts.view.Get(path)
@@ -806,8 +842,8 @@ func (ts *TokenStore) lookupSalted(saltedId string) (*TokenEntry, error) {
 		return nil, fmt.Errorf("failed to decode entry: %v", err)
 	}
 
-	// This is a token that is awaiting deferred revocation
-	if entry.NumUses == -1 {
+	// This is a token that is awaiting deferred revocation or tainted
+	if entry.NumUses < 0 && !tainted {
 		return nil, nil
 	}
 
@@ -869,46 +905,109 @@ func (ts *TokenStore) Revoke(id string) error {
 
 // revokeSalted is used to invalidate a given salted token,
 // any child tokens will be orphaned.
-func (ts *TokenStore) revokeSalted(saltedId string) error {
+func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
+	// Protect the entry lookup/writing with locks. The rub here is that we
+	// don't know the ID until we look it up once, so first we look it up, then
+	// do a locked lookup.
+	entry, err := ts.lookupSalted(saltedId, true)
+	if err != nil {
+		return err
+	}
+	if entry == nil {
+		return nil
+	}
+
+	lock := ts.getTokenLock(entry.ID)
+	lock.Lock()
+
 	// Lookup the token first
-	entry, err := ts.lookupSalted(saltedId)
+	entry, err = ts.lookupSalted(saltedId, true)
+	if err != nil {
+		lock.Unlock()
+		return err
+	}
+
+	if entry == nil {
+		lock.Unlock()
+		return nil
+	}
+
+	// On failure we write -3, so if we hit -2 here we're already running a
+	// revocation operation. This can happen due to e.g. recursion into this
+	// function via the expiration manager's RevokeByToken.
+	if entry.NumUses == tokenRevocationInProgress {
+		lock.Unlock()
+		return nil
+	}
+
+	// This acts as a WAL. lookupSalted will no longer return this entry,
+	// so the token cannot be used, but this way we can keep the entry
+	// around until after the rest of this function is attempted, and a
+	// tidy function can key off of this value to try again.
+	entry.NumUses = tokenRevocationInProgress
+	err = ts.storeCommon(entry, false)
+	lock.Unlock()
 	if err != nil {
 		return err
 	}
 
-	// Nuke the primary key first
-	path := lookupPrefix + saltedId
-	if ts.view.Delete(path); err != nil {
-		return fmt.Errorf("failed to delete entry: %v", err)
+	// If we are returning an error, mark the entry with -3 to indicate
+	// failed revocation. This way we don't try to clean up during active
+	// revocation (-2).
+	defer func() {
+		if ret != nil {
+			lock.Lock()
+			defer lock.Unlock()
+
+			// Lookup the token again to make sure something else didn't
+			// revoke in the interim
+			entry, err := ts.lookupSalted(saltedId, true)
+			if err != nil {
+				return
+			}
+
+			// If it exists just taint to -3 rather than trying to figure
+			// out what it means if it's already -3 after the -2 above
+			if entry != nil {
+				entry.NumUses = tokenRevocationFailed
+				ts.storeCommon(entry, false)
+			}
+		}
+	}()
+
+	// Destroy the token's cubby. This should go first as it's a
+	// security-sensitive item.
+	err = ts.cubbyholeDestroyer(ts, saltedId)
+	if err != nil {
+		return err
+	}
+
+	// Revoke all secrets under this token. This should go first as it's a
+	// security-sensitive item.
+	if err := ts.expiration.RevokeByToken(entry); err != nil {
+		return err
 	}
 
 	// Clear the secondary index if any
-	if entry != nil && entry.Parent != "" {
+	if entry.Parent != "" {
 		path := parentPrefix + ts.SaltID(entry.Parent) + "/" + saltedId
-		if ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
 
 	// Clear the accessor index if any
-	if entry != nil && entry.Accessor != "" {
+	if entry.Accessor != "" {
 		path := accessorPrefix + ts.SaltID(entry.Accessor)
-		if ts.view.Delete(path); err != nil {
+		if err = ts.view.Delete(path); err != nil {
 			return fmt.Errorf("failed to delete entry: %v", err)
 		}
 	}
 
-	// Revoke all secrets under this token
-	if entry != nil {
-		if err := ts.expiration.RevokeByToken(entry); err != nil {
-			return err
-		}
-	}
-
-	// Destroy the cubby space
-	err = ts.destroyCubbyhole(saltedId)
-	if err != nil {
-		return err
+	// Now that the entry is not usable for any revocation tasks, nuke it
+	path := lookupPrefix + saltedId
+	if err = ts.view.Delete(path); err != nil {
+		return fmt.Errorf("failed to delete entry: %v", err)
 	}
 
 	return nil
@@ -993,7 +1092,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 	// If we hit an error, assume it's a pre-struct straight token ID
 	if err != nil {
 		aEntry.TokenID = string(entry.Value)
-		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID))
+		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID), false)
 		if err != nil {
 			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
 		}
@@ -1008,6 +1107,114 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 	}
 
 	return aEntry, nil
+}
+
+// handleTidy handles the cleaning up of leaked accessor storage entries and
+// cleaning up of leases that are associated to tokens that are expired.
+func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// List out all the accessors
+	saltedAccessorList, err := ts.view.List(accessorPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch accessor entries: %v", err)
+	}
+
+	var tidyErrors *multierror.Error
+
+	// First, clean up secondary index entries that are no longer valid
+	parentList, err := ts.view.List(parentPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
+	}
+
+	// Scan through the secondary index entries; if there is an entry
+	// with the token's salt ID at the end, remove it
+	for _, parent := range parentList {
+		children, err := ts.view.List(parentPrefix + parent)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
+			continue
+		}
+
+		for _, child := range children {
+			// Look up tainted entries so we can be sure that if this isn't
+			// found, it doesn't exist
+			te, _ := ts.lookupSalted(child, true)
+			if te == nil {
+				err = ts.view.Delete(parentPrefix + parent + "/" + child)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
+				}
+			}
+		}
+	}
+
+	// For each of the accessor, see if the token ID associated with it is
+	// a valid one. If not, delete the leases associated with that token
+	// and delete the accessor as well.
+	for _, saltedAccessor := range saltedAccessorList {
+		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
+			continue
+		}
+
+		// A valid accessor storage entry should always have a token ID
+		// in it. If not, it is an invalid accessor entry and needs to
+		// be deleted.
+		if accessorEntry.TokenID == "" {
+			// If deletion of accessor fails, move on to the next
+			// item since this is just a best-effort operation
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
+				continue
+			}
+		}
+
+		saltedId := ts.SaltID(accessorEntry.TokenID)
+
+		// Look up tainted variants so we only find entries that truly don't
+		// exist
+		te, err := ts.lookupSalted(saltedId, true)
+
+		// If token entry is not found assume that the token is not valid any
+		// more and conclude that accessor, leases, and secondary index entries
+		// for this token should not exist as well.
+		if te == nil {
+			// RevokeByToken expects a '*TokenEntry'. For the
+			// purposes of tidying, it is sufficient if the token
+			// entry only has ID set.
+			tokenEntry := &TokenEntry{
+				ID: accessorEntry.TokenID,
+			}
+
+			// Attempt to revoke the token. This will also revoke
+			// the leases associated with the token.
+			err := ts.expiration.RevokeByToken(tokenEntry)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke leases of expired token: %v", err))
+				continue
+			}
+
+			// If deletion of accessor fails, move on to the next item since
+			// this is just a best-effort operation. We do this last so that on
+			// next run if something above failed we still have the accessor
+			// entry to try again.
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
+				continue
+			}
+		}
+	}
+
+	// Later request handling code seems to check if the type is multierror so
+	// if we haven't added any errors we need to just return a normal nil error
+	if tidyErrors == nil {
+		return nil, nil
+	}
+
+	return nil, tidyErrors
 }
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning
@@ -1213,57 +1420,119 @@ func (ts *TokenStore) handleCreateCommon(
 
 	resp := &logical.Response{}
 
+	var addDefault bool
+
+	// N.B.: The logic here uses various calculations as to whether default
+	// should be added. In the end we decided that if NoDefaultPolicy is set it
+	// should be stripped out regardless, *but*, the logic of when it should
+	// and shouldn't be added is kept because we want to do subset comparisons
+	// based on adding default when it's correct to do so.
 	switch {
-	// If we have a role, and the role defines policies, we don't even consider
-	// parent policies; the role allowed policies trumps all
-	case role != nil && len(role.AllowedPolicies) > 0:
-		if len(role.DisallowedPolicies) > 0 {
-			resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
+	case role != nil && (len(role.AllowedPolicies) > 0 || len(role.DisallowedPolicies) > 0):
+		// Holds the final set of policies as they get munged
+		var finalPolicies []string
+
+		// We don't make use of the global one because roles with allowed or
+		// disallowed set do their own policy rules
+		var localAddDefault bool
+
+		// If the request doesn't say not to add "default" and if "default"
+		// isn't in the disallowed list, add it. This is in line with the idea
+		// that roles, when allowed/disallowed ar set, allow a subset of
+		// policies to be set disjoint from the parent token's policies.
+		if !data.NoDefaultPolicy && !strutil.StrListContains(role.DisallowedPolicies, "default") {
+			localAddDefault = true
 		}
-		if len(data.Policies) == 0 {
-			data.Policies = role.AllowedPolicies
+
+		// Start with passed-in policies as a baseline, if they exist
+		if len(data.Policies) > 0 {
+			finalPolicies = policyutil.SanitizePolicies(data.Policies, localAddDefault)
+		}
+
+		var sanitizedRolePolicies []string
+
+		// First check allowed policies; if policies are specified they will be
+		// checked, otherwise if an allowed set exists that will be the set
+		// that is used
+		if len(role.AllowedPolicies) > 0 {
+			// Note that if "default" is already in allowed, and also in
+			// disallowed, this will still result in an error later since this
+			// doesn't strip out default
+			sanitizedRolePolicies = policyutil.SanitizePolicies(role.AllowedPolicies, localAddDefault)
+
+			if len(finalPolicies) == 0 {
+				finalPolicies = sanitizedRolePolicies
+			} else {
+				if !strutil.StrListSubset(sanitizedRolePolicies, finalPolicies) {
+					return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", finalPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+				}
+			}
 		} else {
-			// Sanitize passed-in and role policies before comparison
-			sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
-			sanitizedRolePolicies := policyutil.SanitizePolicies(role.AllowedPolicies, true)
-
-			if !strutil.StrListSubset(sanitizedRolePolicies, sanitizedInputPolicies) {
-				return logical.ErrorResponse(fmt.Sprintf("token policies (%v) must be subset of the role's allowed policies (%v)", sanitizedInputPolicies, sanitizedRolePolicies)), logical.ErrInvalidRequest
+			// Check against parent policies, or assign parent policies. As
+			// this is a role, add default unless explicitly disabled.
+			if len(finalPolicies) == 0 {
+				finalPolicies = policyutil.SanitizePolicies(parent.Policies, localAddDefault)
+			} else {
+				// If we added default based on the fact that this is using a
+				// role, we need to add it here too to ensure that the subset
+				// matching works.
+				sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, localAddDefault)
+				if !strutil.StrListSubset(sanitizedParentPolicies, finalPolicies) {
+					return logical.ErrorResponse("child policies must be subset of parent when role contains no allowed_policies"), logical.ErrInvalidRequest
+				}
 			}
 		}
 
-	case role != nil && len(role.DisallowedPolicies) > 0:
-		if len(data.Policies) == 0 {
-			data.Policies = parent.Policies
-		}
-		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
+		if len(role.DisallowedPolicies) > 0 {
+			// We don't add the default here because we only want to disallow it if it's explicitly set
+			sanitizedRolePolicies = policyutil.SanitizePolicies(role.DisallowedPolicies, policyutil.DoNotAddDefaultPolicy)
 
-		// Do not voluntarily add 'default' to the list of items to check on
-		sanitizedRolePolicies := policyutil.SanitizePolicies(role.DisallowedPolicies, false)
-
-		for _, inputPolicy := range sanitizedInputPolicies {
-			if strutil.StrListContains(sanitizedRolePolicies, inputPolicy) {
-				return logical.ErrorResponse(fmt.Sprintf("token policy (%s) is disallowed by this role", inputPolicy)), logical.ErrInvalidRequest
+			for _, finalPolicy := range finalPolicies {
+				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
+					return logical.ErrorResponse(fmt.Sprintf("token policy %q is disallowed by this role", finalPolicy)), logical.ErrInvalidRequest
+				}
 			}
 		}
 
+		data.Policies = finalPolicies
+
+	// No policies specified, inherit parent
 	case len(data.Policies) == 0:
-		data.Policies = parent.Policies
+		// Only inherit "default" if the parent already has it, so don't touch addDefault here
+		data.Policies = policyutil.SanitizePolicies(parent.Policies, policyutil.DoNotAddDefaultPolicy)
 
-	// When a role is not in use, only permit policies to be a subset unless
-	// the client has root or sudo privileges
+	// When a role is not in use or does not specify allowed/disallowed, only
+	// permit policies to be a subset unless the client has root or sudo
+	// privileges. Default is added in this case if the parent has it, unless
+	// the client specified for it not to be added.
 	case !isSudo:
 		// Sanitize passed-in and parent policies before comparison
-		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, true)
-		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, true)
+		sanitizedInputPolicies := policyutil.SanitizePolicies(data.Policies, policyutil.DoNotAddDefaultPolicy)
+		sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, policyutil.DoNotAddDefaultPolicy)
 
 		if !strutil.StrListSubset(sanitizedParentPolicies, sanitizedInputPolicies) {
 			return logical.ErrorResponse("child policies must be subset of parent"), logical.ErrInvalidRequest
 		}
+
+		// If the parent has default, and they haven't requested not to get it,
+		// add it. Note that if they have explicitly put "default" in
+		// data.Policies it will still be added because NoDefaultPolicy
+		// controls *automatic* adding.
+		if !data.NoDefaultPolicy && strutil.StrListContains(parent.Policies, "default") {
+			addDefault = true
+		}
+
+	// Add default by default in this case unless requested not to
+	case isSudo:
+		addDefault = !data.NoDefaultPolicy
 	}
 
-	// Do not add the 'default' policy if requested not to.
-	te.Policies = policyutil.SanitizePolicies(data.Policies, !data.NoDefaultPolicy)
+	te.Policies = policyutil.SanitizePolicies(data.Policies, addDefault)
+
+	// Yes, this is a little inefficient to do it like this, but meh
+	if data.NoDefaultPolicy {
+		te.Policies = strutil.StrListDelete(te.Policies, "default")
+	}
 
 	// Prevent internal policies from being assigned to tokens
 	for _, policy := range te.Policies {
@@ -1575,8 +1844,13 @@ func (ts *TokenStore) handleLookup(
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	lock := ts.getTokenLock(id)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	// Lookup the token
-	out, err := ts.Lookup(id)
+	saltedId := ts.SaltID(id)
+	out, err := ts.lookupSalted(saltedId, true)
 
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
@@ -1937,23 +2211,16 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 
 	allowedPoliciesStr, ok := data.GetOk("allowed_policies")
 	if ok {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(allowedPoliciesStr.(string), ","), false)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(allowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
 	} else if req.Operation == logical.CreateOperation {
-		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("allowed_policies").(string), ","), false)
+		entry.AllowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("allowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
 	}
 
 	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
 	if ok {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(disallowedPoliciesStr.(string), ","), false)
+		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(disallowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
 	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), false)
-	}
-
-	if len(entry.AllowedPolicies) > 0 && len(entry.DisallowedPolicies) > 0 {
-		if resp == nil {
-			resp = &logical.Response{}
-		}
-		resp.AddWarning("Both 'allowed_policies' and 'disallowed_policies' are set; only 'allowed_policies' will take effect")
+		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
 	}
 
 	// Store it
@@ -1969,6 +2236,16 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 }
 
 const (
+	tokenTidyHelp = `
+This endpoint performs cleanup tasks that can be run if certain error
+conditions have occurred.
+`
+	tokenTidyDesc = `
+This endpoint performs cleanup tasks that can be run to clean up token and
+lease entries after certain error conditions. Usually running this is not
+necessary, and is only required if upgrade notes or support personnel suggest
+it.
+`
 	tokenBackendHelp = `The token credential backend is always enabled and builtin to Vault.
 Client tokens are used to identify a client and to allow Vault to associate policies and ACLs
 which are enforced on every request. This backend also allows for generating sub-tokens as well
@@ -1989,12 +2266,9 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenAllowedPoliciesHelp = `If set, tokens can be created with any subset of the policies in this
 list, rather than the normal semantics of tokens being a subset of the
 calling token's policies. The parameter is a comma-delimited string of
-policy names. If this and 'disallowed_policies' are both set, only this
-option takes effect.`
+policy names.`
 	tokenDisallowedPoliciesHelp = `If set, successful token creation via this role will require that
-no policies in the given list are requested. If both
-'disallowed_policies' and 'allowed_policies' are set, this option has
-no effect. The parameter is a comma-delimited string of policy names.`
+no policies in the given list are requested. The parameter is a comma-delimited string of policy names.`
 	tokenOrphanHelp = `If true, tokens created via this role
 will be orphan tokens (have no parent)`
 	tokenPeriodHelp = `If set, tokens created via this role

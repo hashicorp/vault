@@ -85,8 +85,18 @@ func (t *transport) prepareKeyChange(algs *algorithms, kexResult *kexResult) err
 }
 
 // Read and decrypt next packet.
-func (t *transport) readPacket() ([]byte, error) {
-	return t.reader.readPacket(t.bufReader)
+func (t *transport) readPacket() (p []byte, err error) {
+	for {
+		p, err = t.reader.readPacket(t.bufReader)
+		if err != nil {
+			break
+		}
+		if len(p) == 0 || (p[0] != msgIgnore && p[0] != msgDebug) {
+			break
+		}
+	}
+
+	return p, err
 }
 
 func (s *connectionState) readPacket(r *bufio.Reader) ([]byte, error) {
