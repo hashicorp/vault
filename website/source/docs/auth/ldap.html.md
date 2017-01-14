@@ -15,8 +15,8 @@ server and user/password credentials. This allows Vault to be integrated
 into environments using LDAP without duplicating the user/pass configuration
 in multiple places.
 
-The mapping of groups in LDAP to Vault policies is managed by using the
-`users/` and `groups/` paths.
+The mapping of groups and users in LDAP to Vault policies is managed by using
+the `users/` and `groups/` paths.
 
 ## A Note on Escaping
 
@@ -231,16 +231,17 @@ $ vault write auth/ldap/groups/scientists policies=foo,bar
 ```
 
 This maps the LDAP group "scientists" to the "foo" and "bar" Vault policies.
-
-We can also add specific LDAP users to additional (potentially non-LDAP) groups:
+We can also add specific LDAP users to additional (potentially non-LDAP)
+groups. Note that policies can also be specified on LDAP users as well.
 
 ```
 $ vault write auth/ldap/groups/engineers policies=foobar
-$ vault write auth/ldap/users/tesla groups=engineers
+$ vault write auth/ldap/users/tesla groups=engineers policies=zoobar
 ```
 
 This adds the LDAP user "tesla" to the "engineers" group, which maps to
-the "foobar" Vault policy.
+the "foobar" Vault policy. User "tesla" itself is associated with "zoobar"
+policy.
 
 Finally, we can test this by authenticating:
 
@@ -250,9 +251,9 @@ Password (will be hidden):
 Successfully authenticated! The policies that are associated
 with this token are listed below:
 
-bar, foo, foobar
+default, foobar, zoobar
 ```
 
 ## Note on policy mapping
 
-It should be noted that user -> policy mapping (via group membership) happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
+It should be noted that user -> policy mapping happens at token creation time. And changes in group membership on the LDAP server will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
