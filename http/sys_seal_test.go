@@ -221,6 +221,10 @@ func TestSysUnseal_Reset(t *testing.T) {
 		t.Fatalf("expected version information")
 	}
 	expected["version"] = actual["version"]
+	if actual["nonce"] == "" {
+		t.Fatalf("expected a nonce")
+	}
+	expected["nonce"] = actual["nonce"]
 	if actual["cluster_name"] == nil {
 		delete(expected, "cluster_name")
 	} else {
