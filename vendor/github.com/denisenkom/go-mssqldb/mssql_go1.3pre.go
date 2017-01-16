@@ -6,6 +6,8 @@ import (
 	"net"
 )
 
-func createDialer(p *connectParams) *net.Dialer {
-	return &net.Dialer{Timeout: p.dial_timeout}
+func init() {
+	createDialer = func(p *connectParams) dialer {
+		return tcpDialer{&net.Dialer{Timeout: p.dial_timeout}}
+	}
 }

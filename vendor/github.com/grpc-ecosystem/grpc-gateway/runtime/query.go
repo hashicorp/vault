@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/grpc-ecosystem/grpc-gateway/utilities"
@@ -62,7 +63,7 @@ func populateFieldValueFromPath(msg proto.Message, fieldPath []string, values []
 		case reflect.Ptr:
 			if f.IsNil() {
 				m = reflect.New(f.Type().Elem())
-				f.Set(m)
+				f.Set(m.Convert(f.Type()))
 			}
 			m = f.Elem()
 			continue
@@ -101,18 +102,41 @@ func populateRepeatedField(f reflect.Value, values []string) error {
 	if !ok {
 		return fmt.Errorf("unsupported field type %s", elemType)
 	}
-	f.Set(reflect.MakeSlice(f.Type(), len(values), len(values)))
+	f.Set(reflect.MakeSlice(f.Type(), len(values), len(values)).Convert(f.Type()))
 	for i, v := range values {
 		result := conv.Call([]reflect.Value{reflect.ValueOf(v)})
 		if err := result[1].Interface(); err != nil {
 			return err.(error)
 		}
-		f.Index(i).Set(result[0])
+		f.Index(i).Set(result[0].Convert(f.Index(i).Type()))
 	}
 	return nil
 }
 
 func populateField(f reflect.Value, value string) error {
+	// Handle well known type
+	type wkt interface {
+		XXX_WellKnownType() string
+	}
+	if wkt, ok := f.Addr().Interface().(wkt); ok {
+		switch wkt.XXX_WellKnownType() {
+		case "Timestamp":
+			if value == "null" {
+				f.Field(0).SetInt(0)
+				f.Field(1).SetInt(0)
+				return nil
+			}
+
+			t, err := time.Parse(time.RFC3339Nano, value)
+			if err != nil {
+				return fmt.Errorf("bad Timestamp: %v", err)
+			}
+			f.Field(0).SetInt(int64(t.Unix()))
+			f.Field(1).SetInt(int64(t.Nanosecond()))
+			return nil
+		}
+	}
+
 	conv, ok := convFromType[f.Kind()]
 	if !ok {
 		return fmt.Errorf("unsupported field type %T", f)
@@ -121,7 +145,7 @@ func populateField(f reflect.Value, value string) error {
 	if err := result[1].Interface(); err != nil {
 		return err.(error)
 	}
-	f.Set(result[0])
+	f.Set(result[0].Convert(f.Type()))
 	return nil
 }
 

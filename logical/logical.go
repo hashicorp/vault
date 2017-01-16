@@ -39,6 +39,10 @@ type Backend interface {
 	// handle any cleanup like connection closing or releasing of file handles.
 	Cleanup()
 
+	// Initialize is invoked after a backend is created. It is the place to run
+	// any operations requiring storage; these should not be in the factory.
+	Initialize() error
+
 	// InvalidateKey may be invoked when an object is modified that belongs
 	// to the backend. The backend can use this to clear any caches or reset
 	// internal state as needed.
@@ -71,4 +75,27 @@ type Paths struct {
 
 	// Unauthenticated are the paths that can be accessed without any auth.
 	Unauthenticated []string
+
+	// LocalStorage are paths (prefixes) that are local to this instance; this
+	// indicates that these paths should not be replicated
+	LocalStorage []string
+}
+
+type ReplicationState uint32
+
+const (
+	ReplicationDisabled ReplicationState = iota
+	ReplicationPrimary
+	ReplicationSecondary
+)
+
+func (r ReplicationState) String() string {
+	switch r {
+	case ReplicationSecondary:
+		return "secondary"
+	case ReplicationPrimary:
+		return "primary"
+	}
+
+	return "disabled"
 }

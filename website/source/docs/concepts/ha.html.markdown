@@ -127,13 +127,13 @@ it will start cluster listeners, and when it becomes standby it will stop them.
 
 ### Per-Node Cluster Address
 
-Similar to the `redirect_addr`, this is the value that each node, if active,
-should advertise to the standbys to use for server-to-server communications,
-and lives in the `backend` (or `ha_backend`) block.  On each node, this should
-be set to a host name or IP address that a standby can use to reach one of that
-node's `cluster_address` values set in the `listener` blocks, including port.
-(Note that this will always be forced to `https` since only TLS connections are
-used between servers.)
+Similar to the `redirect_addr`, `cluster_addr` is the value that each node, if
+active, should advertise to the standbys to use for server-to-server
+communications, and lives in the `backend` (or `ha_backend`) block. On each
+node, this should be set to a host name or IP address that a standby can use to
+reach one of that node's `cluster_address` values set in the `listener` blocks,
+including port. (Note that this will always be forced to `https` since only TLS
+connections are used between servers.)
 
 This value can also be specified by the `VAULT_CLUSTER_ADDR` environment
 variable, which takes precedence.

@@ -182,6 +182,11 @@ type Trap struct {
 
 // NewCheckManager returns a new check manager
 func NewCheckManager(cfg *Config) (*CheckManager, error) {
+	return New(cfg)
+}
+
+// New returns a new check manager
+func New(cfg *Config) (*CheckManager, error) {
 
 	if cfg == nil {
 		return nil, errors.New("invalid Check Manager configuration (nil)")
@@ -223,7 +228,7 @@ func NewCheckManager(cfg *Config) (*CheckManager, error) {
 	cfg.API.Debug = cm.Debug
 	cfg.API.Log = cm.Log
 
-	apih, err := api.NewAPI(&cfg.API)
+	apih, err := api.New(&cfg.API)
 	if err != nil {
 		return nil, err
 	}

@@ -53,6 +53,39 @@ func TestSysInit_get(t *testing.T) {
 	}
 }
 
+// Test to check if the API errors out when wrong number of PGP keys are
+// supplied
+func TestSysInit_pgpKeysEntries(t *testing.T) {
+	core := vault.TestCore(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+		"secret_shares":   5,
+		"secret_threhold": 3,
+		"pgp_keys":        []string{"pgpkey1"},
+	})
+	testResponseStatus(t, resp, 400)
+}
+
+// Test to check if the API errors out when wrong number of PGP keys are
+// supplied for recovery config
+func TestSysInit_pgpKeysEntriesForRecovery(t *testing.T) {
+	core := vault.TestCoreNewSeal(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+		"secret_shares":      1,
+		"secret_threshold":   1,
+		"stored_shares":      1,
+		"recovery_shares":    5,
+		"recovery_threshold": 3,
+		"recovery_pgp_keys":  []string{"pgpkey1"},
+	})
+	testResponseStatus(t, resp, 400)
+}
+
 func TestSysInit_put(t *testing.T) {
 	core := vault.TestCore(t)
 	ln, addr := TestServer(t, core)

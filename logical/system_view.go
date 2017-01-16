@@ -31,19 +31,18 @@ type SystemView interface {
 	// despite known slowdowns.
 	CachingDisabled() bool
 
-	// IsPrimary checks if this is a primary Vault instance. This
-	// can be used to avoid writes on secondaries and to avoid doing
-	// lazy upgrades which may cause writes.
-	IsPrimary() bool
+	// ReplicationState indicates the state of cluster replication
+	ReplicationState() ReplicationState
 }
 
 type StaticSystemView struct {
-	DefaultLeaseTTLVal time.Duration
-	MaxLeaseTTLVal     time.Duration
-	SudoPrivilegeVal   bool
-	TaintedVal         bool
-	CachingDisabledVal bool
-	Primary            bool
+	DefaultLeaseTTLVal  time.Duration
+	MaxLeaseTTLVal      time.Duration
+	SudoPrivilegeVal    bool
+	TaintedVal          bool
+	CachingDisabledVal  bool
+	Primary             bool
+	ReplicationStateVal ReplicationState
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -66,6 +65,6 @@ func (d StaticSystemView) CachingDisabled() bool {
 	return d.CachingDisabledVal
 }
 
-func (d StaticSystemView) IsPrimary() bool {
-	return d.Primary
+func (d StaticSystemView) ReplicationState() ReplicationState {
+	return d.ReplicationStateVal
 }

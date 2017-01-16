@@ -86,13 +86,17 @@ the settings of the "foo" key by reading it:
 ```
 $ vault read transit/keys/foo
 Key                     Value
-type                    aes256-gcm96
-deletion_allowed        false
-derived                 false
-keys                    map[1:1.459861712e+09]
-latest_version          1
-min_decryption_version  1
-name                    foo
+deletion_allowed      	false
+derived               	false
+keys                  	map[1:1484070923]
+latest_version        	1
+min_decryption_version	1
+name                  	foo
+supports_decryption   	true
+supports_derivation   	true
+supports_encryption   	true
+supports_signing      	false
+type                  	aes256-gcm96
 ````
 
 Now, if we wanted to encrypt a piece of plain text, we use the encrypt
@@ -153,7 +157,7 @@ only encrypt or decrypt using the named keys they need access to.
           <li>`aes256-gcm96`: AES-256 wrapped with GCM using a 12-byte nonce size (symmetric)</li>
           <li>`ecdsa-p256`: ECDSA using the P-256 elliptic curve (asymmetric)</li>
         </ul>
-        Defaults to `aes256-gcm`.
+        Defaults to `aes256-gcm96`.
       </li>
       <li>
         <span class="param">derived</span>
@@ -220,7 +224,11 @@ only encrypt or decrypt using the named keys they need access to.
           "1": 1442851412
         },
         "min_decryption_version": 0,
-        "name": "foo"
+        "name": "foo",
+        "supports_encryption": true,
+        "supports_decryption": true,
+        "supports_derivation": true,
+        "supports_signing": false
       }
     }
     ```

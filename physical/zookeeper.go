@@ -182,7 +182,7 @@ func (c *ZookeeperBackend) cleanupLogicalPath(path string) error {
 			return nil
 		} else {
 			// Empty node, lets clean it up!
-			if err := c.client.Delete(fullPath, -1); err != nil {
+			if err := c.client.Delete(fullPath, -1); err != nil && err != zk.ErrNoNode {
 				msgFmt := "Removal of node `%s` failed: `%v`"
 				return fmt.Errorf(msgFmt, fullPath, err)
 			}

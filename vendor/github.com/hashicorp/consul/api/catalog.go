@@ -4,12 +4,14 @@ type Node struct {
 	Node            string
 	Address         string
 	TaggedAddresses map[string]string
+	Meta            map[string]string
 }
 
 type CatalogService struct {
 	Node                     string
 	Address                  string
 	TaggedAddresses          map[string]string
+	NodeMeta                 map[string]string
 	ServiceID                string
 	ServiceName              string
 	ServiceAddress           string
@@ -29,6 +31,7 @@ type CatalogRegistration struct {
 	Node            string
 	Address         string
 	TaggedAddresses map[string]string
+	NodeMeta        map[string]string
 	Datacenter      string
 	Service         *AgentService
 	Check           *AgentCheck
