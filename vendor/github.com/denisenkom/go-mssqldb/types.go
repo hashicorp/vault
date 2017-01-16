@@ -134,10 +134,11 @@ func writeVarLen(w io.Writer, ti *typeInfo) (err error) {
 			return
 		}
 		ti.Writer = writeByteLenType
-	case typeGuid, typeIntN, typeDecimal, typeNumeric,
+	case typeIntN, typeDecimal, typeNumeric,
 		typeBitN, typeDecimalN, typeNumericN, typeFltN,
 		typeMoneyN, typeDateTimeN, typeChar,
 		typeVarChar, typeBinary, typeVarBinary:
+
 		// byle len types
 		if ti.Size > 0xff {
 			panic("Invalid size for BYLELEN_TYPE")
@@ -155,6 +156,14 @@ func writeVarLen(w io.Writer, ti *typeInfo) (err error) {
 			if err != nil {
 				return
 			}
+		}
+		ti.Writer = writeByteLenType
+	case typeGuid:
+		if !(ti.Size == 0x10 || ti.Size == 0x00) {
+			panic("Invalid size for BYLELEN_TYPE")
+		}
+		if err = binary.Write(w, binary.LittleEndian, uint8(ti.Size)); err != nil {
+			return
 		}
 		ti.Writer = writeByteLenType
 	case typeBigVarBin, typeBigVarChar, typeBigBinary, typeBigChar,

@@ -16,7 +16,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
-	"github.com/ory-am/dockertest"
+	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
 var (

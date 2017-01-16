@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package api provides methods for interacting with the Circonus API
 package api
 
 import (
@@ -35,20 +34,20 @@ type TokenKeyType string
 // TokenAppType - Circonus API Token app name
 type TokenAppType string
 
-// IDType Circonus object id (numeric portion of cid)
-type IDType int
-
 // CIDType Circonus object cid
-type CIDType string
+type CIDType *string
+
+// IDType Circonus object id
+type IDType int
 
 // URLType submission url type
 type URLType string
 
-// SearchQueryType search query
+// SearchQueryType search query (see: https://login.circonus.com/resources/api#searching)
 type SearchQueryType string
 
-// SearchFilterType search filter
-type SearchFilterType string
+// SearchFilterType search filter (see: https://login.circonus.com/resources/api#filtering)
+type SearchFilterType map[string][]string
 
 // TagType search/select/custom tag(s) type
 type TagType []string
@@ -71,8 +70,18 @@ type API struct {
 	Log    *log.Logger
 }
 
-// NewAPI returns a new Circonus API
+// NewClient returns a new Circonus API (alias for New)
+func NewClient(ac *Config) (*API, error) {
+	return New(ac)
+}
+
+// NewAPI returns a new Circonus API (alias for New)
 func NewAPI(ac *Config) (*API, error) {
+	return New(ac)
+}
+
+// New returns a new Circonus API
+func New(ac *Config) (*API, error) {
 
 	if ac == nil {
 		return nil, errors.New("Invalid API configuration (nil)")

@@ -405,6 +405,23 @@ func (w *walker) replacePointerMaybe() {
 	}
 
 	v := w.valPop()
+
+	// If the expected type is a pointer to an interface of any depth,
+	// such as *interface{}, **interface{}, etc., then we need to convert
+	// the value "v" from *CONCRETE to *interface{} so types match for
+	// Set.
+	//
+	// Example if v is type *Foo where Foo is a struct, v would become
+	// *interface{} instead. This only happens if we have an interface expectation
+	// at this depth.
+	//
+	// For more info, see GH-16
+	if iType, ok := w.ifaceTypes[ifaceKey(w.ps[w.depth], w.depth)]; ok && iType.Kind() == reflect.Interface {
+		y := reflect.New(iType)           // Create *interface{}
+		y.Elem().Set(reflect.Indirect(v)) // Assign "Foo" to interface{} (dereferenced)
+		v = y                             // v is now typed *interface{} (where *v = Foo)
+	}
+
 	for i := 1; i < w.ps[w.depth]; i++ {
 		if iType, ok := w.ifaceTypes[ifaceKey(w.ps[w.depth]-i, w.depth)]; ok {
 			iface := reflect.New(iType).Elem()

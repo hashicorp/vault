@@ -358,12 +358,19 @@ of the header should be "X-Vault-Token" and the value should be the token.
     ```javascript
     {
       "data": {
+        "accessor": "REDACTED",
+	"creation_time": 1484093665,
+	"creation_ttl": 3600,
+	"display_name": "github-armon",
+	"explicit_max_ttl": 0,
         "id": "ClientToken",
-        "policies": ["web", "stage"],
-        "path": "auth/github/login",
         "meta": {"user": "armon", "organization": "hashicorp"},
-        "display_name": "github-armon",
-        "num_uses": 0,
+	"num_uses": 0,
+	"orphan": true,
+	"path": "auth/github/login",
+	"policies": ["web", "stage"],
+	"renewable": true,
+	"ttl": 3655
       }
     }
     ```
@@ -473,7 +480,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/revoke[/token]
+### /auth/token/revoke
 #### POST
 
 <dl class="api">
@@ -487,7 +494,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/revoke</token>`</dd>
+  <dd>`/auth/token/revoke`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -495,7 +502,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">token</span>
         <span class="param-flags">required</span>
-            Token to revoke. This can be part of the URL or the body.
+            Token to revoke.
       </li>
     </ul>
   </dd>
@@ -505,7 +512,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 </dl>
 
-### /auth/token/revoke-accessor[/accessor]
+### /auth/token/revoke-accessor
 #### POST
 
 <dl class="api">
@@ -520,7 +527,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/token/revoke-accessor</accessor>`</dd>
+  <dd>`/auth/token/revoke-accessor`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -528,7 +535,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
       <li>
         <span class="param">accessor</span>
         <span class="param-flags">required</span>
-            Accessor of the token. This can be part of the URL or the body.
+            Accessor of the token.
       </li>
     </ul>
   </dd>

@@ -329,13 +329,16 @@ Init Options:
   -pgp-keys                 If provided, must be a comma-separated list of
                             files on disk containing binary- or base64-format
                             public PGP keys, or Keybase usernames specified as
-                            "keybase:<username>". The number of given entries
-                            must match 'key-shares'. The output unseal keys will
+                            "keybase:<username>". The output unseal keys will
                             be encrypted and base64-encoded, in order, with the
                             given public keys. If you want to use them with the
                             'vault unseal' command, you will need to base64-
                             decode and decrypt; this will be the plaintext
-                            unseal key.
+                            unseal key. When 'stored-shares' are not used, the
+                            number of entries in this field must match 'key-shares'.
+                            When 'stored-shares' are used, the number of entries
+                            should match the difference between 'key-shares'
+                            and 'stored-shares'.
 
   -root-token-pgp-key       If provided, a file on disk with a binary- or
                             base64-format public PGP key, or a Keybase username

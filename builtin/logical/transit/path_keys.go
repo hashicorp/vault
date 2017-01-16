@@ -164,6 +164,10 @@ func (b *backend) pathPolicyRead(
 			"min_decryption_version": p.MinDecryptionVersion,
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
+			"supports_encryption":    p.Type.EncryptionSupported(),
+			"supports_decryption":    p.Type.DecryptionSupported(),
+			"supports_signing":       p.Type.SigningSupported(),
+			"supports_derivation":    p.Type.DerivationSupported(),
 		},
 	}
 

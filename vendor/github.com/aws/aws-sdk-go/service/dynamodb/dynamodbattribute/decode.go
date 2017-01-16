@@ -241,7 +241,7 @@ func (d *Decoder) decodeBinary(b []byte, v reflect.Value) error {
 func (d *Decoder) decodeBool(b *bool, v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Bool, reflect.Interface:
-		v.Set(reflect.ValueOf(*b))
+		v.Set(reflect.ValueOf(*b).Convert(v.Type()))
 	default:
 		return &UnmarshalTypeError{Value: "bool", Type: v.Type()}
 	}

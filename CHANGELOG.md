@@ -1,8 +1,15 @@
 ## 0.6.5 (Unreleased)
 
+IMPROVEMENTS:
+
+ * auth/github: Support listing teams and users [GH-2261]
+ * physical/consul: Add option for using consistent mode on Consul gets [GH-2270]
+
 BUG FIXES:
 
  * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
+ * secret/pki: When using `sign-verbatim`, don't require a role and use the
+   CSR's common name [GH-2243]
 
 ## 0.6.4 (December 16, 2016)
 

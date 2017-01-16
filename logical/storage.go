@@ -1,11 +1,17 @@
 package logical
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
+
+// ErrReadOnly is returned when a backend does not support
+// writing. This can be caused by a read-only replica or secondary
+// cluster operation.
+var ErrReadOnly = errors.New("Cannot write to readonly storage")
 
 // Storage is the way that logical backends are able read/write data.
 type Storage interface {
