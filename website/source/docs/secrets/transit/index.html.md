@@ -381,10 +381,12 @@ only encrypt or decrypt using the named keys they need access to.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Returns the named encryption key. The `keys` object shows the value of the
-    key for each version. If `version` is specified, the specific version will
-    be returned. Depending on the type of key, different information may be
-    returned. The key must be exportable to support this operation.
+    Returns the named key. The `keys` object shows the value of the key for
+    each version. If `version` is specified, the specific version will be
+    returned. If `latest` is provided as the version, the current key will be
+    provided. Depending on the type of key, different information may be
+    returned. The key must be exportable to support this operation and the
+    version must still be valid.
   </dd>
 
   <dt>Method</dt>
