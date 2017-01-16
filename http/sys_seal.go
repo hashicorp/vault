@@ -186,11 +186,14 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 		clusterID = cluster.ID
 	}
 
+	progress, nonce := core.SecretProgress()
+
 	respondOk(w, &SealStatusResponse{
 		Sealed:      sealed,
 		T:           sealConfig.SecretThreshold,
 		N:           sealConfig.SecretShares,
-		Progress:    core.SecretProgress(),
+		Progress:    progress,
+		Nonce:       nonce,
 		Version:     version.GetVersion().VersionNumber(),
 		ClusterName: clusterName,
 		ClusterID:   clusterID,
@@ -202,6 +205,7 @@ type SealStatusResponse struct {
 	T           int    `json:"t"`
 	N           int    `json:"n"`
 	Progress    int    `json:"progress"`
+	Nonce       string `json:"nonce"`
 	Version     string `json:"version"`
 	ClusterName string `json:"cluster_name,omitempty"`
 	ClusterID   string `json:"cluster_id,omitempty"`
