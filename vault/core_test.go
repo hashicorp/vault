@@ -72,7 +72,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		t.Fatalf("should be sealed")
 	}
 
-	if prog := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -91,14 +91,14 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 			if !unseal {
 				t.Fatalf("should be unsealed")
 			}
-			if prog := c.SecretProgress(); prog != 0 {
+			if prog, _ := c.SecretProgress(); prog != 0 {
 				t.Fatalf("bad progress: %d", prog)
 			}
 		} else {
 			if unseal {
 				t.Fatalf("should not be unsealed")
 			}
-			if prog := c.SecretProgress(); prog != i+1 {
+			if prog, _ := c.SecretProgress(); prog != i+1 {
 				t.Fatalf("bad progress: %d", prog)
 			}
 		}
@@ -160,7 +160,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		t.Fatalf("should be sealed")
 	}
 
-	if prog := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -172,7 +172,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 	if !unseal {
 		t.Fatalf("should be unsealed")
 	}
-	if prog := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
