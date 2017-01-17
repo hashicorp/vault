@@ -124,6 +124,11 @@ type activeAdvertisement struct {
 	ClusterKeyParams *clusterKeyParams `json:"cluster_key_params,omitempty"`
 }
 
+type unlockInformation struct {
+	Parts [][]byte
+	Nonce string
+}
+
 // Core is used as the central manager of Vault activity. It is the primary point of
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
@@ -167,9 +172,8 @@ type Core struct {
 	standbyStopCh    chan struct{}
 	manualStepDownCh chan struct{}
 
-	// unlockParts has the keys provided to Unseal until
-	// the threshold number of parts is available.
-	unlockParts [][]byte
+	// unlockInfo has the keys provided to Unseal until the threshold number of parts is available, as well as the operation nonce
+	unlockInfo *unlockInformation
 
 	// generateRootProgress holds the shares until we reach enough
 	// to verify the master key
@@ -735,10 +739,15 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 }
 
 // SecretProgress returns the number of keys provided so far
-func (c *Core) SecretProgress() int {
+func (c *Core) SecretProgress() (int, string) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	return len(c.unlockParts)
+	switch c.unlockInfo {
+	case nil:
+		return 0, ""
+	default:
+		return len(c.unlockInfo.Parts), c.unlockInfo.Nonce
+	}
 }
 
 // ResetUnsealProcess removes the current unlock parts from memory, to reset
@@ -749,7 +758,7 @@ func (c *Core) ResetUnsealProcess() {
 	if !c.sealed {
 		return
 	}
-	c.unlockParts = nil
+	c.unlockInfo = nil
 }
 
 // Unseal is used to provide one of the key parts to unseal the Vault.
@@ -790,19 +799,29 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	}
 
 	// Check if we already have this piece
-	for _, existing := range c.unlockParts {
-		if bytes.Equal(existing, key) {
-			return false, nil
+	if c.unlockInfo != nil {
+		for _, existing := range c.unlockInfo.Parts {
+			if bytes.Equal(existing, key) {
+				return false, nil
+			}
+		}
+	} else {
+		uuid, err := uuid.GenerateUUID()
+		if err != nil {
+			return false, err
+		}
+		c.unlockInfo = &unlockInformation{
+			Nonce: uuid,
 		}
 	}
 
 	// Store this key
-	c.unlockParts = append(c.unlockParts, key)
+	c.unlockInfo.Parts = append(c.unlockInfo.Parts, key)
 
 	// Check if we don't have enough keys to unlock
-	if len(c.unlockParts) < config.SecretThreshold {
+	if len(c.unlockInfo.Parts) < config.SecretThreshold {
 		if c.logger.IsDebug() {
-			c.logger.Debug("core: cannot unseal, not enough keys", "keys", len(c.unlockParts), "threshold", config.SecretThreshold)
+			c.logger.Debug("core: cannot unseal, not enough keys", "keys", len(c.unlockInfo.Parts), "threshold", config.SecretThreshold, "nonce", c.unlockInfo.Nonce)
 		}
 		return false, nil
 	}
@@ -810,11 +829,11 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 	// Recover the master key
 	var masterKey []byte
 	if config.SecretThreshold == 1 {
-		masterKey = c.unlockParts[0]
-		c.unlockParts = nil
+		masterKey = c.unlockInfo.Parts[0]
+		c.unlockInfo = nil
 	} else {
-		masterKey, err = shamir.Combine(c.unlockParts)
-		c.unlockParts = nil
+		masterKey, err = shamir.Combine(c.unlockInfo.Parts)
+		c.unlockInfo = nil
 		if err != nil {
 			return false, fmt.Errorf("failed to compute master key: %v", err)
 		}

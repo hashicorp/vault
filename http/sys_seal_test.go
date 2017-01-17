@@ -30,6 +30,7 @@ func TestSysSealStatus(t *testing.T) {
 		"t":        json.Number("3"),
 		"n":        json.Number("3"),
 		"progress": json.Number("0"),
+		"nonce":    "",
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -117,13 +118,19 @@ func TestSysUnseal(t *testing.T) {
 			"t":        json.Number("3"),
 			"n":        json.Number("3"),
 			"progress": json.Number(fmt.Sprintf("%d", i+1)),
+			"nonce":    "",
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
-			expected["progress"] = 0
+			expected["progress"] = json.Number("0")
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
+		if i < len(keys)-1 && (actual["nonce"] == nil || actual["nonce"].(string) == "") {
+			t.Fatalf("got nil nonce, actual is %#v", actual)
+		} else {
+			expected["nonce"] = actual["nonce"]
+		}
 		if actual["version"] == nil {
 			t.Fatalf("expected version information")
 		}
@@ -139,7 +146,7 @@ func TestSysUnseal(t *testing.T) {
 			expected["cluster_id"] = actual["cluster_id"]
 		}
 		if !reflect.DeepEqual(actual, expected) {
-			t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+			t.Fatalf("bad: expected: \n%#v\nactual: \n%#v", expected, actual)
 		}
 	}
 }
@@ -196,6 +203,10 @@ func TestSysUnseal_Reset(t *testing.T) {
 			t.Fatalf("expected version information")
 		}
 		expected["version"] = actual["version"]
+		if actual["nonce"] == "" && expected["sealed"].(bool) {
+			t.Fatalf("expected a nonce")
+		}
+		expected["nonce"] = actual["nonce"]
 		if actual["cluster_name"] == nil {
 			delete(expected, "cluster_name")
 		} else {
@@ -228,6 +239,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 		t.Fatalf("expected version information")
 	}
 	expected["version"] = actual["version"]
+	expected["nonce"] = actual["nonce"]
 	if actual["cluster_name"] == nil {
 		delete(expected, "cluster_name")
 	} else {
