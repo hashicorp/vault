@@ -191,7 +191,7 @@ func TestSysUnseal_Reset(t *testing.T) {
 			t.Fatalf("expected version information")
 		}
 		expected["version"] = actual["version"]
-		if actual["nonce"] == "" {
+		if actual["nonce"] == "" && expected["sealed"].(bool) {
 			t.Fatalf("expected a nonce")
 		}
 		expected["nonce"] = actual["nonce"]
