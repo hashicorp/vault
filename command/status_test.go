@@ -18,7 +18,7 @@ func TestStatus(t *testing.T) {
 	}
 
 	core := vault.TestCore(t)
-	key, _ := vault.TestCoreInit(t, core)
+	keys, _ := vault.TestCoreInit(t, core)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 

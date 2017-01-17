@@ -202,13 +202,12 @@ func TestGenerateRoot_OTP(t *testing.T) {
 }
 
 func TestGenerateRoot_PGP(t *testing.T) {
-	core, ts, key, _ := vault.TestCoreWithTokenStore(t)
+	core, ts, keys, _ := vault.TestCoreWithTokenStore(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
 	c := &GenerateRootCommand{
-		Key: hex.EncodeToString(key),
 		Meta: meta.Meta{
 			Ui: ui,
 		},
@@ -235,14 +234,23 @@ func TestGenerateRoot_PGP(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	c.Nonce = config.Nonce
+	for _, key := range keys {
+		c = &GenerateRootCommand{
+			Key: hex.EncodeToString(key),
+			Meta: meta.Meta{
+				Ui: ui,
+			},
+		}
 
-	// Provide the key
-	args = []string{
-		"-address", addr,
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		c.Nonce = config.Nonce
+
+		// Provide the key
+		args = []string{
+			"-address", addr,
+		}
+		if code := c.Run(args); code != 0 {
+			t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
 	}
 
 	beforeNAfter := strings.Split(ui.OutputWriter.String(), "Encoded root token: ")
