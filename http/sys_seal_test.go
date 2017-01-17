@@ -101,39 +101,44 @@ func TestSysSeal_unsealed(t *testing.T) {
 
 func TestSysUnseal(t *testing.T) {
 	core := vault.TestCore(t)
-	key, _ := vault.TestCoreInit(t, core)
+	keys, _ := vault.TestCoreInit(t, core)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
-		"key": hex.EncodeToString(key),
-	})
+	for i, key := range keys {
+		resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
+			"key": hex.EncodeToString(key),
+		})
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"sealed":   false,
-		"t":        json.Number("1"),
-		"n":        json.Number("1"),
-		"progress": json.Number("0"),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if actual["version"] == nil {
-		t.Fatalf("expected version information")
-	}
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+		var actual map[string]interface{}
+		expected := map[string]interface{}{
+			"sealed":   true,
+			"t":        json.Number("3"),
+			"n":        json.Number("5"),
+			"progress": json.Number(i + 1),
+		}
+		if i == len(keys)-1 {
+			expected["sealed"] = false
+		}
+		testResponseStatus(t, resp, 200)
+		testResponseBody(t, resp, &actual)
+		if actual["version"] == nil {
+			t.Fatalf("expected version information")
+		}
+		expected["version"] = actual["version"]
+		if actual["cluster_name"] == nil {
+			delete(expected, "cluster_name")
+		} else {
+			expected["cluster_name"] = actual["cluster_name"]
+		}
+		if actual["cluster_id"] == nil {
+			delete(expected, "cluster_id")
+		} else {
+			expected["cluster_id"] = actual["cluster_id"]
+		}
+		if !reflect.DeepEqual(actual, expected) {
+			t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
+		}
 	}
 }
 

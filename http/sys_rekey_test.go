@@ -164,7 +164,7 @@ func TestSysRekey_badKey(t *testing.T) {
 }
 
 func TestSysRekey_Update(t *testing.T) {
-	core, master, token := vault.TestCoreUnsealed(t)
+	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
@@ -177,24 +177,32 @@ func TestSysRekey_Update(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rekeyStatus)
 
-	resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
-		"nonce": rekeyStatus["nonce"].(string),
-		"key":   hex.EncodeToString(master),
-	})
-
 	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"complete":         true,
-		"nonce":            rekeyStatus["nonce"].(string),
-		"backup":           false,
-		"pgp_fingerprints": interface{}(nil),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
+	var expected map[string]interface{}
 
-	keys := actual["keys"].([]interface{})
-	if len(keys) != 5 {
-		t.Fatalf("bad: %#v", keys)
+	for i, key := range keys {
+		resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
+			"nonce": rekeyStatus["nonce"].(string),
+			"key":   hex.EncodeToString(key),
+		})
+
+		actual = map[string]interface{}{}
+		expected = map[string]interface{}{
+			"complete":         false,
+			"nonce":            rekeyStatus["nonce"].(string),
+			"backup":           false,
+			"pgp_fingerprints": interface{}(nil),
+		}
+		if i+1 == len(keys) {
+			expected["complete"] = true
+		}
+		testResponseStatus(t, resp, 20)
+		testResponseBody(t, resp, &actual)
+	}
+
+	retKeys := actual["keys"].([]interface{})
+	if len(retKeys) != 5 {
+		t.Fatalf("bad: %#v", retKeys)
 	}
 	keysB64 := actual["keys_base64"].([]interface{})
 	if len(keysB64) != 5 {
@@ -209,7 +217,7 @@ func TestSysRekey_Update(t *testing.T) {
 }
 
 func TestSysRekey_ReInitUpdate(t *testing.T) {
-	core, master, token := vault.TestCoreUnsealed(t)
+	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
@@ -230,7 +238,7 @@ func TestSysRekey_ReInitUpdate(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 
 	resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
-		"key": hex.EncodeToString(master),
+		"key": hex.EncodeToString(keys[0]),
 	})
 
 	testResponseStatus(t, resp, 400)

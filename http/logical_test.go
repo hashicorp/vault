@@ -92,9 +92,11 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, root := vault.TestCoreInit(t, core1)
-	if _, err := core1.Unseal(vault.TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := vault.TestCoreInit(t, core1)
+	for _, key := range keys {
+		if _, err := core1.Unseal(vault.TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Attempt to fix raciness in this test by giving the first core a chance
@@ -112,8 +114,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(vault.TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	for _, key := range keys {
+		if _, err := core2.Unseal(vault.TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	TestServerWithListener(t, ln1, addr1, core1)

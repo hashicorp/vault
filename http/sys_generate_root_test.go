@@ -239,7 +239,7 @@ func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
 }
 
 func TestSysGenerateRoot_Update_OTP(t *testing.T) {
-	core, master, token := vault.TestCoreUnsealed(t)
+	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
@@ -257,22 +257,29 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rootGenerationStatus)
 
-	resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
-		"nonce": rootGenerationStatus["nonce"].(string),
-		"key":   hex.EncodeToString(master),
-	})
-
 	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"complete":        true,
-		"nonce":           rootGenerationStatus["nonce"].(string),
-		"progress":        json.Number("1"),
-		"required":        json.Number("1"),
-		"started":         true,
-		"pgp_fingerprint": "",
+	var expected map[string]interface{}
+	for i, key := range keys {
+		resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
+			"nonce": rootGenerationStatus["nonce"].(string),
+			"key":   hex.EncodeToString(key),
+		})
+
+		actual = map[string]interface{}{}
+		expected = map[string]interface{}{
+			"complete":        false,
+			"nonce":           rootGenerationStatus["nonce"].(string),
+			"progress":        json.Number(i + 1),
+			"required":        json.Number(len(keys)),
+			"started":         true,
+			"pgp_fingerprint": "",
+		}
+		if i+1 == len(keys) {
+			expected["complete"] = true
+		}
+		testResponseStatus(t, resp, 200)
+		testResponseBody(t, resp, &actual)
 	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
 
 	if actual["encoded_root_token"] == nil {
 		t.Fatalf("no encoded root token found in response")
@@ -319,7 +326,7 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 }
 
 func TestSysGenerateRoot_Update_PGP(t *testing.T) {
-	core, master, token := vault.TestCoreUnsealed(t)
+	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
@@ -338,22 +345,29 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rootGenerationStatus)
 
-	resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
-		"nonce": rootGenerationStatus["nonce"].(string),
-		"key":   hex.EncodeToString(master),
-	})
-
 	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"complete":        true,
-		"nonce":           rootGenerationStatus["nonce"].(string),
-		"progress":        json.Number("1"),
-		"required":        json.Number("1"),
-		"started":         true,
-		"pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
+	var expected map[string]interface{}
+	for i, key := range keys {
+		resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
+			"nonce": rootGenerationStatus["nonce"].(string),
+			"key":   hex.EncodeToString(key),
+		})
+
+		actual = map[string]interface{}{}
+		expected = map[string]interface{}{
+			"complete":        false,
+			"nonce":           rootGenerationStatus["nonce"].(string),
+			"progress":        json.Number(i + 1),
+			"required":        json.Number(len(keys)),
+			"started":         true,
+			"pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
+		}
+		if i+1 == len(keys) {
+			expected["complete"] = true
+		}
+		testResponseStatus(t, resp, 200)
+		testResponseBody(t, resp, &actual)
 	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
 
 	if actual["encoded_root_token"] == nil {
 		t.Fatalf("no encoded root token found in response")
