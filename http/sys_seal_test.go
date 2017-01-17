@@ -120,6 +120,7 @@ func TestSysUnseal(t *testing.T) {
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
+			expected["progress"] = 0
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
