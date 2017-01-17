@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -29,7 +30,7 @@ func TestSysGenerateRootAttempt_Status(t *testing.T) {
 	expected := map[string]interface{}{
 		"started":            false,
 		"progress":           json.Number("0"),
-		"required":           json.Number("1"),
+		"required":           json.Number("3"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -63,7 +64,7 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	expected := map[string]interface{}{
 		"started":            true,
 		"progress":           json.Number("0"),
-		"required":           json.Number("1"),
+		"required":           json.Number("3"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -84,7 +85,7 @@ func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
 	expected = map[string]interface{}{
 		"started":            true,
 		"progress":           json.Number("0"),
-		"required":           json.Number("1"),
+		"required":           json.Number("3"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -117,7 +118,7 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	expected := map[string]interface{}{
 		"started":            true,
 		"progress":           json.Number("0"),
-		"required":           json.Number("1"),
+		"required":           json.Number("3"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "816938b8a29146fbe245dd29e7cbaf8e011db793",
@@ -153,7 +154,7 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	expected := map[string]interface{}{
 		"started":            true,
 		"progress":           json.Number("0"),
-		"required":           json.Number("1"),
+		"required":           json.Number("3"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -180,7 +181,7 @@ func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
 	expected = map[string]interface{}{
 		"started":            false,
 		"progress":           json.Number("0"),
-		"required":           json.Number("1"),
+		"required":           json.Number("3"),
 		"complete":           false,
 		"encoded_root_token": "",
 		"pgp_fingerprint":    "",
@@ -269,8 +270,8 @@ func TestSysGenerateRoot_Update_OTP(t *testing.T) {
 		expected = map[string]interface{}{
 			"complete":        false,
 			"nonce":           rootGenerationStatus["nonce"].(string),
-			"progress":        json.Number(i + 1),
-			"required":        json.Number(len(keys)),
+			"progress":        json.Number(fmt.Sprintf("%d", i+1)),
+			"required":        json.Number(fmt.Sprintf("%d", len(keys))),
 			"started":         true,
 			"pgp_fingerprint": "",
 		}
@@ -357,8 +358,8 @@ func TestSysGenerateRoot_Update_PGP(t *testing.T) {
 		expected = map[string]interface{}{
 			"complete":        false,
 			"nonce":           rootGenerationStatus["nonce"].(string),
-			"progress":        json.Number(i + 1),
-			"required":        json.Number(len(keys)),
+			"progress":        json.Number(fmt.Sprintf("%d", i+1)),
+			"required":        json.Number(fmt.Sprintf("%d", len(keys))),
 			"started":         true,
 			"pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
 		}

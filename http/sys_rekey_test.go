@@ -43,7 +43,7 @@ func TestSysRekeyInit_Status(t *testing.T) {
 		"t":                json.Number("0"),
 		"n":                json.Number("0"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
@@ -73,7 +73,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		"t":                json.Number("3"),
 		"n":                json.Number("5"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 	}
@@ -95,7 +95,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		"t":                json.Number("3"),
 		"n":                json.Number("5"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 	}
@@ -139,7 +139,7 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 		"t":                json.Number("0"),
 		"n":                json.Number("0"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
@@ -196,7 +196,7 @@ func TestSysRekey_Update(t *testing.T) {
 		if i+1 == len(keys) {
 			expected["complete"] = true
 		}
-		testResponseStatus(t, resp, 20)
+		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
 	}
 
