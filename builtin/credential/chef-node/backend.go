@@ -1,4 +1,4 @@
-package chefNode
+package chefnode
 
 import (
 	"github.com/hashicorp/vault/logical"

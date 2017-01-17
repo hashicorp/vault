@@ -1,4 +1,4 @@
-package chefNode
+package chefnode
 
 import (
 	"bytes"
