@@ -96,7 +96,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Policies from each group may overlap
-	policies = policyutil.SanitizePolicies(policies, cfg.EnableDefaultPolicy)
+	policies = policyutil.SanitizePolicies(policies, cfg.AllowUnknownUsers)
 
 	if len(policies) == 0 {
 		return nil, logical.ErrorResponse("user has no associated policies"), nil

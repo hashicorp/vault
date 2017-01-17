@@ -44,9 +44,9 @@ func TestBackend_Config(t *testing.T) {
 	}
 
 	config_data_invalidbool := map[string]interface{}{
-		"host":                  "test.radius.hostname.com",
-		"secret":                "test-secret",
-		"enable_default_policy": "test",
+		"host":                "test.radius.hostname.com",
+		"secret":              "test-secret",
+		"allow_unknown_users": "test",
 	}
 
 	config_data_emptyport := map[string]interface{}{
@@ -103,22 +103,22 @@ func TestBackend_acceptance(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
-	config_data_acceptance_defpol := map[string]interface{}{
-		"host":                  os.Getenv("RADIUS_HOST"),
-		"port":                  os.Getenv("RADIUS_PORT"),
-		"secret":                os.Getenv("RADIUS_SECRET"),
-		"enable_default_policy": "true",
+	config_data_acceptance_allowunkn := map[string]interface{}{
+		"host":                os.Getenv("RADIUS_HOST"),
+		"port":                os.Getenv("RADIUS_PORT"),
+		"secret":              os.Getenv("RADIUS_SECRET"),
+		"allow_unknown_users": "true",
 	}
 
-	if config_data_acceptance_defpol["port"] == "" {
-		config_data_acceptance_defpol["port"] = "1812"
+	if config_data_acceptance_allowunkn["port"] == "" {
+		config_data_acceptance_allowunkn["port"] = "1812"
 	}
 
-	config_data_acceptance_nodefpol := map[string]interface{}{
-		"host":                  os.Getenv("RADIUS_HOST"),
-		"port":                  os.Getenv("RADIUS_PORT"),
-		"secret":                os.Getenv("RADIUS_SECRET"),
-		"enable_default_policy": "false",
+	config_data_acceptance_noallowunkn := map[string]interface{}{
+		"host":                os.Getenv("RADIUS_HOST"),
+		"port":                os.Getenv("RADIUS_PORT"),
+		"secret":              os.Getenv("RADIUS_SECRET"),
+		"allow_unknown_users": "false",
 	}
 
 	data_realpassword := map[string]interface{}{
@@ -131,8 +131,8 @@ func TestBackend_acceptance(t *testing.T) {
 
 	username := os.Getenv("RADIUS_USERNAME")
 
-	if config_data_acceptance_nodefpol["port"] == "" {
-		config_data_acceptance_nodefpol["port"] = "1812"
+	if config_data_acceptance_noallowunkn["port"] == "" {
+		config_data_acceptance_noallowunkn["port"] = "1812"
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -140,8 +140,8 @@ func TestBackend_acceptance(t *testing.T) {
 		PreCheck:       func() { testAccPreCheck(t) },
 		AcceptanceTest: true,
 		Steps: []logicaltest.TestStep{
-			// Login with valid but unknown user will fail since enable_default_policy is false
-			testConfigWrite(t, config_data_acceptance_nodefpol, false),
+			// Login with valid but unknown user will fail because allow_unknown_users is false
+			testConfigWrite(t, config_data_acceptance_noallowunkn, false),
 			testAccUserLogin(t, username, data_realpassword, true),
 			// Once the user is registered auth will succeed
 			testStepUpdateUser(t, username, ""),
@@ -151,8 +151,8 @@ func TestBackend_acceptance(t *testing.T) {
 			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default", "foopolicy"}, false),
 			testAccStepDeleteUser(t, username),
 
-			// When using enable_default_policy, an unknown user will be allowed to authenticate and given the default policy
-			testConfigWrite(t, config_data_acceptance_defpol, false),
+			// When using allow_unknown_users, an unknown user will be allowed to authenticate and given the default policy
+			testConfigWrite(t, config_data_acceptance_allowunkn, false),
 			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default"}, false),
 
 			// More tests

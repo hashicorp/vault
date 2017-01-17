@@ -27,10 +27,10 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "secret shared with the radius server",
 			},
-			"enable_default_policy": &framework.FieldSchema{
+			"allow_unknown_users": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Default:     true,
-				Description: "enable granting default policy upon authentication (default: true)",
+				Default:     false,
+				Description: "enable granting default policy upon successful RADIUS authentication (default: false)",
 			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
@@ -131,9 +131,9 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	if secret != "" {
 		cfg.Secret = secret
 	}
-	enable_default_policy := d.Get("enable_default_policy").(bool)
-	if enable_default_policy {
-		cfg.EnableDefaultPolicy = enable_default_policy
+	allow_unknown_users := d.Get("allow_unknown_users").(bool)
+	if allow_unknown_users {
+		cfg.AllowUnknownUsers = allow_unknown_users
 	}
 	dial_timeout := d.Get("dial_timeout").(int)
 	if dial_timeout != 0 {
@@ -172,13 +172,13 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
-	Host                string `json:"host" structs:"host" mapstructure:"host"`
-	Port                int    `json:"port" structs:"port" mapstructure:"port"`
-	Secret              string `json:"secret" structs:"secret" mapstructure:"secret"`
-	EnableDefaultPolicy bool   `json:"enable_default_policy" structs:"enable_default_policy" mapstructure:"enable_default_policy"`
-	DialTimeout         int    `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
-	ReadTimeout         int    `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
-	NasPort             int    `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
+	Host              string `json:"host" structs:"host" mapstructure:"host"`
+	Port              int    `json:"port" structs:"port" mapstructure:"port"`
+	Secret            string `json:"secret" structs:"secret" mapstructure:"secret"`
+	AllowUnknownUsers bool   `json:"allow_unknown_users" structs:"allow_unknown_users" mapstructure:"allow_unknown_users"`
+	DialTimeout       int    `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
+	ReadTimeout       int    `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
+	NasPort           int    `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
 }
 
 /*
@@ -209,7 +209,6 @@ const pathConfigHelpDesc = `
 This endpoint allows you to configure the RADIOS server to connect to and its
 configuration options.
 
-Upon successful authentication a users will be automatically granted 
-the default policy unless disabled by enable_default_policy.
-In that case, a user with no configured policies will be denied access
+If allow_unknown_users is set to true, upon successful backend authentication a user
+will be automatically granted the default policy, otherwise it will be denied access.
 `
