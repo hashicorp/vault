@@ -32,6 +32,11 @@ func pathConfig(b *backend) *framework.Path {
 				Default:     false,
 				Description: "enable granting default policy upon successful RADIUS authentication (default: false)",
 			},
+			"reauth_on_renew": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: "attempt reauthentication with backend before granting token renewal (default: false)",
+			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
@@ -135,6 +140,10 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	if allow_unknown_users {
 		cfg.AllowUnknownUsers = allow_unknown_users
 	}
+	reauth_on_renew := d.Get("reauth_on_renew").(bool)
+	if reauth_on_renew {
+		cfg.ReauthOnRenew = reauth_on_renew
+	}
 	dial_timeout := d.Get("dial_timeout").(int)
 	if dial_timeout != 0 {
 		cfg.DialTimeout = dial_timeout
@@ -176,6 +185,7 @@ type ConfigEntry struct {
 	Port              int    `json:"port" structs:"port" mapstructure:"port"`
 	Secret            string `json:"secret" structs:"secret" mapstructure:"secret"`
 	AllowUnknownUsers bool   `json:"allow_unknown_users" structs:"allow_unknown_users" mapstructure:"allow_unknown_users"`
+	ReauthOnRenew     bool   `json:"reauth_on_renew" structs:"reauth_on_renew" mapstructure:"reauth_on_renew"`
 	DialTimeout       int    `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
 	ReadTimeout       int    `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
 	NasPort           int    `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`

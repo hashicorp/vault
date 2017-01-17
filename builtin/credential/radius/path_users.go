@@ -1,11 +1,11 @@
 package radius
 
 import (
-	"strings"
-
+	"fmt"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"strings"
 )
 
 func pathUsersList(b *backend) *framework.Path {
@@ -47,8 +47,12 @@ func pathUsers(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) User(s logical.Storage, n string) (*UserEntry, error) {
-	entry, err := s.Get("user/" + n)
+func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {
+	if username == "" {
+		return nil, fmt.Errorf("missing username")
+	}
+
+	entry, err := s.Get("user/" + strings.ToLower(username))
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +80,7 @@ func (b *backend) pathUserDelete(
 
 func (b *backend) pathUserRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.User(req.Storage, d.Get("name").(string))
+	user, err := b.user(req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}

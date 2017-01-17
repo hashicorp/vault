@@ -90,7 +90,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	// Retrieve policies
 	var policies []string
-	user, err := b.User(req.Storage, username)
+	user, err := b.user(req.Storage, username)
 	if err == nil && user != nil {
 		policies = append(policies, user.Policies...)
 	}

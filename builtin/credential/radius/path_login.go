@@ -75,12 +75,30 @@ func (b *backend) pathLogin(
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
+	cfg, err := b.Config(req)
+	if err != nil {
+		return nil, err
+	}
+
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
-	loginPolicies, resp, err := b.Login(req, username, password)
-	if len(loginPolicies) == 0 {
-		return resp, err
+	var loginPolicies []string
+	if cfg.ReauthOnRenew {
+		loginPolicies, resp, err := b.Login(req, username, password)
+		if len(loginPolicies) == 0 {
+			return resp, err
+		}
+	} else {
+		user, err := b.user(req.Storage, username)
+		if err != nil {
+			return nil, err
+		}
+		if user == nil {
+			// User no longer exists, do not renew
+			return nil, fmt.Errorf("Renew not allowed for unknown users")
+		}
+		loginPolicies = user.Policies
 	}
 
 	if !policyutil.EquivalentPolicies(loginPolicies, req.Auth.Policies) {
