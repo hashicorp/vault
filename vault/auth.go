@@ -84,6 +84,13 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return err
 	}
 
+	// Mount the backend; we do this here so that if we can't successfully
+	// mount we haven't persisted the table.
+	path := credentialRoutePrefix + entry.Path
+	if err := c.router.Mount(backend, path, entry, view); err != nil {
+		return err
+	}
+
 	// Update the auth table
 	newTable := c.auth.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
@@ -93,11 +100,6 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 	c.auth = newTable
 
-	// Mount the backend
-	path := credentialRoutePrefix + entry.Path
-	if err := c.router.Mount(backend, path, entry, view); err != nil {
-		return err
-	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: enabled credential backend", "path", entry.Path, "type", entry.Type)
 	}

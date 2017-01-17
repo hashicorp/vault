@@ -193,6 +193,12 @@ func (c *Core) mount(me *MountEntry) error {
 		return err
 	}
 
+	// Mount the backend; we do this here so that if we can't successfully
+	// mount we haven't persisted the table.
+	if err := c.router.Mount(backend, me.Path, me, view); err != nil {
+		return err
+	}
+
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
@@ -201,10 +207,6 @@ func (c *Core) mount(me *MountEntry) error {
 	}
 	c.mounts = newTable
 
-	// Mount the backend
-	if err := c.router.Mount(backend, me.Path, me, view); err != nil {
-		return err
-	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: successful mount", "path", me.Path, "type", me.Type)
 	}
