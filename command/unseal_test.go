@@ -16,8 +16,9 @@ func TestUnseal(t *testing.T) {
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
+	ui := new(cli.MockUi)
+
 	for _, key := range keys {
-		ui := new(cli.MockUi)
 		c := &UnsealCommand{
 			Key: hex.EncodeToString(key),
 			Meta: meta.Meta{
@@ -46,8 +47,9 @@ func TestUnseal_arg(t *testing.T) {
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
+	ui := new(cli.MockUi)
+
 	for _, key := range keys {
-		ui := new(cli.MockUi)
 		c := &UnsealCommand{
 			Meta: meta.Meta{
 				Ui: ui,

@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -188,16 +189,36 @@ func TestSysRekey_Update(t *testing.T) {
 
 		actual = map[string]interface{}{}
 		expected = map[string]interface{}{
-			"complete":         false,
+			"started":          true,
 			"nonce":            rekeyStatus["nonce"].(string),
 			"backup":           false,
 			"pgp_fingerprints": interface{}(nil),
-		}
-		if i+1 == len(keys) {
-			expected["complete"] = true
+			"required":         json.Number("3"),
+			"t":                json.Number("3"),
+			"n":                json.Number("5"),
+			"progress":         json.Number(fmt.Sprintf("%d", i+1)),
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
+
+		if i+1 == len(keys) {
+			delete(expected, "started")
+			delete(expected, "required")
+			delete(expected, "t")
+			delete(expected, "n")
+			delete(expected, "progress")
+			expected["complete"] = true
+			expected["keys"] = actual["keys"]
+			expected["keys_base64"] = actual["keys_base64"]
+		}
+
+		if i+1 < len(keys) && (actual["nonce"] == nil || actual["nonce"].(string) == "") {
+			t.Fatalf("expected a nonce, i is %d, actual is %#v", i, actual)
+		}
+
+		if !reflect.DeepEqual(actual, expected) {
+			t.Fatalf("\nexpected: \n%#v\nactual: \n%#v", expected, actual)
+		}
 	}
 
 	retKeys := actual["keys"].([]interface{})
@@ -207,12 +228,6 @@ func TestSysRekey_Update(t *testing.T) {
 	keysB64 := actual["keys_base64"].([]interface{})
 	if len(keysB64) != 5 {
 		t.Fatalf("bad: %#v", keysB64)
-	}
-
-	delete(actual, "keys")
-	delete(actual, "keys_base64")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
 }
 
