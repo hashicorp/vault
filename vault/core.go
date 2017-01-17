@@ -1165,6 +1165,13 @@ func (c *Core) postUnseal() (retErr error) {
 	}
 	// HA mode requires us to handle keyring rotation and rekeying
 	if c.ha != nil {
+		// We want to reload these from disk so that in case of a rekey we're
+		// not using cached values
+		c.seal.SetBarrierConfig(nil)
+		if c.seal.RecoveryKeySupported() {
+			c.seal.SetRecoveryConfig(nil)
+		}
+
 		if err := c.checkKeyUpgrades(); err != nil {
 			return err
 		}

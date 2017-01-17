@@ -92,9 +92,11 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, root := vault.TestCoreInit(t, core1)
-	if _, err := core1.Unseal(vault.TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := vault.TestCoreInit(t, core1)
+	for _, key := range keys {
+		if _, err := core1.Unseal(vault.TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Attempt to fix raciness in this test by giving the first core a chance
@@ -112,8 +114,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := core2.Unseal(vault.TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	for _, key := range keys {
+		if _, err := core2.Unseal(vault.TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	TestServerWithListener(t, ln1, addr1, core1)
@@ -121,10 +125,12 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	TestServerAuth(t, addr1, root)
 
 	// WRITE to STANDBY
-	resp := testHttpPut(t, root, addr2+"/v1/secret/foo", map[string]interface{}{
+	resp := testHttpPutDisableRedirect(t, root, addr2+"/v1/secret/foo", map[string]interface{}{
 		"data": "bar",
 	})
+	logger.Trace("307 test one starting")
 	testResponseStatus(t, resp, 307)
+	logger.Trace("307 test one stopping")
 
 	//// READ to standby
 	resp = testHttpGet(t, root, addr2+"/v1/auth/token/lookup-self")
@@ -163,8 +169,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	}
 
 	//// DELETE to standby
-	resp = testHttpDelete(t, root, addr2+"/v1/secret/foo")
+	resp = testHttpDeleteDisableRedirect(t, root, addr2+"/v1/secret/foo")
+	logger.Trace("307 test two starting")
 	testResponseStatus(t, resp, 307)
+	logger.Trace("307 test two stopping")
 }
 
 func TestLogical_CreateToken(t *testing.T) {

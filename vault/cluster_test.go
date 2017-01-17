@@ -52,9 +52,11 @@ func TestClusterHAFetching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, _ := TestCoreInit(t, c)
-	if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, _ := TestCoreInit(t, c)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed

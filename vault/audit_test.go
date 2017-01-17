@@ -54,7 +54,7 @@ func (n *NoopAudit) Reload() error {
 }
 
 func TestCore_EnableAudit(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
@@ -89,12 +89,14 @@ func TestCore_EnableAudit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching audit tables
@@ -160,7 +162,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 }
 
 func TestCore_DisableAudit(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
@@ -200,12 +202,14 @@ func TestCore_DisableAudit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
@@ -215,7 +219,7 @@ func TestCore_DisableAudit(t *testing.T) {
 }
 
 func TestCore_DefaultAuditTable(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	verifyDefaultAuditTable(t, c.audit)
 
 	// Verify we have an audit broker
@@ -232,12 +236,14 @@ func TestCore_DefaultAuditTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
