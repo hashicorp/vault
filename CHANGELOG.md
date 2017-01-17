@@ -3,6 +3,8 @@
 IMPROVEMENTS:
 
  * auth/github: Support listing teams and users [GH-2261]
+ * core: Add a nonce to unseal operations as a check (useful mostly for
+   support, not as a security principle) [GH-2276]
  * physical/consul: Add option for using consistent mode on Consul gets [GH-2270]
 
 BUG FIXES:
