@@ -112,7 +112,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 		for _, ln := range cores[0].Listeners {
 			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 			if !ok {
-				t.Fatal("%s not a TCP port", tcpAddr.String())
+				t.Fatalf("%s not a TCP port", tcpAddr.String())
 			}
 
 			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+10), tlsConfig)

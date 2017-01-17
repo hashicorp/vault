@@ -2192,7 +2192,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2349,7 +2349,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2477,7 +2477,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2537,7 +2537,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2598,7 +2598,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2665,7 +2665,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)

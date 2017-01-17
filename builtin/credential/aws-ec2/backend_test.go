@@ -628,7 +628,7 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 -----END CERTIFICATE-----
 `
 	if resp.Data["aws_public_cert"].(string) != expectedCert {
-		t.Fatal("bad: expected:%s\n got:%s\n", expectedCert, resp.Data["aws_public_cert"].(string))
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedCert, resp.Data["aws_public_cert"].(string))
 	}
 
 	certReq.Operation = logical.CreateOperation

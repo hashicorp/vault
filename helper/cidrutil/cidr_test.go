@@ -105,7 +105,7 @@ func TestCIDRUtil_ValidateCIDRListString(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !valid {
-		t.Fatalf("expected CIDR list %q to be valid")
+		t.Fatalf("expected CIDR list %q to be valid", cidrList)
 	}
 
 	cidrList = "172.169.100.200,192.168.0.0/16,10.10.20.20/24"
@@ -129,7 +129,7 @@ func TestCIDRUtil_ValidateCIDRListSlice(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !valid {
-		t.Fatalf("expected CIDR list %q to be valid")
+		t.Fatalf("expected CIDR list %q to be valid", cidrList)
 	}
 
 	cidrList = []string{"172.169.100.200", "192.168.0.0/16", "10.10.20.20/24"}
@@ -190,7 +190,7 @@ func TestCIDRUtil_Subset(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !subset {
-		t.Fatal("expected CIDR %q to be a subset of CIDR %q", cidr1, cidr2)
+		t.Fatalf("expected CIDR %q to be a subset of CIDR %q", cidr1, cidr2)
 	}
 }
 
