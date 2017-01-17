@@ -125,10 +125,12 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	TestServerAuth(t, addr1, root)
 
 	// WRITE to STANDBY
-	resp := testHttpPut(t, root, addr2+"/v1/secret/foo", map[string]interface{}{
+	resp := testHttpPutDisableRedirect(t, root, addr2+"/v1/secret/foo", map[string]interface{}{
 		"data": "bar",
 	})
+	logger.Trace("307 test one starting")
 	testResponseStatus(t, resp, 307)
+	logger.Trace("307 test one stopping")
 
 	//// READ to standby
 	resp = testHttpGet(t, root, addr2+"/v1/auth/token/lookup-self")
@@ -167,8 +169,10 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 	}
 
 	//// DELETE to standby
-	resp = testHttpDelete(t, root, addr2+"/v1/secret/foo")
+	resp = testHttpDeleteDisableRedirect(t, root, addr2+"/v1/secret/foo")
+	logger.Trace("307 test two starting")
 	testResponseStatus(t, resp, 307)
+	logger.Trace("307 test two stopping")
 }
 
 func TestLogical_CreateToken(t *testing.T) {

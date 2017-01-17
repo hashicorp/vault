@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -26,8 +27,8 @@ func TestSysSealStatus(t *testing.T) {
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
 		"sealed":   true,
-		"t":        json.Number("1"),
-		"n":        json.Number("1"),
+		"t":        json.Number("3"),
+		"n":        json.Number("3"),
 		"progress": json.Number("0"),
 	}
 	testResponseStatus(t, resp, 200)
@@ -114,8 +115,8 @@ func TestSysUnseal(t *testing.T) {
 		expected := map[string]interface{}{
 			"sealed":   true,
 			"t":        json.Number("3"),
-			"n":        json.Number("5"),
-			"progress": json.Number(i + 1),
+			"n":        json.Number("3"),
+			"progress": json.Number(fmt.Sprintf("%d", i+1)),
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
