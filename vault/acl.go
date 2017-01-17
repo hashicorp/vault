@@ -245,28 +245,51 @@ CHECK:
 		if _, ok := permissions.DeniedParameters["*"]; ok {
 			return false, sudo
 		}
-		allowedAll := false
-		if _, ok := permissions.AllowedParameters["*"]; ok {
-			allowedAll = true
-		}
+
+		_, allowedAll := permissions.AllowedParameters["*"]
 		if len(permissions.DeniedParameters) == 0 && allowedAll {
 			return true, sudo
 		}
-		for parameter, _ := range req.Data {
+
+		for parameter, value := range req.Data {
 			// Check if parameter has explictly denied
-			if _, ok := permissions.DeniedParameters[parameter]; ok {
-				return false, sudo
+			if valueSlice, ok := permissions.DeniedParameters[parameter]; ok {
+				// If the value exists in denied values slice, deny
+				return !valueInParameterList(value, valueSlice), sudo
 			}
+
 			// Specfic parameters have been allowed
 			if len(permissions.AllowedParameters) > 0 && !allowedAll {
 				// Requested parameter is not in allowed list
-				if _, ok := permissions.AllowedParameters[parameter]; !ok {
+				if valueSlice, ok := permissions.AllowedParameters[parameter]; !ok {
 					return false, sudo
+				} else {
+					// If the value exists in the allowed values slice, allow
+					return valueInParameterList(value, valueSlice), sudo
 				}
 			}
 		}
+
 		return true, sudo
 	}
 
 	return operationAllowed, sudo
+}
+
+func valueInParameterList(v interface{}, list []interface{}) bool {
+	if len(list) == 0 || valueInSlice("*", list) {
+		return true
+	}
+
+	return valueInSlice(v, list)
+}
+
+func valueInSlice(v interface{}, list []interface{}) bool {
+	for _, el := range list {
+		if el == v {
+			return true
+		}
+	}
+
+	return false
 }
