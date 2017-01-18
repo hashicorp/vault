@@ -36,10 +36,10 @@ These libraries are provided by the community.
 
 ### C&#35;
 
+* [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Standard = 1.4 (.NET Core >= 1.0.0) and also .NET 4.5.x, .NET 4.6.x)
+  * `Install-Package VaultSharp`
 * [Vault.NET](https://github.com/Chatham/Vault.NET)
   * `Install-Package Vault`
-* [VaultSharp](https://github.com/rajanadar/VaultSharp)
-  * `Install-Package VaultSharp`
 
 ### Clojure
 
