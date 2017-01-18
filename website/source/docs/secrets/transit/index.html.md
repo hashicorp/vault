@@ -401,7 +401,7 @@ only encrypt or decrypt using the named keys they need access to.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/transit/export/<key type>/<name>/<version>`</dd>
+  <dd>`/transit/export/<key-type>/<name>/<version>`</dd>
 
   <dt>Parameters</dt>
   <dd>

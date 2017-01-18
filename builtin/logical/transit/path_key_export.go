@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -27,7 +28,7 @@ func (b *backend) pathExportKeys() *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"export_type": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Type of key to export (encryption, signing)",
+				Description: "Type of key to export (encryption-key, signing-key, hmac-key)",
 			},
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -35,12 +36,12 @@ func (b *backend) pathExportKeys() *framework.Path {
 			},
 			"version": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the key",
+				Description: "Version of the key",
 			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathPolicyExport,
+			logical.ReadOperation: b.pathPolicyExportRead,
 		},
 
 		HelpSynopsis:    pathExportHelpSyn,
@@ -48,7 +49,7 @@ func (b *backend) pathExportKeys() *framework.Path {
 	}
 }
 
-func (b *backend) pathPolicyExport(
+func (b *backend) pathPolicyExportRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	exportType := d.Get("export_type").(string)
 	name := d.Get("name").(string)
@@ -112,7 +113,7 @@ func (b *backend) pathPolicyExport(
 			return logical.ErrorResponse("version does not exist or is no longer valid"), logical.ErrInvalidRequest
 		}
 
-		exportKey, err := getExportKey(p, key, exportType)
+		exportKey, err := getExportKey(p, &key, exportType)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +124,7 @@ func (b *backend) pathPolicyExport(
 
 	retKeys := map[string]string{}
 	for k, v := range p.Keys {
-		exportKey, err := getExportKey(p, v, exportType)
+		exportKey, err := getExportKey(p, &v, exportType)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +135,11 @@ func (b *backend) pathPolicyExport(
 	return resp, nil
 }
 
-func getExportKey(policy *keysutil.Policy, key keysutil.KeyEntry, exportType string) (string, error) {
+func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType string) (string, error) {
+	if policy == nil {
+		return "", errors.New("nil policy provided")
+	}
+
 	switch exportType {
 	case exportTypeHMACKey:
 		return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey)), nil
@@ -146,7 +151,7 @@ func getExportKey(policy *keysutil.Policy, key keysutil.KeyEntry, exportType str
 	case exportTypeSigningKey:
 		switch policy.Type {
 		case keysutil.KeyType_ECDSA_P256:
-			ecKey, err := keyEntryToECPrivateKey(key)
+			ecKey, err := keyEntryToECPrivateKey(key, elliptic.P256())
 			if err != nil {
 				return "", err
 			}
@@ -157,10 +162,14 @@ func getExportKey(policy *keysutil.Policy, key keysutil.KeyEntry, exportType str
 	return "", fmt.Errorf("unknown key type %v", policy.Type)
 }
 
-func keyEntryToECPrivateKey(k keysutil.KeyEntry) (string, error) {
+func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string, error) {
+	if k == nil {
+		return "", errors.New("nil KeyEntry provided")
+	}
+
 	privKey := &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
-			Curve: elliptic.P256(),
+			Curve: curve,
 			X:     k.EC_X,
 			Y:     k.EC_Y,
 		},
@@ -169,6 +178,9 @@ func keyEntryToECPrivateKey(k keysutil.KeyEntry) (string, error) {
 	ecder, err := x509.MarshalECPrivateKey(privKey)
 	if err != nil {
 		return "", err
+	}
+	if ecder == nil {
+		return "", errors.New("No data returned when marshalling to private key")
 	}
 
 	block := pem.Block{
