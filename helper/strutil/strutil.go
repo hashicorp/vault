@@ -34,7 +34,7 @@ func StrListSubset(super, sub []string) bool {
 // empty items. The values will be converted to lower case.
 func ParseDedupAndSortStrings(input string, sep string) []string {
 	input = strings.TrimSpace(input)
-	var parsed []string
+	parsed := []string{}
 	if input == "" {
 		// Don't return nil
 		return parsed
