@@ -1485,7 +1485,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 		if len(role.DisallowedPolicies) > 0 {
 			// We don't add the default here because we only want to disallow it if it's explicitly set
-			sanitizedRolePolicies = policyutil.SanitizePolicies(role.DisallowedPolicies, policyutil.DoNotAddDefaultPolicy)
+			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies)
 
 			for _, finalPolicy := range finalPolicies {
 				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
@@ -2218,9 +2218,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 
 	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
 	if ok {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(disallowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.DisallowedPolicies = strutil.ParseDedupAndSortStrings(disallowedPoliciesStr.(string), ",")
 	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.DisallowedPolicies = strutil.ParseDedupAndSortStrings(data.Get("disallowed_policies").(string), ",")
 	}
 
 	// Store it
