@@ -163,7 +163,7 @@ func createRole(t *testing.T) {
 	_, err := svc.CreateRole(params)
 
 	if err != nil {
-		t.Fatal("AWS CreateRole failed: %v", err)
+		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
 
 	attachment := &iam.AttachRolePolicyInput{
@@ -173,7 +173,7 @@ func createRole(t *testing.T) {
 	_, err = svc.AttachRolePolicy(attachment)
 
 	if err != nil {
-		t.Fatal("AWS CreateRole failed: %v", err)
+		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
 
 	// Sleep sometime because AWS is eventually consistent

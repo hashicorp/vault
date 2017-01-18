@@ -160,6 +160,13 @@ func (d *DefaultSeal) SetBarrierConfig(config *SealConfig) error {
 		return err
 	}
 
+	// Provide a way to wipe out the cached value (also prevents actually
+	// saving a nil config)
+	if config == nil {
+		d.config = nil
+		return nil
+	}
+
 	config.Type = d.BarrierType()
 
 	// Encode the seal configuration

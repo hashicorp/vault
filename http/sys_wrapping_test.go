@@ -301,7 +301,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(data, secret.Data) {
-		t.Fatal("custom wrap did not match expected: %#v", secret.Data)
+		t.Fatalf("custom wrap did not match expected: %#v", secret.Data)
 	}
 
 	//

@@ -1792,6 +1792,38 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 }
 
+func TestTokenStore_RoleDisallowedPoliciesWithRoot(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	// Don't set disallowed_policies. Verify that a read on the role does return a non-nil value.
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/role1",
+		Data: map[string]interface{}{
+			"disallowed_policies": "root,testpolicy",
+		},
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = ts.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	expected := []string{"root", "testpolicy"}
+	if !reflect.DeepEqual(resp.Data["disallowed_policies"], expected) {
+		t.Fatalf("bad: expected: %#v, actual: %#v", expected, resp.Data["disallowed_policies"])
+	}
+}
+
 func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	var req *logical.Request
 	var resp *logical.Response
@@ -2192,7 +2224,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2349,7 +2381,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2477,7 +2509,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2537,7 +2569,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2598,7 +2630,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2665,7 +2697,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)

@@ -25,10 +25,10 @@ func Test_CreateLocks(t *testing.T) {
 
 	// Maximum number of locks
 	if err := CreateLocks(locks, 256); err != nil {
-		t.Fatal("err: %v", err)
+		t.Fatalf("err: %v", err)
 	}
 	if len(locks) != 256 {
-		t.Fatal("bad: len(locks): expected:256 actual:%d", len(locks))
+		t.Fatalf("bad: len(locks): expected:256 actual:%d", len(locks))
 	}
 
 	// Clear out the locks for testing the next case
@@ -38,10 +38,10 @@ func Test_CreateLocks(t *testing.T) {
 
 	// General case
 	if err := CreateLocks(locks, 10); err != nil {
-		t.Fatal("err: %v", err)
+		t.Fatalf("err: %v", err)
 	}
 	if len(locks) != 10 {
-		t.Fatal("bad: len(locks): expected:10 actual:%d", len(locks))
+		t.Fatalf("bad: len(locks): expected:10 actual:%d", len(locks))
 	}
 
 }

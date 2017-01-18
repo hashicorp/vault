@@ -43,7 +43,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	}
 	// Check the presense of the canary
 	if compressedJSONBytes[0] != CompressionCanaryLzw {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryLzw, compressedJSONBytes[0])
+		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryLzw, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
@@ -74,7 +74,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	}
 	// Check the presense of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
+		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
@@ -106,7 +106,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	}
 	// Check the presense of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
+		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
@@ -138,7 +138,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	}
 	// Check the presense of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
-		t.Fatal("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
+		t.Fatalf("bad: compression canary: expected: %d actual: %d", CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 
 	// Decompress the input and check the output
@@ -170,7 +170,7 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 	}
 	// Check the presense of the canary
 	if compressedJSONBytes[0] != CompressionCanaryGzip {
-		t.Fatal("bad: compression canary: expected: %d actual: %d",
+		t.Fatalf("bad: compression canary: expected: %d actual: %d",
 			CompressionCanaryGzip, compressedJSONBytes[0])
 	}
 

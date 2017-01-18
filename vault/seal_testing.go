@@ -7,10 +7,12 @@ import (
 )
 
 type TestSeal struct {
-	defseal        *DefaultSeal
-	barrierKeys    [][]byte
-	recoveryKey    []byte
-	recoveryConfig *SealConfig
+	defseal              *DefaultSeal
+	barrierKeys          [][]byte
+	recoveryKey          []byte
+	recoveryConfig       *SealConfig
+	storedKeysDisabled   bool
+	recoveryKeysDisabled bool
 }
 
 func newTestSeal(t *testing.T) Seal {
@@ -43,11 +45,11 @@ func (d *TestSeal) BarrierType() string {
 }
 
 func (d *TestSeal) StoredKeysSupported() bool {
-	return true
+	return !d.storedKeysDisabled
 }
 
 func (d *TestSeal) RecoveryKeySupported() bool {
-	return true
+	return !d.recoveryKeysDisabled
 }
 
 func (d *TestSeal) SetStoredKeys(keys [][]byte) error {
@@ -110,8 +112,7 @@ func TestCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealCo
 	}
 	if sealed, _ := core.Sealed(); sealed {
 		for _, key := range result.SecretShares {
-			if _, err := core.Unseal(key); err != nil {
-
+			if _, err := core.Unseal(TestKeyCopy(key)); err != nil {
 				t.Fatalf("unseal err: %s", err)
 			}
 		}

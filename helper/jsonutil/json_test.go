@@ -98,7 +98,7 @@ func TestJSONUtil_EncodeJSON(t *testing.T) {
 	expected := `{"test":"data","validation":"process"}`
 
 	if actual != expected {
-		t.Fatal("bad: encoded JSON: expected:%s\nactual:%s\n", expected, string(actualBytes))
+		t.Fatalf("bad: encoded JSON: expected:%s\nactual:%s\n", expected, string(actualBytes))
 	}
 }
 
@@ -117,7 +117,7 @@ func TestJSONUtil_DecodeJSON(t *testing.T) {
 		"validation": "process",
 	}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatal("bad: expected:%#v\nactual:%#v", expected, actual)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 }
 
@@ -136,6 +136,6 @@ func TestJSONUtil_DecodeJSONFromReader(t *testing.T) {
 		"validation": "process",
 	}
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatal("bad: expected:%#v\nactual:%#v", expected, actual)
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 }

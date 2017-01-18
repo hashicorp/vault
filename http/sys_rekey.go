@@ -204,8 +204,10 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			}
 			resp.Keys = keys
 			resp.KeysB64 = keysB64
+			respondOk(w, resp)
+		} else {
+			handleSysRekeyInitGet(core, recovery, w, r)
 		}
-		respondOk(w, resp)
 	})
 }
 

@@ -374,7 +374,7 @@ func TestAppRole_RoleSecretIDReadDelete(t *testing.T) {
 
 	resp, err = b.HandleRequest(secretIDReq)
 	if resp != nil && resp.IsError() {
-		t.Fatalf("error response:%#v", err, resp)
+		t.Fatalf("error response:%#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)

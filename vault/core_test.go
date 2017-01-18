@@ -72,7 +72,7 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 		t.Fatalf("should be sealed")
 	}
 
-	if prog := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -91,14 +91,14 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 			if !unseal {
 				t.Fatalf("should be unsealed")
 			}
-			if prog := c.SecretProgress(); prog != 0 {
+			if prog, _ := c.SecretProgress(); prog != 0 {
 				t.Fatalf("bad progress: %d", prog)
 			}
 		} else {
 			if unseal {
 				t.Fatalf("should not be unsealed")
 			}
-			if prog := c.SecretProgress(); prog != i+1 {
+			if prog, _ := c.SecretProgress(); prog != i+1 {
 				t.Fatalf("bad progress: %d", prog)
 			}
 		}
@@ -160,7 +160,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 		t.Fatalf("should be sealed")
 	}
 
-	if prog := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -172,7 +172,7 @@ func TestCore_Unseal_Single(t *testing.T) {
 	if !unseal {
 		t.Fatalf("should be unsealed")
 	}
-	if prog := c.SecretProgress(); prog != 0 {
+	if prog, _ := c.SecretProgress(); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
 	}
 
@@ -228,12 +228,18 @@ func TestCore_Route_Sealed(t *testing.T) {
 
 // Attempt to unseal after doing a first seal
 func TestCore_SealUnseal(t *testing.T) {
-	c, key, root := TestCoreUnsealed(t)
+	c, keys, root := TestCoreUnsealed(t)
 	if err := c.Seal(root); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if unseal, err := TestCoreUnseal(c, key); err != nil || !unseal {
-		t.Fatalf("err: %v", err)
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("err: should be unsealed")
+		}
 	}
 }
 
@@ -979,9 +985,11 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, root := TestCoreInit(t, core)
-	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1019,8 +1027,10 @@ func TestCore_Standby_Seal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1086,9 +1096,11 @@ func TestCore_StepDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, root := TestCoreInit(t, core)
-	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1126,8 +1138,10 @@ func TestCore_StepDown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1273,9 +1287,11 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, root := TestCoreInit(t, core)
-	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1340,8 +1356,10 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1441,9 +1459,11 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, root := TestCoreInit(t, core)
-	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1495,8 +1515,10 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -1988,9 +2010,11 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, root := TestCoreInit(t, core)
-	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Wait for core to become active
@@ -2007,8 +2031,10 @@ func TestCore_Standby_Rotate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core2, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Rotate the encryption key
