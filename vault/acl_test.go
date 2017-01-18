@@ -153,6 +153,7 @@ func TestACL_Layered(t *testing.T) {
 	}
 	testLayeredACL(t, acl)
 }
+
 func testLayeredACL(t *testing.T, acl *ACL) {
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
@@ -266,6 +267,7 @@ func TestPolicyMerge(t *testing.T) {
 		}
 	}
 }
+
 func TestAllowOperation(t *testing.T) {
 	policy, err := Parse(permissionsPolicy)
 	if err != nil {
@@ -315,6 +317,66 @@ func TestAllowOperation(t *testing.T) {
 			}
 			if rootPrivs != tc.rootPrivs {
 				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+			}
+		}
+	}
+}
+
+func TestValuePermissions(t *testing.T) {
+	policy, err := Parse(valuePermissionsPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	acl, err := NewACL([]*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	toperations := []logical.Operation{
+		logical.UpdateOperation,
+		logical.DeleteOperation,
+		logical.CreateOperation,
+	}
+	type tcase struct {
+		path       string
+		parameters []string
+		values     []interface{}
+		allowed    bool
+	}
+
+	tcases := []tcase{
+		{"dev/ops", []string{"allow"}, []interface{}{"good"}, true},
+		{"dev/ops", []string{"allow"}, []interface{}{"bad"}, false},
+		{"foo/bar", []string{"deny"}, []interface{}{"bad"}, false},
+		{"foo/bar", []string{"deny"}, []interface{}{"good"}, true},
+		{"foo/bar", []string{"allow"}, []interface{}{"good"}, true},
+		{"foo/baz", []string{"allow"}, []interface{}{"good"}, true},
+		{"foo/baz", []string{"deny"}, []interface{}{"bad"}, false},
+		{"foo/baz", []string{"deny"}, []interface{}{"good"}, true},
+		{"foo/baz", []string{"allow"}, []interface{}{"bad"}, false},
+		{"foo/baz", []string{"neither"}, []interface{}{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good1"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good2"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
+		{"fizz/buzz", []string{"deny_multi"}, []interface{}{"bad2"}, false},
+		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []interface{}{"good", "good2"}, true},
+		//	{"test/types", []string{"array"}, []interface{}{[]string{"good"}}, true},
+	}
+
+	for _, tc := range tcases {
+		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
+		for i, parameter := range tc.parameters {
+			request.Data[parameter] = tc.values[i]
+		}
+		for _, op := range toperations {
+			request.Operation = op
+			allowed, _ := acl.AllowOperation(&request)
+			if allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, allowed)
 			}
 		}
 	}
@@ -570,6 +632,68 @@ path "var/aws" {
 		  	"soft" = []
 			"warm" = []
 			"kitty" = []
+		}
+	}
+}
+`
+
+//allow operation testing
+var valuePermissionsPolicy = `
+name = "op"
+path "dev/*" {
+	policy = "write"
+	
+	permissions = {
+		allowedparameters = {
+  			"allow" = ["good"]
+	  	}
+	}
+}
+path "foo/bar" {
+	policy = "write"
+	permissions = {
+		deniedparameters = {
+			"deny" = ["bad"]
+		}
+	}
+}
+path "foo/baz" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"allow" = ["good"]
+		}
+		deniedparameters = {
+			"deny" = ["bad"]
+		}
+	}
+}
+path "fizz/buzz" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"allow_multi" = ["good", "good1", "good2"]
+			"allow" = ["good"]
+		}
+		deniedparameters = {
+			"deny_multi" = ["bad", "bad1", "bad2"]
+		}
+	}
+}
+path "test/types" {
+	policy = "write"
+	permissions = {
+		allowedparameters = {
+			"array" = ["good"]
+			"array" = ["good1"]
+			"array" = ["good2"]
+			"map" = {
+					"good" = "one"
+			}
+			"int" = [1, 2]
+		}
+		deniedparameters = {
+			"bool" = [false]
 		}
 	}
 }

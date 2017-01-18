@@ -1,6 +1,8 @@
 package vault
 
 import (
+	"reflect"
+
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/logical"
 )
@@ -286,7 +288,7 @@ func valueInParameterList(v interface{}, list []interface{}) bool {
 
 func valueInSlice(v interface{}, list []interface{}) bool {
 	for _, el := range list {
-		if el == v {
+		if reflect.DeepEqual(el, v) {
 			return true
 		}
 	}
