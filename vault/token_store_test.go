@@ -1919,6 +1919,16 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 		t.Fatal("expected an error response")
 	}
 
+	// Disallowed should act as a blacklist so make sure we can still make
+	// something with other policies in the request
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/test123")
+	req.Data["policies"] = []string{"foo", "bar"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(req)
+	if err != nil || resp == nil || resp.IsError() {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
 	// Create a role to have 'default' policy disallowed
 	req = logical.TestRequest(t, logical.UpdateOperation, "roles/default")
 	req.ClientToken = root
