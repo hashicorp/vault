@@ -1468,18 +1468,10 @@ func (ts *TokenStore) handleCreateCommon(
 				}
 			}
 		} else {
-			// Check against parent policies, or assign parent policies. As
-			// this is a role, add default unless explicitly disabled.
+			// Assign parent policies if none have been requested. As this is a
+			// role, add default unless explicitly disabled.
 			if len(finalPolicies) == 0 {
 				finalPolicies = policyutil.SanitizePolicies(parent.Policies, localAddDefault)
-			} else {
-				// If we added default based on the fact that this is using a
-				// role, we need to add it here too to ensure that the subset
-				// matching works.
-				sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, localAddDefault)
-				if !strutil.StrListSubset(sanitizedParentPolicies, finalPolicies) {
-					return logical.ErrorResponse("child policies must be subset of parent when role contains no allowed_policies"), logical.ErrInvalidRequest
-				}
 			}
 		}
 
