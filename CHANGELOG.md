@@ -13,7 +13,7 @@ BUG FIXES:
    blacklist (with only `disallowed_policies` set) would not work in most
    circumstances [GH-2286]
  * physical/file: File names are base64 encoded to avoid problems with some of
-   the characters disallowed by host OS [GH-2288]
+   the characters disallowed by host OS [GH-2203]
  * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
  * secret/pki: When using `sign-verbatim`, don't require a role and use the
    CSR's common name [GH-2243]
