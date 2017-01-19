@@ -364,7 +364,13 @@ func TestValuePermissions(t *testing.T) {
 		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
 		{"fizz/buzz", []string{"deny_multi"}, []interface{}{"bad2"}, false},
 		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []interface{}{"good", "good2"}, true},
-		//	{"test/types", []string{"array"}, []interface{}{[]string{"good"}}, true},
+		//	{"test/types", []string{"array"}, []interface{}{[1]string{"good"}}, true},
+		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"good": "one"}}, true},
+		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"bad": "one"}}, false},
+		{"test/types", []string{"int"}, []interface{}{1}, true},
+		{"test/types", []string{"int"}, []interface{}{3}, false},
+		//{"test/types", []string{"bool"}, []interface{}{false}, false},
+		//{"test/types", []string{"bool"}, []interface{}{true}, true},
 	}
 
 	for _, tc := range tcases {
@@ -686,7 +692,6 @@ path "test/types" {
 		allowedparameters = {
 			"array" = ["good"]
 			"array" = ["good1"]
-			"array" = ["good2"]
 			"map" = {
 					"good" = "one"
 			}
