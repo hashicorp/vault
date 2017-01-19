@@ -183,7 +183,7 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">exportable</span>
         <span class="param-flags">optional</span>
-        Boolean flag indicating if the key is exportable.
+        Boolean flag indicating if the key is exportable. Defaults to false.
       </li>
     </ul>
   </dd>
