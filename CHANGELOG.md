@@ -5,10 +5,15 @@ IMPROVEMENTS:
  * auth/github: Support listing teams and users [GH-2261]
  * core: Add a nonce to unseal operations as a check (useful mostly for
    support, not as a security principle) [GH-2276]
- * physical/consul: Add option for using consistent mode on Consul gets [GH-2270]
+ * physical/consul: Add option for setting consistency mode on Consul gets [GH-2282]
 
 BUG FIXES:
 
+ * auth/token: Fix regression in 0.6.4 where using token store roles as a
+   blacklist (with only `disallowed_policies` set) would not work in most
+   circumstances [GH-2286]
+ * physical/file: File names are base64 encoded to avoid problems with some of
+   the characters disallowed by host OS [GH-2203]
  * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
  * secret/pki: When using `sign-verbatim`, don't require a role and use the
    CSR's common name [GH-2243]

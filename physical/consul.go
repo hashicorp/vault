@@ -47,6 +47,14 @@ const (
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
 	reconcileTimeout = 60 * time.Second
+
+	// consistencyModeDefault is the configuration value used to tell
+	// consul to use default consistency.
+	consistencyModeDefault = "default"
+
+	// consistencyModeStrong is the configuration value used to tell
+	// consul to use strong consistency.
+	consistencyModeStrong = "strong"
 )
 
 type notifyEvent struct{}
@@ -67,7 +75,7 @@ type ConsulBackend struct {
 	serviceTags         []string
 	disableRegistration bool
 	checkTimeout        time.Duration
-	requireConsistent   bool
+	consistencyMode     string
 
 	notifyActiveCh chan notifyEvent
 	notifySealedCh chan notifyEvent
@@ -194,14 +202,15 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		}
 	}
 
-	requireConsistentRaw, ok := conf["require_consistent"]
-	var requireConsistent bool
+	consistencyMode, ok := conf["consistency_mode"]
 	if ok {
-		b, err := strconv.ParseBool(requireConsistentRaw)
-		if err != nil {
-			return nil, errwrap.Wrapf("failed parsing require_consistent parameter: {{err}}", err)
+		switch consistencyMode {
+		case consistencyModeDefault, consistencyModeStrong:
+		default:
+			return nil, fmt.Errorf("invalid consistency_mode value: %s", consistencyMode)
 		}
-		requireConsistent = b
+	} else {
+		consistencyMode = consistencyModeDefault
 	}
 
 	// Setup the backend
@@ -215,7 +224,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
-		requireConsistent:   requireConsistent,
+		consistencyMode:     consistencyMode,
 	}
 	return c, nil
 }
@@ -298,9 +307,9 @@ func (c *ConsulBackend) Get(key string) (*Entry, error) {
 	defer c.permitPool.Release()
 
 	var queryOptions *api.QueryOptions
-	if c.requireConsistent {
+	if c.consistencyMode == consistencyModeStrong {
 		queryOptions = &api.QueryOptions{
-			RequireConsistent: c.requireConsistent,
+			RequireConsistent: true,
 		}
 	}
 
@@ -367,10 +376,10 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 		return nil, fmt.Errorf("failed to create lock: %v", err)
 	}
 	cl := &ConsulLock{
-		client:            c.client,
-		key:               c.path + key,
-		lock:              lock,
-		requireConsistent: c.requireConsistent,
+		client:          c.client,
+		key:             c.path + key,
+		lock:            lock,
+		consistencyMode: c.consistencyMode,
 	}
 	return cl, nil
 }
@@ -397,10 +406,10 @@ func (c *ConsulBackend) DetectHostAddr() (string, error) {
 
 // ConsulLock is used to provide the Lock interface backed by Consul
 type ConsulLock struct {
-	client            *api.Client
-	key               string
-	lock              *api.Lock
-	requireConsistent bool
+	client          *api.Client
+	key             string
+	lock            *api.Lock
+	consistencyMode string
 }
 
 func (c *ConsulLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
@@ -415,9 +424,9 @@ func (c *ConsulLock) Value() (bool, string, error) {
 	kv := c.client.KV()
 
 	var queryOptions *api.QueryOptions
-	if c.requireConsistent {
+	if c.consistencyMode == consistencyModeStrong {
 		queryOptions = &api.QueryOptions{
-			RequireConsistent: c.requireConsistent,
+			RequireConsistent: true,
 		}
 	}
 
