@@ -32,13 +32,13 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	}
 
 	// Use the vault logical path
-	mungedURL, err := url.Parse(c.Address())
+	vaultURL, err := url.Parse(c.Address())
 	if err != nil {
 		return "", err
 	}
-	mungedURL.Path = path
+	vaultURL.Path = "/v1/" + path
 
-	headers, err := authHeaders(conf, mungedURL, "POST", false)
+	headers, err := authHeaders(conf, vaultURL, "POST", false)
 	if err != nil {
 		return "", err
 	}

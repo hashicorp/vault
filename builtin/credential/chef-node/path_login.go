@@ -65,8 +65,8 @@ func (b *backend) pathLogin(req *logical.Request, data *framework.FieldData) (*l
 	if err != nil {
 		return nil, err
 	}
-
-	auth := authenticate(client, ts, sig, sigVer, key, req.MountPoint+req.Path)
+	reqPath := "/v1/" + req.MountPoint + req.Path
+	auth := authenticate(client, ts, sig, sigVer, key, reqPath)
 	if !auth {
 		return logical.ErrorResponse("Couldn't authenticate client"), nil
 	}
@@ -95,7 +95,7 @@ func (b *backend) pathLogin(req *logical.Request, data *framework.FieldData) (*l
 				Renewable: true,
 			},
 			InternalData: map[string]interface{}{
-				"request_path":      req.MountPoint + req.Path,
+				"request_path":      reqPath,
 				"signature_version": data.Get("signature_version"),
 				"signature":         data.Get("signature"),
 				"client_name":       data.Get("client_name"),
