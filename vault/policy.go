@@ -69,8 +69,8 @@ type PathCapabilities struct {
 
 type Permissions struct {
 	CapabilitiesBitmap uint32
-	AllowedParameters  map[string][]interface{}
-	DeniedParameters   map[string][]interface{}
+	AllowedParameters  map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParameters   map[string][]interface{} `hcl:"denied_parameters"`
 }
 
 // Parse is used to parse the specified ACL rules into an

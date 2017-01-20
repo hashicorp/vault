@@ -37,22 +37,22 @@ path "foo/bar" {
 	capabilities = ["create", "sudo"]
 }
 
-# Check that only allowedparameters are being added to foobar
+# Check that only allowed_parameters are being added to foobar
 path "foo/bar" {
 	capabilities = ["create", "sudo"]
 	permissions = {
-	  allowedparameters = {
+	  allowed_parameters = {
 	    "zip" = []
 	    "zap" = []
 	  }
 	}
 }
 
-# Check that only deniedparameters are being added to bazbar
+# Check that only denied_parameters are being added to bazbar
 path "baz/bar" {
 	capabilities = ["create", "sudo"]
 	permissions = {
-	  deniedparameters = {
+	  denied_parameters = {
 	    "zip" = []
 	    "zap" = []
 	  }
@@ -63,11 +63,11 @@ path "baz/bar" {
 path "biz/bar" {
 	capabilities = ["create", "sudo"]
 	permissions = {
-	  allowedparameters = {
+	  allowed_parameters = {
 	    "zim" = []
 	    "zam" = []
 	  }
-	  deniedparameters = {
+	  denied_parameters = {
 	    "zip" = []
 	    "zap" = []
 	  }

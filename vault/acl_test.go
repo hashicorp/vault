@@ -228,7 +228,6 @@ func TestPolicyMerge(t *testing.T) {
 		path      string
 		parameter string
 		allowed   bool
-		rootPrivs bool
 	}
 
 	toperations := []logical.Operation{
@@ -238,18 +237,18 @@ func TestPolicyMerge(t *testing.T) {
 	}
 
 	tcases := []tcase{
-		{"foo/bar", "baz", false, false},
-		{"foo/bar", "zip", false, false},
-		{"hello/universe", "bob", true, false},
-		{"hello/universe", "tom", true, false},
-		{"rainy/day", "bob", true, false},
-		{"rainy/day", "tom", true, false},
-		{"cool/bike", "four", false, false},
-		{"cool/bike", "frank", false, false},
-		{"clean/bed", "one", false, false},
-		{"clean/bed", "two", false, false},
-		{"coca/cola", "john", false, false},
-		{"coca/cola", "two", false, false},
+		{"foo/bar", "baz", false},
+		{"foo/bar", "zip", false},
+		{"hello/universe", "bob", true},
+		{"hello/universe", "tom", true},
+		{"rainy/day", "bob", true},
+		{"rainy/day", "tom", true},
+		{"cool/bike", "four", false},
+		{"cool/bike", "frank", false},
+		{"clean/bed", "one", false},
+		{"clean/bed", "two", false},
+		{"coca/cola", "john", false},
+		{"coca/cola", "two", false},
 	}
 
 	for _, tc := range tcases {
@@ -257,12 +256,9 @@ func TestPolicyMerge(t *testing.T) {
 		request.Data[tc.parameter] = ""
 		for _, op := range toperations {
 			request.Operation = op
-			allowed, rootPrivs := acl.AllowOperation(&request)
+			allowed, _ := acl.AllowOperation(&request)
 			if allowed != tc.allowed {
-				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
-			}
-			if rootPrivs != tc.rootPrivs {
-				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+				t.Fatalf("bad: case %#v: %v", tc, allowed)
 			}
 		}
 	}
@@ -286,22 +282,21 @@ func TestAllowOperation(t *testing.T) {
 		path       string
 		parameters []string
 		allowed    bool
-		rootPrivs  bool
 	}
 
 	tcases := []tcase{
-		{"dev/ops", []string{"zip"}, true, false},
-		{"foo/bar", []string{"zap"}, false, false},
-		{"foo/baz", []string{"hello"}, true, false},
-		{"foo/baz", []string{"zap"}, false, false},
-		{"broken/phone", []string{"steve"}, false, false},
-		{"hello/world", []string{"one"}, false, false},
-		{"tree/fort", []string{"one"}, true, false},
-		{"tree/fort", []string{"beer"}, false, false},
-		{"fruit/apple", []string{"pear"}, false, false},
-		{"fruit/apple", []string{"one"}, false, false},
-		{"cold/weather", []string{"four"}, true, false},
-		{"var/aws", []string{"cold", "warm", "kitty"}, false, false},
+		{"dev/ops", []string{"zip"}, true},
+		{"foo/bar", []string{"zap"}, false},
+		{"foo/baz", []string{"hello"}, true},
+		{"foo/baz", []string{"zap"}, false},
+		{"broken/phone", []string{"steve"}, false},
+		{"hello/world", []string{"one"}, false},
+		{"tree/fort", []string{"one"}, true},
+		{"tree/fort", []string{"beer"}, false},
+		{"fruit/apple", []string{"pear"}, false},
+		{"fruit/apple", []string{"one"}, false},
+		{"cold/weather", []string{"four"}, true},
+		{"var/aws", []string{"cold", "warm", "kitty"}, false},
 	}
 
 	for _, tc := range tcases {
@@ -311,12 +306,9 @@ func TestAllowOperation(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			allowed, rootPrivs := acl.AllowOperation(&request)
+			allowed, _ := acl.AllowOperation(&request)
 			if allowed != tc.allowed {
-				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
-			}
-			if rootPrivs != tc.rootPrivs {
-				t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+				t.Fatalf("bad: case %#v: %v", tc, allowed)
 			}
 		}
 	}
@@ -451,7 +443,7 @@ name = "ops"
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"baz" = []
 		}
 	}
@@ -459,7 +451,7 @@ path "foo/bar" {
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"zip" = []
 		}
 	}
@@ -467,7 +459,7 @@ path "foo/bar" {
 path "hello/universe" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"bob" = []
 		}
 	}
@@ -475,7 +467,7 @@ path "hello/universe" {
 path "hello/universe" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"tom" = []
 		}
   }
@@ -483,7 +475,7 @@ path "hello/universe" {
 path "rainy/day" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"bob" = []
 		}
 	}
@@ -491,7 +483,7 @@ path "rainy/day" {
 path "rainy/day" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"*" = []
 		}
   }
@@ -499,7 +491,7 @@ path "rainy/day" {
 path "cool/bike" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"frank" = []
 		}
 	}
@@ -507,7 +499,7 @@ path "cool/bike" {
 path "cool/bike" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"*" = []
 		}
   }
@@ -515,7 +507,7 @@ path "cool/bike" {
 path "clean/bed" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"*" = []
 		}
 	}
@@ -523,7 +515,7 @@ path "clean/bed" {
 path "clean/bed" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"*" = []
 		}
   }
@@ -531,7 +523,7 @@ path "clean/bed" {
 path "coca/cola" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"john" = []
 		}
 	}
@@ -539,7 +531,7 @@ path "coca/cola" {
 path "coca/cola" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"john" = []
 		}
   }
@@ -553,7 +545,7 @@ path "dev/*" {
 	policy = "write"
 	
   permissions = {
-  	allowedparameters = {
+  	allowed_parameters = {
   		"zip" = []
   	}
   }
@@ -561,7 +553,7 @@ path "dev/*" {
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"zap" = []
 		}
   }
@@ -569,10 +561,10 @@ path "foo/bar" {
 path "foo/baz" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"hello" = []
 		}
-		deniedparameters = {
+		denied_parameters = {
 			"zap" = []
 		}
   }
@@ -580,10 +572,10 @@ path "foo/baz" {
 path "broken/phone" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 		  "steve" = []
 		}
-		deniedparameters = {
+		denied_parameters = {
 		  "steve" = []
 		}
 	}
@@ -591,10 +583,10 @@ path "broken/phone" {
 path "hello/world" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"*" = []
 		}
-		deniedparameters = {
+		denied_parameters = {
 			"*" = []
 		}
   }
@@ -602,10 +594,10 @@ path "hello/world" {
 path "tree/fort" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"*" = []
 		}
-		deniedparameters = {
+		denied_parameters = {
 			"beer" = []
 		}
   }
@@ -613,10 +605,10 @@ path "tree/fort" {
 path "fruit/apple" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"pear" = []
 		}
-		deniedparameters = {
+		denied_parameters = {
 			"*" = []
 		}
   }
@@ -624,17 +616,17 @@ path "fruit/apple" {
 path "cold/weather" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {}
-		deniedparameters = {}
+		allowed_parameters = {}
+		denied_parameters = {}
 	}
 }
 path "var/aws" {
   	policy = "write"
 	permissions = {
-	  	allowedparameters = {
+	  	allowed_parameters = {
 			"*" = []
 		}
-		deniedparameters = {
+		denied_parameters = {
 		  	"soft" = []
 			"warm" = []
 			"kitty" = []
@@ -650,7 +642,7 @@ path "dev/*" {
 	policy = "write"
 	
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
   			"allow" = ["good"]
 	  	}
 	}
@@ -658,7 +650,7 @@ path "dev/*" {
 path "foo/bar" {
 	policy = "write"
 	permissions = {
-		deniedparameters = {
+		denied_parameters = {
 			"deny" = ["bad"]
 		}
 	}
@@ -666,10 +658,10 @@ path "foo/bar" {
 path "foo/baz" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"allow" = ["good"]
 		}
-		deniedparameters = {
+		denied_parameters = {
 			"deny" = ["bad"]
 		}
 	}
@@ -677,11 +669,11 @@ path "foo/baz" {
 path "fizz/buzz" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
+		allowed_parameters = {
 			"allow_multi" = ["good", "good1", "good2"]
 			"allow" = ["good"]
 		}
-		deniedparameters = {
+		denied_parameters = {
 			"deny_multi" = ["bad", "bad1", "bad2"]
 		}
 	}
@@ -689,15 +681,13 @@ path "fizz/buzz" {
 path "test/types" {
 	policy = "write"
 	permissions = {
-		allowedparameters = {
-			"array" = ["good"]
-			"array" = ["good1"]
+		allowed_parameters = {
 			"map" = {
 					"good" = "one"
 			}
 			"int" = [1, 2]
 		}
-		deniedparameters = {
+		denied_parameters = {
 			"bool" = [false]
 		}
 	}
