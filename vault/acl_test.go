@@ -682,9 +682,7 @@ path "test/types" {
 	policy = "write"
 	permissions = {
 		allowed_parameters = {
-			"map" = {
-					"good" = "one"
-			}
+			"map" = [{"good" = "one"}]
 			"int" = [1, 2]
 		}
 		denied_parameters = {
