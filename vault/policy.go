@@ -113,8 +113,6 @@ func Parse(rules string) (*Policy, error) {
 }
 
 func parsePaths(result *Policy, list *ast.ObjectList) error {
-	// specifically how can we access the key value pairs for
-	// permissions
 	paths := make([]*PathCapabilities, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
