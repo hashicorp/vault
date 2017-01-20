@@ -119,12 +119,12 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 	for _, item := range list.Items {
 		key := "path"
 		if len(item.Keys) > 0 {
-			key = item.Keys[0].Token.Value().(string) // "secret/foo"
+			key = item.Keys[0].Token.Value().(string)
 		}
 		valid := []string{
 			"policy",
 			"capabilities",
-			"permissions", // added here to validate
+			"permissions",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
