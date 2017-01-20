@@ -56,8 +56,6 @@ type Policy struct {
 	Raw   string
 }
 
-/*
- */
 // PathCapabilities represents a policy for a path in the namespace.
 type PathCapabilities struct {
 	Prefix       string
