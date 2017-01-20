@@ -85,9 +85,6 @@ func NewACL(policies []*Policy) (*ACL, error) {
 					goto CHECK_DENIED
 				}
 
-				// TODO: make sure merging happens how we would expect. Should the existing policy be overwritten if the new policy allows everything?
-				// TODO: Should the existing policy take precedence in the loop below?
-
 				// If the exising policy allows everything set this policy to
 				// allow everything and skip to check denied
 				if _, ok = existingPerms.AllowedParameters["*"]; ok {
@@ -97,10 +94,9 @@ func NewACL(policies []*Policy) (*ACL, error) {
 					goto CHECK_DENIED
 				}
 
-				// Merge the two values, allowing existing policy to take precedence
-				// on collisions
+				// Merge the two maps, appending values on key conflict.
 				for key, value := range existingPerms.AllowedParameters {
-					pc.Permissions.AllowedParameters[key] = value
+					pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
 				}
 			}
 
@@ -125,10 +121,9 @@ func NewACL(policies []*Policy) (*ACL, error) {
 					goto INSERT
 				}
 
-				// Merge the two values, allowing existing policy to take precedence
-				// on collisions
+				// Merge the two maps, appending values on key conflict.
 				for key, value := range existingPerms.DeniedParameters {
-					pc.Permissions.DeniedParameters[key] = value
+					pc.Permissions.DeniedParameters[key] = append(value, pc.Permissions.DeniedParameters[key]...)
 				}
 			}
 

@@ -215,7 +215,7 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 }
 
 func TestPolicyMerge(t *testing.T) {
-	policy, err := Parse(permissionsPolicy2)
+	policy, err := Parse(mergingPolicies)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -225,41 +225,33 @@ func TestPolicyMerge(t *testing.T) {
 	}
 
 	type tcase struct {
-		path      string
-		parameter string
-		allowed   bool
-	}
-
-	toperations := []logical.Operation{
-		logical.UpdateOperation,
-		logical.CreateOperation,
-		logical.DeleteOperation,
+		path    string
+		allowed map[string][]interface{}
+		denied  map[string][]interface{}
 	}
 
 	tcases := []tcase{
-		{"foo/bar", "baz", false},
-		{"foo/bar", "zip", false},
-		{"hello/universe", "bob", true},
-		{"hello/universe", "tom", true},
-		{"rainy/day", "bob", true},
-		{"rainy/day", "tom", true},
-		{"cool/bike", "four", false},
-		{"cool/bike", "frank", false},
-		{"clean/bed", "one", false},
-		{"clean/bed", "two", false},
-		{"coca/cola", "john", false},
-		{"coca/cola", "two", false},
+		{"foo/bar", nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}},
+		{"hello/universe", map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil},
+		{"allow/all", map[string][]interface{}{"*": []interface{}{}}, nil},
+		{"allow/all1", map[string][]interface{}{"*": []interface{}{}}, nil},
+		{"deny/all", nil, map[string][]interface{}{"*": []interface{}{}}},
+		{"deny/all1", nil, map[string][]interface{}{"*": []interface{}{}}},
+		{"value/merge", map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
 	}
 
 	for _, tc := range tcases {
-		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
-		request.Data[tc.parameter] = ""
-		for _, op := range toperations {
-			request.Operation = op
-			allowed, _ := acl.AllowOperation(&request)
-			if allowed != tc.allowed {
-				t.Fatalf("bad: case %#v: %v", tc, allowed)
-			}
+		raw, ok := acl.exactRules.Get(tc.path)
+		if !ok {
+			t.Fatalf("Could not find acl entry for path %s", tc.path)
+		}
+
+		p := raw.(*Permissions)
+		if !reflect.DeepEqual(tc.allowed, p.AllowedParameters) {
+			t.Fatalf("Allowed paramaters did not match, Expected: %#v, Got: %#v", tc.allowed, p.AllowedParameters)
+		}
+		if !reflect.DeepEqual(tc.denied, p.DeniedParameters) {
+			t.Fatalf("Denied paramaters did not match, Expected: %#v, Got: %#v", tc.denied, p.DeniedParameters)
 		}
 	}
 }
@@ -438,7 +430,7 @@ path "foo/bar" {
 `
 
 //test merging
-var permissionsPolicy2 = `
+var mergingPolicies = `
 name = "ops"
 path "foo/bar" {
 	policy = "write"
@@ -460,7 +452,7 @@ path "hello/universe" {
 	policy = "write"
 	permissions = {
 		allowed_parameters = {
-			"bob" = []
+			"foo" = []
 		}
 	}
 }
@@ -468,19 +460,19 @@ path "hello/universe" {
 	policy = "write"
 	permissions = {
 		allowed_parameters = {
-			"tom" = []
+			"bar" = []
 		}
   }
 }
-path "rainy/day" {
+path "allow/all" {
 	policy = "write"
 	permissions = {
 		allowed_parameters = {
-			"bob" = []
+			"test" = []
 		}
 	}
 }
-path "rainy/day" {
+path "allow/all" {
 	policy = "write"
 	permissions = {
 		allowed_parameters = {
@@ -488,7 +480,23 @@ path "rainy/day" {
 		}
   }
 }
-path "cool/bike" {
+path "allow/all1" {
+	policy = "write"
+	permissions = {
+		allowed_parameters = {
+			"*" = []
+		}
+  }
+}
+path "allow/all1" {
+	policy = "write"
+	permissions = {
+		allowed_parameters = {
+			"test" = []
+		}
+  }
+}
+path "deny/all" {
 	policy = "write"
 	permissions = {
 		denied_parameters = {
@@ -496,7 +504,7 @@ path "cool/bike" {
 		}
 	}
 }
-path "cool/bike" {
+path "deny/all" {
 	policy = "write"
 	permissions = {
 		denied_parameters = {
@@ -504,35 +512,42 @@ path "cool/bike" {
 		}
   }
 }
-path "clean/bed" {
+path "deny/all1" {
 	policy = "write"
 	permissions = {
 		denied_parameters = {
-			"*" = []
-		}
-	}
-}
-path "clean/bed" {
-	policy = "write"
-	permissions = {
-		allowed_parameters = {
 			"*" = []
 		}
   }
 }
-path "coca/cola" {
+path "deny/all1" {
 	policy = "write"
 	permissions = {
 		denied_parameters = {
-			"john" = []
+			"test" = []
 		}
-	}
+  }
 }
-path "coca/cola" {
+path "value/merge" {
 	policy = "write"
 	permissions = {
 		allowed_parameters = {
-			"john" = []
+			"test" = [1, 2]
+		}
+		denied_parameters = {
+			"test" = [1, 2]
+		}
+
+	}
+}
+path "value/merge" {
+	policy = "write"
+	permissions = {
+		allowed_parameters = {
+			"test" = [3, 4]
+		}
+		denied_parameters = {
+			"test" = [3, 4]
 		}
   }
 }
