@@ -79,16 +79,27 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				if pc.Permissions.AllowedParameters == nil {
 					pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(existingPerms.AllowedParameters))
 				}
+
+				// If this policy allows everything skip to checking denied
 				if _, ok := pc.Permissions.AllowedParameters["*"]; ok {
 					goto CHECK_DENIED
 				}
-				for key, value := range existingPerms.AllowedParameters {
-					if key == "*" {
-						pc.Permissions.AllowedParameters = map[string][]interface{}{
-							"*": []interface{}{},
-						}
-						goto CHECK_DENIED
+
+				// TODO: make sure merging happens how we would expect. Should the existing policy be overwritten if the new policy allows everything?
+				// TODO: Should the existing policy take precedence in the loop below?
+
+				// If the exising policy allows everything set this policy to
+				// allow everything and skip to check denied
+				if _, ok = existingPerms.AllowedParameters["*"]; ok {
+					pc.Permissions.AllowedParameters = map[string][]interface{}{
+						"*": []interface{}{},
 					}
+					goto CHECK_DENIED
+				}
+
+				// Merge the two values, allowing existing policy to take precedence
+				// on collisions
+				for key, value := range existingPerms.AllowedParameters {
 					pc.Permissions.AllowedParameters[key] = value
 				}
 			}
@@ -99,16 +110,24 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				if pc.Permissions.DeniedParameters == nil {
 					pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(existingPerms.DeniedParameters))
 				}
+
+				// If this policy denies everything go to insert
 				if _, ok := pc.Permissions.DeniedParameters["*"]; ok {
 					goto INSERT
 				}
-				for key, value := range existingPerms.DeniedParameters {
-					if key == "*" {
-						pc.Permissions.DeniedParameters = map[string][]interface{}{
-							"*": []interface{}{},
-						}
-						break
+
+				// If exising policy denies everything set this policy to
+				// deny everything and go to insert
+				if _, ok = existingPerms.DeniedParameters["*"]; ok {
+					pc.Permissions.DeniedParameters = map[string][]interface{}{
+						"*": []interface{}{},
 					}
+					goto INSERT
+				}
+
+				// Merge the two values, allowing existing policy to take precedence
+				// on collisions
+				for key, value := range existingPerms.DeniedParameters {
 					pc.Permissions.DeniedParameters[key] = value
 				}
 			}
