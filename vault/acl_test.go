@@ -361,8 +361,8 @@ func TestValuePermissions(t *testing.T) {
 		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"bad": "one"}}, false},
 		{"test/types", []string{"int"}, []interface{}{1}, true},
 		{"test/types", []string{"int"}, []interface{}{3}, false},
-		//{"test/types", []string{"bool"}, []interface{}{false}, false},
-		//{"test/types", []string{"bool"}, []interface{}{true}, true},
+		{"test/types", []string{"bool"}, []interface{}{false}, false},
+		{"test/types", []string{"bool"}, []interface{}{true}, true},
 	}
 
 	for _, tc := range tcases {
