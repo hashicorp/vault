@@ -3,6 +3,7 @@ package chefnode
 import (
 	"fmt"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -25,9 +26,26 @@ func pathConfig(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation:   b.pathConfigRead,
 			logical.UpdateOperation: b.pathConfigWrite,
 		},
 	}
+}
+
+func (b *backend) pathConfigRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	cfg, err := b.Config(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, nil
+	}
+
+	resp := &logical.Response{
+		Data: structs.New(cfg).Map(),
+	}
+	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords.")
+	return resp, nil
 }
 
 func (b *backend) pathConfigWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
