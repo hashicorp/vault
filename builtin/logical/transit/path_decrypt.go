@@ -142,7 +142,8 @@ func (b *backend) pathDecryptWrite(
 	}
 
 	var batchItems []BatchDecryptionItemRequest
-	var batchResponseItems []BatchDecryptionItemResponse
+	contextSet := true
+
 	for _, batchItem := range batchInputArray {
 		var item BatchDecryptionItemRequest
 		if err := mapstructure.Decode(batchItem, &item); err != nil {
@@ -150,6 +151,17 @@ func (b *backend) pathDecryptWrite(
 		}
 		batchItems = append(batchItems, item)
 
+		if item.Context == "" && contextSet {
+			contextSet = false
+		}
+
+		if item.Context != "" && !contextSet {
+			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
+		}
+	}
+
+	var batchResponseItems []BatchDecryptionItemResponse
+	for _, item := range batchItems {
 		if item.Ciphertext == "" {
 			batchResponseItems = append(batchResponseItems, BatchDecryptionItemResponse{
 				Error: "missing ciphertext to decrypt",
