@@ -647,8 +647,7 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">context</span>
         <span class="param-flags">optional</span>
-        The key derivation context, provided as base64-encoded string.
-        Must be provided if derivation is enabled.
+        Base64 encoded context for key derivation. Required for derived keys.
       </li>
       <li>
         <span class="param">nonce</span>
@@ -657,6 +656,29 @@ only encrypt or decrypt using the named keys they need access to.
         Must be provided if convergent encryption is enabled for this key and
         the key was created with Vault 0.6.1. Not required for keys created in
         0.6.2+.
+      </li>
+      <li>
+        <span class="param">batch</span>
+        <span class="param-flags">optional</span>
+        Base64 encoded list of items to be rewrapped in a single batch. When
+        this parameter is set, if the parameters 'ciphertext', 'context' and
+        'nonce' are also set, they will be ignored. JSON format for the input
+        goes like this:
+
+```javascript
+[
+  {
+    "context": "context1",
+    "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
+  },
+  {
+    "context": "context2",
+    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
+  },
+  ...
+]
+```javascript
+
       </li>
     </ul>
   </dd>

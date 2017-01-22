@@ -344,8 +344,8 @@ func (b *backend) pathRewrapWrite(
 const pathRewrapHelpSyn = `Rewrap ciphertext`
 
 const pathRewrapHelpDesc = `
-After key rotation, this function can be used to rewrap the
-given ciphertext with the latest version of the named key.
-If the given ciphertext is already using the latest version
-of the key, this function is a no-op.
+After key rotation, this function can be used to rewrap the given ciphertext or
+a batch of given ciphertext blocks with the latest version of the named key.
+If the given ciphertext is already using the latest version of the key, this
+function is a no-op.
 `
