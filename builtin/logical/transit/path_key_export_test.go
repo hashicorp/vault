@@ -1,12 +1,22 @@
 package transit
 
 import (
+	"fmt"
+	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestTransit_PathVersion_ExportsCorrectVersion(t *testing.T) {
+func TestTransit_ExportKeyVersion_ExportsCorrectVersion(t *testing.T) {
+	VerifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
+	VerifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
+	VerifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
+	VerifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256")
+}
+
+func VerifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -24,11 +34,38 @@ func TestTransit_PathVersion_ExportsCorrectVersion(t *testing.T) {
 	}
 	req.Data = map[string]interface{}{
 		"exportable": true,
+		"type":       keyType,
 	}
 	_, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	verifyVersion := func(versionRequest string, expectedVersion int) {
+		req := &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      fmt.Sprintf("export/%s/foo/%s", exportType, versionRequest),
+		}
+		rsp, err := b.HandleRequest(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := rsp.Data["version"]; !ok {
+			t.Error("no version returned from export")
+		}
+		version, ok := rsp.Data["version"].(int)
+		if !ok {
+			t.Error("could not cast to version")
+		}
+		if version != expectedVersion {
+			t.Errorf("expected version %d, received version %d", expectedVersion, version)
+		}
+	}
+
+	verifyVersion("v1", 1)
+	verifyVersion("1", 1)
+	verifyVersion("latest", 1)
 
 	req.Path = "keys/foo/rotate"
 	// v2
@@ -36,71 +73,24 @@ func TestTransit_PathVersion_ExportsCorrectVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	verifyVersion("v1", 1)
+	verifyVersion("1", 1)
+	verifyVersion("v2", 2)
+	verifyVersion("2", 2)
+	verifyVersion("latest", 2)
+
 	// v3
 	_, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	req = &logical.Request{
-		Storage:   storage,
-		Operation: logical.ReadOperation,
-		Path:      "export/encryption-key/foo/v1",
-	}
-	rsp, err := b.HandleRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := rsp.Data["version"]; !ok {
-		t.Error("no version returned from export")
-	}
-	version, ok := rsp.Data["version"].(int)
-	if !ok {
-		t.Error("could not cast to version")
-	}
-	if version != 1 {
-		t.Errorf("expected version 1, received version %d", version)
-	}
-
-	req = &logical.Request{
-		Storage:   storage,
-		Operation: logical.ReadOperation,
-		Path:      "export/encryption-key/foo/1",
-	}
-	rsp, err = b.HandleRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := rsp.Data["version"]; !ok {
-		t.Error("no version returned from export")
-	}
-	version, ok = rsp.Data["version"].(int)
-	if !ok {
-		t.Error("could not cast to version")
-	}
-	if version != 1 {
-		t.Errorf("expected version 1, received version %d", version)
-	}
-
-	req = &logical.Request{
-		Storage:   storage,
-		Operation: logical.ReadOperation,
-		Path:      "export/encryption-key/foo/latest",
-	}
-	rsp, err = b.HandleRequest(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := rsp.Data["version"]; !ok {
-		t.Error("no version returned from export")
-	}
-	version, ok = rsp.Data["version"].(int)
-	if !ok {
-		t.Error("could not cast to version")
-	}
-	if version != 3 {
-		t.Errorf("expected version 3, received version %d", version)
-	}
+	verifyVersion("v1", 1)
+	verifyVersion("1", 1)
+	verifyVersion("v3", 3)
+	verifyVersion("3", 3)
+	verifyVersion("latest", 3)
 }
 
 func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
@@ -139,7 +129,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	verifyExportCount := func(expectedCount int) {
+	verifyExport := func(validVersions []int) {
 		req = &logical.Request{
 			Storage:   storage,
 			Operation: logical.ReadOperation,
@@ -157,13 +147,17 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 		if !ok {
 			t.Error("could not cast to keys object")
 		}
-		if len(keys) != expectedCount {
-			t.Errorf("expected %d key, received %d", expectedCount, len(keys))
+		if len(keys) != len(validVersions) {
+			t.Errorf("expected %d key count, received %d", len(validVersions), len(keys))
+		}
+		for _, version := range validVersions {
+			if _, ok := keys[strconv.Itoa(version)]; !ok {
+				t.Errorf("expecting to find key version %d, not found", version)
+			}
 		}
 	}
 
-	// valid versions: 1, 2, 3
-	verifyExportCount(3)
+	verifyExport([]int{1, 2, 3})
 
 	req = &logical.Request{
 		Storage:   storage,
@@ -177,8 +171,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// valid versions: 3
-	verifyExportCount(1)
+	verifyExport([]int{3})
 
 	req = &logical.Request{
 		Storage:   storage,
@@ -192,8 +185,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// valid versions: 2, 3
-	verifyExportCount(2)
+	verifyExport([]int{2, 3})
 
 	req = &logical.Request{
 		Storage:   storage,
@@ -205,6 +197,191 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// valid versions: 2, 3, 4
-	verifyExportCount(3)
+	verifyExport([]int{2, 3, 4})
+}
+
+func TestTransit_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+	}
+	req.Data = map[string]interface{}{
+		"exportable": false,
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.ReadOperation,
+		Path:      "export/encryption-key/foo",
+	}
+	rsp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rsp.IsError() {
+		t.Fatal("Key not marked as exportble but was exported.")
+	}
+}
+
+func TestTransit_ExportSigningDoesNotSupportSigning_ReturnsError(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+	}
+	req.Data = map[string]interface{}{
+		"exportable": true,
+		"type":       "aes256-gcm96",
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.ReadOperation,
+		Path:      "export/signing-key/foo",
+	}
+	_, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatal("Key does not support signing but was exported without error.")
+	}
+}
+
+func TestTransit_ExportEncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+	}
+	req.Data = map[string]interface{}{
+		"exportable": true,
+		"type":       "ecdsa-p256",
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.ReadOperation,
+		Path:      "export/encryption-key/foo",
+	}
+	_, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatal("Key does not support encryption but was exported without error.")
+	}
+}
+
+func TestTransit_KeysDoesNotExist_ReturnsNotFound(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.ReadOperation,
+		Path:      "export/encryption-key/foo",
+	}
+	rsp, err := b.HandleRequest(req)
+
+	if !(rsp == nil && err == nil) {
+		t.Fatal("Key does not exist but does not return not found")
+	}
+}
+
+func TestTransit_ExportEncryptionKey_DoesNotExportHMACKey(t *testing.T) {
+	var b *backend
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	b = Backend(&logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	})
+
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+	}
+	req.Data = map[string]interface{}{
+		"exportable": true,
+		"type":       "aes256-gcm96",
+	}
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.ReadOperation,
+		Path:      "export/encryption-key/foo",
+	}
+	encryptionKeyRsp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Path = "export/hmac-key/foo"
+	hmacKeyRsp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encryptionKeys, ok := encryptionKeyRsp.Data["keys"].(map[string]string)
+	if !ok {
+		t.Error("could not cast to keys object")
+	}
+	hmacKeys, ok := hmacKeyRsp.Data["keys"].(map[string]string)
+	if !ok {
+		t.Error("could not cast to keys object")
+	}
+	if len(hmacKeys) != len(encryptionKeys) {
+		t.Errorf("hmac (%d) and encyryption (%d) key count don't match",
+			len(hmacKeys), len(encryptionKeys))
+	}
+
+	if reflect.DeepEqual(encryptionKeyRsp.Data, hmacKeyRsp.Data) {
+		t.Fatal("Encryption key data matched hmac key data")
+	}
 }
