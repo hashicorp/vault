@@ -101,6 +101,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 	}
 
+	// Merge local Policies into Okta Policies
+	policies = append(policies, user.Policies...)
+
 	if len(policies) == 0 {
 		errStr := "user is not a member of any authorized policy"
 		if len(oktaResponse.Warnings()) > 0 {

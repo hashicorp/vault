@@ -33,6 +33,11 @@ func pathUsers(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Comma-separated list of groups associated with the user.",
 			},
+
+			"policies": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Comma-separated list of policies associated with the user.",
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -95,7 +100,8 @@ func (b *backend) pathUserRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"groups": user.Groups,
+			"groups":   user.Groups,
+			"policies": user.Policies,
 		},
 	}, nil
 }
@@ -112,9 +118,15 @@ func (b *backend) pathUserWrite(
 		groups[i] = strings.TrimSpace(g)
 	}
 
+	policies := strings.Split(d.Get("policies").(string), ",")
+	for i, p := range policies {
+		policies[i] = strings.TrimSpace(p)
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
-		Groups: groups,
+		Groups:   groups,
+		Policies: policies,
 	})
 	if err != nil {
 		return nil, err
@@ -136,7 +148,8 @@ func (b *backend) pathUserList(
 }
 
 type UserEntry struct {
-	Groups []string
+	Groups   []string
+	Policies []string
 }
 
 const pathUserHelpSyn = `
