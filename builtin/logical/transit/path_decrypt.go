@@ -176,6 +176,7 @@ func (b *backend) pathDecryptWrite(
 					Error: "failed to base64-decode nonce",
 				})
 			}
+			continue
 		}
 
 		plaintext, err := p.Decrypt(itemContext, itemNonce, item.Ciphertext)

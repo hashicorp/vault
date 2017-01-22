@@ -33,7 +33,7 @@ type BatchEncryptionItemResponse struct {
 	// request item
 	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
 
-	// Error, if set represents a failure encountered which encrypting a
+	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
 	Error string `json:"error" structs:"error" mapstructure:"error"`
 }
