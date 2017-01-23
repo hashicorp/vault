@@ -1,4 +1,4 @@
-package awsec2
+package awsauth
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
 // * Static credentials from 'config/client'
 // * Environment variables
 // * Instance metadata role
-func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config, error) {
+func (b *backend) getClientConfig(s logical.Storage, region, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{
 		Region: region,
 	}
@@ -33,8 +33,12 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 	endpoint := aws.String("")
 	if config != nil {
 		// Override the default endpoint with the configured endpoint.
-		if config.Endpoint != "" {
+		if clientType == "ec2" && config.Endpoint != "" {
 			endpoint = aws.String(config.Endpoint)
+		} else if clientType == "iam" && config.IAMEndpoint != "" {
+			endpoint = aws.String(config.IAMEndpoint)
+		} else if clientType == "sts" && config.STSEndpoint != "" {
+			endpoint = aws.String(config.STSEndpoint)
 		}
 
 		credsConfig.AccessKey = config.AccessKey
@@ -102,7 +106,7 @@ func (b *backend) clientEC2(s logical.Storage, region string) (*ec2.EC2, error) 
 	}
 
 	// Create an AWS config object using a chain of providers
-	awsConfig, err := b.getClientConfig(s, region)
+	awsConfig, err := b.getClientConfig(s, region, "ec2")
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +136,7 @@ func (b *backend) clientIAM(s logical.Storage, region string) (*iam.IAM, error) 
 	}
 
 	// Create an AWS config object using a chain of providers
-	awsConfig, err := b.getClientConfig(s, region)
+	awsConfig, err := b.getClientConfig(s, region, "iam")
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package awsec2
+package awsauth
 
 import (
 	"github.com/fatih/structs"
@@ -26,6 +26,24 @@ func pathConfigClient(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "URL to override the default generated endpoint for making AWS EC2 API calls.",
+			},
+
+			"iam_endpoint": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "URL to override the default generated endpoint for making AWS IAM API calls.",
+			},
+
+			"sts_endpoint": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
+			},
+
+			"caller_identity_header_value": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "Value to require in the X-Vault-AWSIAM-Server-ID request header",
 			},
 		},
 
@@ -162,6 +180,36 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry.Endpoint = data.Get("endpoint").(string)
 	}
 
+	iamEndpointStr, ok := data.GetOk("iam_endpoint")
+	if ok {
+		if configEntry.IAMEndpoint != iamEndpointStr.(string) {
+			changedCreds = true
+			configEntry.IAMEndpoint = iamEndpointStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.IAMEndpoint = data.Get("iam_endpoint").(string)
+	}
+
+	stsEndpointStr, ok := data.GetOk("sts_endpoint")
+	if ok {
+		if configEntry.STSEndpoint != stsEndpointStr.(string) {
+			// NOT setting changedCreds here, since this isn't really cached
+			configEntry.STSEndpoint = stsEndpointStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.STSEndpoint = data.Get("sts_endpoint").(string)
+	}
+
+	headerValStr, ok := data.GetOk("caller_identity_header_value")
+	if ok {
+		if configEntry.HeaderValue != headerValStr.(string) {
+			// NOT setting changedCreds here, since this isn't really cached
+			configEntry.HeaderValue = headerValStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.HeaderValue = data.Get("caller_identity_header_value").(string)
+	}
+
 	// Since this endpoint supports both create operation and update operation,
 	// the error checks for access_key and secret_key not being set are not present.
 	// This allows calling this endpoint multiple times to provide the values.
@@ -187,9 +235,12 @@ func (b *backend) pathConfigClientCreateUpdate(
 // Struct to hold 'aws_access_key' and 'aws_secret_key' that are required to
 // interact with the AWS EC2 API.
 type clientConfig struct {
-	AccessKey string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
-	SecretKey string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
-	Endpoint  string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
+	AccessKey   string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
+	SecretKey   string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
+	Endpoint    string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
+	IAMEndpoint string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
+	STSEndpoint string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
+	HeaderValue string `json:"vault_header_value" structs:"vault_header_value" mapstructure:"vault_header_value"`
 }
 
 const pathConfigClientHelpSyn = `

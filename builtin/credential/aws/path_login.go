@@ -1,11 +1,16 @@
-package awsec2
+package awsauth
 
 import (
 	"crypto/subtle"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fullsailor/pkcs7"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -36,23 +42,58 @@ bearing the name of the AMI ID of the EC2 instance that is trying to login.
 If a matching role is not found, login fails.`,
 			},
 
+			"auth_type": {
+				Type:    framework.TypeString,
+				Default: "instance_identity_document",
+				Description: `The login type to use upon logging in. The valid choices are
+instance_identity_document (default) or signed_caller_identity_request.`,
+			},
+
 			"pkcs7": {
-				Type:        framework.TypeString,
-				Description: "PKCS7 signature of the identity document.",
+				Type: framework.TypeString,
+				Description: `PKCS7 signature of the identity document when using an auth_type
+of instance_identity_document.`,
 			},
 
 			"nonce": {
 				Type: framework.TypeString,
-				Description: `The nonce to be used for subsequent login requests.
-If this parameter is not specified at all and if reauthentication is allowed,
-then the backend will generate a random nonce, attaches it to the instance's
-identity-whitelist entry and returns the nonce back as part of auth metadata.
-This value should be used with further login requests, to establish client
-authenticity. Clients can choose to set a custom nonce if preferred, in which
-case, it is recommended that clients provide a strong nonce.  If a nonce is
-provided but with an empty value, it indicates intent to disable
-reauthentication. Note that, when 'disallow_reauthentication' option is enabled
-on either the role or the role tag, the 'nonce' holds no significance.`,
+				Description: `The nonce to be used for subsequent login requests when
+auth_type is instance_identity_document.  If this parameter is not specified at
+all and if reauthentication is allowed, then the backend will generate a random
+nonce, attaches it to the instance's identity-whitelist entry and returns the
+nonce back as part of auth metadata.  This value should be used with further
+login requests, to establish client authenticity. Clients can choose to set a
+custom nonce if preferred, in which case, it is recommended that clients provide
+a strong nonce.  If a nonce is provided but with an empty value, it indicates
+intent to disable reauthentication. Note that, when 'disallow_reauthentication'
+option is enabled on either the role or the role tag, the 'nonce' holds no
+significance.`,
+			},
+
+			"request_method": {
+				Type: framework.TypeString,
+				Description: `HTTP method to use for the AWS request when auth_type is
+signed_caller_identity_request. This must match what has been signed in the
+presigned request. Currently, POST is the only supported value`,
+			},
+
+			"request_url": {
+				Type: framework.TypeString,
+				Description: `Full URL against which to make the AWS request when auth_method is
+signed_caller_identity_request. If using a POST request with the action
+specified in the body, this should just be "/".`,
+			},
+
+			"request_body": {
+				Type: framework.TypeString,
+				Description: `Base64-encoded request body when auth_type is signed_caller_identity_request.
+This must match the request body included in the signature.`,
+			},
+			"request_headers": {
+				Type: framework.TypeString,
+				Description: `Base64-encoded JSON representation of the request headers when auth_type is
+signed_caller_identity_request. This must at a minimum include the headers over
+which AWS has included a signature.`,
 			},
 			"identity": {
 				Type: framework.TypeString,
@@ -79,14 +120,9 @@ needs to be supplied along with 'identity' parameter.`,
 
 // instanceIamRoleARN fetches the IAM role ARN associated with the given
 // instance profile name
-func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, region string) (string, error) {
+func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName string) (string, error) {
 	if instanceProfileName == "" {
 		return "", fmt.Errorf("missing instance profile name")
-	}
-
-	iamClient, err := b.clientIAM(s, region)
-	if err != nil {
-		return "", err
 	}
 
 	profile, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{
@@ -116,7 +152,7 @@ func (b *backend) instanceIamRoleARN(s logical.Storage, instanceProfileName, reg
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API
 // and checks if the instance is running and is healthy
-func (b *backend) validateInstance(s logical.Storage, instanceID, region string) (*ec2.DescribeInstancesOutput, error) {
+func (b *backend) validateInstance(s logical.Storage, instanceID, region string) (*ec2.Instance, error) {
 	// Create an EC2 client to pull the instance information
 	ec2Client, err := b.clientEC2(s, region)
 	if err != nil {
@@ -155,7 +191,7 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region string)
 	if *status.Reservations[0].Instances[0].State.Name != "running" {
 		return nil, fmt.Errorf("instance is not in 'running' state")
 	}
-	return status, nil
+	return status.Reservations[0].Instances[0], nil
 }
 
 // validateMetadata matches the given client nonce and pending time with the
@@ -314,11 +350,114 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 	return &identityDoc, nil
 }
 
-// pathLoginUpdate is used to create a Vault token by the EC2 instances
+func (b *backend) pathLoginUpdate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	auth_type := data.Get("auth_type")
+	if auth_type == "instance_identity_document" {
+		return b.pathLoginUpdateInstanceIdentityDocument(req, data)
+	} else if auth_type == "signed_caller_identity_request" {
+		return b.pathLoginUpdateCallerIdentityRequest(req, data)
+	} else {
+		return logical.ErrorResponse("unrecognized auth_type, must be one of instance_identity_document or signed_caller_identity_request"), nil
+	}
+}
+
+// Returns whether the EC2 instance meets the requirements of the particular
+// AWS role entry.
+func (b *backend) verifyInstanceMeetsRoleRequirements(
+	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, iamClient *iam.IAM) (*roleTagLoginResponse, string, error) {
+
+	// Verify that the AMI ID of the instance trying to login matches the
+	// AMI ID specified as a constraint on the role.
+	//
+	// Here, we're making a tradeoff and pulling the AMI ID out of the EC2
+	// API rather than the signed instance identity doc. They *should* match.
+	// This means we require an EC2 API call to retrieve the AMI ID, but we're
+	// already calling the API to validate the Instance ID anyway, so it shouldn't
+	// matter. The benefit is that we have the exact same code whether auth_type
+	// is instance_identity_document or signed_caller_identity_request.
+	if roleEntry.BoundAmiID != "" && *instance.ImageId != roleEntry.BoundAmiID {
+		return nil, fmt.Sprintf("AMI ID '%s' does not belong to role '%s'", instance.ImageId, roleName), nil
+	}
+
+	// Check if the IAM instance profile ARN of the instance trying to
+	// login, matches the IAM instance profile ARN specified as a constraint
+	// on the role
+	if roleEntry.BoundIamInstanceProfileARN != "" {
+		if instance.IamInstanceProfile == nil {
+			return nil, "", fmt.Errorf("IAM instance profile in the instance description is nil")
+		}
+		if instance.IamInstanceProfile.Arn == nil {
+			return nil, "", fmt.Errorf("IAM instance profile ARN in the instance description is nil")
+		}
+		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
+		if !strings.HasPrefix(iamInstanceProfileARN, roleEntry.BoundIamInstanceProfileARN) {
+			return nil, fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName), nil
+		}
+	}
+
+	// Check if the IAM role ARN of the instance trying to login, matches
+	// the IAM role ARN specified as a constraint on the role.
+	if roleEntry.BoundIamRoleARN != "" {
+		if instance.IamInstanceProfile == nil {
+			return nil, "", fmt.Errorf("IAM instance profile in the instance description is nil")
+		}
+		if instance.IamInstanceProfile.Arn == nil {
+			return nil, "", fmt.Errorf("IAM instance profile ARN in the instance description is nil")
+		}
+
+		// Fetch the instance profile ARN from the instance description
+		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
+
+		if iamInstanceProfileARN == "" {
+			return nil, "", fmt.Errorf("IAM instance profile ARN in the instance description is empty")
+		}
+
+		// Extract out the instance profile name from the instance
+		// profile ARN
+		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, ":instance-profile/")
+		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
+
+		if iamInstanceProfileName == "" {
+			return nil, "", fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
+		}
+
+		// Use instance profile ARN to fetch the associated role ARN
+		if iamClient == nil {
+			return nil, "", fmt.Errorf("Could not fetch IAM client")
+		}
+		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileName)
+		if err != nil {
+			return nil, "", fmt.Errorf("IAM role ARN could not be fetched: %v", err)
+		}
+		if iamRoleARN == "" {
+			return nil, "", fmt.Errorf("IAM role ARN could not be fetched")
+		}
+
+		if !strings.HasPrefix(iamRoleARN, roleEntry.BoundIamRoleARN) {
+			return nil, fmt.Sprintf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName), nil
+		}
+	}
+
+	var roleTagResp *roleTagLoginResponse = nil
+	if roleEntry.RoleTag != "" {
+		roleTagResp, err := b.handleRoleTagLogin(s, roleName, roleEntry, instance)
+		if err != nil {
+			return nil, "", err
+		}
+		if roleTagResp == nil {
+			return nil, "failed to fetch and verify the role tag", nil
+		}
+	}
+
+	return roleTagResp, "", nil
+}
+
+// pathLoginUpdateInstanceIdentityDocument is used to create a Vault token by the EC2 instances
 // by providing the pkcs7 signature of the instance identity document
 // and a client created nonce. Client nonce is optional if 'disallow_reauthentication'
 // option is enabled on the registered role.
-func (b *backend) pathLoginUpdate(
+func (b *backend) pathLoginUpdateInstanceIdentityDocument(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	identityDocB64 := data.Get("identity").(string)
 	var identityDocBytes []byte
@@ -380,7 +519,7 @@ func (b *backend) pathLoginUpdate(
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
 	// and fetching the instance description. Validation succeeds only if the
 	// instance is in 'running' state.
-	instanceDesc, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region)
+	instance, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %v", err)), nil
 	}
@@ -394,72 +533,23 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %q not found", roleName)), nil
 	}
 
-	// Verify that the AMI ID of the instance trying to login matches the
-	// AMI ID specified as a constraint on the role
-	if roleEntry.BoundAmiID != "" && identityDocParsed.AmiID != roleEntry.BoundAmiID {
-		return logical.ErrorResponse(fmt.Sprintf("AMI ID %q does not belong to role %q", identityDocParsed.AmiID, roleName)), nil
-	}
-
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on the role
 	if roleEntry.BoundAccountID != "" && identityDocParsed.AccountID != roleEntry.BoundAccountID {
 		return logical.ErrorResponse(fmt.Sprintf("Account ID %q does not belong to role %q", identityDocParsed.AccountID, roleName)), nil
 	}
 
-	// Check if the IAM instance profile ARN of the instance trying to
-	// login, matches the IAM instance profile ARN specified as a constraint
-	// on the role.
-	if roleEntry.BoundIamInstanceProfileARN != "" {
-		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
-			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
-		}
-		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
-			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
-		}
-		iamInstanceProfileARN := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
-		if !strings.HasPrefix(iamInstanceProfileARN, roleEntry.BoundIamInstanceProfileARN) {
-			return logical.ErrorResponse(fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName)), nil
-		}
+	iamClient, err := b.clientIAM(req.Storage, identityDocParsed.Region)
+	if err != nil {
+		iamClient = nil
 	}
 
-	// Check if the IAM role ARN of the instance trying to login, matches
-	// the IAM role ARN specified as a constraint on the role.
-	if roleEntry.BoundIamRoleARN != "" {
-		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile == nil {
-			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
-		}
-		if instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn == nil {
-			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
-		}
-
-		// Fetch the instance profile ARN from the instance description
-		iamInstanceProfileARN := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
-
-		if iamInstanceProfileARN == "" {
-			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is empty")
-		}
-
-		// Extract out the instance profile name from the instance
-		// profile ARN
-		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, ":instance-profile/")
-		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
-
-		if iamInstanceProfileName == "" {
-			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
-		}
-
-		// Use instance profile ARN to fetch the associated role ARN
-		iamRoleARN, err := b.instanceIamRoleARN(req.Storage, iamInstanceProfileName, identityDocParsed.Region)
-		if err != nil {
-			return nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
-		}
-		if iamRoleARN == "" {
-			return nil, fmt.Errorf("IAM role ARN could not be fetched")
-		}
-
-		if !strings.HasPrefix(iamRoleARN, roleEntry.BoundIamRoleARN) {
-			return logical.ErrorResponse(fmt.Sprintf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName)), nil
-		}
+	roleTagResp, validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, iamClient)
+	if err != nil {
+		return nil, err
+	}
+	if validationError != "" {
+		return logical.ErrorResponse(validationError), nil
 	}
 
 	// Get the entry from the identity whitelist, if there is one
@@ -543,43 +633,34 @@ func (b *backend) pathLoginUpdate(
 	policies := roleEntry.Policies
 	rTagMaxTTL := time.Duration(0)
 
-	if roleEntry.RoleTag != "" {
-		//
+	if roleTagResp != nil {
 		// Role tag is enabled on the role.
 		//
 
 		// Overwrite the policies with the ones returned from processing the role tag
-		resp, err := b.handleRoleTagLogin(req.Storage, identityDocParsed, roleName, roleEntry, instanceDesc)
-		if err != nil {
-			return nil, err
-		}
-		if resp == nil {
-			return logical.ErrorResponse("failed to fetch and verify the role tag"), nil
-		}
-
 		// If there are no policies on the role tag, policies on the role are inherited.
 		// If policies on role tag are set, by this point, it is verified that it is a subset of the
 		// policies on the role. So, apply only those.
-		if len(resp.Policies) != 0 {
-			policies = resp.Policies
+		if len(roleTagResp.Policies) != 0 {
+			policies = roleTagResp.Policies
 		}
 
 		// If roleEntry had disallowReauthentication set to 'true', do not reset it
 		// to 'false' based on role tag having it not set. But, if role tag had it set,
 		// be sure to override the value.
 		if !disallowReauthentication {
-			disallowReauthentication = resp.DisallowReauthentication
+			disallowReauthentication = roleTagResp.DisallowReauthentication
 		}
 
 		// Cache the value of role tag's max_ttl value
-		rTagMaxTTL = resp.MaxTTL
+		rTagMaxTTL = roleTagResp.MaxTTL
 
 		// Scope the shortestMaxTTL to the value set on the role tag
-		if resp.MaxTTL > time.Duration(0) && resp.MaxTTL < shortestMaxTTL {
-			shortestMaxTTL = resp.MaxTTL
+		if roleTagResp.MaxTTL > time.Duration(0) && roleTagResp.MaxTTL < shortestMaxTTL {
+			shortestMaxTTL = roleTagResp.MaxTTL
 		}
-		if resp.MaxTTL > longestMaxTTL {
-			longestMaxTTL = resp.MaxTTL
+		if roleTagResp.MaxTTL > longestMaxTTL {
+			longestMaxTTL = roleTagResp.MaxTTL
 		}
 	}
 
@@ -625,6 +706,7 @@ func (b *backend) pathLoginUpdate(
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
 				"ami_id":           identityDocParsed.AmiID,
+				"auth_type":        "instance_identity_document",
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
@@ -660,20 +742,17 @@ func (b *backend) pathLoginUpdate(
 // handleRoleTagLogin is used to fetch the role tag of the instance and
 // verifies it to be correct.  Then the policies for the login request will be
 // set off of the role tag, if certain creteria satisfies.
-func (b *backend) handleRoleTagLogin(s logical.Storage, identityDocParsed *identityDocument, roleName string, roleEntry *awsRoleEntry, instanceDesc *ec2.DescribeInstancesOutput) (*roleTagLoginResponse, error) {
-	if identityDocParsed == nil {
-		return nil, fmt.Errorf("nil parsed identity document")
-	}
+func (b *backend) handleRoleTagLogin(s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
 	if roleEntry == nil {
 		return nil, fmt.Errorf("nil role entry")
 	}
-	if instanceDesc == nil {
-		return nil, fmt.Errorf("nil instance description")
+	if instance == nil {
+		return nil, fmt.Errorf("nil instance")
 	}
 
-	// Input validation on instanceDesc is not performed here considering
+	// Input validation on instance is not performed here considering
 	// that it would have been done in validateInstance method.
-	tags := instanceDesc.Reservations[0].Instances[0].Tags
+	tags := instance.Tags
 	if tags == nil || len(tags) == 0 {
 		return nil, fmt.Errorf("missing tag with key %q on the instance", roleEntry.RoleTag)
 	}
@@ -707,7 +786,7 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDocParsed *ident
 	}
 
 	// If instance_id was set on the role tag, check if the same instance is attempting to login
-	if rTag.InstanceID != "" && rTag.InstanceID != identityDocParsed.InstanceID {
+	if rTag.InstanceID != "" && rTag.InstanceID != *instance.InstanceId {
 		return nil, fmt.Errorf("role tag is being used by an unauthorized instance.")
 	}
 
@@ -734,6 +813,65 @@ func (b *backend) handleRoleTagLogin(s logical.Storage, identityDocParsed *ident
 
 // pathLoginRenew is used to renew an authenticated token
 func (b *backend) pathLoginRenew(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	authType, ok := req.Auth.Metadata["auth_type"]
+	if !ok {
+		// backwards compatibility for clients that have leases from before we added auth_type
+		authType = "instance_identity_document"
+	}
+
+	if authType == "instance_identity_document" {
+		return b.pathLoginRenewInstanceIdentityDocument(req, data)
+	} else if authType == "signed_caller_identity_request" {
+		return b.pathLoginRenewSignedCallerIdentityRequest(req, data)
+	} else {
+		return nil, fmt.Errorf("unrecognized auth_type: '%s'", authType)
+	}
+}
+
+func (b *backend) pathLoginRenewSignedCallerIdentityRequest(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	canonicalArn := req.Auth.Metadata["canonical_arn"]
+	if canonicalArn == "" {
+		return nil, fmt.Errorf("unable to retrieve canonical ARN from metadata during renewal")
+	}
+
+	roleName := req.Auth.InternalData["role_name"].(string)
+	if roleName == "" {
+		return nil, fmt.Errorf("error retrieving role_name during renewal")
+	}
+	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if roleEntry == nil {
+		return nil, fmt.Errorf("role entry not found")
+	}
+
+	if entityType, ok := req.Auth.Metadata["inferredEntityType"]; !ok {
+		if entityType == "ec2Instance" {
+			instanceID, ok := req.Auth.Metadata["inferredEntityId"]
+			if !ok {
+				return nil, fmt.Errorf("no inferred entity ID in auth metadata")
+			}
+			_, err := b.validateInstance(req.Storage, instanceID, roleEntry.InferredAWSRegion)
+			if err != nil {
+				return nil, fmt.Errorf("failed to verify instance ID '%s': %s", instanceID, err)
+			}
+		} else {
+			return nil, fmt.Errorf("unrecognized entity_type in metadata: '%s'", entityType)
+		}
+	}
+
+	if roleEntry.BoundIamPrincipalARN != canonicalArn {
+		return nil, fmt.Errorf("role no longer bound to arn '%s'", canonicalArn)
+	}
+
+	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
+
+}
+
+func (b *backend) pathLoginRenewInstanceIdentityDocument(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := req.Auth.Metadata["instance_id"]
 	if instanceID == "" {
@@ -815,6 +953,352 @@ func (b *backend) pathLoginRenew(
 
 // identityDocument represents the items of interest from the EC2 instance
 // identity document
+func (b *backend) pathLoginUpdateCallerIdentityRequest(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+
+	// BEGIN boring data parsing
+	method := data.Get("request_method").(string)
+	if method == "" {
+		return logical.ErrorResponse("missing method"), nil
+	}
+
+	// In the future, might consider supporting GET
+	if method != "POST" {
+		return logical.ErrorResponse("invalid request_method; currently only 'POST' is supported"), nil
+	}
+
+	rawUrl := data.Get("request_url").(string)
+	if rawUrl == "" {
+		return logical.ErrorResponse("missing request_url"), nil
+	}
+	parsedUrl, err := url.Parse(rawUrl)
+	if err != nil {
+		return logical.ErrorResponse("error parsing request_url"), nil
+	}
+
+	// TODO: There are two potentially valid cases we're not yet supporting that would
+	// necessitate this check being changed. First, if we support GET requests.
+	// Second if we support presigned POST requests
+	bodyB64 := data.Get("request_body").(string)
+	if bodyB64 == "" {
+		return logical.ErrorResponse("missing request_body"), nil
+	}
+	bodyRaw, err := base64.StdEncoding.DecodeString(bodyB64)
+	if err != nil {
+		return logical.ErrorResponse("request_body is invalid base64"), nil
+	}
+	body := string(bodyRaw)
+
+	headersB64 := data.Get("request_headers").(string)
+	if headersB64 == "" {
+		return logical.ErrorResponse("missing request_headers"), nil
+	}
+	headersJson, err := base64.StdEncoding.DecodeString(headersB64)
+	if err != nil {
+		return logical.ErrorResponse("request_headers is invalid base64"), nil
+	}
+	var headers http.Header
+	err = jsonutil.DecodeJSON(headersJson, &headers)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("request_headers '%s' is invalid JSON: %s", headersJson, err)), nil
+	}
+	// END boring data parsing
+
+	config, err := b.lockedClientConfigEntry(req.Storage)
+	if err != nil {
+		return logical.ErrorResponse("error getting configuration"), nil
+	}
+
+	endpoint := "https://sts.amazonaws.com"
+
+	if config != nil {
+		if config.HeaderValue != "" {
+			ok, msg := ensureVaultHeaderValue(headers, parsedUrl, config.HeaderValue)
+			if !ok {
+				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %s", magicVaultHeader, msg)), nil
+			}
+		}
+		if config.STSEndpoint != "" {
+			endpoint = config.Endpoint
+		}
+	}
+
+	clientArn, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %s", err)), nil
+	}
+	canonicalArn, principalName, sessionName, err := parseIamArn(clientArn)
+	if err != nil {
+		return logical.ErrorResponse("unrecognized IAM principal type"), nil
+	}
+
+	roleName := data.Get("role").(string)
+	if roleName == "" {
+		roleName = principalName
+	}
+
+	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if roleEntry == nil {
+		return logical.ErrorResponse(fmt.Sprintf("entry for role %s not found", roleName)), nil
+	}
+
+	// The role creation should ensure that either we're inferring this is an EC2 instance
+	// or that we're binding an ARN
+	if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != canonicalArn {
+		return logical.ErrorResponse(fmt.Sprintf("IAM Principal '%s' does not belong to the role '%s'", clientArn, roleName)), nil
+	}
+
+	policies := roleEntry.Policies
+	rTagMaxTTL := time.Duration(0)
+
+	inferredEntityType := ""
+	inferredEntityId := ""
+	if roleEntry.InferRoleType == "ec2Instance" {
+		instance, err := b.validateInstance(req.Storage, sessionName, roleEntry.InferredAWSRegion)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", sessionName, roleEntry.InferredAWSRegion)), nil
+		}
+
+		// It's a bit of a hack to use the inferred "EC2" region to get a region for the IAM client
+		// IAM is a "global" service and so doesn't really have a region, so it wouldn't matter
+		// Except that the region is used to infer the partion (i.e., aws, aws-cn, or aws-us-gov),
+		// and we can safely assume that the EC2 client will be in the same partition as IAM
+		iamClient, err := b.clientIAM(req.Storage, roleEntry.InferredAWSRegion)
+		if err != nil {
+			iamClient = nil
+		}
+
+		roleTagResp, validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, iamClient)
+		if err != nil {
+			return nil, err
+		}
+		if validationError != "" {
+			return logical.ErrorResponse(validationError), nil
+		}
+
+		if roleTagResp != nil {
+			if len(roleTagResp.Policies) != 0 {
+				policies = roleTagResp.Policies
+			}
+
+			rTagMaxTTL = roleTagResp.MaxTTL
+		}
+
+		inferredEntityType = "ec2Instance"
+		inferredEntityId = sessionName
+	}
+
+	resp := &logical.Response{
+		Auth: &logical.Auth{
+			Policies: policies,
+			Metadata: map[string]string{
+				"client_arn":         clientArn,
+				"canonical_arn":      canonicalArn,
+				"auth_type":          "signed_caller_identity_request",
+				"role_tag_max_ttl":   rTagMaxTTL.String(),
+				"inferredEntityType": inferredEntityType,
+				"inferredEntityId":   inferredEntityId,
+			},
+			InternalData: map[string]interface{}{
+				"role_name": roleName,
+			},
+			DisplayName: principalName,
+			LeaseOptions: logical.LeaseOptions{
+				Renewable: true,
+				TTL:       roleEntry.TTL,
+			},
+		},
+	}
+
+	shortestTTL := b.System().DefaultLeaseTTL()
+	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
+		shortestTTL = roleEntry.TTL
+	}
+
+	maxTTL := b.System().MaxLeaseTTL()
+	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
+		maxTTL = roleEntry.MaxTTL
+	}
+	if rTagMaxTTL > time.Duration(0) && rTagMaxTTL < maxTTL {
+		maxTTL = rTagMaxTTL
+	}
+
+	if shortestTTL > maxTTL {
+		resp.AddWarning(fmt.Sprintf("Effective TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", (shortestTTL / time.Second).String(), (maxTTL / time.Second).String()))
+		shortestTTL = maxTTL
+	}
+
+	resp.Auth.TTL = shortestTTL
+
+	return resp, nil
+}
+
+func parseIamArn(iamArn string) (string, string, string, error) {
+	fullParts := strings.Split(iamArn, ":")
+	principalFullName := fullParts[5]
+	parts := strings.Split(principalFullName, "/")
+	principalName := parts[1]
+	transformedArn := iamArn
+	sessionName := ""
+	if parts[0] == "assumed-role" {
+		transformedArn = fmt.Sprintf("arn:aws:iam::%s:role/%s", fullParts[4], principalName)
+		sessionName = parts[2]
+	} else if parts[0] != "user" {
+		return "", "", "", fmt.Errorf("unrecognized principal type: '%s'", parts[0])
+	}
+	return transformedArn, principalName, sessionName, nil
+}
+
+func ensureVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) (bool, string) {
+	providedValue := ""
+	for k, v := range headers {
+		if strings.ToLower(magicVaultHeader) == strings.ToLower(k) {
+			providedValue = strings.Join(v, ",")
+			break
+		}
+	}
+	if providedValue == "" {
+		return false, fmt.Sprintf("didn't find %s", magicVaultHeader)
+	}
+
+	// NOT doing a constant time compare here since the value is NOT intended to be secret
+	if providedValue != requiredHeaderValue {
+		return false, fmt.Sprintf("expected %s but got %s", requiredHeaderValue, providedValue)
+	}
+
+	if authzHeaders, ok := headers["Authorization"]; ok {
+		// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
+		// We need to extract out the SignedHeaders
+		re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
+		authzHeader := strings.Join(authzHeaders, ",")
+		matches := re.FindSubmatch([]byte(authzHeader))
+		if len(matches) < 1 {
+			return false, "vault header wasn't signed"
+		}
+		if len(matches) > 2 {
+			return false, "found multiple SignedHeaders components"
+		}
+		signedHeaders := string(matches[1])
+		return ensureHeaderIsSigned(signedHeaders, magicVaultHeader)
+	}
+	// TODO: If we support GET requests, then we need to parse the X-Amz-SignedHeaders
+	// argument out of the query string and search in there for the header value
+	return false, "Missing Authorization header"
+}
+
+func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) *http.Request {
+	// This is all a bit complicated because the AWS signature algorithm requires that
+	// the Host header be included in the signed headers. See
+	// http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
+	// The use cases we want to support, in order of increasing complexity, are:
+	// 1. All defaults (client assumes sts.amazonaws.com and server has no override)
+	// 2. Alternate STS regions: client wants to go to a specific region, in which case
+	//    Vault must be confiugred with that endpoint as well. The client's signed request
+	//    will include a signature over what the client expects the Host header to be,
+	//    so we cannot change that and must match.
+	// 3. Alternate STS regions with a proxy that is transparent to Vault's clients.
+	//    In this case, Vault is aware of the proxy, as the proxy is configured as the
+	//    endpoint, but the clients should NOT be aware of the proxy (because STS will
+	//    not be aware of the proxy)
+	// It's also annoying because:
+	// 1. The AWS Sigv4 algorithm requires the Host header to be defined
+	// 2. Some of the official SDKs (at least botocore and aws-sdk-go) don't actually
+	//    incude an explicit Host header in the HTTP requests they generate, relying on
+	//    the underlying HTTP library to do that for them.
+	// 3. To get a validly signed request, the SDKs check if a Host header has been set
+	//    and, if not, add an inferred host header (based on the URI) to the internal
+	//    data structure used for calculating the signature, but never actually expose
+	//    that to clients. So then they just "hope" that the underlying library actually
+	//    adds the right Host header which was included in the signature calculation.
+	// We could either explicity require all Vault clients to explicitly add the Host header
+	// in the encoded request, or we could also implicitly infer it from the URI.
+	// We choose to support both -- allow you to explicitly set a Host header, but if not,
+	// infer one from the URI.
+	// HOWEVER, we have to preserve the request URI portion of the client's
+	// URL because the GetCallerIdentity Action can be encoded in either the body
+	// or the URL. So, we need to rebuild the URL sent to the http library to have the
+	// custom, Vault-specified endpoint with the client-side request parameters.
+	targetUrl := fmt.Sprintf("%s/%s", endpoint, parsedUrl.RequestURI())
+	request, err := http.NewRequest(method, targetUrl, strings.NewReader(body))
+	if err != nil {
+		return nil
+	}
+	request.Host = parsedUrl.Host
+	for k, vals := range headers {
+		for _, val := range vals {
+			request.Header.Add(k, val)
+		}
+	}
+	return request
+}
+
+func ensureHeaderIsSigned(signedHeaders, headerToSign string) (bool, string) {
+	// Not doing a constant time compare here, the values aren't secret
+	for _, header := range strings.Split(signedHeaders, ";") {
+		if header == strings.ToLower(headerToSign) {
+			return true, ""
+		}
+	}
+	return false, fmt.Sprintf("Vault header wasn't signed")
+}
+
+func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse, error) {
+	decoder := xml.NewDecoder(strings.NewReader(response))
+	result := GetCallerIdentityResponse{}
+	err := decoder.Decode(&result)
+	return result, err
+}
+
+func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (string, error) {
+	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
+	// The protection against this is that this method will only call the endpoint specified in the
+	// client config (defaulting to sts.amazonaws.com), so it would require a Vault admin to override
+	// the endpoint to talk to alternate web addresses
+	request := buildHttpRequest(method, endpoint, parsedUrl, body, headers)
+	client := cleanhttp.DefaultClient()
+	response, err := client.Do(request)
+	if err != nil {
+		return "", fmt.Errorf("error making request: %s", err)
+	}
+	if response != nil {
+		defer response.Body.Close()
+	}
+	// we check for status code afterwards to also print out response body
+	responseBody, err := ioutil.ReadAll(response.Body)
+	if response.StatusCode != 200 {
+		return "", fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
+	}
+	callerIdentityResponse, err := parseGetCallerIdentityResponse(string(responseBody))
+	if err != nil {
+		return "", fmt.Errorf("error parsing STS response")
+	}
+	clientArn := callerIdentityResponse.GetCallerIdentityResult[0].Arn
+	if clientArn == "" {
+		return "", fmt.Errorf("no ARN validated")
+	}
+	return clientArn, nil
+}
+
+type GetCallerIdentityResponse struct {
+	XMLName                 xml.Name                  `xml:"GetCallerIdentityResponse"`
+	GetCallerIdentityResult []GetCallerIdentityResult `xml:"GetCallerIdentityResult"`
+	ResponseMetadata        []ResponseMetadata        `xml:"ResponseMetadata"`
+}
+
+type GetCallerIdentityResult struct {
+	Arn     string `xml:"Arn"`
+	UserId  string `xml:"UserId"`
+	Account string `xml:"Account"`
+}
+
+type ResponseMetadata struct {
+	RequestId string `xml:"RequestId"`
+}
+
+// Struct to represent items of interest from the EC2 instance identity document.
 type identityDocument struct {
 	Tags        map[string]interface{} `json:"tags,omitempty" structs:"tags" mapstructure:"tags"`
 	InstanceID  string                 `json:"instanceId,omitempty" structs:"instanceId" mapstructure:"instanceId"`
@@ -832,11 +1316,21 @@ type roleTagLoginResponse struct {
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 }
 
+const magicVaultHeader = "X-Vault-AWSIAM-Server-Id"
+
 const pathLoginSyn = `
 Authenticates an EC2 instance with Vault.
 `
 
 const pathLoginDesc = `
+Authenticate AWS entities, either an arbitrary IAM principal or EC2 instances.
+
+IAM principals are authenticated by processing a signed sts:GetCallerIdentity
+request and then parsing the response to see who signed the request. Optionally,
+the caller can be inferred to be another AWS entity type, with EC2 instances
+the only currently supported entity type, and additional filtering can be
+implemented based on that inferred type.
+
 An EC2 instance is authenticated using the PKCS#7 signature of the instance identity
 document and a client created nonce. This nonce should be unique and should be used by
 the instance for all future logins, unless 'disallow_reauthenitcation' option on the
