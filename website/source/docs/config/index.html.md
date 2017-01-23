@@ -138,13 +138,13 @@ The supported options are:
       possible.
 
   * `tls_cipher_suites` (optional) - The list of supported ciphersuites
-      separated with colon. The list of all available ciphersuites you can find
+      separated with comma. The list of all available ciphersuites you can find
       [here](https://golang.org/src/crypto/tls/cipher_suites.go).
 
-  * `tls_prefer_server_ciphers` (optional) - Controls whether the server selects
-      client's most preferred ciphersuite, or the server's most preferred
-      ciphersuite. If true then the server's preference, as expressed in
-      the order of elements in `tls_cipher_suites`, is used. This defaults to
+  * `tls_prefer_server_cipher_suites` (optional) - Controls whether the server
+      selects client's most preferred ciphersuite, or the server's most
+      preferred ciphersuite. If true then the server's preference, as expressed
+      in the order of elements in `tls_cipher_suites`, is used. This defaults to
       "false" (client's preference).
 
 ### Connecting to Vault Enterprise in HashiCorp Atlas
