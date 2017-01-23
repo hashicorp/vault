@@ -7,6 +7,7 @@ IMPROVEMENTS:
    local groups [GH-2152]
  * core: Add a nonce to unseal operations as a check (useful mostly for
    support, not as a security principle) [GH-2276]
+ * duo: Added ability to supply extra context to Duo pushes [GH-2118]
  * physical/consul: Add option for setting consistency mode on Consul gets
    [GH-2282]
 
