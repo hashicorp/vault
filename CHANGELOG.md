@@ -1,5 +1,14 @@
 ## 0.6.5 (Unreleased)
 
+FEATURES:
+
+ * **Exportable Transit Keys**: Keys in `transit` can now be marked as
+   `exportable` at creation time. This allows a properly ACL'd user to retrieve
+   the associated signing key, encryption key, or HMAC key. The `exportable`
+   value is returned on a key policy read and cannot be changed, so if a key is
+   marked `exportable` it will always be exportable, and if it is not it will
+   never be exportable.
+
 IMPROVEMENTS:
 
  * auth/github: Support listing teams and users [GH-2261]
@@ -10,6 +19,7 @@ IMPROVEMENTS:
  * duo: Added ability to supply extra context to Duo pushes [GH-2118]
  * physical/consul: Add option for setting consistency mode on Consul gets
    [GH-2282]
+ * secret/transit: Support exportable keys [GH-2133]
 
 BUG FIXES:
 
