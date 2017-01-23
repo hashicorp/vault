@@ -933,7 +933,7 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 	}
 	le.LastRenewalTime = out.LastRenewalTime
 	if !reflect.DeepEqual(out, le) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", le, out)
+		t.Fatalf("bad: expected:\n%#v\nactual:\n%#v", le, out)
 	}
 
 	err = exp.deleteEntry("foo/bar/1234")
