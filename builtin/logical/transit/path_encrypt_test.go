@@ -178,7 +178,6 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var responseItems []BatchEncryptionItemResponse
 	var batchResponseArray []interface{}
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
@@ -197,7 +196,6 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
 		}
-		responseItems = append(responseItems, item)
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 		}
@@ -254,7 +252,6 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var responseItems []BatchEncryptionItemResponse
 	var batchResponseArray []interface{}
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
@@ -273,7 +270,6 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
 		}
-		responseItems = append(responseItems, item)
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
@@ -312,7 +308,6 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var responseItems []BatchEncryptionItemResponse
 	var batchResponseArray []interface{}
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
@@ -331,7 +326,6 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
 		}
-		responseItems = append(responseItems, item)
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 		}
@@ -372,7 +366,6 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var responseItems []BatchEncryptionItemResponse
 	var batchResponseArray []interface{}
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
@@ -391,7 +384,6 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
 		}
-		responseItems = append(responseItems, item)
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
