@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -33,6 +34,7 @@ const (
 
 type creationBundle struct {
 	CommonName     string
+	OU             []string
 	DNSNames       []string
 	EmailAddresses []string
 	IPAddresses    []net.IP
@@ -571,6 +573,14 @@ func generateCreationBundle(b *backend,
 		}
 	}
 
+	// Set OU (organizationalUnit) values if specified in the role
+	ou := []string{}
+	{
+		if role.OU != "" {
+			ou = strutil.ParseDedupAndSortStrings(role.OU, ",")
+		}
+	}
+
 	// Read in alternate names -- DNS and email addresses
 	dnsNames := []string{}
 	emailAddresses := []string{}
@@ -717,6 +727,7 @@ func generateCreationBundle(b *backend,
 
 	creationBundle := &creationBundle{
 		CommonName:     cn,
+		OU:             ou,
 		DNSNames:       dnsNames,
 		EmailAddresses: emailAddresses,
 		IPAddresses:    ipAddresses,
@@ -807,7 +818,8 @@ func createCertificate(creationInfo *creationBundle) (*certutil.ParsedCertBundle
 	}
 
 	subject := pkix.Name{
-		CommonName: creationInfo.CommonName,
+		CommonName:         creationInfo.CommonName,
+		OrganizationalUnit: creationInfo.OU,
 	}
 
 	certTemplate := &x509.Certificate{
@@ -969,7 +981,8 @@ func signCertificate(creationInfo *creationBundle,
 	subjKeyID := sha1.Sum(marshaledKey)
 
 	subject := pkix.Name{
-		CommonName: creationInfo.CommonName,
+		CommonName:         creationInfo.CommonName,
+		OrganizationalUnit: creationInfo.OU,
 	}
 
 	certTemplate := &x509.Certificate{
