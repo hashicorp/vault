@@ -80,8 +80,8 @@ sending a SIGHUP to the server process. These are denoted below.
 
 * `ui` (optional, Vault Enterprise only) - If set `true`, enables the built-in
   web-based UI. Once enabled, the UI will be available to browsers at the
-  standard Vault address. This can also be set via the `VAULT_UI` 
-  environment variable, which takes precedence. 
+  standard Vault address. This can also be set via the `VAULT_UI`
+  environment variable, which takes precedence.
 
 In production it is a risk to run Vault on systems where `mlock` is
 unavailable or the setting has been disabled via the `disable_mlock`.
@@ -136,6 +136,16 @@ The supported options are:
       or "tls12". This defaults to "tls12". WARNING: TLS 1.1 and lower
       are generally considered less secure; avoid using these if
       possible.
+
+  * `tls_cipher_suites` (optional) - The list of supported ciphersuites
+      separated with colon. The list of all available ciphersuites you can find
+      [here](https://golang.org/src/crypto/tls/cipher_suites.go).
+
+  * `tls_prefer_server_ciphers` (optional) - Controls whether the server selects
+      client's most preferred ciphersuite, or the server's most preferred
+      ciphersuite. If true then the server's preference, as expressed in
+      the order of elements in `tls_cipher_suites`, is used. This defaults to
+      "false" (client's preference).
 
 ### Connecting to Vault Enterprise in HashiCorp Atlas
 

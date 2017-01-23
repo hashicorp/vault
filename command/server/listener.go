@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/helper/tlsutil"
@@ -83,6 +84,21 @@ func listenerWrapTLS(
 	}
 	tlsConf.ClientAuth = tls.RequestClientCert
 
+	if v, ok := config["tls_cipher_suites"]; ok {
+		ciphers, err := parseCiphers(v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_cipher_suites': %v", err)
+		}
+		tlsConf.CipherSuites = ciphers
+	}
+	if v, ok := config["tls_prefer_server_ciphers"]; ok {
+		preferServer, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_prefer_server_ciphers': %v", err)
+		}
+		tlsConf.PreferServerCipherSuites = preferServer
+	}
+
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
 	return ln, props, cg.reload, nil
@@ -123,4 +139,37 @@ func (cg *certificateGetter) getCertificate(clientHello *tls.ClientHelloInfo) (*
 	}
 
 	return cg.cert, nil
+}
+
+func parseCiphers(cipherStr string) ([]uint16, error) {
+	suites := []uint16{}
+	ciphers := strings.Split(cipherStr, ":")
+	cipherMap := map[string]uint16{
+		"TLS_RSA_WITH_RC4_128_SHA":                tls.TLS_RSA_WITH_RC4_128_SHA,      // Grade C
+		"TLS_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA, // Grade C
+		"TLS_RSA_WITH_AES_128_CBC_SHA":            tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+		"TLS_RSA_WITH_AES_256_CBC_SHA":            tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+		"TLS_RSA_WITH_AES_128_GCM_SHA256":         tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+		"TLS_RSA_WITH_AES_256_GCM_SHA384":         tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":        tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA, // Grade C
+		"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+		"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA":    tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+		"TLS_ECDHE_RSA_WITH_RC4_128_SHA":          tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,      // Grade C
+		"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":     tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA, // Grade C
+		"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+		"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA":      tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+		"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":   tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256": tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+		"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":   tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+		"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	}
+	for _, cipher := range ciphers {
+		if v, ok := cipherMap[cipher]; ok {
+			suites = append(suites, v)
+		} else {
+			return suites, fmt.Errorf("unsupported cipher '%s'", cipher)
+		}
+	}
+
+	return suites, nil
 }
