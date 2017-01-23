@@ -36,6 +36,9 @@ type PolicyRequest struct {
 	// Whether to enable convergent encryption
 	Convergent bool
 
+	// Whether to allow export
+	Exportable bool
+
 	// Whether to upsert
 	Upsert bool
 }
@@ -244,9 +247,10 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 		}
 
 		p = &Policy{
-			Name:    req.Name,
-			Type:    req.KeyType,
-			Derived: req.Derived,
+			Name:       req.Name,
+			Type:       req.KeyType,
+			Derived:    req.Derived,
+			Exportable: req.Exportable,
 		}
 		if req.Derived {
 			p.KDF = Kdf_hkdf_sha256
