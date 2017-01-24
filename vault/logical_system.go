@@ -81,7 +81,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					},
 					"allowed_origins": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "A regular expression describing origins that may make cross-origin requests.",
+						Description: "A space-separated list of origins that may make cross-origin requests.",
 					},
 				},
 
@@ -666,6 +666,7 @@ func (b *SystemBackend) corsStatusResponse() (*logical.Response, error) {
 	if corsConf == nil {
 		return nil, errCORSNotConfigured
 	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"enabled":         corsConf.Enabled(),
@@ -674,15 +675,15 @@ func (b *SystemBackend) corsStatusResponse() (*logical.Response, error) {
 	}, nil
 }
 
-// handleCORSEnable sets the regexp that describes origins that are allowed
+// handleCORSEnable sets the list of origins that are allowed
 // to make cross-origin requests and sets the CORS enabled flag to true
 func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	if b.Core.corsConfig == nil {
 		b.Core.corsConfig = newCORSConfig()
 	}
-	s := d.Get("allowed_origins")
+	origins := d.Get("allowed_origins").(string)
 
-	err := b.Core.corsConfig.Enable(s.(string))
+	err := b.Core.corsConfig.Enable(origins)
 	if err != nil {
 		return nil, err
 	}
@@ -690,7 +691,7 @@ func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.Fiel
 	return b.corsStatusResponse()
 }
 
-// handleCORSDisable clears the allowed origins regexp and sets the CORS enabled flag to false
+// handleCORSDisable clears the allowed origins and sets the CORS enabled flag to false
 func (b *SystemBackend) handleCORSDisable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.Core.CORSConfig().Disable()
 
@@ -1816,7 +1817,7 @@ This path responds to the following HTTP methods.
         Returns the configuration of the CORS setting.
 
     POST /
-        Sets the regular expression which describes origins that can make cross-origin requests.
+        Sets the space-separate list of origins that can make cross-origin requests.
 
     DELETE /
         Clears the CORS configuration and disables acceptance of CORS requests.

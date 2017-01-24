@@ -36,12 +36,12 @@ func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
-	req.Data["allowed_origins"] = "http://.+:[0-9]{4}"
+	req.Data["allowed_origins"] = "http://www.example.com"
 	actual, err := b.HandleRequest(req)
 
 	expected := &logical.Response{
 		Data: map[string]interface{}{
-			"allowed_origins": "http://.+:[0-9]{4}",
+			"allowed_origins": "http:/www.example.com",
 			"enabled":         true,
 		},
 	}
