@@ -112,6 +112,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"userpass": &credUserpass.CLIHandler{},
 					"ldap":     &credLdap.CLIHandler{},
 					"cert":     &credCert.CLIHandler{},
+					"aws":      &credAws.CLIHandler{},
 				},
 			}, nil
 		},
