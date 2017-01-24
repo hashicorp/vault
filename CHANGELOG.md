@@ -14,6 +14,8 @@ IMPROVEMENTS:
  * auth/github: Support listing teams and users [GH-2261]
  * auth/ldap: Support adding policies to local users directly, in addition to
    local groups [GH-2152]
+ * command/server: Add ability to select and prefer server cipher suites
+   [GH-2293]
  * core: Add a nonce to unseal operations as a check (useful mostly for
    support, not as a security principle) [GH-2276]
  * duo: Added ability to supply extra context to Duo pushes [GH-2118]

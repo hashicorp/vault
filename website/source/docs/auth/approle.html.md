@@ -241,23 +241,23 @@ $ curl -X POST \
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "keys": [
-      "dev",
-      "prod",
-      "test"
-    ]
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
+    ```javascript
+    {
+      "auth": null,
+      "warnings": null,
+      "wrap_info": null,
+      "data": {
+        "keys": [
+          "dev",
+          "prod",
+          "test"
+        ]
+      },
+      "lease_duration": 0,
+      "renewable": false,
+      "lease_id": ""
+    }
+    ```
 
   </dd>
 </dl>
@@ -386,28 +386,28 @@ $ curl -X POST \
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "token_ttl": 1200,
-    "token_max_ttl": 1800,
-    "secret_id_ttl": 600,
-    "secret_id_num_uses": 40,
-    "policies": [
-      "default"
-    ],
-    "period": 0,
-    "bind_secret_id": true,
-    "bound_cidr_list": ""
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
+    ```javascript
+    {
+      "auth": null,
+      "warnings": null,
+      "wrap_info": null,
+      "data": {
+        "token_ttl": 1200,
+        "token_max_ttl": 1800,
+        "secret_id_ttl": 600,
+        "secret_id_num_uses": 40,
+        "policies": [
+          "default"
+        ],
+        "period": 0,
+        "bind_secret_id": true,
+        "bound_cidr_list": ""
+      },
+      "lease_duration": 0,
+      "renewable": false,
+      "lease_id": ""
+    }
+    ```
 
   </dd>
 </dl>
@@ -458,19 +458,19 @@ $ curl -X POST \
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "role_id": "e5a7b66e-5d08-da9c-7075-71984634b882"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
+    ```javascript
+    {
+      "auth": null,
+      "warnings": null,
+      "wrap_info": null,
+      "data": {
+        "role_id": "e5a7b66e-5d08-da9c-7075-71984634b882"
+      },
+      "lease_duration": 0,
+      "renewable": false,
+      "lease_id": ""
+    }
+    ```
 
   </dd>
 </dl>
@@ -551,20 +551,20 @@ the role.
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "secret_id_accessor": "84896a0c-1347-aa90-a4f6-aca8b7558780",
-    "secret_id": "841771dc-11c9-bbc7-bcac-6a3945a69cd9"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
+    ```javascript
+    {
+      "auth": null,
+      "warnings": null,
+      "wrap_info": null,
+      "data": {
+        "secret_id_accessor": "84896a0c-1347-aa90-a4f6-aca8b7558780",
+        "secret_id": "841771dc-11c9-bbc7-bcac-6a3945a69cd9"
+      },
+      "lease_duration": 0,
+      "renewable": false,
+      "lease_id": ""
+    }
+    ```
 
   </dd>
 </dl>
@@ -591,25 +591,25 @@ the role.
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "keys": [
-      "ce102d2a-8253-c437-bf9a-aceed4241491",
-      "a1c8dee4-b869-e68d-3520-2040c1a0849a",
-      "be83b7e2-044c-7244-07e1-47560ca1c787",
-      "84896a0c-1347-aa90-a4f6-aca8b7558780",
-      "239b1328-6523-15e7-403a-a48038cdc45a"
-    ]
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
+    ```javascript
+    {
+      "auth": null,
+      "warnings": null,
+      "wrap_info": null,
+      "data": {
+        "keys": [
+          "ce102d2a-8253-c437-bf9a-aceed4241491",
+          "a1c8dee4-b869-e68d-3520-2040c1a0849a",
+          "be83b7e2-044c-7244-07e1-47560ca1c787",
+          "84896a0c-1347-aa90-a4f6-aca8b7558780",
+          "239b1328-6523-15e7-403a-a48038cdc45a"
+        ]
+      },
+      "lease_duration": 0,
+      "renewable": false,
+      "lease_id": ""
+    }
+    ```
 
   </dd>
 </dl>
@@ -642,24 +642,25 @@ Secret ID attached to the role
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-        "request_id": "0d25d8ec-0d16-2842-1dda-c28c25aefd4b",
-        "lease_id": "",
-        "lease_duration": 0,
-        "renewable": false,
-        "data": {
-                "cidr_list": null,
-                "creation_time": "2016-09-28T21:00:46.760570318-04:00",
-                "expiration_time": "0001-01-01T00:00:00Z",
-                "last_updated_time": "2016-09-28T21:00:46.760570318-04:00",
-                "metadata": {},
-                "secret_id_accessor": "b4bea6b2-0214-9f7f-33cf-e732155feadb",
-                "secret_id_num_uses": 10,
-                "secret_id_ttl": 0
-        },
-}
-```
+    ```javascript
+    {
+      "request_id": "0d25d8ec-0d16-2842-1dda-c28c25aefd4b",
+      "lease_id": "",
+      "lease_duration": 0,
+      "renewable": false,
+      "data": {
+        "cidr_list": null,
+        "creation_time": "2016-09-28T21:00:46.760570318-04:00",
+        "expiration_time": "0001-01-01T00:00:00Z",
+        "last_updated_time": "2016-09-28T21:00:46.760570318-04:00",
+        "metadata": {},
+        "secret_id_accessor": "b4bea6b2-0214-9f7f-33cf-e732155feadb",
+        "secret_id_num_uses": 10,
+        "secret_id_ttl": 0
+      }
+    }
+    ```
+
   </dd>
 </dl>
 
@@ -723,24 +724,24 @@ Accessor of the secret ID
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-        "request_id": "2132237e-d1b6-d298-6117-b54a2d938d00",
-        "lease_id": "",
-        "lease_duration": 0,
-        "renewable": false,
-        "data": {
-                "cidr_list": null,
-                "creation_time": "2016-09-28T22:09:02.834238344-04:00",
-                "expiration_time": "0001-01-01T00:00:00Z",
-                "last_updated_time": "2016-09-28T22:09:02.834238344-04:00",
-                "metadata": {},
-                "secret_id_accessor": "54ba219d-b539-ac4f-e3cf-763c02f351fb",
-                "secret_id_num_uses": 10,
-                "secret_id_ttl": 0
-        },
-}
-```
+    ```javascript
+    {
+      "request_id": "2132237e-d1b6-d298-6117-b54a2d938d00",
+      "lease_id": "",
+      "lease_duration": 0,
+      "renewable": false,
+      "data": {
+        "cidr_list": null,
+        "creation_time": "2016-09-28T22:09:02.834238344-04:00",
+        "expiration_time": "0001-01-01T00:00:00Z",
+        "last_updated_time": "2016-09-28T22:09:02.834238344-04:00",
+        "metadata": {},
+        "secret_id_accessor": "54ba219d-b539-ac4f-e3cf-763c02f351fb",
+        "secret_id_num_uses": 10,
+        "secret_id_ttl": 0
+      }
+    }
+    ```
 
   </dd>
 </dl>
@@ -826,20 +827,20 @@ the role.
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "secret_id_accessor": "a109dc4a-1fd3-6df6-feda-0ca28b2d4a81",
-    "secret_id": "testsecretid"
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
+    ```javascript
+    {
+      "auth": null,
+      "warnings": null,
+      "wrap_info": null,
+      "data": {
+        "secret_id_accessor": "a109dc4a-1fd3-6df6-feda-0ca28b2d4a81",
+        "secret_id": "testsecretid"
+      },
+      "lease_duration": 0,
+      "renewable": false,
+      "lease_id": ""
+    }
+    ```
 
   </dd>
 </dl>
@@ -883,26 +884,26 @@ the role.
   <dt>Returns</dt>
   <dd>
 
-```javascript
-{
-  "auth": {
-    "renewable": true,
-    "lease_duration": 1200,
-    "metadata": null,
-    "policies": [
-      "default"
-    ],
-    "accessor": "fd6c9a00-d2dc-3b11-0be5-af7ae0e1d374",
-    "client_token": "5b1a0318-679c-9c45-e5c6-d1b9a9035d49"
-  },
-  "warnings": null,
-  "wrap_info": null,
-  "data": null,
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-```
+    ```javascript
+    {
+      "auth": {
+        "renewable": true,
+        "lease_duration": 1200,
+        "metadata": null,
+        "policies": [
+          "default"
+        ],
+        "accessor": "fd6c9a00-d2dc-3b11-0be5-af7ae0e1d374",
+        "client_token": "5b1a0318-679c-9c45-e5c6-d1b9a9035d49"
+      },
+      "warnings": null,
+      "wrap_info": null,
+      "data": null,
+      "lease_duration": 0,
+      "renewable": false,
+      "lease_id": ""
+    }
+    ```
 
   </dd>
 </dl>

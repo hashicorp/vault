@@ -381,9 +381,9 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
-### /transit/export/encryption-key/<name>(/<version>)
-### /transit/export/signing-key/<name>(/<version>)
-### /transit/export/hmac-key/<name>(/<version>)
+### /transit/export/encryption-key/\<name\>(/\<version\>)
+### /transit/export/signing-key/\<name\>(/\<version\>)
+### /transit/export/hmac-key/\<name\>(/\<version\>)
 #### GET
 
 <dl class="api">
