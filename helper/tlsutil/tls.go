@@ -3,7 +3,6 @@ package tlsutil
 import (
 	"crypto/tls"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/vault/helper/strutil"
 )
@@ -18,7 +17,7 @@ var TLSLookup = map[string]uint16{
 // ParseCiphers parse ciphersuites from the comma-separated string into recognized slice
 func ParseCiphers(cipherStr string) ([]uint16, error) {
 	suites := []uint16{}
-	ciphers := strutil.ParseDedupAndSortStrings(cipherStr, ",")
+	ciphers := strutil.ParseStringSlice(cipherStr, ",")
 	cipherMap := map[string]uint16{
 		"TLS_RSA_WITH_RC4_128_SHA":                tls.TLS_RSA_WITH_RC4_128_SHA,
 		"TLS_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
@@ -39,7 +38,7 @@ func ParseCiphers(cipherStr string) ([]uint16, error) {
 		"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384": tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 	}
 	for _, cipher := range ciphers {
-		if v, ok := cipherMap[strings.ToUpper(cipher)]; ok {
+		if v, ok := cipherMap[cipher]; ok {
 			suites = append(suites, v)
 		} else {
 			return suites, fmt.Errorf("unsupported cipher %q", cipher)
