@@ -355,10 +355,10 @@
 			"revisionTime": "2017-01-13T02:57:25Z"
 		},
 		{
-			"checksumSHA1": "7UA5xypGCK2rsrcAf3udKkwOkJM=",
+			"checksumSHA1": "Zgqp9pp3G4cSZbepa6tzhNeHZOI=",
 			"path": "github.com/coreos/etcd/client",
-			"revision": "c89eae790d072ef89f8583030ac2116f6e3d0df0",
-			"revisionTime": "2017-01-13T02:57:25Z"
+			"revision": "b9bbfda874f0add91c300042078c1b1bb904e9c5",
+			"revisionTime": "2017-01-24T15:53:15Z"
 		},
 		{
 			"checksumSHA1": "oW3dk6tgLaS8q1dj9pj4+3kiIog=",
@@ -419,6 +419,18 @@
 			"path": "github.com/coreos/etcd/pkg/types",
 			"revision": "c89eae790d072ef89f8583030ac2116f6e3d0df0",
 			"revisionTime": "2017-01-13T02:57:25Z"
+		},
+		{
+			"checksumSHA1": "sp2FkEyaIGiQFOEZCTDkBZgyHOs=",
+			"path": "github.com/coreos/etcd/version",
+			"revision": "b9bbfda874f0add91c300042078c1b1bb904e9c5",
+			"revisionTime": "2017-01-24T15:53:15Z"
+		},
+		{
+			"checksumSHA1": "bkO2CG/UwwIs8k0x/iXKpkyg7pU=",
+			"path": "github.com/coreos/go-semver/semver",
+			"revision": "568e959cd89871e61434c1143528d9162da89ef2",
+			"revisionTime": "2015-03-04T02:01:26Z"
 		},
 		{
 			"checksumSHA1": "d50/+u/LFlXvEV10HiEoXB9OsGg=",
