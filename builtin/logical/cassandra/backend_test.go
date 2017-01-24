@@ -19,8 +19,8 @@ var (
 )
 
 func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cid dockertest.ContainerID, retURL string) {
-	if os.Getenv("PG_URL") != "" {
-		return "", os.Getenv("PG_URL")
+	if os.Getenv("CASSANDRA_HOST") != "" {
+		return "", os.Getenv("CASSANDRA_HOST")
 	}
 
 	// Without this the checks for whether the container has started seem to
