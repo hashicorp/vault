@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 // Case1: If batch decryption input is not base64 encoded, it should fail.
@@ -91,18 +90,14 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []interface{}
+	var batchDecryptionResponseArray []BatchDecryptionItemResponse
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchDecryptionResponseArray); err != nil {
 		t.Fatal(err)
 	}
 
 	plaintext1 := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 	plaintext2 := "Cg=="
-	for _, responseItem := range batchDecryptionResponseArray {
-		var item BatchDecryptionItemResponse
-		if err := mapstructure.Decode(responseItem, &item); err != nil {
-			t.Fatal(err)
-		}
+	for _, item := range batchDecryptionResponseArray {
 		if item.Plaintext != plaintext1 && item.Plaintext != plaintext2 {
 			t.Fatalf("bad: plaintext: %q", item.Plaintext)
 		}
@@ -152,15 +147,11 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 	}
 
 	var decryptionRequestItems []BatchDecryptionItemRequest
-	var batchResponseArray []interface{}
+	var batchResponseArray []BatchDecryptionItemRequest
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
-	for _, responseItem := range batchResponseArray {
-		var item BatchDecryptionItemRequest
-		if err := mapstructure.Decode(responseItem, &item); err != nil {
-			t.Fatal(err)
-		}
+	for _, item := range batchResponseArray {
 		item.Context = "dmlzaGFsCg=="
 		decryptionRequestItems = append(decryptionRequestItems, item)
 	}
@@ -186,17 +177,13 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []interface{}
+	var batchDecryptionResponseArray []BatchDecryptionItemResponse
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchDecryptionResponseArray); err != nil {
 		t.Fatal(err)
 	}
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
-	for _, responseItem := range batchDecryptionResponseArray {
-		var item BatchDecryptionItemResponse
-		if err := mapstructure.Decode(responseItem, &item); err != nil {
-			t.Fatal(err)
-		}
+	for _, item := range batchDecryptionResponseArray {
 		if item.Plaintext != plaintext {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, item.Plaintext)
 		}

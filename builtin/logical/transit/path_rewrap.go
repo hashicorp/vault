@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/mitchellh/mapstructure"
 )
 
 // BatchRewrapItemRequest represents an item in the batch rewrap
@@ -105,11 +104,16 @@ func (b *backend) pathRewrapWrite(
 	}
 
 	batchInputRaw := d.Get("batch").(string)
+	var batchInputArray []BatchRewrapItemRequest
 	var batchInput []byte
 	if len(batchInputRaw) != 0 {
 		batchInput, err = base64.StdEncoding.DecodeString(batchInputRaw)
 		if err != nil {
 			return logical.ErrorResponse("failed to base64-decode batch input"), logical.ErrInvalidRequest
+		}
+
+		if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
+			return nil, fmt.Errorf("invalid input: %v", err)
 		}
 	} else {
 		ciphertext := d.Get("ciphertext").(string)
@@ -117,34 +121,21 @@ func (b *backend) pathRewrapWrite(
 			return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 		}
 
-		var singleItemBatch []BatchRewrapItemRequest
-		singleItemBatch = append(singleItemBatch, BatchRewrapItemRequest{
+		batchInputArray = make([]BatchRewrapItemRequest, 1)
+		batchInputArray[0] = BatchRewrapItemRequest{
 			Ciphertext: ciphertext,
 			Context:    d.Get("context").(string),
 			Nonce:      d.Get("nonce").(string),
-		})
-
-		batchInput, err = jsonutil.EncodeJSON(singleItemBatch)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode batch input")
 		}
 	}
 
-	var batchInputArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
-		return nil, fmt.Errorf("invalid input: %v", err)
+	if len(batchInputArray) == 0 {
+		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	}
 
-	var batchItems []BatchRewrapItemRequest
 	contextSet := true
 
-	for _, batchItem := range batchInputArray {
-		var item BatchRewrapItemRequest
-		if err := mapstructure.Decode(batchItem, &item); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse the input: %v", err)), logical.ErrInvalidRequest
-		}
-		batchItems = append(batchItems, item)
-
+	for _, item := range batchInputArray {
 		if item.Context == "" && contextSet {
 			contextSet = false
 		}
@@ -154,12 +145,12 @@ func (b *backend) pathRewrapWrite(
 		}
 	}
 
-	var batchResponseItems []BatchRewrapItemResponse
-	for _, item := range batchItems {
+	batchResponseItems := make([]BatchRewrapItemResponse, len(batchInputArray))
+	for i, item := range batchInputArray {
 		if item.Ciphertext == "" {
-			batchResponseItems = append(batchResponseItems, BatchRewrapItemResponse{
+			batchResponseItems[i] = BatchRewrapItemResponse{
 				Error: "missing ciphertext to decrypt",
-			})
+			}
 			continue
 		}
 
@@ -167,9 +158,9 @@ func (b *backend) pathRewrapWrite(
 		if len(item.Context) != 0 {
 			itemContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
-				batchResponseItems = append(batchResponseItems, BatchRewrapItemResponse{
+				batchResponseItems[i] = BatchRewrapItemResponse{
 					Error: "failed to base64-decode context",
-				})
+				}
 				continue
 			}
 		}
@@ -178,9 +169,9 @@ func (b *backend) pathRewrapWrite(
 		if len(item.Nonce) != 0 {
 			itemNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
-				batchResponseItems = append(batchResponseItems, BatchRewrapItemResponse{
+				batchResponseItems[i] = BatchRewrapItemResponse{
 					Error: "failed to base64-decode nonce",
-				})
+				}
 			}
 			continue
 		}
@@ -198,9 +189,9 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if plaintext == "" {
-			batchResponseItems = append(batchResponseItems, BatchRewrapItemResponse{
+			batchResponseItems[i] = BatchRewrapItemResponse{
 				Error: "empty plaintext returned during rewrap",
-			})
+			}
 			continue
 		}
 
@@ -217,23 +208,15 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if ciphertext == "" {
-			batchResponseItems = append(batchResponseItems, BatchRewrapItemResponse{
+			batchResponseItems[i] = BatchRewrapItemResponse{
 				Error: "empty ciphertext returned",
-			})
+			}
 			continue
 		}
 
-		batchResponseItems = append(batchResponseItems, BatchRewrapItemResponse{
+		batchResponseItems[i] = BatchRewrapItemResponse{
 			Ciphertext: ciphertext,
-		})
-	}
-
-	if len(batchItems) != len(batchResponseItems) {
-		return nil, fmt.Errorf("number of request and the number of response items do not match")
-	}
-
-	if len(batchResponseItems) == 0 {
-		return nil, fmt.Errorf("number of response items cannot be zero")
+		}
 	}
 
 	resp := &logical.Response{}
@@ -255,90 +238,6 @@ func (b *backend) pathRewrapWrite(
 	}
 
 	return resp, nil
-
-	/*
-		name := d.Get("name").(string)
-
-		value := d.Get("ciphertext").(string)
-		if len(value) == 0 {
-			return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
-		}
-
-		var err error
-
-		// Decode the context if any
-		contextRaw := d.Get("context").(string)
-		var context []byte
-		if len(contextRaw) != 0 {
-			context, err = base64.StdEncoding.DecodeString(contextRaw)
-			if err != nil {
-				return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
-			}
-		}
-
-		// Decode the nonce if any
-		nonceRaw := d.Get("nonce").(string)
-		var nonce []byte
-		if len(nonceRaw) != 0 {
-			nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
-			if err != nil {
-				return logical.ErrorResponse("failed to base64-decode nonce"), logical.ErrInvalidRequest
-			}
-		}
-
-		// Get the policy
-		p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
-		if lock != nil {
-			defer lock.RUnlock()
-		}
-		if err != nil {
-			return nil, err
-		}
-		// Error if invalid policy
-		if p == nil {
-			return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
-		}
-
-		plaintext, err := p.Decrypt(context, nonce, value)
-		if err != nil {
-			switch err.(type) {
-			case errutil.UserError:
-				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-			case errutil.InternalError:
-				return nil, err
-			default:
-				return nil, err
-			}
-		}
-
-		if plaintext == "" {
-			return nil, fmt.Errorf("empty plaintext returned during rewrap")
-		}
-
-		ciphertext, err := p.Encrypt(context, nonce, plaintext)
-		if err != nil {
-			switch err.(type) {
-			case errutil.UserError:
-				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-			case errutil.InternalError:
-				return nil, err
-			default:
-				return nil, err
-			}
-		}
-
-		if ciphertext == "" {
-			return nil, fmt.Errorf("empty ciphertext returned")
-		}
-
-		// Generate the response
-		resp := &logical.Response{
-			Data: map[string]interface{}{
-				"ciphertext": ciphertext,
-			},
-		}
-		return resp, nil
-	*/
 }
 
 const pathRewrapHelpSyn = `Rewrap ciphertext`

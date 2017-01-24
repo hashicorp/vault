@@ -8,7 +8,6 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/mitchellh/mapstructure"
 )
 
 // BatchDecryptionItemRequest represents an item in the batch decryption
@@ -111,46 +110,39 @@ func (b *backend) pathDecryptWrite(
 	}
 
 	batchInputRaw := d.Get("batch").(string)
+	var batchInputArray []BatchDecryptionItemRequest
 	var batchInput []byte
 	if len(batchInputRaw) != 0 {
 		batchInput, err = base64.StdEncoding.DecodeString(batchInputRaw)
 		if err != nil {
 			return logical.ErrorResponse("failed to base64-decode batch input"), logical.ErrInvalidRequest
 		}
+
+		if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
+			return nil, fmt.Errorf("invalid input: %v", err)
+		}
+
 	} else {
 		ciphertext := d.Get("ciphertext").(string)
 		if len(ciphertext) == 0 {
 			return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 		}
 
-		var singleItemBatch []BatchDecryptionItemRequest
-		singleItemBatch = append(singleItemBatch, BatchDecryptionItemRequest{
+		batchInputArray = make([]BatchDecryptionItemRequest, 1)
+		batchInputArray[0] = BatchDecryptionItemRequest{
 			Ciphertext: ciphertext,
 			Context:    d.Get("context").(string),
 			Nonce:      d.Get("nonce").(string),
-		})
-
-		batchInput, err = jsonutil.EncodeJSON(singleItemBatch)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode batch input")
 		}
 	}
 
-	var batchInputArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
-		return nil, fmt.Errorf("invalid input: %v", err)
+	if len(batchInputArray) == 0 {
+		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	}
 
-	var batchItems []BatchDecryptionItemRequest
 	contextSet := true
 
-	for _, batchItem := range batchInputArray {
-		var item BatchDecryptionItemRequest
-		if err := mapstructure.Decode(batchItem, &item); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse the input: %v", err)), logical.ErrInvalidRequest
-		}
-		batchItems = append(batchItems, item)
-
+	for _, item := range batchInputArray {
 		if item.Context == "" && contextSet {
 			contextSet = false
 		}
@@ -160,12 +152,12 @@ func (b *backend) pathDecryptWrite(
 		}
 	}
 
-	var batchResponseItems []BatchDecryptionItemResponse
-	for _, item := range batchItems {
+	batchResponseItems := make([]BatchDecryptionItemResponse, len(batchInputArray))
+	for i, item := range batchInputArray {
 		if item.Ciphertext == "" {
-			batchResponseItems = append(batchResponseItems, BatchDecryptionItemResponse{
+			batchResponseItems[i] = BatchDecryptionItemResponse{
 				Error: "missing ciphertext to decrypt",
-			})
+			}
 			continue
 		}
 
@@ -173,9 +165,9 @@ func (b *backend) pathDecryptWrite(
 		if len(item.Context) != 0 {
 			itemContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
-				batchResponseItems = append(batchResponseItems, BatchDecryptionItemResponse{
+				batchResponseItems[i] = BatchDecryptionItemResponse{
 					Error: "failed to base64-decode context",
-				})
+				}
 				continue
 			}
 		}
@@ -184,9 +176,9 @@ func (b *backend) pathDecryptWrite(
 		if len(item.Nonce) != 0 {
 			itemNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
-				batchResponseItems = append(batchResponseItems, BatchDecryptionItemResponse{
+				batchResponseItems[i] = BatchDecryptionItemResponse{
 					Error: "failed to base64-decode nonce",
-				})
+				}
 			}
 			continue
 		}
@@ -203,17 +195,9 @@ func (b *backend) pathDecryptWrite(
 			}
 		}
 
-		batchResponseItems = append(batchResponseItems, BatchDecryptionItemResponse{
+		batchResponseItems[i] = BatchDecryptionItemResponse{
 			Plaintext: plaintext,
-		})
-	}
-
-	if len(batchItems) != len(batchResponseItems) {
-		return nil, fmt.Errorf("number of request and the number of response items do not match")
-	}
-
-	if len(batchResponseItems) == 0 {
-		return nil, fmt.Errorf("number of response items cannot be zero")
+		}
 	}
 
 	resp := &logical.Response{}

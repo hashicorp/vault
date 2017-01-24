@@ -144,37 +144,35 @@ func (b *backend) pathEncryptWrite(
 
 	batchInputRaw := d.Get("batch").(string)
 	var batchInput []byte
+	var batchInputArray []BatchEncryptionItemRequest
 	if len(batchInputRaw) != 0 {
 		batchInput, err = base64.StdEncoding.DecodeString(batchInputRaw)
 		if err != nil {
 			return logical.ErrorResponse("failed to base64-decode batch input"), logical.ErrInvalidRequest
 		}
+
+		if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
+			return nil, fmt.Errorf("invalid input: %v", err)
+		}
+
 	} else {
 		valueRaw, ok := d.GetOk("plaintext")
 		if !ok {
 			return logical.ErrorResponse("missing plaintext to encrypt"), logical.ErrInvalidRequest
 		}
 
-		var singleItemBatch []BatchEncryptionItemRequest
-		singleItemBatch = append(singleItemBatch, BatchEncryptionItemRequest{
+		batchInputArray = make([]BatchEncryptionItemRequest, 1)
+		batchInputArray[0] = BatchEncryptionItemRequest{
 			Plaintext: valueRaw.(string),
 			Context:   d.Get("context").(string),
 			Nonce:     d.Get("nonce").(string),
-		})
-
-		batchInput, err = jsonutil.EncodeJSON(singleItemBatch)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode batch input")
 		}
-
 	}
 
-	var batchInputArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputArray); err != nil {
-		return nil, fmt.Errorf("invalid input: %v", err)
+	if len(batchInputArray) == 0 {
+		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	}
 
-	var batchItems []BatchEncryptionItemRequest
 	contextSet := true
 
 	// Before processing the batch request items, get the policy. If the
@@ -186,7 +184,6 @@ func (b *backend) pathEncryptWrite(
 		if err := mapstructure.Decode(batchItem, &item); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to parse the input: %v", err)), logical.ErrInvalidRequest
 		}
-		batchItems = append(batchItems, item)
 
 		if item.Context == "" && contextSet {
 			contextSet = false
@@ -195,10 +192,6 @@ func (b *backend) pathEncryptWrite(
 		if item.Context != "" && !contextSet {
 			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 		}
-	}
-
-	if len(batchItems) == 0 {
-		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	}
 
 	// Get the policy
@@ -243,25 +236,25 @@ func (b *backend) pathEncryptWrite(
 		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
 	}
 
-	var batchResponseItems []BatchEncryptionItemResponse
+	batchResponseItems := make([]BatchEncryptionItemResponse, len(batchInputArray))
 
 	// Process batch request items. If encryption of any request
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
-	for _, item := range batchItems {
+	for i, item := range batchInputArray {
 		// Decode the plaintext
 		if len(item.Plaintext) == 0 {
-			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+			batchResponseItems[i] = BatchEncryptionItemResponse{
 				Error: "missing plaintext to encrypt",
-			})
+			}
 			continue
 		}
 
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
-			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+			batchResponseItems[i] = BatchEncryptionItemResponse{
 				Error: "failed to base64-decode plaintext",
-			})
+			}
 			continue
 		}
 
@@ -270,9 +263,9 @@ func (b *backend) pathEncryptWrite(
 		if len(item.Context) != 0 {
 			itemContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
-				batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+				batchResponseItems[i] = BatchEncryptionItemResponse{
 					Error: "failed to base64-decode context",
-				})
+				}
 				continue
 			}
 		}
@@ -282,9 +275,9 @@ func (b *backend) pathEncryptWrite(
 		if len(item.Nonce) != 0 {
 			itemNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
-				batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+				batchResponseItems[i] = BatchEncryptionItemResponse{
 					Error: "failed to base64-decode nonce",
-				})
+				}
 				continue
 			}
 		}
@@ -302,23 +295,15 @@ func (b *backend) pathEncryptWrite(
 		}
 
 		if ciphertext == "" {
-			batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+			batchResponseItems[i] = BatchEncryptionItemResponse{
 				Error: "empty ciphertext returned",
-			})
+			}
 			continue
 		}
 
-		batchResponseItems = append(batchResponseItems, BatchEncryptionItemResponse{
+		batchResponseItems[i] = BatchEncryptionItemResponse{
 			Ciphertext: ciphertext,
-		})
-	}
-
-	if len(batchItems) != len(batchResponseItems) {
-		return nil, fmt.Errorf("number of request and the number of response items do not match")
-	}
-
-	if len(batchResponseItems) == 0 {
-		return nil, fmt.Errorf("number of response items cannot be zero")
+		}
 	}
 
 	resp := &logical.Response{}

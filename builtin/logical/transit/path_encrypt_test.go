@@ -178,7 +178,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []interface{}
+	var batchResponseArray []BatchEncryptionItemResponse
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
@@ -191,11 +191,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, responseItem := range batchResponseArray {
-		var item BatchEncryptionItemResponse
-		if err := mapstructure.Decode(responseItem, &item); err != nil {
-			t.Fatal(err)
-		}
+	for _, item := range batchResponseArray {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 		}
@@ -252,7 +248,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []interface{}
+	var batchResponseArray []BatchEncryptionItemResponse
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
@@ -265,11 +261,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, responseItem := range batchResponseArray {
-		var item BatchEncryptionItemResponse
-		if err := mapstructure.Decode(responseItem, &item); err != nil {
-			t.Fatal(err)
-		}
+	for _, item := range batchResponseArray {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
@@ -366,7 +358,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []interface{}
+	var batchResponseArray []BatchEncryptionItemResponse
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
@@ -379,11 +371,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, responseItem := range batchResponseArray {
-		var item BatchEncryptionItemResponse
-		if err := mapstructure.Decode(responseItem, &item); err != nil {
-			t.Fatal(err)
-		}
+	for _, item := range batchResponseArray {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
