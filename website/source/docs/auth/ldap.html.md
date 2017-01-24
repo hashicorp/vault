@@ -277,7 +277,7 @@ It should be noted that user -> policy mapping happens at token creation time. A
   <dd>
     <ul>
       <li>
-        <span class="param">rurl</span>
+        <span class="param">url</span>
         <span class="param-flags">required</span>
         The LDAP server to connect to. Examples: `ldap://ldap.myorg.com`,
         `ldaps://ldap.myorg.com:636`
@@ -418,8 +418,6 @@ It should be noted that user -> policy mapping happens at token creation time. A
   </dd>
 </dl>
 
-
-### /auth/ldap/config
 #### GET
 <dl class="api">
   <dt>Description</dt>
@@ -473,11 +471,11 @@ It should be noted that user -> policy mapping happens at token creation time. A
 </dl>
 
 ### /auth/ldap/groups
-#### LIST/GET
+#### LIST
 <dl class="api">
   <dt>Description</dt>
   <dd>
-  Lists the existing groups in the backend
+  Lists the existing groups in the backend.
   </dd>
 
   <dt>Method</dt>
@@ -523,7 +521,7 @@ It should be noted that user -> policy mapping happens at token creation time. A
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/ldap/groups/[group_name]`</dd>
@@ -599,7 +597,7 @@ It should be noted that user -> policy mapping happens at token creation time. A
 </dl>
 
 ### /auth/ldap/users
-#### LIST/GET
+#### LIST
 <dl class="api">
   <dt>Description</dt>
   <dd>
@@ -648,7 +646,7 @@ It should be noted that user -> policy mapping happens at token creation time. A
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/ldap/users/[username]`</dd>
@@ -740,7 +738,7 @@ It should be noted that user -> policy mapping happens at token creation time. A
   </dd>
 
   <dt>Method</dt>
-  <dd>GET</dd>
+  <dd>POST</dd>
 
   <dt>URL</dt>
   <dd>`/auth/ldap/login/[username]`</dd>
