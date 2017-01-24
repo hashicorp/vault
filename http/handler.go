@@ -31,9 +31,6 @@ const (
 	// not to use request forwarding
 	NoRequestForwardingHeaderName = "X-Vault-No-Request-Forwarding"
 
-	// NoCORS is the name of the header telling Vault not to use CORS handler.
-	NoCORS = "X-Vault-No-CORS"
-
 	// MaxRequestSize is the maximum accepted request size. This is to prevent
 	// a denial of service attack where no Content-Length is provided and the server
 	// is fed ever more data until it exhausts memory.
