@@ -200,6 +200,7 @@ func TestKey_Serialize(t *testing.T) {
 	if !k.InstallTime.Equal(out.InstallTime) {
 		t.Fatalf("bad: expected:\n%#v\nactual:\n%#v", k, out)
 	}
+	k.InstallTime = out.InstallTime
 
 	if !reflect.DeepEqual(k, out) {
 		t.Fatalf("bad: %#v", out)
