@@ -56,13 +56,6 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 				Meta: *metaPtr,
 			}, nil
 		},
-
-		"cors": func() (cli.Command, error) {
-			return &command.CorsCommand{
-				Meta: *metaPtr,
-			}, nil
-		},
-
 		"server": func() (cli.Command, error) {
 			return &command.ServerCommand{
 				Meta: *metaPtr,
