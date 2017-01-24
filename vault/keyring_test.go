@@ -167,6 +167,11 @@ func TestKeyring_Serialize(t *testing.T) {
 	for i = 1; i < k.ActiveTerm(); i++ {
 		key1 := k2.TermKey(i)
 		key2 := k.TermKey(i)
+		// Work around timezone bug due to DeepEqual using == for comparison
+		if !key1.InstallTime.Equal(key2.InstallTime) {
+			t.Fatalf("bad: key 1:\n%#v\nkey 2:\n%#v", key1, key2)
+		}
+		key1.InstallTime = key2.InstallTime
 		if !reflect.DeepEqual(key1, key2) {
 			t.Fatalf("bad: key 1:\n%#v\nkey 2:\n%#v", key1, key2)
 		}
@@ -189,6 +194,11 @@ func TestKey_Serialize(t *testing.T) {
 	out, err := DeserializeKey(buf)
 	if err != nil {
 		t.Fatalf("err: %v", err)
+	}
+
+	// Work around timezone bug due to DeepEqual using == for comparison
+	if !k.InstallTime.Equal(out.InstallTime) {
+		t.Fatalf("bad: key 1:\n%#v\nkey 2:\n%#v", key1, key2)
 	}
 
 	if !reflect.DeepEqual(k, out) {
