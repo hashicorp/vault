@@ -198,7 +198,7 @@ func TestKey_Serialize(t *testing.T) {
 
 	// Work around timezone bug due to DeepEqual using == for comparison
 	if !k.InstallTime.Equal(out.InstallTime) {
-		t.Fatalf("bad: key 1:\n%#v\nkey 2:\n%#v", key1, key2)
+		t.Fatalf("bad: expected:\n%#v\nactual:\n%#v", k, out)
 	}
 
 	if !reflect.DeepEqual(k, out) {
