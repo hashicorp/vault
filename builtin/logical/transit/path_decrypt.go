@@ -136,22 +136,16 @@ func (b *backend) pathDecryptWrite(
 		}
 	}
 
-	if len(batchInputArray) == 0 {
-		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
-	}
-
 	var contextSet bool
 	switch len(batchInputArray) {
+	case 0:
+		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	case 1:
 		contextSet = batchInputArray[0].Context != ""
 	default:
-		contextSet = true
+		contextSet = batchInputArray[0].Context != ""
 		for _, item := range batchInputArray {
-			if item.Context == "" && contextSet {
-				contextSet = false
-			}
-
-			if item.Context != "" && !contextSet {
+			if (item.Context == "" && contextSet) || (item.Context != "" && !contextSet) {
 				return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 			}
 		}

@@ -168,26 +168,20 @@ func (b *backend) pathEncryptWrite(
 		}
 	}
 
-	if len(batchInputArray) == 0 {
-		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
-	}
-
 	var contextSet bool
 	switch len(batchInputArray) {
+	case 0:
+		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	case 1:
 		contextSet = batchInputArray[0].Context != ""
 	default:
-		contextSet = true
+		contextSet = batchInputArray[0].Context != ""
 		// Before processing the batch request items, get the policy. If the
 		// policy is supposed to be upserted, then determine if 'derived' is to
 		// be set or not, based on the presence of 'context' field in all the
 		// input items.
 		for _, item := range batchInputArray {
-			if item.Context == "" && contextSet {
-				contextSet = false
-			}
-
-			if item.Context != "" && !contextSet {
+			if (item.Context == "" && contextSet) || (item.Context != "" && !contextSet) {
 				return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 			}
 		}
