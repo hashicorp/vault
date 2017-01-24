@@ -908,6 +908,7 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 
 func TestExpiration_PersistLoadDelete(t *testing.T) {
 	exp := mockExpiration(t)
+	lastTime := time.Now()
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
 		Path:    "foo/bar",
@@ -919,9 +920,9 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 				TTL: time.Minute,
 			},
 		},
-		IssueTime:       time.Now(),
-		ExpireTime:      time.Now(),
-		LastRenewalTime: time.Time{},
+		IssueTime:       lastTime,
+		ExpireTime:      lastTime,
+		LastRenewalTime: lastTime,
 	}
 	if err := exp.persistEntry(le); err != nil {
 		t.Fatalf("err: %v", err)
@@ -933,7 +934,7 @@ func TestExpiration_PersistLoadDelete(t *testing.T) {
 	}
 	le.LastRenewalTime = out.LastRenewalTime
 	if !reflect.DeepEqual(out, le) {
-		t.Fatalf("bad: expected:%#v\nactual:%#v", le, out)
+		t.Fatalf("bad: expected:\n%#v\nactual:\n%#v", le, out)
 	}
 
 	err = exp.deleteEntry("foo/bar/1234")

@@ -62,6 +62,13 @@ you ensure that all nonces are unique for a
 given context. Failing to do so will severely
 impact the ciphertext's security.`,
 			},
+
+			"exportable": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `Enables keys to be exportable.
+This allows for all the valid keys
+in the key ring to be exported.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -91,6 +98,7 @@ func (b *backend) pathPolicyWrite(
 	derived := d.Get("derived").(bool)
 	convergent := d.Get("convergent_encryption").(bool)
 	keyType := d.Get("type").(string)
+	exportable := d.Get("exportable").(bool)
 
 	if !derived && convergent {
 		return logical.ErrorResponse("convergent encryption requires derivation to be enabled"), nil
@@ -101,6 +109,7 @@ func (b *backend) pathPolicyWrite(
 		Name:       name,
 		Derived:    derived,
 		Convergent: convergent,
+		Exportable: exportable,
 	}
 	switch keyType {
 	case "aes256-gcm96":
@@ -154,6 +163,7 @@ func (b *backend) pathPolicyRead(
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
 			"latest_version":         p.LatestVersion,
+			"exportable":             p.Exportable,
 			"supports_encryption":    p.Type.EncryptionSupported(),
 			"supports_decryption":    p.Type.DecryptionSupported(),
 			"supports_signing":       p.Type.SigningSupported(),
