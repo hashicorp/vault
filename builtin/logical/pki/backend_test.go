@@ -23,6 +23,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -1456,28 +1457,26 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		ret = append(ret, issueTestStep)
 	}
 
-	/*
-		getOuCheck := func(role roleEntry) logicaltest.TestCheckFunc {
-			var certBundle certutil.CertBundle
-			return func(resp *logical.Response) error {
-				err := mapstructure.Decode(resp.Data, &certBundle)
-				if err != nil {
-					return err
-				}
-				parsedCertBundle, err := certBundle.ToParsedCertBundle()
-				if err != nil {
-					return fmt.Errorf("Error checking generated certificate: %s", err)
-				}
-				cert := parsedCertBundle.Certificate
-
-				expected := strutil.ParseDedupAndSortStrings(role.OU, ",")
-				if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
-					return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
-				}
-				return nil
+	getOuCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
 			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.ParseDedupAndSortStrings(role.OU, ",")
+			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
+				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
+			}
+			return nil
 		}
-	*/
+	}
 
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
@@ -1749,18 +1748,13 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		addCnTests()
 	}
 	// OU tests
-	// Disabling the OU tests because of a bug in `x509.CreateCertificate`,
-	// wherein it is not generating the certificate with the all the values
-	// supplied as OUs and is considering only the first element.
-	/*
-		{
-			roleVals.OU = "foo"
-			addTests(getOuCheck(roleVals))
+	{
+		roleVals.OU = "foo"
+		addTests(getOuCheck(roleVals))
 
-			roleVals.OU = "foo,bar"
-			addTests(getOuCheck(roleVals))
-		}
-	*/
+		roleVals.OU = "foo,bar"
+		addTests(getOuCheck(roleVals))
+	}
 	// IP SAN tests
 	{
 		issueVals.IPSANs = "127.0.0.1,::1"
