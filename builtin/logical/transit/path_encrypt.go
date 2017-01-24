@@ -10,7 +10,6 @@ import (
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/mitchellh/mapstructure"
 )
 
 // BatchEncryptionItemRequest represents an item in the batch encryption
@@ -173,24 +172,24 @@ func (b *backend) pathEncryptWrite(
 		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	}
 
-	contextSet := true
+	var contextSet bool
+	switch len(batchInputArray) {
+	case 1:
+		contextSet = batchInputArray[0].Context != ""
+	default:
+		contextSet = true
+		// Before processing the batch request items, get the policy. If the
+		// policy is supposed to be upserted, then determine if 'derived' is to
+		// be set or not, based on the presence of 'context' field in all the
+		// input items.
+		for _, item := range batchInputArray {
+			if item.Context == "" && contextSet {
+				contextSet = false
+			}
 
-	// Before processing the batch request items, get the policy. If the
-	// policy is supposed to be upserted, then determine if 'derived' is to
-	// be set or not, based on the presence of 'context' field in all the
-	// input items.
-	for _, batchItem := range batchInputArray {
-		var item BatchEncryptionItemRequest
-		if err := mapstructure.Decode(batchItem, &item); err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to parse the input: %v", err)), logical.ErrInvalidRequest
-		}
-
-		if item.Context == "" && contextSet {
-			contextSet = false
-		}
-
-		if item.Context != "" && !contextSet {
-			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
+			if item.Context != "" && !contextSet {
+				return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
+			}
 		}
 	}
 
