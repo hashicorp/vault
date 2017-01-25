@@ -641,7 +641,7 @@ func (b *AESGCMBarrier) Get(key string) (*Entry, error) {
 	// Decrypt the ciphertext
 	plain, err := b.decryptKeyring(key, pe.Value)
 	if err != nil {
-		return nil, fmt.Errorf("decryption failed for %q: %v", key, err)
+		return nil, fmt.Errorf("decryption failed for %q: %v", string(key), err)
 	}
 
 	// Wrap in a logical entry
