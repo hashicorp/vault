@@ -41,8 +41,8 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"sts_endpoint":                 "https://my-custom-sts-endpoint.example.com",
-		"caller_identity_header_value": "vault_server_identification_314159",
+		"sts_endpoint":          "https://my-custom-sts-endpoint.example.com",
+		"iam_auth_header_value": "vault_server_identification_314159",
 	}
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
@@ -69,8 +69,8 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	if resp == nil || resp.IsError() {
 		t.Fatal("failed to read the client config entry")
 	}
-	if resp.Data["caller_identity_header_value"] != data["vault_header_value"] {
+	if resp.Data["iam_auth_header_value"] != data["vault_header_value"] {
 		t.Fatalf("expected vault_header_value: '%#v'; returned vault_header_value: '%#v'",
-			data["caller_identity_header_value"], resp.Data["caller_identity_header_value"])
+			data["iam_auth_header_value"], resp.Data["iam_auth_header_value"])
 	}
 }

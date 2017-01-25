@@ -22,7 +22,7 @@ func pathRole(b *backend) *framework.Path {
 			},
 			"allowed_auth_types": {
 				Type:    framework.TypeString,
-				Default: "instance_identity_document",
+				Default: "ec2",
 				Description: `The comma-separated list of allowed auth_type values that
 are allowed to authenticate to this role.`,
 			},
@@ -39,7 +39,7 @@ in its identity document to match the one specified by this parameter.`,
 			"bound_iam_principal_arn": {
 				Type: framework.TypeString,
 				Description: `ARN of the IAM principal to bind to this role. Only applicable when
-auth_type is signed_caller_identity_request.`,
+auth_type is iam.`,
 			},
 			"bound_iam_role_arn": {
 				Type: framework.TypeString,
@@ -49,7 +49,7 @@ The value is prefix-matched (as though it were a glob ending in
 '*').  The configured IAM user or EC2 instance role must be allowed
 to execute the 'iam:GetInstanceProfile' action if this is
 specified. This is only checked when auth_type is
-instance_identity_document.`,
+ec2.`,
 			},
 			"bound_iam_instance_profile_arn": {
 				Type: framework.TypeString,
@@ -57,14 +57,14 @@ instance_identity_document.`,
 with an IAM instance profile ARN which has a prefix that matches
 the value specified by this parameter. The value is prefix-matched
 (as though it were a glob ending in '*'). This is only checked when
-auth_type is instance_identity_document.`,
+auth_type is ec2.`,
 			},
-			"infer_role_as_type": {
+			"role_inferred_type": {
 				Type:    framework.TypeString,
 				Default: false,
-				Description: `When auth_type is signed_caller_identity_request, the
+				Description: `When auth_type is iam, the
 AWS entity type to infer from the authenticated principal. The only supported
-value is ec2Instance, which will extract the EC2 instance ID from the
+value is ec2_instance, which will extract the EC2 instance ID from the
 authenticated role and apply restrictions specific to EC2 instances (such as
 role_tag). The configured EC2 client must be able to find the inferred instance
 ID in the results, and the instance must be running. If unable to
@@ -73,8 +73,8 @@ among running instances, then authentication will fail.`,
 			},
 			"inferred_aws_region": {
 				Type: framework.TypeString,
-				Description: `When auth_type is signed_caller_identity_request and
-infer_role_as_type is set, the region to assume the inferred entity exists in.`,
+				Description: `When auth_type is iam and
+role_inferred_type is set, the region to assume the inferred entity exists in.`,
 			},
 			"role_tag": {
 				Type:    framework.TypeString,
@@ -83,8 +83,8 @@ infer_role_as_type is set, the region to assume the inferred entity exists in.`,
 field should be the 'key' of the tag on the EC2 instance. The 'value'
 of the tag should be generated using 'role/<role>/tag' endpoint.
 Defaults to an empty string, meaning that role tags are disabled. This
-is only checked if auth_type is instance_identity_document or
-infer_role_as_ec2_instance is true`,
+is only checked if auth_type is ec2 or
+role_inferred_type is ec2_instance`,
 			},
 			"ttl": {
 				Type:    framework.TypeDurationSecond,
@@ -110,7 +110,7 @@ resides. This keys off of pendingTime in the metadata document, so
 essentially, this disables the client nonce check whenever the
 instance is migrated to a new host and pendingTime is newer than the
 previously-remembered time. Use with caution. This is only checked when
-auth_type is instance_identity_document.`,
+auth_type is ec2.`,
 			},
 			"disallow_reauthentication": {
 				Type:        framework.TypeBool,
@@ -358,8 +358,8 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundIamPrincipalARN = boundIamPrincipalARNRaw.(string)
 	}
 
-	if inferRoleTypeRaw, ok := data.GetOk("infer_role_as_type"); ok {
-		roleEntry.InferRoleType = inferRoleTypeRaw.(string)
+	if inferRoleTypeRaw, ok := data.GetOk("role_inferred_type"); ok {
+		roleEntry.RoleInferredType = inferRoleTypeRaw.(string)
 	}
 
 	if inferredAWSRegionRaw, ok := data.GetOk("inferred_aws_region"); ok {
@@ -371,10 +371,10 @@ func (b *backend) pathRoleCreateUpdate(
 	parseAllowedAuthTypes := func(input string) string {
 		allowedAuthTypes := []string{}
 		for _, t := range strings.Split(input, ",") {
-			if t == "instance_identity_document" {
+			if t == "ec2" {
 				allowInstanceIdentityDocument = true
 				allowedAuthTypes = append(allowedAuthTypes, t)
-			} else if t == "signed_caller_identity_request" {
+			} else if t == "iam" {
 				allowCallerIdentity = true
 				allowedAuthTypes = append(allowedAuthTypes, t)
 			} else if t != "" {
@@ -406,35 +406,35 @@ func (b *backend) pathRoleCreateUpdate(
 		case roleEntry.BoundIamRoleARN != "":
 		default:
 
-			return logical.ErrorResponse("at least be one bound parameter should be specified on the role with auth_type instance_identity_document or auth_type signed_caller_identity_request"), nil
+			return logical.ErrorResponse("at least be one bound parameter should be specified on the role with auth_type ec2 or auth_type iam"), nil
 		}
 	}
 
 	if allowCallerIdentity {
-		if roleEntry.InferRoleType != "" {
-			if roleEntry.InferRoleType != "ec2Instance" {
-				return logical.ErrorResponse(fmt.Sprintf("invalid infer_role_as_type value: '%s'", roleEntry.InferRoleType)), nil
+		if roleEntry.RoleInferredType != "" {
+			if roleEntry.RoleInferredType != "ec2_instance" {
+				return logical.ErrorResponse(fmt.Sprintf("invalid role_inferred_type value: '%s'", roleEntry.RoleInferredType)), nil
 			}
 			if roleEntry.InferredAWSRegion == "" {
-				return logical.ErrorResponse("must set inferred_aws_region when setting infer_role_as_type"), nil
+				return logical.ErrorResponse("must set inferred_aws_region when setting role_inferred_type"), nil
 			}
 		} else {
 			if roleEntry.BoundIamPrincipalARN == "" {
-				return logical.ErrorResponse("must set bound_iam_principal_arn if not setting infer_role_as_type"), nil
+				return logical.ErrorResponse("must set bound_iam_principal_arn if not setting role_inferred_type"), nil
 			}
 			if roleEntry.InferredAWSRegion != "" {
-				return logical.ErrorResponse("must not set inferred_aws_region without infer_role_as_type"), nil
+				return logical.ErrorResponse("must not set inferred_aws_region without role_inferred_type"), nil
 			}
 		}
 	} else {
-		if roleEntry.InferRoleType != "" {
-			return logical.ErrorResponse("must only set infer_role_as_type when allowing signed_caller_identity_request auth_type"), nil
+		if roleEntry.RoleInferredType != "" {
+			return logical.ErrorResponse("must only set role_inferred_type when allowing iam auth_type"), nil
 		}
 		if roleEntry.BoundIamPrincipalARN != "" {
-			return logical.ErrorResponse("must only set bound_iam_principal_arn when allowing signed_caller_identity_request auth_type"), nil
+			return logical.ErrorResponse("must only set bound_iam_principal_arn when allowing iam auth_type"), nil
 		}
 		if roleEntry.InferredAWSRegion != "" {
-			return logical.ErrorResponse("must not set inferred_aws_region without allowing signed_caller_identity_request auth_type"), nil
+			return logical.ErrorResponse("must not set inferred_aws_region without allowing iam auth_type"), nil
 		}
 	}
 
@@ -532,7 +532,7 @@ type awsRoleEntry struct {
 	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn" structs:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`
 	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
-	InferRoleType              string        `json:"infer_role_type" structs:"infer_role_type" mapstructure:"infer_role_type"`
+	RoleInferredType           string        `json:"infer_role_type" structs:"infer_role_type" mapstructure:"infer_role_type"`
 	InferredAWSRegion          string        `json:"inferred_aws_region" structs:"inferred_aws_region" mapstructure:"inferred_aws_region"`
 	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`

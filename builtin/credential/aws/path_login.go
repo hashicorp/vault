@@ -44,21 +44,21 @@ If a matching role is not found, login fails.`,
 
 			"auth_type": {
 				Type:    framework.TypeString,
-				Default: "instance_identity_document",
+				Default: "ec2",
 				Description: `The login type to use upon logging in. The valid choices are
-instance_identity_document (default) or signed_caller_identity_request.`,
+ec2 (default) or iam.`,
 			},
 
 			"pkcs7": {
 				Type: framework.TypeString,
 				Description: `PKCS7 signature of the identity document when using an auth_type
-of instance_identity_document.`,
+of ec2.`,
 			},
 
 			"nonce": {
 				Type: framework.TypeString,
 				Description: `The nonce to be used for subsequent login requests when
-auth_type is instance_identity_document.  If this parameter is not specified at
+auth_type is ec2.  If this parameter is not specified at
 all and if reauthentication is allowed, then the backend will generate a random
 nonce, attaches it to the instance's identity-whitelist entry and returns the
 nonce back as part of auth metadata.  This value should be used with further
@@ -73,26 +73,26 @@ significance.`,
 			"request_method": {
 				Type: framework.TypeString,
 				Description: `HTTP method to use for the AWS request when auth_type is
-signed_caller_identity_request. This must match what has been signed in the
+iam. This must match what has been signed in the
 presigned request. Currently, POST is the only supported value`,
 			},
 
 			"request_url": {
 				Type: framework.TypeString,
 				Description: `Full URL against which to make the AWS request when auth_method is
-signed_caller_identity_request. If using a POST request with the action
+iam. If using a POST request with the action
 specified in the body, this should just be "/".`,
 			},
 
 			"request_body": {
 				Type: framework.TypeString,
-				Description: `Base64-encoded request body when auth_type is signed_caller_identity_request.
+				Description: `Base64-encoded request body when auth_type is iam.
 This must match the request body included in the signature.`,
 			},
 			"request_headers": {
 				Type: framework.TypeString,
 				Description: `Base64-encoded JSON representation of the request headers when auth_type is
-signed_caller_identity_request. This must at a minimum include the headers over
+iam. This must at a minimum include the headers over
 which AWS has included a signature.`,
 			},
 			"identity": {
@@ -353,12 +353,12 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 func (b *backend) pathLoginUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	auth_type := data.Get("auth_type")
-	if auth_type == "instance_identity_document" {
-		return b.pathLoginUpdateInstanceIdentityDocument(req, data)
-	} else if auth_type == "signed_caller_identity_request" {
-		return b.pathLoginUpdateCallerIdentityRequest(req, data)
+	if auth_type == "ec2" {
+		return b.pathLoginUpdateEc2(req, data)
+	} else if auth_type == "iam" {
+		return b.pathLoginUpdateIam(req, data)
 	} else {
-		return logical.ErrorResponse("unrecognized auth_type, must be one of instance_identity_document or signed_caller_identity_request"), nil
+		return logical.ErrorResponse("unrecognized auth_type, must be one of ec2 or iam"), nil
 	}
 }
 
@@ -375,7 +375,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 	// This means we require an EC2 API call to retrieve the AMI ID, but we're
 	// already calling the API to validate the Instance ID anyway, so it shouldn't
 	// matter. The benefit is that we have the exact same code whether auth_type
-	// is instance_identity_document or signed_caller_identity_request.
+	// is ec2 or iam.
 	if roleEntry.BoundAmiID != "" && *instance.ImageId != roleEntry.BoundAmiID {
 		return nil, fmt.Sprintf("AMI ID '%s' does not belong to role '%s'", instance.ImageId, roleName), nil
 	}
@@ -453,11 +453,11 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 	return roleTagResp, "", nil
 }
 
-// pathLoginUpdateInstanceIdentityDocument is used to create a Vault token by the EC2 instances
+// pathLoginUpdateEc2 is used to create a Vault token by the EC2 instances
 // by providing the pkcs7 signature of the instance identity document
 // and a client created nonce. Client nonce is optional if 'disallow_reauthentication'
 // option is enabled on the registered role.
-func (b *backend) pathLoginUpdateInstanceIdentityDocument(
+func (b *backend) pathLoginUpdateEc2(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	identityDocB64 := data.Get("identity").(string)
 	var identityDocBytes []byte
@@ -531,6 +531,10 @@ func (b *backend) pathLoginUpdateInstanceIdentityDocument(
 	}
 	if roleEntry == nil {
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %q not found", roleName)), nil
+	}
+
+	if !roleAllowsAuthMethod("ec2", roleEntry) {
+		return logical.ErrorResponse(fmt.Sprintf("auth method ec2 not allowed for role %s", roleName)), nil
 	}
 
 	// Verify that the AccountID of the instance trying to login matches the
@@ -706,7 +710,7 @@ func (b *backend) pathLoginUpdateInstanceIdentityDocument(
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
 				"ami_id":           identityDocParsed.AmiID,
-				"auth_type":        "instance_identity_document",
+				"auth_type":        "ec2",
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
@@ -817,19 +821,19 @@ func (b *backend) pathLoginRenew(
 	authType, ok := req.Auth.Metadata["auth_type"]
 	if !ok {
 		// backwards compatibility for clients that have leases from before we added auth_type
-		authType = "instance_identity_document"
+		authType = "ec2"
 	}
 
-	if authType == "instance_identity_document" {
-		return b.pathLoginRenewInstanceIdentityDocument(req, data)
-	} else if authType == "signed_caller_identity_request" {
-		return b.pathLoginRenewSignedCallerIdentityRequest(req, data)
+	if authType == "ec2" {
+		return b.pathLoginRenewEc2(req, data)
+	} else if authType == "iam" {
+		return b.pathLoginRenewIam(req, data)
 	} else {
 		return nil, fmt.Errorf("unrecognized auth_type: '%s'", authType)
 	}
 }
 
-func (b *backend) pathLoginRenewSignedCallerIdentityRequest(
+func (b *backend) pathLoginRenewIam(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	canonicalArn := req.Auth.Metadata["canonical_arn"]
 	if canonicalArn == "" {
@@ -849,7 +853,7 @@ func (b *backend) pathLoginRenewSignedCallerIdentityRequest(
 	}
 
 	if entityType, ok := req.Auth.Metadata["inferredEntityType"]; !ok {
-		if entityType == "ec2Instance" {
+		if entityType == "ec2_instance" {
 			instanceID, ok := req.Auth.Metadata["inferredEntityId"]
 			if !ok {
 				return nil, fmt.Errorf("no inferred entity ID in auth metadata")
@@ -871,7 +875,7 @@ func (b *backend) pathLoginRenewSignedCallerIdentityRequest(
 
 }
 
-func (b *backend) pathLoginRenewInstanceIdentityDocument(
+func (b *backend) pathLoginRenewEc2(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	instanceID := req.Auth.Metadata["instance_id"]
 	if instanceID == "" {
@@ -951,9 +955,7 @@ func (b *backend) pathLoginRenewInstanceIdentityDocument(
 	return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
 }
 
-// identityDocument represents the items of interest from the EC2 instance
-// identity document
-func (b *backend) pathLoginUpdateCallerIdentityRequest(
+func (b *backend) pathLoginUpdateIam(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	// BEGIN boring data parsing
@@ -1045,6 +1047,10 @@ func (b *backend) pathLoginUpdateCallerIdentityRequest(
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %s not found", roleName)), nil
 	}
 
+	if !roleAllowsAuthMethod("iam", roleEntry) {
+		return logical.ErrorResponse(fmt.Sprintf("auth method iam not allowed for role %s", roleName)), nil
+	}
+
 	// The role creation should ensure that either we're inferring this is an EC2 instance
 	// or that we're binding an ARN
 	if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != canonicalArn {
@@ -1056,7 +1062,7 @@ func (b *backend) pathLoginUpdateCallerIdentityRequest(
 
 	inferredEntityType := ""
 	inferredEntityId := ""
-	if roleEntry.InferRoleType == "ec2Instance" {
+	if roleEntry.RoleInferredType == "ec2_instance" {
 		instance, err := b.validateInstance(req.Storage, sessionName, roleEntry.InferredAWSRegion)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", sessionName, roleEntry.InferredAWSRegion)), nil
@@ -1087,7 +1093,7 @@ func (b *backend) pathLoginUpdateCallerIdentityRequest(
 			rTagMaxTTL = roleTagResp.MaxTTL
 		}
 
-		inferredEntityType = "ec2Instance"
+		inferredEntityType = "ec2_instance"
 		inferredEntityId = sessionName
 	}
 
@@ -1097,7 +1103,7 @@ func (b *backend) pathLoginUpdateCallerIdentityRequest(
 			Metadata: map[string]string{
 				"client_arn":         clientArn,
 				"canonical_arn":      canonicalArn,
-				"auth_type":          "signed_caller_identity_request",
+				"auth_type":          "iam",
 				"role_tag_max_ttl":   rTagMaxTTL.String(),
 				"inferredEntityType": inferredEntityType,
 				"inferredEntityId":   inferredEntityId,
@@ -1252,6 +1258,17 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	return result, err
 }
 
+func roleAllowsAuthMethod(authMethod string, roleEntry *awsRoleEntry) bool {
+	allowedAuthMethod := false
+	for _, allowedAuthType := range roleEntry.AllowedAuthTypes {
+		if allowedAuthType == "iam" {
+			allowedAuthMethod = true
+			break
+		}
+	}
+	return allowedAuthMethod
+}
+
 func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (string, error) {
 	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
 	// The protection against this is that this method will only call the endpoint specified in the
@@ -1298,7 +1315,8 @@ type ResponseMetadata struct {
 	RequestId string `xml:"RequestId"`
 }
 
-// Struct to represent items of interest from the EC2 instance identity document.
+// identityDocument represents the items of interest from the EC2 instance
+// identity document
 type identityDocument struct {
 	Tags        map[string]interface{} `json:"tags,omitempty" structs:"tags" mapstructure:"tags"`
 	InstanceID  string                 `json:"instanceId,omitempty" structs:"instanceId" mapstructure:"instanceId"`

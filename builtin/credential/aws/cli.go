@@ -74,7 +74,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, map[string]interface{}{
-		"auth_type":       "signed_caller_identity_request",
+		"auth_type":       "iam",
 		"request_method":  method,
 		"request_url":     targetUrl,
 		"request_headers": headers,

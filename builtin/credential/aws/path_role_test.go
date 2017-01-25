@@ -166,7 +166,7 @@ func TestBackend_pathRoleSignedCallerIdentity(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"allowed_auth_types":      "signed_caller_identity_request",
+		"allowed_auth_types":      "iam",
 		"policies":                "p,q,r,s",
 		"max_ttl":                 "2h",
 		"bound_iam_principal_arn": "n:aws:iam::123456789012:user/MyUserName",
@@ -200,7 +200,7 @@ func TestBackend_pathRoleSignedCallerIdentity(t *testing.T) {
 		t.Fatalf("bad: policies: expected %#v\ngot: %#v\n", data, resp.Data)
 	}
 
-	data["infer_role_as_type"] = "invalid"
+	data["role_inferred_type"] = "invalid"
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ShouldNeverExist",
@@ -208,13 +208,13 @@ func TestBackend_pathRoleSignedCallerIdentity(t *testing.T) {
 		Storage:   storage,
 	})
 	if resp == nil || !resp.IsError() {
-		t.Fatalf("Created role with invalid infer_role_as_type")
+		t.Fatalf("Created role with invalid role_inferred_type")
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data["infer_role_as_type"] = "ec2Instance"
+	data["role_inferred_type"] = "ec2_instance"
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ShouldNeverExist",
@@ -313,7 +313,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	data := map[string]interface{}{
 		"policies":           "p,q,r,s",
 		"bound_ami_id":       "ami-abc1234",
-		"allowed_auth_types": "instance_identity_document,invalid",
+		"allowed_auth_types": "ec2,invalid",
 	}
 
 	submitCreateRequest := func(roleName string) (*logical.Response, error) {
@@ -333,7 +333,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data["allowed_auth_types"] = "instance_identity_document,,signed_caller_identity_request"
+	data["allowed_auth_types"] = "ec2,,iam"
 	resp, err = submitCreateRequest("shouldNeverExist")
 	if resp != nil && !resp.IsError() {
 		t.Fatalf("created role without required bound_iam_principal_arn")
@@ -346,7 +346,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	delete(data, "bound_ami_id")
 	resp, err = submitCreateRequest("shouldNeverExist")
 	if resp != nil && !resp.IsError() {
-		t.Fatalf("created role without required instance_identity_document binding")
+		t.Fatalf("created role without required ec2 binding")
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -362,7 +362,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	}
 
 	delete(data, "bound_iam_principal_arn")
-	data["infer_role_as_type"] = "ec2Instance"
+	data["role_inferred_type"] = "ec2_instance"
 	data["inferred_aws_region"] = "us-east-1"
 	resp, err = submitCreateRequest("multipleTypesInferred")
 	if err != nil {
