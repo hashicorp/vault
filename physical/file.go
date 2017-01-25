@@ -126,6 +126,8 @@ func (b *FileBackend) Get(path string) (*Entry, error) {
 		return nil, err
 	}
 
+	b.logger.Warn("got path", "path", path, "file path", f.Stat().Name())
+
 	return &entry, nil
 }
 
@@ -225,6 +227,8 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 			names[i] = name + "/"
 		}
 	}
+
+	b.logger.Warn("returning list", "names", names)
 
 	return names, nil
 }
