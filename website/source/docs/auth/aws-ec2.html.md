@@ -1,22 +1,36 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: AWS-EC2"
-sidebar_current: "docs-auth-aws-ec2"
+page_title: "Auth Backend: AWS"
+sidebar_current: "docs-auth-aws"
 description: |-
-  The aws-ec2 backend allows automated authentication of AWS EC2 instances.
+  The aws backend allows automated authentication of AWS entities.
 ---
 
-# Auth Backend: aws-ec2
+# Auth Backend: aws
 
-The aws-ec2 auth backend provides a secure introduction mechanism for AWS EC2
-instances, allowing automated retrieval of a Vault token. Unlike most Vault
-authentication backends, this backend does not require first-deploying, or
+The aws auth backend provides an automated mechanism to retrieve
+a Vault token for AWS EC2 instances and IAM principals.  Unlike most Vault
+authentication backends, this backend does not require manual first-deploying, or
 provisioning security-sensitive credentials (tokens, username/password, client
-certificates, etc). Instead, it treats AWS as a Trusted Third Party and uses
+certificates, etc), by operators under many circumstances. It treats
+AWS as a Trusted Third Party and uses either
 the cryptographically signed dynamic metadata information that uniquely
-represents each EC2 instance.
+represents each EC2 instance or a special AWS request signed with AWS IAM
+credentials. The metadata information is automatically supplied by AWS to all
+EC2 instances, and IAM credentials are automatically supplied to AWS instances
+in IAM instance profiles, Lambda functions, and others, and it is this
+information already provided by AWS which Vault can use to authenticate
+clients.
 
 ## Authentication Workflow
+
+There are two authentication types present in the aws backend: ec2 (which was
+formerly the only type supplied in the aws-ec2 auth backend) and iam. Each has a
+different authentication workflow, and each can solve different use cases. See
+the section on comparing the two auth methods below to help determine which
+method is more appropriate for your use cases.
+
+### EC2 Authentication Method
 
 EC2 instances have access to metadata describing the instance. (For those not
 familiar with instance metadata, details can be found
@@ -38,6 +52,51 @@ verifies the current running status of the instance via the EC2 API.
 There are various modifications to this workflow that provide more or less
 security, as detailed later in this documentation.
 
+### IAM Authentication Method
+
+The AWS STS API includes a method,
+[`sts:GetCallerIdentity`](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html),
+which allows you to validate the identity of a client. The client signs
+a `GetCallerIdentity` query using the [AWS Signature v4
+algorithm](http://docs.aws.amazon.com/general/latest/gr/sigv4_signing.html) and
+submits 4 pieces of information to the Vault server to recreate a valid signed
+request: the request URL, the request body, the request headers, and the request
+method, as the AWS signature is computed over those fields. The Vault server
+then reconstructs the query and forwards it on to the AWS STS service and
+validates the result back. Clients don't need network-level access to talk to
+the AWS STS API endpoint; they merely need access to the credentials to sign the
+request. However, it means that the Vault server does need network-level access
+to send requests to the STS endpoint.
+
+Importantly, the credentials used to sign the GetCallerIdentity request can come
+from the EC2 instance metadata service for an EC2 instance, or from the AWS
+environment variables in an AWS Lambda function execution, which obviates the
+need for an operator to manually provision some sort of identity material first.
+However, the credentials can, in principle, come from anywhere, not just from
+the locations AWS hasprovided for you.
+
+Each signed AWS request includes the current timestamp to mitigate the risk of
+replay attacks. In addition, Vault allows you to require an additional header,
+`X-Vault-AWSIAM-Server-ID`, to be present to mitigate against different types of replay
+attacks (such as a signed `GetCallerIdentity` request stolen from a dev Vault
+instance and used to authenticate to a prod Vault instance). Vault further
+requires that this header be one of the headers included in the AWS signature
+and relies upon AWS to authenticate that signature.
+
+While AWS API endpoints support both signed GET and POST requests, for
+simplicity, the aws-iam backend supports only POST requests. It also does not
+support `presigned` requests, i.e., requests with `X-Amz-Credential`,
+`X-Amz-signature`, and `X-Amz-SignedHeaders` GET query parameter containing the
+authenticating information.
+
+It's also important to note that Amazon does NOT appear to include any sort
+of authorization around calls to `GetCallerIdentity`. For example, if you have
+an IAM policy on your credential that requires all access to be MFA authenticated,
+non-MFA authenticated credentials (i.e., raw credentials, not those retrieved
+by calling `GetSessionToken` and supplying an MFA code) will still be able to
+authenticate to Vault using this backend. It does not appear possible to enforce
+an IAM principal to be MFA authenticated while authenticating to Vault.
+
 ## Authorization Workflow
 
 The basic mechanism of operation is per-role. Roles are registered in the
@@ -45,8 +104,15 @@ backend and associated with various optional restrictions, such as the set
 of allowed policies and max TTLs on the generated tokens. Each role can
 be specified with the constraints that are to be met during the login. For
 example, one such constraint that is supported is to bind against AMI ID. A
-role which is bound to a specific AMI, can only be used for login by those
+role which is bound to a specific AMI, can only be used for login by EC2 
 instances that are deployed on the same AMI.
+
+In general, role bindings that are specific to an EC2 instance are only checked
+when the ec2 auth method is used to login, while bindings specific to IAM
+principals are only checked when the iam auth method is used to login. However,
+the iam method includes the ability for you to "infer" an EC2 instance ID from
+the authenticated client and apply many of the bindings that would otherwise
+only apply specifically to EC2 instances.
 
 In many cases, an organization will use a "seed AMI" that is specialized after
 bootup by configuration management or similar processes. For this reason, a
@@ -64,7 +130,145 @@ the backend to verify the authenticity of a found role tag and ensure that it ha
 not been tampered with. There is also a mechanism to blacklist role tags if one
 has been found to be distributed outside of its intended set of machines.
 
+## IAM Authentication Inferences
+
+With the iam auth method, normally Vault will see the IAM principal that
+authenticated, either the IAM user or role. However, when you have an EC2
+instance in an IAM instance profile, Vault can actually see the instance ID of
+the instance and can "infer" that it's an EC2 instance. However, there are
+important security caveats to be aware of before configuring Vault to make that
+inference.
+
+Each AWS IAM role has a "trust policy" which specifies which entities are
+trusted to call
+[`sts:AssumeRole`](http://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html)
+on the role and retrieve credentials that can be used to authenticate with that
+role. When AssumeRole is called, a parameter called RoleSessionName is passed
+in, which is chosen arbitrarily by the entity which calls AssumeRole. If you
+have a role with an ARN `arn:aws:iam::123456789012:role/MyRole`, then the
+credentials returned by calling AssumeRole on that role will be
+`arn:aws:sts::123456789012:assumed-role/MyRole/RoleSessionName` where
+RoleSessionName is the session name in the AssumeRole API call. It is this
+latter value which Vault actually sees.
+
+When you have an EC2 instance in an instance profile, the corresponding role's
+trust policy specifies that the principal `"Service": "ec2.amazonaws.com"` is
+trusted to call AssumeRole. When this is configured, EC2 calls AssumeRole on
+behalf of your instance, with a RoleSessionName corresponding to the
+instance's instance ID. Thus, it is possible for Vault to extract the instance
+ID out of the value it sees when an EC2 instance in an instance profile
+authenticates to Vault with the iam authentication method. This is known as
+"inferencing." Vault can be configured, on a role-by-role basis, to infer that a
+caller is an EC2 instance and, if so, apply further bindings that apply
+specifically to EC2 instances -- most of the bindings available to the ec2
+authentication backend.
+
+However, it is very important to note that if any entity other than an AWS
+service is permitted to call AssumeRole on your role, then that entity can
+simply pass in your instance's instance ID and spoof your instance to Vault.
+This also means that anybody who is able to modify your role's trust policy
+(e.g., via
+[`iam:UpdateAssumeRolePolicy`](http://docs.aws.amazon.com/IAM/latest/APIReference/API_UpdateAssumeRolePolicy.html),
+then that person could also spoof your instances. If this is a concern but you
+would like to take advantage of inferencing, then you should tightly restrict
+who is able to call AssumeRole on the role, tightly restrict who is able to call
+UpdateAssumeRolePolicy on the role, and monitor CloudTrail logs for calls to
+AssumeRole and UpdateAssumeRolePolicy. All of these caveats apply equally to
+using the iam authentication method without inferencing; the point is merely
+that Vault cannot offer an iron-clad guarantee about the inference and it is up
+to operators to determine, based on their own AWS controls and use cases,
+whether or not it's appropriate to configure inferencing.
+
+## Mixing Authentication Types
+
+Vault allows you to configure whether to allow the ec2 auth method, the aws auth
+method, or both auth methods for a given role. If you do this, it is important
+to understand that _only those bindings applicable to the client's chosen auth
+type will be enforced by Vault_. Some examples:
+
+1. You configure a role only allowing the ec2 auth type, with a bound AMI ID. A
+   client would not be able to login using the iam auth type.
+1. You configure a role only allowing the iam auth type, with a bound IAM
+   principal ARN. A client would not be able to login with the ec2 auth method.
+1. You configure a role only allowing the iam auth type and further configure
+   inferencing. You have a bound AMI ID and a bound IAM principal ARN. A client
+   must login using the iam method; the RoleSessionName must be a valid instance
+   ID viewable by Vault, and the instance must have come from the bound AMI ID.
+1. You configure a role to allow both iam and ec2 auth types, but you have not
+   configured inferencing. You configure both a bound AMI ID and a bound IAM
+   principal ARN. If a client chooses to login with the ec2 auth method, only the
+   bound AMI is checked; the bound IAM principal ARN is ignored. Similarly, if a
+   client logs in with the iam auth method, then only the bound IAM principal ARN
+   is checked; the bound AMI ID is ignored.
+1. You configure a role to allow both iam and ec2 auth types, and you have
+   further configured inferencing, with a bound IAM principal ARN and a bound AMI
+   ID. If a client logs in with the ec2 auth method, then only the bound AMI ID
+   is checked. If a client logs in with the iam auth method, then the same
+   checks are performed as in example 3.
+
+
+## Comparison of the EC2 and IAM Methods
+
+The iam and ec2 authentication methods serve similar and somewhat overlapping
+functionality, in that both authenticate some type of AWS entity to Vault. To
+help you determine which method is more appropriate for your use case, here is a
+comparison of the two authentication methods.
+
+* What type of entity is authenticated:
+  * The ec2 auth method authenticates only AWS EC2 instances and is specialized
+    to handle EC2 instances, such as restricting access to EC2 instances from
+    a particular AMI, EC2 instances in a particular instance profile, or EC2
+    instances with a specialized tag value (via the role_tag feature).
+  * The iam auth method authenticates generic AWS IAM principals. This can
+    include IAM users, IAM roles assumed from other accounts, AWS Lambdas that
+    are launched in an IAM role, or even EC2 instances that are launched in an
+    IAM instance profile. However, because it authenticates more generalized IAM
+    principals, this backend doesn't offer more granular controls beyond binding
+    to a given IAM principal without the use of inferencing.
+* How the entities are authenticated
+  * The ec2 auth method authenticates instances by making use of the EC2
+    instance identity document, which is a cryptographically signed document
+    containing metadata about the instance. This document changes relatively
+    infrequently, so Vault adds a number of other constructs to mitigate against
+    replay attacks, such as client nonces, role tags, instance migrations, etc.
+    Because the instance identity document is signed by AWS, you have a strong
+    guarantee that it came from an EC2 instance.
+  * The iam auth method authenticates by having clients provide a specially
+    signed AWS API request which the backend then passes on to AWS to validate
+    the signature and tell Vault who created it. The actual secret (i.e.,
+    the AWS secret access key) is never transmitted over the wire, and the
+    AWS signature algorithm automatically expires requests after 15 minutes,
+    providing simple and robust protection against replay attacks. The use of
+    inferencing, however, provides a weaker guarantee that the credentials came
+    from an EC2 instance in an IAM instance profile compared to the ec2
+    authentication mechanism.
+  * The instance identity document used in the ec2 auth method is more likely to
+    be stolen given its relatively static nature, but it's harder to spoof. On
+    the other hand, the credentials of an EC2 instance in an IAM instance
+    profile are less likely to be stolen given their dynamic and short-lived
+    nature, but it's easier to spoof credentials that might have come from an
+    EC2 instance.
+* Specific use cases
+  * If you have a long-lived EC2 instance which you are unable to relaunch into
+    an IAM instance profile, then the ec2 auth method is probably the best
+    solution for you. (While you could store long-lived AWS IAM user credentials
+    on disk and use those to authenticate to Vault, that would not be
+    recommended.)
+  * If you have non-EC2 instance entities, such as IAM users, Lambdas in IAM
+    roles, or developer laptops using [AdRoll's
+    Hologram](https://github.com/AdRoll/hologram) then you would need to use the
+    iam auth method.
+  * If you have EC2 instances which are already in an IAM instance profile, then
+    you could use either auth method. If you need more granular filtering beyond just
+    the instance profile of given EC2 instances (such as filtering based off
+    the AMI the instance was launched from), then you would need to
+    use the ec2 auth method, launch your EC2 instances into unique instance
+    profiles for each different Vault role you would want them to authenticate
+    to, or make use of inferencing.
+
 ## Client Nonce
+
+Note: this only applies to the ec2 authentication method.
 
 If an unintended party gains access to the PKCS#7 signature of the identity
 document (which by default is available to every process and user that gains
@@ -79,11 +283,11 @@ investigation.
 During the first login, the backend stores the instance ID that authenticated
 in a `whitelist`. One method of operation of the backend is to disallow any
 authentication attempt for an instance ID contained in the whitelist, using the
-'disallow_reauthentication' option on the role, meaning that an instance is
+`disallow_reauthentication` option on the role, meaning that an instance is
 allowed to login only once. However, this has consequences for token rotation,
 as it means that once a token has expired, subsequent authentication attempts
 would fail. By default, reauthentication is enabled in this backend, and can be
-turned off using 'disallow_reauthentication' parameter on the registered role.
+turned off using `disallow_reauthentication` parameter on the registered role.
 
 In the default method of operation, the backend will return a unique nonce
 during the first authentication attempt, as part of auth `metadata`. Clients
@@ -122,6 +326,9 @@ access.
 
 ### Dynamic Management of Policies Via Role Tags
 
+Note: This only applies to the ec2 auth method or the iam auth method when
+inferencing is used.
+
 If the instance is required to have customized set of policies based on the
 role it plays, the `role_tag` option can be used to provide a tag to set on
 instances, for a given role. When this option is set, during login, along with
@@ -131,7 +338,7 @@ instance. The tag holds information that represents a *subset* of privileges tha
 are set on the role and are used to further restrict the set of the role's
 privileges for that particular instance.
 
-A `role_tag` can be created using `auth/aws-ec2/role/<role>/tag` endpoint
+A `role_tag` can be created using `auth/aws/role/<role>/tag` endpoint
 and is immutable. The information present in the tag is SHA256 hashed and HMAC
 protected. The per-role key to HMAC is only maintained in the backend. This prevents
 an adversarial operator from modifying the tag when setting it on the EC2 instance
@@ -152,11 +359,13 @@ other resources provided by or resident in Vault.
 
 ### Handling Lost Client Nonces
 
+Note: This only applies to the ec2 auth method.
+
 If an EC2 instance loses its client nonce (due to a reboot, a stop/start of the
 client, etc.), subsequent login attempts will not succeed. If the client nonce
 is lost, normally the only option is to delete the entry corresponding to the
 instance ID from the identity `whitelist` in the backend. This can be done via
-the `auth/aws-ec2/identity-whitelist/<instance_id>` endpoint. This allows a new
+the `auth/aws/identity-whitelist/<instance_id>` endpoint. This allows a new
 client nonce to be accepted by the backend during the next login request.
 
 Under certain circumstances there is another useful setting. When the instance
@@ -189,6 +398,8 @@ role tag has no effect.
 
 ### Disabling Reauthentication
 
+Note: this only applies to the ec2 authentication method.
+
 If in a given organization's architecture, a client fetches a long-lived Vault
 token and has no need to rotate the token, all future logins for that instance
 ID can be disabled. If the option `disallow_reauthentication` is set, only one
@@ -210,13 +421,16 @@ role tag has no effect.
 
 ### Blacklisting Role Tags
 
+Note: this only applies to the ec2 authentication method or the iam auth method
+when inferencing is used.
+
 Role tags are tied to a specific role, but the backend has no control over, which
 instances using that role, should have any particular role tag; that is purely up
 to the operator. Although role tags are only restrictive (a tag cannot escalate
 privileges above what is set on its role), if a role tag is found to have been
 used incorrectly, and the administrator wants to ensure that the role tag has no
 further effect, the role tag can be placed on a `blacklist` via the endpoint
-`auth/aws-ec2/roletag-blacklist/<role_tag>`. Note that this will not invalidate the
+`auth/aws/roletag-blacklist/<role_tag>`. Note that this will not invalidate the
 tokens that were already issued; this only blocks any further login requests from
 those instances that have the blacklisted tag attached to them.
 
@@ -245,6 +459,8 @@ endpoints.
 
 ### Varying Public Certificates
 
+Note: this only applies to the ec2 authentication method.
+
 The AWS public certificate, which contains the public key used to verify the
 PKCS#7 signature, varies for different AWS regions. The primary AWS public
 certificate, which covers most AWS regions, is already included in Vault and
@@ -252,11 +468,11 @@ does not need to be added. Instances whose PKCS#7 signatures cannot be
 verified by the default public certificate included in Vault can register a
 different public certificate which can be found [here]
 (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
-via the `auth/aws-ec2/config/certificate/<cert_name>` endpoint.
+via the `auth/aws/config/certificate/<cert_name>` endpoint.
 
 ### Dangling Tokens
 
-An EC2 instance, after authenticating itself with the backend gets a Vault token.
+An EC2 instance, after authenticating itself with the backend, gets a Vault token.
 After that, if the instance terminates or goes down for any reason, the backend
 will not be aware of such events. The token issued will still be valid, until
 it expires. The token will likely be expired sooner than its lifetime when the
@@ -269,7 +485,7 @@ instance fails to renew the token on time.
 #### Enable AWS EC2 authentication in Vault.
 
 ```
-$ vault auth-enable aws-ec2
+$ vault auth-enable aws
 ```
 
 #### Configure the credentials required to make AWS API calls
@@ -283,50 +499,139 @@ The IAM account or role to which the credentials map must allow the
 `bound_iam_role_arn` below), `iam:GetInstanceProfile` must also be allowed.
 
 ```
-$ vault write auth/aws-ec2/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
+$ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj access_key=VKIAJBRHKH6EVTTNXDHA
 ```
 
 #### Configure the policies on the role.
 
 ```
-$ vault write auth/aws-ec2/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
+$ vault write auth/aws/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
+
+$ vault write auth/aws/role/dev-role-iam allowed_auth_methods=iam \
+              bound_iam_principal_arn=arn:aws:iam::123456789012:role/MyRole policies=prod,dev max_ttl=500h
 ```
+
+#### Configure a required X-Vault-AWSIAM-Server-ID Header (recommended)
+
+```
+$ vault write auth/aws/client/config iam_auth_header_vaule=vault.example.xom
+```
+
 
 #### Perform the login operation
 
 ```
-$ vault write auth/aws-ec2/login role=dev-role \
+$ vault write auth/aws/login role=dev-role \
 pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=5defbf9e-a8f9-3063-bdfc-54b7a42a1f95
 ```
 
+For the iam auth method, generating the signed request is a non-standard
+operation. The Vault cli supports generating this for you:
+
+```
+$ vault auth -method=aws header_value=vault.example.com role=dev-role-iam
+```
+
+This assumes you have AWS credentials configured in the standard locations AWS
+SDKs search for credentials (environment variables, ~/.aws/credentials, IAM
+instance profile in that order). If you do not have IAM credentials available at
+any of these locations, you can explicitly pass them in on the command line
+(though this is not recommended), omitting `aws_security_token` if not
+applicable .
+
+```
+$ vault auth -method=aws header_value=vault.example.com role=dev-role-iam \
+        aws_access_key_id=<access_key> \
+        aws_secret_access_key=<secret_key> \
+        aws_security_token=<security_token>
+```
+
+For reference, the following Go program also demonstrates how to generate the
+required parameters (assuming you are using a default AWS credential provider),
+filling in the value for the header value as appropriate:
+
+```
+package main
+
+import (
+        "encoding/base64"
+        "encoding/json"
+        "fmt"
+        "io/ioutil"
+
+        "github.com/aws/aws-sdk-go/aws/session"
+        "github.com/aws/aws-sdk-go/service/sts"
+)
+
+func main() {
+        sess, err := session.NewSession()
+        if err != nil {
+                fmt.Println("failed to create session,", err)
+                return
+        }
+
+        svc := sts.New(sess)
+        var params *sts.GetCallerIdentityInput
+        stsRequest, _ := svc.GetCallerIdentityRequest(params)
+        stsRequest.HTTPRequest.Header.Add("X-Vault-AWSIAM-Server-ID", "vault.example.com")
+        stsRequest.Sign()
+
+        headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
+        if err != nil {
+                fmt.Println(fmt.Errorf("Error:", err))
+                return
+        }
+        requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
+        if err != nil {
+                fmt.Println(fmt.Errorf("Error:", err))
+                return
+        }
+        fmt.Println("request_method=" + stsRequest.HTTPRequest.Method)
+        fmt.Println("request_url=" + stsRequest.HTTPRequest.URL.String())
+        fmt.Println("request_headers=" + base64.StdEncoding.EncodeToString(headersJson))
+        fmt.Println("request_body=" + base64.StdEncoding.EncodeToString(requestBody))
+}
+
+```
+Using this, we can get the values to pass in to the `vault write` operation:
+
+```
+$ vault write auth/aws/login role=dev-role-iam \
+        request_method=POST \
+        request_url=https://sts.amazonaws.com/ \
+        request_body=QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ== \
+        request_headers=eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==
+```
 
 ### Via the API
 
-#### Enable AWS EC2 authentication in Vault.
+#### Enable AWS authentication in Vault.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '{"type":"aws-ec2"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/sys/auth/aws" -d '{"type":"aws"}'
 ```
 
 #### Configure the credentials required to make AWS API calls.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/config/client" -d '{"access_key":"VKIAJBRHKH6EVTTNXDHA", "secret_key":"vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj"}'
 ```
 
 #### Configure the policies on the role.
 
 ```
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws-ec2/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
+
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role-iam -d '{"allowed_auth_methods":"iam","policies":"prod,dev","max_ttl":"500h","bound_iam_principal_arn":"arn:aws:iam::123456789012:role/MyRole"}'
 ```
 
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws-ec2/login" -d
-'{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
-```
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
 
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev", "request_method": "POST", "request_url": "https://sts.amazonaws.com/", "request_body": "QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==", "request_headers": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==" }'
+```
 
 The response will be in JSON. For example:
 
@@ -341,7 +646,8 @@ The response will be in JSON. For example:
       "region": "us-east-1",
       "nonce": "5defbf9e-a8f9-3063-bdfc-54b7a42a1f95",
       "instance_id": "i-a832f734",
-      "ami_id": "ami-f083709d"
+      "ami_id": "ami-f083709d",
+      "auth_type": "ec2"
     },
     "policies": [
       "default",
@@ -362,19 +668,19 @@ The response will be in JSON. For example:
 ```
 
 ## API
-### /auth/aws-ec2/config/client
+### /auth/aws/config/client
 #### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Configures the credentials required to perform API calls to AWS.
-    The instance identity document fetched from the PKCS#7 signature
-    will provide the EC2 instance ID. The credentials configured using
-    this endpoint will be used to query the status of the instances via
-    DescribeInstances API. If static credentials are not provided using
-    this endpoint, then the credentials will be retrieved from the
-    environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and `AWS_REGION`
-    respectively. If the credentials are still not found and if the
+    Configures the credentials required to perform API calls to AWS as well as
+    custom endpoints to talk to AWS APIs. The instance identity document
+    fetched from the PKCS#7 signature will provide the EC2 instance ID. The
+    credentials configured using this endpoint will be used to query the status
+    of the instances via DescribeInstances API. If static credentials are not
+    provided using this endpoint, then the credentials will be retrieved from
+    the environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and
+    `AWS_REGION` respectively. If the credentials are still not found and if the
     backend is configured on an EC2 instance with metadata querying
     capabilities, the credentials are fetched automatically.
   </dd>
@@ -383,7 +689,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/client`</dd>
+  <dd>`/auth/aws/config/client`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -408,6 +714,35 @@ The response will be in JSON. For example:
         URL to override the default generated endpoint for making AWS EC2 API calls.
       </li>
     </ul>
+    <ul>
+      <li>
+        <span class="param">iam_endpoint</span>
+        <span class="param-flags">optional</span>
+        URL to override the default generated endpoint for making AWS IAM API calls.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">sts_endpoint</span>
+        <span class="param-flags">optional</span>
+        URL to override the default generated endpoint for making AWS STS API calls.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">iam_auth_header_value</span>
+        <span class="param-flags">optional</span>
+        The value to require in the `X-Vault-AWSIAM-Server-ID` header as part of
+        GetCallerIdentity requests that are used in the iam auth method. If not
+        set, then no value is required or validated. If set, clients must
+        include an X-Vault-AWSIAM-Server-ID header in the headers of login
+        requests, and further this header must be among the signed headers
+        validated by AWS. This is to protect against different types of replay
+        attacks, for example a signed request sent to a dev server being resent
+        to a production server. Consider setting this to the Vault server's DNS
+        name.
+      </li>
+    </ul>
   </dd>
 
   <dt>Returns</dt>
@@ -427,7 +762,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/client`</dd>
+  <dd>`/auth/aws/config/client`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -445,6 +780,9 @@ The response will be in JSON. For example:
     "secret_key": "vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5TVzrl3Oj",
     "access_key": "VKIAJBRHKH6EVTTNXDHA"
     "endpoint" "",
+    "iam_endpoint" "",
+    "sts_endpoint" "",
+    "iam_auth_header_value" "",
   },
   "lease_duration": 0,
   "renewable": false,
@@ -467,7 +805,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/client`</dd>
+  <dd>`/auth/aws/config/client`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -480,7 +818,7 @@ The response will be in JSON. For example:
 </dl>
 
 
-### /auth/aws-ec2/config/certificate/<cert_name>
+### /auth/aws/config/certificate/<cert_name>
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -496,7 +834,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/certificate/<cert_name>`</dd>
+  <dd>`/auth/aws/config/certificate/<cert_name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -544,7 +882,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/certificate/<cert_name>`</dd>
+  <dd>`/auth/aws/config/certificate/<cert_name>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -581,7 +919,7 @@ The response will be in JSON. For example:
   <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/certificates` (LIST) or `/auth/aws-ec2/config/certificates?list=true` (GET)</dd>
+  <dd>`/auth/aws/config/certificates` (LIST) or `/auth/aws/config/certificates?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -609,7 +947,7 @@ The response will be in JSON. For example:
   </dd>
 </dl>
 
-### /auth/aws-ec2/config/tidy/identity-whitelist
+### /auth/aws/config/tidy/identity-whitelist
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -621,7 +959,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -660,7 +998,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -698,7 +1036,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws/config/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -712,7 +1050,7 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws-ec2/config/tidy/roletag-blacklist
+### /auth/aws/config/tidy/roletag-blacklist
 ##### POST
 <dl class="api">
   <dt>Description</dt>
@@ -724,7 +1062,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -762,7 +1100,7 @@ The response will be in JSON. For example:
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -800,7 +1138,7 @@ The response will be in JSON. For example:
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws/config/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -814,23 +1152,23 @@ The response will be in JSON. For example:
 
 
 
-### /auth/aws-ec2/role/[role]
+### /auth/aws/role/[role]
 #### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Registers a role in the backend. Only those instances which are using
-the role registered using this endpoint, will be able to perform the login
-operation. Contraints can be specified on the role, that are applied on the
-instances attempting to login. At least one constraint should be specified
-on the role.
+    Registers a role in the backend. Only those instances or principals which
+    are using the role registered using this endpoint, will be able to perform
+    the login operation. Contraints can be specified on the role, that are
+    applied on the instances or principals attempting to login. At least one
+    constraint should be specified on the role.
   </dd>
 
   <dt>Method</dt>
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/role/<role>`</dd>
+  <dd>`/auth/aws/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -843,10 +1181,22 @@ on the role.
     </ul>
     <ul>
       <li>
+        <span class="param">allowed_auth_types</span>
+        <span class="param-flags">optional</span>
+        The auth types permitted for this role, separated by commas. Valid
+        choices are "ec2" or "iam". If no value is chosen, then it will default
+        to "ec2" for backwards compatibility. Only those bindings applicable to
+        the auth type chosen by clients will be checked by Vault upon login.
+      </li>
+    </ul>
+    <ul>
+      <li>
         <span class="param">bound_ami_id</span>
         <span class="param-flags">optional</span>
         If set, defines a constraint on the EC2 instances that they
-should be using the AMI ID specified by this parameter.
+should be using the AMI ID specified by this parameter. This constraint is
+checked during ec2 auth as well as the iam auth method only when inferring an EC2
+instance.
       </li>
     </ul>
     <ul>
@@ -854,7 +1204,8 @@ should be using the AMI ID specified by this parameter.
         <span class="param">bound_account_id</span>
         <span class="param-flags">optional</span>
         If set, defines a constraint on the EC2 instances that the account ID
-in its identity document to match the one specified by this parameter.
+in its identity document to match the one specified by this parameter. This
+constraint is checked only by the ec2 auth method.
       </li>
     </ul>
     <ul>
@@ -865,7 +1216,9 @@ in its identity document to match the one specified by this parameter.
 must match the IAM role ARN specified by this parameter.  The value is
 prefix-matched (as though it were a glob ending in `*`).  The configured
 IAM user or EC2 instance role must be allowed to execute the
-`iam:GetInstanceProfile` action if this is specified.
+`iam:GetInstanceProfile` action if this is specified. This constraint is checked
+by the ec2 auth method as well as the iam auth method only when inferring an EC2
+instance.
       </li>
     </ul>
     <ul>
@@ -875,7 +1228,8 @@ IAM user or EC2 instance role must be allowed to execute the
 If set, defines a constraint on the EC2 instances to be associated with an IAM
 instance profile ARN which has a prefix that matches the value specified by
 this parameter. The value is prefix-matched (as though it were a glob ending
-in `*`).
+in `*`). This constraint is checked by the ec2 auth method as well as the iam
+auth method only when inferring an ec2 instance.
       </li>
     </ul>
     <ul>
@@ -885,7 +1239,39 @@ in `*`).
         If set, enables the role tags for this role. The value set for this
         field should be the 'key' of the tag on the EC2 instance. The 'value'
         of the tag should be generated using 'role/<role>/tag' endpoint.
-        Defaults to an empty string, meaning that role tags are disabled.
+        Defaults to an empty string, meaning that role tags are disabled. This
+        constraint is checked by the ec2 auth method as well as the iam auth
+        method only when inferring an EC2 instance.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">bound_iam_principal_arn</span>
+        <span class="param-flags">optional</span>
+        Defines the IAM principal that must be authenticated using the iam
+        auth method. It should look like
+        "arn:aws:iam::123456789012:user/MyUserName" or
+        "arn:aws:iam::123456789012:role/MyRoleName". This constraint is only
+        checked by the iam auth method.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">role_inferred_type</span>
+        <span class="param-flags">optional</span>
+        When set, instructs Vault to turn on inferencing. The only current valid
+        value is "ec2_instance" instructing Vault to infer that the role comes
+        from an EC2 instance in an IAM instance profile. This only applies to
+        the iam auth method.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">inferred_aws_region</span>
+        <span class="param-flags">optional</span>
+        When role inferencing is activated, the region to search for the
+        inferred entities (e.g., EC2 instances). Required if role inferencing is
+        activated. This only applies to the iam auth method.
       </li>
     </ul>
     <ul>
@@ -914,14 +1300,14 @@ in `*`).
       <li>
         <span class="param">allow_instance_migration</span>
         <span class="param-flags">optional</span>
-        If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution.
+        If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution. This only applies to authentications via the ec2 auth method.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'.
+        If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'. this only applies to authentications via the ec2 auth method.
       </li>
     </ul>
   </dd>
@@ -943,7 +1329,7 @@ in `*`).
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/role/<role>`</dd>
+  <dd>`/auth/aws/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -990,7 +1376,7 @@ in `*`).
   <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/roles` (LIST) or `/auth/aws-ec2/roles?list=true` (GET)</dd>
+  <dd>`/auth/aws/roles` (LIST) or `/auth/aws/roles?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1031,7 +1417,7 @@ in `*`).
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/role/<role>`</dd>
+  <dd>`/auth/aws/role/<role>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1044,7 +1430,7 @@ in `*`).
 </dl>
 
 
-### /auth/aws-ec2/role/[role]/tag
+### /auth/aws/role/[role]/tag
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1068,7 +1454,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/role/<role>/tag`</dd>
+  <dd>`/auth/aws/role/<role>/tag`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1106,7 +1492,7 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws-ec2/identity-whitelist endpoint. Defaults to 'false'.
+        If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/identity-whitelist endpoint. Defaults to 'false'.
       </li>
     </ul>
     <ul>
@@ -1139,15 +1525,18 @@ instance can be allowed to gain in a worst-case scenario.
 </dl>
 
 
-### /auth/aws-ec2/login
+### /auth/aws/login
 #### POST
 <dl class="api">
   <dt>Description</dt>
   <dd>
     Fetch a token. This endpoint verifies the pkcs7 signature of the instance
-    identity document.  Verifies that the instance is actually in a running state.
+    identity document or the signature of the signed GetCallerIdentity request.
+    With the ec2 auth method, or when inferring an EC2 instance, verifies that
+    the instance is actually in a running state.
     Cross checks the constraints defined on the role with which the login is being
-    performed. As an alternative to pkcs7 signature, the identity document along
+    performed. With the ec2 auth method, as an alternative to pkcs7 signature,
+    the identity document along
     with its RSA digest can be supplied to this endpoint.
   </dd>
 
@@ -1155,7 +1544,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/login`</dd>
+  <dd>`/auth/aws/login`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1165,8 +1554,17 @@ instance can be allowed to gain in a worst-case scenario.
         <span class="param-flags">optional</span>
         Name of the role against which the login is being attempted.
         If `role` is not specified, then the login endpoint looks for a role
-        bearing the name of the AMI ID of the EC2 instance that is trying to login.
+        bearing the name of the AMI ID of the EC2 instance that is trying to
+        login if using the ec2 auth method, or the "friendly name" (i.e., role
+        name or username) of the IAM principal authenticated.
         If a matching role is not found, login fails.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">auth_method</span>
+        <span class="param-flags">optional</span>
+        The auth method to use, either ec2 or iam. If omitted, assumes ec2.
       </li>
     </ul>
     <ul>
@@ -1174,7 +1572,8 @@ instance can be allowed to gain in a worst-case scenario.
         <span class="param">identity</span>
         <span class="param-flags">required</span>
         Base64 encoded EC2 instance identity document. This needs to be supplied along
-        with the `signature` parameter. If using `curl` for fetching the identity
+        with the `signature` parameter when using the ec2 auth method. If using `curl`
+        for fetching the identity
         document, consider using the option `-w 0` while piping the output to
         `base64` binary.
       </li>
@@ -1184,7 +1583,8 @@ instance can be allowed to gain in a worst-case scenario.
         <span class="param">signature</span>
         <span class="param-flags">required</span>
         Base64 encoded SHA256 RSA signature of the instance identity document. This
-        needs to be supplied along with `identity` parameter.
+        needs to be supplied along with `identity` parameter when using the ec2
+        auth method.
       </li>
     </ul>
     <ul>
@@ -1193,7 +1593,7 @@ instance can be allowed to gain in a worst-case scenario.
         <span class="param-flags">required</span>
         PKCS7 signature of the identity document with all `\n` characters removed.
         Either this needs to be set *OR* both `identity` and `signature` need to be
-        set.
+        set when using the ec2 auth method.
       </li>
     </ul>
     <ul>
@@ -1209,7 +1609,51 @@ instance can be allowed to gain in a worst-case scenario.
         that clients provide a strong nonce.  If a nonce is provided but with an empty
         value, it indicates intent to disable reauthentication. Note that, when
         `disallow_reauthentication` option is enabled on either the role or the role
-        tag, the `nonce` holds no significance.
+        tag, the `nonce` holds no significance. This is ignored unless using the
+        ec2 auth method.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">request_method</span>
+        <span class="param-flags">required</span>
+        HTTP method used in the signed request. Currently only POST is
+        supported, but other methods may be supported in the future. This is
+        required when using the iam auth method.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">request_url</span>
+        <span class="param-flags">required</span>
+        HTTP URL used in the signed request. Most likely just
+        https://sts.amazonaws.com/ as most requests will probably use POST with
+        an empty URI. This is required when using the iam auth method.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">request_body</span>
+        <span class="param-flags">required</span>
+        Base64-encoded body of the signed request. Most likely
+        <em>QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==</em>
+        which is the base64 encoding of
+        <em>Action=GetCallerIdentity&Version=2011-06-15</em>. This is required
+        when using the iam auth method.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">request_headers</span>
+        <span class="param-flags">required</span>
+        Base64-encoded, JSON-serialized representation of the HTTP request
+        headers. The JSON serialization assumes that each header key maps to an
+        array of string values (though the length of that array will probably
+        only be one). If the iam_auth_header_value is configured in Vault for
+        the aws auth mount, then the headers must include the
+        X-Vault-AWSIAM-Server-Id header, its value must match the value
+        configured, and the header must be included in the signed headers. This
+        is required when using the iam auth method.
       </li>
     </ul>
   </dd>
@@ -1226,7 +1670,8 @@ instance can be allowed to gain in a worst-case scenario.
       "role_tag_max_ttl": "0",
       "instance_id": "i-de0f1344"
       "ami_id": "ami-fce36983"
-      "role": "dev-role"
+      "role": "dev-role",
+      "auth_method": "ec2"
     },
     "policies": [
       "default",
@@ -1247,7 +1692,7 @@ instance can be allowed to gain in a worst-case scenario.
 </dl>
 
 
-### /auth/aws-ec2/roletag-blacklist/<role_tag>
+### /auth/aws/roletag-blacklist/<role_tag>
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1263,7 +1708,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/roletag-blacklist/<role_tag>`</dd>
+  <dd>`/auth/aws/roletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1294,7 +1739,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/broletag-blacklist/<role_tag>`</dd>
+  <dd>`/auth/aws/broletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1333,7 +1778,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/roletag-blacklist` (LIST) or `/auth/aws-ec2/roletag-blacklist?list=true` (GET)</dd>
+  <dd>`/auth/aws/roletag-blacklist` (LIST) or `/auth/aws/roletag-blacklist?list=true` (GET)</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1373,7 +1818,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/roletag-blacklist/<role_tag>`</dd>
+  <dd>`/auth/aws/roletag-blacklist/<role_tag>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1386,7 +1831,7 @@ instance can be allowed to gain in a worst-case scenario.
 </dl>
 
 
-### /auth/aws-ec2/tidy/roletag-blacklist
+### /auth/aws/tidy/roletag-blacklist
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1398,7 +1843,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/tidy/roletag-blacklist`</dd>
+  <dd>`/auth/aws/tidy/roletag-blacklist`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1417,7 +1862,7 @@ instance can be allowed to gain in a worst-case scenario.
 </dl>
 
 
-### /auth/aws-ec2/identity-whitelist/<instance_id>
+### /auth/aws/identity-whitelist/<instance_id>
 #### GET
 <dl class="api">
   <dt>Description</dt>
@@ -1429,7 +1874,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/identity-whitelist/<instance_id>`</dd>
+  <dd>`/auth/aws/identity-whitelist/<instance_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1478,7 +1923,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/identity-whitelist` (LIST) or `/auth/aws-ec2/identity-whitelist?list=true` (GET)</dd>
+  <dd>`/auth/aws/identity-whitelist` (LIST) or `/auth/aws/identity-whitelist?list=true` (GET)</dd>
   <dt>Parameters</dt>
   <dd>
     None.
@@ -1517,7 +1962,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>DELETE</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/identity-whitelist/<instance_id>`</dd>
+  <dd>`/auth/aws/identity-whitelist/<instance_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>
@@ -1530,7 +1975,7 @@ instance can be allowed to gain in a worst-case scenario.
 </dl>
 
 
-### /auth/aws-ec2/tidy/identity-whitelist
+### /auth/aws/tidy/identity-whitelist
 #### POST
 <dl class="api">
   <dt>Description</dt>
@@ -1542,7 +1987,7 @@ instance can be allowed to gain in a worst-case scenario.
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/tidy/identity-whitelist`</dd>
+  <dd>`/auth/aws/tidy/identity-whitelist`</dd>
 
   <dt>Parameters</dt>
   <dd>
