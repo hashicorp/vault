@@ -1,7 +1,6 @@
 package physical
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 
 	log "github.com/mgutz/logxi/v1"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -50,16 +48,12 @@ func (b *FileBackend) Delete(path string) error {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	_, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(path)
-	err := os.Remove(fullPathPrefixedEncodedFileName)
-	if err != nil && os.IsNotExist(err) {
-		// For backwards compatibility, try to delete the file without base64
-		// URL encoding the file name.
-		err = os.Remove(fullPathPrefixedFileName)
-	}
+	basePath, key := b.path(path)
+	fullPath := filepath.Join(basePath, key)
 
+	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("Failed to remove %q: %v", path, err)
+		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
 	}
 
 	err = b.cleanupLogicalPath(path)
@@ -101,22 +95,19 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 	return nil
 }
 
-func (b *FileBackend) Get(path string) (*Entry, error) {
+func (b *FileBackend) Get(k string) (*Entry, error) {
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	_, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(path)
-	f, err := os.Open(fullPathPrefixedEncodedFileName)
-	if err != nil && os.IsNotExist(err) {
-		// For backwards compatibility, if non-encoded file name is a valid
-		// storage entry, read it out.
-		f, err = os.Open(fullPathPrefixedFileName)
-	}
+	path, key := b.path(k)
+	path = filepath.Join(path, key)
 
+	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
+
 		return nil, err
 	}
 	defer f.Close()
@@ -130,61 +121,27 @@ func (b *FileBackend) Get(path string) (*Entry, error) {
 }
 
 func (b *FileBackend) Put(entry *Entry) error {
-	var retErr error
-	if entry == nil {
-		retErr = multierror.Append(retErr, fmt.Errorf("nil entry"))
-		return retErr
-	}
-
-	basePath, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(entry.Key)
+	path, key := b.path(entry.Key)
 
 	b.l.Lock()
 	defer b.l.Unlock()
 
-	// New storage entries will have their file names base64 URL encoded. If a
-	// file with a non-encoded file name exists, it indicates that this is an
-	// update operation. To avoid duplication of storage entries, delete the
-	// old entry in the defer function.
-	info, err := os.Stat(fullPathPrefixedFileName)
-	if err == nil && info != nil {
-		defer func() {
-			err := os.Remove(fullPathPrefixedFileName)
-			if err != nil && !os.IsNotExist(err) {
-				retErr = multierror.Append(retErr, fmt.Errorf("failed to remove old entry: %v", err))
-				return
-			}
-			err = b.cleanupLogicalPath(entry.Key)
-			if err != nil {
-				retErr = multierror.Append(retErr, fmt.Errorf("failed to cleanup the after removing old entry: %v", err))
-				return
-			}
-		}()
-	}
-
 	// Make the parent tree
-	if err := os.MkdirAll(basePath, 0755); err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return err
 	}
 
 	// JSON encode the entry and write it
 	f, err := os.OpenFile(
-		fullPathPrefixedEncodedFileName,
+		filepath.Join(path, key),
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600)
 	if err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr
+		return err
 	}
 	defer f.Close()
 	enc := json.NewEncoder(f)
-
-	err = enc.Encode(entry)
-	if err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr
-	}
-	return nil
+	return enc.Encode(entry)
 }
 
 func (b *FileBackend) List(prefix string) ([]string, error) {
@@ -215,12 +172,6 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	for i, name := range names {
 		if name[0] == '_' {
 			names[i] = name[1:]
-			// If the file name is encoded, decode it to retain the list output
-			// meaningful.
-			nameDecodedBytes, err := base64.URLEncoding.DecodeString(names[i])
-			if err == nil {
-				names[i] = string(nameDecodedBytes)
-			}
 		} else {
 			names[i] = name + "/"
 		}
@@ -229,21 +180,9 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	return names, nil
 }
 
-func (b *FileBackend) path(path string) (string, string, string) {
-	fullPath := filepath.Join(b.Path, path)
-
-	basePath := filepath.Dir(fullPath)
-
-	fileName := filepath.Base(fullPath)
-
-	fullPathPrefixedFileName := filepath.Join(basePath, "_"+fileName)
-
-	// base64 URL encode the file name to make all the characters compatible by
-	// the host OS (specially Windows). However, the basePath can contain
-	// disallowed characters.  Encoding all the directory names and the file
-	// name is an over kill, and encoding the fullPath will flatten the
-	// storage, which *may* not be desired.
-	fullPathPrefixedEncodedFileName := filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
-
-	return basePath, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName
+func (b *FileBackend) path(k string) (string, string) {
+	path := filepath.Join(b.Path, k)
+	key := filepath.Base(path)
+	path = filepath.Dir(path)
+	return path, "_" + key
 }
