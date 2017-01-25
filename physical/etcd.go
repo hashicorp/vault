@@ -75,6 +75,9 @@ func newEtcdBackend(conf map[string]string, logger log.Logger) (Backend, error) 
 	}
 }
 
+// getEtcdAPIVersion gets the latest supported API version.
+// If etcd cluster version >= 3.1, "3" will be returned.
+// Otherwise, "2" will be returned.
 func getEtcdAPIVersion(c client.Client) (string, error) {
 	v, err := c.GetVersion(context.Background())
 	if err != nil {

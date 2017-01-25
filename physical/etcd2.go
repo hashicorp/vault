@@ -76,7 +76,13 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (Backend, error)
 	if haEnabled == "" {
 		haEnabled = conf["ha_enabled"]
 	}
-	haEnabledBool, _ := strconv.ParseBool(haEnabled)
+	if haEnabled == "" {
+		haEnabled = "false"
+	}
+	haEnabledBool, err := strconv.ParseBool(haEnabled)
+	if err != nil {
+		return nil, fmt.Errorf("value [%v] of 'ha_enabled' could not be understood", haEnabled)
+	}
 
 	// Should we sync the cluster state? There are three available options
 	// for our client library: don't sync (required for some proxies), sync
