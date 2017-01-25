@@ -1307,8 +1307,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"account_id": "123456789098",
-		"sts_role":   "arn:aws:iam:123456789098:role/myRole",
+		"sts_role": "arn:aws:iam:account1:role/myRole",
 	}
 
 	stsReq.Data = data
@@ -1334,14 +1333,13 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	stsReq.Operation = logical.ReadOperation
 	// test read operation
 	resp, err = b.HandleRequest(stsReq)
-	expectedStsRole := "arn:aws:iam:123456789098:role/myRole"
+	expectedStsRole := "arn:aws:iam:account1:role/myRole"
 	if resp.Data["sts_role"].(string) != expectedStsRole {
 		t.Fatalf("bad: expected:%s\n got:%s\n", expectedStsRole, resp.Data["sts_role"].(string))
 	}
 
 	stsReq.Operation = logical.CreateOperation
 	stsReq.Path = "config/sts/account2"
-	data["account_id"] = "098765432123"
 	stsReq.Data = data
 	// create another entry to test the list operation
 	_, err = b.HandleRequest(stsReq)
