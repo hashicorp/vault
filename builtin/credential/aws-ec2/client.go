@@ -106,7 +106,7 @@ func (b *backend) flushCachedIAMClients() {
 // clientEC2 creates a client to interact with AWS EC2 API
 func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*ec2.EC2, error) {
 	b.configMutex.RLock()
-	if b.EC2ClientsMap[region][stsRole] != nil {
+	if b.EC2ClientsMap[region] != nil && b.EC2ClientsMap[region][stsRole] != nil {
 		defer b.configMutex.RUnlock()
 		// If the client object was already created, return it
 		return b.EC2ClientsMap[region][stsRole], nil
@@ -118,7 +118,7 @@ func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*
 	defer b.configMutex.Unlock()
 
 	// If the client gets created while switching the locks, return it
-	if b.EC2ClientsMap[region][stsRole] != nil {
+	if b.EC2ClientsMap[region] != nil && b.EC2ClientsMap[region][stsRole] != nil {
 		return b.EC2ClientsMap[region][stsRole], nil
 	}
 
