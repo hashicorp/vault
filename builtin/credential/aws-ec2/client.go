@@ -149,7 +149,7 @@ func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*
 // clientIAM creates a client to interact with AWS IAM API
 func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*iam.IAM, error) {
 	b.configMutex.RLock()
-	if b.IAMClientsMap[region][stsRole] != nil {
+	if b.IAMClientsMap[region] != nil && b.IAMClientsMap[region][stsRole] != nil {
 		defer b.configMutex.RUnlock()
 		// If the client object was already created, return it
 		return b.IAMClientsMap[region][stsRole], nil
@@ -161,7 +161,7 @@ func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*
 	defer b.configMutex.Unlock()
 
 	// If the client gets created while switching the locks, return it
-	if b.IAMClientsMap[region][stsRole] != nil {
+	if b.IAMClientsMap[region] != nil && b.IAMClientsMap[region][stsRole] != nil {
 		return b.IAMClientsMap[region][stsRole], nil
 	}
 
