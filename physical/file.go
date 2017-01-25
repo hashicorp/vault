@@ -126,7 +126,8 @@ func (b *FileBackend) Get(path string) (*Entry, error) {
 		return nil, err
 	}
 
-	b.logger.Warn("got path", "path", path, "file path", f.Stat().Name())
+	st, _ := f.Stat()
+	b.logger.Warn("got path", "path", path, "file path", st.Name())
 
 	return &entry, nil
 }
