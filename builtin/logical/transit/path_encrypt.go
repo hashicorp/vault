@@ -192,14 +192,6 @@ func (b *backend) pathEncryptWrite(
 			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 		}
 
-		// Decode the plaintext
-		if len(item.Plaintext) == 0 {
-			batchResponseItems[i] = BatchEncryptionItemResponse{
-				Error: "missing plaintext to encrypt",
-			}
-			continue
-		}
-
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
 			batchResponseItems[i] = BatchEncryptionItemResponse{
