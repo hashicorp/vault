@@ -3,7 +3,7 @@ layout: "docs"
 page_title: "Tokens"
 sidebar_current: "docs-concepts-tokens"
 description: |-
-  Tokens are a core authentication method in Vault. Concepts and important features. 
+  Tokens are a core authentication method in Vault. Concepts and important features.
 ---
 
 # Tokens
@@ -54,8 +54,8 @@ of version 0.6.1, there are only three ways to create root tokens:
    expiration
 2. By using another root token; a root token with an expiration cannot create a
    root token that never expires
-3. By using `vault generate-root` with the permission of a quorum of unseal key
-   holders
+3. By using `vault generate-root` ([example](../guides/generate-root.html))
+   with the permission of a quorum of unseal key holders
 
 Root tokens are useful in development but should be extremely carefully guarded
 in production. In fact, the Vault team recommends that root tokens are only
@@ -205,5 +205,5 @@ to be given periodic tokens.
 
 There are a few important things to know when using periodic tokens:
 
-* When a periodic token is created via a token store role, the _current_ value of the role's period setting will be used at renewal time 
+* When a periodic token is created via a token store role, the _current_ value of the role's period setting will be used at renewal time
 * A token with both a period and an explicit max TTL will act like a periodic token but will be revoked when the explicit max TTL is reached
