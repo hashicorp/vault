@@ -623,6 +623,150 @@ The response will be in JSON. For example:
   </dd>
 </dl>
 
+
+### /auth/aws-ec2/config/sts/<account_id>
+#### POST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows the explicit association of STS roles to satellite AWS accounts (i.e. those
+    which are not the account in which the Vault server is running.) Login attempts from
+    EC2 instances running in these accounts will be verified using credentials obtained
+    by assumption of these STS roles.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/certificate/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">account_id</span>
+        <span class="param-flags">required</span>
+        AWS account ID to be associated with STS role. If set,
+        Vault will use assumed credentials to verify any login attempts from EC2
+        instances in this account.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">sts_role</span>
+        <span class="param-flags">required</span>
+        AWS ARN for STS role to be assumed when interacting with the account specified.
+        The Vault server must have permissions to assume this role.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+#### GET
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the previously configured STS role. 
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/sts/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "sts_role ": "arn:aws:iam:<account_id>:role/myRole"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### LIST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Lists all the AWS Account IDs for which an STS role is registered 
+  </dd>
+
+  <dt>Method</dt>
+  <dd>LIST/GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/sts` (LIST) or `/auth/aws-ec2/config/sts?list=true` (GET)</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "keys": [
+      "<account_id_1>",
+      "<account_id_2>"
+    ]
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### DELETE
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes a previously configured AWS account/STS role association  
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/sts/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
 ### /auth/aws-ec2/config/tidy/identity-whitelist
 ##### POST
 <dl class="api">
