@@ -8,9 +8,11 @@ import (
 
 var errCORSNotConfigured = errors.New("CORS is not configured")
 
-var allowedHeaders = map[string]string{
-	"Access-Control-Allow-Headers": "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
-	"Access-Control-Max-Age":       "1800",
+var responseHeaders = map[string]string{
+	"Access-Control-Allow-Headers":     "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
+	"Access-Control-Max-Age":           "1800",
+	"Access-Control-Allow-Credentials": "true",
+	"Vary": "Origin",
 }
 
 var allowedMethods = []string{
@@ -70,7 +72,6 @@ func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", origin)
-	w.Header().Set("Vary", "Origin")
 
 	// apply headers for preflight requests
 	if r.Method == http.MethodOptions {
@@ -90,7 +91,7 @@ func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
 		methods := strings.Join(allowedMethods, ",")
 		w.Header().Set("Access-Control-Allow-Methods", methods)
 
-		for k, v := range allowedHeaders {
+		for k, v := range responseHeaders {
 			w.Header().Set(k, v)
 		}
 	}
