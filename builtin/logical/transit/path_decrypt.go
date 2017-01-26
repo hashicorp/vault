@@ -120,18 +120,14 @@ func (b *backend) pathDecryptWrite(
 		}
 
 		if item.Ciphertext == "" {
-			batchResponseItems[i] = BatchResponseItem{
-				Error: "missing ciphertext to decrypt",
-			}
+			batchResponseItems[i].Error = "missing ciphertext to decrypt"
 			continue
 		}
 
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
-				batchResponseItems[i] = BatchResponseItem{
-					Error: "failed to base64-decode context",
-				}
+				batchResponseItems[i].Error = "failed to base64-decode context"
 				continue
 			}
 		}
@@ -139,11 +135,9 @@ func (b *backend) pathDecryptWrite(
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
-				batchResponseItems[i] = BatchResponseItem{
-					Error: "failed to base64-decode nonce",
-				}
+				batchResponseItems[i].Error = "failed to base64-decode nonce"
+				continue
 			}
-			continue
 		}
 	}
 
@@ -175,9 +169,7 @@ func (b *backend) pathDecryptWrite(
 				return nil, err
 			}
 		}
-		batchResponseItems[i] = BatchResponseItem{
-			Plaintext: plaintext,
-		}
+		batchResponseItems[i].Plaintext = plaintext
 	}
 
 	resp := &logical.Response{}

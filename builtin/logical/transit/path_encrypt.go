@@ -39,15 +39,15 @@ type BatchRequestItem struct {
 type BatchResponseItem struct {
 	// Ciphertext for the plaintext present in the corresponding batch
 	// request item
-	Ciphertext string `json:"omitempty,ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
+	Ciphertext string `json:"ciphertext,omitempty" structs:"ciphertext" mapstructure:"ciphertext"`
 
 	// Plaintext for the ciphertext present in the corresponsding batch
 	// request item
-	Plaintext string `json:"omitempty,plaintext" structs:"plaintext" mapstructure:"plaintext"`
+	Plaintext string `json:"plaintext,omitempty" structs:"plaintext" mapstructure:"plaintext"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
-	Error string `json:"omitempty,error" structs:"error" mapstructure:"error"`
+	Error string `json:"error,omitempty" structs:"error" mapstructure:"error"`
 }
 
 func (b *backend) pathEncrypt() *framework.Path {
@@ -205,9 +205,7 @@ func (b *backend) pathEncryptWrite(
 
 		_, err := base64.StdEncoding.DecodeString(item.Plaintext)
 		if err != nil {
-			batchResponseItems[i] = BatchResponseItem{
-				Error: "failed to base64-decode plaintext",
-			}
+			batchResponseItems[i].Error = "failed to base64-decode plaintext"
 			continue
 		}
 
@@ -215,9 +213,7 @@ func (b *backend) pathEncryptWrite(
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
-				batchResponseItems[i] = BatchResponseItem{
-					Error: "failed to base64-decode context",
-				}
+				batchResponseItems[i].Error = "failed to base64-decode context"
 				continue
 			}
 		}
@@ -226,9 +222,7 @@ func (b *backend) pathEncryptWrite(
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
-				batchResponseItems[i] = BatchResponseItem{
-					Error: "failed to base64-decode nonce",
-				}
+				batchResponseItems[i].Error = "failed to base64-decode nonce"
 				continue
 			}
 		}
@@ -297,15 +291,11 @@ func (b *backend) pathEncryptWrite(
 		}
 
 		if ciphertext == "" {
-			batchResponseItems[i] = BatchResponseItem{
-				Error: "empty ciphertext returned",
-			}
+			batchResponseItems[i].Error = "empty ciphertext returned"
 			continue
 		}
 
-		batchResponseItems[i] = BatchResponseItem{
-			Ciphertext: ciphertext,
-		}
+		batchResponseItems[i].Ciphertext = ciphertext
 	}
 
 	resp := &logical.Response{}

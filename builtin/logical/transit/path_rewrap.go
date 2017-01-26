@@ -111,18 +111,14 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if item.Ciphertext == "" {
-			batchResponseItems[i] = BatchResponseItem{
-				Error: "missing ciphertext to decrypt",
-			}
+			batchResponseItems[i].Error = "missing ciphertext to decrypt"
 			continue
 		}
 
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
-				batchResponseItems[i] = BatchResponseItem{
-					Error: "failed to base64-decode context",
-				}
+				batchResponseItems[i].Error = "failed to base64-decode context"
 				continue
 			}
 		}
@@ -130,11 +126,9 @@ func (b *backend) pathRewrapWrite(
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
-				batchResponseItems[i] = BatchResponseItem{
-					Error: "failed to base64-decode nonce",
-				}
+				batchResponseItems[i].Error = "failed to base64-decode nonce"
+				continue
 			}
-			continue
 		}
 	}
 
@@ -168,9 +162,7 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if plaintext == "" {
-			batchResponseItems[i] = BatchResponseItem{
-				Error: "empty plaintext returned during rewrap",
-			}
+			batchResponseItems[i].Error = "empty plaintext returned during rewrap"
 			continue
 		}
 
@@ -187,15 +179,11 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if ciphertext == "" {
-			batchResponseItems[i] = BatchResponseItem{
-				Error: "empty ciphertext returned",
-			}
+			batchResponseItems[i].Error = "empty ciphertext returned"
 			continue
 		}
 
-		batchResponseItems[i] = BatchResponseItem{
-			Ciphertext: ciphertext,
-		}
+		batchResponseItems[i].Ciphertext = ciphertext
 	}
 
 	resp := &logical.Response{}
