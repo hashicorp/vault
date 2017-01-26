@@ -657,7 +657,6 @@ func (m *ExpirationManager) loadEntry(leaseID string) (*leaseEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode lease entry: %v", err)
 	}
-	m.logger.Trace("decoded lease entry", "entry", fmt.Sprintf("%#v", le), "encoded_entry", string(out.Value))
 	return le, nil
 }
 
@@ -668,7 +667,6 @@ func (m *ExpirationManager) persistEntry(le *leaseEntry) error {
 	if err != nil {
 		return fmt.Errorf("failed to encode lease entry: %v", err)
 	}
-	m.logger.Trace("encoded lease entry", "entry", fmt.Sprintf("%#v", le), "encoded_entry", string(buf))
 
 	// Write out to the view
 	ent := logical.StorageEntry{
