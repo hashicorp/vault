@@ -22,18 +22,14 @@ var allowedMethods = []string{
 }
 
 type CORSConfig struct {
-	enabled        bool
-	allowedOrigins []string
+	Enabled        bool
+	AllowedOrigins []string
 }
 
 func newCORSConfig() *CORSConfig {
 	return &CORSConfig{
-		enabled: false,
+		Enabled: false,
 	}
-}
-
-func (c *CORSConfig) Enabled() bool {
-	return c.enabled
 }
 
 func (c *CORSConfig) Enable(s string) error {
@@ -43,16 +39,16 @@ func (c *CORSConfig) Enable(s string) error {
 
 	allowedOrigins := strings.Split(s, " ")
 
-	c.allowedOrigins = allowedOrigins
-	c.enabled = true
+	c.AllowedOrigins = allowedOrigins
+	c.Enabled = true
 
 	return nil
 }
 
 // Disable sets CORS to disabled and clears the allowed origins
 func (c *CORSConfig) Disable() {
-	c.enabled = false
-	c.allowedOrigins = []string{}
+	c.Enabled = false
+	c.AllowedOrigins = []string{}
 }
 
 // ApplyHeaders examines the CORS configuration and the request to determine
@@ -63,7 +59,7 @@ func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
 	// If CORS is not enabled or if no Origin header is present (i.e. the request
 	// is from the Vault CLI. A browser will always send an Origin header), then
 	// just return a 200.
-	if !c.enabled || origin == "" {
+	if !c.Enabled || origin == "" {
 		return http.StatusOK
 	}
 
@@ -102,22 +98,16 @@ func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
 	return http.StatusOK
 }
 
-// AllowedOrigins returns a space-separated list of origins which can make
-// cross-origin requests.
-func (c *CORSConfig) AllowedOrigins() string {
-	return strings.Join(c.allowedOrigins, " ")
-}
-
 func (c *CORSConfig) validOrigin(origin string) bool {
-	if c.allowedOrigins == nil {
+	if c.AllowedOrigins == nil {
 		return false
 	}
 
-	if len(c.allowedOrigins) == 1 && (c.allowedOrigins)[0] == "*" {
+	if len(c.AllowedOrigins) == 1 && (c.AllowedOrigins)[0] == "*" {
 		return true
 	}
 
-	for _, allowedOrigin := range c.allowedOrigins {
+	for _, allowedOrigin := range c.AllowedOrigins {
 		if origin == allowedOrigin {
 			return true
 		}
