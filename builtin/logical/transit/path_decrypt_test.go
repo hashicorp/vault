@@ -90,7 +90,7 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []BatchDecryptionItemResponse
+	var batchDecryptionResponseArray []BatchResponseItem
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchDecryptionResponseArray); err != nil {
 		t.Fatal(err)
 	}
@@ -146,8 +146,8 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var decryptionRequestItems []BatchDecryptionItemRequest
-	var batchResponseArray []BatchDecryptionItemRequest
+	var decryptionRequestItems []BatchRequestItem
+	var batchResponseArray []BatchRequestItem
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []BatchDecryptionItemResponse
+	var batchDecryptionResponseArray []BatchResponseItem
 	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchDecryptionResponseArray); err != nil {
 		t.Fatal(err)
 	}

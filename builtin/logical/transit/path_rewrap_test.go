@@ -269,12 +269,12 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	}
 
 	for i, responseItem := range batchEncryptionResponseArray {
-		var input BatchRewrapItemRequest
+		var input BatchRequestItem
 		if err := mapstructure.Decode(responseItem, &input); err != nil {
 			t.Fatal(err)
 		}
 
-		var output BatchRewrapItemResponse
+		var output BatchResponseItem
 		if err := mapstructure.Decode(batchRewrapResponseArray[i], &output); err != nil {
 			t.Fatal(err)
 		}

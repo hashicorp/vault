@@ -10,39 +10,6 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-// BatchRewrapItemRequest represents an item in the batch rewrap
-// request
-type BatchRewrapItemRequest struct {
-	// Context for key derivation. This is required for derived keys.
-	Context string `json:"context" structs:"context" mapstructure:"context"`
-
-	// DecodedContext, for internal use, which is the base64 decoded version of
-	// the Context field
-	DecodedContext []byte `json:"decoded_context" structs:"decoded_context" mapstructure:"decoded_context"`
-
-	// Ciphertext which needs rewrap
-	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
-
-	// Nonce to be used when v1 convergent encryption is used
-	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
-
-	// DecodedNonce, for internal use, which is the base64 decoded version of
-	// the Nonce field
-	DecodedNonce []byte `json:"decoded_nonce" structs:"decoded_nonce" mapstructure:"decoded_nonce"`
-}
-
-// BatchRewrapItemResponse represents an item in the batch rewrap
-// response
-type BatchRewrapItemResponse struct {
-	// Ciphertext is a rewrapped version of the ciphertext in the corresponding
-	// batch request item
-	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
-
-	// Error, if set represents a failure encountered while encrypting rewrapping a
-	// corresponding batch request item
-	Error string `json:"error" structs:"error" mapstructure:"error"`
-}
-
 func (b *backend) pathRewrap() *framework.Path {
 	return &framework.Path{
 		Pattern: "rewrap/" + framework.GenericNameRegex("name"),
@@ -99,7 +66,7 @@ also set, they will be ignored. JSON format for the input goes like this:
 func (b *backend) pathRewrapWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	batchInputRaw := d.Get("batch").(string)
-	var batchInputItems []BatchRewrapItemRequest
+	var batchInputItems []BatchRequestItem
 	var batchInput []byte
 	var err error
 	if len(batchInputRaw) != 0 {
@@ -117,15 +84,15 @@ func (b *backend) pathRewrapWrite(
 			return logical.ErrorResponse("missing ciphertext to decrypt"), logical.ErrInvalidRequest
 		}
 
-		batchInputItems = make([]BatchRewrapItemRequest, 1)
-		batchInputItems[0] = BatchRewrapItemRequest{
+		batchInputItems = make([]BatchRequestItem, 1)
+		batchInputItems[0] = BatchRequestItem{
 			Ciphertext: ciphertext,
 			Context:    d.Get("context").(string),
 			Nonce:      d.Get("nonce").(string),
 		}
 	}
 
-	batchResponseItems := make([]BatchRewrapItemResponse, len(batchInputItems))
+	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
 	if len(batchInputItems) == 0 {
 		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	}
@@ -133,12 +100,18 @@ func (b *backend) pathRewrapWrite(
 	contextSet := batchInputItems[0].Context != ""
 
 	for i, item := range batchInputItems {
+		// Invalidate the items that are not expected in the request item, for
+		// safety
+		batchInputItems[i].Plaintext = ""
+		batchInputItems[i].DecodedContext = nil
+		batchInputItems[i].DecodedNonce = nil
+
 		if (item.Context == "" && contextSet) || (item.Context != "" && !contextSet) {
 			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 		}
 
 		if item.Ciphertext == "" {
-			batchResponseItems[i] = BatchRewrapItemResponse{
+			batchResponseItems[i] = BatchResponseItem{
 				Error: "missing ciphertext to decrypt",
 			}
 			continue
@@ -147,7 +120,7 @@ func (b *backend) pathRewrapWrite(
 		if len(item.Context) != 0 {
 			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
 			if err != nil {
-				batchResponseItems[i] = BatchRewrapItemResponse{
+				batchResponseItems[i] = BatchResponseItem{
 					Error: "failed to base64-decode context",
 				}
 				continue
@@ -157,7 +130,7 @@ func (b *backend) pathRewrapWrite(
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
 			if err != nil {
-				batchResponseItems[i] = BatchRewrapItemResponse{
+				batchResponseItems[i] = BatchResponseItem{
 					Error: "failed to base64-decode nonce",
 				}
 			}
@@ -195,7 +168,7 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if plaintext == "" {
-			batchResponseItems[i] = BatchRewrapItemResponse{
+			batchResponseItems[i] = BatchResponseItem{
 				Error: "empty plaintext returned during rewrap",
 			}
 			continue
@@ -214,13 +187,13 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if ciphertext == "" {
-			batchResponseItems[i] = BatchRewrapItemResponse{
+			batchResponseItems[i] = BatchResponseItem{
 				Error: "empty ciphertext returned",
 			}
 			continue
 		}
 
-		batchResponseItems[i] = BatchRewrapItemResponse{
+		batchResponseItems[i] = BatchResponseItem{
 			Ciphertext: ciphertext,
 		}
 	}
