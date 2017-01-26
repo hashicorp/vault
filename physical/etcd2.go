@@ -67,6 +67,57 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (Backend, error)
 		path = "/" + path
 	}
 
+	c, err := newEtcdV2Client(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	haEnabled := os.Getenv("ETCD_HA_ENABLED")
+	if haEnabled == "" {
+		haEnabled = conf["ha_enabled"]
+	}
+	if haEnabled == "" {
+		haEnabled = "false"
+	}
+	haEnabledBool, err := strconv.ParseBool(haEnabled)
+	if err != nil {
+		return nil, fmt.Errorf("value [%v] of 'ha_enabled' could not be understood", haEnabled)
+	}
+
+	// Should we sync the cluster state? There are three available options
+	// for our client library: don't sync (required for some proxies), sync
+	// once, or sync periodically with AutoSync.  We currently support the
+	// first two.
+	sync, ok := conf["sync"]
+	if !ok {
+		sync = "yes"
+	}
+	switch sync {
+	case "yes", "true", "y", "1":
+		ctx, cancel := context.WithTimeout(context.Background(), client.DefaultRequestTimeout)
+		syncErr := c.Sync(ctx)
+		cancel()
+		if syncErr != nil {
+			return nil, fmt.Errorf("%s: %s", EtcdSyncClusterError, syncErr)
+		}
+	case "no", "false", "n", "0":
+	default:
+		return nil, fmt.Errorf("value of 'sync' could not be understood")
+	}
+
+	kAPI := client.NewKeysAPI(c)
+
+	// Setup the backend.
+	return &Etcd2Backend{
+		path:       path,
+		kAPI:       kAPI,
+		permitPool: NewPermitPool(DefaultParallelOperations),
+		logger:     logger,
+		haEnabled:  haEnabledBool,
+	}, nil
+}
+
+func newEtcdV2Client(conf map[string]string) (client.Client, error) {
 	// Set a default machines list and check for an overriding address value.
 	machines := "http://127.0.0.1:2379"
 	if address, ok := conf["address"]; ok {
@@ -85,12 +136,6 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (Backend, error)
 			return nil, EtcdAddressError
 		}
 	}
-
-	haEnabled := os.Getenv("ETCD_HA_ENABLED")
-	if haEnabled == "" {
-		haEnabled = conf["ha_enabled"]
-	}
-	haEnabledBool, _ := strconv.ParseBool(haEnabled)
 
 	// Create a new client from the supplied address and attempt to sync with the
 	// cluster.
@@ -135,42 +180,7 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (Backend, error)
 		cfg.Password = password
 	}
 
-	c, err := client.New(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	// Should we sync the cluster state? There are three available options
-	// for our client library: don't sync (required for some proxies), sync
-	// once, or sync periodically with AutoSync.  We currently support the
-	// first two.
-	sync, ok := conf["sync"]
-	if !ok {
-		sync = "yes"
-	}
-	switch sync {
-	case "yes", "true", "y", "1":
-		ctx, cancel := context.WithTimeout(context.Background(), client.DefaultRequestTimeout)
-		syncErr := c.Sync(ctx)
-		cancel()
-		if syncErr != nil {
-			return nil, fmt.Errorf("%s: %s", EtcdSyncClusterError, syncErr)
-		}
-	case "no", "false", "n", "0":
-	default:
-		return nil, fmt.Errorf("value of 'sync' could not be understood")
-	}
-
-	kAPI := client.NewKeysAPI(c)
-
-	// Setup the backend.
-	return &Etcd2Backend{
-		path:       path,
-		kAPI:       kAPI,
-		permitPool: NewPermitPool(DefaultParallelOperations),
-		logger:     logger,
-		haEnabled:  haEnabledBool,
-	}, nil
+	return client.New(cfg)
 }
 
 // Put is used to insert or update an entry.
