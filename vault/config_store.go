@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -10,17 +11,21 @@ import (
 )
 
 const (
-	// policySubPath is the sub-path used for the policy store
+	// configSubPath is the sub-path used for the config store
 	// view. This is nested under the system view.
 	configSubPath = "config/"
 
-	// policyCacheSize is the number of policies that are kept cached
+	// configCacheSize is the number of configs that are kept cached
 	configCacheSize = 1024
 )
 
+var defaultConfigs = []string{
+	"cors",
+}
+
 type Config struct {
-	Name string
-	CORS *CORSConfig
+	Name     string
+	Settings map[string]string
 }
 
 // ConfigStore is used to provide durable storage of configuration items
@@ -57,6 +62,25 @@ func (c *Core) setupConfigStore() error {
 
 	// Create the config store
 	c.configStore = NewConfigStore(view, &dynamicSystemView{core: c})
+
+	for _, name := range defaultConfigs {
+		config, err := c.configStore.GetConfig(name)
+		if err != nil {
+			return err
+		}
+
+		if config != nil {
+			switch config.Name {
+			case "cors":
+				enabled, err := strconv.ParseBool(config.Settings["enabled"])
+				if err != nil {
+					enabled = false
+				}
+				c.corsConfig.Enable(config.Settings["allowed_origins"])
+				c.corsConfig.Enabled = enabled
+			}
+		}
+	}
 
 	return nil
 }
