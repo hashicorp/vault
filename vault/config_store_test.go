@@ -58,9 +58,9 @@ func testConfigStore_CRUD(t *testing.T, cs *ConfigStore) {
 
 	config := &Config{
 		Name: "cors",
-		CORS: &CORSConfig{
-			AllowedOrigins: []string{"http://www.example.com"},
-			Enabled:        true,
+		Settings: map[string]string{
+			"allowed_origins": "http://www.example.com http://localhost",
+			"enabled":         "true",
 		},
 	}
 
@@ -73,6 +73,7 @@ func testConfigStore_CRUD(t *testing.T, cs *ConfigStore) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
 	if !reflect.DeepEqual(c, config) {
 		t.Fatalf("bad: %v", c)
 	}
