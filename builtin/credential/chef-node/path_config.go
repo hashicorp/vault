@@ -99,7 +99,7 @@ func (b *backend) Config(s logical.Storage) (*config, error) {
 }
 
 type config struct {
-	BaseURL    string `json:"base_url"`
-	ClientKey  string `json:"client_key"`
-	ClientName string `json:"client_name"`
+	BaseURL    string `json:"base_url" structs:"base_url"`
+	ClientKey  string `json:"client_key" structs:"client_key"`
+	ClientName string `json:"client_name" structs:"client_name"`
 }
