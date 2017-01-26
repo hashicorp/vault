@@ -41,13 +41,13 @@ func TestSystemConfigCORS(t *testing.T) {
 
 	expected := &logical.Response{
 		Data: map[string]interface{}{
-			"allowed_origins": "http:/www.example.com",
 			"enabled":         true,
+			"allowed_origins": "http://www.example.com",
 		},
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("UPDATE FAILED -- bad: %#v", actual)
+		t.Fatalf("UPDATE FAILED\nexpected:\n%#v\nactual:\n%#v", expected, actual)
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
