@@ -1,6 +1,11 @@
 package chefnode
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -37,6 +42,18 @@ func Backend() *backend {
 
 type backend struct {
 	*framework.Backend
+}
+
+func parsePrivateKey(key string) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode([]byte(key))
+	if block == nil {
+		return nil, fmt.Errorf("Couldn't parse PEM data")
+	}
+	privkey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return privkey, nil
 }
 
 const backendHelp = `

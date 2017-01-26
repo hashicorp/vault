@@ -3,6 +3,8 @@ package chefnode
 import (
 	"fmt"
 
+	"net/url"
+
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -52,6 +54,16 @@ func (b *backend) pathConfigWrite(req *logical.Request, data *framework.FieldDat
 	baseURL := data.Get("base_url").(string)
 	clientName := data.Get("client_name").(string)
 	clientKey := data.Get("client_key").(string)
+
+	_, err := parsePrivateKey(clientKey)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = url.ParseRequestURI(baseURL)
+	if err != nil {
+		return nil, err
+	}
 
 	entry, err := logical.StorageEntryJSON("config", config{
 		BaseURL:    baseURL,

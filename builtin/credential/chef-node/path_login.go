@@ -365,18 +365,6 @@ func splitOn60(toSplit string) []string {
 	return sl
 }
 
-func parsePrivateKey(key string) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode([]byte(key))
-	if block == nil {
-		return nil, fmt.Errorf("Couldn't parse PEM data")
-	}
-	privkey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return privkey, nil
-}
-
 func parsePublicKey(key string) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode([]byte(key))
 	if block == nil {
