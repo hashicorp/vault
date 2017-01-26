@@ -28,12 +28,6 @@ type CORSConfig struct {
 	AllowedOrigins []string
 }
 
-func newCORSConfig() *CORSConfig {
-	return &CORSConfig{
-		Enabled: false,
-	}
-}
-
 func (c *CORSConfig) Enable(s string) error {
 	if strings.Contains("*", s) && len(s) > 1 {
 		return errors.New("wildcard must be the only value")

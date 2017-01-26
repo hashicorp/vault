@@ -678,9 +678,6 @@ func (b *SystemBackend) corsStatusResponse() (*logical.Response, error) {
 // handleCORSEnable sets the list of origins that are allowed
 // to make cross-origin requests and sets the CORS enabled flag to true
 func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	if b.Core.corsConfig == nil {
-		b.Core.corsConfig = newCORSConfig()
-	}
 	origins := d.Get("allowed_origins").(string)
 
 	err := b.Core.corsConfig.Enable(origins)

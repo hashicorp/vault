@@ -414,9 +414,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
 	}
 
-	// Get a default CORS config.
-	corsConfig := newCORSConfig()
-
 	// Setup the core
 	c := &Core{
 		redirectAddr:                     conf.RedirectAddr,
@@ -435,7 +432,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		corsConfig:                       corsConfig,
+		corsConfig:                       &CORSConfig{},
 	}
 
 	// Wrap the backend in a cache unless disabled
