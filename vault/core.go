@@ -231,6 +231,9 @@ type Core struct {
 	// policy store is used to manage named ACL policies
 	policyStore *PolicyStore
 
+	// config store is used to manage API-managable configs
+	configStore *ConfigStore
+
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
 
@@ -1212,6 +1215,9 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupPolicyStore(); err != nil {
 		return err
 	}
+	if err := c.setupConfigStore(); err != nil {
+		return err
+	}
 	if err := c.loadCredentials(); err != nil {
 		return err
 	}
@@ -1270,6 +1276,9 @@ func (c *Core) preSeal() error {
 	}
 	if err := c.teardownPolicyStore(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down policy store: {{err}}", err))
+	}
+	if err := c.teardownConfigStore(); err != nil {
+		result = multierror.Append(result, errwrap.Wrapf("error tearing down config store: {{err}}", err))
 	}
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))
