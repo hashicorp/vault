@@ -2,6 +2,10 @@
 
 FEATURES:
 
+ * **Okta Authentication**: A new Okta authentication backend allows you to use
+   Okta usernames and passwords to authenticate to Vault. If provided with an
+   appropriate Okta API token, group membership can be queried to assign
+   policies; users and groups can be defined locally as well.
  * **Exportable Transit Keys**: Keys in `transit` can now be marked as
    `exportable` at creation time. This allows a properly ACL'd user to retrieve
    the associated signing key, encryption key, or HMAC key. The `exportable`
