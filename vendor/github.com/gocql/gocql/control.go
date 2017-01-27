@@ -11,11 +11,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"sync"
+
 	"golang.org/x/net/context"
 )
 
 var (
-	randr *rand.Rand
+	randr    *rand.Rand
+	mutRandr sync.Mutex
 )
 
 func init() {
@@ -135,7 +138,9 @@ func hostInfo(addr string, defaultPort int) (*HostInfo, error) {
 }
 
 func shuffleHosts(hosts []*HostInfo) []*HostInfo {
+	mutRandr.Lock()
 	perm := randr.Perm(len(hosts))
+	mutRandr.Unlock()
 	shuffled := make([]*HostInfo, len(hosts))
 
 	for i, host := range hosts {

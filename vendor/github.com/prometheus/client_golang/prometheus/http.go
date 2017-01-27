@@ -172,6 +172,9 @@ func nowSeries(t ...time.Time) nower {
 // httputil.ReverseProxy is a prominent example for a handler
 // performing such writes.
 //
+// - It has additional issues with HTTP/2, cf.
+// https://github.com/prometheus/client_golang/issues/272.
+//
 // Upcoming versions of this package will provide ways of instrumenting HTTP
 // handlers that are more flexible and have fewer issues. Please prefer direct
 // instrumentation in the meantime.

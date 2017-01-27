@@ -1,6 +1,7 @@
 package api
 
 type Node struct {
+	ID              string
 	Node            string
 	Address         string
 	TaggedAddresses map[string]string
@@ -8,6 +9,7 @@ type Node struct {
 }
 
 type CatalogService struct {
+	ID                       string
 	Node                     string
 	Address                  string
 	TaggedAddresses          map[string]string
@@ -28,6 +30,7 @@ type CatalogNode struct {
 }
 
 type CatalogRegistration struct {
+	ID              string
 	Node            string
 	Address         string
 	TaggedAddresses map[string]string
@@ -39,7 +42,7 @@ type CatalogRegistration struct {
 
 type CatalogDeregistration struct {
 	Node       string
-	Address    string
+	Address    string // Obsolete.
 	Datacenter string
 	ServiceID  string
 	CheckID    string

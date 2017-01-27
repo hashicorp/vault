@@ -106,6 +106,12 @@ cfg, err := LoadSources(LoadOptions{AllowBooleanKeys: true}, "my.cnf"))
 
 The value of those keys are always `true`, and when you save to a file, it will keep in the same foramt as you read.
 
+To generate such keys in your program, you could use `NewBooleanKey`:
+
+```go
+key, err := sec.NewBooleanKey("skip-host-cache")
+```
+
 #### Comment
 
 Take care that following format will be treated as comment:

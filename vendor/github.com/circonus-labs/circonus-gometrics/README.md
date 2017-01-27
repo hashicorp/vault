@@ -18,70 +18,67 @@ A working cut-n-past example. Simply set the required environment variable `CIRC
 package main
 
 import (
-	"log"
-	"math/rand"
-	"os"
+    "log"
+    "math/rand"
+    "os"
     "os/signal"
     "syscall"
-	"time"
+    "time"
 
-	cgm "github.com/circonus-labs/circonus-gometrics"
+    cgm "github.com/circonus-labs/circonus-gometrics"
 )
 
 func main() {
 
     logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	logger.Println("Configuring cgm")
+    logger.Println("Configuring cgm")
 
-	cmc := &cgm.Config{}
+    cmc := &cgm.Config{}
     cmc.Debug := false // set to true for debug messages
-	cmc.Log = logger
+    cmc.Log = logger
 
-	// Circonus API Token key (https://login.circonus.com/user/tokens)
-	cmc.CheckManager.API.TokenKey = os.Getenv("CIRCONUS_API_TOKEN")
+    // Circonus API Token key (https://login.circonus.com/user/tokens)
+    cmc.CheckManager.API.TokenKey = os.Getenv("CIRCONUS_API_TOKEN")
 
-	logger.Println("Creating new cgm instance")
+    logger.Println("Creating new cgm instance")
 
-	metrics, err := cgm.NewCirconusMetrics(cmc)
-	if err != nil {
+    metrics, err := cgm.NewCirconusMetrics(cmc)
+    if err != nil {
         logger.Println(err)
-		os.Exit(1)
-	}
+        os.Exit(1)
+    }
 
-	src := rand.NewSource(time.Now().UnixNano())
-	rnd := rand.New(src)
-
-	logger.Println("Starting cgm internal auto-flush timer")
-	metrics.Start()
+    src := rand.NewSource(time.Now().UnixNano())
+    rnd := rand.New(src)
 
     logger.Println("Adding ctrl-c trap")
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		logger.Println("Received CTRL-C, flushing outstanding metrics before exit")
-		metrics.Flush()
-		os.Exit(0)
-	}()
+    c := make(chan os.Signal, 2)
+    signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+    go func() {
+        <-c
+        logger.Println("Received CTRL-C, flushing outstanding metrics before exit")
+        metrics.Flush()
+        os.Exit(0)
+    }()
 
-	logger.Println("Starting to send metrics")
+    logger.Println("Starting to send metrics")
 
-	// number of "sets" of metrics to send
-	max := 60
+    // number of "sets" of metrics to send
+    max := 60
 
-	for i := 1; i < max; i++ {
-		logger.Printf("\tmetric set %d of %d", i, 60)
-		metrics.Timing("foo", rnd.Float64()*10)
-		metrics.Increment("bar")
-		metrics.Gauge("baz", 10)
+    for i := 1; i < max; i++ {
+        logger.Printf("\tmetric set %d of %d", i, 60)
+        metrics.Timing("foo", rnd.Float64()*10)
+        metrics.Increment("bar")
+        metrics.Gauge("baz", 10)
         time.Sleep(time.Second)
-	}
+    }
 
     metrics.SetText("fini", "complete")
 
-	logger.Println("Flushing any outstanding metrics manually")
-	metrics.Flush()
+    logger.Println("Flushing any outstanding metrics manually")
+    metrics.Flush()
 }
 ```
 
@@ -93,98 +90,95 @@ A working, cut-n-paste example with all options available for modification. Also
 package main
 
 import (
-	"log"
-	"math/rand"
-	"os"
+    "log"
+    "math/rand"
+    "os"
     "os/signal"
     "syscall"
-	"time"
+    "time"
 
-	cgm "github.com/circonus-labs/circonus-gometrics"
+    cgm "github.com/circonus-labs/circonus-gometrics"
 )
 
 func main() {
 
     logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	logger.Println("Configuring cgm")
+    logger.Println("Configuring cgm")
 
-	cmc := &cgm.Config{}
+    cmc := &cgm.Config{}
 
     // General
 
-	cmc.Interval = "10s"
+    cmc.Interval = "10s"
     cmc.Log = logger
-	cmc.Debug = false
+    cmc.Debug = false
     cmc.ResetCounters = "true"
     cmc.ResetGauges = "true"
     cmc.ResetHistograms = "true"
     cmc.ResetText = "true"
 
-	// Circonus API configuration options
-	cmc.CheckManager.API.TokenKey = os.Getenv("CIRCONUS_API_TOKEN")
-	cmc.CheckManager.API.TokenApp = os.Getenv("CIRCONUS_API_APP")
-	cmc.CheckManager.API.URL = os.Getenv("CIRCONUS_API_URL")
+    // Circonus API configuration options
+    cmc.CheckManager.API.TokenKey = os.Getenv("CIRCONUS_API_TOKEN")
+    cmc.CheckManager.API.TokenApp = os.Getenv("CIRCONUS_API_APP")
+    cmc.CheckManager.API.URL = os.Getenv("CIRCONUS_API_URL")
 
-	// Check configuration options
-	cmc.CheckManager.Check.SubmissionURL = os.Getenv("CIRCONUS_SUBMISION_URL")
-	cmc.CheckManager.Check.ID = os.Getenv("CIRCONUS_CHECK_ID")
-	cmc.CheckManager.Check.InstanceID = ""
-	cmc.CheckManager.Check.DisplayName = ""
+    // Check configuration options
+    cmc.CheckManager.Check.SubmissionURL = os.Getenv("CIRCONUS_SUBMISION_URL")
+    cmc.CheckManager.Check.ID = os.Getenv("CIRCONUS_CHECK_ID")
+    cmc.CheckManager.Check.InstanceID = ""
+    cmc.CheckManager.Check.DisplayName = ""
     cmc.CheckManager.Check.TargetHost = ""
     //  if hn, err := os.Hostname(); err == nil {
     //      cmc.CheckManager.Check.TargetHost = hn
     //  }
-	cmc.CheckManager.Check.SearchTag = ""
-	cmc.CheckManager.Check.Secret = ""
-	cmc.CheckManager.Check.Tags = ""
-	cmc.CheckManager.Check.MaxURLAge = "5m"
-	cmc.CheckManager.Check.ForceMetricActivation = "false"
+    cmc.CheckManager.Check.SearchTag = ""
+    cmc.CheckManager.Check.Secret = ""
+    cmc.CheckManager.Check.Tags = ""
+    cmc.CheckManager.Check.MaxURLAge = "5m"
+    cmc.CheckManager.Check.ForceMetricActivation = "false"
 
-	// Broker configuration options
-	cmc.CheckManager.Broker.ID = ""
-	cmc.CheckManager.Broker.SelectTag = ""
-	cmc.CheckManager.Broker.MaxResponseTime = "500ms"
+    // Broker configuration options
+    cmc.CheckManager.Broker.ID = ""
+    cmc.CheckManager.Broker.SelectTag = ""
+    cmc.CheckManager.Broker.MaxResponseTime = "500ms"
 
-	logger.Println("Creating new cgm instance")
+    logger.Println("Creating new cgm instance")
 
-	metrics, err := cgm.NewCirconusMetrics(cmc)
-	if err != nil {
+    metrics, err := cgm.NewCirconusMetrics(cmc)
+    if err != nil {
         logger.Println(err)
-		os.Exit(1)
-	}
+        os.Exit(1)
+    }
 
-	src := rand.NewSource(time.Now().UnixNano())
-	rnd := rand.New(src)
-
-	logger.Println("Starting cgm internal auto-flush timer")
-	metrics.Start()
+    src := rand.NewSource(time.Now().UnixNano())
+    rnd := rand.New(src)
 
     logger.Println("Adding ctrl-c trap")
-	c := make(chan os.Signal, 2)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		logger.Println("Received CTRL-C, flushing outstanding metrics before exit")
-		metrics.Flush()
-		os.Exit(0)
-	}()
+    c := make(chan os.Signal, 2)
+    signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+    go func() {
+        <-c
+        logger.Println("Received CTRL-C, flushing outstanding metrics before exit")
+        metrics.Flush()
+        os.Exit(0)
+    }()
 
     // Add metric tags (append to any existing tags on specified metric)
     metrics.AddMetricTags("foo", []string{"cgm:test"})
     metrics.AddMetricTags("baz", []string{"cgm:test"})
 
-	logger.Println("Starting to send metrics")
+    logger.Println("Starting to send metrics")
 
-	// number of "sets" of metrics to send
-	max := 60
+    // number of "sets" of metrics to send
+    max := 60
 
-	for i := 1; i < max; i++ {
-		logger.Printf("\tmetric set %d of %d", i, 60)
+    for i := 1; i < max; i++ {
+        logger.Printf("\tmetric set %d of %d", i, 60)
 
-		metrics.Timing("foo", rnd.Float64()*10)
-		metrics.Increment("bar")
-		metrics.Gauge("baz", 10)
+        metrics.Timing("foo", rnd.Float64()*10)
+        metrics.Increment("bar")
+        metrics.Gauge("baz", 10)
 
         if i == 35 {
             // Set metric tags (overwrite current tags on specified metric)
@@ -192,10 +186,10 @@ func main() {
         }
 
         time.Sleep(time.Second)
-	}
+    }
 
-	logger.Println("Flushing any outstanding metrics manually")
-	metrics.Flush()
+    logger.Println("Flushing any outstanding metrics manually")
+    metrics.Flush()
 
 }
 ```
@@ -226,7 +220,6 @@ func main() {
     if err != nil {
         panic(err)
     }
-    metrics.Start()
 
     http.HandleFunc("/", metrics.TrackHTTPLatency("/", func(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintf(w, "Hello, %s!", r.URL.Path[1:])

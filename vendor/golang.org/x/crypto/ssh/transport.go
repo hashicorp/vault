@@ -22,7 +22,9 @@ type packetConn interface {
 	// Encrypt and send a packet of data to the remote peer.
 	writePacket(packet []byte) error
 
-	// Read a packet from the connection
+	// Read a packet from the connection. The read is blocking,
+	// i.e. if error is nil, then the returned byte slice is
+	// always non-empty.
 	readPacket() ([]byte, error)
 
 	// Close closes the write-side of the connection.

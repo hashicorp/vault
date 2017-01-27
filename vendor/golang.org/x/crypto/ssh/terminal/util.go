@@ -17,7 +17,6 @@
 package terminal // import "golang.org/x/crypto/ssh/terminal"
 
 import (
-	"io"
 	"syscall"
 	"unsafe"
 )
@@ -88,6 +87,13 @@ func GetSize(fd int) (width, height int, err error) {
 	return int(dimensions[1]), int(dimensions[0]), nil
 }
 
+// passwordReader is an io.Reader that reads from a specific file descriptor.
+type passwordReader int
+
+func (r passwordReader) Read(buf []byte) (int, error) {
+	return syscall.Read(int(r), buf)
+}
+
 // ReadPassword reads a line of input from a terminal without local echo.  This
 // is commonly used for inputting passwords and other sensitive data. The slice
 // returned does not include the \n.
@@ -109,27 +115,5 @@ func ReadPassword(fd int) ([]byte, error) {
 		syscall.Syscall6(syscall.SYS_IOCTL, uintptr(fd), ioctlWriteTermios, uintptr(unsafe.Pointer(&oldState)), 0, 0, 0)
 	}()
 
-	var buf [16]byte
-	var ret []byte
-	for {
-		n, err := syscall.Read(fd, buf[:])
-		if err != nil {
-			return nil, err
-		}
-		if n == 0 {
-			if len(ret) == 0 {
-				return nil, io.EOF
-			}
-			break
-		}
-		if buf[n-1] == '\n' {
-			n--
-		}
-		ret = append(ret, buf[:n]...)
-		if n < len(buf) {
-			break
-		}
-	}
-
-	return ret, nil
+	return readPasswordLine(passwordReader(fd))
 }

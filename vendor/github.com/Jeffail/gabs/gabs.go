@@ -283,9 +283,11 @@ func (g *Container) Delete(path ...string) error {
 	for target := 0; target < len(path); target++ {
 		if mmap, ok := object.(map[string]interface{}); ok {
 			if target == len(path)-1 {
-				delete(mmap, path[target])
-			} else if mmap[path[target]] == nil {
-				return ErrNotObj
+				if _, ok := mmap[path[target]]; ok {
+					delete(mmap, path[target])
+				} else {
+					return ErrNotObj
+				}
 			}
 			object = mmap[path[target]]
 		} else {

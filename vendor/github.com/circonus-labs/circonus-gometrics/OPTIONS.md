@@ -63,7 +63,7 @@ func main() {
 | General ||
 | `cfg.Log` | none | log.Logger instance to send logging messages. Default is to discard messages. If Debug is turned on and no instance is specified, messages will go to stderr. |
 | `cfg.Debug` | false | Turn on debugging messages. |
-| `cfg.Interval` | "10s" | Interval at which metrics are flushed and sent to Circonus. |
+| `cfg.Interval` | "10s" | Interval at which metrics are flushed and sent to Circonus. Set to "0s" to disable automatic flush (note, if disabled, `cgm.Flush()` must be called manually to send metrics to Circonus).|
 | `cfg.ResetCounters` | "true" | Reset counter metrics after each submission. Change to "false" to retain (and continue submitting) the last value.|
 | `cfg.ResetGauges` | "true" | Reset gauge metrics after each submission. Change to "false" to retain (and continue submitting) the last value.|
 | `cfg.ResetHistograms` | "true" | Reset histogram metrics after each submission. Change to "false" to retain (and continue submitting) the last value.|
