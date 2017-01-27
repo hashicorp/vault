@@ -366,16 +366,14 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.InferredAWSRegion = inferredAWSRegionRaw.(string)
 	}
 
-	allowInstanceIdentityDocument, allowCallerIdentity := false, false
+	allowEc2Auth, allowIamAuth := false, false
 
 	parseAllowedAuthTypes := func(input string) string {
 		allowedAuthTypes := []string{}
 		for _, t := range strings.Split(input, ",") {
 			if t == "ec2" {
-				allowInstanceIdentityDocument = true
 				allowedAuthTypes = append(allowedAuthTypes, t)
 			} else if t == "iam" {
-				allowCallerIdentity = true
 				allowedAuthTypes = append(allowedAuthTypes, t)
 			} else if t != "" {
 				return fmt.Sprintf("unrecognized auth type: '%s'", t)
@@ -397,45 +395,69 @@ func (b *backend) pathRoleCreateUpdate(
 		}
 	}
 
-	if allowInstanceIdentityDocument || (allowCallerIdentity && roleEntry.BoundIamPrincipalARN == "") {
-		// Ensure that at least one bound is set on the role
-		switch {
-		case roleEntry.BoundAccountID != "":
-		case roleEntry.BoundAmiID != "":
-		case roleEntry.BoundIamInstanceProfileARN != "":
-		case roleEntry.BoundIamRoleARN != "":
-		default:
-
-			return logical.ErrorResponse("at least be one bound parameter should be specified on the role with auth_type ec2 or auth_type iam"), nil
+	for _, t := range roleEntry.AllowedAuthTypes {
+		if t == "ec2" {
+			allowEc2Auth = true
+		} else if t == "iam" {
+			allowIamAuth = true
+		} else {
+			return nil, fmt.Errorf("Unrecognized auth_type in roleEntry: %s", t)
 		}
 	}
 
-	if allowCallerIdentity {
-		if roleEntry.RoleInferredType != "" {
-			if roleEntry.RoleInferredType != "ec2_instance" {
-				return logical.ErrorResponse(fmt.Sprintf("invalid role_inferred_type value: '%s'", roleEntry.RoleInferredType)), nil
-			}
-			if roleEntry.InferredAWSRegion == "" {
-				return logical.ErrorResponse("must set inferred_aws_region when setting role_inferred_type"), nil
-			}
-		} else {
-			if roleEntry.BoundIamPrincipalARN == "" {
-				return logical.ErrorResponse("must set bound_iam_principal_arn if not setting role_inferred_type"), nil
-			}
-			if roleEntry.InferredAWSRegion != "" {
-				return logical.ErrorResponse("must not set inferred_aws_region without role_inferred_type"), nil
-			}
+	allowEc2Binds := allowEc2Auth
+
+	if roleEntry.RoleInferredType != "" {
+		if !allowIamAuth {
+			return logical.ErrorResponse("specified role_inferred_type but didn't allow iam auth_type"), nil
+		} else if roleEntry.RoleInferredType != "ec2_instance" {
+			return logical.ErrorResponse(fmt.Sprintf("specified invalid role_inferred_type: %s", roleEntry.RoleInferredType)), nil
+		} else if roleEntry.InferredAWSRegion == "" {
+			return logical.ErrorResponse("specified role_inferred_type but not inferred_aws_region"), nil
 		}
-	} else {
-		if roleEntry.RoleInferredType != "" {
-			return logical.ErrorResponse("must only set role_inferred_type when allowing iam auth_type"), nil
+		allowEc2Binds = true
+	} else if roleEntry.InferredAWSRegion != "" {
+		return logical.ErrorResponse("specified inferred_aws_region but not role_inferred_type"), nil
+	}
+
+	numBinds := 0
+
+	if roleEntry.BoundAccountID != "" {
+		if !allowEc2Auth {
+			return logical.ErrorResponse("specified bound_account_id but not allowing ec2 auth_method"), nil
 		}
-		if roleEntry.BoundIamPrincipalARN != "" {
-			return logical.ErrorResponse("must only set bound_iam_principal_arn when allowing iam auth_type"), nil
+		numBinds++
+	}
+
+	if roleEntry.BoundAmiID != "" {
+		if !allowEc2Binds {
+			return logical.ErrorResponse("specified bound_ami_id but not allowing ec2 auth_method or inferring ec2_instance"), nil
 		}
-		if roleEntry.InferredAWSRegion != "" {
-			return logical.ErrorResponse("must not set inferred_aws_region without allowing iam auth_type"), nil
+		numBinds++
+	}
+
+	if roleEntry.BoundIamInstanceProfileARN != "" {
+		if !allowEc2Binds {
+			return logical.ErrorResponse("specified bound_iam_instance_profile_arn but not allowing ec2 auth_method or inferring ec2_instance"), nil
 		}
+	}
+
+	if roleEntry.BoundIamRoleARN != "" {
+		if !allowEc2Binds {
+			return logical.ErrorResponse("specified bound_iam_role_arn but not allowing ec2 auth_method or inferring ec2_instance"), nil
+		}
+		numBinds++
+	}
+
+	if roleEntry.BoundIamPrincipalARN != "" {
+		if !allowIamAuth {
+			return logical.ErrorResponse("specified bound_iam_principal_arn but not allowing iam auth_method"), nil
+		}
+		numBinds++
+	}
+
+	if numBinds == 0 {
+		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
 	}
 
 	policiesStr, ok := data.GetOk("policies")

@@ -38,7 +38,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 		"bound_ami_id": "abcd-123",
 	}
 	resp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Path:      "role/abcd-123",
 		Storage:   storage,
 		Data:      data,
@@ -105,7 +105,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 
 	// register a different role
 	resp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Path:      "role/ami-6789",
 		Storage:   storage,
 		Data:      data,
@@ -1303,7 +1303,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		"bound_ami_id": "ami-1234567",
 	}
 	roleRequestEc2 := &logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Path:      "role/ec2only",
 		Storage:   storage,
 		Data:      roleDataEc2,

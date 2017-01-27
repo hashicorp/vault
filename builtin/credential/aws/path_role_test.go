@@ -8,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestBackend_pathRoleInstanceIdentityDocument(t *testing.T) {
+func TestBackend_pathRoleEc2(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -64,7 +64,7 @@ func TestBackend_pathRoleInstanceIdentityDocument(t *testing.T) {
 		Storage:   storage,
 	})
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to create role")
+		t.Fatalf("failed to create role: %s", resp.Data["error"])
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -82,14 +82,15 @@ func TestBackend_pathRoleInstanceIdentityDocument(t *testing.T) {
 	}
 
 	// add another entry, to test listing of role entries
+	data["bound_ami_id"] = "ami-abcd456"
 	resp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Path:      "role/ami-abcd456",
 		Data:      data,
 		Storage:   storage,
 	})
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to create role")
+		t.Fatalf("failed to create role: %s", resp.Data["error"])
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -134,7 +135,7 @@ func TestBackend_pathRoleInstanceIdentityDocument(t *testing.T) {
 
 }
 
-func TestBackend_pathRoleSignedCallerIdentity(t *testing.T) {
+func TestBackend_pathIam(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
