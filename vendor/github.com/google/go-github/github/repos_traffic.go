@@ -60,9 +60,6 @@ func (s *RepositoriesService) ListTrafficReferrers(owner, repo string) ([]*Traff
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeTrafficPreview)
-
 	trafficReferrers := new([]*TrafficReferrer)
 	resp, err := s.client.Do(req, &trafficReferrers)
 	if err != nil {
@@ -82,9 +79,6 @@ func (s *RepositoriesService) ListTrafficPaths(owner, repo string) ([]*TrafficPa
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeTrafficPreview)
 
 	var paths = new([]*TrafficPath)
 	resp, err := s.client.Do(req, &paths)
@@ -110,9 +104,6 @@ func (s *RepositoriesService) ListTrafficViews(owner, repo string, opt *TrafficB
 		return nil, nil, err
 	}
 
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeTrafficPreview)
-
 	trafficViews := new(TrafficViews)
 	resp, err := s.client.Do(req, &trafficViews)
 	if err != nil {
@@ -136,9 +127,6 @@ func (s *RepositoriesService) ListTrafficClones(owner, repo string, opt *Traffic
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: remove custom Accept header when this API fully launches.
-	req.Header.Set("Accept", mediaTypeTrafficPreview)
 
 	trafficClones := new(TrafficClones)
 	resp, err := s.client.Do(req, &trafficClones)

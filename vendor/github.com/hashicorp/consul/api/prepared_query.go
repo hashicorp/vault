@@ -43,6 +43,11 @@ type ServiceQuery struct {
 	// this list it must be present. If the tag is preceded with "!" then
 	// it is disallowed.
 	Tags []string
+
+	// NodeMeta is a map of required node metadata fields. If a key/value
+	// pair is in this map it must be present on the node in order for the
+	// service entry to be returned.
+	NodeMeta map[string]string
 }
 
 // QueryTemplate carries the arguments for creating a templated query.

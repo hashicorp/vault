@@ -318,11 +318,14 @@ func (f *File) parse(reader io.Reader) (err error) {
 		if err != nil {
 			// Treat as boolean key when desired, and whole line is key name.
 			if IsErrDelimiterNotFound(err) && f.options.AllowBooleanKeys {
-				key, err := section.NewKey(string(line), "true")
+				kname, err := p.readValue(line, f.options.IgnoreContinuation)
 				if err != nil {
 					return err
 				}
-				key.isBooleanType = true
+				key, err := section.NewBooleanKey(kname)
+				if err != nil {
+					return err
+				}
 				key.Comment = strings.TrimSpace(p.comment.String())
 				p.comment.Reset()
 				continue

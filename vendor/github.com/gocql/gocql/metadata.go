@@ -416,6 +416,9 @@ func getKeyspaceMetadata(session *Session, keyspaceName string) (*KeyspaceMetada
 		var replication map[string]string
 
 		iter := session.control.query(stmt, keyspaceName)
+		if iter.NumRows() == 0 {
+			return nil, ErrKeyspaceDoesNotExist
+		}
 		iter.Scan(&keyspace.DurableWrites, &replication)
 		err := iter.Close()
 		if err != nil {
@@ -438,6 +441,9 @@ func getKeyspaceMetadata(session *Session, keyspaceName string) (*KeyspaceMetada
 		var strategyOptionsJSON []byte
 
 		iter := session.control.query(stmt, keyspaceName)
+		if iter.NumRows() == 0 {
+			return nil, ErrKeyspaceDoesNotExist
+		}
 		iter.Scan(&keyspace.DurableWrites, &keyspace.StrategyClass, &strategyOptionsJSON)
 		err := iter.Close()
 		if err != nil {

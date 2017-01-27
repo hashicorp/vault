@@ -1254,7 +1254,7 @@ initiate_connection:
 
 	login := login{
 		TDSVersion:   verTDS74,
-		PacketSize:   uint32(len(outbuf.buf)),
+		PacketSize:   outbuf.PackageSize(),
 		Database:     p.database,
 		OptionFlags2: fODBC, // to get unlimited TEXTSIZE
 		HostName:     p.workstation,

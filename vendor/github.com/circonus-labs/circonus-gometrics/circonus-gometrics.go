@@ -58,14 +58,16 @@ type Config struct {
 	// API, Check and Broker configuration options
 	CheckManager checkmgr.Config
 
-	// how frequenly to submit metrics to Circonus, default 10 seconds
+	// how frequenly to submit metrics to Circonus, default 10 seconds.
+	// Set to 0 to disable automatic flushes and call Flush manually.
 	Interval string
 }
 
 // CirconusMetrics state
 type CirconusMetrics struct {
-	Log             *log.Logger
-	Debug           bool
+	Log   *log.Logger
+	Debug bool
+
 	resetCounters   bool
 	resetGauges     bool
 	resetHistograms bool
@@ -196,24 +198,25 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 		cm.check = check
 	}
 
-	// initialize
-	if _, err := cm.check.GetTrap(); err != nil {
-		return nil, err
+	// start background initialization
+	cm.check.Initialize()
+
+	// if automatic flush is enabled, start it.
+	// note: submit will jettison metrics until initialization has completed.
+	if cm.flushInterval > time.Duration(0) {
+		go func() {
+			for _ = range time.NewTicker(cm.flushInterval).C {
+				cm.Flush()
+			}
+		}()
 	}
 
 	return cm, nil
 }
 
-// Start initializes the CirconusMetrics instance based on
-// configuration settings and sets the httptrap check url to
-// which metrics should be sent. It then starts a perdiodic
-// submission process of all metrics collected.
+// Start deprecated NOP, automatic flush is started in New if flush interval > 0.
 func (m *CirconusMetrics) Start() {
-	go func() {
-		for _ = range time.NewTicker(m.flushInterval).C {
-			m.Flush()
-		}
-	}()
+	return
 }
 
 // Flush metrics kicks off the process of sending metrics to Circonus

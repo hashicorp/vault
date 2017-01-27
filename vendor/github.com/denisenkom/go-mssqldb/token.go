@@ -11,21 +11,25 @@ import (
 	"golang.org/x/net/context"
 )
 
+//go:generate stringer -type token
+
+type token byte
+
 // token ids
 const (
-	tokenReturnStatus = 121 // 0x79
-	tokenColMetadata  = 129 // 0x81
-	tokenOrder        = 169 // 0xA9
-	tokenError        = 170 // 0xAA
-	tokenInfo         = 171 // 0xAB
-	tokenLoginAck     = 173 // 0xad
-	tokenRow          = 209 // 0xd1
-	tokenNbcRow       = 210 // 0xd2
-	tokenEnvChange    = 227 // 0xE3
-	tokenSSPI         = 237 // 0xED
-	tokenDone         = 253 // 0xFD
-	tokenDoneProc     = 254
-	tokenDoneInProc   = 255
+	tokenReturnStatus token = 121 // 0x79
+	tokenColMetadata  token = 129 // 0x81
+	tokenOrder        token = 169 // 0xA9
+	tokenError        token = 170 // 0xAA
+	tokenInfo         token = 171 // 0xAB
+	tokenLoginAck     token = 173 // 0xad
+	tokenRow          token = 209 // 0xd1
+	tokenNbcRow       token = 210 // 0xd2
+	tokenEnvChange    token = 227 // 0xE3
+	tokenSSPI         token = 237 // 0xED
+	tokenDone         token = 253 // 0xFD
+	tokenDoneProc     token = 254
+	tokenDoneInProc   token = 255
 )
 
 // done flags
@@ -181,11 +185,7 @@ func processEnvChg(sess *tdsSession) {
 			if err != nil {
 				badStreamPanicf("Invalid Packet size value returned from server (%s): %s", packetsize, err.Error())
 			}
-			if len(sess.buf.buf) != packetsizei {
-				newbuf := make([]byte, packetsizei)
-				copy(newbuf, sess.buf.buf)
-				sess.buf.buf = newbuf
-			}
+			sess.buf.ResizeBuffer(packetsizei)
 		case envSortId:
 			// currently ignored
 			// old value, should be 0
@@ -525,9 +525,9 @@ func processSingleResponse(sess *tdsSession, ch chan tokenStruct) {
 	var columns []columnStruct
 	errs := make([]Error, 0, 5)
 	for {
-		token := sess.buf.byte()
+		token := token(sess.buf.byte())
 		if sess.logFlags&logDebug != 0 {
-			sess.log.Printf("got token id %d", token)
+			sess.log.Printf("got token %v", token)
 		}
 		switch token {
 		case tokenSSPI:
@@ -625,8 +625,7 @@ type parseResp struct {
 }
 
 func (ts *parseResp) sendAttention(ch chan tokenStruct) parseRespIter {
-	err := sendAttention(ts.sess.buf)
-	if err != nil {
+	if err := sendAttention(ts.sess.buf); err != nil {
 		ts.dlogf("failed to send attention signal %v", err)
 		ch <- err
 		return parseRespIterDone
@@ -719,8 +718,8 @@ func (ts *parseResp) iter(ctx context.Context, ch chan tokenStruct, tokChan chan
 
 func processResponse(ctx context.Context, sess *tdsSession, ch chan tokenStruct) {
 	ts := &parseResp{
-		ctxDone: ctx.Done(),
 		sess:    sess,
+		ctxDone: ctx.Done(),
 	}
 	defer func() {
 		// Ensure any remaining error is piped through

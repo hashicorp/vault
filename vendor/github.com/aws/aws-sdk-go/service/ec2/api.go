@@ -2945,6 +2945,10 @@ func (c *EC2) CreateReservedInstancesListingRequest(input *CreateReservedInstanc
 // listing at a time. To get a list of your Standard Reserved Instances, you
 // can use the DescribeReservedInstances operation.
 //
+// Only Standard Reserved Instances with a capacity reservation can be sold
+// in the Reserved Instance Marketplace. Convertible Reserved Instances and
+// Standard Reserved Instances with a regional benefit cannot be sold.
+//
 // The Reserved Instance Marketplace matches sellers who want to resell Standard
 // Reserved Instance capacity that they no longer need with buyers who want
 // to purchase additional capacity. Reserved Instances bought and sold through
@@ -3647,8 +3651,8 @@ func (c *EC2) CreateVpcRequest(input *CreateVpcInput) (req *request.Request, out
 //
 // You can specify the instance tenancy value for the VPC when you create it.
 // You can't change this value for the VPC after you create it. For more information,
-// see Dedicated Instances (http://docs.aws.amazon.com/AmazonVPC/latest/UserGuide/dedicated-instance.html.html)
-// in the Amazon Virtual Private Cloud User Guide.
+// see Dedicated Instances (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html)
+// in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -3714,7 +3718,7 @@ func (c *EC2) CreateVpcEndpointRequest(input *CreateVpcEndpointInput) (req *requ
 // that will control access to the service from your VPC. You can also specify
 // the VPC route tables that use the endpoint.
 //
-// Currently, only endpoints to Amazon S3 are supported.
+// Use DescribeVpcEndpointServices to get a list of supported AWS services.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
 // with awserr.Error's Code and Message methods to get detailed information about
@@ -24472,6 +24476,9 @@ type DescribeCustomerGatewaysInput struct {
 	//    is ipsec.1.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -24564,6 +24571,9 @@ type DescribeDhcpOptionsInput struct {
 	//    * value - The value for one of the options.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -24880,8 +24890,7 @@ type DescribeHostReservationOfferingsInput struct {
 	//
 	//    * instance-family - The instance family of the offering (e.g., m4).
 	//
-	//    * payment-option - The payment option (No Upfront | Partial Upfront |
-	//    All Upfront).
+	//    * payment-option - The payment option (NoUpfront | PartialUpfront | AllUpfront).
 	Filter []*Filter `locationNameList:"Filter" type:"list"`
 
 	// This is the maximum duration of the reservation you'd like to purchase, specified
@@ -24999,8 +25008,7 @@ type DescribeHostReservationsInput struct {
 	//
 	//    * instance-family - The instance family (e.g., m4).
 	//
-	//    * payment-option - The payment option (No Upfront | Partial Upfront |
-	//    All Upfront).
+	//    * payment-option - The payment option (NoUpfront | PartialUpfront | AllUpfront).
 	//
 	//    * state - The state of the reservation (payment-pending | payment-failed
 	//    | active | retired).
@@ -25557,6 +25565,9 @@ type DescribeImagesInput struct {
 	//    * state-reason-message - The message for the state change.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -26457,8 +26468,10 @@ type DescribeInstancesInput struct {
 	//
 	//    * subnet-id - The ID of the subnet for the instance.
 	//
-	//    * tag:key=value - The key/value combination of a tag assigned to the resource,
-	//    where tag:key is the tag's key.
+	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -26590,6 +26603,9 @@ type DescribeInternetGatewaysInput struct {
 	//    * internet-gateway-id - The ID of the Internet gateway.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -26997,6 +27013,9 @@ type DescribeNetworkAclsInput struct {
 	//    * network-acl-id - The ID of the network ACL.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -27299,6 +27318,9 @@ type DescribeNetworkInterfacesInput struct {
 	//    * subnet-id - The ID of the subnet for the network interface.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -27684,6 +27706,9 @@ type DescribeReservedInstancesInput struct {
 	//    | payment-failed | retired).
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -28269,6 +28294,9 @@ type DescribeRouteTablesInput struct {
 	//    specified in a route in the table.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -28972,6 +29000,9 @@ type DescribeSnapshotsInput struct {
 	//    * status - The status of the snapshot (pending | completed | error).
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -29646,6 +29677,9 @@ type DescribeSpotInstanceRequestsInput struct {
 	//    request.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -30033,6 +30067,9 @@ type DescribeSubnetsInput struct {
 	//    * subnet-id - The ID of the subnet.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -30496,6 +30533,9 @@ type DescribeVolumesInput struct {
 	//    | deleted | error).
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -30839,6 +30879,9 @@ type DescribeVpcClassicLinkInput struct {
 	//    (true | false).
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -31145,6 +31188,9 @@ type DescribeVpcPeeringConnectionsInput struct {
 	//    status of the VPC peering connection, if applicable.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -31253,6 +31299,9 @@ type DescribeVpcsInput struct {
 	//    * state - The state of the VPC (pending | available).
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -31360,6 +31409,9 @@ type DescribeVpnConnectionsInput struct {
 	//    device.
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -31465,6 +31517,9 @@ type DescribeVpnGatewaysInput struct {
 	//    | deleting | deleted).
 	//
 	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
 	//
 	//    * tag-key - The key of a tag assigned to the resource. This filter is
 	//    independent of the tag-value filter. For example, if you use both the
@@ -39385,6 +39440,10 @@ type ModifySubnetAttributeInput struct {
 	// subnet should be assigned an IPv6 address. This includes a network interface
 	// that's created when launching an instance into the subnet (the instance therefore
 	// receives an IPv6 address).
+	//
+	// If you enable the IPv6 addressing feature for your subnet, your network interface
+	// or instance only receives an IPv6 address if it's created using version 2016-11-15
+	// or later of the Amazon EC2 API.
 	AssignIpv6AddressOnCreation *AttributeBooleanValue `type:"structure"`
 
 	// Specify true to indicate that network interfaces created in the specified
@@ -41048,8 +41107,8 @@ type Placement struct {
 	// The name of the placement group the instance is in (for cluster compute instances).
 	GroupName *string `locationName:"groupName" type:"string"`
 
-	// The ID of the Dedicted host on which the instance resides. This parameter
-	// is not support for the ImportInstance command.
+	// The ID of the Dedicated Host on which the instance resides. This parameter
+	// is not supported for the ImportInstance command.
 	HostId *string `locationName:"hostId" type:"string"`
 
 	// The tenancy of the instance (if the instance is running in a VPC). An instance
@@ -48611,6 +48670,11 @@ type SpotPlacement struct {
 
 	// The name of the placement group (for cluster instances).
 	GroupName *string `locationName:"groupName" type:"string"`
+
+	// The tenancy of the instance (if the instance is running in a VPC). An instance
+	// with a tenancy of dedicated runs on single-tenant hardware. The host tenancy
+	// is not supported for Spot instances.
+	Tenancy *string `locationName:"tenancy" type:"string" enum:"Tenancy"`
 }
 
 // String returns the string representation
@@ -48632,6 +48696,12 @@ func (s *SpotPlacement) SetAvailabilityZone(v string) *SpotPlacement {
 // SetGroupName sets the GroupName field's value.
 func (s *SpotPlacement) SetGroupName(v string) *SpotPlacement {
 	s.GroupName = &v
+	return s
+}
+
+// SetTenancy sets the Tenancy field's value.
+func (s *SpotPlacement) SetTenancy(v string) *SpotPlacement {
+	s.Tenancy = &v
 	return s
 }
 

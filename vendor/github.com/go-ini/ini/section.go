@@ -82,6 +82,17 @@ func (s *Section) NewKey(name, val string) (*Key, error) {
 	return s.keys[name], nil
 }
 
+// NewBooleanKey creates a new boolean type key to given section.
+func (s *Section) NewBooleanKey(name string) (*Key, error) {
+	key, err := s.NewKey(name, "true")
+	if err != nil {
+		return nil, err
+	}
+
+	key.isBooleanType = true
+	return key, nil
+}
+
 // GetKey returns key in section by given name.
 func (s *Section) GetKey(name string) (*Key, error) {
 	// FIXME: change to section level lock?

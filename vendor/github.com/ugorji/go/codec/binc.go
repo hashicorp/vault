@@ -639,12 +639,12 @@ func (d *bincDecDriver) decStringAndBytes(bs []byte, withString, zerocopy bool) 
 			if d.br {
 				bs2 = d.r.readx(slen)
 			} else if len(bs) == 0 {
-				bs2 = decByteSlice(d.r, slen, d.b[:])
+				bs2 = decByteSlice(d.r, slen, d.d.h.MaxInitLen, d.b[:])
 			} else {
-				bs2 = decByteSlice(d.r, slen, bs)
+				bs2 = decByteSlice(d.r, slen, d.d.h.MaxInitLen, bs)
 			}
 		} else {
-			bs2 = decByteSlice(d.r, slen, bs)
+			bs2 = decByteSlice(d.r, slen, d.d.h.MaxInitLen, bs)
 		}
 		if withString {
 			s = string(bs2)
@@ -696,7 +696,7 @@ func (d *bincDecDriver) decStringAndBytes(bs []byte, withString, zerocopy bool) 
 			// since using symbols, do not store any part of
 			// the parameter bs in the map, as it might be a shared buffer.
 			// bs2 = decByteSlice(d.r, slen, bs)
-			bs2 = decByteSlice(d.r, slen, nil)
+			bs2 = decByteSlice(d.r, slen, d.d.h.MaxInitLen, nil)
 			if withString {
 				s = string(bs2)
 			}
@@ -747,7 +747,7 @@ func (d *bincDecDriver) DecodeBytes(bs []byte, isstring, zerocopy bool) (bsOut [
 			bs = d.b[:]
 		}
 	}
-	return decByteSlice(d.r, clen, bs)
+	return decByteSlice(d.r, clen, d.d.h.MaxInitLen, bs)
 }
 
 func (d *bincDecDriver) DecodeExt(rv interface{}, xtag uint64, ext Ext) (realxtag uint64) {
