@@ -94,6 +94,11 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 		if s.WrappedAccessor != "" {
 			s.WrappedAccessor = fn(s.WrappedAccessor)
 		}
+
+	case []string:
+		for i, el := range s {
+			s[i] = fn(el)
+		}
 	}
 
 	return nil

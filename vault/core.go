@@ -218,6 +218,10 @@ type Core struct {
 	// out into the configured audit backends
 	auditBroker *AuditBroker
 
+	// auditedHeaders is used to configure which http headers
+	// can be output in the audit logs
+	auditedHeaders *audit.AuditedHeadersConfig
+
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
 
@@ -426,6 +430,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+		auditedHeaders:                   audit.NewAuditedHeadersConfig(),
 	}
 
 	// Wrap the backend in a cache unless disabled
@@ -964,7 +969,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		DisplayName: te.DisplayName,
 	}
 
-	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
+	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		return retErr
@@ -1050,7 +1055,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 		DisplayName: te.DisplayName,
 	}
 
-	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
+	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
 		return retErr
@@ -1605,4 +1610,8 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	min, max = c.barrier.KeyLength()
 	max += shamir.ShareOverhead
 	return
+}
+
+func (c *Core) AuditedHeadersConfig() *audit.AuditedHeadersConfig {
+	return c.auditedHeaders
 }

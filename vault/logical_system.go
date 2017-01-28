@@ -40,6 +40,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"audit/*",
 				"raw/*",
 				"rotate",
+				"config/*",
 			},
 
 			Unauthenticated: []string{
@@ -621,6 +622,28 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
 			},
+
+			&framework.Path{
+				Pattern: "config/audited-headers$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"header": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"hmac": &framework.FieldSchema{
+						Type: framework.TypeBool,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleAuditedHeadersAdd,
+					logical.DeleteOperation: b.handleAuditedHeadersRemove,
+					logical.ReadOperation:   b.handleAuditedHeadersRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
+			},
 		},
 	}
 
@@ -633,6 +656,43 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 type SystemBackend struct {
 	Core    *Core
 	Backend *framework.Backend
+}
+
+func (b *SystemBackend) handleAuditedHeadersAdd(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.AuditedHeadersConfig()
+
+	header := d.Get("header").(string)
+	hmac := d.Get("hmac").(bool)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig.Add(header, hmac)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleAuditedHeadersRemove(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.AuditedHeadersConfig()
+
+	fmt.Println(d.Get("header"))
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+	headerConfig.Remove(header)
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.AuditedHeadersConfig()
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"headers": headerConfig.Headers,
+		},
+	}, nil
 }
 
 // handleCapabilitiesreturns the ACL capabilities of the token for a given path

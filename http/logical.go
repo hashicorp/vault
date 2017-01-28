@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -78,6 +79,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		Path:       path,
 		Data:       data,
 		Connection: getConnection(r),
+		Headers:    r.Header,
 	})
 
 	req, err = requestWrapInfo(r, req)
@@ -142,7 +144,7 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 				return
 			}
 		}
-
+		fmt.Println(r.Header)
 		// Build the proper response
 		respondLogical(w, r, req, dataOnly, resp)
 	})
