@@ -24,9 +24,9 @@ const (
 
 func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
-		Pattern: "export/" + framework.GenericNameRegex("export_type") + "/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version"),
+		Pattern: "export/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version"),
 		Fields: map[string]*framework.FieldSchema{
-			"export_type": &framework.FieldSchema{
+			"type": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "Type of key to export (encryption-key, signing-key, hmac-key)",
 			},
@@ -51,7 +51,7 @@ func (b *backend) pathExportKeys() *framework.Path {
 
 func (b *backend) pathPolicyExportRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	exportType := d.Get("export_type").(string)
+	exportType := d.Get("type").(string)
 	name := d.Get("name").(string)
 	version := d.Get("version").(string)
 
@@ -89,13 +89,18 @@ func (b *backend) pathPolicyExportRead(
 		}
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"name": p.Name,
-		},
-	}
+	retKeys := map[string]string{}
+	switch version {
+	case "":
+		for k, v := range p.Keys {
+			exportKey, err := getExportKey(p, &v, exportType)
+			if err != nil {
+				return nil, err
+			}
+			retKeys[strconv.Itoa(k)] = exportKey
+		}
 
-	if version != "" {
+	default:
 		var versionValue int
 		if version == "latest" {
 			versionValue = p.LatestVersion
@@ -106,7 +111,6 @@ func (b *backend) pathPolicyExportRead(
 				return logical.ErrorResponse("invalid key version"), logical.ErrInvalidRequest
 			}
 		}
-		resp.Data["version"] = versionValue
 
 		key, ok := p.Keys[versionValue]
 		if !ok {
@@ -117,20 +121,17 @@ func (b *backend) pathPolicyExportRead(
 		if err != nil {
 			return nil, err
 		}
-		resp.Data["key"] = exportKey
 
-		return resp, nil
+		retKeys[strconv.Itoa(versionValue)] = exportKey
 	}
 
-	retKeys := map[string]string{}
-	for k, v := range p.Keys {
-		exportKey, err := getExportKey(p, &v, exportType)
-		if err != nil {
-			return nil, err
-		}
-		retKeys[strconv.Itoa(k)] = exportKey
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"name": p.Name,
+			"type": p.Type.String(),
+			"keys": retKeys,
+		},
 	}
-	resp.Data["keys"] = retKeys
 
 	return resp, nil
 }
@@ -143,11 +144,13 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 	switch exportType {
 	case exportTypeHMACKey:
 		return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey)), nil
+
 	case exportTypeEncryptionKey:
 		switch policy.Type {
 		case keysutil.KeyType_AES256_GCM96:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.AESKey)), nil
 		}
+
 	case exportTypeSigningKey:
 		switch policy.Type {
 		case keysutil.KeyType_ECDSA_P256:
