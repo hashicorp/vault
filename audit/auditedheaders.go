@@ -1,7 +1,6 @@
 package audit
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/hashicorp/vault/helper/salt"
@@ -39,8 +38,6 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, salt *sa
 	a.RLock()
 	defer a.RUnlock()
 
-	fmt.Println(a.Headers)
-
 	result = make(map[string][]string)
 	for key, val := range headers {
 		hVals := make([]string, len(val))
@@ -48,7 +45,6 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, salt *sa
 
 		if settings, ok := a.Headers[key]; ok {
 			if settings.HMAC {
-				fmt.Println("HMAC'ING")
 				if err := Hash(salt, hVals); err != nil {
 					return nil, err
 				}

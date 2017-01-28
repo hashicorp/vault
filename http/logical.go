@@ -1,7 +1,6 @@
 package http
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -144,7 +143,7 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 				return
 			}
 		}
-		fmt.Println(r.Header)
+
 		// Build the proper response
 		respondLogical(w, r, req, dataOnly, resp)
 	})
