@@ -112,9 +112,12 @@ func (b *backend) pathPolicyExportRead(
 			}
 		}
 
+		if versionValue < p.MinDecryptionVersion {
+			return logical.ErrorResponse("version for export is below minimun decryption version"), logical.ErrInvalidRequest
+		}
 		key, ok := p.Keys[versionValue]
 		if !ok {
-			return logical.ErrorResponse("version does not exist or is no longer valid"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("version does not exist or cannot be found"), logical.ErrInvalidRequest
 		}
 
 		exportKey, err := getExportKey(p, &key, exportType)
