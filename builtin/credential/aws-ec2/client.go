@@ -49,7 +49,7 @@ func (b *backend) getClientConfig(s logical.Storage, region string) (*aws.Config
 		return nil, err
 	}
 	if creds == nil {
-		return nil, fmt.Errorf("could not compile valid credential providers from static config, environemnt, shared, or instance metadata")
+		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 	}
 
 	// Create a config that can be used to make the API calls.
@@ -136,11 +136,19 @@ func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*
 		return nil, err
 	}
 
+	if awsConfig == nil {
+		return nil, fmt.Errorf("could not retrieve valid assumed credentials")
+	}
+
 	// Create a new EC2 client object, cache it and return the same
+	client := ec2.New(session.New(awsConfig))
+	if client == nil {
+		return nil, fmt.Errorf("could not obtain ec2 client")
+	}
 	if _, ok := b.EC2ClientsMap[region]; !ok {
-		b.EC2ClientsMap[region] = map[string]*ec2.EC2{stsRole: ec2.New(session.New(awsConfig))}
+		b.EC2ClientsMap[region] = map[string]*ec2.EC2{stsRole: client}
 	} else {
-		b.EC2ClientsMap[region][stsRole] = ec2.New(session.New(awsConfig))
+		b.EC2ClientsMap[region][stsRole] = client
 	}
 
 	return b.EC2ClientsMap[region][stsRole], nil
@@ -179,7 +187,15 @@ func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*
 		return nil, err
 	}
 
+	if awsConfig == nil {
+		return nil, fmt.Errorf("could not retrieve valid assumed credentials")
+	}
+
 	// Create a new IAM client object, cache it and return the same
+	client := ec2.New(session.New(awsConfig))
+	if client == nil {
+		return nil, fmt.Errorf("could not obtain iam client")
+	}
 	if _, ok := b.IAMClientsMap[region]; !ok {
 		b.IAMClientsMap[region] = map[string]*iam.IAM{stsRole: iam.New(session.New(awsConfig))}
 	} else {
