@@ -1,8 +1,6 @@
 package chefnode
 
 import (
-	"strings"
-
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -39,11 +37,11 @@ func pathTags(b *backend) *framework.Path {
 }
 
 func (b *backend) pathTagList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	envs, err := req.Storage.List("tag/")
+	tags, err := req.Storage.List("tag/")
 	if err != nil {
 		return nil, err
 	}
-	return logical.ListResponse(envs), nil
+	return logical.ListResponse(tags), nil
 }
 
 func (b *backend) Tag(s logical.Storage, n string) (*TagEntry, error) {
@@ -73,17 +71,17 @@ func (b *backend) pathTagDelete(req *logical.Request, d *framework.FieldData) (*
 }
 
 func (b *backend) pathTagRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	env, err := b.Tag(req.Storage, d.Get("name").(string))
+	tag, err := b.Tag(req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
-	if env == nil {
+	if tag == nil {
 		return nil, nil
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(env.Policies, ","),
+			"policies": tag.Policies,
 		},
 	}, nil
 }

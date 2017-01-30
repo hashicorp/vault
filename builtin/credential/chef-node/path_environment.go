@@ -1,8 +1,6 @@
 package chefnode
 
 import (
-	"strings"
-
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -83,7 +81,7 @@ func (b *backend) pathEnvironmentRead(req *logical.Request, d *framework.FieldDa
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(env.Policies, ","),
+			"policies": env.Policies,
 		},
 	}, nil
 }

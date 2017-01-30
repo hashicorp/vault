@@ -1,8 +1,6 @@
 package chefnode
 
 import (
-	"strings"
-
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -39,11 +37,11 @@ func pathRoles(b *backend) *framework.Path {
 }
 
 func (b *backend) pathRoleList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	envs, err := req.Storage.List("role/")
+	roles, err := req.Storage.List("role/")
 	if err != nil {
 		return nil, err
 	}
-	return logical.ListResponse(envs), nil
+	return logical.ListResponse(roles), nil
 }
 
 func (b *backend) Role(s logical.Storage, n string) (*RoleEntry, error) {
@@ -73,17 +71,17 @@ func (b *backend) pathRoleDelete(req *logical.Request, d *framework.FieldData) (
 }
 
 func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	env, err := b.Role(req.Storage, d.Get("name").(string))
+	role, err := b.Role(req.Storage, d.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
-	if env == nil {
+	if role == nil {
 		return nil, nil
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(env.Policies, ","),
+			"policies": role.Policies,
 		},
 	}, nil
 }
