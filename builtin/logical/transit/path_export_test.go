@@ -9,14 +9,14 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestTransit_ExportKeyVersion_ExportsCorrectVersion(t *testing.T) {
-	VerifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
-	VerifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
-	VerifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
-	VerifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256")
+func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
+	verifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
+	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
+	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
+	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256")
 }
 
-func VerifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
+func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -51,15 +51,35 @@ func VerifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, ok := rsp.Data["version"]; !ok {
-			t.Error("no version returned from export")
-		}
-		version, ok := rsp.Data["version"].(int)
+
+		typRaw, ok := rsp.Data["type"]
 		if !ok {
-			t.Error("could not cast to version")
+			t.Fatal("no type returned from export")
 		}
-		if version != expectedVersion {
-			t.Errorf("expected version %d, received version %d", expectedVersion, version)
+		typ, ok := typRaw.(string)
+		if !ok {
+			t.Fatalf("could not find key type, resp data is %#v", rsp.Data)
+		}
+		if typ != keyType {
+			t.Fatalf("key type mismatch; %q vs %q", typ, keyType)
+		}
+
+		keysRaw, ok := rsp.Data["keys"]
+		if !ok {
+			t.Fatal("could not find keys value")
+		}
+		keys, ok := keysRaw.(map[string]string)
+		if !ok {
+			t.Fatal("could not cast to keys map")
+		}
+		if len(keys) != 1 {
+			t.Fatal("unexpected number of keys found")
+		}
+
+		for k, _ := range keys {
+			if k != strconv.Itoa(expectedVersion) {
+				t.Fatalf("expected version %q, received version %q", strconv.Itoa(expectedVersion), k)
+			}
 		}
 	}
 
@@ -93,7 +113,7 @@ func VerifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 	verifyVersion("latest", 3)
 }
 
-func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
+func TestTransit_Export_ValidVersionsOnly(t *testing.T) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -200,7 +220,7 @@ func TestTransit_PathKeys_ExportValidVersionsOnly(t *testing.T) {
 	verifyExport([]int{2, 3, 4})
 }
 
-func TestTransit_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
+func TestTransit_Export_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -237,7 +257,7 @@ func TestTransit_KeysNotMarkedExportable_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestTransit_ExportSigningDoesNotSupportSigning_ReturnsError(t *testing.T) {
+func TestTransit_Export_SigningDoesNotSupportSigning_ReturnsError(t *testing.T) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -272,7 +292,7 @@ func TestTransit_ExportSigningDoesNotSupportSigning_ReturnsError(t *testing.T) {
 	}
 }
 
-func TestTransit_ExportEncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T) {
+func TestTransit_Export_EncryptionDoesNotSupportEncryption_ReturnsError(t *testing.T) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -307,7 +327,7 @@ func TestTransit_ExportEncryptionDoesNotSupportEncryption_ReturnsError(t *testin
 	}
 }
 
-func TestTransit_KeysDoesNotExist_ReturnsNotFound(t *testing.T) {
+func TestTransit_Export_KeysDoesNotExist_ReturnsNotFound(t *testing.T) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -329,7 +349,7 @@ func TestTransit_KeysDoesNotExist_ReturnsNotFound(t *testing.T) {
 	}
 }
 
-func TestTransit_ExportEncryptionKey_DoesNotExportHMACKey(t *testing.T) {
+func TestTransit_Export_EncryptionKey_DoesNotExportHMACKey(t *testing.T) {
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}

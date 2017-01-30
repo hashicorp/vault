@@ -25,6 +25,9 @@ IMPROVEMENTS:
  * duo: Added ability to supply extra context to Duo pushes [GH-2118]
  * physical/consul: Add option for setting consistency mode on Consul gets
    [GH-2282]
+ * physical/etcd: Full v3 API support; code will autodetect which API version
+   to use. The v3 code path is significantly less complicated and may be much
+   more stable. [GH-2168]
  * secret/pki: Allow specifying OU entries in generated certificate subjects
    [GH-2251]
  * secret/transit: Support exportable keys [GH-2133]
