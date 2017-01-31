@@ -770,8 +770,8 @@ func (b *backend) pathLoginRenew(
 	}
 
 	// Ensure backwards compatibility for older clients without account_id saved in metadata
-	var accountID string
-	if accountID, ok := req.Auth.Metadata["account_id"]; ok {
+	accountID, ok := req.Auth.Metadata["account_id"]
+	if ok {
 		if accountID == "" {
 			return nil, fmt.Errorf("unable to fetch account_id from metadata during renewal")
 		}
