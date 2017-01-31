@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -72,12 +71,7 @@ func (c *Core) setupConfigStore() error {
 		if config != nil {
 			switch config.Name {
 			case "cors":
-				enabled, err := strconv.ParseBool(config.Settings["enabled"])
-				if err != nil {
-					enabled = false
-				}
 				c.corsConfig.Enable(config.Settings["allowed_origins"])
-				c.corsConfig.Enabled = enabled
 			}
 		}
 	}
