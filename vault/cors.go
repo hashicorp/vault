@@ -4,15 +4,17 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
+
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 var errCORSNotConfigured = errors.New("CORS is not configured")
 
-var responseHeaders = map[string]string{
-	"Access-Control-Allow-Headers":     "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
+var preflightHeaders = map[string]string{
+	"Access-Control-Allow-Headers":     "*",
 	"Access-Control-Max-Age":           "1800",
 	"Access-Control-Allow-Credentials": "true",
-	"Vary": "Origin",
 }
 
 var allowedMethods = []string{
@@ -21,43 +23,64 @@ var allowedMethods = []string{
 	http.MethodOptions,
 	http.MethodPost,
 	http.MethodPut,
+	"LIST", // LIST is not an official HTTP method, but Vault supports it.
 }
 
+// CORSConfig stores the state of the CORS configuration.
 type CORSConfig struct {
-	Enabled        bool
-	AllowedOrigins []string
+	isEnabled      bool
+	allowedOrigins []string
+	mutex          *sync.RWMutex
 }
 
+// Enable takes either a '*' or a comma-seprated list of URLs that can make
+// cross-origin requests to Vault.
 func (c *CORSConfig) Enable(s string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	if strings.Contains("*", s) && len(s) > 1 {
 		return errors.New("wildcard must be the only value")
 	}
 
-	allowedOrigins := strings.Split(s, " ")
-
-	c.AllowedOrigins = allowedOrigins
-	c.Enabled = true
+	c.allowedOrigins = strings.Split(s, ",")
+	c.isEnabled = true
 
 	return nil
 }
 
+// Get returns the state of the CORS configuration.
+func (c *CORSConfig) Get() *CORSConfig {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c
+}
+
+// Enabled returns the value of CORSConfig.isEnabled
+func (c *CORSConfig) Enabled() bool {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.isEnabled
+}
+
 // Disable sets CORS to disabled and clears the allowed origins
 func (c *CORSConfig) Disable() {
-	c.Enabled = false
-	c.AllowedOrigins = []string{}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	c.isEnabled = false
+	c.allowedOrigins = []string{}
 }
 
 // ApplyHeaders examines the CORS configuration and the request to determine
 // if the CORS headers should be returned with the response.
 func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
-	origin := r.Header.Get("Origin")
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
-	// If CORS is not enabled or if no Origin header is present (i.e. the request
-	// is from the Vault CLI. A browser will always send an Origin header), then
-	// just return a 200.
-	if !c.Enabled || origin == "" {
-		return http.StatusOK
-	}
+	origin := r.Header.Get("Origin")
 
 	// Return a 403 if the origin is not
 	// allowed to make cross-origin requests.
@@ -66,47 +89,34 @@ func (c *CORSConfig) ApplyHeaders(w http.ResponseWriter, r *http.Request) int {
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Vary", "Origin")
 
 	// apply headers for preflight requests
 	if r.Method == http.MethodOptions {
-		methodAllowed := false
 		requestedMethod := r.Header.Get("Access-Control-Request-Method")
-		for _, method := range allowedMethods {
-			if method == requestedMethod {
-				methodAllowed = true
-				continue
-			}
-		}
 
-		if !methodAllowed {
+		if !strutil.StrListContains(allowedMethods, requestedMethod) {
 			return http.StatusMethodNotAllowed
 		}
 
-		methods := strings.Join(allowedMethods, ",")
-		w.Header().Set("Access-Control-Allow-Methods", methods)
+		w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
 
-		for k, v := range responseHeaders {
+		for k, v := range preflightHeaders {
 			w.Header().Set(k, v)
 		}
 	}
 
-	return http.StatusOK
+	return http.StatusNoContent
 }
 
 func (c *CORSConfig) validOrigin(origin string) bool {
-	if c.AllowedOrigins == nil {
+	if c.allowedOrigins == nil {
 		return false
 	}
 
-	if len(c.AllowedOrigins) == 1 && (c.AllowedOrigins)[0] == "*" {
+	if len(c.allowedOrigins) == 1 && (c.allowedOrigins)[0] == "*" {
 		return true
 	}
 
-	for _, allowedOrigin := range c.AllowedOrigins {
-		if origin == allowedOrigin {
-			return true
-		}
-	}
-
-	return false
+	return strutil.StrListContains(c.allowedOrigins, origin)
 }
