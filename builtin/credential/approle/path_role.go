@@ -541,6 +541,11 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 
 	var listItems []string
 	for _, secretIDHMAC := range secretIDHMACs {
+		// For sanity
+		if secretIDHMAC == "" {
+			continue
+		}
+
 		// Prepare the full index of the SecretIDs.
 		entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
 
@@ -551,10 +556,6 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 		// possible. Also, indexing it everywhere using secretIDHMACs
 		// makes listing operation easier.
 		secretIDLock := b.secretIDLock(secretIDHMAC)
-
-		if secretIDLock == customLock {
-			return nil, fmt.Errorf("listing lock and secret-id lock should never be the same")
-		}
 
 		secretIDLock.RLock()
 
