@@ -37,7 +37,10 @@ func TestSystemConfigCORS(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
 	req.Data["allowed_origins"] = "http://www.example.com"
-	actual, err := b.HandleRequest(req)
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	expected := &logical.Response{
 		Data: map[string]interface{}{
@@ -46,8 +49,20 @@ func TestSystemConfigCORS(t *testing.T) {
 		},
 	}
 
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("UPDATE FAILED\nexpected:\n%#v\nactual:\n%#v", expected, actual)
+		t.Fatalf("UPDATE FAILED -- bad: %#v", actual)
+	}
+
+	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
+	_, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
@@ -56,21 +71,11 @@ func TestSystemConfigCORS(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("READ FAILED -- bad: %#v", actual)
-	}
-
 	expected = &logical.Response{
 		Data: map[string]interface{}{
 			"enabled":         false,
 			"allowed_origins": "",
 		},
-	}
-
-	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
-	actual, err = b.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
