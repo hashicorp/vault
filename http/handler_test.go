@@ -81,9 +81,8 @@ func TestHandler_cors(t *testing.T) {
 	// Test that the CORS headers are applied correctly.
 	//
 	expHeaders := map[string]string{
-		"Access-Control-Allow-Origin":      addr,
-		"Access-Control-Allow-Headers":     "origin,content-type,cache-control,accept,options,authorization,x-requested-with,x-vault-token",
-		"Access-Control-Allow-Credentials": "true",
+		"Access-Control-Allow-Origin":  addr,
+		"Access-Control-Allow-Headers": "*",
 		"Vary": "Origin",
 	}
 
