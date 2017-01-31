@@ -347,11 +347,11 @@ func (n *noopAudit) GetHash(data string) string {
 	return n.Config.Salt.GetIdentifiedHMAC(data)
 }
 
-func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request, h *audit.AuditedHeadersConfig, e error) error {
+func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request, e error) error {
 	return nil
 }
 
-func (n *noopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical.Response, h *audit.AuditedHeadersConfig, err error) error {
+func (n *noopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical.Response, err error) error {
 	return nil
 }
 

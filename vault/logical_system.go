@@ -667,7 +667,7 @@ func (b *SystemBackend) handleAuditedHeadersAdd(req *logical.Request, d *framewo
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig.Add(header, hmac)
+	headerConfig.add(header, hmac)
 
 	return nil, nil
 }
@@ -680,7 +680,7 @@ func (b *SystemBackend) handleAuditedHeadersRemove(req *logical.Request, d *fram
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
-	headerConfig.Remove(header)
+	headerConfig.remove(header)
 
 	return nil, nil
 }

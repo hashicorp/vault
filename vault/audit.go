@@ -408,7 +408,7 @@ func (a *AuditBroker) GetHash(name string, input string) (string, error) {
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, headersConfig *audit.AuditedHeadersConfig, outerErr error) (retErr error) {
+func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, headersConfig *AuditedHeadersConfig, outerErr error) (retErr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
@@ -426,11 +426,19 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, heade
 	//	return
 	//}
 
+	headers := req.Headers
+	defer func() {
+		req.Headers = headers
+	}()
+
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
+		req.Headers = nil
+		req.Headers = headersConfig.ApplyConfig(headers, be.backend.GetHash)
+
 		start := time.Now()
-		err := be.backend.LogRequest(auth, req, headersConfig, outerErr)
+		err := be.backend.LogRequest(auth, req, outerErr)
 		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
 		if err != nil {
 			a.logger.Error("audit: backend failed to log request", "backend", name, "error", err)
@@ -448,7 +456,7 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, heade
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
 func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
-	resp *logical.Response, headersConfig *audit.AuditedHeadersConfig, err error) (reterr error) {
+	resp *logical.Response, headersConfig *AuditedHeadersConfig, err error) (reterr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
@@ -459,11 +467,19 @@ func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 		}
 	}()
 
+	headers := req.Headers
+	defer func() {
+		req.Headers = headers
+	}()
+
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
+		req.Headers = nil
+		req.Headers = headersConfig.ApplyConfig(headers, be.backend.GetHash)
+
 		start := time.Now()
-		err := be.backend.LogResponse(auth, req, resp, headersConfig, err)
+		err := be.backend.LogResponse(auth, req, resp, err)
 		metrics.MeasureSince([]string{"audit", name, "log_response"}, start)
 		if err != nil {
 			a.logger.Error("audit: backend failed to log response", "backend", name, "error", err)

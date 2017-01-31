@@ -94,9 +94,9 @@ func (b *Backend) GetHash(data string) string {
 	return audit.HashString(b.formatConfig.Salt, data)
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, headersConfig *audit.AuditedHeadersConfig, outerErr error) error {
+func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatRequest(&buf, b.formatConfig, headersConfig, auth, req, outerErr); err != nil {
+	if err := b.formatter.FormatRequest(&buf, b.formatConfig, auth, req, outerErr); err != nil {
 		return err
 	}
 
@@ -105,9 +105,9 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, headersCo
 	return err
 }
 
-func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request, resp *logical.Response, headersConfig *audit.AuditedHeadersConfig, err error) error {
+func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request, resp *logical.Response, err error) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatResponse(&buf, b.formatConfig, headersConfig, auth, req, resp, err); err != nil {
+	if err := b.formatter.FormatResponse(&buf, b.formatConfig, auth, req, resp, err); err != nil {
 		return err
 	}
 

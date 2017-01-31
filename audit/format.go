@@ -25,7 +25,6 @@ type AuditFormatter struct {
 func (f *AuditFormatter) FormatRequest(
 	w io.Writer,
 	config FormatterConfig,
-	headersConfig *AuditedHeadersConfig,
 	auth *logical.Auth,
 	req *logical.Request,
 	err error) error {
@@ -90,11 +89,6 @@ func (f *AuditFormatter) FormatRequest(
 		errString = err.Error()
 	}
 
-	headers, err := headersConfig.ApplyConfig(req.Headers, config.Salt)
-	if err != nil {
-		return err
-	}
-
 	reqEntry := &AuditRequestEntry{
 		Type:  "request",
 		Error: errString,
@@ -113,7 +107,7 @@ func (f *AuditFormatter) FormatRequest(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			Headers:             headers,
+			Headers:             req.Headers,
 		},
 	}
 
@@ -131,7 +125,6 @@ func (f *AuditFormatter) FormatRequest(
 func (f *AuditFormatter) FormatResponse(
 	w io.Writer,
 	config FormatterConfig,
-	headersConfig *AuditedHeadersConfig,
 	auth *logical.Auth,
 	req *logical.Request,
 	resp *logical.Response,
@@ -265,11 +258,6 @@ func (f *AuditFormatter) FormatResponse(
 		}
 	}
 
-	headers, err := headersConfig.ApplyConfig(req.Headers, config.Salt)
-	if err != nil {
-		return err
-	}
-
 	respEntry := &AuditResponseEntry{
 		Type:  "response",
 		Error: errString,
@@ -288,7 +276,7 @@ func (f *AuditFormatter) FormatResponse(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			Headers:             headers,
+			Headers:             req.Headers,
 		},
 
 		Response: AuditResponse{

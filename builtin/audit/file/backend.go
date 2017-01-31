@@ -111,7 +111,7 @@ func (b *Backend) GetHash(data string) string {
 	return audit.HashString(b.formatConfig.Salt, data)
 }
 
-func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, headerConfig *audit.AuditedHeadersConfig, outerErr error) error {
+func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) error {
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
 
@@ -119,14 +119,13 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, headerCon
 		return err
 	}
 
-	return b.formatter.FormatRequest(b.f, b.formatConfig, headerConfig, auth, req, outerErr)
+	return b.formatter.FormatRequest(b.f, b.formatConfig, auth, req, outerErr)
 }
 
 func (b *Backend) LogResponse(
 	auth *logical.Auth,
 	req *logical.Request,
 	resp *logical.Response,
-	headerConfig *audit.AuditedHeadersConfig,
 	err error) error {
 
 	b.fileLock.Lock()
@@ -136,7 +135,7 @@ func (b *Backend) LogResponse(
 		return err
 	}
 
-	return b.formatter.FormatResponse(b.f, b.formatConfig, headerConfig, auth, req, resp, err)
+	return b.formatter.FormatResponse(b.f, b.formatConfig, auth, req, resp, err)
 }
 
 // The file lock must be held before calling this

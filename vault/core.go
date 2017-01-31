@@ -220,7 +220,7 @@ type Core struct {
 
 	// auditedHeaders is used to configure which http headers
 	// can be output in the audit logs
-	auditedHeaders *audit.AuditedHeadersConfig
+	auditedHeaders *AuditedHeadersConfig
 
 	// systemBarrierView is the barrier view for the system backend
 	systemBarrierView *BarrierView
@@ -430,7 +430,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		auditedHeaders:                   audit.NewAuditedHeadersConfig(),
 	}
 
 	// Wrap the backend in a cache unless disabled
@@ -1220,6 +1219,9 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupAudits(); err != nil {
 		return err
 	}
+	if err := c.setupAuditedHeadersConfig(); err != nil {
+		return err
+	}
 	if c.ha != nil {
 		if err := c.startClusterListener(); err != nil {
 			return err
@@ -1612,6 +1614,6 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 	return
 }
 
-func (c *Core) AuditedHeadersConfig() *audit.AuditedHeadersConfig {
+func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
 }
