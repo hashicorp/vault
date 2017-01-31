@@ -109,7 +109,7 @@ func (b *backend) nonLockedSetAwsStsEntry(s logical.Storage, accountID string, s
 }
 
 // lockedSetAwsStsEntry creates or updates an STS role association with the given accountID
-// This method acquired the write lock before creating or updating the STS entry.
+// This method acquires the write lock before creating or updating the STS entry.
 func (b *backend) lockedSetAwsStsEntry(s logical.Storage, accountID string, stsEntry *awsStsEntry) error {
 	if accountID == "" {
 		return fmt.Errorf("missing AWS account ID")
@@ -195,13 +195,9 @@ func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framewor
 	// Check that an STS role has actually been provided
 	stsRole, ok := data.GetOk("sts_role")
 	if ok {
-		if stsRole != "" {
-			stsEntry.StsRole = stsRole.(string)
-		} else {
-			return logical.ErrorResponse("missing sts role"), nil
-		}
-	} else {
-		return logical.ErrorResponse("missing sts role"), nil
+		stsEntry.StsRole = stsRole.(string)
+	} else if req.Operation == logical.CreateOperation {
+		stsEntry.StsRole = data.Get("sts_role").(string)
 	}
 
 	// save the provided STS role
@@ -219,7 +215,7 @@ func (b *backend) pathConfigStsDelete(req *logical.Request, data *framework.Fiel
 
 	accountID := data.Get("account_id").(string)
 	if accountID == "" {
-		return logical.ErrorResponse("missing account_id"), nil
+		return logical.ErrorResponse("missing account id"), nil
 	}
 
 	return nil, req.Storage.Delete("config/sts/" + accountID)
