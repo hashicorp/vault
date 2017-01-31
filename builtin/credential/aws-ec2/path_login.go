@@ -645,6 +645,7 @@ func (b *backend) pathLoginUpdate(
 			Metadata: map[string]string{
 				"instance_id":      identityDocParsed.InstanceID,
 				"region":           identityDocParsed.Region,
+				"account_id":       identityDocParsed.AccountID,
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
 				"ami_id":           identityDocParsed.AmiID,
@@ -768,9 +769,12 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("unable to fetch region from metadata during renewal")
 	}
 
-	accountID := req.Auth.Metadata["account_id"]
-	if accountID == "" {
-		return nil, fmt.Errorf("unable to fetch account_id from metadata during renewal")
+	// Ensure backwards compatibility for older clients without account_id saved in metadata
+	var accountID string
+	if accountID, ok := req.Auth.Metadata["account_id"]; ok {
+		if accountID == "" {
+			return nil, fmt.Errorf("unable to fetch account_id from metadata during renewal")
+		}
 	}
 
 	// Cross check that the instance is still in 'running' state
