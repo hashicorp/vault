@@ -432,7 +432,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		corsConfig:                       &CORSConfig{},
+		corsConfig:                       &CORSConfig{mutex: &sync.RWMutex{}},
 	}
 
 	// Wrap the backend in a cache unless disabled
@@ -511,7 +511,7 @@ func (c *Core) Shutdown() error {
 
 // CORSConfig returns the current CORS configuration
 func (c *Core) CORSConfig() *CORSConfig {
-	return c.corsConfig
+	return c.corsConfig.Get()
 }
 
 // LookupToken returns the properties of the token from the token store. This
