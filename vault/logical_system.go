@@ -86,9 +86,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation:   b.handleCORSStatus,
-					logical.UpdateOperation: b.handleCORSEnable,
-					logical.DeleteOperation: b.handleCORSDisable,
+					logical.ReadOperation:   b.handleCORSRead,
+					logical.UpdateOperation: b.handleCORSUpdate,
+					logical.DeleteOperation: b.handleCORSDelete,
 				},
 
 				HelpDescription: strings.TrimSpace(sysHelp["config/cors"][0]),
@@ -662,22 +662,22 @@ type SystemBackend struct {
 
 // corsStatus returns the current CORS configuration as a logical.Response
 func (b *SystemBackend) corsStatusResponse() (*logical.Response, error) {
-	corsConf := b.Core.corsConfig
+	corsConf := b.Core.corsConfig.Get()
 	if corsConf == nil {
 		return nil, errCORSNotConfigured
 	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"enabled":         corsConf.Enabled,
-			"allowed_origins": strings.Join(corsConf.AllowedOrigins, " "),
+			"enabled":         corsConf.isEnabled,
+			"allowed_origins": strings.Join(corsConf.allowedOrigins, ","),
 		},
 	}, nil
 }
 
-// handleCORSEnable sets the list of origins that are allowed
+// handleCORSUpdate sets the list of origins that are allowed
 // to make cross-origin requests and sets the CORS enabled flag to true
-func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	origins := d.Get("allowed_origins").(string)
 
 	err := b.Core.corsConfig.Enable(origins)
@@ -698,22 +698,22 @@ func (b *SystemBackend) handleCORSEnable(req *logical.Request, d *framework.Fiel
 		return handleError(err)
 	}
 
-	return b.corsStatusResponse()
+	return nil, nil
 }
 
-// handleCORSDisable clears the allowed origins and sets the CORS enabled flag to false
-func (b *SystemBackend) handleCORSDisable(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+// handleCORSDelete clears the allowed origins and sets the CORS enabled flag to false
+func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.Core.CORSConfig().Disable()
 
 	if err := b.Core.configStore.DeleteConfig("cors"); err != nil {
 		return handleError(err)
 	}
 
-	return b.corsStatusResponse()
+	return nil, nil
 }
 
-// handleCORSStatus returns the current CORS configuration
-func (b *SystemBackend) handleCORSStatus(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+// handleCORSRead returns the current CORS configuration
+func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	return b.corsStatusResponse()
 }
 
