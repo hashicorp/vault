@@ -624,7 +624,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "config/audited-headers$",
+				Pattern: "config/audited-headers/(?P<header>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"header": &framework.FieldSchema{
@@ -636,9 +636,19 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleAuditedHeadersAdd,
-					logical.DeleteOperation: b.handleAuditedHeadersRemove,
-					logical.ReadOperation:   b.handleAuditedHeadersRead,
+					logical.UpdateOperation: b.handleAuditedHeaderUpdate,
+					logical.DeleteOperation: b.handleAuditedHeaderDelete,
+					logical.ReadOperation:   b.handleAuditedHeaderRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
+			},
+			&framework.Path{
+				Pattern: "config/audited-headers$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleAuditedHeadersRead,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
@@ -658,7 +668,7 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
-func (b *SystemBackend) handleAuditedHeadersAdd(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
 
 	header := d.Get("header").(string)
@@ -672,7 +682,7 @@ func (b *SystemBackend) handleAuditedHeadersAdd(req *logical.Request, d *framewo
 	return nil, nil
 }
 
-func (b *SystemBackend) handleAuditedHeadersRemove(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
 
 	fmt.Println(d.Get("header"))
@@ -683,6 +693,26 @@ func (b *SystemBackend) handleAuditedHeadersRemove(req *logical.Request, d *fram
 	headerConfig.remove(header)
 
 	return nil, nil
+}
+
+func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.AuditedHeadersConfig()
+
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	settings, ok := headerConfig.Headers[header]
+	if !ok {
+		return logical.ErrorResponse("Could not find header in config"), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			header: settings,
+		},
+	}, nil
 }
 
 func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
