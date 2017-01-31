@@ -73,22 +73,14 @@ policy or `sudo` capability on the path.
       <li>
         <span class="param">allowed_origins</span>
         <span class="param-flags">required</span>
-        Valid values are either a wildcard (*) or a space-separated list of
+        Valid values are either a wildcard (*) or a comma-separated list of
         exact origins that are permitted to make cross-origin requests.
       </li>
     </ul>
   </dd>
 
   <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "enabled": true,
-      "allowed_origins": "*"
-    }
-    ```
-
+  <dd>`204` response code.
   </dd>
 </dl>
 
@@ -112,13 +104,6 @@ policy or `sudo` capability on the path.
   </dd>
 
   <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "enabled": false
-    }
-    ```
-
+  <dd>`204` response code.
   </dd>
 </dl>
