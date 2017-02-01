@@ -70,6 +70,9 @@ func (b *backend) getStsClientConfig(s logical.Storage, region string, stsRole s
 	if err != nil {
 		return nil, err
 	}
+	if config == nil {
+		return nil, fmt.Errorf("could not compile valid credentials through the default provider chain")
+	}
 	assumedCredentials := stscreds.NewCredentials(session.New(config), stsRole)
 	// Test that we actually have permissions to assume the role
 	if _, err = assumedCredentials.Get(); err != nil {
@@ -192,14 +195,14 @@ func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*
 	}
 
 	// Create a new IAM client object, cache it and return the same
-	client := ec2.New(session.New(awsConfig))
+	client := iam.New(session.New(awsConfig))
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
 	}
 	if _, ok := b.IAMClientsMap[region]; !ok {
-		b.IAMClientsMap[region] = map[string]*iam.IAM{stsRole: iam.New(session.New(awsConfig))}
+		b.IAMClientsMap[region] = map[string]*iam.IAM{stsRole: client}
 	} else {
-		b.IAMClientsMap[region][stsRole] = iam.New(session.New(awsConfig))
+		b.IAMClientsMap[region][stsRole] = client
 	}
 	return b.IAMClientsMap[region][stsRole], nil
 }
