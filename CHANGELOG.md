@@ -15,6 +15,7 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/aws-ec2: Add support for cross-account auth using STS [GH-2148]
  * auth/github: Support listing teams and users [GH-2261]
  * auth/ldap: Support adding policies to local users directly, in addition to
    local groups [GH-2152]
