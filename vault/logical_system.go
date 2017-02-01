@@ -668,6 +668,7 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
+// handleAuditedHeaderUpdate creates or overwrites a header entry
 func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
 
@@ -682,10 +683,10 @@ func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *frame
 	return nil, nil
 }
 
+// handleAudtedHeaderDelete deletes the header with the given name
 func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
 
-	fmt.Println(d.Get("header"))
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
@@ -695,6 +696,7 @@ func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *frame
 	return nil, nil
 }
 
+// handleAuditedHeaderRead returns the header configuration for the given header name
 func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
 
@@ -715,6 +717,7 @@ func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framewo
 	}, nil
 }
 
+// handleAuditedHeadersRead returns the whole audited headers config
 func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	headerConfig := b.Core.AuditedHeadersConfig()
 

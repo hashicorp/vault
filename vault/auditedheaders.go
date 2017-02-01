@@ -8,14 +8,18 @@ import (
 )
 
 const (
-	auditedHeadersEntry   = "audited_headers"
+	// Key used in the BarrierView to store and retrieve the header config
+	auditedHeadersEntry = "audited_headers"
+	// Path used to create a sub view off of BarrierView
 	auditedHeadersSubPath = "auditedHeadersConfig/"
 )
 
 type auditedHeaderSettings struct {
-	HMAC bool
+	HMAC bool `json:"hmac"`
 }
 
+// AuditedHeadersConfig is used by the Audit Broker to write only approved
+// headers to the audit logs. It uses a BarrierView to persist the settings.
 type AuditedHeadersConfig struct {
 	Headers map[string]*auditedHeaderSettings
 
@@ -23,12 +27,7 @@ type AuditedHeadersConfig struct {
 	sync.RWMutex
 }
 
-func NewAuditedHeadersConfig() *AuditedHeadersConfig {
-	return &AuditedHeadersConfig{
-		Headers: make(map[string]*auditedHeaderSettings),
-	}
-}
-
+// add adds or overwrites a header in the config and updates the barrier view
 func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
 	a.Lock()
 	defer a.Unlock()
@@ -46,6 +45,7 @@ func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
 	return nil
 }
 
+// remove deletes a header out of the header config and updates the barrier view
 func (a *AuditedHeadersConfig) remove(header string) error {
 	a.Lock()
 	defer a.Unlock()
@@ -63,6 +63,8 @@ func (a *AuditedHeadersConfig) remove(header string) error {
 	return nil
 }
 
+// ApplyConfig returns a map of approved headers and their values, either
+// hmac'ed or plaintext
 func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc func(string) string) (result map[string][]string) {
 	a.RLock()
 	defer a.RUnlock()
@@ -86,12 +88,12 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc
 	return
 }
 
+// Initalize the headers config by loading from the barrier view
 func (c *Core) setupAuditedHeadersConfig() error {
 	// Create a sub-view
 	view := c.systemBarrierView.SubView(auditedHeadersSubPath)
 
 	// Create the config
-
 	out, err := view.Get(auditedHeadersEntry)
 	if err != nil {
 		return fmt.Errorf("failed to read config: %v", err)
