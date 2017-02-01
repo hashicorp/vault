@@ -296,7 +296,11 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	reqErrs := errors.New("errs")
 
-	err = b.LogRequest(auth, req, reqErrs)
+	headersConf := &AuditedHeadersConfig{
+		Headers: make(map[string]*auditedHeaderSettings),
+	}
+
+	err = b.LogRequest(auth, req, headersConf, reqErrs)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -315,13 +319,13 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(auth, req, nil); err != nil {
+	if err := b.LogRequest(auth, req, headersConf, nil); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(auth, req, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
+	if err := b.LogRequest(auth, req, headersConf, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -359,7 +363,11 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
-	err := b.LogResponse(auth, req, resp, respErr)
+	headersConf := &AuditedHeadersConfig{
+		Headers: make(map[string]*auditedHeaderSettings),
+	}
+
+	err := b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -381,14 +389,14 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(auth, req, resp, respErr)
+	err = b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(auth, req, resp, respErr)
+	err = b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err.Error() != "no audit backend succeeded in logging the response" {
 		t.Fatalf("err: %v", err)
 	}
