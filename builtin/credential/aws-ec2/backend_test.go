@@ -1342,8 +1342,8 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	stsReq.Path = "config/sts/account2"
 	stsReq.Data = data
 	// create another entry to test the list operation
-	_, err = b.HandleRequest(stsReq)
-	if err != nil {
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
 	}
 
@@ -1364,14 +1364,14 @@ func TestBackend_pathStsConfig(t *testing.T) {
 
 	stsReq.Operation = logical.DeleteOperation
 	stsReq.Path = "config/sts/account1"
-	_, err = b.HandleRequest(stsReq)
-	if err != nil {
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
 	}
 
 	stsReq.Path = "config/sts/account2"
-	_, err = b.HandleRequest(stsReq)
-	if err != nil {
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
 	}
 
