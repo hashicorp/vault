@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func mockAuditedHeaderConfig(t *testing.T) *AuditedHeadersConfig {
+func mockAuditedHeadersConfig(t *testing.T) *AuditedHeadersConfig {
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "foo/")
 	return &AuditedHeadersConfig{
@@ -14,14 +14,14 @@ func mockAuditedHeaderConfig(t *testing.T) *AuditedHeadersConfig {
 	}
 }
 
-func TestAuditedHeaderConfig_CRUD(t *testing.T) {
-	conf := mockAuditedHeaderConfig(t)
+func TestAuditedHeadersConfig_CRUD(t *testing.T) {
+	conf := mockAuditedHeadersConfig(t)
 
-	testAuditedHeaderConfig_Add(t, conf)
-	testAuditedHeaderConfig_Remove(t, conf)
+	testAuditedHeadersConfig_Add(t, conf)
+	testAuditedHeadersConfig_Remove(t, conf)
 }
 
-func testAuditedHeaderConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
+func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 	err := conf.add("X-Test-Header", false)
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
@@ -92,7 +92,7 @@ func testAuditedHeaderConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 
 }
 
-func testAuditedHeaderConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
+func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 	err := conf.remove("X-Test-Header")
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
@@ -149,6 +149,45 @@ func testAuditedHeaderConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 
 	if !reflect.DeepEqual(headers, expected) {
 		t.Fatalf("Expected config didn't match actual. Expected: %#v, Got: %#v", expected, headers)
+	}
+}
+
+func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
+	conf := mockAuditedHeadersConfig(t)
+
+	conf.Headers = map[string]*auditedHeaderSettings{
+		"X-Test-Header":  &auditedHeaderSettings{false},
+		"X-Vault-Header": &auditedHeaderSettings{true},
+	}
+
+	reqHeaders := map[string][]string{
+		"X-Test-Header":  []string{"foo"},
+		"X-Vault-Header": []string{"bar", "bar"},
+		"Content-Type":   []string{"json"},
+	}
+
+	hashFunc := func(s string) string { return "hashed" }
+
+	result := conf.ApplyConfig(reqHeaders, hashFunc)
+
+	expected := map[string][]string{
+		"X-Test-Header":  []string{"foo"},
+		"X-Vault-Header": []string{"hashed", "hashed"},
+	}
+
+	if !reflect.DeepEqual(result, expected) {
+		t.Fatalf("Expected headers did not match actual: Expected %#v\n Got %#v\n", expected, result)
+	}
+
+	//Make sure we didn't edit the reqHeaders map
+	reqHeadersCopy := map[string][]string{
+		"X-Test-Header":  []string{"foo"},
+		"X-Vault-Header": []string{"bar", "bar"},
+		"Content-Type":   []string{"json"},
+	}
+
+	if !reflect.DeepEqual(reqHeaders, reqHeadersCopy) {
+		t.Fatalf("Req headers were changed, expected %#v\n got %#v", reqHeadersCopy, reqHeaders)
 	}
 
 }
