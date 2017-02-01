@@ -95,20 +95,21 @@ you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
 
-			"batch": &framework.FieldSchema{
+			"batch_input": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded list of items to be encrypted in a single batch. When this
 parameter is set, if the parameters 'plaintext', 'context' and 'nonce' are also
-set, they will be ignored. JSON format for the input goes like this:
+set, they will be ignored. JSON format for the input (which should be base64
+encoded) goes like this:
 
 [
   {
-    "context": "context1",
+    "context": "c2FtcGxlY29udGV4dA==",
     "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
   },
   {
-    "context": "context2",
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
     "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
   },
   ...
@@ -146,7 +147,7 @@ func (b *backend) pathEncryptWrite(
 	name := d.Get("name").(string)
 	var err error
 
-	batchInputRaw := d.Get("batch").(string)
+	batchInputRaw := d.Get("batch_input").(string)
 	var batchInput []byte
 	var batchInputItems []BatchRequestItem
 	if len(batchInputRaw) != 0 {
@@ -159,6 +160,9 @@ func (b *backend) pathEncryptWrite(
 			return nil, fmt.Errorf("invalid input: %v", err)
 		}
 
+		if len(batchInputItems) == 0 {
+			return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
+		}
 	} else {
 		valueRaw, ok := d.GetOk("plaintext")
 		if !ok {
@@ -189,10 +193,6 @@ func (b *backend) pathEncryptWrite(
 		}
 	}
 
-	if len(batchInputItems) == 0 {
-		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
-	}
-
 	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
@@ -201,10 +201,6 @@ func (b *backend) pathEncryptWrite(
 	// be set or not, based on the presence of 'context' field in all the
 	// input items.
 	for i, item := range batchInputItems {
-		// Invalidate the items that are not expected in the request item, for
-		// safety
-		batchInputItems[i].Ciphertext = ""
-
 		if (len(item.Context) == 0 && contextSet) || (len(item.Context) != 0 && !contextSet) {
 			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 		}
@@ -292,7 +288,7 @@ func (b *backend) pathEncryptWrite(
 			return nil, fmt.Errorf("failed to JSON encode batch response")
 		}
 		resp.Data = map[string]interface{}{
-			"data": string(batchResponseJSON),
+			"batch_results": string(batchResponseJSON),
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {

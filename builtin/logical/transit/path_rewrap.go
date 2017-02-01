@@ -34,19 +34,21 @@ func (b *backend) pathRewrap() *framework.Path {
 				Description: "Nonce for when convergent encryption is used",
 			},
 
-			"batch": &framework.FieldSchema{
+			"batch_input": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `
 Base64 encoded list of items to be rewrapped in a single batch. When this
 parameter is set, if the parameters 'ciphertext', 'context' and 'nonce' are
-also set, they will be ignored. JSON format for the input goes like this:
+also set, they will be ignored. JSON format for the input (which should be
+bae64 encoded) goes like this:
+
 [
   {
-    "context": "context1",
+    "context": "c2FtcGxlY29udGV4dA==",
     "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
   },
   {
-    "context": "context2",
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
     "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
   },
   ...
@@ -65,7 +67,7 @@ also set, they will be ignored. JSON format for the input goes like this:
 
 func (b *backend) pathRewrapWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	batchInputRaw := d.Get("batch").(string)
+	batchInputRaw := d.Get("batch_input").(string)
 	var batchInputItems []BatchRequestItem
 	var batchInput []byte
 	var err error
@@ -77,6 +79,10 @@ func (b *backend) pathRewrapWrite(
 
 		if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputItems); err != nil {
 			return nil, fmt.Errorf("invalid input: %v", err)
+		}
+
+		if len(batchInputItems) == 0 {
+			return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 		}
 	} else {
 		ciphertext := d.Get("ciphertext").(string)
@@ -108,18 +114,10 @@ func (b *backend) pathRewrapWrite(
 		}
 	}
 
-	if len(batchInputItems) == 0 {
-		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
-	}
-
 	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
 	contextSet := len(batchInputItems[0].Context) != 0
 
 	for i, item := range batchInputItems {
-		// Invalidate the items that are not expected in the request item, for
-		// safety
-		batchInputItems[i].Plaintext = ""
-
 		if (len(item.Context) == 0 && contextSet) || (len(item.Context) != 0 && !contextSet) {
 			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 		}
@@ -190,7 +188,7 @@ func (b *backend) pathRewrapWrite(
 			return nil, fmt.Errorf("failed to JSON encode batch response")
 		}
 		resp.Data = map[string]interface{}{
-			"data": string(batchResponseJSON),
+			"batch_results": string(batchResponseJSON),
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {

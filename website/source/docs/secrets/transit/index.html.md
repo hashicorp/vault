@@ -477,21 +477,21 @@ only encrypt or decrypt using the named keys they need access to.
     </ul>
     <ul>
       <li>
-        <span class="param">batch</span>
+        <span class="param">batch_input</span>
         <span class="param-flags">optional</span>
-        Base64 encoded list of items to be encrypted in a single batch. The size of the
-        input is limited to 4MB. When this parameter is set, the parameters
-        'plaintext', 'context' and 'nonce' will be ignored. JSON format for the input
-        goes like this:
+        Base64 encoded list of items to be encrypted in a single batch. When
+        this parameter is set, if the parameters 'plaintext', 'context' and
+        'nonce' are also set, they will be ignored. JSON format for the input
+        (which should be base64 encoded) goes like this:
 
 ```javascript
 [
   {
-    "context": "context1",
+    "context": "c2FtcGxlY29udGV4dA==",
     "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
   },
   {
-    "context": "context2",
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
     "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
   },
   ...
@@ -580,21 +580,21 @@ only encrypt or decrypt using the named keys they need access to.
     </ul>
     <ul>
       <li>
-        <span class="param">batch</span>
+        <span class="param">batch_input</span>
         <span class="param-flags">optional</span>
-        Base64 encoded list of items to be decrypted in a single batch. When this
-        parameter is set, if the parameters 'ciphertext', 'context' and 'nonce' are
-        also set, they will be ignored. JSON format for the input goes like this:
-
+        Base64 encoded list of items to be decrypted in a single batch. When
+        this parameter is set, if the parameters 'ciphertext', 'context' and
+        'nonce' are also set, they will be ignored. JSON format for the input
+        (which should be base64 encoded) goes like this:
 
 ```javascript
 [
   {
-    "context": "context1",
+    "context": "c2FtcGxlY29udGV4dA==",
     "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
   },
   {
-    "context": "context2",
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
     "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
   },
   ...
@@ -658,26 +658,26 @@ only encrypt or decrypt using the named keys they need access to.
         0.6.2+.
       </li>
       <li>
-        <span class="param">batch</span>
+        <span class="param">batch_input</span>
         <span class="param-flags">optional</span>
         Base64 encoded list of items to be rewrapped in a single batch. When
         this parameter is set, if the parameters 'ciphertext', 'context' and
         'nonce' are also set, they will be ignored. JSON format for the input
-        goes like this:
+        (which should be bae64 encoded) goes like this:
 
 ```javascript
 [
   {
-    "context": "context1",
+    "context": "c2FtcGxlY29udGV4dA==",
     "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
   },
   {
-    "context": "context2",
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
     "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
   },
   ...
 ]
-```javascript
+```
 
       </li>
     </ul>
