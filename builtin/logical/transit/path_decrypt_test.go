@@ -128,8 +128,8 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 	}
 
 	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="}]`
+"context":"dGVzdGNvbnRleHQ="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
+"context":"dGVzdGNvbnRleHQ="}]`
 
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
@@ -152,7 +152,7 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, item := range batchResponseArray {
-		item.Context = []byte("dmlzaGFsCg==")
+		item.Context = []byte("testcontext")
 		decryptionRequestItems = append(decryptionRequestItems, item)
 	}
 
