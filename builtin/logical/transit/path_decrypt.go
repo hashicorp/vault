@@ -88,7 +88,7 @@ func (b *backend) pathDecryptWrite(
 		}
 
 		if len(batchInputItems) == 0 {
-			return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
 		ciphertext := d.Get("ciphertext").(string)

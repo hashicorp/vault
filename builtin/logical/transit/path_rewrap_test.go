@@ -208,7 +208,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dmlzaGFsCg=="}]`
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -222,13 +222,13 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	}
 
 	var batchEncryptionResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchEncryptionResponseArray); err != nil {
+	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchEncryptionResponseArray); err != nil {
 		t.Fatal(err)
 	}
 
-	batchInputB64 = base64.StdEncoding.EncodeToString([]byte(resp.Data["data"].(string)))
+	batchInputB64 = base64.StdEncoding.EncodeToString([]byte(resp.Data["batch_results"].(string)))
 	rewrapData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 
 	rotateReq := &logical.Request{
@@ -254,7 +254,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 	}
 
 	var batchRewrapResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchRewrapResponseArray); err != nil {
+	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchRewrapResponseArray); err != nil {
 		t.Fatal(err)
 	}
 

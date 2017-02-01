@@ -161,7 +161,7 @@ func (b *backend) pathEncryptWrite(
 		}
 
 		if len(batchInputItems) == 0 {
-			return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
+			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
 		valueRaw, ok := d.GetOk("plaintext")

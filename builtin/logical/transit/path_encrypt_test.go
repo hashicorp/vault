@@ -130,7 +130,7 @@ func TestTransit_BatchEncryptionCase3(t *testing.T) {
 
 	batchInput := `[ {"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
 	batchData := map[string]interface{}{
-		"batch": batchInput,
+		"batch_input": batchInput,
 	}
 
 	batchReq := &logical.Request{
@@ -165,7 +165,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -179,7 +179,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	}
 
 	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
+	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
 
@@ -235,7 +235,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -249,7 +249,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 	}
 
 	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
+	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
 
@@ -287,7 +287,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -301,7 +301,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 	}
 
 	var batchResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
+	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
 
@@ -345,7 +345,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -359,7 +359,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 	}
 
 	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["data"].(string)), &batchResponseArray); err != nil {
+	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
 		t.Fatal(err)
 	}
 
@@ -408,7 +408,7 @@ func TestTransit_BatchEncryptionCase8(t *testing.T) {
 	batchInput := `[{"plaintext":"simple_plaintext"}]`
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -451,8 +451,8 @@ func TestTransit_BatchEncryptionCase9(t *testing.T) {
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 	batchData := map[string]interface{}{
-		"batch":     batchInputB64,
-		"plaintext": plaintext,
+		"batch_input": batchInputB64,
+		"plaintext":   plaintext,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -483,7 +483,7 @@ func TestTransit_BatchEncryptionCase10(t *testing.T) {
 
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 
 	batchReq := &logical.Request{
@@ -510,7 +510,7 @@ func TestTransit_BatchEncryptionCase11(t *testing.T) {
 
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -542,7 +542,7 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 
 	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch": batchInputB64,
+		"batch_input": batchInputB64,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
