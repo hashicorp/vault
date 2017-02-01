@@ -218,6 +218,8 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 
 	hashFunc := func(s string) string { return salter.GetIdentifiedHMAC(s) }
 
+	// Reset the timer since we did a lot above
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		conf.ApplyConfig(reqHeaders, hashFunc)
 	}
