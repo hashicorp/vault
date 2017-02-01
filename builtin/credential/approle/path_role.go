@@ -520,12 +520,9 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 		return logical.ErrorResponse(fmt.Sprintf("role %s does not exist", roleName)), nil
 	}
 
-	// If the argument to secretIDLock does not start with 2 hex
-	// chars, a generic lock is returned. So, passing empty string
-	// to get the "custom" lock that could be used for listing.
-	lock := b.secretIDLock("")
-	lock.RLock()
-	defer lock.RUnlock()
+	// Guard the list operation with an outer lock
+	b.secretIDListingLock.RLock()
+	defer b.secretIDListingLock.RUnlock()
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
 	if err != nil {
@@ -541,6 +538,11 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 
 	var listItems []string
 	for _, secretIDHMAC := range secretIDHMACs {
+		// For sanity
+		if secretIDHMAC == "" {
+			continue
+		}
+
 		// Prepare the full index of the SecretIDs.
 		entryIndex := fmt.Sprintf("secret_id/%s/%s", roleNameHMAC, secretIDHMAC)
 
@@ -550,22 +552,23 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 		// corresponding lock many times using SecretIDs is not
 		// possible. Also, indexing it everywhere using secretIDHMACs
 		// makes listing operation easier.
-		lock := b.secretIDLock(secretIDHMAC)
-		lock.RLock()
+		secretIDLock := b.secretIDLock(secretIDHMAC)
+
+		secretIDLock.RLock()
 
 		result := secretIDStorageEntry{}
 		if entry, err := req.Storage.Get(entryIndex); err != nil {
-			lock.RUnlock()
+			secretIDLock.RUnlock()
 			return nil, err
 		} else if entry == nil {
-			lock.RUnlock()
+			secretIDLock.RUnlock()
 			return nil, fmt.Errorf("storage entry for SecretID is present but no content found at the index")
 		} else if err := entry.DecodeJSON(&result); err != nil {
-			lock.RUnlock()
+			secretIDLock.RUnlock()
 			return nil, err
 		}
 		listItems = append(listItems, result.SecretIDAccessor)
-		lock.RUnlock()
+		secretIDLock.RUnlock()
 	}
 
 	return logical.ListResponse(listItems), nil

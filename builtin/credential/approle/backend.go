@@ -42,6 +42,10 @@ type backend struct {
 	// predefined number of locks when the backend is created, and will be
 	// indexed based on the SecretIDAccessors itself.
 	secretIDAccessorLocksMap map[string]*sync.RWMutex
+
+	// secretIDListingLock is a dedicated lock for listing SecretIDAccessors
+	// for all the SecretIDs issued against an approle
+	secretIDListingLock sync.RWMutex
 }
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
