@@ -520,12 +520,9 @@ func (b *backend) pathRoleSecretIDList(req *logical.Request, data *framework.Fie
 		return logical.ErrorResponse(fmt.Sprintf("role %s does not exist", roleName)), nil
 	}
 
-	// If the argument to secretIDLock does not start with 2 hex
-	// chars, a generic lock is returned. So, passing empty string
-	// to get the "custom" lock that could be used for listing.
-	customLock := b.secretIDLock("")
-	customLock.RLock()
-	defer customLock.RUnlock()
+	// Guard the list operation with an outer lock
+	b.secretIDListingLock.RLock()
+	defer b.secretIDListingLock.RUnlock()
 
 	roleNameHMAC, err := createHMAC(role.HMACKey, roleName)
 	if err != nil {
