@@ -15,11 +15,7 @@ import (
 // BatchRequestItem represents a request item for batch processing
 type BatchRequestItem struct {
 	// Context for key derivation. This is required for derived keys.
-	Context string `json:"context" structs:"context" mapstructure:"context"`
-
-	// DecodedContext, for internal use, which is the base64 decoded version of
-	// the Context field
-	DecodedContext []byte `json:"decoded_context" structs:"decoded_context" mapstructure:"decoded_context"`
+	Context []byte `json:"context" structs:"context" mapstructure:"context"`
 
 	// Plaintext for encryption
 	Plaintext string `json:"plaintext" structs:"plaintext" mapstructure:"plaintext"`
@@ -28,11 +24,7 @@ type BatchRequestItem struct {
 	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
 
 	// Nonce to be used when v1 convergent encryption is used
-	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
-
-	// DecodedNonce, for internal use, which is the base64 decoded version of
-	// the Nonce field
-	DecodedNonce []byte `json:"decoded_nonce" structs:"decoded_nonce" mapstructure:"decoded_nonce"`
+	Nonce []byte `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 }
 
 // BatchResponseItem represents a response item for batch processing
@@ -176,17 +168,33 @@ func (b *backend) pathEncryptWrite(
 		batchInputItems = make([]BatchRequestItem, 1)
 		batchInputItems[0] = BatchRequestItem{
 			Plaintext: valueRaw.(string),
-			Context:   d.Get("context").(string),
-			Nonce:     d.Get("nonce").(string),
+		}
+
+		// Decode the context
+		contextRaw := d.Get("context").(string)
+		if len(contextRaw) != 0 {
+			batchInputItems[0].Context, err = base64.StdEncoding.DecodeString(contextRaw)
+			if err != nil {
+				return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+			}
+		}
+
+		// Decode the nonce
+		nonceRaw := d.Get("nonce").(string)
+		if len(nonceRaw) != 0 {
+			batchInputItems[0].Nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
+			if err != nil {
+				return logical.ErrorResponse("failed to base64-decode nonce"), logical.ErrInvalidRequest
+			}
 		}
 	}
 
-	contextSet := batchInputItems[0].Context != ""
 	if len(batchInputItems) == 0 {
 		return logical.ErrorResponse("missing input to process"), logical.ErrInvalidRequest
 	}
 
 	batchResponseItems := make([]BatchResponseItem, len(batchInputItems))
+	contextSet := len(batchInputItems[0].Context) != 0
 
 	// Before processing the batch request items, get the policy. If the
 	// policy is supposed to be upserted, then determine if 'derived' is to
@@ -196,10 +204,8 @@ func (b *backend) pathEncryptWrite(
 		// Invalidate the items that are not expected in the request item, for
 		// safety
 		batchInputItems[i].Ciphertext = ""
-		batchInputItems[i].DecodedContext = nil
-		batchInputItems[i].DecodedNonce = nil
 
-		if (item.Context == "" && contextSet) || (item.Context != "" && !contextSet) {
+		if (len(item.Context) == 0 && contextSet) || (len(item.Context) != 0 && !contextSet) {
 			return logical.ErrorResponse("context should be set either in all the request blocks or in none"), logical.ErrInvalidRequest
 		}
 
@@ -207,24 +213,6 @@ func (b *backend) pathEncryptWrite(
 		if err != nil {
 			batchResponseItems[i].Error = "failed to base64-decode plaintext"
 			continue
-		}
-
-		// Decode the context
-		if len(item.Context) != 0 {
-			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
-			if err != nil {
-				batchResponseItems[i].Error = "failed to base64-decode context"
-				continue
-			}
-		}
-
-		// Decode the nonce
-		if len(item.Nonce) != 0 {
-			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
-			if err != nil {
-				batchResponseItems[i].Error = "failed to base64-decode nonce"
-				continue
-			}
 		}
 	}
 
@@ -278,13 +266,12 @@ func (b *backend) pathEncryptWrite(
 			continue
 		}
 
-		ciphertext, err := p.Encrypt(item.DecodedContext, item.DecodedNonce, item.Plaintext)
+		ciphertext, err := p.Encrypt(item.Context, item.Nonce, item.Plaintext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
-				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-			case errutil.InternalError:
-				return nil, err
+				batchResponseItems[i].Error = err.Error()
+				continue
 			default:
 				return nil, err
 			}
@@ -309,7 +296,7 @@ func (b *backend) pathEncryptWrite(
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
-			return nil, fmt.Errorf(batchResponseItems[0].Error)
+			return logical.ErrorResponse(batchResponseItems[0].Error), logical.ErrInvalidRequest
 		}
 		resp.Data = map[string]interface{}{
 			"ciphertext": batchResponseItems[0].Ciphertext,

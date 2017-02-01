@@ -498,9 +498,8 @@ func TestTransit_BatchEncryptionCase10(t *testing.T) {
 	}
 }
 
-// Case11: Incorrect inputs for context and nonce should be ignored
+// Case11: Incorrect inputs for context and nonce should not be ignored
 func TestTransit_BatchEncryptionCase11(t *testing.T) {
-	var resp *logical.Response
 	var err error
 
 	b, s := createBackendWithStorage(t)
@@ -519,9 +518,9 @@ func TestTransit_BatchEncryptionCase11(t *testing.T) {
 		Storage:   s,
 		Data:      batchData,
 	}
-	resp, err = b.HandleRequest(batchReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
+	_, err = b.HandleRequest(batchReq)
+	if err == nil {
+		t.Fatalf("expected an error")
 	}
 }
 

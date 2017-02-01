@@ -152,7 +152,7 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, item := range batchResponseArray {
-		item.Context = "dmlzaGFsCg=="
+		item.Context = []byte("dmlzaGFsCg==")
 		decryptionRequestItems = append(decryptionRequestItems, item)
 	}
 
