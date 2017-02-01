@@ -377,6 +377,7 @@ func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 		ServerName: parsedCert.Subject.CommonName,
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		ClientCAs:  c.clusterCertPool,
+		MinVersion: tls.VersionTLS12,
 	}
 
 	return tlsConfig, nil
