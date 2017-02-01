@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// awsStsEntry is used to store details of an STS role for assumption
 type awsStsEntry struct {
 	StsRole string `json:"sts_role" structs:"sts_role" mapstructure:"sts_role"`
 }
@@ -116,7 +117,7 @@ func (b *backend) lockedSetAwsStsEntry(s logical.Storage, accountID string, stsE
 	}
 
 	if stsEntry == nil {
-		return fmt.Errorf("missing AWS STS Role ARN")
+		return fmt.Errorf("missing sts entry")
 	}
 
 	b.configMutex.Lock()
@@ -197,7 +198,11 @@ func (b *backend) pathConfigStsCreateUpdate(req *logical.Request, data *framewor
 	if ok {
 		stsEntry.StsRole = stsRole.(string)
 	} else if req.Operation == logical.CreateOperation {
-		stsEntry.StsRole = data.Get("sts_role").(string)
+		return logical.ErrorResponse("missing sts role"), nil
+	}
+
+	if stsEntry.StsRole == "" {
+		return logical.ErrorResponse("sts role cannot be empty"), nil
 	}
 
 	// save the provided STS role
