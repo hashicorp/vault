@@ -262,6 +262,20 @@ will not be aware of such events. The token issued will still be valid, until
 it expires. The token will likely be expired sooner than its lifetime when the
 instance fails to renew the token on time.
 
+### Cross Account Access
+
+To allow Vault to authenticate EC2 instances running in other accounts, AWS STS (Security
+Token Service) can be used to retrieve temporary credentials by assuming an IAM Role
+in those accounts.
+
+The account in which Vault is running (i.e. the master account) must be listed as
+a trusted entity in the IAM Role being assumed on the remote account. The Role itself
+must allow the `ec2:DescribeInstances` action, and `iam:GetInstanceProfile` if IAM Role
+binding is used (see below).
+
+Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
+for the IAM Role to be assumed.
+
 ## Authentication
 
 ### Via the CLI
@@ -606,6 +620,150 @@ The response will be in JSON. For example:
 }
 ```
 
+  </dd>
+</dl>
+
+
+### /auth/aws-ec2/config/sts/<account_id>
+#### POST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows the explicit association of STS roles to satellite AWS accounts (i.e. those
+    which are not the account in which the Vault server is running.) Login attempts from
+    EC2 instances running in these accounts will be verified using credentials obtained
+    by assumption of these STS roles.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/certificate/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">account_id</span>
+        <span class="param-flags">required</span>
+        AWS account ID to be associated with STS role. If set,
+        Vault will use assumed credentials to verify any login attempts from EC2
+        instances in this account.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">sts_role</span>
+        <span class="param-flags">required</span>
+        AWS ARN for STS role to be assumed when interacting with the account specified.
+        The Vault server must have permissions to assume this role.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+#### GET
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the previously configured STS role. 
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/sts/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "sts_role ": "arn:aws:iam:<account_id>:role/myRole"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### LIST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Lists all the AWS Account IDs for which an STS role is registered 
+  </dd>
+
+  <dt>Method</dt>
+  <dd>LIST/GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/sts` (LIST) or `/auth/aws-ec2/config/sts?list=true` (GET)</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "keys": [
+      "<account_id_1>",
+      "<account_id_2>"
+    ]
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### DELETE
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes a previously configured AWS account/STS role association  
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws-ec2/config/sts/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
   </dd>
 </dl>
 
