@@ -38,6 +38,8 @@ BUG FIXES:
    blacklist (with only `disallowed_policies` set) would not work in most
    circumstances [GH-2286]
  * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
+ * secret/cassandra: Stop a connection leak that could occur on active node
+   failover [GH-2313]
  * secret/pki: When using `sign-verbatim`, don't require a role and use the
    CSR's common name [GH-2243]
 
