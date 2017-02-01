@@ -3,6 +3,8 @@ package vault
 import (
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/vault/helper/salt"
 )
 
 func mockAuditedHeadersConfig(t *testing.T) *AuditedHeadersConfig {
@@ -190,4 +192,33 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		t.Fatalf("Req headers were changed, expected %#v\n got %#v", reqHeadersCopy, reqHeaders)
 	}
 
+}
+
+func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
+	conf := &AuditedHeadersConfig{
+		Headers: make(map[string]*auditedHeaderSettings),
+		view:    nil,
+	}
+
+	conf.Headers = map[string]*auditedHeaderSettings{
+		"X-Test-Header":  &auditedHeaderSettings{false},
+		"X-Vault-Header": &auditedHeaderSettings{true},
+	}
+
+	reqHeaders := map[string][]string{
+		"X-Test-Header":  []string{"foo"},
+		"X-Vault-Header": []string{"bar", "bar"},
+		"Content-Type":   []string{"json"},
+	}
+
+	salter, err := salt.NewSalt(nil, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	hashFunc := func(s string) string { return salter.GetIdentifiedHMAC(s) }
+
+	for i := 0; i < b.N; i++ {
+		conf.ApplyConfig(reqHeaders, hashFunc)
+	}
 }
