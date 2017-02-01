@@ -130,7 +130,6 @@ help:
 build:  clean-containers devkit generate
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
-		$(BACKEND_ENVS) \
 		mesosphereci/vault-devkit:latest \
 			/bin/bash -x -c ' \
 				VAULT_DEV_BUILD=1 sh -c "./scripts/build.sh"'
