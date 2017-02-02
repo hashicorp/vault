@@ -9,9 +9,9 @@ import (
 
 const (
 	// Key used in the BarrierView to store and retrieve the header config
-	auditedHeadersEntry = "audited_headers"
+	auditedHeadersEntry = "audited-headers"
 	// Path used to create a sub view off of BarrierView
-	auditedHeadersSubPath = "auditedHeadersConfig/"
+	auditedHeadersSubPath = "audited-headers-config/"
 )
 
 type auditedHeaderSettings struct {
