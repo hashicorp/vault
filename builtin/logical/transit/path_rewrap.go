@@ -156,11 +156,6 @@ func (b *backend) pathRewrapWrite(
 			}
 		}
 
-		if plaintext == "" {
-			batchResponseItems[i].Error = "empty plaintext returned during rewrap"
-			continue
-		}
-
 		ciphertext, err := p.Encrypt(item.Context, item.Nonce, plaintext)
 		if err != nil {
 			switch err.(type) {
@@ -175,8 +170,7 @@ func (b *backend) pathRewrapWrite(
 		}
 
 		if ciphertext == "" {
-			batchResponseItems[i].Error = "empty ciphertext returned"
-			continue
+			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
 		}
 
 		batchResponseItems[i].Ciphertext = ciphertext

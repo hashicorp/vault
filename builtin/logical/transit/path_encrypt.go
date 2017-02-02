@@ -274,8 +274,7 @@ func (b *backend) pathEncryptWrite(
 		}
 
 		if ciphertext == "" {
-			batchResponseItems[i].Error = "empty ciphertext returned"
-			continue
+			return nil, fmt.Errorf("empty ciphertext returned for input item %d", i)
 		}
 
 		batchResponseItems[i].Ciphertext = ciphertext
