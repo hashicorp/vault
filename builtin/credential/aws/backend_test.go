@@ -1195,7 +1195,7 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 // it requires the following environment variables to be set:
 // TEST_AWS_ACCESS_KEY_ID
 // TEST_AWS_SECRET_ACCESS_KEY
-// TEST_AWS_SECURITY_TOKEN (optional, if you are using short-lived creds)
+// TEST_AWS_SECURITY_TOKEN or TEST_AWS_SESSION_TOKEN (optional, if you are using short-lived creds)
 // These are intentionally NOT the "standard" variables to prevent accidentally
 // using prod creds in acceptance tests
 func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
@@ -1227,8 +1227,8 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// potentially pick up credentials from the ~/.config files), but probably
 	// good enough rather than having to muck around in the low-level details
 	for _, envvar := range []string{
-		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SECURITY_TOKEN"} {
-		os.Setenv("TEST_"+envvar, os.Getenv(envvar))
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SECURITY_TOKEN", "AWS_SESSION_TOKEN"} {
+		os.Setenv(envvar, os.Getenv("TEST_"+envvar))
 	}
 	awsSession, err := session.NewSession()
 	if err != nil {
