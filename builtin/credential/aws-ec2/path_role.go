@@ -51,6 +51,12 @@ the value specified by this parameter. The value is prefix-matched
 				Default:     "",
 				Description: "If set, enables the role tags for this role. The value set for this field should be the 'key' of the tag on the EC2 instance. The 'value' of the tag should be generated using 'role/<role>/tag' endpoint. Defaults to an empty string, meaning that role tags are disabled.",
 			},
+			"period": &framework.FieldSchema{
+				Type:    framework.TypeDurationSecond,
+				Default: 0,
+				Description: `
+If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.`,
+			},
 			"ttl": {
 				Type:    framework.TypeDurationSecond,
 				Default: 0,
@@ -381,6 +387,17 @@ func (b *backend) pathRoleCreateUpdate(
 		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
 	}
 
+	periodRaw, ok := data.GetOk("period")
+	if ok {
+		roleEntry.Period = time.Second * time.Duration(periodRaw.(int))
+	} else if req.Operation == logical.CreateOperation {
+		roleEntry.Period = time.Second * time.Duration(data.Get("period").(int))
+	}
+
+	if roleEntry.Period > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.Period.String(), b.System().MaxLeaseTTL().String())), nil
+	}
+
 	roleTagStr, ok := data.GetOk("role_tag")
 	if ok {
 		roleEntry.RoleTag = roleTagStr.(string)
@@ -424,6 +441,7 @@ type awsRoleEntry struct {
 	Policies                   []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	DisallowReauthentication   bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 	HMACKey                    string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
+	Period                     time.Duration `json:"period" mapstructure:"period" structs:"period"`
 }
 
 const pathRoleSyn = `

@@ -1063,6 +1063,17 @@ in `*`).
     </ul>
     <ul>
       <li>
+        <span class="param">period</span>
+        <span class="param-flags">optional</span>
+        If set, indicates that the token generated using this role should never
+        expire. The token should be renewed within the duration specified by
+        this value. At each renewal, the token's TTL will be set to the value
+        of this parameter.  The maximum allowed lifetime of tokens issued using
+        this role.
+      </li>
+    </ul>
+    <ul>
+      <li>
         <span class="param">policies</span>
         <span class="param-flags">optional</span>
         Policies to be set on tokens issued using this role.

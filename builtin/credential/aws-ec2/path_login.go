@@ -641,6 +641,7 @@ func (b *backend) pathLoginUpdate(
 
 	resp := &logical.Response{
 		Auth: &logical.Auth{
+			Period:   roleEntry.Period,
 			Policies: policies,
 			Metadata: map[string]string{
 				"instance_id":      identityDocParsed.InstanceID,
@@ -666,16 +667,20 @@ func (b *backend) pathLoginUpdate(
 		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
-	// Cap the TTL value.
-	shortestTTL := b.System().DefaultLeaseTTL()
-	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-		shortestTTL = roleEntry.TTL
+	if roleEntry.Period > time.Duration(0) {
+		resp.Auth.TTL = roleEntry.Period
+	} else {
+		// Cap the TTL value.
+		shortestTTL := b.System().DefaultLeaseTTL()
+		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
+			shortestTTL = roleEntry.TTL
+		}
+		if shortestMaxTTL < shortestTTL {
+			resp.AddWarning(fmt.Sprintf("Effective ttl of %q exceeded the effective max_ttl of %q; ttl value is capped appropriately", (shortestTTL / time.Second).String(), (shortestMaxTTL / time.Second).String()))
+			shortestTTL = shortestMaxTTL
+		}
+		resp.Auth.TTL = shortestTTL
 	}
-	if shortestMaxTTL < shortestTTL {
-		resp.AddWarning(fmt.Sprintf("Effective ttl of %q exceeded the effective max_ttl of %q; ttl value is capped appropriately", (shortestTTL / time.Second).String(), (shortestMaxTTL / time.Second).String()))
-		shortestTTL = shortestMaxTTL
-	}
-	resp.Auth.TTL = shortestTTL
 
 	return resp, nil
 
@@ -824,25 +829,35 @@ func (b *backend) pathLoginRenew(
 		longestMaxTTL = rTagMaxTTL
 	}
 
-	// Cap the TTL value
-	shortestTTL := b.System().DefaultLeaseTTL()
-	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-		shortestTTL = roleEntry.TTL
-	}
-	if shortestMaxTTL < shortestTTL {
-		shortestTTL = shortestMaxTTL
-	}
-
 	// Only LastUpdatedTime and ExpirationTime change and all other fields remain the same
 	currentTime := time.Now()
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 
+	// Updating the expiration time is required for the tidy operation on the
+	// whitelist identity storage items
 	if err = setWhitelistIdentityEntry(req.Storage, instanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
-	return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
+	// If 'Period' is set on the role, then the token should never expire. Role
+	// tag does not have a 'Period' field. So, regarless of whether the token
+	// was issued using a role login or a role tag login, the period set on the
+	// role should take effect.
+	if roleEntry.Period > time.Duration(0) {
+		req.Auth.TTL = roleEntry.Period
+		return &logical.Response{Auth: req.Auth}, nil
+	} else {
+		// Cap the TTL value
+		shortestTTL := b.System().DefaultLeaseTTL()
+		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
+			shortestTTL = roleEntry.TTL
+		}
+		if shortestMaxTTL < shortestTTL {
+			shortestTTL = shortestMaxTTL
+		}
+		return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
+	}
 }
 
 // identityDocument represents the items of interest from the EC2 instance
