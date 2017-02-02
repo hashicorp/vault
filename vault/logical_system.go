@@ -40,7 +40,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"audit/*",
 				"raw/*",
 				"rotate",
-				"config/*",
+				"config/auditing/*",
 			},
 
 			Unauthenticated: []string{
@@ -624,7 +624,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "config/audited-headers/(?P<header>.+)",
+				Pattern: "config/auditing/request-headers/(?P<header>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"header": &framework.FieldSchema{
@@ -645,7 +645,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
 			},
 			&framework.Path{
-				Pattern: "config/audited-headers$",
+				Pattern: "config/auditing/request-headers$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.ReadOperation: b.handleAuditedHeadersRead,
