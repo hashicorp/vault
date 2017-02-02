@@ -65,8 +65,9 @@ type handshakeTransport struct {
 	pendingPackets [][]byte // Used when a key exchange is in progress.
 
 	// If the read loop wants to schedule a kex, it pings this
-	// channel, and the write loop will send out a kex message.
-	requestKex chan struct{}
+	// channel, and the write loop will send out a kex
+	// message. The boolean is whether this is the first request or not.
+	requestKex chan bool
 
 	// If the other side requests or confirms a kex, its kexInit
 	// packet is sent here for the write loop to find it.
@@ -77,9 +78,14 @@ type handshakeTransport struct {
 	dialAddress     string
 	remoteAddr      net.Addr
 
-	readSinceKex uint64
+	// Algorithms agreed in the last key exchange.
+	algorithms *algorithms
 
-	writtenSinceKex uint64
+	readPacketsLeft uint32
+	readBytesLeft   int64
+
+	writePacketsLeft uint32
+	writeBytesLeft   int64
 
 	// The session ID or nil if first kex did not complete yet.
 	sessionID []byte
@@ -96,11 +102,14 @@ func newHandshakeTransport(conn keyingTransport, config *Config, clientVersion, 
 		serverVersion: serverVersion,
 		clientVersion: clientVersion,
 		incoming:      make(chan []byte, chanSize),
-		requestKex:    make(chan struct{}, 1),
+		requestKex:    make(chan bool, 1),
 		startKex:      make(chan *pendingKex, 1),
 
 		config: config,
 	}
+
+	// We always start with a mandatory key exchange.
+	t.requestKex <- true
 	return t
 }
 
@@ -174,12 +183,6 @@ func (t *handshakeTransport) readPacket() ([]byte, error) {
 }
 
 func (t *handshakeTransport) readLoop() {
-	// We always start with the mandatory key exchange.  We use
-	// the channel for simplicity, and this works if we can rely
-	// on the SSH package itself not doing anything else before
-	// waitSession has completed.
-	t.requestKeyExchange()
-
 	first := true
 	for {
 		p, err := t.readOnePacket(first)
@@ -227,14 +230,15 @@ func (t *handshakeTransport) recordWriteError(err error) {
 
 func (t *handshakeTransport) requestKeyExchange() {
 	select {
-	case t.requestKex <- struct{}{}:
+	case t.requestKex <- false:
 	default:
 		// something already requested a kex, so do nothing.
 	}
-
 }
 
 func (t *handshakeTransport) kexLoop() {
+	firstSent := false
+
 write:
 	for t.getWriteError() == nil {
 		var request *pendingKex
@@ -247,7 +251,18 @@ write:
 				if !ok {
 					break write
 				}
-			case <-t.requestKex:
+			case requestFirst := <-t.requestKex:
+				// For the first key exchange, both
+				// sides will initiate a key exchange,
+				// and both channels will fire. To
+				// avoid doing two key exchanges in a
+				// row, ignore our own request for an
+				// initial kex if we have already sent
+				// it out.
+				if firstSent && requestFirst {
+
+					continue
+				}
 			}
 
 			if !sent {
@@ -255,6 +270,7 @@ write:
 					t.recordWriteError(err)
 					break
 				}
+				firstSent = true
 				sent = true
 			}
 		}
@@ -279,7 +295,12 @@ write:
 		t.writeError = err
 		t.sentInitPacket = nil
 		t.sentInitMsg = nil
-		t.writtenSinceKex = 0
+		t.writePacketsLeft = packetRekeyThreshold
+		if t.config.RekeyThreshold > 0 {
+			t.writeBytesLeft = int64(t.config.RekeyThreshold)
+		} else if t.algorithms != nil {
+			t.writeBytesLeft = t.algorithms.w.rekeyBytes()
+		}
 		request.done <- t.writeError
 
 		// kex finished. Push packets that we received while
@@ -293,7 +314,7 @@ write:
 				break
 			}
 		}
-		t.pendingPackets = t.pendingPackets[0:]
+		t.pendingPackets = t.pendingPackets[:0]
 		t.mu.Unlock()
 	}
 
@@ -309,17 +330,31 @@ write:
 	t.conn.Close()
 }
 
-func (t *handshakeTransport) readOnePacket(first bool) ([]byte, error) {
-	if t.readSinceKex > t.config.RekeyThreshold {
-		t.requestKeyExchange()
-	}
+// The protocol uses uint32 for packet counters, so we can't let them
+// reach 1<<32.  We will actually read and write more packets than
+// this, though: the other side may send more packets, and after we
+// hit this limit on writing we will send a few more packets for the
+// key exchange itself.
+const packetRekeyThreshold = (1 << 31)
 
+func (t *handshakeTransport) readOnePacket(first bool) ([]byte, error) {
 	p, err := t.conn.readPacket()
 	if err != nil {
 		return nil, err
 	}
 
-	t.readSinceKex += uint64(len(p))
+	if t.readPacketsLeft > 0 {
+		t.readPacketsLeft--
+	} else {
+		t.requestKeyExchange()
+	}
+
+	if t.readBytesLeft > 0 {
+		t.readBytesLeft -= int64(len(p))
+	} else {
+		t.requestKeyExchange()
+	}
+
 	if debugHandshake {
 		t.printPacket(p, false)
 	}
@@ -349,7 +384,12 @@ func (t *handshakeTransport) readOnePacket(first bool) ([]byte, error) {
 		return nil, err
 	}
 
-	t.readSinceKex = 0
+	t.readPacketsLeft = packetRekeyThreshold
+	if t.config.RekeyThreshold > 0 {
+		t.readBytesLeft = int64(t.config.RekeyThreshold)
+	} else {
+		t.readBytesLeft = t.algorithms.r.rekeyBytes()
+	}
 
 	// By default, a key exchange is hidden from higher layers by
 	// translating it into msgIgnore.
@@ -432,8 +472,16 @@ func (t *handshakeTransport) writePacket(p []byte) error {
 		t.pendingPackets = append(t.pendingPackets, cp)
 		return nil
 	}
-	t.writtenSinceKex += uint64(len(p))
-	if t.writtenSinceKex > t.config.RekeyThreshold {
+
+	if t.writeBytesLeft > 0 {
+		t.writeBytesLeft -= int64(len(p))
+	} else {
+		t.requestKeyExchange()
+	}
+
+	if t.writePacketsLeft > 0 {
+		t.writePacketsLeft--
+	} else {
 		t.requestKeyExchange()
 	}
 
@@ -474,7 +522,8 @@ func (t *handshakeTransport) enterKeyExchange(otherInitPacket []byte) error {
 		magics.serverKexInit = otherInitPacket
 	}
 
-	algs, err := findAgreedAlgorithms(clientInit, serverInit)
+	var err error
+	t.algorithms, err = findAgreedAlgorithms(clientInit, serverInit)
 	if err != nil {
 		return err
 	}
@@ -497,16 +546,16 @@ func (t *handshakeTransport) enterKeyExchange(otherInitPacket []byte) error {
 		}
 	}
 
-	kex, ok := kexAlgoMap[algs.kex]
+	kex, ok := kexAlgoMap[t.algorithms.kex]
 	if !ok {
-		return fmt.Errorf("ssh: unexpected key exchange algorithm %v", algs.kex)
+		return fmt.Errorf("ssh: unexpected key exchange algorithm %v", t.algorithms.kex)
 	}
 
 	var result *kexResult
 	if len(t.hostKeys) > 0 {
-		result, err = t.server(kex, algs, &magics)
+		result, err = t.server(kex, t.algorithms, &magics)
 	} else {
-		result, err = t.client(kex, algs, &magics)
+		result, err = t.client(kex, t.algorithms, &magics)
 	}
 
 	if err != nil {
@@ -518,7 +567,7 @@ func (t *handshakeTransport) enterKeyExchange(otherInitPacket []byte) error {
 	}
 	result.SessionID = t.sessionID
 
-	t.conn.prepareKeyChange(algs, result)
+	t.conn.prepareKeyChange(t.algorithms, result)
 	if err = t.conn.writePacket([]byte{msgNewKeys}); err != nil {
 		return err
 	}

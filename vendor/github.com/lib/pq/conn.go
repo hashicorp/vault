@@ -98,6 +98,15 @@ type conn struct {
 	namei     int
 	scratch   [512]byte
 	txnStatus transactionStatus
+	txnClosed chan<- struct{}
+
+	// Save connection arguments to use during CancelRequest.
+	dialer Dialer
+	opts   values
+
+	// Cancellation key data for use with CancelRequest messages.
+	processID int
+	secretKey int
 
 	parameterStatus parameterStatus
 
@@ -307,7 +316,10 @@ func DialOpen(d Dialer, name string) (_ driver.Conn, err error) {
 		}
 	}
 
-	cn := &conn{}
+	cn := &conn{
+		opts:   o,
+		dialer: d,
+	}
 	err = cn.handleDriverSettings(o)
 	if err != nil {
 		return nil, err
@@ -529,7 +541,15 @@ func (cn *conn) Begin() (_ driver.Tx, err error) {
 	return cn, nil
 }
 
+func (cn *conn) closeTxn() {
+	if cn.txnClosed != nil {
+		close(cn.txnClosed)
+		cn.txnClosed = nil
+	}
+}
+
 func (cn *conn) Commit() (err error) {
+	defer cn.closeTxn()
 	if cn.bad {
 		return driver.ErrBadConn
 	}
@@ -565,6 +585,7 @@ func (cn *conn) Commit() (err error) {
 }
 
 func (cn *conn) Rollback() (err error) {
+	defer cn.closeTxn()
 	if cn.bad {
 		return driver.ErrBadConn
 	}
@@ -796,7 +817,11 @@ func (cn *conn) Close() (err error) {
 }
 
 // Implement the "Queryer" interface
-func (cn *conn) Query(query string, args []driver.Value) (_ driver.Rows, err error) {
+func (cn *conn) Query(query string, args []driver.Value) (driver.Rows, error) {
+	return cn.query(query, args)
+}
+
+func (cn *conn) query(query string, args []driver.Value) (_ *rows, err error) {
 	if cn.bad {
 		return nil, driver.ErrBadConn
 	}
@@ -1074,6 +1099,7 @@ func (cn *conn) startup(o values) {
 		t, r := cn.recv()
 		switch t {
 		case 'K':
+			cn.processBackendKeyData(r)
 		case 'S':
 			cn.processParameterStatus(r)
 		case 'R':
@@ -1301,6 +1327,7 @@ func (cn *conn) parseComplete(commandTag string) (driver.Result, string) {
 
 type rows struct {
 	cn       *conn
+	closed   chan<- struct{}
 	colNames []string
 	colTyps  []oid.Oid
 	colFmts  []format
@@ -1309,6 +1336,9 @@ type rows struct {
 }
 
 func (rs *rows) Close() error {
+	if rs.closed != nil {
+		defer close(rs.closed)
+	}
 	// no need to look at cn.bad as Next() will
 	for {
 		err := rs.Next(nil)
@@ -1511,6 +1541,11 @@ func (cn *conn) readReadyForQuery() {
 		cn.bad = true
 		errorf("unexpected message %q; expected ReadyForQuery", t)
 	}
+}
+
+func (c *conn) processBackendKeyData(r *readBuf) {
+	c.processID = r.int32()
+	c.secretKey = r.int32()
 }
 
 func (cn *conn) readParseResponse() {

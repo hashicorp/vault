@@ -37,13 +37,13 @@ func (s *ActivityService) ListStargazers(owner, repo string, opt *ListOptions) (
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeStarringPreview)
 
-	stargazers := new([]*Stargazer)
-	resp, err := s.client.Do(req, stargazers)
+	var stargazers []*Stargazer
+	resp, err := s.client.Do(req, &stargazers)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *stargazers, resp, err
+	return stargazers, resp, nil
 }
 
 // ActivityListStarredOptions specifies the optional parameters to the
@@ -84,13 +84,13 @@ func (s *ActivityService) ListStarred(user string, opt *ActivityListStarredOptio
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeStarringPreview)
 
-	repos := new([]*StarredRepository)
-	resp, err := s.client.Do(req, repos)
+	var repos []*StarredRepository
+	resp, err := s.client.Do(req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *repos, resp, err
+	return repos, resp, nil
 }
 
 // IsStarred checks if a repository is starred by authenticated user.

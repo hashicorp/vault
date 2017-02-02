@@ -146,12 +146,12 @@ func (s *AuthorizationsService) List(opt *ListOptions) ([]*Authorization, *Respo
 		return nil, nil, err
 	}
 
-	auths := new([]*Authorization)
-	resp, err := s.client.Do(req, auths)
+	var auths []*Authorization
+	resp, err := s.client.Do(req, &auths)
 	if err != nil {
 		return nil, resp, err
 	}
-	return *auths, resp, err
+	return auths, resp, nil
 }
 
 // Get a single authorization.

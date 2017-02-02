@@ -110,13 +110,13 @@ func (s *ActivityService) ListEvents(opt *ListOptions) ([]*Event, *Response, err
 		return nil, nil, err
 	}
 
-	events := new([]*Event)
-	resp, err := s.client.Do(req, events)
+	var events []*Event
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }
 
 // ListRepositoryEvents lists events for a repository.
@@ -134,13 +134,13 @@ func (s *ActivityService) ListRepositoryEvents(owner, repo string, opt *ListOpti
 		return nil, nil, err
 	}
 
-	events := new([]*Event)
-	resp, err := s.client.Do(req, events)
+	var events []*Event
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }
 
 // ListIssueEventsForRepository lists issue events for a repository.
@@ -158,13 +158,13 @@ func (s *ActivityService) ListIssueEventsForRepository(owner, repo string, opt *
 		return nil, nil, err
 	}
 
-	events := new([]*IssueEvent)
-	resp, err := s.client.Do(req, events)
+	var events []*IssueEvent
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }
 
 // ListEventsForRepoNetwork lists public events for a network of repositories.
@@ -182,13 +182,13 @@ func (s *ActivityService) ListEventsForRepoNetwork(owner, repo string, opt *List
 		return nil, nil, err
 	}
 
-	events := new([]*Event)
-	resp, err := s.client.Do(req, events)
+	var events []*Event
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }
 
 // ListEventsForOrganization lists public events for an organization.
@@ -206,13 +206,13 @@ func (s *ActivityService) ListEventsForOrganization(org string, opt *ListOptions
 		return nil, nil, err
 	}
 
-	events := new([]*Event)
-	resp, err := s.client.Do(req, events)
+	var events []*Event
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }
 
 // ListEventsPerformedByUser lists the events performed by a user. If publicOnly is
@@ -236,13 +236,13 @@ func (s *ActivityService) ListEventsPerformedByUser(user string, publicOnly bool
 		return nil, nil, err
 	}
 
-	events := new([]*Event)
-	resp, err := s.client.Do(req, events)
+	var events []*Event
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }
 
 // ListEventsReceivedByUser lists the events received by a user. If publicOnly is
@@ -266,13 +266,13 @@ func (s *ActivityService) ListEventsReceivedByUser(user string, publicOnly bool,
 		return nil, nil, err
 	}
 
-	events := new([]*Event)
-	resp, err := s.client.Do(req, events)
+	var events []*Event
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }
 
 // ListUserEventsForOrganization provides the user’s organization dashboard. You
@@ -291,11 +291,11 @@ func (s *ActivityService) ListUserEventsForOrganization(org, user string, opt *L
 		return nil, nil, err
 	}
 
-	events := new([]*Event)
-	resp, err := s.client.Do(req, events)
+	var events []*Event
+	resp, err := s.client.Do(req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *events, resp, err
+	return events, resp, nil
 }

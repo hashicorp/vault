@@ -175,13 +175,13 @@ func (s *RepositoriesService) List(user string, opt *RepositoryListOptions) ([]*
 	// TODO: remove custom Accept header when license support fully launches
 	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
-	repos := new([]*Repository)
-	resp, err := s.client.Do(req, repos)
+	var repos []*Repository
+	resp, err := s.client.Do(req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *repos, resp, err
+	return repos, resp, nil
 }
 
 // RepositoryListByOrgOptions specifies the optional parameters to the
@@ -212,13 +212,13 @@ func (s *RepositoriesService) ListByOrg(org string, opt *RepositoryListByOrgOpti
 	// TODO: remove custom Accept header when license support fully launches
 	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
-	repos := new([]*Repository)
-	resp, err := s.client.Do(req, repos)
+	var repos []*Repository
+	resp, err := s.client.Do(req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *repos, resp, err
+	return repos, resp, nil
 }
 
 // RepositoryListAllOptions specifies the optional parameters to the
@@ -244,13 +244,13 @@ func (s *RepositoriesService) ListAll(opt *RepositoryListAllOptions) ([]*Reposit
 		return nil, nil, err
 	}
 
-	repos := new([]*Repository)
-	resp, err := s.client.Do(req, repos)
+	var repos []*Repository
+	resp, err := s.client.Do(req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *repos, resp, err
+	return repos, resp, nil
 }
 
 // Create a new repository.  If an organization is specified, the new
@@ -408,13 +408,13 @@ func (s *RepositoriesService) ListContributors(owner string, repository string, 
 		return nil, nil, err
 	}
 
-	contributor := new([]*Contributor)
-	resp, err := s.client.Do(req, contributor)
+	var contributor []*Contributor
+	resp, err := s.client.Do(req, &contributor)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return *contributor, resp, err
+	return contributor, resp, nil
 }
 
 // ListLanguages lists languages for the specified repository. The returned map
@@ -458,13 +458,13 @@ func (s *RepositoriesService) ListTeams(owner string, repo string, opt *ListOpti
 		return nil, nil, err
 	}
 
-	teams := new([]*Team)
-	resp, err := s.client.Do(req, teams)
+	var teams []*Team
+	resp, err := s.client.Do(req, &teams)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *teams, resp, err
+	return teams, resp, nil
 }
 
 // RepositoryTag represents a repository tag.
@@ -490,13 +490,13 @@ func (s *RepositoriesService) ListTags(owner string, repo string, opt *ListOptio
 		return nil, nil, err
 	}
 
-	tags := new([]*RepositoryTag)
-	resp, err := s.client.Do(req, tags)
+	var tags []*RepositoryTag
+	resp, err := s.client.Do(req, &tags)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *tags, resp, err
+	return tags, resp, nil
 }
 
 // Branch represents a repository branch
@@ -575,13 +575,13 @@ func (s *RepositoriesService) ListBranches(owner string, repo string, opt *ListO
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
-	branches := new([]*Branch)
-	resp, err := s.client.Do(req, branches)
+	var branches []*Branch
+	resp, err := s.client.Do(req, &branches)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *branches, resp, err
+	return branches, resp, nil
 }
 
 // GetBranch gets the specified branch for a repository.

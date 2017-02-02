@@ -120,13 +120,13 @@ func (s *RepositoriesService) ListCommits(owner, repo string, opt *CommitsListOp
 		return nil, nil, err
 	}
 
-	commits := new([]*RepositoryCommit)
-	resp, err := s.client.Do(req, commits)
+	var commits []*RepositoryCommit
+	resp, err := s.client.Do(req, &commits)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *commits, resp, err
+	return commits, resp, nil
 }
 
 // GetCommit fetches the specified commit, including all details about it.

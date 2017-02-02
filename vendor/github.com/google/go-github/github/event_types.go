@@ -423,26 +423,26 @@ type PullRequestReviewCommentEvent struct {
 //
 // GitHub API docs: http://developer.github.com/v3/activity/events/types/#pushevent
 type PushEvent struct {
-	PushID       *int                 `json:"push_id,omitempty"`
-	Head         *string              `json:"head,omitempty"`
-	Ref          *string              `json:"ref,omitempty"`
-	Size         *int                 `json:"size,omitempty"`
-	Commits      []PushEventCommit    `json:"commits,omitempty"`
-	Repo         *PushEventRepository `json:"repository,omitempty"`
-	Before       *string              `json:"before,omitempty"`
-	DistinctSize *int                 `json:"distinct_size,omitempty"`
+	PushID       *int              `json:"push_id,omitempty"`
+	Head         *string           `json:"head,omitempty"`
+	Ref          *string           `json:"ref,omitempty"`
+	Size         *int              `json:"size,omitempty"`
+	Commits      []PushEventCommit `json:"commits,omitempty"`
+	Before       *string           `json:"before,omitempty"`
+	DistinctSize *int              `json:"distinct_size,omitempty"`
 
 	// The following fields are only populated by Webhook events.
-	After        *string          `json:"after,omitempty"`
-	Created      *bool            `json:"created,omitempty"`
-	Deleted      *bool            `json:"deleted,omitempty"`
-	Forced       *bool            `json:"forced,omitempty"`
-	BaseRef      *string          `json:"base_ref,omitempty"`
-	Compare      *string          `json:"compare,omitempty"`
-	HeadCommit   *PushEventCommit `json:"head_commit,omitempty"`
-	Pusher       *User            `json:"pusher,omitempty"`
-	Sender       *User            `json:"sender,omitempty"`
-	Installation *Installation    `json:"installation,omitempty"`
+	After        *string              `json:"after,omitempty"`
+	Created      *bool                `json:"created,omitempty"`
+	Deleted      *bool                `json:"deleted,omitempty"`
+	Forced       *bool                `json:"forced,omitempty"`
+	BaseRef      *string              `json:"base_ref,omitempty"`
+	Compare      *string              `json:"compare,omitempty"`
+	Repo         *PushEventRepository `json:"repository,omitempty"`
+	HeadCommit   *PushEventCommit     `json:"head_commit,omitempty"`
+	Pusher       *User                `json:"pusher,omitempty"`
+	Sender       *User                `json:"sender,omitempty"`
+	Installation *Installation        `json:"installation,omitempty"`
 }
 
 func (p PushEvent) String() string {
@@ -460,14 +460,13 @@ type PushEventCommit struct {
 	SHA *string `json:"sha,omitempty"`
 
 	// The following fields are only populated by Webhook events.
-	ID           *string       `json:"id,omitempty"`
-	TreeID       *string       `json:"tree_id,omitempty"`
-	Timestamp    *Timestamp    `json:"timestamp,omitempty"`
-	Committer    *CommitAuthor `json:"committer,omitempty"`
-	Added        []string      `json:"added,omitempty"`
-	Removed      []string      `json:"removed,omitempty"`
-	Modified     []string      `json:"modified,omitempty"`
-	Installation *Installation `json:"installation,omitempty"`
+	ID        *string       `json:"id,omitempty"`
+	TreeID    *string       `json:"tree_id,omitempty"`
+	Timestamp *Timestamp    `json:"timestamp,omitempty"`
+	Committer *CommitAuthor `json:"committer,omitempty"`
+	Added     []string      `json:"added,omitempty"`
+	Removed   []string      `json:"removed,omitempty"`
+	Modified  []string      `json:"modified,omitempty"`
 }
 
 func (p PushEventCommit) String() string {
@@ -500,11 +499,13 @@ type PushEventRepository struct {
 	DefaultBranch   *string             `json:"default_branch,omitempty"`
 	MasterBranch    *string             `json:"master_branch,omitempty"`
 	Organization    *string             `json:"organization,omitempty"`
-
-	// The following fields are only populated by Webhook events.
-	URL          *string       `json:"url,omitempty"`
-	HTMLURL      *string       `json:"html_url,omitempty"`
-	Installation *Installation `json:"installation,omitempty"`
+	URL             *string             `json:"url,omitempty"`
+	HTMLURL         *string             `json:"html_url,omitempty"`
+	StatusesURL     *string             `json:"statuses_url,omitempty"`
+	GitURL          *string             `json:"git_url,omitempty"`
+	SSHURL          *string             `json:"ssh_url,omitempty"`
+	CloneURL        *string             `json:"clone_url,omitempty"`
+	SVNURL          *string             `json:"svn_url,omitempty"`
 }
 
 // PushEventRepoOwner is a basic representation of user/org in a PushEvent payload.

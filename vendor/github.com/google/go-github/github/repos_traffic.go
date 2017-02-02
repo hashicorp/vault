@@ -60,13 +60,13 @@ func (s *RepositoriesService) ListTrafficReferrers(owner, repo string) ([]*Traff
 		return nil, nil, err
 	}
 
-	trafficReferrers := new([]*TrafficReferrer)
+	var trafficReferrers []*TrafficReferrer
 	resp, err := s.client.Do(req, &trafficReferrers)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *trafficReferrers, resp, err
+	return trafficReferrers, resp, nil
 }
 
 // ListTrafficPaths list the top 10 popular content over the last 14 days.
@@ -80,13 +80,13 @@ func (s *RepositoriesService) ListTrafficPaths(owner, repo string) ([]*TrafficPa
 		return nil, nil, err
 	}
 
-	var paths = new([]*TrafficPath)
+	var paths []*TrafficPath
 	resp, err := s.client.Do(req, &paths)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *paths, resp, err
+	return paths, resp, nil
 }
 
 // ListTrafficViews get total number of views for the last 14 days and breaks it down either per day or week.
