@@ -18,11 +18,12 @@ import (
 )
 
 type NoopAudit struct {
-	Config  *audit.BackendConfig
-	ReqErr  error
-	ReqAuth []*logical.Auth
-	Req     []*logical.Request
-	ReqErrs []error
+	Config     *audit.BackendConfig
+	ReqErr     error
+	ReqAuth    []*logical.Auth
+	Req        []*logical.Request
+	ReqHeaders []map[string][]string
+	ReqErrs    []error
 
 	RespErr  error
 	RespAuth []*logical.Auth
@@ -32,13 +33,9 @@ type NoopAudit struct {
 }
 
 func (n *NoopAudit) LogRequest(a *logical.Auth, r *logical.Request, err error) error {
-	copy, err := copystructure.Copy(r)
-	if err != nil {
-		return err
-	}
-
 	n.ReqAuth = append(n.ReqAuth, a)
-	n.Req = append(n.Req, copy.(*logical.Request))
+	n.Req = append(n.Req, r)
+	n.ReqHeaders = append(n.ReqHeaders, r.Headers)
 	n.ReqErrs = append(n.ReqErrs, err)
 	return n.ReqErr
 }
@@ -293,12 +290,25 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Path:      "sys/mounts",
 	}
 
+	// Copy so we can verify nothing canged
+	authCopyRaw, err := copystructure.Copy(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authCopy := authCopyRaw.(*logical.Auth)
+
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
 	// Create an identifier for the request to verify against
-	var err error
 	req.ID, err = uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("failed to generate identifier for the request: path%s err: %v", req.Path, err)
 	}
+	reqCopy.ID = req.ID
 
 	reqErrs := errors.New("errs")
 
@@ -306,7 +316,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Headers: make(map[string]*auditedHeaderSettings),
 	}
 
-	err = b.LogRequest(auth, req, headersConf, reqErrs)
+	err = b.LogRequest(authCopy, reqCopy, headersConf, reqErrs)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -316,7 +326,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 			t.Fatalf("Bad: %#v", a.ReqAuth[0])
 		}
 		if !reflect.DeepEqual(a.Req[0], req) {
-			t.Fatalf("Bad: %#v", a.Req[0])
+			t.Fatalf("Bad: %#v\n wanted %#v", a.Req[0], req)
 		}
 		if !reflect.DeepEqual(a.ReqErrs[0], reqErrs) {
 			t.Fatalf("Bad: %#v", a.ReqErrs[0])
@@ -369,11 +379,30 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
+	// Copy so we can verify nothing canged
+	authCopyRaw, err := copystructure.Copy(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authCopy := authCopyRaw.(*logical.Auth)
+
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
+	respCopyRaw, err := copystructure.Copy(resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	respCopy := respCopyRaw.(*logical.Response)
+
 	headersConf := &AuditedHeadersConfig{
 		Headers: make(map[string]*auditedHeaderSettings),
 	}
 
-	err := b.LogResponse(auth, req, resp, headersConf, respErr)
+	err = b.LogResponse(authCopy, reqCopy, respCopy, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -435,6 +464,13 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
+	// Copy so we can verify nothing canged
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
 	headersConf := &AuditedHeadersConfig{
 		Headers: map[string]*auditedHeaderSettings{
 			"X-Test-Header":  &auditedHeaderSettings{false},
@@ -442,7 +478,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 		},
 	}
 
-	err := b.LogRequest(auth, req, headersConf, respErr)
+	err = b.LogRequest(auth, reqCopy, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -453,7 +489,7 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 
 	for _, a := range []*NoopAudit{a1, a2} {
-		if !reflect.DeepEqual(a.Req[0].Headers, expected) {
+		if !reflect.DeepEqual(a.ReqHeaders[0], expected) {
 			t.Fatalf("Bad audited headers: %#v", a.Req[0].Headers)
 		}
 	}
