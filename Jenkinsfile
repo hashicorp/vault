@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('sec_ci_libs')
+@Library('sec_ci_libs@gh_syncing')
 import task_wrapper
 import user_is_authorized
 
