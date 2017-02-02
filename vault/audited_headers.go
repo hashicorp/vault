@@ -69,7 +69,7 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc
 	a.RLock()
 	defer a.RUnlock()
 
-	result = make(map[string][]string)
+	result = make(map[string][]string, len(a.Headers))
 	for key, settings := range a.Headers {
 		if val, ok := headers[key]; ok {
 			hVals := make([]string, len(val))
