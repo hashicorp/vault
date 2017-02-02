@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	log "github.com/mgutz/logxi/v1"
+	"github.com/mitchellh/copystructure"
 )
 
 type NoopAudit struct {
@@ -31,8 +32,13 @@ type NoopAudit struct {
 }
 
 func (n *NoopAudit) LogRequest(a *logical.Auth, r *logical.Request, err error) error {
+	copy, err := copystructure.Copy(r)
+	if err != nil {
+		return err
+	}
+
 	n.ReqAuth = append(n.ReqAuth, a)
-	n.Req = append(n.Req, r)
+	n.Req = append(n.Req, copy.(*logical.Request))
 	n.ReqErrs = append(n.ReqErrs, err)
 	return n.ReqErr
 }
@@ -398,6 +404,71 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	a2.RespErr = fmt.Errorf("failed")
 	err = b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err.Error() != "no audit backend succeeded in logging the response" {
+		t.Fatalf("err: %v", err)
+	}
+}
+
+func TestAuditBroker_AuditHeaders(t *testing.T) {
+	l := logformat.NewVaultLogger(log.LevelTrace)
+	b := NewAuditBroker(l)
+	a1 := &NoopAudit{}
+	a2 := &NoopAudit{}
+	b.Register("foo", a1, nil)
+	b.Register("bar", a2, nil)
+
+	auth := &logical.Auth{
+		ClientToken: "foo",
+		Policies:    []string{"dev", "ops"},
+		Metadata: map[string]string{
+			"user":   "armon",
+			"source": "github",
+		},
+	}
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "sys/mounts",
+		Headers: map[string][]string{
+			"X-Test-Header":  []string{"foo"},
+			"X-Vault-Header": []string{"bar"},
+			"Content-Type":   []string{"baz"},
+		},
+	}
+	respErr := fmt.Errorf("permission denied")
+
+	headersConf := &AuditedHeadersConfig{
+		Headers: map[string]*auditedHeaderSettings{
+			"X-Test-Header":  &auditedHeaderSettings{false},
+			"X-Vault-Header": &auditedHeaderSettings{false},
+		},
+	}
+
+	err := b.LogRequest(auth, req, headersConf, respErr)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected := map[string][]string{
+		"X-Test-Header":  []string{"foo"},
+		"X-Vault-Header": []string{"bar"},
+	}
+
+	for _, a := range []*NoopAudit{a1, a2} {
+		if !reflect.DeepEqual(a.Req[0].Headers, expected) {
+			t.Fatalf("Bad audited headers: %#v", a.Req[0].Headers)
+		}
+	}
+
+	// Should still work with one failing backend
+	a1.ReqErr = fmt.Errorf("failed")
+	err = b.LogRequest(auth, req, headersConf, respErr)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should FAIL work with both failing backends
+	a2.ReqErr = fmt.Errorf("failed")
+	err = b.LogRequest(auth, req, headersConf, respErr)
+	if !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }
