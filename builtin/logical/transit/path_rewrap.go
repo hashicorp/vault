@@ -165,7 +165,8 @@ func (b *backend) pathRewrapWrite(
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
-				return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+				batchResponseItems[i].Error = err.Error()
+				continue
 			case errutil.InternalError:
 				return nil, err
 			default:
