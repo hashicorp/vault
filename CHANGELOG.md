@@ -13,11 +13,12 @@ FEATURES:
    marked `exportable` it will always be exportable, and if it is not it will
    never be exportable.
  * ** Batch Transit Operations**: `encrypt`, `decrypt` and `rewrap` operations
-   in transit backend now optionally take in batch input items, processes all
-   the input items responds with the combined results of all the items. Input
-   errors for individual items will not stop the batch processing. Instead, it
-   marks the respective response item as an error and continues to process the
-   rest.
+   in the transit backend now support processing multiple input items in one
+   call, returning the output of each item in the response.
+ * **Configurable Audited HTTP Headers**: You can now specify headers that you
+   want to have included in each audit entry, along with whether each header
+   should be HMAC'd or kept plaintext. This can be useful for adding additional
+   client or network metadata to the audit logs.
 
 IMPROVEMENTS:
 
@@ -38,7 +39,6 @@ IMPROVEMENTS:
    more stable. [GH-2168]
  * secret/pki: Allow specifying OU entries in generated certificate subjects
    [GH-2251]
- * secret/transit: Support exportable keys [GH-2133]
 
 BUG FIXES:
 
