@@ -670,41 +670,45 @@ type SystemBackend struct {
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
 func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
-
 	header := d.Get("header").(string)
 	hmac := d.Get("hmac").(bool)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
-	headerConfig.add(header, hmac)
+	headerConfig := b.Core.AuditedHeadersConfig()
+	err := headerConfig.add(header, hmac)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
 
 // handleAudtedHeaderDelete deletes the header with the given name
 func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
-
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
-	headerConfig.remove(header)
+
+	headerConfig := b.Core.AuditedHeadersConfig()
+	err := headerConfig.remove(header)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
 func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	headerConfig := b.Core.AuditedHeadersConfig()
-
 	header := d.Get("header").(string)
 	if header == "" {
 		return logical.ErrorResponse("missing header name"), nil
 	}
 
+	headerConfig := b.Core.AuditedHeadersConfig()
 	settings, ok := headerConfig.Headers[header]
 	if !ok {
 		return logical.ErrorResponse("Could not find header in config"), nil

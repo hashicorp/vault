@@ -29,6 +29,11 @@ type AuditedHeadersConfig struct {
 
 // add adds or overwrites a header in the config and updates the barrier view
 func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
+	if header == "" {
+		return fmt.Errorf("header value cannot be empty")
+	}
+
+	// Grab a write lock
 	a.Lock()
 	defer a.Unlock()
 
@@ -47,6 +52,11 @@ func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
 
 // remove deletes a header out of the header config and updates the barrier view
 func (a *AuditedHeadersConfig) remove(header string) error {
+	if header == "" {
+		return fmt.Errorf("header value cannot be empty")
+	}
+
+	// Grab a write lock
 	a.Lock()
 	defer a.Unlock()
 
@@ -66,15 +76,18 @@ func (a *AuditedHeadersConfig) remove(header string) error {
 // ApplyConfig returns a map of approved headers and their values, either
 // hmac'ed or plaintext
 func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc func(string) string) (result map[string][]string) {
+	// Grab a read lock
 	a.RLock()
 	defer a.RUnlock()
 
 	result = make(map[string][]string, len(a.Headers))
 	for key, settings := range a.Headers {
 		if val, ok := headers[key]; ok {
+			// copy the header values so we don't overwrite them
 			hVals := make([]string, len(val))
 			copy(hVals, val)
 
+			// Optionally hmac the values
 			if settings.HMAC {
 				for i, el := range hVals {
 					hVals[i] = hashFunc(el)
