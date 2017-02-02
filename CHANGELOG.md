@@ -12,6 +12,12 @@ FEATURES:
    value is returned on a key policy read and cannot be changed, so if a key is
    marked `exportable` it will always be exportable, and if it is not it will
    never be exportable.
+ * ** Batch Transit Operations**: `encrypt`, `decrypt` and `rewrap` operations
+   in transit backend now optionally take in batch input items, processes all
+   the input items responds with the combined results of all the items. Input
+   errors for individual items will not stop the batch processing. Instead, it
+   marks the respective response item as an error and continues to process the
+   rest.
 
 IMPROVEMENTS:
 
