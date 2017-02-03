@@ -14,8 +14,7 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"host": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Default:     "127.0.0.1",
-				Description: "radius host to connect to (default: 127.0.0.1)",
+				Description: "radius host to connect",
 			},
 
 			"port": &framework.FieldSchema{

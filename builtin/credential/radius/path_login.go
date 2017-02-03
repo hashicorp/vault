@@ -16,7 +16,7 @@ func pathLogin(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "DN (distinguished name) to be used for login.",
+				Description: "Username to be used for login.",
 			},
 
 			"password": &framework.FieldSchema{
@@ -74,6 +74,7 @@ func (b *backend) pathLogin(
 
 func (b *backend) pathLoginRenew(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var err error
 
 	cfg, err := b.Config(req)
 	if err != nil {
@@ -83,14 +84,16 @@ func (b *backend) pathLoginRenew(
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
+	var resp *logical.Response
 	var loginPolicies []string
+	var user *UserEntry
 	if cfg.ReauthOnRenew {
-		loginPolicies, resp, err := b.Login(req, username, password)
+		loginPolicies, resp, err = b.Login(req, username, password)
 		if len(loginPolicies) == 0 {
 			return resp, err
 		}
 	} else {
-		user, err := b.user(req.Storage, username)
+		user, err = b.user(req.Storage, username)
 		if err != nil {
 			return nil, err
 		}

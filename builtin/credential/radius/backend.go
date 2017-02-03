@@ -31,8 +31,6 @@ func Backend() *backend {
 
 		Paths: append([]*framework.Path{
 			pathConfig(&b),
-			//	pathGroups(&b),
-			//	pathGroupsList(&b),
 			pathUsers(&b),
 			pathUsersList(&b),
 		},
@@ -55,7 +53,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	if err != nil {
 		return nil, nil, err
 	}
-	if cfg == nil {
+	if cfg == nil || cfg.Host == "" || cfg.Secret == "" {
 		return nil, logical.ErrorResponse("radius backend not configured"), nil
 	}
 
@@ -65,9 +63,6 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	packet.Add("User-Name", username)
 	packet.Add("User-Password", password)
 	packet.Add("NAS-Port", uint32(cfg.NasPort))
-
-	//dial_timeout := time.Duration(10) * time.Second
-	//raad_timeout := time.Duration(10) * time.Second
 
 	client := radius.Client{
 		DialTimeout: time.Duration(cfg.DialTimeout) * time.Second,
