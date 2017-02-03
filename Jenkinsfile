@@ -1,8 +1,6 @@
 #!/usr/bin/env groovy
 
-@Library('sec_ci_libs')
-import task_wrapper
-import user_is_authorized
+@Library('sec_ci_libs') _
 
 
 task_wrapper('mesos'){
