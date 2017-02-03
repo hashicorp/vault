@@ -1,7 +1,6 @@
 package transit
 
 import (
-	"encoding/base64"
 	"strings"
 	"testing"
 
@@ -205,30 +204,36 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dmlzaGFsCg=="}]`
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
-	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+	batchEncryptionInput := []interface{}{
+		map[string]interface{}{"plaintext": "dmlzaGFsCg=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+	}
+	batchEncryptionData := map[string]interface{}{
+		"batch_input": batchEncryptionInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "encrypt/upserted_key",
 		Storage:   s,
-		Data:      batchData,
+		Data:      batchEncryptionData,
 	}
 	resp, err = b.HandleRequest(batchReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchEncryptionResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchEncryptionResponseArray); err != nil {
+	var batchEncryptionResponseItems []BatchRequestItem
+	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchEncryptionResponseItems); err != nil {
 		t.Fatal(err)
 	}
 
-	batchInputB64 = base64.StdEncoding.EncodeToString([]byte(resp.Data["batch_results"].(string)))
-	rewrapData := map[string]interface{}{
-		"batch_input": batchInputB64,
+	batchRewrapInput := make([]interface{}, len(batchEncryptionResponseItems))
+	for i, item := range batchEncryptionResponseItems {
+		batchRewrapInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+	}
+
+	batchRewrapData := map[string]interface{}{
+		"batch_input": batchRewrapInput,
 	}
 
 	rotateReq := &logical.Request{
@@ -245,7 +250,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "rewrap/upserted_key",
 		Storage:   s,
-		Data:      rewrapData,
+		Data:      batchRewrapData,
 	}
 
 	resp, err = b.HandleRequest(rewrapReq)
@@ -258,8 +263,8 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(batchRewrapResponseArray) != len(batchEncryptionResponseArray) {
-		t.Fatalf("bad: length of input and output or rewrap are not matching; expected: %d, actual: %d", len(batchEncryptionResponseArray), len(batchRewrapResponseArray))
+	if len(batchRewrapResponseArray) != len(batchEncryptionResponseItems) {
+		t.Fatalf("bad: length of input and output or rewrap are not matching; expected: %d, actual: %d", len(batchEncryptionResponseItems), len(batchRewrapResponseArray))
 	}
 
 	decReq := &logical.Request{
@@ -268,7 +273,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		Storage:   s,
 	}
 
-	for i, responseItem := range batchEncryptionResponseArray {
+	for i, responseItem := range batchEncryptionResponseItems {
 		var input BatchRequestItem
 		if err := mapstructure.Decode(responseItem, &input); err != nil {
 			t.Fatal(err)
