@@ -21,8 +21,8 @@ VAULT_CTR_MOUNT := /go/src/github.com/hashicorp/vault/
 ZK_IP = $(shell docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault-test-zk)
 CONSUL_IP = $(shell docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' vault-test-consul)
 
-BACKEND_ENVS := -e ZOOKEEPER_ADDR=$(ZK_IP):2181 \
-				-e CONSUL_ADDR=$(CONSUL_IP):8500
+BACKEND_ENVS = -e ZOOKEEPER_ADDR=$(ZK_IP):2181 \
+			   -e CONSUL_ADDR=$(CONSUL_IP):8500
 
 DEVKIT_COMMON_DOCKER_OPTS := --name vault-devkit \
 	-p 8200:8200 \
