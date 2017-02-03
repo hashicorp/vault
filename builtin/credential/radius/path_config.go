@@ -124,7 +124,7 @@ func (b *backend) pathConfigCreateUpdate(
 	// Build a ConfigEntry struct out of the supplied FieldData
 	cfg, err := b.Config(req)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 	if cfg == nil {
 		cfg = &ConfigEntry{}
