@@ -139,7 +139,7 @@ build:  clean-containers devkit generate
 test: generate testplain testrace
 
 .PHONY: testplain
-testplain: clean-containers devkit aux generate
+testplain: clean-containers devkit generate aux
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
@@ -150,7 +150,7 @@ testplain: clean-containers devkit aux generate
 
 # testacc runs acceptance tests
 .PHONY: testacc
-testacc: clean-containers devkit aux generate
+testacc: clean-containers devkit generate aux
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
@@ -164,7 +164,7 @@ testacc: clean-containers devkit aux generate
 
 # testrace runs the race checker
 .PHONY: testrace
-testrace: clean-containers devkit aux generate
+testrace: clean-containers devkit generate aux
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		$(BACKEND_ENVS) \
