@@ -92,6 +92,12 @@ func TestBackend_users(t *testing.T) {
 }
 
 func TestBackend_acceptance(t *testing.T) {
+
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
 	b, err := Factory(&logical.BackendConfig{
 		Logger: nil,
 		System: &logical.StaticSystemView{

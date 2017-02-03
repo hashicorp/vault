@@ -2,8 +2,12 @@ package radius
 
 import (
 	"fmt"
-	"sort"
+	"net"
+	"strconv"
 	"strings"
+	"time"
+
+	"layeh.com/radius"
 
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
@@ -39,7 +43,7 @@ func (b *backend) pathLogin(
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
-	policies, resp, err := b.Login(req, username, password)
+	policies, resp, err := b.RadiusLogin(req, username, password)
 	// Handle an internal error
 	if err != nil {
 		return nil, err
@@ -49,11 +53,7 @@ func (b *backend) pathLogin(
 		if resp.IsError() {
 			return resp, nil
 		}
-	} else {
-		resp = &logical.Response{}
 	}
-
-	sort.Strings(policies)
 
 	resp.Auth = &logical.Auth{
 		Policies: policies,
@@ -88,10 +88,12 @@ func (b *backend) pathLoginRenew(
 	var loginPolicies []string
 	var user *UserEntry
 	if cfg.ReauthOnRenew {
-		loginPolicies, resp, err = b.Login(req, username, password)
-		if len(loginPolicies) == 0 {
+		loginPolicies, resp, err = b.RadiusLogin(req, username, password)
+
+		if err != nil || (resp != nil && resp.IsError()) {
 			return resp, err
 		}
+
 	} else {
 		user, err = b.user(req.Storage, username)
 		if err != nil {
@@ -109,6 +111,57 @@ func (b *backend) pathLoginRenew(
 	}
 
 	return framework.LeaseExtend(0, 0, b.System())(req, d)
+}
+
+func (b *backend) RadiusLogin(req *logical.Request, username string, password string) ([]string, *logical.Response, error) {
+
+	cfg, err := b.Config(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	if cfg == nil || cfg.Host == "" || cfg.Secret == "" {
+		return nil, logical.ErrorResponse("radius backend not configured"), nil
+	}
+
+	hostport := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
+
+	packet := radius.New(radius.CodeAccessRequest, []byte(cfg.Secret))
+	packet.Add("User-Name", username)
+	packet.Add("User-Password", password)
+	packet.Add("NAS-Port", uint32(cfg.NasPort))
+
+	client := radius.Client{
+		DialTimeout: time.Duration(cfg.DialTimeout) * time.Second,
+		ReadTimeout: time.Duration(cfg.ReadTimeout) * time.Second,
+	}
+
+	received, err := client.Exchange(packet, hostport)
+
+	if err != nil {
+		return nil, logical.ErrorResponse(err.Error()), nil
+	}
+
+	if received.Code != radius.CodeAccessAccept {
+		return nil, logical.ErrorResponse("access denied by the authentication server"), nil
+	}
+
+	radiusResponse := &logical.Response{}
+
+	// Retrieve policies
+	var policies []string
+	user, err := b.user(req.Storage, username)
+	if err == nil && user != nil {
+		policies = append(policies, user.Policies...)
+	}
+
+	// Policies from each group may overlap
+	policies = policyutil.SanitizePolicies(policies, cfg.AllowUnknownUsers)
+
+	if len(policies) == 0 {
+		return nil, logical.ErrorResponse("user has no associated policies"), nil
+	}
+
+	return policies, radiusResponse, nil
 }
 
 const pathLoginSyn = `

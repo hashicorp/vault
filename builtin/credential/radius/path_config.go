@@ -53,8 +53,11 @@ func pathConfig(b *backend) *framework.Path {
 			},
 		},
 
+		ExistenceCheck: b.configExistenceCheck,
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigRead,
+			logical.CreateOperation: b.pathConfigWrite,
 			logical.UpdateOperation: b.pathConfigWrite,
 		},
 
@@ -63,21 +66,20 @@ func pathConfig(b *backend) *framework.Path {
 	}
 }
 
+// Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
+// Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
+func (b *backend) configExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := b.Config(req)
+	if err != nil {
+		return false, err
+	}
+	return entry != nil, nil
+}
+
 /*
  * Construct ConfigEntry struct using stored configuration.
  */
 func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
-	// Schema for ConfigEntry
-	fd, err := b.getConfigFieldData()
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a new ConfigEntry, filling in defaults where appropriate
-	result, err := b.newConfigEntry(fd)
-	if err != nil {
-		return nil, err
-	}
 
 	storedConfig, err := req.Storage.Get("config")
 	if err != nil {
@@ -86,16 +88,16 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 
 	if storedConfig == nil {
 		// No user overrides, return default configuration
-		return result, nil
+		return nil, nil
 	}
 
-	// Deserialize stored configuration.
-	// Fields not specified in storedConfig will retain their defaults.
+	var result ConfigEntry
+
 	if err := storedConfig.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
 
-	return result, nil
+	return &result, nil
 }
 
 func (b *backend) pathConfigRead(
@@ -117,43 +119,72 @@ func (b *backend) pathConfigRead(
 }
 
 /*
- * Creates and initializes a ConfigEntry object with its default values,
- * as specified by the passed schema.
+ * Retrieve a complete config entry from defaults or already configured params
  */
-func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
-	cfg := new(ConfigEntry)
+func (b *backend) configCreateUpdate(d *framework.FieldData, req *logical.Request) (*ConfigEntry, error) {
 
-	host := d.Get("host").(string)
-	if host != "" {
-		cfg.Host = strings.ToLower(host)
+	cfg, err := b.Config(req)
+	if err != nil {
+		return nil, err
 	}
-	port := d.Get("port").(int)
-	if port != 0 {
-		cfg.Port = port
+	if cfg == nil {
+		cfg = &ConfigEntry{}
 	}
-	secret := d.Get("secret").(string)
-	if secret != "" {
-		cfg.Secret = secret
+
+	host, ok := d.GetOk("host")
+	if ok {
+		cfg.Host = strings.ToLower(host.(string))
+	} else if req.Operation == logical.CreateOperation {
+		cfg.Host = strings.ToLower(d.Get("host").(string))
 	}
-	allow_unknown_users := d.Get("allow_unknown_users").(bool)
-	if allow_unknown_users {
-		cfg.AllowUnknownUsers = allow_unknown_users
+
+	port, ok := d.GetOk("port")
+	if ok {
+		cfg.Port = port.(int)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.Port = d.Get("port").(int)
 	}
-	reauth_on_renew := d.Get("reauth_on_renew").(bool)
-	if reauth_on_renew {
-		cfg.ReauthOnRenew = reauth_on_renew
+
+	secret, ok := d.GetOk("secret")
+	if ok {
+		cfg.Secret = secret.(string)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.Secret = d.Get("secret").(string)
 	}
-	dial_timeout := d.Get("dial_timeout").(int)
-	if dial_timeout != 0 {
-		cfg.DialTimeout = dial_timeout
+
+	allowUnknownUsers, ok := d.GetOk("allow_unknown_users")
+	if ok {
+		cfg.AllowUnknownUsers = allowUnknownUsers.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.AllowUnknownUsers = d.Get("allow_unknown_users").(bool)
 	}
-	read_timeout := d.Get("read_timeout").(int)
-	if read_timeout != 0 {
-		cfg.ReadTimeout = read_timeout
+
+	reauthOnRenew, ok := d.GetOk("reauth_on_renew")
+	if ok {
+		cfg.ReauthOnRenew = reauthOnRenew.(bool)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.ReauthOnRenew = d.Get("reauth_on_renew").(bool)
 	}
-	nas_port := d.Get("nas_port").(int)
-	if nas_port != 0 {
-		cfg.NasPort = nas_port
+
+	dialTimeout, ok := d.GetOk("dial_timeout")
+	if ok {
+		cfg.DialTimeout = dialTimeout.(int)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.DialTimeout = d.Get("dial_timeout").(int)
+	}
+
+	readTimeout, ok := d.GetOk("read_timeout")
+	if ok {
+		cfg.ReadTimeout = readTimeout.(int)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.ReadTimeout = d.Get("read_timeout").(int)
+	}
+
+	nasPort, ok := d.GetOk("nas_port")
+	if ok {
+		cfg.NasPort = nasPort.(int)
+	} else if req.Operation == logical.CreateOperation {
+		cfg.NasPort = d.Get("nas_port").(int)
 	}
 
 	return cfg, nil
@@ -163,7 +194,7 @@ func (b *backend) pathConfigWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
 	// Build a ConfigEntry struct out of the supplied FieldData
-	cfg, err := b.newConfigEntry(d)
+	cfg, err := b.configCreateUpdate(d, req)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -215,9 +246,6 @@ Configure the RADIUS server to connect to, along with its options.
 `
 
 const pathConfigHelpDesc = `
-This endpoint allows you to configure the RADIOS server to connect to and its
+This endpoint allows you to configure the RADIUS server to connect to and its
 configuration options.
-
-If allow_unknown_users is set to true, upon successful backend authentication a user
-will be automatically granted the default policy, otherwise it will be denied access.
 `
