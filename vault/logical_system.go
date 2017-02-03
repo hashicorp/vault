@@ -2252,7 +2252,7 @@ This path responds to the following HTTP methods.
 		Disable auditing of the given header.
 		`,
 	},
-	"audit-headers": {
+	"audited-headers": {
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
 	},
