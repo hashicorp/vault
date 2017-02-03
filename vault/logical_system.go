@@ -641,8 +641,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					logical.ReadOperation:   b.handleAuditedHeaderRead,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
 			},
 			&framework.Path{
 				Pattern: "config/auditing/request-headers$",
@@ -651,8 +651,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					logical.ReadOperation: b.handleAuditedHeadersRead,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
 		},
 	}
@@ -2236,5 +2236,24 @@ Enable a new audit backend or disable an existing backend.
 		"Rotates a response-wrapped token.",
 		`Rotates a response-wrapped token; the output is a new token with the same
 		response wrapped inside and the same creation TTL. The original token is revoked.`,
+	},
+	"audited-headers-name": {
+		"Configures the headers sent to the audit logs.",
+		`
+This path responds to the following HTTP methods.
+
+	GET /<name>
+		Returns the setting for the header with the given name.
+
+	POST /<name>
+		Enable auditing of the given header.
+
+	DELETE /<path>
+		Disable auditing of the given header.
+		`,
+	},
+	"audit-headers": {
+		"Lists the headers configured to be audited.",
+		`Returns a list of headers that have been configured to be audited.`,
 	},
 }
