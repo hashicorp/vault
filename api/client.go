@@ -106,7 +106,7 @@ func DefaultConfig() *Config {
 func (c *Config) ConfigureTLS(t *TLSConfig) error {
 
 	if c.HttpClient == nil {
-		return fmt.Errorf("config HTTP Client must be set")
+		c.HttpClient = DefaultConfig().HttpClient
 	}
 
 	var clientCert tls.Certificate
