@@ -2,10 +2,11 @@ package radius
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"strings"
 )
 
 func pathUsersList(b *backend) *framework.Path {
@@ -97,9 +98,17 @@ func (b *backend) pathUserRead(
 
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+
+	var policies = policyutil.ParsePolicies(d.Get("policies").(string))
+	for _, policy := range policies {
+		if policy == "root" {
+			return logical.ErrorResponse("root policy cannot be granted by an authentication backend"), nil
+		}
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("user/"+d.Get("name").(string), &UserEntry{
-		Policies: policyutil.ParsePolicies(d.Get("policies").(string)),
+		Policies: policies,
 	})
 	if err != nil {
 		return nil, err

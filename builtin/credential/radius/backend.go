@@ -52,5 +52,5 @@ Authentication is then done by suppying the two fields for "login".
 
 The backend optionally allows to grant the default policy to any 
 user that successfully authenticates against the RADIUS server, 
-without them being explecitely mapped to a policy.
+without them being explicitly mapped to a policy.
 `

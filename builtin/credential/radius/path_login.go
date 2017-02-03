@@ -43,6 +43,14 @@ func (b *backend) pathLogin(
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
+	if username == "" {
+		return logical.ErrorResponse("username cannot be emtpy"), nil
+	}
+
+	if password == "" {
+		return logical.ErrorResponse("password cannot be emtpy"), nil
+	}
+
 	policies, resp, err := b.RadiusLogin(req, username, password)
 	// Handle an internal error
 	if err != nil {

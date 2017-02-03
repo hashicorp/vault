@@ -57,8 +57,8 @@ func pathConfig(b *backend) *framework.Path {
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigRead,
-			logical.CreateOperation: b.pathConfigWrite,
-			logical.UpdateOperation: b.pathConfigWrite,
+			logical.CreateOperation: b.pathConfigCreateUpdate,
+			logical.UpdateOperation: b.pathConfigCreateUpdate,
 		},
 
 		HelpSynopsis:    pathConfigHelpSyn,
@@ -114,18 +114,17 @@ func (b *backend) pathConfigRead(
 	resp := &logical.Response{
 		Data: structs.New(cfg).Map(),
 	}
-	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any passwords.")
+	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the configuration information as-is, including any secrets.")
 	return resp, nil
 }
 
-/*
- * Retrieve a complete config entry from defaults or already configured params
- */
-func (b *backend) configCreateUpdate(d *framework.FieldData, req *logical.Request) (*ConfigEntry, error) {
+func (b *backend) pathConfigCreateUpdate(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
+	// Build a ConfigEntry struct out of the supplied FieldData
 	cfg, err := b.Config(req)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 	if cfg == nil {
 		cfg = &ConfigEntry{}
@@ -187,18 +186,6 @@ func (b *backend) configCreateUpdate(d *framework.FieldData, req *logical.Reques
 		cfg.NasPort = d.Get("nas_port").(int)
 	}
 
-	return cfg, nil
-}
-
-func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-
-	// Build a ConfigEntry struct out of the supplied FieldData
-	cfg, err := b.configCreateUpdate(d, req)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
-	}
-
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
 		return nil, err
@@ -219,26 +206,6 @@ type ConfigEntry struct {
 	DialTimeout       int    `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
 	ReadTimeout       int    `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
 	NasPort           int    `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
-}
-
-/*
- * Returns FieldData describing our ConfigEntry struct schema
- */
-func (b *backend) getConfigFieldData() (*framework.FieldData, error) {
-	configPath := b.Route("config")
-
-	if configPath == nil {
-		return nil, logical.ErrUnsupportedPath
-	}
-
-	raw := make(map[string]interface{}, len(configPath.Fields))
-
-	fd := framework.FieldData{
-		Raw:    raw,
-		Schema: configPath.Fields,
-	}
-
-	return &fd, nil
 }
 
 const pathConfigHelpSyn = `
