@@ -12,7 +12,7 @@ FEATURES:
    value is returned on a key policy read and cannot be changed, so if a key is
    marked `exportable` it will always be exportable, and if it is not it will
    never be exportable.
- * ** Batch Transit Operations**: `encrypt`, `decrypt` and `rewrap` operations
+ * **Batch Transit Operations**: `encrypt`, `decrypt` and `rewrap` operations
    in the transit backend now support processing multiple input items in one
    call, returning the output of each item in the response.
  * **Configurable Audited HTTP Headers**: You can now specify headers that you
