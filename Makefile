@@ -127,7 +127,7 @@ help:
 # build creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
 .PHONY: build
-build:  clean-containers devkit generate
+build:  clean-devkit-container devkit generate
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		mesosphereci/vault-devkit:latest \
@@ -185,7 +185,7 @@ cover: clean-containers devkit aux
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 .PHONY: vet
-vet: clean-containers devkit
+vet: clean-devkit-container devkit
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		mesosphereci/vault-devkit:latest \
@@ -201,7 +201,7 @@ vet: clean-containers devkit
 # generate runs `go generate` to build the dynamically generated
 # source files.
 .PHONY: generate
-generate: clean-containers devkit
+generate: clean-devkit-container devkit
 	docker run --rm \
 		$(DEVKIT_COMMON_DOCKER_OPTS) \
 		mesosphereci/vault-devkit:latest \
