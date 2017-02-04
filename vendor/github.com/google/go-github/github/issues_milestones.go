@@ -66,13 +66,13 @@ func (s *IssuesService) ListMilestones(owner string, repo string, opt *Milestone
 		return nil, nil, err
 	}
 
-	milestones := new([]*Milestone)
-	resp, err := s.client.Do(req, milestones)
+	var milestones []*Milestone
+	resp, err := s.client.Do(req, &milestones)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *milestones, resp, err
+	return milestones, resp, nil
 }
 
 // GetMilestone gets a single milestone.

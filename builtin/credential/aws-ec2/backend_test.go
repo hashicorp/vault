@@ -628,7 +628,7 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 -----END CERTIFICATE-----
 `
 	if resp.Data["aws_public_cert"].(string) != expectedCert {
-		t.Fatal("bad: expected:%s\n got:%s\n", expectedCert, resp.Data["aws_public_cert"].(string))
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedCert, resp.Data["aws_public_cert"].(string))
 	}
 
 	certReq.Operation = logical.CreateOperation
@@ -1273,5 +1273,119 @@ func TestBackendAcc_LoginAndWhitelistIdentity(t *testing.T) {
 	}
 	if resp == nil || resp.Auth == nil || resp.IsError() {
 		t.Fatalf("login attempt failed")
+	}
+}
+
+func TestBackend_pathStsConfig(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stsReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Path:      "config/sts/account1",
+	}
+	checkFound, exists, err := b.HandleExistenceCheck(stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !checkFound {
+		t.Fatal("existence check not found for path 'config/sts/account1'")
+	}
+	if exists {
+		t.Fatal("existence check should have returned 'false' for 'config/sts/account1'")
+	}
+
+	data := map[string]interface{}{
+		"sts_role": "arn:aws:iam:account1:role/myRole",
+	}
+
+	stsReq.Data = data
+	// test create operation
+	resp, err := b.HandleRequest(stsReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
+	}
+
+	stsReq.Data = nil
+	// test existence check
+	checkFound, exists, err = b.HandleExistenceCheck(stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !checkFound {
+		t.Fatal("existence check not found for path 'config/sts/account1'")
+	}
+	if !exists {
+		t.Fatal("existence check should have returned 'true' for 'config/sts/account1'")
+	}
+
+	stsReq.Operation = logical.ReadOperation
+	// test read operation
+	resp, err = b.HandleRequest(stsReq)
+	expectedStsRole := "arn:aws:iam:account1:role/myRole"
+	if resp.Data["sts_role"].(string) != expectedStsRole {
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedStsRole, resp.Data["sts_role"].(string))
+	}
+
+	stsReq.Operation = logical.CreateOperation
+	stsReq.Path = "config/sts/account2"
+	stsReq.Data = data
+	// create another entry to test the list operation
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(err)
+	}
+
+	stsReq.Operation = logical.ListOperation
+	stsReq.Path = "config/sts"
+	// test list operation
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to list config/sts")
+	}
+	keys := resp.Data["keys"].([]string)
+	if len(keys) != 2 {
+		t.Fatalf("invalid keys listed: %#v\n", keys)
+	}
+
+	stsReq.Operation = logical.DeleteOperation
+	stsReq.Path = "config/sts/account1"
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(err)
+	}
+
+	stsReq.Path = "config/sts/account2"
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(err)
+	}
+
+	stsReq.Operation = logical.ListOperation
+	stsReq.Path = "config/sts"
+	// test list operation
+	resp, err = b.HandleRequest(stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to list config/sts")
+	}
+	if resp.Data["keys"] != nil {
+		t.Fatalf("no entries should be present")
 	}
 }

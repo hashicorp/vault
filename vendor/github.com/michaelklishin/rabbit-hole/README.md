@@ -4,7 +4,7 @@ This library is a [RabbitMQ HTTP API](https://raw.githack.com/rabbitmq/rabbitmq-
 
 ## Supported Go Versions
 
-Rabbit Hole requires Go 1.3+.
+Rabbit Hole requires Go 1.6+.
 
 
 ## Supported RabbitMQ Versions
@@ -293,4 +293,4 @@ See [CONTRIBUTING.md](https://github.com/michaelklishin/rabbit-hole/blob/master/
 
 2-clause BSD license.
 
-(c) Michael S. Klishin, 2013-2016.
+(c) Michael S. Klishin, 2013-2017.

@@ -41,13 +41,13 @@ func (s *UsersService) ListKeys(user string, opt *ListOptions) ([]*Key, *Respons
 		return nil, nil, err
 	}
 
-	keys := new([]*Key)
-	resp, err := s.client.Do(req, keys)
+	var keys []*Key
+	resp, err := s.client.Do(req, &keys)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *keys, resp, err
+	return keys, resp, nil
 }
 
 // GetKey fetches a single public key.

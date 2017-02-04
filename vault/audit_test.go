@@ -14,14 +14,16 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	log "github.com/mgutz/logxi/v1"
+	"github.com/mitchellh/copystructure"
 )
 
 type NoopAudit struct {
-	Config  *audit.BackendConfig
-	ReqErr  error
-	ReqAuth []*logical.Auth
-	Req     []*logical.Request
-	ReqErrs []error
+	Config     *audit.BackendConfig
+	ReqErr     error
+	ReqAuth    []*logical.Auth
+	Req        []*logical.Request
+	ReqHeaders []map[string][]string
+	ReqErrs    []error
 
 	RespErr  error
 	RespAuth []*logical.Auth
@@ -33,6 +35,7 @@ type NoopAudit struct {
 func (n *NoopAudit) LogRequest(a *logical.Auth, r *logical.Request, err error) error {
 	n.ReqAuth = append(n.ReqAuth, a)
 	n.Req = append(n.Req, r)
+	n.ReqHeaders = append(n.ReqHeaders, r.Headers)
 	n.ReqErrs = append(n.ReqErrs, err)
 	return n.ReqErr
 }
@@ -54,7 +57,7 @@ func (n *NoopAudit) Reload() error {
 }
 
 func TestCore_EnableAudit(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
@@ -89,12 +92,14 @@ func TestCore_EnableAudit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching audit tables
@@ -160,7 +165,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 }
 
 func TestCore_DisableAudit(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
 		return &NoopAudit{
 			Config: config,
@@ -200,12 +205,14 @@ func TestCore_DisableAudit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
@@ -215,7 +222,7 @@ func TestCore_DisableAudit(t *testing.T) {
 }
 
 func TestCore_DefaultAuditTable(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	verifyDefaultAuditTable(t, c.audit)
 
 	// Verify we have an audit broker
@@ -232,12 +239,14 @@ func TestCore_DefaultAuditTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
@@ -281,16 +290,33 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Path:      "sys/mounts",
 	}
 
+	// Copy so we can verify nothing canged
+	authCopyRaw, err := copystructure.Copy(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authCopy := authCopyRaw.(*logical.Auth)
+
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
 	// Create an identifier for the request to verify against
-	var err error
 	req.ID, err = uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("failed to generate identifier for the request: path%s err: %v", req.Path, err)
 	}
+	reqCopy.ID = req.ID
 
 	reqErrs := errors.New("errs")
 
-	err = b.LogRequest(auth, req, reqErrs)
+	headersConf := &AuditedHeadersConfig{
+		Headers: make(map[string]*auditedHeaderSettings),
+	}
+
+	err = b.LogRequest(authCopy, reqCopy, headersConf, reqErrs)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -300,7 +326,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 			t.Fatalf("Bad: %#v", a.ReqAuth[0])
 		}
 		if !reflect.DeepEqual(a.Req[0], req) {
-			t.Fatalf("Bad: %#v", a.Req[0])
+			t.Fatalf("Bad: %#v\n wanted %#v", a.Req[0], req)
 		}
 		if !reflect.DeepEqual(a.ReqErrs[0], reqErrs) {
 			t.Fatalf("Bad: %#v", a.ReqErrs[0])
@@ -309,13 +335,13 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(auth, req, nil); err != nil {
+	if err := b.LogRequest(auth, req, headersConf, nil); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(auth, req, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
+	if err := b.LogRequest(auth, req, headersConf, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -353,7 +379,30 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
-	err := b.LogResponse(auth, req, resp, respErr)
+	// Copy so we can verify nothing canged
+	authCopyRaw, err := copystructure.Copy(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authCopy := authCopyRaw.(*logical.Auth)
+
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
+	respCopyRaw, err := copystructure.Copy(resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	respCopy := respCopyRaw.(*logical.Response)
+
+	headersConf := &AuditedHeadersConfig{
+		Headers: make(map[string]*auditedHeaderSettings),
+	}
+
+	err = b.LogResponse(authCopy, reqCopy, respCopy, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -375,15 +424,87 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(auth, req, resp, respErr)
+	err = b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(auth, req, resp, respErr)
+	err = b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err.Error() != "no audit backend succeeded in logging the response" {
+		t.Fatalf("err: %v", err)
+	}
+}
+
+func TestAuditBroker_AuditHeaders(t *testing.T) {
+	l := logformat.NewVaultLogger(log.LevelTrace)
+	b := NewAuditBroker(l)
+	a1 := &NoopAudit{}
+	a2 := &NoopAudit{}
+	b.Register("foo", a1, nil)
+	b.Register("bar", a2, nil)
+
+	auth := &logical.Auth{
+		ClientToken: "foo",
+		Policies:    []string{"dev", "ops"},
+		Metadata: map[string]string{
+			"user":   "armon",
+			"source": "github",
+		},
+	}
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "sys/mounts",
+		Headers: map[string][]string{
+			"X-Test-Header":  []string{"foo"},
+			"X-Vault-Header": []string{"bar"},
+			"Content-Type":   []string{"baz"},
+		},
+	}
+	respErr := fmt.Errorf("permission denied")
+
+	// Copy so we can verify nothing canged
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
+	headersConf := &AuditedHeadersConfig{
+		Headers: map[string]*auditedHeaderSettings{
+			"X-Test-Header":  &auditedHeaderSettings{false},
+			"X-Vault-Header": &auditedHeaderSettings{false},
+		},
+	}
+
+	err = b.LogRequest(auth, reqCopy, headersConf, respErr)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected := map[string][]string{
+		"X-Test-Header":  []string{"foo"},
+		"X-Vault-Header": []string{"bar"},
+	}
+
+	for _, a := range []*NoopAudit{a1, a2} {
+		if !reflect.DeepEqual(a.ReqHeaders[0], expected) {
+			t.Fatalf("Bad audited headers: %#v", a.Req[0].Headers)
+		}
+	}
+
+	// Should still work with one failing backend
+	a1.ReqErr = fmt.Errorf("failed")
+	err = b.LogRequest(auth, req, headersConf, respErr)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should FAIL work with both failing backends
+	a2.ReqErr = fmt.Errorf("failed")
+	err = b.LogRequest(auth, req, headersConf, respErr)
+	if !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }

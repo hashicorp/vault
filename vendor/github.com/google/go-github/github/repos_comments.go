@@ -50,13 +50,13 @@ func (s *RepositoriesService) ListComments(owner, repo string, opt *ListOptions)
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	comments := new([]*RepositoryComment)
-	resp, err := s.client.Do(req, comments)
+	var comments []*RepositoryComment
+	resp, err := s.client.Do(req, &comments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *comments, resp, err
+	return comments, resp, nil
 }
 
 // ListCommitComments lists all the comments for a given commit SHA.
@@ -77,13 +77,13 @@ func (s *RepositoriesService) ListCommitComments(owner, repo, sha string, opt *L
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	comments := new([]*RepositoryComment)
-	resp, err := s.client.Do(req, comments)
+	var comments []*RepositoryComment
+	resp, err := s.client.Do(req, &comments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *comments, resp, err
+	return comments, resp, nil
 }
 
 // CreateComment creates a comment for the given commit.

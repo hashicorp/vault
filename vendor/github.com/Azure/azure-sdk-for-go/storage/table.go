@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
+	"time"
 )
 
 // TableServiceClient contains operations for Microsoft Azure Table Storage
@@ -23,6 +26,17 @@ const (
 
 type createTableRequest struct {
 	TableName string `json:"TableName"`
+}
+
+// TableAccessPolicy are used for SETTING table policies
+type TableAccessPolicy struct {
+	ID         string
+	StartTime  time.Time
+	ExpiryTime time.Time
+	CanRead    bool
+	CanAppend  bool
+	CanUpdate  bool
+	CanDelete  bool
 }
 
 func pathForTable(table AzureTable) string { return fmt.Sprintf("%s", table) }
@@ -45,7 +59,7 @@ func (c *TableServiceClient) QueryTables() ([]AzureTable, error) {
 	headers := c.getStandardHeaders()
 	headers["Content-Length"] = "0"
 
-	resp, err := c.client.execTable("GET", uri, headers, nil)
+	resp, err := c.client.execTable(http.MethodGet, uri, headers, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +70,9 @@ func (c *TableServiceClient) QueryTables() ([]AzureTable, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.body)
+	if _, err := buf.ReadFrom(resp.body); err != nil {
+		return nil, err
+	}
 
 	var respArray queryTablesResponse
 	if err := json.Unmarshal(buf.Bytes(), &respArray); err != nil {
@@ -88,7 +104,7 @@ func (c *TableServiceClient) CreateTable(table AzureTable) error {
 
 	headers["Content-Length"] = fmt.Sprintf("%d", buf.Len())
 
-	resp, err := c.client.execTable("POST", uri, headers, buf)
+	resp, err := c.client.execTable(http.MethodPost, uri, headers, buf)
 
 	if err != nil {
 		return err
@@ -114,7 +130,7 @@ func (c *TableServiceClient) DeleteTable(table AzureTable) error {
 
 	headers["Content-Length"] = "0"
 
-	resp, err := c.client.execTable("DELETE", uri, headers, nil)
+	resp, err := c.client.execTable(http.MethodDelete, uri, headers, nil)
 
 	if err != nil {
 		return err
@@ -126,4 +142,103 @@ func (c *TableServiceClient) DeleteTable(table AzureTable) error {
 
 	}
 	return nil
+}
+
+// SetTablePermissions sets up table ACL permissions as per REST details https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Set-Table-ACL
+func (c *TableServiceClient) SetTablePermissions(table AzureTable, accessPolicy TableAccessPolicy, timeout uint) (err error) {
+	params := url.Values{
+		"comp": {"acl"},
+	}
+
+	if timeout > 0 {
+		params.Add("timeout", fmt.Sprint(timeout))
+	}
+
+	uri := c.client.getEndpoint(tableServiceName, string(table), params)
+	headers := c.client.getStandardHeaders()
+
+	permissions := generateTablePermissions(accessPolicy)
+
+	// generate the XML for the SharedAccessSignature if required.
+	accessPolicyXML, err := generateAccessPolicy(accessPolicy.ID,
+		accessPolicy.StartTime,
+		accessPolicy.ExpiryTime,
+		permissions)
+
+	if err != nil {
+		return err
+	}
+
+	var resp *odataResponse
+	headers["Content-Length"] = strconv.Itoa(len(accessPolicyXML))
+	resp, err = c.client.execTable(http.MethodPut, uri, headers, strings.NewReader(accessPolicyXML))
+
+	if err != nil {
+		return err
+	}
+
+	if resp != nil {
+		defer func() {
+			closeErr := resp.body.Close()
+			if closeErr != nil && err == nil {
+				err = closeErr
+			}
+		}()
+
+		if err := checkRespCode(resp.statusCode, []int{http.StatusNoContent}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetTablePermissions gets the table ACL permissions, as per REST details https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-table-acl
+func (c *TableServiceClient) GetTablePermissions(table AzureTable, timeout int) (permissionResponse *AccessPolicy, err error) {
+	params := url.Values{"comp": {"acl"}}
+
+	if timeout > 0 {
+		params.Add("timeout", strconv.Itoa(timeout))
+	}
+
+	uri := c.client.getEndpoint(tableServiceName, string(table), params)
+	headers := c.client.getStandardHeaders()
+	resp, err := c.client.execTable(http.MethodGet, uri, headers, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		err = resp.body.Close()
+	}()
+
+	var out AccessPolicy
+	err = xmlUnmarshal(resp.body, &out.SignedIdentifiersList)
+	if err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+func generateTablePermissions(accessPolicy TableAccessPolicy) (permissions string) {
+	// generate the permissions string (raud).
+	// still want the end user API to have bool flags.
+	permissions = ""
+
+	if accessPolicy.CanRead {
+		permissions += "r"
+	}
+
+	if accessPolicy.CanAppend {
+		permissions += "a"
+	}
+
+	if accessPolicy.CanUpdate {
+		permissions += "u"
+	}
+
+	if accessPolicy.CanDelete {
+		permissions += "d"
+	}
+	return permissions
 }

@@ -1,3 +1,56 @@
+## 0.6.5 (Unreleased)
+
+FEATURES:
+
+ * **Okta Authentication**: A new Okta authentication backend allows you to use
+   Okta usernames and passwords to authenticate to Vault. If provided with an
+   appropriate Okta API token, group membership can be queried to assign
+   policies; users and groups can be defined locally as well.
+ * **Exportable Transit Keys**: Keys in `transit` can now be marked as
+   `exportable` at creation time. This allows a properly ACL'd user to retrieve
+   the associated signing key, encryption key, or HMAC key. The `exportable`
+   value is returned on a key policy read and cannot be changed, so if a key is
+   marked `exportable` it will always be exportable, and if it is not it will
+   never be exportable.
+ * **Batch Transit Operations**: `encrypt`, `decrypt` and `rewrap` operations
+   in the transit backend now support processing multiple input items in one
+   call, returning the output of each item in the response.
+ * **Configurable Audited HTTP Headers**: You can now specify headers that you
+   want to have included in each audit entry, along with whether each header
+   should be HMAC'd or kept plaintext. This can be useful for adding additional
+   client or network metadata to the audit logs.
+
+IMPROVEMENTS:
+
+ * auth/aws-ec2: Add support for cross-account auth using STS [GH-2148]
+ * auth/aws-ec2: Support issuing periodic tokens [GH-2324]
+ * auth/github: Support listing teams and users [GH-2261]
+ * auth/ldap: Support adding policies to local users directly, in addition to
+   local groups [GH-2152]
+ * command/server: Add ability to select and prefer server cipher suites
+   [GH-2293]
+ * core: Add a nonce to unseal operations as a check (useful mostly for
+   support, not as a security principle) [GH-2276]
+ * duo: Added ability to supply extra context to Duo pushes [GH-2118]
+ * physical/consul: Add option for setting consistency mode on Consul gets
+   [GH-2282]
+ * physical/etcd: Full v3 API support; code will autodetect which API version
+   to use. The v3 code path is significantly less complicated and may be much
+   more stable. [GH-2168]
+ * secret/pki: Allow specifying OU entries in generated certificate subjects
+   [GH-2251]
+
+BUG FIXES:
+
+ * auth/token: Fix regression in 0.6.4 where using token store roles as a
+   blacklist (with only `disallowed_policies` set) would not work in most
+   circumstances [GH-2286]
+ * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
+ * secret/cassandra: Stop a connection leak that could occur on active node
+   failover [GH-2313]
+ * secret/pki: When using `sign-verbatim`, don't require a role and use the
+   CSR's common name [GH-2243]
+
 ## 0.6.4 (December 16, 2016)
 
 SECURITY:
@@ -5,20 +58,20 @@ SECURITY:
 Further details about these security issues can be found in the 0.6.4 upgrade
 guide.
 
-  * `default` Policy Privilege Escalation: If a parent token did not have the
-    `default` policy attached to its token, it could still create children with
-    the `default` policy. This is no longer allowed (unless the parent has
-    `sudo` capability for the creation path). In most cases this is low
-    severity since the access grants in the `default` policy are meant to be
-    access grants that are acceptable for all tokens to have.
-  * Leases Not Expired When Limited Use Token Runs Out of Uses: When using
-    limited-use tokens to create leased secrets, if the limited-use token was
-    revoked due to running out of uses (rather than due to TTL expiration or
-    explicit revocation) it would fail to revoke the leased secrets. These
-    secrets would still be revoked when their TTL expired, limiting the
-    severity of this issue. An endpoint has been added (`auth/token/tidy`) that
-    can perform housekeeping tasks on the token store; one of its tasks can
-    detect this situation and revoke the associated leases.
+ * `default` Policy Privilege Escalation: If a parent token did not have the
+   `default` policy attached to its token, it could still create children with
+   the `default` policy. This is no longer allowed (unless the parent has
+   `sudo` capability for the creation path). In most cases this is low severity
+   since the access grants in the `default` policy are meant to be access
+   grants that are acceptable for all tokens to have.
+ * Leases Not Expired When Limited Use Token Runs Out of Uses: When using
+   limited-use tokens to create leased secrets, if the limited-use token was
+   revoked due to running out of uses (rather than due to TTL expiration or
+   explicit revocation) it would fail to revoke the leased secrets. These
+   secrets would still be revoked when their TTL expired, limiting the severity
+   of this issue. An endpoint has been added (`auth/token/tidy`) that can
+   perform housekeeping tasks on the token store; one of its tasks can detect
+   this situation and revoke the associated leases.
 
 FEATURES:
 

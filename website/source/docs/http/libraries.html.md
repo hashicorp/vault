@@ -36,8 +36,10 @@ These libraries are provided by the community.
 
 ### C&#35;
 
-* [VaultSharp](https://github.com/rajanadar/VaultSharp)
+* [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Standard = 1.4 (.NET Core >= 1.0.0) and also .NET 4.5.x, .NET 4.6.x)
   * `Install-Package VaultSharp`
+* [Vault.NET](https://github.com/Chatham/Vault.NET)
+  * `Install-Package Vault`
 
 ### Clojure
 
@@ -46,6 +48,10 @@ These libraries are provided by the community.
 ### Elixir
 
 * [vaultex](https://hex.pm/packages/vaultex)
+
+### Go
+
+* [vc](https://github.com/adfinis-sygroup/vault-client)
 
 ### Haskell
 
@@ -78,7 +84,7 @@ These libraries are provided by the community.
 
 * [HVAC](https://github.com/ianunruh/hvac)
   * `pip install hvac`
-  
+
 ### Rust
 
 * [HashicorpVault](https://crates.io/crates/hashicorp_vault)

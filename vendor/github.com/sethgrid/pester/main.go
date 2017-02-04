@@ -292,7 +292,7 @@ func (c *Client) pester(p params) (*http.Response, error) {
 				}
 
 				// prevent a 0 from causing the tick to block, pass additional microsecond
-				<-time.Tick(c.Backoff(i) + 1*time.Microsecond)
+				<-time.After(c.Backoff(i) + 1*time.Microsecond)
 			}
 		}(req, p)
 	}

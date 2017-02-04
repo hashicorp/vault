@@ -22,13 +22,13 @@ func (s *IssuesService) ListAssignees(owner, repo string, opt *ListOptions) ([]*
 	if err != nil {
 		return nil, nil, err
 	}
-	assignees := new([]*User)
-	resp, err := s.client.Do(req, assignees)
+	var assignees []*User
+	resp, err := s.client.Do(req, &assignees)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *assignees, resp, err
+	return assignees, resp, nil
 }
 
 // IsAssignee checks if a user is an assignee for the specified repository.

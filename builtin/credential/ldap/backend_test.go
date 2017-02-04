@@ -12,6 +12,94 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend()
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+
+	_, err := b.Backend.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return b, config.StorageView
+}
+
+func TestLdapAuthBackend_UserPolicies(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Data: map[string]interface{}{
+			// Online LDAP test server
+			// http://www.forumsys.com/tutorials/integration-how-to/ldap/online-ldap-test-server/
+			"url":      "ldap://ldap.forumsys.com",
+			"userattr": "uid",
+			"userdn":   "dc=example,dc=com",
+			"groupdn":  "dc=example,dc=com",
+			"binddn":   "cn=read-only-admin,dc=example,dc=com",
+		},
+		Storage: storage,
+	}
+	resp, err = b.HandleRequest(configReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	groupReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"policies": "grouppolicy",
+		},
+		Path:    "groups/engineers",
+		Storage: storage,
+	}
+	resp, err = b.HandleRequest(groupReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	userReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"groups":   "engineers",
+			"policies": "userpolicy",
+		},
+		Path:    "users/tesla",
+		Storage: storage,
+	}
+
+	resp, err = b.HandleRequest(userReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	loginReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login/tesla",
+		Data: map[string]interface{}{
+			"password": "password",
+		},
+		Storage: storage,
+	}
+
+	resp, err = b.HandleRequest(loginReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	expected := []string{"default", "grouppolicy", "userpolicy"}
+	if !reflect.DeepEqual(expected, resp.Auth.Policies) {
+		t.Fatalf("bad: policies: expected: %q, actual: %q", expected, resp.Auth.Policies)
+	}
+}
+
 /*
  * Acceptance test for LDAP Auth Backend
  *
@@ -369,7 +457,6 @@ func testAccStepLogin(t *testing.T, user string, pass string) logicaltest.TestSt
 		Check: logicaltest.TestCheckAuth([]string{"bar", "default", "foo"}),
 	}
 }
-
 
 func testAccStepLoginNoGroupDN(t *testing.T, user string, pass string) logicaltest.TestStep {
 	return logicaltest.TestStep{

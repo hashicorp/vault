@@ -61,7 +61,7 @@ func TestUnwrap(t *testing.T) {
 		t.Fatal("outer response was nil")
 	}
 	if outer.WrapInfo == nil {
-		t.Fatal("outer wrapinfo was nil, response was %#v", *outer)
+		t.Fatalf("outer wrapinfo was nil, response was %#v", *outer)
 	}
 
 	args = append(args, outer.WrapInfo.Token)
@@ -88,7 +88,7 @@ func TestUnwrap(t *testing.T) {
 		t.Fatal("outer response was nil")
 	}
 	if outer.WrapInfo == nil {
-		t.Fatal("outer wrapinfo was nil, response was %#v", *outer)
+		t.Fatalf("outer wrapinfo was nil, response was %#v", *outer)
 	}
 
 	args = []string{

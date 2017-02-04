@@ -52,9 +52,11 @@ func TestClusterHAFetching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	key, _ := TestCoreInit(t, c)
-	if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, _ := TestCoreInit(t, c)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -110,7 +112,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 		for _, ln := range cores[0].Listeners {
 			tcpAddr, ok := ln.Addr().(*net.TCPAddr)
 			if !ok {
-				t.Fatal("%s not a TCP port", tcpAddr.String())
+				t.Fatalf("%s not a TCP port", tcpAddr.String())
 			}
 
 			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+10), tlsConfig)

@@ -29,7 +29,12 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 				Connection: &logical.Connection{
 					RemoteAddr: "127.0.0.1",
 				},
-				WrapTTL: 60 * time.Second,
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": []string{"bar"},
+				},
 			},
 			errors.New("this is an error"),
 			testFormatJSONReqBasicStr,
@@ -74,5 +79,5 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	}
 }
 
-const testFormatJSONReqBasicStr = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"display_name":"","policies":["root"],"metadata":null},"request":{"operation":"update","path":"/foo","data":null,"wrap_ttl":60,"remote_address":"127.0.0.1"},"error":"this is an error"}
+const testFormatJSONReqBasicStr = `{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"display_name":"","policies":["root"],"metadata":null},"request":{"operation":"update","path":"/foo","data":null,"wrap_ttl":60,"remote_address":"127.0.0.1","headers":{"foo":["bar"]}},"error":"this is an error"}
 `

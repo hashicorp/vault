@@ -221,6 +221,12 @@ func testBackend_ListPrefix(t *testing.T, b Backend) {
 	e2 := &Entry{Key: "foo/bar", Value: []byte("test")}
 	e3 := &Entry{Key: "foo/bar/baz", Value: []byte("test")}
 
+	defer func() {
+		b.Delete("foo")
+		b.Delete("foo/bar")
+		b.Delete("foo/bar/baz")
+	}()
+
 	err := b.Put(e1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -278,7 +284,6 @@ func testBackend_ListPrefix(t *testing.T, b Backend) {
 	if keys[0] != "baz" {
 		t.Fatalf("bad: %v", keys)
 	}
-
 }
 
 func testHABackend(t *testing.T, b HABackend, b2 HABackend) {

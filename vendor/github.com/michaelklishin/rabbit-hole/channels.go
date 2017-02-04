@@ -1,7 +1,5 @@
 package rabbithole
 
-import "net/url"
-
 // Brief (very incomplete) connection information.
 type BriefConnectionDetails struct {
 	// Connection name
@@ -73,7 +71,7 @@ func (c *Client) ListChannels() (rec []ChannelInfo, err error) {
 
 // Returns channel information.
 func (c *Client) GetChannel(name string) (rec *ChannelInfo, err error) {
-	req, err := newGETRequest(c, "channels/"+url.QueryEscape(name))
+	req, err := newGETRequest(c, "channels/" + PathEscape(name))
 	if err != nil {
 		return nil, err
 	}

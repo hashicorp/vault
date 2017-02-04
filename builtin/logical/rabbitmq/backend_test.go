@@ -64,13 +64,13 @@ const (
 
 func testAccPreCheck(t *testing.T) {
 	if uri := os.Getenv(envRabbitMQConnectionURI); uri == "" {
-		t.Fatal(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQConnectionURI))
+		t.Fatalf(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQConnectionURI))
 	}
 	if username := os.Getenv(envRabbitMQUsername); username == "" {
-		t.Fatal(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQUsername))
+		t.Fatalf(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQUsername))
 	}
 	if password := os.Getenv(envRabbitMQPassword); password == "" {
-		t.Fatal(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQPassword))
+		t.Fatalf(fmt.Sprintf("%s must be set for acceptance tests", envRabbitMQPassword))
 	}
 }
 

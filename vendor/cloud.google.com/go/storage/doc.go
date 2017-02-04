@@ -23,7 +23,7 @@ All of the methods of this package use exponential backoff to retry calls
 that fail with certain errors, as described in
 https://cloud.google.com/storage/docs/exponential-backoff.
 
-Note: This package is experimental and may make backwards-incompatible changes.
+Note: This package is in beta.  Some backwards-incompatible changes may occur.
 
 
 Creating a Client

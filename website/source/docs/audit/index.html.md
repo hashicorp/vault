@@ -41,11 +41,11 @@ When enabling an audit backend, options can be passed to it to configure it.
 For example, the command below enables the file audit backend:
 
 ```
-$ vault audit-enable file path=/var/log/vault_audit.log
+$ vault audit-enable file file_path=/var/log/vault_audit.log
 ...
 ```
 
-In the command above, we passed the "path" parameter to specify the path
+In the command above, we passed the "file_path" parameter to specify the path
 where the audit log will be written to. Each audit backend has its own
 set of parameters. See the documentation to the left for more details.
 

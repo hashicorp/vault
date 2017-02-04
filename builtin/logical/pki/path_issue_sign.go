@@ -52,7 +52,7 @@ func pathSign(b *backend) *framework.Path {
 
 func pathSignVerbatim(b *backend) *framework.Path {
 	ret := &framework.Path{
-		Pattern: "sign-verbatim/" + framework.GenericNameRegex("role"),
+		Pattern: "sign-verbatim" + framework.OptionalParamRegex("role"),
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathSignVerbatim,
@@ -124,6 +124,7 @@ func (b *backend) pathSignVerbatim(
 		AllowIPSANs:      true,
 		EnforceHostnames: false,
 		KeyType:          "any",
+		UseCSRCommonName: true,
 	}
 
 	return b.pathIssueSignCert(req, data, role, true, true)
@@ -229,7 +230,7 @@ func (b *backend) pathIssueSignCert(
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally")
+		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
 	}
 
 	return resp, nil

@@ -13,7 +13,7 @@ import (
 )
 
 func TestCore_DefaultMountTable(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	verifyDefaultTable(t, c.mounts)
 
 	// Start a second core with same physical
@@ -25,12 +25,14 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
@@ -40,7 +42,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 }
 
 func TestCore_Mount(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	me := &MountEntry{
 		Table: mountTableType,
 		Path:  "foo",
@@ -64,12 +66,14 @@ func TestCore_Mount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
@@ -79,7 +83,7 @@ func TestCore_Mount(t *testing.T) {
 }
 
 func TestCore_Unmount(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	existed, err := c.unmount("secret")
 	if !existed || err != nil {
 		t.Fatalf("existed: %v; err: %v", existed, err)
@@ -98,12 +102,14 @@ func TestCore_Unmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
@@ -187,7 +193,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// View should be empty
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -197,7 +203,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 }
 
 func TestCore_Remount(t *testing.T) {
-	c, key, _ := TestCoreUnsealed(t)
+	c, keys, _ := TestCoreUnsealed(t)
 	err := c.remount("secret", "foo")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -216,12 +222,14 @@ func TestCore_Remount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	unseal, err := TestCoreUnseal(c2, key)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if !unseal {
-		t.Fatalf("should be unsealed")
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
 	}
 
 	// Verify matching mount tables
@@ -305,7 +313,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// View should not be empty
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

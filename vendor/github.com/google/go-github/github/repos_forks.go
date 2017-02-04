@@ -32,13 +32,13 @@ func (s *RepositoriesService) ListForks(owner, repo string, opt *RepositoryListF
 		return nil, nil, err
 	}
 
-	repos := new([]*Repository)
-	resp, err := s.client.Do(req, repos)
+	var repos []*Repository
+	resp, err := s.client.Do(req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *repos, resp, err
+	return repos, resp, nil
 }
 
 // RepositoryCreateForkOptions specifies the optional parameters to the
@@ -49,6 +49,12 @@ type RepositoryCreateForkOptions struct {
 }
 
 // CreateFork creates a fork of the specified repository.
+//
+// This method might return an *AcceptedError and a status code of
+// 202. This is because this is the status that GitHub returns to signify that
+// it is now computing creating the fork in a background task.
+// A follow up request, after a delay of a second or so, should result
+// in a successful request.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/forks/#create-a-fork
 func (s *RepositoriesService) CreateFork(owner, repo string, opt *RepositoryCreateForkOptions) (*Repository, *Response, error) {

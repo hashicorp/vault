@@ -18,7 +18,7 @@ func BasicHelpFunc(app string) HelpFunc {
 	return func(commands map[string]CommandFactory) string {
 		var buf bytes.Buffer
 		buf.WriteString(fmt.Sprintf(
-			"usage: %s [--version] [--help] <command> [<args>]\n\n",
+			"Usage: %s [--version] [--help] <command> [<args>]\n\n",
 			app))
 		buf.WriteString("Available commands are:\n")
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -592,11 +593,13 @@ func TestTokenStore_Revoke(t *testing.T) {
 }
 
 func TestTokenStore_Revoke_Leases(t *testing.T) {
-	_, ts, _, _ := TestCoreWithTokenStore(t)
+	c, ts, _, _ := TestCoreWithTokenStore(t)
+
+	view := NewBarrierView(c.barrier, "noop/")
 
 	// Mount a noop backend
 	noop := &NoopBackend{}
-	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, nil)
+	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, view)
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.create(ent); err != nil {
@@ -1789,6 +1792,38 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 	}
 }
 
+func TestTokenStore_RoleDisallowedPoliciesWithRoot(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	_, ts, _, root := TestCoreWithTokenStore(t)
+
+	// Don't set disallowed_policies. Verify that a read on the role does return a non-nil value.
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/role1",
+		Data: map[string]interface{}{
+			"disallowed_policies": "root,testpolicy",
+		},
+		ClientToken: root,
+	}
+	resp, err = ts.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = ts.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%v", err, resp)
+	}
+
+	expected := []string{"root", "testpolicy"}
+	if !reflect.DeepEqual(resp.Data["disallowed_policies"], expected) {
+		t.Fatalf("bad: expected: %#v, actual: %#v", expected, resp.Data["disallowed_policies"])
+	}
+}
+
 func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	var req *logical.Request
 	var resp *logical.Response
@@ -1882,6 +1917,16 @@ func TestTokenStore_RoleDisallowedPolicies(t *testing.T) {
 	resp, err = ts.HandleRequest(req)
 	if err == nil || resp != nil && !resp.IsError() {
 		t.Fatal("expected an error response")
+	}
+
+	// Disallowed should act as a blacklist so make sure we can still make
+	// something with other policies in the request
+	req = logical.TestRequest(t, logical.UpdateOperation, "create/test123")
+	req.Data["policies"] = []string{"foo", "bar"}
+	req.ClientToken = parentToken
+	resp, err = ts.HandleRequest(req)
+	if err != nil || resp == nil || resp.IsError() {
+		t.Fatalf("err:%v resp:%v", err, resp)
 	}
 
 	// Create a role to have 'default' policy disallowed
@@ -2189,7 +2234,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2346,7 +2391,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2474,7 +2519,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2534,7 +2579,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2595,7 +2640,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -2662,7 +2707,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatal(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -3265,5 +3310,127 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 	numberOfAccessors = len(resp.Data["keys"].([]string))
 	if numberOfAccessors != 1 {
 		t.Fatalf("bad: number of accessors. Expected: 1, Actual: %d", numberOfAccessors)
+	}
+}
+
+func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
+	exp := mockExpiration(t)
+	ts := exp.tokenStore
+
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+
+	// Create new token
+	root, err := ts.rootToken()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
+	req.ClientToken = root.ID
+	req.Data["policies"] = []string{"default"}
+
+	resp, err := ts.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v %v", err, resp)
+	}
+
+	// Create a new token
+	auth := &logical.Auth{
+		ClientToken: resp.Auth.ClientToken,
+		LeaseOptions: logical.LeaseOptions{
+			TTL:       time.Hour,
+			Renewable: true,
+		},
+	}
+	err = exp.RegisterAuth("auth/token/create", auth)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	tut := resp.Auth.ClientToken
+
+	req = &logical.Request{
+		Path:        "prod/aws/foo",
+		ClientToken: tut,
+	}
+	resp = &logical.Response{
+		Secret: &logical.Secret{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Hour,
+			},
+		},
+	}
+
+	leases := []string{}
+
+	for i := 0; i < 10; i++ {
+		leaseId, err := exp.Register(req, resp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		leases = append(leases, leaseId)
+	}
+
+	sort.Strings(leases)
+
+	storedLeases, err := exp.lookupByToken(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(storedLeases)
+	if !reflect.DeepEqual(leases, storedLeases) {
+		t.Fatalf("bad: %#v vs %#v", leases, storedLeases)
+	}
+
+	// Now, delete the token entry. The leases should still exist.
+	saltedTut := ts.SaltID(tut)
+	te, err := ts.lookupSalted(saltedTut, true)
+	if err != nil {
+		t.Fatalf("failed to lookup token: %v", err)
+	}
+	if te == nil {
+		t.Fatal("got nil token entry")
+	}
+
+	// Destroy the token index
+	path := lookupPrefix + saltedTut
+	if ts.view.Delete(path); err != nil {
+		t.Fatalf("failed to delete token entry: %v", err)
+	}
+	te, err = ts.lookupSalted(saltedTut, true)
+	if err != nil {
+		t.Fatalf("failed to lookup token: %v", err)
+	}
+	if te != nil {
+		t.Fatal("got token entry")
+	}
+
+	// Verify leases still exist
+	storedLeases, err = exp.lookupByToken(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(storedLeases)
+	if !reflect.DeepEqual(leases, storedLeases) {
+		t.Fatalf("bad: %#v vs %#v", leases, storedLeases)
+	}
+
+	// Call tidy
+	ts.handleTidy(nil, nil)
+
+	// Verify leases are gone
+	storedLeases, err = exp.lookupByToken(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(storedLeases) > 0 {
+		t.Fatal("found leases")
 	}
 }

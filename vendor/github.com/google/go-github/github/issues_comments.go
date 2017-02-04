@@ -66,13 +66,13 @@ func (s *IssuesService) ListComments(owner string, repo string, number int, opt 
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	comments := new([]*IssueComment)
-	resp, err := s.client.Do(req, comments)
+	var comments []*IssueComment
+	resp, err := s.client.Do(req, &comments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *comments, resp, err
+	return comments, resp, nil
 }
 
 // GetComment fetches the specified issue comment.

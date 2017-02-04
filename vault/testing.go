@@ -15,6 +15,7 @@ import (
 	"time"
 
 	log "github.com/mgutz/logxi/v1"
+	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ssh"
 
@@ -68,6 +69,12 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 // TestCore returns a pure in-memory, uninitialized core for testing.
 func TestCore(t *testing.T) *Core {
 	return TestCoreWithSeal(t, nil)
+}
+
+// TestCoreNewSeal returns an in-memory, ininitialized core with the new seal
+// configuration.
+func TestCoreNewSeal(t *testing.T) *Core {
+	return TestCoreWithSeal(t, &TestSeal{})
 }
 
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
@@ -136,24 +143,24 @@ func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
-func TestCoreInit(t *testing.T, core *Core) ([]byte, string) {
+func TestCoreInit(t *testing.T, core *Core) ([][]byte, string) {
 	return TestCoreInitClusterWrapperSetup(t, core, nil, func() (http.Handler, http.Handler) { return nil, nil })
 }
 
-func TestCoreInitClusterWrapperSetup(t *testing.T, core *Core, clusterAddrs []*net.TCPAddr, handlerSetupFunc func() (http.Handler, http.Handler)) ([]byte, string) {
+func TestCoreInitClusterWrapperSetup(t *testing.T, core *Core, clusterAddrs []*net.TCPAddr, handlerSetupFunc func() (http.Handler, http.Handler)) ([][]byte, string) {
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterSetupFuncs(handlerSetupFunc)
 	result, err := core.Initialize(&InitParams{
 		BarrierConfig: &SealConfig{
-			SecretShares:    1,
-			SecretThreshold: 1,
+			SecretShares:    3,
+			SecretThreshold: 3,
 		},
 		RecoveryConfig: nil,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	return result.SecretShares[0], result.RootToken
+	return result.SecretShares, result.RootToken
 }
 
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
@@ -163,11 +170,13 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
-func TestCoreUnsealed(t *testing.T) (*Core, []byte, string) {
+func TestCoreUnsealed(t *testing.T) (*Core, [][]byte, string) {
 	core := TestCore(t)
-	key, token := TestCoreInit(t, core)
-	if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, token := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	sealed, err := core.Sealed()
@@ -178,13 +187,13 @@ func TestCoreUnsealed(t *testing.T) (*Core, []byte, string) {
 		t.Fatal("should not be sealed")
 	}
 
-	return core, key, token
+	return core, keys, token
 }
 
 // TestCoreWithTokenStore returns an in-memory core that has a token store
 // mounted, so that logical token functions can be used
-func TestCoreWithTokenStore(t *testing.T) (*Core, *TokenStore, []byte, string) {
-	c, key, root := TestCoreUnsealed(t)
+func TestCoreWithTokenStore(t *testing.T) (*Core, *TokenStore, [][]byte, string) {
+	c, keys, root := TestCoreUnsealed(t)
 
 	me := &MountEntry{
 		Table:       credentialTableType,
@@ -213,7 +222,7 @@ func TestCoreWithTokenStore(t *testing.T) (*Core, *TokenStore, []byte, string) {
 	exp := NewExpirationManager(router, subview, ts, logger)
 	ts.SetExpirationManager(exp)
 
-	return c, ts, key, root
+	return c, ts, keys, root
 }
 
 // TestKeyCopy is a silly little function to just copy the key so that
@@ -381,6 +390,15 @@ func (n *rawHTTP) Cleanup() {
 	// noop
 }
 
+func (n *rawHTTP) Initialize() error {
+	// noop
+	return nil
+}
+
+func (n *rawHTTP) InvalidateKey(string) {
+	// noop
+}
+
 func GenerateRandBytes(length int) ([]byte, error) {
 	if length < 0 {
 		return nil, fmt.Errorf("length must be >= 0")
@@ -429,7 +447,7 @@ type TestClusterCore struct {
 	*Core
 	Listeners   []*TestListener
 	Root        string
-	Key         []byte
+	BarrierKeys [][]byte
 	CACertBytes []byte
 	CACert      *x509.Certificate
 	TLSConfig   *tls.Config
@@ -671,9 +689,11 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 	c2.SetClusterSetupFuncs(WrapHandlerForClustering(handlers[1], logger))
 	c3.SetClusterListenerAddrs(clusterAddrGen(c3lns))
 	c3.SetClusterSetupFuncs(WrapHandlerForClustering(handlers[2], logger))
-	key, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), WrapHandlerForClustering(handlers[0], logger))
-	if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
-		t.Fatalf("unseal err: %s", err)
+	keys, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), WrapHandlerForClustering(handlers[0], logger))
+	for _, key := range keys {
+		if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
 	}
 
 	// Verify unsealed
@@ -688,11 +708,15 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 	TestWaitActive(t, c1)
 
 	if unsealStandbys {
-		if _, err := c2.Unseal(TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
+		for _, key := range keys {
+			if _, err := c2.Unseal(TestKeyCopy(key)); err != nil {
+				t.Fatalf("unseal err: %s", err)
+			}
 		}
-		if _, err := c3.Unseal(TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
+		for _, key := range keys {
+			if _, err := c3.Unseal(TestKeyCopy(key)); err != nil {
+				t.Fatalf("unseal err: %s", err)
+			}
 		}
 
 		// Let them come fully up to standby
@@ -715,35 +739,41 @@ func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unseal
 		}
 	}
 
-	return []*TestClusterCore{
-		&TestClusterCore{
-			Core:        c1,
-			Listeners:   c1lns,
-			Root:        root,
-			Key:         TestKeyCopy(key),
-			CACertBytes: caBytes,
-			CACert:      caCert,
-			TLSConfig:   tlsConfig,
-		},
-		&TestClusterCore{
-			Core:        c2,
-			Listeners:   c2lns,
-			Root:        root,
-			Key:         TestKeyCopy(key),
-			CACertBytes: caBytes,
-			CACert:      caCert,
-			TLSConfig:   tlsConfig,
-		},
-		&TestClusterCore{
-			Core:        c3,
-			Listeners:   c3lns,
-			Root:        root,
-			Key:         TestKeyCopy(key),
-			CACertBytes: caBytes,
-			CACert:      caCert,
-			TLSConfig:   tlsConfig,
-		},
-	}
+	var ret []*TestClusterCore
+	keyCopies, _ := copystructure.Copy(keys)
+	ret = append(ret, &TestClusterCore{
+		Core:        c1,
+		Listeners:   c1lns,
+		Root:        root,
+		BarrierKeys: keyCopies.([][]byte),
+		CACertBytes: caBytes,
+		CACert:      caCert,
+		TLSConfig:   tlsConfig,
+	})
+
+	keyCopies, _ = copystructure.Copy(keys)
+	ret = append(ret, &TestClusterCore{
+		Core:        c2,
+		Listeners:   c2lns,
+		Root:        root,
+		BarrierKeys: keyCopies.([][]byte),
+		CACertBytes: caBytes,
+		CACert:      caCert,
+		TLSConfig:   tlsConfig,
+	})
+
+	keyCopies, _ = copystructure.Copy(keys)
+	ret = append(ret, &TestClusterCore{
+		Core:        c3,
+		Listeners:   c3lns,
+		Root:        root,
+		BarrierKeys: keyCopies.([][]byte),
+		CACertBytes: caBytes,
+		CACert:      caCert,
+		TLSConfig:   tlsConfig,
+	})
+
+	return ret
 }
 
 const (

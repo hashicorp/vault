@@ -180,6 +180,12 @@ func (err *Error) Stack() []byte {
 	return buf.Bytes()
 }
 
+// Callers satisfies the bugsnag ErrorWithCallerS() interface
+// so that the stack can be read out.
+func (err *Error) Callers() []uintptr {
+	return err.stack
+}
+
 // ErrorStack returns a string that contains both the
 // error message and the callstack.
 func (err *Error) ErrorStack() string {
