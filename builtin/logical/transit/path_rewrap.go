@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -155,12 +154,8 @@ func (b *backend) pathRewrapWrite(
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
-		batchResponseJSON, err := jsonutil.EncodeJSON(batchResponseItems)
-		if err != nil {
-			return nil, fmt.Errorf("failed to JSON encode batch response")
-		}
 		resp.Data = map[string]interface{}{
-			"batch_results": string(batchResponseJSON),
+			"batch_results": batchResponseItems,
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {

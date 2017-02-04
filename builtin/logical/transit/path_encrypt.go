@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -265,12 +264,8 @@ func (b *backend) pathEncryptWrite(
 
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
-		batchResponseJSON, err := jsonutil.EncodeJSON(batchResponseItems)
-		if err != nil {
-			return nil, fmt.Errorf("failed to JSON encode batch response")
-		}
 		resp.Data = map[string]interface{}{
-			"batch_results": string(batchResponseJSON),
+			"batch_results": batchResponseItems,
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
