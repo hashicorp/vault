@@ -52,7 +52,7 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) userExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
-	userEntry, err := b.user(req.Storage, data.Get("username").(string))
+	userEntry, err := b.user(req.Storage, data.Get("name").(string))
 	if err != nil {
 		return false, err
 	}
