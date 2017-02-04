@@ -44,9 +44,9 @@ func TestBackend_Config(t *testing.T) {
 	}
 
 	config_data_invalidbool := map[string]interface{}{
-		"host":                "test.radius.hostname.com",
-		"secret":              "test-secret",
-		"allow_unknown_users": "test",
+		"host":                       "test.radius.hostname.com",
+		"secret":                     "test-secret",
+		"unregistered_user_policies": "test",
 	}
 
 	config_data_emptyport := map[string]interface{}{
@@ -109,66 +109,64 @@ func TestBackend_acceptance(t *testing.T) {
 		t.Fatalf("Unable to create backend: %s", err)
 	}
 
-	config_data_acceptance_allowunkn := map[string]interface{}{
-		"host":                os.Getenv("RADIUS_HOST"),
-		"port":                os.Getenv("RADIUS_PORT"),
-		"secret":              os.Getenv("RADIUS_SECRET"),
-		"allow_unknown_users": "true",
+	configDataAcceptanceAllowUnreg := map[string]interface{}{
+		"host":                       os.Getenv("RADIUS_HOST"),
+		"port":                       os.Getenv("RADIUS_PORT"),
+		"secret":                     os.Getenv("RADIUS_SECRET"),
+		"unregistered_user_policies": "policy1,policy2",
+	}
+	if configDataAcceptanceAllowUnreg["port"] == "" {
+		configDataAcceptanceAllowUnreg["port"] = "1812"
 	}
 
-	if config_data_acceptance_allowunkn["port"] == "" {
-		config_data_acceptance_allowunkn["port"] = "1812"
+	configDataAcceptanceNoAllowUnreg := map[string]interface{}{
+		"host":                       os.Getenv("RADIUS_HOST"),
+		"port":                       os.Getenv("RADIUS_PORT"),
+		"secret":                     os.Getenv("RADIUS_SECRET"),
+		"unregistered_user_policies": "",
+	}
+	if configDataAcceptanceNoAllowUnreg["port"] == "" {
+		configDataAcceptanceNoAllowUnreg["port"] = "1812"
 	}
 
-	config_data_acceptance_noallowunkn := map[string]interface{}{
-		"host":                os.Getenv("RADIUS_HOST"),
-		"port":                os.Getenv("RADIUS_PORT"),
-		"secret":              os.Getenv("RADIUS_SECRET"),
-		"allow_unknown_users": "false",
-	}
-
-	data_realpassword := map[string]interface{}{
+	dataRealpassword := map[string]interface{}{
 		"password": os.Getenv("RADIUS_USERPASS"),
 	}
 
-	data_wrongpassword := map[string]interface{}{
+	dataWrongpassword := map[string]interface{}{
 		"password": "wrongpassword",
 	}
 
 	username := os.Getenv("RADIUS_USERNAME")
-
-	if config_data_acceptance_noallowunkn["port"] == "" {
-		config_data_acceptance_noallowunkn["port"] = "1812"
-	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend:        b,
 		PreCheck:       func() { testAccPreCheck(t) },
 		AcceptanceTest: true,
 		Steps: []logicaltest.TestStep{
-			// Login with valid but unknown user will fail because allow_unknown_users is false
-			testConfigWrite(t, config_data_acceptance_noallowunkn, false),
-			testAccUserLogin(t, username, data_realpassword, true),
+			// Login with valid but unknown user will fail because unregistered_user_policies is emtpy
+			testConfigWrite(t, configDataAcceptanceNoAllowUnreg, false),
+			testAccUserLogin(t, username, dataRealpassword, true),
 			// Once the user is registered auth will succeed
 			testStepUpdateUser(t, username, ""),
-			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default"}, false),
+			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default"}, false),
 
 			testStepUpdateUser(t, username, "foopolicy"),
-			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default", "foopolicy"}, false),
+			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default", "foopolicy"}, false),
 			testAccStepDeleteUser(t, username),
 
-			// When using allow_unknown_users, an unknown user will be allowed to authenticate and given the default policy
-			testConfigWrite(t, config_data_acceptance_allowunkn, false),
-			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default"}, false),
+			// When unregistered_user_policies is specified, an unknown user will be granted access and granted the listed policies
+			testConfigWrite(t, configDataAcceptanceAllowUnreg, false),
+			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default", "policy1", "policy2"}, false),
 
 			// More tests
-			testAccUserLogin(t, "nonexistinguser", data_realpassword, true),
-			testAccUserLogin(t, username, data_wrongpassword, true),
+			testAccUserLogin(t, "nonexistinguser", dataRealpassword, true),
+			testAccUserLogin(t, username, dataWrongpassword, true),
 			testStepUpdateUser(t, username, "foopolicy"),
-			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default", "foopolicy"}, false),
+			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default", "foopolicy"}, false),
 			testStepUpdateUser(t, username, "foopolicy, secondpolicy"),
-			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default", "foopolicy", "secondpolicy"}, false),
-			testAccUserLoginPolicy(t, username, data_realpassword, []string{"default", "foopolicy", "secondpolicy", "thirdpolicy"}, true),
+			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default", "foopolicy", "secondpolicy"}, false),
+			testAccUserLoginPolicy(t, username, dataRealpassword, []string{"default", "foopolicy", "secondpolicy", "thirdpolicy"}, true),
 		},
 	})
 }

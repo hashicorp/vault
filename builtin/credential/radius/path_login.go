@@ -142,34 +142,28 @@ func (b *backend) RadiusLogin(req *logical.Request, username string, password st
 		DialTimeout: time.Duration(cfg.DialTimeout) * time.Second,
 		ReadTimeout: time.Duration(cfg.ReadTimeout) * time.Second,
 	}
-
 	received, err := client.Exchange(packet, hostport)
-
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
-
 	if received.Code != radius.CodeAccessAccept {
 		return nil, logical.ErrorResponse("access denied by the authentication server"), nil
 	}
 
-	radiusResponse := &logical.Response{}
-
-	// Retrieve policies
 	var policies []string
+	// Retrieve user entry from storage
 	user, err := b.user(req.Storage, username)
-	if err == nil && user != nil {
-		policies = append(policies, user.Policies...)
+	if user == nil {
+		// No user found, check if unregistered users are allowed (unregistered_user_policies not empty)
+		if len(policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, false)) == 0 {
+			return nil, logical.ErrorResponse("authentication succeeded but user has no associated policies"), nil
+		}
+		policies = policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, true)
+	} else {
+		policies = policyutil.SanitizePolicies(user.Policies, true)
 	}
 
-	// Policies from each group may overlap
-	policies = policyutil.SanitizePolicies(policies, cfg.AllowUnknownUsers)
-
-	if len(policies) == 0 {
-		return nil, logical.ErrorResponse("user has no associated policies"), nil
-	}
-
-	return policies, radiusResponse, nil
+	return policies, &logical.Response{}, nil
 }
 
 const pathLoginSyn = `

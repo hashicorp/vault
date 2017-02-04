@@ -14,37 +14,37 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"host": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "radius host to connect",
+				Description: "RADIUS server host",
 			},
 
 			"port": &framework.FieldSchema{
 				Type:        framework.TypeInt,
 				Default:     1812,
-				Description: "radius port (default: 1812)",
+				Description: "RADIUS server port (default: 1812)",
 			},
 			"secret": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "secret shared with the radius server",
+				Description: "Secret shared with the RADIUS server",
 			},
-			"allow_unknown_users": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: "enable granting default policy upon successful RADIUS authentication (default: false)",
+			"unregistered_user_policies": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "Comma-Separated list of policies to grant upon successful RADIUS aithentication of an unregisted user (default: emtpy)",
 			},
 			"reauth_on_renew": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: "attempt reauthentication with backend before granting token renewal (default: false)",
+				Description: "Attempt reauthentication with backend before granting token renewal (default: false)",
 			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
-				Description: "number of seconds before connect timeouts (default: 10)",
+				Description: "Number of seconds before connect timeouts (default: 10)",
 			},
 			"read_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
-				Description: "number of seconds before response timeouts (default: 10)",
+				Description: "Number of seconds before response timeouts (default: 10)",
 			},
 			"nas_port": &framework.FieldSchema{
 				Type:        framework.TypeInt,
@@ -151,12 +151,21 @@ func (b *backend) pathConfigCreateUpdate(
 		cfg.Secret = d.Get("secret").(string)
 	}
 
-	allowUnknownUsers, ok := d.GetOk("allow_unknown_users")
+	var policies []string
+	var unregisteredUserPoliciesStr string
+	unregisteredUserPoliciesRaw, ok := d.GetOk("unregistered_user_policies")
 	if ok {
-		cfg.AllowUnknownUsers = allowUnknownUsers.(bool)
+		unregisteredUserPoliciesStr = unregisteredUserPoliciesRaw.(string)
 	} else if req.Operation == logical.CreateOperation {
-		cfg.AllowUnknownUsers = d.Get("allow_unknown_users").(bool)
+		unregisteredUserPoliciesStr = d.Get("unregistered_user_policies").(string)
 	}
+	policies = strings.Split(unregisteredUserPoliciesStr, ",")
+	for _, policy := range policies {
+		if policy == "root" {
+			return logical.ErrorResponse("root policy cannot be granted by an authentication backend"), nil
+		}
+	}
+	cfg.UnregisteredUserPolicies = policies
 
 	reauthOnRenew, ok := d.GetOk("reauth_on_renew")
 	if ok {
@@ -198,14 +207,14 @@ func (b *backend) pathConfigCreateUpdate(
 }
 
 type ConfigEntry struct {
-	Host              string `json:"host" structs:"host" mapstructure:"host"`
-	Port              int    `json:"port" structs:"port" mapstructure:"port"`
-	Secret            string `json:"secret" structs:"secret" mapstructure:"secret"`
-	AllowUnknownUsers bool   `json:"allow_unknown_users" structs:"allow_unknown_users" mapstructure:"allow_unknown_users"`
-	ReauthOnRenew     bool   `json:"reauth_on_renew" structs:"reauth_on_renew" mapstructure:"reauth_on_renew"`
-	DialTimeout       int    `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
-	ReadTimeout       int    `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
-	NasPort           int    `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
+	Host                     string   `json:"host" structs:"host" mapstructure:"host"`
+	Port                     int      `json:"port" structs:"port" mapstructure:"port"`
+	Secret                   string   `json:"secret" structs:"secret" mapstructure:"secret"`
+	UnregisteredUserPolicies []string `json:"unregistered_user_policies" structs:"unregistered_user_policies" mapstructure:"unregistered_user_policies"`
+	ReauthOnRenew            bool     `json:"reauth_on_renew" structs:"reauth_on_renew" mapstructure:"reauth_on_renew"`
+	DialTimeout              int      `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
+	ReadTimeout              int      `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
+	NasPort                  int      `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
 }
 
 const pathConfigHelpSyn = `
