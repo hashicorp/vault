@@ -10,7 +10,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	DefaultMount string
+}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	var data struct {
@@ -37,7 +39,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		data.Password = password
 	}
 	if data.Mount == "" {
-		data.Mount = "userpass"
+		data.Mount = h.DefaultMount
 	}
 
 	options := map[string]interface{}{
