@@ -41,11 +41,23 @@ func pathUsers(b *backend) *framework.Path {
 			logical.DeleteOperation: b.pathUserDelete,
 			logical.ReadOperation:   b.pathUserRead,
 			logical.UpdateOperation: b.pathUserWrite,
+			logical.CreateOperation: b.pathUserWrite,
 		},
+
+		ExistenceCheck: b.userExistenceCheck,
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
 	}
+}
+
+func (b *backend) userExistenceCheck(req *logical.Request, data *framework.FieldData) (bool, error) {
+	userEntry, err := b.user(req.Storage, data.Get("username").(string))
+	if err != nil {
+		return false, err
+	}
+
+	return userEntry != nil, nil
 }
 
 func (b *backend) user(s logical.Storage, username string) (*UserEntry, error) {

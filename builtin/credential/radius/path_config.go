@@ -33,7 +33,7 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"reauth_on_renew": &framework.FieldSchema{
 				Type:        framework.TypeBool,
-				Default:     false,
+				Default:     true,
 				Description: "Attempt reauthentication with backend before granting token renewal (default: false)",
 			},
 			"dial_timeout": &framework.FieldSchema{
