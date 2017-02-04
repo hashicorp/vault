@@ -66,7 +66,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 func (h *CLIHandler) Help() string {
 	help := `
-The "userpass" credential provider allows you to authenticate with
+The "userpass"/"radius" credential provider allows you to authenticate with
 a username and password. To use it, specify the "username" and "password"
 parameters. If password is not provided on the command line, it will be
 read from stdin.
