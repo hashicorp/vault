@@ -3,7 +3,6 @@ package transit
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -181,10 +180,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -194,7 +190,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseArray {
+	for _, item := range batchResponseItems {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 		}
@@ -252,10 +248,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -265,7 +258,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseArray {
+	for _, item := range batchResponseItems {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
@@ -307,10 +300,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -320,7 +310,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, responseItem := range batchResponseArray {
+	for _, responseItem := range batchResponseItems {
 		var item BatchResponseItem
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
@@ -365,10 +355,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -378,7 +365,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseArray {
+	for _, item := range batchResponseItems {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",

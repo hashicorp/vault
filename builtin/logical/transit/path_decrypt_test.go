@@ -3,7 +3,6 @@ package transit
 import (
 	"testing"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -34,9 +33,8 @@ func TestTransit_BatchDecryptionCase1(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionInput := resp.Data["batch_results"].(string)
 	batchDecryptionData := map[string]interface{}{
-		"batch_input": batchDecryptionInput,
+		"batch_input": resp.Data["batch_results"],
 	}
 
 	batchDecryptionReq := &logical.Request{
@@ -77,13 +75,9 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionInputItems []BatchRequestItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchDecryptionInputItems); err != nil {
-		t.Fatal(err)
-	}
-
-	batchDecryptionInput := make([]interface{}, len(batchDecryptionInputItems))
-	for i, item := range batchDecryptionInputItems {
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
+	for i, item := range batchResponseItems {
 		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
 	}
 	batchDecryptionData := map[string]interface{}{
@@ -101,14 +95,11 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchDecryptionResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchDecryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	plaintext1 := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 	plaintext2 := "Cg=="
-	for _, item := range batchDecryptionResponseArray {
+	for _, item := range batchDecryptionResponseItems {
 		if item.Plaintext != plaintext1 && item.Plaintext != plaintext2 {
 			t.Fatalf("bad: plaintext: %q", item.Plaintext)
 		}
@@ -157,10 +148,7 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionInputItems []BatchRequestItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchDecryptionInputItems); err != nil {
-		t.Fatal(err)
-	}
+	batchDecryptionInputItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	batchDecryptionInput := make([]interface{}, len(batchDecryptionInputItems))
 	for i, item := range batchDecryptionInputItems {
@@ -182,13 +170,10 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchDecryptionResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchDecryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
-	for _, item := range batchDecryptionResponseArray {
+	for _, item := range batchDecryptionResponseItems {
 		if item.Plaintext != plaintext {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, item.Plaintext)
 		}
