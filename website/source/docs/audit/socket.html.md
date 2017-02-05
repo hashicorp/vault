@@ -67,6 +67,11 @@ Following are the configuration options available for the backend.
             Allows selecting the output format. Valid values are `json` (the
             default) and `jsonx`, which formats the normal log entries as XML.
       </li>
+      <li>
+        <span class="param">write_timeout</span>
+        <span class="param-flags">optional</span>
+            Sets the timeout for writes to the socket. Defaults to "2s" (2 seconds).
+        </li>
     </ul>
   </dd>
 </dl>

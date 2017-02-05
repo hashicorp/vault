@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/logical"
@@ -28,7 +29,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		socketType = "tcp"
 	}
 
-	writeDeadline, ok := conf.Config["write_deadline"]
+	writeDeadline, ok := conf.Config["write_timeout"]
 	if !ok {
 		writeDeadline = "2s"
 	}
@@ -119,13 +120,16 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 	}
 
 	b.Lock()
+	defer b.Unlock()
 
 	b.connection.SetDeadline(time.Now().Add(b.writeDuration))
 	_, err := b.connection.Write(buf.Bytes())
 
-	b.Unlock()
 	if err != nil {
-		b.Reload()
+		rErr := b.reconnect()
+		if rErr != nil {
+			err = multierror.Append(err, rErr)
+		}
 	}
 
 	return err
@@ -139,22 +143,22 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 	}
 
 	b.Lock()
+	defer b.Unlock()
 
 	b.connection.SetDeadline(time.Now().Add(b.writeDuration))
 	_, err := b.connection.Write(buf.Bytes())
 
-	b.Unlock()
 	if err != nil {
-		b.Reload()
+		rErr := b.reconnect()
+		if rErr != nil {
+			err = multierror.Append(err, rErr)
+		}
 	}
 
 	return err
 }
 
-func (b *Backend) Reload() error {
-	b.Lock()
-	defer b.Unlock()
-
+func (b *Backend) reconnect() error {
 	conn, err := net.Dial(b.socketType, b.address)
 	if err != nil {
 		return err
@@ -164,4 +168,13 @@ func (b *Backend) Reload() error {
 	b.connection = conn
 
 	return nil
+}
+
+func (b *Backend) Reload() error {
+	b.Lock()
+	defer b.Unlock()
+
+	err := b.reconnect()
+
+	return err
 }
