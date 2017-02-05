@@ -124,7 +124,7 @@ func main() {
     cmc.CheckManager.API.URL = os.Getenv("CIRCONUS_API_URL")
 
     // Check configuration options
-    cmc.CheckManager.Check.SubmissionURL = os.Getenv("CIRCONUS_SUBMISION_URL")
+    cmc.CheckManager.Check.SubmissionURL = os.Getenv("CIRCONUS_SUBMISSION_URL")
     cmc.CheckManager.Check.ID = os.Getenv("CIRCONUS_CHECK_ID")
     cmc.CheckManager.Check.InstanceID = ""
     cmc.CheckManager.Check.DisplayName = ""

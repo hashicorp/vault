@@ -33,13 +33,13 @@ func (s *IssuesService) ListLabels(owner string, repo string, opt *ListOptions) 
 		return nil, nil, err
 	}
 
-	labels := new([]*Label)
-	resp, err := s.client.Do(req, labels)
+	var labels []*Label
+	resp, err := s.client.Do(req, &labels)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *labels, resp, err
+	return labels, resp, nil
 }
 
 // GetLabel gets a single label.
@@ -126,13 +126,13 @@ func (s *IssuesService) ListLabelsByIssue(owner string, repo string, number int,
 		return nil, nil, err
 	}
 
-	labels := new([]*Label)
-	resp, err := s.client.Do(req, labels)
+	var labels []*Label
+	resp, err := s.client.Do(req, &labels)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *labels, resp, err
+	return labels, resp, nil
 }
 
 // AddLabelsToIssue adds labels to an issue.
@@ -145,13 +145,13 @@ func (s *IssuesService) AddLabelsToIssue(owner string, repo string, number int, 
 		return nil, nil, err
 	}
 
-	l := new([]*Label)
-	resp, err := s.client.Do(req, l)
+	var l []*Label
+	resp, err := s.client.Do(req, &l)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *l, resp, err
+	return l, resp, nil
 }
 
 // RemoveLabelForIssue removes a label for an issue.
@@ -176,13 +176,13 @@ func (s *IssuesService) ReplaceLabelsForIssue(owner string, repo string, number 
 		return nil, nil, err
 	}
 
-	l := new([]*Label)
-	resp, err := s.client.Do(req, l)
+	var l []*Label
+	resp, err := s.client.Do(req, &l)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *l, resp, err
+	return l, resp, nil
 }
 
 // RemoveLabelsForIssue removes all labels for an issue.
@@ -212,11 +212,11 @@ func (s *IssuesService) ListLabelsForMilestone(owner string, repo string, number
 		return nil, nil, err
 	}
 
-	labels := new([]*Label)
-	resp, err := s.client.Do(req, labels)
+	var labels []*Label
+	resp, err := s.client.Do(req, &labels)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *labels, resp, err
+	return labels, resp, nil
 }

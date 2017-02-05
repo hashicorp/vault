@@ -283,6 +283,10 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	// Cache the identifier of the request
 	originalReqID := req.ID
 
+	// Cache the headers and hide them from backends
+	headers := req.Headers
+	req.Headers = nil
+
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo
 	if req.WrapInfo != nil {
@@ -301,6 +305,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		req.Storage = nil
 		req.ClientToken = clientToken
 		req.WrapInfo = wrapInfo
+		req.Headers = headers
 	}()
 
 	// Invoke the backend

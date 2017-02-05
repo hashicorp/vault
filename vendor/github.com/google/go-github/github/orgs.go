@@ -125,13 +125,13 @@ func (s *OrganizationsService) List(user string, opt *ListOptions) ([]*Organizat
 		return nil, nil, err
 	}
 
-	orgs := new([]*Organization)
-	resp, err := s.client.Do(req, orgs)
+	var orgs []*Organization
+	resp, err := s.client.Do(req, &orgs)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *orgs, resp, err
+	return orgs, resp, nil
 }
 
 // Get fetches an organization by name.

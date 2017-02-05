@@ -27,13 +27,13 @@ func (s *UsersService) ListEmails(opt *ListOptions) ([]*UserEmail, *Response, er
 		return nil, nil, err
 	}
 
-	emails := new([]*UserEmail)
-	resp, err := s.client.Do(req, emails)
+	var emails []*UserEmail
+	resp, err := s.client.Do(req, &emails)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *emails, resp, err
+	return emails, resp, nil
 }
 
 // AddEmails adds email addresses of the authenticated user.
@@ -46,13 +46,13 @@ func (s *UsersService) AddEmails(emails []string) ([]*UserEmail, *Response, erro
 		return nil, nil, err
 	}
 
-	e := new([]*UserEmail)
-	resp, err := s.client.Do(req, e)
+	var e []*UserEmail
+	resp, err := s.client.Do(req, &e)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *e, resp, err
+	return e, resp, nil
 }
 
 // DeleteEmails deletes email addresses from authenticated user.

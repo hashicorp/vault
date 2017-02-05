@@ -23,6 +23,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"audit/*",
 		"raw/*",
 		"rotate",
+		"config/auditing/*",
 	}
 
 	b := testSystemBackend(t)

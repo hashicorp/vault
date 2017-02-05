@@ -126,7 +126,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 		cm.Debug = cfg.Debug
 		cm.Log = cfg.Log
 
-		if cm.Debug && cfg.Log == nil {
+		if cm.Debug && cm.Log == nil {
 			cm.Log = log.New(os.Stderr, "", log.LstdFlags)
 		}
 		if cm.Log == nil {
@@ -217,6 +217,11 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 // Start deprecated NOP, automatic flush is started in New if flush interval > 0.
 func (m *CirconusMetrics) Start() {
 	return
+}
+
+// Ready returns true or false indicating if the check is ready to accept metrics
+func (m *CirconusMetrics) Ready() bool {
+	return m.check.IsReady()
 }
 
 // Flush metrics kicks off the process of sending metrics to Circonus

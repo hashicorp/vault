@@ -102,7 +102,7 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	}
 
 	// Create an audit trail of the response
-	if auditErr := c.auditBroker.LogResponse(auth, req, auditResp, err); auditErr != nil {
+	if auditErr := c.auditBroker.LogResponse(auth, req, auditResp, c.auditedHeaders, err); auditErr != nil {
 		c.logger.Error("core: failed to audit response", "request_path", req.Path, "error", auditErr)
 		return nil, ErrInternalError
 	}
@@ -162,7 +162,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			errType = logical.ErrInvalidRequest
 		}
 
-		if err := c.auditBroker.LogRequest(auth, req, ctErr); err != nil {
+		if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, ctErr); err != nil {
 			c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		}
 
@@ -176,7 +176,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	req.DisplayName = auth.DisplayName
 
 	// Create an audit trail of the request
-	if err := c.auditBroker.LogRequest(auth, req, nil); err != nil {
+	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, ErrInternalError)
 		return nil, auth, retErr
@@ -317,7 +317,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
 
 	// Create an audit trail of the request, auth is not available on login requests
-	if err := c.auditBroker.LogRequest(nil, req, nil); err != nil {
+	if err := c.auditBroker.LogRequest(nil, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "path", req.Path, "error", err)
 		return nil, nil, ErrInternalError
 	}

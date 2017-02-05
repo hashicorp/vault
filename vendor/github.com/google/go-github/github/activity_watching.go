@@ -37,13 +37,13 @@ func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]
 		return nil, nil, err
 	}
 
-	watchers := new([]*User)
-	resp, err := s.client.Do(req, watchers)
+	var watchers []*User
+	resp, err := s.client.Do(req, &watchers)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *watchers, resp, err
+	return watchers, resp, nil
 }
 
 // ListWatched lists the repositories the specified user is watching.  Passing
@@ -67,13 +67,13 @@ func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]*Reposit
 		return nil, nil, err
 	}
 
-	watched := new([]*Repository)
-	resp, err := s.client.Do(req, watched)
+	var watched []*Repository
+	resp, err := s.client.Do(req, &watched)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *watched, resp, err
+	return watched, resp, nil
 }
 
 // GetRepositorySubscription returns the subscription for the specified

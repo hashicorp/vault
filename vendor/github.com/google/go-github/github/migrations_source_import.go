@@ -230,13 +230,13 @@ func (s *MigrationService) CommitAuthors(owner, repo string) ([]*SourceImportAut
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeImportPreview)
 
-	authors := new([]*SourceImportAuthor)
-	resp, err := s.client.Do(req, authors)
+	var authors []*SourceImportAuthor
+	resp, err := s.client.Do(req, &authors)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *authors, resp, err
+	return authors, resp, nil
 }
 
 // MapCommitAuthor updates an author's identity for the import. Your
@@ -300,13 +300,13 @@ func (s *MigrationService) LargeFiles(owner, repo string) ([]*LargeFile, *Respon
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeImportPreview)
 
-	files := new([]*LargeFile)
-	resp, err := s.client.Do(req, files)
+	var files []*LargeFile
+	resp, err := s.client.Do(req, &files)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *files, resp, err
+	return files, resp, nil
 }
 
 // CancelImport stops an import for a repository.

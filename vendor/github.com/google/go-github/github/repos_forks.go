@@ -32,13 +32,13 @@ func (s *RepositoriesService) ListForks(owner, repo string, opt *RepositoryListF
 		return nil, nil, err
 	}
 
-	repos := new([]*Repository)
-	resp, err := s.client.Do(req, repos)
+	var repos []*Repository
+	resp, err := s.client.Do(req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *repos, resp, err
+	return repos, resp, nil
 }
 
 // RepositoryCreateForkOptions specifies the optional parameters to the

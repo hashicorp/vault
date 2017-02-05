@@ -12,9 +12,18 @@ FEATURES:
    value is returned on a key policy read and cannot be changed, so if a key is
    marked `exportable` it will always be exportable, and if it is not it will
    never be exportable.
+ * **Batch Transit Operations**: `encrypt`, `decrypt` and `rewrap` operations
+   in the transit backend now support processing multiple input items in one
+   call, returning the output of each item in the response.
+ * **Configurable Audited HTTP Headers**: You can now specify headers that you
+   want to have included in each audit entry, along with whether each header
+   should be HMAC'd or kept plaintext. This can be useful for adding additional
+   client or network metadata to the audit logs.
 
 IMPROVEMENTS:
 
+ * auth/aws-ec2: Add support for cross-account auth using STS [GH-2148]
+ * auth/aws-ec2: Support issuing periodic tokens [GH-2324]
  * auth/github: Support listing teams and users [GH-2261]
  * auth/ldap: Support adding policies to local users directly, in addition to
    local groups [GH-2152]
@@ -30,7 +39,6 @@ IMPROVEMENTS:
    more stable. [GH-2168]
  * secret/pki: Allow specifying OU entries in generated certificate subjects
    [GH-2251]
- * secret/transit: Support exportable keys [GH-2133]
 
 BUG FIXES:
 
@@ -38,6 +46,8 @@ BUG FIXES:
    blacklist (with only `disallowed_policies` set) would not work in most
    circumstances [GH-2286]
  * physical/s3: Page responses in client so list doesn't truncate [GH-2224]
+ * secret/cassandra: Stop a connection leak that could occur on active node
+   failover [GH-2313]
  * secret/pki: When using `sign-verbatim`, don't require a role and use the
    CSR's common name [GH-2243]
 

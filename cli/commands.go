@@ -109,7 +109,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 				Meta: *metaPtr,
 				Handlers: map[string]command.AuthHandler{
 					"github":   &credGitHub.CLIHandler{},
-					"userpass": &credUserpass.CLIHandler{},
+					"userpass": &credUserpass.CLIHandler{DefaultMount: "userpass"},
 					"ldap":     &credLdap.CLIHandler{},
 					"okta":     &credOkta.CLIHandler{},
 					"cert":     &credCert.CLIHandler{},

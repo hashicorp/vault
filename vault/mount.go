@@ -256,6 +256,12 @@ func (c *Core) unmount(path string) (bool, error) {
 		return true, err
 	}
 
+	// Call cleanup function if it exists
+	b, ok := c.router.root.Get(path)
+	if ok {
+		b.(*routeEntry).backend.Cleanup()
+	}
+
 	// Unmount the backend entirely
 	if err := c.router.Unmount(path); err != nil {
 		return true, err
@@ -271,7 +277,7 @@ func (c *Core) unmount(path string) (bool, error) {
 		return true, err
 	}
 	if c.logger.IsInfo() {
-		c.logger.Info("core: successful unmounted", "path", path)
+		c.logger.Info("core: successfully unmounted", "path", path)
 	}
 	return true, nil
 }
