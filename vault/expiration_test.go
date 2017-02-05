@@ -14,9 +14,63 @@ import (
 )
 
 // mockExpiration returns a mock expiration manager
-func mockExpiration(t *testing.T) *ExpirationManager {
+func mockExpiration(t testing.TB) *ExpirationManager {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 	return ts.expiration
+}
+
+func BenchmarkExpiration_Restore(b *testing.B) {
+	exp := mockExpiration(b)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(b)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		b.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+
+	for i := 0; i < 10000; i++ {
+		pathUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "/prod/aws/" + pathUUID,
+		}
+		resp := &logical.Response{
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 200 * time.Second,
+				},
+			},
+			Data: map[string]interface{}{
+				"access_key": "xyz",
+				"secret_key": "abcd",
+			},
+		}
+		_, err = exp.Register(req, resp)
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
+
+	// Stop everything
+	err = exp.Stop()
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = exp.Restore()
+		// Restore
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
 }
 
 func TestExpiration_Restore(t *testing.T) {

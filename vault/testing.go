@@ -67,19 +67,19 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
-func TestCore(t *testing.T) *Core {
+func TestCore(t testing.TB) *Core {
 	return TestCoreWithSeal(t, nil)
 }
 
 // TestCoreNewSeal returns an in-memory, ininitialized core with the new seal
 // configuration.
-func TestCoreNewSeal(t *testing.T) *Core {
+func TestCoreNewSeal(t testing.TB) *Core {
 	return TestCoreWithSeal(t, &TestSeal{})
 }
 
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
-func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
+func TestCoreWithSeal(t testing.TB, testSeal Seal) *Core {
 	noopAudits := map[string]audit.Factory{
 		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -143,11 +143,11 @@ func TestCoreWithSeal(t *testing.T, testSeal Seal) *Core {
 
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
-func TestCoreInit(t *testing.T, core *Core) ([][]byte, string) {
+func TestCoreInit(t testing.TB, core *Core) ([][]byte, string) {
 	return TestCoreInitClusterWrapperSetup(t, core, nil, func() (http.Handler, http.Handler) { return nil, nil })
 }
 
-func TestCoreInitClusterWrapperSetup(t *testing.T, core *Core, clusterAddrs []*net.TCPAddr, handlerSetupFunc func() (http.Handler, http.Handler)) ([][]byte, string) {
+func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, clusterAddrs []*net.TCPAddr, handlerSetupFunc func() (http.Handler, http.Handler)) ([][]byte, string) {
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterSetupFuncs(handlerSetupFunc)
 	result, err := core.Initialize(&InitParams{
@@ -170,7 +170,7 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
-func TestCoreUnsealed(t *testing.T) (*Core, [][]byte, string) {
+func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
 	core := TestCore(t)
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
@@ -192,7 +192,7 @@ func TestCoreUnsealed(t *testing.T) (*Core, [][]byte, string) {
 
 // TestCoreWithTokenStore returns an in-memory core that has a token store
 // mounted, so that logical token functions can be used
-func TestCoreWithTokenStore(t *testing.T) (*Core, *TokenStore, [][]byte, string) {
+func TestCoreWithTokenStore(t testing.TB) (*Core, *TokenStore, [][]byte, string) {
 	c, keys, root := TestCoreUnsealed(t)
 
 	me := &MountEntry{
@@ -420,7 +420,7 @@ func GenerateRandBytes(length int) ([]byte, error) {
 	return buf, nil
 }
 
-func TestWaitActive(t *testing.T, core *Core) {
+func TestWaitActive(t testing.TB, core *Core) {
 	start := time.Now()
 	var standby bool
 	var err error
@@ -463,7 +463,7 @@ func (t *TestClusterCore) CloseListeners() {
 	time.Sleep(time.Second)
 }
 
-func TestCluster(t *testing.T, handlers []http.Handler, base *CoreConfig, unsealStandbys bool) []*TestClusterCore {
+func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unsealStandbys bool) []*TestClusterCore {
 	if handlers == nil || len(handlers) != 3 {
 		t.Fatal("handlers must be size 3")
 	}
