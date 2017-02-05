@@ -693,8 +693,8 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
-// corsStatus returns the current CORS configuration as a logical.Response
-func (b *SystemBackend) corsStatusResponse() (*logical.Response, error) {
+// handleCORSRead returns the current CORS configuration
+func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	corsConf := b.Core.corsConfig.Get()
 	if corsConf == nil {
 		return nil, errCORSNotConfigured
@@ -734,6 +734,17 @@ func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.Fiel
 	return nil, nil
 }
 
+// handleCORSDelete clears the allowed origins and sets the CORS enabled flag to false
+func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.CORSConfig().Disable()
+
+	if err := b.Core.configStore.DeleteConfig("cors"); err != nil {
+		return handleError(err)
+	}
+
+	return nil, nil
+}
+
 // handleAuditedHeaderUpdate creates or overwrites a header entry
 func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	header := d.Get("header").(string)
@@ -765,22 +776,6 @@ func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *frame
 	}
 
 	return nil, nil
-}
-
-// handleCORSDelete clears the allowed origins and sets the CORS enabled flag to false
-func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.Core.CORSConfig().Disable()
-
-	if err := b.Core.configStore.DeleteConfig("cors"); err != nil {
-		return handleError(err)
-	}
-
-	return nil, nil
-}
-
-// handleCORSRead returns the current CORS configuration
-func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	return b.corsStatusResponse()
 }
 
 // handleAuditedHeaderRead returns the header configuration for the given header name
