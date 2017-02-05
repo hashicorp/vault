@@ -31,11 +31,6 @@ func pathConfig(b *backend) *framework.Path {
 				Default:     "",
 				Description: "Comma-Separated list of policies to grant upon successful RADIUS aithentication of an unregisted user (default: emtpy)",
 			},
-			"reauth_on_renew": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: "Attempt reauthentication with backend before granting token renewal (default: false)",
-			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
@@ -167,13 +162,6 @@ func (b *backend) pathConfigCreateUpdate(
 	}
 	cfg.UnregisteredUserPolicies = policies
 
-	reauthOnRenew, ok := d.GetOk("reauth_on_renew")
-	if ok {
-		cfg.ReauthOnRenew = reauthOnRenew.(bool)
-	} else if req.Operation == logical.CreateOperation {
-		cfg.ReauthOnRenew = d.Get("reauth_on_renew").(bool)
-	}
-
 	dialTimeout, ok := d.GetOk("dial_timeout")
 	if ok {
 		cfg.DialTimeout = dialTimeout.(int)
@@ -211,7 +199,6 @@ type ConfigEntry struct {
 	Port                     int      `json:"port" structs:"port" mapstructure:"port"`
 	Secret                   string   `json:"secret" structs:"secret" mapstructure:"secret"`
 	UnregisteredUserPolicies []string `json:"unregistered_user_policies" structs:"unregistered_user_policies" mapstructure:"unregistered_user_policies"`
-	ReauthOnRenew            bool     `json:"reauth_on_renew" structs:"reauth_on_renew" mapstructure:"reauth_on_renew"`
 	DialTimeout              int      `json:"dial_timeout" structs:"dial_timeout" mapstructure:"dial_timeout"`
 	ReadTimeout              int      `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
 	NasPort                  int      `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`

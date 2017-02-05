@@ -97,7 +97,6 @@ Configuration is written to `auth/radius/config`.
 * `dial_timeout` (int, optional) - Number of second to wait for a backend connection before timing out. Default is 10
 * `read_timeout` (int, optional) - Number of second to wait for a backend response before timing out. Default is 10
 * `nas_port` (int, optional) - The NAS-Port attribute of the RADIUS request. Default is 10
-* `reauth_on_renew` (bool, optional) - If true, vault will attempt to re authenticate to RADIUS using the last used user credentials on token renewal. Default is true
 
 
 To use the "radius" auth backend, an operator must configure a
