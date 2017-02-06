@@ -8,7 +8,7 @@ description: |-
 
 # Audit Backend: Socket
 
-The `socket` audit backend writes to a TCP or UDP socket.
+The `socket` audit backend writes to a TCP, UDP, or UNIX socket.
 
 ## Format
 
@@ -42,7 +42,7 @@ Following are the configuration options available for the backend.
       <li>
         <span class="param">address</span>
         <span class="param-flags">required</span>
-            The socket server address to use. Example `127.0.0.1:9090`.
+            The socket server address to use. Example `127.0.0.1:9090` or `/tmp/audit.sock`.
       </li>
       <li>
         <span class="param">socket_type</span>
