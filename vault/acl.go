@@ -47,25 +47,52 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
-				tree.Insert(pc.Prefix, pc.CapabilitiesBitmap)
+				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			existing := raw.(uint32)
+			permissions := raw.(Permissions)
+			existing := permissions.CapabilitiesBitmap
 
 			switch {
 			case existing&DenyCapabilityInt > 0:
 				// If we are explicitly denied in the existing capability set,
 				// don't save anything else
 
-			case pc.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			case pc.Permissions.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If this new policy explicitly denies, only save the deny value
-				tree.Insert(pc.Prefix, DenyCapabilityInt)
+				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
+				tree.Insert(pc.Prefix, pc.Permissions)
 
 			default:
 				// Insert the capabilities in this new policy into the existing
 				// value
-				tree.Insert(pc.Prefix, existing|pc.CapabilitiesBitmap)
+				pc.Permissions.CapabilitiesBitmap = existing | pc.Permissions.CapabilitiesBitmap
+				tree.Insert(pc.Prefix, pc.Permissions)
 			}
+
+			// look for a * in allowed parameters
+
+			// Merge allowed parameters
+			for key, _ := range permissions.AllowedParameters {
+				// Add new parameter
+				if _, ok := pc.Permissions.AllowedParameters[key]; !ok {
+					pc.Permissions.AllowedParameters[key] = permissions.AllowedParameters[key]
+					continue
+				}
+			}
+
+			// Merge disallowed parameters
+			for key, _ := range permissions.DeniedParameters {
+				// Add new parameter
+				if _, ok := pc.Permissions.DeniedParameters[key]; !ok {
+					pc.Permissions.DeniedParameters[key] = permissions.DeniedParameters[key]
+					continue
+				}
+
+			}
+
+			tree.Insert(pc.Prefix, pc.Permissions)
+
 		}
 	}
 	return a, nil
@@ -80,8 +107,10 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
+
 	if ok {
-		capabilities = raw.(uint32)
+		perm := raw.(Permissions)
+		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -90,7 +119,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		capabilities = raw.(uint32)
+		perm := raw.(Permissions)
+		capabilities = perm.CapabilitiesBitmap
 	}
 
 CHECK:
@@ -124,11 +154,20 @@ CHECK:
 // AllowOperation is used to check if the given operation is permitted. The
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
-func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool) {
+
+// change arguments to hold a full request that holds the operation, path, and parameter
+// that is to be modified.
+func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
 	// Fast-path root
 	if a.root {
 		return true, true
 	}
+
+	///////////////////////////////////////////////////////////////////////////////////
+	// Parse Request and set variables to check on
+	///////////////////////////////////////////////////////////////////////////////////
+	op := req.Operation
+	path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
@@ -156,24 +195,35 @@ CHECK:
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
 	sudo = capabilities&SudoCapabilityInt > 0
+	operationAllowed := false
 	switch op {
 	case logical.ReadOperation:
-		allowed = capabilities&ReadCapabilityInt > 0
+		operationAllowed = capabilities&ReadCapabilityInt > 0
 	case logical.ListOperation:
-		allowed = capabilities&ListCapabilityInt > 0
+		operationAllowed = capabilities&ListCapabilityInt > 0
 	case logical.UpdateOperation:
-		allowed = capabilities&UpdateCapabilityInt > 0
+		operationAllowed = capabilities&UpdateCapabilityInt > 0
 	case logical.DeleteOperation:
-		allowed = capabilities&DeleteCapabilityInt > 0
+		operationAllowed = capabilities&DeleteCapabilityInt > 0
 	case logical.CreateOperation:
-		allowed = capabilities&CreateCapabilityInt > 0
+		operationAllowed = capabilities&CreateCapabilityInt > 0
 
 	// These three re-use UpdateCapabilityInt since that's the most appropriate capability/operation mapping
 	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
-		allowed = capabilities&UpdateCapabilityInt > 0
+		operationAllowed = capabilities&UpdateCapabilityInt > 0
 
 	default:
 		return false, false
 	}
+
+	if !operationAllowed {
+		return false, sudo
+	}
+	//check whether parameter change is allowed
+	if op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.DeleteOperation {
+	}
+
+	//if raw.AllowOperation[param_trying_to_be_set]
+
 	return
 }
