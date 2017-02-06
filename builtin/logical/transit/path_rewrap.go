@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/mitchellh/mapstructure"
 )
 
 func (b *backend) pathRewrap() *framework.Path {
@@ -33,27 +33,6 @@ func (b *backend) pathRewrap() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Nonce for when convergent encryption is used",
 			},
-
-			"batch_input": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `
-Base64 encoded list of items to be rewrapped in a single batch. When this
-parameter is set, if the parameters 'ciphertext', 'context' and 'nonce' are
-also set, they will be ignored. JSON format for the input (which should be
-bae64 encoded) goes like this:
-
-[
-  {
-    "context": "c2FtcGxlY29udGV4dA==",
-    "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
-  },
-  {
-    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
-    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
-  },
-  ...
-]`,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -67,18 +46,13 @@ bae64 encoded) goes like this:
 
 func (b *backend) pathRewrapWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	batchInputRaw := d.Get("batch_input").(string)
+	batchInputRaw := d.Raw["batch_input"]
 	var batchInputItems []BatchRequestItem
-	var batchInput []byte
 	var err error
-	if len(batchInputRaw) != 0 {
-		batchInput, err = base64.StdEncoding.DecodeString(batchInputRaw)
+	if batchInputRaw != nil {
+		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode batch input"), logical.ErrInvalidRequest
-		}
-
-		if err := jsonutil.DecodeJSON([]byte(batchInput), &batchInputItems); err != nil {
-			return nil, fmt.Errorf("invalid input: %v", err)
+			return nil, fmt.Errorf("failed to parse batch input: %v", err)
 		}
 
 		if len(batchInputItems) == 0 {
@@ -93,24 +67,8 @@ func (b *backend) pathRewrapWrite(
 		batchInputItems = make([]BatchRequestItem, 1)
 		batchInputItems[0] = BatchRequestItem{
 			Ciphertext: ciphertext,
-		}
-
-		// Decode the context
-		contextRaw := d.Get("context").(string)
-		if len(contextRaw) != 0 {
-			batchInputItems[0].Context, err = base64.StdEncoding.DecodeString(contextRaw)
-			if err != nil {
-				return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
-			}
-		}
-
-		// Decode the nonce
-		nonceRaw := d.Get("nonce").(string)
-		if len(nonceRaw) != 0 {
-			batchInputItems[0].Nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
-			if err != nil {
-				return logical.ErrorResponse("failed to base64-decode nonce"), logical.ErrInvalidRequest
-			}
+			Context:    d.Get("context").(string),
+			Nonce:      d.Get("nonce").(string),
 		}
 	}
 
@@ -125,6 +83,24 @@ func (b *backend) pathRewrapWrite(
 		if item.Ciphertext == "" {
 			batchResponseItems[i].Error = "missing ciphertext to decrypt"
 			continue
+		}
+
+		// Decode the context
+		if len(item.Context) != 0 {
+			batchInputItems[i].DecodedContext, err = base64.StdEncoding.DecodeString(item.Context)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+		}
+
+		// Decode the nonce
+		if len(item.Nonce) != 0 {
+			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
 		}
 	}
 
@@ -145,7 +121,7 @@ func (b *backend) pathRewrapWrite(
 			continue
 		}
 
-		plaintext, err := p.Decrypt(item.Context, item.Nonce, item.Ciphertext)
+		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -156,7 +132,7 @@ func (b *backend) pathRewrapWrite(
 			}
 		}
 
-		ciphertext, err := p.Encrypt(item.Context, item.Nonce, plaintext)
+		ciphertext, err := p.Encrypt(item.DecodedContext, item.DecodedNonce, plaintext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -177,13 +153,9 @@ func (b *backend) pathRewrapWrite(
 	}
 
 	resp := &logical.Response{}
-	if len(batchInputRaw) != 0 {
-		batchResponseJSON, err := jsonutil.EncodeJSON(batchResponseItems)
-		if err != nil {
-			return nil, fmt.Errorf("failed to JSON encode batch response")
-		}
+	if batchInputRaw != nil {
 		resp.Data = map[string]interface{}{
-			"batch_results": string(batchResponseJSON),
+			"batch_results": batchResponseItems,
 		}
 	} else {
 		if batchResponseItems[0].Error != "" {
