@@ -244,11 +244,11 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 	if initRequest.StoredShares < 1 {
 		c.Ui.Output(fmt.Sprintf(
 			"\n"+
-				"Vault initialized with %d keys and a key threshold of %d. Please\n"+
-				"securely distribute the above keys. When the Vault is re-sealed,\n"+
-				"restarted, or stopped, you must provide at least %d of these keys\n"+
+			"Vault initialized with %d key(s) and a key threshold of %d. Please\n"+
+			"securely distribute the above key(s). When the Vault is re-sealed,\n"+
+			"restarted, or stopped, you must provide at least %d of these key(s)\n"+
 				"to unseal it again.\n\n"+
-				"Vault does not store the master key. Without at least %d keys,\n"+
+			"Vault does not store the master key. Without at least %d key(s),\n"+
 				"your Vault will remain permanently sealed.",
 			initRequest.SecretShares,
 			initRequest.SecretThreshold,
