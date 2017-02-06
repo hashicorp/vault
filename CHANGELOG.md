@@ -18,7 +18,10 @@ FEATURES:
  * **Configurable Audited HTTP Headers**: You can now specify headers that you
    want to have included in each audit entry, along with whether each header
    should be HMAC'd or kept plaintext. This can be useful for adding additional
-   client or network metadata to the audit logs.
+   client or network metadata to the audit logs. 
+ * **Transit Backend UI (Enterprise)**: Vault Enterprise UI now supports the transit
+   backend, allowing creation, viewing and editing of named keys as well as using
+   those keys to perform supported transit operations directly in the UI.
 
 IMPROVEMENTS:
 
@@ -39,6 +42,9 @@ IMPROVEMENTS:
    more stable. [GH-2168]
  * secret/pki: Allow specifying OU entries in generated certificate subjects
    [GH-2251]
+ * secret mount ui (Enterprise): the secret mount list now shows all mounted
+   backends even if the UI cannot browse them. Additional backends can now be
+   mounted from the UI as well.
 
 BUG FIXES:
 
