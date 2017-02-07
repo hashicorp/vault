@@ -242,18 +242,26 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 	c.Ui.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))
 
 	if initRequest.StoredShares < 1 {
+		keyMsg := "key"
+		unsealMsg := "this key"
+		if initRequest.SecretShares > 1 {
+			keyMsg = "keys"
+			unsealMsg = fmt.Sprintf("at least %d of these keys",initRequest.SecretThreshold)
+		}
 		c.Ui.Output(fmt.Sprintf(
 			"\n"+
-			"Vault initialized with %d key(s) and a key threshold of %d. Please\n"+
-			"securely distribute the above key(s). When the Vault is re-sealed,\n"+
-			"restarted, or stopped, you must provide at least %d of these key(s)\n"+
+			"Vault initialized with %d %s and a key threshold of %d. Please\n"+
+			"securely distribute the above %s. When the Vault is re-sealed,\n"+
+			"restarted, or stopped, you must provide %s\n"+
 				"to unseal it again.\n\n"+
-			"Vault does not store the master key. Without at least %d key(s),\n"+
+			"Vault does not store the master key. Without %s,\n"+
 				"your Vault will remain permanently sealed.",
 			initRequest.SecretShares,
+			keyMsg,
 			initRequest.SecretThreshold,
-			initRequest.SecretThreshold,
-			initRequest.SecretThreshold,
+			keyMsg,
+			unsealMsg,
+			unsealMsg,
 		))
 	} else {
 		c.Ui.Output(
