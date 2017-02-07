@@ -704,8 +704,7 @@ func testTokenStore_RevokeTree_Impl(t testing.TB, depth uint64) {
 }
 
 func BenchmarkTokenStore_RevokeTree(b *testing.B) {
-	//benchmarks := []uint64{0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024}
-	benchmarks := []uint64{20}
+	benchmarks := []uint64{0, 1, 2, 4, 8, 16, 20}
 	for _, depth := range benchmarks {
 		b.Run(fmt.Sprintf("Tree of Depth %d", depth), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
