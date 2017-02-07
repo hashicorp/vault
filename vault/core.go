@@ -235,9 +235,6 @@ type Core struct {
 	// policy store is used to manage named ACL policies
 	policyStore *PolicyStore
 
-	// config store is used to manage API-managable configs
-	configStore *ConfigStore
-
 	// token store is used to manage authentication tokens
 	tokenStore *TokenStore
 
@@ -436,7 +433,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		corsConfig:                       &CORSConfig{mutex: &sync.RWMutex{}},
+		corsConfig:                       &CORSConfig{},
 	}
 
 	// Wrap the backend in a cache unless disabled
@@ -1216,7 +1213,7 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupPolicyStore(); err != nil {
 		return err
 	}
-	if err := c.setupConfigStore(); err != nil {
+	if err := c.loadCORSConfig(); err != nil {
 		return err
 	}
 	if err := c.loadCredentials(); err != nil {
@@ -1281,7 +1278,7 @@ func (c *Core) preSeal() error {
 	if err := c.teardownPolicyStore(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down policy store: {{err}}", err))
 	}
-	if err := c.teardownConfigStore(); err != nil {
+	if err := c.saveCORSConfig(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down config store: {{err}}", err))
 	}
 	if err := c.stopRollback(); err != nil {
