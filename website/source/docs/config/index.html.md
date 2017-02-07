@@ -446,6 +446,15 @@ Unseal Progress: 0
 
 #### Backend Reference: etcd (Community-Supported)
 
+The etcd physical backend supports both v2 and v3 APIs. To explicitly specify
+the API version, use the `etcd_api` configuration parameter. The default
+version is auto-detected based on the version of the etcd cluster. If the
+cluster version is 3.1+ and there has been no data written using the v2 API,
+the auto-detected default is v3.
+
+The v2 API has known issues with HA support and should not be used in HA
+scenarios.
+
 For etcd, the following options are supported:
 
   * `path` (optional) - The path within etcd where data will be stored.
@@ -455,6 +464,9 @@ For etcd, the following options are supported:
     Can be comma separated list (protocol://host:port) of many etcd instances.
     Defaults to "http://localhost:2379" if not specified. May also be specified
     via the ETCD_ADDR environment variable.
+
+  * `etcd_api` (optional) - Set to `"v2"` or `"v3"` to explicitly set the API
+    version that the backend will use.
 
   * `sync` (optional) - Should we synchronize the list of available etcd
     servers on startup?  This is a **string** value to allow for auto-sync to
