@@ -10,6 +10,8 @@ description: |-
 
 The `socket` audit backend writes to a TCP, UDP, or UNIX socket.
 
+~> **Warning:** Due to the nature of the underlying protocols used in this backend there exists a case when the connection to a socket is lost a single audit entry could be omitted from the logs and the request will still succeed. Using this backend in conjunction with another audit backend will help to improve accuracy, but the socket backend should not be used if strong guarantees are needed for audit logs.
+
 ## Format
 
 Each line in the audit log is a JSON object. The `type` field specifies what type of
