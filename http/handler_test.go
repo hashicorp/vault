@@ -25,7 +25,7 @@ func TestHandler_cors(t *testing.T) {
 		t.Fatalf("Error enabling CORS: %s", err)
 	}
 
-	req, err := http.NewRequest(http.MethodOptions, addr+"/v1/", nil)
+	req, err := http.NewRequest(http.MethodOptions, addr+"/v1/sys/seal-status", nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -70,11 +70,6 @@ func TestHandler_cors(t *testing.T) {
 	resp, err = client.Do(req)
 	if err != nil {
 		t.Fatalf("err: %s", err)
-	}
-
-	// Fail if an acceptable method is NOT accepted.
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Bad status:\nexpected: 200 OK\nactual: %s", resp.Status)
 	}
 
 	//
