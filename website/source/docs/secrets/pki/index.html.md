@@ -409,7 +409,7 @@ subpath for interactive help output.
   <dd>
 
     ```
-    <binary DER-encoded certficiate>
+    <binary DER-encoded certificate>
     ```
 
   </dd>
@@ -441,7 +441,7 @@ subpath for interactive help output.
   <dd>
 
     ```
-    <PEM-encoded certficiate chain>
+    <PEM-encoded certificate chain>
     ```
 
   </dd>
@@ -1227,7 +1227,7 @@ subpath for interactive help output.
         <span class="param">ou</span>
         <span class="param-flags">optional</span>
         This sets the OU (OrganizationalUnit) values in the subject field of
-        issued certiicates. This is a comma-separated string.
+        issued certificates. This is a comma-separated string.
       </li>
     </ul>
   </dd>

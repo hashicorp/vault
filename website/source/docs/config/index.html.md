@@ -379,7 +379,7 @@ backend "consul" {
   scheme = "http"
 
   // token is a Consul ACL Token that has write privileges to the path
-  // specified below.  Use of a Consul ACL Token is a best pracitce.
+  // specified below.  Use of a Consul ACL Token is a best practice.
   token = "[redacted]" // Vault's Consul ACL Token
 
   // path must be writable by the Consul ACL Token

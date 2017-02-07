@@ -112,7 +112,7 @@ that are truncated to form the display name portion of the mysql username
 interpolated into the `{{name}}` field: the default is 10. 
 
 You may also configure the total number of characters allowed in the entire
-generated username (the sum of the display name and uuid poritions); the
+generated username (the sum of the display name and uuid portions); the
 default is 16. Note that versions of MySQL prior to 5.8 have a 16 character
 total limit on user names, so it is probably not safe to increase this above
 the default on versions prior to that.
