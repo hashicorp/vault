@@ -16,11 +16,16 @@ import (
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `login/(?P<username>.+)`,
+		Pattern: "login" + framework.OptionalParamRegex("urlusername"),
 		Fields: map[string]*framework.FieldSchema{
+			"urlusername": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Username to be used for login. (URL parameter)",
+			},
+
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Username to be used for login.",
+				Description: "Username to be used for login. (POST request body)",
 			},
 
 			"password": &framework.FieldSchema{
@@ -44,7 +49,10 @@ func (b *backend) pathLogin(
 	password := d.Get("password").(string)
 
 	if username == "" {
-		return logical.ErrorResponse("username cannot be emtpy"), nil
+		username = d.Get("urlusername").(string)
+		if username == "" {
+			return logical.ErrorResponse("username cannot be emtpy"), nil
+		}
 	}
 
 	if password == "" {

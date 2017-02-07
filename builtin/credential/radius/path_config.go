@@ -10,7 +10,7 @@ import (
 
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `config`,
+		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
 			"host": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -29,7 +29,7 @@ func pathConfig(b *backend) *framework.Path {
 			"unregistered_user_policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Comma-Separated list of policies to grant upon successful RADIUS aithentication of an unregisted user (default: emtpy)",
+				Description: "Comma-Separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: emtpy)",
 			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
@@ -82,7 +82,6 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 	}
 
 	if storedConfig == nil {
-		// No user overrides, return default configuration
 		return nil, nil
 	}
 
@@ -131,6 +130,9 @@ func (b *backend) pathConfigCreateUpdate(
 	} else if req.Operation == logical.CreateOperation {
 		cfg.Host = strings.ToLower(d.Get("host").(string))
 	}
+	if cfg.Host == "" {
+		return logical.ErrorResponse("config parameter `host` cannot be empty"), nil
+	}
 
 	port, ok := d.GetOk("port")
 	if ok {
@@ -145,22 +147,26 @@ func (b *backend) pathConfigCreateUpdate(
 	} else if req.Operation == logical.CreateOperation {
 		cfg.Secret = d.Get("secret").(string)
 	}
+	if cfg.Secret == "" {
+		return logical.ErrorResponse("config parameter `secret` cannot be empty"), nil
+	}
 
-	var policies []string
-	var unregisteredUserPoliciesStr string
+	policies := make([]string, 0)
 	unregisteredUserPoliciesRaw, ok := d.GetOk("unregistered_user_policies")
 	if ok {
-		unregisteredUserPoliciesStr = unregisteredUserPoliciesRaw.(string)
-	} else if req.Operation == logical.CreateOperation {
-		unregisteredUserPoliciesStr = d.Get("unregistered_user_policies").(string)
-	}
-	policies = strings.Split(unregisteredUserPoliciesStr, ",")
-	for _, policy := range policies {
-		if policy == "root" {
-			return logical.ErrorResponse("root policy cannot be granted by an authentication backend"), nil
+		unregisteredUserPoliciesStr := unregisteredUserPoliciesRaw.(string)
+		if strings.TrimSpace(unregisteredUserPoliciesStr) != "" {
+			policies = strings.Split(unregisteredUserPoliciesStr, ",")
+			for _, policy := range policies {
+				if policy == "root" {
+					return logical.ErrorResponse("root policy cannot be granted by an authentication backend"), nil
+				}
+			}
 		}
+		cfg.UnregisteredUserPolicies = policies
+	} else if req.Operation == logical.CreateOperation {
+		cfg.UnregisteredUserPolicies = policies
 	}
-	cfg.UnregisteredUserPolicies = policies
 
 	dialTimeout, ok := d.GetOk("dial_timeout")
 	if ok {

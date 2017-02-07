@@ -21,8 +21,6 @@ can successfully authenticate but are not registered in the `users/` path.
 
 ## Authentication
 
-The 'radius' auth backend accepts 
-
 #### Via the CLI
 
 ```
@@ -41,6 +39,9 @@ The password should be sent in the POST body encoded as JSON.
 $ curl $VAULT_ADDR/v1/auth/radius/login/mitchellh \
     -d '{ "password": "foo" }'
 ```
+
+Alternatively a POST request can be made to `auth/radius/login/` 
+with both `username` and `password` sent in the POST body encoded as JSON.
 
 The response will be in JSON. For example:
 
@@ -82,22 +83,10 @@ token/     token     token based credentials
 radius/    radius
 ```
 
-To use the ldap auth backend, it must first be configured with connection
+To use the radius auth backend, it must first be configured with connection
 details for your RADIUS server.
-The configuration options are detailed below.
-
+The configuration options are detailed below in the API docs.
 Configuration is written to `auth/radius/config`.
-
-### Configuration parameters
-
-* `host` (string, required) - The RADIUS server to connect to. Examples: `radius.myorg.com`, `127.0.0.1`
-* `port` (int, optional) - The UDP port where the RADIUS server is listening on. Default is 1812
-* `secret` - (string, required) - The RADIUS shared secret
-* `unregistered_user_policies` - (string, optional) - A Comma-Separated list of policies granted to unregistered users
-* `dial_timeout` (int, optional) - Number of second to wait for a backend connection before timing out. Default is 10
-* `read_timeout` (int, optional) - Number of second to wait for a backend response before timing out. Default is 10
-* `nas_port` (int, optional) - The NAS-Port attribute of the RADIUS request. Default is 10
-
 
 To use the "radius" auth backend, an operator must configure a
 mapping between users and policies. An example is shown below.
@@ -118,6 +107,67 @@ has no explicit mapping in the `users/` path.
 This is done through the `unregistered_user_policies` configuration parameter.
 
 ## API
+
+### /auth/radius/config
+#### POST
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+      Configures the connection parameters and shard secret used to communicate with RADIUS
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/radius/config`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">host</span>
+        <span class="param-flags">required</span>
+            The RADIUS server to connect to. Examples: `radius.myorg.com`, `127.0.0.1`
+      </li>
+      <li>
+        <span class="param">port</span>
+        <span class="param-flags">optional</span>
+            The UDP port where the RADIUS server is listening on. Defaults is 1812
+      </li>
+      <li>
+        <span class="param">secret</span>
+        <span class="param-flags">required</span>
+            The RADIUS shared secret
+      </li>
+      <li>
+        <span class="param">unregistered_user_policies</span>
+        <span class="param-flags">optional</span>
+            A Comma-Separated list of policies to be granted to unregistered users
+      </li>
+      <li>
+        <span class="param">dial_timeout</span>
+        <span class="param-flags">optional</span>
+            Number of second to wait for a backend connection before timing out. Defaults is 10
+      </li>
+      <li>
+        <span class="param">read_timeout</span>
+        <span class="param-flags">optional</span>
+            Number of second to wait for a backend response before timing out. Defaults is 10
+      </li>
+      <li>
+        <span class="param">nas_port</span>
+        <span class="param-flags">optional</span>
+            The NAS-Port attribute of the RADIUS request. Defaults is 10
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
 
 ### /auth/radius/users/[username]
 #### POST
@@ -222,7 +272,7 @@ This is done through the `unregistered_user_policies` configuration parameter.
   </dd>
 </dl>
 
-
+### /auth/radius/login
 ### /auth/radius/login/[username]
 #### POST
 <dl class="api">
@@ -234,16 +284,22 @@ This is done through the `unregistered_user_policies` configuration parameter.
   <dt>Method</dt>
   <dd>POST</dd>
 
-  <dt>URL</dt>
-  <dd>`/auth/radius/login/<username>`</dd>
+  <dt>URLS</dt>
+  <dd>`/auth/radius/login`</dd>
+  <dd>`/auth/radius/login/[username]`</dd>
 
   <dt>Parameters</dt>
   <dd>
     <ul>
+        <li>
+        <span class="param">username</span>
+        <span class="param-flags">required</span>
+            Username for the authenticating user.
+      </li>
       <li>
         <span class="param">password</span>
         <span class="param-flags">required</span>
-            Password for this user.
+            Password for the authenticating user.
       </li>
     </ul>
   </dd>

@@ -103,7 +103,7 @@ func (b *backend) pathUserRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(user.Policies, ","),
+			"policies": user.Policies,
 		},
 	}, nil
 }
@@ -155,6 +155,6 @@ for RADIUS users that are allowed to authenticate, and associate policies to
 them.
 
 Deleting a user will not revoke auth for prior authenticated users.
-To do this, do a revoke on "login/<username>" for
-the usernames you want revoked.
+To do this, do a revoke token by path on "auth/radius/login/<username>"
+for the usernames you want revoked.
 `
