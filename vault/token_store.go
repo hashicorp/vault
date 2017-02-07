@@ -1035,26 +1035,34 @@ func (ts *TokenStore) RevokeTree(id string) error {
 // revokeTreeSalted is used to invalide a given token and all
 // child tokens using a saltedID.
 func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
-	// Scan for child tokens
-	path := parentPrefix + saltedId + "/"
-	children, err := ts.view.List(path)
-	if err != nil {
-		return fmt.Errorf("failed to scan for children: %v", err)
-	}
+	// Create a queue of tokens to revoke
+	frontier := make([]string, 0, 64)
 
-	// Recursively nuke the children. The subtle nuance here is that
-	// we don't have the acutal ID of the child, but we have the salted
-	// value. Turns out, this is good enough!
-	for _, child := range children {
-		if err := ts.revokeTreeSalted(child); err != nil {
-			return err
+	// Add the initial token
+	frontier = append(frontier, saltedId)
+
+	for l := len(frontier); l > 0; l = len(frontier) {
+		for _, id := range frontier[:l] {
+			// Scan for child tokens
+			path := parentPrefix + id + "/"
+			children, err := ts.view.List(path)
+			if err != nil {
+				return fmt.Errorf("failed to scan for children: %v", err)
+			}
+
+			// Add the children to the frontier
+			frontier = append(frontier, children...)
+
+			// Revoke the current entry
+			if err := ts.revokeSalted(id); err != nil {
+				return fmt.Errorf("failed to revoke entry: %v", err)
+			}
 		}
+
+		// Update the frontier
+		frontier = frontier[l:]
 	}
 
-	// Revoke this entry
-	if err := ts.revokeSalted(saltedId); err != nil {
-		return fmt.Errorf("failed to revoke entry: %v", err)
-	}
 	return nil
 }
 
