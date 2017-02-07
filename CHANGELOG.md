@@ -1,4 +1,4 @@
-## 0.6.5 (Unreleased)
+## 0.6.5 (February 7th, 2017)
 
 FEATURES:
 
