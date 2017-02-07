@@ -103,7 +103,7 @@ func (b *backend) pathUserRead(
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"policies": strings.Join(user.Policies, ","),
+			"policies": user.Policies,
 		},
 	}, nil
 }
@@ -150,11 +150,9 @@ Manage users allowed to authenticate.
 `
 
 const pathUserHelpDesc = `
-This endpoint allows you to create, read, update, and delete configuration
-for RADIUS users that are allowed to authenticate, and associate policies to
-them.
+This endpoint allows you to create, read, update, and delete configuration for
+RADIUS users that are allowed to authenticate, and associate policies to them.
 
-Deleting a user will not revoke auth for prior authenticated users.
-To do this, do a revoke on "login/<username>" for
-the usernames you want revoked.
+Deleting a user will not revoke auth for prior authenticated users.  To revoke
+access, the issued Vault token or the associates lease should be revoked.
 `

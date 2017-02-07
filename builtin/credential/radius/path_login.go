@@ -16,7 +16,7 @@ import (
 
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `login/(?P<username>.+)`,
+		Pattern: "login" + framework.OptionalParamRegex("username"),
 		Fields: map[string]*framework.FieldSchema{
 			"username": &framework.FieldSchema{
 				Type:        framework.TypeString,

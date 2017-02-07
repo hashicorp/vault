@@ -3,14 +3,14 @@ layout: "docs"
 page_title: "Auth Backend: RADIUS"
 sidebar_current: "docs-auth-radius"
 description: |-
-  The "radius" auth backend allows users to authenticate with Vault using an existing RADIUS server.
+  The `radius` auth backend allows users to authenticate with Vault using an existing RADIUS server.
 ---
 
 # Auth Backend: RADIUS
 
 Name: `radius`
 
-The "radius" auth backend allows users to authenticate with Vault using
+The `radius` auth backend allows users to authenticate with Vault using
 an existing RADIUS server that accepts the PAP authentication scheme. 
 
 The mapping of users to Vault policies is managed by using the
@@ -20,8 +20,6 @@ Optionally, a configurable set of policies can be granted to all users that
 can successfully authenticate but are not registered in the `users/` path.
 
 ## Authentication
-
-The 'radius' auth backend accepts 
 
 #### Via the CLI
 
@@ -99,7 +97,7 @@ Configuration is written to `auth/radius/config`.
 * `nas_port` (int, optional) - The NAS-Port attribute of the RADIUS request. Default is 10
 
 
-To use the "radius" auth backend, an operator must configure a
+To use the `radius` auth backend, an operator must configure a
 mapping between users and policies. An example is shown below.
 Use `vault path-help` for more details.
 
@@ -118,6 +116,93 @@ has no explicit mapping in the `users/` path.
 This is done through the `unregistered_user_policies` configuration parameter.
 
 ## API
+
+### /auth/radius/config
+#### POST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+      Configures the backend with information required to communicate with
+      `radius` server.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/radius/config`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">host</span>
+        <span class="param-flags">required</span>
+          `radius` server host.
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">port</span>
+        <span class="param-flags">optional</span>
+          `radius` server port (default: 1812),
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">secret</span>
+        <span class="param-flags">required</span>
+          Secret shared with `radius` server.
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">unregistered_user_policies</span>
+        <span class="param-flags">optional</span>
+          Comma-Separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: emtpy)
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">dial_timeout</span>
+        <span class="param-flags">optional</span>
+          Number of seconds before connect timeouts (default: 10)
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">read_timeout</span>
+        <span class="param-flags">optional</span>
+          Number of seconds before response timeouts (default: 10)
+      </li>
+    </ul>
+  </dd>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">nas_port</span>
+        <span class="param-flags">optional</span>
+          `radius` NAS port field (default: 10)
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+
 
 ### /auth/radius/users/[username]
 #### POST

@@ -10,7 +10,7 @@ import (
 
 func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `config`,
+		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
 			"host": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -24,12 +24,12 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			"secret": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Secret shared with the RADIUS server",
+				Description: "Secret shared with RADIUS server",
 			},
 			"unregistered_user_policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Comma-Separated list of policies to grant upon successful RADIUS aithentication of an unregisted user (default: emtpy)",
+				Description: "Comma-Separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: emtpy)",
 			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
@@ -82,7 +82,6 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 	}
 
 	if storedConfig == nil {
-		// No user overrides, return default configuration
 		return nil, nil
 	}
 
@@ -130,6 +129,9 @@ func (b *backend) pathConfigCreateUpdate(
 		cfg.Host = strings.ToLower(host.(string))
 	} else if req.Operation == logical.CreateOperation {
 		cfg.Host = strings.ToLower(d.Get("host").(string))
+		if cfg.Host == "" {
+			return logical.ErrorResponse("missing host"), nil
+		}
 	}
 
 	port, ok := d.GetOk("port")
@@ -144,6 +146,9 @@ func (b *backend) pathConfigCreateUpdate(
 		cfg.Secret = secret.(string)
 	} else if req.Operation == logical.CreateOperation {
 		cfg.Secret = d.Get("secret").(string)
+		if cfg.Secret == "" {
+			return logical.ErrorResponse("missing secret"), nil
+		}
 	}
 
 	var policies []string
