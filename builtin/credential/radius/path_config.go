@@ -29,17 +29,17 @@ func pathConfig(b *backend) *framework.Path {
 			"unregistered_user_policies": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Comma-Separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: emtpy)",
+				Description: "Comma-separated list of policies to grant upon successful RADIUS authentication of an unregisted user (default: emtpy)",
 			},
 			"dial_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
-				Description: "Number of seconds before connect timeouts (default: 10)",
+				Description: "Number of seconds before connect times out (default: 10)",
 			},
 			"read_timeout": &framework.FieldSchema{
 				Type:        framework.TypeDurationSecond,
 				Default:     10,
-				Description: "Number of seconds before response timeouts (default: 10)",
+				Description: "Number of seconds before response times out (default: 10)",
 			},
 			"nas_port": &framework.FieldSchema{
 				Type:        framework.TypeInt,
