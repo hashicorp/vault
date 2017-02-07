@@ -702,8 +702,8 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"enabled":         corsConf.isEnabled,
-			"allowed_origins": strings.Join(corsConf.allowedOrigins, ","),
+			"enabled":         corsConf.Enabled,
+			"allowed_origins": strings.Join(corsConf.AllowedOrigins, ","),
 		},
 	}, nil
 }
@@ -718,29 +718,12 @@ func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.Fiel
 		return nil, err
 	}
 
-	config := &Config{
-		Name: "cors",
-		Settings: map[string]string{
-			"allowed_origins": origins,
-			"enabled":         "true",
-		},
-	}
-
-	// Update the config
-	if err := b.Core.configStore.SetConfig(config); err != nil {
-		return handleError(err)
-	}
-
 	return nil, nil
 }
 
 // handleCORSDelete clears the allowed origins and sets the CORS enabled flag to false
 func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.Core.CORSConfig().Disable()
-
-	if err := b.Core.configStore.DeleteConfig("cors"); err != nil {
-		return handleError(err)
-	}
 
 	return nil, nil
 }
