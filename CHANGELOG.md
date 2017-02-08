@@ -6,6 +6,11 @@ IMPROVEMENTS:
    username if not explicitly set on the command line when authenticating
    [GH-2154]
 
+BUG FIXES:
+
+ * command/server: Fix parsing of redirect address when port is not mentioned
+   [GH-2354]
+
 ## 0.6.5 (February 7th, 2017)
 
 FEATURES:
