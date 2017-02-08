@@ -1,13 +1,10 @@
 package transit
 
 import (
-	"encoding/base64"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
-	"github.com/mitchellh/mapstructure"
 )
 
 // Check the normal flow of rewrap
@@ -205,30 +202,33 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dmlzaGFsCg=="}]`
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
-	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+	batchEncryptionInput := []interface{}{
+		map[string]interface{}{"plaintext": "dmlzaGFsCg=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+	}
+	batchEncryptionData := map[string]interface{}{
+		"batch_input": batchEncryptionInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "encrypt/upserted_key",
 		Storage:   s,
-		Data:      batchData,
+		Data:      batchEncryptionData,
 	}
 	resp, err = b.HandleRequest(batchReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchEncryptionResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchEncryptionResponseArray); err != nil {
-		t.Fatal(err)
+	batchEncryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+
+	batchRewrapInput := make([]interface{}, len(batchEncryptionResponseItems))
+	for i, item := range batchEncryptionResponseItems {
+		batchRewrapInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
 	}
 
-	batchInputB64 = base64.StdEncoding.EncodeToString([]byte(resp.Data["batch_results"].(string)))
-	rewrapData := map[string]interface{}{
-		"batch_input": batchInputB64,
+	batchRewrapData := map[string]interface{}{
+		"batch_input": batchRewrapInput,
 	}
 
 	rotateReq := &logical.Request{
@@ -245,7 +245,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "rewrap/upserted_key",
 		Storage:   s,
-		Data:      rewrapData,
+		Data:      batchRewrapData,
 	}
 
 	resp, err = b.HandleRequest(rewrapReq)
@@ -253,13 +253,10 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchRewrapResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchRewrapResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchRewrapResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
-	if len(batchRewrapResponseArray) != len(batchEncryptionResponseArray) {
-		t.Fatalf("bad: length of input and output or rewrap are not matching; expected: %d, actual: %d", len(batchEncryptionResponseArray), len(batchRewrapResponseArray))
+	if len(batchRewrapResponseItems) != len(batchEncryptionResponseItems) {
+		t.Fatalf("bad: length of input and output or rewrap are not matching; expected: %d, actual: %d", len(batchEncryptionResponseItems), len(batchRewrapResponseItems))
 	}
 
 	decReq := &logical.Request{
@@ -268,27 +265,19 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		Storage:   s,
 	}
 
-	for i, responseItem := range batchEncryptionResponseArray {
-		var input BatchRequestItem
-		if err := mapstructure.Decode(responseItem, &input); err != nil {
-			t.Fatal(err)
-		}
+	for i, eItem := range batchEncryptionResponseItems {
+		rItem := batchRewrapResponseItems[i]
 
-		var output BatchResponseItem
-		if err := mapstructure.Decode(batchRewrapResponseArray[i], &output); err != nil {
-			t.Fatal(err)
-		}
-
-		if input.Ciphertext == output.Ciphertext {
+		if eItem.Ciphertext == rItem.Ciphertext {
 			t.Fatalf("bad: rewrap input and output are the same")
 		}
 
-		if !strings.HasPrefix(output.Ciphertext, "vault:v2") {
-			t.Fatalf("bad: invalid version of ciphertext in rewrap response; expected: 'vault:v2', actual: %s", output.Ciphertext)
+		if !strings.HasPrefix(rItem.Ciphertext, "vault:v2") {
+			t.Fatalf("bad: invalid version of ciphertext in rewrap response; expected: 'vault:v2', actual: %s", rItem.Ciphertext)
 		}
 
 		decReq.Data = map[string]interface{}{
-			"ciphertext": output.Ciphertext,
+			"ciphertext": rItem.Ciphertext,
 		}
 
 		resp, err = b.HandleRequest(decReq)

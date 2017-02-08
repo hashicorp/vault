@@ -1,4 +1,12 @@
-## 0.6.5 (Unreleased)
+## Next (Unreleased)
+
+IMPROVEMENTS:
+
+ * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
+   username if not explicitly set on the command line when authenticating
+   [GH-2154]
+
+## 0.6.5 (February 7th, 2017)
 
 FEATURES:
 
@@ -6,6 +14,9 @@ FEATURES:
    Okta usernames and passwords to authenticate to Vault. If provided with an
    appropriate Okta API token, group membership can be queried to assign
    policies; users and groups can be defined locally as well.
+ * **RADIUS Authentication**: A new RADIUS authentication backend allows using
+   a RADIUS server to authenticate to Vault. Policies can be configured for
+   specific users or for any authenticated user.
  * **Exportable Transit Keys**: Keys in `transit` can now be marked as
    `exportable` at creation time. This allows a properly ACL'd user to retrieve
    the associated signing key, encryption key, or HMAC key. The `exportable`
@@ -18,7 +29,12 @@ FEATURES:
  * **Configurable Audited HTTP Headers**: You can now specify headers that you
    want to have included in each audit entry, along with whether each header
    should be HMAC'd or kept plaintext. This can be useful for adding additional
-   client or network metadata to the audit logs.
+   client or network metadata to the audit logs. 
+ * **Transit Backend UI (Enterprise)**: Vault Enterprise UI now supports the transit
+   backend, allowing creation, viewing and editing of named keys as well as using
+   those keys to perform supported transit operations directly in the UI.
+ * **Socket Audit Backend** A new socket audit backend allows audit logs to be sent 
+   through TCP, UDP, or UNIX Sockets.
 
 IMPROVEMENTS:
 
@@ -39,6 +55,9 @@ IMPROVEMENTS:
    more stable. [GH-2168]
  * secret/pki: Allow specifying OU entries in generated certificate subjects
    [GH-2251]
+ * secret mount ui (Enterprise): the secret mount list now shows all mounted
+   backends even if the UI cannot browse them. Additional backends can now be
+   mounted from the UI as well.
 
 BUG FIXES:
 

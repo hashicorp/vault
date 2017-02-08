@@ -100,7 +100,7 @@ block.
         <span class="param">options</span>
         <span class="param-flags">optional</span>
            Configuration options of the backend in JSON format.
-           Refer to `syslog` and `file` audit backend options.
+           Refer to `syslog`, `file` and `socket` audit backend options.
       </li>
     </ul>
   </dd>

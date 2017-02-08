@@ -664,6 +664,9 @@ func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 				res = &rows{
 					cn: cn,
 				}
+				if t == 'C' {
+					res.result, res.tag = cn.parseComplete(r.string())
+				}
 			}
 			res.done = true
 		case 'Z':
@@ -1333,6 +1336,8 @@ type rows struct {
 	colFmts  []format
 	done     bool
 	rb       readBuf
+	result   driver.Result
+	tag      string
 }
 
 func (rs *rows) Close() error {
@@ -1356,6 +1361,17 @@ func (rs *rows) Columns() []string {
 	return rs.colNames
 }
 
+func (rs *rows) Result() driver.Result {
+	if rs.result == nil {
+		return emptyRows
+	}
+	return rs.result
+}
+
+func (rs *rows) Tag() string {
+	return rs.tag
+}
+
 func (rs *rows) Next(dest []driver.Value) (err error) {
 	if rs.done {
 		return io.EOF
@@ -1373,6 +1389,9 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 		case 'E':
 			err = parseError(&rs.rb)
 		case 'C', 'I':
+			if t == 'C' {
+				rs.result, rs.tag = conn.parseComplete(rs.rb.string())
+			}
 			continue
 		case 'Z':
 			conn.processReadyForQuery(&rs.rb)

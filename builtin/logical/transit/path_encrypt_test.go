@@ -1,10 +1,8 @@
 package transit
 
 import (
-	"encoding/base64"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -14,6 +12,7 @@ import (
 func TestTransit_BatchEncryptionCase1(t *testing.T) {
 	var resp *logical.Response
 	var err error
+
 	b, s := createBackendWithStorage(t)
 
 	// Create the policy
@@ -128,7 +127,7 @@ func TestTransit_BatchEncryptionCase3(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[ {"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
+	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
 	batchData := map[string]interface{}{
 		"batch_input": batchInput,
 	}
@@ -162,10 +161,13 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+	}
+
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -178,10 +180,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -191,7 +190,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseArray {
+	for _, item := range batchResponseItems {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 		}
@@ -229,14 +228,15 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="}]`
-
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
-	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dmlzaGFsCg=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dmlzaGFsCg=="},
 	}
+
+	batchData := map[string]interface{}{
+		"batch_input": batchInput,
+	}
+
 	batchReq := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "encrypt/existing_key",
@@ -248,10 +248,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -261,7 +258,7 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseArray {
+	for _, item := range batchResponseItems {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
@@ -284,10 +281,13 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+	}
+
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -300,10 +300,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []interface{}
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -313,7 +310,7 @@ func TestTransit_BatchEncryptionCase6(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, responseItem := range batchResponseArray {
+	for _, responseItem := range batchResponseItems {
 		var item BatchResponseItem
 		if err := mapstructure.Decode(responseItem, &item); err != nil {
 			t.Fatal(err)
@@ -339,13 +336,13 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="}]`
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dmlzaGFsCg=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dmlzaGFsCg=="},
+	}
 
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -358,10 +355,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	decReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -371,7 +365,7 @@ func TestTransit_BatchEncryptionCase7(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseArray {
+	for _, item := range batchResponseItems {
 		decReq.Data = map[string]interface{}{
 			"ciphertext": item.Ciphertext,
 			"context":    "dmlzaGFsCg==",
@@ -405,10 +399,11 @@ func TestTransit_BatchEncryptionCase8(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchInput := `[{"plaintext":"simple_plaintext"}]`
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "simple_plaintext"},
+	}
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -447,11 +442,13 @@ func TestTransit_BatchEncryptionCase9(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="}]`
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+	}
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 		"plaintext":   plaintext,
 	}
 	batchReq := &logical.Request{
@@ -477,13 +474,13 @@ func TestTransit_BatchEncryptionCase10(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="
-},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="}]`
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dmlzaGFsCg=="},
+	}
 
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 
 	batchReq := &logical.Request{
@@ -498,19 +495,19 @@ func TestTransit_BatchEncryptionCase10(t *testing.T) {
 	}
 }
 
-// Case11: Incorrect inputs for context and nonce should not be ignored
+// Case11: Incorrect inputs for context and nonce should not fail the operation
 func TestTransit_BatchEncryptionCase11(t *testing.T) {
 	var err error
 
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dmlzaGFsCg=="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"not-encoded"}]`
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dmlzaGFsCg=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "not-encoded"},
+	}
 
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -519,30 +516,23 @@ func TestTransit_BatchEncryptionCase11(t *testing.T) {
 		Data:      batchData,
 	}
 	_, err = b.HandleRequest(batchReq)
-	if err == nil {
-		t.Fatalf("expected an error")
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
 // Case12: Invalid batch input
 func TestTransit_BatchEncryptionCase12(t *testing.T) {
 	var err error
-
 	b, s := createBackendWithStorage(t)
 
-	batchInput := `{
-	"randomjson": [{
-		"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
-		"context": "dmlzaGFsCg=="
-	}, {
-		"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
-		"context": "not-encoded"
-	}]
-}`
+	batchInput := []interface{}{
+		map[string]interface{}{},
+		"unexpected_interface",
+	}
 
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.CreateOperation,

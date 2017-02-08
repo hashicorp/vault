@@ -269,7 +269,6 @@ func (c *S3) CreateBucketRequest(input *CreateBucketInput) (req *request.Request
 //   by all users of the system. Please select a different name and try again.
 //
 //   * ErrCodeBucketAlreadyOwnedByYou "BucketAlreadyOwnedByYou"
-
 //
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/s3-2006-03-01/CreateBucket
 func (c *S3) CreateBucket(input *CreateBucketInput) (*CreateBucketOutput, error) {

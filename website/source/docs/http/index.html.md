@@ -169,3 +169,8 @@ The following HTTP status codes are used throughout the API.
    try again later. If the error persists, report a bug.
 - `503` - Vault is down for maintenance or is currently sealed.
    Try again later.
+
+## Limits
+
+A maximum request size of 32MB is imposed to prevent a denial 
+of service attack with arbitrarily large requests.
