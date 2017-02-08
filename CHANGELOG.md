@@ -25,6 +25,8 @@ FEATURES:
  * **Transit Backend UI (Enterprise)**: Vault Enterprise UI now supports the transit
    backend, allowing creation, viewing and editing of named keys as well as using
    those keys to perform supported transit operations directly in the UI.
+ * **Socket Audit Backend** A new socket audit backend allows audit logs to be sent 
+   through TCP, UDP, or UNIX Sockets.
 
 IMPROVEMENTS:
 
