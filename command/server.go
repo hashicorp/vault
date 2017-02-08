@@ -314,7 +314,7 @@ func (c *ServerCommand) Run(args []string) int {
 		host, port, err := net.SplitHostPort(u.Host)
 		if err != nil {
 			// This sucks, as it's a const in the function but not exported in the package
-			if strings.HasSuffix(err.Error(), "missing port in address") {
+			if strings.Contains(err.Error(), "missing port in address") {
 				host = u.Host
 				port = "443"
 			} else {
