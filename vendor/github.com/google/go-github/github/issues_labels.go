@@ -58,7 +58,7 @@ func (s *IssuesService) GetLabel(owner string, repo string, name string) (*Label
 		return nil, resp, err
 	}
 
-	return label, resp, err
+	return label, resp, nil
 }
 
 // CreateLabel creates a new label on the specified repository.
@@ -77,7 +77,7 @@ func (s *IssuesService) CreateLabel(owner string, repo string, label *Label) (*L
 		return nil, resp, err
 	}
 
-	return l, resp, err
+	return l, resp, nil
 }
 
 // EditLabel edits a label.
@@ -96,7 +96,7 @@ func (s *IssuesService) EditLabel(owner string, repo string, name string, label 
 		return nil, resp, err
 	}
 
-	return l, resp, err
+	return l, resp, nil
 }
 
 // DeleteLabel deletes a label.

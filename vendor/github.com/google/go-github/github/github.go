@@ -96,6 +96,9 @@ const (
 
 	// https://developer.github.com/changes/2017-01-05-commit-search-api/
 	mediaTypeCommitSearchPreview = "application/vnd.github.cloak-preview+json"
+
+	// https://developer.github.com/changes/2016-12-14-reviews-api/
+	mediaTypePullRequestReviewsPreview = "application/vnd.github.black-cat-preview+json"
 )
 
 // A Client manages communication with the GitHub API.

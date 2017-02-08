@@ -91,7 +91,7 @@ func (s *IssuesService) GetMilestone(owner string, repo string, number int) (*Mi
 		return nil, resp, err
 	}
 
-	return milestone, resp, err
+	return milestone, resp, nil
 }
 
 // CreateMilestone creates a new milestone on the specified repository.
@@ -110,7 +110,7 @@ func (s *IssuesService) CreateMilestone(owner string, repo string, milestone *Mi
 		return nil, resp, err
 	}
 
-	return m, resp, err
+	return m, resp, nil
 }
 
 // EditMilestone edits a milestone.
@@ -129,7 +129,7 @@ func (s *IssuesService) EditMilestone(owner string, repo string, number int, mil
 		return nil, resp, err
 	}
 
-	return m, resp, err
+	return m, resp, nil
 }
 
 // DeleteMilestone deletes a milestone.

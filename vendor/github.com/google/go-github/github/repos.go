@@ -277,7 +277,7 @@ func (s *RepositoriesService) Create(org string, repo *Repository) (*Repository,
 		return nil, resp, err
 	}
 
-	return r, resp, err
+	return r, resp, nil
 }
 
 // Get fetches a repository.
@@ -301,7 +301,7 @@ func (s *RepositoriesService) Get(owner, repo string) (*Repository, *Response, e
 		return nil, resp, err
 	}
 
-	return repository, resp, err
+	return repository, resp, nil
 }
 
 // GetByID fetches a repository.
@@ -324,7 +324,7 @@ func (s *RepositoriesService) GetByID(id int) (*Repository, *Response, error) {
 		return nil, resp, err
 	}
 
-	return repository, resp, err
+	return repository, resp, nil
 }
 
 // Edit updates a repository.
@@ -346,7 +346,7 @@ func (s *RepositoriesService) Edit(owner, repo string, repository *Repository) (
 		return nil, resp, err
 	}
 
-	return r, resp, err
+	return r, resp, nil
 }
 
 // Delete a repository.
@@ -440,7 +440,7 @@ func (s *RepositoriesService) ListLanguages(owner string, repo string) (map[stri
 		return nil, resp, err
 	}
 
-	return languages, resp, err
+	return languages, resp, nil
 }
 
 // ListTeams lists the teams for the specified repository.
@@ -603,7 +603,7 @@ func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *R
 		return nil, resp, err
 	}
 
-	return b, resp, err
+	return b, resp, nil
 }
 
 // GetBranchProtection gets the protection of a given branch.
@@ -625,7 +625,7 @@ func (s *RepositoriesService) GetBranchProtection(owner, repo, branch string) (*
 		return nil, resp, err
 	}
 
-	return p, resp, err
+	return p, resp, nil
 }
 
 // UpdateBranchProtection updates the protection of a given branch.
@@ -647,7 +647,7 @@ func (s *RepositoriesService) UpdateBranchProtection(owner, repo, branch string,
 		return nil, resp, err
 	}
 
-	return p, resp, err
+	return p, resp, nil
 }
 
 // RemoveBranchProtection removes the protection of a given branch.
@@ -682,5 +682,5 @@ func (s *RepositoriesService) License(owner, repo string) (*RepositoryLicense, *
 		return nil, resp, err
 	}
 
-	return r, resp, err
+	return r, resp, nil
 }

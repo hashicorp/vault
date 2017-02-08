@@ -132,7 +132,7 @@ func (s *PullRequestsService) Get(owner string, repo string, number int) (*PullR
 		return nil, resp, err
 	}
 
-	return pull, resp, err
+	return pull, resp, nil
 }
 
 // GetRaw gets raw (diff or patch) format of a pull request.
@@ -158,7 +158,7 @@ func (s *PullRequestsService) GetRaw(owner string, repo string, number int, opt 
 		return "", resp, err
 	}
 
-	return ret.String(), resp, err
+	return ret.String(), resp, nil
 }
 
 // NewPullRequest represents a new pull request to be created.
@@ -186,7 +186,7 @@ func (s *PullRequestsService) Create(owner string, repo string, pull *NewPullReq
 		return nil, resp, err
 	}
 
-	return p, resp, err
+	return p, resp, nil
 }
 
 type pullRequestUpdate struct {
@@ -226,7 +226,7 @@ func (s *PullRequestsService) Edit(owner string, repo string, number int, pull *
 		return nil, resp, err
 	}
 
-	return p, resp, err
+	return p, resp, nil
 }
 
 // ListCommits lists the commits in a pull request.
@@ -342,5 +342,5 @@ func (s *PullRequestsService) Merge(owner string, repo string, number int, commi
 		return nil, resp, err
 	}
 
-	return mergeResult, resp, err
+	return mergeResult, resp, nil
 }

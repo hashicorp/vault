@@ -102,7 +102,7 @@ func (s *PullRequestsService) GetComment(owner string, repo string, number int) 
 		return nil, resp, err
 	}
 
-	return comment, resp, err
+	return comment, resp, nil
 }
 
 // CreateComment creates a new comment on the specified pull request.
@@ -121,7 +121,7 @@ func (s *PullRequestsService) CreateComment(owner string, repo string, number in
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // EditComment updates a pull request comment.
@@ -140,7 +140,7 @@ func (s *PullRequestsService) EditComment(owner string, repo string, number int,
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // DeleteComment deletes a pull request comment.
