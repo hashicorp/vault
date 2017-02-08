@@ -236,7 +236,7 @@ func (s *IssuesService) Get(owner string, repo string, number int) (*Issue, *Res
 		return nil, resp, err
 	}
 
-	return issue, resp, err
+	return issue, resp, nil
 }
 
 // Create a new issue on the specified repository.
@@ -255,7 +255,7 @@ func (s *IssuesService) Create(owner string, repo string, issue *IssueRequest) (
 		return nil, resp, err
 	}
 
-	return i, resp, err
+	return i, resp, nil
 }
 
 // Edit an issue.
@@ -274,7 +274,7 @@ func (s *IssuesService) Edit(owner string, repo string, number int, issue *Issue
 		return nil, resp, err
 	}
 
-	return i, resp, err
+	return i, resp, nil
 }
 
 // Lock an issue's conversation.

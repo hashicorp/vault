@@ -46,15 +46,18 @@ func NewHTTPClient(ctx context.Context, opts ...option.ClientOption) (*http.Clie
 	if o.GRPCConn != nil {
 		return nil, "", errors.New("unsupported gRPC connection specified")
 	}
-	// TODO(djd): Set UserAgent on all outgoing requests.
+	// TODO(cbro): consider injecting the User-Agent even if an explicit HTTP client is provided?
 	if o.HTTPClient != nil {
 		return o.HTTPClient, o.Endpoint, nil
 	}
 	if o.APIKey != "" {
 		hc := &http.Client{
 			Transport: &gtransport.APIKey{
-				Key:       o.APIKey,
-				Transport: http.DefaultTransport,
+				Key: o.APIKey,
+				Transport: userAgentTransport{
+					base:      baseTransport(ctx),
+					userAgent: o.UserAgent,
+				},
 			},
 		}
 		return hc, o.Endpoint, nil
@@ -73,11 +76,53 @@ func NewHTTPClient(ctx context.Context, opts ...option.ClientOption) (*http.Clie
 			return nil, "", fmt.Errorf("google.DefaultTokenSource: %v", err)
 		}
 	}
-	return oauth2.NewClient(ctx, o.TokenSource), o.Endpoint, nil
+	hc := &http.Client{
+		Transport: &oauth2.Transport{
+			Source: o.TokenSource,
+			Base: userAgentTransport{
+				base:      baseTransport(ctx),
+				userAgent: o.UserAgent,
+			},
+		},
+	}
+	return hc, o.Endpoint, nil
+}
+
+type userAgentTransport struct {
+	userAgent string
+	base      http.RoundTripper
+}
+
+func (t userAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	rt := t.base
+	if rt == nil {
+		return nil, errors.New("transport: no Transport specified")
+	}
+	if t.userAgent == "" {
+		return rt.RoundTrip(req)
+	}
+	newReq := *req
+	newReq.Header = make(http.Header)
+	for k, vv := range req.Header {
+		newReq.Header[k] = vv
+	}
+	// TODO(cbro): append to existing User-Agent header?
+	newReq.Header["User-Agent"] = []string{t.userAgent}
+	return rt.RoundTrip(&newReq)
 }
 
 // Set at init time by dial_appengine.go. If nil, we're not on App Engine.
 var appengineDialerHook func(context.Context) grpc.DialOption
+var appengineUrlfetchHook func(context.Context) http.RoundTripper
+
+// baseTransport returns the base HTTP transport.
+// On App Engine, this is urlfetch.Transport, otherwise it's http.DefaultTransport.
+func baseTransport(ctx context.Context) http.RoundTripper {
+	if appengineUrlfetchHook != nil {
+		return appengineUrlfetchHook(ctx)
+	}
+	return http.DefaultTransport
+}
 
 // DialGRPC returns a GRPC connection for use communicating with a Google cloud
 // service, configured with the given ClientOptions.
