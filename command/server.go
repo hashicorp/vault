@@ -312,17 +312,21 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 		host, port, err := net.SplitHostPort(u.Host)
-		nPort, nPortErr := strconv.Atoi(port)
+		nPort := 0
 		if err != nil {
-			// assume it's due to there not being a port specified, in which case
-			// use 443
+			// assume it's due to there not being a port specified, in which
+			// case use 443
 			host = u.Host
 			nPort = 443
+		} else {
+			var nPortErr error
+			nPort, nPortErr = strconv.Atoi(port)
+			if nPortErr != nil {
+				c.Ui.Output(fmt.Sprintf("Cannot parse %s as a numeric port: %v", port, nPortErr))
+				return 1
+			}
 		}
-		if nPortErr != nil {
-			c.Ui.Output(fmt.Sprintf("Cannot parse %s as a numeric port: %v", port, nPortErr))
-			return 1
-		}
+
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
 		// Will always be TLS-secured
 		u.Scheme = "https"
