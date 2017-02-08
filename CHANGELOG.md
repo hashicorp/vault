@@ -1,3 +1,11 @@
+## Next (Unreleased)
+
+IMPROVEMENTS:
+
+ * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
+   username if not explicitly set on the command line when authenticating
+   [GH-2154]
+
 ## 0.6.5 (February 7th, 2017)
 
 FEATURES:
