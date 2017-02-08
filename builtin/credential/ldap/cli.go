@@ -21,7 +21,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	if !ok {
 		username = usernameFromEnv()
 		if username == "" {
-			return "", fmt.Errorf("'username' var must be set. cannot default to environment variables 'LOGNAME' or 'USER' as neither are set")
+			return "", fmt.Errorf("'username' not supplied and neither 'LOGNAME' nor 'USER' env vars set")
 		}
 	}
 	password, ok := m["password"]
