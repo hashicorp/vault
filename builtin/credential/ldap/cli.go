@@ -79,10 +79,10 @@ which MFA backend is in use, read "auth/[mount]/mfa_config".
 }
 
 func usernameFromEnv() string {
-	if logname, ok := os.LookupEnv("LOGNAME"); ok {
+	if logname := os.Getenv("LOGNAME"); logname != "" {
 		return logname
 	}
-	if user, ok := os.LookupEnv("USER"); ok {
+	if user := os.Getenv("USER"); user != "" {
 		return user
 	}
 	return ""
