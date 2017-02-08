@@ -324,7 +324,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 		nPort, err := strconv.Atoi(port)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error converting %q to a numeric: %v", port, err))
+			c.Ui.Output(fmt.Sprintf("Error parsing redirect address; failed to convert %q to a numeric: %v", port, err))
 			return 1
 		}
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
