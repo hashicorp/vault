@@ -40,6 +40,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"audit/*",
 				"raw/*",
 				"rotate",
+				"config/auditing/*",
 			},
 
 			Unauthenticated: []string{
@@ -621,6 +622,38 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["rewrap"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["rewrap"][1]),
 			},
+
+			&framework.Path{
+				Pattern: "config/auditing/request-headers/(?P<header>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"header": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"hmac": &framework.FieldSchema{
+						Type: framework.TypeBool,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleAuditedHeaderUpdate,
+					logical.DeleteOperation: b.handleAuditedHeaderDelete,
+					logical.ReadOperation:   b.handleAuditedHeaderRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
+			},
+			&framework.Path{
+				Pattern: "config/auditing/request-headers$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleAuditedHeadersRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
+			},
 		},
 	}
 
@@ -633,6 +666,70 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 type SystemBackend struct {
 	Core    *Core
 	Backend *framework.Backend
+}
+
+// handleAuditedHeaderUpdate creates or overwrites a header entry
+func (b *SystemBackend) handleAuditedHeaderUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	hmac := d.Get("hmac").(bool)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig := b.Core.AuditedHeadersConfig()
+	err := headerConfig.add(header, hmac)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// handleAudtedHeaderDelete deletes the header with the given name
+func (b *SystemBackend) handleAuditedHeaderDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig := b.Core.AuditedHeadersConfig()
+	err := headerConfig.remove(header)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// handleAuditedHeaderRead returns the header configuration for the given header name
+func (b *SystemBackend) handleAuditedHeaderRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	header := d.Get("header").(string)
+	if header == "" {
+		return logical.ErrorResponse("missing header name"), nil
+	}
+
+	headerConfig := b.Core.AuditedHeadersConfig()
+	settings, ok := headerConfig.Headers[header]
+	if !ok {
+		return logical.ErrorResponse("Could not find header in config"), nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			header: settings,
+		},
+	}, nil
+}
+
+// handleAuditedHeadersRead returns the whole audited headers config
+func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	headerConfig := b.Core.AuditedHeadersConfig()
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"headers": headerConfig.Headers,
+		},
+	}, nil
 }
 
 // handleCapabilitiesreturns the ACL capabilities of the token for a given path
@@ -2139,5 +2236,24 @@ Enable a new audit backend or disable an existing backend.
 		"Rotates a response-wrapped token.",
 		`Rotates a response-wrapped token; the output is a new token with the same
 		response wrapped inside and the same creation TTL. The original token is revoked.`,
+	},
+	"audited-headers-name": {
+		"Configures the headers sent to the audit logs.",
+		`
+This path responds to the following HTTP methods.
+
+	GET /<name>
+		Returns the setting for the header with the given name.
+
+	POST /<name>
+		Enable auditing of the given header.
+
+	DELETE /<path>
+		Disable auditing of the given header.
+		`,
+	},
+	"audited-headers": {
+		"Lists the headers configured to be audited.",
+		`Returns a list of headers that have been configured to be audited.`,
 	},
 }

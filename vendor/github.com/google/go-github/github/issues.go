@@ -141,13 +141,13 @@ func (s *IssuesService) listIssues(u string, opt *IssueListOptions) ([]*Issue, *
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	issues := new([]*Issue)
-	resp, err := s.client.Do(req, issues)
+	var issues []*Issue
+	resp, err := s.client.Do(req, &issues)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *issues, resp, err
+	return issues, resp, nil
 }
 
 // IssueListByRepoOptions specifies the optional parameters to the
@@ -208,13 +208,13 @@ func (s *IssuesService) ListByRepo(owner string, repo string, opt *IssueListByRe
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	issues := new([]*Issue)
-	resp, err := s.client.Do(req, issues)
+	var issues []*Issue
+	resp, err := s.client.Do(req, &issues)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *issues, resp, err
+	return issues, resp, nil
 }
 
 // Get a single issue.

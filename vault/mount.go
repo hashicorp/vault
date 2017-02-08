@@ -172,6 +172,9 @@ func (c *Core) mount(me *MountEntry) error {
 		}
 	}
 
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+
 	// Verify there is no conflicting mount
 	if match := c.router.MatchingMount(me.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
@@ -190,22 +193,18 @@ func (c *Core) mount(me *MountEntry) error {
 		return err
 	}
 
-	// Update the mount table
-	c.mountsLock.Lock()
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, me)
 	if err := c.persistMounts(newTable); err != nil {
-		c.mountsLock.Unlock()
 		c.logger.Error("core: failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
 	c.mounts = newTable
-	c.mountsLock.Unlock()
 
-	// Mount the backend
 	if err := c.router.Mount(backend, me.Path, me, view); err != nil {
 		return err
 	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("core: successful mount", "path", me.Path, "type", me.Type)
 	}
@@ -257,6 +256,12 @@ func (c *Core) unmount(path string) (bool, error) {
 		return true, err
 	}
 
+	// Call cleanup function if it exists
+	b, ok := c.router.root.Get(path)
+	if ok {
+		b.(*routeEntry).backend.Cleanup()
+	}
+
 	// Unmount the backend entirely
 	if err := c.router.Unmount(path); err != nil {
 		return true, err
@@ -272,7 +277,7 @@ func (c *Core) unmount(path string) (bool, error) {
 		return true, err
 	}
 	if c.logger.IsInfo() {
-		c.logger.Info("core: successful unmounted", "path", path)
+		c.logger.Info("core: successfully unmounted", "path", path)
 	}
 	return true, nil
 }

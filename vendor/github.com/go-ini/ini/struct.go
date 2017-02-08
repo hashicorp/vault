@@ -174,7 +174,7 @@ func setWithProperType(t reflect.Type, key *Key, field reflect.Value, delim stri
 		}
 		field.SetUint(uintVal)
 
-	case reflect.Float64:
+	case reflect.Float32, reflect.Float64:
 		floatVal, err := key.Float64()
 		if err != nil {
 			return nil

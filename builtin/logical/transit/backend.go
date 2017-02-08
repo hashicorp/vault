@@ -27,6 +27,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			b.pathRewrap(),
 			b.pathKeys(),
 			b.pathListKeys(),
+			b.pathExportKeys(),
 			b.pathEncrypt(),
 			b.pathDecrypt(),
 			b.pathDatakey(),

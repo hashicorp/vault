@@ -107,10 +107,10 @@ type DecodeOptions struct {
 	// If nil, we use []interface{}
 	SliceType reflect.Type
 
-	// MaxInitLen defines the initial length that we "make" a collection (slice, chan or map) with.
+	// MaxInitLen defines the maxinum initial length that we "make" a collection (string, slice, map, chan).
 	// If 0 or negative, we default to a sensible value based on the size of an element in the collection.
 	//
-	// For example, when decoding, a stream may say that it has MAX_UINT elements.
+	// For example, when decoding, a stream may say that it has 2^64 elements.
 	// We should not auto-matically provision a slice of that length, to prevent Out-Of-Memory crash.
 	// Instead, we provision up to MaxInitLen, fill that up, and start appending after that.
 	MaxInitLen int
@@ -1961,18 +1961,31 @@ func (x decSliceHelper) ElemContainerState(index int) {
 	}
 }
 
-func decByteSlice(r decReader, clen int, bs []byte) (bsOut []byte) {
+func decByteSlice(r decReader, clen, maxInitLen int, bs []byte) (bsOut []byte) {
 	if clen == 0 {
 		return zeroByteSlice
 	}
 	if len(bs) == clen {
 		bsOut = bs
+		r.readb(bsOut)
 	} else if cap(bs) >= clen {
 		bsOut = bs[:clen]
+		r.readb(bsOut)
 	} else {
-		bsOut = make([]byte, clen)
+		// bsOut = make([]byte, clen)
+		len2, _ := decInferLen(clen, maxInitLen, 1)
+		bsOut = make([]byte, len2)
+		r.readb(bsOut)
+		for len2 < clen {
+			len3, _ := decInferLen(clen-len2, maxInitLen, 1)
+			// fmt.Printf(">>>>> TESTING: in loop: clen: %v, maxInitLen: %v, len2: %v, len3: %v\n", clen, maxInitLen, len2, len3)
+			bs3 := bsOut
+			bsOut = make([]byte, len2+len3)
+			copy(bsOut, bs3)
+			r.readb(bsOut[len2:])
+			len2 += len3
+		}
 	}
-	r.readb(bsOut)
 	return
 }
 

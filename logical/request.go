@@ -48,6 +48,11 @@ type Request struct {
 	// to represent the auth that was returned prior.
 	Auth *Auth `json:"auth" structs:"auth" mapstructure:"auth"`
 
+	// Headers will contain the http headers from the request. This value will
+	// be used in the audit broker to ensure we are auditing only the allowed
+	// headers.
+	Headers map[string][]string `json:"headers" structs:"headers" mapstructure:"headers"`
+
 	// Connection will be non-nil only for credential providers to
 	// inspect the connection information and potentially use it for
 	// authentication/protection.

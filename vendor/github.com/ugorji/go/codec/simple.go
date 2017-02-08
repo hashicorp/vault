@@ -372,7 +372,7 @@ func (d *simpleDecDriver) DecodeBytes(bs []byte, isstring, zerocopy bool) (bsOut
 			bs = d.b[:]
 		}
 	}
-	return decByteSlice(d.r, clen, bs)
+	return decByteSlice(d.r, clen, d.d.h.MaxInitLen, bs)
 }
 
 func (d *simpleDecDriver) DecodeExt(rv interface{}, xtag uint64, ext Ext) (realxtag uint64) {

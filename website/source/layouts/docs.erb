@@ -104,6 +104,15 @@
 					<a href="/docs/http/index.html">API & Libraries</a>
 				</li>
 
+				<li<%= sidebar_current("docs-guides") %>>
+					<a href="/docs/guides/index.html">Guides</a>
+					<ul class="nav">
+						<li<%= sidebar_current("docs-guides-generate-root") %>>
+							<a href="/docs/guides/generate-root.html">Root Token Generation</a>
+						</li>
+					</ul>
+				</li>
+
 				<hr>
 
 				<li<%= sidebar_current("docs-secrets") %>>
@@ -194,6 +203,14 @@
 							<a href="/docs/auth/mfa.html">MFA</a>
 						</li>
 
+						<li<%= sidebar_current("docs-auth-okta") %>>
+							<a href="/docs/auth/okta.html">Okta</a>
+						</li>
+
+						<li<%= sidebar_current("docs-auth-radius") %>>
+							<a href="/docs/auth/radius.html">RADIUS</a>
+						</li>
+
 						<li<%= sidebar_current("docs-auth-cert") %>>
 							<a href="/docs/auth/cert.html">TLS Certificates</a>
 						</li>
@@ -217,6 +234,10 @@
 
 						<li<%= sidebar_current("docs-audit-syslog") %>>
 							<a href="/docs/audit/syslog.html">Syslog</a>
+						</li>
+
+						<li<%= sidebar_current("docs-audit-socket") %>>
+							<a href="/docs/audit/socket.html">Socket</a>
 						</li>
 					</ul>
 				</li>

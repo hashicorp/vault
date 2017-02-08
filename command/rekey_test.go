@@ -16,22 +16,33 @@ import (
 )
 
 func TestRekey(t *testing.T) {
-	core, key, _ := vault.TestCoreUnsealed(t)
+	core, keys, _ := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
-	c := &RekeyCommand{
-		Key:         hex.EncodeToString(key),
-		RecoveryKey: false,
-		Meta: meta.Meta{
-			Ui: ui,
-		},
-	}
 
-	args := []string{"-address", addr}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	for i, key := range keys {
+		c := &RekeyCommand{
+			Key:         hex.EncodeToString(key),
+			RecoveryKey: false,
+			Meta: meta.Meta{
+				Ui: ui,
+			},
+		}
+
+		if i > 0 {
+			conf, err := core.RekeyConfig(false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c.Nonce = conf.Nonce
+		}
+
+		args := []string{"-address", addr}
+		if code := c.Run(args); code != 0 {
+			t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
 	}
 
 	config, err := core.SealAccess().BarrierConfig()
@@ -44,21 +55,32 @@ func TestRekey(t *testing.T) {
 }
 
 func TestRekey_arg(t *testing.T) {
-	core, key, _ := vault.TestCoreUnsealed(t)
+	core, keys, _ := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
-	c := &RekeyCommand{
-		RecoveryKey: false,
-		Meta: meta.Meta{
-			Ui: ui,
-		},
-	}
 
-	args := []string{"-address", addr, hex.EncodeToString(key)}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	for i, key := range keys {
+		c := &RekeyCommand{
+			RecoveryKey: false,
+			Meta: meta.Meta{
+				Ui: ui,
+			},
+		}
+
+		if i > 0 {
+			conf, err := core.RekeyConfig(false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c.Nonce = conf.Nonce
+		}
+
+		args := []string{"-address", addr, hex.EncodeToString(key)}
+		if code := c.Run(args); code != 0 {
+			t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
 	}
 
 	config, err := core.SealAccess().BarrierConfig()
@@ -71,13 +93,13 @@ func TestRekey_arg(t *testing.T) {
 }
 
 func TestRekey_init(t *testing.T) {
-	core, key, _ := vault.TestCoreUnsealed(t)
+	core, _, _ := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
+
 	c := &RekeyCommand{
-		Key: hex.EncodeToString(key),
 		Meta: meta.Meta{
 			Ui: ui,
 		},
@@ -106,13 +128,13 @@ func TestRekey_init(t *testing.T) {
 }
 
 func TestRekey_cancel(t *testing.T) {
-	core, key, _ := vault.TestCoreUnsealed(t)
+	core, keys, _ := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
-		Key: hex.EncodeToString(key),
+		Key: hex.EncodeToString(keys[0]),
 		Meta: meta.Meta{
 			Ui: ui,
 		},
@@ -138,13 +160,13 @@ func TestRekey_cancel(t *testing.T) {
 }
 
 func TestRekey_status(t *testing.T) {
-	core, key, _ := vault.TestCoreUnsealed(t)
+	core, keys, _ := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
-		Key: hex.EncodeToString(key),
+		Key: hex.EncodeToString(keys[0]),
 		Meta: meta.Meta{
 			Ui: ui,
 		},
@@ -166,7 +188,7 @@ func TestRekey_status(t *testing.T) {
 }
 
 func TestRekey_init_pgp(t *testing.T) {
-	core, key, token := vault.TestCoreUnsealed(t)
+	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
@@ -184,7 +206,6 @@ func TestRekey_init_pgp(t *testing.T) {
 
 	ui := new(cli.MockUi)
 	c := &RekeyCommand{
-		Key: hex.EncodeToString(key),
 		Meta: meta.Meta{
 			Ui: ui,
 		},
@@ -220,13 +241,22 @@ func TestRekey_init_pgp(t *testing.T) {
 		t.Fatal("should rekey")
 	}
 
-	c.Nonce = config.Nonce
+	for _, key := range keys {
+		c = &RekeyCommand{
+			Key: hex.EncodeToString(key),
+			Meta: meta.Meta{
+				Ui: ui,
+			},
+		}
 
-	args = []string{
-		"-address", addr,
-	}
-	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		c.Nonce = config.Nonce
+
+		args = []string{
+			"-address", addr,
+		}
+		if code := c.Run(args); code != 0 {
+			t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
 	}
 
 	type backupStruct struct {

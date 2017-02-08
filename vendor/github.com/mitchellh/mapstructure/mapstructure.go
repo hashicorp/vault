@@ -202,7 +202,7 @@ func (d *Decoder) decode(name string, data interface{}, val reflect.Value) error
 			d.config.DecodeHook,
 			dataVal.Type(), val.Type(), data)
 		if err != nil {
-			return err
+			return fmt.Errorf("error decoding '%s': %s", name, err)
 		}
 	}
 
@@ -229,6 +229,8 @@ func (d *Decoder) decode(name string, data interface{}, val reflect.Value) error
 		err = d.decodePtr(name, data, val)
 	case reflect.Slice:
 		err = d.decodeSlice(name, data, val)
+	case reflect.Func:
+		err = d.decodeFunc(name, data, val)
 	default:
 		// If we reached this point then we weren't able to decode it
 		return fmt.Errorf("%s: unsupported type: %s", name, dataKind)
@@ -547,7 +549,7 @@ func (d *Decoder) decodePtr(name string, data interface{}, val reflect.Value) er
 	valType := val.Type()
 	valElemType := valType.Elem()
 
-	realVal:=val
+	realVal := val
 	if realVal.IsNil() || d.config.ZeroFields {
 		realVal = reflect.New(valElemType)
 	}
@@ -560,6 +562,19 @@ func (d *Decoder) decodePtr(name string, data interface{}, val reflect.Value) er
 	return nil
 }
 
+func (d *Decoder) decodeFunc(name string, data interface{}, val reflect.Value) error {
+	// Create an element of the concrete (non pointer) type and decode
+	// into that. Then set the value of the pointer to this type.
+	dataVal := reflect.Indirect(reflect.ValueOf(data))
+	if val.Type() != dataVal.Type() {
+		return fmt.Errorf(
+			"'%s' expected type '%s', got unconvertible type '%s'",
+			name, val.Type(), dataVal.Type())
+	}
+	val.Set(dataVal)
+	return nil
+}
+
 func (d *Decoder) decodeSlice(name string, data interface{}, val reflect.Value) error {
 	dataVal := reflect.Indirect(reflect.ValueOf(data))
 	dataValKind := dataVal.Kind()
@@ -567,7 +582,7 @@ func (d *Decoder) decodeSlice(name string, data interface{}, val reflect.Value) 
 	valElemType := valType.Elem()
 	sliceType := reflect.SliceOf(valElemType)
 
-	valSlice:=val
+	valSlice := val
 	if valSlice.IsNil() || d.config.ZeroFields {
 
 		// Check input type
@@ -591,6 +606,9 @@ func (d *Decoder) decodeSlice(name string, data interface{}, val reflect.Value) 
 
 	for i := 0; i < dataVal.Len(); i++ {
 		currentData := dataVal.Index(i).Interface()
+		for valSlice.Len() <= i {
+			valSlice = reflect.Append(valSlice, reflect.Zero(valElemType))
+		}
 		currentField := valSlice.Index(i)
 
 		fieldName := fmt.Sprintf("%s[%d]", name, i)

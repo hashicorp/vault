@@ -126,16 +126,24 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 		policy: cfg.PoolConfig.HostSelectionPolicy,
 	}
 
-	if err := s.init(); err != nil {
-		// TODO(zariel): dont wrap this error in fmt.Errorf, return a typed error
-		s.Close()
+	//Check the TLS Config before trying to connect to anything external
+	connCfg, err := connConfig(&s.cfg)
+	if err != nil {
+		//TODO: Return a typed error
 		return nil, fmt.Errorf("gocql: unable to create session: %v", err)
 	}
+	s.connCfg = connCfg
 
-	if s.pool.Size() == 0 {
-		// TODO(zariel): move this to init
+	if err := s.init(); err != nil {
 		s.Close()
-		return nil, ErrNoConnectionsStarted
+		if err == ErrNoConnectionsStarted {
+			//This error used to be generated inside NewSession & returned directly
+			//Forward it on up to be backwards compatible
+			return nil, ErrNoConnectionsStarted
+		} else {
+			// TODO(zariel): dont wrap this error in fmt.Errorf, return a typed error
+			return nil, fmt.Errorf("gocql: unable to create session: %v", err)
+		}
 	}
 
 	return s, nil
@@ -146,12 +154,6 @@ func (s *Session) init() error {
 	if err != nil {
 		return err
 	}
-
-	connCfg, err := connConfig(s)
-	if err != nil {
-		return err
-	}
-	s.connCfg = connCfg
 
 	if !s.cfg.disableControlConn {
 		s.control = createControlConn(s)
@@ -165,7 +167,7 @@ func (s *Session) init() error {
 
 			// TODO(zariel): we really only need this in 1 place
 			s.cfg.ProtoVersion = proto
-			connCfg.ProtoVersion = proto
+			s.connCfg.ProtoVersion = proto
 		}
 
 		if err := s.control.connect(hosts); err != nil {
@@ -210,6 +212,10 @@ func (s *Session) init() error {
 		s.useSystemSchema = newer
 	} else {
 		s.useSystemSchema = hosts[0].Version().Major >= 3
+	}
+
+	if s.pool.Size() == 0 {
+		return ErrNoConnectionsStarted
 	}
 
 	return nil
@@ -383,7 +389,7 @@ func (s *Session) executeQuery(qry *Query) *Iter {
 	return iter
 }
 
-// KeyspaceMetadata returns the schema metadata for the keyspace specified.
+// KeyspaceMetadata returns the schema metadata for the keyspace specified. Returns an error if the keyspace does not exist.
 func (s *Session) KeyspaceMetadata(keyspace string) (*KeyspaceMetadata, error) {
 	// fail fast
 	if s.Closed() {
@@ -1564,15 +1570,16 @@ func (e Error) Error() string {
 }
 
 var (
-	ErrNotFound      = errors.New("not found")
-	ErrUnavailable   = errors.New("unavailable")
-	ErrUnsupported   = errors.New("feature not supported")
-	ErrTooManyStmts  = errors.New("too many statements")
-	ErrUseStmt       = errors.New("use statements aren't supported. Please see https://github.com/gocql/gocql for explaination.")
-	ErrSessionClosed = errors.New("session has been closed")
-	ErrNoConnections = errors.New("gocql: no hosts available in the pool")
-	ErrNoKeyspace    = errors.New("no keyspace provided")
-	ErrNoMetadata    = errors.New("no metadata available")
+	ErrNotFound             = errors.New("not found")
+	ErrUnavailable          = errors.New("unavailable")
+	ErrUnsupported          = errors.New("feature not supported")
+	ErrTooManyStmts         = errors.New("too many statements")
+	ErrUseStmt              = errors.New("use statements aren't supported. Please see https://github.com/gocql/gocql for explanation.")
+	ErrSessionClosed        = errors.New("session has been closed")
+	ErrNoConnections        = errors.New("gocql: no hosts available in the pool")
+	ErrNoKeyspace           = errors.New("no keyspace provided")
+	ErrKeyspaceDoesNotExist = errors.New("keyspace does not exist")
+	ErrNoMetadata           = errors.New("no metadata available")
 )
 
 type ErrProtocol struct{ error }

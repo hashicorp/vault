@@ -73,13 +73,13 @@ func (s *RepositoriesService) ListDeployments(owner, repo string, opt *Deploymen
 		return nil, nil, err
 	}
 
-	deployments := new([]*Deployment)
-	resp, err := s.client.Do(req, deployments)
+	var deployments []*Deployment
+	resp, err := s.client.Do(req, &deployments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *deployments, resp, err
+	return deployments, resp, nil
 }
 
 // GetDeployment returns a single deployment of a repository.
@@ -166,13 +166,13 @@ func (s *RepositoriesService) ListDeploymentStatuses(owner, repo string, deploym
 		return nil, nil, err
 	}
 
-	statuses := new([]*DeploymentStatus)
-	resp, err := s.client.Do(req, statuses)
+	var statuses []*DeploymentStatus
+	resp, err := s.client.Do(req, &statuses)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *statuses, resp, err
+	return statuses, resp, nil
 }
 
 // GetDeploymentStatus returns a single deployment status of a repository.

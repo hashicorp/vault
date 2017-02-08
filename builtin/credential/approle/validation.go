@@ -567,9 +567,8 @@ func (b *backend) flushRoleSecrets(s logical.Storage, roleName, hmacKey string) 
 	}
 
 	// Acquire the custom lock to perform listing of SecretIDs
-	customLock := b.secretIDLock("")
-	customLock.RLock()
-	defer customLock.RUnlock()
+	b.secretIDListingLock.RLock()
+	defer b.secretIDListingLock.RUnlock()
 
 	secretIDHMACs, err := s.List(fmt.Sprintf("secret_id/%s/", roleNameHMAC))
 	if err != nil {

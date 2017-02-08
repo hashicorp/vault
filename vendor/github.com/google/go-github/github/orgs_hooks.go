@@ -22,13 +22,13 @@ func (s *OrganizationsService) ListHooks(org string, opt *ListOptions) ([]*Hook,
 		return nil, nil, err
 	}
 
-	hooks := new([]*Hook)
-	resp, err := s.client.Do(req, hooks)
+	var hooks []*Hook
+	resp, err := s.client.Do(req, &hooks)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *hooks, resp, err
+	return hooks, resp, nil
 }
 
 // GetHook returns a single specified Hook.

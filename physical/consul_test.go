@@ -118,33 +118,33 @@ func TestConsul_ServiceTags(t *testing.T) {
 
 func TestConsul_newConsulBackend(t *testing.T) {
 	tests := []struct {
-		name              string
-		consulConfig      map[string]string
-		fail              bool
-		redirectAddr      string
-		checkTimeout      time.Duration
-		path              string
-		service           string
-		address           string
-		scheme            string
-		token             string
-		max_parallel      int
-		disableReg        bool
-		requireConsistent bool
+		name            string
+		consulConfig    map[string]string
+		fail            bool
+		redirectAddr    string
+		checkTimeout    time.Duration
+		path            string
+		service         string
+		address         string
+		scheme          string
+		token           string
+		max_parallel    int
+		disableReg      bool
+		consistencyMode string
 	}{
 		{
-			name:              "Valid default config",
-			consulConfig:      map[string]string{},
-			checkTimeout:      5 * time.Second,
-			redirectAddr:      "http://127.0.0.1:8200",
-			path:              "vault/",
-			service:           "vault",
-			address:           "127.0.0.1:8500",
-			scheme:            "http",
-			token:             "",
-			max_parallel:      4,
-			disableReg:        false,
-			requireConsistent: false,
+			name:            "Valid default config",
+			consulConfig:    map[string]string{},
+			checkTimeout:    5 * time.Second,
+			redirectAddr:    "http://127.0.0.1:8200",
+			path:            "vault/",
+			service:         "vault",
+			address:         "127.0.0.1:8500",
+			scheme:          "http",
+			token:           "",
+			max_parallel:    4,
+			disableReg:      false,
+			consistencyMode: "default",
 		},
 		{
 			name: "Valid modified config",
@@ -158,17 +158,17 @@ func TestConsul_newConsulBackend(t *testing.T) {
 				"token":                "deadbeef-cafeefac-deadc0de-feedface",
 				"max_parallel":         "4",
 				"disable_registration": "false",
-				"require_consistent":   "true",
+				"consistency_mode":     "strong",
 			},
-			checkTimeout:      6 * time.Second,
-			path:              "seaTech/",
-			service:           "astronomy",
-			redirectAddr:      "http://127.0.0.2:8200",
-			address:           "127.0.0.2",
-			scheme:            "https",
-			token:             "deadbeef-cafeefac-deadc0de-feedface",
-			max_parallel:      4,
-			requireConsistent: true,
+			checkTimeout:    6 * time.Second,
+			path:            "seaTech/",
+			service:         "astronomy",
+			redirectAddr:    "http://127.0.0.2:8200",
+			address:         "127.0.0.2",
+			scheme:          "https",
+			token:           "deadbeef-cafeefac-deadc0de-feedface",
+			max_parallel:    4,
+			consistencyMode: "strong",
 		},
 		{
 			name: "check timeout too short",
@@ -224,8 +224,8 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			t.Errorf("bad: %v != %v", test.service, c.serviceName)
 		}
 
-		if test.requireConsistent != c.requireConsistent {
-			t.Errorf("bad require_consistent value: %v != %v", test.requireConsistent, c.requireConsistent)
+		if test.consistencyMode != c.consistencyMode {
+			t.Errorf("bad consistency_mode value: %v != %v", test.consistencyMode, c.consistencyMode)
 		}
 
 		// FIXME(sean@): Unable to test max_parallel

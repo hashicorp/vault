@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -300,7 +299,7 @@ func (b *AESGCMBarrier) ReloadMasterKey() error {
 	defer b.l.Unlock()
 
 	// Check if the master key is the same
-	if bytes.Equal(b.keyring.MasterKey(), key.Value) {
+	if subtle.ConstantTimeCompare(b.keyring.MasterKey(), key.Value) == 1 {
 		return nil
 	}
 

@@ -175,6 +175,13 @@ of the header should be "X-Vault-Token" and the value should be the token.
         a one-time-token or limited use token. Defaults to 0, which has
         no limit to the number of uses.
       </li>
+      <li>
+        <span class="param">period</span>
+        <span class="param-flags">optional</span>
+        If specified, the token will be periodic; it will have no maximum TTL
+        (unless an "explicit-max-ttl" is also set) but every renewal will use
+        the given period. Requires a root/sudo token to use.
+      </li>
     </ul>
   </dd>
 

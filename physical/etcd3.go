@@ -59,7 +59,13 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (Backend, error)
 	if haEnabled == "" {
 		haEnabled = conf["ha_enabled"]
 	}
-	haEnabledBool, _ := strconv.ParseBool(haEnabled)
+	if haEnabled == "" {
+		haEnabled = "false"
+	}
+	haEnabledBool, err := strconv.ParseBool(haEnabled)
+	if err != nil {
+		return nil, fmt.Errorf("value [%v] of 'ha_enabled' could not be understood", haEnabled)
+	}
 
 	cert, hasCert := conf["tls_cert_file"]
 	key, hasKey := conf["tls_key_file"]

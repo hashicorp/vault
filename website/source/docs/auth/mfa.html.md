@@ -90,6 +90,6 @@ the new username. For example "%s@example.com" would append "@example.com"
 to the provided username before connecting to Duo.
 
 `push_info` is a string of URL-encoded key/value pairs that provides additional
-context about the authentication attemmpt in the Duo Mobile application.
+context about the authentication attempt in the Duo Mobile application.
 
 More information can be found through the CLI `path-help` command.

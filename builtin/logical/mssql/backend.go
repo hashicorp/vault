@@ -31,6 +31,8 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
+
+		Clean: b.ResetDB,
 	}
 
 	return &b

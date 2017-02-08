@@ -88,6 +88,7 @@ $ vault read transit/keys/foo
 Key                     Value
 deletion_allowed      	false
 derived               	false
+exportable            	false
 keys                  	map[1:1484070923]
 latest_version        	1
 min_decryption_version	1
@@ -179,6 +180,11 @@ only encrypt or decrypt using the named keys they need access to.
         key, and the key space for nonces is 96 bit -- not as large as the AES
         key itself. Defaults to false.
       </li>
+      <li>
+        <span class="param">exportable</span>
+        <span class="param-flags">optional</span>
+        Boolean flag indicating if the key is exportable. Defaults to false.
+      </li>
     </ul>
   </dd>
 
@@ -220,6 +226,7 @@ only encrypt or decrypt using the named keys they need access to.
         "type": "aes256-gcm96",
         "deletion_allowed": false,
         "derived": false,
+        "exportable": false,
         "keys": {
           "1": 1442851412
         },
@@ -374,6 +381,51 @@ only encrypt or decrypt using the named keys they need access to.
   </dd>
 </dl>
 
+### /transit/export/encryption-key/\<name\>(/\<version\>)
+### /transit/export/signing-key/\<name\>(/\<version\>)
+### /transit/export/hmac-key/\<name\>(/\<version\>)
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the named key. The `keys` object shows the value of the key for
+    each version. If `version` is specified, the specific version will be
+    returned. If `latest` is provided as the version, the current key will be
+    provided. Depending on the type of key, different information may be
+    returned. The key must be exportable to support this operation and the
+    version must still be valid.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/transit/export/<key-type>/<name>/<version>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+    ```javascript
+    {
+      "data": {
+        "name": "foo",
+        "keys": {
+          "1": "eyXYGHbTmugUJn6EtYD/yVEoF6pCxm4R/cMEutUm3MY=",
+          "2": "Euzymqx6iXjS3/NuGKDCiM2Ev6wdhnU+rBiKnJ7YpHE="
+        }
+      }
+    }
+    ```
+
+  </dd>
+</dl>
+
 ### /transit/encrypt/
 #### POST
 
@@ -401,23 +453,75 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">plaintext</span>
         <span class="param-flags">required</span>
-        The plaintext to encrypt, provided as a base64-encoded string.
+        Base64 encoded plaintext value to be encrypted.
       </li>
+    </ul>
+    <ul>
       <li>
         <span class="param">context</span>
         <span class="param-flags">optional</span>
-        The key derivation context, provided as a base64-encoded string.
-        Must be provided if derivation is enabled.
+        Base64 encoded context for key derivation. Required if key derivation
+        is enabled.
       </li>
+    </ul>
+    <ul>
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
-        The nonce value, provided as base64 encoded. Must be provided if
-        convergent encryption is enabled for this key and the key was generated
-        with Vault 0.6.1. Not required for keys created in 0.6.2+. The value
-        must be exactly 96 bits (12 bytes) long and the user must ensure that
-        for any given context (and thus, any given encryption key) this nonce
-        value is **never reused**.
+        Base64 encoded nonce value. Must be provided if convergent encryption is
+        enabled for this key and the key was generated with Vault 0.6.1. Not required
+        for keys created in 0.6.2+. The value must be exactly 96 bits (12 bytes) long
+        and the user must ensure that for any given context (and thus, any given
+        encryption key) this nonce value is **never reused**.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">batch_input</span>
+        <span class="param-flags">optional</span>
+        List of items to be encrypted in a single batch. When
+        this parameter is set, if the parameters 'plaintext', 'context' and
+        'nonce' are also set, they will be ignored. Format for the input
+        goes like this:
+
+```javascript
+[
+  {
+    "context": "c2FtcGxlY29udGV4dA==",
+    "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
+  },
+  {
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
+    "plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="
+  },
+  ...
+]
+```
+
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">type</span>
+        <span class="param-flags">optional</span>
+        This parameter is required when encryption key is expected to be created.
+        When performing an upsert operation, the type of key to create. Currently,
+        "aes256-gcm96" (symmetric) is the only type supported. Defaults to
+        "aes256-gcm96".
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">convergent_encryption</span>
+        <span class="param-flags">optional</span>
+        This parameter will only be used when a key is expected to be created.  Whether
+        to support convergent encryption. This is only supported when using a key with
+        key derivation enabled and will require all requests to carry both a context
+        and 96-bit (12-byte) nonce. The given nonce will be used in place of a randomly
+        generated nonce. As a result, when the same context and nonce are supplied, the
+        same ciphertext is generated. It is *very important* when using this mode that
+        you ensure that all nonces are unique for a given context.  Failing to do so
+        will severely impact the ciphertext's security.
       </li>
     </ul>
   </dd>
@@ -463,16 +567,39 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">context</span>
         <span class="param-flags">optional</span>
-        The key derivation context, provided as a base64-encoded string.
-        Must be provided if derivation is enabled.
+        Base64 encoded context for key derivation. Required if key derivation is
+        enabled.
       </li>
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
-        The nonce value used during encryption, provided as base64 encoded.
-        Must be provided if convergent encryption is enabled for this key and
-        the key was created with Vault 0.6.1. Not required for keys created in
-        0.6.2+.
+        Base64 encoded nonce value used during encryption. Must be provided if
+        convergent encryption is enabled for this key and the key was generated with
+        Vault 0.6.1. Not required for keys created in 0.6.2+.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">batch_input</span>
+        <span class="param-flags">optional</span>
+        List of items to be decrypted in a single batch. When this parameter is
+        set, if the parameters 'ciphertext', 'context' and 'nonce' are also
+        set, they will be ignored. Format for the input goes like this:
+
+```javascript
+[
+  {
+    "context": "c2FtcGxlY29udGV4dA==",
+    "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
+  },
+  {
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
+    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
+  },
+  ...
+]
+```
+
       </li>
     </ul>
   </dd>
@@ -519,8 +646,7 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">context</span>
         <span class="param-flags">optional</span>
-        The key derivation context, provided as base64-encoded string.
-        Must be provided if derivation is enabled.
+        Base64 encoded context for key derivation. Required for derived keys.
       </li>
       <li>
         <span class="param">nonce</span>
@@ -529,6 +655,28 @@ only encrypt or decrypt using the named keys they need access to.
         Must be provided if convergent encryption is enabled for this key and
         the key was created with Vault 0.6.1. Not required for keys created in
         0.6.2+.
+      </li>
+      <li>
+        <span class="param">batch_input</span>
+        <span class="param-flags">optional</span>
+        List of items to be rewrapped in a single batch. When this parameter is
+        set, if the parameters 'ciphertext', 'context' and 'nonce' are also
+        set, they will be ignored. Format for the input goes like this:
+
+```javascript
+[
+  {
+    "context": "c2FtcGxlY29udGV4dA==",
+    "ciphertext": "vault:v1:/DupSiSbX/ATkGmKAmhqD0tvukByrx6gmps7dVI="
+  },
+  {
+    "context": "YW5vdGhlcnNhbXBsZWNvbnRleHQ=",
+    "ciphertext": "vault:v1:XjsPWPjqPrBi1N2Ms2s1QM798YyFWnO4TR4lsFA="
+  },
+  ...
+]
+```
+
       </li>
     </ul>
   </dd>

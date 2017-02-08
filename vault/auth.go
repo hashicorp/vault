@@ -66,6 +66,10 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return fmt.Errorf("token credential backend cannot be instantiated")
 	}
 
+	if match := c.router.MatchingMount(credentialRoutePrefix + entry.Path); match != "" {
+		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
+	}
+
 	// Generate a new UUID and view
 	entryUUID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -89,11 +93,11 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 	c.auth = newTable
 
-	// Mount the backend
 	path := credentialRoutePrefix + entry.Path
 	if err := c.router.Mount(backend, path, entry, view); err != nil {
 		return err
 	}
+
 	if c.logger.IsInfo() {
 		c.logger.Info("core: enabled credential backend", "path", entry.Path, "type", entry.Type)
 	}
@@ -119,9 +123,6 @@ func (c *Core) disableCredential(path string) (bool, error) {
 	if view == nil {
 		return false, fmt.Errorf("no matching backend")
 	}
-
-	c.authLock.Lock()
-	defer c.authLock.Unlock()
 
 	// Mark the entry as tainted
 	if err := c.taintCredEntry(path); err != nil {
@@ -162,6 +163,9 @@ func (c *Core) disableCredential(path string) (bool, error) {
 
 // removeCredEntry is used to remove an entry in the auth table
 func (c *Core) removeCredEntry(path string) error {
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
+
 	// Taint the entry from the auth table
 	newTable := c.auth.shallowClone()
 	newTable.remove(path)
@@ -178,6 +182,9 @@ func (c *Core) removeCredEntry(path string) error {
 
 // taintCredEntry is used to mark an entry in the auth table as tainted
 func (c *Core) taintCredEntry(path string) error {
+	c.authLock.Lock()
+	defer c.authLock.Unlock()
+
 	// Taint the entry from the auth table
 	// We do this on the original since setting the taint operates
 	// on the entries which a shallow clone shares anyways

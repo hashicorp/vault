@@ -107,6 +107,7 @@ func (f *AuditFormatter) FormatRequest(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
+			Headers:             req.Headers,
 		},
 	}
 
@@ -275,6 +276,7 @@ func (f *AuditFormatter) FormatResponse(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
+			Headers:             req.Headers,
 		},
 
 		Response: AuditResponse{
@@ -325,6 +327,7 @@ type AuditRequest struct {
 	Data                map[string]interface{} `json:"data"`
 	RemoteAddr          string                 `json:"remote_address"`
 	WrapTTL             int                    `json:"wrap_ttl"`
+	Headers             map[string][]string    `json:"headers"`
 }
 
 type AuditResponse struct {

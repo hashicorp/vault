@@ -86,13 +86,13 @@ func (s *OrganizationsService) ListMembers(org string, opt *ListMembersOptions) 
 		return nil, nil, err
 	}
 
-	members := new([]*User)
-	resp, err := s.client.Do(req, members)
+	var members []*User
+	resp, err := s.client.Do(req, &members)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *members, resp, err
+	return members, resp, nil
 }
 
 // IsMember checks if a user is a member of an organization.
@@ -269,4 +269,30 @@ func (s *OrganizationsService) RemoveOrgMembership(user, org string) (*Response,
 	}
 
 	return s.client.Do(req, nil)
+}
+
+// ListPendingOrgInvitations returns a list of pending invitations.
+//
+// GitHub API docs: https://developer.github.com/v3/orgs/members/#list-pending-organization-invitations
+func (s *OrganizationsService) ListPendingOrgInvitations(org int, opt *ListOptions) ([]*Invitation, *Response, error) {
+	u := fmt.Sprintf("orgs/%v/invitations", org)
+	u, err := addOptions(u, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeOrgMembershipPreview)
+
+	var pendingInvitations []*Invitation
+	resp, err := s.client.Do(req, &pendingInvitations)
+	if err != nil {
+		return nil, resp, err
+	}
+	return pendingInvitations, resp, nil
 }

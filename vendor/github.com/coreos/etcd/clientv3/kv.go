@@ -32,7 +32,7 @@ type KV interface {
 	// Put puts a key-value pair into etcd.
 	// Note that key,value can be plain bytes array and string is
 	// an immutable representation of that bytes array.
-	// To get a string of bytes, do string([]byte(0x10, 0x20)).
+	// To get a string of bytes, do string([]byte{0x10, 0x20}).
 	Put(ctx context.Context, key, val string, opts ...OpOption) (*PutResponse, error)
 
 	// Get retrieves keys.
@@ -148,7 +148,7 @@ func (kv *kv) do(ctx context.Context, op Op) (OpResponse, error) {
 		}
 	case tPut:
 		var resp *pb.PutResponse
-		r := &pb.PutRequest{Key: op.key, Value: op.val, Lease: int64(op.leaseID), PrevKv: op.prevKV}
+		r := &pb.PutRequest{Key: op.key, Value: op.val, Lease: int64(op.leaseID), PrevKv: op.prevKV, IgnoreValue: op.ignoreValue, IgnoreLease: op.ignoreLease}
 		resp, err = kv.remote.Put(ctx, r)
 		if err == nil {
 			return OpResponse{put: (*PutResponse)(resp)}, nil

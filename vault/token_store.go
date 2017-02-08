@@ -1468,24 +1468,16 @@ func (ts *TokenStore) handleCreateCommon(
 				}
 			}
 		} else {
-			// Check against parent policies, or assign parent policies. As
-			// this is a role, add default unless explicitly disabled.
+			// Assign parent policies if none have been requested. As this is a
+			// role, add default unless explicitly disabled.
 			if len(finalPolicies) == 0 {
 				finalPolicies = policyutil.SanitizePolicies(parent.Policies, localAddDefault)
-			} else {
-				// If we added default based on the fact that this is using a
-				// role, we need to add it here too to ensure that the subset
-				// matching works.
-				sanitizedParentPolicies := policyutil.SanitizePolicies(parent.Policies, localAddDefault)
-				if !strutil.StrListSubset(sanitizedParentPolicies, finalPolicies) {
-					return logical.ErrorResponse("child policies must be subset of parent when role contains no allowed_policies"), logical.ErrInvalidRequest
-				}
 			}
 		}
 
 		if len(role.DisallowedPolicies) > 0 {
 			// We don't add the default here because we only want to disallow it if it's explicitly set
-			sanitizedRolePolicies = policyutil.SanitizePolicies(role.DisallowedPolicies, policyutil.DoNotAddDefaultPolicy)
+			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies)
 
 			for _, finalPolicy := range finalPolicies {
 				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
@@ -2218,9 +2210,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 
 	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
 	if ok {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(disallowedPoliciesStr.(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.DisallowedPolicies = strutil.ParseDedupAndSortStrings(disallowedPoliciesStr.(string), ",")
 	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = policyutil.SanitizePolicies(strings.Split(data.Get("disallowed_policies").(string), ","), policyutil.DoNotAddDefaultPolicy)
+		entry.DisallowedPolicies = strutil.ParseDedupAndSortStrings(data.Get("disallowed_policies").(string), ",")
 	}
 
 	// Store it

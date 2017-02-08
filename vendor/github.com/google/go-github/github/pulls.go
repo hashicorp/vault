@@ -107,13 +107,13 @@ func (s *PullRequestsService) List(owner string, repo string, opt *PullRequestLi
 		return nil, nil, err
 	}
 
-	pulls := new([]*PullRequest)
-	resp, err := s.client.Do(req, pulls)
+	var pulls []*PullRequest
+	resp, err := s.client.Do(req, &pulls)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *pulls, resp, err
+	return pulls, resp, nil
 }
 
 // Get a single pull request.
@@ -189,12 +189,33 @@ func (s *PullRequestsService) Create(owner string, repo string, pull *NewPullReq
 	return p, resp, err
 }
 
+type pullRequestUpdate struct {
+	Title *string `json:"title,omitempty"`
+	Body  *string `json:"body,omitempty"`
+	State *string `json:"state,omitempty"`
+	Base  *string `json:"base,omitempty"`
+}
+
 // Edit a pull request.
+//
+// The following fields are editable: Title, Body, State, and Base.Ref.
+// Base.Ref updates the base branch of the pull request.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#update-a-pull-request
 func (s *PullRequestsService) Edit(owner string, repo string, number int, pull *PullRequest) (*PullRequest, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d", owner, repo, number)
-	req, err := s.client.NewRequest("PATCH", u, pull)
+
+	update := new(pullRequestUpdate)
+	if pull != nil {
+		update.Title = pull.Title
+		update.Body = pull.Body
+		update.State = pull.State
+		if pull.Base != nil {
+			update.Base = pull.Base.Ref
+		}
+	}
+
+	req, err := s.client.NewRequest("PATCH", u, update)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -223,13 +244,13 @@ func (s *PullRequestsService) ListCommits(owner string, repo string, number int,
 		return nil, nil, err
 	}
 
-	commits := new([]*RepositoryCommit)
-	resp, err := s.client.Do(req, commits)
+	var commits []*RepositoryCommit
+	resp, err := s.client.Do(req, &commits)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *commits, resp, err
+	return commits, resp, nil
 }
 
 // ListFiles lists the files in a pull request.
@@ -247,13 +268,13 @@ func (s *PullRequestsService) ListFiles(owner string, repo string, number int, o
 		return nil, nil, err
 	}
 
-	commitFiles := new([]*CommitFile)
-	resp, err := s.client.Do(req, commitFiles)
+	var commitFiles []*CommitFile
+	resp, err := s.client.Do(req, &commitFiles)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *commitFiles, resp, err
+	return commitFiles, resp, nil
 }
 
 // IsMerged checks if a pull request has been merged.
