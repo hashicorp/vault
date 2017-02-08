@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -156,6 +157,8 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 		return nil, err
 	}
 
+	result.logger = b.Logger()
+
 	return result, nil
 }
 
@@ -183,6 +186,8 @@ func (b *backend) pathConfigRead(
  */
 func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	cfg := new(ConfigEntry)
+
+	cfg.logger = b.Logger()
 
 	url := d.Get("url").(string)
 	if url != "" {
@@ -295,6 +300,7 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
+	logger        log.Logger
 	Url           string `json:"url" structs:"url" mapstructure:"url"`
 	UserDN        string `json:"userdn" structs:"userdn" mapstructure:"userdn"`
 	GroupDN       string `json:"groupdn" structs:"groupdn" mapstructure:"groupdn"`
@@ -398,6 +404,11 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 			continue
 		}
 		if err == nil {
+			if retErr != nil {
+				if c.logger.IsDebug() {
+					c.logger.Debug("ldap: errors connecting to some hosts: %s", retErr.Error())
+				}
+			}
 			retErr = nil
 			break
 		}
