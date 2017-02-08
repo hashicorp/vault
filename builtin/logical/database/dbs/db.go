@@ -11,6 +11,7 @@ import (
 
 const (
 	postgreSQLTypeName = "postgres"
+	mySQLTypeName      = "mysql"
 	cassandraTypeName  = "cassandra"
 )
 
@@ -38,6 +39,28 @@ func Factory(conf *DatabaseConfig) (DatabaseType, error) {
 		}
 
 		return &PostgreSQL{
+			ConnectionProducer:  connProducer,
+			CredentialsProducer: credsProducer,
+		}, nil
+
+	case mySQLTypeName:
+		var details *sqlConnectionDetails
+		err := mapstructure.Decode(conf.ConnectionDetails, &details)
+		if err != nil {
+			return nil, err
+		}
+
+		connProducer := &sqlConnectionProducer{
+			config:      conf,
+			connDetails: details,
+		}
+
+		credsProducer := &sqlCredentialsProducer{
+			displayNameLen: 4,
+			usernameLen:    16,
+		}
+
+		return &MySQL{
 			ConnectionProducer:  connProducer,
 			CredentialsProducer: credsProducer,
 		}, nil

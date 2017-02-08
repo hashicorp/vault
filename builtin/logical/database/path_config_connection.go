@@ -52,7 +52,8 @@ reduced to the same size.`,
 			},
 
 			"max_connection_lifetime": &framework.FieldSchema{
-				Type: framework.TypeInt,
+				Type:    framework.TypeString,
+				Default: "0s",
 				Description: `Maximum amount of time a connection may be reused;
 				a zero or negative value reuses connections forever.`,
 			},
@@ -91,7 +92,6 @@ func (b *databaseBackend) pathConnectionRead(req *logical.Request, data *framewo
 
 func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connType := data.Get("connection_type").(string)
-	connDetails := data.Get("connection_details").(map[string]interface{})
 
 	maxOpenConns := data.Get("max_open_connections").(int)
 	if maxOpenConns == 0 {
@@ -115,7 +115,7 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 
 	config := &dbs.DatabaseConfig{
 		DatabaseType:          connType,
-		ConnectionDetails:     connDetails,
+		ConnectionDetails:     data.Raw,
 		MaxOpenConnections:    maxOpenConns,
 		MaxIdleConnections:    maxIdleConns,
 		MaxConnectionLifetime: maxConnLifetime,

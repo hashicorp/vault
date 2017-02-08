@@ -22,7 +22,7 @@ type MySQL struct {
 }
 
 func (p *MySQL) Type() string {
-	return postgreSQLTypeName
+	return mySQLTypeName
 }
 
 func (p *MySQL) getConnection() (*sql.DB, error) {
