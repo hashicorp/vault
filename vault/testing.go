@@ -80,6 +80,24 @@ func TestCoreNewSeal(t testing.TB) *Core {
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
 func TestCoreWithSeal(t testing.TB, testSeal Seal) *Core {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	physicalBackend := physical.NewInmem(logger)
+
+	conf := testCoreConfig(t, physicalBackend, logger)
+
+	if testSeal != nil {
+		conf.Seal = testSeal
+	}
+
+	c, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	return c
+}
+
+func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	noopAudits := map[string]audit.Factory{
 		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -118,9 +136,6 @@ func TestCoreWithSeal(t testing.TB, testSeal Seal) *Core {
 		logicalBackends[backendName] = backendFactory
 	}
 
-	logger := logformat.NewVaultLogger(log.LevelTrace)
-
-	physicalBackend := physical.NewInmem(logger)
 	conf := &CoreConfig{
 		Physical:           physicalBackend,
 		AuditBackends:      noopAudits,
@@ -129,16 +144,8 @@ func TestCoreWithSeal(t testing.TB, testSeal Seal) *Core {
 		DisableMlock:       true,
 		Logger:             logger,
 	}
-	if testSeal != nil {
-		conf.Seal = testSeal
-	}
 
-	c, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	return c
+	return conf
 }
 
 // TestCoreInit initializes the core with a single key, and returns
@@ -155,7 +162,10 @@ func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, clusterAddrs []*n
 			SecretShares:    3,
 			SecretThreshold: 3,
 		},
-		RecoveryConfig: nil,
+		RecoveryConfig: &SealConfig{
+			SecretShares:    3,
+			SecretThreshold: 3,
+		},
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -190,11 +200,35 @@ func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
 	return core, keys, token
 }
 
-// TestCoreWithTokenStore returns an in-memory core that has a token store
-// mounted, so that logical token functions can be used
-func TestCoreWithTokenStore(t testing.TB) (*Core, *TokenStore, [][]byte, string) {
-	c, keys, root := TestCoreUnsealed(t)
+func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][]byte, string) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	conf := testCoreConfig(t, backend, logger)
+	conf.Seal = &TestSeal{}
 
+	core, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	keys, token := TestCoreInit(t, core)
+	for _, key := range keys {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+			t.Fatalf("unseal err: %s", err)
+		}
+	}
+
+	sealed, err := core.Sealed()
+	if err != nil {
+		t.Fatalf("err checking seal status: %s", err)
+	}
+	if sealed {
+		t.Fatal("should not be sealed")
+	}
+
+	return core, keys, token
+}
+
+func testTokenStore(t testing.TB, c *Core) *TokenStore {
 	me := &MountEntry{
 		Table:       credentialTableType,
 		Path:        "token/",
@@ -221,6 +255,25 @@ func TestCoreWithTokenStore(t testing.TB) (*Core, *TokenStore, [][]byte, string)
 
 	exp := NewExpirationManager(router, subview, ts, logger)
 	ts.SetExpirationManager(exp)
+
+	return ts
+}
+
+// TestCoreWithTokenStore returns an in-memory core that has a token store
+// mounted, so that logical token functions can be used
+func TestCoreWithTokenStore(t testing.TB) (*Core, *TokenStore, [][]byte, string) {
+	c, keys, root := TestCoreUnsealed(t)
+	ts := testTokenStore(t, c)
+
+	return c, ts, keys, root
+}
+
+// TestCoreWithBackendTokenStore returns a core that has a token store
+// mounted and used the provided physical backend, so that logical token
+// functions can be used
+func TestCoreWithBackendTokenStore(t testing.TB, backend physical.Backend) (*Core, *TokenStore, [][]byte, string) {
+	c, keys, root := TestCoreUnsealedBackend(t, backend)
+	ts := testTokenStore(t, c)
 
 	return c, ts, keys, root
 }

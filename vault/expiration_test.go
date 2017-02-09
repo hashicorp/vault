@@ -5,12 +5,23 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	dockertest "gopkg.in/ory-am/dockertest.v2"
+
+	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/physical"
+	log "github.com/mgutz/logxi/v1"
+)
+
+var (
+	testImagePull sync.Once
 )
 
 // mockExpiration returns a mock expiration manager
@@ -19,43 +30,39 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 	return ts.expiration
 }
 
-func BenchmarkExpiration_Restore(b *testing.B) {
-	exp := mockExpiration(b)
+func mockConsulExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
+	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
+	return c, ts.expiration
+}
+
+func BenchmarkExpiration_Restore_Consul(b *testing.B) {
+	cid, addr, _ := prepareTestContainer(b)
+	if cid != "" {
+		defer cid.KillRemove()
+	}
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	physicalBackend, err := physical.NewBackend("consul", logger, map[string]string{
+		"address":      addr,
+		"path":         randPath,
+		"max_parallel": "256",
+		"token":        dockertest.ConsulACLMasterToken,
+	})
+	if err != nil {
+		b.Fatalf("err: %s", err)
+	}
+
+	c, exp := mockConsulExpiration(b, physicalBackend)
 	noop := &NoopBackend{}
-	_, barrier, _ := mockBarrier(b)
-	view := NewBarrierView(barrier, "logical/")
+	view := NewBarrierView(c.barrier, "logical/")
 	meUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		b.Fatal(err)
 	}
 	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
-	for i := 0; i < 10000; i++ {
-		pathUUID, err := uuid.GenerateUUID()
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		req := &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "/prod/aws/" + pathUUID,
-		}
-		resp := &logical.Response{
-			Secret: &logical.Secret{
-				LeaseOptions: logical.LeaseOptions{
-					TTL: 200 * time.Second,
-				},
-			},
-			Data: map[string]interface{}{
-				"access_key": "xyz",
-				"secret_key": "abcd",
-			},
-		}
-		_, err = exp.Register(req, resp)
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
-	}
+	registerLeases(b, exp)
 
 	// Stop everything
 	err = exp.Stop()
@@ -67,6 +74,64 @@ func BenchmarkExpiration_Restore(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		err = exp.Restore()
 		// Restore
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
+}
+
+func BenchmarkExpiration_Restore_InMem(b *testing.B) {
+	exp := mockExpiration(b)
+	noop := &NoopBackend{}
+	_, barrier, _ := mockBarrier(b)
+	view := NewBarrierView(barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		b.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+
+	registerLeases(b, exp)
+
+	// Stop everything
+	err = exp.Stop()
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = exp.Restore()
+		// Restore
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
+}
+
+func registerLeases(b testing.TB, exp *ExpirationManager) {
+	for i := 0; i < 10000; i++ {
+		pathUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "prod/aws/" + pathUUID,
+		}
+		resp := &logical.Response{
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 400 * time.Second,
+				},
+			},
+			Data: map[string]interface{}{
+				"access_key": "xyz",
+				"secret_key": "abcd",
+			},
+		}
+		_, err = exp.Register(req, resp)
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
@@ -1122,4 +1187,63 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	}
 
 	return be.Setup(conf)
+}
+
+func prepareTestContainer(t testing.TB) (cid dockertest.ContainerID, retAddress string, client *api.Client) {
+	/*	if os.Getenv("CONSUL_HTTP_ADDR") != "" {
+			return "", os.Getenv("CONSUL_HTTP_ADDR")
+		}
+	*/
+	// Without this the checks for whether the container has started seem to
+	// never actually pass. There's really no reason to expose the test
+	// containers, so don't.
+	dockertest.BindDockerToLocalhost = "yep"
+
+	testImagePull.Do(func() {
+		dockertest.Pull(dockertest.ConsulImageName)
+	})
+
+	try := 0
+	cid, connErr := dockertest.ConnectToConsul(60, 500*time.Millisecond, func(connAddress string) bool {
+		try += 1
+		// Build a client and verify that the credentials work
+		config := api.DefaultConfig()
+		config.Address = connAddress
+		config.Token = dockertest.ConsulACLMasterToken
+		client, err := api.NewClient(config)
+		if err != nil {
+			if try > 50 {
+				panic(err)
+			}
+			return false
+		}
+
+		_, err = client.KV().Put(&api.KVPair{
+			Key:   "setuptest",
+			Value: []byte("setuptest"),
+		}, nil)
+		if err != nil {
+			if try > 50 {
+				panic(err)
+			}
+			return false
+		}
+
+		retAddress = connAddress
+		return true
+	})
+
+	if connErr != nil {
+		t.Fatalf("could not connect to consul: %v", connErr)
+	}
+
+	conf := api.DefaultConfig()
+	conf.Address = retAddress
+	conf.Token = dockertest.ConsulACLMasterToken
+	client, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	return
 }
