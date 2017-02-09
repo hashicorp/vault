@@ -124,34 +124,59 @@ func (m *ExpirationManager) Restore() error {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
 
+	broker := make(chan string, len(existing))
+	errs := make(chan error, len(existing))
+	result := make(chan *leaseEntry, len(existing))
+
+	for i := 0; i < 64; i++ {
+		go func() {
+			for leaseID := range broker {
+				le, err := m.loadEntry(leaseID)
+				if err != nil {
+					errs <- err
+				}
+
+				result <- le
+			}
+		}()
+	}
+
+	go func() {
+		for _, leaseID := range existing {
+			broker <- leaseID
+		}
+		close(broker)
+	}()
+
 	// Restore each key
-	for _, leaseID := range existing {
-		// Load the entry
-		le, err := m.loadEntry(leaseID)
-		if err != nil {
-			return err
-		}
-
-		// If there is no entry, nothing to restore
-		if le == nil {
+	for i := 0; i < len(existing); i++ {
+		select {
+		case err := <-errs:
+			fmt.Println(err)
 			continue
-		}
+		case le := <-result:
 
-		// If there is no expiry time, don't do anything
-		if le.ExpireTime.IsZero() {
-			continue
-		}
+			// If there is no entry, nothing to restore
+			if le == nil {
+				continue
+			}
 
-		// Determine the remaining time to expiration
-		expires := le.ExpireTime.Sub(time.Now())
-		if expires <= 0 {
-			expires = minRevokeDelay
-		}
+			// If there is no expiry time, don't do anything
+			if le.ExpireTime.IsZero() {
+				continue
+			}
 
-		// Setup revocation timer
-		m.pending[le.LeaseID] = time.AfterFunc(expires, func() {
-			m.expireID(le.LeaseID)
-		})
+			// Determine the remaining time to expiration
+			expires := le.ExpireTime.Sub(time.Now())
+			if expires <= 0 {
+				expires = minRevokeDelay
+			}
+
+			// Setup revocation timer
+			m.pending[le.LeaseID] = time.AfterFunc(expires, func() {
+				m.expireID(le.LeaseID)
+			})
+		}
 	}
 	if len(m.pending) > 0 {
 		if m.logger.IsInfo() {

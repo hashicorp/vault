@@ -36,21 +36,22 @@ func mockConsulExpiration(t testing.TB, backend physical.Backend) (*Core, *Expir
 }
 
 func BenchmarkExpiration_Restore_Consul(b *testing.B) {
-	cid, addr, _ := prepareTestContainer(b)
-	if cid != "" {
-		defer cid.KillRemove()
-	}
+	/*	cid, addr, _ := prepareTestContainer(b)
+		if cid != "" {
+			defer cid.KillRemove()
+		}*/
+	addr := "127.0.0.1:8500"
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	physicalBackend, err := physical.NewBackend("consul", logger, map[string]string{
 		"address":      addr,
 		"path":         randPath,
-		"max_parallel": "256",
+		"max_parallel": "64",
 		"token":        dockertest.ConsulACLMasterToken,
 	})
 	if err != nil {
-		b.Fatalf("err: %s", err)
+		b.Fatalf("err1: %s", err)
 	}
 
 	c, exp := mockConsulExpiration(b, physicalBackend)
@@ -67,7 +68,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 	// Stop everything
 	err = exp.Stop()
 	if err != nil {
-		b.Fatalf("err: %v", err)
+		b.Fatalf("err2: %v", err)
 	}
 
 	b.ResetTimer()
@@ -75,8 +76,9 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 		err = exp.Restore()
 		// Restore
 		if err != nil {
-			b.Fatalf("err: %v", err)
+			b.Fatalf("err3: %v", err)
 		}
+		exp.Stop()
 	}
 }
 
@@ -133,7 +135,7 @@ func registerLeases(b testing.TB, exp *ExpirationManager) {
 		}
 		_, err = exp.Register(req, resp)
 		if err != nil {
-			b.Fatalf("err: %v", err)
+			b.Fatalf("err4: %v", err)
 		}
 	}
 }
