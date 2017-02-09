@@ -11,7 +11,9 @@ if (env.BRANCH_NAME == "v0.5.3-zkfix") {
 
 task_wrapper('mesos'){
     stage("Verify author") {
-        user_is_authorized()
+        def master_branches = ['v0.5.3-zkfix']
+
+        user_is_authorized(master_branches)
     }
 
     stage('Cleanup workspace') {
