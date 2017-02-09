@@ -74,6 +74,12 @@ Following are the configuration options available for the backend.
         <span class="param-flags">optional</span>
             Sets the timeout for writes to the socket. Defaults to "2s" (2 seconds).
         </li>
+      <li>
+        <span class="param">prefix</span>
+        <span class="param-flags">optional</span>
+            Allows a customizable string prefix to write before the actual log
+            line. Defaults to an empty string.
+      </li>
     </ul>
   </dd>
 </dl>

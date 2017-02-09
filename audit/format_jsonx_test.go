@@ -17,6 +17,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 		Auth     *logical.Auth
 		Req      *logical.Request
 		Err      error
+		Prefix   string
 		Result   string
 		Expected string
 	}{
@@ -37,6 +38,27 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 			},
 			errors.New("this is an error"),
 			"",
+			"",
+			`<json:object name="auth"><json:string name="accessor"></json:string><json:string name="client_token"></json:string><json:string name="display_name"></json:string><json:null name="metadata" /><json:array name="policies"><json:string>root</json:string></json:array></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token"></json:string><json:string name="client_token_accessor"></json:string><json:null name="data" /><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id"></json:string><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
+		},
+		"auth, request with prefix": {
+			&logical.Auth{ClientToken: "foo", Policies: []string{"root"}},
+			&logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": []string{"bar"},
+				},
+			},
+			errors.New("this is an error"),
+			"",
+			"@cee: ",
 			`<json:object name="auth"><json:string name="accessor"></json:string><json:string name="client_token"></json:string><json:string name="display_name"></json:string><json:null name="metadata" /><json:array name="policies"><json:string>root</json:string></json:array></json:object><json:string name="error">this is an error</json:string><json:object name="request"><json:string name="client_token"></json:string><json:string name="client_token_accessor"></json:string><json:null name="data" /><json:object name="headers"><json:array name="foo"><json:string>bar</json:string></json:array></json:object><json:string name="id"></json:string><json:string name="operation">update</json:string><json:string name="path">/foo</json:string><json:string name="remote_address">127.0.0.1</json:string><json:number name="wrap_ttl">60</json:number></json:object><json:string name="type">request</json:string>`,
 		},
 	}
@@ -44,7 +66,9 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 	for name, tc := range cases {
 		var buf bytes.Buffer
 		formatter := AuditFormatter{
-			AuditFormatWriter: &JSONxFormatWriter{},
+			AuditFormatWriter: &JSONxFormatWriter{
+				Prefix: tc.Prefix,
+			},
 		}
 		salter, _ := salt.NewSalt(nil, nil)
 		config := FormatterConfig{
@@ -55,7 +79,11 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 
-		if strings.TrimSpace(buf.String()) != string(tc.Expected) {
+		if !strings.HasPrefix(buf.String(), tc.Prefix) {
+			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, tc.Result, tc.Prefix)
+		}
+
+		if !strings.HasSuffix(strings.TrimSpace(buf.String()), string(tc.Expected)) {
 			t.Fatalf(
 				"bad: %s\nResult:\n\n'%s'\n\nExpected:\n\n'%s'",
 				name, strings.TrimSpace(buf.String()), string(tc.Expected))
