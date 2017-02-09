@@ -338,7 +338,7 @@ only encrypt or decrypt using the named keys they need access to.
         Defaults to 0.
       </li>
       <li>
-        <span class="param">allow_deletion</span>
+        <span class="param">deletion_allowed</span>
         <span class="param-flags">optional</span>
         When set, the key is allowed to be deleted. Defaults to false.
       </li>
