@@ -124,11 +124,11 @@ func (m *ExpirationManager) Restore() error {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
 
-	broker := make(chan string, len(existing))
-	errs := make(chan error, len(existing))
-	result := make(chan *leaseEntry, len(existing))
+	broker := make(chan string)
+	errs := make(chan error)
+	result := make(chan *leaseEntry)
 
-	for i := 0; i < 64; i++ {
+	for i := 0; i < 4; i++ {
 		go func() {
 			for leaseID := range broker {
 				le, err := m.loadEntry(leaseID)

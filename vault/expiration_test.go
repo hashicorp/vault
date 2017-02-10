@@ -47,7 +47,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 	physicalBackend, err := physical.NewBackend("consul", logger, map[string]string{
 		"address":      addr,
 		"path":         randPath,
-		"max_parallel": "64",
+		"max_parallel": "256",
 		"token":        dockertest.ConsulACLMasterToken,
 	})
 	if err != nil {
