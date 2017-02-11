@@ -5,6 +5,8 @@ IMPROVEMENTS:
  * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
    username if not explicitly set on the command line when authenticating
    [GH-2154]
+ * audit: Support adding a configurable prefix (such as `@cee`) before each
+   line [GH-2359]
 
 BUG FIXES:
 
