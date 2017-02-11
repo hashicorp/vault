@@ -154,6 +154,11 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 
 	// Configure the client
 	consulConf := api.DefaultConfig()
+	tr := cleanhttp.DefaultPooledTransport()
+
+	tr.MaxIdleConnsPerHost = 64
+
+	consulConf.HttpClient.Transport = tr
 
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr

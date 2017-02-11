@@ -48,7 +48,6 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
-		"token":        dockertest.ConsulACLMasterToken,
 	})
 	if err != nil {
 		b.Fatalf("err1: %s", err)

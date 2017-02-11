@@ -128,7 +128,7 @@ func (m *ExpirationManager) Restore() error {
 	errs := make(chan error)
 	result := make(chan *leaseEntry)
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 64; i++ {
 		go func() {
 			for leaseID := range broker {
 				le, err := m.loadEntry(leaseID)
