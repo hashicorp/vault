@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -9,9 +10,6 @@ import (
 	"testing"
 	"time"
 
-	dockertest "gopkg.in/ory-am/dockertest.v2"
-
-	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
@@ -30,17 +28,50 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 	return ts.expiration
 }
 
-func mockConsulExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
+func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
 	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
 	return c, ts.expiration
 }
 
+func BenchmarkExpiration_Restore_Postgres(b *testing.B) {
+	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
+	if addr == "" {
+		b.Fatal("PHYSICAL_BACKEND_BENCHMARK_ADDR not set")
+	}
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	physicalBackend, err := physical.NewBackend(os.Getenv("BENCHMARK_BACKEND_TYPE"), logger, map[string]string{
+		"connection_url": addr,
+		"path":           randPath,
+		"max_parallel":   "256",
+	})
+	if err != nil {
+		b.Fatalf("err1: %s", err)
+	}
+
+	benchmarkExpirationBackend(b, physicalBackend)
+}
+
+func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
+	//addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	physicalBackend, err := physical.NewBackend("etcd", logger, map[string]string{
+		//	"address":      addr,
+		"path":         randPath,
+		"max_parallel": "256",
+	})
+	if err != nil {
+		b.Fatalf("err1: %s", err)
+	}
+
+	benchmarkExpirationBackend(b, physicalBackend)
+}
+
 func BenchmarkExpiration_Restore_Consul(b *testing.B) {
-	/*	cid, addr, _ := prepareTestContainer(b)
-		if cid != "" {
-			defer cid.KillRemove()
-		}*/
-	addr := "127.0.0.1:8500"
+	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
@@ -53,7 +84,11 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 		b.Fatalf("err1: %s", err)
 	}
 
-	c, exp := mockConsulExpiration(b, physicalBackend)
+	benchmarkExpirationBackend(b, physicalBackend)
+}
+
+func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend) {
+	c, exp := mockBackendExpiration(b, physicalBackend)
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
 	meUUID, err := uuid.GenerateUUID()
@@ -70,6 +105,7 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 		b.Fatalf("err2: %v", err)
 	}
 
+	fmt.Println("Restoring Leases")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err = exp.Restore()
@@ -1188,63 +1224,4 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	}
 
 	return be.Setup(conf)
-}
-
-func prepareTestContainer(t testing.TB) (cid dockertest.ContainerID, retAddress string, client *api.Client) {
-	/*	if os.Getenv("CONSUL_HTTP_ADDR") != "" {
-			return "", os.Getenv("CONSUL_HTTP_ADDR")
-		}
-	*/
-	// Without this the checks for whether the container has started seem to
-	// never actually pass. There's really no reason to expose the test
-	// containers, so don't.
-	dockertest.BindDockerToLocalhost = "yep"
-
-	testImagePull.Do(func() {
-		dockertest.Pull(dockertest.ConsulImageName)
-	})
-
-	try := 0
-	cid, connErr := dockertest.ConnectToConsul(60, 500*time.Millisecond, func(connAddress string) bool {
-		try += 1
-		// Build a client and verify that the credentials work
-		config := api.DefaultConfig()
-		config.Address = connAddress
-		config.Token = dockertest.ConsulACLMasterToken
-		client, err := api.NewClient(config)
-		if err != nil {
-			if try > 50 {
-				panic(err)
-			}
-			return false
-		}
-
-		_, err = client.KV().Put(&api.KVPair{
-			Key:   "setuptest",
-			Value: []byte("setuptest"),
-		}, nil)
-		if err != nil {
-			if try > 50 {
-				panic(err)
-			}
-			return false
-		}
-
-		retAddress = connAddress
-		return true
-	})
-
-	if connErr != nil {
-		t.Fatalf("could not connect to consul: %v", connErr)
-	}
-
-	conf := api.DefaultConfig()
-	conf.Address = retAddress
-	conf.Token = dockertest.ConsulACLMasterToken
-	client, err := api.NewClient(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	return
 }
