@@ -54,12 +54,12 @@ func BenchmarkExpiration_Restore_Postgres(b *testing.B) {
 }
 
 func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
-	//addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
+	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	physicalBackend, err := physical.NewBackend("etcd", logger, map[string]string{
-		//	"address":      addr,
+		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
 	})
@@ -85,6 +85,11 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 	}
 
 	benchmarkExpirationBackend(b, physicalBackend)
+}
+
+func BenchmarkExpiration_Restore_InMem(b *testing.B) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	benchmarkExpirationBackend(b, physical.NewInmem(logger))
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend) {
@@ -114,35 +119,6 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend) 
 			b.Fatalf("err3: %v", err)
 		}
 		exp.Stop()
-	}
-}
-
-func BenchmarkExpiration_Restore_InMem(b *testing.B) {
-	exp := mockExpiration(b)
-	noop := &NoopBackend{}
-	_, barrier, _ := mockBarrier(b)
-	view := NewBarrierView(barrier, "logical/")
-	meUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		b.Fatal(err)
-	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
-
-	registerLeases(b, exp)
-
-	// Stop everything
-	err = exp.Stop()
-	if err != nil {
-		b.Fatalf("err: %v", err)
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err = exp.Restore()
-		// Restore
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
 	}
 }
 
