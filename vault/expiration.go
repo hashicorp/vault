@@ -124,36 +124,73 @@ func (m *ExpirationManager) Restore() error {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
 
+	// Make the channels used for the worker pool
 	broker := make(chan string)
-	errs := make(chan error)
-	result := make(chan *leaseEntry)
+	quit := make(chan bool)
+	// Buffer these channels to prevent deadlocks
+	errs := make(chan error, len(existing))
+	result := make(chan *leaseEntry, len(existing))
 
+	// Use a wait group
+	var wg sync.WaitGroup
+
+	// Create 64 workers to distribute work to
 	for i := 0; i < 64; i++ {
 		go func() {
-			for leaseID := range broker {
-				le, err := m.loadEntry(leaseID)
-				if err != nil {
-					errs <- err
-				}
+			defer wg.Done()
+			for {
+				select {
+				case leaseID, ok := <-broker:
+					// broker has been closed, we are done
+					if !ok {
+						return
+					}
 
-				result <- le
+					le, err := m.loadEntry(leaseID)
+					if err != nil {
+						errs <- err
+					}
+
+					// Write results out to the result channel
+					result <- le
+
+				// quit early
+				case <-quit:
+					return
+				}
 			}
 		}()
+		wg.Add(1)
 	}
 
+	// Distribute the collected keys to the workers in a go routine
 	go func() {
+		defer wg.Done()
 		for _, leaseID := range existing {
-			broker <- leaseID
+			select {
+			case <-quit:
+				return
+
+			default:
+				broker <- leaseID
+			}
 		}
+
+		// Close the broker, causing worker routines to exit
 		close(broker)
 	}()
+	wg.Add(1)
 
-	// Restore each key
+	// Restore each key by pulling from the result chan
 	for i := 0; i < len(existing); i++ {
 		select {
 		case err := <-errs:
-			fmt.Println(err)
-			continue
+			// Close all go routines
+			close(quit)
+			wg.Wait()
+
+			return err
+
 		case le := <-result:
 
 			// If there is no entry, nothing to restore
@@ -183,6 +220,8 @@ func (m *ExpirationManager) Restore() error {
 			m.logger.Info("expire: leases restored", "restored_lease_count", len(m.pending))
 		}
 	}
+
+	wg.Wait()
 	return nil
 }
 
