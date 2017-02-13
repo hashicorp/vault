@@ -12,6 +12,8 @@ func pathTagsList(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathTagList,
 		},
+		HelpSynopsis:    pathTagHelpSyn,
+		HelpDescription: pathTagHelpDesc,
 	}
 }
 
@@ -103,3 +105,11 @@ func (b *backend) pathTagWrite(req *logical.Request, d *framework.FieldData) (*l
 type TagEntry struct {
 	Policies []string
 }
+
+const pathTagHelpSyn = `
+Manage Vault policies assigned to a Chef tag
+`
+const pathTagHelpDesc = `
+This endpoint allows you to create, read, update and delete configurations for policies
+associated with a Chef tag.
+`

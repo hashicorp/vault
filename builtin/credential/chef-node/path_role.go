@@ -12,6 +12,8 @@ func pathRolesList(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
 		},
+		HelpSynopsis:    pathRoleHelpSyn,
+		HelpDescription: pathRoleHelpDesc,
 	}
 }
 
@@ -103,3 +105,11 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 type RoleEntry struct {
 	Policies []string
 }
+
+const pathRoleHelpSyn = `
+Manage Vault policies assigned to a Chef role
+`
+const pathRoleHelpDesc = `
+This endpoint allows you to create, read, update, and delete configuration for policies
+associated with Chef environments
+`

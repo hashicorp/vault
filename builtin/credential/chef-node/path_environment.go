@@ -12,6 +12,8 @@ func pathEnvironmentsList(b *backend) *framework.Path {
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathEnvironmentList,
 		},
+		HelpSynopsis:    pathEnvHelpSyn,
+		HelpDescription: pathEnvHelpDesc,
 	}
 }
 
@@ -103,3 +105,12 @@ func (b *backend) pathEnvironmentWrite(req *logical.Request, d *framework.FieldD
 type EnvironmentEntry struct {
 	Policies []string
 }
+
+const pathEnvHelpSyn = `
+Manage Vault polices assigned to a Chef environment.
+`
+
+const pathEnvHelpDesc = `
+This endpoint allows you to create, read, update, and delete configuration for policies
+associated with Chef environments.
+`

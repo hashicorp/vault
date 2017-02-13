@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"strings"
+
 	"github.com/hashicorp/vault/api"
 )
 
@@ -64,5 +66,16 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 }
 
 func (h *CLIHandler) Help() string {
-	return `Chef Node credential provider`
+	help := `
+The chef-node credential provider allows a chef node to authenticate against a Chef server.
+Before using it you must configure a client for Vault to connect to the Chef server.  The
+client information and the Chef server API endpoint must then be configured through the 'config'
+endpoint.
+
+The vault CLI can also be used to authenticate by giving a client name and client key in pem
+format to use for authentication.
+
+Example: vault auth -method=chef-node client_name=test_node client_key=@test_node.pem
+`
+	return strings.TrimSpace(help)
 }

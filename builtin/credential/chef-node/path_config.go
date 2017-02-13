@@ -16,21 +16,25 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"base_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: `The url to the chef server api endpoint`,
+				Description: `The URL to the chef server api endpoint`,
 			},
 			"client_name": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `Name of the client to connect to chef server with`,
+				Type: framework.TypeString,
+				Description: `Name of the client to connect to chef server with. This needs
+to be precreated in the chef server.`,
 			},
 			"client_key": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `PEM encoded client key to use for authenticating to chef server`,
+				Type: framework.TypeString,
+				Description: `PEM encoded client key to use for authenticating to chef
+server. This is generated when the client is created in the chef server`,
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation:   b.pathConfigRead,
 			logical.UpdateOperation: b.pathConfigWrite,
 		},
+		HelpSynopsis:    pathConfigHelpSyn,
+		HelpDescription: pathConfigHelpDesc,
 	}
 }
 
@@ -103,3 +107,11 @@ type config struct {
 	ClientKey  string `json:"client_key" structs:"client_key"`
 	ClientName string `json:"client_name" structs:"client_name"`
 }
+
+const pathConfigHelpSyn = `
+Configure Vault to connection to Chef server.
+`
+const pathConfigHelpDesc = `
+Configure the URL of the chef server API endpoint and the client name and key used to
+make API requests to it.  The client must be already created in the chef server.
+`
