@@ -142,8 +142,8 @@ func (m *ExpirationManager) Restore() error {
 
 	// Create 64 workers to distribute work to
 	for i := 0; i < RestoreWorkerCount; i++ {
+		wg.Add(1)
 		go func() {
-			wg.Add(1)
 			defer wg.Done()
 
 			for {
@@ -172,8 +172,8 @@ func (m *ExpirationManager) Restore() error {
 	}
 
 	// Distribute the collected keys to the workers in a go routine
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		for i, leaseID := range existing {
 			if i%500 == 0 {
