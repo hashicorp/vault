@@ -138,12 +138,14 @@ func (m *ExpirationManager) Restore() error {
 	result := make(chan *leaseEntry, len(existing))
 
 	// Use a wait group
-	var wg sync.WaitGroup
+	wg := &sync.WaitGroup{}
 
 	// Create 64 workers to distribute work to
 	for i := 0; i < RestoreWorkerCount; i++ {
 		go func() {
+			wg.Add(1)
 			defer wg.Done()
+
 			for {
 				select {
 				case leaseID, ok := <-broker:
@@ -167,11 +169,11 @@ func (m *ExpirationManager) Restore() error {
 				}
 			}
 		}()
-		wg.Add(1)
 	}
 
 	// Distribute the collected keys to the workers in a go routine
 	go func() {
+		wg.Add(1)
 		defer wg.Done()
 		for i, leaseID := range existing {
 			if i%500 == 0 {
@@ -190,7 +192,6 @@ func (m *ExpirationManager) Restore() error {
 		// Close the broker, causing worker routines to exit
 		close(broker)
 	}()
-	wg.Add(1)
 
 	// Restore each key by pulling from the result chan
 	for i := 0; i < len(existing); i++ {
