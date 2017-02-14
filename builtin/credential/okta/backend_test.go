@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/policyutil"
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/vault/logical"
@@ -40,23 +41,23 @@ func TestBackend_Config(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testConfigCreate(t, configData),
-			testLoginWrite(t, username, "wrong", "E0000004", 0),
-			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0),
+			testLoginWrite(t, username, "wrong", "E0000004", nil),
+			testLoginWrite(t, username, password, "user is not a member of any authorized policy", nil),
 			testAccUserGroups(t, username, "local_group,local_group2"),
 			testAccGroups(t, "local_group", "local_group_policy"),
-			testLoginWrite(t, username, password, "", 2),
+			testLoginWrite(t, username, password, "", []string{"local_group_policy"}),
 			testAccGroups(t, "Everyone", "everyone_group_policy,every_group_policy2"),
-			testLoginWrite(t, username, password, "", 2),
+			testLoginWrite(t, username, password, "", []string{"local_group_policy"}),
 			testConfigUpdate(t, configDataToken),
 			testConfigRead(t, configData),
-			testLoginWrite(t, username, password, "", 4),
-			testAccGroups(t, "TestGroup", "testgroup_group_policy"),
-			testLoginWrite(t, username, password, "", 5),
+			testLoginWrite(t, username, password, "", []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
+			testAccGroups(t, "local_group2", "testgroup_group_policy"),
+			testLoginWrite(t, username, password, "", []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
 		},
 	})
 }
 
-func testLoginWrite(t *testing.T, username, password, reason string, policies int) logicaltest.TestStep {
+func testLoginWrite(t *testing.T, username, password, reason string, policies []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login/" + username,
@@ -72,8 +73,8 @@ func testLoginWrite(t *testing.T, username, password, reason string, policies in
 			}
 
 			if resp.Auth != nil {
-				if len(resp.Auth.Policies) != policies {
-					return fmt.Errorf("policy mismatch expected %d but got %s", policies, resp.Auth.Policies)
+				if !policyutil.EquivalentPolicies(resp.Auth.Policies, policies) {
+					return fmt.Errorf("policy mismatch expected %v but got %v", policies, resp.Auth.Policies)
 				}
 			}
 
