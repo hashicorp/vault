@@ -10,6 +10,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/okta: Fix panic if user had no local groups and/or policies set
+   [GH-2367]
  * command/server: Fix parsing of redirect address when port is not mentioned
    [GH-2354]
 
