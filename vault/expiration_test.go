@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"reflect"
 	"sort"
@@ -10,6 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
@@ -38,19 +43,16 @@ func BenchmarkExpiration_Restore_Postgres(b *testing.B) {
 	if addr == "" {
 		b.Fatal("PHYSICAL_BACKEND_BENCHMARK_ADDR not set")
 	}
-	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	physicalBackend, err := physical.NewBackend(os.Getenv("BENCHMARK_BACKEND_TYPE"), logger, map[string]string{
+	physicalBackend, err := physical.NewBackend("postgresql", logger, map[string]string{
 		"connection_url": addr,
-		"path":           randPath,
-		"max_parallel":   "256",
 	})
 	if err != nil {
-		b.Fatalf("err1: %s", err)
+		b.Fatalf("err: %s", err)
 	}
 
-	benchmarkExpirationBackend(b, physicalBackend)
+	benchmarkExpirationBackend(b, physicalBackend, 1000) // 1,000 leases
 }
 
 func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
@@ -64,10 +66,10 @@ func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
 		"max_parallel": "256",
 	})
 	if err != nil {
-		b.Fatalf("err1: %s", err)
+		b.Fatalf("err: %s", err)
 	}
 
-	benchmarkExpirationBackend(b, physicalBackend)
+	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
 }
 
 func BenchmarkExpiration_Restore_Consul(b *testing.B) {
@@ -81,18 +83,78 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 		"max_parallel": "256",
 	})
 	if err != nil {
-		b.Fatalf("err1: %s", err)
+		b.Fatalf("err: %s", err)
 	}
 
-	benchmarkExpirationBackend(b, physicalBackend)
+	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
+}
+
+func BenchmarkExpiration_Restore_S3(b *testing.B) {
+
+	endpoint := os.Getenv("AWS_S3_ENDPOINT")
+
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	s3conn := s3.New(session.New(&aws.Config{
+		Credentials: credentials.NewEnvCredentials(),
+		Endpoint:    aws.String(endpoint),
+		Region:      aws.String(region),
+	}))
+
+	var randInt = rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	bucket := fmt.Sprintf("vault-s3-testacc-%d", randInt)
+
+	_, err := s3conn.CreateBucket(&s3.CreateBucketInput{
+		Bucket: aws.String(bucket),
+	})
+	if err != nil {
+		b.Fatalf("unable to create test bucket: %s", err)
+	}
+
+	defer func() {
+		// Gotta list all the objects and delete them
+		// before being able to delete the bucket
+		listResp, _ := s3conn.ListObjects(&s3.ListObjectsInput{
+			Bucket: aws.String(bucket),
+		})
+
+		objects := &s3.Delete{}
+		for _, key := range listResp.Contents {
+			oi := &s3.ObjectIdentifier{Key: key.Key}
+			objects.Objects = append(objects.Objects, oi)
+		}
+
+		s3conn.DeleteObjects(&s3.DeleteObjectsInput{
+			Bucket: aws.String(bucket),
+			Delete: objects,
+		})
+
+		_, err := s3conn.DeleteBucket(&s3.DeleteBucketInput{Bucket: aws.String(bucket)})
+		if err != nil {
+			b.Fatalf("err: %s", err)
+		}
+	}()
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	physicalBackend, err := physical.NewBackend("s3", logger, map[string]string{
+		"bucket": bucket,
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	benchmarkExpirationBackend(b, physicalBackend, 1000) // 1,000 Leases
 }
 
 func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	benchmarkExpirationBackend(b, physical.NewInmem(logger))
+	benchmarkExpirationBackend(b, physical.NewInmem(logger), 100000) // 100,000 Leases
 }
 
-func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend) {
+func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
 	c, exp := mockBackendExpiration(b, physicalBackend)
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
@@ -102,28 +164,8 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend) 
 	}
 	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
-	registerLeases(b, exp)
-
-	// Stop everything
-	err = exp.Stop()
-	if err != nil {
-		b.Fatalf("err2: %v", err)
-	}
-
-	fmt.Println("Restoring Leases")
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err = exp.Restore()
-		// Restore
-		if err != nil {
-			b.Fatalf("err3: %v", err)
-		}
-		exp.Stop()
-	}
-}
-
-func registerLeases(b testing.TB, exp *ExpirationManager) {
-	for i := 0; i < 10000; i++ {
+	// Register fake leases
+	for i := 0; i < numLeases; i++ {
 		pathUUID, err := uuid.GenerateUUID()
 		if err != nil {
 			b.Fatal(err)
@@ -146,9 +188,25 @@ func registerLeases(b testing.TB, exp *ExpirationManager) {
 		}
 		_, err = exp.Register(req, resp)
 		if err != nil {
-			b.Fatalf("err4: %v", err)
+			b.Fatalf("err: %v", err)
 		}
 	}
+
+	// Stop everything
+	err = exp.Stop()
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = exp.Restore()
+		// Restore
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
+	b.StopTimer()
 }
 
 func TestExpiration_Restore(t *testing.T) {
