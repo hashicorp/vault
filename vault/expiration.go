@@ -41,6 +41,9 @@ const (
 
 	// defaultLeaseDuration is the default lease duration used when no lease is specified
 	defaultLeaseTTL = maxLeaseTTL
+
+	// Number of parallel workers used during the Restore process
+	RestoreWorkerCount = 64
 )
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -138,7 +141,7 @@ func (m *ExpirationManager) Restore() error {
 	var wg sync.WaitGroup
 
 	// Create 64 workers to distribute work to
-	for i := 0; i < 64; i++ {
+	for i := 0; i < RestoreWorkerCount; i++ {
 		go func() {
 			defer wg.Done()
 			for {
@@ -152,6 +155,7 @@ func (m *ExpirationManager) Restore() error {
 					le, err := m.loadEntry(leaseID)
 					if err != nil {
 						errs <- err
+						continue
 					}
 
 					// Write results out to the result channel
@@ -194,7 +198,6 @@ func (m *ExpirationManager) Restore() error {
 		case err := <-errs:
 			// Close all go routines
 			close(quit)
-			wg.Wait()
 
 			return err
 

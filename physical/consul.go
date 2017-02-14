@@ -154,10 +154,9 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 
 	// Configure the client
 	consulConf := api.DefaultConfig()
+	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
 	tr := cleanhttp.DefaultPooledTransport()
-
 	tr.MaxIdleConnsPerHost = 64
-
 	consulConf.HttpClient.Transport = tr
 
 	if addr, ok := conf["address"]; ok {
@@ -184,7 +183,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		}
 
 		transport := cleanhttp.DefaultPooledTransport()
-		transport.MaxIdleConnsPerHost = 4
+		transport.MaxIdleConnsPerHost = 64
 		transport.TLSClientConfig = tlsClientConfig
 		consulConf.HttpClient.Transport = transport
 		logger.Debug("physical/consul: configured TLS")
