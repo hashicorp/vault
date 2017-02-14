@@ -4,10 +4,10 @@ Package ansi is a small, fast library to create ANSI colored strings and codes.
 
 ## Install
 
-This install the color viewer and the package itself
+Get it
 
 ```sh
-go get -u github.com/mgutz/ansi/cmd/ansi-mgutz
+go get -u github.com/mgutz/ansi
 ```
 
 ## Example
@@ -18,7 +18,7 @@ import "github.com/mgutz/ansi"
 // colorize a string, SLOW
 msg := ansi.Color("foo", "red+b:white")
 
-// create a closure to avoid recalculating ANSI code compilation
+// create a FAST closure function to avoid computation of ANSI code
 phosphorize := ansi.ColorFunc("green+h:black")
 msg = phosphorize("Bring back the 80s!")
 msg2 := phospohorize("Look, I'm a CRT!")
@@ -44,10 +44,10 @@ Color(s, "red+B:white+h")  // red blink on white bright
 Color(s, "off")            // turn off ansi codes
 ```
 
-To view color combinations, from terminal.
+To view color combinations, from project directory in terminal.
 
 ```sh
-ansi-mgutz
+go test
 ```
 
 ## Style format
@@ -68,15 +68,18 @@ Colors
 * white
 * 0...255 (256 colors)
 
-Attributes
+Foreground Attributes
 
-*   b = bold foreground
-*   B = Blink foreground
-*   u = underline foreground
-*   i = inverse
-*   h = high intensity (bright) foreground, background
+* B = Blink
+* b = bold
+* h = high intensity (bright)
+* i = inverse
+* s = strikethrough
+* u = underline
 
-    does not work with 256 colors
+Background Attributes
+
+* h = high intensity (bright)
 
 ## Constants
 
@@ -99,7 +102,6 @@ Attributes
 * ansi.LightMagenta
 * ansi.LightCyan
 * ansi.LightWhite
-
 
 ## References
 

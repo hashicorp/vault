@@ -11,9 +11,11 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-ldap/ldap"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/tlsutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	log "github.com/mgutz/logxi/v1"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -23,7 +25,7 @@ func pathConfig(b *backend) *framework.Path {
 			"url": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "ldap://127.0.0.1",
-				Description: "ldap URL to connect to (default: ldap://127.0.0.1)",
+				Description: "LDAP URL to connect to (default: ldap://127.0.0.1). Multiple URLs can be specified by concatenating them with commas; they will be tried in-order.",
 			},
 
 			"userdn": &framework.FieldSchema{
@@ -155,6 +157,8 @@ func (b *backend) Config(req *logical.Request) (*ConfigEntry, error) {
 		return nil, err
 	}
 
+	result.logger = b.Logger()
+
 	return result, nil
 }
 
@@ -182,6 +186,8 @@ func (b *backend) pathConfigRead(
  */
 func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	cfg := new(ConfigEntry)
+
+	cfg.logger = b.Logger()
 
 	url := d.Get("url").(string)
 	if url != "" {
@@ -294,6 +300,7 @@ func (b *backend) pathConfigWrite(
 }
 
 type ConfigEntry struct {
+	logger        log.Logger
 	Url           string `json:"url" structs:"url" mapstructure:"url"`
 	UserDN        string `json:"userdn" structs:"userdn" mapstructure:"userdn"`
 	GroupDN       string `json:"groupdn" structs:"groupdn" mapstructure:"groupdn"`
@@ -348,55 +355,67 @@ func (c *ConfigEntry) GetTLSConfig(host string) (*tls.Config, error) {
 }
 
 func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
-
-	u, err := url.Parse(c.Url)
-	if err != nil {
-		return nil, err
-	}
-	host, port, err := net.SplitHostPort(u.Host)
-	if err != nil {
-		host = u.Host
-	}
-
+	var retErr *multierror.Error
 	var conn *ldap.Conn
-	var tlsConfig *tls.Config
-	switch u.Scheme {
-	case "ldap":
-		if port == "" {
-			port = "389"
-		}
-		conn, err = ldap.Dial("tcp", host+":"+port)
+	urls := strings.Split(c.Url, ",")
+	for _, uut := range urls {
+		u, err := url.Parse(uut)
 		if err != nil {
-			break
+			retErr = multierror.Append(retErr, fmt.Errorf("error parsing url %q: %s", uut, err.Error()))
+			continue
 		}
-		if conn == nil {
-			err = fmt.Errorf("empty connection after dialing")
-			break
+		host, port, err := net.SplitHostPort(u.Host)
+		if err != nil {
+			host = u.Host
 		}
-		if c.StartTLS {
+
+		var tlsConfig *tls.Config
+		switch u.Scheme {
+		case "ldap":
+			if port == "" {
+				port = "389"
+			}
+			conn, err = ldap.Dial("tcp", net.JoinHostPort(host, port))
+			if err != nil {
+				break
+			}
+			if conn == nil {
+				err = fmt.Errorf("empty connection after dialing")
+				break
+			}
+			if c.StartTLS {
+				tlsConfig, err = c.GetTLSConfig(host)
+				if err != nil {
+					break
+				}
+				err = conn.StartTLS(tlsConfig)
+			}
+		case "ldaps":
+			if port == "" {
+				port = "636"
+			}
 			tlsConfig, err = c.GetTLSConfig(host)
 			if err != nil {
 				break
 			}
-			err = conn.StartTLS(tlsConfig)
+			conn, err = ldap.DialTLS("tcp", net.JoinHostPort(host, port), tlsConfig)
+		default:
+			retErr = multierror.Append(retErr, fmt.Errorf("invalid LDAP scheme in url %q"))
+			continue
 		}
-	case "ldaps":
-		if port == "" {
-			port = "636"
-		}
-		tlsConfig, err = c.GetTLSConfig(host)
-		if err != nil {
+		if err == nil {
+			if retErr != nil {
+				if c.logger.IsDebug() {
+					c.logger.Debug("ldap: errors connecting to some hosts: %s", retErr.Error())
+				}
+			}
+			retErr = nil
 			break
 		}
-		conn, err = ldap.DialTLS("tcp", host+":"+port, tlsConfig)
-	default:
-		return nil, fmt.Errorf("invalid LDAP scheme")
-	}
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to LDAP: %v", err)
+		retErr = multierror.Append(retErr, fmt.Errorf("error connecting to host %q: %s", uut, err.Error()))
 	}
 
-	return conn, nil
+	return conn, retErr.ErrorOrNil()
 }
 
 /*

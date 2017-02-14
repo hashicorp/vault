@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes"
-	prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -77,15 +76,6 @@ func New(cfg Config) (*Client, error) {
 // NewFromURL creates a new etcdv3 client from a URL.
 func NewFromURL(url string) (*Client, error) {
 	return New(Config{Endpoints: []string{url}})
-}
-
-// NewFromConfigFile creates a new etcdv3 client from a configuration file.
-func NewFromConfigFile(path string) (*Client, error) {
-	cfg, err := configFromFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return New(*cfg)
 }
 
 // Close shuts down the client's etcd connections.
@@ -290,9 +280,7 @@ func (c *Client) dial(endpoint string, dopts ...grpc.DialOption) (*grpc.ClientCo
 		opts = append(opts, grpc.WithPerRPCCredentials(c.tokenCred))
 	}
 
-	// add metrics options
-	opts = append(opts, grpc.WithUnaryInterceptor(prometheus.UnaryClientInterceptor))
-	opts = append(opts, grpc.WithStreamInterceptor(prometheus.StreamClientInterceptor))
+	opts = append(opts, c.cfg.DialOptions...)
 
 	conn, err := grpc.Dial(host, opts...)
 	if err != nil {

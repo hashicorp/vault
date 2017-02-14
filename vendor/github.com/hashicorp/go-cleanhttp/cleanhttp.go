@@ -3,6 +3,7 @@ package cleanhttp
 import (
 	"net"
 	"net/http"
+	"runtime"
 	"time"
 )
 
@@ -22,13 +23,15 @@ func DefaultTransport() *http.Transport {
 func DefaultPooledTransport() *http.Transport {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
+		DialContext: (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-		DisableKeepAlives:   false,
-		MaxIdleConnsPerHost: 1,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
 	}
 	return transport
 }

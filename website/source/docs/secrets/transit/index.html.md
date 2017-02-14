@@ -338,7 +338,7 @@ only encrypt or decrypt using the named keys they need access to.
         Defaults to 0.
       </li>
       <li>
-        <span class="param">allow_deletion</span>
+        <span class="param">deletion_allowed</span>
         <span class="param-flags">optional</span>
         When set, the key is allowed to be deleted. Defaults to false.
       </li>
@@ -479,10 +479,10 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">batch_input</span>
         <span class="param-flags">optional</span>
-        Base64 encoded list of items to be encrypted in a single batch. When
+        List of items to be encrypted in a single batch. When
         this parameter is set, if the parameters 'plaintext', 'context' and
-        'nonce' are also set, they will be ignored. JSON format for the input
-        (which should be base64 encoded) goes like this:
+        'nonce' are also set, they will be ignored. Format for the input
+        goes like this:
 
 ```javascript
 [
@@ -582,10 +582,9 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">batch_input</span>
         <span class="param-flags">optional</span>
-        Base64 encoded list of items to be decrypted in a single batch. When
-        this parameter is set, if the parameters 'ciphertext', 'context' and
-        'nonce' are also set, they will be ignored. JSON format for the input
-        (which should be base64 encoded) goes like this:
+        List of items to be decrypted in a single batch. When this parameter is
+        set, if the parameters 'ciphertext', 'context' and 'nonce' are also
+        set, they will be ignored. Format for the input goes like this:
 
 ```javascript
 [
@@ -660,10 +659,9 @@ only encrypt or decrypt using the named keys they need access to.
       <li>
         <span class="param">batch_input</span>
         <span class="param-flags">optional</span>
-        Base64 encoded list of items to be rewrapped in a single batch. When
-        this parameter is set, if the parameters 'ciphertext', 'context' and
-        'nonce' are also set, they will be ignored. JSON format for the input
-        (which should be bae64 encoded) goes like this:
+        List of items to be rewrapped in a single batch. When this parameter is
+        set, if the parameters 'ciphertext', 'context' and 'nonce' are also
+        set, they will be ignored. Format for the input goes like this:
 
 ```javascript
 [

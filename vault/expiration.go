@@ -92,6 +92,7 @@ func (c *Core) setupExpiration() error {
 	c.tokenStore.SetExpirationManager(mgr)
 
 	// Restore the existing state
+	c.logger.Info("expiration: restoring leases")
 	if err := c.expiration.Restore(); err != nil {
 		return fmt.Errorf("expiration state restore failed: %v", err)
 	}
@@ -119,10 +120,12 @@ func (m *ExpirationManager) Restore() error {
 	defer m.pendingLock.Unlock()
 
 	// Accumulate existing leases
+	m.logger.Debug("expiration: collecting leases")
 	existing, err := logical.CollectKeys(m.idView)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
+	m.logger.Debug("expiration: leases collected", "num_existing", len(existing))
 
 	// Make the channels used for the worker pool
 	broker := make(chan string)
@@ -166,7 +169,11 @@ func (m *ExpirationManager) Restore() error {
 	// Distribute the collected keys to the workers in a go routine
 	go func() {
 		defer wg.Done()
-		for _, leaseID := range existing {
+		for i, leaseID := range existing {
+			if i%500 == 0 {
+				m.logger.Trace("expiration: leases loading", "progress", i)
+			}
+
 			select {
 			case <-quit:
 				return
