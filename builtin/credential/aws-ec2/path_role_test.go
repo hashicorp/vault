@@ -47,13 +47,13 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	if resp.Data["ttl"] != time.Duration(10) {
+	if int64(resp.Data["ttl"].(time.Duration)) != 10 {
 		t.Fatalf("bad: period; expected: 10, actual: %d", resp.Data["ttl"])
 	}
-	if resp.Data["max_ttl"] != time.Duration(20) {
+	if int64(resp.Data["max_ttl"].(time.Duration)) != 20 {
 		t.Fatalf("bad: period; expected: 20, actual: %d", resp.Data["max_ttl"])
 	}
-	if resp.Data["period"] != time.Duration(30) {
+	if int64(resp.Data["period"].(time.Duration)) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
 	}
 }
