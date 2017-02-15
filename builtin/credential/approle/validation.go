@@ -143,7 +143,7 @@ func (b *backend) validateCredentials(req *logical.Request, data *framework.Fiel
 			return nil, "", metadata, fmt.Errorf("failed to verify the CIDR restrictions set on the role: %v", err)
 		}
 		if !belongs {
-			return nil, "", metadata, fmt.Errorf("source address unauthorized through CIDR restrictions on the role")
+			return nil, "", metadata, fmt.Errorf("source address %q unauthorized through CIDR restrictions on the role", req.Connection.RemoteAddr)
 		}
 	}
 
@@ -199,7 +199,7 @@ func (b *backend) validateBindSecretID(req *logical.Request, roleName, secretID,
 			}
 
 			if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
-				return false, nil, fmt.Errorf("source address unauthorized through CIDR restrictions on the secret ID: %v", err)
+				return false, nil, fmt.Errorf("source address %q unauthorized through CIDR restrictions on the secret ID: %v", req.Connection.RemoteAddr, err)
 			}
 		}
 
@@ -261,7 +261,7 @@ func (b *backend) validateBindSecretID(req *logical.Request, roleName, secretID,
 		}
 
 		if belongs, err := cidrutil.IPBelongsToCIDRBlocksSlice(req.Connection.RemoteAddr, result.CIDRList); !belongs || err != nil {
-			return false, nil, fmt.Errorf("source address unauthorized through CIDR restrictions on the secret ID: %v", err)
+			return false, nil, fmt.Errorf("source address %q unauthorized through CIDR restrictions on the secret ID: %v", req.Connection.RemoteAddr, err)
 		}
 	}
 
