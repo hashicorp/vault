@@ -226,13 +226,16 @@ func (m *ExpirationManager) Restore() error {
 			})
 		}
 	}
+
+	// Let all go routines finish
+	wg.Wait()
+
 	if len(m.pending) > 0 {
 		if m.logger.IsInfo() {
 			m.logger.Info("expire: leases restored", "restored_lease_count", len(m.pending))
 		}
 	}
 
-	wg.Wait()
 	return nil
 }
 
