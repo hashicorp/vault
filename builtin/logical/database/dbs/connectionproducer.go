@@ -64,8 +64,6 @@ func (cp *sqlConnectionProducer) Connection() (interface{}, error) {
 		} else {
 			conn += "?timezone=utc"
 		}
-	} else {
-		conn += " timezone=utc"
 	}
 
 	var err error

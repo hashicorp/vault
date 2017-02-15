@@ -24,11 +24,6 @@ func pathConfigConnection(b *databaseBackend) *framework.Path {
 				Description: "DB type (e.g. postgres)",
 			},
 
-			"connection_details": &framework.FieldSchema{
-				Type:        framework.TypeMap,
-				Description: "Connection details for specified connection type.",
-			},
-
 			"verify_connection": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
