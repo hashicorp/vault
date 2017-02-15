@@ -64,8 +64,8 @@ sending a SIGHUP to the server process. These are denoted below.
   subsystem. This will very significantly impact performance.
 
 * `disable_mlock` (optional) - A boolean. If true, this will disable the
-  server from executing the `mlock` syscall to prevent memory from being
-  swapped to disk. This is not recommended in production (see below).
+  server from executing the `mlock` syscall. `mlock` prevents memory from being
+  swapped to disk. Disabling `mlock` is not recommended in production (see below).
 
 * `telemetry` (optional)  - Configures the telemetry reporting system
   (see below).
