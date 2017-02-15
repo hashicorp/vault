@@ -50,6 +50,11 @@ alt_names map. If email protection is enabled
 in the role, this may be an email address.`,
 	}
 
+	fields["ou"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The requested OU; TODO: handle case of multiple OUs?`,
+	}
+
 	fields["alt_names"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The requested Subject Alternative Names, if any,
@@ -89,6 +94,11 @@ one, specify the alternative names in the alt_names
 map. If not specified when signing, the common
 name will be taken from the CSR; other names
 must still be specified in alt_names or ip_sans.`,
+	}
+
+	fields["ou"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The requested OU; TODO: handle case of multiple OUs?`,
 	}
 
 	fields["ttl"] = &framework.FieldSchema{

@@ -1787,6 +1787,39 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		roleTestStep.ErrorOk = false
 	}
 
+	// OU tests
+	{
+		// case 1 - AllowedOUs is empty, any OU should pass
+		issueVals.OU = "foo"
+		roleVals.AllowedOUs = ""
+		issueTestStep.ErrorOk = false
+		addTests(nil)
+
+		// case 2 - AllowedOUs contains a single OU, a matching OU should pass
+		issueVals.OU = "foo"
+		roleVals.AllowedOUs = "foo"
+		issueTestStep.ErrorOk = false
+		addTests(nil)
+
+		// case 3 - AllowedOUs contains a single OU, a non-matching OU should fail
+		issueVals.OU = "foo"
+		roleVals.AllowedOUs = "bar"
+		issueTestStep.ErrorOk = true
+		addTests(nil)
+
+		// case 4 - AllowedOUs contains multiple OUs, a matching OU should pass
+		issueVals.OU = "foo"
+		roleVals.AllowedOUs = "foo,bar"
+		issueTestStep.ErrorOk = false
+		addTests(nil)
+
+		// case 5 - AllowedOUs contains multiple OUs, a non-matching OU should fail
+		issueVals.OU = "baz"
+		roleVals.AllowedOUs = "foo,bar"
+		issueTestStep.ErrorOk = true
+		addTests(nil)
+	}
+
 	// Listing test
 	ret = append(ret, logicaltest.TestStep{
 		Operation: logical.ListOperation,
