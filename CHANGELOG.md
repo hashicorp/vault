@@ -10,6 +10,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * auth/aws-ec2: Return role period in seconds and not nanoseconds [GH-2374]
  * auth/okta: Fix panic if user had no local groups and/or policies set
    [GH-2367]
  * command/server: Fix parsing of redirect address when port is not mentioned
