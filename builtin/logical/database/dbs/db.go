@@ -22,16 +22,12 @@ var (
 func Factory(conf *DatabaseConfig) (DatabaseType, error) {
 	switch conf.DatabaseType {
 	case postgreSQLTypeName:
-		var details *sqlConnectionDetails
-		err := mapstructure.Decode(conf.ConnectionDetails, &details)
+		var connProducer *sqlConnectionProducer
+		err := mapstructure.Decode(conf.ConnectionDetails, &connProducer)
 		if err != nil {
 			return nil, err
 		}
-
-		connProducer := &sqlConnectionProducer{
-			config:      conf,
-			connDetails: details,
-		}
+		connProducer.config = conf
 
 		credsProducer := &sqlCredentialsProducer{
 			displayNameLen: 23,
@@ -44,16 +40,12 @@ func Factory(conf *DatabaseConfig) (DatabaseType, error) {
 		}, nil
 
 	case mySQLTypeName:
-		var details *sqlConnectionDetails
-		err := mapstructure.Decode(conf.ConnectionDetails, &details)
+		var connProducer *sqlConnectionProducer
+		err := mapstructure.Decode(conf.ConnectionDetails, &connProducer)
 		if err != nil {
 			return nil, err
 		}
-
-		connProducer := &sqlConnectionProducer{
-			config:      conf,
-			connDetails: details,
-		}
+		connProducer.config = conf
 
 		credsProducer := &sqlCredentialsProducer{
 			displayNameLen: 4,
@@ -66,16 +58,12 @@ func Factory(conf *DatabaseConfig) (DatabaseType, error) {
 		}, nil
 
 	case cassandraTypeName:
-		var details *cassandraConnectionDetails
-		err := mapstructure.Decode(conf.ConnectionDetails, &details)
+		var connProducer *cassandraConnectionProducer
+		err := mapstructure.Decode(conf.ConnectionDetails, &connProducer)
 		if err != nil {
 			return nil, err
 		}
-
-		connProducer := &cassandraConnectionProducer{
-			config:      conf,
-			connDetails: details,
-		}
+		connProducer.config = conf
 
 		credsProducer := &cassandraCredentialsProducer{}
 

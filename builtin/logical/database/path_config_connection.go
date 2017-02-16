@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,6 +10,64 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
+
+func pathResetConnection(b *databaseBackend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("reset/%s", framework.GenericNameRegex("name")),
+		Fields: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "Name of this DB type",
+			},
+		},
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.UpdateOperation: b.pathConnectionReset,
+		},
+
+		HelpSynopsis:    pathConfigConnectionHelpSyn,
+		HelpDescription: pathConfigConnectionHelpDesc,
+	}
+}
+
+func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
+	if name == "" {
+		return nil, errors.New("No database name set")
+	}
+
+	// Grab the mutex lock
+	b.Lock()
+	defer b.Unlock()
+
+	entry, err := req.Storage.Get(fmt.Sprintf("dbs/%s", name))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read connection configuration")
+	}
+	if entry == nil {
+		return nil, nil
+	}
+
+	var config dbs.DatabaseConfig
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+
+	db, ok := b.connections[name]
+	if !ok {
+		return logical.ErrorResponse("Can not change type of existing connection."), nil
+	}
+
+	db.Close()
+	db, err = dbs.Factory(&config)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+	}
+
+	b.connections[name] = db
+
+	return nil, nil
+}
 
 func pathConfigConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
@@ -129,13 +188,13 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 		if b.connections[name].Type() != connType {
 			return logical.ErrorResponse("Can not change type of existing connection."), nil
 		}
-
-		db = b.connections[name]
 	} else {
 		db, err = dbs.Factory(config)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 		}
+
+		b.connections[name] = db
 	}
 
 	/*
@@ -166,9 +225,6 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 	}
 
 	// Reset the DB connection
-	db.Reset(config)
-	b.connections[name] = db
-
 	resp := &logical.Response{}
 	resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection string or URL as it is, including passwords, if any.")
 

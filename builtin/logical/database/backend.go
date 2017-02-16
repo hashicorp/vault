@@ -25,6 +25,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathRoleCreate(&b),
+			pathResetConnection(&b),
 		},
 
 		Secrets: []*framework.Secret{

@@ -15,47 +15,40 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
-	"github.com/mitchellh/mapstructure"
 )
 
 type ConnectionProducer interface {
 	Connection() (interface{}, error)
 	Close()
-	// TODO: Should we make this immutable instead?
-	Reset(*DatabaseConfig) error
 }
 
 // sqlConnectionProducer impliments ConnectionProducer and provides a generic producer for most sql databases
-type sqlConnectionDetails struct {
-	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
-}
-
 type sqlConnectionProducer struct {
+	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
+
 	config *DatabaseConfig
-	// TODO: Should we merge these two structures make it immutable?
-	connDetails *sqlConnectionDetails
 
 	db *sql.DB
 	sync.Mutex
 }
 
-func (cp *sqlConnectionProducer) Connection() (interface{}, error) {
+func (c *sqlConnectionProducer) Connection() (interface{}, error) {
 	// Grab the write lock
-	cp.Lock()
-	defer cp.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	// If we already have a DB, we got it!
-	if cp.db != nil {
-		if err := cp.db.Ping(); err == nil {
-			return cp.db, nil
+	if c.db != nil {
+		if err := c.db.Ping(); err == nil {
+			return c.db, nil
 		}
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
-		cp.db.Close()
+		c.db.Close()
 	}
 
 	// Otherwise, attempt to make connection
-	conn := cp.connDetails.ConnectionURL
+	conn := c.ConnectionURL
 
 	// Ensure timezone is set to UTC for all the conenctions
 	if strings.HasPrefix(conn, "postgres://") || strings.HasPrefix(conn, "postgresql://") {
@@ -67,54 +60,33 @@ func (cp *sqlConnectionProducer) Connection() (interface{}, error) {
 	}
 
 	var err error
-	cp.db, err = sql.Open(cp.config.DatabaseType, conn)
+	c.db, err = sql.Open(c.config.DatabaseType, conn)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set some connection pool settings. We don't need much of this,
 	// since the request rate shouldn't be high.
-	cp.db.SetMaxOpenConns(cp.config.MaxOpenConnections)
-	cp.db.SetMaxIdleConns(cp.config.MaxIdleConnections)
-	cp.db.SetConnMaxLifetime(cp.config.MaxConnectionLifetime)
+	c.db.SetMaxOpenConns(c.config.MaxOpenConnections)
+	c.db.SetMaxIdleConns(c.config.MaxIdleConnections)
+	c.db.SetConnMaxLifetime(c.config.MaxConnectionLifetime)
 
-	return cp.db, nil
+	return c.db, nil
 }
 
-func (cp *sqlConnectionProducer) Close() {
+func (c *sqlConnectionProducer) Close() {
 	// Grab the write lock
-	cp.Lock()
-	defer cp.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
-	if cp.db != nil {
-		cp.db.Close()
+	if c.db != nil {
+		c.db.Close()
 	}
 
-	cp.db = nil
+	c.db = nil
 }
 
-func (cp *sqlConnectionProducer) Reset(config *DatabaseConfig) error {
-	// Grab the write lock
-	cp.Lock()
-
-	var details *sqlConnectionDetails
-	err := mapstructure.Decode(config.ConnectionDetails, &details)
-	if err != nil {
-		return err
-	}
-
-	cp.connDetails = details
-	cp.config = config
-
-	cp.Unlock()
-
-	cp.Close()
-	_, err = cp.Connection()
-	return err
-}
-
-// cassandraConnectionProducer impliments ConnectionProducer and provides connections for cassandra
-type cassandraConnectionDetails struct {
+type cassandraConnectionProducer struct {
 	Hosts           string `json:"hosts" structs:"hosts" mapstructure:"hosts"`
 	Username        string `json:"username" structs:"username" mapstructure:"username"`
 	Password        string `json:"password" structs:"password" mapstructure:"password"`
@@ -127,90 +99,74 @@ type cassandraConnectionDetails struct {
 	ConnectTimeout  int    `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
 	TLSMinVersion   string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 	Consistency     string `json:"consistency" structs:"consistency" mapstructure:"consistency"`
-}
 
-type cassandraConnectionProducer struct {
 	config *DatabaseConfig
-	// TODO: Should we merge these two structures make it immutable?
-	connDetails *cassandraConnectionDetails
 
 	session *gocql.Session
 	sync.Mutex
 }
 
-func (cp *cassandraConnectionProducer) Connection() (interface{}, error) {
+func (c *cassandraConnectionProducer) Connection() (interface{}, error) {
 	// Grab the write lock
-	cp.Lock()
-	defer cp.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
 	// If we already have a DB, we got it!
-	if cp.session != nil {
-		return cp.session, nil
+	if c.session != nil {
+		return c.session, nil
 	}
 
-	session, err := cp.createSession(cp.connDetails)
+	session, err := c.createSession()
 	if err != nil {
 		return nil, err
 	}
 
 	//  Store the session in backend for reuse
-	cp.session = session
+	c.session = session
 
 	return session, nil
 }
 
-func (cp *cassandraConnectionProducer) Close() {
+func (c *cassandraConnectionProducer) Close() {
 	// Grab the write lock
-	cp.Lock()
-	defer cp.Unlock()
+	c.Lock()
+	defer c.Unlock()
 
-	if cp.session != nil {
-		cp.session.Close()
+	if c.session != nil {
+		c.session.Close()
 	}
 
-	cp.session = nil
+	c.session = nil
 }
 
-func (cp *cassandraConnectionProducer) Reset(config *DatabaseConfig) error {
-	// Grab the write lock
-	cp.Lock()
-	cp.config = config
-	cp.Unlock()
-
-	cp.Close()
-	_, err := cp.Connection()
-
-	return err
-}
-
-func (cp *cassandraConnectionProducer) createSession(cfg *cassandraConnectionDetails) (*gocql.Session, error) {
-	clusterConfig := gocql.NewCluster(strings.Split(cfg.Hosts, ",")...)
+func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
+	clusterConfig := gocql.NewCluster(strings.Split(c.Hosts, ",")...)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
-		Username: cfg.Username,
-		Password: cfg.Password,
+		Username: c.Username,
+		Password: c.Password,
 	}
 
-	clusterConfig.ProtoVersion = cfg.ProtocolVersion
+	clusterConfig.ProtoVersion = c.ProtocolVersion
 	if clusterConfig.ProtoVersion == 0 {
 		clusterConfig.ProtoVersion = 2
 	}
 
-	clusterConfig.Timeout = time.Duration(cfg.ConnectTimeout) * time.Second
+	clusterConfig.Timeout = time.Duration(c.ConnectTimeout) * time.Second
 
-	if cfg.TLS {
+	if c.TLS {
 		var tlsConfig *tls.Config
-		if len(cfg.Certificate) > 0 || len(cfg.IssuingCA) > 0 {
-			if len(cfg.Certificate) > 0 && len(cfg.PrivateKey) == 0 {
+		if len(c.Certificate) > 0 || len(c.IssuingCA) > 0 {
+			if len(c.Certificate) > 0 && len(c.PrivateKey) == 0 {
 				return nil, fmt.Errorf("Found certificate for TLS authentication but no private key")
 			}
 
 			certBundle := &certutil.CertBundle{}
-			if len(cfg.Certificate) > 0 {
-				certBundle.Certificate = cfg.Certificate
-				certBundle.PrivateKey = cfg.PrivateKey
+			if len(c.Certificate) > 0 {
+				certBundle.Certificate = c.Certificate
+				certBundle.PrivateKey = c.PrivateKey
 			}
-			if len(cfg.IssuingCA) > 0 {
-				certBundle.IssuingCA = cfg.IssuingCA
+			if len(c.IssuingCA) > 0 {
+				certBundle.IssuingCA = c.IssuingCA
 			}
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()
@@ -222,11 +178,11 @@ func (cp *cassandraConnectionProducer) createSession(cfg *cassandraConnectionDet
 			if err != nil || tlsConfig == nil {
 				return nil, fmt.Errorf("failed to get TLS configuration: tlsConfig:%#v err:%v", tlsConfig, err)
 			}
-			tlsConfig.InsecureSkipVerify = cfg.InsecureTLS
+			tlsConfig.InsecureSkipVerify = c.InsecureTLS
 
-			if cfg.TLSMinVersion != "" {
+			if c.TLSMinVersion != "" {
 				var ok bool
-				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[cfg.TLSMinVersion]
+				tlsConfig.MinVersion, ok = tlsutil.TLSLookup[c.TLSMinVersion]
 				if !ok {
 					return nil, fmt.Errorf("invalid 'tls_min_version' in config")
 				}
@@ -248,8 +204,8 @@ func (cp *cassandraConnectionProducer) createSession(cfg *cassandraConnectionDet
 	}
 
 	// Set consistency
-	if cfg.Consistency != "" {
-		consistencyValue, err := gocql.ParseConsistencyWrapper(cfg.Consistency)
+	if c.Consistency != "" {
+		consistencyValue, err := gocql.ParseConsistencyWrapper(c.Consistency)
 		if err != nil {
 			return nil, err
 		}
