@@ -10,6 +10,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * audit: When auditing headers use case-insensitive comparisons [GH-2362]
  * auth/aws-ec2: Return role period in seconds and not nanoseconds [GH-2374]
  * auth/okta: Fix panic if user had no local groups and/or policies set
    [GH-2367]
