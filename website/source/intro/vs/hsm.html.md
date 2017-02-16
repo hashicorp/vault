@@ -28,7 +28,7 @@ with a significant advantage in that they conform to government-mandated
 compliance requirements (e.g. FIPS 140), which often require specific hardware
 protections and security models in addition to software.
 
-Vault doesn't replace an HSM. Instead, they can be complimentary; a compliant
+Vault doesn't replace an HSM. Instead, they can be complementary; a compliant
 HSM can protect Vault's master key to help Vault comply with regulatory
 requirements, and Vault can provide easy client APIs for tasks such as
 encryption and decryption.
