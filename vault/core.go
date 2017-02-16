@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
@@ -310,7 +311,7 @@ type Core struct {
 
 	// replicationState keeps the current replication state cached for quick
 	// lookup
-	replicationState logical.ReplicationState
+	replicationState consts.ReplicationState
 }
 
 // CoreConfig is used to parameterize a core

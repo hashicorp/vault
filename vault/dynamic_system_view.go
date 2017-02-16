@@ -3,6 +3,7 @@ package vault
 import (
 	"time"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -76,8 +77,8 @@ func (d dynamicSystemView) CachingDisabled() bool {
 }
 
 // Checks if this is a primary Vault instance.
-func (d dynamicSystemView) ReplicationState() logical.ReplicationState {
-	var state logical.ReplicationState
+func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
+	var state consts.ReplicationState
 	d.core.clusterParamsLock.RLock()
 	state = d.core.replicationState
 	d.core.clusterParamsLock.RUnlock()
