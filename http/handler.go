@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
@@ -206,11 +207,11 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 // case of an error.
 func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *logical.Request) (*logical.Response, bool) {
 	resp, err := core.HandleRequest(r)
-	if errwrap.Contains(err, vault.ErrStandby.Error()) {
+	if errwrap.Contains(err, consts.ErrStandby.Error()) {
 		respondStandby(core, w, rawReq.URL)
 		return resp, false
 	}
-	if respondErrorCommon(w, resp, err) {
+	if respondErrorCommon(w, r, resp, err) {
 		return resp, false
 	}
 
@@ -310,20 +311,7 @@ func requestWrapInfo(r *http.Request, req *logical.Request) (*logical.Request, e
 }
 
 func respondError(w http.ResponseWriter, status int, err error) {
-	// Adjust status code when sealed
-	if errwrap.Contains(err, vault.ErrSealed.Error()) {
-		status = http.StatusServiceUnavailable
-	}
-
-	// Adjust status code on
-	if errwrap.Contains(err, "http: request body too large") {
-		status = http.StatusRequestEntityTooLarge
-	}
-
-	// Allow HTTPCoded error passthrough to specify a code
-	if t, ok := err.(logical.HTTPCodedError); ok {
-		status = t.Code()
-	}
+	logical.AdjustErrorStatusCode(&status, err)
 
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -337,42 +325,13 @@ func respondError(w http.ResponseWriter, status int, err error) {
 	enc.Encode(resp)
 }
 
-func respondErrorCommon(w http.ResponseWriter, resp *logical.Response, err error) bool {
-	// If there are no errors return
-	if err == nil && (resp == nil || !resp.IsError()) {
+func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logical.Response, err error) bool {
+	statusCode, newErr := logical.RespondErrorCommon(req, resp, err)
+	if newErr == nil && statusCode == 0 {
 		return false
 	}
 
-	// Start out with internal server error since in most of these cases there
-	// won't be a response so this won't be overridden
-	statusCode := http.StatusInternalServerError
-	// If we actually have a response, start out with bad request
-	if resp != nil {
-		statusCode = http.StatusBadRequest
-	}
-
-	// Now, check the error itself; if it has a specific logical error, set the
-	// appropriate code
-	if err != nil {
-		switch {
-		case errwrap.ContainsType(err, new(vault.StatusBadRequest)):
-			statusCode = http.StatusBadRequest
-		case errwrap.Contains(err, logical.ErrPermissionDenied.Error()):
-			statusCode = http.StatusForbidden
-		case errwrap.Contains(err, logical.ErrUnsupportedOperation.Error()):
-			statusCode = http.StatusMethodNotAllowed
-		case errwrap.Contains(err, logical.ErrUnsupportedPath.Error()):
-			statusCode = http.StatusNotFound
-		case errwrap.Contains(err, logical.ErrInvalidRequest.Error()):
-			statusCode = http.StatusBadRequest
-		}
-	}
-
-	if resp != nil && resp.IsError() {
-		err = fmt.Errorf("%s", resp.Data["error"].(string))
-	}
-
-	respondError(w, statusCode, err)
+	respondError(w, statusCode, newErr)
 	return true
 }
 

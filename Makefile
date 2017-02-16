@@ -24,6 +24,11 @@ dev-dynamic: generate
 test: generate
 	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=10m -parallel=4
 
+testcompile: generate
+	@for pkg in $(TEST) ; do \
+		go test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
+	done
+
 # testacc runs acceptance tests
 testacc: generate
 	@if [ "$(TEST)" = "./..." ]; then \
