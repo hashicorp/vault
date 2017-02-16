@@ -1229,6 +1229,12 @@ subpath for interactive help output.
         This sets the OU (OrganizationalUnit) values in the subject field of
         issued certificates. This is a comma-separated string.
       </li>
+      <li>
+        <span class="param">organization</span>
+        <span class="param-flags">optional</span>
+        This sets the O (Organization) values in the subject field of issued
+        certificates. This is a comma-separated string.
+      </li>
     </ul>
   </dd>
 

@@ -1478,6 +1478,27 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		}
 	}
 
+	getOrganizationCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
+				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
+			}
+			return nil
+		}
+	}
+
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
 	getCnCheck := func(name string, role roleEntry, key crypto.Signer, usage x509.KeyUsage, extUsage x509.ExtKeyUsage, validity time.Duration) logicaltest.TestCheckFunc {
@@ -1754,6 +1775,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		roleVals.OU = "foo,bar"
 		addTests(getOuCheck(roleVals))
+	}
+	// Organization tests
+	{
+		roleVals.Organization = "system:masters"
+		addTests(getOrganizationCheck(roleVals))
+
+		roleVals.Organization = "foo,bar"
+		addTests(getOrganizationCheck(roleVals))
 	}
 	// IP SAN tests
 	{
