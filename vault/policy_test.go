@@ -40,50 +40,42 @@ path "foo/bar" {
 # Check that only allowed_parameters are being added to foobar
 path "foo/bar" {
 	capabilities = ["create", "sudo"]
-	permissions = {
-	  allowed_parameters = {
-	    "zip" = []
-	    "zap" = []
-	  }
+	allowed_parameters = {
+	  "zip" = []
+	  "zap" = []
 	}
 }
 
 # Check that only denied_parameters are being added to bazbar
 path "baz/bar" {
 	capabilities = ["create", "sudo"]
-	permissions = {
-	  denied_parameters = {
-	    "zip" = []
-	    "zap" = []
-	  }
+	denied_parameters = {
+	  "zip" = []
+	  "zap" = []
 	}
 }
 
 # Check that both allowed and denied parameters are being added to bizbar
 path "biz/bar" {
 	capabilities = ["create", "sudo"]
-	permissions = {
-	  allowed_parameters = {
-	    "zim" = []
-	    "zam" = []
-	  }
-	  denied_parameters = {
-	    "zip" = []
-	    "zap" = []
-	  }
+	allowed_parameters = {
+	  "zim" = []
+	  "zam" = []
+	}
+	denied_parameters = {
+	  "zip" = []
+	  "zap" = []
 	}
 }
 path "test/types" {
 	capabilities = ["create", "sudo"]
-	permissions = {
-		allowed_parameters = {
-			"map" = [{"good" = "one"}]
-			"int" = [1, 2]
-		}
-		denied_parameters = {
-			"string" = ["test"]
-			"bool" = [false]
-		}
+	allowed_parameters = {
+		"map" = [{"good" = "one"}]
+		"int" = [1, 2]
+	}
+	denied_parameters = {
+		"string" = ["test"]
+		"bool" = [false]
 	}
 }
 `)
@@ -99,15 +91,19 @@ func TestPolicy_Parse(t *testing.T) {
 	}
 
 	expect := []*PathCapabilities{
-		&PathCapabilities{"", "deny",
-			[]string{
+		&PathCapabilities{
+			Prefix: "",
+			Policy: "deny",
+			Capabilities: []string{
 				"deny",
 			},
-			&Permissions{CapabilitiesBitmap: DenyCapabilityInt},
-			true,
+			Permissions: &Permissions{CapabilitiesBitmap: DenyCapabilityInt},
+			Glob:        true,
 		},
-		&PathCapabilities{"stage/", "sudo",
-			[]string{
+		&PathCapabilities{
+			Prefix: "stage/",
+			Policy: "sudo",
+			Capabilities: []string{
 				"create",
 				"read",
 				"update",
@@ -115,80 +111,100 @@ func TestPolicy_Parse(t *testing.T) {
 				"list",
 				"sudo",
 			},
-			&Permissions{
+			Permissions: &Permissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | ReadCapabilityInt | UpdateCapabilityInt | DeleteCapabilityInt | ListCapabilityInt | SudoCapabilityInt),
 			},
-			true,
+			Glob: true,
 		},
-		&PathCapabilities{"prod/version", "read",
-			[]string{
+		&PathCapabilities{
+			Prefix: "prod/version",
+			Policy: "read",
+			Capabilities: []string{
 				"read",
 				"list",
 			},
-			&Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
-			false,
+			Permissions: &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
+			Glob:        false,
 		},
-		&PathCapabilities{"foo/bar", "read",
-			[]string{
+		&PathCapabilities{
+			Prefix: "foo/bar",
+			Policy: "read",
+			Capabilities: []string{
 				"read",
 				"list",
 			},
-			&Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
-			false,
+			Permissions: &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
+			Glob:        false,
 		},
-		&PathCapabilities{"foo/bar", "",
-			[]string{
+		&PathCapabilities{
+			Prefix: "foo/bar",
+			Policy: "",
+			Capabilities: []string{
 				"create",
 				"sudo",
 			},
-			&Permissions{CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt)},
-			false,
+			Permissions: &Permissions{CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt)},
+			Glob:        false,
 		},
-		&PathCapabilities{"foo/bar", "",
-			[]string{
+		&PathCapabilities{
+			Prefix: "foo/bar",
+			Policy: "",
+			Capabilities: []string{
 				"create",
 				"sudo",
 			},
-			&Permissions{
+			AllowedParametersHCL: map[string][]interface{}{"zip": {}, "zap": {}},
+			Permissions: &Permissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			false,
+			Glob: false,
 		},
-		&PathCapabilities{"baz/bar", "",
-			[]string{
+		&PathCapabilities{
+			Prefix: "baz/bar",
+			Policy: "",
+			Capabilities: []string{
 				"create",
 				"sudo",
 			},
-			&Permissions{
+			DeniedParametersHCL: map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
+			Permissions: &Permissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				DeniedParameters:   map[string][]interface{}{"zip": []interface{}{}, "zap": []interface{}{}},
 			},
-			false,
+			Glob: false,
 		},
-		&PathCapabilities{"biz/bar", "",
-			[]string{
+		&PathCapabilities{
+			Prefix: "biz/bar",
+			Policy: "",
+			Capabilities: []string{
 				"create",
 				"sudo",
 			},
-			&Permissions{
+			AllowedParametersHCL: map[string][]interface{}{"zim": {}, "zam": {}},
+			DeniedParametersHCL:  map[string][]interface{}{"zip": {}, "zap": {}},
+			Permissions: &Permissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"zim": {}, "zam": {}},
 				DeniedParameters:   map[string][]interface{}{"zip": {}, "zap": {}},
 			},
-			false,
+			Glob: false,
 		},
-		&PathCapabilities{"test/types", "",
-			[]string{
+		&PathCapabilities{
+			Prefix: "test/types",
+			Policy: "",
+			Capabilities: []string{
 				"create",
 				"sudo",
 			},
-			&Permissions{
+			AllowedParametersHCL: map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
+			DeniedParametersHCL:  map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
+			Permissions: &Permissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				AllowedParameters:  map[string][]interface{}{"map": []interface{}{map[string]interface{}{"good": "one"}}, "int": []interface{}{1, 2}},
 				DeniedParameters:   map[string][]interface{}{"string": []interface{}{"test"}, "bool": []interface{}{false}},
 			},
-			false,
+			Glob: false,
 		},
 	}
 	if !reflect.DeepEqual(p.Paths, expect) {

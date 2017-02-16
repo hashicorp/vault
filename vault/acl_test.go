@@ -214,7 +214,7 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	}
 }
 
-func TestPolicyMerge(t *testing.T) {
+func TestACL_PolicyMerge(t *testing.T) {
 	policy, err := Parse(mergingPolicies)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -256,7 +256,7 @@ func TestPolicyMerge(t *testing.T) {
 	}
 }
 
-func TestAllowOperation(t *testing.T) {
+func TestACL_AllowOperation(t *testing.T) {
 	policy, err := Parse(permissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -306,7 +306,7 @@ func TestAllowOperation(t *testing.T) {
 	}
 }
 
-func TestValuePermissions(t *testing.T) {
+func TestACL_ValuePermissions(t *testing.T) {
 	policy, err := Parse(valuePermissionsPolicy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -434,122 +434,93 @@ var mergingPolicies = `
 name = "ops"
 path "foo/bar" {
 	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"baz" = []
-		}
+	denied_parameters = {
+		"baz" = []
 	}
 }
 path "foo/bar" {
 	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"zip" = []
-		}
+	denied_parameters = {
+		"zip" = []
 	}
 }
 path "hello/universe" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"foo" = []
-		}
+	allowed_parameters = {
+		"foo" = []
 	}
 }
 path "hello/universe" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"bar" = []
-		}
-  }
-}
-path "allow/all" {
-	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"test" = []
-		}
+	allowed_parameters = {
+		"bar" = []
 	}
 }
 path "allow/all" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"*" = []
-		}
-  }
+	allowed_parameters = {
+		"test" = []
+	}
+}
+path "allow/all" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+	}
 }
 path "allow/all1" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"*" = []
-		}
-  }
+	allowed_parameters = {
+		"*" = []
+	}
 }
 path "allow/all1" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"test" = []
-		}
-  }
-}
-path "deny/all" {
-	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"frank" = []
-		}
+	allowed_parameters = {
+		"test" = []
 	}
 }
 path "deny/all" {
 	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"*" = []
-		}
-  }
+	denied_parameters = {
+		"frank" = []
+	}
+}
+path "deny/all" {
+	policy = "write"
+	denied_parameters = {
+		"*" = []
+	}
 }
 path "deny/all1" {
 	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"*" = []
-		}
-  }
+	denied_parameters = {
+		"*" = []
+	}
 }
 path "deny/all1" {
 	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"test" = []
-		}
-  }
-}
-path "value/merge" {
-	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"test" = [1, 2]
-		}
-		denied_parameters = {
-			"test" = [1, 2]
-		}
-
+	denied_parameters = {
+		"test" = []
 	}
 }
 path "value/merge" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"test" = [3, 4]
-		}
-		denied_parameters = {
-			"test" = [3, 4]
-		}
-  }
+	allowed_parameters = {
+		"test" = [1, 2]
+	}
+	denied_parameters = {
+		"test" = [1, 2]
+	}
+}
+path "value/merge" {
+	policy = "write"
+	allowed_parameters = {
+		"test" = [3, 4]
+	}
+	denied_parameters = {
+		"test" = [3, 4]
+	}
 }
 `
 
@@ -559,93 +530,75 @@ name = "dev"
 path "dev/*" {
 	policy = "write"
 	
-  permissions = {
-  	allowed_parameters = {
-  		"zip" = []
-  	}
-  }
+	allowed_parameters = {
+		"zip" = []
+	}
 }
 path "foo/bar" {
 	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"zap" = []
-		}
-  }
+	denied_parameters = {
+		"zap" = []
+	}
 }
 path "foo/baz" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"hello" = []
-		}
-		denied_parameters = {
-			"zap" = []
-		}
-  }
+	allowed_parameters = {
+		"hello" = []
+	}
+	denied_parameters = {
+		"zap" = []
+	}
 }
 path "broken/phone" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-		  "steve" = []
-		}
-		denied_parameters = {
-		  "steve" = []
-		}
+	allowed_parameters = {
+	  "steve" = []
+	}
+	denied_parameters = {
+	  "steve" = []
 	}
 }
 path "hello/world" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"*" = []
-		}
-		denied_parameters = {
-			"*" = []
-		}
-  }
+	allowed_parameters = {
+		"*" = []
+	}
+	denied_parameters = {
+		"*" = []
+	}
 }
 path "tree/fort" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"*" = []
-		}
-		denied_parameters = {
-			"beer" = []
-		}
-  }
+	allowed_parameters = {
+		"*" = []
+	}
+	denied_parameters = {
+		"beer" = []
+	}
 }
 path "fruit/apple" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"pear" = []
-		}
-		denied_parameters = {
-			"*" = []
-		}
-  }
+	allowed_parameters = {
+		"pear" = []
+	}
+	denied_parameters = {
+		"*" = []
+	}
 }
 path "cold/weather" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {}
-		denied_parameters = {}
-	}
+	allowed_parameters = {}
+	denied_parameters = {}
 }
 path "var/aws" {
-  	policy = "write"
-	permissions = {
-	  	allowed_parameters = {
-			"*" = []
-		}
-		denied_parameters = {
-		  	"soft" = []
-			"warm" = []
-			"kitty" = []
-		}
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+	}
+	denied_parameters = {
+		"soft" = []
+		"warm" = []
+		"kitty" = []
 	}
 }
 `
@@ -656,53 +609,43 @@ name = "op"
 path "dev/*" {
 	policy = "write"
 	
-	permissions = {
-		allowed_parameters = {
-  			"allow" = ["good"]
-	  	}
+	allowed_parameters = {
+		"allow" = ["good"]
 	}
 }
 path "foo/bar" {
 	policy = "write"
-	permissions = {
-		denied_parameters = {
-			"deny" = ["bad"]
-		}
+	denied_parameters = {
+		"deny" = ["bad"]
 	}
 }
 path "foo/baz" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"allow" = ["good"]
-		}
-		denied_parameters = {
-			"deny" = ["bad"]
-		}
+	allowed_parameters = {
+		"allow" = ["good"]
+	}
+	denied_parameters = {
+		"deny" = ["bad"]
 	}
 }
 path "fizz/buzz" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"allow_multi" = ["good", "good1", "good2"]
-			"allow" = ["good"]
-		}
-		denied_parameters = {
-			"deny_multi" = ["bad", "bad1", "bad2"]
-		}
+	allowed_parameters = {
+		"allow_multi" = ["good", "good1", "good2"]
+		"allow" = ["good"]
+	}
+	denied_parameters = {
+		"deny_multi" = ["bad", "bad1", "bad2"]
 	}
 }
 path "test/types" {
 	policy = "write"
-	permissions = {
-		allowed_parameters = {
-			"map" = [{"good" = "one"}]
-			"int" = [1, 2]
-		}
-		denied_parameters = {
-			"bool" = [false]
-		}
+	allowed_parameters = {
+		"map" = [{"good" = "one"}]
+		"int" = [1, 2]
+	}
+	denied_parameters = {
+		"bool" = [false]
 	}
 }
 `

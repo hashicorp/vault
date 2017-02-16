@@ -60,15 +60,20 @@ type Policy struct {
 type PathCapabilities struct {
 	Prefix       string
 	Policy       string
-	Capabilities []string
 	Permissions  *Permissions
 	Glob         bool
+	Capabilities []string
+
+	// These two keys are used at the top level to make the HCL nicer; we store
+	// in the Permissions object though
+	AllowedParametersHCL map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParametersHCL  map[string][]interface{} `hcl:"denied_parameters"`
 }
 
 type Permissions struct {
 	CapabilitiesBitmap uint32
-	AllowedParameters  map[string][]interface{} `hcl:"allowed_parameters"`
-	DeniedParameters   map[string][]interface{} `hcl:"denied_parameters"`
+	AllowedParameters  map[string][]interface{}
+	DeniedParameters   map[string][]interface{}
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -122,7 +127,8 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		valid := []string{
 			"policy",
 			"capabilities",
-			"permissions",
+			"allowed_parameters",
+			"denied_parameters",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -181,8 +187,10 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			}
 		}
 
-	PathFinished:
+		pc.Permissions.AllowedParameters = pc.AllowedParametersHCL
+		pc.Permissions.DeniedParameters = pc.DeniedParametersHCL
 
+	PathFinished:
 		paths = append(paths, &pc)
 	}
 
