@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -100,7 +101,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	checkListenersFunc := func(expectFail bool) {
 		tlsConfig, err := cores[0].ClusterTLSConfig()
 		if err != nil {
-			if err.Error() != ErrSealed.Error() {
+			if err.Error() != consts.ErrSealed.Error() {
 				t.Fatal(err)
 			}
 			tlsConfig = lastTLSConfig

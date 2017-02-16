@@ -109,39 +109,12 @@ func handleLogical(core *vault.Core, dataOnly bool, prepareRequestCallback Prepa
 
 		// Make the internal request. We attach the connection info
 		// as well in case this is an authentication request that requires
-		// it. Vault core handles stripping this if we need to.
+		// it. Vault core handles stripping this if we need to. This also
+		// handles all error cases; if we hit respondLogical, the request is a
+		// success.
 		resp, ok := request(core, w, r, req)
 		if !ok {
 			return
-		}
-		switch {
-		case req.Operation == logical.ReadOperation:
-			if resp == nil {
-				respondError(w, http.StatusNotFound, nil)
-				return
-			}
-
-		// Basically: if we have empty "keys" or no keys at all, 404. This
-		// provides consistency with GET.
-		case req.Operation == logical.ListOperation && resp.WrapInfo == nil:
-			if resp == nil || len(resp.Data) == 0 {
-				respondError(w, http.StatusNotFound, nil)
-				return
-			}
-			keysRaw, ok := resp.Data["keys"]
-			if !ok || keysRaw == nil {
-				respondError(w, http.StatusNotFound, nil)
-				return
-			}
-			keys, ok := keysRaw.([]string)
-			if !ok {
-				respondError(w, http.StatusInternalServerError, nil)
-				return
-			}
-			if len(keys) == 0 {
-				respondError(w, http.StatusNotFound, nil)
-				return
-			}
 		}
 
 		// Build the proper response

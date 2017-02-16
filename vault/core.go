@@ -60,14 +60,6 @@ const (
 )
 
 var (
-	// ErrSealed is returned if an operation is performed on
-	// a sealed barrier. No operation is expected to succeed before unsealing
-	ErrSealed = errors.New("Vault is sealed")
-
-	// ErrStandby is returned if an operation is performed on
-	// a standby Vault. No operation is expected to succeed until active.
-	ErrStandby = errors.New("Vault is in standby mode")
-
 	// ErrAlreadyInit is returned if the core is already
 	// initialized. This prevents a re-initialization.
 	ErrAlreadyInit = errors.New("Vault is already initialized")
@@ -519,10 +511,10 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	// Many tests don't have a token store running
@@ -657,7 +649,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Check if sealed
 	if c.sealed {
-		return false, "", ErrSealed
+		return false, "", consts.ErrSealed
 	}
 
 	// Check if HA enabled
@@ -1598,6 +1590,14 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			return
 		}
 	}
+}
+
+func (c *Core) ReplicationState() consts.ReplicationState {
+	var state consts.ReplicationState
+	c.clusterParamsLock.RLock()
+	state = c.replicationState
+	c.clusterParamsLock.RUnlock()
+	return state
 }
 
 func (c *Core) SealAccess() *SealAccess {
