@@ -1,13 +1,23 @@
 package chefnode
 
 import (
+	"io/ioutil"
+	"math/rand"
+	"net/http"
 	"net/url"
+	"os"
 	"testing"
 
 	"strings"
 
+	"fmt"
+
+	"bytes"
+	"encoding/json"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
+	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
 func TestBackend_Config(t *testing.T) {
@@ -235,7 +245,7 @@ func TestBackend_Tag(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatal("Failed to create environment")
+		t.Fatal("Failed to create tag")
 	}
 
 	resp, err = b.HandleRequest(&logical.Request{
@@ -247,7 +257,7 @@ func TestBackend_Tag(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.IsError() {
-		t.Fatal("Failed to read environment")
+		t.Fatal("Failed to read tag")
 	}
 	if !policyutil.EquivalentPolicies(strings.Split(data["policies"].(string), ","), resp.Data["policies"].([]string)) {
 		t.Fatalf("policies didn't match: expected: %#v\ngot: %#v\n", data, resp.Data)
@@ -341,7 +351,7 @@ ywIDAQAB
 	}
 
 	vaultURL, _ := url.Parse("http://localhost/v1/chef-node/login")
-	headers, _ := authHeaders(conf, vaultURL, "POST", false)
+	headers, _ := authHeaders(conf, vaultURL, "POST", nil, false)
 
 	sigVer := headers.Get("X-Ops-Sign")
 	sig := headers.Get("X-Ops-Authorization")
@@ -351,4 +361,361 @@ ywIDAQAB
 	if !authenticate("test_client", ts, sig, sigVer, key, vaultURL.Path) {
 		t.Fatal("Couldn't authenticate request")
 	}
+}
+
+// This is an acceptance test.
+// Requires the following env vars:
+// VAULT_CLIENT_NAME - name of the client vault should connect to server as
+// VAULT_CLIENT_KEYFILE - path to key for vault client
+// VAULT_ADMIN_NAME - name of admin user for object creation
+// VAULT_ADMIN_KEYFILE - path to admin's keyfile
+// VAULT_CHEF_URL - Chef api endpoint
+//
+// The test requires that the admin user and the vault client already exist in the
+// Chef server.
+//
+// It also requires that the ACLs on the chef server set the read permissions for
+// the client used to connect on any newly created clients.  See the documentation
+// for the backend to see how that might be done.
+func TestBackendAcc_Login(t *testing.T) {
+	if os.Getenv(logicaltest.TestEnvVar) == "" {
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		return
+	}
+
+	clientName := os.Getenv("VAULT_CLIENT_NAME")
+	if clientName == "" {
+		t.Fatalf("env var VAULT_CLIENT_NAME not set")
+	}
+	clientKeyFile := os.Getenv("VAULT_CLIENT_KEYFILE")
+	if clientKeyFile == "" {
+		t.Fatalf("env var VAULT_CLIENT_KEYFILE not set")
+	}
+	adminName := os.Getenv("VAULT_ADMIN_NAME")
+	if adminName == "" {
+		t.Fatalf("env var VAULT_ADMIN_NAME not set")
+	}
+	adminKeyFile := os.Getenv("VAULT_ADMIN_KEYFILE")
+	if adminKeyFile == "" {
+		t.Fatalf("env var VAULT_ADMIN_KEYFILE not set")
+	}
+	chefURL := os.Getenv("VAULT_CHEF_URL")
+	if chefURL == "" {
+		t.Fatalf("env var VAULT_CHEF_URL not set")
+	}
+
+	env := randString()
+	err := setupTestEnv(env)
+	if err != nil {
+		t.Fatalf("Couldn't setup test environment %s", env)
+	}
+	defer teardownTestEnv(env)
+
+	role1 := randString()
+	role2 := randString()
+	err = setupTestRole(role1)
+	if err != nil {
+		t.Fatalf("Couldn't setup test role %s", role1)
+	}
+	err = setupTestRole(role2)
+	if err != nil {
+		t.Fatalf("Couldn't setup test role %s", role2)
+	}
+	defer teardownTestRole(role1)
+	defer teardownTestRole(role2)
+
+	nodeName := randString()
+	tag1 := randString()
+	tag2 := randString()
+	tagList := []string{tag1, tag2}
+	roleList := []string{role1, role2}
+	nodeKey, err := setupTestNode(nodeName, env, roleList, tagList)
+	if err != nil {
+		t.Fatalf("Couldn't setup test node %s", nodeName)
+	}
+	defer teardownTestNode(nodeName)
+
+	storage := &logical.InmemStorage{}
+	bconfig := logical.TestBackendConfig()
+	bconfig.StorageView = storage
+	b, err := Backend().Setup(bconfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vaultKey, err := ioutil.ReadFile(clientKeyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	vConfig := map[string]interface{}{
+		"client_name": clientName,
+		"client_key":  string(vaultKey),
+		"base_url":    chefURL,
+	}
+	_, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "config",
+		Data:      vConfig,
+	})
+
+	epData := map[string]interface{}{
+		"policies": "ep",
+	}
+
+	epResp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "environment/" + env,
+		Data:      epData,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if epResp != nil && epResp.IsError() {
+		t.Fatalf("Failed to create environment")
+	}
+
+	rpData := map[string]interface{}{
+		"policies": "rp1",
+	}
+	rpResp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/" + role1,
+		Data:      rpData,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rpResp != nil && rpResp.IsError() {
+		t.Fatalf("Failed to create first role")
+	}
+	rpData = map[string]interface{}{
+		"policies": "rp2",
+	}
+	rpResp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "role/" + role2,
+		Data:      rpData,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rpResp != nil && rpResp.IsError() {
+		t.Fatalf("Failed to create second role")
+	}
+
+	tpData := map[string]interface{}{
+		"policies": "tp1",
+	}
+	tagResp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "tag/" + tag1,
+		Data:      tpData,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tagResp != nil && tagResp.IsError() {
+		t.Fatal("Failed to create tag")
+	}
+	tpData = map[string]interface{}{
+		"policies": "tp2",
+	}
+	tagResp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "tag/" + tag2,
+		Data:      tpData,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tagResp != nil && tagResp.IsError() {
+		t.Fatal("Failed to create tag")
+	}
+
+	conf := &config{
+		ClientName: nodeName,
+		ClientKey:  string(nodeKey),
+	}
+
+	testURL, err := url.Parse("/v1/login")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := authHeaders(conf, testURL, "POST", nil, false)
+
+	loginInput := map[string]interface{}{
+		"signature_version": h.Get("X-Ops-Sign"),
+		"client_name":       nodeName,
+		"signature":         h.Get("X-Ops-Authorization"),
+		"timestamp":         h.Get("X-Ops-Timestamp"),
+	}
+
+	loginRequest := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginInput,
+	}
+
+	resp, err := b.HandleRequest(loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("login attempt failed")
+	}
+	exPols := []string{"default", "ep", "rp1", "rp2", "tp1", "tp2"}
+	if !policyutil.EquivalentPolicies(exPols, resp.Auth.Policies) {
+		t.Fatalf("policies didn't match:\nexpected: %#v\ngot: %#v\n", exPols, resp.Auth.Policies)
+	}
+}
+
+func randString() string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	b := make([]byte, 20)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func chefRequest(object string, method string, body []byte) (*http.Response, error) {
+	adminName := os.Getenv("VAULT_ADMIN_NAME")
+	adminKeyFile := os.Getenv("VAULT_ADMIN_KEYFILE")
+	chefURL := os.Getenv("VAULT_CHEF_URL")
+	key, _ := ioutil.ReadFile(adminKeyFile)
+	conf := &config{
+		ClientName: adminName,
+		ClientKey:  string(key),
+	}
+	url, _ := url.Parse(chefURL + "/" + object)
+	bodyBuf := bytes.NewBuffer(body)
+	headerBuf := bytes.NewBuffer(body)
+
+	headers, err := authHeaders(conf, url, method, headerBuf, true)
+	if err != nil {
+		return nil, err
+	}
+	headers.Add("Content-Type", "application/json")
+	req, err := http.NewRequest(method, url.String(), bodyBuf)
+	req.Header = headers
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func setupTestEnv(env string) error {
+	envData := map[string]string{
+		"name": env,
+	}
+	envJSON, err := json.Marshal(envData)
+	if err != nil {
+		return err
+	}
+	_, err = chefRequest("environments", "POST", envJSON)
+	return err
+}
+
+func setupTestRole(role string) error {
+	roleData := map[string]string{
+		"name": role,
+	}
+	roleJSON, err := json.Marshal(roleData)
+	if err != nil {
+		return err
+	}
+	_, err = chefRequest("roles", "POST", roleJSON)
+	return err
+}
+
+func setupTestNode(name string, env string, roles []string, tags []string) (string, error) {
+	clientData := struct {
+		Name        string `json:"name"`
+		GenerateKey bool   `json:"create_key"`
+	}{
+		name,
+		true,
+	}
+	clientJSON, err := json.Marshal(clientData)
+	if err != nil {
+		return "", err
+	}
+
+	clientResp, err := chefRequest("clients", "POST", clientJSON)
+	if err != nil {
+		return "", err
+	}
+	defer clientResp.Body.Close()
+	cBody, err := ioutil.ReadAll(clientResp.Body)
+	if err != nil {
+		return "", err
+	}
+	var clientRespStruct struct {
+		PrivateKey string `json:"private_key"`
+	}
+	err = json.Unmarshal(cBody, &clientRespStruct)
+	if err != nil {
+		return "", err
+	}
+
+	nodeData := struct {
+		Name        string `json:"name"`
+		ChefEnv     string `json:"chef_environment"`
+		NormalAttrs struct {
+			Tags []string `json:"tags"`
+		} `json:"normal"`
+		AutoAttrs struct {
+			Roles []string `json:"roles"`
+		} `json:"automatic"`
+	}{
+		name,
+		env,
+		struct {
+			Tags []string `json:"tags"`
+		}{
+			tags,
+		},
+		struct {
+			Roles []string `json:"roles"`
+		}{
+			roles,
+		},
+	}
+	nodeJSON, err := json.Marshal(nodeData)
+	if err != nil {
+		return "", err
+	}
+	_, err = chefRequest("nodes", "POST", nodeJSON)
+	if err != nil {
+		return "", err
+	}
+
+	return clientRespStruct.PrivateKey, nil
+}
+
+func teardownTestNode(name string) error {
+	_, err := chefRequest("nodes/"+name, "DELETE", []byte(""))
+	if err != nil {
+		return err
+	}
+	_, err = chefRequest("clients/"+name, "DELETE", []byte(""))
+	return err
+}
+
+func teardownTestRole(name string) error {
+	_, err := chefRequest("roles/"+name, "DELETE", []byte(""))
+	return err
+}
+
+func teardownTestEnv(name string) error {
+	_, err := chefRequest("environments/"+name, "DELETE", []byte(""))
+	return err
 }
