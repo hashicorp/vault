@@ -272,10 +272,10 @@ func (b *backend) pathRoleRead(
 	// HMAC key belonging to the role should NOT be exported.
 	delete(respData, "hmac_key")
 
-	// Display the ttl in seconds.
+	// Display all the durations in seconds
 	respData["ttl"] = roleEntry.TTL / time.Second
-	// Display the max_ttl in seconds.
 	respData["max_ttl"] = roleEntry.MaxTTL / time.Second
+	respData["period"] = roleEntry.Period / time.Second
 
 	return &logical.Response{
 		Data: respData,

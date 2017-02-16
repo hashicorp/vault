@@ -5,6 +5,16 @@ IMPROVEMENTS:
  * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
    username if not explicitly set on the command line when authenticating
    [GH-2154]
+ * audit: Support adding a configurable prefix (such as `@cee`) before each
+   line [GH-2359]
+
+BUG FIXES:
+
+ * auth/aws-ec2: Return role period in seconds and not nanoseconds [GH-2374]
+ * auth/okta: Fix panic if user had no local groups and/or policies set
+   [GH-2367]
+ * command/server: Fix parsing of redirect address when port is not mentioned
+   [GH-2354]
 
 ## 0.6.5 (February 7th, 2017)
 

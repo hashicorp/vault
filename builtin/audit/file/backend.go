@@ -76,9 +76,13 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 
 	switch format {
 	case "json":
-		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{}
+		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
+			Prefix: conf.Config["prefix"],
+		}
 	case "jsonx":
-		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{}
+		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{
+			Prefix: conf.Config["prefix"],
+		}
 	}
 
 	// Ensure that the file can be successfully opened for writing;

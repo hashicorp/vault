@@ -59,10 +59,6 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse("okta auth backend unexpected failure"), nil
 	}
 
-	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/okta:", auth)
-	}
-
 	oktaGroups, err := b.getOktaGroups(cfg, auth.Embedded.User.ID)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
@@ -96,13 +92,15 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	var policies []string
 	for _, groupName := range allGroups {
 		group, err := b.Group(req.Storage, groupName)
-		if err == nil && group != nil {
+		if err == nil && group != nil && group.Policies != nil {
 			policies = append(policies, group.Policies...)
 		}
 	}
 
 	// Merge local Policies into Okta Policies
-	policies = append(policies, user.Policies...)
+	if user != nil && user.Policies != nil {
+		policies = append(policies, user.Policies...)
+	}
 
 	if len(policies) == 0 {
 		errStr := "user is not a member of any authorized policy"

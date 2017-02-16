@@ -24,11 +24,11 @@ familiar with instance metadata, details can be found
 
 One piece of "dynamic metadata" available to the EC2 instance, is the instance
 identity document, a JSON representation of a collection of instance metadata.
-Importantly, AWS also provides a copy of this metadata in PKCS#7 format signed
-with its public key, and publishes the public keys used (which are grouped by
-region). (Details on the instance identity document and the signature can be
+AWS also provides PKCS#7 signature of the instance metadata document, and
+publishes the public keys (grouped by region) which can be used to verify the
+signature. Details on the instance identity document and the signature can be
 found
-[here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html).)
+[here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html).
 
 During login, the backend verifies the signature on the PKCS#7 document,
 ensuring that the information contained within, is certified accurate by AWS.
