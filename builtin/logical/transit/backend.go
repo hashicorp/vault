@@ -1,6 +1,8 @@
 package transit
 
 import (
+	"strings"
+
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -39,6 +41,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 		},
 
 		Secrets: []*framework.Secret{},
+
+		Invalidate: b.invalidate,
 	}
 
 	b.lm = keysutil.NewLockManager(conf.System.CachingDisabled())
@@ -49,4 +53,15 @@ func Backend(conf *logical.BackendConfig) *backend {
 type backend struct {
 	*framework.Backend
 	lm *keysutil.LockManager
+}
+
+func (b *backend) invalidate(key string) {
+	if b.Logger().IsTrace() {
+		b.Logger().Trace("transit: invalidating key", "key", key)
+	}
+	switch {
+	case strings.HasPrefix(key, "policy/"):
+		name := strings.TrimPrefix(key, "policy/")
+		b.lm.InvalidatePolicy(name)
+	}
 }

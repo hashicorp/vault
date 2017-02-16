@@ -17,6 +17,9 @@ type backend struct {
 	// by this backend.
 	salt *salt.Salt
 
+	// The view to use when creating the salt
+	view logical.Storage
+
 	// Guard to clean-up the expired SecretID entries
 	tidySecretIDCASGuard uint32
 
@@ -57,18 +60,9 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
-	// Initialize the salt
-	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
-		HashFunc: salt.SHA256Hash,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	// Create a backend object
 	b := &backend{
-		// Set the salt object for the backend
-		salt: salt,
+		view: conf.StorageView,
 
 		// Create the map of locks to modify the registered roles
 		roleLocksMap: make(map[string]*sync.RWMutex, 257),
@@ -82,6 +76,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		// Create the map of locks to modify the generated SecretIDAccessors
 		secretIDAccessorLocksMap: make(map[string]*sync.RWMutex, 257),
 	}
+
+	var err error
 
 	// Create 256 locks each for managing RoleID and SecretIDs. This will avoid
 	// a superfluous number of locks directly proportional to the number of RoleID
@@ -129,8 +125,20 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
+		Init: b.initialize,
 	}
 	return b, nil
+}
+
+func (b *backend) initialize() error {
+	salt, err := salt.NewSalt(b.view, &salt.Config{
+		HashFunc: salt.SHA256Hash,
+	})
+	if err != nil {
+		return err
+	}
+	b.salt = salt
+	return nil
 }
 
 // periodicFunc of the backend will be invoked once a minute by the RollbackManager.

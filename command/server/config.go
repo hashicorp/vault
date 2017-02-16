@@ -38,7 +38,7 @@ type Config struct {
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
-func DevConfig(ha bool) *Config {
+func DevConfig(ha, transactional bool) *Config {
 	ret := &Config{
 		DisableCache: false,
 		DisableMlock: true,
@@ -63,7 +63,12 @@ func DevConfig(ha bool) *Config {
 		DefaultLeaseTTL: 32 * 24 * time.Hour,
 	}
 
-	if ha {
+	switch {
+	case ha && transactional:
+		ret.Backend.Type = "inmem_transactional_ha"
+	case !ha && transactional:
+		ret.Backend.Type = "inmem_transactional"
+	case ha && !transactional:
 		ret.Backend.Type = "inmem_ha"
 	}
 

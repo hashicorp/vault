@@ -16,6 +16,12 @@ func CubbyholeBackendFactory(conf *logical.BackendConfig) (logical.Backend, erro
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(cubbyholeHelp),
 
+		PathsSpecial: &logical.Paths{
+			LocalStorage: []string{
+				"*",
+			},
+		},
+
 		Paths: []*framework.Path{
 			&framework.Path{
 				Pattern: ".*",
