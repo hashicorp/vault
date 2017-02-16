@@ -35,10 +35,6 @@ func TestFormatRequestErrors(t *testing.T) {
 	if err := formatter.FormatRequest(nil, config, nil, &logical.Request{}, nil); err == nil {
 		t.Fatal("expected error due to nil writer")
 	}
-	if err := formatter.FormatRequest(ioutil.Discard, config, nil, &logical.Request{}, nil); err == nil {
-		t.Fatal("expected error due to missing replication cluster")
-	}
-
 }
 
 func TestFormatResponseErrors(t *testing.T) {
@@ -55,8 +51,5 @@ func TestFormatResponseErrors(t *testing.T) {
 	}
 	if err := formatter.FormatResponse(nil, config, nil, &logical.Request{}, nil, nil); err == nil {
 		t.Fatal("expected error due to nil writer")
-	}
-	if err := formatter.FormatResponse(ioutil.Discard, config, nil, &logical.Request{}, nil, nil); err == nil {
-		t.Fatal("expected error due to missing replication cluster")
 	}
 }

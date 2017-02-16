@@ -53,12 +53,6 @@ func (f *AuditFormatter) FormatRequest(
 			}()
 		}
 
-		// auth should always be filled in except in the case of a replicated
-		// request.
-		if auth == nil && req.ReplicationCluster == "" {
-			return fmt.Errorf("no auth information attached to request but request did not come from a replicated cluster")
-		}
-
 		// Copy the auth structure
 		if auth != nil {
 			cp, err := copystructure.Copy(auth)
@@ -169,12 +163,6 @@ func (f *AuditFormatter) FormatResponse(
 			}()
 		}
 
-		// auth should always be filled in except in the case of a replicated
-		// request.
-		if auth == nil && req.ReplicationCluster == "" {
-			return fmt.Errorf("no auth information attached to response but response did not come from a replicated cluster")
-		}
-
 		// Copy the auth structure
 		if auth != nil {
 			cp, err := copystructure.Copy(auth)
@@ -203,7 +191,7 @@ func (f *AuditFormatter) FormatResponse(
 		// Cache and restore accessor in the auth
 		if auth != nil {
 			var accessor string
-			if !config.HMACAccessor && auth != nil && auth.Accessor != "" {
+			if !config.HMACAccessor && auth.Accessor != "" {
 				accessor = auth.Accessor
 			}
 			if err := Hash(config.Salt, auth); err != nil {
