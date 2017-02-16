@@ -41,6 +41,10 @@ func (a *AuditedHeadersConfig) add(header string, hmac bool) error {
 	a.Lock()
 	defer a.Unlock()
 
+	if a.Headers == nil {
+		a.Headers = make(map[string]*auditedHeaderSettings, 1)
+	}
+
 	a.Headers[strings.ToLower(header)] = &auditedHeaderSettings{hmac}
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)
 	if err != nil {
@@ -63,6 +67,11 @@ func (a *AuditedHeadersConfig) remove(header string) error {
 	// Grab a write lock
 	a.Lock()
 	defer a.Unlock()
+
+	// Nothing to delete
+	if len(a.Headers) == 0 {
+		return nil
+	}
 
 	delete(a.Headers, strings.ToLower(header))
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)

@@ -438,8 +438,10 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 }
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
-	l := logformat.NewVaultLogger(log.LevelTrace)
-	b := NewAuditBroker(l)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	b := NewAuditBroker(logger)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "headers/")
 	a1 := &NoopAudit{}
 	a2 := &NoopAudit{}
 	b.Register("foo", a1, nil)
@@ -472,11 +474,10 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	reqCopy := reqCopyRaw.(*logical.Request)
 
 	headersConf := &AuditedHeadersConfig{
-		Headers: map[string]*auditedHeaderSettings{
-			"X-Test-Header":  &auditedHeaderSettings{false},
-			"X-Vault-Header": &auditedHeaderSettings{false},
-		},
+		view: view,
 	}
+	headersConf.add("X-Test-Header", false)
+	headersConf.add("X-Vault-Header", false)
 
 	err = b.LogRequest(auth, reqCopy, headersConf, respErr)
 	if err != nil {
@@ -484,8 +485,8 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"X-Test-Header":  []string{"foo"},
-		"X-Vault-Header": []string{"bar"},
+		"x-test-header":  []string{"foo"},
+		"x-vault-header": []string{"bar"},
 	}
 
 	for _, a := range []*NoopAudit{a1, a2} {
