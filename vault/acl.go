@@ -243,7 +243,8 @@ CHECK:
 	case logical.CreateOperation:
 		operationAllowed = capabilities&CreateCapabilityInt > 0
 
-	// These three re-use UpdateCapabilityInt since that's the most appropriate capability/operation mapping
+	// These three re-use UpdateCapabilityInt since that's the most appropriate
+	// capability/operation mapping
 	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
 		operationAllowed = capabilities&UpdateCapabilityInt > 0
 
@@ -255,7 +256,8 @@ CHECK:
 		return false, sudo
 	}
 
-	// Only check parameter permissions for operations that can modify parameters.
+	// Only check parameter permissions for operations that can modify
+	// parameters.
 	if op == logical.UpdateOperation || op == logical.DeleteOperation || op == logical.CreateOperation {
 		// Check if all parameters have been denied
 		if _, ok := permissions.DeniedParameters["*"]; ok {
@@ -271,7 +273,12 @@ CHECK:
 			// Check if parameter has explictly denied
 			if valueSlice, ok := permissions.DeniedParameters[parameter]; ok {
 				// If the value exists in denied values slice, deny
-				return !valueInParameterList(value, valueSlice), sudo
+				if valueInParameterList(value, valueSlice) {
+					return false, sudo
+				}
+				// If the value doesn't exist in the denied values slice,
+				// continue
+				continue
 			}
 
 			// Specfic parameters have been allowed
@@ -280,16 +287,17 @@ CHECK:
 				if valueSlice, ok := permissions.AllowedParameters[parameter]; !ok {
 					return false, sudo
 				} else {
-					// If the value exists in the allowed values slice, allow
-					return valueInParameterList(value, valueSlice), sudo
+					// If the value doesn't exists in the allowed values slice,
+					// deny
+					if !valueInParameterList(value, valueSlice) {
+						return false, sudo
+					}
 				}
 			}
 		}
-
-		return true, sudo
 	}
 
-	return operationAllowed, sudo
+	return true, sudo
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {
