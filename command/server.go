@@ -61,7 +61,7 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly, devHA bool
+	var dev, verifyOnly, devHA, devTransactional bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress string
 	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
@@ -70,7 +70,8 @@ func (c *ServerCommand) Run(args []string) int {
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
-	flags.BoolVar(&devHA, "dev-ha", false, "")
+	flags.BoolVar(&devHA, "ha", false, "")
+	flags.BoolVar(&devTransactional, "transactional", false, "")
 	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -122,7 +123,7 @@ func (c *ServerCommand) Run(args []string) int {
 		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
 	}
 
-	if devHA {
+	if devHA || devTransactional {
 		dev = true
 	}
 
@@ -143,7 +144,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	if dev {
-		config = server.DevConfig(devHA)
+		config = server.DevConfig(devHA, devTransactional)
 		if devListenAddress != "" {
 			config.Listeners[0].Config["address"] = devListenAddress
 		}
@@ -234,6 +235,9 @@ func (c *ServerCommand) Run(args []string) int {
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
+	}
+	if dev {
+		coreConfig.DevToken = devRootTokenID
 	}
 
 	var disableClustering bool

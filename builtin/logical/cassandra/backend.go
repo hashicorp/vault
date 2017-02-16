@@ -31,6 +31,8 @@ func Backend() *backend {
 			secretCreds(&b),
 		},
 
+		Invalidate: b.invalidate,
+
 		Clean: func() {
 			b.ResetDB(nil)
 		},
@@ -105,6 +107,20 @@ func (b *backend) ResetDB(newSession *gocql.Session) {
 	}
 
 	b.session = newSession
+}
+
+func (b *backend) invalidate(key string) {
+	switch key {
+	case "config/connection":
+		b.lock.Lock()
+		defer b.lock.Unlock()
+
+		if b.session != nil {
+			b.session.Close()
+		}
+
+		b.session = nil
+	}
 }
 
 const backendHelp = `

@@ -12,9 +12,13 @@ import (
 
 func TestCubbyholeBackend_RootPaths(t *testing.T) {
 	b := testCubbyholeBackend()
-	root := b.SpecialPaths()
-	if root != nil {
-		t.Fatalf("unexpected: %v", root)
+	expected := []string{
+		"*",
+	}
+
+	actual := b.SpecialPaths().LocalStorage
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
 	}
 }
 
