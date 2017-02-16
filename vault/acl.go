@@ -2,6 +2,7 @@ package vault
 
 import (
 	"reflect"
+	"strings"
 
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/logical"
@@ -259,41 +260,51 @@ CHECK:
 	// Only check parameter permissions for operations that can modify
 	// parameters.
 	if op == logical.UpdateOperation || op == logical.DeleteOperation || op == logical.CreateOperation {
+		if len(req.Data) == 0 {
+			return true, sudo
+		}
+
+		if len(permissions.DeniedParameters) == 0 {
+			goto ALLOWED_PARAMETERS
+		}
+
 		// Check if all parameters have been denied
 		if _, ok := permissions.DeniedParameters["*"]; ok {
 			return false, sudo
 		}
 
-		_, allowedAll := permissions.AllowedParameters["*"]
-		if len(permissions.DeniedParameters) == 0 && allowedAll {
-			return true, sudo
-		}
-
 		for parameter, value := range req.Data {
 			// Check if parameter has been explictly denied
-			if valueSlice, ok := permissions.DeniedParameters[parameter]; ok {
+			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
 				// If the value exists in denied values slice, deny
 				if valueInParameterList(value, valueSlice) {
 					return false, sudo
 				}
-				// If the value doesn't exist in the denied values slice,
-				// continue
-				continue
+			}
+		}
+
+	ALLOWED_PARAMETERS:
+		// If we don't have any allowed parameters set, allow
+		if len(permissions.AllowedParameters) == 0 {
+			return true, sudo
+		}
+
+		_, allowedAll := permissions.AllowedParameters["*"]
+		if len(permissions.AllowedParameters) == 1 && allowedAll {
+			return true, sudo
+		}
+
+		for parameter, value := range req.Data {
+			valueSlice, ok := permissions.AllowedParameters[strings.ToLower(parameter)]
+			// Requested parameter is not in allowed list
+			if !ok && !allowedAll {
+				return false, sudo
 			}
 
-			// Specfic parameters have been allowed
-			if len(permissions.AllowedParameters) > 0 && !allowedAll {
-				// Requested parameter is not in allowed list
-				valueSlice, ok := permissions.AllowedParameters[parameter]
-				if !ok {
-					return false, sudo
-				}
-
-				// If the value doesn't exists in the allowed values slice,
-				// deny
-				if !valueInParameterList(value, valueSlice) {
-					return false, sudo
-				}
+			// If the value doesn't exists in the allowed values slice,
+			// deny
+			if ok && !valueInParameterList(value, valueSlice) {
+				return false, sudo
 			}
 		}
 	}
@@ -302,7 +313,7 @@ CHECK:
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {
-	if len(list) == 0 || valueInSlice("*", list) {
+	if len(list) == 0 {
 		return true
 	}
 

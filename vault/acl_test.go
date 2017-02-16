@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -337,9 +338,10 @@ func TestACL_ValuePermissions(t *testing.T) {
 		{"foo/bar", []string{"allow"}, []interface{}{"good"}, true},
 		{"foo/baz", []string{"allow"}, []interface{}{"good"}, true},
 		{"foo/baz", []string{"deny"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"deny"}, []interface{}{"good"}, true},
+		{"foo/baz", []string{"deny"}, []interface{}{"good"}, false},
 		{"foo/baz", []string{"allow", "deny"}, []interface{}{"good", "bad"}, false},
 		{"foo/baz", []string{"deny", "allow"}, []interface{}{"good", "bad"}, false},
+		{"foo/baz", []string{"deny", "allow"}, []interface{}{"bad", "good"}, false},
 		{"foo/baz", []string{"allow"}, []interface{}{"bad"}, false},
 		{"foo/baz", []string{"neither"}, []interface{}{"bad"}, false},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good"}, true},
@@ -348,14 +350,18 @@ func TestACL_ValuePermissions(t *testing.T) {
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
 		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
 		{"fizz/buzz", []string{"deny_multi"}, []interface{}{"bad2"}, false},
-		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []interface{}{"good", "good2"}, true},
+		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []interface{}{"good", "good2"}, false},
 		//	{"test/types", []string{"array"}, []interface{}{[1]string{"good"}}, true},
 		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"good": "one"}}, true},
 		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"bad": "one"}}, false},
 		{"test/types", []string{"int"}, []interface{}{1}, true},
 		{"test/types", []string{"int"}, []interface{}{3}, false},
-		{"test/types", []string{"bool"}, []interface{}{false}, false},
-		{"test/types", []string{"bool"}, []interface{}{true}, true},
+		{"test/types", []string{"bool"}, []interface{}{false}, true},
+		{"test/types", []string{"bool"}, []interface{}{true}, false},
+		{"test/star", []string{"anything"}, []interface{}{true}, true},
+		{"test/star", []string{"foo"}, []interface{}{true}, true},
+		{"test/star", []string{"bar"}, []interface{}{false}, true},
+		{"test/star", []string{"bar"}, []interface{}{true}, false},
 	}
 
 	for _, tc := range tcases {
@@ -365,6 +371,7 @@ func TestACL_ValuePermissions(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
+			fmt.Println(tc)
 			allowed, _ := acl.AllowOperation(&request)
 			if allowed != tc.allowed {
 				t.Fatalf("bad: case %#v: %v", tc, allowed)
@@ -644,9 +651,19 @@ path "test/types" {
 	allowed_parameters = {
 		"map" = [{"good" = "one"}]
 		"int" = [1, 2]
+		"bool" = [false]
 	}
 	denied_parameters = {
-		"bool" = [false]
+	}
+}
+path "test/star" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+		"foo" = []
+		"bar" = [false]
+	}
+	denied_parameters = {
 	}
 }
 `
