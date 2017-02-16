@@ -40,7 +40,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	}
 	vaultURL.Path = "/v1/" + path
 
-	headers, err := authHeaders(conf, vaultURL, "POST", false)
+	headers, err := authHeaders(conf, vaultURL, "POST", nil, false)
 	if err != nil {
 		return "", err
 	}

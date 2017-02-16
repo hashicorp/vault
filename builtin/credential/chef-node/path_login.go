@@ -22,6 +22,8 @@ import (
 
 	"encoding/json"
 
+	"io"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -225,7 +227,7 @@ func (b *backend) retrieveNodeInfo(req *logical.Request, targetName string) (*no
 		return nil, err
 	}
 
-	headers, err := authHeaders(config, nodeURL, "GET", true)
+	headers, err := authHeaders(config, nodeURL, "GET", nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +269,7 @@ func (b *backend) retrievePubKey(req *logical.Request, targetName string) (*rsa.
 		return nil, err
 	}
 
-	headers, err := authHeaders(config, keyURL, "GET", true)
+	headers, err := authHeaders(config, keyURL, "GET", nil, true)
 	if err != nil {
 		return nil, err
 	}
@@ -321,10 +323,20 @@ func authenticate(client string, ts string, sig string, sigVer string, key *rsa.
 	return true
 }
 
-func authHeaders(conf *config, url *url.URL, method string, split bool) (http.Header, error) {
+func authHeaders(conf *config, url *url.URL, method string, body io.Reader, split bool) (http.Header, error) {
 	hashedPath := sha1.Sum([]byte(url.EscapedPath()))
-	// So far nothing we do requires a body
-	bodyHash := sha1.Sum([]byte(""))
+	var bodyHash [20]byte
+
+	if body != nil {
+		bodyData, err := ioutil.ReadAll(body)
+		if err != nil {
+			return nil, err
+		}
+		bodyHash = sha1.Sum(bodyData)
+	} else {
+		bodyHash = sha1.Sum([]byte(""))
+	}
+
 	ts := time.Now().UTC().Format(time.RFC3339)
 	headers := []string{
 		"Method:" + method,
