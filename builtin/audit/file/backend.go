@@ -157,10 +157,15 @@ func (b *Backend) open() error {
 		return err
 	}
 
-	// Change the file mode in case the log file already existed
-	err = os.Chmod(b.path, b.mode)
-	if err != nil {
-		return err
+	// Change the file mode in case the log file already existed. We special
+	// case /dev/null since we can't chmod it
+	switch b.path {
+	case "/dev/null":
+	default:
+		err = os.Chmod(b.path, b.mode)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
