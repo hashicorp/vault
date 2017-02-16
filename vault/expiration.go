@@ -12,6 +12,7 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -41,9 +42,6 @@ const (
 
 	// defaultLeaseDuration is the default lease duration used when no lease is specified
 	defaultLeaseTTL = maxLeaseTTL
-
-	// Number of parallel workers used during the Restore process
-	RestoreWorkerCount = 64
 )
 
 // ExpirationManager is used by the Core to manage leases. Secrets
@@ -141,7 +139,7 @@ func (m *ExpirationManager) Restore() error {
 	wg := &sync.WaitGroup{}
 
 	// Create 64 workers to distribute work to
-	for i := 0; i < RestoreWorkerCount; i++ {
+	for i := 0; i < consts.ExpirationRestoreWorkerCount; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
