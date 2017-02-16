@@ -284,14 +284,15 @@ CHECK:
 			// Specfic parameters have been allowed
 			if len(permissions.AllowedParameters) > 0 && !allowedAll {
 				// Requested parameter is not in allowed list
-				if valueSlice, ok := permissions.AllowedParameters[parameter]; !ok {
+				valueSlice, ok := permissions.AllowedParameters[parameter]
+				if !ok {
 					return false, sudo
-				} else {
-					// If the value doesn't exists in the allowed values slice,
-					// deny
-					if !valueInParameterList(value, valueSlice) {
-						return false, sudo
-					}
+				}
+
+				// If the value doesn't exists in the allowed values slice,
+				// deny
+				if !valueInParameterList(value, valueSlice) {
+					return false, sudo
 				}
 			}
 		}
