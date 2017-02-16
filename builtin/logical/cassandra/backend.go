@@ -112,14 +112,7 @@ func (b *backend) ResetDB(newSession *gocql.Session) {
 func (b *backend) invalidate(key string) {
 	switch key {
 	case "config/connection":
-		b.lock.Lock()
-		defer b.lock.Unlock()
-
-		if b.session != nil {
-			b.session.Close()
-		}
-
-		b.session = nil
+		b.ResetDB(nil)
 	}
 }
 
