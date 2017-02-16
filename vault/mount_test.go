@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/compressutil"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -79,6 +80,96 @@ func TestCore_Mount(t *testing.T) {
 	// Verify matching mount tables
 	if !reflect.DeepEqual(c.mounts, c2.mounts) {
 		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
+	}
+}
+
+// Test that the local table actually gets populated as expected with local
+// entries, and that upon reading the entries from both are recombined
+// correctly
+func TestCore_Mount_Local(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	c.mounts = &MountTable{
+		Type: mountTableType,
+		Entries: []*MountEntry{
+			&MountEntry{
+				Table: mountTableType,
+				Path:  "noop/",
+				Type:  "generic",
+				UUID:  "abcd",
+			},
+			&MountEntry{
+				Table: mountTableType,
+				Path:  "noop2/",
+				Type:  "generic",
+				UUID:  "bcde",
+			},
+		},
+	}
+
+	// Both should set up successfully
+	err := c.setupMounts()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(c.mounts.Entries) != 2 {
+		t.Fatalf("expected two entries, got %d", len(c.mounts.Entries))
+	}
+
+	rawLocal, err := c.barrier.Get(coreLocalMountConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rawLocal == nil {
+		t.Fatal("expected non-nil local mounts")
+	}
+	localMountsTable := &MountTable{}
+	if err := jsonutil.DecodeJSON(rawLocal.Value, localMountsTable); err != nil {
+		t.Fatal(err)
+	}
+	if len(localMountsTable.Entries) > 0 {
+		t.Fatalf("expected no entries in local mount table, got %#v", localMountsTable)
+	}
+
+	c.mounts.Entries[1].Local = true
+	if err := c.persistMounts(c.mounts); err != nil {
+		t.Fatal(err)
+	}
+
+	rawLocal, err = c.barrier.Get(coreLocalMountConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rawLocal == nil {
+		t.Fatal("expected non-nil local mount")
+	}
+	localMountsTable = &MountTable{}
+	if err := jsonutil.DecodeJSON(rawLocal.Value, localMountsTable); err != nil {
+		t.Fatal(err)
+	}
+	if len(localMountsTable.Entries) != 1 {
+		t.Fatalf("expected one entry in local mount table, got %#v", localMountsTable)
+	}
+
+	oldMounts := c.mounts
+	if err := c.loadMounts(); err != nil {
+		t.Fatal(err)
+	}
+	compEntries := c.mounts.Entries[:0]
+	// Filter out required mounts
+	for _, v := range c.mounts.Entries {
+		if v.Type == "generic" {
+			compEntries = append(compEntries, v)
+		}
+	}
+	c.mounts.Entries = compEntries
+
+	if !reflect.DeepEqual(oldMounts, c.mounts) {
+		t.Fatalf("expected\n%#v\ngot\n%#v\n", oldMounts, c.mounts)
+	}
+
+	if len(c.mounts.Entries) != 2 {
+		t.Fatalf("expected two mount entries, got %#v", localMountsTable)
 	}
 }
 
