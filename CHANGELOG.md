@@ -7,6 +7,8 @@ IMPROVEMENTS:
    [GH-2154]
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
+ * secret/pki: O (Organization) values can now be set to role-defined values
+   for issued/signed certificates [GH-2369]
 
 BUG FIXES:
 
