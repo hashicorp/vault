@@ -48,16 +48,19 @@ func (c *AuditListCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Description | Options"}
+	columns := []string{"Path | Type | Description | Replication Behavior | Options"}
 	for _, path := range paths {
 		audit := audits[path]
 		opts := make([]string, 0, len(audit.Options))
 		for k, v := range audit.Options {
 			opts = append(opts, k+"="+v)
 		}
-
+		replicatedBehavior := "replicated"
+		if audit.Local {
+			replicatedBehavior = "local"
+		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s", audit.Path, audit.Type, audit.Description, strings.Join(opts, " ")))
+			"%s | %s | %s | %s | %s", audit.Path, audit.Type, audit.Description, replicatedBehavior, strings.Join(opts, " ")))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))

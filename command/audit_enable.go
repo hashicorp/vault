@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/kv-builder"
 	"github.com/hashicorp/vault/meta"
 	"github.com/mitchellh/mapstructure"
@@ -21,9 +22,11 @@ type AuditEnableCommand struct {
 
 func (c *AuditEnableCommand) Run(args []string) int {
 	var desc, path string
+	var local bool
 	flags := c.Meta.FlagSet("audit-enable", meta.FlagSetDefault)
 	flags.StringVar(&desc, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
+	flags.BoolVar(&local, "local", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -68,7 +71,12 @@ func (c *AuditEnableCommand) Run(args []string) int {
 		return 1
 	}
 
-	err = client.Sys().EnableAudit(path, auditType, desc, opts)
+	err = client.Sys().EnableAuditWithOptions(path, &api.EnableAuditOptions{
+		Type:   auditType,
+		Description: desc,
+		Options:     opts,
+		Local:       local,
+	})
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error enabling audit backend: %s", err))
@@ -113,6 +121,9 @@ Audit Enable Options:
                           is purely for referencing this audit backend. By
                           default this will be the backend type.
 
+  -local                  Mark the mount as a local mount. Local mounts
+                          are not replicated nor (if a secondary)
+                          removed by replication.
 `
 	return strings.TrimSpace(helpText)
 }
