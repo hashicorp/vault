@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 )
@@ -154,6 +155,10 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 
 	// Configure the client
 	consulConf := api.DefaultConfig()
+	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
+	tr := cleanhttp.DefaultPooledTransport()
+	tr.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
+	consulConf.HttpClient.Transport = tr
 
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
@@ -179,7 +184,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		}
 
 		transport := cleanhttp.DefaultPooledTransport()
-		transport.MaxIdleConnsPerHost = 4
+		transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 		transport.TLSClientConfig = tlsClientConfig
 		consulConf.HttpClient.Transport = transport
 		logger.Debug("physical/consul: configured TLS")

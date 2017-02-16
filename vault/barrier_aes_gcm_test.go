@@ -15,7 +15,7 @@ var (
 )
 
 // mockBarrier returns a physical backend, security barrier, and master key
-func mockBarrier(t *testing.T) (physical.Backend, SecurityBarrier, []byte) {
+func mockBarrier(t testing.TB) (physical.Backend, SecurityBarrier, []byte) {
 
 	inm := physical.NewInmem(logger)
 	b, err := NewAESGCMBarrier(inm)
