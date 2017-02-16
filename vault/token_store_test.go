@@ -672,40 +672,28 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 }
 
 func TestTokenStore_RevokeTree(t *testing.T) {
+	testTokenStore_RevokeTree_Impl(t, 2)
+}
+
+// testTokenStore_RevokeTree_Impl takes a tree depth, creates a binary tree of
+// tokens and tests that tokens are revoked properly.
+func testTokenStore_RevokeTree_Impl(t testing.TB, depth uint64) {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 
-	ent1 := &TokenEntry{}
-	if err := ts.create(ent1); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	ent2 := &TokenEntry{Parent: ent1.ID}
-	if err := ts.create(ent2); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	ent3 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.create(ent3); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	ent4 := &TokenEntry{Parent: ent2.ID}
-	if err := ts.create(ent4); err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	root, children := buildTokenTree(t, ts, depth)
 
 	err := ts.RevokeTree("")
 	if err.Error() != "cannot revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
-	err = ts.RevokeTree(ent1.ID)
+	err = ts.RevokeTree(root.ID)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	lookup := []string{ent1.ID, ent2.ID, ent3.ID, ent4.ID}
-	for _, id := range lookup {
-		out, err := ts.Lookup(id)
+	children = append(children, root)
+	for _, entry := range children {
+		out, err := ts.Lookup(entry.ID)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -713,6 +701,48 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 			t.Fatalf("bad: %#v", out)
 		}
 	}
+}
+
+func BenchmarkTokenStore_RevokeTree(b *testing.B) {
+	benchmarks := []uint64{0, 1, 2, 4, 8, 16, 20}
+	for _, depth := range benchmarks {
+		b.Run(fmt.Sprintf("Tree of Depth %d", depth), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				testTokenStore_RevokeTree_Impl(b, depth)
+			}
+		})
+	}
+}
+
+func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntry, children []*TokenEntry) {
+	root = &TokenEntry{}
+	if err := ts.create(root); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	frontier := []*TokenEntry{root}
+	current := uint64(0)
+	for current < depth {
+		next := make([]*TokenEntry, 0, 2*len(frontier))
+		for _, node := range frontier {
+			left := &TokenEntry{Parent: node.ID}
+			if err := ts.create(left); err != nil {
+				t.Fatalf("err: %v", err)
+			}
+
+			right := &TokenEntry{Parent: node.ID}
+			if err := ts.create(right); err != nil {
+				t.Fatalf("err: %v", err)
+			}
+
+			children = append(children, left, right)
+			next = append(next, left, right)
+		}
+		frontier = next
+		current++
+	}
+
+	return root, children
 }
 
 func TestTokenStore_RevokeSelf(t *testing.T) {
