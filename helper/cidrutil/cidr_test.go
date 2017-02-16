@@ -55,7 +55,7 @@ func TestCIDRUtil_IPBelongsToCIDRBlocksString(t *testing.T) {
 	}
 
 	ip = "10.197.192.6"
-	cidrList = "10.197.192.0/18"
+	cidrList = "1.2.3.0/8,10.197.192.0/18,10.197.193.0/24"
 
 	belongs, err = IPBelongsToCIDRBlocksString(ip, cidrList, ",")
 	if err != nil {
