@@ -202,7 +202,7 @@ func TestBarrierView_Scan(t *testing.T) {
 	}
 
 	// Collect the keys
-	if err := ScanView(view, cb); err != nil {
+	if err := logical.ScanView(view, cb); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -235,7 +235,7 @@ func TestBarrierView_CollectKeys(t *testing.T) {
 	}
 
 	// Collect the keys
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -269,16 +269,48 @@ func TestBarrierView_ClearView(t *testing.T) {
 	}
 
 	// Clear the keys
-	if err := ClearView(view); err != nil {
+	if err := logical.ClearView(view); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Collect the keys
-	out, err := CollectKeys(view)
+	out, err := logical.CollectKeys(view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	if len(out) != 0 {
 		t.Fatalf("have keys: %#v", out)
+	}
+}
+func TestBarrierView_Readonly(t *testing.T) {
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "foo/")
+
+	// Add a key before enabling read-only
+	entry := &Entry{Key: "test", Value: []byte("test")}
+	if err := view.Put(entry.Logical()); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Enable read only mode
+	view.readonly = true
+
+	// Put should fail in readonly mode
+	if err := view.Put(entry.Logical()); err != logical.ErrReadOnly {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete nested
+	if err := view.Delete("test"); err != logical.ErrReadOnly {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Check the non-nested key
+	e, err := view.Get("test")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if e == nil {
+		t.Fatalf("key test missing")
 	}
 }

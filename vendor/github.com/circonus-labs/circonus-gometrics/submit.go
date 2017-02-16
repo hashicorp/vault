@@ -22,12 +22,18 @@ import (
 
 func (m *CirconusMetrics) submit(output map[string]interface{}, newMetrics map[string]*api.CheckBundleMetric) {
 
+	// if there is nowhere to send metrics to, just return.
+	if !m.check.IsReady() {
+		m.Log.Printf("[WARN] check not ready, skipping metric submission")
+		return
+	}
+
 	// update check if there are any new metrics or, if metric tags have been added since last submit
 	m.check.UpdateCheck(newMetrics)
 
 	str, err := json.Marshal(output)
 	if err != nil {
-		m.Log.Printf("[ERROR] marshling output %+v", err)
+		m.Log.Printf("[ERROR] marshaling output %+v", err)
 		return
 	}
 
@@ -43,7 +49,7 @@ func (m *CirconusMetrics) submit(output map[string]interface{}, newMetrics map[s
 }
 
 func (m *CirconusMetrics) trapCall(payload []byte) (int, error) {
-	trap, err := m.check.GetTrap()
+	trap, err := m.check.GetSubmissionURL()
 	if err != nil {
 		return 0, err
 	}

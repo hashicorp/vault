@@ -42,6 +42,7 @@ type GistFilename string
 type GistFile struct {
 	Size     *int    `json:"size,omitempty"`
 	Filename *string `json:"filename,omitempty"`
+	Language *string `json:"language,omitempty"`
 	Type     *string `json:"type,omitempty"`
 	RawURL   *string `json:"raw_url,omitempty"`
 	Content  *string `json:"content,omitempty"`
@@ -109,13 +110,13 @@ func (s *GistsService) List(user string, opt *GistListOptions) ([]*Gist, *Respon
 		return nil, nil, err
 	}
 
-	gists := new([]*Gist)
-	resp, err := s.client.Do(req, gists)
+	var gists []*Gist
+	resp, err := s.client.Do(req, &gists)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *gists, resp, err
+	return gists, resp, nil
 }
 
 // ListAll lists all public gists.
@@ -132,13 +133,13 @@ func (s *GistsService) ListAll(opt *GistListOptions) ([]*Gist, *Response, error)
 		return nil, nil, err
 	}
 
-	gists := new([]*Gist)
-	resp, err := s.client.Do(req, gists)
+	var gists []*Gist
+	resp, err := s.client.Do(req, &gists)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *gists, resp, err
+	return gists, resp, nil
 }
 
 // ListStarred lists starred gists of authenticated user.
@@ -155,13 +156,13 @@ func (s *GistsService) ListStarred(opt *GistListOptions) ([]*Gist, *Response, er
 		return nil, nil, err
 	}
 
-	gists := new([]*Gist)
-	resp, err := s.client.Do(req, gists)
+	var gists []*Gist
+	resp, err := s.client.Do(req, &gists)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *gists, resp, err
+	return gists, resp, nil
 }
 
 // Get a single gist.
@@ -246,13 +247,13 @@ func (s *GistsService) ListCommits(id string) ([]*GistCommit, *Response, error) 
 		return nil, nil, err
 	}
 
-	gistCommits := new([]*GistCommit)
-	resp, err := s.client.Do(req, gistCommits)
+	var gistCommits []*GistCommit
+	resp, err := s.client.Do(req, &gistCommits)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *gistCommits, resp, err
+	return gistCommits, resp, nil
 }
 
 // Delete a gist.
@@ -334,11 +335,11 @@ func (s *GistsService) ListForks(id string) ([]*GistFork, *Response, error) {
 		return nil, nil, err
 	}
 
-	gistForks := new([]*GistFork)
-	resp, err := s.client.Do(req, gistForks)
+	var gistForks []*GistFork
+	resp, err := s.client.Do(req, &gistForks)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *gistForks, resp, err
+	return gistForks, resp, nil
 }

@@ -408,7 +408,7 @@ func (a *AuditBroker) GetHash(name string, input string) (string, error) {
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outerErr error) (retErr error) {
+func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, headersConfig *AuditedHeadersConfig, outerErr error) (retErr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
@@ -426,9 +426,17 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outer
 	//	return
 	//}
 
+	headers := req.Headers
+	defer func() {
+		req.Headers = headers
+	}()
+
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
+		req.Headers = nil
+		req.Headers = headersConfig.ApplyConfig(headers, be.backend.GetHash)
+
 		start := time.Now()
 		err := be.backend.LogRequest(auth, req, outerErr)
 		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
@@ -448,7 +456,7 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, outer
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
 func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
-	resp *logical.Response, err error) (reterr error) {
+	resp *logical.Response, headersConfig *AuditedHeadersConfig, err error) (reterr error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
@@ -459,9 +467,17 @@ func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 		}
 	}()
 
+	headers := req.Headers
+	defer func() {
+		req.Headers = headers
+	}()
+
 	// Ensure at least one backend logs
 	anyLogged := false
 	for name, be := range a.backends {
+		req.Headers = nil
+		req.Headers = headersConfig.ApplyConfig(headers, be.backend.GetHash)
+
 		start := time.Now()
 		err := be.backend.LogResponse(auth, req, resp, err)
 		metrics.MeasureSince([]string{"audit", name, "log_response"}, start)

@@ -697,7 +697,7 @@ func Test_Renew(t *testing.T) {
 		StorageView: storage,
 	})
 	if err != nil {
-		t.Fatal("error: %s", err)
+		t.Fatalf("error: %s", err)
 	}
 
 	b := lb.(*backend)
@@ -779,7 +779,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatal("got nil response from renew")
 	}
 	if resp.IsError() {
-		t.Fatal("got error: %#v", *resp)
+		t.Fatalf("got error: %#v", *resp)
 	}
 
 	// Delete CA, make sure we can't renew

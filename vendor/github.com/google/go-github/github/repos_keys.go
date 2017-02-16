@@ -24,13 +24,13 @@ func (s *RepositoriesService) ListKeys(owner string, repo string, opt *ListOptio
 		return nil, nil, err
 	}
 
-	keys := new([]*Key)
-	resp, err := s.client.Do(req, keys)
+	var keys []*Key
+	resp, err := s.client.Do(req, &keys)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *keys, resp, err
+	return keys, resp, nil
 }
 
 // GetKey fetches a single deploy key.

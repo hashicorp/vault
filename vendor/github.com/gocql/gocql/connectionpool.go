@@ -70,9 +70,7 @@ type policyConnPool struct {
 	endpoints []string
 }
 
-func connConfig(session *Session) (*ConnConfig, error) {
-	cfg := session.cfg
-
+func connConfig(cfg *ClusterConfig) (*ConnConfig, error) {
 	var (
 		err       error
 		tlsConfig *tls.Config

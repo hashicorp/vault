@@ -92,6 +92,7 @@ func (c *Core) setupExpiration() error {
 	c.tokenStore.SetExpirationManager(mgr)
 
 	// Restore the existing state
+	c.logger.Info("expiration: restoring leases")
 	if err := c.expiration.Restore(); err != nil {
 		return fmt.Errorf("expiration state restore failed: %v", err)
 	}
@@ -119,13 +120,19 @@ func (m *ExpirationManager) Restore() error {
 	defer m.pendingLock.Unlock()
 
 	// Accumulate existing leases
-	existing, err := CollectKeys(m.idView)
+	m.logger.Debug("expiration: collecting leases")
+	existing, err := logical.CollectKeys(m.idView)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
 
+	m.logger.Debug("expiration: leases collected", "num_existing", len(existing))
+
 	// Restore each key
-	for _, leaseID := range existing {
+	for i, leaseID := range existing {
+		if i%500 == 0 {
+			m.logger.Trace("expiration: leases loading", "progress", i)
+		}
 		// Load the entry
 		le, err := m.loadEntry(leaseID)
 		if err != nil {
@@ -292,7 +299,7 @@ func (m *ExpirationManager) revokePrefixCommon(prefix string, force bool) error 
 
 	// Accumulate existing leases
 	sub := m.idView.SubView(prefix)
-	existing, err := CollectKeys(sub)
+	existing, err := logical.CollectKeys(sub)
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}

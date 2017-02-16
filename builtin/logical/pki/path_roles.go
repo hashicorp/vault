@@ -167,6 +167,20 @@ the common name in the CSR will be used. This
 does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
 			},
+
+			"ou": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, the OU (OrganizationalUnit) will be set to
+this value in certificates issued by this role.`,
+			},
+
+			"organization": &framework.FieldSchema{
+				Type:    framework.TypeString,
+				Default: "",
+				Description: `If set, the O (Organization) will be set to
+this value in certificates issued by this role.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -328,6 +342,8 @@ func (b *backend) pathRoleCreate(
 		KeyBits:             data.Get("key_bits").(int),
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
 		KeyUsage:            data.Get("key_usage").(string),
+		OU:                  data.Get("ou").(string),
+		Organization:        data.Get("organization").(string),
 	}
 
 	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
@@ -442,6 +458,8 @@ type roleEntry struct {
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 	MaxPathLength         *int   `json:",omitempty" structs:",omitempty"`
 	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
+	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
+	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

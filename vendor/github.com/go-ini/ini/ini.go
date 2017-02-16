@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"runtime"
@@ -36,7 +37,7 @@ const (
 
 	// Maximum allowed depth when recursively substituing variable names.
 	_DEPTH_VALUES = 99
-	_VERSION      = "1.21.1"
+	_VERSION      = "1.24.0"
 )
 
 // Version returns current package version literal.
@@ -108,7 +109,16 @@ type sourceData struct {
 }
 
 func (s *sourceData) ReadCloser() (io.ReadCloser, error) {
-	return &bytesReadCloser{bytes.NewReader(s.data)}, nil
+	return ioutil.NopCloser(bytes.NewReader(s.data)), nil
+}
+
+// sourceReadCloser represents an input stream with Close method.
+type sourceReadCloser struct {
+	reader io.ReadCloser
+}
+
+func (s *sourceReadCloser) ReadCloser() (io.ReadCloser, error) {
+	return s.reader, nil
 }
 
 // File represents a combination of a or more INI file(s) in memory.
@@ -149,6 +159,8 @@ func parseDataSource(source interface{}) (dataSource, error) {
 		return sourceFile{s}, nil
 	case []byte:
 		return &sourceData{s}, nil
+	case io.ReadCloser:
+		return &sourceReadCloser{s}, nil
 	default:
 		return nil, fmt.Errorf("error parsing data source: unknown type '%s'", s)
 	}
@@ -164,6 +176,9 @@ type LoadOptions struct {
 	// AllowBooleanKeys indicates whether to allow boolean type keys or treat as value is missing.
 	// This type of keys are mostly used in my.cnf.
 	AllowBooleanKeys bool
+	// Some INI formats allow group blocks that store a block of raw content that doesn't otherwise
+	// conform to key/value pairs. Specify the names of those blocks here.
+	UnparseableSections []string
 }
 
 func LoadSources(opts LoadOptions, source interface{}, others ...interface{}) (_ *File, err error) {
@@ -231,6 +246,18 @@ func (f *File) NewSection(name string) (*Section, error) {
 	f.sectionList = append(f.sectionList, name)
 	f.sections[name] = newSection(f, name)
 	return f.sections[name], nil
+}
+
+// NewRawSection creates a new section with an unparseable body.
+func (f *File) NewRawSection(name, body string) (*Section, error) {
+	section, err := f.NewSection(name)
+	if err != nil {
+		return nil, err
+	}
+
+	section.isRawSection = true
+	section.rawBody = body
+	return section, nil
 }
 
 // NewSections creates a list of sections.
@@ -386,6 +413,13 @@ func (f *File) WriteToIndent(w io.Writer, indent string) (n int64, err error) {
 			}
 		}
 
+		if sec.isRawSection {
+			if _, err = buf.WriteString(sec.rawBody); err != nil {
+				return 0, err
+			}
+			continue
+		}
+
 		// Count and generate alignment length and buffer spaces using the
 		// longest key. Keys may be modifed if they contain certain characters so
 		// we need to take that into account in our calculation.
@@ -438,6 +472,9 @@ func (f *File) WriteToIndent(w io.Writer, indent string) (n int64, err error) {
 			}
 
 			if key.isBooleanType {
+				if kname != sec.keyList[len(sec.keyList)-1] {
+					buf.WriteString(LineBreak)
+				}
 				continue
 			}
 

@@ -124,7 +124,7 @@ func TestServer_ReloadListener(t *testing.T) {
 	checkFinished := func() {
 		finishedMutex.Lock()
 		if finished {
-			t.Fatal(fmt.Sprintf("finished early; relhcl was\n%s\nstdout was\n%s\nstderr was\n%s\n", relhcl, ui.OutputWriter.String(), ui.ErrorWriter.String()))
+			t.Fatalf(fmt.Sprintf("finished early; relhcl was\n%s\nstdout was\n%s\nstderr was\n%s\n", relhcl, ui.OutputWriter.String(), ui.ErrorWriter.String()))
 		}
 		finishedMutex.Unlock()
 	}

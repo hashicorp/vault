@@ -312,15 +312,19 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 		host, port, err := net.SplitHostPort(u.Host)
-		nPort, nPortErr := strconv.Atoi(port)
 		if err != nil {
-			// assume it's due to there not being a port specified, in which case
-			// use 443
-			host = u.Host
-			nPort = 443
+			// This sucks, as it's a const in the function but not exported in the package
+			if strings.Contains(err.Error(), "missing port in address") {
+				host = u.Host
+				port = "443"
+			} else {
+				c.Ui.Output(fmt.Sprintf("Error parsing redirect address: %v", err))
+				return 1
+			}
 		}
-		if nPortErr != nil {
-			c.Ui.Output(fmt.Sprintf("Cannot parse %s as a numeric port: %v", port, nPortErr))
+		nPort, err := strconv.Atoi(port)
+		if err != nil {
+			c.Ui.Output(fmt.Sprintf("Error parsing redirect address; failed to convert %q to a numeric: %v", port, err))
 			return 1
 		}
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))

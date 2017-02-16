@@ -65,6 +65,20 @@ func TestPathMap(t *testing.T) {
 		t.Fatalf("bad: %#v", keys)
 	}
 
+	// LIST via HTTP
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "map/foo/",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatalf("bad: %#v", err)
+	}
+	if len(resp.Data) != 1 || len(resp.Data["keys"].([]string)) != 1 ||
+		resp.Data["keys"].([]string)[0] != "a" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
 	// Delete via HTTP
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.DeleteOperation,

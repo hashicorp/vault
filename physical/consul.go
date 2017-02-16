@@ -47,6 +47,14 @@ const (
 	// reconcileTimeout is how often Vault should query Consul to detect
 	// and fix any state drift.
 	reconcileTimeout = 60 * time.Second
+
+	// consistencyModeDefault is the configuration value used to tell
+	// consul to use default consistency.
+	consistencyModeDefault = "default"
+
+	// consistencyModeStrong is the configuration value used to tell
+	// consul to use strong consistency.
+	consistencyModeStrong = "strong"
 )
 
 type notifyEvent struct{}
@@ -67,6 +75,7 @@ type ConsulBackend struct {
 	serviceTags         []string
 	disableRegistration bool
 	checkTimeout        time.Duration
+	consistencyMode     string
 
 	notifyActiveCh chan notifyEvent
 	notifySealedCh chan notifyEvent
@@ -193,6 +202,17 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		}
 	}
 
+	consistencyMode, ok := conf["consistency_mode"]
+	if ok {
+		switch consistencyMode {
+		case consistencyModeDefault, consistencyModeStrong:
+		default:
+			return nil, fmt.Errorf("invalid consistency_mode value: %s", consistencyMode)
+		}
+	} else {
+		consistencyMode = consistencyModeDefault
+	}
+
 	// Setup the backend
 	c := &ConsulBackend{
 		path:                path,
@@ -204,6 +224,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
+		consistencyMode:     consistencyMode,
 	}
 	return c, nil
 }
@@ -285,7 +306,14 @@ func (c *ConsulBackend) Get(key string) (*Entry, error) {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	pair, _, err := c.kv.Get(c.path+key, nil)
+	var queryOptions *api.QueryOptions
+	if c.consistencyMode == consistencyModeStrong {
+		queryOptions = &api.QueryOptions{
+			RequireConsistent: true,
+		}
+	}
+
+	pair, _, err := c.kv.Get(c.path+key, queryOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -348,9 +376,10 @@ func (c *ConsulBackend) LockWith(key, value string) (Lock, error) {
 		return nil, fmt.Errorf("failed to create lock: %v", err)
 	}
 	cl := &ConsulLock{
-		client: c.client,
-		key:    c.path + key,
-		lock:   lock,
+		client:          c.client,
+		key:             c.path + key,
+		lock:            lock,
+		consistencyMode: c.consistencyMode,
 	}
 	return cl, nil
 }
@@ -377,9 +406,10 @@ func (c *ConsulBackend) DetectHostAddr() (string, error) {
 
 // ConsulLock is used to provide the Lock interface backed by Consul
 type ConsulLock struct {
-	client *api.Client
-	key    string
-	lock   *api.Lock
+	client          *api.Client
+	key             string
+	lock            *api.Lock
+	consistencyMode string
 }
 
 func (c *ConsulLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
@@ -393,7 +423,14 @@ func (c *ConsulLock) Unlock() error {
 func (c *ConsulLock) Value() (bool, string, error) {
 	kv := c.client.KV()
 
-	pair, _, err := kv.Get(c.key, nil)
+	var queryOptions *api.QueryOptions
+	if c.consistencyMode == consistencyModeStrong {
+		queryOptions = &api.QueryOptions{
+			RequireConsistent: true,
+		}
+	}
+
+	pair, _, err := kv.Get(c.key, queryOptions)
 	if err != nil {
 		return false, "", err
 	}

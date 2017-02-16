@@ -225,7 +225,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		// the TLS state.
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		c.rpcClientConnCancelFunc = cancelFunc
-		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer()), grpc.WithInsecure())
+		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "")), grpc.WithInsecure())
 		if err != nil {
 			c.logger.Error("core/refreshRequestForwardingConnection: err setting up rpc client", "error", err)
 			return err
@@ -307,7 +307,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 			c.logger.Error("core/ForwardRequest: got nil forwarding RPC request")
 			return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
 		}
-		resp, err := c.rpcForwardingClient.HandleRequest(context.Background(), freq, grpc.FailFast(true))
+		resp, err := c.rpcForwardingClient.ForwardRequest(context.Background(), freq, grpc.FailFast(true))
 		if err != nil {
 			c.logger.Error("core/ForwardRequest: error during forwarded RPC request", "error", err)
 			return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
@@ -330,14 +330,18 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 // getGRPCDialer is used to return a dialer that has the correct TLS
 // configuration. Otherwise gRPC tries to be helpful and stomps all over our
 // NextProtos.
-func (c *Core) getGRPCDialer() func(string, time.Duration) (net.Conn, error) {
+func (c *Core) getGRPCDialer(alpnProto, serverName string) func(string, time.Duration) (net.Conn, error) {
 	return func(addr string, timeout time.Duration) (net.Conn, error) {
 		tlsConfig, err := c.ClusterTLSConfig()
 		if err != nil {
-			c.logger.Error("core/getGRPCDialer: failed to get tls configuration", "error", err)
+			c.logger.Error("core: failed to get tls configuration", "error", err)
 			return nil, err
 		}
-		tlsConfig.NextProtos = []string{"req_fw_sb-act_v1"}
+		if serverName != "" {
+			tlsConfig.ServerName = serverName
+		}
+
+		tlsConfig.NextProtos = []string{alpnProto}
 		dialer := &net.Dialer{
 			Timeout: timeout,
 		}
@@ -350,7 +354,7 @@ type forwardedRequestRPCServer struct {
 	handler http.Handler
 }
 
-func (s *forwardedRequestRPCServer) HandleRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
+func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
 	// Parse an http.Request out of it
 	req, err := forwarding.ParseForwardedRequest(freq)
 	if err != nil {

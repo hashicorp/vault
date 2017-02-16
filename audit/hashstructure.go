@@ -84,7 +84,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 
 		s.Data = data.(map[string]interface{})
 
-	case *logical.WrapInfo:
+	case *logical.ResponseWrapInfo:
 		if s == nil {
 			return nil
 		}

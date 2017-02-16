@@ -138,10 +138,11 @@ func TestKeyring_Serialize(t *testing.T) {
 	master := []byte("test")
 	k = k.SetMasterKey(master)
 
+	now := time.Now()
 	testKey := []byte("testing")
 	testSecond := []byte("second")
-	k, _ = k.AddKey(&Key{Term: 1, Version: 1, Value: testKey, InstallTime: time.Now()})
-	k, _ = k.AddKey(&Key{Term: 2, Version: 1, Value: testSecond, InstallTime: time.Now()})
+	k, _ = k.AddKey(&Key{Term: 1, Version: 1, Value: testKey, InstallTime: now})
+	k, _ = k.AddKey(&Key{Term: 2, Version: 1, Value: testSecond, InstallTime: now})
 
 	buf, err := k.Serialize()
 	if err != nil {
@@ -166,8 +167,13 @@ func TestKeyring_Serialize(t *testing.T) {
 	for i = 1; i < k.ActiveTerm(); i++ {
 		key1 := k2.TermKey(i)
 		key2 := k.TermKey(i)
+		// Work around timezone bug due to DeepEqual using == for comparison
+		if !key1.InstallTime.Equal(key2.InstallTime) {
+			t.Fatalf("bad: key 1:\n%#v\nkey 2:\n%#v", key1, key2)
+		}
+		key1.InstallTime = key2.InstallTime
 		if !reflect.DeepEqual(key1, key2) {
-			t.Fatalf("bad: %v %v", key1, key2)
+			t.Fatalf("bad: key 1:\n%#v\nkey 2:\n%#v", key1, key2)
 		}
 	}
 }
@@ -189,6 +195,12 @@ func TestKey_Serialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	// Work around timezone bug due to DeepEqual using == for comparison
+	if !k.InstallTime.Equal(out.InstallTime) {
+		t.Fatalf("bad: expected:\n%#v\nactual:\n%#v", k, out)
+	}
+	k.InstallTime = out.InstallTime
 
 	if !reflect.DeepEqual(k, out) {
 		t.Fatalf("bad: %#v", out)

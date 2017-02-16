@@ -226,7 +226,7 @@ $ vault write aws/roles/deploy \
 
 The policy.json file would contain an inline policy with similar permissions,
 less the `sts:GetFederationToken` permission.  (We could grant `sts` permissions,
-but STS would attach an implict deny on `sts` that overides the allow.)
+but STS would attach an implicit deny on `sts` that overrides the allow.)
 
 ```javascript
 {
@@ -267,7 +267,7 @@ AssumeRole adds a few benefits over federation tokens:
 
 1. Assumed roles can invoke IAM and STS operations, if granted by the role's
    IAM policies.
-2. Assumed roles support cross-account authenication
+2. Assumed roles support cross-account authentication
 
 The `aws/config/root` credentials must have an IAM policy that allows `sts:AssumeRole`
 against the target role:

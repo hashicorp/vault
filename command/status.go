@@ -40,11 +40,13 @@ func (c *StatusCommand) Run(args []string) int {
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
 			"Unseal Progress: %d\n"+
+			"Unseal Nonce: %v"+
 			"Version: %s",
 		sealStatus.Sealed,
 		sealStatus.N,
 		sealStatus.T,
 		sealStatus.Progress,
+		sealStatus.Nonce,
 		sealStatus.Version)
 
 	if sealStatus.ClusterName != "" && sealStatus.ClusterID != "" {

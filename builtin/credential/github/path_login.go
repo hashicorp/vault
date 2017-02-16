@@ -107,7 +107,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	if err != nil {
 		return nil, nil, err
 	}
-	if config.Org == "" {
+	if config.Organization == "" {
 		return nil, logical.ErrorResponse(
 			"configure the github credential backend first"), nil
 	}
@@ -152,7 +152,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 
 	for _, o := range allOrgs {
-		if strings.ToLower(*o.Login) == strings.ToLower(config.Org) {
+		if strings.ToLower(*o.Login) == strings.ToLower(config.Organization) {
 			org = o
 			break
 		}

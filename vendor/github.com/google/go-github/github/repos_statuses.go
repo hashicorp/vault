@@ -54,13 +54,13 @@ func (s *RepositoriesService) ListStatuses(owner, repo, ref string, opt *ListOpt
 		return nil, nil, err
 	}
 
-	statuses := new([]*RepoStatus)
-	resp, err := s.client.Do(req, statuses)
+	var statuses []*RepoStatus
+	resp, err := s.client.Do(req, &statuses)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *statuses, resp, err
+	return statuses, resp, nil
 }
 
 // CreateStatus creates a new status for a repository at the specified

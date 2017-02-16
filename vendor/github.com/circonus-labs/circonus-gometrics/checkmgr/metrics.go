@@ -10,12 +10,18 @@ import (
 
 // IsMetricActive checks whether a given metric name is currently active(enabled)
 func (cm *CheckManager) IsMetricActive(name string) bool {
+	cm.availableMetricsmu.Lock()
+	defer cm.availableMetricsmu.Unlock()
+
 	active, _ := cm.availableMetrics[name]
 	return active
 }
 
 // ActivateMetric determines if a given metric should be activated
 func (cm *CheckManager) ActivateMetric(name string) bool {
+	cm.availableMetricsmu.Lock()
+	defer cm.availableMetricsmu.Unlock()
+
 	active, exists := cm.availableMetrics[name]
 
 	if !exists {
@@ -33,41 +39,57 @@ func (cm *CheckManager) ActivateMetric(name string) bool {
 func (cm *CheckManager) AddMetricTags(metricName string, tags []string, appendTags bool) bool {
 	tagsUpdated := false
 
-	if len(tags) == 0 {
+	if appendTags && len(tags) == 0 {
 		return tagsUpdated
 	}
 
-	if _, exists := cm.metricTags[metricName]; !exists {
+	currentTags, exists := cm.metricTags[metricName]
+	if !exists {
 		foundMetric := false
 
-		for _, metric := range cm.checkBundle.Metrics {
-			if metric.Name == metricName {
-				foundMetric = true
-				cm.metricTags[metricName] = metric.Tags
-				break
+		if cm.checkBundle != nil {
+			for _, metric := range cm.checkBundle.Metrics {
+				if metric.Name == metricName {
+					foundMetric = true
+					currentTags = metric.Tags
+					break
+				}
 			}
 		}
 
 		if !foundMetric {
-			cm.metricTags[metricName] = []string{}
+			currentTags = []string{}
 		}
 	}
 
-	action := "no new"
+	action := ""
 	if appendTags {
-		numNewTags := countNewTags(cm.metricTags[metricName], tags)
+		numNewTags := countNewTags(currentTags, tags)
 		if numNewTags > 0 {
 			action = "Added"
-			cm.metricTags[metricName] = append(cm.metricTags[metricName], tags...)
+			currentTags = append(currentTags, tags...)
 			tagsUpdated = true
 		}
 	} else {
-		action = "Set"
-		cm.metricTags[metricName] = tags
-		tagsUpdated = true
+		if len(tags) != len(currentTags) {
+			action = "Set"
+			currentTags = tags
+			tagsUpdated = true
+		} else {
+			numNewTags := countNewTags(currentTags, tags)
+			if numNewTags > 0 {
+				action = "Set"
+				currentTags = tags
+				tagsUpdated = true
+			}
+		}
 	}
 
-	if cm.Debug {
+	if tagsUpdated {
+		cm.metricTags[metricName] = currentTags
+	}
+
+	if cm.Debug && action != "" {
 		cm.Log.Printf("[DEBUG] %s metric tag(s) %s %v\n", action, metricName, tags)
 	}
 
@@ -116,7 +138,9 @@ func (cm *CheckManager) inventoryMetrics() {
 	for _, metric := range cm.checkBundle.Metrics {
 		availableMetrics[metric.Name] = metric.Status == "active"
 	}
+	cm.availableMetricsmu.Lock()
 	cm.availableMetrics = availableMetrics
+	cm.availableMetricsmu.Unlock()
 }
 
 // countNewTags returns a count of new tags which do not exist in the current list of tags

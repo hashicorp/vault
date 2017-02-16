@@ -23,6 +23,7 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
@@ -1456,6 +1457,48 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		ret = append(ret, issueTestStep)
 	}
 
+	getOuCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.ParseDedupAndSortStrings(role.OU, ",")
+			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
+				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
+			}
+			return nil
+		}
+	}
+
+	getOrganizationCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
+				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
+			}
+			return nil
+		}
+	}
+
 	// Returns a TestCheckFunc that performs various validity checks on the
 	// returned certificate information, mostly within checkCertsAndPrivateKey
 	getCnCheck := func(name string, role roleEntry, key crypto.Signer, usage x509.KeyUsage, extUsage x509.ExtKeyUsage, validity time.Duration) logicaltest.TestCheckFunc {
@@ -1724,6 +1767,22 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		// toggled any longer
 		keybitSizeRandOff = true
 		addCnTests()
+	}
+	// OU tests
+	{
+		roleVals.OU = "foo"
+		addTests(getOuCheck(roleVals))
+
+		roleVals.OU = "foo,bar"
+		addTests(getOuCheck(roleVals))
+	}
+	// Organization tests
+	{
+		roleVals.Organization = "system:masters"
+		addTests(getOrganizationCheck(roleVals))
+
+		roleVals.Organization = "foo,bar"
+		addTests(getOrganizationCheck(roleVals))
 	}
 	// IP SAN tests
 	{

@@ -336,12 +336,14 @@ var oidEncryptionAlgorithmDESCBC = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 7}
 var oidEncryptionAlgorithmDESEDE3CBC = asn1.ObjectIdentifier{1, 2, 840, 113549, 3, 7}
 var oidEncryptionAlgorithmAES256CBC = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 42}
 var oidEncryptionAlgorithmAES128GCM = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 6}
+var oidEncryptionAlgorithmAES128CBC = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 1, 2}
 
 func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 	alg := eci.ContentEncryptionAlgorithm.Algorithm
 	if !alg.Equal(oidEncryptionAlgorithmDESCBC) &&
 		!alg.Equal(oidEncryptionAlgorithmDESEDE3CBC) &&
 		!alg.Equal(oidEncryptionAlgorithmAES256CBC) &&
+		!alg.Equal(oidEncryptionAlgorithmAES128CBC) &&
 		!alg.Equal(oidEncryptionAlgorithmAES128GCM) {
 		fmt.Printf("Unsupported Content Encryption Algorithm: %s\n", alg)
 		return nil, ErrUnsupportedAlgorithm
@@ -378,7 +380,7 @@ func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 		block, err = des.NewTripleDESCipher(key)
 	case alg.Equal(oidEncryptionAlgorithmAES256CBC):
 		fallthrough
-	case alg.Equal(oidEncryptionAlgorithmAES128GCM):
+	case alg.Equal(oidEncryptionAlgorithmAES128GCM), alg.Equal(oidEncryptionAlgorithmAES128CBC):
 		block, err = aes.NewCipher(key)
 	}
 

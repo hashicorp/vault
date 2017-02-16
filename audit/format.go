@@ -3,8 +3,10 @@ package audit
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
+	"github.com/SermoDigital/jose/jws"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -105,8 +107,12 @@ func (f *AuditFormatter) FormatRequest(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			WrapTTL:             int(req.WrapTTL / time.Second),
+			Headers:             req.Headers,
 		},
+	}
+
+	if req.WrapInfo != nil {
+		reqEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
 	if !config.OmitTime {
@@ -238,11 +244,15 @@ func (f *AuditFormatter) FormatResponse(
 		}
 	}
 
-	var respWrapInfo *AuditWrapInfo
+	var respWrapInfo *AuditResponseWrapInfo
 	if resp.WrapInfo != nil {
-		respWrapInfo = &AuditWrapInfo{
+		token := resp.WrapInfo.Token
+		if jwtToken := parseVaultTokenFromJWT(token); jwtToken != nil {
+			token = *jwtToken
+		}
+		respWrapInfo = &AuditResponseWrapInfo{
 			TTL:             int(resp.WrapInfo.TTL / time.Second),
-			Token:           resp.WrapInfo.Token,
+			Token:           token,
 			CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
 			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 		}
@@ -266,7 +276,7 @@ func (f *AuditFormatter) FormatResponse(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
-			WrapTTL:             int(req.WrapTTL / time.Second),
+			Headers:             req.Headers,
 		},
 
 		Response: AuditResponse{
@@ -276,6 +286,10 @@ func (f *AuditFormatter) FormatResponse(
 			Redirect: resp.Redirect,
 			WrapInfo: respWrapInfo,
 		},
+	}
+
+	if req.WrapInfo != nil {
+		respEntry.Request.WrapTTL = int(req.WrapInfo.TTL / time.Second)
 	}
 
 	if !config.OmitTime {
@@ -313,6 +327,7 @@ type AuditRequest struct {
 	Data                map[string]interface{} `json:"data"`
 	RemoteAddr          string                 `json:"remote_address"`
 	WrapTTL             int                    `json:"wrap_ttl"`
+	Headers             map[string][]string    `json:"headers"`
 }
 
 type AuditResponse struct {
@@ -320,7 +335,7 @@ type AuditResponse struct {
 	Secret   *AuditSecret           `json:"secret,omitempty"`
 	Data     map[string]interface{} `json:"data,omitempty"`
 	Redirect string                 `json:"redirect,omitempty"`
-	WrapInfo *AuditWrapInfo         `json:"wrap_info,omitempty"`
+	WrapInfo *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
 }
 
 type AuditAuth struct {
@@ -335,7 +350,7 @@ type AuditSecret struct {
 	LeaseID string `json:"lease_id"`
 }
 
-type AuditWrapInfo struct {
+type AuditResponseWrapInfo struct {
 	TTL             int    `json:"ttl"`
 	Token           string `json:"token"`
 	CreationTime    string `json:"creation_time"`
@@ -348,4 +363,21 @@ func getRemoteAddr(req *logical.Request) string {
 		return req.Connection.RemoteAddr
 	}
 	return ""
+}
+
+// parseVaultTokenFromJWT returns a string iff the token was a JWT and we could
+// extract the original token ID from inside
+func parseVaultTokenFromJWT(token string) *string {
+	if strings.Count(token, ".") != 2 {
+		return nil
+	}
+
+	wt, err := jws.ParseJWT([]byte(token))
+	if err != nil || wt == nil {
+		return nil
+	}
+
+	result, _ := wt.Claims().JWTID()
+
+	return &result
 }

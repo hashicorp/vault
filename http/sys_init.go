@@ -81,6 +81,18 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
+	if len(barrierConfig.PGPKeys) > 0 && len(barrierConfig.PGPKeys) != barrierConfig.SecretShares-barrierConfig.StoredShares {
+		respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys"))
+		return
+	}
+
+	if core.SealAccess().RecoveryKeySupported() {
+		if len(recoveryConfig.PGPKeys) > 0 && len(recoveryConfig.PGPKeys) != recoveryConfig.SecretShares-recoveryConfig.StoredShares {
+			respondError(w, http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for recovery"))
+			return
+		}
+	}
+
 	initParams := &vault.InitParams{
 		BarrierConfig:   barrierConfig,
 		RecoveryConfig:  recoveryConfig,

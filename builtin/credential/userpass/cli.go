@@ -10,7 +10,9 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	DefaultMount string
+}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	var data struct {
@@ -37,7 +39,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		data.Password = password
 	}
 	if data.Mount == "" {
-		data.Mount = "userpass"
+		data.Mount = h.DefaultMount
 	}
 
 	options := map[string]interface{}{
@@ -64,7 +66,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 func (h *CLIHandler) Help() string {
 	help := `
-The "userpass" credential provider allows you to authenticate with
+The "userpass"/"radius" credential provider allows you to authenticate with
 a username and password. To use it, specify the "username" and "password"
 parameters. If password is not provided on the command line, it will be
 read from stdin.

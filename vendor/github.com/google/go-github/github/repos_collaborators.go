@@ -22,13 +22,13 @@ func (s *RepositoriesService) ListCollaborators(owner, repo string, opt *ListOpt
 		return nil, nil, err
 	}
 
-	users := new([]*User)
-	resp, err := s.client.Do(req, users)
+	var users []*User
+	resp, err := s.client.Do(req, &users)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *users, resp, err
+	return users, resp, nil
 }
 
 // IsCollaborator checks whether the specified Github user has collaborator
@@ -47,6 +47,35 @@ func (s *RepositoriesService) IsCollaborator(owner, repo, user string) (bool, *R
 	resp, err := s.client.Do(req, nil)
 	isCollab, err := parseBoolResponse(err)
 	return isCollab, resp, err
+}
+
+// RepositoryPermissionLevel represents the permission level an organization
+// member has for a given repository.
+type RepositoryPermissionLevel struct {
+	// Possible values: "admin", "write", "read", "none"
+	Permission *string `json:"permission,omitempty"`
+
+	User *User `json:"user,omitempty"`
+}
+
+// GetPermissionLevel retrieves the specific permission level a collaborator has for a given repository.
+// GitHub API docs: https://developer.github.com/v3/repos/collaborators/#review-a-users-permission-level
+func (s *RepositoriesService) GetPermissionLevel(owner, repo, user string) (*RepositoryPermissionLevel, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/collaborators/%v/permission", owner, repo, user)
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// TODO: remove custom Accept header when this API fully launches.
+	req.Header.Set("Accept", mediaTypeOrgMembershipPreview)
+
+	rpl := new(RepositoryPermissionLevel)
+	resp, err := s.client.Do(req, rpl)
+	if err != nil {
+		return nil, resp, err
+	}
+	return rpl, resp, nil
 }
 
 // RepositoryAddCollaboratorOptions specifies the optional parameters to the

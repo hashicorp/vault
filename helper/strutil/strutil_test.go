@@ -35,7 +35,7 @@ func TestStrUtil_StrListDelete(t *testing.T) {
 
 	output = StrListDelete(output, "random")
 	if len(output) != 1 {
-		t.Fatal("bad: expected: 1, actual: %d", len(output))
+		t.Fatalf("bad: expected: 1, actual: %d", len(output))
 	}
 
 	output = StrListDelete(output, "item3")

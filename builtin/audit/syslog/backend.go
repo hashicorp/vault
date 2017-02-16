@@ -74,9 +74,13 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 
 	switch format {
 	case "json":
-		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{}
+		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
+			Prefix: conf.Config["prefix"],
+		}
 	case "jsonx":
-		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{}
+		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{
+			Prefix: conf.Config["prefix"],
+		}
 	}
 
 	return b, nil
@@ -105,8 +109,7 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 	return err
 }
 
-func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
-	resp *logical.Response, err error) error {
+func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request, resp *logical.Response, err error) error {
 	var buf bytes.Buffer
 	if err := b.formatter.FormatResponse(&buf, b.formatConfig, auth, req, resp, err); err != nil {
 		return err

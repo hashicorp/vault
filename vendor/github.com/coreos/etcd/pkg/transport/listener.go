@@ -234,8 +234,6 @@ func (info TLSInfo) ClientConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		// if given a CA, trust any host with a cert signed by the CA
-		cfg.ServerName = ""
 	}
 
 	if info.selfCert {

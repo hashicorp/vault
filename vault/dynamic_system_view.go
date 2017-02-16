@@ -74,3 +74,12 @@ func (d dynamicSystemView) Tainted() bool {
 func (d dynamicSystemView) CachingDisabled() bool {
 	return d.core.cachingDisabled
 }
+
+// Checks if this is a primary Vault instance.
+func (d dynamicSystemView) ReplicationState() logical.ReplicationState {
+	var state logical.ReplicationState
+	d.core.clusterParamsLock.RLock()
+	state = d.core.replicationState
+	d.core.clusterParamsLock.RUnlock()
+	return state
+}

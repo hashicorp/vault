@@ -66,13 +66,13 @@ func (s *IssuesService) ListComments(owner string, repo string, number int, opt 
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	comments := new([]*IssueComment)
-	resp, err := s.client.Do(req, comments)
+	var comments []*IssueComment
+	resp, err := s.client.Do(req, &comments)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *comments, resp, err
+	return comments, resp, nil
 }
 
 // GetComment fetches the specified issue comment.
@@ -95,7 +95,7 @@ func (s *IssuesService) GetComment(owner string, repo string, id int) (*IssueCom
 		return nil, resp, err
 	}
 
-	return comment, resp, err
+	return comment, resp, nil
 }
 
 // CreateComment creates a new comment on the specified issue.
@@ -113,7 +113,7 @@ func (s *IssuesService) CreateComment(owner string, repo string, number int, com
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // EditComment updates an issue comment.
@@ -131,7 +131,7 @@ func (s *IssuesService) EditComment(owner string, repo string, id int, comment *
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // DeleteComment deletes an issue comment.

@@ -3,12 +3,29 @@ package http
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/hashicorp/vault/vault"
 )
+
+// Test to check if the API errors out when wrong number of PGP keys are
+// supplied for rekey
+func TestSysRekeyInit_pgpKeysEntriesForRekey(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		"secret_shares":    5,
+		"secret_threshold": 3,
+		"pgp_keys":         []string{"pgpkey1"},
+	})
+	testResponseStatus(t, resp, 400)
+}
 
 func TestSysRekeyInit_Status(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
@@ -27,7 +44,7 @@ func TestSysRekeyInit_Status(t *testing.T) {
 		"t":                json.Number("0"),
 		"n":                json.Number("0"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
@@ -57,7 +74,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		"t":                json.Number("3"),
 		"n":                json.Number("5"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 	}
@@ -79,7 +96,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		"t":                json.Number("3"),
 		"n":                json.Number("5"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 	}
@@ -123,7 +140,7 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 		"t":                json.Number("0"),
 		"n":                json.Number("0"),
 		"progress":         json.Number("0"),
-		"required":         json.Number("1"),
+		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
@@ -148,7 +165,7 @@ func TestSysRekey_badKey(t *testing.T) {
 }
 
 func TestSysRekey_Update(t *testing.T) {
-	core, master, token := vault.TestCoreUnsealed(t)
+	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
@@ -161,39 +178,61 @@ func TestSysRekey_Update(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &rekeyStatus)
 
-	resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
-		"nonce": rekeyStatus["nonce"].(string),
-		"key":   hex.EncodeToString(master),
-	})
-
 	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"complete":         true,
-		"nonce":            rekeyStatus["nonce"].(string),
-		"backup":           false,
-		"pgp_fingerprints": interface{}(nil),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
+	var expected map[string]interface{}
 
-	keys := actual["keys"].([]interface{})
-	if len(keys) != 5 {
-		t.Fatalf("bad: %#v", keys)
+	for i, key := range keys {
+		resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
+			"nonce": rekeyStatus["nonce"].(string),
+			"key":   hex.EncodeToString(key),
+		})
+
+		actual = map[string]interface{}{}
+		expected = map[string]interface{}{
+			"started":          true,
+			"nonce":            rekeyStatus["nonce"].(string),
+			"backup":           false,
+			"pgp_fingerprints": interface{}(nil),
+			"required":         json.Number("3"),
+			"t":                json.Number("3"),
+			"n":                json.Number("5"),
+			"progress":         json.Number(fmt.Sprintf("%d", i+1)),
+		}
+		testResponseStatus(t, resp, 200)
+		testResponseBody(t, resp, &actual)
+
+		if i+1 == len(keys) {
+			delete(expected, "started")
+			delete(expected, "required")
+			delete(expected, "t")
+			delete(expected, "n")
+			delete(expected, "progress")
+			expected["complete"] = true
+			expected["keys"] = actual["keys"]
+			expected["keys_base64"] = actual["keys_base64"]
+		}
+
+		if i+1 < len(keys) && (actual["nonce"] == nil || actual["nonce"].(string) == "") {
+			t.Fatalf("expected a nonce, i is %d, actual is %#v", i, actual)
+		}
+
+		if !reflect.DeepEqual(actual, expected) {
+			t.Fatalf("\nexpected: \n%#v\nactual: \n%#v", expected, actual)
+		}
+	}
+
+	retKeys := actual["keys"].([]interface{})
+	if len(retKeys) != 5 {
+		t.Fatalf("bad: %#v", retKeys)
 	}
 	keysB64 := actual["keys_base64"].([]interface{})
 	if len(keysB64) != 5 {
 		t.Fatalf("bad: %#v", keysB64)
 	}
-
-	delete(actual, "keys")
-	delete(actual, "keys_base64")
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
-	}
 }
 
 func TestSysRekey_ReInitUpdate(t *testing.T) {
-	core, master, token := vault.TestCoreUnsealed(t)
+	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
@@ -214,7 +253,7 @@ func TestSysRekey_ReInitUpdate(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 
 	resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
-		"key": hex.EncodeToString(master),
+		"key": hex.EncodeToString(keys[0]),
 	})
 
 	testResponseStatus(t, resp, 400)

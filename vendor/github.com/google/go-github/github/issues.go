@@ -17,6 +17,11 @@ import (
 type IssuesService service
 
 // Issue represents a GitHub issue on a repository.
+//
+// Note: As far as the GitHub API is concerned, every pull request is an issue,
+// but not every issue is a pull request. Some endpoints, events, and webhooks
+// may also return pull requests via this struct. If PullRequestLinks is nil,
+// this is an issue, and if PullRequestLinks is not nil, this is a pull request.
 type Issue struct {
 	ID               *int              `json:"id,omitempty"`
 	Number           *int              `json:"number,omitempty"`
@@ -136,13 +141,13 @@ func (s *IssuesService) listIssues(u string, opt *IssueListOptions) ([]*Issue, *
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	issues := new([]*Issue)
-	resp, err := s.client.Do(req, issues)
+	var issues []*Issue
+	resp, err := s.client.Do(req, &issues)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *issues, resp, err
+	return issues, resp, nil
 }
 
 // IssueListByRepoOptions specifies the optional parameters to the
@@ -203,13 +208,13 @@ func (s *IssuesService) ListByRepo(owner string, repo string, opt *IssueListByRe
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeReactionsPreview)
 
-	issues := new([]*Issue)
-	resp, err := s.client.Do(req, issues)
+	var issues []*Issue
+	resp, err := s.client.Do(req, &issues)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return *issues, resp, err
+	return issues, resp, nil
 }
 
 // Get a single issue.
@@ -231,7 +236,7 @@ func (s *IssuesService) Get(owner string, repo string, number int) (*Issue, *Res
 		return nil, resp, err
 	}
 
-	return issue, resp, err
+	return issue, resp, nil
 }
 
 // Create a new issue on the specified repository.
@@ -250,7 +255,7 @@ func (s *IssuesService) Create(owner string, repo string, issue *IssueRequest) (
 		return nil, resp, err
 	}
 
-	return i, resp, err
+	return i, resp, nil
 }
 
 // Edit an issue.
@@ -269,7 +274,7 @@ func (s *IssuesService) Edit(owner string, repo string, number int, issue *Issue
 		return nil, resp, err
 	}
 
-	return i, resp, err
+	return i, resp, nil
 }
 
 // Lock an issue's conversation.

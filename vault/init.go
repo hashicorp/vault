@@ -187,7 +187,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 	// Perform initial setup
 	if err := c.setupCluster(); err != nil {
-		c.stateLock.Unlock()
 		c.logger.Error("core: cluster setup failed during init", "error", err)
 		return nil, err
 	}

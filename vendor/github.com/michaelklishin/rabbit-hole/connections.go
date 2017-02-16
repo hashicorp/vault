@@ -2,7 +2,6 @@ package rabbithole
 
 import (
 	"net/http"
-	"net/url"
 )
 
 // Provides information about connection to a RabbitMQ node.
@@ -100,7 +99,7 @@ func (c *Client) ListConnections() (rec []ConnectionInfo, err error) {
 //
 
 func (c *Client) GetConnection(name string) (rec *ConnectionInfo, err error) {
-	req, err := newGETRequest(c, "connections/"+url.QueryEscape(name))
+	req, err := newGETRequest(c, "connections/" + PathEscape(name))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +116,7 @@ func (c *Client) GetConnection(name string) (rec *ConnectionInfo, err error) {
 //
 
 func (c *Client) CloseConnection(name string) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "connections/"+url.QueryEscape(name), nil)
+	req, err := newRequestWithBody(c, "DELETE", "connections/" + PathEscape(name), nil)
 	if err != nil {
 		return nil, err
 	}

@@ -4,17 +4,19 @@ EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox
 BUILD_TAGS?=vault
 
-default: dev 
+default: dev
 
 # bin generates the releaseable binaries for Vault
 bin: generate
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
-# into ./bin/ as well as $GOPATH/bin
+# into ./bin/ as well as $GOPATH/bin, except for quickdev which
+# is only put into /bin/
+quickdev: generate
+	@CGO_ENABLED=0 go build -i -tags='$(BUILD_TAGS)' -o bin/vault
 dev: generate
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-
 dev-dynamic: generate
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
@@ -61,7 +63,7 @@ bootstrap:
 	done
 
 proto:
-	protoc -I helper/forwarding -I vault -I ../../.. vault/request_forwarding_service.proto --go_out=plugins=grpc:vault
+	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
 
 .PHONY: bin default generate test vet bootstrap

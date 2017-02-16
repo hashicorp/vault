@@ -74,6 +74,11 @@ type QueryOptions struct {
 	// that node. Setting this to "_agent" will use the agent's node
 	// for the sort.
 	Near string
+
+	// NodeMeta is used to filter results by nodes with the given
+	// metadata key/value pairs. Currently, only one key/value pair can
+	// be provided for filtering.
+	NodeMeta map[string]string
 }
 
 // WriteOptions are used to parameterize a write
@@ -385,6 +390,11 @@ func (r *request) setQueryOptions(q *QueryOptions) {
 	}
 	if q.Near != "" {
 		r.params.Set("near", q.Near)
+	}
+	if len(q.NodeMeta) > 0 {
+		for key, value := range q.NodeMeta {
+			r.params.Add("node-meta", key+":"+value)
+		}
 	}
 }
 
