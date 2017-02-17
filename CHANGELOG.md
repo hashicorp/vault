@@ -30,6 +30,8 @@ BUG FIXES:
    [GH-2367]
  * command/server: Fix parsing of redirect address when port is not mentioned
    [GH-2354]
+ * physical/postgresql: Fix listing returning incorrect results if there were
+   multiple levels of children [GH-2393]
 
 ## 0.6.5 (February 7th, 2017)
 
