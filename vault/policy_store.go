@@ -2,11 +2,13 @@ package vault
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -137,7 +139,13 @@ func (c *Core) setupPolicyStore() error {
 	view := c.systemBarrierView.SubView(policySubPath)
 
 	// Create the policy store
-	c.policyStore = NewPolicyStore(view, &dynamicSystemView{core: c})
+	sysView := &dynamicSystemView{core: c}
+	c.policyStore = NewPolicyStore(view, sysView)
+
+	if sysView.ReplicationState() == consts.ReplicationSecondary {
+		// Policies will sync from the primary
+		return nil
+	}
 
 	// Ensure that the default policy exists, and if not, create it
 	policy, err := c.policyStore.GetPolicy("default")
@@ -171,6 +179,16 @@ func (c *Core) setupPolicyStore() error {
 func (c *Core) teardownPolicyStore() error {
 	c.policyStore = nil
 	return nil
+}
+
+func (ps *PolicyStore) invalidate(name string) {
+	if ps.lru == nil {
+		// Nothing to do if the cache is not used
+		return
+	}
+
+	// This may come with a prefixed "/" due to joining the file path
+	ps.lru.Remove(strings.TrimPrefix(name, "/"))
 }
 
 // SetPolicy is used to create or update the given policy

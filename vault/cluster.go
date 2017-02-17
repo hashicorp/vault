@@ -43,7 +43,7 @@ var (
 
 // This can be one of a few key types so the different params may or may not be filled
 type clusterKeyParams struct {
-	Type string   `json:"type"`
+	Type string   `json:"type" structs:"type" mapstructure:"type"`
 	X    *big.Int `json:"x" structs:"x" mapstructure:"x"`
 	Y    *big.Int `json:"y" structs:"y" mapstructure:"y"`
 	D    *big.Int `json:"d" structs:"d" mapstructure:"d"`
@@ -339,45 +339,67 @@ func (c *Core) stopClusterListener() {
 	c.logger.Info("core/stopClusterListener: success")
 }
 
-// ClusterTLSConfig generates a TLS configuration based on the local cluster
-// key and cert.
+// ClusterTLSConfig generates a TLS configuration based on the local/replicated
+// cluster key and cert.
 func (c *Core) ClusterTLSConfig() (*tls.Config, error) {
 	cluster, err := c.Cluster()
 	if err != nil {
 		return nil, err
 	}
 	if cluster == nil {
-		return nil, fmt.Errorf("cluster information is nil")
+		return nil, fmt.Errorf("local cluster information is nil")
 	}
 
 	// Prevent data races with the TLS parameters
 	c.clusterParamsLock.Lock()
 	defer c.clusterParamsLock.Unlock()
 
-	if c.localClusterCert == nil || len(c.localClusterCert) == 0 {
-		return nil, fmt.Errorf("cluster certificate is nil")
+	forwarding := c.localClusterCert != nil && len(c.localClusterCert) > 0
+
+	var parsedCert *x509.Certificate
+	if forwarding {
+		parsedCert, err = x509.ParseCertificate(c.localClusterCert)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing local cluster certificate: %v", err)
+		}
+
+		// This is idempotent, so be sure it's been added
+		c.clusterCertPool.AddCert(parsedCert)
 	}
 
-	parsedCert, err := x509.ParseCertificate(c.localClusterCert)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing local cluster certificate: %v", err)
-	}
+	nameLookup := func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		c.clusterParamsLock.RLock()
+		defer c.clusterParamsLock.RUnlock()
 
-	// This is idempotent, so be sure it's been added
-	c.clusterCertPool.AddCert(parsedCert)
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{
-			tls.Certificate{
+		if forwarding && clientHello.ServerName == parsedCert.Subject.CommonName {
+			return &tls.Certificate{
 				Certificate: [][]byte{c.localClusterCert},
 				PrivateKey:  c.localClusterPrivateKey,
-			},
-		},
-		RootCAs:    c.clusterCertPool,
-		ServerName: parsedCert.Subject.CommonName,
-		ClientAuth: tls.RequireAndVerifyClientCert,
-		ClientCAs:  c.clusterCertPool,
-		MinVersion: tls.VersionTLS12,
+			}, nil
+		}
+
+		return nil, nil
+	}
+
+	var clientCertificates []tls.Certificate
+	if forwarding {
+		clientCertificates = append(clientCertificates, tls.Certificate{
+			Certificate: [][]byte{c.localClusterCert},
+			PrivateKey:  c.localClusterPrivateKey,
+		})
+	}
+
+	tlsConfig := &tls.Config{
+		// We need this here for the client side
+		Certificates:   clientCertificates,
+		RootCAs:        c.clusterCertPool,
+		ClientAuth:     tls.RequireAndVerifyClientCert,
+		ClientCAs:      c.clusterCertPool,
+		GetCertificate: nameLookup,
+		MinVersion:     tls.VersionTLS12,
+	}
+	if forwarding {
+		tlsConfig.ServerName = parsedCert.Subject.CommonName
 	}
 
 	return tlsConfig, nil
