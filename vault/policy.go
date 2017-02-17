@@ -187,8 +187,19 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			}
 		}
 
-		pc.Permissions.AllowedParameters = pc.AllowedParametersHCL
-		pc.Permissions.DeniedParameters = pc.DeniedParametersHCL
+		if pc.AllowedParametersHCL != nil {
+			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
+			for key, val := range pc.AllowedParametersHCL {
+				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
+			}
+		}
+		if pc.DeniedParametersHCL != nil {
+			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
+
+			for key, val := range pc.DeniedParametersHCL {
+				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
+			}
+		}
 
 	PathFinished:
 		paths = append(paths, &pc)

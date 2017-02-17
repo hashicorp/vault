@@ -335,14 +335,14 @@ func TestACL_ValuePermissions(t *testing.T) {
 		{"foo/bar", []string{"deny"}, []interface{}{"bad"}, false},
 		{"foo/bar", []string{"deny"}, []interface{}{"good"}, true},
 		{"foo/bar", []string{"allow"}, []interface{}{"good"}, true},
-		{"foo/baz", []string{"allow"}, []interface{}{"good"}, true},
+		{"foo/baz", []string{"aLLow"}, []interface{}{"good"}, true},
 		{"foo/baz", []string{"deny"}, []interface{}{"bad"}, false},
 		{"foo/baz", []string{"deny"}, []interface{}{"good"}, false},
 		{"foo/baz", []string{"allow", "deny"}, []interface{}{"good", "bad"}, false},
 		{"foo/baz", []string{"deny", "allow"}, []interface{}{"good", "bad"}, false},
-		{"foo/baz", []string{"deny", "allow"}, []interface{}{"bad", "good"}, false},
-		{"foo/baz", []string{"allow"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"neither"}, []interface{}{"bad"}, false},
+		{"foo/baz", []string{"deNy", "allow"}, []interface{}{"bad", "good"}, false},
+		{"foo/baz", []string{"aLLow"}, []interface{}{"bad"}, false},
+		{"foo/baz", []string{"Neither"}, []interface{}{"bad"}, false},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good"}, true},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good1"}, true},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good2"}, true},
@@ -630,10 +630,10 @@ path "foo/bar" {
 path "foo/baz" {
 	policy = "write"
 	allowed_parameters = {
-		"allow" = ["good"]
+		"ALLOW" = ["good"]
 	}
 	denied_parameters = {
-		"deny" = ["bad"]
+		"dEny" = ["bad"]
 	}
 }
 path "fizz/buzz" {
