@@ -70,11 +70,6 @@ path "cubbyhole/*" {
     capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-# Allow a token to list its cubbyhole (not covered by the splat above)
-path "cubbyhole" {
-    capabilities = ["list"]
-}
-
 # Allow a token to wrap arbitrary values in a response-wrapping token
 path "sys/wrapping/wrap" {
     capabilities = ["update"]
