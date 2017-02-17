@@ -27,6 +27,7 @@ type ACLRole string
 const (
 	RoleOwner  ACLRole = "OWNER"
 	RoleReader ACLRole = "READER"
+	RoleWriter ACLRole = "WRITER"
 )
 
 // ACLEntity refers to a user or group.

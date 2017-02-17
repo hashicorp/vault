@@ -586,7 +586,7 @@ func generateCreationBundle(b *backend,
 	organization := []string{}
 	{
 		if role.Organization != "" {
-			ou = strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			organization = strutil.ParseDedupAndSortStrings(role.Organization, ",")
 		}
 	}
 

@@ -71,6 +71,15 @@ func (lm *LockManager) CacheActive() bool {
 	return lm.cache != nil
 }
 
+func (lm *LockManager) InvalidatePolicy(name string) {
+	// Check if it's in our cache. If so, return right away.
+	if lm.CacheActive() {
+		lm.cacheMutex.Lock()
+		defer lm.cacheMutex.Unlock()
+		delete(lm.cache, name)
+	}
+}
+
 func (lm *LockManager) policyLock(name string, lockType bool) *sync.RWMutex {
 	lm.locksMutex.RLock()
 	lock := lm.locks[name]

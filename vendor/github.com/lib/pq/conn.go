@@ -664,9 +664,12 @@ func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 				res = &rows{
 					cn: cn,
 				}
-				if t == 'C' {
-					res.result, res.tag = cn.parseComplete(r.string())
-				}
+			}
+			// Set the result and tag to the last command complete if there wasn't a
+			// query already run. Although queries usually return from here and cede
+			// control to Next, a query with zero results does not.
+			if t == 'C' && res.colNames == nil {
+				res.result, res.tag = cn.parseComplete(r.string())
 			}
 			res.done = true
 		case 'Z':

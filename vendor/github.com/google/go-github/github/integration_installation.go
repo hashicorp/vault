@@ -42,5 +42,5 @@ func (s *IntegrationsService) ListRepos(opt *ListOptions) ([]*Repository, *Respo
 		return nil, resp, err
 	}
 
-	return r.Repositories, resp, err
+	return r.Repositories, resp, nil
 }

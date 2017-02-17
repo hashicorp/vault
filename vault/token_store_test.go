@@ -437,6 +437,9 @@ func TestTokenStore_CreateLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	if err := ts2.Initialize(); err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	// Should still match
 	out, err = ts2.Lookup(ent.ID)
@@ -474,6 +477,9 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	// New store should share the salt
 	ts2, err := NewTokenStore(c, getBackendConfig(c))
 	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if err := ts2.Initialize(); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 

@@ -87,7 +87,7 @@ type RepositoryAddCollaboratorOptions struct {
 	//     push - team members can pull and push, but not administer this repository
 	//     admin - team members can pull, push and administer this repository
 	//
-	// Default value is "push".  This option is only valid for organization-owned repositories.
+	// Default value is "push". This option is only valid for organization-owned repositories.
 	Permission string `json:"permission,omitempty"`
 }
 

@@ -114,7 +114,7 @@ func (a AuthorizationRequest) String() string {
 // AuthorizationUpdateRequest represents a request to update an authorization.
 //
 // Note that for any one update, you must only provide one of the "scopes"
-// fields.  That is, you may provide only one of "Scopes", or "AddScopes", or
+// fields. That is, you may provide only one of "Scopes", or "AddScopes", or
 // "RemoveScopes".
 //
 // GitHub API docs: https://developer.github.com/v3/oauth_authorizations/#update-an-existing-authorization
@@ -170,7 +170,7 @@ func (s *AuthorizationsService) Get(id int) (*Authorization, *Response, error) {
 	if err != nil {
 		return nil, resp, err
 	}
-	return a, resp, err
+	return a, resp, nil
 }
 
 // Create a new authorization for the specified OAuth application.
@@ -189,7 +189,7 @@ func (s *AuthorizationsService) Create(auth *AuthorizationRequest) (*Authorizati
 	if err != nil {
 		return nil, resp, err
 	}
-	return a, resp, err
+	return a, resp, nil
 }
 
 // GetOrCreateForApp creates a new authorization for the specified OAuth
@@ -225,7 +225,7 @@ func (s *AuthorizationsService) GetOrCreateForApp(clientID string, auth *Authori
 		return nil, resp, err
 	}
 
-	return a, resp, err
+	return a, resp, nil
 }
 
 // Edit a single authorization.
@@ -245,7 +245,7 @@ func (s *AuthorizationsService) Edit(id int, auth *AuthorizationUpdateRequest) (
 		return nil, resp, err
 	}
 
-	return a, resp, err
+	return a, resp, nil
 }
 
 // Delete a single authorization.
@@ -285,7 +285,7 @@ func (s *AuthorizationsService) Check(clientID string, token string) (*Authoriza
 		return nil, resp, err
 	}
 
-	return a, resp, err
+	return a, resp, nil
 }
 
 // Reset is used to reset a valid OAuth token without end user involvement.
@@ -313,7 +313,7 @@ func (s *AuthorizationsService) Reset(clientID string, token string) (*Authoriza
 		return nil, resp, err
 	}
 
-	return a, resp, err
+	return a, resp, nil
 }
 
 // Revoke an authorization for an application.
@@ -352,7 +352,7 @@ func (s *AuthorizationsService) ListGrants() ([]*Grant, *Response, error) {
 		return nil, resp, err
 	}
 
-	return grants, resp, err
+	return grants, resp, nil
 }
 
 // GetGrant gets a single OAuth application grant.
@@ -371,7 +371,7 @@ func (s *AuthorizationsService) GetGrant(id int) (*Grant, *Response, error) {
 		return nil, resp, err
 	}
 
-	return grant, resp, err
+	return grant, resp, nil
 }
 
 // DeleteGrant deletes an OAuth application grant. Deleting an application's
@@ -408,7 +408,7 @@ func (s *AuthorizationsService) CreateImpersonation(username string, authReq *Au
 	if err != nil {
 		return nil, resp, err
 	}
-	return a, resp, err
+	return a, resp, nil
 }
 
 // DeleteImpersonation deletes an impersonation OAuth token.

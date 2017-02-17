@@ -20,7 +20,7 @@ func (k Key) String() string {
 	return Stringify(k)
 }
 
-// ListKeys lists the verified public keys for a user.  Passing the empty
+// ListKeys lists the verified public keys for a user. Passing the empty
 // string will fetch keys for the authenticated user.
 //
 // GitHub API docs: http://developer.github.com/v3/users/keys/#list-public-keys-for-a-user
@@ -67,7 +67,7 @@ func (s *UsersService) GetKey(id int) (*Key, *Response, error) {
 		return nil, resp, err
 	}
 
-	return key, resp, err
+	return key, resp, nil
 }
 
 // CreateKey adds a public key for the authenticated user.
@@ -87,7 +87,7 @@ func (s *UsersService) CreateKey(key *Key) (*Key, *Response, error) {
 		return nil, resp, err
 	}
 
-	return k, resp, err
+	return k, resp, nil
 }
 
 // DeleteKey deletes a public key.

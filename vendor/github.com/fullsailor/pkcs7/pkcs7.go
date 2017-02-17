@@ -649,6 +649,12 @@ func (sd *SignedData) AddCertificate(cert *x509.Certificate) {
 	sd.certs = append(sd.certs, cert)
 }
 
+// Detach removes content from the signed data struct to make it a detached signature.
+// This must be called right before Finish()
+func (sd *SignedData) Detach() {
+	sd.sd.ContentInfo = contentInfo{ContentType: oidSignedData}
+}
+
 // Finish marshals the content and its signers
 func (sd *SignedData) Finish() ([]byte, error) {
 	sd.sd.Certificates = marshalCertificates(sd.certs)

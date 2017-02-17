@@ -267,6 +267,7 @@ func newPacketCipher(d direction, algs directionAlgorithms, kex *kexResult) (pac
 
 	c := &streamPacketCipher{
 		mac: macModes[algs.MAC].new(macKey),
+		etm: macModes[algs.MAC].etm,
 	}
 	c.macResult = make([]byte, c.mac.Size())
 

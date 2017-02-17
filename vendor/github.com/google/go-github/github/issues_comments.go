@@ -30,10 +30,10 @@ func (i IssueComment) String() string {
 // IssueListCommentsOptions specifies the optional parameters to the
 // IssuesService.ListComments method.
 type IssueListCommentsOptions struct {
-	// Sort specifies how to sort comments.  Possible values are: created, updated.
+	// Sort specifies how to sort comments. Possible values are: created, updated.
 	Sort string `url:"sort,omitempty"`
 
-	// Direction in which to sort comments.  Possible values are: asc, desc.
+	// Direction in which to sort comments. Possible values are: asc, desc.
 	Direction string `url:"direction,omitempty"`
 
 	// Since filters comments by time.
@@ -42,7 +42,7 @@ type IssueListCommentsOptions struct {
 	ListOptions
 }
 
-// ListComments lists all comments on the specified issue.  Specifying an issue
+// ListComments lists all comments on the specified issue. Specifying an issue
 // number of 0 will return all comments on all issues for the repository.
 //
 // GitHub API docs: http://developer.github.com/v3/issues/comments/#list-comments-on-an-issue

@@ -30,7 +30,7 @@ type Commit struct {
 	URL          *string                `json:"url,omitempty"`
 	Verification *SignatureVerification `json:"verification,omitempty"`
 
-	// CommentCount is the number of GitHub comments on the commit.  This
+	// CommentCount is the number of GitHub comments on the commit. This
 	// is only populated for requests that fetch GitHub data like
 	// Pulls.ListCommits, Repositories.ListCommits, etc.
 	CommentCount *int `json:"comment_count,omitempty"`
@@ -40,7 +40,7 @@ func (c Commit) String() string {
 	return Stringify(c)
 }
 
-// CommitAuthor represents the author or committer of a commit.  The commit
+// CommitAuthor represents the author or committer of a commit. The commit
 // author may not correspond to a GitHub User.
 type CommitAuthor struct {
 	Date  *time.Time `json:"date,omitempty"`
@@ -74,7 +74,7 @@ func (s *GitService) GetCommit(owner string, repo string, sha string) (*Commit, 
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // createCommit represents the body of a CreateCommit request.
@@ -123,5 +123,5 @@ func (s *GitService) CreateCommit(owner string, repo string, commit *Commit) (*C
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }

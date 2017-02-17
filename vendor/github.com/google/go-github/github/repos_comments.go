@@ -103,7 +103,7 @@ func (s *RepositoriesService) CreateComment(owner, repo, sha string, comment *Re
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // GetComment gets a single comment from a repository.
@@ -125,7 +125,7 @@ func (s *RepositoriesService) GetComment(owner, repo string, id int) (*Repositor
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // UpdateComment updates the body of a single comment.
@@ -144,7 +144,7 @@ func (s *RepositoriesService) UpdateComment(owner, repo string, id int, comment 
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // DeleteComment deletes a single comment from a repository.

@@ -42,6 +42,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/net/trace"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/transport"
 )
@@ -85,6 +86,9 @@ func recvResponse(ctx context.Context, dopts dialOptions, t transport.ClientTran
 		dopts.copts.StatsHandler.HandleRPC(ctx, inPayload)
 	}
 	c.trailerMD = stream.Trailer()
+	if peer, ok := peer.FromContext(stream.Context()); ok {
+		c.peer = peer
+	}
 	return nil
 }
 

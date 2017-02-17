@@ -86,6 +86,11 @@ type SecurityBarrier interface {
 	// VerifyMaster is used to check if the given key matches the master key
 	VerifyMaster(key []byte) error
 
+	// SetMasterKey is used to directly set a new master key. This is used in
+	// repliated scenarios due to the chicken and egg problem of reloading the
+	// keyring from disk before we have the master key to decrypt it.
+	SetMasterKey(key []byte) error
+
 	// ReloadKeyring is used to re-read the underlying keyring.
 	// This is used for HA deployments to ensure the latest keyring
 	// is present in the leader.
@@ -119,8 +124,14 @@ type SecurityBarrier interface {
 	// Rekey is used to change the master key used to protect the keyring
 	Rekey([]byte) error
 
+	// For replication we must send over the keyring, so this must be available
+	Keyring() (*Keyring, error)
+
 	// SecurityBarrier must provide the storage APIs
 	BarrierStorage
+
+	// SecurityBarrier must provide the encryption APIs
+	BarrierEncryptor
 }
 
 // BarrierStorage is the storage only interface required for a Barrier.
@@ -137,6 +148,14 @@ type BarrierStorage interface {
 	// List is used ot list all the keys under a given
 	// prefix, up to the next prefix.
 	List(prefix string) ([]string, error)
+}
+
+// BarrierEncryptor is the in memory only interface that does not actually
+// use the underlying barrier. It is used for lower level modules like the
+// Write-Ahead-Log and Merkle index to allow them to use the barrier.
+type BarrierEncryptor interface {
+	Encrypt(key string, plaintext []byte) ([]byte, error)
+	Decrypt(key string, ciphertext []byte) ([]byte, error)
 }
 
 // Entry is used to represent data stored by the security barrier

@@ -32,6 +32,7 @@ func TestSysAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 		},
 		"token/": map[string]interface{}{
@@ -41,6 +42,7 @@ func TestSysAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -83,6 +85,7 @@ func TestSysEnableAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"token/": map[string]interface{}{
 				"description": "token based credentials",
@@ -91,6 +94,7 @@ func TestSysEnableAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -100,6 +104,7 @@ func TestSysEnableAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"token/": map[string]interface{}{
 			"description": "token based credentials",
@@ -108,6 +113,7 @@ func TestSysEnableAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -153,6 +159,7 @@ func TestSysDisableAuth(t *testing.T) {
 				},
 				"description": "token based credentials",
 				"type":        "token",
+				"local":       false,
 			},
 		},
 		"token/": map[string]interface{}{
@@ -162,6 +169,7 @@ func TestSysDisableAuth(t *testing.T) {
 			},
 			"description": "token based credentials",
 			"type":        "token",
+			"local":       false,
 		},
 	}
 	testResponseStatus(t, resp, 200)

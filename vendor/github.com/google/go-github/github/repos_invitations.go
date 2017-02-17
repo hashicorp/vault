@@ -46,7 +46,7 @@ func (s *RepositoriesService) ListInvitations(repoID int, opt *ListOptions) ([]*
 		return nil, resp, err
 	}
 
-	return invites, resp, err
+	return invites, resp, nil
 }
 
 // DeleteInvitation deletes a repository invitation.

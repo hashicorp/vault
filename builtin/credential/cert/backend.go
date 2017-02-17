@@ -1,6 +1,7 @@
 package cert
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/logical"
@@ -13,7 +14,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	if err != nil {
 		return b, err
 	}
-	return b, b.populateCRLs(conf.StorageView)
+	return b, nil
 }
 
 func Backend() *backend {
@@ -36,9 +37,10 @@ func Backend() *backend {
 		}),
 
 		AuthRenew: b.pathLoginRenew,
+
+		Invalidate: b.invalidate,
 	}
 
-	b.crls = map[string]CRLInfo{}
 	b.crlUpdateMutex = &sync.RWMutex{}
 
 	return &b
@@ -50,6 +52,15 @@ type backend struct {
 
 	crls           map[string]CRLInfo
 	crlUpdateMutex *sync.RWMutex
+}
+
+func (b *backend) invalidate(key string) {
+	switch {
+	case strings.HasPrefix(key, "crls/"):
+		b.crlUpdateMutex.Lock()
+		defer b.crlUpdateMutex.Unlock()
+		b.crls = nil
+	}
 }
 
 const backendHelp = `

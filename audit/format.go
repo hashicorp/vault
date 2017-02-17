@@ -27,7 +27,11 @@ func (f *AuditFormatter) FormatRequest(
 	config FormatterConfig,
 	auth *logical.Auth,
 	req *logical.Request,
-	err error) error {
+	inErr error) error {
+
+	if req == nil {
+		return fmt.Errorf("request to request-audit a nil request")
+	}
 
 	if w == nil {
 		return fmt.Errorf("writer for audit request is nil")
@@ -49,22 +53,26 @@ func (f *AuditFormatter) FormatRequest(
 			}()
 		}
 
-		// Copy the structures
-		cp, err := copystructure.Copy(auth)
-		if err != nil {
-			return err
+		// Copy the auth structure
+		if auth != nil {
+			cp, err := copystructure.Copy(auth)
+			if err != nil {
+				return err
+			}
+			auth = cp.(*logical.Auth)
 		}
-		auth = cp.(*logical.Auth)
 
-		cp, err = copystructure.Copy(req)
+		cp, err := copystructure.Copy(req)
 		if err != nil {
 			return err
 		}
 		req = cp.(*logical.Request)
 
 		// Hash any sensitive information
-		if err := Hash(config.Salt, auth); err != nil {
-			return err
+		if auth != nil {
+			if err := Hash(config.Salt, auth); err != nil {
+				return err
+			}
 		}
 
 		// Cache and restore accessor in the request
@@ -85,8 +93,8 @@ func (f *AuditFormatter) FormatRequest(
 		auth = new(logical.Auth)
 	}
 	var errString string
-	if err != nil {
-		errString = err.Error()
+	if inErr != nil {
+		errString = inErr.Error()
 	}
 
 	reqEntry := &AuditRequestEntry{
@@ -107,6 +115,7 @@ func (f *AuditFormatter) FormatRequest(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
+			ReplicationCluster:  req.ReplicationCluster,
 			Headers:             req.Headers,
 		},
 	}
@@ -128,7 +137,11 @@ func (f *AuditFormatter) FormatResponse(
 	auth *logical.Auth,
 	req *logical.Request,
 	resp *logical.Response,
-	err error) error {
+	inErr error) error {
+
+	if req == nil {
+		return fmt.Errorf("request to response-audit a nil request")
+	}
 
 	if w == nil {
 		return fmt.Errorf("writer for audit request is nil")
@@ -150,37 +163,43 @@ func (f *AuditFormatter) FormatResponse(
 			}()
 		}
 
-		// Copy the structure
-		cp, err := copystructure.Copy(auth)
-		if err != nil {
-			return err
+		// Copy the auth structure
+		if auth != nil {
+			cp, err := copystructure.Copy(auth)
+			if err != nil {
+				return err
+			}
+			auth = cp.(*logical.Auth)
 		}
-		auth = cp.(*logical.Auth)
 
-		cp, err = copystructure.Copy(req)
+		cp, err := copystructure.Copy(req)
 		if err != nil {
 			return err
 		}
 		req = cp.(*logical.Request)
 
-		cp, err = copystructure.Copy(resp)
-		if err != nil {
-			return err
+		if resp != nil {
+			cp, err := copystructure.Copy(resp)
+			if err != nil {
+				return err
+			}
+			resp = cp.(*logical.Response)
 		}
-		resp = cp.(*logical.Response)
 
 		// Hash any sensitive information
 
 		// Cache and restore accessor in the auth
-		var accessor, wrappedAccessor string
-		if !config.HMACAccessor && auth != nil && auth.Accessor != "" {
-			accessor = auth.Accessor
-		}
-		if err := Hash(config.Salt, auth); err != nil {
-			return err
-		}
-		if accessor != "" {
-			auth.Accessor = accessor
+		if auth != nil {
+			var accessor string
+			if !config.HMACAccessor && auth.Accessor != "" {
+				accessor = auth.Accessor
+			}
+			if err := Hash(config.Salt, auth); err != nil {
+				return err
+			}
+			if accessor != "" {
+				auth.Accessor = accessor
+			}
 		}
 
 		// Cache and restore accessor in the request
@@ -196,21 +215,23 @@ func (f *AuditFormatter) FormatResponse(
 		}
 
 		// Cache and restore accessor in the response
-		accessor = ""
-		if !config.HMACAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
-			accessor = resp.Auth.Accessor
-		}
-		if !config.HMACAccessor && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
-			wrappedAccessor = resp.WrapInfo.WrappedAccessor
-		}
-		if err := Hash(config.Salt, resp); err != nil {
-			return err
-		}
-		if accessor != "" {
-			resp.Auth.Accessor = accessor
-		}
-		if wrappedAccessor != "" {
-			resp.WrapInfo.WrappedAccessor = wrappedAccessor
+		if resp != nil {
+			var accessor, wrappedAccessor string
+			if !config.HMACAccessor && resp != nil && resp.Auth != nil && resp.Auth.Accessor != "" {
+				accessor = resp.Auth.Accessor
+			}
+			if !config.HMACAccessor && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
+				wrappedAccessor = resp.WrapInfo.WrappedAccessor
+			}
+			if err := Hash(config.Salt, resp); err != nil {
+				return err
+			}
+			if accessor != "" {
+				resp.Auth.Accessor = accessor
+			}
+			if wrappedAccessor != "" {
+				resp.WrapInfo.WrappedAccessor = wrappedAccessor
+			}
 		}
 	}
 
@@ -222,8 +243,8 @@ func (f *AuditFormatter) FormatResponse(
 		resp = new(logical.Response)
 	}
 	var errString string
-	if err != nil {
-		errString = err.Error()
+	if inErr != nil {
+		errString = inErr.Error()
 	}
 
 	var respAuth *AuditAuth
@@ -276,6 +297,7 @@ func (f *AuditFormatter) FormatResponse(
 			Path:                req.Path,
 			Data:                req.Data,
 			RemoteAddr:          getRemoteAddr(req),
+			ReplicationCluster:  req.ReplicationCluster,
 			Headers:             req.Headers,
 		},
 
@@ -312,14 +334,15 @@ type AuditRequestEntry struct {
 type AuditResponseEntry struct {
 	Time     string        `json:"time,omitempty"`
 	Type     string        `json:"type"`
-	Error    string        `json:"error"`
 	Auth     AuditAuth     `json:"auth"`
 	Request  AuditRequest  `json:"request"`
 	Response AuditResponse `json:"response"`
+	Error    string        `json:"error"`
 }
 
 type AuditRequest struct {
 	ID                  string                 `json:"id"`
+	ReplicationCluster  string                 `json:"replication_cluster,omitempty"`
 	Operation           logical.Operation      `json:"operation"`
 	ClientToken         string                 `json:"client_token"`
 	ClientTokenAccessor string                 `json:"client_token_accessor"`
