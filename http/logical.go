@@ -53,6 +53,12 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		return nil, http.StatusMethodNotAllowed, nil
 	}
 
+	if op == logical.ListOperation {
+		if !strings.HasSuffix(path, "/") {
+			path += "/"
+		}
+	}
+
 	// Parse the request if we can
 	var data map[string]interface{}
 	if op == logical.UpdateOperation {
