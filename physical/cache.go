@@ -71,7 +71,7 @@ func (c *Cache) lockForKey(key string) *sync.RWMutex {
 // Purge is used to clear the cache
 func (c *Cache) Purge() {
 	// Lock the world
-	var lockHashes []string
+	lockHashes := make([]string, 0, len(c.locks))
 	for hash := range c.locks {
 		lockHashes = append(lockHashes, hash)
 	}
