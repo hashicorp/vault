@@ -243,8 +243,12 @@ func testTokenStore(t testing.TB, c *Core) *TokenStore {
 	me.UUID = meUUID
 
 	view := NewBarrierView(c.barrier, credentialBarrierPrefix+me.UUID+"/")
+	sysView := c.mountEntrySysView(me)
 
-	tokenstore, _ := c.newCredentialBackend("token", c.mountEntrySysView(me), view, nil)
+	tokenstore, _ := c.newCredentialBackend("token", sysView, view, nil)
+	if err := tokenstore.Initialize(); err != nil {
+		panic(err)
+	}
 	ts := tokenstore.(*TokenStore)
 
 	router := NewRouter()
