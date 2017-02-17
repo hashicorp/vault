@@ -458,6 +458,23 @@ func TestBackendAcc_Login(t *testing.T) {
 		Data:      vConfig,
 	})
 
+	cpData := map[string]interface{}{
+		"policies": "cp",
+	}
+
+	cpResp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "client/" + nodeName,
+		Data:      cpData,
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cpResp != nil && cpResp.IsError() {
+		t.Fatalf("Failed to create client")
+	}
+
 	epData := map[string]interface{}{
 		"policies": "ep",
 	}
@@ -569,7 +586,8 @@ func TestBackendAcc_Login(t *testing.T) {
 	if resp == nil || resp.Auth == nil || resp.IsError() {
 		t.Fatalf("login attempt failed")
 	}
-	exPols := []string{"default", "ep", "rp1", "rp2", "tp1", "tp2"}
+
+	exPols := []string{"default", "cp", "ep", "rp1", "rp2", "tp1", "tp2"}
 	if !policyutil.EquivalentPolicies(exPols, resp.Auth.Policies) {
 		t.Fatalf("policies didn't match:\nexpected: %#v\ngot: %#v\n", exPols, resp.Auth.Policies)
 	}

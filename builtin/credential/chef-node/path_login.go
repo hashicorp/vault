@@ -174,6 +174,15 @@ func (b *backend) getNodePolicies(req *logical.Request, node string) ([]string, 
 		return nil, err
 	}
 
+	var clientPols []string
+	clientEntry, err := b.Client(req.Storage, node)
+	if err != nil {
+		return nil, err
+	}
+	if clientEntry != nil {
+		clientPols = clientEntry.Policies
+	}
+
 	var envPols []string
 	envEntry, err := b.Environment(req.Storage, nodeInfo.ChefEnv)
 	if err != nil {
@@ -208,6 +217,7 @@ func (b *backend) getNodePolicies(req *logical.Request, node string) ([]string, 
 	}
 
 	var allPol []string
+	allPol = append(allPol, clientPols...)
 	allPol = append(allPol, envPols...)
 	allPol = append(allPol, rolePols...)
 	allPol = append(allPol, tagPols...)

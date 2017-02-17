@@ -33,6 +33,8 @@ func Backend() *backend {
 			pathRolesList(&b),
 			pathTags(&b),
 			pathTagsList(&b),
+			pathClients(&b),
+			pathClientsList(&b),
 		}),
 
 		AuthRenew: b.pathLoginRenew,
