@@ -60,6 +60,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"audit/*",
 				"raw/*",
 				"replication/primary/secondary-token",
+				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
 			},
