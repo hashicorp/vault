@@ -56,13 +56,21 @@ type Policy struct {
 	Raw   string
 }
 
+/*
+ */
 // PathCapabilities represents a policy for a path in the namespace.
 type PathCapabilities struct {
-	Prefix             string
-	Policy             string
-	Capabilities       []string
+	Prefix       string
+	Policy       string
+	Capabilities []string
+	Permissions  *Permissions
+	Glob         bool
+}
+
+type Permissions struct {
 	CapabilitiesBitmap uint32 `hcl:"-"`
-	Glob               bool
+	AllowedParams      map[string]bool
+	DisallowedParams   map[string]bool
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -107,27 +115,32 @@ func Parse(rules string) (*Policy, error) {
 }
 
 func parsePaths(result *Policy, list *ast.ObjectList) error {
+	// specifically how can we access the key value pairs for
+	// permissions
 	paths := make([]*PathCapabilities, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
 		if len(item.Keys) > 0 {
-			key = item.Keys[0].Token.Value().(string)
+			key = item.Keys[0].Token.Value().(string) // "secret/foo"
 		}
-
 		valid := []string{
 			"policy",
 			"capabilities",
+			"permissions", // added here to validate
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
 
 		var pc PathCapabilities
+
+		// allocate memory so that DecodeObject can initialize the Permissions struct
+		pc.Permissions = new(Permissions)
+
 		pc.Prefix = key
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
-
 		// Strip a leading '/' as paths in Vault start after the / in the API path
 		if len(pc.Prefix) > 0 && pc.Prefix[0] == '/' {
 			pc.Prefix = pc.Prefix[1:]
@@ -156,16 +169,16 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		}
 
 		// Initialize the map
-		pc.CapabilitiesBitmap = 0
+		pc.Permissions.CapabilitiesBitmap = 0
 		for _, cap := range pc.Capabilities {
 			switch cap {
 			// If it's deny, don't include any other capability
 			case DenyCapability:
 				pc.Capabilities = []string{DenyCapability}
-				pc.CapabilitiesBitmap = DenyCapabilityInt
+				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
 			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
-				pc.CapabilitiesBitmap |= cap2Int[cap]
+				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability '%s'", key, cap)
 			}
