@@ -233,10 +233,10 @@ func TestACL_PolicyMerge(t *testing.T) {
 	tcases := []tcase{
 		{"foo/bar", nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}},
 		{"hello/universe", map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil},
-		{"allow/all", map[string][]interface{}{"*": []interface{}{}}, nil},
-		{"allow/all1", map[string][]interface{}{"*": []interface{}{}}, nil},
-		{"deny/all", nil, map[string][]interface{}{"*": []interface{}{}}},
-		{"deny/all1", nil, map[string][]interface{}{"*": []interface{}{}}},
+		{"allow/all", map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
+		{"allow/all1", map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
+		{"deny/all", nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
+		{"deny/all1", nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
 		{"value/merge", map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
 	}
 
@@ -284,7 +284,7 @@ func TestACL_AllowOperation(t *testing.T) {
 		{"broken/phone", []string{"steve"}, false},
 		{"hello/world", []string{"one"}, false},
 		{"tree/fort", []string{"one"}, true},
-		{"tree/fort", []string{"beer"}, false},
+		{"tree/fort", []string{"foo"}, false},
 		{"fruit/apple", []string{"pear"}, false},
 		{"fruit/apple", []string{"one"}, false},
 		{"cold/weather", []string{"four"}, true},
@@ -466,6 +466,7 @@ path "allow/all" {
 	policy = "write"
 	allowed_parameters = {
 		"test" = []
+		"test1" = ["foo"]
 	}
 }
 path "allow/all" {
@@ -484,12 +485,13 @@ path "allow/all1" {
 	policy = "write"
 	allowed_parameters = {
 		"test" = []
+		"test1" = ["foo"]
 	}
 }
 path "deny/all" {
 	policy = "write"
 	denied_parameters = {
-		"frank" = []
+		"test" = []
 	}
 }
 path "deny/all" {
@@ -579,7 +581,7 @@ path "tree/fort" {
 		"*" = []
 	}
 	denied_parameters = {
-		"beer" = []
+		"foo" = []
 	}
 }
 path "fruit/apple" {

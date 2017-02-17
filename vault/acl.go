@@ -81,45 +81,15 @@ func NewACL(policies []*Policy) (*ACL, error) {
 					pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(existingPerms.AllowedParameters))
 				}
 
-				// If this policy allows everything skip to checking denied
-				if _, ok := pc.Permissions.AllowedParameters["*"]; ok {
-					goto CHECK_DENIED
-				}
-
-				// If the exising policy allows everything set this policy to
-				// allow everything and skip to check denied
-				if _, ok = existingPerms.AllowedParameters["*"]; ok {
-					pc.Permissions.AllowedParameters = map[string][]interface{}{
-						"*": []interface{}{},
-					}
-					goto CHECK_DENIED
-				}
-
 				// Merge the two maps, appending values on key conflict.
 				for key, value := range existingPerms.AllowedParameters {
 					pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
 				}
 			}
 
-		CHECK_DENIED:
-
 			if len(existingPerms.DeniedParameters) > 0 {
 				if pc.Permissions.DeniedParameters == nil {
 					pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(existingPerms.DeniedParameters))
-				}
-
-				// If this policy denies everything go to insert
-				if _, ok := pc.Permissions.DeniedParameters["*"]; ok {
-					goto INSERT
-				}
-
-				// If exising policy denies everything set this policy to
-				// deny everything and go to insert
-				if _, ok = existingPerms.DeniedParameters["*"]; ok {
-					pc.Permissions.DeniedParameters = map[string][]interface{}{
-						"*": []interface{}{},
-					}
-					goto INSERT
 				}
 
 				// Merge the two maps, appending values on key conflict.
