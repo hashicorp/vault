@@ -1,9 +1,15 @@
 package physical
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/golang-lru"
+	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -17,8 +23,11 @@ const (
 // Vault are for policy objects so there is a large read reduction
 // by using a simple write-through cache.
 type Cache struct {
-	backend Backend
-	lru     *lru.TwoQueueCache
+	backend       Backend
+	transactional Transactional
+	lru           *lru.TwoQueueCache
+	locks         map[string]*sync.RWMutex
+	logger        log.Logger
 }
 
 // NewCache returns a physical cache of the given size.
@@ -34,16 +43,58 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 	c := &Cache{
 		backend: b,
 		lru:     cache,
+		locks:   make(map[string]*sync.RWMutex, 256),
+		logger:  logger,
 	}
+	if err := locksutil.CreateLocks(c.locks, 256); err != nil {
+		logger.Error("physical/cache: error creating locks", "error", err)
+		return nil
+	}
+
+	if txnl, ok := c.backend.(Transactional); ok {
+		c.transactional = txnl
+	}
+
 	return c
+}
+
+func (c *Cache) lockHashForKey(key string) string {
+	hf := sha1.New()
+	hf.Write([]byte(key))
+	return strings.ToLower(hex.EncodeToString(hf.Sum(nil))[:2])
+}
+
+func (c *Cache) lockForKey(key string) *sync.RWMutex {
+	return c.locks[c.lockHashForKey(key)]
 }
 
 // Purge is used to clear the cache
 func (c *Cache) Purge() {
+	// Lock the world
+	lockHashes := make([]string, 0, len(c.locks))
+	for hash := range c.locks {
+		lockHashes = append(lockHashes, hash)
+	}
+
+	// Sort and deduplicate. This ensures we don't try to grab the same lock
+	// twice, and enforcing a sort means we'll not have multiple goroutines
+	// deadlock by acquiring in different orders.
+	lockHashes = strutil.RemoveDuplicates(lockHashes)
+
+	for _, lockHash := range lockHashes {
+		lock := c.locks[lockHash]
+		lock.Lock()
+		defer lock.Unlock()
+	}
+
 	c.lru.Purge()
 }
 
 func (c *Cache) Put(entry *Entry) error {
+	lock := c.lockForKey(entry.Key)
+	lock.Lock()
+	defer lock.Unlock()
+
 	err := c.backend.Put(entry)
 	if err == nil {
 		c.lru.Add(entry.Key, entry)
@@ -52,6 +103,10 @@ func (c *Cache) Put(entry *Entry) error {
 }
 
 func (c *Cache) Get(key string) (*Entry, error) {
+	lock := c.lockForKey(key)
+	lock.RLock()
+	defer lock.RUnlock()
+
 	// Check the LRU first
 	if raw, ok := c.lru.Get(key); ok {
 		if raw == nil {
@@ -79,6 +134,10 @@ func (c *Cache) Get(key string) (*Entry, error) {
 }
 
 func (c *Cache) Delete(key string) error {
+	lock := c.lockForKey(key)
+	lock.Lock()
+	defer lock.Unlock()
+
 	err := c.backend.Delete(key)
 	if err == nil {
 		c.lru.Remove(key)
@@ -87,6 +146,45 @@ func (c *Cache) Delete(key string) error {
 }
 
 func (c *Cache) List(prefix string) ([]string, error) {
-	// Always pass-through as this would be difficult to cache.
+	// Always pass-through as this would be difficult to cache. For the same
+	// reason we don't lock as we can't reasonably know which locks to readlock
+	// ahead of time.
 	return c.backend.List(prefix)
+}
+
+func (c *Cache) Transaction(txns []TxnEntry) error {
+	if c.transactional == nil {
+		return fmt.Errorf("physical/cache: underlying backend does not support transactions")
+	}
+
+	var lockHashes []string
+	for _, txn := range txns {
+		lockHashes = append(lockHashes, c.lockHashForKey(txn.Entry.Key))
+	}
+
+	// Sort and deduplicate. This ensures we don't try to grab the same lock
+	// twice, and enforcing a sort means we'll not have multiple goroutines
+	// deadlock by acquiring in different orders.
+	lockHashes = strutil.RemoveDuplicates(lockHashes)
+
+	for _, lockHash := range lockHashes {
+		lock := c.locks[lockHash]
+		lock.Lock()
+		defer lock.Unlock()
+	}
+
+	if err := c.transactional.Transaction(txns); err != nil {
+		return err
+	}
+
+	for _, txn := range txns {
+		switch txn.Operation {
+		case PutOperation:
+			c.lru.Add(txn.Entry.Key, txn.Entry)
+		case DeleteOperation:
+			c.lru.Remove(txn.Entry.Key)
+		}
+	}
+
+	return nil
 }
