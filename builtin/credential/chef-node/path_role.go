@@ -111,5 +111,5 @@ Manage Vault policies assigned to a Chef role
 `
 const pathRoleHelpDesc = `
 This endpoint allows you to create, read, update, and delete configuration for policies
-associated with Chef environments
+associated with Chef roles
 `
