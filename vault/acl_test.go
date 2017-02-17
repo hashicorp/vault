@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -371,7 +370,6 @@ func TestACL_ValuePermissions(t *testing.T) {
 		}
 		for _, op := range toperations {
 			request.Operation = op
-			fmt.Println(tc)
 			allowed, _ := acl.AllowOperation(&request)
 			if allowed != tc.allowed {
 				t.Fatalf("bad: case %#v: %v", tc, allowed)
