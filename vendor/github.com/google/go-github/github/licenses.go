@@ -96,5 +96,5 @@ func (s *LicensesService) Get(licenseName string) (*License, *Response, error) {
 		return nil, resp, err
 	}
 
-	return license, resp, err
+	return license, resp, nil
 }

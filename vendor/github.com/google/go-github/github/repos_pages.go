@@ -52,7 +52,7 @@ func (s *RepositoriesService) GetPagesInfo(owner, repo string) (*Pages, *Respons
 		return nil, resp, err
 	}
 
-	return site, resp, err
+	return site, resp, nil
 }
 
 // ListPagesBuilds lists the builds for a GitHub Pages site.
@@ -71,7 +71,7 @@ func (s *RepositoriesService) ListPagesBuilds(owner, repo string) ([]*PagesBuild
 		return nil, resp, err
 	}
 
-	return pages, resp, err
+	return pages, resp, nil
 }
 
 // GetLatestPagesBuild fetches the latest build information for a GitHub pages site.
@@ -90,7 +90,7 @@ func (s *RepositoriesService) GetLatestPagesBuild(owner, repo string) (*PagesBui
 		return nil, resp, err
 	}
 
-	return build, resp, err
+	return build, resp, nil
 }
 
 // GetPageBuild fetches the specific build information for a GitHub pages site.
@@ -109,7 +109,7 @@ func (s *RepositoriesService) GetPageBuild(owner, repo string, id int) (*PagesBu
 		return nil, resp, err
 	}
 
-	return build, resp, err
+	return build, resp, nil
 }
 
 // RequestPageBuild requests a build of a GitHub Pages site without needing to push new commit.
@@ -131,5 +131,5 @@ func (s *RepositoriesService) RequestPageBuild(owner, repo string) (*PagesBuild,
 		return nil, resp, err
 	}
 
-	return build, resp, err
+	return build, resp, nil
 }

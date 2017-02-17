@@ -20,7 +20,7 @@ type Tag struct {
 	Verification *SignatureVerification `json:"verification,omitempty"`
 }
 
-// createTagRequest represents the body of a CreateTag request.  This is mostly
+// createTagRequest represents the body of a CreateTag request. This is mostly
 // identical to Tag with the exception that the object SHA and Type are
 // top-level fields, rather than being nested inside a JSON object.
 type createTagRequest struct {

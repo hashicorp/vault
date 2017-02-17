@@ -151,7 +151,7 @@ type RepositoryListOptions struct {
 	ListOptions
 }
 
-// List the repositories for a user.  Passing the empty string will list
+// List the repositories for a user. Passing the empty string will list
 // repositories for the authenticated user.
 //
 // GitHub API docs: http://developer.github.com/v3/repos/#list-user-repositories
@@ -187,8 +187,8 @@ func (s *RepositoriesService) List(user string, opt *RepositoryListOptions) ([]*
 // RepositoryListByOrgOptions specifies the optional parameters to the
 // RepositoriesService.ListByOrg method.
 type RepositoryListByOrgOptions struct {
-	// Type of repositories to list.  Possible values are: all, public, private,
-	// forks, sources, member.  Default is "all".
+	// Type of repositories to list. Possible values are: all, public, private,
+	// forks, sources, member. Default is "all".
 	Type string `url:"type,omitempty"`
 
 	ListOptions
@@ -253,8 +253,8 @@ func (s *RepositoriesService) ListAll(opt *RepositoryListAllOptions) ([]*Reposit
 	return repos, resp, nil
 }
 
-// Create a new repository.  If an organization is specified, the new
-// repository will be created under that org.  If the empty string is
+// Create a new repository. If an organization is specified, the new
+// repository will be created under that org. If the empty string is
 // specified, it will be created for the authenticated user.
 //
 // GitHub API docs: http://developer.github.com/v3/repos/#create

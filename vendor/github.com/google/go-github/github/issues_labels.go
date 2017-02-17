@@ -113,7 +113,7 @@ func (s *IssuesService) DeleteLabel(owner string, repo string, name string) (*Re
 
 // ListLabelsByIssue lists all labels for an issue.
 //
-// GitHub API docs: http://developer.github.com/v3/issues/labels/#list-all-labels-for-this-repository
+// GitHub API docs: https://developer.github.com/v3/issues/labels/#list-labels-on-an-issue
 func (s *IssuesService) ListLabelsByIssue(owner string, repo string, number int, opt *ListOptions) ([]*Label, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/issues/%d/labels", owner, repo, number)
 	u, err := addOptions(u, opt)
@@ -137,7 +137,7 @@ func (s *IssuesService) ListLabelsByIssue(owner string, repo string, number int,
 
 // AddLabelsToIssue adds labels to an issue.
 //
-// GitHub API docs: http://developer.github.com/v3/issues/labels/#list-all-labels-for-this-repository
+// GitHub API docs: https://developer.github.com/v3/issues/labels/#add-labels-to-an-issue
 func (s *IssuesService) AddLabelsToIssue(owner string, repo string, number int, labels []string) ([]*Label, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/issues/%d/labels", owner, repo, number)
 	req, err := s.client.NewRequest("POST", u, labels)

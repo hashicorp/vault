@@ -7,7 +7,7 @@ package github
 
 import "fmt"
 
-// ListFollowers lists the followers for a user.  Passing the empty string will
+// ListFollowers lists the followers for a user. Passing the empty string will
 // fetch followers for the authenticated user.
 //
 // GitHub API docs: http://developer.github.com/v3/users/followers/#list-followers-of-a-user
@@ -37,7 +37,7 @@ func (s *UsersService) ListFollowers(user string, opt *ListOptions) ([]*User, *R
 	return users, resp, nil
 }
 
-// ListFollowing lists the people that a user is following.  Passing the empty
+// ListFollowing lists the people that a user is following. Passing the empty
 // string will list people the authenticated user is following.
 //
 // GitHub API docs: http://developer.github.com/v3/users/followers/#list-users-followed-by-another-user
@@ -67,7 +67,7 @@ func (s *UsersService) ListFollowing(user string, opt *ListOptions) ([]*User, *R
 	return users, resp, nil
 }
 
-// IsFollowing checks if "user" is following "target".  Passing the empty
+// IsFollowing checks if "user" is following "target". Passing the empty
 // string for "user" will check if the authenticated user is following "target".
 //
 // GitHub API docs: http://developer.github.com/v3/users/followers/#check-if-you-are-following-a-user

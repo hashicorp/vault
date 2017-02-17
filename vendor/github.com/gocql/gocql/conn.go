@@ -93,13 +93,14 @@ type SslOptions struct {
 }
 
 type ConnConfig struct {
-	ProtoVersion  int
-	CQLVersion    string
-	Timeout       time.Duration
-	Compressor    Compressor
-	Authenticator Authenticator
-	Keepalive     time.Duration
-	tlsConfig     *tls.Config
+	ProtoVersion   int
+	CQLVersion     string
+	Timeout        time.Duration
+	ConnectTimeout time.Duration
+	Compressor     Compressor
+	Authenticator  Authenticator
+	Keepalive      time.Duration
+	tlsConfig      *tls.Config
 }
 
 type ConnErrorHandler interface {
@@ -167,7 +168,7 @@ func Connect(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler, ses
 	)
 
 	dialer := &net.Dialer{
-		Timeout: cfg.Timeout,
+		Timeout: cfg.ConnectTimeout,
 	}
 
 	// TODO(zariel): handle ipv6 zone
@@ -212,8 +213,8 @@ func Connect(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler, ses
 		ctx    context.Context
 		cancel func()
 	)
-	if c.timeout > 0 {
-		ctx, cancel = context.WithTimeout(context.Background(), c.timeout)
+	if cfg.ConnectTimeout > 0 {
+		ctx, cancel = context.WithTimeout(context.Background(), cfg.ConnectTimeout)
 	} else {
 		ctx, cancel = context.WithCancel(context.Background())
 	}

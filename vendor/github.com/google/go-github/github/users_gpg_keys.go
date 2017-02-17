@@ -58,7 +58,7 @@ func (s *UsersService) ListGPGKeys() ([]*GPGKey, *Response, error) {
 		return nil, resp, err
 	}
 
-	return keys, resp, err
+	return keys, resp, nil
 }
 
 // GetGPGKey gets extended details for a single GPG key. It requires authentication
@@ -81,7 +81,7 @@ func (s *UsersService) GetGPGKey(id int) (*GPGKey, *Response, error) {
 		return nil, resp, err
 	}
 
-	return key, resp, err
+	return key, resp, nil
 }
 
 // CreateGPGKey creates a GPG key. It requires authenticatation via Basic Auth
@@ -106,7 +106,7 @@ func (s *UsersService) CreateGPGKey(armoredPublicKey string) (*GPGKey, *Response
 		return nil, resp, err
 	}
 
-	return key, resp, err
+	return key, resp, nil
 }
 
 // DeleteGPGKey deletes a GPG key. It requires authentication via Basic Auth or

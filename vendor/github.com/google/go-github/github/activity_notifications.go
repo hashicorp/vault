@@ -67,7 +67,7 @@ func (s *ActivityService) ListNotifications(opt *NotificationListOptions) ([]*No
 		return nil, resp, err
 	}
 
-	return notifications, resp, err
+	return notifications, resp, nil
 }
 
 // ListRepositoryNotifications lists all notifications in a given repository
@@ -92,7 +92,7 @@ func (s *ActivityService) ListRepositoryNotifications(owner, repo string, opt *N
 		return nil, resp, err
 	}
 
-	return notifications, resp, err
+	return notifications, resp, nil
 }
 
 type markReadOptions struct {
@@ -148,7 +148,7 @@ func (s *ActivityService) GetThread(id string) (*Notification, *Response, error)
 		return nil, resp, err
 	}
 
-	return notification, resp, err
+	return notification, resp, nil
 }
 
 // MarkThreadRead marks the specified thread as read.
@@ -183,7 +183,7 @@ func (s *ActivityService) GetThreadSubscription(id string) (*Subscription, *Resp
 		return nil, resp, err
 	}
 
-	return sub, resp, err
+	return sub, resp, nil
 }
 
 // SetThreadSubscription sets the subscription for the specified thread for the
@@ -204,7 +204,7 @@ func (s *ActivityService) SetThreadSubscription(id string, subscription *Subscri
 		return nil, resp, err
 	}
 
-	return sub, resp, err
+	return sub, resp, nil
 }
 
 // DeleteThreadSubscription deletes the subscription for the specified thread

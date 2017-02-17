@@ -63,7 +63,7 @@ func (s *GistsService) GetComment(gistID string, commentID int) (*GistComment, *
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // CreateComment creates a comment for a gist.
@@ -82,7 +82,7 @@ func (s *GistsService) CreateComment(gistID string, comment *GistComment) (*Gist
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // EditComment edits an existing gist comment.
@@ -101,7 +101,7 @@ func (s *GistsService) EditComment(gistID string, commentID int, comment *GistCo
 		return nil, resp, err
 	}
 
-	return c, resp, err
+	return c, resp, nil
 }
 
 // DeleteComment deletes a gist comment.

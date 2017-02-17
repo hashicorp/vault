@@ -37,10 +37,10 @@ func (p PullRequestComment) String() string {
 // PullRequestListCommentsOptions specifies the optional parameters to the
 // PullRequestsService.ListComments method.
 type PullRequestListCommentsOptions struct {
-	// Sort specifies how to sort comments.  Possible values are: created, updated.
+	// Sort specifies how to sort comments. Possible values are: created, updated.
 	Sort string `url:"sort,omitempty"`
 
-	// Direction in which to sort comments.  Possible values are: asc, desc.
+	// Direction in which to sort comments. Possible values are: asc, desc.
 	Direction string `url:"direction,omitempty"`
 
 	// Since filters comments by time.
@@ -49,7 +49,7 @@ type PullRequestListCommentsOptions struct {
 	ListOptions
 }
 
-// ListComments lists all comments on the specified pull request.  Specifying a
+// ListComments lists all comments on the specified pull request. Specifying a
 // pull request number of 0 will return all comments on all pull requests for
 // the repository.
 //
