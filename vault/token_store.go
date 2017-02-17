@@ -109,19 +109,10 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		t.policyLookupFunc = c.policyStore.GetPolicy
 	}
 
-	// Setup the salt
-	salt, err := salt.NewSalt(view, &salt.Config{
-		HashFunc: salt.SHA1Hash,
-	})
-	if err != nil {
-		return nil, err
-	}
-	t.salt = salt
-
 	t.tokenLocks = map[string]*sync.RWMutex{}
 
 	// Create 256 locks
-	if err = locksutil.CreateLocks(t.tokenLocks, 256); err != nil {
+	if err := locksutil.CreateLocks(t.tokenLocks, 256); err != nil {
 		return nil, fmt.Errorf("failed to create locks: %v", err)
 	}
 
@@ -135,6 +126,15 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			Root: []string{
 				"revoke-orphan/*",
 				"accessors*",
+			},
+
+			// Most token store items are local since tokens are local, but a
+			// notable exception is roles
+			LocalStorage: []string{
+				lookupPrefix,
+				accessorPrefix,
+				parentPrefix,
+				"salt",
 			},
 		},
 
@@ -467,11 +467,26 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				HelpDescription: strings.TrimSpace(tokenTidyDesc),
 			},
 		},
+
+		Init: t.Initialize,
 	}
 
 	t.Backend.Setup(config)
 
 	return t, nil
+}
+
+func (ts *TokenStore) Initialize() error {
+	// Setup the salt
+	salt, err := salt.NewSalt(ts.view, &salt.Config{
+		HashFunc: salt.SHA1Hash,
+	})
+	if err != nil {
+		return err
+	}
+	ts.salt = salt
+
+	return nil
 }
 
 // TokenEntry is used to represent a given token
@@ -1085,7 +1100,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 		return aEntry, fmt.Errorf("failed to read index using accessor: %s", err)
 	}
 	if entry == nil {
-		return aEntry, &StatusBadRequest{Err: "invalid accessor"}
+		return aEntry, &logical.StatusBadRequest{Err: "invalid accessor"}
 	}
 
 	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
@@ -1225,7 +1240,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 	if accessor == "" {
 		accessor = data.Get("urlaccessor").(string)
 		if accessor == "" {
-			return nil, &StatusBadRequest{Err: "missing accessor"}
+			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 		}
 		urlaccessor = true
 	}
@@ -1279,7 +1294,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 	if accessor == "" {
 		accessor = data.Get("urlaccessor").(string)
 		if accessor == "" {
-			return nil, &StatusBadRequest{Err: "missing accessor"}
+			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 		}
 		urlaccessor = true
 	}

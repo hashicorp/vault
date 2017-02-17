@@ -133,34 +133,10 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, fmt.Errorf("error initializing seal: %v", err)
 	}
 
-	err = c.seal.SetBarrierConfig(barrierConfig)
-	if err != nil {
-		c.logger.Error("core: failed to save barrier configuration", "error", err)
-		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
-	}
-
 	barrierKey, barrierUnsealKeys, err := c.generateShares(barrierConfig)
 	if err != nil {
 		c.logger.Error("core: error generating shares", "error", err)
 		return nil, err
-	}
-
-	// If we are storing shares, pop them out of the returned results and push
-	// them through the seal
-	if barrierConfig.StoredShares > 0 {
-		var keysToStore [][]byte
-		for i := 0; i < barrierConfig.StoredShares; i++ {
-			keysToStore = append(keysToStore, barrierUnsealKeys[0])
-			barrierUnsealKeys = barrierUnsealKeys[1:]
-		}
-		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
-			c.logger.Error("core: failed to store keys", "error", err)
-			return nil, fmt.Errorf("failed to store keys: %v", err)
-		}
-	}
-
-	results := &InitResult{
-		SecretShares: barrierUnsealKeys,
 	}
 
 	// Initialize the barrier
@@ -180,10 +156,37 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 	// Ensure the barrier is re-sealed
 	defer func() {
+		// Defers are LIFO so we need to run this here too to ensure the stop
+		// happens before sealing. preSeal also stops, so we just make the
+		// stopping safe against multiple calls.
 		if err := c.barrier.Seal(); err != nil {
 			c.logger.Error("core: failed to seal barrier", "error", err)
 		}
 	}()
+
+	err = c.seal.SetBarrierConfig(barrierConfig)
+	if err != nil {
+		c.logger.Error("core: failed to save barrier configuration", "error", err)
+		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
+	}
+
+	// If we are storing shares, pop them out of the returned results and push
+	// them through the seal
+	if barrierConfig.StoredShares > 0 {
+		var keysToStore [][]byte
+		for i := 0; i < barrierConfig.StoredShares; i++ {
+			keysToStore = append(keysToStore, barrierUnsealKeys[0])
+			barrierUnsealKeys = barrierUnsealKeys[1:]
+		}
+		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
+			c.logger.Error("core: failed to store keys", "error", err)
+			return nil, fmt.Errorf("failed to store keys: %v", err)
+		}
+	}
+
+	results := &InitResult{
+		SecretShares: barrierUnsealKeys,
+	}
 
 	// Perform initial setup
 	if err := c.setupCluster(); err != nil {

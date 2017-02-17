@@ -433,3 +433,30 @@ func TestInitialize_KeyLength(t *testing.T) {
 		t.Fatalf("key length protection failed")
 	}
 }
+
+func TestEncrypt_BarrierEncryptor(t *testing.T) {
+	inm := physical.NewInmem(logger)
+	b, err := NewAESGCMBarrier(inm)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Initialize and unseal
+	key, _ := b.GenerateKey()
+	b.Initialize(key)
+	b.Unseal(key)
+
+	cipher, err := b.Encrypt("foo", []byte("quick brown fox"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	plain, err := b.Decrypt("foo", cipher)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if string(plain) != "quick brown fox" {
+		t.Fatalf("bad: %s", plain)
+	}
+}
