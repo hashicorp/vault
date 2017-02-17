@@ -23,21 +23,23 @@ var (
 		"core",
 	}
 
-	replicationPaths = []*framework.Path{
-		&framework.Path{
-			Pattern: "replication/status",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-					var state consts.ReplicationState
-					resp := &logical.Response{
-						Data: map[string]interface{}{
-							"mode": state.String(),
-						},
-					}
-					return resp, nil
+	replicationPaths = func(b *SystemBackend) []*framework.Path {
+		return []*framework.Path{
+			&framework.Path{
+				Pattern: "replication/status",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+						var state consts.ReplicationState
+						resp := &logical.Response{
+							Data: map[string]interface{}{
+								"mode": state.String(),
+							},
+						}
+						return resp, nil
+					},
 				},
 			},
-		},
+		}
 	}
 )
 
@@ -692,7 +694,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 		},
 	}
 
-	b.Backend.Paths = append(b.Backend.Paths, replicationPaths...)
+	b.Backend.Paths = append(b.Backend.Paths, replicationPaths(b)...)
 
 	b.Backend.Invalidate = b.invalidate
 
