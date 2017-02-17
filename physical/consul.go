@@ -293,7 +293,7 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 
 // Used to run multiple entries via a transaction
 func (c *ConsulBackend) Transaction(txns []TxnEntry) error {
-	if txns == nil {
+	if len(txns) == 0 {
 		return nil
 	}
 
