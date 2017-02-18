@@ -159,6 +159,12 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		// Defers are LIFO so we need to run this here too to ensure the stop
 		// happens before sealing. preSeal also stops, so we just make the
 		// stopping safe against multiple calls.
+
+		// If we are wrapping the shares do not reseal vault.
+		if barrierConfig.WrapShares {
+			return
+		}
+
 		if err := c.barrier.Seal(); err != nil {
 			c.logger.Error("core: failed to seal barrier", "error", err)
 		}
@@ -184,10 +190,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		}
 	}
 
-	results := &InitResult{
-		SecretShares: barrierUnsealKeys,
-	}
-
 	// Perform initial setup
 	if err := c.setupCluster(); err != nil {
 		c.logger.Error("core: cluster setup failed during init", "error", err)
@@ -196,6 +198,34 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	if err := c.postUnseal(); err != nil {
 		c.logger.Error("core: post-unseal setup failed during init", "error", err)
 		return nil, err
+	}
+
+	if barrierConfig.WrapShares {
+		// Fully unseal vault
+		sealed, err := c.unsealInternal(barrierKey)
+		if err != nil {
+			return nil, err
+		}
+
+		if !sealed {
+			return nil, fmt.Errorf("failed to unseal")
+		}
+
+		// wrap tokens
+		wrappedKeys := make([][]byte, len(barrierUnsealKeys))
+		for i, _ := range barrierUnsealKeys {
+			token, err := c.wrapKeyInCubbyhole(barrierUnsealKeys[i])
+			if err != nil {
+				return nil, fmt.Errorf("failed to wrap share: %s", err)
+			}
+			fmt.Println(token)
+			wrappedKeys[i] = []byte(token)
+		}
+		barrierUnsealKeys = wrappedKeys
+	}
+
+	results := &InitResult{
+		SecretShares: barrierUnsealKeys,
 	}
 
 	// Save the configuration regardless, but only generate a key if it's not
@@ -222,6 +252,13 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 			results.RecoveryShares = recoveryUnsealKeys
 		}
+	}
+
+	// If the shares are getting wrapped, don't create a root token or run
+	// preseal.
+	if barrierConfig.WrapShares {
+		results.RootToken = ""
+		return results, nil
 	}
 
 	// Generate a new root token

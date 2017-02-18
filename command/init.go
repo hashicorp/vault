@@ -1,6 +1,7 @@
 package command
 
 import (
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
@@ -22,7 +23,7 @@ type InitCommand struct {
 func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
 	var pgpKeys, recoveryPgpKeys, rootTokenPgpKey pgpkeys.PubKeyFilesFlag
-	var auto, check bool
+	var auto, check, wrapShares bool
 	var consulServiceName string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -36,6 +37,7 @@ func (c *InitCommand) Run(args []string) int {
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
 	flags.BoolVar(&check, "check", false, "")
 	flags.BoolVar(&auto, "auto", false, "")
+	flags.BoolVar(&wrapShares, "wrap-shares", false, "")
 	flags.StringVar(&consulServiceName, "consul-service", physical.DefaultServiceName, "")
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -49,6 +51,7 @@ func (c *InitCommand) Run(args []string) int {
 		RecoveryShares:    recoveryShares,
 		RecoveryThreshold: recoveryThreshold,
 		RecoveryPGPKeys:   recoveryPgpKeys,
+		WrapShares:        wrapShares,
 	}
 
 	switch len(rootTokenPgpKey) {
@@ -225,21 +228,43 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 	}
 
 	for i, key := range resp.Keys {
-		if resp.KeysB64 != nil && len(resp.KeysB64) == len(resp.Keys) {
+		if initRequest.WrapShares {
+			decoded, err := hex.DecodeString(key)
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf(
+					"Error decoding token: %s", err))
+				return 1
+			}
+
+			c.Ui.Output(fmt.Sprintf("Wraped Unseal Key Token %d: %s", i+1, decoded))
+		} else if resp.KeysB64 != nil && len(resp.KeysB64) == len(resp.Keys) {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, resp.KeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, key))
 		}
 	}
 	for i, key := range resp.RecoveryKeys {
-		if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) {
+		if initRequest.WrapShares {
+			decoded, err := hex.DecodeString(key)
+			if err != nil {
+				c.Ui.Error(fmt.Sprintf(
+					"Error decoding token: %s", err))
+				return 1
+			}
+
+			c.Ui.Output(fmt.Sprintf("Wraped Recover Key Token %d: %s", i+1, decoded))
+		} else if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, resp.RecoveryKeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, key))
 		}
 	}
 
-	c.Ui.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))
+	if initRequest.WrapShares {
+		c.Ui.Output("No root token is initialized when shares are wrapped.")
+	} else {
+		c.Ui.Output(fmt.Sprintf("Initial Root Token: %s", resp.RootToken))
+	}
 
 	if initRequest.StoredShares < 1 {
 		c.Ui.Output(fmt.Sprintf(

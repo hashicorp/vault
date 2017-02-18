@@ -224,6 +224,10 @@ type SealConfig struct {
 	// is the T value of Shamir.
 	SecretThreshold int `json:"secret_threshold"`
 
+	// WrapShares indicates whether or not to cubbyhole wrap each share. Both
+	// WrapShares and PHPKeys should not be set.
+	WrapShares bool `json:"wrap_shares"`
+
 	// PGPKeys is the array of public PGP keys used, if requested, to encrypt
 	// the output unseal tokens. If provided, it sets the value of
 	// SecretShares. Ordering is important.
@@ -281,6 +285,10 @@ func (s *SealConfig) Validate() error {
 			}
 		}
 	}
+	if len(s.PGPKeys) > 0 && s.WrapShares {
+		return fmt.Errorf("cannot use both wrap_shares and pgp_keys")
+	}
+
 	return nil
 }
 
@@ -292,6 +300,7 @@ func (s *SealConfig) Clone() *SealConfig {
 		Nonce:           s.Nonce,
 		Backup:          s.Backup,
 		StoredShares:    s.StoredShares,
+		WrapShares:      s.WrapShares,
 	}
 	if len(s.PGPKeys) > 0 {
 		ret.PGPKeys = make([]string, len(s.PGPKeys))

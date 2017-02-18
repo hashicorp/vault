@@ -49,12 +49,14 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		SecretThreshold: req.SecretThreshold,
 		StoredShares:    req.StoredShares,
 		PGPKeys:         req.PGPKeys,
+		WrapShares:      req.WrapShares,
 	}
 
 	recoveryConfig := &vault.SealConfig{
 		SecretShares:    req.RecoveryShares,
 		SecretThreshold: req.RecoveryThreshold,
 		PGPKeys:         req.RecoveryPGPKeys,
+		WrapShares:      req.WrapShares,
 	}
 
 	if core.SealAccess().StoredKeysSupported() {
@@ -147,6 +149,7 @@ type InitRequest struct {
 	RecoveryThreshold int      `json:"recovery_threshold"`
 	RecoveryPGPKeys   []string `json:"recovery_pgp_keys"`
 	RootTokenPGPKey   string   `json:"root_token_pgp_key"`
+	WrapShares        bool     `json:"wrap_shares"`
 }
 
 type InitResponse struct {
