@@ -70,7 +70,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
