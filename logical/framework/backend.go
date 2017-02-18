@@ -544,6 +544,8 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 				return s.Type.Zero()
 			case int:
 				result = inp
+			case int64:
+				result = int(inp)
 			case float32:
 				result = int(inp)
 			case float64:
