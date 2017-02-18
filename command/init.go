@@ -236,7 +236,7 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 				return 1
 			}
 
-			c.Ui.Output(fmt.Sprintf("Wraped Unseal Key Token %d: %s", i+1, decoded))
+			c.Ui.Output(fmt.Sprintf("Wrapped Unseal Key Token %d: %s", i+1, decoded))
 		} else if resp.KeysB64 != nil && len(resp.KeysB64) == len(resp.Keys) {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, resp.KeysB64[i]))
 		} else {
@@ -252,7 +252,7 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 				return 1
 			}
 
-			c.Ui.Output(fmt.Sprintf("Wraped Recover Key Token %d: %s", i+1, decoded))
+			c.Ui.Output(fmt.Sprintf("Wrapped Recover Key Token %d: %s", i+1, decoded))
 		} else if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, resp.RecoveryKeysB64[i]))
 		} else {
