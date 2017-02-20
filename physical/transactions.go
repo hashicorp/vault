@@ -28,7 +28,7 @@ type PseudoTransactional interface {
 
 // Implements the transaction interface
 func genericTransactionHandler(t PseudoTransactional, txns []TxnEntry) (retErr error) {
-	var rollbackStack []TxnEntry
+	rollbackStack := make([]TxnEntry, 0, len(txns))
 	var dirty bool
 
 	// We walk the transactions in order; each successful operation goes into a
