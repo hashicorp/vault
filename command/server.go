@@ -61,7 +61,7 @@ type ServerCommand struct {
 }
 
 func (c *ServerCommand) Run(args []string) int {
-	var dev, verifyOnly, devHA bool
+	var dev, verifyOnly, devHA, devTransactional bool
 	var configPath []string
 	var logLevel, devRootTokenID, devListenAddress string
 	flags := c.Meta.FlagSet("server", meta.FlagSetDefault)
@@ -70,7 +70,8 @@ func (c *ServerCommand) Run(args []string) int {
 	flags.StringVar(&devListenAddress, "dev-listen-address", "", "")
 	flags.StringVar(&logLevel, "log-level", "info", "")
 	flags.BoolVar(&verifyOnly, "verify-only", false, "")
-	flags.BoolVar(&devHA, "dev-ha", false, "")
+	flags.BoolVar(&devHA, "ha", false, "")
+	flags.BoolVar(&devTransactional, "transactional", false, "")
 	flags.Usage = func() { c.Ui.Output(c.Help()) }
 	flags.Var((*sliceflag.StringFlag)(&configPath), "config", "config")
 	if err := flags.Parse(args); err != nil {
@@ -122,7 +123,7 @@ func (c *ServerCommand) Run(args []string) int {
 		devListenAddress = os.Getenv("VAULT_DEV_LISTEN_ADDRESS")
 	}
 
-	if devHA {
+	if devHA || devTransactional {
 		dev = true
 	}
 
@@ -143,7 +144,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Load the configuration
 	var config *server.Config
 	if dev {
-		config = server.DevConfig(devHA)
+		config = server.DevConfig(devHA, devTransactional)
 		if devListenAddress != "" {
 			config.Listeners[0].Config["address"] = devListenAddress
 		}
@@ -235,6 +236,9 @@ func (c *ServerCommand) Run(args []string) int {
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
 	}
+	if dev {
+		coreConfig.DevToken = devRootTokenID
+	}
 
 	var disableClustering bool
 
@@ -312,15 +316,19 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 		host, port, err := net.SplitHostPort(u.Host)
-		nPort, nPortErr := strconv.Atoi(port)
 		if err != nil {
-			// assume it's due to there not being a port specified, in which case
-			// use 443
-			host = u.Host
-			nPort = 443
+			// This sucks, as it's a const in the function but not exported in the package
+			if strings.Contains(err.Error(), "missing port in address") {
+				host = u.Host
+				port = "443"
+			} else {
+				c.Ui.Output(fmt.Sprintf("Error parsing redirect address: %v", err))
+				return 1
+			}
 		}
-		if nPortErr != nil {
-			c.Ui.Output(fmt.Sprintf("Cannot parse %s as a numeric port: %v", port, nPortErr))
+		nPort, err := strconv.Atoi(port)
+		if err != nil {
+			c.Ui.Output(fmt.Sprintf("Error parsing redirect address; failed to convert %q to a numeric: %v", port, err))
 			return 1
 		}
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))

@@ -46,6 +46,7 @@ type ClusterConfig struct {
 	// versions the protocol selected is not defined (ie, it can be any of the supported in the cluster)
 	ProtoVersion      int
 	Timeout           time.Duration     // connection timeout (default: 600ms)
+	ConnectTimeout    time.Duration     // initial connection timeout, used during initial dial to server (default: 600ms)
 	Port              int               // port (default: 9042)
 	Keyspace          string            // initial keyspace (optional)
 	NumConns          int               // number of connections per host (default: 2)
@@ -132,6 +133,7 @@ func NewCluster(hosts ...string) *ClusterConfig {
 		Hosts:                  hosts,
 		CQLVersion:             "3.0.0",
 		Timeout:                600 * time.Millisecond,
+		ConnectTimeout:         600 * time.Millisecond,
 		Port:                   9042,
 		NumConns:               2,
 		Consistency:            Quorum,

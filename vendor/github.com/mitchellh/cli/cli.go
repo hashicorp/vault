@@ -25,7 +25,7 @@ import (
 //
 //   * We use longest prefix matching to find a matching subcommand. This
 //     means if you register "foo bar" and the user executes "cli foo qux",
-//     the "foo" commmand will be executed with the arg "qux". It is up to
+//     the "foo" command will be executed with the arg "qux". It is up to
 //     you to handle these args. One option is to just return the special
 //     help return code `RunResultHelp` to display help and exit.
 //

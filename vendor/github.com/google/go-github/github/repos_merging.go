@@ -33,5 +33,5 @@ func (s *RepositoriesService) Merge(owner, repo string, request *RepositoryMerge
 		return nil, resp, err
 	}
 
-	return commit, resp, err
+	return commit, resp, nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	log "github.com/mgutz/logxi/v1"
@@ -164,6 +165,94 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	}
 }
 
+// Test that the local table actually gets populated as expected with local
+// entries, and that upon reading the entries from both are recombined
+// correctly
+func TestCore_EnableAudit_Local(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
+	}
+
+	c.auditBackends["fail"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return nil, fmt.Errorf("failing enabling")
+	}
+
+	c.audit = &MountTable{
+		Type: auditTableType,
+		Entries: []*MountEntry{
+			&MountEntry{
+				Table: auditTableType,
+				Path:  "noop/",
+				Type:  "noop",
+				UUID:  "abcd",
+			},
+			&MountEntry{
+				Table: auditTableType,
+				Path:  "noop2/",
+				Type:  "noop",
+				UUID:  "bcde",
+			},
+		},
+	}
+
+	// Both should set up successfully
+	err := c.setupAudits()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rawLocal, err := c.barrier.Get(coreLocalAuditConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rawLocal == nil {
+		t.Fatal("expected non-nil local audit")
+	}
+	localAuditTable := &MountTable{}
+	if err := jsonutil.DecodeJSON(rawLocal.Value, localAuditTable); err != nil {
+		t.Fatal(err)
+	}
+	if len(localAuditTable.Entries) > 0 {
+		t.Fatalf("expected no entries in local audit table, got %#v", localAuditTable)
+	}
+
+	c.audit.Entries[1].Local = true
+	if err := c.persistAudit(c.audit); err != nil {
+		t.Fatal(err)
+	}
+
+	rawLocal, err = c.barrier.Get(coreLocalAuditConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rawLocal == nil {
+		t.Fatal("expected non-nil local audit")
+	}
+	localAuditTable = &MountTable{}
+	if err := jsonutil.DecodeJSON(rawLocal.Value, localAuditTable); err != nil {
+		t.Fatal(err)
+	}
+	if len(localAuditTable.Entries) != 1 {
+		t.Fatalf("expected one entry in local audit table, got %#v", localAuditTable)
+	}
+
+	oldAudit := c.audit
+	if err := c.loadAudits(); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(oldAudit, c.audit) {
+		t.Fatalf("expected\n%#v\ngot\n%#v\n", oldAudit, c.audit)
+	}
+
+	if len(c.audit.Entries) != 2 {
+		t.Fatalf("expected two audit entries, got %#v", localAuditTable)
+	}
+}
+
 func TestCore_DisableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
@@ -217,7 +306,7 @@ func TestCore_DisableAudit(t *testing.T) {
 
 	// Verify matching mount tables
 	if !reflect.DeepEqual(c.audit, c2.audit) {
-		t.Fatalf("mismatch: %v %v", c.audit, c2.audit)
+		t.Fatalf("mismatch:\n%#v\n%#v", c.audit, c2.audit)
 	}
 }
 
@@ -438,8 +527,10 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 }
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
-	l := logformat.NewVaultLogger(log.LevelTrace)
-	b := NewAuditBroker(l)
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	b := NewAuditBroker(logger)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "headers/")
 	a1 := &NoopAudit{}
 	a2 := &NoopAudit{}
 	b.Register("foo", a1, nil)
@@ -472,11 +563,10 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	reqCopy := reqCopyRaw.(*logical.Request)
 
 	headersConf := &AuditedHeadersConfig{
-		Headers: map[string]*auditedHeaderSettings{
-			"X-Test-Header":  &auditedHeaderSettings{false},
-			"X-Vault-Header": &auditedHeaderSettings{false},
-		},
+		view: view,
 	}
+	headersConf.add("X-Test-Header", false)
+	headersConf.add("X-Vault-Header", false)
 
 	err = b.LogRequest(auth, reqCopy, headersConf, respErr)
 	if err != nil {
@@ -484,8 +574,8 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	}
 
 	expected := map[string][]string{
-		"X-Test-Header":  []string{"foo"},
-		"X-Vault-Header": []string{"bar"},
+		"x-test-header":  []string{"foo"},
+		"x-vault-header": []string{"bar"},
 	}
 
 	for _, a := range []*NoopAudit{a1, a2} {

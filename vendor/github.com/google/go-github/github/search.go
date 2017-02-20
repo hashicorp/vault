@@ -19,7 +19,7 @@ type SearchService service
 
 // SearchOptions specifies optional parameters to the SearchService methods.
 type SearchOptions struct {
-	// How to sort the search results.  Possible values are:
+	// How to sort the search results. Possible values are:
 	//   - for repositories: stars, fork, updated
 	//   - for commits: author-date, committer-date
 	//   - for code: indexed

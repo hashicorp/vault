@@ -57,5 +57,5 @@ func (s GitignoresService) Get(name string) (*Gitignore, *Response, error) {
 		return nil, resp, err
 	}
 
-	return gitignore, resp, err
+	return gitignore, resp, nil
 }

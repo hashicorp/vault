@@ -119,7 +119,7 @@ func (s *RepositoriesService) getSingleRelease(url string) (*RepositoryRelease, 
 	if err != nil {
 		return nil, resp, err
 	}
-	return release, resp, err
+	return release, resp, nil
 }
 
 // CreateRelease adds a new release for a repository.
@@ -138,7 +138,7 @@ func (s *RepositoriesService) CreateRelease(owner, repo string, release *Reposit
 	if err != nil {
 		return nil, resp, err
 	}
-	return r, resp, err
+	return r, resp, nil
 }
 
 // EditRelease edits a repository release.
@@ -157,7 +157,7 @@ func (s *RepositoriesService) EditRelease(owner, repo string, id int, release *R
 	if err != nil {
 		return nil, resp, err
 	}
-	return r, resp, err
+	return r, resp, nil
 }
 
 // DeleteRelease delete a single release from a repository.
@@ -212,7 +212,7 @@ func (s *RepositoriesService) GetReleaseAsset(owner, repo string, id int) (*Rele
 	if err != nil {
 		return nil, resp, err
 	}
-	return asset, resp, err
+	return asset, resp, nil
 }
 
 // DownloadReleaseAsset downloads a release asset or returns a redirect URL.
@@ -275,7 +275,7 @@ func (s *RepositoriesService) EditReleaseAsset(owner, repo string, id int, relea
 	if err != nil {
 		return nil, resp, err
 	}
-	return asset, resp, err
+	return asset, resp, nil
 }
 
 // DeleteReleaseAsset delete a single release asset from a repository.
@@ -321,5 +321,5 @@ func (s *RepositoriesService) UploadReleaseAsset(owner, repo string, id int, opt
 	if err != nil {
 		return nil, resp, err
 	}
-	return asset, resp, err
+	return asset, resp, nil
 }

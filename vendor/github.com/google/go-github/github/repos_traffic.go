@@ -110,7 +110,7 @@ func (s *RepositoriesService) ListTrafficViews(owner, repo string, opt *TrafficB
 		return nil, resp, err
 	}
 
-	return trafficViews, resp, err
+	return trafficViews, resp, nil
 }
 
 // ListTrafficClones get total number of clones for the last 14 days and breaks it down either per day or week for the last 14 days.
@@ -134,5 +134,5 @@ func (s *RepositoriesService) ListTrafficClones(owner, repo string, opt *Traffic
 		return nil, resp, err
 	}
 
-	return trafficClones, resp, err
+	return trafficClones, resp, nil
 }

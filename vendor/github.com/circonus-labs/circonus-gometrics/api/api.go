@@ -7,6 +7,8 @@ package api
 import (
 	"bytes"
 	crand "crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -14,6 +16,7 @@ import (
 	"math"
 	"math/big"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -72,6 +75,7 @@ type Config struct {
 	URL      string
 	TokenKey string
 	TokenApp string
+	CACert   *x509.CertPool
 	Log      *log.Logger
 	Debug    bool
 }
@@ -81,6 +85,7 @@ type API struct {
 	apiURL                  *url.URL
 	key                     TokenKeyType
 	app                     TokenAppType
+	caCert                  *x509.CertPool
 	Debug                   bool
 	Log                     *log.Logger
 	useExponentialBackoff   bool
@@ -135,6 +140,7 @@ func New(ac *Config) (*API, error) {
 		apiURL: apiURL,
 		key:    key,
 		app:    app,
+		caCert: ac.CACert,
 		Debug:  ac.Debug,
 		Log:    ac.Log,
 		useExponentialBackoff: false,
@@ -287,6 +293,33 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 	req.Header.Add("X-Circonus-App-Name", string(a.app))
 
 	client := retryablehttp.NewClient()
+	if a.apiURL.Scheme == "https" && a.caCert != nil {
+		client.HTTPClient.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+			TLSClientConfig:     &tls.Config{RootCAs: a.caCert},
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: -1,
+			DisableCompression:  true,
+		}
+	} else {
+		client.HTTPClient.Transport = &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout: 10 * time.Second,
+			DisableKeepAlives:   true,
+			MaxIdleConnsPerHost: -1,
+			DisableCompression:  true,
+		}
+	}
+
 	a.useExponentialBackoffmu.Lock()
 	eb := a.useExponentialBackoff
 	a.useExponentialBackoffmu.Unlock()

@@ -48,6 +48,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/transport"
 )
@@ -140,6 +141,7 @@ type callInfo struct {
 	failFast  bool
 	headerMD  metadata.MD
 	trailerMD metadata.MD
+	peer      *peer.Peer
 	traceInfo traceInfo // in trace.go
 }
 
@@ -183,12 +185,20 @@ func Trailer(md *metadata.MD) CallOption {
 	})
 }
 
+// Peer returns a CallOption that retrieves peer information for a
+// unary RPC.
+func Peer(peer *peer.Peer) CallOption {
+	return afterCall(func(c *callInfo) {
+		*peer = *c.peer
+	})
+}
+
 // FailFast configures the action to take when an RPC is attempted on broken
 // connections or unreachable servers. If failfast is true, the RPC will fail
 // immediately. Otherwise, the RPC client will block the call until a
 // connection is available (or the call is canceled or times out) and will retry
 // the call if it fails due to a transient error. Please refer to
-// https://github.com/grpc/grpc/blob/master/doc/fail_fast.md
+// https://github.com/grpc/grpc/blob/master/doc/fail_fast.md. Note: failFast is default to true.
 func FailFast(failFast bool) CallOption {
 	return beforeCall(func(c *callInfo) error {
 		c.failFast = failFast

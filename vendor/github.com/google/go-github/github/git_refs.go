@@ -61,7 +61,7 @@ func (s *GitService) GetRef(owner string, repo string, ref string) (*Reference, 
 		return nil, resp, err
 	}
 
-	return r, resp, err
+	return r, resp, nil
 }
 
 // ReferenceListOptions specifies optional parameters to the
@@ -98,7 +98,7 @@ func (s *GitService) ListRefs(owner, repo string, opt *ReferenceListOptions) ([]
 		return nil, resp, err
 	}
 
-	return rs, resp, err
+	return rs, resp, nil
 }
 
 // CreateRef creates a new ref in a repository.
@@ -121,7 +121,7 @@ func (s *GitService) CreateRef(owner string, repo string, ref *Reference) (*Refe
 		return nil, resp, err
 	}
 
-	return r, resp, err
+	return r, resp, nil
 }
 
 // UpdateRef updates an existing ref in a repository.
@@ -144,7 +144,7 @@ func (s *GitService) UpdateRef(owner string, repo string, ref *Reference, force 
 		return nil, resp, err
 	}
 
-	return r, resp, err
+	return r, resp, nil
 }
 
 // DeleteRef deletes a ref from a repository.

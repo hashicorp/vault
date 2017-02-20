@@ -85,6 +85,12 @@ Following are the configuration options available for the backend.
             Allows selecting the output format. Valid values are `json` (the
             default) and `jsonx`, which formats the normal log entries as XML.
       </li>
+      <li>
+        <span class="param">prefix</span>
+        <span class="param-flags">optional</span>
+            Allows a customizable string prefix to write before the actual log
+            line. Defaults to an empty string.
+      </li>
     </ul>
   </dd>
 </dl>

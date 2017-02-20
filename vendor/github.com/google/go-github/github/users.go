@@ -68,7 +68,7 @@ func (u User) String() string {
 	return Stringify(u)
 }
 
-// Get fetches a user.  Passing the empty string will fetch the authenticated
+// Get fetches a user. Passing the empty string will fetch the authenticated
 // user.
 //
 // GitHub API docs: http://developer.github.com/v3/users/#get-a-single-user
@@ -90,7 +90,7 @@ func (s *UsersService) Get(user string) (*User, *Response, error) {
 		return nil, resp, err
 	}
 
-	return uResp, resp, err
+	return uResp, resp, nil
 }
 
 // GetByID fetches a user.
@@ -109,7 +109,7 @@ func (s *UsersService) GetByID(id int) (*User, *Response, error) {
 		return nil, resp, err
 	}
 
-	return user, resp, err
+	return user, resp, nil
 }
 
 // Edit the authenticated user.
@@ -128,7 +128,7 @@ func (s *UsersService) Edit(user *User) (*User, *Response, error) {
 		return nil, resp, err
 	}
 
-	return uResp, resp, err
+	return uResp, resp, nil
 }
 
 // UserListOptions specifies optional parameters to the UsersService.ListAll
@@ -184,7 +184,7 @@ func (s *UsersService) ListInvitations() ([]*RepositoryInvitation, *Response, er
 		return nil, resp, err
 	}
 
-	return invites, resp, err
+	return invites, resp, nil
 }
 
 // AcceptInvitation accepts the currently-open repository invitation for the

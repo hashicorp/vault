@@ -10,6 +10,7 @@ import (
 
 type backend struct {
 	*framework.Backend
+	view logical.Storage
 	salt *salt.Salt
 }
 
@@ -22,21 +23,18 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
-	salt, err := salt.NewSalt(conf.StorageView, &salt.Config{
-		HashFunc: salt.SHA256Hash,
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	var b backend
-	b.salt = salt
+	b.view = conf.StorageView
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"verify",
+			},
+
+			LocalStorage: []string{
+				"otp/",
 			},
 		},
 
@@ -54,8 +52,21 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			secretDynamicKey(&b),
 			secretOTP(&b),
 		},
+
+		Init: b.Initialize,
 	}
 	return &b, nil
+}
+
+func (b *backend) Initialize() error {
+	salt, err := salt.NewSalt(b.view, &salt.Config{
+		HashFunc: salt.SHA256Hash,
+	})
+	if err != nil {
+		return err
+	}
+	b.salt = salt
+	return nil
 }
 
 const backendHelp = `

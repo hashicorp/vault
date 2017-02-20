@@ -15,11 +15,13 @@ type MountCommand struct {
 
 func (c *MountCommand) Run(args []string) int {
 	var description, path, defaultLeaseTTL, maxLeaseTTL string
+	var local bool
 	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
 	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
 	flags.StringVar(&maxLeaseTTL, "max-lease-ttl", "", "")
+	flags.BoolVar(&local, "local", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -54,6 +56,7 @@ func (c *MountCommand) Run(args []string) int {
 			DefaultLeaseTTL: defaultLeaseTTL,
 			MaxLeaseTTL:     maxLeaseTTL,
 		},
+		Local: local,
 	}
 
 	if err := client.Sys().Mount(path, mountInfo); err != nil {
@@ -101,6 +104,10 @@ Mount Options:
                                  If not specified, uses the global default, or
                                  the previously set value. Set to '0' to
                                  explicitly set it to use the global default.
+
+  -local                         Mark the mount as a local mount. Local mounts
+                                 are not replicated nor (if a secondary)
+                                 removed by replication.
 
 `
 	return strings.TrimSpace(helpText)

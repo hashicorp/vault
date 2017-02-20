@@ -50,7 +50,7 @@ func (s *RepositoriesService) GetKey(owner string, repo string, id int) (*Key, *
 		return nil, resp, err
 	}
 
-	return key, resp, err
+	return key, resp, nil
 }
 
 // CreateKey adds a deploy key for a repository.
@@ -70,7 +70,7 @@ func (s *RepositoriesService) CreateKey(owner string, repo string, key *Key) (*K
 		return nil, resp, err
 	}
 
-	return k, resp, err
+	return k, resp, nil
 }
 
 // EditKey edits a deploy key.
@@ -90,7 +90,7 @@ func (s *RepositoriesService) EditKey(owner string, repo string, id int, key *Ke
 		return nil, resp, err
 	}
 
-	return k, resp, err
+	return k, resp, nil
 }
 
 // DeleteKey deletes a deploy key.

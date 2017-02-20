@@ -31,7 +31,7 @@ func (s *RepositoriesService) ListProjects(owner, repo string, opt *ListOptions)
 		return nil, resp, err
 	}
 
-	return projects, resp, err
+	return projects, resp, nil
 }
 
 // CreateProject creates a GitHub Project for the specified repository.
@@ -53,5 +53,5 @@ func (s *RepositoriesService) CreateProject(owner, repo string, opt *ProjectOpti
 		return nil, resp, err
 	}
 
-	return project, resp, err
+	return project, resp, nil
 }

@@ -48,8 +48,8 @@ type ListMembersOptions struct {
 	// organization), list only publicly visible members.
 	PublicOnly bool `url:"-"`
 
-	// Filter members returned in the list.  Possible values are:
-	// 2fa_disabled, all.  Default is "all".
+	// Filter members returned in the list. Possible values are:
+	// 2fa_disabled, all. Default is "all".
 	Filter string `url:"filter,omitempty"`
 
 	// Role filters members returned by their role in the organization.
@@ -64,7 +64,7 @@ type ListMembersOptions struct {
 	ListOptions
 }
 
-// ListMembers lists the members for an organization.  If the authenticated
+// ListMembers lists the members for an organization. If the authenticated
 // user is an owner of the organization, this will return both concealed and
 // public members, otherwise it will only return public members.
 //
@@ -196,7 +196,7 @@ func (s *OrganizationsService) ListOrgMemberships(opt *ListOrgMembershipsOptions
 		return nil, resp, err
 	}
 
-	return memberships, resp, err
+	return memberships, resp, nil
 }
 
 // GetOrgMembership gets the membership for a user in a specified organization.
@@ -224,7 +224,7 @@ func (s *OrganizationsService) GetOrgMembership(user, org string) (*Membership, 
 		return nil, resp, err
 	}
 
-	return membership, resp, err
+	return membership, resp, nil
 }
 
 // EditOrgMembership edits the membership for user in specified organization.
@@ -254,10 +254,10 @@ func (s *OrganizationsService) EditOrgMembership(user, org string, membership *M
 		return nil, resp, err
 	}
 
-	return m, resp, err
+	return m, resp, nil
 }
 
-// RemoveOrgMembership removes user from the specified organization.  If the
+// RemoveOrgMembership removes user from the specified organization. If the
 // user has been invited to the organization, this will cancel their invitation.
 //
 // GitHub API docs: https://developer.github.com/v3/orgs/members/#remove-organization-membership

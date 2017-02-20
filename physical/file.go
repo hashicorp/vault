@@ -22,12 +22,17 @@ import (
 // and non-performant. It is meant mostly for local testing and development.
 // It can be improved in the future.
 type FileBackend struct {
-	Path   string
-	l      sync.Mutex
-	logger log.Logger
+	sync.RWMutex
+	path       string
+	logger     log.Logger
+	permitPool *PermitPool
 }
 
-// newFileBackend constructs a Filebackend using the given directory
+type TransactionalFileBackend struct {
+	FileBackend
+}
+
+// newFileBackend constructs a FileBackend using the given directory
 func newFileBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 	path, ok := conf["path"]
 	if !ok {
@@ -35,20 +40,44 @@ func newFileBackend(conf map[string]string, logger log.Logger) (Backend, error) 
 	}
 
 	return &FileBackend{
-		Path:   path,
-		logger: logger,
+		path:       path,
+		logger:     logger,
+		permitPool: NewPermitPool(DefaultParallelOperations),
+	}, nil
+}
+
+func newTransactionalFileBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+	path, ok := conf["path"]
+	if !ok {
+		return nil, fmt.Errorf("'path' must be set")
+	}
+
+	// Create a pool of size 1 so only one operation runs at a time
+	return &TransactionalFileBackend{
+		FileBackend: FileBackend{
+			path:       path,
+			logger:     logger,
+			permitPool: NewPermitPool(1),
+		},
 	}, nil
 }
 
 func (b *FileBackend) Delete(path string) error {
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
+
+	b.Lock()
+	defer b.Unlock()
+
+	return b.DeleteInternal(path)
+}
+
+func (b *FileBackend) DeleteInternal(path string) error {
 	if path == "" {
 		return nil
 	}
 
-	b.l.Lock()
-	defer b.l.Unlock()
-
-	basePath, key := b.path(path)
+	basePath, key := b.expandPath(path)
 	fullPath := filepath.Join(basePath, key)
 
 	err := os.Remove(fullPath)
@@ -66,7 +95,7 @@ func (b *FileBackend) Delete(path string) error {
 func (b *FileBackend) cleanupLogicalPath(path string) error {
 	nodes := strings.Split(path, fmt.Sprintf("%c", os.PathSeparator))
 	for i := len(nodes) - 1; i > 0; i-- {
-		fullPath := filepath.Join(b.Path, filepath.Join(nodes[:i]...))
+		fullPath := filepath.Join(b.path, filepath.Join(nodes[:i]...))
 
 		dir, err := os.Open(fullPath)
 		if err != nil {
@@ -96,10 +125,17 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 }
 
 func (b *FileBackend) Get(k string) (*Entry, error) {
-	b.l.Lock()
-	defer b.l.Unlock()
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	path, key := b.path(k)
+	b.RLock()
+	defer b.RUnlock()
+
+	return b.GetInternal(k)
+}
+
+func (b *FileBackend) GetInternal(k string) (*Entry, error) {
+	path, key := b.expandPath(k)
 	path = filepath.Join(path, key)
 
 	f, err := os.Open(path)
@@ -121,10 +157,17 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 }
 
 func (b *FileBackend) Put(entry *Entry) error {
-	path, key := b.path(entry.Key)
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	b.l.Lock()
-	defer b.l.Unlock()
+	b.Lock()
+	defer b.Unlock()
+
+	return b.PutInternal(entry)
+}
+
+func (b *FileBackend) PutInternal(entry *Entry) error {
+	path, key := b.expandPath(entry.Key)
 
 	// Make the parent tree
 	if err := os.MkdirAll(path, 0755); err != nil {
@@ -145,10 +188,17 @@ func (b *FileBackend) Put(entry *Entry) error {
 }
 
 func (b *FileBackend) List(prefix string) ([]string, error) {
-	b.l.Lock()
-	defer b.l.Unlock()
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	path := b.Path
+	b.RLock()
+	defer b.RUnlock()
+
+	return b.ListInternal(prefix)
+}
+
+func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
+	path := b.path
 	if prefix != "" {
 		path = filepath.Join(path, prefix)
 	}
@@ -180,9 +230,19 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	return names, nil
 }
 
-func (b *FileBackend) path(k string) (string, string) {
-	path := filepath.Join(b.Path, k)
+func (b *FileBackend) expandPath(k string) (string, string) {
+	path := filepath.Join(b.path, k)
 	key := filepath.Base(path)
 	path = filepath.Dir(path)
 	return path, "_" + key
+}
+
+func (b *TransactionalFileBackend) Transaction(txns []TxnEntry) error {
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
+
+	b.Lock()
+	defer b.Unlock()
+
+	return genericTransactionHandler(b, txns)
 }

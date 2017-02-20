@@ -237,7 +237,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 			t.Fatalf("err: %v", err)
 		}
 		for i := 0; i < 3; i++ {
-			_, err = TestCoreUnseal(c, result.SecretShares[i])
+			_, err = TestCoreUnseal(c, TestKeyCopy(result.SecretShares[i]))
 			if err != nil {
 				t.Fatalf("err: %v", err)
 			}
@@ -270,7 +270,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	// Provide the parts master
 	oldResult := result
 	for i := 0; i < 3; i++ {
-		result, err = c.RekeyUpdate(oldResult.SecretShares[i], rkconf.Nonce, recovery)
+		result, err = c.RekeyUpdate(TestKeyCopy(oldResult.SecretShares[i]), rkconf.Nonce, recovery)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}

@@ -1,10 +1,37 @@
 ## Next (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * List Operations Always Use Trailing Slash: Any list operation, whether via
+   the `GET` or `LIST` HTTP verb, will now internally canonicalize the path to
+   have a trailing slash. This makes policy writing more predictable, as it
+   means clients will no longer work or fail based on which client they're
+   using or which HTTP verb they're using. However, it also means that policies
+   allowing `list` capability must be carefully checked to ensure that they
+   contain a trailing slash; some policies may need to be split into multiple
+   stanzas to accommodate.
+
 IMPROVEMENTS:
 
  * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
    username if not explicitly set on the command line when authenticating
    [GH-2154]
+ * audit: Support adding a configurable prefix (such as `@cee`) before each
+   line [GH-2359]
+ * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * secret/pki: O (Organization) values can now be set to role-defined values
+   for issued/signed certificates [GH-2369]
+
+BUG FIXES:
+
+ * audit: When auditing headers use case-insensitive comparisons [GH-2362]
+ * auth/aws-ec2: Return role period in seconds and not nanoseconds [GH-2374]
+ * auth/okta: Fix panic if user had no local groups and/or policies set
+   [GH-2367]
+ * command/server: Fix parsing of redirect address when port is not mentioned
+   [GH-2354]
+ * physical/postgresql: Fix listing returning incorrect results if there were
+   multiple levels of children [GH-2393]
 
 ## 0.6.5 (February 7th, 2017)
 

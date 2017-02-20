@@ -180,7 +180,7 @@ func (s *GistsService) Get(id string) (*Gist, *Response, error) {
 		return nil, resp, err
 	}
 
-	return gist, resp, err
+	return gist, resp, nil
 }
 
 // GetRevision gets a specific revision of a gist.
@@ -198,7 +198,7 @@ func (s *GistsService) GetRevision(id, sha string) (*Gist, *Response, error) {
 		return nil, resp, err
 	}
 
-	return gist, resp, err
+	return gist, resp, nil
 }
 
 // Create a gist for authenticated user.
@@ -216,7 +216,7 @@ func (s *GistsService) Create(gist *Gist) (*Gist, *Response, error) {
 		return nil, resp, err
 	}
 
-	return g, resp, err
+	return g, resp, nil
 }
 
 // Edit a gist.
@@ -234,7 +234,7 @@ func (s *GistsService) Edit(id string, gist *Gist) (*Gist, *Response, error) {
 		return nil, resp, err
 	}
 
-	return g, resp, err
+	return g, resp, nil
 }
 
 // ListCommits lists commits of a gist.
@@ -322,7 +322,7 @@ func (s *GistsService) Fork(id string) (*Gist, *Response, error) {
 		return nil, resp, err
 	}
 
-	return g, resp, err
+	return g, resp, nil
 }
 
 // ListForks lists forks of a gist.

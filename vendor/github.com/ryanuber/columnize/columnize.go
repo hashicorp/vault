@@ -83,9 +83,9 @@ func stringFormat(c *Config, widths []int, columns int) string {
 // elementsFromLine returns a list of elements, each representing a single
 // item which will belong to a column of output.
 func elementsFromLine(config *Config, line string) []interface{} {
-	seperated := strings.Split(line, config.Delim)
-	elements := make([]interface{}, len(seperated))
-	for i, field := range seperated {
+	separated := strings.Split(line, config.Delim)
+	elements := make([]interface{}, len(separated))
+	for i, field := range separated {
 		value := strings.TrimSpace(field)
 
 		// Apply the empty value, if configured.

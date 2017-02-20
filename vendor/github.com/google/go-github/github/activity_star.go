@@ -49,18 +49,18 @@ func (s *ActivityService) ListStargazers(owner, repo string, opt *ListOptions) (
 // ActivityListStarredOptions specifies the optional parameters to the
 // ActivityService.ListStarred method.
 type ActivityListStarredOptions struct {
-	// How to sort the repository list.  Possible values are: created, updated,
-	// pushed, full_name.  Default is "full_name".
+	// How to sort the repository list. Possible values are: created, updated,
+	// pushed, full_name. Default is "full_name".
 	Sort string `url:"sort,omitempty"`
 
-	// Direction in which to sort repositories.  Possible values are: asc, desc.
+	// Direction in which to sort repositories. Possible values are: asc, desc.
 	// Default is "asc" when sort is "full_name", otherwise default is "desc".
 	Direction string `url:"direction,omitempty"`
 
 	ListOptions
 }
 
-// ListStarred lists all the repos starred by a user.  Passing the empty string
+// ListStarred lists all the repos starred by a user. Passing the empty string
 // will list the starred repositories for the authenticated user.
 //
 // GitHub API docs: http://developer.github.com/v3/activity/starring/#list-repositories-being-starred

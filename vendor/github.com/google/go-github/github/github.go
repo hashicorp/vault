@@ -106,8 +106,8 @@ type Client struct {
 	clientMu sync.Mutex   // clientMu protects the client during calls that modify the CheckRedirect func.
 	client   *http.Client // HTTP client used to communicate with the API.
 
-	// Base URL for API requests.  Defaults to the public GitHub API, but can be
-	// set to a domain endpoint to use with GitHub Enterprise.  BaseURL should
+	// Base URL for API requests. Defaults to the public GitHub API, but can be
+	// set to a domain endpoint to use with GitHub Enterprise. BaseURL should
 	// always be specified with a trailing slash.
 	BaseURL *url.URL
 
@@ -178,7 +178,7 @@ type RawOptions struct {
 	Type RawType
 }
 
-// addOptions adds the parameters in opt as URL query parameters to s.  opt
+// addOptions adds the parameters in opt as URL query parameters to s. opt
 // must be a struct whose fields may contain "url" tags.
 func addOptions(s string, opt interface{}) (string, error) {
 	v := reflect.ValueOf(opt)
@@ -200,8 +200,8 @@ func addOptions(s string, opt interface{}) (string, error) {
 	return u.String(), nil
 }
 
-// NewClient returns a new GitHub API client.  If a nil httpClient is
-// provided, http.DefaultClient will be used.  To use API methods which require
+// NewClient returns a new GitHub API client. If a nil httpClient is
+// provided, http.DefaultClient will be used. To use API methods which require
 // authentication, provide an http.Client that will perform the authentication
 // for you (such as that provided by the golang.org/x/oauth2 library).
 func NewClient(httpClient *http.Client) *Client {
@@ -235,7 +235,7 @@ func NewClient(httpClient *http.Client) *Client {
 
 // NewRequest creates an API request. A relative URL can be provided in urlStr,
 // in which case it is resolved relative to the BaseURL of the Client.
-// Relative URLs should always be specified without a preceding slash.  If
+// Relative URLs should always be specified without a preceding slash. If
 // specified, the value pointed to by body is JSON encoded and included as the
 // request body.
 func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Request, error) {
@@ -295,14 +295,14 @@ func (c *Client) NewUploadRequest(urlStr string, reader io.Reader, size int64, m
 	return req, nil
 }
 
-// Response is a GitHub API response.  This wraps the standard http.Response
+// Response is a GitHub API response. This wraps the standard http.Response
 // returned from GitHub and provides convenient access to things like
 // pagination links.
 type Response struct {
 	*http.Response
 
 	// These fields provide the page values for paginating through a set of
-	// results.  Any or all of these may be set to the zero value for
+	// results. Any or all of these may be set to the zero value for
 	// responses that are not part of a paginated set, or for which there
 	// are no additional pages.
 
@@ -384,7 +384,7 @@ func parseRate(r *http.Response) Rate {
 }
 
 // Rate specifies the current rate limit for the client as determined by the
-// most recent API call.  If the client is used in a multi-user application,
+// most recent API call. If the client is used in a multi-user application,
 // this rate may not always be up-to-date.
 //
 // Deprecated: Use the Response.Rate returned from most recent API call instead.
@@ -396,11 +396,11 @@ func (c *Client) Rate() Rate {
 	return rate
 }
 
-// Do sends an API request and returns the API response.  The API response is
+// Do sends an API request and returns the API response. The API response is
 // JSON decoded and stored in the value pointed to by v, or returned as an
-// error if an API error has occurred.  If v implements the io.Writer
+// error if an API error has occurred. If v implements the io.Writer
 // interface, the raw response body will be written to v, without attempting to
-// first decode it.  If rate limit is exceeded and reset time is in the future,
+// first decode it. If rate limit is exceeded and reset time is in the future,
 // Do returns *RateLimitError immediately without making a network API call.
 func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	rateLimitCategory := category(req.URL.Path)
@@ -511,7 +511,7 @@ func (r *ErrorResponse) Error() string {
 }
 
 // TwoFactorAuthError occurs when using HTTP Basic Authentication for a user
-// that has two-factor authentication enabled.  The request can be reattempted
+// that has two-factor authentication enabled. The request can be reattempted
 // by providing a one-time password in the request.
 type TwoFactorAuthError ErrorResponse
 
@@ -609,7 +609,7 @@ func (e *Error) Error() string {
 // present. A response is considered an error if it has a status code outside
 // the 200 range or equal to 202 Accepted.
 // API error responses are expected to have either no response
-// body, or a JSON response body that maps to ErrorResponse.  Any other
+// body, or a JSON response body that maps to ErrorResponse. Any other
 // response body will be silently ignored.
 //
 // The error type will be *RateLimitError for rate limit exceeded errors,
@@ -658,15 +658,15 @@ func CheckResponse(r *http.Response) error {
 // parseBoolResponse determines the boolean result from a GitHub API response.
 // Several GitHub API methods return boolean responses indicated by the HTTP
 // status code in the response (true indicated by a 204, false indicated by a
-// 404).  This helper function will determine that result and hide the 404
-// error if present.  Any other error will be returned through as-is.
+// 404). This helper function will determine that result and hide the 404
+// error if present. Any other error will be returned through as-is.
 func parseBoolResponse(err error) (bool, error) {
 	if err == nil {
 		return true, nil
 	}
 
 	if err, ok := err.(*ErrorResponse); ok && err.Response.StatusCode == http.StatusNotFound {
-		// Simply false.  In this one case, we do not pass the error through.
+		// Simply false. In this one case, we do not pass the error through.
 		return false, nil
 	}
 
@@ -692,15 +692,15 @@ func (r Rate) String() string {
 
 // RateLimits represents the rate limits for the current client.
 type RateLimits struct {
-	// The rate limit for non-search API requests.  Unauthenticated
-	// requests are limited to 60 per hour.  Authenticated requests are
+	// The rate limit for non-search API requests. Unauthenticated
+	// requests are limited to 60 per hour. Authenticated requests are
 	// limited to 5,000 per hour.
 	//
 	// GitHub API docs: https://developer.github.com/v3/#rate-limiting
 	Core *Rate `json:"core"`
 
-	// The rate limit for search API requests.  Unauthenticated requests
-	// are limited to 10 requests per minutes.  Authenticated requests are
+	// The rate limit for search API requests. Unauthenticated requests
+	// are limited to 10 requests per minutes. Authenticated requests are
 	// limited to 30 per minute.
 	//
 	// GitHub API docs: https://developer.github.com/v3/search/#rate-limit
@@ -735,11 +735,13 @@ func category(path string) rateLimitCategory {
 // Deprecated: RateLimit is deprecated, use RateLimits instead.
 func (c *Client) RateLimit() (*Rate, *Response, error) {
 	limits, resp, err := c.RateLimits()
-	if limits == nil {
-		return nil, nil, err
+	if err != nil {
+		return nil, resp, err
 	}
-
-	return limits.Core, resp, err
+	if limits == nil {
+		return nil, resp, errors.New("RateLimits returned nil limits and error; unable to extract Core rate limit")
+	}
+	return limits.Core, resp, nil
 }
 
 // RateLimits returns the rate limits for the current client.
@@ -768,7 +770,7 @@ func (c *Client) RateLimits() (*RateLimits, *Response, error) {
 		c.rateMu.Unlock()
 	}
 
-	return response.Resources, resp, err
+	return response.Resources, resp, nil
 }
 
 /*
@@ -838,7 +840,7 @@ func (t *UnauthenticatedRateLimitedTransport) transport() http.RoundTripper {
 }
 
 // BasicAuthTransport is an http.RoundTripper that authenticates all requests
-// using HTTP Basic Authentication with the provided username and password.  It
+// using HTTP Basic Authentication with the provided username and password. It
 // additionally supports users who have two-factor authentication enabled on
 // their GitHub account.
 type BasicAuthTransport struct {

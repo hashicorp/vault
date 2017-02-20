@@ -51,7 +51,7 @@ func (s *ProjectsService) GetProject(id int) (*Project, *Response, error) {
 		return nil, resp, err
 	}
 
-	return project, resp, err
+	return project, resp, nil
 }
 
 // ProjectOptions specifies the parameters to the
@@ -83,7 +83,7 @@ func (s *ProjectsService) UpdateProject(id int, opt *ProjectOptions) (*Project, 
 		return nil, resp, err
 	}
 
-	return project, resp, err
+	return project, resp, nil
 }
 
 // DeleteProject deletes a GitHub Project from a repository.
@@ -137,7 +137,7 @@ func (s *ProjectsService) ListProjectColumns(projectID int, opt *ListOptions) ([
 		return nil, resp, err
 	}
 
-	return columns, resp, err
+	return columns, resp, nil
 }
 
 // GetProjectColumn gets a column of a GitHub Project for a repo.
@@ -159,7 +159,7 @@ func (s *ProjectsService) GetProjectColumn(id int) (*ProjectColumn, *Response, e
 		return nil, resp, err
 	}
 
-	return column, resp, err
+	return column, resp, nil
 }
 
 // ProjectColumnOptions specifies the parameters to the
@@ -189,7 +189,7 @@ func (s *ProjectsService) CreateProjectColumn(projectID int, opt *ProjectColumnO
 		return nil, resp, err
 	}
 
-	return column, resp, err
+	return column, resp, nil
 }
 
 // UpdateProjectColumn updates a column of a GitHub Project.
@@ -211,7 +211,7 @@ func (s *ProjectsService) UpdateProjectColumn(columnID int, opt *ProjectColumnOp
 		return nil, resp, err
 	}
 
-	return column, resp, err
+	return column, resp, nil
 }
 
 // DeleteProjectColumn deletes a column from a GitHub Project.
@@ -290,7 +290,7 @@ func (s *ProjectsService) ListProjectCards(columnID int, opt *ListOptions) ([]*P
 		return nil, resp, err
 	}
 
-	return cards, resp, err
+	return cards, resp, nil
 }
 
 // GetProjectCard gets a card in a column of a GitHub Project.
@@ -312,7 +312,7 @@ func (s *ProjectsService) GetProjectCard(columnID int) (*ProjectCard, *Response,
 		return nil, resp, err
 	}
 
-	return card, resp, err
+	return card, resp, nil
 }
 
 // ProjectCardOptions specifies the parameters to the
@@ -347,7 +347,7 @@ func (s *ProjectsService) CreateProjectCard(columnID int, opt *ProjectCardOption
 		return nil, resp, err
 	}
 
-	return card, resp, err
+	return card, resp, nil
 }
 
 // UpdateProjectCard updates a card of a GitHub Project.
@@ -369,7 +369,7 @@ func (s *ProjectsService) UpdateProjectCard(cardID int, opt *ProjectCardOptions)
 		return nil, resp, err
 	}
 
-	return card, resp, err
+	return card, resp, nil
 }
 
 // DeleteProjectCard deletes a card from a GitHub Project.

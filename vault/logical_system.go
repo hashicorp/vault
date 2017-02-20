@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -20,6 +21,25 @@ var (
 	// This is both for security and to prevent disrupting Vault.
 	protectedPaths = []string{
 		"core",
+	}
+
+	replicationPaths = func(b *SystemBackend) []*framework.Path {
+		return []*framework.Path{
+			&framework.Path{
+				Pattern: "replication/status",
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+						var state consts.ReplicationState
+						resp := &logical.Response{
+							Data: map[string]interface{}{
+								"mode": state.String(),
+							},
+						}
+						return resp, nil
+					},
+				},
+			},
+		}
 	}
 )
 
@@ -40,12 +60,15 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"audit",
 				"audit/*",
 				"raw/*",
+				"replication/primary/secondary-token",
+				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
 			},
 
 			Unauthenticated: []string{
 				"wrapping/pubkey",
+				"replication/status",
 			},
 		},
 
@@ -251,6 +274,11 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 						Type:        framework.TypeMap,
 						Description: strings.TrimSpace(sysHelp["mount_config"][0]),
 					},
+					"local": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     false,
+						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -402,6 +430,11 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
+					"local": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     false,
+						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -519,6 +552,11 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					"options": &framework.FieldSchema{
 						Type:        framework.TypeMap,
 						Description: strings.TrimSpace(sysHelp["audit_opts"][0]),
+					},
+					"local": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Default:     false,
+						Description: strings.TrimSpace(sysHelp["mount_local"][0]),
 					},
 				},
 
@@ -682,6 +720,10 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 		},
 	}
 
+	b.Backend.Paths = append(b.Backend.Paths, replicationPaths(b)...)
+
+	b.Backend.Invalidate = b.invalidate
+
 	return b.Backend.Setup(config)
 }
 
@@ -726,6 +768,20 @@ func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.Fiel
 	b.Core.CORSConfig().Disable()
 
 	return nil, nil
+}
+
+func (b *SystemBackend) invalidate(key string) {
+	if b.Core.logger.IsTrace() {
+		b.Core.logger.Trace("sys: invaliding key", "key", key)
+	}
+	switch {
+	case strings.HasPrefix(key, policySubPath):
+		b.Core.stateLock.RLock()
+		defer b.Core.stateLock.RUnlock()
+		if b.Core.policyStore != nil {
+			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policySubPath))
+		}
+	}
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -929,6 +985,7 @@ func (b *SystemBackend) handleMountTable(
 				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 			},
+			"local": entry.Local,
 		}
 
 		resp.Data[entry.Path] = info
@@ -940,6 +997,15 @@ func (b *SystemBackend) handleMountTable(
 // handleMount is used to mount a new path
 func (b *SystemBackend) handleMount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.clusterParamsLock.RLock()
+	repState := b.Core.replicationState
+	b.Core.clusterParamsLock.RUnlock()
+
+	local := data.Get("local").(bool)
+	if !local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+	}
+
 	// Get all the options
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
@@ -1014,6 +1080,7 @@ func (b *SystemBackend) handleMount(
 		Type:        logicalType,
 		Description: description,
 		Config:      config,
+		Local:       local,
 	}
 
 	// Attempt mount
@@ -1039,12 +1106,21 @@ func handleError(
 // handleUnmount is used to unmount a path
 func (b *SystemBackend) handleUnmount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.clusterParamsLock.RLock()
+	repState := b.Core.replicationState
+	b.Core.clusterParamsLock.RUnlock()
+
 	suffix := strings.TrimPrefix(req.Path, "mounts/")
 	if len(suffix) == 0 {
 		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
 	}
 
 	suffix = sanitizeMountPath(suffix)
+
+	entry := b.Core.router.MatchingMountEntry(suffix)
+	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
+	}
 
 	// Attempt unmount
 	if existed, err := b.Core.unmount(suffix); existed && err != nil {
@@ -1058,6 +1134,10 @@ func (b *SystemBackend) handleUnmount(
 // handleRemount is used to remount a path
 func (b *SystemBackend) handleRemount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.clusterParamsLock.RLock()
+	repState := b.Core.replicationState
+	b.Core.clusterParamsLock.RUnlock()
+
 	// Get the paths
 	fromPath := data.Get("from").(string)
 	toPath := data.Get("to").(string)
@@ -1069,6 +1149,11 @@ func (b *SystemBackend) handleRemount(
 
 	fromPath = sanitizeMountPath(fromPath)
 	toPath = sanitizeMountPath(toPath)
+
+	entry := b.Core.router.MatchingMountEntry(fromPath)
+	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot remount a non-local mount on a replication secondary"), nil
+	}
 
 	// Attempt remount
 	if err := b.Core.remount(fromPath, toPath); err != nil {
@@ -1155,6 +1240,10 @@ func (b *SystemBackend) handleMountTuneWrite(
 // handleTuneWriteCommon is used to set config settings on a path
 func (b *SystemBackend) handleTuneWriteCommon(
 	path string, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.clusterParamsLock.RLock()
+	repState := b.Core.replicationState
+	b.Core.clusterParamsLock.RUnlock()
+
 	path = sanitizeMountPath(path)
 
 	// Prevent protected paths from being changed
@@ -1169,6 +1258,9 @@ func (b *SystemBackend) handleTuneWriteCommon(
 	if mountEntry == nil {
 		b.Backend.Logger().Error("sys: tune failed: no mount entry found", "path", path)
 		return handleError(fmt.Errorf("sys: tune of path '%s' failed: no mount entry found", path))
+	}
+	if mountEntry != nil && !mountEntry.Local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot tune a non-local mount on a replication secondary"), nil
 	}
 
 	var lock *sync.RWMutex
@@ -1309,6 +1401,7 @@ func (b *SystemBackend) handleAuthTable(
 				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 			},
+			"local": entry.Local,
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -1318,6 +1411,15 @@ func (b *SystemBackend) handleAuthTable(
 // handleEnableAuth is used to enable a new credential backend
 func (b *SystemBackend) handleEnableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.clusterParamsLock.RLock()
+	repState := b.Core.replicationState
+	b.Core.clusterParamsLock.RUnlock()
+
+	local := data.Get("local").(bool)
+	if !local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+	}
+
 	// Get all the options
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
@@ -1337,6 +1439,7 @@ func (b *SystemBackend) handleEnableAuth(
 		Path:        path,
 		Type:        logicalType,
 		Description: description,
+		Local:       local,
 	}
 
 	// Attempt enabling
@@ -1451,6 +1554,7 @@ func (b *SystemBackend) handleAuditTable(
 			"type":        entry.Type,
 			"description": entry.Description,
 			"options":     entry.Options,
+			"local":       entry.Local,
 		}
 		resp.Data[entry.Path] = info
 	}
@@ -1484,6 +1588,15 @@ func (b *SystemBackend) handleAuditHash(
 // handleEnableAudit is used to enable a new audit backend
 func (b *SystemBackend) handleEnableAudit(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.clusterParamsLock.RLock()
+	repState := b.Core.replicationState
+	b.Core.clusterParamsLock.RUnlock()
+
+	local := data.Get("local").(bool)
+	if !local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot add a non-local mount to a replication secondary"), nil
+	}
+
 	// Get all the options
 	path := data.Get("path").(string)
 	backendType := data.Get("type").(string)
@@ -1507,6 +1620,7 @@ func (b *SystemBackend) handleEnableAudit(
 		Type:        backendType,
 		Description: description,
 		Options:     optionMap,
+		Local:       local,
 	}
 
 	// Attempt enabling
@@ -1622,6 +1736,13 @@ func (b *SystemBackend) handleKeyStatus(
 // handleRotate is used to trigger a key rotation
 func (b *SystemBackend) handleRotate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Core.clusterParamsLock.RLock()
+	repState := b.Core.replicationState
+	b.Core.clusterParamsLock.RUnlock()
+	if repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot rotate on a replication secondary"), nil
+	}
+
 	// Rotate to the new term
 	newTerm, err := b.Core.barrier.Rotate()
 	if err != nil {
@@ -1644,6 +1765,17 @@ func (b *SystemBackend) handleRotate(
 			}
 		})
 	}
+
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := b.Core.barrier.Put(&Entry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(fmt.Sprintf("new-rotation-term-%d", newTerm)),
+	}); err != nil {
+		b.Core.logger.Error("core: error saving keyring canary", "error", err)
+		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
+	}
+
 	return nil, nil
 }
 
@@ -2023,6 +2155,11 @@ west coast.
 	"mount_config": {
 		`Configuration for this mount, such as default_lease_ttl
 and max_lease_ttl.`,
+	},
+
+	"mount_local": {
+		`Mark the mount as a local mount, which is not replicated
+and is unaffected by replication.`,
 	},
 
 	"tune_default_lease_ttl": {

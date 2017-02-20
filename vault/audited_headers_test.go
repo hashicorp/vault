@@ -29,7 +29,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	settings, ok := conf.Headers["X-Test-Header"]
+	settings, ok := conf.Headers["x-test-header"]
 	if !ok {
 		t.Fatal("Expected header to be found in config")
 	}
@@ -50,7 +50,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 	}
 
 	expected := map[string]*auditedHeaderSettings{
-		"X-Test-Header": &auditedHeaderSettings{
+		"x-test-header": &auditedHeaderSettings{
 			HMAC: false,
 		},
 	}
@@ -64,7 +64,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	settings, ok = conf.Headers["X-Vault-Header"]
+	settings, ok = conf.Headers["x-vault-header"]
 	if !ok {
 		t.Fatal("Expected header to be found in config")
 	}
@@ -84,7 +84,7 @@ func testAuditedHeadersConfig_Add(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error decoding header view: %s", err)
 	}
 
-	expected["X-Vault-Header"] = &auditedHeaderSettings{
+	expected["x-vault-header"] = &auditedHeaderSettings{
 		HMAC: true,
 	}
 
@@ -100,7 +100,7 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	_, ok := conf.Headers["X-Test-Header"]
+	_, ok := conf.Headers["x-Test-HeAder"]
 	if ok {
 		t.Fatal("Expected header to not be found in config")
 	}
@@ -117,7 +117,7 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 	}
 
 	expected := map[string]*auditedHeaderSettings{
-		"X-Vault-Header": &auditedHeaderSettings{
+		"x-vault-header": &auditedHeaderSettings{
 			HMAC: true,
 		},
 	}
@@ -126,12 +126,12 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 		t.Fatalf("Expected config didn't match actual. Expected: %#v, Got: %#v", expected, headers)
 	}
 
-	err = conf.remove("X-Vault-Header")
+	err = conf.remove("x-VaulT-Header")
 	if err != nil {
 		t.Fatalf("Error when adding header to config: %s", err)
 	}
 
-	_, ok = conf.Headers["X-Vault-Header"]
+	_, ok = conf.Headers["x-vault-header"]
 	if ok {
 		t.Fatal("Expected header to not be found in config")
 	}
@@ -157,10 +157,8 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 	conf := mockAuditedHeadersConfig(t)
 
-	conf.Headers = map[string]*auditedHeaderSettings{
-		"X-Test-Header":  &auditedHeaderSettings{false},
-		"X-Vault-Header": &auditedHeaderSettings{true},
-	}
+	conf.add("X-TesT-Header", false)
+	conf.add("X-Vault-HeAdEr", true)
 
 	reqHeaders := map[string][]string{
 		"X-Test-Header":  []string{"foo"},
@@ -173,8 +171,8 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 	result := conf.ApplyConfig(reqHeaders, hashFunc)
 
 	expected := map[string][]string{
-		"X-Test-Header":  []string{"foo"},
-		"X-Vault-Header": []string{"hashed", "hashed"},
+		"x-test-header":  []string{"foo"},
+		"x-vault-header": []string{"hashed", "hashed"},
 	}
 
 	if !reflect.DeepEqual(result, expected) {

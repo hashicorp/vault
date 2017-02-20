@@ -11,9 +11,9 @@ import (
 )
 
 // WebHookPayload represents the data that is received from GitHub when a push
-// event hook is triggered.  The format of these payloads pre-date most of the
+// event hook is triggered. The format of these payloads pre-date most of the
 // GitHub v3 API, so there are lots of minor incompatibilities with the types
-// defined in the rest of the API.  Therefore, several types are duplicated
+// defined in the rest of the API. Therefore, several types are duplicated
 // here to account for these differences.
 //
 // GitHub API docs: https://help.github.com/articles/post-receive-hooks
@@ -55,7 +55,7 @@ func (w WebHookCommit) String() string {
 }
 
 // WebHookAuthor represents the author or committer of a commit, as specified
-// in a WebHookCommit.  The commit author may not correspond to a GitHub User.
+// in a WebHookCommit. The commit author may not correspond to a GitHub User.
 type WebHookAuthor struct {
 	Email    *string `json:"email,omitempty"`
 	Name     *string `json:"name,omitempty"`
@@ -99,7 +99,7 @@ func (s *RepositoriesService) CreateHook(owner, repo string, hook *Hook) (*Hook,
 		return nil, resp, err
 	}
 
-	return h, resp, err
+	return h, resp, nil
 }
 
 // ListHooks lists all Hooks for the specified repository.
@@ -190,7 +190,7 @@ func (s *RepositoriesService) TestHook(owner, repo string, id int) (*Response, e
 	return s.client.Do(req, nil)
 }
 
-// ListServiceHooks is deprecated.  Use Client.ListServiceHooks instead.
+// ListServiceHooks is deprecated. Use Client.ListServiceHooks instead.
 func (s *RepositoriesService) ListServiceHooks() ([]*ServiceHook, *Response, error) {
 	return s.client.ListServiceHooks()
 }
