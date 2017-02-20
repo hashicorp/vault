@@ -117,5 +117,5 @@ TxnWalk:
 		}
 	}
 
-	return nil
+	return
 }
