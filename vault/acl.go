@@ -80,9 +80,16 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				if pc.Permissions.AllowedParameters == nil {
 					pc.Permissions.AllowedParameters = existingPerms.AllowedParameters
 				} else {
-					// Merge the two maps, appending values on key conflict.
 					for key, value := range existingPerms.AllowedParameters {
-						pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
+						pcValue, ok := pc.Permissions.AllowedParameters[key]
+						// If an empty array exist it should overwrite any other
+						// value.
+						if len(value) == 0 || (ok && len(pcValue) == 0) {
+							pc.Permissions.AllowedParameters[key] = []interface{}{}
+						} else {
+							// Merge the two maps, appending values on key conflict.
+							pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
+						}
 					}
 				}
 			}
@@ -91,10 +98,16 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				if pc.Permissions.DeniedParameters == nil {
 					pc.Permissions.DeniedParameters = existingPerms.DeniedParameters
 				} else {
-
-					// Merge the two maps, appending values on key conflict.
 					for key, value := range existingPerms.DeniedParameters {
-						pc.Permissions.DeniedParameters[key] = append(value, pc.Permissions.DeniedParameters[key]...)
+						pcValue, ok := pc.Permissions.DeniedParameters[key]
+						// If an empty array exist it should overwrite any other
+						// value.
+						if len(value) == 0 || (ok && len(pcValue) == 0) {
+							pc.Permissions.DeniedParameters[key] = []interface{}{}
+						} else {
+							// Merge the two maps, appending values on key conflict.
+							pc.Permissions.DeniedParameters[key] = append(value, pc.Permissions.DeniedParameters[key]...)
+						}
 					}
 				}
 			}
