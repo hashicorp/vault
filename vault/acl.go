@@ -78,23 +78,24 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 			if len(existingPerms.AllowedParameters) > 0 {
 				if pc.Permissions.AllowedParameters == nil {
-					pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(existingPerms.AllowedParameters))
-				}
-
-				// Merge the two maps, appending values on key conflict.
-				for key, value := range existingPerms.AllowedParameters {
-					pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
+					pc.Permissions.AllowedParameters = existingPerms.AllowedParameters
+				} else {
+					// Merge the two maps, appending values on key conflict.
+					for key, value := range existingPerms.AllowedParameters {
+						pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
+					}
 				}
 			}
 
 			if len(existingPerms.DeniedParameters) > 0 {
 				if pc.Permissions.DeniedParameters == nil {
-					pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(existingPerms.DeniedParameters))
-				}
+					pc.Permissions.DeniedParameters = existingPerms.DeniedParameters
+				} else {
 
-				// Merge the two maps, appending values on key conflict.
-				for key, value := range existingPerms.DeniedParameters {
-					pc.Permissions.DeniedParameters[key] = append(value, pc.Permissions.DeniedParameters[key]...)
+					// Merge the two maps, appending values on key conflict.
+					for key, value := range existingPerms.DeniedParameters {
+						pc.Permissions.DeniedParameters[key] = append(value, pc.Permissions.DeniedParameters[key]...)
+					}
 				}
 			}
 
@@ -163,7 +164,7 @@ CHECK:
 // AllowOperation is used to check if the given operation is permitted. The
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
-func (a *ACL) AllowOperation(req *logical.Request) (allowed bool, sudo bool) {
+func (a *ACL) AllowOperation(req *logical.Request) (bool, bool) {
 	// Fast-path root
 	if a.root {
 		return true, true
@@ -200,7 +201,7 @@ CHECK:
 	// Check if the minimum permissions are met
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
-	sudo = capabilities&SudoCapabilityInt > 0
+	sudo := capabilities&SudoCapabilityInt > 0
 	operationAllowed := false
 	switch op {
 	case logical.ReadOperation:
@@ -229,7 +230,8 @@ CHECK:
 
 	// Only check parameter permissions for operations that can modify
 	// parameters.
-	if op == logical.UpdateOperation || op == logical.DeleteOperation || op == logical.CreateOperation {
+	if op == logical.UpdateOperation || op == logical.CreateOperation {
+		// If there are no data fields, allow
 		if len(req.Data) == 0 {
 			return true, sudo
 		}
@@ -283,6 +285,7 @@ CHECK:
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {
+	// Empty list is equivalent to the item always existing in the list and "*"
 	if len(list) == 0 {
 		return true
 	}

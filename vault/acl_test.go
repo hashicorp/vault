@@ -267,7 +267,6 @@ func TestACL_AllowOperation(t *testing.T) {
 	}
 	toperations := []logical.Operation{
 		logical.UpdateOperation,
-		logical.DeleteOperation,
 		logical.CreateOperation,
 	}
 	type tcase struct {
@@ -319,7 +318,6 @@ func TestACL_ValuePermissions(t *testing.T) {
 
 	toperations := []logical.Operation{
 		logical.UpdateOperation,
-		logical.DeleteOperation,
 		logical.CreateOperation,
 	}
 	type tcase struct {
