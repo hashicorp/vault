@@ -21,6 +21,8 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"audit",
 		"audit/*",
 		"raw/*",
+		"replication/primary/secondary-token",
+		"replication/reindex",
 		"rotate",
 		"config/auditing/*",
 	}
@@ -50,6 +52,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"type":        "system",
@@ -58,6 +61,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -66,6 +70,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 			},
+			"local": true,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -580,6 +585,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
 			},
+			"local": false,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
@@ -843,6 +849,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 	req.Data["options"] = map[string]interface{}{
 		"foo": "bar",
 	}
+	req.Data["local"] = true
 	b.HandleRequest(req)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "audit")
@@ -859,6 +866,7 @@ func TestSystemBackend_auditTable(t *testing.T) {
 			"options": map[string]string{
 				"foo": "bar",
 			},
+			"local": true,
 		},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {

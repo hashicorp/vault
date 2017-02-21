@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Team represents a team within a GitHub organization.  Teams are used to
+// Team represents a team within a GitHub organization. Teams are used to
 // manage access to an organization's repositories.
 type Team struct {
 	ID          *int    `json:"id,omitempty"`
@@ -20,9 +20,9 @@ type Team struct {
 	Slug        *string `json:"slug,omitempty"`
 
 	// Permission is deprecated when creating or editing a team in an org
-	// using the new GitHub permission model.  It no longer identifies the
+	// using the new GitHub permission model. It no longer identifies the
 	// permission a team has on its repos, but only specifies the default
-	// permission a repo is initially added with.  Avoid confusion by
+	// permission a repo is initially added with. Avoid confusion by
 	// specifying a permission value when calling AddTeamRepo.
 	Permission *string `json:"permission,omitempty"`
 
@@ -99,7 +99,7 @@ func (s *OrganizationsService) GetTeam(team int) (*Team, *Response, error) {
 		return nil, resp, err
 	}
 
-	return t, resp, err
+	return t, resp, nil
 }
 
 // CreateTeam creates a new team within an organization.
@@ -118,7 +118,7 @@ func (s *OrganizationsService) CreateTeam(org string, team *Team) (*Team, *Respo
 		return nil, resp, err
 	}
 
-	return t, resp, err
+	return t, resp, nil
 }
 
 // EditTeam edits a team.
@@ -137,7 +137,7 @@ func (s *OrganizationsService) EditTeam(id int, team *Team) (*Team, *Response, e
 		return nil, resp, err
 	}
 
-	return t, resp, err
+	return t, resp, nil
 }
 
 // DeleteTeam deletes a team.
@@ -156,8 +156,8 @@ func (s *OrganizationsService) DeleteTeam(team int) (*Response, error) {
 // OrganizationListTeamMembersOptions specifies the optional parameters to the
 // OrganizationsService.ListTeamMembers method.
 type OrganizationListTeamMembersOptions struct {
-	// Role filters members returned by their role in the team.  Possible
-	// values are "all", "member", "maintainer".  Default is "all".
+	// Role filters members returned by their role in the team. Possible
+	// values are "all", "member", "maintainer". Default is "all".
 	Role string `url:"role,omitempty"`
 
 	ListOptions
@@ -227,7 +227,7 @@ func (s *OrganizationsService) ListTeamRepos(team int, opt *ListOptions) ([]*Rep
 	return repos, resp, nil
 }
 
-// IsTeamRepo checks if a team manages the specified repository.  If the
+// IsTeamRepo checks if a team manages the specified repository. If the
 // repository is managed by team, a Repository is returned which includes the
 // permissions team has for that repo.
 //
@@ -247,7 +247,7 @@ func (s *OrganizationsService) IsTeamRepo(team int, owner string, repo string) (
 		return nil, resp, err
 	}
 
-	return repository, resp, err
+	return repository, resp, nil
 }
 
 // OrganizationAddTeamRepoOptions specifies the optional parameters to the
@@ -263,7 +263,7 @@ type OrganizationAddTeamRepoOptions struct {
 	Permission string `json:"permission,omitempty"`
 }
 
-// AddTeamRepo adds a repository to be managed by the specified team.  The
+// AddTeamRepo adds a repository to be managed by the specified team. The
 // specified repository must be owned by the organization to which the team
 // belongs, or a direct fork of a repository owned by the organization.
 //
@@ -279,7 +279,7 @@ func (s *OrganizationsService) AddTeamRepo(team int, owner string, repo string, 
 }
 
 // RemoveTeamRepo removes a repository from being managed by the specified
-// team.  Note that this does not delete the repository, it just removes it
+// team. Note that this does not delete the repository, it just removes it
 // from the team.
 //
 // GitHub API docs: http://developer.github.com/v3/orgs/teams/#remove-team-repo
@@ -332,13 +332,13 @@ func (s *OrganizationsService) GetTeamMembership(team int, user string) (*Member
 		return nil, resp, err
 	}
 
-	return t, resp, err
+	return t, resp, nil
 }
 
 // OrganizationAddTeamMembershipOptions does stuff specifies the optional
 // parameters to the OrganizationsService.AddTeamMembership method.
 type OrganizationAddTeamMembershipOptions struct {
-	// Role specifies the role the user should have in the team.  Possible
+	// Role specifies the role the user should have in the team. Possible
 	// values are:
 	//     member - a normal member of the team
 	//     maintainer - a team maintainer. Able to add/remove other team
@@ -380,7 +380,7 @@ func (s *OrganizationsService) AddTeamMembership(team int, user string, opt *Org
 		return nil, resp, err
 	}
 
-	return t, resp, err
+	return t, resp, nil
 }
 
 // RemoveTeamMembership removes a user from a team.

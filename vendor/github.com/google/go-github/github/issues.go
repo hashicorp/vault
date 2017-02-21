@@ -68,22 +68,22 @@ type IssueRequest struct {
 // IssueListOptions specifies the optional parameters to the IssuesService.List
 // and IssuesService.ListByOrg methods.
 type IssueListOptions struct {
-	// Filter specifies which issues to list.  Possible values are: assigned,
-	// created, mentioned, subscribed, all.  Default is "assigned".
+	// Filter specifies which issues to list. Possible values are: assigned,
+	// created, mentioned, subscribed, all. Default is "assigned".
 	Filter string `url:"filter,omitempty"`
 
-	// State filters issues based on their state.  Possible values are: open,
-	// closed, all.  Default is "open".
+	// State filters issues based on their state. Possible values are: open,
+	// closed, all. Default is "open".
 	State string `url:"state,omitempty"`
 
 	// Labels filters issues based on their label.
 	Labels []string `url:"labels,comma,omitempty"`
 
-	// Sort specifies how to sort issues.  Possible values are: created, updated,
-	// and comments.  Default value is "created".
+	// Sort specifies how to sort issues. Possible values are: created, updated,
+	// and comments. Default value is "created".
 	Sort string `url:"sort,omitempty"`
 
-	// Direction in which to sort issues.  Possible values are: asc, desc.
+	// Direction in which to sort issues. Possible values are: asc, desc.
 	// Default is "desc".
 	Direction string `url:"direction,omitempty"`
 
@@ -102,7 +102,7 @@ type PullRequestLinks struct {
 	PatchURL *string `json:"patch_url,omitempty"`
 }
 
-// List the issues for the authenticated user.  If all is true, list issues
+// List the issues for the authenticated user. If all is true, list issues
 // across all the user's visible repositories including owned, member, and
 // organization repositories; if false, list only owned and member
 // repositories.
@@ -153,16 +153,16 @@ func (s *IssuesService) listIssues(u string, opt *IssueListOptions) ([]*Issue, *
 // IssueListByRepoOptions specifies the optional parameters to the
 // IssuesService.ListByRepo method.
 type IssueListByRepoOptions struct {
-	// Milestone limits issues for the specified milestone.  Possible values are
+	// Milestone limits issues for the specified milestone. Possible values are
 	// a milestone number, "none" for issues with no milestone, "*" for issues
 	// with any milestone.
 	Milestone string `url:"milestone,omitempty"`
 
-	// State filters issues based on their state.  Possible values are: open,
-	// closed, all.  Default is "open".
+	// State filters issues based on their state. Possible values are: open,
+	// closed, all. Default is "open".
 	State string `url:"state,omitempty"`
 
-	// Assignee filters issues based on their assignee.  Possible values are a
+	// Assignee filters issues based on their assignee. Possible values are a
 	// user name, "none" for issues that are not assigned, "*" for issues with
 	// any assigned user.
 	Assignee string `url:"assignee,omitempty"`
@@ -176,11 +176,11 @@ type IssueListByRepoOptions struct {
 	// Labels filters issues based on their label.
 	Labels []string `url:"labels,omitempty,comma"`
 
-	// Sort specifies how to sort issues.  Possible values are: created, updated,
-	// and comments.  Default value is "created".
+	// Sort specifies how to sort issues. Possible values are: created, updated,
+	// and comments. Default value is "created".
 	Sort string `url:"sort,omitempty"`
 
-	// Direction in which to sort issues.  Possible values are: asc, desc.
+	// Direction in which to sort issues. Possible values are: asc, desc.
 	// Default is "desc".
 	Direction string `url:"direction,omitempty"`
 

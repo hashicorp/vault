@@ -1,9 +1,9 @@
 package vault
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/ecdsa"
+	"crypto/subtle"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
@@ -56,17 +57,14 @@ const (
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
+
+	// coreKeyringCanaryPath is used as a canary to indicate to replicated
+	// clusters that they need to perform a rekey operation synchronously; this
+	// isn't keyring-canary to avoid ignoring it when ignoring core/keyring
+	coreKeyringCanaryPath = "core/canary-keyring"
 )
 
 var (
-	// ErrSealed is returned if an operation is performed on
-	// a sealed barrier. No operation is expected to succeed before unsealing
-	ErrSealed = errors.New("Vault is sealed")
-
-	// ErrStandby is returned if an operation is performed on
-	// a standby Vault. No operation is expected to succeed until active.
-	ErrStandby = errors.New("Vault is in standby mode")
-
 	// ErrAlreadyInit is returned if the core is already
 	// initialized. This prevents a re-initialization.
 	ErrAlreadyInit = errors.New("Vault is already initialized")
@@ -87,6 +85,12 @@ var (
 	// step down of the active node, to prevent instantly regrabbing the lock.
 	// It's var not const so that tests can manipulate it.
 	manualStepDownSleepPeriod = 10 * time.Second
+
+	// Functions only in the Enterprise version
+	enterprisePostUnseal = enterprisePostUnsealImpl
+	enterprisePreSeal    = enterprisePreSealImpl
+	startReplication     = startReplicationImpl
+	stopReplication      = stopReplicationImpl
 )
 
 // ReloadFunc are functions that are called when a reload is requested.
@@ -133,6 +137,11 @@ type unlockInformation struct {
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
 type Core struct {
+	// N.B.: This is used to populate a dev token down replication, as
+	// otherwise, after replication is started, a dev would have to go through
+	// the generate-root process simply to talk to the new follower cluster.
+	devToken string
+
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
@@ -268,7 +277,7 @@ type Core struct {
 	//
 	// Name
 	clusterName string
-	// Used to modify cluster TLS params
+	// Used to modify cluster parameters
 	clusterParamsLock sync.RWMutex
 	// The private key stored in the barrier used for establishing
 	// mutually-authenticated connections between Vault cluster members
@@ -310,11 +319,13 @@ type Core struct {
 
 	// replicationState keeps the current replication state cached for quick
 	// lookup
-	replicationState logical.ReplicationState
+	replicationState consts.ReplicationState
 }
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
+	DevToken string `json:"dev_token" structs:"dev_token" mapstructure:"dev_token"`
+
 	LogicalBackends map[string]logical.Factory `json:"logical_backends" structs:"logical_backends" mapstructure:"logical_backends"`
 
 	CredentialBackends map[string]logical.Factory `json:"credential_backends" structs:"credential_backends" mapstructure:"credential_backends"`
@@ -390,6 +401,30 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		conf.Logger = logformat.NewVaultLogger(log.LevelTrace)
 	}
 
+	// Setup the core
+	c := &Core{
+		redirectAddr:                     conf.RedirectAddr,
+		clusterAddr:                      conf.ClusterAddr,
+		physical:                         conf.Physical,
+		seal:                             conf.Seal,
+		router:                           NewRouter(),
+		sealed:                           true,
+		standby:                          true,
+		logger:                           conf.Logger,
+		defaultLeaseTTL:                  conf.DefaultLeaseTTL,
+		maxLeaseTTL:                      conf.MaxLeaseTTL,
+		cachingDisabled:                  conf.DisableCache,
+		clusterName:                      conf.ClusterName,
+		clusterCertPool:                  x509.NewCertPool(),
+		clusterListenerShutdownCh:        make(chan struct{}),
+		clusterListenerShutdownSuccessCh: make(chan struct{}),
+	}
+
+	// Wrap the physical backend in a cache layer if enabled and not already wrapped
+	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
+		c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
+	}
+
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
 		if err := mlock.LockMemory(); err != nil {
@@ -407,34 +442,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Construct a new AES-GCM barrier
-	barrier, err := NewAESGCMBarrier(conf.Physical)
+	var err error
+	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
-	}
-
-	// Setup the core
-	c := &Core{
-		redirectAddr:                     conf.RedirectAddr,
-		clusterAddr:                      conf.ClusterAddr,
-		physical:                         conf.Physical,
-		seal:                             conf.Seal,
-		barrier:                          barrier,
-		router:                           NewRouter(),
-		sealed:                           true,
-		standby:                          true,
-		logger:                           conf.Logger,
-		defaultLeaseTTL:                  conf.DefaultLeaseTTL,
-		maxLeaseTTL:                      conf.MaxLeaseTTL,
-		cachingDisabled:                  conf.DisableCache,
-		clusterName:                      conf.ClusterName,
-		clusterCertPool:                  x509.NewCertPool(),
-		clusterListenerShutdownCh:        make(chan struct{}),
-		clusterListenerShutdownSuccessCh: make(chan struct{}),
-	}
-
-	// Wrap the backend in a cache unless disabled
-	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
-		c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
 	}
 
 	if conf.HAPhysical != nil && conf.HAPhysical.HAEnabled() {
@@ -518,10 +529,10 @@ func (c *Core) LookupToken(token string) (*TokenEntry, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	// Many tests don't have a token store running
@@ -656,7 +667,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Check if sealed
 	if c.sealed {
-		return false, "", ErrSealed
+		return false, "", consts.ErrSealed
 	}
 
 	// Check if HA enabled
@@ -803,17 +814,29 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		return true, nil
 	}
 
+	masterKey, err := c.unsealPart(config, key)
+	if err != nil {
+		return false, err
+	}
+	if masterKey != nil {
+		return c.unsealInternal(masterKey)
+	}
+
+	return false, nil
+}
+
+func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
 	// Check if we already have this piece
 	if c.unlockInfo != nil {
 		for _, existing := range c.unlockInfo.Parts {
-			if bytes.Equal(existing, key) {
-				return false, nil
+			if subtle.ConstantTimeCompare(existing, key) == 1 {
+				return nil, nil
 			}
 		}
 	} else {
 		uuid, err := uuid.GenerateUUID()
 		if err != nil {
-			return false, err
+			return nil, err
 		}
 		c.unlockInfo = &unlockInformation{
 			Nonce: uuid,
@@ -828,27 +851,37 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		if c.logger.IsDebug() {
 			c.logger.Debug("core: cannot unseal, not enough keys", "keys", len(c.unlockInfo.Parts), "threshold", config.SecretThreshold, "nonce", c.unlockInfo.Nonce)
 		}
-		return false, nil
+		return nil, nil
 	}
+
+	// Best-effort memzero of unlock parts once we're done with them
+	defer func() {
+		for i, _ := range c.unlockInfo.Parts {
+			memzero(c.unlockInfo.Parts[i])
+		}
+		c.unlockInfo = nil
+	}()
 
 	// Recover the master key
 	var masterKey []byte
+	var err error
 	if config.SecretThreshold == 1 {
-		masterKey = c.unlockInfo.Parts[0]
-		c.unlockInfo = nil
+		masterKey = make([]byte, len(c.unlockInfo.Parts[0]))
+		copy(masterKey, c.unlockInfo.Parts[0])
 	} else {
 		masterKey, err = shamir.Combine(c.unlockInfo.Parts)
-		c.unlockInfo = nil
 		if err != nil {
-			return false, fmt.Errorf("failed to compute master key: %v", err)
+			return nil, fmt.Errorf("failed to compute master key: %v", err)
 		}
 	}
-	defer memzero(masterKey)
 
-	return c.unsealInternal(masterKey)
+	return masterKey, nil
 }
 
+// This must be called with the state write lock held
 func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
+	defer memzero(masterKey)
+
 	// Attempt to unlock
 	if err := c.barrier.Unseal(masterKey); err != nil {
 		return false, err
@@ -867,12 +900,14 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 			c.logger.Warn("core: vault is sealed")
 			return false, err
 		}
+
 		if err := c.postUnseal(); err != nil {
 			c.logger.Error("core: post-unseal setup failed", "error", err)
 			c.barrier.Seal()
 			c.logger.Warn("core: vault is sealed")
 			return false, err
 		}
+
 		c.standby = false
 	} else {
 		// Go to standby mode, wait until we are active to unseal
@@ -1168,6 +1203,7 @@ func (c *Core) postUnseal() (retErr error) {
 	if purgable, ok := c.physical.(physical.Purgable); ok {
 		purgable.Purge()
 	}
+
 	// HA mode requires us to handle keyring rotation and rekeying
 	if c.ha != nil {
 		// We want to reload these from disk so that in case of a rekey we're
@@ -1189,6 +1225,9 @@ func (c *Core) postUnseal() (retErr error) {
 		if err := c.scheduleUpgradeCleanup(); err != nil {
 			return err
 		}
+	}
+	if err := enterprisePostUnseal(c); err != nil {
+		return err
 	}
 	if err := c.ensureWrappingKey(); err != nil {
 		return err
@@ -1251,6 +1290,7 @@ func (c *Core) preSeal() error {
 		c.metricsCh = nil
 	}
 	var result error
+
 	if c.ha != nil {
 		c.stopClusterListener()
 	}
@@ -1273,12 +1313,32 @@ func (c *Core) preSeal() error {
 	if err := c.unloadMounts(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error unloading mounts: {{err}}", err))
 	}
+	if err := enterprisePreSeal(c); err != nil {
+		result = multierror.Append(result, err)
+	}
+
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
 		purgable.Purge()
 	}
 	c.logger.Info("core: pre-seal teardown complete")
 	return result
+}
+
+func enterprisePostUnsealImpl(c *Core) error {
+	return nil
+}
+
+func enterprisePreSealImpl(c *Core) error {
+	return nil
+}
+
+func startReplicationImpl(c *Core) error {
+	return nil
+}
+
+func stopReplicationImpl(c *Core) error {
+	return nil
 }
 
 // runStandby is a long running routine that is used when an HA backend
@@ -1597,6 +1657,14 @@ func (c *Core) emitMetrics(stopCh chan struct{}) {
 			return
 		}
 	}
+}
+
+func (c *Core) ReplicationState() consts.ReplicationState {
+	var state consts.ReplicationState
+	c.clusterParamsLock.RLock()
+	state = c.replicationState
+	c.clusterParamsLock.RUnlock()
+	return state
 }
 
 func (c *Core) SealAccess() *SealAccess {

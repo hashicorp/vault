@@ -35,6 +35,8 @@ func Backend() *backend {
 		},
 
 		Clean: b.resetClient,
+
+		Invalidate: b.invalidate,
 	}
 
 	return &b
@@ -97,6 +99,13 @@ func (b *backend) resetClient() {
 	defer b.lock.Unlock()
 
 	b.client = nil
+}
+
+func (b *backend) invalidate(key string) {
+	switch key {
+	case "config/connection":
+		b.resetClient()
+	}
 }
 
 // Lease returns the lease information

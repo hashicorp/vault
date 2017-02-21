@@ -151,10 +151,10 @@ func (s *RepositoriesService) GetCommit(owner, repo, sha string) (*RepositoryCom
 		return nil, resp, err
 	}
 
-	return commit, resp, err
+	return commit, resp, nil
 }
 
-// GetCommitSHA1 gets the SHA-1 of a commit reference.  If a last-known SHA1 is
+// GetCommitSHA1 gets the SHA-1 of a commit reference. If a last-known SHA1 is
 // supplied and no new commits have occurred, a 304 Unmodified response is returned.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/commits/#get-the-sha-1-of-a-commit-reference
@@ -177,7 +177,7 @@ func (s *RepositoriesService) GetCommitSHA1(owner, repo, ref, lastSHA string) (s
 		return "", resp, err
 	}
 
-	return buf.String(), resp, err
+	return buf.String(), resp, nil
 }
 
 // CompareCommits compares a range of commits with each other.
@@ -198,5 +198,5 @@ func (s *RepositoriesService) CompareCommits(owner, repo string, base, head stri
 		return nil, resp, err
 	}
 
-	return comp, resp, err
+	return comp, resp, nil
 }

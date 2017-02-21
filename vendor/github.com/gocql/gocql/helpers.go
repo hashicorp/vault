@@ -250,6 +250,42 @@ func (iter *Iter) SliceMap() ([]map[string]interface{}, error) {
 
 // MapScan takes a map[string]interface{} and populates it with a row
 // that is returned from cassandra.
+//
+// Each call to MapScan() must be called with a new map object.
+// During the call to MapScan() any pointers in the existing map
+// are replaced with non pointer types before the call returns
+//
+//	iter := session.Query(`SELECT * FROM mytable`).Iter()
+//	for {
+//		// New map each iteration
+//		row = make(map[string]interface{})
+//		if !iter.MapScan(row) {
+//			break
+//		}
+//		// Do things with row
+//		if fullname, ok := row["fullname"]; ok {
+//			fmt.Printf("Full Name: %s\n", fullname)
+//		}
+//	}
+//
+// You can also pass pointers in the map before each call
+//
+//	var fullName FullName // Implements gocql.Unmarshaler and gocql.Marshaler interfaces
+//	var address net.IP
+//	var age int
+//	iter := session.Query(`SELECT * FROM scan_map_table`).Iter()
+//	for {
+//		// New map each iteration
+//		row := map[string]interface{}{
+//			"fullname": &fullName,
+//			"age":      &age,
+//			"address":  &address,
+//		}
+//		if !iter.MapScan(row) {
+//			break
+//		}
+//		fmt.Printf("First: %s Age: %d Address: %q\n", fullName.FirstName, age, address)
+//	}
 func (iter *Iter) MapScan(m map[string]interface{}) bool {
 	if iter.err != nil {
 		return false

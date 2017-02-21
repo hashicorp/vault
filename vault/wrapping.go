@@ -13,6 +13,7 @@ import (
 	"github.com/SermoDigital/jose/jws"
 	"github.com/SermoDigital/jose/jwt"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -284,10 +285,10 @@ func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return false, ErrSealed
+		return false, consts.ErrSealed
 	}
 	if c.standby {
-		return false, ErrStandby
+		return false, consts.ErrStandby
 	}
 
 	te, err := c.tokenStore.Lookup(token)

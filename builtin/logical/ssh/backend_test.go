@@ -73,6 +73,10 @@ func TestBackend_allowed_users(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = b.Initialize()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	roleData := map[string]interface{}{
 		"key_type":      "otp",

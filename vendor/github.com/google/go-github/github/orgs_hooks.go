@@ -62,7 +62,7 @@ func (s *OrganizationsService) CreateHook(org string, hook *Hook) (*Hook, *Respo
 		return nil, resp, err
 	}
 
-	return h, resp, err
+	return h, resp, nil
 }
 
 // EditHook updates a specified Hook.

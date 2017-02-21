@@ -33,6 +33,7 @@ func TestSysMounts(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -41,6 +42,7 @@ func TestSysMounts(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -49,6 +51,7 @@ func TestSysMounts(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": true,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -58,6 +61,7 @@ func TestSysMounts(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -66,6 +70,7 @@ func TestSysMounts(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -74,6 +79,7 @@ func TestSysMounts(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -114,6 +120,7 @@ func TestSysMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"secret/": map[string]interface{}{
 				"description": "generic secret storage",
@@ -122,6 +129,7 @@ func TestSysMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -130,6 +138,7 @@ func TestSysMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -138,6 +147,7 @@ func TestSysMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": true,
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -147,6 +157,7 @@ func TestSysMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
@@ -155,6 +166,7 @@ func TestSysMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -163,6 +175,7 @@ func TestSysMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -171,6 +184,7 @@ func TestSysMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -233,6 +247,7 @@ func TestSysRemount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"secret/": map[string]interface{}{
 				"description": "generic secret storage",
@@ -241,6 +256,7 @@ func TestSysRemount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -249,6 +265,7 @@ func TestSysRemount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -257,6 +274,7 @@ func TestSysRemount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": true,
 			},
 		},
 		"bar/": map[string]interface{}{
@@ -266,6 +284,7 @@ func TestSysRemount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
@@ -274,6 +293,7 @@ func TestSysRemount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -282,6 +302,7 @@ func TestSysRemount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -290,6 +311,7 @@ func TestSysRemount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -333,6 +355,7 @@ func TestSysUnmount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -341,6 +364,7 @@ func TestSysUnmount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -349,6 +373,7 @@ func TestSysUnmount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": true,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -358,6 +383,7 @@ func TestSysUnmount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -366,6 +392,7 @@ func TestSysUnmount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -374,6 +401,7 @@ func TestSysUnmount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -414,6 +442,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"secret/": map[string]interface{}{
 				"description": "generic secret storage",
@@ -422,6 +451,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -430,6 +460,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -438,6 +469,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": true,
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -447,6 +479,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
@@ -455,6 +488,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -463,6 +497,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -471,6 +506,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -532,6 +568,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("259196400"),
 					"max_lease_ttl":     json.Number("259200000"),
 				},
+				"local": false,
 			},
 			"secret/": map[string]interface{}{
 				"description": "generic secret storage",
@@ -540,6 +577,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -548,6 +586,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -556,6 +595,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": true,
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -565,6 +605,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("259196400"),
 				"max_lease_ttl":     json.Number("259200000"),
 			},
+			"local": false,
 		},
 		"secret/": map[string]interface{}{
 			"description": "generic secret storage",
@@ -573,6 +614,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -581,6 +623,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -589,6 +632,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": true,
 		},
 	}
 

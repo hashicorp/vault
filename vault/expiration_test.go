@@ -2,21 +2,129 @@ package vault
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/physical"
+	log "github.com/mgutz/logxi/v1"
+)
+
+var (
+	testImagePull sync.Once
 )
 
 // mockExpiration returns a mock expiration manager
-func mockExpiration(t *testing.T) *ExpirationManager {
+func mockExpiration(t testing.TB) *ExpirationManager {
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 	return ts.expiration
+}
+
+func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
+	c, ts, _, _ := TestCoreWithBackendTokenStore(t, backend)
+	return c, ts.expiration
+}
+
+func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
+	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	physicalBackend, err := physical.NewBackend("etcd", logger, map[string]string{
+		"address":      addr,
+		"path":         randPath,
+		"max_parallel": "256",
+	})
+	if err != nil {
+		b.Fatalf("err: %s", err)
+	}
+
+	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
+}
+
+func BenchmarkExpiration_Restore_Consul(b *testing.B) {
+	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
+	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	physicalBackend, err := physical.NewBackend("consul", logger, map[string]string{
+		"address":      addr,
+		"path":         randPath,
+		"max_parallel": "256",
+	})
+	if err != nil {
+		b.Fatalf("err: %s", err)
+	}
+
+	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
+}
+
+func BenchmarkExpiration_Restore_InMem(b *testing.B) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	benchmarkExpirationBackend(b, physical.NewInmem(logger), 100000) // 100,000 Leases
+}
+
+func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
+	c, exp := mockBackendExpiration(b, physicalBackend)
+	noop := &NoopBackend{}
+	view := NewBarrierView(c.barrier, "logical/")
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		b.Fatal(err)
+	}
+	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+
+	// Register fake leases
+	for i := 0; i < numLeases; i++ {
+		pathUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "prod/aws/" + pathUUID,
+		}
+		resp := &logical.Response{
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 400 * time.Second,
+				},
+			},
+			Data: map[string]interface{}{
+				"access_key": "xyz",
+				"secret_key": "abcd",
+			},
+		}
+		_, err = exp.Register(req, resp)
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
+
+	// Stop everything
+	err = exp.Stop()
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err = exp.Restore()
+		// Restore
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+	}
+	b.StopTimer()
 }
 
 func TestExpiration_Restore(t *testing.T) {

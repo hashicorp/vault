@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 
+	"github.com/fatih/structs"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -42,11 +43,16 @@ func (c *Sys) ListAuth() (map[string]*AuthMount, error) {
 	return mounts, nil
 }
 
+// DEPRECATED: Use EnableAuthWithOptions instead
 func (c *Sys) EnableAuth(path, authType, desc string) error {
-	body := map[string]string{
-		"type":        authType,
-		"description": desc,
-	}
+	return c.EnableAuthWithOptions(path, &EnableAuthOptions{
+		Type:        authType,
+		Description: desc,
+	})
+}
+
+func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) error {
+	body := structs.Map(options)
 
 	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s", path))
 	if err := r.SetJSONBody(body); err != nil {
@@ -75,10 +81,17 @@ func (c *Sys) DisableAuth(path string) error {
 // individually documentd because the map almost directly to the raw HTTP API
 // documentation. Please refer to that documentation for more details.
 
+type EnableAuthOptions struct {
+	Type        string `json:"type" structs:"type"`
+	Description string `json:"description" structs:"description"`
+	Local       bool   `json:"local" structs:"local"`
+}
+
 type AuthMount struct {
 	Type        string           `json:"type" structs:"type" mapstructure:"type"`
 	Description string           `json:"description" structs:"description" mapstructure:"description"`
 	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
+	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
 }
 
 type AuthConfigOutput struct {

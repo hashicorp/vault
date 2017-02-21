@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -16,6 +15,10 @@ const (
 	// Auth configuration is protected within the Vault itself, which means it
 	// can only be viewed or modified after an unseal.
 	coreAuthConfigPath = "core/auth"
+
+	// coreLocalAuthConfigPath is used to store credential configuration for
+	// local (non-replicated) mounts
+	coreLocalAuthConfigPath = "core/local-auth"
 
 	// credentialBarrierPrefix is the prefix to the UUID used in the
 	// barrier view for the credential backends.
@@ -71,16 +74,25 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	}
 
 	// Generate a new UUID and view
-	entryUUID, err := uuid.GenerateUUID()
+	if entry.UUID == "" {
+		entryUUID, err := uuid.GenerateUUID()
+		if err != nil {
+			return err
+		}
+		entry.UUID = entryUUID
+	}
+
+	viewPath := credentialBarrierPrefix + entry.UUID + "/"
+	view := NewBarrierView(c.barrier, viewPath)
+	sysView := c.mountEntrySysView(entry)
+
+	// Create the new backend
+	backend, err := c.newCredentialBackend(entry.Type, sysView, view, nil)
 	if err != nil {
 		return err
 	}
-	entry.UUID = entryUUID
-	view := NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
 
-	// Create the new backend
-	backend, err := c.newCredentialBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
-	if err != nil {
+	if err := backend.Initialize(); err != nil {
 		return err
 	}
 
@@ -121,7 +133,7 @@ func (c *Core) disableCredential(path string) (bool, error) {
 	fullPath := credentialRoutePrefix + path
 	view := c.router.MatchingStorageView(fullPath)
 	if view == nil {
-		return false, fmt.Errorf("no matching backend")
+		return false, fmt.Errorf("no matching backend %s", fullPath)
 	}
 
 	// Mark the entry as tainted
@@ -206,10 +218,17 @@ func (c *Core) taintCredEntry(path string) error {
 // loadCredentials is invoked as part of postUnseal to load the auth table
 func (c *Core) loadCredentials() error {
 	authTable := &MountTable{}
+	localAuthTable := &MountTable{}
+
 	// Load the existing mount table
 	raw, err := c.barrier.Get(coreAuthConfigPath)
 	if err != nil {
 		c.logger.Error("core: failed to read auth table", "error", err)
+		return errLoadAuthFailed
+	}
+	rawLocal, err := c.barrier.Get(coreLocalAuthConfigPath)
+	if err != nil {
+		c.logger.Error("core: failed to read local auth table", "error", err)
 		return errLoadAuthFailed
 	}
 
@@ -222,6 +241,13 @@ func (c *Core) loadCredentials() error {
 			return errLoadAuthFailed
 		}
 		c.auth = authTable
+	}
+	if rawLocal != nil {
+		if err := jsonutil.DecodeJSON(rawLocal.Value, localAuthTable); err != nil {
+			c.logger.Error("core: failed to decode local auth table", "error", err)
+			return errLoadAuthFailed
+		}
+		c.auth.Entries = append(c.auth.Entries, localAuthTable.Entries...)
 	}
 
 	// Done if we have restored the auth table
@@ -272,17 +298,33 @@ func (c *Core) persistAuth(table *MountTable) error {
 		}
 	}
 
+	nonLocalAuth := &MountTable{
+		Type: credentialTableType,
+	}
+
+	localAuth := &MountTable{
+		Type: credentialTableType,
+	}
+
+	for _, entry := range table.Entries {
+		if entry.Local {
+			localAuth.Entries = append(localAuth.Entries, entry)
+		} else {
+			nonLocalAuth.Entries = append(nonLocalAuth.Entries, entry)
+		}
+	}
+
 	// Marshal the table
-	raw, err := json.Marshal(table)
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalAuth, nil)
 	if err != nil {
-		c.logger.Error("core: failed to encode auth table", "error", err)
+		c.logger.Error("core: failed to encode and/or compress auth table", "error", err)
 		return err
 	}
 
 	// Create an entry
 	entry := &Entry{
 		Key:   coreAuthConfigPath,
-		Value: raw,
+		Value: compressedBytes,
 	}
 
 	// Write to the physical backend
@@ -290,6 +332,24 @@ func (c *Core) persistAuth(table *MountTable) error {
 		c.logger.Error("core: failed to persist auth table", "error", err)
 		return err
 	}
+
+	// Repeat with local auth
+	compressedBytes, err = jsonutil.EncodeJSONAndCompress(localAuth, nil)
+	if err != nil {
+		c.logger.Error("core: failed to encode and/or compress local auth table", "error", err)
+		return err
+	}
+
+	entry = &Entry{
+		Key:   coreLocalAuthConfigPath,
+		Value: compressedBytes,
+	}
+
+	if err := c.barrier.Put(entry); err != nil {
+		c.logger.Error("core: failed to persist local auth table", "error", err)
+		return err
+	}
+
 	return nil
 }
 
@@ -312,13 +372,19 @@ func (c *Core) setupCredentials() error {
 		}
 
 		// Create a barrier view using the UUID
-		view = NewBarrierView(c.barrier, credentialBarrierPrefix+entry.UUID+"/")
+		viewPath := credentialBarrierPrefix + entry.UUID + "/"
+		view = NewBarrierView(c.barrier, viewPath)
+		sysView := c.mountEntrySysView(entry)
 
 		// Initialize the backend
-		backend, err = c.newCredentialBackend(entry.Type, c.mountEntrySysView(entry), view, nil)
+		backend, err = c.newCredentialBackend(entry.Type, sysView, view, nil)
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
 			return errLoadAuthFailed
+		}
+
+		if err := backend.Initialize(); err != nil {
+			return err
 		}
 
 		// Mount the backend

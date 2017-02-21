@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/meta"
 )
 
@@ -14,9 +15,11 @@ type AuthEnableCommand struct {
 
 func (c *AuthEnableCommand) Run(args []string) int {
 	var description, path string
+	var local bool
 	flags := c.Meta.FlagSet("auth-enable", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
+	flags.BoolVar(&local, "local", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -44,7 +47,11 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		return 2
 	}
 
-	if err := client.Sys().EnableAuth(path, authType, description); err != nil {
+	if err := client.Sys().EnableAuthWithOptions(path, &api.EnableAuthOptions{
+		Type:        authType,
+		Description: description,
+		Local:       local,
+	}); err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error: %s", err))
 		return 2
@@ -82,6 +89,9 @@ Auth Enable Options:
                           to the type of the mount. This will make the auth
                           provider available at "/auth/<path>"
 
+  -local                  Mark the mount as a local mount. Local mounts
+                          are not replicated nor (if a secondary)
+                          removed by replication.
 `
 	return strings.TrimSpace(helpText)
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -198,7 +199,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 		Path:      "sys/mounts",
 	}
 	_, err := c.HandleRequest(req)
-	if err != ErrSealed {
+	if err != consts.ErrSealed {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -1541,7 +1542,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 
 	// Request should fail in standby mode
 	_, err = core2.HandleRequest(req)
-	if err != ErrStandby {
+	if err != consts.ErrStandby {
 		t.Fatalf("err: %v", err)
 	}
 

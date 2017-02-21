@@ -69,8 +69,8 @@ type PullRequestBranch struct {
 // PullRequestListOptions specifies the optional parameters to the
 // PullRequestsService.List method.
 type PullRequestListOptions struct {
-	// State filters pull requests based on their state.  Possible values are:
-	// open, closed.  Default is "open".
+	// State filters pull requests based on their state. Possible values are:
+	// open, closed. Default is "open".
 	State string `url:"state,omitempty"`
 
 	// Head filters pull requests by head user and branch name in the format of:

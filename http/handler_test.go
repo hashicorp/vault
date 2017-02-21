@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -80,6 +81,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"sys/": map[string]interface{}{
 				"description": "system endpoints used for control, policy and debugging",
@@ -88,6 +90,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": false,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description": "per-token private secret storage",
@@ -96,6 +99,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
+				"local": true,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -105,6 +109,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"sys/": map[string]interface{}{
 			"description": "system endpoints used for control, policy and debugging",
@@ -113,6 +118,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": false,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
@@ -121,6 +127,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -223,7 +230,7 @@ func TestHandler_error(t *testing.T) {
 	// vault.ErrSealed is a special case
 	w3 := httptest.NewRecorder()
 
-	respondError(w3, 400, vault.ErrSealed)
+	respondError(w3, 400, consts.ErrSealed)
 
 	if w3.Code != 503 {
 		t.Fatalf("expected 503, got %d", w3.Code)

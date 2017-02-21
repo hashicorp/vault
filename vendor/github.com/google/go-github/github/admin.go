@@ -75,7 +75,7 @@ func (s *AdminService) UpdateUserLDAPMapping(user string, mapping *UserLDAPMappi
 		return nil, resp, err
 	}
 
-	return m, resp, err
+	return m, resp, nil
 }
 
 // UpdateTeamLDAPMapping updates the mapping between a GitHub team and an LDAP group.
@@ -94,5 +94,5 @@ func (s *AdminService) UpdateTeamLDAPMapping(team int, mapping *TeamLDAPMapping)
 		return nil, resp, err
 	}
 
-	return m, resp, err
+	return m, resp, nil
 }

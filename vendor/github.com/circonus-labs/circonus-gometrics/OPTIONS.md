@@ -32,6 +32,7 @@ func main() {
     cfg.CheckManager.API.TokenKey = ""
     cfg.CheckManager.API.TokenApp = "circonus-gometrics"
     cfg.CheckManager.API.TokenURL = "https://api.circonus.com/v2"
+    cfg.CheckManager.API.CACert = nil
 
     // Check
     _, an := path.Split(os.Args[0])
@@ -72,6 +73,7 @@ func main() {
 | `cfg.CheckManager.API.TokenKey` | "" | [Circonus API Token key](https://login.circonus.com/user/tokens) |
 | `cfg.CheckManager.API.TokenApp` | "circonus-gometrics" | App associated with API token |
 | `cfg.CheckManager.API.URL` | "https://api.circonus.com/v2" | Circonus API URL |
+| `cfg.CheckManager.API.CACert` | nil | [*x509.CertPool](https://golang.org/pkg/crypto/x509/#CertPool) with CA Cert to validate API endpoint using internal CA or self-signed certificates |
 |Check||
 | `cfg.CheckManager.Check.ID` | "" | Check ID of previously created check. (*Note: **check id** not **check bundle id**.*) |
 | `cfg.CheckManager.Check.SubmissionURL` | "" | Submission URL of previously created check. |

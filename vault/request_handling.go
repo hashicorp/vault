@@ -7,6 +7,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -18,10 +19,10 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	// Allowing writing to a path ending in / makes it extremely difficult to
@@ -183,7 +184,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	}
 
 	// Route the request
-	resp, err := c.router.Route(req)
+	resp, routeErr := c.router.Route(req)
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -305,8 +306,8 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 	}
 
 	// Return the response and error
-	if err != nil {
-		retErr = multierror.Append(retErr, err)
+	if routeErr != nil {
+		retErr = multierror.Append(retErr, routeErr)
 	}
 	return resp, auth, retErr
 }
@@ -330,7 +331,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 	}
 
 	// Route the request
-	resp, err := c.router.Route(req)
+	resp, routeErr := c.router.Route(req)
 	if resp != nil {
 		// If wrapping is used, use the shortest between the request and response
 		var wrapTTL time.Duration
@@ -445,5 +446,5 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		req.DisplayName = auth.DisplayName
 	}
 
-	return resp, auth, err
+	return resp, auth, routeErr
 }
