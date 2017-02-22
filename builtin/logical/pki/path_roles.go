@@ -185,7 +185,7 @@ this value in certificates issued by this role.`,
 			"generate_lease": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     false,
-				Description: `If set, certificates issues against this role will have Vault leases attached to them. Defaults to "false".`,
+				Description: `If set, certificates issued against this role will have Vault leases attached to them. Defaults to "false".`,
 			},
 		},
 
@@ -291,10 +291,10 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
-	// Upgrade the role entry to have generate lease switch
+	// Upgrade generate_lease in role
 	if role.GenerateLease == nil {
-		// All the newly created roles will have GenerateLease always set to a
-		// value. A nil value indicates that this role needs an upgrade. Set it to
+		// All the new roles will have GenerateLease always set to a value. A
+		// nil value indicates that this role needs an upgrade. Set it to
 		// `true` to not alter its current behavior.
 		role.GenerateLease = new(bool)
 		*role.GenerateLease = true

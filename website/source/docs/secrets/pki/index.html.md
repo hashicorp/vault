@@ -1235,6 +1235,12 @@ subpath for interactive help output.
         This sets the O (Organization) values in the subject field of issued
         certificates. This is a comma-separated string.
       </li>
+      <li>
+        <span class="param">generate_lease</span>
+        <span class="param-flags">optional</span>
+        If set, certificates issued against this role will have Vault leases
+        attached to them. Defaults to "false".
+      </li>
     </ul>
   </dd>
 
