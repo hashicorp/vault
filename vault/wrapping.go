@@ -74,61 +74,26 @@ func (c *Core) ensureWrappingKey() error {
 }
 
 func (c *Core) wrapKeyInCubbyhole(key []byte) (string, error) {
-	creationTime := time.Now()
-	te := TokenEntry{
-		Path:           "init_token",
-		Policies:       []string{"response-wrapping"},
-		CreationTime:   creationTime.Unix(),
-		TTL:            24 * time.Hour,
-		NumUses:        1,
-		ExplicitMaxTTL: 24 * time.Hour,
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "sys/init",
 	}
-
-	if err := c.tokenStore.create(&te); err != nil {
-		c.logger.Error("core: failed to create wrapping token", "error", err)
-		return "", ErrInternalError
-	}
-
-	cubbyReq := &logical.Request{
-		Operation:   logical.CreateOperation,
-		Path:        "cubbyhole/response",
-		ClientToken: te.ID,
+	resp := &logical.Response{
+		WrapInfo: &logical.ResponseWrapInfo{
+			TTL:    24 * time.Hour,
+			Format: "jwt",
+		},
 		Data: map[string]interface{}{
-			"response": fmt.Sprintf("{\"data\": {\"share\": \"%s\"}}", base64.StdEncoding.EncodeToString(key)),
+			"share": base64.StdEncoding.EncodeToString(key),
 		},
 	}
 
-	cubbyResp, err := c.router.Route(cubbyReq)
+	_, err := c.wrapInCubbyhole(req, resp)
 	if err != nil {
-		// Revoke since it's not yet being tracked for expiration
-		c.tokenStore.Revoke(te.ID)
-		c.logger.Error("core: failed to store wrapped share", "error", err)
-		return "", ErrInternalError
-	}
-	if cubbyResp != nil && cubbyResp.IsError() {
-		c.tokenStore.Revoke(te.ID)
-		c.logger.Error("core: failed to store wrapped share", "error", cubbyResp.Data["error"])
-		return "", ErrInternalError
+		return "", err
 	}
 
-	auth := &logical.Auth{
-		ClientToken: te.ID,
-		Policies:    []string{"response-wrapping"},
-		LeaseOptions: logical.LeaseOptions{
-			TTL:       te.TTL,
-			Renewable: false,
-		},
-	}
-
-	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
-		// Revoke since it's not yet being tracked for expiration
-		c.tokenStore.Revoke(te.ID)
-		c.logger.Error("core: failed to register cubbyhole wrapping token lease", "error", err)
-		return "", ErrInternalError
-	}
-
-	return te.ID, nil
+	return resp.WrapInfo.Token, nil
 }
 
 func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*logical.Response, error) {
