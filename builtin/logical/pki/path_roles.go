@@ -492,7 +492,7 @@ type roleEntry struct {
 	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
 	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
-	GenerateLease         *bool  `json:"generate_lease" structs:"generate_lease" mapstructure:"generate_lease"`
+	GenerateLease         *bool  `json:"generate_lease" structs:"generate_lease"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
