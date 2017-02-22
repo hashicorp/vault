@@ -181,6 +181,12 @@ this value in certificates issued by this role.`,
 				Description: `If set, the O (Organization) will be set to
 this value in certificates issued by this role.`,
 			},
+
+			"generate_lease": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Default:     false,
+				Description: `If set, certificates issues against this role will have Vault leases attached to them. Defaults to "false".`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -272,12 +278,35 @@ func (b *backend) pathRoleDelete(
 
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := b.getRole(req.Storage, data.Get("name").(string))
+	roleName := data.Get("name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role name"), nil
+	}
+
+	role, err := b.getRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
 	if role == nil {
 		return nil, nil
+	}
+
+	// Upgrade the role entry to have generate lease switch
+	if role.GenerateLease == nil {
+		// All the newly created roles will have GenerateLease always set to a
+		// value. A nil value indicates that this role needs an upgrade. Set it to
+		// `true` to not alter its current behavior.
+		role.GenerateLease = new(bool)
+		*role.GenerateLease = true
+
+		// Persist the upgrade
+		entry, err := logical.StorageEntryJSON("role/"+roleName, role)
+		if err != nil {
+			return nil, err
+		}
+		if err := req.Storage.Put(entry); err != nil {
+			return nil, fmt.Errorf("failed to upgrade role entry: %v", err)
+		}
 	}
 
 	hasMax := true
@@ -344,7 +373,10 @@ func (b *backend) pathRoleCreate(
 		KeyUsage:            data.Get("key_usage").(string),
 		OU:                  data.Get("ou").(string),
 		Organization:        data.Get("organization").(string),
+		GenerateLease:       new(bool),
 	}
+
+	*entry.GenerateLease = data.Get("generate_lease").(bool)
 
 	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
 		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
@@ -460,6 +492,7 @@ type roleEntry struct {
 	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
 	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
+	GenerateLease         *bool  `json:"generate_lease" structs:"generate_lease" mapstructure:"generate_lease"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
