@@ -31,6 +31,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	var init, cancel, status, delete, retrieve, backup, recoveryKey bool
 	var shares, threshold int
 	var nonce string
+	var wrapShares bool
 	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("rekey", meta.FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
@@ -44,6 +45,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.StringVar(&nonce, "nonce", "", "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
+	flags.BoolVar(&wrapShares, "wrap-shares", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -63,7 +65,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	// Check if we are running doing any restricted variants
 	switch {
 	case init:
-		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey)
+		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey, wrapShares)
 	case cancel:
 		return c.cancelRekey(client, recoveryKey)
 	case status:
@@ -94,6 +96,7 @@ func (c *RekeyCommand) Run(args []string) int {
 				SecretThreshold: threshold,
 				PGPKeys:         pgpKeys,
 				Backup:          backup,
+				WrapShares:      wrapShares,
 			})
 		} else {
 			rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
@@ -101,6 +104,7 @@ func (c *RekeyCommand) Run(args []string) int {
 				SecretThreshold: threshold,
 				PGPKeys:         pgpKeys,
 				Backup:          backup,
+				WrapShares:      wrapShares,
 			})
 		}
 		if err != nil {
@@ -212,13 +216,14 @@ func (c *RekeyCommand) Run(args []string) int {
 func (c *RekeyCommand) initRekey(client *api.Client,
 	shares, threshold int,
 	pgpKeys pgpkeys.PubKeyFilesFlag,
-	backup, recoveryKey bool) int {
+	backup, recoveryKey, wrapShares bool) int {
 	// Start the rekey
 	request := &api.RekeyInitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
 		PGPKeys:         pgpKeys,
 		Backup:          backup,
+		WrapShares:      wrapShares,
 	}
 	var status *api.RekeyStatusResponse
 	var err error

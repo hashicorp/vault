@@ -133,6 +133,7 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 		StoredShares:    req.StoredShares,
 		PGPKeys:         req.PGPKeys,
 		Backup:          req.Backup,
+		WrapShares:      req.WrapShares,
 	}, recovery)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
@@ -225,6 +226,7 @@ type RekeyRequest struct {
 	StoredShares    int      `json:"stored_shares"`
 	PGPKeys         []string `json:"pgp_keys"`
 	Backup          bool     `json:"backup"`
+	WrapShares      bool     `json:"wrap_shares"`
 }
 
 type RekeyStatusResponse struct {

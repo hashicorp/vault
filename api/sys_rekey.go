@@ -172,6 +172,7 @@ type RekeyInitRequest struct {
 	SecretShares    int      `json:"secret_shares"`
 	SecretThreshold int      `json:"secret_threshold"`
 	PGPKeys         []string `json:"pgp_keys"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool
 }
 

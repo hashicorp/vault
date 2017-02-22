@@ -82,7 +82,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 		}
 		unsealKeys = encryptedShares
 	}
-
+	fmt.Println(masterKey, unsealKeys)
 	return masterKey, unsealKeys, nil
 }
 
@@ -154,22 +154,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
 	}
 
-	// Ensure the barrier is re-sealed
-	defer func() {
-		// Defers are LIFO so we need to run this here too to ensure the stop
-		// happens before sealing. preSeal also stops, so we just make the
-		// stopping safe against multiple calls.
-
-		// If we are wrapping the shares do not reseal vault.
-		if barrierConfig.WrapShares {
-			return
-		}
-
-		if err := c.barrier.Seal(); err != nil {
-			c.logger.Error("core: failed to seal barrier", "error", err)
-		}
-	}()
-
 	err = c.seal.SetBarrierConfig(barrierConfig)
 	if err != nil {
 		c.logger.Error("core: failed to save barrier configuration", "error", err)
@@ -201,16 +185,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	}
 
 	if barrierConfig.WrapShares {
-		// Fully unseal vault
-		sealed, err := c.unsealInternal(barrierKey)
-		if err != nil {
-			return nil, err
-		}
-
-		if !sealed {
-			return nil, fmt.Errorf("failed to unseal")
-		}
-
 		// wrap tokens
 		wrappedKeys := make([][]byte, len(barrierUnsealKeys))
 		for i, _ := range barrierUnsealKeys {
@@ -218,7 +192,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to wrap share: %s", err)
 			}
-			fmt.Println(token)
 			wrappedKeys[i] = []byte(token)
 		}
 		barrierUnsealKeys = wrappedKeys
@@ -253,10 +226,20 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			results.RecoveryShares = recoveryUnsealKeys
 		}
 	}
+	fmt.Println(barrierKey, results)
+	// Fully unseal vault
+	sealed, err := c.unsealInternal(barrierKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !sealed {
+		return nil, fmt.Errorf("failed to unseal")
+	}
 
 	// If the shares are getting wrapped, don't create a root token or run
 	// preseal.
-	if barrierConfig.WrapShares {
+	if barrierConfig.WrapShares || len(barrierConfig.PGPKeys) > 0 {
 		results.RootToken = ""
 		return results, nil
 	}
@@ -277,12 +260,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			return nil, err
 		}
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
-	}
-
-	// Prepare to re-seal
-	if err := c.preSeal(); err != nil {
-		c.logger.Error("core: pre-seal teardown failed", "error", err)
-		return nil, err
 	}
 
 	return results, nil

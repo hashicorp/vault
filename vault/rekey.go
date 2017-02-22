@@ -391,6 +391,19 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		}
 	}
 
+	if c.barrierRekeyConfig.WrapShares {
+		// wrap tokens
+		wrappedKeys := make([][]byte, len(results.SecretShares))
+		for i, _ := range results.SecretShares {
+			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i])
+			if err != nil {
+				return nil, fmt.Errorf("failed to wrap share: %s", err)
+			}
+			wrappedKeys[i] = []byte(token)
+		}
+		results.SecretShares = wrappedKeys
+	}
+
 	if keysToStore != nil {
 		if err := c.seal.SetStoredKeys(keysToStore); err != nil {
 			c.logger.Error("core: failed to store keys", "error", err)
