@@ -238,6 +238,7 @@ func TestACL_PolicyMerge(t *testing.T) {
 		{"deny/all", nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
 		{"deny/all1", nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
 		{"value/merge", map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
+		{"value/empty", map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}},
 	}
 
 	for _, tc := range tcases {
@@ -526,6 +527,24 @@ path "value/merge" {
 	}
 	denied_parameters = {
 		"test" = [3, 4]
+	}
+}
+path "value/empty" {
+	policy = "write"
+	allowed_parameters = {
+		"empty" = []
+	}
+	denied_parameters = {
+		"empty" = [1]
+	}
+}
+path "value/empty" {
+	policy = "write"
+	allowed_parameters = {
+		"empty" = [1]
+	}
+	denied_parameters = {
+		"empty" = []
 	}
 }
 `
