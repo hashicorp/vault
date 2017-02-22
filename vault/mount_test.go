@@ -37,7 +37,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	}
 
 	// Verify matching mount tables
-	if !reflect.DeepEqual(c.mounts, c2.mounts) {
+	if !reflect.DeepEqual(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()) {
 		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
 	}
 }
@@ -78,7 +78,7 @@ func TestCore_Mount(t *testing.T) {
 	}
 
 	// Verify matching mount tables
-	if !reflect.DeepEqual(c.mounts, c2.mounts) {
+	if !reflect.DeepEqual(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()) {
 		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
 	}
 }
@@ -127,8 +127,8 @@ func TestCore_Mount_Local(t *testing.T) {
 	if err := jsonutil.DecodeJSON(rawLocal.Value, localMountsTable); err != nil {
 		t.Fatal(err)
 	}
-	if len(localMountsTable.Entries) > 0 {
-		t.Fatalf("expected no entries in local mount table, got %#v", localMountsTable)
+	if len(localMountsTable.Entries) != 1 || localMountsTable.Entries[0].Type != "cubbyhole" {
+		t.Fatalf("expected only cubbyhole entry in local mount table, got %#v", localMountsTable)
 	}
 
 	c.mounts.Entries[1].Local = true
@@ -147,7 +147,11 @@ func TestCore_Mount_Local(t *testing.T) {
 	if err := jsonutil.DecodeJSON(rawLocal.Value, localMountsTable); err != nil {
 		t.Fatal(err)
 	}
-	if len(localMountsTable.Entries) != 1 {
+	// This requires some explanation: because we're directly munging the mount
+	// table, the table initially when core unseals contains cubbyhole as per
+	// above, but then we overwrite it with our own table with one local entry,
+	// so we should now only expect the noop2 entry
+	if len(localMountsTable.Entries) != 1 || localMountsTable.Entries[0].Path != "noop2/" {
 		t.Fatalf("expected one entry in local mount table, got %#v", localMountsTable)
 	}
 
@@ -204,7 +208,7 @@ func TestCore_Unmount(t *testing.T) {
 	}
 
 	// Verify matching mount tables
-	if !reflect.DeepEqual(c.mounts, c2.mounts) {
+	if !reflect.DeepEqual(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()) {
 		t.Fatalf("mismatch: %v %v", c.mounts, c2.mounts)
 	}
 }
@@ -483,6 +487,17 @@ func testCore_MountTable_UpgradeToTyped_Common(
 		mt = c.auth
 	}
 
+	// We filter out local entries here since the logic is rather dumb
+	// (straight JSON comparison) and doesn't seal well with the separate
+	// locations
+	newEntries := mt.Entries[:0]
+	for _, entry := range mt.Entries {
+		if !entry.Local {
+			newEntries = append(newEntries, entry)
+		}
+	}
+	mt.Entries = newEntries
+
 	// Save the expected table
 	goodJson, err := json.Marshal(mt)
 	if err != nil {
@@ -577,20 +592,21 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 	if len(table.Entries) != 3 {
 		t.Fatalf("bad: %v", table.Entries)
 	}
+	table.sortEntriesByPath()
 	for idx, entry := range table.Entries {
 		switch idx {
 		case 0:
-			if entry.Path != "secret/" {
-				t.Fatalf("bad: %v", entry)
-			}
-			if entry.Type != "generic" {
-				t.Fatalf("bad: %v", entry)
-			}
-		case 1:
 			if entry.Path != "cubbyhole/" {
 				t.Fatalf("bad: %v", entry)
 			}
 			if entry.Type != "cubbyhole" {
+				t.Fatalf("bad: %v", entry)
+			}
+		case 1:
+			if entry.Path != "secret/" {
+				t.Fatalf("bad: %v", entry)
+			}
+			if entry.Type != "generic" {
 				t.Fatalf("bad: %v", entry)
 			}
 		case 2:
@@ -611,5 +627,4 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 			t.Fatalf("bad: %v", entry)
 		}
 	}
-
 }

@@ -99,7 +99,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
-				"local": false,
+				"local": true,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -127,7 +127,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)

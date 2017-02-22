@@ -51,7 +51,7 @@ func TestSysMounts(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
-				"local": false,
+				"local": true,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -79,7 +79,7 @@ func TestSysMounts(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -147,7 +147,7 @@ func TestSysMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
-				"local": false,
+				"local": true,
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -184,7 +184,7 @@ func TestSysMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -274,7 +274,7 @@ func TestSysRemount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
-				"local": false,
+				"local": true,
 			},
 		},
 		"bar/": map[string]interface{}{
@@ -311,7 +311,7 @@ func TestSysRemount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -373,7 +373,7 @@ func TestSysUnmount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
-				"local": false,
+				"local": true,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -401,7 +401,7 @@ func TestSysUnmount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -469,7 +469,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
-				"local": false,
+				"local": true,
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -506,7 +506,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -595,7 +595,7 @@ func TestSysTuneMount(t *testing.T) {
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
 				},
-				"local": false,
+				"local": true,
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -632,7 +632,7 @@ func TestSysTuneMount(t *testing.T) {
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
 			},
-			"local": false,
+			"local": true,
 		},
 	}
 

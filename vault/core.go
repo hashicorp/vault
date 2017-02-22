@@ -628,7 +628,7 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
 		return nil, te, logical.ErrPermissionDenied
 	}
@@ -1037,7 +1037,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
@@ -1122,7 +1122,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr

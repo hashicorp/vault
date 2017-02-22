@@ -40,6 +40,7 @@ func NewTransactionalInmem(logger log.Logger) *TransactionalInmemBackend {
 		InmemBackend: InmemBackend{
 			root:       radix.New(),
 			permitPool: NewPermitPool(1),
+			logger:     logger,
 		},
 	}
 	return in

@@ -10,18 +10,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestCubbyholeBackend_RootPaths(t *testing.T) {
-	b := testCubbyholeBackend()
-	expected := []string{
-		"*",
-	}
-
-	actual := b.SpecialPaths().LocalStorage
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: %#v", actual)
-	}
-}
-
 func TestCubbyholeBackend_Write(t *testing.T) {
 	b := testCubbyholeBackend()
 	req := logical.TestRequest(t, logical.UpdateOperation, "foo")
