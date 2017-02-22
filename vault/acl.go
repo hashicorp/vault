@@ -298,7 +298,7 @@ CHECK:
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {
-	// Empty list is equivalent to the item always existing in the list and "*"
+	// Empty list is equivalent to the item always existing in the list
 	if len(list) == 0 {
 		return true
 	}
