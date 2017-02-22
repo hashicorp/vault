@@ -34,6 +34,18 @@ path "secret/foo" {
 path "secret/super-secret" {
   capabilities = ["deny"]
 }
+
+path "secret/bar" {
+  capabilities = ["create"]
+  permissions = {
+    allowed_parameters = {
+      "*" = []
+    }
+    denied_parameters = {
+      "foo" = ["bar"]
+    }
+  }
+}
 ```
 
 Policies use path based matching to apply rules. A policy may be an exact
@@ -98,6 +110,31 @@ capabilities. These mappings are as follows:
   * `write` - `["create", "read", "update", "delete", "list"]`
 
   * `read` - `["read", "list"]`
+
+## Permissions
+
+Paths offer an optional `permissions` field for fine-grain control over the
+parameters and values a path is able to write. The capabilities associated with
+this path take precedence over permissions on parameters.
+
+  * `allowed_parameters` - Acts as a whitelist. Setting to "*" will allow a
+    parameter by any name to be changed.  Otherwise setting a key with an `[]`
+    value will allow changes to parameters with that name. Setting a key with a
+    populated value array will allow that parameter to only be set to one of the
+    values in the array. If keys exist in the `allowed_parameters` object all
+    keys not specified will be denied.  
+  * `denied_parameters` - Acts as a blacklist, and takes precedence over
+    `allowed_parameters`. Setting to "*" will deny any attempt to change any
+    parameter. Otherwise setting a key with an `[]` value will deny any changes
+    to parameters with that name. Setting a key with a populated value array
+    will deny any attempt to set a parameter with that name and value. If keys
+    exist in the `denied_parameters` object all keys not specified will be
+    allowed.
+
+If both `allowed_parameters` and `denied_parameters` contain keys and the keys
+in `denied_parameters` contain values: All specified `allowed_parameters` will
+be allowed, and specified `denied_parameters` will be allowed to be anything not
+included in their array of denied values.
 
 ## Root Policy
 

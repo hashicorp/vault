@@ -1,6 +1,9 @@
 package vault
 
 import (
+	"reflect"
+	"strings"
+
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/logical"
 )
@@ -47,25 +50,72 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
-				tree.Insert(pc.Prefix, pc.CapabilitiesBitmap)
+				tree.Insert(pc.Prefix, pc.Permissions)
 				continue
 			}
-			existing := raw.(uint32)
+
+			// these are the ones already in the tree
+			existingPerms := raw.(*Permissions)
 
 			switch {
-			case existing&DenyCapabilityInt > 0:
+			case existingPerms.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If we are explicitly denied in the existing capability set,
 				// don't save anything else
+				continue
 
-			case pc.CapabilitiesBitmap&DenyCapabilityInt > 0:
+			case pc.Permissions.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If this new policy explicitly denies, only save the deny value
-				tree.Insert(pc.Prefix, DenyCapabilityInt)
+				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
+				pc.Permissions.AllowedParameters = nil
+				pc.Permissions.DeniedParameters = nil
+				goto INSERT
 
 			default:
 				// Insert the capabilities in this new policy into the existing
 				// value
-				tree.Insert(pc.Prefix, existing|pc.CapabilitiesBitmap)
+				pc.Permissions.CapabilitiesBitmap = existingPerms.CapabilitiesBitmap | pc.Permissions.CapabilitiesBitmap
 			}
+
+			if len(existingPerms.AllowedParameters) > 0 {
+				if pc.Permissions.AllowedParameters == nil {
+					pc.Permissions.AllowedParameters = existingPerms.AllowedParameters
+				} else {
+					for key, value := range existingPerms.AllowedParameters {
+						pcValue, ok := pc.Permissions.AllowedParameters[key]
+						// If an empty array exist it should overwrite any other
+						// value.
+						if len(value) == 0 || (ok && len(pcValue) == 0) {
+							pc.Permissions.AllowedParameters[key] = []interface{}{}
+						} else {
+							// Merge the two maps, appending values on key conflict.
+							pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
+						}
+					}
+				}
+			}
+
+			if len(existingPerms.DeniedParameters) > 0 {
+				if pc.Permissions.DeniedParameters == nil {
+					pc.Permissions.DeniedParameters = existingPerms.DeniedParameters
+				} else {
+					for key, value := range existingPerms.DeniedParameters {
+						pcValue, ok := pc.Permissions.DeniedParameters[key]
+						// If an empty array exist it should overwrite any other
+						// value.
+						if len(value) == 0 || (ok && len(pcValue) == 0) {
+							pc.Permissions.DeniedParameters[key] = []interface{}{}
+						} else {
+							// Merge the two maps, appending values on key conflict.
+							pc.Permissions.DeniedParameters[key] = append(value, pc.Permissions.DeniedParameters[key]...)
+						}
+					}
+				}
+			}
+
+		INSERT:
+
+			tree.Insert(pc.Prefix, pc.Permissions)
+
 		}
 	}
 	return a, nil
@@ -80,8 +130,10 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
+
 	if ok {
-		capabilities = raw.(uint32)
+		perm := raw.(*Permissions)
+		capabilities = perm.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -90,7 +142,8 @@ func (a *ACL) Capabilities(path string) (pathCapabilities []string) {
 	if !ok {
 		return []string{DenyCapability}
 	} else {
-		capabilities = raw.(uint32)
+		perm := raw.(*Permissions)
+		capabilities = perm.CapabilitiesBitmap
 	}
 
 CHECK:
@@ -124,22 +177,27 @@ CHECK:
 // AllowOperation is used to check if the given operation is permitted. The
 // first bool indicates if an op is allowed, the second whether sudo priviliges
 // exist for that op and path.
-func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, sudo bool) {
+func (a *ACL) AllowOperation(req *logical.Request) (bool, bool) {
 	// Fast-path root
 	if a.root {
 		return true, true
 	}
+	op := req.Operation
+	path := req.Path
 
 	// Help is always allowed
 	if op == logical.HelpOperation {
 		return true, false
 	}
 
+	var permissions *Permissions
+
 	// Find an exact matching rule, look for glob if no match
 	var capabilities uint32
 	raw, ok := a.exactRules.Get(path)
 	if ok {
-		capabilities = raw.(uint32)
+		permissions = raw.(*Permissions)
+		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
 	}
 
@@ -148,32 +206,112 @@ func (a *ACL) AllowOperation(op logical.Operation, path string) (allowed bool, s
 	if !ok {
 		return false, false
 	} else {
-		capabilities = raw.(uint32)
+		permissions = raw.(*Permissions)
+		capabilities = permissions.CapabilitiesBitmap
 	}
 
 CHECK:
 	// Check if the minimum permissions are met
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
-	sudo = capabilities&SudoCapabilityInt > 0
+	sudo := capabilities&SudoCapabilityInt > 0
+	operationAllowed := false
 	switch op {
 	case logical.ReadOperation:
-		allowed = capabilities&ReadCapabilityInt > 0
+		operationAllowed = capabilities&ReadCapabilityInt > 0
 	case logical.ListOperation:
-		allowed = capabilities&ListCapabilityInt > 0
+		operationAllowed = capabilities&ListCapabilityInt > 0
 	case logical.UpdateOperation:
-		allowed = capabilities&UpdateCapabilityInt > 0
+		operationAllowed = capabilities&UpdateCapabilityInt > 0
 	case logical.DeleteOperation:
-		allowed = capabilities&DeleteCapabilityInt > 0
+		operationAllowed = capabilities&DeleteCapabilityInt > 0
 	case logical.CreateOperation:
-		allowed = capabilities&CreateCapabilityInt > 0
+		operationAllowed = capabilities&CreateCapabilityInt > 0
 
-	// These three re-use UpdateCapabilityInt since that's the most appropriate capability/operation mapping
+	// These three re-use UpdateCapabilityInt since that's the most appropriate
+	// capability/operation mapping
 	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
-		allowed = capabilities&UpdateCapabilityInt > 0
+		operationAllowed = capabilities&UpdateCapabilityInt > 0
 
 	default:
 		return false, false
 	}
-	return
+
+	if !operationAllowed {
+		return false, sudo
+	}
+
+	// Only check parameter permissions for operations that can modify
+	// parameters.
+	if op == logical.UpdateOperation || op == logical.CreateOperation {
+		// If there are no data fields, allow
+		if len(req.Data) == 0 {
+			return true, sudo
+		}
+
+		if len(permissions.DeniedParameters) == 0 {
+			goto ALLOWED_PARAMETERS
+		}
+
+		// Check if all parameters have been denied
+		if _, ok := permissions.DeniedParameters["*"]; ok {
+			return false, sudo
+		}
+
+		for parameter, value := range req.Data {
+			// Check if parameter has been explictly denied
+			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
+				// If the value exists in denied values slice, deny
+				if valueInParameterList(value, valueSlice) {
+					return false, sudo
+				}
+			}
+		}
+
+	ALLOWED_PARAMETERS:
+		// If we don't have any allowed parameters set, allow
+		if len(permissions.AllowedParameters) == 0 {
+			return true, sudo
+		}
+
+		_, allowedAll := permissions.AllowedParameters["*"]
+		if len(permissions.AllowedParameters) == 1 && allowedAll {
+			return true, sudo
+		}
+
+		for parameter, value := range req.Data {
+			valueSlice, ok := permissions.AllowedParameters[strings.ToLower(parameter)]
+			// Requested parameter is not in allowed list
+			if !ok && !allowedAll {
+				return false, sudo
+			}
+
+			// If the value doesn't exists in the allowed values slice,
+			// deny
+			if ok && !valueInParameterList(value, valueSlice) {
+				return false, sudo
+			}
+		}
+	}
+
+	return true, sudo
+}
+
+func valueInParameterList(v interface{}, list []interface{}) bool {
+	// Empty list is equivalent to the item always existing in the list
+	if len(list) == 0 {
+		return true
+	}
+
+	return valueInSlice(v, list)
+}
+
+func valueInSlice(v interface{}, list []interface{}) bool {
+	for _, el := range list {
+		if reflect.DeepEqual(el, v) {
+			return true
+		}
+	}
+
+	return false
 }

@@ -58,11 +58,22 @@ type Policy struct {
 
 // PathCapabilities represents a policy for a path in the namespace.
 type PathCapabilities struct {
-	Prefix             string
-	Policy             string
-	Capabilities       []string
-	CapabilitiesBitmap uint32 `hcl:"-"`
-	Glob               bool
+	Prefix       string
+	Policy       string
+	Permissions  *Permissions
+	Glob         bool
+	Capabilities []string
+
+	// These two keys are used at the top level to make the HCL nicer; we store
+	// in the Permissions object though
+	AllowedParametersHCL map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParametersHCL  map[string][]interface{} `hcl:"denied_parameters"`
+}
+
+type Permissions struct {
+	CapabilitiesBitmap uint32
+	AllowedParameters  map[string][]interface{}
+	DeniedParameters   map[string][]interface{}
 }
 
 // Parse is used to parse the specified ACL rules into an
@@ -113,16 +124,21 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		if len(item.Keys) > 0 {
 			key = item.Keys[0].Token.Value().(string)
 		}
-
 		valid := []string{
 			"policy",
 			"capabilities",
+			"allowed_parameters",
+			"denied_parameters",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
 
 		var pc PathCapabilities
+
+		// allocate memory so that DecodeObject can initialize the Permissions struct
+		pc.Permissions = new(Permissions)
+
 		pc.Prefix = key
 		if err := hcl.DecodeObject(&pc, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -156,23 +172,36 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 		}
 
 		// Initialize the map
-		pc.CapabilitiesBitmap = 0
+		pc.Permissions.CapabilitiesBitmap = 0
 		for _, cap := range pc.Capabilities {
 			switch cap {
 			// If it's deny, don't include any other capability
 			case DenyCapability:
 				pc.Capabilities = []string{DenyCapability}
-				pc.CapabilitiesBitmap = DenyCapabilityInt
+				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
 			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
-				pc.CapabilitiesBitmap |= cap2Int[cap]
+				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability '%s'", key, cap)
 			}
 		}
 
-	PathFinished:
+		if pc.AllowedParametersHCL != nil {
+			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
+			for key, val := range pc.AllowedParametersHCL {
+				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
+			}
+		}
+		if pc.DeniedParametersHCL != nil {
+			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
 
+			for key, val := range pc.DeniedParametersHCL {
+				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
+			}
+		}
+
+	PathFinished:
 		paths = append(paths, &pc)
 	}
 
