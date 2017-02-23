@@ -187,7 +187,14 @@ this value in certificates issued by this role.`,
 				Default: false,
 				Description: `
 If set, certificates issued/signed against this role will have Vault leases
-attached to them. Defaults to "false".`,
+attached to them. Defaults to "false".
+
+For certificates associated with leases, when the leases expire, Vault will add
+the certificates to the CRL. When lease generation is disabled, for the
+certificates to be added to the CRL, "pki/revoke" endpoint should be invoked.
+When large number of certificates are generated with long lifetimes, it is
+recommended that lease generation is disabled. Large amount of leases adversely
+affects the startup time of Vault.`,
 			},
 		},
 
@@ -255,6 +262,16 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		modified = true
 	}
 
+	// Upgrade generate_lease in role
+	if result.GenerateLease == nil {
+		// All the new roles will have GenerateLease always set to a value. A
+		// nil value indicates that this role needs an upgrade. Set it to
+		// `true` to not alter its current behavior.
+		result.GenerateLease = new(bool)
+		*result.GenerateLease = true
+		modified = true
+	}
+
 	if modified {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -291,24 +308,6 @@ func (b *backend) pathRoleRead(
 	}
 	if role == nil {
 		return nil, nil
-	}
-
-	// Upgrade generate_lease in role
-	if role.GenerateLease == nil {
-		// All the new roles will have GenerateLease always set to a value. A
-		// nil value indicates that this role needs an upgrade. Set it to
-		// `true` to not alter its current behavior.
-		role.GenerateLease = new(bool)
-		*role.GenerateLease = true
-
-		// Persist the upgrade
-		entry, err := logical.StorageEntryJSON("role/"+roleName, role)
-		if err != nil {
-			return nil, err
-		}
-		if err := req.Storage.Put(entry); err != nil {
-			return nil, fmt.Errorf("failed to upgrade role entry: %v", err)
-		}
 	}
 
 	hasMax := true
@@ -490,11 +489,11 @@ type roleEntry struct {
 	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
-	MaxPathLength         *int   `json:",omitempty" structs:",omitempty"`
+	MaxPathLength         *int   `json:"max_path_length,omitempty" structs:"max_path_length,omitempty" mapstructure:"max_path_length"`
 	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
 	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
-	GenerateLease         *bool  `json:"generate_lease" structs:"generate_lease"`
+	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
