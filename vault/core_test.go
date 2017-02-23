@@ -69,6 +69,19 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+
+	err = c.Seal(res.RootToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 	if !sealed {
 		t.Fatalf("should be sealed")
 	}
@@ -154,6 +167,19 @@ func TestCore_Unseal_Single(t *testing.T) {
 	}
 
 	sealed, err := c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+
+	err = c.Seal(res.RootToken)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	sealed, err = c.Sealed()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

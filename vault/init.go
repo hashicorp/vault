@@ -177,14 +177,35 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		}
 	}
 
-	// Perform initial setup
-	if err := c.setupCluster(); err != nil {
-		c.logger.Error("core: cluster setup failed during init", "error", err)
+	// If ha is enabled we need to
+	if c.ha != nil {
+		// Perform initial setup
+		if err := c.setupCluster(); err != nil {
+			c.logger.Error("core: cluster setup failed during init", "error", err)
+			return nil, err
+		}
+		if err := c.postUnseal(); err != nil {
+			c.logger.Error("core: post-unseal setup failed during init", "error", err)
+			return nil, err
+		}
+		/*	defer func() {
+			if err := c.preSeal(); err != nil {
+				c.logger.Error("core: pre-seal teardown failed", "error", err)
+			}
+
+			if err := c.barrier.Seal(); err != nil {
+				c.logger.Error("core: failed to seal barrier", "error", err)
+			}
+		}()*/
+	}
+
+	// Fully unseal vault, this zeros out barrierKey
+	sealed, err := c.unsealInternal(barrierKey)
+	if err != nil {
 		return nil, err
 	}
-	if err := c.postUnseal(); err != nil {
-		c.logger.Error("core: post-unseal setup failed during init", "error", err)
-		return nil, err
+	if !sealed {
+		return nil, fmt.Errorf("failed to unseal")
 	}
 
 	if barrierConfig.WrapShares {
@@ -228,16 +249,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 
 			results.RecoveryShares = recoveryUnsealKeys
 		}
-	}
-
-	// Fully unseal vault, this zeros out barrierKey
-	sealed, err := c.unsealInternal(barrierKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if !sealed {
-		return nil, fmt.Errorf("failed to unseal")
 	}
 
 	// If the shares are getting wrapped, don't create a root token.
