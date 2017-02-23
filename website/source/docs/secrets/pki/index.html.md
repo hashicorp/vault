@@ -1239,13 +1239,14 @@ subpath for interactive help output.
         <span class="param">generate_lease</span>
         <span class="param-flags">optional</span>
         If set, certificates issued/signed against this role will have Vault
-        leases attached to them. Defaults to "false". For certificates
-        associated with leases, when the leases expire, Vault will add the
-        certificates to the CRL. When lease generation is disabled, for the
-        certificates to be added to the CRL, "pki/revoke" endpoint should be
-        invoked. When large number of certificates are generated with long
-        lifetimes, it is recommended that lease generation is disabled. Large
-        amount of leases adversely affects the startup time of Vault.
+        leases attached to them. Defaults to "false". Certificates can be added
+        to the CRL by `vault revoke <lease_id>` when certificates are
+        associated with leases.  It can also be done using the `pki/revoke`
+        endpoint. However, when lease generation is disabled, invoking
+        `pki/revoke` would be the only way to add the certificates to the CRL.
+        When large number of certificates are generated with long lifetimes, it
+        is recommended that lease generation be disabled, as large amount of
+        leases adversely affect the startup time of Vault.
       </li>
     </ul>
   </dd>
