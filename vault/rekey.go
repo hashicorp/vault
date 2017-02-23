@@ -397,7 +397,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		// wrap tokens
 		wrappedKeys := make([][]byte, len(results.SecretShares))
 		for i, _ := range results.SecretShares {
-			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i], true)
+			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i], true, c.barrierRekeyConfig)
 			if err != nil {
 				return nil, fmt.Errorf("failed to wrap share: %s", err)
 			}
