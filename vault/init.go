@@ -60,7 +60,10 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 	// Return the master key if only a single key part is used
 	var unsealKeys [][]byte
 	if sc.SecretShares == 1 {
-		unsealKeys = append(unsealKeys, masterKey)
+		// The unseal process zeros out masterKey, so copy here to return
+		masterKeyCopy := make([]byte, len(masterKey))
+		copy(masterKeyCopy, masterKey)
+		unsealKeys = append(unsealKeys, masterKeyCopy)
 	} else {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(masterKey, sc.SecretShares, sc.SecretThreshold)
@@ -82,7 +85,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 		}
 		unsealKeys = encryptedShares
 	}
-	fmt.Println(masterKey, unsealKeys)
+
 	return masterKey, unsealKeys, nil
 }
 
@@ -226,8 +229,8 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			results.RecoveryShares = recoveryUnsealKeys
 		}
 	}
-	fmt.Println(barrierKey, results)
-	// Fully unseal vault
+
+	// Fully unseal vault, this zeros out barrierKey
 	sealed, err := c.unsealInternal(barrierKey)
 	if err != nil {
 		return nil, err
