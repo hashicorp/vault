@@ -429,6 +429,12 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("Account ID %q does not belong to role %q", identityDocParsed.AccountID, roleName)), nil
 	}
 
+	// Verify that the `Region` of the instance trying to login matches the
+	// `Region` specified as a constraint on the role
+	if roleEntry.BoundRegion != "" && identityDocParsed.Region != roleEntry.BoundRegion {
+		return logical.ErrorResponse(fmt.Sprintf("Region %q does not belong to the role %q", identityDocParsed.Region, roleName)), nil
+	}
+
 	// Check if the IAM instance profile ARN of the instance trying to
 	// login, matches the IAM instance profile ARN specified as a constraint
 	// on the role.

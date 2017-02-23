@@ -30,6 +30,10 @@ using the AMI ID specified by this parameter.`,
 				Description: `If set, defines a constraint on the EC2 instances that the account ID
 in its identity document to match the one specified by this parameter.`,
 			},
+			"bound_region": {
+				Type:        framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that the region in its identity document to match the one specified by this parameter.`,
+			},
 			"bound_iam_role_arn": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the authenticating EC2 instance
@@ -312,6 +316,10 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundAccountID = boundAccountIDRaw.(string)
 	}
 
+	if boundRegionRaw, ok := data.GetOk("bound_region"); ok {
+		roleEntry.BoundRegion = boundRegionRaw.(string)
+	}
+
 	if boundIamRoleARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
 		roleEntry.BoundIamRoleARN = boundIamRoleARNRaw.(string)
 	}
@@ -432,6 +440,7 @@ func (b *backend) pathRoleCreateUpdate(
 type awsRoleEntry struct {
 	BoundAmiID                 string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
 	BoundAccountID             string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
+	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
 	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
 	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`

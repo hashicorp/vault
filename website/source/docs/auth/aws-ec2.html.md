@@ -1020,6 +1020,14 @@ The response will be in JSON. For example:
     </ul>
     <ul>
       <li>
+        <span class="param">bound_region</span>
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instances that the region in
+        its identity document to match the one specified by this parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
         <span class="param">bound_iam_role_arn</span>
         <span class="param-flags">optional</span>
         If set, defines a constraint on the authenticating EC2 instance that it
