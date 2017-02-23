@@ -203,6 +203,7 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			resp.Nonce = req.Nonce
 			resp.Backup = result.Backup
 			resp.PGPFingerprints = result.PGPFingerprints
+			resp.WrapShares = result.WrapShares
 
 			// Encode the keys
 			keys := make([]string, 0, len(result.SecretShares))
@@ -225,8 +226,8 @@ type RekeyRequest struct {
 	SecretThreshold int      `json:"secret_threshold"`
 	StoredShares    int      `json:"stored_shares"`
 	PGPKeys         []string `json:"pgp_keys"`
-	Backup          bool     `json:"backup"`
 	WrapShares      bool     `json:"wrap_shares"`
+	Backup          bool     `json:"backup"`
 }
 
 type RekeyStatusResponse struct {
@@ -237,6 +238,7 @@ type RekeyStatusResponse struct {
 	Progress        int      `json:"progress"`
 	Required        int      `json:"required"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool     `json:"backup"`
 }
 
@@ -251,5 +253,6 @@ type RekeyUpdateResponse struct {
 	Keys            []string `json:"keys"`
 	KeysB64         []string `json:"keys_base64"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool     `json:"backup"`
 }

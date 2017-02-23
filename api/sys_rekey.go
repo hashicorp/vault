@@ -184,6 +184,7 @@ type RekeyStatusResponse struct {
 	Progress        int
 	Required        int
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool
 }
 
@@ -193,6 +194,7 @@ type RekeyUpdateResponse struct {
 	Keys            []string
 	KeysB64         []string `json:"keys_base64"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool
 }
 

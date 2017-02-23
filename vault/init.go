@@ -212,7 +212,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		// wrap tokens
 		wrappedKeys := make([][]byte, len(barrierUnsealKeys))
 		for i, _ := range barrierUnsealKeys {
-			token, err := c.wrapKeyInCubbyhole(barrierUnsealKeys[i])
+			token, err := c.wrapKeyInCubbyhole(barrierUnsealKeys[i], false)
 			if err != nil {
 				return nil, fmt.Errorf("failed to wrap share: %s", err)
 			}

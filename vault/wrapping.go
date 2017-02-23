@@ -73,10 +73,15 @@ func (c *Core) ensureWrappingKey() error {
 	return nil
 }
 
-func (c *Core) wrapKeyInCubbyhole(key []byte) (string, error) {
+func (c *Core) wrapKeyInCubbyhole(key []byte, rekey bool) (string, error) {
 	req := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "sys/init",
+	}
+
+	method := "init"
+	if rekey {
+		method = "rekey"
 	}
 	resp := &logical.Response{
 		WrapInfo: &logical.ResponseWrapInfo{
@@ -84,7 +89,8 @@ func (c *Core) wrapKeyInCubbyhole(key []byte) (string, error) {
 			Format: "jwt",
 		},
 		Data: map[string]interface{}{
-			"share": base64.StdEncoding.EncodeToString(key),
+			"share":  base64.StdEncoding.EncodeToString(key),
+			"method": method,
 		},
 	}
 

@@ -33,6 +33,7 @@ type RekeyResult struct {
 	PGPFingerprints []string
 	Backup          bool
 	RecoveryKey     bool
+	WrapShares      bool
 }
 
 // RekeyBackup stores the backup copy of PGP-encrypted keys
@@ -325,7 +326,8 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 
 	// Return the master key if only a single key part is used
 	results := &RekeyResult{
-		Backup: c.barrierRekeyConfig.Backup,
+		Backup:     c.barrierRekeyConfig.Backup,
+		WrapShares: c.barrierRekeyConfig.WrapShares,
 	}
 
 	if c.barrierRekeyConfig.SecretShares == 1 {
@@ -395,7 +397,7 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		// wrap tokens
 		wrappedKeys := make([][]byte, len(results.SecretShares))
 		for i, _ := range results.SecretShares {
-			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i])
+			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i], true)
 			if err != nil {
 				return nil, fmt.Errorf("failed to wrap share: %s", err)
 			}
