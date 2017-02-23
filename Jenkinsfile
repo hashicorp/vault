@@ -4,7 +4,7 @@
 
 def master_branches = ["v0.5.3-zkfix", ] as String[]
 
-if (master_branches.contains(env.BRANCH_NAME)) {  }
+if (master_branches.contains(env.BRANCH_NAME)) {
     // Rebuild main branch once a day
     properties([
         pipelineTriggers([cron('H H * * *')])
