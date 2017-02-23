@@ -60,8 +60,7 @@ ID that matches the value specified by this parameter.`,
 				Type: framework.TypeString,
 				Description: `
 If set, defines a constraint on the EC2 instance to be associated with the
-subnet ID that matches the value specified by this parameter.
-				`,
+subnet ID that matches the value specified by this parameter.`,
 			},
 			"role_tag": {
 				Type:        framework.TypeString,
