@@ -183,9 +183,11 @@ this value in certificates issued by this role.`,
 			},
 
 			"generate_lease": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     false,
-				Description: `If set, certificates issued against this role will have Vault leases attached to them. Defaults to "false".`,
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `
+If set, certificates issued/signed against this role will have Vault leases
+attached to them. Defaults to "false".`,
 			},
 		},
 

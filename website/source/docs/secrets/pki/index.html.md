@@ -1238,8 +1238,8 @@ subpath for interactive help output.
       <li>
         <span class="param">generate_lease</span>
         <span class="param-flags">optional</span>
-        If set, certificates issued against this role will have Vault leases
-        attached to them. Defaults to "false".
+        If set, certificates issued/signed against this role will have Vault
+        leases attached to them. Defaults to "false".
       </li>
     </ul>
   </dd>
