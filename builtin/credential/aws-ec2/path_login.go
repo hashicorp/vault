@@ -408,6 +408,8 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %v", err)), nil
 	}
 
+	fmt.Printf("instanceDesc: %#v\n", instanceDesc)
+
 	// Get the entry for the role used by the instance
 	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
 	if err != nil {
@@ -435,6 +437,28 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("Region %q does not belong to the role %q", identityDocParsed.Region, roleName)), nil
 	}
 
+	// Validate the SubnetID if corresponding bound was set on the role
+	if roleEntry.BoundSubnetID != "" {
+		subnetIDPtr := instanceDesc.Reservations[0].Instances[0].SubnetId
+		if subnetIDPtr == nil {
+			return nil, fmt.Errorf("Subnet ID in the instance description is nil")
+		}
+		if roleEntry.BoundSubnetID != *subnetIDPtr {
+			return logical.ErrorResponse(fmt.Sprintf("Subnet ID %q does not satisfy the constraint on the role %q", *subnetIDPtr, roleName)), nil
+		}
+	}
+
+	// Validate the VpcID if corresponding bound was set on the role
+	if roleEntry.BoundVpcID != "" {
+		vpcIDPtr := instanceDesc.Reservations[0].Instances[0].VpcId
+		if vpcIDPtr == nil {
+			return nil, fmt.Errorf("Subnet ID in the instance description is nil")
+		}
+		if roleEntry.BoundVpcID != *vpcIDPtr {
+			return logical.ErrorResponse(fmt.Sprintf("Subnet ID %q does not satisfy the constraint on the role %q", *vpcIDPtr, roleName)), nil
+		}
+	}
+
 	// Check if the IAM instance profile ARN of the instance trying to
 	// login, matches the IAM instance profile ARN specified as a constraint
 	// on the role.
@@ -447,7 +471,7 @@ func (b *backend) pathLoginUpdate(
 		}
 		iamInstanceProfileARN := *instanceDesc.Reservations[0].Instances[0].IamInstanceProfile.Arn
 		if !strings.HasPrefix(iamInstanceProfileARN, roleEntry.BoundIamInstanceProfileARN) {
-			return logical.ErrorResponse(fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName)), nil
+			return logical.ErrorResponse(fmt.Sprintf("IAM instance profile ARN %q does not satisfy the constraint on the role %q", iamInstanceProfileARN, roleName)), nil
 		}
 	}
 
@@ -487,7 +511,7 @@ func (b *backend) pathLoginUpdate(
 		}
 
 		if !strings.HasPrefix(iamRoleARN, roleEntry.BoundIamRoleARN) {
-			return logical.ErrorResponse(fmt.Sprintf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName)), nil
+			return logical.ErrorResponse(fmt.Sprintf("IAM role ARN %q does not satisfy the constraint on the role %q", iamRoleARN, roleName)), nil
 		}
 	}
 

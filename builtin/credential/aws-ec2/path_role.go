@@ -50,6 +50,19 @@ with an IAM instance profile ARN which has a prefix that matches
 the value specified by this parameter. The value is prefix-matched
 (as though it were a glob ending in '*').`,
 			},
+			"bound_vpc_id": {
+				Type: framework.TypeString,
+				Description: `
+If set, defines a constraint on the EC2 instance to be associated with the VPC
+ID that matches the value specified by this parameter.`,
+			},
+			"bound_subnet_id": {
+				Type: framework.TypeString,
+				Description: `
+If set, defines a constraint on the EC2 instance to be associated with the
+subnet ID that matches the value specified by this parameter.
+				`,
+			},
 			"role_tag": {
 				Type:        framework.TypeString,
 				Default:     "",
@@ -320,6 +333,14 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundRegion = boundRegionRaw.(string)
 	}
 
+	if boundVpcIDRaw, ok := data.GetOk("bound_vpc_id"); ok {
+		roleEntry.BoundVpcID = boundVpcIDRaw.(string)
+	}
+
+	if boundSubnetIDRaw, ok := data.GetOk("bound_subnet_id"); ok {
+		roleEntry.BoundSubnetID = boundSubnetIDRaw.(string)
+	}
+
 	if boundIamRoleARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
 		roleEntry.BoundIamRoleARN = boundIamRoleARNRaw.(string)
 	}
@@ -443,6 +464,8 @@ type awsRoleEntry struct {
 	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
 	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
+	BoundSubnetID              string        `json:"bound_subnet_id" structs:"bound_subnet_id" mapstructure:"bound_subnet_id"`
+	BoundVpcID                 string        `json:"bound_vpc_id" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
 	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
 	TTL                        time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`
