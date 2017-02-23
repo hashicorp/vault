@@ -240,8 +240,7 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, fmt.Errorf("failed to unseal")
 	}
 
-	// If the shares are getting wrapped, don't create a root token or run
-	// preseal.
+	// If the shares are getting wrapped, don't create a root token.
 	if barrierConfig.WrapShares || len(barrierConfig.PGPKeys) > 0 {
 		results.RootToken = ""
 		return results, nil
