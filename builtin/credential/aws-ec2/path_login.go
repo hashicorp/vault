@@ -408,8 +408,6 @@ func (b *backend) pathLoginUpdate(
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %v", err)), nil
 	}
 
-	fmt.Printf("instanceDesc: %#v\n", instanceDesc)
-
 	// Get the entry for the role used by the instance
 	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
 	if err != nil {
