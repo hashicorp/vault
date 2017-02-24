@@ -23,9 +23,13 @@ type Config struct {
 	Backend   *Backend    `hcl:"-"`
 	HABackend *Backend    `hcl:"-"`
 
+	HSM *HSM `hcl:"-"`
+
 	CacheSize    int  `hcl:"cache_size"`
 	DisableCache bool `hcl:"disable_cache"`
 	DisableMlock bool `hcl:"disable_mlock"`
+
+	EnableUI bool `hcl:"ui"`
 
 	Telemetry *Telemetry `hcl:"telemetry"`
 
@@ -56,6 +60,8 @@ func DevConfig(ha, transactional bool) *Config {
 				},
 			},
 		},
+
+		EnableUI: true,
 
 		Telemetry: &Telemetry{},
 
@@ -96,6 +102,16 @@ type Backend struct {
 
 func (b *Backend) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
+}
+
+// HSM contains HSM configuration for the server
+type HSM struct {
+	Type   string
+	Config map[string]string
+}
+
+func (h *HSM) GoString() string {
+	return fmt.Sprintf("*%#v", *h)
 }
 
 // Telemetry is the telemetry configuration for the server
@@ -205,6 +221,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.HABackend = c2.HABackend
 	}
 
+	result.HSM = c.HSM
+	if c2.HSM != nil {
+		result.HSM = c2.HSM
+	}
+
 	result.Telemetry = c.Telemetry
 	if c2.Telemetry != nil {
 		result.Telemetry = c2.Telemetry
@@ -240,6 +261,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.ClusterName = c.ClusterName
 	if c2.ClusterName != "" {
 		result.ClusterName = c2.ClusterName
+	}
+
+	result.EnableUI = c.EnableUI
+	if c2.EnableUI {
+		result.EnableUI = c2.EnableUI
 	}
 
 	return result
@@ -303,10 +329,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"atlas",
 		"backend",
 		"ha_backend",
+		"hsm",
 		"listener",
 		"cache_size",
 		"disable_cache",
 		"disable_mlock",
+		"ui",
 		"telemetry",
 		"default_lease_ttl",
 		"max_lease_ttl",
@@ -325,6 +353,12 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	if o := list.Filter("ha_backend"); len(o.Items) > 0 {
 		if err := parseHABackends(&result, o); err != nil {
 			return nil, fmt.Errorf("error parsing 'ha_backend': %s", err)
+		}
+	}
+
+	if o := list.Filter("hsm"); len(o.Items) > 0 {
+		if err := parseHSMs(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'hsm': %s", err)
 		}
 	}
 
@@ -527,6 +561,45 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 		Type:              strings.ToLower(key),
 		Config:            m,
 	}
+	return nil
+}
+
+func parseHSMs(result *Config, list *ast.ObjectList) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one 'hsm' block is permitted")
+	}
+
+	// Get our item
+	item := list.Items[0]
+
+	key := "hsm"
+	if len(item.Keys) > 0 {
+		key = item.Keys[0].Token.Value().(string)
+	}
+
+	valid := []string{
+		"lib",
+		"slot",
+		"pin",
+		"mechanism",
+		"key_label",
+		"generate_key",
+		"regenerate_key",
+	}
+	if err := checkHCLKeys(item.Val, valid); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("hsm.%s:", key))
+	}
+
+	var m map[string]string
+	if err := hcl.DecodeObject(&m, item.Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("hsm.%s:", key))
+	}
+
+	result.HSM = &HSM{
+		Type:   strings.ToLower(key),
+		Config: m,
+	}
+
 	return nil
 }
 
