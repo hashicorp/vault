@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file.
 
 // This file provides functions for validating payloads from GitHub Webhooks.
-// GitHub docs: https://developer.github.com/webhooks/securing/#validating-payloads-from-github
+// GitHub API docs: https://developer.github.com/webhooks/securing/#validating-payloads-from-github
 
 package github
 
@@ -31,7 +31,7 @@ const (
 	sha512Prefix = "sha512"
 	// signatureHeader is the GitHub header key used to pass the HMAC hexdigest.
 	signatureHeader = "X-Hub-Signature"
-	// eventTypeHeader is the Github header key used to pass the event type.
+	// eventTypeHeader is the GitHub header key used to pass the event type.
 	eventTypeHeader = "X-Github-Event"
 )
 
@@ -143,7 +143,7 @@ func ValidatePayload(r *http.Request, secretKey []byte) (payload []byte, err err
 // payload is the JSON payload sent by GitHub Webhooks.
 // secretKey is the GitHub Webhook secret message.
 //
-// GitHub docs: https://developer.github.com/webhooks/securing/#validating-payloads-from-github
+// GitHub API docs: https://developer.github.com/webhooks/securing/#validating-payloads-from-github
 func validateSignature(signature string, payload, secretKey []byte) error {
 	messageMAC, hashFunc, err := messageMAC(signature)
 	if err != nil {

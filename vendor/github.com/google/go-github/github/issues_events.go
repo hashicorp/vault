@@ -6,6 +6,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -73,7 +74,7 @@ type IssueEvent struct {
 // ListIssueEvents lists events for the specified issue.
 //
 // GitHub API docs: https://developer.github.com/v3/issues/events/#list-events-for-an-issue
-func (s *IssuesService) ListIssueEvents(owner, repo string, number int, opt *ListOptions) ([]*IssueEvent, *Response, error) {
+func (s *IssuesService) ListIssueEvents(ctx context.Context, owner, repo string, number int, opt *ListOptions) ([]*IssueEvent, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/issues/%v/events", owner, repo, number)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -86,7 +87,7 @@ func (s *IssuesService) ListIssueEvents(owner, repo string, number int, opt *Lis
 	}
 
 	var events []*IssueEvent
-	resp, err := s.client.Do(req, &events)
+	resp, err := s.client.Do(ctx, req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -97,7 +98,7 @@ func (s *IssuesService) ListIssueEvents(owner, repo string, number int, opt *Lis
 // ListRepositoryEvents lists events for the specified repository.
 //
 // GitHub API docs: https://developer.github.com/v3/issues/events/#list-events-for-a-repository
-func (s *IssuesService) ListRepositoryEvents(owner, repo string, opt *ListOptions) ([]*IssueEvent, *Response, error) {
+func (s *IssuesService) ListRepositoryEvents(ctx context.Context, owner, repo string, opt *ListOptions) ([]*IssueEvent, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/issues/events", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -110,7 +111,7 @@ func (s *IssuesService) ListRepositoryEvents(owner, repo string, opt *ListOption
 	}
 
 	var events []*IssueEvent
-	resp, err := s.client.Do(req, &events)
+	resp, err := s.client.Do(ctx, req, &events)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -121,7 +122,7 @@ func (s *IssuesService) ListRepositoryEvents(owner, repo string, opt *ListOption
 // GetEvent returns the specified issue event.
 //
 // GitHub API docs: https://developer.github.com/v3/issues/events/#get-a-single-event
-func (s *IssuesService) GetEvent(owner, repo string, id int) (*IssueEvent, *Response, error) {
+func (s *IssuesService) GetEvent(ctx context.Context, owner, repo string, id int) (*IssueEvent, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/issues/events/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -130,7 +131,7 @@ func (s *IssuesService) GetEvent(owner, repo string, id int) (*IssueEvent, *Resp
 	}
 
 	event := new(IssueEvent)
-	resp, err := s.client.Do(req, event)
+	resp, err := s.client.Do(ctx, req, event)
 	if err != nil {
 		return nil, resp, err
 	}

@@ -6,6 +6,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -43,7 +44,7 @@ type GPGEmail struct {
 // via Basic Auth or via OAuth with at least read:gpg_key scope.
 //
 // GitHub API docs: https://developer.github.com/v3/users/gpg_keys/#list-your-gpg-keys
-func (s *UsersService) ListGPGKeys() ([]*GPGKey, *Response, error) {
+func (s *UsersService) ListGPGKeys(ctx context.Context) ([]*GPGKey, *Response, error) {
 	req, err := s.client.NewRequest("GET", "user/gpg_keys", nil)
 	if err != nil {
 		return nil, nil, err
@@ -53,7 +54,7 @@ func (s *UsersService) ListGPGKeys() ([]*GPGKey, *Response, error) {
 	req.Header.Set("Accept", mediaTypeGitSigningPreview)
 
 	var keys []*GPGKey
-	resp, err := s.client.Do(req, &keys)
+	resp, err := s.client.Do(ctx, req, &keys)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -65,7 +66,7 @@ func (s *UsersService) ListGPGKeys() ([]*GPGKey, *Response, error) {
 // via Basic Auth or via OAuth with at least read:gpg_key scope.
 //
 // GitHub API docs: https://developer.github.com/v3/users/gpg_keys/#get-a-single-gpg-key
-func (s *UsersService) GetGPGKey(id int) (*GPGKey, *Response, error) {
+func (s *UsersService) GetGPGKey(ctx context.Context, id int) (*GPGKey, *Response, error) {
 	u := fmt.Sprintf("user/gpg_keys/%v", id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -76,7 +77,7 @@ func (s *UsersService) GetGPGKey(id int) (*GPGKey, *Response, error) {
 	req.Header.Set("Accept", mediaTypeGitSigningPreview)
 
 	key := &GPGKey{}
-	resp, err := s.client.Do(req, key)
+	resp, err := s.client.Do(ctx, req, key)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -88,7 +89,7 @@ func (s *UsersService) GetGPGKey(id int) (*GPGKey, *Response, error) {
 // or OAuth with at least write:gpg_key scope.
 //
 // GitHub API docs: https://developer.github.com/v3/users/gpg_keys/#create-a-gpg-key
-func (s *UsersService) CreateGPGKey(armoredPublicKey string) (*GPGKey, *Response, error) {
+func (s *UsersService) CreateGPGKey(ctx context.Context, armoredPublicKey string) (*GPGKey, *Response, error) {
 	gpgKey := &struct {
 		ArmoredPublicKey string `json:"armored_public_key"`
 	}{ArmoredPublicKey: armoredPublicKey}
@@ -101,7 +102,7 @@ func (s *UsersService) CreateGPGKey(armoredPublicKey string) (*GPGKey, *Response
 	req.Header.Set("Accept", mediaTypeGitSigningPreview)
 
 	key := &GPGKey{}
-	resp, err := s.client.Do(req, key)
+	resp, err := s.client.Do(ctx, req, key)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -113,7 +114,7 @@ func (s *UsersService) CreateGPGKey(armoredPublicKey string) (*GPGKey, *Response
 // via OAuth with at least admin:gpg_key scope.
 //
 // GitHub API docs: https://developer.github.com/v3/users/gpg_keys/#delete-a-gpg-key
-func (s *UsersService) DeleteGPGKey(id int) (*Response, error) {
+func (s *UsersService) DeleteGPGKey(ctx context.Context, id int) (*Response, error) {
 	u := fmt.Sprintf("user/gpg_keys/%v", id)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -123,5 +124,5 @@ func (s *UsersService) DeleteGPGKey(id int) (*Response, error) {
 	// TODO: remove custom Accept header when this API fully launches.
 	req.Header.Set("Accept", mediaTypeGitSigningPreview)
 
-	return s.client.Do(req, nil)
+	return s.client.Do(ctx, req, nil)
 }

@@ -454,7 +454,7 @@ const defaultHelpTemplate = `
 {{.Help}}{{if gt (len .Subcommands) 0}}
 
 Subcommands:
-{{ range $value := .Subcommands }}
+{{- range $value := .Subcommands }}
     {{ $value.NameAligned }}    {{ $value.Synopsis }}{{ end }}
-{{ end }}
+{{- end }}
 `

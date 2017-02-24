@@ -243,6 +243,18 @@ func (cm *CheckManager) initializeTrapURL() error {
 	}
 	cm.trapCN = BrokerCNType(cn)
 
+	if cm.enabled {
+		u, err := url.Parse(string(cm.trapURL))
+		if err != nil {
+			return err
+		}
+		if u.Scheme == "https" {
+			if err := cm.loadCACert(); err != nil {
+				return err
+			}
+		}
+	}
+
 	cm.trapLastUpdate = time.Now()
 
 	return nil

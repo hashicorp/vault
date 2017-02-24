@@ -205,7 +205,7 @@ func New(cfg *Config) (*CirconusMetrics, error) {
 	// note: submit will jettison metrics until initialization has completed.
 	if cm.flushInterval > time.Duration(0) {
 		go func() {
-			for _ = range time.NewTicker(cm.flushInterval).C {
+			for range time.NewTicker(cm.flushInterval).C {
 				cm.Flush()
 			}
 		}()

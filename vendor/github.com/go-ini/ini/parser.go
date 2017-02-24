@@ -341,17 +341,16 @@ func (f *File) parse(reader io.Reader) (err error) {
 			p.count++
 		}
 
-		key, err := section.NewKey(kname, "")
-		if err != nil {
-			return err
-		}
-		key.isAutoIncrement = isAutoIncr
-
 		value, err := p.readValue(line[offset:], f.options.IgnoreContinuation)
 		if err != nil {
 			return err
 		}
-		key.SetValue(value)
+
+		key, err := section.NewKey(kname, value)
+		if err != nil {
+			return err
+		}
+		key.isAutoIncrement = isAutoIncr
 		key.Comment = strings.TrimSpace(p.comment.String())
 		p.comment.Reset()
 	}
