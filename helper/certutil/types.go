@@ -3,7 +3,9 @@
 // includes helpers for converting a certificate/private key bundle
 // between DER and PEM, printing certificate serial numbers, and more.
 //
-// Functionality specific to the PKI backend includes some types // and helper methods to make requesting certificates from the // backend easy.
+// Functionality specific to the PKI backend includes some types
+// and helper methods to make requesting certificates from the
+// backend easy.
 package certutil
 
 import (
