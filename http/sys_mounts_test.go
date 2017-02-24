@@ -1,4 +1,4 @@
-package api
+package http
 
 import (
 	"fmt"
@@ -6,19 +6,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestSysMountConfig(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	config := DefaultConfig()
+	config := api.DefaultConfig()
 	config.Address = addr
 
-	client, err := NewClient(config)
+	client, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,10 +52,10 @@ func TestSysMountConfig(t *testing.T) {
 
 // testMount sets up a test mount of a generic backend w/ a random path; caller
 // is responsible for unmounting
-func testMount(client *Client) (string, error) {
+func testMount(client *api.Client) (string, error) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	path := fmt.Sprintf("testmount-%d", randInt)
-	err := client.Sys().Mount(path, &MountInput{Type: "generic"})
+	err := client.Sys().Mount(path, &api.MountInput{Type: "generic"})
 	return path, err
 }

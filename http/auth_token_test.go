@@ -1,28 +1,28 @@
-package api
+package http
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestAuthTokenCreate(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	config := DefaultConfig()
+	config := api.DefaultConfig()
 	config.Address = addr
 
-	client, err := NewClient(config)
+	client, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(token)
 
-	secret, err := client.Auth().Token().Create(&TokenCreateRequest{
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		Lease: "1h",
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func TestAuthTokenCreate(t *testing.T) {
 		t.Errorf("expected 1h, got %q", secret.Auth.LeaseDuration)
 	}
 
-	renewCreateRequest := &TokenCreateRequest{
+	renewCreateRequest := &api.TokenCreateRequest{
 		TTL:       "1h",
 		Renewable: new(bool),
 	}
@@ -60,7 +60,7 @@ func TestAuthTokenCreate(t *testing.T) {
 		t.Errorf("expected renewable token")
 	}
 
-	explicitMaxCreateRequest := &TokenCreateRequest{
+	explicitMaxCreateRequest := &api.TokenCreateRequest{
 		TTL:            "1h",
 		ExplicitMaxTTL: "1800s",
 	}
@@ -85,20 +85,20 @@ func TestAuthTokenCreate(t *testing.T) {
 
 func TestAuthTokenLookup(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	config := DefaultConfig()
+	config := api.DefaultConfig()
 	config.Address = addr
 
-	client, err := NewClient(config)
+	client, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	client.SetToken(token)
 
 	// Create a new token ...
-	secret2, err := client.Auth().Token().Create(&TokenCreateRequest{
+	secret2, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		Lease: "1h",
 	})
 	if err != nil {
@@ -119,13 +119,13 @@ func TestAuthTokenLookup(t *testing.T) {
 
 func TestAuthTokenLookupSelf(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	config := DefaultConfig()
+	config := api.DefaultConfig()
 	config.Address = addr
 
-	client, err := NewClient(config)
+	client, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,13 +148,13 @@ func TestAuthTokenLookupSelf(t *testing.T) {
 
 func TestAuthTokenRenew(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := http.TestServer(t, core)
+	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	config := DefaultConfig()
+	config := api.DefaultConfig()
 	config.Address = addr
 
-	client, err := NewClient(config)
+	client, err := api.NewClient(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestAuthTokenRenew(t *testing.T) {
 	}
 
 	// Create a new token that should be renewable
-	secret, err := client.Auth().Token().Create(&TokenCreateRequest{
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
 		Lease: "1h",
 	})
 	if err != nil {
