@@ -21,6 +21,8 @@ IMPROVEMENTS:
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
  * secret/pki: O (Organization) values can now be set to role-defined values
    for issued/signed certificates [GH-2369]
+ * secret/pki: When using DER format, still return the private key type
+   [GH-2405]
 
 BUG FIXES:
 

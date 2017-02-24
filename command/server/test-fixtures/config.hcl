@@ -1,6 +1,8 @@
 disable_cache = true
 disable_mlock = true
 
+ui = true
+
 listener "atlas" {
     token = "foobar"
     infrastructure = "foo/bar"

@@ -500,6 +500,10 @@ func (c *Core) loadMounts() error {
 
 		// Upgrade to table-scoped entries
 		for _, entry := range c.mounts.Entries {
+			if entry.Type == "cubbyhole" && !entry.Local {
+				entry.Local = true
+				needPersist = true
+			}
 			if entry.Table == "" {
 				entry.Table = c.mounts.Type
 				needPersist = true
