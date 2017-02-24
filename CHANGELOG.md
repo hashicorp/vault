@@ -13,6 +13,8 @@ DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
+ * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
+   Subnet ID and Region [GH-2407]
  * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
    username if not explicitly set on the command line when authenticating
    [GH-2154]
