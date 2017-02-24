@@ -314,10 +314,13 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.ClusterAddr = envCA
 	} else {
 		var addrToUse string
-		if coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "" {
+		switch {
+		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
 			addrToUse = coreConfig.RedirectAddr
-		} else if dev {
+		case dev:
 			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Config["address"])
+		default:
+			goto CLUSTER_SYNTHESIS_COMPLETE
 		}
 		u, err := url.ParseRequestURI(addrToUse)
 		if err != nil {
@@ -345,6 +348,9 @@ func (c *ServerCommand) Run(args []string) int {
 		u.Scheme = "https"
 		coreConfig.ClusterAddr = u.String()
 	}
+
+CLUSTER_SYNTHESIS_COMPLETE:
+
 	if coreConfig.ClusterAddr != "" {
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
