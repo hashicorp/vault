@@ -215,8 +215,8 @@ func (b *backend) pathIssueSignCert(
 		}
 
 		if !useCSR {
-			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
-			resp.Data["private_key_type"] = cb.PrivateKeyType
+			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
+			respData["private_key_type"] = cb.PrivateKeyType
 		}
 	}
 
