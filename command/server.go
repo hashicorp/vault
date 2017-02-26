@@ -869,6 +869,10 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 			cfg.CheckManager.API.TokenApp = "vault"
 		}
 
+		if cfg.CheckManager.Check.DisplayName == "" {
+			cfg.CheckManager.Check.DisplayName = "Vault"
+		}
+
 		if cfg.CheckManager.Check.SearchTag == "" {
 			cfg.CheckManager.Check.SearchTag = "service:vault"
 		}
