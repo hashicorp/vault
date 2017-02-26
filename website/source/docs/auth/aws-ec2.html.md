@@ -73,7 +73,7 @@ from the EC2 instance metadata service for an EC2 instance, or from the AWS
 environment variables in an AWS Lambda function execution, which obviates the
 need for an operator to manually provision some sort of identity material first.
 However, the credentials can, in principle, come from anywhere, not just from
-the locations AWS hasprovided for you.
+the locations AWS has provided for you.
 
 Each signed AWS request includes the current timestamp to mitigate the risk of
 replay attacks. In addition, Vault allows you to require an additional header,
@@ -84,7 +84,7 @@ requires that this header be one of the headers included in the AWS signature
 and relies upon AWS to authenticate that signature.
 
 While AWS API endpoints support both signed GET and POST requests, for
-simplicity, the aws-iam backend supports only POST requests. It also does not
+simplicity, the aws backend supports only POST requests. It also does not
 support `presigned` requests, i.e., requests with `X-Amz-Credential`,
 `X-Amz-signature`, and `X-Amz-SignedHeaders` GET query parameter containing the
 authenticating information.
@@ -249,21 +249,16 @@ comparison of the two authentication methods.
     nature, but it's easier to spoof credentials that might have come from an
     EC2 instance.
 * Specific use cases
-  * If you have a long-lived EC2 instance which you are unable to relaunch into
-    an IAM instance profile, then the ec2 auth method is probably the best
-    solution for you. (While you could store long-lived AWS IAM user credentials
-    on disk and use those to authenticate to Vault, that would not be
-    recommended.)
   * If you have non-EC2 instance entities, such as IAM users, Lambdas in IAM
     roles, or developer laptops using [AdRoll's
     Hologram](https://github.com/AdRoll/hologram) then you would need to use the
     iam auth method.
-  * If you have EC2 instances which are already in an IAM instance profile, then
-    you could use either auth method. If you need more granular filtering beyond just
-    the instance profile of given EC2 instances (such as filtering based off
-    the AMI the instance was launched from), then you would need to
-    use the ec2 auth method, launch your EC2 instances into unique instance
-    profiles for each different Vault role you would want them to authenticate
+  * If you have EC2 instances, then you could use either auth method. If you
+    need more granular filtering beyond just the instance profile of given EC2
+    instances (such as filtering based off the AMI the instance was launched
+    from), then you would need to use the ec2 auth method, change the instance
+    profile associated with your EC2 instances so they have unique IAM roles
+    for each different Vault role you would want them to authenticate
     to, or make use of inferencing.
 
 ## Client Nonce
@@ -1374,7 +1369,11 @@ constraint is checked only by the ec2 auth method.
         <span class="param">bound_region</span>
         <span class="param-flags">optional</span>
         If set, defines a constraint on the EC2 instances that the region in
-        its identity document to match the one specified by this parameter.
+        its identity document to match the one specified by this parameter. This
+        constraint is only checked by the ec2 auth method (as IAM is a global
+        service so it doesn't make sense to bind by region with the iam auth
+        method, and binding by region is implied with the inferred AWS region
+        when inferring an EC2 instance).
       </li>
     </ul>
     <ul>
