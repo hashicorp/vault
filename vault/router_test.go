@@ -58,8 +58,8 @@ func (n *NoopBackend) Cleanup() {
 	// noop
 }
 
-func (n *NoopBackend) InvalidateKey(string) {
-	// noop
+func (n *NoopBackend) InvalidateKey(k string) {
+	n.Invalidations = append(n.Invalidations, k)
 }
 
 func (n *NoopBackend) Initialize() error {

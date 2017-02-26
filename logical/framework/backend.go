@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
@@ -534,7 +536,40 @@ type FieldSchema struct {
 // the zero value of the type.
 func (s *FieldSchema) DefaultOrZero() interface{} {
 	if s.Default != nil {
-		return s.Default
+		switch s.Type {
+		case TypeDurationSecond:
+			var result int
+			switch inp := s.Default.(type) {
+			case nil:
+				return s.Type.Zero()
+			case int:
+				result = inp
+			case int64:
+				result = int(inp)
+			case float32:
+				result = int(inp)
+			case float64:
+				result = int(inp)
+			case string:
+				dur, err := duration.ParseDurationSecond(inp)
+				if err != nil {
+					return s.Type.Zero()
+				}
+				result = int(dur.Seconds())
+			case json.Number:
+				valInt64, err := inp.Int64()
+				if err != nil {
+					return s.Type.Zero()
+				}
+				result = int(valInt64)
+			default:
+				return s.Type.Zero()
+			}
+			return result
+
+		default:
+			return s.Default
+		}
 	}
 
 	return s.Type.Zero()

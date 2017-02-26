@@ -23,6 +23,8 @@ import (
 
 	"github.com/agl/ed25519"
 	"github.com/keybase/go-crypto/brainpool"
+	"github.com/keybase/go-crypto/curve25519"
+	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/rsa"
@@ -43,6 +45,8 @@ var (
 	oidCurveP512r1 []byte = []byte{0x2B, 0x24, 0x03, 0x03, 0x02, 0x08, 0x01, 0x01, 0x0D}
 	// EdDSA
 	oidEdDSA []byte = []byte{0x2B, 0x06, 0x01, 0x04, 0x01, 0xDA, 0x47, 0x0F, 0x01}
+	// cv25519
+	oidCurve25519 []byte = []byte{0x2B, 0x06, 0x01, 0x04, 0x01, 0x97, 0x55, 0x01, 0x05, 0x01}
 )
 
 const maxOIDLength = 10
@@ -106,28 +110,53 @@ func (f *ecdsaKey) serialize(w io.Writer) (err error) {
 	return writeMPIs(w, f.p)
 }
 
+func getCurveByOid(oid []byte) elliptic.Curve {
+	switch {
+	case bytes.Equal(oid, oidCurveP256):
+		return elliptic.P256()
+	case bytes.Equal(oid, oidCurveP384):
+		return elliptic.P384()
+	case bytes.Equal(oid, oidCurveP521):
+		return elliptic.P521()
+	case bytes.Equal(oid, oidCurveP256r1):
+		return brainpool.P256r1()
+	case bytes.Equal(oid, oidCurveP384r1):
+		return brainpool.P384r1()
+	case bytes.Equal(oid, oidCurveP512r1):
+		return brainpool.P512r1()
+	case bytes.Equal(oid, oidCurve25519):
+		return curve25519.Cv25519()
+	default:
+		return nil
+	}
+}
+
 func (f *ecdsaKey) newECDSA() (*ecdsa.PublicKey, error) {
-	var c elliptic.Curve
-	if bytes.Equal(f.oid, oidCurveP256) {
-		c = elliptic.P256()
-	} else if bytes.Equal(f.oid, oidCurveP384) {
-		c = elliptic.P384()
-	} else if bytes.Equal(f.oid, oidCurveP521) {
-		c = elliptic.P521()
-	} else if bytes.Equal(f.oid, oidCurveP256r1) {
-		c = brainpool.P256r1()
-	} else if bytes.Equal(f.oid, oidCurveP384r1) {
-		c = brainpool.P384r1()
-	} else if bytes.Equal(f.oid, oidCurveP512r1) {
-		c = brainpool.P512r1()
-	} else {
+	var c = getCurveByOid(f.oid)
+	// Curve25519 should not be used in ECDSA.
+	if c == nil || bytes.Equal(f.oid, oidCurve25519) {
 		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
 	}
+	// Note: Unmarshal already checks if point is on curve.
 	x, y := elliptic.Unmarshal(c, f.p.bytes)
 	if x == nil {
 		return nil, errors.UnsupportedError("failed to parse EC point")
 	}
 	return &ecdsa.PublicKey{Curve: c, X: x, Y: y}, nil
+}
+
+func (f *ecdsaKey) newECDH() (*ecdh.PublicKey, error) {
+	var c = getCurveByOid(f.oid)
+	if c == nil {
+		return nil, errors.UnsupportedError(fmt.Sprintf("unsupported oid: %x", f.oid))
+	}
+	// ecdh.Unmarshal handles unmarshaling for all curve types. It
+	// also checks if point is on curve.
+	x, y := ecdh.Unmarshal(c, f.p.bytes)
+	if x == nil {
+		return nil, errors.UnsupportedError("failed to parse EC point")
+	}
+	return &ecdh.PublicKey{Curve: c, X: x, Y: y}, nil
 }
 
 func (f *ecdsaKey) byteLen() int {
@@ -324,7 +353,7 @@ func (pk *PublicKey) parse(r io.Reader) (err error) {
 	case PubKeyAlgoElGamal:
 		err = pk.parseElGamal(r)
 	case PubKeyAlgoEdDSA:
-		pk.edk = &edDSAkey{}
+		pk.edk = new(edDSAkey)
 		if err = pk.edk.parse(r); err != nil {
 			return err
 		}
@@ -344,8 +373,7 @@ func (pk *PublicKey) parse(r io.Reader) (err error) {
 		if err = pk.ecdh.parse(r); err != nil {
 			return
 		}
-		// The ECDH key is stored in an ecdsa.PublicKey for convenience.
-		pk.PublicKey, err = pk.ec.newECDSA()
+		pk.PublicKey, err = pk.ec.newECDH()
 	default:
 		err = errors.UnsupportedError("public key type: " + strconv.Itoa(int(pk.PubKeyAlgo)))
 	}

@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -21,6 +22,8 @@ import (
 	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 )
@@ -154,6 +157,10 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 
 	// Configure the client
 	consulConf := api.DefaultConfig()
+	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
+	tr := cleanhttp.DefaultPooledTransport()
+	tr.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
+	consulConf.HttpClient.Transport = tr
 
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
@@ -179,7 +186,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		}
 
 		transport := cleanhttp.DefaultPooledTransport()
-		transport.MaxIdleConnsPerHost = 4
+		transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 		transport.TLSClientConfig = tlsClientConfig
 		consulConf.HttpClient.Transport = transport
 		logger.Debug("physical/consul: configured TLS")
@@ -284,16 +291,58 @@ func setupTLSConfig(conf map[string]string) (*tls.Config, error) {
 	return tlsClientConfig, nil
 }
 
+// Used to run multiple entries via a transaction
+func (c *ConsulBackend) Transaction(txns []TxnEntry) error {
+	if len(txns) == 0 {
+		return nil
+	}
+
+	ops := make([]*api.KVTxnOp, 0, len(txns))
+
+	for _, op := range txns {
+		cop := &api.KVTxnOp{
+			Key: c.path + op.Entry.Key,
+		}
+		switch op.Operation {
+		case DeleteOperation:
+			cop.Verb = api.KVDelete
+		case PutOperation:
+			cop.Verb = api.KVSet
+			cop.Value = op.Entry.Value
+		default:
+			return fmt.Errorf("%q is not a supported transaction operation", op.Operation)
+		}
+
+		ops = append(ops, cop)
+	}
+
+	ok, resp, _, err := c.kv.Txn(ops, nil)
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+
+	var retErr *multierror.Error
+	for _, res := range resp.Errors {
+		retErr = multierror.Append(retErr, errors.New(res.What))
+	}
+
+	return retErr
+}
+
 // Put is used to insert or update an entry
 func (c *ConsulBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"consul", "put"}, time.Now())
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
+
 	pair := &api.KVPair{
 		Key:   c.path + entry.Key,
 		Value: entry.Value,
 	}
-
-	c.permitPool.Acquire()
-	defer c.permitPool.Release()
 
 	_, err := c.kv.Put(pair, nil)
 	return err

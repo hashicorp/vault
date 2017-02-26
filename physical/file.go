@@ -1,7 +1,6 @@
 package physical
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 
 	log "github.com/mgutz/logxi/v1"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -24,12 +22,17 @@ import (
 // and non-performant. It is meant mostly for local testing and development.
 // It can be improved in the future.
 type FileBackend struct {
-	Path   string
-	l      sync.Mutex
-	logger log.Logger
+	sync.RWMutex
+	path       string
+	logger     log.Logger
+	permitPool *PermitPool
 }
 
-// newFileBackend constructs a Filebackend using the given directory
+type TransactionalFileBackend struct {
+	FileBackend
+}
+
+// newFileBackend constructs a FileBackend using the given directory
 func newFileBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 	path, ok := conf["path"]
 	if !ok {
@@ -37,29 +40,49 @@ func newFileBackend(conf map[string]string, logger log.Logger) (Backend, error) 
 	}
 
 	return &FileBackend{
-		Path:   path,
-		logger: logger,
+		path:       path,
+		logger:     logger,
+		permitPool: NewPermitPool(DefaultParallelOperations),
+	}, nil
+}
+
+func newTransactionalFileBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+	path, ok := conf["path"]
+	if !ok {
+		return nil, fmt.Errorf("'path' must be set")
+	}
+
+	// Create a pool of size 1 so only one operation runs at a time
+	return &TransactionalFileBackend{
+		FileBackend: FileBackend{
+			path:       path,
+			logger:     logger,
+			permitPool: NewPermitPool(1),
+		},
 	}, nil
 }
 
 func (b *FileBackend) Delete(path string) error {
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
+
+	b.Lock()
+	defer b.Unlock()
+
+	return b.DeleteInternal(path)
+}
+
+func (b *FileBackend) DeleteInternal(path string) error {
 	if path == "" {
 		return nil
 	}
 
-	b.l.Lock()
-	defer b.l.Unlock()
+	basePath, key := b.expandPath(path)
+	fullPath := filepath.Join(basePath, key)
 
-	_, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(path)
-	err := os.Remove(fullPathPrefixedEncodedFileName)
-	if err != nil && os.IsNotExist(err) {
-		// For backwards compatibility, try to delete the file without base64
-		// URL encoding the file name.
-		err = os.Remove(fullPathPrefixedFileName)
-	}
-
+	err := os.Remove(fullPath)
 	if err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("Failed to remove %q: %v", path, err)
+		return fmt.Errorf("Failed to remove %q: %v", fullPath, err)
 	}
 
 	err = b.cleanupLogicalPath(path)
@@ -72,7 +95,7 @@ func (b *FileBackend) Delete(path string) error {
 func (b *FileBackend) cleanupLogicalPath(path string) error {
 	nodes := strings.Split(path, fmt.Sprintf("%c", os.PathSeparator))
 	for i := len(nodes) - 1; i > 0; i-- {
-		fullPath := filepath.Join(b.Path, filepath.Join(nodes[:i]...))
+		fullPath := filepath.Join(b.path, filepath.Join(nodes[:i]...))
 
 		dir, err := os.Open(fullPath)
 		if err != nil {
@@ -101,22 +124,26 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 	return nil
 }
 
-func (b *FileBackend) Get(path string) (*Entry, error) {
-	b.l.Lock()
-	defer b.l.Unlock()
+func (b *FileBackend) Get(k string) (*Entry, error) {
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	_, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(path)
-	f, err := os.Open(fullPathPrefixedEncodedFileName)
-	if err != nil && os.IsNotExist(err) {
-		// For backwards compatibility, if non-encoded file name is a valid
-		// storage entry, read it out.
-		f, err = os.Open(fullPathPrefixedFileName)
-	}
+	b.RLock()
+	defer b.RUnlock()
 
+	return b.GetInternal(k)
+}
+
+func (b *FileBackend) GetInternal(k string) (*Entry, error) {
+	path, key := b.expandPath(k)
+	path = filepath.Join(path, key)
+
+	f, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
+
 		return nil, err
 	}
 	defer f.Close()
@@ -130,68 +157,48 @@ func (b *FileBackend) Get(path string) (*Entry, error) {
 }
 
 func (b *FileBackend) Put(entry *Entry) error {
-	var retErr error
-	if entry == nil {
-		retErr = multierror.Append(retErr, fmt.Errorf("nil entry"))
-		return retErr
-	}
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	basePath, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName := b.path(entry.Key)
+	b.Lock()
+	defer b.Unlock()
 
-	b.l.Lock()
-	defer b.l.Unlock()
+	return b.PutInternal(entry)
+}
 
-	// New storage entries will have their file names base64 URL encoded. If a
-	// file with a non-encoded file name exists, it indicates that this is an
-	// update operation. To avoid duplication of storage entries, delete the
-	// old entry in the defer function.
-	info, err := os.Stat(fullPathPrefixedFileName)
-	if err == nil && info != nil {
-		defer func() {
-			err := os.Remove(fullPathPrefixedFileName)
-			if err != nil && !os.IsNotExist(err) {
-				retErr = multierror.Append(retErr, fmt.Errorf("failed to remove old entry: %v", err))
-				return
-			}
-			err = b.cleanupLogicalPath(entry.Key)
-			if err != nil {
-				retErr = multierror.Append(retErr, fmt.Errorf("failed to cleanup the after removing old entry: %v", err))
-				return
-			}
-		}()
-	}
+func (b *FileBackend) PutInternal(entry *Entry) error {
+	path, key := b.expandPath(entry.Key)
 
 	// Make the parent tree
-	if err := os.MkdirAll(basePath, 0755); err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return err
 	}
 
 	// JSON encode the entry and write it
 	f, err := os.OpenFile(
-		fullPathPrefixedEncodedFileName,
+		filepath.Join(path, key),
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600)
 	if err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr
+		return err
 	}
 	defer f.Close()
 	enc := json.NewEncoder(f)
-
-	err = enc.Encode(entry)
-	if err != nil {
-		retErr = multierror.Append(retErr, err)
-		return retErr
-	}
-	return nil
+	return enc.Encode(entry)
 }
 
 func (b *FileBackend) List(prefix string) ([]string, error) {
-	b.l.Lock()
-	defer b.l.Unlock()
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	path := b.Path
+	b.RLock()
+	defer b.RUnlock()
+
+	return b.ListInternal(prefix)
+}
+
+func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
+	path := b.path
 	if prefix != "" {
 		path = filepath.Join(path, prefix)
 	}
@@ -215,12 +222,6 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	for i, name := range names {
 		if name[0] == '_' {
 			names[i] = name[1:]
-			// If the file name is encoded, decode it to retain the list output
-			// meaningful.
-			nameDecodedBytes, err := base64.URLEncoding.DecodeString(names[i])
-			if err == nil {
-				names[i] = string(nameDecodedBytes)
-			}
 		} else {
 			names[i] = name + "/"
 		}
@@ -229,21 +230,19 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 	return names, nil
 }
 
-func (b *FileBackend) path(path string) (string, string, string) {
-	fullPath := filepath.Join(b.Path, path)
+func (b *FileBackend) expandPath(k string) (string, string) {
+	path := filepath.Join(b.path, k)
+	key := filepath.Base(path)
+	path = filepath.Dir(path)
+	return path, "_" + key
+}
 
-	basePath := filepath.Dir(fullPath)
+func (b *TransactionalFileBackend) Transaction(txns []TxnEntry) error {
+	b.permitPool.Acquire()
+	defer b.permitPool.Release()
 
-	fileName := filepath.Base(fullPath)
+	b.Lock()
+	defer b.Unlock()
 
-	fullPathPrefixedFileName := filepath.Join(basePath, "_"+fileName)
-
-	// base64 URL encode the file name to make all the characters compatible by
-	// the host OS (specially Windows). However, the basePath can contain
-	// disallowed characters.  Encoding all the directory names and the file
-	// name is an over kill, and encoding the fullPath will flatten the
-	// storage, which *may* not be desired.
-	fullPathPrefixedEncodedFileName := filepath.Join(basePath, "_"+base64.URLEncoding.EncodeToString([]byte(fileName)))
-
-	return basePath, fullPathPrefixedFileName, fullPathPrefixedEncodedFileName
+	return genericTransactionHandler(b, txns)
 }

@@ -32,6 +32,7 @@ func main() {
     cfg.CheckManager.API.TokenKey = ""
     cfg.CheckManager.API.TokenApp = "circonus-gometrics"
     cfg.CheckManager.API.TokenURL = "https://api.circonus.com/v2"
+    cfg.CheckManager.API.CACert = nil
 
     // Check
     _, an := path.Split(os.Args[0])
@@ -63,7 +64,7 @@ func main() {
 | General ||
 | `cfg.Log` | none | log.Logger instance to send logging messages. Default is to discard messages. If Debug is turned on and no instance is specified, messages will go to stderr. |
 | `cfg.Debug` | false | Turn on debugging messages. |
-| `cfg.Interval` | "10s" | Interval at which metrics are flushed and sent to Circonus. |
+| `cfg.Interval` | "10s" | Interval at which metrics are flushed and sent to Circonus. Set to "0s" to disable automatic flush (note, if disabled, `cgm.Flush()` must be called manually to send metrics to Circonus).|
 | `cfg.ResetCounters` | "true" | Reset counter metrics after each submission. Change to "false" to retain (and continue submitting) the last value.|
 | `cfg.ResetGauges` | "true" | Reset gauge metrics after each submission. Change to "false" to retain (and continue submitting) the last value.|
 | `cfg.ResetHistograms` | "true" | Reset histogram metrics after each submission. Change to "false" to retain (and continue submitting) the last value.|
@@ -72,6 +73,7 @@ func main() {
 | `cfg.CheckManager.API.TokenKey` | "" | [Circonus API Token key](https://login.circonus.com/user/tokens) |
 | `cfg.CheckManager.API.TokenApp` | "circonus-gometrics" | App associated with API token |
 | `cfg.CheckManager.API.URL` | "https://api.circonus.com/v2" | Circonus API URL |
+| `cfg.CheckManager.API.CACert` | nil | [*x509.CertPool](https://golang.org/pkg/crypto/x509/#CertPool) with CA Cert to validate API endpoint using internal CA or self-signed certificates |
 |Check||
 | `cfg.CheckManager.Check.ID` | "" | Check ID of previously created check. (*Note: **check id** not **check bundle id**.*) |
 | `cfg.CheckManager.Check.SubmissionURL` | "" | Submission URL of previously created check. |

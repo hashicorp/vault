@@ -23,6 +23,21 @@ const (
 	testPlaintext = "the quick brown fox"
 )
 
+func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if b == nil {
+		t.Fatalf("failed to create backend")
+	}
+	_, err := b.Backend.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b, config.StorageView
+}
+
 func TestBackend_basic(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{

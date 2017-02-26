@@ -187,34 +187,30 @@ func (cm *CheckManager) isValidBroker(broker *api.Broker) bool {
 			brokerHost = *detail.IP
 		}
 
-		// broker must be reachable and respond within designated time
-		conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", brokerHost, brokerPort), cm.brokerMaxResponseTime)
-		if err != nil {
-			if detail.CN != "trap.noit.circonus.net" {
-				if cm.Debug {
-					cm.Log.Printf("[DEBUG] Broker '%s' unable to connect, %v\n", broker.Name, err)
-				}
-				continue // not able to reach the broker (or respone slow enough for it to be considered not usable)
-			}
-			// if circonus trap broker, try port 443
+		if brokerHost == "trap.noit.circonus.net" && brokerPort != "443" {
 			brokerPort = "443"
-			conn, err = net.DialTimeout("tcp", fmt.Sprintf("%s:%s", detail.CN, brokerPort), cm.brokerMaxResponseTime)
-			if err != nil {
-				if cm.Debug {
-					cm.Log.Printf("[DEBUG] Broker '%s' unable to connect %v\n", broker.Name, err)
-				}
-				continue // not able to reach the broker on 443 either (or respone slow enough for it to be considered not usable)
+		}
+
+		retries := 5
+		for attempt := 1; attempt <= retries; attempt++ {
+			// broker must be reachable and respond within designated time
+			conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%s", brokerHost, brokerPort), cm.brokerMaxResponseTime)
+			if err == nil {
+				conn.Close()
+				valid = true
+				break
 			}
-		}
-		conn.Close()
 
-		if cm.Debug {
-			cm.Log.Printf("[DEBUG] Broker '%s' is valid\n", broker.Name)
+			cm.Log.Printf("[WARN] Broker '%s' unable to connect, %v. Retrying in 2 seconds, attempt %d of %d.", broker.Name, err, attempt, retries)
+			time.Sleep(2 * time.Second)
 		}
 
-		valid = true
-		break
-
+		if valid {
+			if cm.Debug {
+				cm.Log.Printf("[DEBUG] Broker '%s' is valid\n", broker.Name)
+			}
+			break
+		}
 	}
 	return valid
 }

@@ -228,7 +228,7 @@ This is the easiest part:
 ```go
 ...
 
-jsonParsedObj := gabs.ParseJSON([]byte(`{
+jsonParsedObj, _ := gabs.ParseJSON([]byte(`{
 	"outter":{
 		"values":{
 			"first":10,

@@ -42,7 +42,7 @@ metrics.NewGlobal(metrics.DefaultConfig("service-name"), sink)
 metrics.EmitKey([]string{"questions", "meaning of life"}, 42)
 ```
 
-Here is an example of setting up an signal handler:
+Here is an example of setting up a signal handler:
 
 ```go
 // Setup the inmem sink and signal handler

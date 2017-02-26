@@ -40,7 +40,7 @@ func (c *StatusCommand) Run(args []string) int {
 			"Key Shares: %d\n"+
 			"Key Threshold: %d\n"+
 			"Unseal Progress: %d\n"+
-			"Unseal Nonce: %v"+
+			"Unseal Nonce: %v\n"+
 			"Version: %s",
 		sealStatus.Sealed,
 		sealStatus.N,

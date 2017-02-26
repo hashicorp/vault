@@ -320,6 +320,7 @@ func (s *MssqlStmt) queryContext(ctx context.Context, args []namedValue) (driver
 
 func (s *MssqlStmt) processQueryResponse(ctx context.Context) (res driver.Rows, err error) {
 	tokchan := make(chan tokenStruct, 5)
+	ctx, cancel := context.WithCancel(ctx)
 	go processResponse(ctx, s.c.sess, tokchan)
 	// process metadata
 	var cols []columnStruct
@@ -344,7 +345,7 @@ loop:
 			return nil, token
 		}
 	}
-	res = &MssqlRows{sess: s.c.sess, tokchan: tokchan, cols: cols}
+	res = &MssqlRows{sess: s.c.sess, tokchan: tokchan, cols: cols, cancel: cancel}
 	return
 }
 
@@ -389,9 +390,12 @@ type MssqlRows struct {
 	tokchan chan tokenStruct
 
 	nextCols []columnStruct
+
+	cancel func()
 }
 
 func (rc *MssqlRows) Close() error {
+	rc.cancel()
 	for _ = range rc.tokchan {
 	}
 	rc.tokchan = nil

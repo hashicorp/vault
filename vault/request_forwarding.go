@@ -27,6 +27,9 @@ func (c *Core) startForwarding() error {
 	// Clean up in case we have transitioned from a client to a server
 	c.clearForwardingClients()
 
+	// Resolve locally to avoid races
+	ha := c.ha != nil
+
 	// Get our base handler (for our RPC server) and our wrapped handler (for
 	// straight HTTP/2 forwarding)
 	baseHandler, wrappedHandler := c.clusterHandlerSetupFunc()
@@ -43,10 +46,13 @@ func (c *Core) startForwarding() error {
 
 	// Create our RPC server and register the request handler server
 	c.rpcServer = grpc.NewServer()
-	RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
-		core:    c,
-		handler: baseHandler,
-	})
+
+	if ha {
+		RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
+			core:    c,
+			handler: baseHandler,
+		})
+	}
 
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
@@ -82,6 +88,7 @@ func (c *Core) startForwarding() error {
 
 			// Wrap the listener with TLS
 			tlsLn := tls.NewListener(tcpLn, tlsConfig)
+			defer tlsLn.Close()
 
 			if c.logger.IsInfo() {
 				c.logger.Info("core/startClusterListener: serving cluster requests", "cluster_listen_address", tlsLn.Addr())
@@ -89,7 +96,6 @@ func (c *Core) startForwarding() error {
 
 			for {
 				if atomic.LoadUint32(&shutdown) > 0 {
-					tlsLn.Close()
 					return
 				}
 
@@ -100,10 +106,11 @@ func (c *Core) startForwarding() error {
 
 				// Accept the connection
 				conn, err := tlsLn.Accept()
+				if conn != nil {
+					// Always defer although it may be closed ahead of time
+					defer conn.Close()
+				}
 				if err != nil {
-					if conn != nil {
-						conn.Close()
-					}
 					continue
 				}
 
@@ -123,19 +130,29 @@ func (c *Core) startForwarding() error {
 
 				switch tlsConn.ConnectionState().NegotiatedProtocol {
 				case "h2":
+					if !ha {
+						conn.Close()
+						continue
+					}
+
 					c.logger.Debug("core/startClusterListener/Accept: got h2 connection")
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: wrappedHandler,
 					})
 
 				case "req_fw_sb-act_v1":
+					if !ha {
+						conn.Close()
+						continue
+					}
+
 					c.logger.Debug("core/startClusterListener/Accept: got req_fw_sb-act_v1 connection")
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: c.rpcServer,
 					})
 
 				default:
-					c.logger.Debug("core/startClusterListener/Accept: unknown negotiated protocol")
+					c.logger.Debug("core: unknown negotiated protocol on cluster port")
 					conn.Close()
 					continue
 				}
@@ -154,8 +171,9 @@ func (c *Core) startForwarding() error {
 		<-c.clusterListenerShutdownCh
 
 		// Stop the RPC server
+		c.logger.Info("core: shutting down forwarding rpc listeners")
 		c.rpcServer.Stop()
-		c.logger.Info("core/startClusterListener: shutting down listeners")
+		c.logger.Info("core: forwarding rpc listeners stopped")
 
 		// Set the shutdown flag. This will cause the listeners to shut down
 		// within the deadline in clusterListenerAcceptDeadline
@@ -163,7 +181,7 @@ func (c *Core) startForwarding() error {
 
 		// Wait for them all to shut down
 		shutdownWg.Wait()
-		c.logger.Info("core/startClusterListener: listeners successfully shut down")
+		c.logger.Info("core: rpc listeners successfully shut down")
 
 		// Tell the main thread that shutdown is done.
 		c.clusterListenerShutdownSuccessCh <- struct{}{}
@@ -223,6 +241,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		// It's not really insecure, but we have to dial manually to get the
 		// ALPN header right. It's just "insecure" because GRPC isn't managing
 		// the TLS state.
+
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		c.rpcClientConnCancelFunc = cancelFunc
 		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "")), grpc.WithInsecure())

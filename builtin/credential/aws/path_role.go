@@ -41,6 +41,12 @@ in its identity document to match the one specified by this parameter.`,
 				Description: `ARN of the IAM principal to bind to this role. Only applicable when
 auth_type is iam.`,
 			},
+			"bound_region": {
+				Type: framework.TypeString,
+				Description: `If set, defines a constraint on the EC2 instances that the region in
+its identity document to match the one specified by this parameter. Only applicable when
+auth_type is ec2.`,
+			},
 			"bound_iam_role_arn": {
 				Type: framework.TypeString,
 				Description: `If set, defines a constraint on the authenticating EC2 instance
@@ -76,6 +82,18 @@ among running instances, then authentication will fail.`,
 				Description: `When auth_type is iam and
 role_inferred_type is set, the region to assume the inferred entity exists in.`,
 			},
+			"bound_vpc_id": {
+				Type: framework.TypeString,
+				Description: `
+If set, defines a constraint on the EC2 instance to be associated with the VPC
+ID that matches the value specified by this parameter.`,
+			},
+			"bound_subnet_id": {
+				Type: framework.TypeString,
+				Description: `
+If set, defines a constraint on the EC2 instance to be associated with the
+subnet ID that matches the value specified by this parameter.`,
+			},
 			"role_tag": {
 				Type:    framework.TypeString,
 				Default: "",
@@ -85,6 +103,12 @@ of the tag should be generated using 'role/<role>/tag' endpoint.
 Defaults to an empty string, meaning that role tags are disabled. This
 is only checked if auth_type is ec2 or
 role_inferred_type is ec2_instance`,
+			},
+			"period": &framework.FieldSchema{
+				Type:    framework.TypeDurationSecond,
+				Default: 0,
+				Description: `
+If set, indicates that the token generated using this role should never expire. The token should be renewed within the duration specified by this value. At each renewal, the token's TTL will be set to the value of this parameter.`,
 			},
 			"ttl": {
 				Type:    framework.TypeDurationSecond,
@@ -306,10 +330,10 @@ func (b *backend) pathRoleRead(
 	// HMAC key belonging to the role should NOT be exported.
 	delete(respData, "hmac_key")
 
-	// Display the ttl in seconds.
+	// Display all the durations in seconds
 	respData["ttl"] = roleEntry.TTL / time.Second
-	// Display the max_ttl in seconds.
 	respData["max_ttl"] = roleEntry.MaxTTL / time.Second
+	respData["period"] = roleEntry.Period / time.Second
 
 	return &logical.Response{
 		Data: respData,
@@ -344,6 +368,18 @@ func (b *backend) pathRoleCreateUpdate(
 
 	if boundAccountIDRaw, ok := data.GetOk("bound_account_id"); ok {
 		roleEntry.BoundAccountID = boundAccountIDRaw.(string)
+	}
+
+	if boundRegionRaw, ok := data.GetOk("bound_region"); ok {
+		roleEntry.BoundRegion = boundRegionRaw.(string)
+	}
+
+	if boundVpcIDRaw, ok := data.GetOk("bound_vpc_id"); ok {
+		roleEntry.BoundVpcID = boundVpcIDRaw.(string)
+	}
+
+	if boundSubnetIDRaw, ok := data.GetOk("bound_subnet_id"); ok {
+		roleEntry.BoundSubnetID = boundSubnetIDRaw.(string)
 	}
 
 	if boundIamRoleARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
@@ -429,6 +465,13 @@ func (b *backend) pathRoleCreateUpdate(
 		numBinds++
 	}
 
+	if roleEntry.BoundRegion != "" {
+		if !allowEc2Auth {
+			return logical.ErrorResponse("specified bound_region but not allowing ec2 auth_method"), nil
+		}
+		numBinds++
+	}
+
 	if roleEntry.BoundAmiID != "" {
 		if !allowEc2Binds {
 			return logical.ErrorResponse("specified bound_ami_id but not allowing ec2 auth_method or inferring ec2_instance"), nil
@@ -440,6 +483,7 @@ func (b *backend) pathRoleCreateUpdate(
 		if !allowEc2Binds {
 			return logical.ErrorResponse("specified bound_iam_instance_profile_arn but not allowing ec2 auth_method or inferring ec2_instance"), nil
 		}
+		numBinds++
 	}
 
 	if roleEntry.BoundIamRoleARN != "" {
@@ -516,6 +560,17 @@ func (b *backend) pathRoleCreateUpdate(
 		return logical.ErrorResponse("ttl should be shorter than max_ttl"), nil
 	}
 
+	periodRaw, ok := data.GetOk("period")
+	if ok {
+		roleEntry.Period = time.Second * time.Duration(periodRaw.(int))
+	} else if req.Operation == logical.CreateOperation {
+		roleEntry.Period = time.Second * time.Duration(data.Get("period").(int))
+	}
+
+	if roleEntry.Period > b.System().MaxLeaseTTL() {
+		return logical.ErrorResponse(fmt.Sprintf("'period' of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.Period.String(), b.System().MaxLeaseTTL().String())), nil
+	}
+
 	roleTagStr, ok := data.GetOk("role_tag")
 	if ok {
 		roleEntry.RoleTag = roleTagStr.(string)
@@ -554,6 +609,9 @@ type awsRoleEntry struct {
 	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn" structs:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`
 	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
+	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
+	BoundSubnetID              string        `json:"bound_subnet_id" structs:"bound_subnet_id" mapstructure:"bound_subnet_id"`
+	BoundVpcID                 string        `json:"bound_vpc_id" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
 	RoleInferredType           string        `json:"infer_role_type" structs:"infer_role_type" mapstructure:"infer_role_type"`
 	InferredAWSRegion          string        `json:"inferred_aws_region" structs:"inferred_aws_region" mapstructure:"inferred_aws_region"`
 	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
@@ -563,6 +621,7 @@ type awsRoleEntry struct {
 	Policies                   []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	DisallowReauthentication   bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 	HMACKey                    string        `json:"hmac_key" structs:"hmac_key" mapstructure:"hmac_key"`
+	Period                     time.Duration `json:"period" mapstructure:"period" structs:"period"`
 }
 
 const pathRoleSyn = `

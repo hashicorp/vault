@@ -281,7 +281,7 @@ func (c *AuthCommand) listMethods() int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Default TTL | Max TTL | Description"}
+	columns := []string{"Path | Type | Default TTL | Max TTL | Replication Behavior | Description"}
 	for _, path := range paths {
 		auth := auth[path]
 		defTTL := "system"
@@ -292,8 +292,12 @@ func (c *AuthCommand) listMethods() int {
 		if auth.Config.MaxLeaseTTL != 0 {
 			maxTTL = strconv.Itoa(auth.Config.MaxLeaseTTL)
 		}
+		replicatedBehavior := "replicated"
+		if auth.Local {
+			replicatedBehavior = "local"
+		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s", path, auth.Type, defTTL, maxTTL, auth.Description))
+			"%s | %s | %s | %s | %s | %s", path, auth.Type, defTTL, maxTTL, replicatedBehavior, auth.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))

@@ -25,6 +25,10 @@ type Request struct {
 	// Id is the uuid associated with each request
 	ID string `json:"id" structs:"id" mapstructure:"id"`
 
+	// If set, the name given to the replication secondary where this request
+	// originated
+	ReplicationCluster string `json:"replication_cluster" structs:"replication_cluster", mapstructure:"replication_cluster"`
+
 	// Operation is the requested operation type
 	Operation Operation `json:"operation" structs:"operation" mapstructure:"operation"`
 
@@ -38,7 +42,7 @@ type Request struct {
 	Data map[string]interface{} `json:"map" structs:"data" mapstructure:"data"`
 
 	// Storage can be used to durably store and retrieve state.
-	Storage Storage `json:"storage" structs:"storage" mapstructure:"storage"`
+	Storage Storage `json:"-"`
 
 	// Secret will be non-nil only for Revoke and Renew operations
 	// to represent the secret that was returned prior.
@@ -47,6 +51,11 @@ type Request struct {
 	// Auth will be non-nil only for Renew operations
 	// to represent the auth that was returned prior.
 	Auth *Auth `json:"auth" structs:"auth" mapstructure:"auth"`
+
+	// Headers will contain the http headers from the request. This value will
+	// be used in the audit broker to ensure we are auditing only the allowed
+	// headers.
+	Headers map[string][]string `json:"headers" structs:"headers" mapstructure:"headers"`
 
 	// Connection will be non-nil only for credential providers to
 	// inspect the connection information and potentially use it for

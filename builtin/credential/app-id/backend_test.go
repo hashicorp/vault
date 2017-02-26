@@ -72,6 +72,10 @@ func TestBackend_upgradeToSalted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	err = backend.Initialize()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	// Check the keys have been upgraded
 	out, err := inm.Get("struct/map/app-id/foo")

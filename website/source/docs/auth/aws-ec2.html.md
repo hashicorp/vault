@@ -38,11 +38,11 @@ familiar with instance metadata, details can be found
 
 One piece of "dynamic metadata" available to the EC2 instance, is the instance
 identity document, a JSON representation of a collection of instance metadata.
-Importantly, AWS also provides a copy of this metadata in PKCS#7 format signed
-with its public key, and publishes the public keys used (which are grouped by
-region). (Details on the instance identity document and the signature can be
+AWS also provides PKCS#7 signature of the instance metadata document, and
+publishes the public keys (grouped by region) which can be used to verify the
+signature. Details on the instance identity document and the signature can be
 found
-[here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html).)
+[here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html).
 
 During login, the backend verifies the signature on the PKCS#7 document,
 ensuring that the information contained within, is certified accurate by AWS.
@@ -478,6 +478,20 @@ will not be aware of such events. The token issued will still be valid, until
 it expires. The token will likely be expired sooner than its lifetime when the
 instance fails to renew the token on time.
 
+### Cross Account Access
+
+To allow Vault to authenticate EC2 instances running in other accounts, AWS STS (Security
+Token Service) can be used to retrieve temporary credentials by assuming an IAM Role
+in those accounts.
+
+The account in which Vault is running (i.e. the master account) must be listed as
+a trusted entity in the IAM Role being assumed on the remote account. The Role itself
+must allow the `ec2:DescribeInstances` action, and `iam:GetInstanceProfile` if IAM Role
+binding is used (see below).
+
+Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
+for the IAM Role to be assumed.
+
 ## Authentication
 
 ### Via the CLI
@@ -825,9 +839,9 @@ The response will be in JSON. For example:
   <dd>
     Registers an AWS public key to be used to verify the instance identity
     documents. While the PKCS#7 signature of the identity documents have DSA
-    digest, the identity signature will have RSA digest, and hence the public keys
-    for each type varies respectively. Indicate the type of the public key using
-    the "type" parameter.
+    digest, the identity signature will have RSA digest, and hence the public
+    keys for each type varies respectively. Indicate the type of the public key
+    using the "type" parameter.
   </dd>
 
   <dt>Method</dt>
@@ -857,10 +871,10 @@ The response will be in JSON. For example:
         <span class="param">type</span>
         <span class="param-flags">optional</span>
         Takes the value of either "pkcs7" or "identity", indicating the type of
-        document which can be verified using the given certificate. The PKCS#7 document
-        will have a DSA digest and the identity signature will have an RSA signature,
-        and accordingly the public certificates to verify those also vary. Defaults to
-        "pkcs7".
+        document which can be verified using the given certificate. The PKCS#7
+        document will have a DSA digest and the identity signature will have an
+        RSA signature, and accordingly the public certificates to verify those
+        also vary. Defaults to "pkcs7".
       </li>
     </ul>
   </dd>
@@ -947,6 +961,150 @@ The response will be in JSON. For example:
   </dd>
 </dl>
 
+
+### /auth/aws/config/sts/<account_id>
+#### POST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Allows the explicit association of STS roles to satellite AWS accounts
+    (i.e. those which are not the account in which the Vault server is
+    running.) Login attempts from EC2 instances running in these accounts will
+    be verified using credentials obtained by assumption of these STS roles.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>POST</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/certificate/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    <ul>
+      <li>
+        <span class="param">account_id</span>
+        <span class="param-flags">required</span>
+        AWS account ID to be associated with STS role. If set, Vault will use
+        assumed credentials to verify any login attempts from EC2 instances in
+        this account.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">sts_role</span>
+        <span class="param-flags">required</span>
+        AWS ARN for STS role to be assumed when interacting with the account
+        specified.  The Vault server must have permissions to assume this role.
+      </li>
+    </ul>
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
+#### GET
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Returns the previously configured STS role. 
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/sts/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "sts_role ": "arn:aws:iam:<account_id>:role/myRole"
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### LIST
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Lists all the AWS Account IDs for which an STS role is registered 
+  </dd>
+
+  <dt>Method</dt>
+  <dd>LIST/GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/sts` (LIST) or `/auth/aws/config/sts?list=true` (GET)</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>
+
+```javascript
+{
+  "auth": null,
+  "warnings": null,
+  "data": {
+    "keys": [
+      "<account_id_1>",
+      "<account_id_2>"
+    ]
+  },
+  "lease_duration": 0,
+  "renewable": false,
+  "lease_id": ""
+}
+```
+
+  </dd>
+</dl>
+
+#### DELETE
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Deletes a previously configured AWS account/STS role association  
+  </dd>
+
+  <dt>Method</dt>
+  <dd>DELETE</dd>
+
+  <dt>URL</dt>
+  <dd>`/auth/aws/config/sts/<account_id>`</dd>
+
+  <dt>Parameters</dt>
+  <dd>
+    None.
+  </dd>
+
+  <dt>Returns</dt>
+  <dd>`204` response code.
+  </dd>
+</dl>
+
 ### /auth/aws/config/tidy/identity-whitelist
 ##### POST
 <dl class="api">
@@ -967,16 +1125,17 @@ The response will be in JSON. For example:
       <li>
         <span class="param">safety_buffer</span>
         <span class="param-flags">optional</span>
-        The amount of extra time that must have passed beyond the `roletag` expiration,
-        before it is removed from the backend storage. Defaults to 72h.
+        The amount of extra time that must have passed beyond the `roletag`
+        expiration, before it is removed from the backend storage. Defaults to
+        72h.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">disable_periodic_tidy</span>
         <span class="param-flags">optional</span>
-        If set to 'true', disables the periodic tidying of the 'identity-whitelist/<instance_id>'
-        entries.
+        If set to 'true', disables the periodic tidying of the
+        'identity-whitelist/<instance_id>' entries.
       </li>
     </ul>
   </dd>
@@ -1066,19 +1225,21 @@ The response will be in JSON. For example:
 
   <dt>Parameters</dt>
   <dd>
-
     <ul>
       <li>
         <span class="param">safety_buffer</span>
         <span class="param-flags">optional</span>
-        The amount of extra time that must have passed beyond the `roletag` expiration, before it is removed from the backend storage. Defaults to 72h.
+        The amount of extra time that must have passed beyond the `roletag`
+        expiration, before it is removed from the backend storage. Defaults to
+        72h.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">disable_periodic_tidy</span>
         <span class="param-flags">optional</span>
-        If set to 'true', disables the periodic tidying of the 'roletag-blacklist/<role_tag>' entries.
+        If set to 'true', disables the periodic tidying of the
+        'roletag-blacklist/<role_tag>' entries.
       </li>
     </ul>
   </dd>
@@ -1210,6 +1371,30 @@ constraint is checked only by the ec2 auth method.
     </ul>
     <ul>
       <li>
+        <span class="param">bound_region</span>
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instances that the region in
+        its identity document to match the one specified by this parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">bound_vpc_id</span>
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instance to be associated with
+        the VPC ID that matches the value specified by this parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">bound_subnet_id</span>
+        <span class="param-flags">optional</span>
+        If set, defines a constraint on the EC2 instance to be associated with
+        the subnet ID that matches the value specified by this parameter.
+      </li>
+    </ul>
+    <ul>
+      <li>
         <span class="param">bound_iam_role_arn</span>
         <span class="param-flags">optional</span>
 	If set, defines a constraint on the authenticating EC2 instance that it
@@ -1278,8 +1463,8 @@ auth method only when inferring an ec2 instance.
       <li>
         <span class="param">ttl</span>
         <span class="param-flags">optional</span>
-        The TTL period of tokens issued using this role, provided as "1h", where hour is
-        the largest suffix.
+        The TTL period of tokens issued using this role, provided as "1h",
+        where hour is the largest suffix.
       </li>
     </ul>
     <ul>
@@ -1287,6 +1472,17 @@ auth method only when inferring an ec2 instance.
         <span class="param">max_ttl</span>
         <span class="param-flags">optional</span>
         The maximum allowed lifetime of tokens issued using this role.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">period</span>
+        <span class="param-flags">optional</span>
+        If set, indicates that the token generated using this role should never
+        expire. The token should be renewed within the duration specified by
+        this value. At each renewal, the token's TTL will be set to the value
+        of this parameter.  The maximum allowed lifetime of tokens issued using
+        this role.
       </li>
     </ul>
     <ul>
@@ -1300,14 +1496,23 @@ auth method only when inferring an ec2 instance.
       <li>
         <span class="param">allow_instance_migration</span>
         <span class="param-flags">optional</span>
-        If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution. This only applies to authentications via the ec2 auth method.
+        If set, allows migration of the underlying instance where the client
+        resides. This keys off of pendingTime in the metadata document, so
+        essentially, this disables the client nonce check whenever the instance
+        is migrated to a new host and pendingTime is newer than the
+        previously-remembered time. Use with caution. This only applies to
+        authentications via the ec2 auth method.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. In order to perform a fresh login, the entry in whitelist for the instance ID needs to be cleared using 'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to 'false'. this only applies to authentications via the ec2 auth method.
+        If set, only allows a single token to be granted per instance ID. In
+        order to perform a fresh login, the entry in whitelist for the instance
+        ID needs to be cleared using
+        'auth/aws/identity-whitelist/<instance_id>' endpoint. Defaults to
+        'false'. This only applies to authentications via the ec2 auth method.
       </li>
     </ul>
   </dd>
@@ -1435,19 +1640,20 @@ auth method only when inferring an ec2 instance.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-Creates a role tag on the role, which help in restricting the capabilities that
-are set on the role. Role tags are not tied to any specific ec2 instance unless
-specified explicitly using the `instance_id` parameter. By default, role tags
-are designed to be used across all instances that satisfies the constraints on
-the role. Regardless of which instances have role tags on them, capabilities
-defined in a role tag must be a strict subset of the given role's capabilities.
-Note that, since adding and removing a tag is often a widely distributed
-privilege, care needs to be taken to ensure that the instances are attached
-with correct tags to not let them gain more privileges than what were intended.
-If a role tag is changed, the capabilities inherited by the instance will be
-those defined on the new role tag. Since those must be a subset of the role
-capabilities, the role should never provide more capabilities than any given
-instance can be allowed to gain in a worst-case scenario.
+     Creates a role tag on the role, which help in restricting the capabilities
+     that are set on the role. Role tags are not tied to any specific ec2
+     instance unless specified explicitly using the `instance_id` parameter. By
+     default, role tags are designed to be used across all instances that
+     satisfies the constraints on the role. Regardless of which instances have
+     role tags on them, capabilities defined in a role tag must be a strict
+     subset of the given role's capabilities.  Note that, since adding and
+     removing a tag is often a widely distributed privilege, care needs to be
+     taken to ensure that the instances are attached with correct tags to not
+     let them gain more privileges than what were intended.  If a role tag is
+     changed, the capabilities inherited by the instance will be those defined
+     on the new role tag. Since those must be a subset of the role
+     capabilities, the role should never provide more capabilities than any
+     given instance can be allowed to gain in a worst-case scenario.
   </dd>
 
   <dt>Method</dt>
@@ -1469,9 +1675,9 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">policies</span>
         <span class="param-flags">optional</span>
-        Policies to be associated with the tag. If set, must be a subset of
-        the role's policies. If set, but set to an empty value, only the
-        'default' policy will be given to issued tokens.
+        Policies to be associated with the tag. If set, must be a subset of the
+        role's policies. If set, but set to an empty value, only the 'default'
+        policy will be given to issued tokens.
       </li>
     </ul>
     <ul>
@@ -1485,21 +1691,28 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">instance_id</span>
         <span class="param-flags">optional</span>
-        Instance ID for which this tag is intended for. If set, the created tag can only be used by the instance with the given ID.
+        Instance ID for which this tag is intended for. If set, the created tag
+        can only be used by the instance with the given ID.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">disallow_reauthentication</span>
         <span class="param-flags">optional</span>
-        If set, only allows a single token to be granted per instance ID. This can be cleared with the auth/aws/identity-whitelist endpoint. Defaults to 'false'.
+        If set, only allows a single token to be granted per instance ID. This
+        can be cleared with the auth/aws/identity-whitelist endpoint.
+        Defaults to 'false'.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">allow_instance_migration</span>
         <span class="param-flags">optional</span>
-        If set, allows migration of the underlying instance where the client resides. This keys off of pendingTime in the metadata document, so essentially, this disables the client nonce check whenever the instance is migrated to a new host and pendingTime is newer than the previously-remembered time. Use with caution. Defaults to 'false'.
+        If set, allows migration of the underlying instance where the client
+        resides. This keys off of pendingTime in the metadata document, so
+        essentially, this disables the client nonce check whenever the instance
+        is migrated to a new host and pendingTime is newer than the
+        previously-remembered time. Use with caution. Defaults to 'false'.
       </li>
     </ul>
   </dd>
@@ -1571,46 +1784,46 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">identity</span>
         <span class="param-flags">required</span>
-        Base64 encoded EC2 instance identity document. This needs to be supplied along
-        with the `signature` parameter when using the ec2 auth method. If using `curl`
-        for fetching the identity
-        document, consider using the option `-w 0` while piping the output to
-        `base64` binary.
+        Base64 encoded EC2 instance identity document. This needs to be
+        supplied along with the `signature` parameter. If using `curl` for
+        fetching the identity document, consider using the option `-w 0` while
+        piping the output to `base64` binary.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">signature</span>
         <span class="param-flags">required</span>
-        Base64 encoded SHA256 RSA signature of the instance identity document. This
-        needs to be supplied along with `identity` parameter when using the ec2
-        auth method.
+        Base64 encoded SHA256 RSA signature of the instance identity document.
+        This needs to be supplied along with `identity` parameter when using the
+        ec2 auth method.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">pkcs7</span>
         <span class="param-flags">required</span>
-        PKCS7 signature of the identity document with all `\n` characters removed.
-        Either this needs to be set *OR* both `identity` and `signature` need to be
-        set when using the ec2 auth method.
+        PKCS7 signature of the identity document with all `\n` characters
+        removed.  Either this needs to be set *OR* both `identity` and
+        `signature` need to be set when using the ec2 auth method.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">nonce</span>
         <span class="param-flags">optional</span>
-        The nonce to be used for subsequent login requests. If this parameter is not
-        specified at all and if reauthentication is allowed, then the backend will
-        generate a random nonce, attaches it to the instance's identity-whitelist entry
-        and returns the nonce back as part of auth metadata. This value should be used
-        with further login requests, to establish client authenticity. Clients can
-        choose to set a custom nonce if preferred, in which case, it is recommended
-        that clients provide a strong nonce.  If a nonce is provided but with an empty
-        value, it indicates intent to disable reauthentication. Note that, when
-        `disallow_reauthentication` option is enabled on either the role or the role
-        tag, the `nonce` holds no significance. This is ignored unless using the
-        ec2 auth method.
+        The nonce to be used for subsequent login requests. If this parameter
+        is not specified at all and if reauthentication is allowed, then the
+        backend will generate a random nonce, attaches it to the instance's
+        identity-whitelist entry and returns the nonce back as part of auth
+        metadata. This value should be used with further login requests, to
+        establish client authenticity. Clients can choose to set a custom nonce
+        if preferred, in which case, it is recommended that clients provide a
+        strong nonce.  If a nonce is provided but with an empty value, it
+        indicates intent to disable reauthentication. Note that, when
+        `disallow_reauthentication` option is enabled on either the role or the
+        role tag, the `nonce` holds no significance. This is ignored unless
+        using the ec2 auth method.
       </li>
     </ul>
     <ul>
@@ -1698,10 +1911,10 @@ instance can be allowed to gain in a worst-case scenario.
   <dt>Description</dt>
   <dd>
     Places a valid role tag in a blacklist. This ensures that the role tag
-    cannot be used by any instance to perform a login operation again.
-    Note that if the role tag was previously used to perform a successful
-    login, placing the tag in the blacklist does not invalidate the
-    already issued token.
+    cannot be used by any instance to perform a login operation again.  Note
+    that if the role tag was previously used to perform a successful login,
+    placing the tag in the blacklist does not invalidate the already issued
+    token.
   </dd>
 
   <dt>Method</dt>
@@ -1716,8 +1929,8 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">role_tag</span>
         <span class="param-flags">required</span>
-        Role tag to be blacklisted. The tag can be supplied as-is. In order
-        to avoid any encoding problems, it can be base64 encoded.
+        Role tag to be blacklisted. The tag can be supplied as-is. In order to
+        avoid any encoding problems, it can be base64 encoded.
       </li>
     </ul>
   </dd>
@@ -1836,7 +2049,8 @@ instance can be allowed to gain in a worst-case scenario.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Cleans up the entries in the blacklist based on expiration time on the entry and `safety_buffer`.
+    Cleans up the entries in the blacklist based on expiration time on the
+    entry and `safety_buffer`.
   </dd>
 
   <dt>Method</dt>
@@ -1851,7 +2065,9 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">safety_buffer</span>
         <span class="param-flags">optional</span>
-        The amount of extra time that must have passed beyond the `roletag` expiration, before it is removed from the backend storage. Defaults to 72h.
+        The amount of extra time that must have passed beyond the `roletag`
+        expiration, before it is removed from the backend storage. Defaults to
+        72h.
       </li>
     </ul>
   </dd>
@@ -1867,7 +2083,8 @@ instance can be allowed to gain in a worst-case scenario.
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Returns an entry in the whitelist. An entry will be created/updated by every successful login.
+    Returns an entry in the whitelist. An entry will be created/updated by
+    every successful login.
   </dd>
 
   <dt>Method</dt>
@@ -1882,8 +2099,8 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">instance_id</span>
         <span class="param-flags">required</span>
-        EC2 instance ID. A successful login operation from an EC2 instance
-        gets cached in this whitelist, keyed off of instance ID.
+        EC2 instance ID. A successful login operation from an EC2 instance gets
+        cached in this whitelist, keyed off of instance ID.
       </li>
     </ul>
   </dd>
@@ -1995,7 +2212,9 @@ instance can be allowed to gain in a worst-case scenario.
       <li>
         <span class="param">safety_buffer</span>
         <span class="param-flags">optional</span>
-        The amount of extra time that must have passed beyond the identity expiration, before it is removed from the backend storage. Defaults to 72h.
+        The amount of extra time that must have passed beyond the identity
+        expiration, before it is removed from the backend storage. Defaults to
+        72h.
       </li>
     </ul>
   </dd>

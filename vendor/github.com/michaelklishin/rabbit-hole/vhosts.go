@@ -3,7 +3,6 @@ package rabbithole
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 )
 
 //
@@ -98,7 +97,7 @@ func (c *Client) ListVhosts() (rec []VhostInfo, err error) {
 
 // Returns information about a specific virtual host.
 func (c *Client) GetVhost(vhostname string) (rec *VhostInfo, err error) {
-	req, err := newGETRequest(c, "vhosts/"+url.QueryEscape(vhostname))
+	req, err := newGETRequest(c, "vhosts/" + PathEscape(vhostname))
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +126,7 @@ func (c *Client) PutVhost(vhostname string, settings VhostSettings) (res *http.R
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "PUT", "vhosts/"+url.QueryEscape(vhostname), body)
+	req, err := newRequestWithBody(c, "PUT", "vhosts/" + PathEscape(vhostname), body)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +145,7 @@ func (c *Client) PutVhost(vhostname string, settings VhostSettings) (res *http.R
 
 // Deletes a virtual host.
 func (c *Client) DeleteVhost(vhostname string) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "vhosts/"+url.QueryEscape(vhostname), nil)
+	req, err := newRequestWithBody(c, "DELETE", "vhosts/" + PathEscape(vhostname), nil)
 	if err != nil {
 		return nil, err
 	}

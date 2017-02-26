@@ -11,17 +11,20 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	log "github.com/mgutz/logxi/v1"
+	"github.com/mitchellh/copystructure"
 )
 
 type NoopAudit struct {
-	Config  *audit.BackendConfig
-	ReqErr  error
-	ReqAuth []*logical.Auth
-	Req     []*logical.Request
-	ReqErrs []error
+	Config     *audit.BackendConfig
+	ReqErr     error
+	ReqAuth    []*logical.Auth
+	Req        []*logical.Request
+	ReqHeaders []map[string][]string
+	ReqErrs    []error
 
 	RespErr  error
 	RespAuth []*logical.Auth
@@ -33,6 +36,7 @@ type NoopAudit struct {
 func (n *NoopAudit) LogRequest(a *logical.Auth, r *logical.Request, err error) error {
 	n.ReqAuth = append(n.ReqAuth, a)
 	n.Req = append(n.Req, r)
+	n.ReqHeaders = append(n.ReqHeaders, r.Headers)
 	n.ReqErrs = append(n.ReqErrs, err)
 	return n.ReqErr
 }
@@ -161,6 +165,94 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	}
 }
 
+// Test that the local table actually gets populated as expected with local
+// entries, and that upon reading the entries from both are recombined
+// correctly
+func TestCore_EnableAudit_Local(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return &NoopAudit{
+			Config: config,
+		}, nil
+	}
+
+	c.auditBackends["fail"] = func(config *audit.BackendConfig) (audit.Backend, error) {
+		return nil, fmt.Errorf("failing enabling")
+	}
+
+	c.audit = &MountTable{
+		Type: auditTableType,
+		Entries: []*MountEntry{
+			&MountEntry{
+				Table: auditTableType,
+				Path:  "noop/",
+				Type:  "noop",
+				UUID:  "abcd",
+			},
+			&MountEntry{
+				Table: auditTableType,
+				Path:  "noop2/",
+				Type:  "noop",
+				UUID:  "bcde",
+			},
+		},
+	}
+
+	// Both should set up successfully
+	err := c.setupAudits()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rawLocal, err := c.barrier.Get(coreLocalAuditConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rawLocal == nil {
+		t.Fatal("expected non-nil local audit")
+	}
+	localAuditTable := &MountTable{}
+	if err := jsonutil.DecodeJSON(rawLocal.Value, localAuditTable); err != nil {
+		t.Fatal(err)
+	}
+	if len(localAuditTable.Entries) > 0 {
+		t.Fatalf("expected no entries in local audit table, got %#v", localAuditTable)
+	}
+
+	c.audit.Entries[1].Local = true
+	if err := c.persistAudit(c.audit); err != nil {
+		t.Fatal(err)
+	}
+
+	rawLocal, err = c.barrier.Get(coreLocalAuditConfigPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rawLocal == nil {
+		t.Fatal("expected non-nil local audit")
+	}
+	localAuditTable = &MountTable{}
+	if err := jsonutil.DecodeJSON(rawLocal.Value, localAuditTable); err != nil {
+		t.Fatal(err)
+	}
+	if len(localAuditTable.Entries) != 1 {
+		t.Fatalf("expected one entry in local audit table, got %#v", localAuditTable)
+	}
+
+	oldAudit := c.audit
+	if err := c.loadAudits(); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(oldAudit, c.audit) {
+		t.Fatalf("expected\n%#v\ngot\n%#v\n", oldAudit, c.audit)
+	}
+
+	if len(c.audit.Entries) != 2 {
+		t.Fatalf("expected two audit entries, got %#v", localAuditTable)
+	}
+}
+
 func TestCore_DisableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = func(config *audit.BackendConfig) (audit.Backend, error) {
@@ -214,7 +306,7 @@ func TestCore_DisableAudit(t *testing.T) {
 
 	// Verify matching mount tables
 	if !reflect.DeepEqual(c.audit, c2.audit) {
-		t.Fatalf("mismatch: %v %v", c.audit, c2.audit)
+		t.Fatalf("mismatch:\n%#v\n%#v", c.audit, c2.audit)
 	}
 }
 
@@ -287,16 +379,33 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		Path:      "sys/mounts",
 	}
 
+	// Copy so we can verify nothing canged
+	authCopyRaw, err := copystructure.Copy(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authCopy := authCopyRaw.(*logical.Auth)
+
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
 	// Create an identifier for the request to verify against
-	var err error
 	req.ID, err = uuid.GenerateUUID()
 	if err != nil {
 		t.Fatalf("failed to generate identifier for the request: path%s err: %v", req.Path, err)
 	}
+	reqCopy.ID = req.ID
 
 	reqErrs := errors.New("errs")
 
-	err = b.LogRequest(auth, req, reqErrs)
+	headersConf := &AuditedHeadersConfig{
+		Headers: make(map[string]*auditedHeaderSettings),
+	}
+
+	err = b.LogRequest(authCopy, reqCopy, headersConf, reqErrs)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -306,7 +415,7 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 			t.Fatalf("Bad: %#v", a.ReqAuth[0])
 		}
 		if !reflect.DeepEqual(a.Req[0], req) {
-			t.Fatalf("Bad: %#v", a.Req[0])
+			t.Fatalf("Bad: %#v\n wanted %#v", a.Req[0], req)
 		}
 		if !reflect.DeepEqual(a.ReqErrs[0], reqErrs) {
 			t.Fatalf("Bad: %#v", a.ReqErrs[0])
@@ -315,13 +424,13 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(auth, req, nil); err != nil {
+	if err := b.LogRequest(auth, req, headersConf, nil); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.ReqErr = fmt.Errorf("failed")
-	if err := b.LogRequest(auth, req, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
+	if err := b.LogRequest(auth, req, headersConf, nil); !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }
@@ -359,7 +468,30 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	}
 	respErr := fmt.Errorf("permission denied")
 
-	err := b.LogResponse(auth, req, resp, respErr)
+	// Copy so we can verify nothing canged
+	authCopyRaw, err := copystructure.Copy(auth)
+	if err != nil {
+		t.Fatal(err)
+	}
+	authCopy := authCopyRaw.(*logical.Auth)
+
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
+	respCopyRaw, err := copystructure.Copy(resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	respCopy := respCopyRaw.(*logical.Response)
+
+	headersConf := &AuditedHeadersConfig{
+		Headers: make(map[string]*auditedHeaderSettings),
+	}
+
+	err = b.LogResponse(authCopy, reqCopy, respCopy, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -381,15 +513,88 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 	// Should still work with one failing backend
 	a1.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(auth, req, resp, respErr)
+	err = b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// Should FAIL work with both failing backends
 	a2.RespErr = fmt.Errorf("failed")
-	err = b.LogResponse(auth, req, resp, respErr)
+	err = b.LogResponse(auth, req, resp, headersConf, respErr)
 	if err.Error() != "no audit backend succeeded in logging the response" {
+		t.Fatalf("err: %v", err)
+	}
+}
+
+func TestAuditBroker_AuditHeaders(t *testing.T) {
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	b := NewAuditBroker(logger)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "headers/")
+	a1 := &NoopAudit{}
+	a2 := &NoopAudit{}
+	b.Register("foo", a1, nil)
+	b.Register("bar", a2, nil)
+
+	auth := &logical.Auth{
+		ClientToken: "foo",
+		Policies:    []string{"dev", "ops"},
+		Metadata: map[string]string{
+			"user":   "armon",
+			"source": "github",
+		},
+	}
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "sys/mounts",
+		Headers: map[string][]string{
+			"X-Test-Header":  []string{"foo"},
+			"X-Vault-Header": []string{"bar"},
+			"Content-Type":   []string{"baz"},
+		},
+	}
+	respErr := fmt.Errorf("permission denied")
+
+	// Copy so we can verify nothing canged
+	reqCopyRaw, err := copystructure.Copy(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqCopy := reqCopyRaw.(*logical.Request)
+
+	headersConf := &AuditedHeadersConfig{
+		view: view,
+	}
+	headersConf.add("X-Test-Header", false)
+	headersConf.add("X-Vault-Header", false)
+
+	err = b.LogRequest(auth, reqCopy, headersConf, respErr)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected := map[string][]string{
+		"x-test-header":  []string{"foo"},
+		"x-vault-header": []string{"bar"},
+	}
+
+	for _, a := range []*NoopAudit{a1, a2} {
+		if !reflect.DeepEqual(a.ReqHeaders[0], expected) {
+			t.Fatalf("Bad audited headers: %#v", a.Req[0].Headers)
+		}
+	}
+
+	// Should still work with one failing backend
+	a1.ReqErr = fmt.Errorf("failed")
+	err = b.LogRequest(auth, req, headersConf, respErr)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Should FAIL work with both failing backends
+	a2.ReqErr = fmt.Errorf("failed")
+	err = b.LogRequest(auth, req, headersConf, respErr)
+	if !errwrap.Contains(err, "no audit backend succeeded in logging the request") {
 		t.Fatalf("err: %v", err)
 	}
 }

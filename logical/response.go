@@ -109,7 +109,7 @@ func init() {
 			if err != nil {
 				return nil, fmt.Errorf("error copying Data: %v", err)
 			}
-			ret.Data = retData.(map[string]interface{})
+			ret.Data = *(retData.(*map[string]interface{}))
 		}
 
 		if input.Warnings() != nil {

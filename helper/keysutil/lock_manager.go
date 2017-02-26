@@ -36,6 +36,9 @@ type PolicyRequest struct {
 	// Whether to enable convergent encryption
 	Convergent bool
 
+	// Whether to allow export
+	Exportable bool
+
 	// Whether to upsert
 	Upsert bool
 }
@@ -66,6 +69,15 @@ func NewLockManager(cacheDisabled bool) *LockManager {
 
 func (lm *LockManager) CacheActive() bool {
 	return lm.cache != nil
+}
+
+func (lm *LockManager) InvalidatePolicy(name string) {
+	// Check if it's in our cache. If so, return right away.
+	if lm.CacheActive() {
+		lm.cacheMutex.Lock()
+		defer lm.cacheMutex.Unlock()
+		delete(lm.cache, name)
+	}
 }
 
 func (lm *LockManager) policyLock(name string, lockType bool) *sync.RWMutex {
@@ -244,9 +256,10 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 		}
 
 		p = &Policy{
-			Name:    req.Name,
-			Type:    req.KeyType,
-			Derived: req.Derived,
+			Name:       req.Name,
+			Type:       req.KeyType,
+			Derived:    req.Derived,
+			Exportable: req.Exportable,
 		}
 		if req.Derived {
 			p.KDF = Kdf_hkdf_sha256

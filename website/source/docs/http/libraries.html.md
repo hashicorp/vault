@@ -79,6 +79,8 @@ These libraries are provided by the community.
 
 * [vault-php-sdk](https://github.com/jippi/vault-php-sdk)
   * `composer require jippi/vault-php-sdk`
+* [vault-php-sdk](https://github.com/violuke/vault-php-sdk) extended from jipppi
+  * `composer require violuke/vault-php-sdk`
 
 ### Python
 

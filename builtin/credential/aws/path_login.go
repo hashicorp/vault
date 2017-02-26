@@ -152,9 +152,21 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API
 // and checks if the instance is running and is healthy
-func (b *backend) validateInstance(s logical.Storage, instanceID, region string) (*ec2.Instance, error) {
+func (b *backend) validateInstance(s logical.Storage, instanceID, region, accountID string) (*ec2.Instance, error) {
+
+	// Check if an STS configuration exists for the AWS account
+	sts, err := b.lockedAwsStsEntry(s, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching STS config for account ID %q: %q\n", accountID, err)
+	}
+	// An empty STS role signifies the master account
+	stsRole := ""
+	if sts != nil {
+		stsRole = sts.StsRole
+	}
+
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := b.clientEC2(s, region)
+	ec2Client, err := b.clientEC2(s, region, stsRole)
 	if err != nil {
 		return nil, err
 	}
@@ -380,6 +392,28 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 		return nil, fmt.Sprintf("AMI ID '%s' does not belong to role '%s'", instance.ImageId, roleName), nil
 	}
 
+	// Validate the SubnetID if corresponding bound was set on the role
+	if roleEntry.BoundSubnetID != "" {
+		subnetIDPtr := instance.SubnetId
+		if subnetIDPtr == nil {
+			return nil, "", fmt.Errorf("Subnet ID in the instance description is nil")
+		}
+		if roleEntry.BoundSubnetID != *subnetIDPtr {
+			return nil, fmt.Sprintf("Subnet ID %q does not satisfy the constraint on role %q", *subnetIDPtr, roleName), nil
+		}
+	}
+
+	// Validate the VpcID if corresponding bound was set on the role
+	if roleEntry.BoundVpcID != "" {
+		vpcIDPtr := instance.VpcId
+		if vpcIDPtr == nil {
+			return nil, "", fmt.Errorf("VPC ID in the instance description is nil")
+		}
+		if roleEntry.BoundVpcID != *vpcIDPtr {
+			return nil, fmt.Sprintf("VPC ID %q does not satisfy the constraint on role %q", *vpcIDPtr, roleName), nil
+		}
+	}
+
 	// Check if the IAM instance profile ARN of the instance trying to
 	// login, matches the IAM instance profile ARN specified as a constraint
 	// on the role
@@ -519,7 +553,7 @@ func (b *backend) pathLoginUpdateEc2(
 	// Validate the instance ID by making a call to AWS EC2 DescribeInstances API
 	// and fetching the instance description. Validation succeeds only if the
 	// instance is in 'running' state.
-	instance, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region)
+	instance, err := b.validateInstance(req.Storage, identityDocParsed.InstanceID, identityDocParsed.Region, identityDocParsed.AccountID)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("failed to verify instance ID: %v", err)), nil
 	}
@@ -538,12 +572,29 @@ func (b *backend) pathLoginUpdateEc2(
 	}
 
 	// Verify that the AccountID of the instance trying to login matches the
-	// AccountID specified as a constraint on the role
+	// AccountID specified as a constraint on role
 	if roleEntry.BoundAccountID != "" && identityDocParsed.AccountID != roleEntry.BoundAccountID {
 		return logical.ErrorResponse(fmt.Sprintf("Account ID %q does not belong to role %q", identityDocParsed.AccountID, roleName)), nil
 	}
 
-	iamClient, err := b.clientIAM(req.Storage, identityDocParsed.Region)
+	// Verify that the `Region` of the instance trying to login matches the
+	// `Region` specified as a constraint on role
+	if roleEntry.BoundRegion != "" && identityDocParsed.Region != roleEntry.BoundRegion {
+		return logical.ErrorResponse(fmt.Sprintf("Region %q does not satisfy the constraint on role %q", identityDocParsed.Region, roleName)), nil
+	}
+
+	// Check if an STS configuration exists for the AWS account
+	sts, err := b.lockedAwsStsEntry(req.Storage, identityDocParsed.AccountID)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error fetching STS config for account ID %q: %q\n", identityDocParsed.AccountID, err)), nil
+	}
+	// An empty STS role signifies the master account
+	stsRole := ""
+	if sts != nil {
+		stsRole = sts.StsRole
+	}
+
+	iamClient, err := b.clientIAM(req.Storage, identityDocParsed.Region, stsRole)
 	if err != nil {
 		iamClient = nil
 	}
@@ -703,10 +754,12 @@ func (b *backend) pathLoginUpdateEc2(
 
 	resp := &logical.Response{
 		Auth: &logical.Auth{
+			Period:   roleEntry.Period,
 			Policies: policies,
 			Metadata: map[string]string{
 				"instance_id":      identityDocParsed.InstanceID,
 				"region":           identityDocParsed.Region,
+				"account_id":       identityDocParsed.AccountID,
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
 				"ami_id":           identityDocParsed.AmiID,
@@ -728,16 +781,20 @@ func (b *backend) pathLoginUpdateEc2(
 		resp.Auth.Metadata["nonce"] = clientNonce
 	}
 
-	// Cap the TTL value.
-	shortestTTL := b.System().DefaultLeaseTTL()
-	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-		shortestTTL = roleEntry.TTL
+	if roleEntry.Period > time.Duration(0) {
+		resp.Auth.TTL = roleEntry.Period
+	} else {
+		// Cap the TTL value.
+		shortestTTL := b.System().DefaultLeaseTTL()
+		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
+			shortestTTL = roleEntry.TTL
+		}
+		if shortestMaxTTL < shortestTTL {
+			resp.AddWarning(fmt.Sprintf("Effective ttl of %q exceeded the effective max_ttl of %q; ttl value is capped appropriately", (shortestTTL / time.Second).String(), (shortestMaxTTL / time.Second).String()))
+			shortestTTL = shortestMaxTTL
+		}
+		resp.Auth.TTL = shortestTTL
 	}
-	if shortestMaxTTL < shortestTTL {
-		resp.AddWarning(fmt.Sprintf("Effective ttl of %q exceeded the effective max_ttl of %q; ttl value is capped appropriately", (shortestTTL / time.Second).String(), (shortestMaxTTL / time.Second).String()))
-		shortestTTL = shortestMaxTTL
-	}
-	resp.Auth.TTL = shortestTTL
 
 	return resp, nil
 
@@ -858,7 +915,7 @@ func (b *backend) pathLoginRenewIam(
 			if !ok {
 				return nil, fmt.Errorf("no inferred entity ID in auth metadata")
 			}
-			_, err := b.validateInstance(req.Storage, instanceID, roleEntry.InferredAWSRegion)
+			_, err := b.validateInstance(req.Storage, instanceID, roleEntry.InferredAWSRegion, req.Auth.Metadata["accountID"])
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify instance ID '%s': %s", instanceID, err)
 			}
@@ -887,8 +944,16 @@ func (b *backend) pathLoginRenewEc2(
 		return nil, fmt.Errorf("unable to fetch region from metadata during renewal")
 	}
 
+	// Ensure backwards compatibility for older clients without account_id saved in metadata
+	accountID, ok := req.Auth.Metadata["account_id"]
+	if ok {
+		if accountID == "" {
+			return nil, fmt.Errorf("unable to fetch account_id from metadata during renewal")
+		}
+	}
+
 	// Cross check that the instance is still in 'running' state
-	_, err := b.validateInstance(req.Storage, instanceID, region)
+	_, err := b.validateInstance(req.Storage, instanceID, region, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify instance ID %q: %q", instanceID, err)
 	}
@@ -934,25 +999,35 @@ func (b *backend) pathLoginRenewEc2(
 		longestMaxTTL = rTagMaxTTL
 	}
 
-	// Cap the TTL value
-	shortestTTL := b.System().DefaultLeaseTTL()
-	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-		shortestTTL = roleEntry.TTL
-	}
-	if shortestMaxTTL < shortestTTL {
-		shortestTTL = shortestMaxTTL
-	}
-
 	// Only LastUpdatedTime and ExpirationTime change and all other fields remain the same
 	currentTime := time.Now()
 	storedIdentity.LastUpdatedTime = currentTime
 	storedIdentity.ExpirationTime = currentTime.Add(longestMaxTTL)
 
+	// Updating the expiration time is required for the tidy operation on the
+	// whitelist identity storage items
 	if err = setWhitelistIdentityEntry(req.Storage, instanceID, storedIdentity); err != nil {
 		return nil, err
 	}
 
-	return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
+	// If 'Period' is set on the role, then the token should never expire. Role
+	// tag does not have a 'Period' field. So, regarless of whether the token
+	// was issued using a role login or a role tag login, the period set on the
+	// role should take effect.
+	if roleEntry.Period > time.Duration(0) {
+		req.Auth.TTL = roleEntry.Period
+		return &logical.Response{Auth: req.Auth}, nil
+	} else {
+		// Cap the TTL value
+		shortestTTL := b.System().DefaultLeaseTTL()
+		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
+			shortestTTL = roleEntry.TTL
+		}
+		if shortestMaxTTL < shortestTTL {
+			shortestTTL = shortestMaxTTL
+		}
+		return framework.LeaseExtend(shortestTTL, shortestMaxTTL, b.System())(req, data)
+	}
 }
 
 func (b *backend) pathLoginUpdateIam(
@@ -1025,7 +1100,7 @@ func (b *backend) pathLoginUpdateIam(
 		}
 	}
 
-	clientArn, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
+	clientArn, accountID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %s", err)), nil
 	}
@@ -1063,7 +1138,7 @@ func (b *backend) pathLoginUpdateIam(
 	inferredEntityType := ""
 	inferredEntityId := ""
 	if roleEntry.RoleInferredType == "ec2_instance" {
-		instance, err := b.validateInstance(req.Storage, sessionName, roleEntry.InferredAWSRegion)
+		instance, err := b.validateInstance(req.Storage, sessionName, roleEntry.InferredAWSRegion, accountID)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", sessionName, roleEntry.InferredAWSRegion)), nil
 		}
@@ -1072,7 +1147,7 @@ func (b *backend) pathLoginUpdateIam(
 		// IAM is a "global" service and so doesn't really have a region, so it wouldn't matter
 		// Except that the region is used to infer the partion (i.e., aws, aws-cn, or aws-us-gov),
 		// and we can safely assume that the EC2 client will be in the same partition as IAM
-		iamClient, err := b.clientIAM(req.Storage, roleEntry.InferredAWSRegion)
+		iamClient, err := b.clientIAM(req.Storage, roleEntry.InferredAWSRegion, accountID)
 		if err != nil {
 			iamClient = nil
 		}
@@ -1107,6 +1182,7 @@ func (b *backend) pathLoginUpdateIam(
 				"role_tag_max_ttl":   rTagMaxTTL.String(),
 				"inferredEntityType": inferredEntityType,
 				"inferredEntityId":   inferredEntityId,
+				"account_id":         accountID,
 			},
 			InternalData: map[string]interface{}{
 				"role_name": roleName,
@@ -1119,25 +1195,29 @@ func (b *backend) pathLoginUpdateIam(
 		},
 	}
 
-	shortestTTL := b.System().DefaultLeaseTTL()
-	if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
-		shortestTTL = roleEntry.TTL
-	}
+	if roleEntry.Period > time.Duration(0) {
+		resp.Auth.TTL = roleEntry.Period
+	} else {
+		shortestTTL := b.System().DefaultLeaseTTL()
+		if roleEntry.TTL > time.Duration(0) && roleEntry.TTL < shortestTTL {
+			shortestTTL = roleEntry.TTL
+		}
 
-	maxTTL := b.System().MaxLeaseTTL()
-	if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
-		maxTTL = roleEntry.MaxTTL
-	}
-	if rTagMaxTTL > time.Duration(0) && rTagMaxTTL < maxTTL {
-		maxTTL = rTagMaxTTL
-	}
+		maxTTL := b.System().MaxLeaseTTL()
+		if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
+			maxTTL = roleEntry.MaxTTL
+		}
+		if rTagMaxTTL > time.Duration(0) && rTagMaxTTL < maxTTL {
+			maxTTL = rTagMaxTTL
+		}
 
-	if shortestTTL > maxTTL {
-		resp.AddWarning(fmt.Sprintf("Effective TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", (shortestTTL / time.Second).String(), (maxTTL / time.Second).String()))
-		shortestTTL = maxTTL
-	}
+		if shortestTTL > maxTTL {
+			resp.AddWarning(fmt.Sprintf("Effective TTL of %q exceeded the effective max_ttl of %q; TTL value is capped accordingly", (shortestTTL / time.Second).String(), (maxTTL / time.Second).String()))
+			shortestTTL = maxTTL
+		}
 
-	resp.Auth.TTL = shortestTTL
+		resp.Auth.TTL = shortestTTL
+	}
 
 	return resp, nil
 }
@@ -1269,7 +1349,7 @@ func roleAllowsAuthMethod(authMethod string, roleEntry *awsRoleEntry) bool {
 	return allowedAuthMethod
 }
 
-func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (string, error) {
+func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (string, string, error) {
 	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
 	// The protection against this is that this method will only call the endpoint specified in the
 	// client config (defaulting to sts.amazonaws.com), so it would require a Vault admin to override
@@ -1278,7 +1358,7 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	client := cleanhttp.DefaultClient()
 	response, err := client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("error making request: %s", err)
+		return "", "", fmt.Errorf("error making request: %s", err)
 	}
 	if response != nil {
 		defer response.Body.Close()
@@ -1286,17 +1366,17 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	// we check for status code afterwards to also print out response body
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if response.StatusCode != 200 {
-		return "", fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
+		return "", "", fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
 	}
 	callerIdentityResponse, err := parseGetCallerIdentityResponse(string(responseBody))
 	if err != nil {
-		return "", fmt.Errorf("error parsing STS response")
+		return "", "", fmt.Errorf("error parsing STS response")
 	}
 	clientArn := callerIdentityResponse.GetCallerIdentityResult[0].Arn
 	if clientArn == "" {
-		return "", fmt.Errorf("no ARN validated")
+		return "", "", fmt.Errorf("no ARN validated")
 	}
-	return clientArn, nil
+	return clientArn, callerIdentityResponse.GetCallerIdentityResult[0].Account, nil
 }
 
 type GetCallerIdentityResponse struct {

@@ -13,10 +13,14 @@ import (
 // for testing and development situations where the data is not
 // expected to be durable.
 type InmemBackend struct {
+	sync.RWMutex
 	root       *radix.Tree
-	l          sync.RWMutex
 	permitPool *PermitPool
 	logger     log.Logger
+}
+
+type TransactionalInmemBackend struct {
+	InmemBackend
 }
 
 // NewInmem constructs a new in-memory backend
@@ -29,14 +33,31 @@ func NewInmem(logger log.Logger) *InmemBackend {
 	return in
 }
 
+// Basically for now just creates a permit pool of size 1 so only one operation
+// can run at a time
+func NewTransactionalInmem(logger log.Logger) *TransactionalInmemBackend {
+	in := &TransactionalInmemBackend{
+		InmemBackend: InmemBackend{
+			root:       radix.New(),
+			permitPool: NewPermitPool(1),
+			logger:     logger,
+		},
+	}
+	return in
+}
+
 // Put is used to insert or update an entry
 func (i *InmemBackend) Put(entry *Entry) error {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
-	i.l.Lock()
-	defer i.l.Unlock()
+	i.Lock()
+	defer i.Unlock()
 
+	return i.PutInternal(entry)
+}
+
+func (i *InmemBackend) PutInternal(entry *Entry) error {
 	i.root.Insert(entry.Key, entry)
 	return nil
 }
@@ -46,9 +67,13 @@ func (i *InmemBackend) Get(key string) (*Entry, error) {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
-	i.l.RLock()
-	defer i.l.RUnlock()
+	i.RLock()
+	defer i.RUnlock()
 
+	return i.GetInternal(key)
+}
+
+func (i *InmemBackend) GetInternal(key string) (*Entry, error) {
 	if raw, ok := i.root.Get(key); ok {
 		return raw.(*Entry), nil
 	}
@@ -60,9 +85,13 @@ func (i *InmemBackend) Delete(key string) error {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
-	i.l.Lock()
-	defer i.l.Unlock()
+	i.Lock()
+	defer i.Unlock()
 
+	return i.DeleteInternal(key)
+}
+
+func (i *InmemBackend) DeleteInternal(key string) error {
 	i.root.Delete(key)
 	return nil
 }
@@ -73,9 +102,13 @@ func (i *InmemBackend) List(prefix string) ([]string, error) {
 	i.permitPool.Acquire()
 	defer i.permitPool.Release()
 
-	i.l.RLock()
-	defer i.l.RUnlock()
+	i.RLock()
+	defer i.RUnlock()
 
+	return i.ListInternal(prefix)
+}
+
+func (i *InmemBackend) ListInternal(prefix string) ([]string, error) {
 	var out []string
 	seen := make(map[string]interface{})
 	walkFn := func(s string, v interface{}) bool {
@@ -95,4 +128,15 @@ func (i *InmemBackend) List(prefix string) ([]string, error) {
 	i.root.WalkPrefix(prefix, walkFn)
 
 	return out, nil
+}
+
+// Implements the transaction interface
+func (t *TransactionalInmemBackend) Transaction(txns []TxnEntry) error {
+	t.permitPool.Acquire()
+	defer t.permitPool.Release()
+
+	t.Lock()
+	defer t.Unlock()
+
+	return genericTransactionHandler(t, txns)
 }

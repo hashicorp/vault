@@ -82,13 +82,16 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*Client, error
 		option.WithUserAgent(userAgent),
 	}
 	opts = append(o, opts...)
-	hc, _, err := transport.NewHTTPClient(ctx, opts...)
+	hc, ep, err := transport.NewHTTPClient(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("dialing: %v", err)
 	}
 	rawService, err := raw.New(hc)
 	if err != nil {
 		return nil, fmt.Errorf("storage client: %v", err)
+	}
+	if ep != "" {
+		rawService.BasePath = ep
 	}
 	return &Client{
 		hc:  hc,
@@ -508,26 +511,32 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 		return nil, err
 	}
 	var res *http.Response
-	err = runWithRetry(ctx, func() error { res, err = o.c.hc.Do(req); return err })
+	err = runWithRetry(ctx, func() error {
+		res, err = o.c.hc.Do(req)
+		if err != nil {
+			return err
+		}
+		if res.StatusCode == http.StatusNotFound {
+			res.Body.Close()
+			return ErrObjectNotExist
+		}
+		if res.StatusCode < 200 || res.StatusCode > 299 {
+			body, _ := ioutil.ReadAll(res.Body)
+			res.Body.Close()
+			return &googleapi.Error{
+				Code:   res.StatusCode,
+				Header: res.Header,
+				Body:   string(body),
+			}
+		}
+		if offset > 0 && length != 0 && res.StatusCode != http.StatusPartialContent {
+			res.Body.Close()
+			return errors.New("storage: partial request not satisfied")
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
-	}
-	if res.StatusCode == http.StatusNotFound {
-		res.Body.Close()
-		return nil, ErrObjectNotExist
-	}
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		body, _ := ioutil.ReadAll(res.Body)
-		res.Body.Close()
-		return nil, &googleapi.Error{
-			Code:   res.StatusCode,
-			Header: res.Header,
-			Body:   string(body),
-		}
-	}
-	if offset > 0 && length != 0 && res.StatusCode != http.StatusPartialContent {
-		res.Body.Close()
-		return nil, errors.New("storage: partial request not satisfied")
 	}
 
 	var size int64 // total size of object, even if a range was requested.

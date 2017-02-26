@@ -8,7 +8,7 @@ import (
 // is present on the Request structure for credential backends.
 type Connection struct {
 	// RemoteAddr is the network address that sent the request.
-	RemoteAddr string
+	RemoteAddr string `json:"remote_addr"`
 
 	// ConnState is the TLS connection state if applicable.
 	ConnState *tls.ConnectionState

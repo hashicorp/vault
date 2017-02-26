@@ -31,6 +31,10 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
+
+		Invalidate: b.invalidate,
+
+		Clean: b.ResetDB,
 	}
 
 	return &b
@@ -101,6 +105,13 @@ func (b *backend) ResetDB() {
 	}
 
 	b.db = nil
+}
+
+func (b *backend) invalidate(key string) {
+	switch key {
+	case "config/connection":
+		b.ResetDB()
+	}
 }
 
 // Lease returns the lease information

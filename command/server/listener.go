@@ -83,6 +83,21 @@ func listenerWrapTLS(
 	}
 	tlsConf.ClientAuth = tls.RequestClientCert
 
+	if v, ok := config["tls_cipher_suites"]; ok {
+		ciphers, err := tlsutil.ParseCiphers(v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_cipher_suites': %v", err)
+		}
+		tlsConf.CipherSuites = ciphers
+	}
+	if v, ok := config["tls_prefer_server_cipher_suites"]; ok {
+		preferServer, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_prefer_server_cipher_suites': %v", err)
+		}
+		tlsConf.PreferServerCipherSuites = preferServer
+	}
+
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
 	return ln, props, cg.reload, nil

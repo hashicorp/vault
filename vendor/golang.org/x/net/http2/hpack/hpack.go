@@ -61,7 +61,7 @@ func (hf HeaderField) String() string {
 func (hf HeaderField) Size() uint32 {
 	// http://http2.github.io/http2-spec/compression.html#rfc.section.4.1
 	// "The size of the dynamic table is the sum of the size of
-	// its entries.  The size of an entry is the sum of its name's
+	// its entries. The size of an entry is the sum of its name's
 	// length in octets (as defined in Section 5.2), its value's
 	// length in octets (see Section 5.2), plus 32.  The size of
 	// an entry is calculated using the length of the name and
@@ -199,22 +199,6 @@ func (dt *dynamicTable) evict() {
 	}
 }
 
-// constantTimeStringCompare compares string a and b in a constant
-// time manner.
-func constantTimeStringCompare(a, b string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	c := byte(0)
-
-	for i := 0; i < len(a); i++ {
-		c |= a[i] ^ b[i]
-	}
-
-	return c == 0
-}
-
 // Search searches f in the table. The return value i is 0 if there is
 // no name match. If there is name match or name/value match, i is the
 // index of that entry (1-based). If both name and value match,
@@ -223,7 +207,7 @@ func (dt *dynamicTable) search(f HeaderField) (i uint64, nameValueMatch bool) {
 	l := len(dt.ents)
 	for j := l - 1; j >= 0; j-- {
 		ent := dt.ents[j]
-		if !constantTimeStringCompare(ent.Name, f.Name) {
+		if ent.Name != f.Name {
 			continue
 		}
 		if i == 0 {
@@ -232,14 +216,12 @@ func (dt *dynamicTable) search(f HeaderField) (i uint64, nameValueMatch bool) {
 		if f.Sensitive {
 			continue
 		}
-		if !constantTimeStringCompare(ent.Value, f.Value) {
+		if ent.Value != f.Value {
 			continue
 		}
-		i = uint64(l - j)
-		nameValueMatch = true
-		return
+		return uint64(l - j), true
 	}
-	return
+	return i, false
 }
 
 func (d *Decoder) maxTableIndex() int {
@@ -307,7 +289,7 @@ func (d *Decoder) Write(p []byte) (n int, err error) {
 		err = d.parseHeaderFieldRepr()
 		if err == errNeedMore {
 			// Extra paranoia, making sure saveBuf won't
-			// get too large.  All the varint and string
+			// get too large. All the varint and string
 			// reading code earlier should already catch
 			// overlong things and return ErrStringLength,
 			// but keep this as a last resort.

@@ -33,7 +33,7 @@ func TestServer_CommonHA(t *testing.T) {
 	args := []string{"-config", tmpfile.Name(), "-verify-only", "true"}
 
 	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		t.Fatalf("bad: %d\n\n%s\n\n%s", code, ui.ErrorWriter.String(), ui.OutputWriter.String())
 	}
 
 	if !strings.Contains(ui.OutputWriter.String(), "(HA available)") {
@@ -61,7 +61,7 @@ func TestServer_GoodSeparateHA(t *testing.T) {
 	args := []string{"-config", tmpfile.Name(), "-verify-only", "true"}
 
 	if code := c.Run(args); code != 0 {
-		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		t.Fatalf("bad: %d\n\n%s\n\n%s", code, ui.ErrorWriter.String(), ui.OutputWriter.String())
 	}
 
 	if !strings.Contains(ui.OutputWriter.String(), "HA Backend:") {

@@ -69,14 +69,18 @@ func (v *BarrierView) Get(key string) (*logical.StorageEntry, error) {
 
 // logical.Storage impl.
 func (v *BarrierView) Put(entry *logical.StorageEntry) error {
-	if v.readonly {
-		return logical.ErrReadOnly
-	}
 	if err := v.sanityCheck(entry.Key); err != nil {
 		return err
 	}
+
+	expandedKey := v.expandKey(entry.Key)
+
+	if v.readonly {
+		return logical.ErrReadOnly
+	}
+
 	nested := &Entry{
-		Key:   v.expandKey(entry.Key),
+		Key:   expandedKey,
 		Value: entry.Value,
 	}
 	return v.barrier.Put(nested)
@@ -84,13 +88,18 @@ func (v *BarrierView) Put(entry *logical.StorageEntry) error {
 
 // logical.Storage impl.
 func (v *BarrierView) Delete(key string) error {
-	if v.readonly {
-		return logical.ErrReadOnly
-	}
 	if err := v.sanityCheck(key); err != nil {
 		return err
 	}
-	return v.barrier.Delete(v.expandKey(key))
+
+	expandedKey := v.expandKey(key)
+
+	if v.readonly {
+		return logical.ErrReadOnly
+	}
+
+
+	return v.barrier.Delete(expandedKey)
 }
 
 // SubView constructs a nested sub-view using the given prefix

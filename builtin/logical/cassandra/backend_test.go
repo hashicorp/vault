@@ -4,22 +4,92 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
+	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
+var (
+	testImagePull sync.Once
+)
+
+func prepareTestContainer(t *testing.T, s logical.Storage, b logical.Backend) (cid dockertest.ContainerID, retURL string) {
+	if os.Getenv("CASSANDRA_HOST") != "" {
+		return "", os.Getenv("CASSANDRA_HOST")
+	}
+
+	// Without this the checks for whether the container has started seem to
+	// never actually pass. There's really no reason to expose the test
+	// containers, so don't.
+	dockertest.BindDockerToLocalhost = "yep"
+
+	testImagePull.Do(func() {
+		dockertest.Pull("cassandra")
+	})
+
+	cwd, _ := os.Getwd()
+
+	cid, connErr := dockertest.ConnectToCassandra("latest", 60, 1000*time.Millisecond, func(connURL string) bool {
+		// This will cause a validation to run
+		resp, err := b.HandleRequest(&logical.Request{
+			Storage:   s,
+			Operation: logical.UpdateOperation,
+			Path:      "config/connection",
+			Data: map[string]interface{}{
+				"hosts":            connURL,
+				"username":         "cassandra",
+				"password":         "cassandra",
+				"protocol_version": 3,
+			},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			// It's likely not up and running yet, so return false and try again
+			return false
+		}
+
+		retURL = connURL
+		return true
+	}, []string{"-v", cwd + "/test-fixtures/:/etc/cassandra/"}...)
+
+	if connErr != nil {
+		if cid != "" {
+			cid.KillRemove()
+		}
+		t.Fatalf("could not connect to database: %v", connErr)
+	}
+
+	return
+}
+
+func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
+	err := cid.KillRemove()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestBackend_basic(t *testing.T) {
-	b := Backend()
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, hostname := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, hostname),
 			testAccStepRole(t),
 			testAccStepReadCreds(t, "test"),
 		},
@@ -27,14 +97,22 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	b := Backend()
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cid, hostname := prepareTestContainer(t, config.StorageView, b)
+	if cid != "" {
+		defer cleanupTestContainer(t, cid)
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
-		AcceptanceTest: true,
-		PreCheck:       func() { testAccPreCheck(t) },
-		Backend:        b,
+		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t),
+			testAccStepConfig(t, hostname),
 			testAccStepRole(t),
 			testAccStepRoleWithOptions(t),
 			testAccStepReadRole(t, "test", testRole),
@@ -53,14 +131,15 @@ func testAccPreCheck(t *testing.T) {
 	}
 }
 
-func testAccStepConfig(t *testing.T) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, hostname string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/connection",
 		Data: map[string]interface{}{
-			"hosts":    os.Getenv("CASSANDRA_HOST"),
-			"username": "cassandra",
-			"password": "cassandra",
+			"hosts":            hostname,
+			"username":         "cassandra",
+			"password":         "cassandra",
+			"protocol_version": 3,
 		},
 	}
 }

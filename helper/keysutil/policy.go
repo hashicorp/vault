@@ -147,6 +147,9 @@ type Policy struct {
 	KDF                  int  `json:"kdf"`
 	ConvergentEncryption bool `json:"convergent_encryption"`
 
+	// Whether the key is exportable
+	Exportable bool `json:"exportable"`
+
 	// The minimum version of the key allowed to be used
 	// for decryption
 	MinDecryptionVersion int `json:"min_decryption_version"`

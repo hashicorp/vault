@@ -133,16 +133,41 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, fmt.Errorf("error initializing seal: %v", err)
 	}
 
-	err = c.seal.SetBarrierConfig(barrierConfig)
-	if err != nil {
-		c.logger.Error("core: failed to save barrier configuration", "error", err)
-		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
-	}
-
 	barrierKey, barrierUnsealKeys, err := c.generateShares(barrierConfig)
 	if err != nil {
 		c.logger.Error("core: error generating shares", "error", err)
 		return nil, err
+	}
+
+	// Initialize the barrier
+	if err := c.barrier.Initialize(barrierKey); err != nil {
+		c.logger.Error("core: failed to initialize barrier", "error", err)
+		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
+	}
+	if c.logger.IsInfo() {
+		c.logger.Info("core: security barrier initialized", "shares", barrierConfig.SecretShares, "threshold", barrierConfig.SecretThreshold)
+	}
+
+	// Unseal the barrier
+	if err := c.barrier.Unseal(barrierKey); err != nil {
+		c.logger.Error("core: failed to unseal barrier", "error", err)
+		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
+	}
+
+	// Ensure the barrier is re-sealed
+	defer func() {
+		// Defers are LIFO so we need to run this here too to ensure the stop
+		// happens before sealing. preSeal also stops, so we just make the
+		// stopping safe against multiple calls.
+		if err := c.barrier.Seal(); err != nil {
+			c.logger.Error("core: failed to seal barrier", "error", err)
+		}
+	}()
+
+	err = c.seal.SetBarrierConfig(barrierConfig)
+	if err != nil {
+		c.logger.Error("core: failed to save barrier configuration", "error", err)
+		return nil, fmt.Errorf("barrier configuration saving failed: %v", err)
 	}
 
 	// If we are storing shares, pop them out of the returned results and push
@@ -163,31 +188,8 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		SecretShares: barrierUnsealKeys,
 	}
 
-	// Initialize the barrier
-	if err := c.barrier.Initialize(barrierKey); err != nil {
-		c.logger.Error("core: failed to initialize barrier", "error", err)
-		return nil, fmt.Errorf("failed to initialize barrier: %v", err)
-	}
-	if c.logger.IsInfo() {
-		c.logger.Info("core: security barrier initialized", "shares", barrierConfig.SecretShares, "threshold", barrierConfig.SecretThreshold)
-	}
-
-	// Unseal the barrier
-	if err := c.barrier.Unseal(barrierKey); err != nil {
-		c.logger.Error("core: failed to unseal barrier", "error", err)
-		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
-	}
-
-	// Ensure the barrier is re-sealed
-	defer func() {
-		if err := c.barrier.Seal(); err != nil {
-			c.logger.Error("core: failed to seal barrier", "error", err)
-		}
-	}()
-
 	// Perform initial setup
 	if err := c.setupCluster(); err != nil {
-		c.stateLock.Unlock()
 		c.logger.Error("core: cluster setup failed during init", "error", err)
 		return nil, err
 	}

@@ -175,55 +175,69 @@ func (b *backend) pathIssueSignCert(
 		return nil, fmt.Errorf("Error converting raw cert bundle to cert bundle: %s", err)
 	}
 
-	resp := b.Secret(SecretCertsType).Response(
-		map[string]interface{}{
-			"serial_number": cb.SerialNumber,
-		},
-		map[string]interface{}{
-			"serial_number": cb.SerialNumber,
-		})
+	respData := map[string]interface{}{
+		"serial_number": cb.SerialNumber,
+	}
 
 	switch format {
 	case "pem":
-		resp.Data["issuing_ca"] = signingCB.Certificate
-		resp.Data["certificate"] = cb.Certificate
+		respData["issuing_ca"] = signingCB.Certificate
+		respData["certificate"] = cb.Certificate
 		if cb.CAChain != nil && len(cb.CAChain) > 0 {
-			resp.Data["ca_chain"] = cb.CAChain
+			respData["ca_chain"] = cb.CAChain
 		}
 		if !useCSR {
-			resp.Data["private_key"] = cb.PrivateKey
-			resp.Data["private_key_type"] = cb.PrivateKeyType
+			respData["private_key"] = cb.PrivateKey
+			respData["private_key_type"] = cb.PrivateKeyType
 		}
 
 	case "pem_bundle":
-		resp.Data["issuing_ca"] = signingCB.Certificate
-		resp.Data["certificate"] = cb.ToPEMBundle()
+		respData["issuing_ca"] = signingCB.Certificate
+		respData["certificate"] = cb.ToPEMBundle()
 		if cb.CAChain != nil && len(cb.CAChain) > 0 {
-			resp.Data["ca_chain"] = cb.CAChain
+			respData["ca_chain"] = cb.CAChain
 		}
 		if !useCSR {
-			resp.Data["private_key"] = cb.PrivateKey
-			resp.Data["private_key_type"] = cb.PrivateKeyType
+			respData["private_key"] = cb.PrivateKey
+			respData["private_key_type"] = cb.PrivateKeyType
 		}
 
 	case "der":
-		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
-		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(signingBundle.CertificateBytes)
+		respData["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
+		respData["issuing_ca"] = base64.StdEncoding.EncodeToString(signingBundle.CertificateBytes)
 
 		var caChain []string
 		for _, caCert := range parsedBundle.CAChain {
 			caChain = append(caChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
 		if caChain != nil && len(caChain) > 0 {
-			resp.Data["ca_chain"] = caChain
+			respData["ca_chain"] = caChain
 		}
 
 		if !useCSR {
-			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
+			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
+			respData["private_key_type"] = cb.PrivateKeyType
 		}
 	}
 
-	resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	var resp *logical.Response
+	switch {
+	case role.GenerateLease == nil:
+		return nil, fmt.Errorf("generate lease in role is nil")
+	case *role.GenerateLease == false:
+		// If lease generation is disabled do not populate `Secret` field in
+		// the response
+		resp = &logical.Response{
+			Data: respData,
+		}
+	default:
+		resp = b.Secret(SecretCertsType).Response(
+			respData,
+			map[string]interface{}{
+				"serial_number": cb.SerialNumber,
+			})
+		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
 		Key:   "certs/" + cb.SerialNumber,
