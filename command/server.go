@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
 
@@ -302,6 +304,9 @@ func (c *ServerCommand) Run(args []string) int {
 			coreConfig.RedirectAddr = redirect
 		}
 	}
+	if coreConfig.RedirectAddr == "" && dev {
+		coreConfig.RedirectAddr = fmt.Sprintf("http://%s", config.Listeners[0].Config["address"])
+	}
 
 	// After the redirect bits are sorted out, if no cluster address was
 	// explicitly given, derive one from the redirect addr
@@ -309,10 +314,19 @@ func (c *ServerCommand) Run(args []string) int {
 		coreConfig.ClusterAddr = ""
 	} else if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
 		coreConfig.ClusterAddr = envCA
-	} else if coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "" {
-		u, err := url.ParseRequestURI(coreConfig.RedirectAddr)
+	} else {
+		var addrToUse string
+		switch {
+		case coreConfig.ClusterAddr == "" && coreConfig.RedirectAddr != "":
+			addrToUse = coreConfig.RedirectAddr
+		case dev:
+			addrToUse = fmt.Sprintf("http://%s", config.Listeners[0].Config["address"])
+		default:
+			goto CLUSTER_SYNTHESIS_COMPLETE
+		}
+		u, err := url.ParseRequestURI(addrToUse)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error parsing redirect address %s: %v", coreConfig.RedirectAddr, err))
+			c.Ui.Output(fmt.Sprintf("Error parsing synthesized cluster address %s: %v", addrToUse, err))
 			return 1
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -328,7 +342,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 		nPort, err := strconv.Atoi(port)
 		if err != nil {
-			c.Ui.Output(fmt.Sprintf("Error parsing redirect address; failed to convert %q to a numeric: %v", port, err))
+			c.Ui.Output(fmt.Sprintf("Error parsing synthesized address; failed to convert %q to a numeric: %v", port, err))
 			return 1
 		}
 		u.Host = net.JoinHostPort(host, strconv.Itoa(nPort+1))
@@ -336,6 +350,9 @@ func (c *ServerCommand) Run(args []string) int {
 		u.Scheme = "https"
 		coreConfig.ClusterAddr = u.String()
 	}
+
+CLUSTER_SYNTHESIS_COMPLETE:
+
 	if coreConfig.ClusterAddr != "" {
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
@@ -368,25 +385,23 @@ func (c *ServerCommand) Run(args []string) int {
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
 	infoKeys = append(infoKeys, "log level", "mlock", "backend")
 
+	if coreConfig.ClusterAddr != "" {
+		info["cluster address"] = coreConfig.ClusterAddr
+		infoKeys = append(infoKeys, "cluster address")
+	}
+	if coreConfig.RedirectAddr != "" {
+		info["redirect address"] = coreConfig.RedirectAddr
+		infoKeys = append(infoKeys, "redirect address")
+	}
+
 	if config.HABackend != nil {
 		info["HA backend"] = config.HABackend.Type
-		info["redirect address"] = coreConfig.RedirectAddr
-		infoKeys = append(infoKeys, "HA backend", "redirect address")
-		if coreConfig.ClusterAddr != "" {
-			info["cluster address"] = coreConfig.ClusterAddr
-			infoKeys = append(infoKeys, "cluster address")
-		}
+		infoKeys = append(infoKeys, "HA backend")
 	} else {
 		// If the backend supports HA, then note it
 		if coreConfig.HAPhysical != nil {
 			if coreConfig.HAPhysical.HAEnabled() {
 				info["backend"] += " (HA available)"
-				info["redirect address"] = coreConfig.RedirectAddr
-				infoKeys = append(infoKeys, "redirect address")
-				if coreConfig.ClusterAddr != "" {
-					info["cluster address"] = coreConfig.ClusterAddr
-					infoKeys = append(infoKeys, "cluster address")
-				}
 			} else {
 				info["backend"] += " (HA disabled)"
 			}
@@ -442,10 +457,12 @@ func (c *ServerCommand) Run(args []string) int {
 					c.Ui.Output("Failed to parse tcp listener")
 					return 1
 				}
-				clusterAddrs = append(clusterAddrs, &net.TCPAddr{
+				clusterAddr := &net.TCPAddr{
 					IP:   tcpAddr.IP,
 					Port: tcpAddr.Port + 1,
-				})
+				}
+				clusterAddrs = append(clusterAddrs, clusterAddr)
+				addr = clusterAddr.String()
 			}
 			props["cluster address"] = addr
 		}
@@ -582,6 +599,10 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the HTTP server
 	server := &http.Server{}
+	if err := http2.ConfigureServer(server, nil); err != nil {
+		c.Ui.Output(fmt.Sprintf("Error configuring server for HTTP/2: %s", err))
+		return 1
+	}
 	server.Handler = handler
 	for _, ln := range lns {
 		go server.Serve(ln)
@@ -852,6 +873,10 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 
 		if cfg.CheckManager.API.TokenApp == "" {
 			cfg.CheckManager.API.TokenApp = "vault"
+		}
+
+		if cfg.CheckManager.Check.DisplayName == "" {
+			cfg.CheckManager.Check.DisplayName = "Vault"
 		}
 
 		if cfg.CheckManager.Check.SearchTag == "" {

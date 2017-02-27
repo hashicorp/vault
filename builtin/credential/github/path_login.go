@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
@@ -126,7 +127,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 	}
 
 	// Get the user
-	user, _, err := client.Users.Get("")
+	user, _, err := client.Users.Get(context.Background(), "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -140,7 +141,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 
 	var allOrgs []*github.Organization
 	for {
-		orgs, resp, err := client.Organizations.List("", orgOpt)
+		orgs, resp, err := client.Organizations.List(context.Background(), "", orgOpt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -170,7 +171,7 @@ func (b *backend) verifyCredentials(req *logical.Request, token string) (*verify
 
 	var allTeams []*github.Team
 	for {
-		teams, resp, err := client.Organizations.ListUserTeams(teamOpt)
+		teams, resp, err := client.Organizations.ListUserTeams(context.Background(), teamOpt)
 		if err != nil {
 			return nil, nil, err
 		}

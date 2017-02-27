@@ -2,13 +2,11 @@ package http
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
 	"time"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/vault"
@@ -37,24 +35,11 @@ func TestHTTP_Wrapping(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	root := cores[0].Root
-
-	transport := cleanhttp.DefaultTransport()
-	transport.TLSClientConfig = cores[0].TLSConfig
-	httpClient := &http.Client{
-		Transport: transport,
-	}
-	addr := fmt.Sprintf("https://127.0.0.1:%d", cores[0].Listeners[0].Address.Port)
-	config := api.DefaultConfig()
-	config.Address = addr
-	config.HttpClient = httpClient
-	client, err := api.NewClient(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	client := cores[0].Client
 	client.SetToken(root)
 
 	// Write a value that we will use with wrapping for lookup
-	_, err = client.Logical().Write("secret/foo", map[string]interface{}{
+	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
 		"zip": "zap",
 	})
 	if err != nil {

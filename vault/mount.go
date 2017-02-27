@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -117,6 +118,15 @@ func (t *MountTable) remove(path string) *MountEntry {
 		}
 	}
 	return nil
+}
+
+// sortEntriesByPath sorts the entries in the table by path and returns the
+// table; this is useful for tests
+func (t *MountTable) sortEntriesByPath() *MountTable {
+	sort.Slice(t.Entries, func(i, j int) bool {
+		return t.Entries[i].Path < t.Entries[j].Path
+	})
+	return t
 }
 
 // MountEntry is used to represent a mount table entry
@@ -490,6 +500,10 @@ func (c *Core) loadMounts() error {
 
 		// Upgrade to table-scoped entries
 		for _, entry := range c.mounts.Entries {
+			if entry.Type == "cubbyhole" && !entry.Local {
+				entry.Local = true
+				needPersist = true
+			}
 			if entry.Table == "" {
 				entry.Table = c.mounts.Type
 				needPersist = true
@@ -733,6 +747,7 @@ func requiredMountTable() *MountTable {
 		Type:        "cubbyhole",
 		Description: "per-token private secret storage",
 		UUID:        cubbyholeUUID,
+		Local:       true,
 	}
 
 	sysUUID, err := uuid.GenerateUUID()

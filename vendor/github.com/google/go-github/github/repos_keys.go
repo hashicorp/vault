@@ -5,14 +5,17 @@
 
 package github
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // The Key type is defined in users_keys.go
 
 // ListKeys lists the deploy keys for a repository.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/keys/#list
-func (s *RepositoriesService) ListKeys(owner string, repo string, opt *ListOptions) ([]*Key, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/keys/#list
+func (s *RepositoriesService) ListKeys(ctx context.Context, owner string, repo string, opt *ListOptions) ([]*Key, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -25,7 +28,7 @@ func (s *RepositoriesService) ListKeys(owner string, repo string, opt *ListOptio
 	}
 
 	var keys []*Key
-	resp, err := s.client.Do(req, &keys)
+	resp, err := s.client.Do(ctx, req, &keys)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -35,8 +38,8 @@ func (s *RepositoriesService) ListKeys(owner string, repo string, opt *ListOptio
 
 // GetKey fetches a single deploy key.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/keys/#get
-func (s *RepositoriesService) GetKey(owner string, repo string, id int) (*Key, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/keys/#get
+func (s *RepositoriesService) GetKey(ctx context.Context, owner string, repo string, id int) (*Key, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -45,7 +48,7 @@ func (s *RepositoriesService) GetKey(owner string, repo string, id int) (*Key, *
 	}
 
 	key := new(Key)
-	resp, err := s.client.Do(req, key)
+	resp, err := s.client.Do(ctx, req, key)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -55,8 +58,8 @@ func (s *RepositoriesService) GetKey(owner string, repo string, id int) (*Key, *
 
 // CreateKey adds a deploy key for a repository.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/keys/#create
-func (s *RepositoriesService) CreateKey(owner string, repo string, key *Key) (*Key, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/keys/#create
+func (s *RepositoriesService) CreateKey(ctx context.Context, owner string, repo string, key *Key) (*Key, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys", owner, repo)
 
 	req, err := s.client.NewRequest("POST", u, key)
@@ -65,7 +68,7 @@ func (s *RepositoriesService) CreateKey(owner string, repo string, key *Key) (*K
 	}
 
 	k := new(Key)
-	resp, err := s.client.Do(req, k)
+	resp, err := s.client.Do(ctx, req, k)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -75,8 +78,8 @@ func (s *RepositoriesService) CreateKey(owner string, repo string, key *Key) (*K
 
 // EditKey edits a deploy key.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/keys/#edit
-func (s *RepositoriesService) EditKey(owner string, repo string, id int, key *Key) (*Key, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/keys/#edit
+func (s *RepositoriesService) EditKey(ctx context.Context, owner string, repo string, id int, key *Key) (*Key, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("PATCH", u, key)
@@ -85,7 +88,7 @@ func (s *RepositoriesService) EditKey(owner string, repo string, id int, key *Ke
 	}
 
 	k := new(Key)
-	resp, err := s.client.Do(req, k)
+	resp, err := s.client.Do(ctx, req, k)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -95,8 +98,8 @@ func (s *RepositoriesService) EditKey(owner string, repo string, id int, key *Ke
 
 // DeleteKey deletes a deploy key.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/keys/#delete
-func (s *RepositoriesService) DeleteKey(owner string, repo string, id int) (*Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/keys/#delete
+func (s *RepositoriesService) DeleteKey(ctx context.Context, owner string, repo string, id int) (*Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/keys/%v", owner, repo, id)
 
 	req, err := s.client.NewRequest("DELETE", u, nil)
@@ -104,5 +107,5 @@ func (s *RepositoriesService) DeleteKey(owner string, repo string, id int) (*Res
 		return nil, err
 	}
 
-	return s.client.Do(req, nil)
+	return s.client.Do(ctx, req, nil)
 }

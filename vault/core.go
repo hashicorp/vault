@@ -320,6 +320,9 @@ type Core struct {
 	// replicationState keeps the current replication state cached for quick
 	// lookup
 	replicationState consts.ReplicationState
+
+	// uiEnabled indicates whether Vault Web UI is enabled or not
+	uiEnabled bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -362,6 +365,8 @@ type CoreConfig struct {
 
 	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
 
+	EnableUI bool `json:"ui" structs:"ui" mapstructure:"ui"`
+
 	ReloadFuncs     *map[string][]ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
 }
@@ -403,9 +408,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// Setup the core
 	c := &Core{
+		devToken:                         conf.DevToken,
+		physical:                         conf.Physical,
 		redirectAddr:                     conf.RedirectAddr,
 		clusterAddr:                      conf.ClusterAddr,
-		physical:                         conf.Physical,
 		seal:                             conf.Seal,
 		router:                           NewRouter(),
 		sealed:                           true,
@@ -628,7 +634,7 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
 		return nil, te, logical.ErrPermissionDenied
 	}
@@ -1037,7 +1043,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr
@@ -1122,7 +1128,7 @@ func (c *Core) StepDown(req *logical.Request) (retErr error) {
 	}
 
 	// Verify that this operation is allowed
-	allowed, rootPrivs := acl.AllowOperation(req.Operation, req.Path)
+	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
 		return retErr

@@ -7,6 +7,7 @@ package github
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"time"
 )
@@ -14,7 +15,7 @@ import (
 // PullRequestsService handles communication with the pull request related
 // methods of the GitHub API.
 //
-// GitHub API docs: http://developer.github.com/v3/pulls/
+// GitHub API docs: https://developer.github.com/v3/pulls/
 type PullRequestsService service
 
 // PullRequest represents a GitHub pull request on a repository.
@@ -94,8 +95,8 @@ type PullRequestListOptions struct {
 
 // List the pull requests for the specified repository.
 //
-// GitHub API docs: http://developer.github.com/v3/pulls/#list-pull-requests
-func (s *PullRequestsService) List(owner string, repo string, opt *PullRequestListOptions) ([]*PullRequest, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/pulls/#list-pull-requests
+func (s *PullRequestsService) List(ctx context.Context, owner string, repo string, opt *PullRequestListOptions) ([]*PullRequest, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -108,7 +109,7 @@ func (s *PullRequestsService) List(owner string, repo string, opt *PullRequestLi
 	}
 
 	var pulls []*PullRequest
-	resp, err := s.client.Do(req, &pulls)
+	resp, err := s.client.Do(ctx, req, &pulls)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -119,7 +120,7 @@ func (s *PullRequestsService) List(owner string, repo string, opt *PullRequestLi
 // Get a single pull request.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#get-a-single-pull-request
-func (s *PullRequestsService) Get(owner string, repo string, number int) (*PullRequest, *Response, error) {
+func (s *PullRequestsService) Get(ctx context.Context, owner string, repo string, number int) (*PullRequest, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d", owner, repo, number)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -127,7 +128,7 @@ func (s *PullRequestsService) Get(owner string, repo string, number int) (*PullR
 	}
 
 	pull := new(PullRequest)
-	resp, err := s.client.Do(req, pull)
+	resp, err := s.client.Do(ctx, req, pull)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -136,7 +137,7 @@ func (s *PullRequestsService) Get(owner string, repo string, number int) (*PullR
 }
 
 // GetRaw gets raw (diff or patch) format of a pull request.
-func (s *PullRequestsService) GetRaw(owner string, repo string, number int, opt RawOptions) (string, *Response, error) {
+func (s *PullRequestsService) GetRaw(ctx context.Context, owner string, repo string, number int, opt RawOptions) (string, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d", owner, repo, number)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -153,7 +154,7 @@ func (s *PullRequestsService) GetRaw(owner string, repo string, number int, opt 
 	}
 
 	ret := new(bytes.Buffer)
-	resp, err := s.client.Do(req, ret)
+	resp, err := s.client.Do(ctx, req, ret)
 	if err != nil {
 		return "", resp, err
 	}
@@ -173,7 +174,7 @@ type NewPullRequest struct {
 // Create a new pull request on the specified repository.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#create-a-pull-request
-func (s *PullRequestsService) Create(owner string, repo string, pull *NewPullRequest) (*PullRequest, *Response, error) {
+func (s *PullRequestsService) Create(ctx context.Context, owner string, repo string, pull *NewPullRequest) (*PullRequest, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls", owner, repo)
 	req, err := s.client.NewRequest("POST", u, pull)
 	if err != nil {
@@ -181,7 +182,7 @@ func (s *PullRequestsService) Create(owner string, repo string, pull *NewPullReq
 	}
 
 	p := new(PullRequest)
-	resp, err := s.client.Do(req, p)
+	resp, err := s.client.Do(ctx, req, p)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -202,7 +203,7 @@ type pullRequestUpdate struct {
 // Base.Ref updates the base branch of the pull request.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#update-a-pull-request
-func (s *PullRequestsService) Edit(owner string, repo string, number int, pull *PullRequest) (*PullRequest, *Response, error) {
+func (s *PullRequestsService) Edit(ctx context.Context, owner string, repo string, number int, pull *PullRequest) (*PullRequest, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d", owner, repo, number)
 
 	update := new(pullRequestUpdate)
@@ -221,7 +222,7 @@ func (s *PullRequestsService) Edit(owner string, repo string, number int, pull *
 	}
 
 	p := new(PullRequest)
-	resp, err := s.client.Do(req, p)
+	resp, err := s.client.Do(ctx, req, p)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -232,7 +233,7 @@ func (s *PullRequestsService) Edit(owner string, repo string, number int, pull *
 // ListCommits lists the commits in a pull request.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#list-commits-on-a-pull-request
-func (s *PullRequestsService) ListCommits(owner string, repo string, number int, opt *ListOptions) ([]*RepositoryCommit, *Response, error) {
+func (s *PullRequestsService) ListCommits(ctx context.Context, owner string, repo string, number int, opt *ListOptions) ([]*RepositoryCommit, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d/commits", owner, repo, number)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -245,7 +246,7 @@ func (s *PullRequestsService) ListCommits(owner string, repo string, number int,
 	}
 
 	var commits []*RepositoryCommit
-	resp, err := s.client.Do(req, &commits)
+	resp, err := s.client.Do(ctx, req, &commits)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -256,7 +257,7 @@ func (s *PullRequestsService) ListCommits(owner string, repo string, number int,
 // ListFiles lists the files in a pull request.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#list-pull-requests-files
-func (s *PullRequestsService) ListFiles(owner string, repo string, number int, opt *ListOptions) ([]*CommitFile, *Response, error) {
+func (s *PullRequestsService) ListFiles(ctx context.Context, owner string, repo string, number int, opt *ListOptions) ([]*CommitFile, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d/files", owner, repo, number)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -269,7 +270,7 @@ func (s *PullRequestsService) ListFiles(owner string, repo string, number int, o
 	}
 
 	var commitFiles []*CommitFile
-	resp, err := s.client.Do(req, &commitFiles)
+	resp, err := s.client.Do(ctx, req, &commitFiles)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -280,14 +281,14 @@ func (s *PullRequestsService) ListFiles(owner string, repo string, number int, o
 // IsMerged checks if a pull request has been merged.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#get-if-a-pull-request-has-been-merged
-func (s *PullRequestsService) IsMerged(owner string, repo string, number int) (bool, *Response, error) {
+func (s *PullRequestsService) IsMerged(ctx context.Context, owner string, repo string, number int) (bool, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d/merge", owner, repo, number)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return false, nil, err
 	}
 
-	resp, err := s.client.Do(req, nil)
+	resp, err := s.client.Do(ctx, req, nil)
 	merged, err := parseBoolResponse(err)
 	return merged, resp, err
 }
@@ -319,7 +320,7 @@ type pullRequestMergeRequest struct {
 // commitMessage is the title for the automatic commit message.
 //
 // GitHub API docs: https://developer.github.com/v3/pulls/#merge-a-pull-request-merge-buttontrade
-func (s *PullRequestsService) Merge(owner string, repo string, number int, commitMessage string, options *PullRequestOptions) (*PullRequestMergeResult, *Response, error) {
+func (s *PullRequestsService) Merge(ctx context.Context, owner string, repo string, number int, commitMessage string, options *PullRequestOptions) (*PullRequestMergeResult, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/pulls/%d/merge", owner, repo, number)
 
 	pullRequestBody := &pullRequestMergeRequest{CommitMessage: commitMessage}
@@ -337,7 +338,7 @@ func (s *PullRequestsService) Merge(owner string, repo string, number int, commi
 	req.Header.Set("Accept", mediaTypeSquashPreview)
 
 	mergeResult := new(PullRequestMergeResult)
-	resp, err := s.client.Do(req, mergeResult)
+	resp, err := s.client.Do(ctx, req, mergeResult)
 	if err != nil {
 		return nil, resp, err
 	}

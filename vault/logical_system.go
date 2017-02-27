@@ -1738,6 +1738,13 @@ func (b *SystemBackend) handleWrappingWrap(
 		return logical.ErrorResponse("endpoint requires response wrapping to be used"), logical.ErrInvalidRequest
 	}
 
+	// N.B.: Do *NOT* allow JWT wrapping tokens to be created through this
+	// endpoint. JWTs are signed so if we don't allow users to create wrapping
+	// tokens using them we can ensure that an operator can't spoof a legit JWT
+	// wrapped token, which makes certain init/rekey/generate-root cases have
+	// better properties.
+	req.WrapInfo.Format = "uuid"
+
 	return &logical.Response{
 		Data: data.Raw,
 	}, nil

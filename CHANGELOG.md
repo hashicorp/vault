@@ -10,9 +10,25 @@ DEPRECATIONS/CHANGES:
    allowing `list` capability must be carefully checked to ensure that they
    contain a trailing slash; some policies may need to be split into multiple
    stanzas to accommodate.
+ * PKI Defaults to Unleased Certificates: When issuing certificates from the
+   PKI backend, by default, no leases will be issued. If you want to manually
+   revoke a certificate, its serial number can be used with the `pki/revoke`
+   endpoint. Issuing leases is still possible by enabling the `generate_lease`
+   toggle in PKI role entries (this will default to `true` for upgrades, to
+   keep existing behavior), which will allow using lease IDs to revoke
+   certificates. For installations issuing large numbers of certificates (tens
+   to hundreds of thousands, or millions), this will significantly improve
+   Vault startup time since leases associated with these certificates will not
+   have to be loaded; however note that it also means that revocation of a
+   token used to issue certificates will no longer add these certificates to a
+   CRL. If this behavior is desired or needed, consider keeping leases enabled
+   and ensuring lifetimes are reasonable, and issue long-lived certificates via
+   a different role with leases disabled.
 
 IMPROVEMENTS:
 
+ * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
+   Subnet ID and Region [GH-2407]
  * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
    username if not explicitly set on the command line when authenticating
    [GH-2154]
@@ -21,6 +37,10 @@ IMPROVEMENTS:
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
  * secret/pki: O (Organization) values can now be set to role-defined values
    for issued/signed certificates [GH-2369]
+ * secret/pki: Certificates issued/signed from PKI backend does not generate
+   leases by default [GH-2403]
+ * secret/pki: When using DER format, still return the private key type
+   [GH-2405]
 
 BUG FIXES:
 

@@ -853,6 +853,7 @@ const (
 	NLM_F_ATOMIC                     = 0x400
 	NLM_F_CREATE                     = 0x400
 	NLM_F_DUMP                       = 0x300
+	NLM_F_DUMP_FILTERED              = 0x20
 	NLM_F_DUMP_INTR                  = 0x10
 	NLM_F_ECHO                       = 0x8
 	NLM_F_EXCL                       = 0x200
@@ -1374,6 +1375,7 @@ const (
 	SOL_IP                           = 0x0
 	SOL_IPV6                         = 0x29
 	SOL_IRDA                         = 0x10a
+	SOL_NETLINK                      = 0x10e
 	SOL_PACKET                       = 0x107
 	SOL_RAW                          = 0xff
 	SOL_SOCKET                       = 0x1

@@ -6,6 +6,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"strings"
 )
@@ -13,7 +14,7 @@ import (
 // RepositoriesService handles communication with the repository related
 // methods of the GitHub API.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/
+// GitHub API docs: https://developer.github.com/v3/repos/
 type RepositoriesService service
 
 // Repository represents a GitHub repository.
@@ -154,8 +155,8 @@ type RepositoryListOptions struct {
 // List the repositories for a user. Passing the empty string will list
 // repositories for the authenticated user.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#list-user-repositories
-func (s *RepositoriesService) List(user string, opt *RepositoryListOptions) ([]*Repository, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#list-user-repositories
+func (s *RepositoriesService) List(ctx context.Context, user string, opt *RepositoryListOptions) ([]*Repository, *Response, error) {
 	var u string
 	if user != "" {
 		u = fmt.Sprintf("users/%v/repos", user)
@@ -176,7 +177,7 @@ func (s *RepositoriesService) List(user string, opt *RepositoryListOptions) ([]*
 	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	var repos []*Repository
-	resp, err := s.client.Do(req, &repos)
+	resp, err := s.client.Do(ctx, req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -196,8 +197,8 @@ type RepositoryListByOrgOptions struct {
 
 // ListByOrg lists the repositories for an organization.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#list-organization-repositories
-func (s *RepositoriesService) ListByOrg(org string, opt *RepositoryListByOrgOptions) ([]*Repository, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#list-organization-repositories
+func (s *RepositoriesService) ListByOrg(ctx context.Context, org string, opt *RepositoryListByOrgOptions) ([]*Repository, *Response, error) {
 	u := fmt.Sprintf("orgs/%v/repos", org)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -213,7 +214,7 @@ func (s *RepositoriesService) ListByOrg(org string, opt *RepositoryListByOrgOpti
 	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	var repos []*Repository
-	resp, err := s.client.Do(req, &repos)
+	resp, err := s.client.Do(ctx, req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -232,8 +233,8 @@ type RepositoryListAllOptions struct {
 
 // ListAll lists all GitHub repositories in the order that they were created.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#list-all-public-repositories
-func (s *RepositoriesService) ListAll(opt *RepositoryListAllOptions) ([]*Repository, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#list-all-public-repositories
+func (s *RepositoriesService) ListAll(ctx context.Context, opt *RepositoryListAllOptions) ([]*Repository, *Response, error) {
 	u, err := addOptions("repositories", opt)
 	if err != nil {
 		return nil, nil, err
@@ -245,7 +246,7 @@ func (s *RepositoriesService) ListAll(opt *RepositoryListAllOptions) ([]*Reposit
 	}
 
 	var repos []*Repository
-	resp, err := s.client.Do(req, &repos)
+	resp, err := s.client.Do(ctx, req, &repos)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -257,8 +258,8 @@ func (s *RepositoriesService) ListAll(opt *RepositoryListAllOptions) ([]*Reposit
 // repository will be created under that org. If the empty string is
 // specified, it will be created for the authenticated user.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#create
-func (s *RepositoriesService) Create(org string, repo *Repository) (*Repository, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#create
+func (s *RepositoriesService) Create(ctx context.Context, org string, repo *Repository) (*Repository, *Response, error) {
 	var u string
 	if org != "" {
 		u = fmt.Sprintf("orgs/%v/repos", org)
@@ -272,7 +273,7 @@ func (s *RepositoriesService) Create(org string, repo *Repository) (*Repository,
 	}
 
 	r := new(Repository)
-	resp, err := s.client.Do(req, r)
+	resp, err := s.client.Do(ctx, req, r)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -282,8 +283,8 @@ func (s *RepositoriesService) Create(org string, repo *Repository) (*Repository,
 
 // Get fetches a repository.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#get
-func (s *RepositoriesService) Get(owner, repo string) (*Repository, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#get
+func (s *RepositoriesService) Get(ctx context.Context, owner, repo string) (*Repository, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -296,7 +297,7 @@ func (s *RepositoriesService) Get(owner, repo string) (*Repository, *Response, e
 	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
 
 	repository := new(Repository)
-	resp, err := s.client.Do(req, repository)
+	resp, err := s.client.Do(ctx, req, repository)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -307,7 +308,7 @@ func (s *RepositoriesService) Get(owner, repo string) (*Repository, *Response, e
 // GetByID fetches a repository.
 //
 // Note: GetByID uses the undocumented GitHub API endpoint /repositories/:id.
-func (s *RepositoriesService) GetByID(id int) (*Repository, *Response, error) {
+func (s *RepositoriesService) GetByID(ctx context.Context, id int) (*Repository, *Response, error) {
 	u := fmt.Sprintf("repositories/%d", id)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -319,7 +320,7 @@ func (s *RepositoriesService) GetByID(id int) (*Repository, *Response, error) {
 	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	repository := new(Repository)
-	resp, err := s.client.Do(req, repository)
+	resp, err := s.client.Do(ctx, req, repository)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -329,8 +330,8 @@ func (s *RepositoriesService) GetByID(id int) (*Repository, *Response, error) {
 
 // Edit updates a repository.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#edit
-func (s *RepositoriesService) Edit(owner, repo string, repository *Repository) (*Repository, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#edit
+func (s *RepositoriesService) Edit(ctx context.Context, owner, repo string, repository *Repository) (*Repository, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v", owner, repo)
 	req, err := s.client.NewRequest("PATCH", u, repository)
 	if err != nil {
@@ -341,7 +342,7 @@ func (s *RepositoriesService) Edit(owner, repo string, repository *Repository) (
 	req.Header.Add("Accept", mediaTypeSquashPreview)
 
 	r := new(Repository)
-	resp, err := s.client.Do(req, r)
+	resp, err := s.client.Do(ctx, req, r)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -352,14 +353,14 @@ func (s *RepositoriesService) Edit(owner, repo string, repository *Repository) (
 // Delete a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#delete-a-repository
-func (s *RepositoriesService) Delete(owner, repo string) (*Response, error) {
+func (s *RepositoriesService) Delete(ctx context.Context, owner, repo string) (*Response, error) {
 	u := fmt.Sprintf("repos/%v/%v", owner, repo)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.client.Do(req, nil)
+	return s.client.Do(ctx, req, nil)
 }
 
 // Contributor represents a repository contributor
@@ -395,8 +396,8 @@ type ListContributorsOptions struct {
 
 // ListContributors lists contributors for a repository.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#list-contributors
-func (s *RepositoriesService) ListContributors(owner string, repository string, opt *ListContributorsOptions) ([]*Contributor, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#list-contributors
+func (s *RepositoriesService) ListContributors(ctx context.Context, owner string, repository string, opt *ListContributorsOptions) ([]*Contributor, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/contributors", owner, repository)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -409,7 +410,7 @@ func (s *RepositoriesService) ListContributors(owner string, repository string, 
 	}
 
 	var contributor []*Contributor
-	resp, err := s.client.Do(req, &contributor)
+	resp, err := s.client.Do(ctx, req, &contributor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -426,8 +427,8 @@ func (s *RepositoriesService) ListContributors(owner string, repository string, 
 //       "Python": 7769
 //     }
 //
-// GitHub API Docs: http://developer.github.com/v3/repos/#list-languages
-func (s *RepositoriesService) ListLanguages(owner string, repo string) (map[string]int, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#list-languages
+func (s *RepositoriesService) ListLanguages(ctx context.Context, owner string, repo string) (map[string]int, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/languages", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -435,7 +436,7 @@ func (s *RepositoriesService) ListLanguages(owner string, repo string) (map[stri
 	}
 
 	languages := make(map[string]int)
-	resp, err := s.client.Do(req, &languages)
+	resp, err := s.client.Do(ctx, req, &languages)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -446,7 +447,7 @@ func (s *RepositoriesService) ListLanguages(owner string, repo string) (map[stri
 // ListTeams lists the teams for the specified repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#list-teams
-func (s *RepositoriesService) ListTeams(owner string, repo string, opt *ListOptions) ([]*Team, *Response, error) {
+func (s *RepositoriesService) ListTeams(ctx context.Context, owner string, repo string, opt *ListOptions) ([]*Team, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/teams", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -459,7 +460,7 @@ func (s *RepositoriesService) ListTeams(owner string, repo string, opt *ListOpti
 	}
 
 	var teams []*Team
-	resp, err := s.client.Do(req, &teams)
+	resp, err := s.client.Do(ctx, req, &teams)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -478,7 +479,7 @@ type RepositoryTag struct {
 // ListTags lists tags for the specified repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#list-tags
-func (s *RepositoriesService) ListTags(owner string, repo string, opt *ListOptions) ([]*RepositoryTag, *Response, error) {
+func (s *RepositoriesService) ListTags(ctx context.Context, owner string, repo string, opt *ListOptions) ([]*RepositoryTag, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/tags", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -491,7 +492,7 @@ func (s *RepositoriesService) ListTags(owner string, repo string, opt *ListOptio
 	}
 
 	var tags []*RepositoryTag
-	resp, err := s.client.Do(req, &tags)
+	resp, err := s.client.Do(ctx, req, &tags)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -559,8 +560,8 @@ type BranchRestrictionsRequest struct {
 
 // ListBranches lists branches for the specified repository.
 //
-// GitHub API docs: http://developer.github.com/v3/repos/#list-branches
-func (s *RepositoriesService) ListBranches(owner string, repo string, opt *ListOptions) ([]*Branch, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/#list-branches
+func (s *RepositoriesService) ListBranches(ctx context.Context, owner string, repo string, opt *ListOptions) ([]*Branch, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/branches", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -576,7 +577,7 @@ func (s *RepositoriesService) ListBranches(owner string, repo string, opt *ListO
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	var branches []*Branch
-	resp, err := s.client.Do(req, &branches)
+	resp, err := s.client.Do(ctx, req, &branches)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -587,7 +588,7 @@ func (s *RepositoriesService) ListBranches(owner string, repo string, opt *ListO
 // GetBranch gets the specified branch for a repository.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/#get-branch
-func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *Response, error) {
+func (s *RepositoriesService) GetBranch(ctx context.Context, owner, repo, branch string) (*Branch, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/branches/%v", owner, repo, branch)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -598,7 +599,7 @@ func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *R
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	b := new(Branch)
-	resp, err := s.client.Do(req, b)
+	resp, err := s.client.Do(ctx, req, b)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -609,7 +610,7 @@ func (s *RepositoriesService) GetBranch(owner, repo, branch string) (*Branch, *R
 // GetBranchProtection gets the protection of a given branch.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/branches/#get-branch-protection
-func (s *RepositoriesService) GetBranchProtection(owner, repo, branch string) (*Protection, *Response, error) {
+func (s *RepositoriesService) GetBranchProtection(ctx context.Context, owner, repo, branch string) (*Protection, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection", owner, repo, branch)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -620,7 +621,7 @@ func (s *RepositoriesService) GetBranchProtection(owner, repo, branch string) (*
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	p := new(Protection)
-	resp, err := s.client.Do(req, p)
+	resp, err := s.client.Do(ctx, req, p)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -631,7 +632,7 @@ func (s *RepositoriesService) GetBranchProtection(owner, repo, branch string) (*
 // UpdateBranchProtection updates the protection of a given branch.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/branches/#update-branch-protection
-func (s *RepositoriesService) UpdateBranchProtection(owner, repo, branch string, preq *ProtectionRequest) (*Protection, *Response, error) {
+func (s *RepositoriesService) UpdateBranchProtection(ctx context.Context, owner, repo, branch string, preq *ProtectionRequest) (*Protection, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection", owner, repo, branch)
 	req, err := s.client.NewRequest("PUT", u, preq)
 	if err != nil {
@@ -642,7 +643,7 @@ func (s *RepositoriesService) UpdateBranchProtection(owner, repo, branch string,
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
 	p := new(Protection)
-	resp, err := s.client.Do(req, p)
+	resp, err := s.client.Do(ctx, req, p)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -653,7 +654,7 @@ func (s *RepositoriesService) UpdateBranchProtection(owner, repo, branch string,
 // RemoveBranchProtection removes the protection of a given branch.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/branches/#remove-branch-protection
-func (s *RepositoriesService) RemoveBranchProtection(owner, repo, branch string) (*Response, error) {
+func (s *RepositoriesService) RemoveBranchProtection(ctx context.Context, owner, repo, branch string) (*Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/branches/%v/protection", owner, repo, branch)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
@@ -663,13 +664,13 @@ func (s *RepositoriesService) RemoveBranchProtection(owner, repo, branch string)
 	// TODO: remove custom Accept header when this API fully launches
 	req.Header.Set("Accept", mediaTypeProtectedBranchesPreview)
 
-	return s.client.Do(req, nil)
+	return s.client.Do(ctx, req, nil)
 }
 
 // License gets the contents of a repository's license if one is detected.
 //
 // GitHub API docs: https://developer.github.com/v3/licenses/#get-the-contents-of-a-repositorys-license
-func (s *RepositoriesService) License(owner, repo string) (*RepositoryLicense, *Response, error) {
+func (s *RepositoriesService) License(ctx context.Context, owner, repo string) (*RepositoryLicense, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/license", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -677,7 +678,7 @@ func (s *RepositoriesService) License(owner, repo string) (*RepositoryLicense, *
 	}
 
 	r := &RepositoryLicense{}
-	resp, err := s.client.Do(req, r)
+	resp, err := s.client.Do(ctx, req, r)
 	if err != nil {
 		return nil, resp, err
 	}

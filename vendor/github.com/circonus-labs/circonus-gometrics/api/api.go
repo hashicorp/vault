@@ -251,7 +251,7 @@ func (a *API) apiCall(reqMethod string, reqPath string, data []byte) ([]byte, er
 		reqURL += "/"
 	}
 	if len(reqPath) >= 3 && reqPath[:3] == "/v2" {
-		reqURL += reqPath[3:len(reqPath)]
+		reqURL += reqPath[3:]
 	} else {
 		reqURL += reqPath
 	}
