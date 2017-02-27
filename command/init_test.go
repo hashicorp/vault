@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bytes"
 	"encoding/base64"
 	"os"
 	"reflect"
@@ -13,8 +12,6 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/packet"
 	"github.com/mitchellh/cli"
 )
 
@@ -237,7 +234,6 @@ func TestInit_PGP(t *testing.T) {
 		"-key-shares", "2",
 		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
 		"-key-threshold", "2",
-		"-root-token-pgp-key", pubFiles[0],
 	}
 
 	// This should fail, as key-shares does not match pgp-keys size
@@ -250,7 +246,6 @@ func TestInit_PGP(t *testing.T) {
 		"-key-shares", "4",
 		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2] + "," + pubFiles[3],
 		"-key-threshold", "2",
-		"-root-token-pgp-key", pubFiles[0],
 	}
 
 	ui.OutputWriter.Reset()
@@ -289,55 +284,5 @@ func TestInit_PGP(t *testing.T) {
 	}
 	if !reflect.DeepEqual(expected, sealConf) {
 		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
-	}
-
-	re, err := regexp.Compile("\\s+Initial Root Token:\\s+(.*)")
-	if err != nil {
-		t.Fatalf("Error compiling regex: %s", err)
-	}
-	matches := re.FindAllStringSubmatch(ui.OutputWriter.String(), -1)
-	if len(matches) != 1 {
-		t.Fatalf("Unexpected number of tokens found, got %d", len(matches))
-	}
-
-	encRootToken := matches[0][1]
-	privKeyBytes, err := base64.StdEncoding.DecodeString(pgpkeys.TestPrivKey1)
-	if err != nil {
-		t.Fatalf("error decoding private key: %v", err)
-	}
-	ptBuf := bytes.NewBuffer(nil)
-	entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(privKeyBytes)))
-	if err != nil {
-		t.Fatalf("Error parsing private key: %s", err)
-	}
-	var rootBytes []byte
-	rootBytes, err = base64.StdEncoding.DecodeString(encRootToken)
-	if err != nil {
-		t.Fatalf("Error decoding root token: %s", err)
-	}
-	entityList := &openpgp.EntityList{entity}
-	md, err := openpgp.ReadMessage(bytes.NewBuffer(rootBytes), entityList, nil, nil)
-	if err != nil {
-		t.Fatalf("Error decrypting root token: %s", err)
-	}
-	ptBuf.ReadFrom(md.UnverifiedBody)
-	rootToken := ptBuf.String()
-
-	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), rootToken, false, nil, nil, core)
-
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("Error fetching client: %v", err)
-	}
-
-	client.SetToken(rootToken)
-
-	tokenInfo, err := client.Auth().Token().LookupSelf()
-	if err != nil {
-		t.Fatalf("Error looking up root token info: %v", err)
-	}
-
-	if tokenInfo.Data["policies"].([]interface{})[0].(string) != "root" {
-		t.Fatalf("expected root policy")
 	}
 }
