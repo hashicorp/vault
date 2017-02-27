@@ -25,6 +25,17 @@ DEPRECATIONS/CHANGES:
    and ensuring lifetimes are reasonable, and issue long-lived certificates via
    a different role with leases disabled.
 
+FEATURES:
+
+ * **Expanded Access Control Policies**: Access control policies can now
+   specify allowed and denied parameters -- and, optionally, their values -- to
+   control what a client can and cannot submit during an API call. Policies can
+   also specify minimum/maximum response wrapping TTLs to both enforce the use
+   of response wrapping and control the duration of resultant wrapping tokens.
+   See the [policies concepts
+   page](https://www.vaultproject.io/docs/concepts/policies.html) for more
+   information.
+
 IMPROVEMENTS:
 
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
