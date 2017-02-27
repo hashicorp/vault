@@ -27,6 +27,7 @@ const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
 const EnvVaultMaxRetries = "VAULT_MAX_RETRIES"
+const EnvVaultToken = "VAULT_TOKEN"
 
 // WrappingLookupFunc is a function that, given an HTTP verb and a path,
 // returns an optional string duration to be used for response wrapping (e.g.
@@ -273,7 +274,7 @@ func NewClient(c *Config) (*Client, error) {
 		config: c,
 	}
 
-	if token := os.Getenv("VAULT_TOKEN"); token != "" {
+	if token := os.Getenv(EnvVaultToken); token != "" {
 		client.SetToken(token)
 	}
 
