@@ -1,8 +1,13 @@
 ---
-title: "About Vault HSM Support"
+layout: "docs"
+page_title: "Vault Enterprise HSM Support"
+sidebar_current: "docs-vault-enterprise-hsm"
+description: |-
+  Vault Enterprise has HSM support, allowing for external master key storage and automatic unsealing.
+
 ---
 
-# About Vault HSM Support
+# Vault Enterprise HSM Support
 
 HSM support is a feature of [Vault
 Enterprise](https://www.hashicorp.com/vault.html) that takes advantage of HSMs
@@ -18,11 +23,11 @@ provide integration libraries. This includes AWS'
 [CloudHSM](https://aws.amazon.com/cloudhsm/) offering.
 
 Some parts of Vault work differently when using an HSM. Please see the
-[Behavioral Changes](/help/vault/hsm/behavior) page for important information
+[Behavioral Changes](/docs/vault-enterprise/hsm/behavior.html) page for important information
 on these differences.
 
-The [Configuration](/help/vault/hsm/configuration) page contains configuration
+The [Configuration](/docs/vault-enterprise/hsm/configuration.html) page contains configuration
 information.
 
-Finally, the [Security](/help/vault/hsm/security) page contains information
+Finally, the [Security](/docs/vault-enterprise/hsm/security.html) page contains information
 about deploying Vault's HSM support in a secure fashion.

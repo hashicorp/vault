@@ -1,8 +1,12 @@
 ---
-title: "Vault HSM Behavioral Changes"
+layout: "docs"
+page_title: "Vault Enterprise HSM Behavioral Changes"
+sidebar_current: "docs-vault-enterprise-hsm-behavior"
+description: |-
+  Vault Enterprise HSM support changes the way Vault works with regard to unseal and recovery keys as well as rekey and recovery operations.
 ---
 
-# Vault HSM Behavioral Changes
+# Vault Enterprise HSM Behavioral Changes
 
 This page contains information about the behavioral differences that take
 effect when using Vault with an HSM.
@@ -11,7 +15,7 @@ effect when using Vault with an HSM.
 
 Normally, Vault uses a single set of unseal keys to perform both decryption of
 the cryptographic barrier and to authorize recovery operations, such as the
-[`generate-root`](https://www.vaultproject.io/docs/http/sys-generate-root.html)
+[`generate-root`](/docs/http/sys-generate-root.html)
 functionality.
 
 When using an HSM, because the HSM automatically unseals the barrier but
@@ -24,7 +28,7 @@ Vault usually generates a master key and splits it using [Shamir's Secret
 Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to prevent a
 single operator from being able to modify and unseal Vault (see more
 information about Vault's security model
-[here](https://www.vaultproject.io/docs/internals/security.html)).
+[here](/docs/internals/security.html)).
 
 When using an HSM, Vault instead stores the master key, encrypted by the HSM,
 into its internal storage. As a result, during an `init` command, the number of
@@ -36,7 +40,7 @@ rather than change parameters set by an operator.)
 Vault does not currently support rekeying the master key when protected by an
 HSM; however, it _does_ continue to support rotation of the underlying data
 encryption key that the master key protects via the
-[`/sys/rotate`](https://www.vaultproject.io/docs/http/sys-rotate.html) API
+[`/sys/rotate`](/docs/http/sys-rotate.html) API
 endpoint.
 
 ## Recovery Key
@@ -54,7 +58,7 @@ keys for this purpose, rather than the barrier unseal keys, is automatic.
 
 When initializing, the split is performed according to the following CLI flags
 and their API equivalents in the
-[/sys/init](https://www.vaultproject.io/docs/http/sys-init.html) endpoint:
+[/sys/init](/docs/http/sys-init.html) endpoint:
 
  * `recovery-shares`: The number of shares into which to split the recovery
    key. This value is equivalent to the `recovery_shares` value in the API
@@ -69,7 +73,7 @@ and their API equivalents in the
 
 Additionally, Vault will refuse to initialize if the option has not been set to
 generate a key but no key is found. See
-[Configuration](/help/vault/hsm/configuration) for more details.
+[Configuration](/docs/vault-enterprise/hsm/configuration.html) for more details.
 
 ### Rekeying
 
@@ -79,6 +83,6 @@ this is performed by using the `-recovery-key=true` flag to `vault rekey`.
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`
-endpoint](https://www.vaultproject.io/docs/http/sys-rekey.html); however, the
+endpoint](/docs/http/sys-rekey.html); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.

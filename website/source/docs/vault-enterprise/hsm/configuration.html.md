@@ -1,10 +1,15 @@
 ---
-title: "Vault HSM Configuration"
+layout: "docs"
+page_title: "Vault Enterprise HSM Configuration"
+sidebar_current: "docs-vault-enterprise-hsm-configuration"
+description: |-
+  Vault Enterprise HSM configuration details.
+
 ---
 
-## Vault HSM Configuration
+# Vault Enterprise HSM Configuration
 
-Vault's HSM support is activated by one of the following:
+Vault Enterprise's HSM support is activated by one of the following:
 
 * The presence of an `hsm` block in Vault's configuration file
 * Values set in both the `VAULT_HSM_LIB` and `VAULT_HSM_TYPE` environment

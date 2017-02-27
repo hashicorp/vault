@@ -1,5 +1,10 @@
 ---
-title: "Vault Secure Introduction Client Configuration"
+layout: "docs"
+page_title: "Vault Secure Introduction Client Configuration"
+sidebar_current: "docs-vault-enterprise-vsi-configuration"
+description: |-
+  Configuration details for Vault Secure Introduction Client.
+
 ---
 
 # Vault Secure Introduction Client Configuration

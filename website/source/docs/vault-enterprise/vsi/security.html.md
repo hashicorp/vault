@@ -1,5 +1,9 @@
 ---
-title: "Vault Secure Introduction Client Security"
+layout: "docs"
+page_title: "Vault Secure Introduction Client Security"
+sidebar_current: "docs-vault-enterprise-vsi-security"
+description: |-
+  Guidelines for secure usage of Vault Secure Introduction Client.
 ---
 
 # Vault Secure Introduction Client Security
