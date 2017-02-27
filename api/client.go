@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-rootcerts"
 	"github.com/sethgrid/pester"
@@ -84,8 +86,7 @@ type TLSConfig struct {
 // setting the `VAULT_ADDR` environment variable.
 func DefaultConfig() *Config {
 	config := &Config{
-		Address: "https://127.0.0.1:8200",
-
+		Address:    "https://127.0.0.1:8200",
 		HttpClient: cleanhttp.DefaultClient(),
 	}
 	config.HttpClient.Timeout = time.Second * 60
@@ -104,7 +105,6 @@ func DefaultConfig() *Config {
 
 // ConfigureTLS takes a set of TLS configurations and applies those to the the HTTP client.
 func (c *Config) ConfigureTLS(t *TLSConfig) error {
-
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
 	}
@@ -245,6 +245,11 @@ func NewClient(c *Config) (*Client, error) {
 
 	if c.HttpClient == nil {
 		c.HttpClient = DefaultConfig().HttpClient
+	}
+
+	tp := c.HttpClient.Transport.(*http.Transport)
+	if err := http2.ConfigureTransport(tp); err != nil {
+		return nil, err
 	}
 
 	redirFunc := func() {

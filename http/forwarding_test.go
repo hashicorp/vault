@@ -199,7 +199,9 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uin
 	transport := &http.Transport{
 		TLSClientConfig: cores[0].TLSConfig,
 	}
-	http2.ConfigureTransport(transport)
+	if err := http2.ConfigureTransport(transport); err != nil {
+		t.Fatal(err)
+	}
 
 	client := &http.Client{
 		Transport: transport,
@@ -499,6 +501,9 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 
 	transport := cleanhttp.DefaultTransport()
 	transport.TLSClientConfig = cores[0].TLSConfig
+	if err := http2.ConfigureTransport(transport); err != nil {
+		t.Fatal(err)
+	}
 
 	client := &http.Client{
 		Transport: transport,
@@ -558,13 +563,8 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	//time.Sleep(4 * time.Hour)
 
 	for _, addr := range addrs {
-		config := api.DefaultConfig()
-		config.Address = addr
-		config.HttpClient = client
-		client, err := api.NewClient(config)
-		if err != nil {
-			t.Fatal(err)
-		}
+		client := cores[0].Client
+		client.SetAddress(addr)
 
 		secret, err := client.Logical().Write("auth/cert/login", nil)
 		if err != nil {

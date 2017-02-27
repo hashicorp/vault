@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
 
@@ -597,6 +599,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 
 	// Initialize the HTTP server
 	server := &http.Server{}
+	if err := http2.ConfigureServer(server, nil); err != nil {
+		c.Ui.Output(fmt.Sprintf("Error configuring server for HTTP/2: %s", err))
+		return 1
+	}
 	server.Handler = handler
 	for _, ln := range lns {
 		go server.Serve(ln)
