@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.7.0 (Unreleased)
 
 DEPRECATIONS/CHANGES:
 
@@ -35,6 +35,9 @@ IMPROVEMENTS:
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * physical/dynamodb: Implement a session timeout to avoid having to use
+   recovery mode in the case of an unclean shutdown, which makes HA much safer
+   [GH-2141]
  * secret/pki: O (Organization) values can now be set to role-defined values
    for issued/signed certificates [GH-2369]
  * secret/pki: Certificates issued/signed from PKI backend does not generate
