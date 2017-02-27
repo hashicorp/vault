@@ -1,12 +1,16 @@
 package vault
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/duration"
 )
 
 const (
@@ -64,14 +68,18 @@ type PathCapabilities struct {
 	Glob         bool
 	Capabilities []string
 
-	// These two keys are used at the top level to make the HCL nicer; we store
-	// in the Permissions object though
+	// These keys are used at the top level to make the HCL nicer; we store in
+	// the Permissions object though
+	MinWrappingTTLHCL    interface{}              `hcl:"min_wrapping_ttl"`
+	MaxWrappingTTLHCL    interface{}              `hcl:"max_wrapping_ttl"`
 	AllowedParametersHCL map[string][]interface{} `hcl:"allowed_parameters"`
 	DeniedParametersHCL  map[string][]interface{} `hcl:"denied_parameters"`
 }
 
 type Permissions struct {
 	CapabilitiesBitmap uint32
+	MinWrappingTTL     time.Duration
+	MaxWrappingTTL     time.Duration
 	AllowedParameters  map[string][]interface{}
 	DeniedParameters   map[string][]interface{}
 }
@@ -129,6 +137,8 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			"capabilities",
 			"allowed_parameters",
 			"denied_parameters",
+			"min_wrapping_ttl",
+			"max_wrapping_ttl",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -199,6 +209,25 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			for key, val := range pc.DeniedParametersHCL {
 				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
 			}
+		}
+		if pc.MinWrappingTTLHCL != nil {
+			dur, err := duration.ParseDurationSecond(pc.MinWrappingTTLHCL)
+			if err != nil {
+				return errwrap.Wrapf("error parsing min_wrapping_ttl: {{err}}", err)
+			}
+			pc.Permissions.MinWrappingTTL = dur
+		}
+		if pc.MaxWrappingTTLHCL != nil {
+			dur, err := duration.ParseDurationSecond(pc.MaxWrappingTTLHCL)
+			if err != nil {
+				return errwrap.Wrapf("error parsing max_wrapping_ttl: {{err}}", err)
+			}
+			pc.Permissions.MaxWrappingTTL = dur
+		}
+		if pc.Permissions.MinWrappingTTL != 0 &&
+			pc.Permissions.MaxWrappingTTL != 0 &&
+			pc.Permissions.MaxWrappingTTL < pc.Permissions.MinWrappingTTL {
+			return errors.New("max_wrapping_ttl cannot be less than min_wrapping_ttl")
 		}
 
 	PathFinished:
