@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	log "github.com/mgutz/logxi/v1"
 
 	"crypto/tls"
@@ -188,6 +190,9 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 		transport.TLSClientConfig = tlsClientConfig
+		if err := http2.ConfigureTransport(transport); err != nil {
+			return nil, err
+		}
 		consulConf.HttpClient.Transport = transport
 		logger.Debug("physical/consul: configured TLS")
 	}

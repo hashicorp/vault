@@ -620,6 +620,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	server1 := &http.Server{
 		Handler: handlers[0],
 	}
+	if err := http2.ConfigureServer(server1, nil); err != nil {
+		t.Fatal(err)
+	}
 	for _, ln := range c1lns {
 		go server1.Serve(ln)
 	}
@@ -639,6 +642,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	server2 := &http.Server{
 		Handler: handlers[1],
 	}
+	if err := http2.ConfigureServer(server2, nil); err != nil {
+		t.Fatal(err)
+	}
 	for _, ln := range c2lns {
 		go server2.Serve(ln)
 	}
@@ -657,6 +663,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	}
 	server3 := &http.Server{
 		Handler: handlers[2],
+	}
+	if err := http2.ConfigureServer(server3, nil); err != nil {
+		t.Fatal(err)
 	}
 	for _, ln := range c3lns {
 		go server3.Serve(ln)
@@ -803,7 +812,6 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	getAPIClient := func(port int) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig
-		http2.ConfigureTransport(transport)
 		client := &http.Client{
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
