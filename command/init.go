@@ -1,7 +1,6 @@
 package command
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
@@ -235,16 +234,7 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 		}
 	}
 	for i, key := range resp.RecoveryKeys {
-		if initRequest.WrapShares {
-			decoded, err := hex.DecodeString(key)
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error decoding token: %s", err))
-				return 1
-			}
-
-			c.Ui.Output(fmt.Sprintf("Wrapped Recover Key Token %d: %s", i+1, decoded))
-		} else if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) {
+		if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) && !initRequest.WrapShares {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, resp.RecoveryKeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, key))
