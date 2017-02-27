@@ -209,7 +209,11 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			keys := make([]string, 0, len(result.SecretShares))
 			keysB64 := make([]string, 0, len(result.SecretShares))
 			for _, k := range result.SecretShares {
-				keys = append(keys, hex.EncodeToString(k))
+				if result.WrapShares {
+					keys = append(keys, string(k[:]))
+				} else {
+					keys = append(keys, hex.EncodeToString(k))
+				}
 				keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
 			}
 			resp.Keys = keys

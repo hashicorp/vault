@@ -1,7 +1,6 @@
 package command
 
 import (
-	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -166,20 +165,11 @@ func (c *RekeyCommand) Run(args []string) int {
 	c.Ui.Output("\n")
 	// Provide the keys
 	var haveB64 bool
-	if result.KeysB64 != nil && len(result.KeysB64) == len(result.Keys) {
+	if result.KeysB64 != nil && len(result.KeysB64) == len(result.Keys) && !result.WrapShares {
 		haveB64 = true
 	}
 	for i, key := range result.Keys {
-		if result.WrapShares {
-			decoded, err := hex.DecodeString(key)
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error decoding token: %s", err))
-				return 1
-			}
-
-			c.Ui.Output(fmt.Sprintf("Wrapped Unseal Key Token %d: %s", i+1, decoded))
-		} else if len(result.PGPFingerprints) > 0 {
+		if len(result.PGPFingerprints) > 0 {
 			if haveB64 {
 				c.Ui.Output(fmt.Sprintf("Key %d fingerprint: %s; value: %s", i+1, result.PGPFingerprints[i], result.KeysB64[i]))
 			} else {

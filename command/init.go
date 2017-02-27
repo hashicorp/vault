@@ -228,16 +228,7 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 	}
 
 	for i, key := range resp.Keys {
-		if initRequest.WrapShares {
-			decoded, err := hex.DecodeString(key)
-			if err != nil {
-				c.Ui.Error(fmt.Sprintf(
-					"Error decoding token: %s", err))
-				return 1
-			}
-
-			c.Ui.Output(fmt.Sprintf("Wrapped Unseal Key Token %d: %s", i+1, decoded))
-		} else if resp.KeysB64 != nil && len(resp.KeysB64) == len(resp.Keys) {
+		if resp.KeysB64 != nil && len(resp.KeysB64) == len(resp.Keys) && !initRequest.WrapShares {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, resp.KeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, key))
