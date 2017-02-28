@@ -24,7 +24,3 @@ on client configuration.
 The [Security](/docs/vault-enterprise/vsi/security.html) page contains information and
 suggestions to help deploy the client in a secure fashion. It assumes
 familiarity with the AWS Authentication Backend.
-
-The client provides version information by specifying the `-v` flag to the CLI.
-The [Changelog](/docs/vault-enterprise/vsi/changelog.html) details the changes and bug fixes
-between versions.
