@@ -242,6 +242,19 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 				return nil, err
 			}
 
+			if recoveryConfig.WrapShares {
+				// wrap tokens
+				wrappedKeys := make([][]byte, len(recoveryUnsealKeys))
+				for i, _ := range recoveryUnsealKeys {
+					token, err := c.wrapKeyInCubbyhole(recoveryUnsealKeys[i], false, recoveryConfig)
+					if err != nil {
+						return nil, fmt.Errorf("failed to wrap share: %s", err)
+					}
+					wrappedKeys[i] = []byte(token)
+				}
+				recoveryUnsealKeys = wrappedKeys
+			}
+
 			results.RecoveryShares = recoveryUnsealKeys
 		}
 	}
