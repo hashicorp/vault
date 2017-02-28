@@ -102,7 +102,7 @@ func (b *backend) pathSign(req *logical.Request, data *framework.FieldData) (*lo
 func (b *backend) pathSignCertificate(req *logical.Request, data *framework.FieldData, role *sshRole) (*logical.Response, error) {
 	publicKey := data.Get("public_key").(string)
 	if publicKey == "" {
-		return nil, errutil.UserError{Err: "\"public_key\" is empty"}
+		return nil, errutil.UserError{Err: "missing public_key"}
 	}
 
 	keyParts := strings.Split(publicKey, " ")
@@ -132,9 +132,17 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return nil, err
 	}
 
-	parsedPrincipals, err := b.calculateValidPrincipals(data, role, certificateType == ssh.HostCert)
-	if err != nil {
-		return nil, err
+	var parsedPrincipals []string
+	if certificateType == ssh.HostCert {
+		parsedPrincipals, err = b.calculateValidPrincipals(data, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		parsedPrincipals, err = b.calculateValidPrincipals(data, role.DefaultUser, role.AllowedUsers, contains)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ttl, err := b.calculateTtl(data, role)
@@ -165,7 +173,17 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode local CA certificate/key: %v", err)}
 	}
 
-	signingBundle := createSigningBundle(keyId, userPublicKey, parsedPrincipals, ttl, certificateType, bundle, role, criticalOptions, extensions)
+	signingBundle := creationBundle{
+		KeyId:           keyId,
+		PublicKey:       userPublicKey,
+		SigningBundle:   bundle,
+		ValidPrincipals: parsedPrincipals,
+		TTL:             ttl,
+		CertificateType: certificateType,
+		Role:            role,
+		criticalOptions: criticalOptions,
+		extensions:      extensions,
+	}
 
 	certificate, err := signingBundle.sign()
 	if err != nil {
@@ -187,32 +205,33 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 	return response, nil
 }
 
-func (b *backend) calculateValidPrincipals(data *framework.FieldData, role *sshRole, isHostCertificate bool) ([]string, error) {
+func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
 	validPrincipals := data.Get("valid_principals").(string)
 	if validPrincipals == "" {
-		if role.DefaultUser != "" {
-			return []string {role.DefaultUser}, nil
+		if defaultPrincipal != "" {
+			return []string {defaultPrincipal}, nil
 		}
-		if role.AllowedUsers == "" {
+		if principalsAllowedByRole == "" {
 			return []string{}, nil
 		}
 
 		return nil, errutil.UserError{Err: `"valid_principals" value required by role`}
 	}
 
-	parsedPrincipals := strings.Split(validPrincipals, ",")
-	if role.AllowedUsers == "" {
+	if principalsAllowedByRole == "" {
 		return nil, errutil.UserError{Err: `"valid_principals" not in allowed list`}
 	}
 
+	parsedPrincipals := strings.Split(validPrincipals, ",")
+
 	// Role was explicitly configured to allow any principal.
-	if role.AllowedUsers == "*" {
+	if principalsAllowedByRole == "*" {
 		return parsedPrincipals, nil
 	}
 
-	allowedPrincipals := strings.Split(role.AllowedUsers, ",")
+	allowedPrincipals := strings.Split(principalsAllowedByRole, ",")
 	for _, principal := range parsedPrincipals {
-		if !validateValidPrincipal(principal, allowedPrincipals, role, isHostCertificate) {
+		if !validatePrincipal(allowedPrincipals, principal) {
 			return nil, errutil.UserError{Err: fmt.Sprintf(`%v is not a valid value for "valid_principals"`, principal)}
 		}
 	}
@@ -220,9 +239,8 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, role *sshR
 	return parsedPrincipals, nil
 }
 
-func validateValidPrincipal(validPrincipal string, allowedPrincipals []string, role *sshRole, isHostCertificate bool) bool {
-
-	if isHostCertificate {
+func validateValidPrincipalForHosts(role *sshRole) func([]string, string) bool {
+	return func(allowedPrincipals []string, validPrincipal string) bool {
 		for _, allowedPrincipal := range allowedPrincipals {
 			if allowedPrincipal == validPrincipal && role.AllowBareDomains {
 				return true
@@ -233,9 +251,6 @@ func validateValidPrincipal(validPrincipal string, allowedPrincipals []string, r
 		}
 
 		return false
-	} else {
-
-		return contains(allowedPrincipals, validPrincipal)
 	}
 }
 
@@ -357,22 +372,6 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 	}
 
 	return ttl, nil
-}
-
-func createSigningBundle(keyId string, userPublicKey ssh.PublicKey, validPrincipals []string, duration time.Duration, certificateType uint32, sshCertificateBundle signingBundle,
-	role *sshRole, criticalOptions, extensions map[string]string) creationBundle {
-
-	return creationBundle{
-		KeyId:           keyId,
-		PublicKey:       userPublicKey,
-		SigningBundle:   sshCertificateBundle,
-		ValidPrincipals: validPrincipals,
-		TTL:             duration,
-		CertificateType: certificateType,
-		Role:            role,
-		criticalOptions: criticalOptions,
-		extensions:      extensions,
-	}
 }
 
 func (b *creationBundle) sign() (*ssh.Certificate, error) {
