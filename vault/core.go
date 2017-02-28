@@ -1215,6 +1215,12 @@ func (c *Core) postUnseal() (retErr error) {
 		purgable.Purge()
 	}
 
+	// Purge these for safety in case of a rekey
+	c.seal.SetBarrierConfig(nil)
+	if c.seal.RecoveryKeySupported() {
+		c.seal.SetRecoveryConfig(nil)
+	}
+
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
