@@ -186,11 +186,6 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
 	core := TestCore(t)
 	keys, token := TestCoreInit(t, core)
-	for _, key := range keys {
-		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
-		}
-	}
 
 	sealed, err := core.Sealed()
 	if err != nil {
@@ -214,12 +209,6 @@ func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][
 	}
 
 	keys, token := TestCoreInit(t, core)
-	for _, key := range keys {
-		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
-		}
-	}
-
 	sealed, err := core.Sealed()
 	if err != nil {
 		t.Fatalf("err checking seal status: %s", err)
@@ -760,11 +749,6 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	c3.SetClusterListenerAddrs(clusterAddrGen(c3lns))
 	c3.SetClusterSetupFuncs(WrapHandlerForClustering(handlers[2], logger))
 	keys, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), WrapHandlerForClustering(handlers[0], logger))
-	for _, key := range keys {
-		if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
-		}
-	}
 
 	// Verify unsealed
 	sealed, err := c1.Sealed()
