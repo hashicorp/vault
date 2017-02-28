@@ -2,17 +2,16 @@ package ssh
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/crypto/ssh"
-	"log"
 	"strconv"
 	"strings"
 	"time"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 type signingBundle struct {
@@ -105,21 +104,9 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return nil, errutil.UserError{Err: "missing public_key"}
 	}
 
-	keyParts := strings.Split(publicKey, " ")
-	if len(keyParts) > 1 {
-		// Someone has sent the 'full' public key rather than just the base64 encoded part that the ssh library wants
-		publicKey = keyParts[1]
-	}
-
-	decodedKey, err := base64.StdEncoding.DecodeString(publicKey)
+	userPublicKey, err := parsePublicSSHKey(publicKey)
 	if err != nil {
 		return nil, errutil.UserError{Err: "Unable to decode \"public_key\" as SSH key"}
-	}
-
-	userPublicKey, err := ssh.ParsePublicKey([]byte(decodedKey))
-	if err != nil {
-		log.Printf("Failed to parse key: %s", err)
-		return nil, errutil.UserError{Err: "Unable to parse \"public_key\" as SSH key"}
 	}
 
 	keyId := data.Get("key_id").(string)
@@ -139,7 +126,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 			return nil, err
 		}
 	} else {
-		parsedPrincipals, err = b.calculateValidPrincipals(data, role.DefaultUser, role.AllowedUsers, contains)
+		parsedPrincipals, err = b.calculateValidPrincipals(data, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
 		if err != nil {
 			return nil, err
 		}
@@ -160,7 +147,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return nil, err
 	}
 
-	storedBundle, err := req.Storage.Get("config/ssh_certificate_bundle")
+	storedBundle, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
 	}
@@ -192,15 +179,12 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 
 	signedSSHCertificate := string(ssh.MarshalAuthorizedKey(certificate))
 
-	response := b.Secret(SecretCertsType).Response(
-		map[string]interface{}{
+	response := &logical.Response{
+		Data: map[string]interface{}{
 			"serial_number": strconv.FormatUint(certificate.Serial, 16),
 			"signed_key":    signedSSHCertificate,
 		},
-		map[string]interface{}{
-			"serial_number": strconv.FormatUint(certificate.Serial, 16),
-			"signed_key":    signedSSHCertificate,
-		})
+	}
 
 	return response, nil
 }
@@ -291,7 +275,7 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 		allowedCriticalOptions := strings.Split(role.AllowedCriticalOptions, ",")
 
 		for option := range criticalOptions {
-			if !contains(allowedCriticalOptions, option) {
+			if !strutil.StrListContains(allowedCriticalOptions, option) {
 				notAllowedOptions = append(notAllowedOptions, option)
 			}
 		}
@@ -317,7 +301,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) 
 		allowedExtensions := strings.Split(role.AllowedExtensions, ",")
 
 		for extension := range extensions {
-			if !contains(allowedExtensions, extension) {
+			if !strutil.StrListContains(allowedExtensions, extension) {
 				notAllowed = append(notAllowed, extension)
 			}
 		}

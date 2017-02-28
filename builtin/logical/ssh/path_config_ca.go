@@ -36,24 +36,32 @@ For security reasons, the private key cannot be retrieved later.`,
 
 func (b *backend) pathCAWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	err := req.Storage.Put(&logical.StorageEntry{
+	publicKey := data.Get("public_key").(string)
+	privateKey := data.Get("private_key").(string)
+
+	_, err := ssh.ParsePrivateKey([]byte(privateKey))
+	if err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf(`Unable to parse "private_key" as an SSH private key: %s`, err)}
+	}
+
+	_, err = parsePublicSSHKey(publicKey)
+	if err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf(`Unable to parse "public_key" as an SSH public key: %s`, err)}
+	}
+
+	err = req.Storage.Put(&logical.StorageEntry{
 		Key:   "public_key",
-		Value: []byte(data.Get("public_key").(string)),
+		Value: []byte(publicKey),
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	bundle := signingBundle{
-		Certificate: data.Get("private_key").(string),
+		Certificate: privateKey,
 	}
 
-	_, err = ssh.ParsePrivateKey([]byte(bundle.Certificate))
-	if err != nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf(`Unable to parse "private_key" as an SSH private key: %s`, err)}
-	}
-
-	entry, err := logical.StorageEntryJSON("config/ssh_certificate_bundle", bundle)
+	entry, err := logical.StorageEntryJSON("config/ca_bundle", bundle)
 	if err != nil {
 		return nil, err
 	}
