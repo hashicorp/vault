@@ -1155,6 +1155,8 @@ func (c *Core) sealInternal() error {
 	// Enable that we are sealed to prevent furthur transactions
 	c.sealed = true
 
+	c.logger.Debug("core: marked as sealed")
+
 	// Do pre-seal teardown if HA is not enabled
 	if c.ha == nil {
 		// Even in a non-HA context we key off of this for some things
@@ -1173,10 +1175,11 @@ func (c *Core) sealInternal() error {
 		c.stateLock.Lock()
 	}
 
+	c.logger.Debug("core: sealing barrier")
 	if err := c.barrier.Seal(); err != nil {
+		c.logger.Error("core: error sealing barrier", "error", err)
 		return err
 	}
-	c.logger.Info("core: vault is sealed")
 
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
@@ -1188,6 +1191,8 @@ func (c *Core) sealInternal() error {
 			}
 		}
 	}
+
+	c.logger.Info("core: vault is sealed")
 
 	return nil
 }
@@ -1210,28 +1215,6 @@ func (c *Core) postUnseal() (retErr error) {
 		purgable.Purge()
 	}
 
-	// HA mode requires us to handle keyring rotation and rekeying
-	if c.ha != nil {
-		// We want to reload these from disk so that in case of a rekey we're
-		// not using cached values
-		c.seal.SetBarrierConfig(nil)
-		if c.seal.RecoveryKeySupported() {
-			c.seal.SetRecoveryConfig(nil)
-		}
-
-		if err := c.checkKeyUpgrades(); err != nil {
-			return err
-		}
-		if err := c.barrier.ReloadMasterKey(); err != nil {
-			return err
-		}
-		if err := c.barrier.ReloadKeyring(); err != nil {
-			return err
-		}
-		if err := c.scheduleUpgradeCleanup(); err != nil {
-			return err
-		}
-	}
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
@@ -1398,8 +1381,39 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		activeTime := time.Now()
 
 		// Grab the lock as we need it for cluster setup, which needs to happen
-		// before advertising
+		// before advertising;
 		c.stateLock.Lock()
+
+		// This block is used to wipe barrier/seal state and verify that
+		// everything is sane. If we have no sanity in the barrier, we actually
+		// seal, as there's little we can do.
+		{
+			// Purge the backend if supported; the keyring/barrier init could have
+			// been swapped out from underneath us, e.g. in replication scenarios
+			// so we need to do this before the checks below.
+			if purgable, ok := c.physical.(physical.Purgable); ok {
+				purgable.Purge()
+			}
+
+			c.seal.SetBarrierConfig(nil)
+			if c.seal.RecoveryKeySupported() {
+				c.seal.SetRecoveryConfig(nil)
+			}
+
+			if err := c.performKeyUpgrades(); err != nil {
+				// We call this in a goroutine so that we can give up the
+				// statelock and have this shut us down; sealInternal has a
+				// workflow where it watches for the stopCh to close do we want
+				// to return from here
+				go c.Shutdown()
+				c.logger.Error("core: error performing key upgrades", "error", err)
+				c.stateLock.Unlock()
+				lock.Unlock()
+				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+				return
+			}
+		}
+
 		if err := c.setupCluster(); err != nil {
 			c.stateLock.Unlock()
 			c.logger.Error("core: cluster setup failed", "error", err)
@@ -1540,6 +1554,26 @@ func (c *Core) scheduleUpgradeCleanup() error {
 			}
 		}
 	})
+	return nil
+}
+
+func (c *Core) performKeyUpgrades() error {
+	if err := c.checkKeyUpgrades(); err != nil {
+		return errwrap.Wrapf("error checking for key upgrades: {{err}}", err)
+	}
+
+	if err := c.barrier.ReloadMasterKey(); err != nil {
+		return errwrap.Wrapf("error reloading master key: {{err}}", err)
+	}
+
+	if err := c.barrier.ReloadKeyring(); err != nil {
+		return errwrap.Wrapf("error reloading keyring: {{err}}", err)
+	}
+
+	if err := c.scheduleUpgradeCleanup(); err != nil {
+		return errwrap.Wrapf("error scheduling upgrade cleanup: {{err}}", err)
+	}
+
 	return nil
 }
 
