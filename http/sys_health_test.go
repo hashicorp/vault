@@ -45,7 +45,40 @@ func TestSysHealth_get(t *testing.T) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 
-	keys, _ := vault.TestCoreInit(t, core)
+	keys, root := vault.TestCoreInit(t, core)
+	resp, err = http.Get(addr + "/v1/sys/health")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	actual = map[string]interface{}{}
+	expected = map[string]interface{}{
+		"initialized": true,
+		"sealed":      false,
+		"standby":     false,
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	expected["server_time_utc"] = actual["server_time_utc"]
+	expected["version"] = actual["version"]
+	if actual["cluster_name"] == nil {
+		delete(expected, "cluster_name")
+	} else {
+		expected["cluster_name"] = actual["cluster_name"]
+	}
+	if actual["cluster_id"] == nil {
+		delete(expected, "cluster_id")
+	} else {
+		expected["cluster_id"] = actual["cluster_id"]
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
+	}
+
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
 	resp, err = http.Get(addr + "/v1/sys/health")
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -150,7 +183,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 
-	keys, _ := vault.TestCoreInit(t, core)
+	_, root := vault.TestCoreInit(t, core)
 	resp, err = http.Get(queryurl.String())
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -159,10 +192,10 @@ func TestSysHealth_customcodes(t *testing.T) {
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
 		"initialized": true,
-		"sealed":      true,
-		"standby":     true,
+		"sealed":      false,
+		"standby":     false,
 	}
-	testResponseStatus(t, resp, 523)
+	testResponseStatus(t, resp, 202)
 	testResponseBody(t, resp, &actual)
 
 	expected["server_time_utc"] = actual["server_time_utc"]
@@ -181,11 +214,10 @@ func TestSysHealth_customcodes(t *testing.T) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
 
-	for _, key := range keys {
-		if _, err := vault.TestCoreUnseal(core, vault.TestKeyCopy(key)); err != nil {
-			t.Fatalf("unseal err: %s", err)
-		}
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %s", err)
 	}
+
 	resp, err = http.Get(queryurl.String())
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -194,10 +226,10 @@ func TestSysHealth_customcodes(t *testing.T) {
 	actual = map[string]interface{}{}
 	expected = map[string]interface{}{
 		"initialized": true,
-		"sealed":      false,
-		"standby":     false,
+		"sealed":      true,
+		"standby":     true,
 	}
-	testResponseStatus(t, resp, 202)
+	testResponseStatus(t, resp, 523)
 	testResponseBody(t, resp, &actual)
 	expected["server_time_utc"] = actual["server_time_utc"]
 	expected["version"] = actual["version"]

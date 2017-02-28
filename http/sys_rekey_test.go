@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -23,6 +24,22 @@ func TestSysRekeyInit_pgpKeysEntriesForRekey(t *testing.T) {
 		"secret_shares":    5,
 		"secret_threshold": 3,
 		"pgp_keys":         []string{"pgpkey1"},
+	})
+	testResponseStatus(t, resp, 400)
+}
+
+// Test to check if the API errors out when pgp and wrap shares are supplied
+func TestSysRekeyInit_pgpAndWrap(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		"secret_shares":    1,
+		"secret_threshold": 1,
+		"pgp_keys":         []string{pgpkeys.TestPubKey1},
+		"wrap_shares":      true,
 	})
 	testResponseStatus(t, resp, 400)
 }
@@ -48,6 +65,7 @@ func TestSysRekeyInit_Status(t *testing.T) {
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
+		"wrap_shares":      false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -77,6 +95,7 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
+		"wrap_shares":      false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -99,12 +118,10 @@ func TestSysRekeyInit_Setup(t *testing.T) {
 		"required":         json.Number("3"),
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
+		"wrap_shares":      false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
-	if actual["nonce"].(string) == "" {
-		t.Fatalf("nonce was empty")
-	}
 	if actual["nonce"].(string) == "" {
 		t.Fatalf("nonce was empty")
 	}
@@ -144,6 +161,7 @@ func TestSysRekeyInit_Cancel(t *testing.T) {
 		"pgp_fingerprints": interface{}(nil),
 		"backup":           false,
 		"nonce":            "",
+		"wrap_shares":      false,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
@@ -197,6 +215,7 @@ func TestSysRekey_Update(t *testing.T) {
 			"t":                json.Number("3"),
 			"n":                json.Number("5"),
 			"progress":         json.Number(fmt.Sprintf("%d", i+1)),
+			"wrap_shares":      false,
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)

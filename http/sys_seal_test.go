@@ -26,7 +26,7 @@ func TestSysSealStatus(t *testing.T) {
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{
-		"sealed":   true,
+		"sealed":   false,
 		"t":        json.Number("3"),
 		"n":        json.Number("3"),
 		"progress": json.Number("0"),
@@ -103,9 +103,13 @@ func TestSysSeal_unsealed(t *testing.T) {
 
 func TestSysUnseal(t *testing.T) {
 	core := vault.TestCore(t)
-	keys, _ := vault.TestCoreInit(t, core)
+	keys, root := vault.TestCoreInit(t, core)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
+
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %s", err)
+	}
 
 	for i, key := range keys {
 		resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
@@ -181,6 +185,16 @@ func TestSysUnseal_Reset(t *testing.T) {
 	if !ok {
 		t.Fatalf("no keys: %#v", actual)
 	}
+
+	root, ok := actual["root_token"]
+	if !ok {
+		t.Fatalf("no root: %#v", actual)
+	}
+
+	if err := core.Seal(root.(string)); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
 	for i, key := range keysRaw.([]interface{}) {
 		if i > thresh-2 {
 			break
