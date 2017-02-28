@@ -194,7 +194,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				A comma-separated list of extensions that certificates can have when signed.
-				To allow any critical options, set this to an empty string.
+				To allow any extensions, set this to an empty string.
 				`,
 			},
 			"default_critical_options": &framework.FieldSchema{
@@ -232,7 +232,7 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, host certificates that are requested are allowed to use the base domains listed in
-				"allowed_users", e.g. "example.com".
+				"allowed_domains", e.g. "example.com".
 				This is a separate option as in some cases this can be considered a security threat.
 				`,
 			},
@@ -240,7 +240,7 @@ func pathRoles(b *backend) *framework.Path {
 				Type:        framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
-				If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_users".
+				If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_domains".
 				`,
 			},
 		},
@@ -525,6 +525,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 				"allow_host_certificates":  role.AllowHostCertificates,
 				"allow_bare_domains":       role.AllowBareDomains,
 				"allow_subdomains":         role.AllowSubdomains,
+				"key_type":                 role.KeyType,
 			},
 		}, nil
 	} else {
