@@ -18,8 +18,11 @@ import (
 	"github.com/mitchellh/copystructure"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/net/http2"
 
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/salt"
@@ -508,6 +511,7 @@ type TestClusterCore struct {
 	CACertBytes []byte
 	CACert      *x509.Certificate
 	TLSConfig   *tls.Config
+	Client      *api.Client
 }
 
 func (t *TestClusterCore) CloseListeners() {
@@ -616,6 +620,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	server1 := &http.Server{
 		Handler: handlers[0],
 	}
+	if err := http2.ConfigureServer(server1, nil); err != nil {
+		t.Fatal(err)
+	}
 	for _, ln := range c1lns {
 		go server1.Serve(ln)
 	}
@@ -635,6 +642,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	server2 := &http.Server{
 		Handler: handlers[1],
 	}
+	if err := http2.ConfigureServer(server2, nil); err != nil {
+		t.Fatal(err)
+	}
 	for _, ln := range c2lns {
 		go server2.Serve(ln)
 	}
@@ -653,6 +663,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	}
 	server3 := &http.Server{
 		Handler: handlers[2],
+	}
+	if err := http2.ConfigureServer(server3, nil); err != nil {
+		t.Fatal(err)
 	}
 	for _, ln := range c3lns {
 		go server3.Serve(ln)
@@ -796,6 +809,27 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		}
 	}
 
+	getAPIClient := func(port int) *api.Client {
+		transport := cleanhttp.DefaultPooledTransport()
+		transport.TLSClientConfig = tlsConfig
+		client := &http.Client{
+			Transport: transport,
+			CheckRedirect: func(*http.Request, []*http.Request) error {
+				// This can of course be overridden per-test by using its own client
+				return fmt.Errorf("redirects not allowed in these tests")
+			},
+		}
+		config := api.DefaultConfig()
+		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+		config.HttpClient = client
+		apiClient, err := api.NewClient(config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		apiClient.SetToken(root)
+		return apiClient
+	}
+
 	var ret []*TestClusterCore
 	keyCopies, _ := copystructure.Copy(keys)
 	ret = append(ret, &TestClusterCore{
@@ -806,6 +840,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		CACertBytes: caBytes,
 		CACert:      caCert,
 		TLSConfig:   tlsConfig,
+		Client:      getAPIClient(c1lns[0].Address.Port),
 	})
 
 	keyCopies, _ = copystructure.Copy(keys)
@@ -817,6 +852,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		CACertBytes: caBytes,
 		CACert:      caCert,
 		TLSConfig:   tlsConfig,
+		Client:      getAPIClient(c2lns[0].Address.Port),
 	})
 
 	keyCopies, _ = copystructure.Copy(keys)
@@ -828,6 +864,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		CACertBytes: caBytes,
 		CACert:      caCert,
 		TLSConfig:   tlsConfig,
+		Client:      getAPIClient(c3lns[0].Address.Port),
 	})
 
 	return ret

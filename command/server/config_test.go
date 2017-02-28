@@ -62,6 +62,7 @@ func TestLoadConfigFile(t *testing.T) {
 
 		DisableCache: true,
 		DisableMlock: true,
+		EnableUI:     true,
 
 		MaxLeaseTTL:        10 * time.Hour,
 		MaxLeaseTTLRaw:     "10h",
@@ -133,6 +134,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 		ClusterName:        "testcluster",
+		EnableUI:           true,
 	}
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
@@ -179,6 +181,8 @@ func TestLoadConfigFile_json2(t *testing.T) {
 		},
 
 		CacheSize: 45678,
+
+		EnableUI: true,
 
 		Telemetry: &Telemetry{
 			StatsiteAddr:                       "foo",
@@ -231,6 +235,8 @@ func TestLoadConfigDir(t *testing.T) {
 			},
 			DisableClustering: true,
 		},
+
+		EnableUI: true,
 
 		Telemetry: &Telemetry{
 			StatsiteAddr:    "qux",

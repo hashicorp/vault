@@ -411,6 +411,16 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := c.barrier.Put(&Entry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(c.barrierRekeyConfig.Nonce),
+	}); err != nil {
+		c.logger.Error("core: error saving keyring canary", "error", err)
+		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
+	}
+
 	// Done!
 	c.barrierRekeyProgress = nil
 	c.barrierRekeyConfig = nil
@@ -577,6 +587,16 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	if err := c.seal.SetRecoveryConfig(c.recoveryRekeyConfig); err != nil {
 		c.logger.Error("core: error saving rekey seal configuration", "error", err)
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
+	}
+
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := c.barrier.Put(&Entry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(c.recoveryRekeyConfig.Nonce),
+	}); err != nil {
+		c.logger.Error("core: error saving keyring canary", "error", err)
+		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
 	}
 
 	// Done!

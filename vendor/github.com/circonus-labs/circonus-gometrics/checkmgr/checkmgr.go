@@ -385,7 +385,9 @@ func (cm *CheckManager) GetSubmissionURL() (*Trap, error) {
 
 	if u.Scheme == "https" {
 		if cm.certPool == nil {
-			cm.loadCACert()
+			if err := cm.loadCACert(); err != nil {
+				return nil, err
+			}
 		}
 		t := &tls.Config{
 			RootCAs: cm.certPool,

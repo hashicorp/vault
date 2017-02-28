@@ -42,17 +42,22 @@ type CACert struct {
 }
 
 // loadCACert loads the CA cert for the broker designated by the submission url
-func (cm *CheckManager) loadCACert() {
+func (cm *CheckManager) loadCACert() error {
 	if cm.certPool != nil {
-		return
+		return nil
 	}
 
 	cm.certPool = x509.NewCertPool()
 
-	cert, err := cm.fetchCert()
-	if err != nil {
-		if cm.Debug {
-			cm.Log.Printf("[DEBUG] Unable to fetch ca.crt, using default. %+v\n", err)
+	var cert []byte
+	var err error
+
+	if cm.enabled {
+		// only attempt to retrieve broker CA cert if
+		// the check is being managed.
+		cert, err = cm.fetchCert()
+		if err != nil {
+			return err
 		}
 	}
 
@@ -61,6 +66,8 @@ func (cm *CheckManager) loadCACert() {
 	}
 
 	cm.certPool.AppendCertsFromPEM(cert)
+
+	return nil
 }
 
 // fetchCert fetches CA certificate using Circonus API

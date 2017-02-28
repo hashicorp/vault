@@ -1235,6 +1235,19 @@ subpath for interactive help output.
         This sets the O (Organization) values in the subject field of issued
         certificates. This is a comma-separated string.
       </li>
+      <li>
+        <span class="param">generate_lease</span>
+        <span class="param-flags">optional</span>
+        If set, certificates issued/signed against this role will have Vault
+        leases attached to them. Defaults to "false". Certificates can be added
+        to the CRL by `vault revoke <lease_id>` when certificates are
+        associated with leases.  It can also be done using the `pki/revoke`
+        endpoint. However, when lease generation is disabled, invoking
+        `pki/revoke` would be the only way to add the certificates to the CRL.
+        When large number of certificates are generated with long lifetimes, it
+        is recommended that lease generation be disabled, as large amount of
+        leases adversely affect the startup time of Vault.
+      </li>
     </ul>
   </dd>
 

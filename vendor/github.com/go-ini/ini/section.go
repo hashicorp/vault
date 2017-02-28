@@ -68,16 +68,18 @@ func (s *Section) NewKey(name, val string) (*Key, error) {
 	}
 
 	if inSlice(name, s.keyList) {
-		s.keys[name].value = val
+		if s.f.options.AllowShadows {
+			if err := s.keys[name].addShadow(val); err != nil {
+				return nil, err
+			}
+		} else {
+			s.keys[name].value = val
+		}
 		return s.keys[name], nil
 	}
 
 	s.keyList = append(s.keyList, name)
-	s.keys[name] = &Key{
-		s:     s,
-		name:  name,
-		value: val,
-	}
+	s.keys[name] = newKey(s, name, val)
 	s.keysHash[name] = val
 	return s.keys[name], nil
 }
