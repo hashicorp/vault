@@ -30,6 +30,7 @@ type sshRole struct {
 	Port                   int               `mapstructure:"port" json:"port"`
 	InstallScript          string            `mapstructure:"install_script" json:"install_script"`
 	AllowedUsers           string            `mapstructure:"allowed_users" json:"allowed_users"`
+	AllowedDomains         string            `mapstructure:"allowed_domains" json:"allowed_domains"`
 	KeyOptionSpecs         string            `mapstructure:"key_option_specs" json:"key_option_specs"`
 	MaxTTL                 string            `mapstructure:"max_ttl" json:"max_ttl"`
 	TTL                    string            `mapstructure:"ttl" json:"ttl"`
@@ -145,7 +146,14 @@ func pathRoles(b *backend) *framework.Path {
 				usernames are to be allowed, then this list enforces it. If this field is
 				set, then credentials can only be created for default_user and usernames
 				present in this list.
-				Treated as a list of domains for 'host' certificate types on 'ca' type.
+				`,
+			},
+			"allowed_domains": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If this option is not specified, client can request for a signed certificate for any
+				valid host. If only certain domains are allowed, then this list enforces it.
 				`,
 			},
 			"key_option_specs": &framework.FieldSchema{
@@ -209,7 +217,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'user'.
 				`,
-				Default:     true,
+				Default:     false,
 			},
 			"allow_host_certificates": &framework.FieldSchema{
 				Type:        framework.TypeBool,
@@ -217,7 +225,7 @@ func pathRoles(b *backend) *framework.Path {
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'host'.
 				`,
-				Default:     true,
+				Default:     false,
 			},
 			"allow_bare_domains": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -400,6 +408,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		AllowUserCertificates:  data.Get("allow_user_certificates").(bool),
 		AllowHostCertificates:  data.Get("allow_host_certificates").(bool),
 		AllowedUsers:           allowedUsers,
+		AllowedDomains:         data.Get("allowed_domains").(string),
 		DefaultUser:            defaultUser,
 		AllowBareDomains:       data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:        data.Get("allow_subdomains").(bool),
@@ -506,6 +515,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"allowed_users":            role.AllowedUsers,
+				"allowed_domains":          role.AllowedDomains,
 				"default_user":             role.DefaultUser,
 				"max_ttl":                  role.MaxTTL,
 				"ttl":                      role.TTL,

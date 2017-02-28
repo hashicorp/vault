@@ -536,7 +536,8 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type": "ca",
-				"allowed_users": "example.com,example.org",
+				"allow_host_certificates": true,
+				"allowed_domains": "example.com,example.org",
 				"allow_subdomains":         true,
 				"default_critical_options": map[string]interface{}{
 					"option": "value",
@@ -578,6 +579,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 
 			createRoleStep("testing", map[string]interface{}{
 				"key_type": "ca",
+				"allow_user_certificates": true,
 				"allowed_critical_options": "option,secondary",
 				"allowed_extensions":       "extension,additional",
 				"default_critical_options": map[string]interface{}{

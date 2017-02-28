@@ -295,11 +295,6 @@ The public half of the key is distributed to remote hosts while the private part
 stays within Vault. This allows SSH public keys to be signed by Vault and then
 verified using only the public key.
 
-It's recommended to set up the remote machines not only with the public key
-(`TrustedUserCAKeys` option in OpenSSH) but also with the list of revoked keys
-(`RevokedKeys` option in OpenSSH), so that any certificate revoked before it's
-normal expiry time can be blocked correctly.
-
 ### Configure a CA certificate
 
 To configure the backend, an SSH key pair must be generated to serve as the CA key:
@@ -325,7 +320,7 @@ policy used to generate those credentials. For example, let's create an
 "example" role:
 
 ```text
-$ vault write sshca/roles/example ttl=4h
+$ vault write sshca/roles/example ttl=4h allow_user_certificates=true
 Success! Data written to: sshca/roles/example
 ```
 
@@ -520,7 +515,16 @@ username@<IP of remote host>:~$
               can be created only for the users in this list and for the `default_user`.
               If this option is explicitly set to `*`, then credentials can be created
               for any username.
-          Treated as a list of domains for 'host' certificate types.
+      </li>
+      <li>
+        <span class="param">allowed_domains</span>
+        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
+        optional for CA type</span>
+          (String)
+          If this option is not specified, client can request for a signed certificate for any
+          valid host. If only certain domains are allowed, then this list enforces it.
+          If this option is explicitly set to `*`, then credentials can be created
+          for any domain.
       </li>
       <li>
         <span class="param">key_option_specs</span>
@@ -584,14 +588,14 @@ username@<IP of remote host>:~$
         <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
         optional for CA type</span>
         If set, certificates are allowed to be signed for use as a 'user'.
-        Defaults to true.
+        Defaults to false.
       </li>
       <li>
         <span class="param">allow_host_certificates</span>
         <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
         optional for CA type</span>
         If set, certificates are allowed to be signed for use as a 'host'.
-        Defaults to true.
+        Defaults to false.
       </li>
       <li>
         <span class="param">allow_bare_domains</span>
