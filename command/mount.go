@@ -15,12 +15,13 @@ type MountCommand struct {
 
 func (c *MountCommand) Run(args []string) int {
 	var description, path, defaultLeaseTTL, maxLeaseTTL string
-	var local bool
+	var local, forceNoCache bool
 	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
 	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
 	flags.StringVar(&maxLeaseTTL, "max-lease-ttl", "", "")
+	flags.BoolVar(&forceNoCache, "force-no-cache", false, "")
 	flags.BoolVar(&local, "local", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -55,6 +56,7 @@ func (c *MountCommand) Run(args []string) int {
 		Config: api.MountConfigInput{
 			DefaultLeaseTTL: defaultLeaseTTL,
 			MaxLeaseTTL:     maxLeaseTTL,
+			ForceNoCache:    forceNoCache,
 		},
 		Local: local,
 	}
@@ -104,6 +106,10 @@ Mount Options:
                                  If not specified, uses the global default, or
                                  the previously set value. Set to '0' to
                                  explicitly set it to use the global default.
+
+  -force-no-cache                Forces the backend to disable caching. If not specified,
+                                 uses the global default. This does not affect caching of
+                                 underlying physical storage.
 
   -local                         Mark the mount as a local mount. Local mounts
                                  are not replicated nor (if a secondary)
