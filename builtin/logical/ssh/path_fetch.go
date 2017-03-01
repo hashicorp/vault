@@ -19,10 +19,13 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchPublicKey(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
 	entry, err := req.Storage.Get("public_key")
 	if err != nil {
 		return nil, err
+	}
+
+	if entry == nil {
+		return nil, nil
 	}
 
 	response := &logical.Response{
@@ -30,8 +33,8 @@ func (b *backend) pathFetchPublicKey(req *logical.Request, data *framework.Field
 			logical.HTTPContentType: "text/plain",
 			logical.HTTPRawBody:     entry.Value,
 			logical.HTTPStatusCode:  200,
-		}}
+		},
+	}
 
 	return response, nil
-
 }

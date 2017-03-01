@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"time"
+
 	"github.com/hashicorp/vault/helper/cidrutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"time"
 )
 
 const (
@@ -166,7 +167,7 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 			},
 			"ttl": &framework.FieldSchema{
-				Type:    framework.TypeString,
+				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				The lease duration if no specific lease duration is
@@ -175,7 +176,7 @@ func pathRoles(b *backend) *framework.Path {
 				the value of max_ttl.`,
 			},
 			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type: framework.TypeString,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				The maximum allowed lease duration
@@ -198,34 +199,40 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 			},
 			"default_critical_options": &framework.FieldSchema{
-				Type:        framework.TypeMap,
+				Type: framework.TypeMap,
 				Description: `
-				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
-				Critical options certificates should have if none are provided when signing.
-				`,
+				[Not applicable for Dynamic type] [Not applicable for OTP type]
+				[Optional for CA type] Critical options certificates should
+				have if none are provided when signing. This field takes in key
+				value pairs in JSON format.  Note that these are not restricted
+				by "allowed_critical_options". Defaults to none.
+`,
 			},
 			"default_extensions": &framework.FieldSchema{
-				Type:        framework.TypeMap,
+				Type: framework.TypeMap,
 				Description: `
-				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
-				Extensions certificates should have if none are provided when signing.
+				[Not applicable for Dynamic type] [Not applicable for OTP type]
+				[Optional for CA type] Extensions certificates should have if
+				none are provided when signing. This field takes in key value
+				pairs in JSON format. Note that these are not restricted by
+				"allowed_extensions". Defaults to none.
 				`,
 			},
 			"allow_user_certificates": &framework.FieldSchema{
-				Type:        framework.TypeBool,
+				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'user'.
 				`,
-				Default:     false,
+				Default: false,
 			},
 			"allow_host_certificates": &framework.FieldSchema{
-				Type:        framework.TypeBool,
+				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, certificates are allowed to be signed for use as a 'host'.
 				`,
-				Default:     false,
+				Default: false,
 			},
 			"allow_bare_domains": &framework.FieldSchema{
 				Type: framework.TypeBool,
@@ -237,7 +244,7 @@ func pathRoles(b *backend) *framework.Path {
 				`,
 			},
 			"allow_subdomains": &framework.FieldSchema{
-				Type:        framework.TypeBool,
+				Type: framework.TypeBool,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_domains".
@@ -401,8 +408,8 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework.FieldData) (*sshRole, *logical.Response) {
 
 	role := &sshRole{
-		MaxTTL:                 data.Get("max_ttl").(string),
-		TTL:                    data.Get("ttl").(string),
+		MaxTTL: data.Get("max_ttl").(string),
+		TTL:    data.Get("ttl").(string),
 		AllowedCriticalOptions: data.Get("allowed_critical_options").(string),
 		AllowedExtensions:      data.Get("allowed_extensions").(string),
 		AllowUserCertificates:  data.Get("allow_user_certificates").(bool),
@@ -514,11 +521,11 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 	} else if role.KeyType == KeyTypeCA {
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"allowed_users":            role.AllowedUsers,
-				"allowed_domains":          role.AllowedDomains,
-				"default_user":             role.DefaultUser,
-				"max_ttl":                  role.MaxTTL,
-				"ttl":                      role.TTL,
+				"allowed_users":   role.AllowedUsers,
+				"allowed_domains": role.AllowedDomains,
+				"default_user":    role.DefaultUser,
+				"max_ttl":         role.MaxTTL,
+				"ttl":             role.TTL,
 				"allowed_critical_options": role.AllowedCriticalOptions,
 				"allowed_extensions":       role.AllowedExtensions,
 				"allow_user_certificates":  role.AllowUserCertificates,
@@ -526,6 +533,8 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 				"allow_bare_domains":       role.AllowBareDomains,
 				"allow_subdomains":         role.AllowSubdomains,
 				"key_type":                 role.KeyType,
+				"default_critical_options": role.DefaultCriticalOptions,
+				"default_extensions":       role.DefaultExtensions,
 			},
 		}, nil
 	} else {

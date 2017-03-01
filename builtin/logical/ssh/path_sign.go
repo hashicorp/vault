@@ -3,15 +3,16 @@ package ssh
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/errutil"
-	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
-	"golang.org/x/crypto/ssh"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/logical/framework"
+	"golang.org/x/crypto/ssh"
 )
 
 type signingBundle struct {
@@ -193,7 +194,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 	validPrincipals := data.Get("valid_principals").(string)
 	if validPrincipals == "" {
 		if defaultPrincipal != "" {
-			return []string {defaultPrincipal}, nil
+			return []string{defaultPrincipal}, nil
 		}
 		if principalsAllowedByRole == "" {
 			return []string{}, nil
@@ -229,7 +230,7 @@ func validateValidPrincipalForHosts(role *sshRole) func([]string, string) bool {
 			if allowedPrincipal == validPrincipal && role.AllowBareDomains {
 				return true
 			}
-			if role.AllowSubdomains && strings.HasSuffix(validPrincipal, "." + allowedPrincipal) {
+			if role.AllowSubdomains && strings.HasSuffix(validPrincipal, "."+allowedPrincipal) {
 				return true
 			}
 		}
@@ -248,13 +249,11 @@ func (b *backend) calculateCertificateType(data *framework.FieldData, role *sshR
 			return 0, errutil.UserError{Err: `"cert_type" 'user' is not allowed by role`}
 		}
 		certificateType = ssh.UserCert
-		break
 	case "host":
 		if !role.AllowHostCertificates {
 			return 0, errutil.UserError{Err: `"cert_type" 'host' is not allowed by role`}
 		}
 		certificateType = ssh.HostCert
-		break
 	default:
 		return 0, errutil.UserError{Err: "\"cert_type\" must be either 'user' or 'host'"}
 	}
@@ -331,7 +330,7 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 		var err error
 		ttl, err = time.ParseDuration(ttlField)
 		if err != nil {
-			return time.Nanosecond, errutil.UserError{Err: fmt.Sprintf("invalid requested ttl: %s", err)}
+			return 0, errutil.UserError{Err: fmt.Sprintf("invalid requested ttl: %s", err)}
 		}
 	}
 
@@ -341,7 +340,7 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 		var err error
 		maxTTL, err = time.ParseDuration(role.MaxTTL)
 		if err != nil {
-			return time.Nanosecond, errutil.UserError{Err: fmt.Sprintf("invalid ttl: %s", err)}
+			return 0, errutil.UserError{Err: fmt.Sprintf("invalid ttl: %s", err)}
 		}
 	}
 
@@ -351,7 +350,7 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 		if len(ttlField) == 0 {
 			ttl = maxTTL
 		} else {
-			return time.Nanosecond, errutil.UserError{Err: fmt.Sprintf("ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
+			return 0, errutil.UserError{Err: fmt.Sprintf("ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
 		}
 	}
 
@@ -359,8 +358,7 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 }
 
 func (b *creationBundle) sign() (*ssh.Certificate, error) {
-
-	signingKey, err := b.SigningBundle.toSSHSigningKey()
+	signingKey, err := ssh.ParsePrivateKey([]byte(b.SigningBundle.Certificate))
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("stored SSH signing key cannot be parsed: %v", err)}
 	}
@@ -392,8 +390,4 @@ func (b *creationBundle) sign() (*ssh.Certificate, error) {
 	}
 
 	return certificate, nil
-}
-
-func (b *signingBundle) toSSHSigningKey() (ssh.Signer, error) {
-	return ssh.ParsePrivateKey([]byte(b.Certificate))
 }
