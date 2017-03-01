@@ -1,4 +1,4 @@
-package http
+package httpBasic
 
 import (
 	"github.com/hashicorp/vault/helper/mfa"
@@ -43,7 +43,7 @@ type backend struct {
 }
 
 const backendHelp = `
-The "http" credential provider allows authentication against
+The "http-basic" credential provider allows authentication against
 a HTTP server, checking username/password and associating users
 to set of policies.
 

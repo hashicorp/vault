@@ -1,4 +1,4 @@
-package http
+package httpBasic
 
 import (
 	"fmt"
@@ -155,6 +155,6 @@ for HTTP users that are allowed to authenticate, and associate policies to
 them.
 
 Deleting a user will not revoke auth for prior authenticated users.
-To do this, do a revoke token by path on "auth/http/login/<username>"
+To do this, do a revoke token by path on "auth/http-basic/login/<username>"
 for the usernames you want revoked.
 `

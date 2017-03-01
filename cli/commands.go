@@ -13,7 +13,7 @@ import (
 	credAwsEc2 "github.com/hashicorp/vault/builtin/credential/aws-ec2"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
-	credHttp "github.com/hashicorp/vault/builtin/credential/http"
+	credHttpBasic "github.com/hashicorp/vault/builtin/credential/http-basic"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credRadius "github.com/hashicorp/vault/builtin/credential/radius"
@@ -70,16 +70,16 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"socket": auditSocket.Factory,
 				},
 				CredentialBackends: map[string]logical.Factory{
-					"approle":  credAppRole.Factory,
-					"cert":     credCert.Factory,
-					"aws-ec2":  credAwsEc2.Factory,
-					"app-id":   credAppId.Factory,
-					"github":   credGitHub.Factory,
-					"http":     credHttp.Factory,
-					"userpass": credUserpass.Factory,
-					"ldap":     credLdap.Factory,
-					"okta":     credOkta.Factory,
-					"radius":   credRadius.Factory,
+					"approle":    credAppRole.Factory,
+					"cert":       credCert.Factory,
+					"aws-ec2":    credAwsEc2.Factory,
+					"app-id":     credAppId.Factory,
+					"github":     credGitHub.Factory,
+					"http-basic": credHttpBasic.Factory,
+					"userpass":   credUserpass.Factory,
+					"ldap":       credLdap.Factory,
+					"okta":       credOkta.Factory,
+					"radius":     credRadius.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,
@@ -115,13 +115,13 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 			return &command.AuthCommand{
 				Meta: *metaPtr,
 				Handlers: map[string]command.AuthHandler{
-					"github":   &credGitHub.CLIHandler{},
-					"http":     &credUserpass.CLIHandler{DefaultMount: "http"},
-					"userpass": &credUserpass.CLIHandler{DefaultMount: "userpass"},
-					"ldap":     &credLdap.CLIHandler{},
-					"okta":     &credOkta.CLIHandler{},
-					"cert":     &credCert.CLIHandler{},
-					"radius":   &credUserpass.CLIHandler{DefaultMount: "radius"},
+					"github":     &credGitHub.CLIHandler{},
+					"http-basic": &credUserpass.CLIHandler{DefaultMount: "http-basic"},
+					"userpass":   &credUserpass.CLIHandler{DefaultMount: "userpass"},
+					"ldap":       &credLdap.CLIHandler{},
+					"okta":       &credOkta.CLIHandler{},
+					"cert":       &credCert.CLIHandler{},
+					"radius":     &credUserpass.CLIHandler{DefaultMount: "radius"},
 				},
 			}, nil
 		},

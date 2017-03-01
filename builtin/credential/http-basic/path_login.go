@@ -1,4 +1,4 @@
-package http
+package httpBasic
 
 import (
 	"fmt"
