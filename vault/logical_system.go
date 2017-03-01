@@ -737,7 +737,7 @@ type SystemBackend struct {
 
 // handleCORSRead returns the current CORS configuration
 func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	corsConf := b.Core.corsConfig.Get()
+	corsConf := b.Core.corsConfig
 	if corsConf == nil {
 		return nil, errCORSNotConfigured
 	}

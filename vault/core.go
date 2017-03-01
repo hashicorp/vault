@@ -529,7 +529,7 @@ func (c *Core) Shutdown() error {
 
 // CORSConfig returns the current CORS configuration
 func (c *Core) CORSConfig() *CORSConfig {
-	return c.corsConfig.Get()
+	return c.corsConfig
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -1326,7 +1326,7 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down policy store: {{err}}", err))
 	}
 	if err := c.saveCORSConfig(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error tearing down config store: {{err}}", err))
+		result = multierror.Append(result, errwrap.Wrapf("error tearing down CORS config: {{err}}", err))
 	}
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))
