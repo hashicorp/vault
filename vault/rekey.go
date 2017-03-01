@@ -538,7 +538,8 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 
 	// Return the master key if only a single key part is used
 	results := &RekeyResult{
-		Backup: c.recoveryRekeyConfig.Backup,
+		Backup:     c.recoveryRekeyConfig.Backup,
+		WrapShares: c.recoveryRekeyConfig.WrapShares,
 	}
 
 	if c.recoveryRekeyConfig.SecretShares == 1 {
@@ -592,6 +593,19 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
+	}
+
+	if c.recoveryRekeyConfig.WrapShares {
+		// wrap tokens
+		wrappedKeys := make([][]byte, len(results.SecretShares))
+		for i, _ := range results.SecretShares {
+			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i], true, c.recoveryRekeyConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to wrap share: %s", err)
+			}
+			wrappedKeys[i] = []byte(token)
+		}
+		results.SecretShares = wrappedKeys
 	}
 
 	if err := c.seal.SetRecoveryKey(newMasterKey); err != nil {
