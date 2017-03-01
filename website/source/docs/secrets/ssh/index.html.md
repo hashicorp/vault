@@ -306,8 +306,8 @@ $ ssh-keygen -N '' -f ./ca -C 'SSH CA key pair'
 Now that we have the SSH CA key pair, these can be used to configure the SSH CA backend:
 
 ```text
-$ cat ca | vault write sshca/config/ca private_key=- public_key="$(cat ca.pub | tr -d '\n')"
-Success! Data written to: sshca/config/ca
+$ cat ca | vault write ssh/config/ca private_key=- public_key="$(cat ca.pub | tr -d '\n')"
+Success! Data written to: ssh/config/ca
 ```
 
 Now that the SSH CA key pair is successfully saved in the backend, the `ca` and
@@ -320,8 +320,8 @@ policy used to generate those credentials. For example, let's create an
 "example" role:
 
 ```text
-$ vault write sshca/roles/example ttl=4h allow_user_certificates=true
-Success! Data written to: sshca/roles/example
+$ vault write ssh/roles/example ttl=4h allow_user_certificates=true key_type=ca
+Success! Data written to: ssh/roles/example
 ```
 
 ### Create a Credential
@@ -331,10 +331,10 @@ sign an SSH public key, we simply write to the `sign` end point with that role
 name: Vault is now configured to create and manage SSH certificates!
 
 ```text
-$ cat dummy.pub | vault write sshca/sign/example public_key=- 
+$ cat dummy.pub | vault write ssh/sign/example public_key=- 
 Key             Value
 ---             -----
-lease_id        sshca/sign/example/3c3740ee-6066-55c0-4a5d-82a544a474a3
+lease_id        ssh/sign/example/3c3740ee-6066-55c0-4a5d-82a544a474a3
 lease_duration  768h0m0s
 lease_renewable false
 serial_number   8343f840b8a027a7
@@ -1123,7 +1123,7 @@ username@<IP of remote host>:~$
 
     ```json
     {
-      "lease_id": "sshca/sign/example/097bf207-96dd-0041-0e83-b23bd1923993",
+      "lease_id": "ssh/sign/example/097bf207-96dd-0041-0e83-b23bd1923993",
       "renewable": false,
       "lease_duration": 21600,
       "data": {
