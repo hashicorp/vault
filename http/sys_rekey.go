@@ -87,6 +87,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 		status.Started = true
 		status.T = rekeyConf.SecretThreshold
 		status.N = rekeyConf.SecretShares
+		status.WrapShares = rekeyConf.WrapShares
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
