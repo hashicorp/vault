@@ -286,3 +286,89 @@ func TestInit_PGP(t *testing.T) {
 		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
 }
+
+func TestInit_Wrap(t *testing.T) {
+	ui := new(cli.MockUi)
+	c := &InitCommand{
+		Meta: meta.Meta{
+			Ui: ui,
+		},
+	}
+
+	core := vault.TestCore(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	init, err := core.Initialized()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if init {
+		t.Fatal("should not be initialized")
+	}
+
+	args := []string{
+		"-address", addr,
+		"-key-shares", "4",
+		"-key-threshold", "2",
+		"-wrap-shares",
+	}
+
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	init, err = core.Initialized()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !init {
+		t.Fatal("should be initialized")
+	}
+
+	sealConf, err := core.SealAccess().BarrierConfig()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &vault.SealConfig{
+		Type:            "shamir",
+		SecretShares:    4,
+		SecretThreshold: 2,
+		WrapShares:      true,
+	}
+	if !reflect.DeepEqual(expected, sealConf) {
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
+	}
+
+	re, err := regexp.Compile("\\s*Unseal Key \\d+: (.*)")
+	if err != nil {
+		t.Fatalf("Error compiling regex: %s", err)
+	}
+	matches := re.FindAllStringSubmatch(ui.OutputWriter.String(), -1)
+	if len(matches) != 4 {
+		t.Fatalf("Unexpected number of keys returned, got %d, matches was \n\n%#v\n\n, input was \n\n%s\n\n", len(matches), matches, ui.OutputWriter.String())
+	}
+
+	args = []string{
+		"-address", addr,
+	}
+	for i := 0; i < 3; i++ {
+		jwt := strings.TrimSpace(matches[i][1])
+		if strings.Count(jwt, ".") != 2 {
+			t.Fatalf("Invalid JWT token: %s", jwt)
+		}
+
+		ui.OutputWriter.Reset()
+		unwrapCommand := &UnwrapCommand{
+			Meta: meta.Meta{
+				ClientToken: jwt,
+				Ui:          ui,
+			},
+		}
+
+		if code := unwrapCommand.Run(args); code != 0 {
+			t.Fatalf("Bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
+	}
+}
