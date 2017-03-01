@@ -93,6 +93,32 @@ func TestSystemBackend_mount(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_mount_force_no_cache(t *testing.T) {
+	core, b, _ := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
+	req.Data["type"] = "generic"
+	req.Data["config"] = map[string]interface{}{
+		"force_no_cache": true,
+	}
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	mountEntry := core.router.MatchingMountEntry("prod/secret/")
+	if mountEntry == nil {
+		t.Fatalf("missing mount entry")
+	}
+	if !mountEntry.Config.ForceNoCache {
+		t.Fatalf("bad config %#v", mountEntry)
+	}
+}
+
 func TestSystemBackend_mount_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 
