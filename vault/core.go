@@ -1734,6 +1734,6 @@ func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
 }
 
-func (c *Core) lastRemoteWALImpl() uint64 {
+func lastRemoteWALImpl(c *Core) uint64 {
 	return 0
 }
