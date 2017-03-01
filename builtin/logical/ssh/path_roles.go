@@ -533,6 +533,8 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 				"allow_bare_domains":       role.AllowBareDomains,
 				"allow_subdomains":         role.AllowSubdomains,
 				"key_type":                 role.KeyType,
+				"default_critical_options": role.DefaultCriticalOptions,
+				"default_extensions":       role.DefaultExtensions,
 			},
 		}, nil
 	} else {
