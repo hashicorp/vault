@@ -35,6 +35,12 @@ FEATURES:
    See the [policies concepts
    page](https://www.vaultproject.io/docs/concepts/policies.html) for more
    information.
+ * **SSH Backend As Certificate Authority**: SSH backend can now be configured
+   to sign host and user certificates. Each mount of the backend will be an
+   independent signing authority. The CA key pair can be configured for each
+   mount and the public key will be accessible via an unauthenticated API call.
+   We recommend using separate mounts for signing host and user certificates.
+   Internal generation of CA key pair is not supported yet but it will be soon.
 
 IMPROVEMENTS:
 
@@ -55,6 +61,7 @@ IMPROVEMENTS:
    leases by default [GH-2403]
  * secret/pki: When using DER format, still return the private key type
    [GH-2405]
+ * secret/ssh: SSH backend as CA to sign user and host certificates [GH-2208]
 
 BUG FIXES:
 
