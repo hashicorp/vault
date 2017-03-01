@@ -572,16 +572,17 @@ username@<IP of remote host>:~$
         <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
         optional for CA type</span>
         A map of critical options certificates should have if none are provided
-        when signing. Note that these are not restricted by
-        `allowed_critical_options`. Defaults to none.
+        when signing. This field takes in key value pairs in JSON format. Note
+        that these are not restricted by `allowed_critical_options`. Defaults
+        to none.
       </li>
       <li>
         <span class="param">default_extensions</span>
         <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
         optional for CA type</span>
-        A map of extensions certificates should have if none are provided
-        when signing. Note that these are not restricted by
-        `allowed_extensions`. Defaults to none.
+        A map of extensions certificates should have if none are provided when
+        signing. This field takes in key value pairs in JSON format. Note that
+        these are not restricted by `allowed_extensions`. Defaults to none.
       </li>
       <li>
         <span class="param">allow_user_certificates</span>
