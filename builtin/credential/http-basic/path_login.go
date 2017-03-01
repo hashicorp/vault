@@ -117,18 +117,18 @@ func (b *backend) HttpLogin(req *logical.Request, username string, password stri
 		return nil, logical.ErrorResponse("HTTP backend not configured"), nil
 	}
 
-    client := &http.Client{ Timeout: 10 * time.Second }
+	client := &http.Client{Timeout: 10 * time.Second}
 
-    /* Authenticate */
-    authreq, err := http.NewRequest("GET", cfg.Url, nil)
-    authreq.SetBasicAuth(username, password)
-    resp, err := client.Do(authreq)
-    if err != nil {
+	/* Authenticate */
+	authreq, err := http.NewRequest("GET", cfg.Url, nil)
+	authreq.SetBasicAuth(username, password)
+	resp, err := client.Do(authreq)
+	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
-    }
-    if resp.StatusCode != 200 {
-        return nil, logical.ErrorResponse("access denied by the authentication server"), nil
-    }
+	}
+	if resp.StatusCode != 200 {
+		return nil, logical.ErrorResponse("access denied by the authentication server"), nil
+	}
 
 	var policies []string
 	// Retrieve user entry from storage
