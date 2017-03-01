@@ -684,17 +684,6 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Check if we are the leader
 	if !c.standby {
-		// If we have connections from talking to a previous leader, close them
-		// out to free resources
-		if c.requestForwardingConnection != nil {
-			c.requestForwardingConnectionLock.Lock()
-			// Verify that the condition hasn't changed
-			if c.requestForwardingConnection != nil {
-				c.requestForwardingConnection.transport.CloseIdleConnections()
-			}
-			c.requestForwardingConnection = nil
-			c.requestForwardingConnectionLock.Unlock()
-		}
 		return true, c.redirectAddr, nil
 	}
 
@@ -754,9 +743,14 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	}
 
 	// Don't set these until everything has been parsed successfully or we'll
-	// never try again
-	c.clusterLeaderRedirectAddr = adv.RedirectAddr
-	c.clusterLeaderUUID = leaderUUID
+	// never try again; in addition set in a goroutine because we need the
+	// write lock around these but only have a read lock
+	go func() {
+		c.stateLock.Lock()
+		defer c.stateLock.Unlock()
+		c.clusterLeaderRedirectAddr = adv.RedirectAddr
+		c.clusterLeaderUUID = leaderUUID
+	}()
 
 	return false, c.clusterLeaderRedirectAddr, nil
 }
@@ -1158,6 +1152,11 @@ func (c *Core) sealInternal() error {
 
 	c.logger.Debug("core: marked as sealed")
 
+	// Clear forwarding clients
+	c.requestForwardingConnectionLock.Lock()
+	c.clearForwardingClients()
+	c.requestForwardingConnectionLock.Unlock()
+
 	// Do pre-seal teardown if HA is not enabled
 	if c.ha == nil {
 		// Even in a non-HA context we key off of this for some things
@@ -1210,6 +1209,11 @@ func (c *Core) postUnseal() (retErr error) {
 		}
 	}()
 	c.logger.Info("core: post-unseal setup starting")
+
+	// Clear forwarding clients; we're active
+	c.requestForwardingConnectionLock.Lock()
+	c.clearForwardingClients()
+	c.requestForwardingConnectionLock.Unlock()
 
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
