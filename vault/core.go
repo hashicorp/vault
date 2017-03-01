@@ -91,6 +91,7 @@ var (
 	enterprisePreSeal    = enterprisePreSealImpl
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
+	LastRemoteWAL        = lastRemoteWALImpl
 )
 
 // ReloadFunc are functions that are called when a reload is requested.
@@ -1731,4 +1732,8 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 
 func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
+}
+
+func (c *Core) lastRemoteWALImpl() uint64 {
+	return 0
 }
