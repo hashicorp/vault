@@ -83,6 +83,10 @@ func (d *TestSeal) RecoveryConfig() (*SealConfig, error) {
 }
 
 func (d *TestSeal) SetRecoveryConfig(config *SealConfig) error {
+	if config == nil {
+		return nil
+	}
+
 	d.recoveryConfig = config
 	return nil
 }
