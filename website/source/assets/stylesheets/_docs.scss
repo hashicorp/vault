@@ -203,8 +203,8 @@ body.layout-intro{
 	p, li, .alert {
 		font-size: 20px;
 		font-family: $font-family-open-sans;
-		font-weight: $font-weight-open;
-    	line-height: 1.5em;
+		font-weight: $font-weight-reg;
+    line-height: 1.5em;
 		margin: 0 0 18px;
     	-webkit-font-smoothing: antialiased;
 	}
@@ -231,8 +231,6 @@ body.layout-intro{
 		font-size: 36px;
 		margin-top: 50px;
 		margin-bottom: 24px;
-    	//@include lato-light();
-    	@include open();
 	}
 
 	h2, h3, h4{
