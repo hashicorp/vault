@@ -429,7 +429,7 @@ username@<IP of remote host>:~$
       <li>
         <span class="param">key</span>
         <span class="param-flags">required for Dynamic Key type, N/A for
-        OTP type, NA for CA type</span>
+        OTP type, N/A for CA type</span>
 	      (String)
         Name of the registered key in Vault. Before creating the role, use
         the `keys/` endpoint to create a named key.
@@ -437,7 +437,7 @@ username@<IP of remote host>:~$
       <li>
         <span class="param">admin_user</span>
         <span class="param-flags">required for Dynamic Key type, N/A for OTP
-        type, NA for CA type</span>
+        type, N/A for CA type</span>
 	      (String)
 	       Admin user at remote host. The shared key being registered should
          be for this user and should have root or sudo privileges. Every
