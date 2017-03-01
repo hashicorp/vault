@@ -94,7 +94,7 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		}
 
 		if recoveryConf.WrapShares {
-			testValidateWrappedShare(t, c, string(res.RecoveryShares[0][:]), recoveryConf)
+			testValidateWrappedShare(t, c, string(res.RecoveryShares[0][:]), recoveryConf, "init")
 		}
 	}
 
@@ -103,7 +103,7 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 			t.Fatalf("Bad: %#v", res)
 		}
 
-		testValidateWrappedShare(t, c, string(res.SecretShares[0][:]), barrierConf)
+		testValidateWrappedShare(t, c, string(res.SecretShares[0][:]), barrierConf, "init")
 	} else {
 		if res.RootToken == "" {
 			t.Fatalf("Bad: %#v", res)
@@ -187,7 +187,7 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 	}
 }
 
-func testValidateWrappedShare(t testing.TB, c *Core, token string, barrierConf *SealConfig) {
+func testValidateWrappedShare(t testing.TB, c *Core, token string, barrierConf *SealConfig, expectedMethod string) string {
 	// Make sure tokens are JWT formatted
 	if strings.Count(token, ".") != 2 {
 		t.Fatalf("Bad: %#v", token)
@@ -232,6 +232,7 @@ func testValidateWrappedShare(t testing.TB, c *Core, token string, barrierConf *
 	keyShares := mData["key-shares"].(float64)
 	keyThres := mData["key-threshold"].(float64)
 	method := mData["method"].(string)
+	share := mData["share"].(string)
 
 	if int(keyShares) != barrierConf.SecretShares {
 		t.Fatalf("Unexpected number of key shares: got %d, expected %d", keyShares, barrierConf.SecretShares)
@@ -239,7 +240,9 @@ func testValidateWrappedShare(t testing.TB, c *Core, token string, barrierConf *
 	if int(keyThres) != barrierConf.SecretThreshold {
 		t.Fatalf("Unexpected threshold: got %d, expected %d", keyShares, barrierConf.SecretThreshold)
 	}
-	if method != "init" {
-		t.Fatalf("Unexpected method: got %d, expected init", method)
+	if method != expectedMethod {
+		t.Fatalf("Unexpected method: got %d, expected init", expectedMethod)
 	}
+
+	return share
 }
