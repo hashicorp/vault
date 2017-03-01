@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.7.0 (Unreleased)
 
 DEPRECATIONS/CHANGES:
 
@@ -25,6 +25,23 @@ DEPRECATIONS/CHANGES:
    and ensuring lifetimes are reasonable, and issue long-lived certificates via
    a different role with leases disabled.
 
+FEATURES:
+
+ * **Expanded Access Control Policies**: Access control policies can now
+   specify allowed and denied parameters -- and, optionally, their values -- to
+   control what a client can and cannot submit during an API call. Policies can
+   also specify minimum/maximum response wrapping TTLs to both enforce the use
+   of response wrapping and control the duration of resultant wrapping tokens.
+   See the [policies concepts
+   page](https://www.vaultproject.io/docs/concepts/policies.html) for more
+   information.
+ * **SSH Backend As Certificate Authority**: SSH backend can now be configured
+   to sign host and user certificates. Each mount of the backend will be an
+   independent signing authority. The CA key pair can be configured for each
+   mount and the public key will be accessible via an unauthenticated API call.
+   We recommend using separate mounts for signing host and user certificates.
+   Internal generation of CA key pair is not supported yet but it will be soon.
+
 IMPROVEMENTS:
 
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
@@ -35,12 +52,16 @@ IMPROVEMENTS:
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * physical/dynamodb: Implement a session timeout to avoid having to use
+   recovery mode in the case of an unclean shutdown, which makes HA much safer
+   [GH-2141]
  * secret/pki: O (Organization) values can now be set to role-defined values
    for issued/signed certificates [GH-2369]
  * secret/pki: Certificates issued/signed from PKI backend does not generate
    leases by default [GH-2403]
  * secret/pki: When using DER format, still return the private key type
    [GH-2405]
+ * secret/ssh: SSH backend as CA to sign user and host certificates [GH-2208]
 
 BUG FIXES:
 

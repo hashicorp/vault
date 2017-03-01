@@ -3,6 +3,7 @@ package vault
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -225,20 +226,27 @@ func TestACL_PolicyMerge(t *testing.T) {
 	}
 
 	type tcase struct {
-		path    string
-		allowed map[string][]interface{}
-		denied  map[string][]interface{}
+		path           string
+		minWrappingTTL *time.Duration
+		maxWrappingTTL *time.Duration
+		allowed        map[string][]interface{}
+		denied         map[string][]interface{}
+	}
+
+	createDuration := func(seconds int) *time.Duration {
+		ret := time.Duration(seconds) * time.Second
+		return &ret
 	}
 
 	tcases := []tcase{
-		{"foo/bar", nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}},
-		{"hello/universe", map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil},
-		{"allow/all", map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
-		{"allow/all1", map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
-		{"deny/all", nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
-		{"deny/all1", nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
-		{"value/merge", map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
-		{"value/empty", map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}},
+		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}},
+		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil},
+		{"allow/all", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
+		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
+		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
+		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
+		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
+		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}},
 	}
 
 	for _, tc := range tcases {
@@ -253,6 +261,12 @@ func TestACL_PolicyMerge(t *testing.T) {
 		}
 		if !reflect.DeepEqual(tc.denied, p.DeniedParameters) {
 			t.Fatalf("Denied paramaters did not match, Expected: %#v, Got: %#v", tc.denied, p.DeniedParameters)
+		}
+		if tc.minWrappingTTL != nil && *tc.minWrappingTTL != p.MinWrappingTTL {
+			t.Fatalf("Min wrapping TTL did not match, Expected: %#v, Got: %#v", tc.minWrappingTTL, p.MinWrappingTTL)
+		}
+		if tc.minWrappingTTL != nil && *tc.maxWrappingTTL != p.MaxWrappingTTL {
+			t.Fatalf("Max wrapping TTL did not match, Expected: %#v, Got: %#v", tc.maxWrappingTTL, p.MaxWrappingTTL)
 		}
 	}
 }
@@ -271,30 +285,50 @@ func TestACL_AllowOperation(t *testing.T) {
 		logical.CreateOperation,
 	}
 	type tcase struct {
-		path       string
-		parameters []string
-		allowed    bool
+		path        string
+		wrappingTTL *time.Duration
+		parameters  []string
+		allowed     bool
+	}
+
+	createDuration := func(seconds int) *time.Duration {
+		ret := time.Duration(seconds) * time.Second
+		return &ret
 	}
 
 	tcases := []tcase{
-		{"dev/ops", []string{"zip"}, true},
-		{"foo/bar", []string{"zap"}, false},
-		{"foo/baz", []string{"hello"}, true},
-		{"foo/baz", []string{"zap"}, false},
-		{"broken/phone", []string{"steve"}, false},
-		{"hello/world", []string{"one"}, false},
-		{"tree/fort", []string{"one"}, true},
-		{"tree/fort", []string{"foo"}, false},
-		{"fruit/apple", []string{"pear"}, false},
-		{"fruit/apple", []string{"one"}, false},
-		{"cold/weather", []string{"four"}, true},
-		{"var/aws", []string{"cold", "warm", "kitty"}, false},
+		{"dev/ops", nil, []string{"zip"}, true},
+		{"foo/bar", nil, []string{"zap"}, false},
+		{"foo/bar", nil, []string{"zip"}, false},
+		{"foo/bar", createDuration(50), []string{"zip"}, false},
+		{"foo/bar", createDuration(450), []string{"zip"}, false},
+		{"foo/bar", createDuration(350), []string{"zip"}, true},
+		{"foo/baz", nil, []string{"hello"}, false},
+		{"foo/baz", createDuration(50), []string{"hello"}, false},
+		{"foo/baz", createDuration(450), []string{"hello"}, true},
+		{"foo/baz", nil, []string{"zap"}, false},
+		{"broken/phone", nil, []string{"steve"}, false},
+		{"working/phone", nil, []string{""}, false},
+		{"working/phone", createDuration(450), []string{""}, false},
+		{"working/phone", createDuration(350), []string{""}, true},
+		{"hello/world", nil, []string{"one"}, false},
+		{"tree/fort", nil, []string{"one"}, true},
+		{"tree/fort", nil, []string{"foo"}, false},
+		{"fruit/apple", nil, []string{"pear"}, false},
+		{"fruit/apple", nil, []string{"one"}, false},
+		{"cold/weather", nil, []string{"four"}, true},
+		{"var/aws", nil, []string{"cold", "warm", "kitty"}, false},
 	}
 
 	for _, tc := range tcases {
 		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
 		for _, parameter := range tc.parameters {
 			request.Data[parameter] = ""
+		}
+		if tc.wrappingTTL != nil {
+			request.WrapInfo = &logical.RequestWrapInfo{
+				TTL: *tc.wrappingTTL,
+			}
 		}
 		for _, op := range toperations {
 			request.Operation = op
@@ -454,12 +488,16 @@ path "hello/universe" {
 	allowed_parameters = {
 		"foo" = []
 	}
+	max_wrapping_ttl = 300
+	min_wrapping_ttl = 100
 }
 path "hello/universe" {
 	policy = "write"
 	allowed_parameters = {
 		"bar" = []
 	}
+	max_wrapping_ttl = 200
+	min_wrapping_ttl = 50
 }
 path "allow/all" {
 	policy = "write"
@@ -564,6 +602,8 @@ path "foo/bar" {
 	denied_parameters = {
 		"zap" = []
 	}
+	min_wrapping_ttl = 300
+	max_wrapping_ttl = 400
 }
 path "foo/baz" {
 	policy = "write"
@@ -573,6 +613,11 @@ path "foo/baz" {
 	denied_parameters = {
 		"zap" = []
 	}
+	min_wrapping_ttl = 300
+}
+path "working/phone" {
+	policy = "write"
+	max_wrapping_ttl = 400
 }
 path "broken/phone" {
 	policy = "write"

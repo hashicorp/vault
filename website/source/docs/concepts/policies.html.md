@@ -37,13 +37,11 @@ path "secret/super-secret" {
 
 path "secret/bar" {
   capabilities = ["create"]
-  permissions = {
-    allowed_parameters = {
-      "*" = []
-    }
-    denied_parameters = {
-      "foo" = ["bar"]
-    }
+  allowed_parameters = {
+    "*" = []
+  }
+  denied_parameters = {
+    "foo" = ["bar"]
   }
 }
 ```
@@ -111,30 +109,57 @@ capabilities. These mappings are as follows:
 
   * `read` - `["read", "list"]`
 
-## Permissions
+## Fine-Grained Control
 
-Paths offer an optional `permissions` field for fine-grain control over the
-parameters and values a path is able to write. The capabilities associated with
-this path take precedence over permissions on parameters.
+There are a few optional fields that allow for fine-grained control over client
+behavior on a given path. The capabilities associated with this path take
+precedence over permissions on parameters.
 
-  * `allowed_parameters` - Acts as a whitelist. Setting to "*" will allow a
-    parameter by any name to be changed.  Otherwise setting a key with an `[]`
-    value will allow changes to parameters with that name. Setting a key with a
-    populated value array will allow that parameter to only be set to one of the
-    values in the array. If keys exist in the `allowed_parameters` object all
-    keys not specified will be denied.  
-  * `denied_parameters` - Acts as a blacklist, and takes precedence over
-    `allowed_parameters`. Setting to "*" will deny any attempt to change any
-    parameter. Otherwise setting a key with an `[]` value will deny any changes
-    to parameters with that name. Setting a key with a populated value array
-    will deny any attempt to set a parameter with that name and value. If keys
-    exist in the `denied_parameters` object all keys not specified will be
-    allowed.
+### Allowed and Disallowed Parameters
 
-If both `allowed_parameters` and `denied_parameters` contain keys and the keys
-in `denied_parameters` contain values: All specified `allowed_parameters` will
-be allowed, and specified `denied_parameters` will be allowed to be anything not
-included in their array of denied values.
+These parameters allow the administrator to restrict the keys (and optionally
+values) that a user is allowed to specify when calling a path.
+
+  * `allowed_parameters` - A map of keys to an array of values that acts as a
+    whitelist. Setting a key with an `[]` value will allow changes to
+    parameters with that name. Setting a key with a populated value array (e.g.
+    `["foo", "bar"]`, `[3600, 7200]` or `[true]` will allow that parameter to
+    only be set to one of the values in the array. If any keys exist in the
+    `allowed_parameters` object all keys not specified will be denied unless
+    there the key `"*"` is set (mapping to an empty array), which will allow
+    all other parameters to be modified; parameters with specific values will
+    still be restricted to those values.
+  * `denied_parameters` - A map of keys to an array of values that acts as a
+    blacklist, and any parameter set here takes precedence over
+    `allowed_parameters`. Setting to "*" will deny any parameter (so only calls
+    made without specifying any parameters will be allowed). Otherwise setting
+    a key with an `[]` value will deny any changes to parameters with that
+    name. Setting a key with a populated value array will deny any attempt to
+    set a parameter with that name and value. If keys exist in the
+    `denied_parameters` object all keys not specified will be allowed (unless
+    `allowed_parameters` is also set, in which case normal rules will apply).
+
+### Required Minimum/Maximum Response Wrapping TTLs
+
+These parameters can be used to set minimums/maximums on TTLs set by clients
+when requesting that a response be
+[wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping.html), with a granularity of a second. These can either be specified as a number of seconds or a string with a `s`, `m`, or `h` suffix indicating seconds, minutes, and hours respectively.
+
+In practice, setting a minimum TTL of one second effectively makes response
+wrapping mandatory for a particular path.
+
+  * `min_wrapping_ttl` - The minimum allowed TTL that clients can specify for a
+    wrapped response. In practice, setting a minimum TTL of one second
+    effectively makes response wrapping mandatory for a particular path. It can
+    also be used to ensure that the TTL is not too low, leading to end targets
+    being unable to unwrap before the token expires.
+  * `max_wrapping_ttl` - The maximum allowed TTL that clients can specify for a
+    wrapped response.
+
+If both are specified, the minimum value must be less than the maximum. In
+addition, if paths are merged from different stanzas, the lowest value
+specified for each is the value that will result, in line with the idea of
+keeping token lifetimes as short as possible.
 
 ## Root Policy
 

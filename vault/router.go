@@ -306,6 +306,9 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		req.ClientToken = clientToken
 		req.WrapInfo = wrapInfo
 		req.Headers = headers
+		// This is only set in one place, after routing, so should never be set
+		// by a backend
+		req.SetLastRemoteWAL(0)
 	}()
 
 	// Invoke the backend

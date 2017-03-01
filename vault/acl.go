@@ -76,6 +76,28 @@ func NewACL(policies []*Policy) (*ACL, error) {
 				pc.Permissions.CapabilitiesBitmap = existingPerms.CapabilitiesBitmap | pc.Permissions.CapabilitiesBitmap
 			}
 
+			// Note: In these stanzas, we're preferring minimum lifetimes. So
+			// we take the lesser of two specified max values, or we take the
+			// lesser of two specified min values, the idea being, allowing
+			// token lifetime to be minimum possible.
+			//
+			// If we have an existing max, and we either don't have a current
+			// max, or the current is greater than the previous, use the
+			// existing.
+			if existingPerms.MaxWrappingTTL > 0 &&
+				(pc.Permissions.MaxWrappingTTL == 0 ||
+					existingPerms.MaxWrappingTTL < pc.Permissions.MaxWrappingTTL) {
+				pc.Permissions.MaxWrappingTTL = existingPerms.MaxWrappingTTL
+			}
+			// If we have an existing min, and we either don't have a current
+			// min, or the current is greater than the previous, use the
+			// existing
+			if existingPerms.MinWrappingTTL > 0 &&
+				(pc.Permissions.MinWrappingTTL == 0 ||
+					existingPerms.MinWrappingTTL < pc.Permissions.MinWrappingTTL) {
+				pc.Permissions.MinWrappingTTL = existingPerms.MinWrappingTTL
+			}
+
 			if len(existingPerms.AllowedParameters) > 0 {
 				if pc.Permissions.AllowedParameters == nil {
 					pc.Permissions.AllowedParameters = existingPerms.AllowedParameters
@@ -238,6 +260,24 @@ CHECK:
 	}
 
 	if !operationAllowed {
+		return false, sudo
+	}
+
+	if permissions.MaxWrappingTTL > 0 {
+		if req.WrapInfo == nil || req.WrapInfo.TTL > permissions.MaxWrappingTTL {
+			return false, sudo
+		}
+	}
+	if permissions.MinWrappingTTL > 0 {
+		if req.WrapInfo == nil || req.WrapInfo.TTL < permissions.MinWrappingTTL {
+			return false, sudo
+		}
+	}
+	// This situation can happen because of merging, even though in a single
+	// path statement we check on ingress
+	if permissions.MinWrappingTTL != 0 &&
+		permissions.MaxWrappingTTL != 0 &&
+		permissions.MaxWrappingTTL < permissions.MinWrappingTTL {
 		return false, sudo
 	}
 

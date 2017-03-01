@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 var rawPolicy = strings.TrimSpace(`
@@ -26,15 +27,21 @@ path "prod/version" {
 }
 
 # Read access to foobar
-# Also tests stripping of leading slash
+# Also tests stripping of leading slash and parsing of min/max as string and
+# integer
 path "/foo/bar" {
 	policy = "read"
+	min_wrapping_ttl = 300
+	max_wrapping_ttl = "1h"
 }
 
 # Add capabilities for creation and sudo to foobar
 # This will be separate; they are combined when compiled into an ACL
+# Also tests reverse string/int handling to the above
 path "foo/bar" {
 	capabilities = ["create", "sudo"]
+	min_wrapping_ttl = "300s"
+	max_wrapping_ttl = 3600
 }
 
 # Check that only allowed_parameters are being added to foobar
@@ -133,8 +140,14 @@ func TestPolicy_Parse(t *testing.T) {
 				"read",
 				"list",
 			},
-			Permissions: &Permissions{CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt)},
-			Glob:        false,
+			MinWrappingTTLHCL: 300,
+			MaxWrappingTTLHCL: "1h",
+			Permissions: &Permissions{
+				CapabilitiesBitmap: (ReadCapabilityInt | ListCapabilityInt),
+				MinWrappingTTL:     300 * time.Second,
+				MaxWrappingTTL:     3600 * time.Second,
+			},
+			Glob: false,
 		},
 		&PathCapabilities{
 			Prefix: "foo/bar",
@@ -143,8 +156,14 @@ func TestPolicy_Parse(t *testing.T) {
 				"create",
 				"sudo",
 			},
-			Permissions: &Permissions{CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt)},
-			Glob:        false,
+			MinWrappingTTLHCL: "300s",
+			MaxWrappingTTLHCL: 3600,
+			Permissions: &Permissions{
+				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
+				MinWrappingTTL:     300 * time.Second,
+				MaxWrappingTTL:     3600 * time.Second,
+			},
+			Glob: false,
 		},
 		&PathCapabilities{
 			Prefix: "foo/bar",
@@ -258,6 +277,23 @@ path "/" {
 	}
 
 	if !strings.Contains(err.Error(), `path "/": invalid policy 'banana'`) {
+		t.Errorf("bad error: %s", err)
+	}
+}
+
+func TestPolicy_ParseBadWrapping(t *testing.T) {
+	_, err := Parse(strings.TrimSpace(`
+path "/" {
+	policy = "read"
+	min_wrapping_ttl = 400
+	max_wrapping_ttl = 200
+}
+`))
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+
+	if !strings.Contains(err.Error(), `max_wrapping_ttl cannot be less than min_wrapping_ttl`) {
 		t.Errorf("bad error: %s", err)
 	}
 }
