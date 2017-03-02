@@ -27,6 +27,17 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * **Replication (Enterprise)**: Vault Enterprise now has support for creating
+   a multi-datacenter replication set between clusters. The current replication
+   offering is based on an asynchronous primary/secondary (1:N) model that
+   replicates static data while keeping dynamic data (leases, tokens)
+   cluster-local, focusing on horizontal scaling for high-throughput and
+   high-fanout deployments.
+ * **Response Wrapping & Replication in the Vault Enterprise UI**: Vault
+   Enterprise UI now supports enabling response wrapping on requests, plus the
+   ability to look up, rotate, and create new response wrapping tokens. It also
+   now supports replication functionality, enabling the configuration of a
+   replication set in the UI.
  * **Expanded Access Control Policies**: Access control policies can now
    specify allowed and denied parameters -- and, optionally, their values -- to
    control what a client can and cannot submit during an API call. Policies can
@@ -41,14 +52,6 @@ FEATURES:
    mount and the public key is accessible via an unauthenticated API call;
    additionally, the backend can generate a public/private key pair for you. We
    recommend using separate mounts for signing host and user certificates.
- * **Response Wrapping & Replication in the Vault Enterprise UI**: Vault
-   Enterprise UI now supports enabling response wrapping on requests. It also 
-   now supports replication functionality, enabling the configuration of a 
-   replicated cluster in the UI.
- * **Replication (Enterprise)**: Vault Enterprise now has support for 
-   multi-datacenter replication. Replication is based on a primary/secondary 
-   (1:N) model with asynchronous replication, focusing on high availability for 
-   global deployments.
 
 IMPROVEMENTS:
 
