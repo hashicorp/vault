@@ -417,6 +417,7 @@ func WrapHandlerForClustering(handler http.Handler, logger log.Logger) func() (h
 		// This mux handles cluster functions (right now, only forwarded requests)
 		mux := http.NewServeMux()
 		mux.HandleFunc("/cluster/local/forwarded-request", func(w http.ResponseWriter, req *http.Request) {
+			//logger.Trace("forwarding: serving h2 forwarded request")
 			freq, err := forwarding.ParseForwardedHTTPRequest(req)
 			if err != nil {
 				if logger != nil {

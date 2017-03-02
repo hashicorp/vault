@@ -1291,9 +1291,7 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
-	if c.ha != nil {
-		c.stopClusterListener()
-	}
+	c.stopClusterListener()
 
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))
@@ -1365,6 +1363,11 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 			return
 		default:
 		}
+
+		// Clear forwarding clients
+		c.requestForwardingConnectionLock.Lock()
+		c.clearForwardingClients()
+		c.requestForwardingConnectionLock.Unlock()
 
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
