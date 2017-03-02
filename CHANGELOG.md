@@ -34,9 +34,9 @@ FEATURES:
    cluster-local, focusing on horizontal scaling for high-throughput and
    high-fanout deployments.
  * **Response Wrapping & Replication in the Vault Enterprise UI**: Vault
-   Enterprise UI now supports enabling response wrapping on requests, plus the
-   ability to look up, rotate, and create new response wrapping tokens. It also
-   now supports replication functionality, enabling the configuration of a
+   Enterprise UI now supports looking up and rotating response wrapping tokens,
+   as well as creating tokens with arbitrary values inside. It also now
+   supports replication functionality, enabling the configuration of a
    replication set in the UI.
  * **Expanded Access Control Policies**: Access control policies can now
    specify allowed and denied parameters -- and, optionally, their values -- to
@@ -46,12 +46,13 @@ FEATURES:
    See the [policies concepts
    page](https://www.vaultproject.io/docs/concepts/policies.html) for more
    information.
- * **SSH Backend As Certificate Authority**: SSH backend can now be configured
-   to sign host and user certificates. Each mount of the backend acts as an
-   independent signing authority. The CA key pair can be configured for each
-   mount and the public key is accessible via an unauthenticated API call;
-   additionally, the backend can generate a public/private key pair for you. We
-   recommend using separate mounts for signing host and user certificates.
+ * **SSH Backend As Certificate Authority**: The SSH backend can now be
+   configured to sign host and user certificates. Each mount of the backend
+   acts as an independent signing authority. The CA key pair can be configured
+   for each mount and the public key is accessible via an unauthenticated API
+   call; additionally, the backend can generate a public/private key pair for
+   you. We recommend using separate mounts for signing host and user
+   certificates.
 
 IMPROVEMENTS:
 
