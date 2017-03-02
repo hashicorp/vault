@@ -41,6 +41,14 @@ FEATURES:
    mount and the public key is accessible via an unauthenticated API call;
    additionally, the backend can generate a public/private key pair for you. We
    recommend using separate mounts for signing host and user certificates.
+ * **Response Wrapping & Replication in the Vault Enterprise UI**: Vault
+   Enterprise UI now supports enableing response wrapping on requests. It also 
+   now supports replication functionality, enabling the configuration of a 
+   replicated cluster in the UI.
+ * **Replication (Enterprise)**: Vault Enterprise now has support for 
+   multi-datacenter replication. Replication is based on a primary/secondary 
+   (1:N) model with asynchronous replication, focusing on high availability for 
+   global deployments.
 
 IMPROVEMENTS:
 
