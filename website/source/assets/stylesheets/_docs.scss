@@ -201,7 +201,7 @@ body.layout-intro{
 	}
 
 	p, li, .alert {
-		font-size: 20px;
+		font-size: 18px;
 		font-family: $font-family-open-sans;
 		font-weight: $font-weight-reg;
     line-height: 1.5em;
@@ -228,6 +228,7 @@ body.layout-intro{
 
 	h1{
 		color: $black;
+    font-weight: $font-weight-b;
 		font-size: 36px;
 		margin-top: 50px;
 		margin-bottom: 24px;
@@ -235,6 +236,8 @@ body.layout-intro{
 
 	h2, h3, h4{
 		margin-bottom: 16px;
+    font-weight: $font-weight-b;
+
 	}
 
     #graph {
