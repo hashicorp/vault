@@ -90,7 +90,6 @@ body {
     text-align: center;
     line-height: 60px;
     font-size: 30px;
-    @include lato-light();
     transition: all 250ms ease-in;
     cursor: pointer;
     z-index: 10;
