@@ -36,11 +36,11 @@ FEATURES:
    page](https://www.vaultproject.io/docs/concepts/policies.html) for more
    information.
  * **SSH Backend As Certificate Authority**: SSH backend can now be configured
-   to sign host and user certificates. Each mount of the backend will be an
+   to sign host and user certificates. Each mount of the backend acts as an
    independent signing authority. The CA key pair can be configured for each
-   mount and the public key will be accessible via an unauthenticated API call.
-   We recommend using separate mounts for signing host and user certificates.
-   Internal generation of CA key pair is not supported yet but it will be soon.
+   mount and the public key is accessible via an unauthenticated API call;
+   additionally, the backend can generate a public/private key pair for you. We
+   recommend using separate mounts for signing host and user certificates.
 
 IMPROVEMENTS:
 
