@@ -521,6 +521,48 @@ func TestBackend_AbleToRetrievePublicKey(t *testing.T) {
 	logicaltest.Test(t, testCase)
 }
 
+func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
+
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "config/ca",
+				Data: map[string]interface{}{
+					"generate_signing_key":  true,
+				},
+			},
+
+			logicaltest.TestStep{
+				Operation:       logical.ReadOperation,
+				Path:            "public_key",
+				Unauthenticated: true,
+
+				Check: func(resp *logical.Response) error {
+
+					key := string(resp.Data["http_raw_body"].([]byte))
+
+					if key == "" {
+						return fmt.Errorf("public_key empty. Expected not empty, actual %s", key)
+					}
+
+					return nil
+				},
+			},
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 	config := logical.TestBackendConfig()
 

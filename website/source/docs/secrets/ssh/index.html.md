@@ -297,21 +297,13 @@ verified using only the public key.
 
 ### Configure a CA certificate
 
-To configure the backend, an SSH key pair must be generated to serve as the CA key:
+The first thing to do is to get Vault to generate the key pair that will be used to sign any
+SSH keys:
 
 ```text
-$ ssh-keygen -N '' -f ./ca -C 'SSH CA key pair'
-```
-
-Now that we have the SSH CA key pair, these can be used to configure the SSH CA backend:
-
-```text
-$ cat ca | vault write ssh/config/ca private_key=- public_key="$(cat ca.pub | tr -d '\n')"
+$ vault write ssh/config/ca generate_signing_key=true
 Success! Data written to: ssh/config/ca
 ```
-
-Now that the SSH CA key pair is successfully saved in the backend, the `ca` and
-`ca.pub` files should be deleted from your local machine.
 
 ### Creating a Role
 
@@ -1036,14 +1028,18 @@ username@<IP of remote host>:~$
     <ul>
       <li>
         <span class="param">private_key</span>
-        <span class="param-flags">required</span>
-        The private key part the SSH CA key pair.
+        <span class="param-flags">optional</span>
+        The private key part the SSH CA key pair; required if generate_signing_key is false.
       </li>
       <li>
         <span class="param">public_key</span>
         <span class="param-flags">optional</span>
-        The public key part of the SSH CA key pair. Note that this will not be validated
-        and will be returned as-is by the `/ssh/public_key` endpoint.
+        The public key part of the SSH CA key pair; required if generate_signing_key is false.
+      </li>
+      <li>
+        <span class="param">generate_signing_key</span>
+        <span class="param-flags">optional</span>
+        Generate the signing key pair interally if true, otherwise use the private_key and public_key fields.
       </li>
     </ul>
   </dd>

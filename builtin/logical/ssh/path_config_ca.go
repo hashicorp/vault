@@ -6,6 +6,10 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/crypto/ssh"
+	"crypto/rsa"
+	"encoding/pem"
+	"crypto/rand"
+	"crypto/x509"
 )
 
 func pathConfigCA(b *backend) *framework.Path {
@@ -19,6 +23,10 @@ func pathConfigCA(b *backend) *framework.Path {
 			"public_key": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `Public half of the SSH key that will be used to sign certificates.`,
+			},
+			"generate_signing_key": &framework.FieldSchema{
+				Type:        framework.TypeBool,
+				Description: `Generate SSH key pair internally rather than use the private_key and public_key fields.`,
 			},
 		},
 
@@ -36,17 +44,19 @@ For security reasons, the private key cannot be retrieved later.`,
 
 func (b *backend) pathCAWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
-	publicKey := data.Get("public_key").(string)
-	privateKey := data.Get("private_key").(string)
+	var publicKey, privateKey string
+	var err error
+	if data.Get("generate_signing_key").(bool) {
+		publicKey, privateKey, err = generateSSHKeyPair()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		publicKey, privateKey, err = parseSSHKeyPair(data)
 
-	_, err := ssh.ParsePrivateKey([]byte(privateKey))
-	if err != nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf(`Unable to parse "private_key" as an SSH private key: %s`, err)}
-	}
-
-	_, err = parsePublicSSHKey(publicKey)
-	if err != nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf(`Unable to parse "public_key" as an SSH public key: %s`, err)}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
@@ -68,4 +78,43 @@ func (b *backend) pathCAWrite(req *logical.Request, data *framework.FieldData) (
 
 	err = req.Storage.Put(entry)
 	return nil, err
+}
+
+
+func generateSSHKeyPair() (string, string, error) {
+	privateSeed, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return "", "", err
+	}
+
+	privateBlock := &pem.Block{
+		Type: "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes: x509.MarshalPKCS1PrivateKey(privateSeed),
+	}
+
+	public, err := ssh.NewPublicKey(&privateSeed.PublicKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	return string(ssh.MarshalAuthorizedKey(public)), string(pem.EncodeToMemory(privateBlock)), nil
+}
+
+func parseSSHKeyPair(data *framework.FieldData) (string, string, error) {
+
+	publicKey := data.Get("public_key").(string)
+	privateKey := data.Get("private_key").(string)
+
+	_, err := ssh.ParsePrivateKey([]byte(privateKey))
+	if err != nil {
+		return "", "", errutil.UserError{Err: fmt.Sprintf(`Unable to parse "private_key" as an SSH private key: %s`, err)}
+	}
+
+	_, err = parsePublicSSHKey(publicKey)
+	if err != nil {
+		return "", "", errutil.UserError{Err: fmt.Sprintf(`Unable to parse "public_key" as an SSH public key: %s`, err)}
+	}
+
+	return publicKey, privateKey, nil
 }
