@@ -220,7 +220,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 	}
 
 	c.audit.Entries[1].Local = true
-	if err := c.persistAudit(c.audit); err != nil {
+	if err := c.persistAudit(c.audit, false); err != nil {
 		t.Fatal(err)
 	}
 
