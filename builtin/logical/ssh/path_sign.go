@@ -198,20 +198,17 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 }
 
 func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
+	if principalsAllowedByRole == "" {
+		return nil, fmt.Errorf(`"role is not configured to allow any principles`)
+	}
+
 	validPrincipals := data.Get("valid_principals").(string)
 	if validPrincipals == "" {
 		if defaultPrincipal != "" {
 			return []string{defaultPrincipal}, nil
 		}
-		if principalsAllowedByRole == "" {
-			return []string{}, nil
-		}
 
-		return nil, fmt.Errorf(`"valid_principals" value required by role`)
-	}
-
-	if principalsAllowedByRole == "" {
-		return nil, fmt.Errorf(`"valid_principals" not in allowed list`)
+		return nil, fmt.Errorf(`"valid_principals" not supplied and no default set in the role`)
 	}
 
 	parsedPrincipals := strings.Split(validPrincipals, ",")
