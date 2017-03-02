@@ -422,47 +422,48 @@ username@<IP of remote host>:~$
         <span class="param">key</span>
         <span class="param-flags">required for Dynamic Key type, N/A for
         OTP type, N/A for CA type</span>
-	      (String)
-        Name of the registered key in Vault. Before creating the role, use
-        the `keys/` endpoint to create a named key.
+          (String)
+          Name of the registered key in Vault. Before creating the role, use
+          the `keys/` endpoint to create a named key.
       </li>
       <li>
         <span class="param">admin_user</span>
         <span class="param-flags">required for Dynamic Key type, N/A for OTP
         type, N/A for CA type</span>
-	      (String)
-	       Admin user at remote host. The shared key being registered should
-         be for this user and should have root or sudo privileges. Every
-         time a dynamic	credential is generated for a client,
-         Vault uses this admin username to login to remote host and install
-         the generated credential.
+          (String)
+          Admin user at remote host. The shared key being registered should be
+          for this user and should have root or sudo privileges. Every time a
+          dynamic	credential is generated for a client, Vault uses this admin
+          username to login to remote host and install the generated
+          credential.
       </li>
       <li>
         <span class="param">default_user</span>
         <span class="param-flags">required for Dynamic Key type, required
         for OTP type, optional for CA type</span>
-	      (String)
-	      Default username for which a credential will be generated.
-        When the endpoint 'creds/' is used without a username, this
-        value will be used as default username.
+          (String)
+          Default username for which a credential will be generated.  When the
+          endpoint 'creds/' is used without a username, this value will be used
+          as default username. For the CA type, if you wish this to be a valid
+          principal, it must also be in `allowed_users`.
       </li>
       <li>
         <span class="param">cidr_list</span>
         <span class="param-flags">optional for Dynamic Key type, optional for
         OTP type, N/A for CA type</span>
-	      (String)
-	      Comma separated list of CIDR blocks for which the role is
-        applicable for.	CIDR blocks can belong to more than one role.
+          (String)
+          Comma separated list of CIDR blocks for which the role is applicable
+          for.	CIDR blocks can belong to more than one role.
       </li>
       <li>
         <span class="param">exclude_cidr_list</span>
         <span class="param-flags">optional for Dynamic Key type, optional for
         OTP type, N/A for CA type</span>
-	      (String)
-        Comma-separated list of CIDR blocks. IP addresses belonging to
-        these blocks are not accepted by the role. This is particularly
-        useful when big CIDR blocks are being used by the role and certain
-        parts need to be kept out.
+          (String)
+          Comma-separated list of CIDR blocks. IP addresses belonging to these
+          blocks are not accepted by the role. This is particularly useful when
+          big CIDR blocks are being used by the role and certain parts need to
+          be kept out.
       </li>
       <li>
         <span class="param">port</span>
@@ -633,7 +634,7 @@ username@<IP of remote host>:~$
   <dd>None</dd>
 
   <dt>Returns</dt>
-  <dd>For a dynamic key role:
+  <dd>Note: these are examples only. For a dynamic key role:
 
 ```json
 {
@@ -669,7 +670,6 @@ username@<IP of remote host>:~$
   "allow_user_certificates": true,
   "allowed_critical_options": "",
   "allowed_extensions": "",
-  "allowed_valid_principals": "",
   "default_critical_options": {},
   "default_extensions": {},
   "max_ttl": "768h",
