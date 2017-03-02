@@ -712,6 +712,8 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, localRedirAddr, nil
 	}
 
+	c.logger.Trace("core: found new active node information, refreshing")
+
 	key := coreLeaderPrefix + leaderUUID
 	entry, err := c.barrier.Get(key)
 	if err != nil {
@@ -728,10 +730,13 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	if err != nil {
 		// Fall back to pre-struct handling
 		adv.RedirectAddr = string(entry.Value)
+		c.logger.Trace("core: parsed redirect addr for new active node", "redirect_addr", adv.RedirectAddr)
 		oldAdv = true
 	}
 
 	if !oldAdv {
+		c.logger.Trace("core: parsing information for new active node", "active_cluster_addr", adv.ClusterAddr, "active_redirect_addr", adv.RedirectAddr)
+
 		// Ensure we are using current values
 		err = c.loadLocalClusterTLS(adv)
 		if err != nil {
