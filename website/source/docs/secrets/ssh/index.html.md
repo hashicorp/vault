@@ -301,7 +301,7 @@ The first thing to do is to get Vault to generate the key pair that will be used
 SSH keys:
 
 ```text
-$ vault write ssh/config/ca generate_signing_key=true
+$ vault write -f ssh/config/ca
 Success! Data written to: ssh/config/ca
 ```
 
