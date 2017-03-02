@@ -100,7 +100,7 @@ func (c *Core) loadLocalClusterTLS(adv activeAdvertisement) (retErr error) {
 			c.localClusterCert = nil
 			c.localClusterPrivateKey = nil
 			c.localClusterParsedCert = nil
-			c.clusterParamsLock.Lock()
+			c.clusterParamsLock.Unlock()
 
 			c.requestForwardingConnectionLock.Lock()
 			c.clearForwardingClients()
