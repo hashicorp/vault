@@ -12,7 +12,12 @@ import (
 	"net/http"
 )
 
-func cloneTLSConfig(c *tls.Config) *tls.Config { return c.Clone() }
+func cloneTLSConfig(c *tls.Config) *tls.Config {
+	// MODIFIED from upstream to work around Go bug
+	ret := c.Clone()
+	ret.GetClientCertificate = c.GetClientCertificate
+	return ret
+}
 
 var _ http.Pusher = (*responseWriter)(nil)
 

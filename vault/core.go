@@ -285,8 +285,8 @@ type Core struct {
 	localClusterPrivateKey crypto.Signer
 	// The local cluster cert
 	localClusterCert []byte
-	// The cert pool containing trusted cluster CAs
-	clusterCertPool *x509.CertPool
+	// The parsed form of the local cluster cert
+	localClusterParsedCert *x509.Certificate
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
 	// The setup function that gives us the handler to use
@@ -422,7 +422,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		maxLeaseTTL:                      conf.MaxLeaseTTL,
 		cachingDisabled:                  conf.DisableCache,
 		clusterName:                      conf.ClusterName,
-		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 	}
@@ -702,10 +701,15 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
+	c.clusterParamsLock.RLock()
+	localLeaderUUID := c.clusterLeaderUUID
+	localRedirAddr := c.clusterLeaderRedirectAddr
+	c.clusterParamsLock.RUnlock()
+
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
-	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
-		return false, c.clusterLeaderRedirectAddr, nil
+	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
+		return false, localRedirAddr, nil
 	}
 
 	key := coreLeaderPrefix + leaderUUID
@@ -743,16 +747,13 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	}
 
 	// Don't set these until everything has been parsed successfully or we'll
-	// never try again; in addition set in a goroutine because we need the
-	// write lock around these but only have a read lock
-	go func() {
-		c.stateLock.Lock()
-		defer c.stateLock.Unlock()
-		c.clusterLeaderRedirectAddr = adv.RedirectAddr
-		c.clusterLeaderUUID = leaderUUID
-	}()
+	// never try again
+	c.clusterParamsLock.Lock()
+	c.clusterLeaderRedirectAddr = adv.RedirectAddr
+	c.clusterLeaderUUID = localLeaderUUID
+	c.clusterParamsLock.Unlock()
 
-	return false, c.clusterLeaderRedirectAddr, nil
+	return false, adv.RedirectAddr, nil
 }
 
 // SecretProgress returns the number of keys provided so far
@@ -1427,6 +1428,14 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 				return
 			}
 		}
+
+		// Clear previous local cluster cert info so we generate new. Since the
+		// UUID will have changed, standbys will know to look for new info
+		c.clusterParamsLock.Lock()
+		c.localClusterCert = nil
+		c.localClusterParsedCert = nil
+		c.localClusterPrivateKey = nil
+		c.clusterParamsLock.Unlock()
 
 		if err := c.setupCluster(); err != nil {
 			c.stateLock.Unlock()

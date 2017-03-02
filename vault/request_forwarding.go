@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"net/http"
@@ -254,7 +255,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		c.rpcClientConnCancelFunc = cancelFunc
-		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "")), grpc.WithInsecure())
+		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)), grpc.WithInsecure())
 		if err != nil {
 			c.logger.Error("core: err setting up forwarding rpc client", "error", err)
 			return err
@@ -360,7 +361,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 // getGRPCDialer is used to return a dialer that has the correct TLS
 // configuration. Otherwise gRPC tries to be helpful and stomps all over our
 // NextProtos.
-func (c *Core) getGRPCDialer(alpnProto, serverName string) func(string, time.Duration) (net.Conn, error) {
+func (c *Core) getGRPCDialer(alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
 	return func(addr string, timeout time.Duration) (net.Conn, error) {
 		tlsConfig, err := c.ClusterTLSConfig()
 		if err != nil {
@@ -370,6 +371,13 @@ func (c *Core) getGRPCDialer(alpnProto, serverName string) func(string, time.Dur
 		if serverName != "" {
 			tlsConfig.ServerName = serverName
 		}
+		if caCert != nil {
+			pool := x509.NewCertPool()
+			pool.AddCert(caCert)
+			tlsConfig.RootCAs = pool
+			tlsConfig.ClientCAs = pool
+		}
+		c.logger.Trace("core: creating rpc dialer", "host", tlsConfig.ServerName)
 
 		tlsConfig.NextProtos = []string{alpnProto}
 		dialer := &net.Dialer{
