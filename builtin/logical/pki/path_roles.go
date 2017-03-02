@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -387,10 +388,10 @@ func (b *backend) pathRoleCreate(
 	if len(entry.MaxTTL) == 0 {
 		maxTTL = maxSystemTTL
 	} else {
-		maxTTL, err = time.ParseDuration(entry.MaxTTL)
+		maxTTL, err = duration.ParseDurationSecond(entry.MaxTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid ttl: %s", err)), nil
+				"Invalid max ttl: %s", err)), nil
 		}
 	}
 	if maxTTL > maxSystemTTL {
@@ -399,7 +400,7 @@ func (b *backend) pathRoleCreate(
 
 	ttl := b.System().DefaultLeaseTTL()
 	if len(entry.TTL) != 0 {
-		ttl, err = time.ParseDuration(entry.TTL)
+		ttl, err = duration.ParseDurationSecond(entry.TTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"Invalid ttl: %s", err)), nil

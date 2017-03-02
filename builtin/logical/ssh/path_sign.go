@@ -2,12 +2,14 @@ package ssh
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
+	"github.com/hashicorp/vault/helper/duration"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -102,12 +104,12 @@ func (b *backend) pathSign(req *logical.Request, data *framework.FieldData) (*lo
 func (b *backend) pathSignCertificate(req *logical.Request, data *framework.FieldData, role *sshRole) (*logical.Response, error) {
 	publicKey := data.Get("public_key").(string)
 	if publicKey == "" {
-		return nil, errutil.UserError{Err: "missing public_key"}
+		return logical.ErrorResponse("missing public_key"), nil
 	}
 
 	userPublicKey, err := parsePublicSSHKey(publicKey)
 	if err != nil {
-		return nil, errutil.UserError{Err: "Unable to decode \"public_key\" as SSH key"}
+		return logical.ErrorResponse(fmt.Sprintf("unable to decode \"public_key\" as SSH key: %s", err)), nil
 	}
 
 	keyId := data.Get("key_id").(string)
@@ -115,50 +117,52 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		keyId = req.DisplayName
 	}
 
+	// Note that these various functions always return "user errors" so we pass
+	// them as 4xx values
 	certificateType, err := b.calculateCertificateType(data, role)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	var parsedPrincipals []string
 	if certificateType == ssh.HostCert {
 		parsedPrincipals, err = b.calculateValidPrincipals(data, "", role.AllowedDomains, validateValidPrincipalForHosts(role))
 		if err != nil {
-			return nil, err
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	} else {
 		parsedPrincipals, err = b.calculateValidPrincipals(data, role.DefaultUser, role.AllowedUsers, strutil.StrListContains)
 		if err != nil {
-			return nil, err
+			return logical.ErrorResponse(err.Error()), nil
 		}
 	}
 
-	ttl, err := b.calculateTtl(data, role)
+	ttl, err := b.calculateTTL(data, role)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	criticalOptions, err := b.calculateCriticalOptions(data, role)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	extensions, err := b.calculateExtensions(data, role)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
 
 	storedBundle, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch local CA certificate/key: %v", err)}
+		return nil, fmt.Errorf("unable to fetch local CA certificate/key: %v", err)
 	}
 	if storedBundle == nil {
-		return nil, errutil.UserError{Err: "backend must be configured with a CA certificate/key"}
+		return logical.ErrorResponse("backend must be configured with a CA certificate/key"), nil
 	}
 
 	var bundle signingBundle
 	if err := storedBundle.DecodeJSON(&bundle); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode local CA certificate/key: %v", err)}
+		return nil, fmt.Errorf("unable to decode local CA certificate/key: %v", err)
 	}
 
 	signingBundle := creationBundle{
@@ -178,12 +182,15 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return nil, err
 	}
 
-	signedSSHCertificate := string(ssh.MarshalAuthorizedKey(certificate))
+	signedSSHCertificate := ssh.MarshalAuthorizedKey(certificate)
+	if len(signedSSHCertificate) == 0 {
+		return nil, fmt.Errorf("error marshaling signed certificate")
+	}
 
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"serial_number": strconv.FormatUint(certificate.Serial, 16),
-			"signed_key":    signedSSHCertificate,
+			"signed_key":    string(signedSSHCertificate),
 		},
 	}
 
@@ -200,11 +207,11 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 			return []string{}, nil
 		}
 
-		return nil, errutil.UserError{Err: `"valid_principals" value required by role`}
+		return nil, fmt.Errorf(`"valid_principals" value required by role`)
 	}
 
 	if principalsAllowedByRole == "" {
-		return nil, errutil.UserError{Err: `"valid_principals" not in allowed list`}
+		return nil, fmt.Errorf(`"valid_principals" not in allowed list`)
 	}
 
 	parsedPrincipals := strings.Split(validPrincipals, ",")
@@ -217,7 +224,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 	allowedPrincipals := strings.Split(principalsAllowedByRole, ",")
 	for _, principal := range parsedPrincipals {
 		if !validatePrincipal(allowedPrincipals, principal) {
-			return nil, errutil.UserError{Err: fmt.Sprintf(`%v is not a valid value for "valid_principals"`, principal)}
+			return nil, fmt.Errorf(`%v is not a valid value for "valid_principals"`, principal)
 		}
 	}
 
@@ -246,16 +253,16 @@ func (b *backend) calculateCertificateType(data *framework.FieldData, role *sshR
 	switch requestedCertificateType {
 	case "user":
 		if !role.AllowUserCertificates {
-			return 0, errutil.UserError{Err: `"cert_type" 'user' is not allowed by role`}
+			return 0, errors.New(`"cert_type" 'user' is not allowed by role`)
 		}
 		certificateType = ssh.UserCert
 	case "host":
 		if !role.AllowHostCertificates {
-			return 0, errutil.UserError{Err: `"cert_type" 'host' is not allowed by role`}
+			return 0, errors.New(`"cert_type" 'host' is not allowed by role`)
 		}
 		certificateType = ssh.HostCert
 	default:
-		return 0, errutil.UserError{Err: "\"cert_type\" must be either 'user' or 'host'"}
+		return 0, errors.New(`"cert_type" must be either 'user' or 'host'`)
 	}
 
 	return certificateType, nil
@@ -280,7 +287,7 @@ func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshR
 		}
 
 		if len(notAllowedOptions) != 0 {
-			return nil, errutil.UserError{Err: fmt.Sprintf("Critical options not on allowed list: %v", notAllowedOptions)}
+			return nil, fmt.Errorf("Critical options not on allowed list: %v", notAllowedOptions)
 		}
 	}
 
@@ -306,14 +313,14 @@ func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) 
 		}
 
 		if len(notAllowed) != 0 {
-			return nil, errutil.UserError{Err: fmt.Sprintf("Extensions not on allowed list: %v", notAllowed)}
+			return nil, fmt.Errorf("Extensions not on allowed list: %v", notAllowed)
 		}
 	}
 
 	return extensions, nil
 }
 
-func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.Duration, error) {
+func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.Duration, error) {
 
 	var ttl, maxTTL time.Duration
 	var ttlField string
@@ -328,9 +335,9 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 		ttl = b.System().DefaultLeaseTTL()
 	} else {
 		var err error
-		ttl, err = time.ParseDuration(ttlField)
+		ttl, err = duration.ParseDurationSecond(ttlField)
 		if err != nil {
-			return 0, errutil.UserError{Err: fmt.Sprintf("invalid requested ttl: %s", err)}
+			return 0, fmt.Errorf("invalid requested ttl: %s", err)
 		}
 	}
 
@@ -338,9 +345,9 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 		maxTTL = b.System().MaxLeaseTTL()
 	} else {
 		var err error
-		maxTTL, err = time.ParseDuration(role.MaxTTL)
+		maxTTL, err = duration.ParseDurationSecond(role.MaxTTL)
 		if err != nil {
-			return 0, errutil.UserError{Err: fmt.Sprintf("invalid ttl: %s", err)}
+			return 0, fmt.Errorf("invalid requested max ttl: %s", err)
 		}
 	}
 
@@ -350,7 +357,7 @@ func (b *backend) calculateTtl(data *framework.FieldData, role *sshRole) (time.D
 		if len(ttlField) == 0 {
 			ttl = maxTTL
 		} else {
-			return 0, errutil.UserError{Err: fmt.Sprintf("ttl is larger than maximum allowed (%d)", maxTTL/time.Second)}
+			return 0, fmt.Errorf("ttl is larger than maximum allowed (%d)", maxTTL/time.Second)
 		}
 	}
 
