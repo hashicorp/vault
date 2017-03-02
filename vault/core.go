@@ -309,6 +309,8 @@ type Core struct {
 	clusterLeaderUUID string
 	// Most recent leader redirect addr
 	clusterLeaderRedirectAddr string
+	// Lock for the cluster leader values
+	clusterLeaderParamsLock sync.RWMutex
 	// The grpc Server that handles server RPC calls
 	rpcServer *grpc.Server
 	// The function for canceling the client connection
@@ -701,10 +703,10 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
-	c.clusterParamsLock.RLock()
+	c.clusterLeaderParamsLock.RLock()
 	localLeaderUUID := c.clusterLeaderUUID
 	localRedirAddr := c.clusterLeaderRedirectAddr
-	c.clusterParamsLock.RUnlock()
+	c.clusterLeaderParamsLock.RUnlock()
 
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
@@ -713,6 +715,14 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	}
 
 	c.logger.Trace("core: found new active node information, refreshing")
+
+	c.clusterLeaderParamsLock.Lock()
+	defer c.clusterLeaderParamsLock.Unlock()
+
+	// Validate base conditions again
+	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
+		return false, localRedirAddr, nil
+	}
 
 	key := coreLeaderPrefix + leaderUUID
 	entry, err := c.barrier.Get(key)
@@ -753,10 +763,8 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Don't set these until everything has been parsed successfully or we'll
 	// never try again
-	c.clusterParamsLock.Lock()
 	c.clusterLeaderRedirectAddr = adv.RedirectAddr
-	c.clusterLeaderUUID = localLeaderUUID
-	c.clusterParamsLock.Unlock()
+	c.clusterLeaderUUID = leaderUUID
 
 	return false, adv.RedirectAddr, nil
 }
