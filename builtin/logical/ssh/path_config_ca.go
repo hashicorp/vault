@@ -27,6 +27,7 @@ func pathConfigCA(b *backend) *framework.Path {
 			"generate_signing_key": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Description: `Generate SSH key pair internally rather than use the private_key and public_key fields.`,
+				Default: true,
 			},
 		},
 
@@ -104,7 +105,14 @@ func generateSSHKeyPair() (string, string, error) {
 func parseSSHKeyPair(data *framework.FieldData) (string, string, error) {
 
 	publicKey := data.Get("public_key").(string)
+	if publicKey == "" {
+		return "", "", errutil.UserError{Err: `missing public_key`}
+	}
+
 	privateKey := data.Get("private_key").(string)
+	if privateKey == "" {
+		return "", "", errutil.UserError{Err: `missing public_key`}
+	}
 
 	_, err := ssh.ParsePrivateKey([]byte(privateKey))
 	if err != nil {
