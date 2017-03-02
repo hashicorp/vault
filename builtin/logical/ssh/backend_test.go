@@ -8,14 +8,15 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
+	"encoding/base64"
+	"errors"
+	"strings"
+
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
-	"errors"
-	"strings"
-	"encoding/base64"
 )
 
 // Before the following tests are run, a username going by the name 'vaultssh' has
@@ -536,8 +537,7 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
-				Data: map[string]interface{}{
-				},
+				Data:      map[string]interface{}{},
 			},
 
 			logicaltest.TestStep{
@@ -576,10 +576,10 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 			configCaStep(),
 
 			createRoleStep("testing", map[string]interface{}{
-				"key_type": "ca",
+				"key_type":                "ca",
 				"allow_host_certificates": true,
-				"allowed_domains": "example.com,example.org",
-				"allow_subdomains":         true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
 				"default_critical_options": map[string]interface{}{
 					"option": "value",
 				},
@@ -619,8 +619,10 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 			configCaStep(),
 
 			createRoleStep("testing", map[string]interface{}{
-				"key_type": "ca",
-				"allow_user_certificates": true,
+				"key_type":                 "ca",
+				"allowed_users":            "tuber",
+				"default_user":             "tuber",
+				"allow_user_certificates":  true,
 				"allowed_critical_options": "option,secondary",
 				"allowed_extensions":       "extension,additional",
 				"default_critical_options": map[string]interface{}{
@@ -631,7 +633,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 				},
 			}),
 
-			signCertificateStep("testing", "root", ssh.UserCert, nil, map[string]string{
+			signCertificateStep("testing", "root", ssh.UserCert, []string{"tuber"}, map[string]string{
 				"secondary": "value",
 			}, map[string]string{
 				"additional": "value",
@@ -670,8 +672,11 @@ func createRoleStep(name string, parameters map[string]interface{}) logicaltest.
 	}
 }
 
-func signCertificateStep(role, keyId string, certType int, validPrincipals []string, criticalOptionPermissions, extensionPermissions map[string]string, ttl time.Duration,
-requestParameters map[string]interface{}) logicaltest.TestStep {
+func signCertificateStep(
+	role, keyId string, certType int, validPrincipals []string,
+	criticalOptionPermissions, extensionPermissions map[string]string,
+	ttl time.Duration,
+	requestParameters map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,
@@ -702,7 +707,7 @@ requestParameters map[string]interface{}) logicaltest.TestStep {
 }
 
 func validateSSHCertificate(cert *ssh.Certificate, keyId string, certType int, validPrincipals []string, criticalOptionPermissions, extensionPermissions map[string]string,
-ttl time.Duration) error {
+	ttl time.Duration) error {
 
 	if cert.KeyId != keyId {
 		return fmt.Errorf("Incorrect KeyId: %v", cert.KeyId)

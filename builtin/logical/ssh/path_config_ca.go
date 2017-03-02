@@ -48,23 +48,20 @@ func (b *backend) pathCAWrite(req *logical.Request, data *framework.FieldData) (
 	publicKey := data.Get("public_key").(string)
 	privateKey := data.Get("private_key").(string)
 
-	signingKeyGenerated := false
+	var generateSigningKey bool
+
 	generateSigningKeyRaw, ok := data.GetOk("generate_signing_key")
-	if ok {
-		if generateSigningKeyRaw.(bool) {
-			if publicKey != "" || privateKey != "" {
-				return logical.ErrorResponse("public_key and private_key is not required when generate_signing_key is set to true"), nil
-			}
-
-			publicKey, privateKey, err = generateSSHKeyPair()
-			if err != nil {
-				return nil, err
-			}
-			signingKeyGenerated = true
+	switch {
+	// explicitly set true
+	case ok && generateSigningKeyRaw.(bool):
+		if publicKey != "" || privateKey != "" {
+			return logical.ErrorResponse("public_key and private_key must not be set when generate_signing_key is set to true"), nil
 		}
-	}
 
-	if !signingKeyGenerated {
+		generateSigningKey = true
+
+		// explicitly set to false, or not set and we have both a public and private key
+	case ok, publicKey != "" && privateKey != "":
 		if publicKey == "" {
 			return logical.ErrorResponse("missing public_key"), nil
 		}
@@ -81,6 +78,25 @@ func (b *backend) pathCAWrite(req *logical.Request, data *framework.FieldData) (
 		_, err = parsePublicSSHKey(publicKey)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Unable to parse public_key as an SSH public key: %v", err)), nil
+		}
+
+		// not set and no public/private key provided so generate
+	case publicKey == "" && privateKey == "":
+		publicKey, privateKey, err = generateSSHKeyPair()
+		if err != nil {
+			return nil, err
+		}
+
+		generateSigningKey = true
+
+	default: // not set, but one or the other supplied
+		return logical.ErrorResponse("only one of public_key and private_key set; both must be set to use, or both must be blank to auto-generate"), nil
+	}
+
+	if generateSigningKey {
+		publicKey, privateKey, err = generateSSHKeyPair()
+		if err != nil {
+			return nil, err
 		}
 	}
 
