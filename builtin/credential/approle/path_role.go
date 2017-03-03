@@ -36,6 +36,9 @@ type roleStorageEntry struct {
 	// SecretID generated against the role will expire
 	SecretIDTTL time.Duration `json:"secret_id_ttl" structs:"secret_id_ttl" mapstructure:"secret_id_ttl"`
 
+	// TokenNumUses defines the number of allowed uses of the token issued
+	TokenNumUses int `json:"token_num_uses" mapstructure:"token_num_uses" structs:"token_num_uses"`
+
 	// Duration before which an issued token must be renewed
 	TokenTTL time.Duration `json:"token_ttl" structs:"token_ttl" mapstructure:"token_ttl"`
 
@@ -71,6 +74,7 @@ type roleIDStorageEntry struct {
 // role/<role_name>/secret-id-ttl - For updating the param
 // role/<role_name>/token-ttl - For updating the param
 // role/<role_name>/token-max-ttl - For updating the param
+// role/<role_name>/token-num-uses - For updating the param
 // role/<role_name>/bind-secret-id - For updating the param
 // role/<role_name>/bound-cidr-list - For updating the param
 // role/<role_name>/period - For updating the param
@@ -122,6 +126,10 @@ will expire. Defaults to 0 meaning that the the secret_id is of unlimited use.`,
 					Type: framework.TypeDurationSecond,
 					Description: `Duration in seconds after which the issued SecretID should expire. Defaults
 to 0, meaning no expiration.`,
+				},
+				"token_num_uses": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: `Number of times issued tokens can be used`,
 				},
 				"token_ttl": &framework.FieldSchema{
 					Type: framework.TypeDurationSecond,
@@ -284,7 +292,26 @@ TTL will be set to the value of this parameter.`,
 			HelpSynopsis:    strings.TrimSpace(roleHelp["role-period"][0]),
 			HelpDescription: strings.TrimSpace(roleHelp["role-period"][1]),
 		},
-
+		&framework.Path{
+			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-num-uses$",
+			Fields: map[string]*framework.FieldSchema{
+				"role_name": &framework.FieldSchema{
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+				"token_num_uses": &framework.FieldSchema{
+					Type:        framework.TypeInt,
+					Description: `Number of times issued tokens can be used`,
+				},
+			},
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.UpdateOperation: b.pathRoleTokenNumUsesUpdate,
+				logical.ReadOperation:   b.pathRoleTokenNumUsesRead,
+				logical.DeleteOperation: b.pathRoleTokenNumUsesDelete,
+			},
+			HelpSynopsis:    strings.TrimSpace(roleHelp["role-token-num-uses"][0]),
+			HelpDescription: strings.TrimSpace(roleHelp["role-token-num-uses"][1]),
+		},
 		&framework.Path{
 			Pattern: "role/" + framework.GenericNameRegex("role_name") + "/token-ttl$",
 			Fields: map[string]*framework.FieldSchema{
@@ -770,6 +797,15 @@ func (b *backend) pathRoleCreateUpdate(req *logical.Request, data *framework.Fie
 		role.SecretIDTTL = time.Second * time.Duration(secretIDTTLRaw.(int))
 	} else if req.Operation == logical.CreateOperation {
 		role.SecretIDTTL = time.Second * time.Duration(data.Get("secret_id_ttl").(int))
+	}
+
+	if tokenNumUsesRaw, ok := data.GetOk("token_num_uses"); ok {
+		role.TokenNumUses = tokenNumUsesRaw.(int)
+	} else if req.Operation == logical.CreateOperation {
+		role.TokenNumUses = data.Get("token_num_uses").(int)
+	}
+	if role.TokenNumUses < 0 {
+		return logical.ErrorResponse("token_num_uses cannot be negative"), nil
 	}
 
 	if tokenTTLRaw, ok := data.GetOk("token_ttl"); ok {
@@ -1594,6 +1630,76 @@ func (b *backend) pathRolePeriodDelete(req *logical.Request, data *framework.Fie
 	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
 }
 
+func (b *backend) pathRoleTokenNumUsesUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	if tokenNumUsesRaw, ok := data.GetOk("token_num_uses"); ok {
+		role.TokenNumUses = tokenNumUsesRaw.(int)
+		return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+	} else {
+		return logical.ErrorResponse("missing token_num_uses"), nil
+	}
+}
+
+func (b *backend) pathRoleTokenNumUsesRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	if role, err := b.roleEntry(req.Storage, strings.ToLower(roleName)); err != nil {
+		return nil, err
+	} else if role == nil {
+		return nil, nil
+	} else {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"token_num_uses": role.TokenNumUses,
+			},
+		}, nil
+	}
+}
+
+func (b *backend) pathRoleTokenNumUsesDelete(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	roleName := data.Get("role_name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role_name"), nil
+	}
+
+	role, err := b.roleEntry(req.Storage, strings.ToLower(roleName))
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return nil, nil
+	}
+
+	lock := b.roleLock(roleName)
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	role.TokenNumUses = data.GetDefaultOrZero("token_num_uses").(int)
+
+	return nil, b.setRoleEntry(req.Storage, roleName, role, "")
+}
+
 func (b *backend) pathRoleTokenTTLUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName := data.Get("role_name").(string)
 	if roleName == "" {
@@ -1985,6 +2091,11 @@ The list operation on the 'role/<role_name>/secret-id' endpoint will return
 the 'secret_id_accessor's. This endpoint can be used to read the properties
 of the secret. If the 'secret_id_num_uses' field in the response is 0, it
 represents a non-expiring 'secret_id'.`,
+	},
+	"role-token-num-uses": {
+		"Number of times issued tokens can be used",
+		`By default, this will be set to zero, indicating that the issued
+tokens can be used any number of times.`,
 	},
 	"role-token-ttl": {
 		`Duration in seconds, the lifetime of the token issued by using the SecretID that
