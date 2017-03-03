@@ -116,17 +116,14 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 	if err != nil {
 		return nil, fmt.Errorf("failed while reading ca_public_key: %v", err)
 	}
-	if publicKeyEntry != nil {
-		return nil, fmt.Errorf("keys are already configured; delete them before reconfiguring")
-	}
 
 	privateKeyEntry, err := req.Storage.Get("config/ca_bundle")
 	if err != nil {
 		return nil, fmt.Errorf("failed while reading ca_bundle: %v", err)
 	}
-	// Valid private key when a corresponding public key was not found
-	if privateKeyEntry != nil {
-		return nil, fmt.Errorf("configured key pair is inconsistent; delete them before reconfiguring")
+
+	if publicKeyEntry != nil || privateKeyEntry != nil {
+		return nil, fmt.Errorf("keys are already configured; delete them before reconfiguring")
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
