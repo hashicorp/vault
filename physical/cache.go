@@ -96,7 +96,7 @@ func (c *Cache) Put(entry *Entry) error {
 	defer lock.Unlock()
 
 	err := c.backend.Put(entry)
-	if err == nil {
+	if err == nil && !strings.HasPrefix(entry.Key, "core/") {
 		c.lru.Add(entry.Key, entry)
 	}
 	return err
@@ -106,6 +106,14 @@ func (c *Cache) Get(key string) (*Entry, error) {
 	lock := c.lockForKey(key)
 	lock.RLock()
 	defer lock.RUnlock()
+
+	// We do NOT cache negative results for keys in the 'core/' prefix
+	// otherwise we risk certain race conditions upstream. The primary issue is
+	// with the HA mode, we could potentially negatively cache the leader entry
+	// and cause leader discovery to fail.
+	if strings.HasPrefix(key, "core/") {
+		return c.backend.Get(key)
+	}
 
 	// Check the LRU first
 	if raw, ok := c.lru.Get(key); ok {
@@ -122,15 +130,12 @@ func (c *Cache) Get(key string) (*Entry, error) {
 		return nil, err
 	}
 
-	// Cache the result. We do NOT cache negative results
-	// for keys in the 'core/' prefix otherwise we risk certain
-	// race conditions upstream. The primary issue is with the HA mode,
-	// we could potentially negatively cache the leader entry and cause
-	// leader discovery to fail.
-	if ent != nil || !strings.HasPrefix(key, "core/") {
+	// Cache the result
+	if ent != nil {
 		c.lru.Add(key, ent)
 	}
-	return ent, err
+
+	return ent, nil
 }
 
 func (c *Cache) Delete(key string) error {
@@ -139,7 +144,7 @@ func (c *Cache) Delete(key string) error {
 	defer lock.Unlock()
 
 	err := c.backend.Delete(key)
-	if err == nil {
+	if err == nil && !strings.HasPrefix(key, "core/") {
 		c.lru.Remove(key)
 	}
 	return err
