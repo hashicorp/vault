@@ -381,7 +381,7 @@ func TestACL_ValuePermissions(t *testing.T) {
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good1"}, true},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good2"}, true},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good2"}, false},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good3"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good3"}, true},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
 		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
