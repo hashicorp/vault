@@ -444,8 +444,9 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	b.Register("bar", a2, nil)
 
 	auth := &logical.Auth{
-		ClientToken: "foo",
-		Policies:    []string{"dev", "ops"},
+		TokenNumUses: 10,
+		ClientToken:  "foo",
+		Policies:     []string{"dev", "ops"},
 		Metadata: map[string]string{
 			"user":   "armon",
 			"source": "github",

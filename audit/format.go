@@ -368,7 +368,7 @@ type AuditAuth struct {
 	DisplayName  string            `json:"display_name"`
 	Policies     []string          `json:"policies"`
 	Metadata     map[string]string `json:"metadata"`
-	TokenNumUses int               `json:"token_num_uses"`
+	TokenNumUses int               `json:"token_num_uses,omitempty"`
 }
 
 type AuditSecret struct {
