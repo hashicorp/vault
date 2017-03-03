@@ -1306,7 +1306,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			lock.Lock()
 			defer lock.Unlock()
 
-			if err := b.tuneMountTTLs(path, &mountEntry.Config, newDefault, newMax); err != nil {
+			if err := b.tuneMountTTLs(path, mountEntry, newDefault, newMax); err != nil {
 				b.Backend.Logger().Error("sys: tuning failed", "path", path, "error", err)
 				return handleError(err)
 			}

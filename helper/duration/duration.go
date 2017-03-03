@@ -1,6 +1,7 @@
 package duration
 
 import (
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -9,6 +10,10 @@ import (
 
 func ParseDurationSecond(in interface{}) (time.Duration, error) {
 	var dur time.Duration
+	jsonIn, ok := in.(json.Number)
+	if ok {
+		in = jsonIn.String()
+	}
 	switch in.(type) {
 	case string:
 		inp := in.(string)

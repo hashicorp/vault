@@ -122,13 +122,11 @@
 	p{
 		margin-top: 60px;
 		text-align: left;
-		font-size: 18px;
-		font-weight: 300;
 		line-height: 2em;
 
 		.strong{
 			font-size: 20px;
-			font-weight: 500;
+			font-weight: 600;
 		}
 	}
 }
@@ -139,10 +137,11 @@
 
 	h2{
 		margin-bottom: 120px;
-		font-size: 44px;
-		@include lato-light();
 		color: $blue;
+		font-family: $font-family-klavika;
+		font-size: 44px;
 		text-transform: uppercase;
+		letter-spacing: 2px;
 	}
 
 	.feature{
@@ -180,12 +179,13 @@
 		}
 
 		h3{
+			font-family: $font-family-klavika;
 			margin: 30px 0;
 			color: $black;
 			font-size: 34px;
+			font-weight: 600;
 			line-height: 34px;
-			letter-spacing: 1px;
-			@include lato-light();
+			text-transform: uppercase;
 		}
 
 		p{
@@ -193,8 +193,6 @@
 			text-align: left;
 			font-size: 16px;
 			line-height: 1.75em;
-			font-weight: 300;
-			@include lato-light();
 		}
 
 		.feature-footer{
@@ -231,7 +229,6 @@
 
 	    	&.cta-gray{
 	    		color: $gray;
-	    		font-weight: 300;
 	    	}
 		}
 
@@ -268,7 +265,6 @@
 			margin-top: 0;
 			font-size: 28px;
 			color: lighten($purple, 8%);
-			@include lato-light();
 		}
 
 		p{
@@ -329,8 +325,6 @@
 						font-size: 14px;
 						letter-spacing: 1px;
 						color: white;
-						font-family: $font-family-lato;
-						font-weight: $font-weight-lato-xb;
 					}
 
 					ul.shell-dots{

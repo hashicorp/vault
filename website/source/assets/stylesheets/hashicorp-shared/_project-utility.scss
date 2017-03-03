@@ -5,9 +5,9 @@
 
 // Variables
 
-$header-font-family: $font-family-lato;
-$project-logo-width: 114px;
-$project-logo-height: 21px;
+$header-font-family: $font-family-open-sans;
+$project-logo-width: 121px;
+$project-logo-height: 42px;
 $project-logo-pad-left: 0px;
 
 $blue: darken($blue, 5%);
@@ -46,7 +46,7 @@ $blue: darken($blue, 5%);
 
   &:hover{
     @include transition(all 300ms ease-in);
-    
+
     svg{
       .svg-bg-line{
         fill: $blue;
