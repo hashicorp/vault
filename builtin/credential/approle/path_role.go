@@ -129,7 +129,7 @@ to 0, meaning no expiration.`,
 				},
 				"token_num_uses": &framework.FieldSchema{
 					Type:        framework.TypeInt,
-					Description: `Number of times the issued token can be used`,
+					Description: `Number of times issued tokens can be used`,
 				},
 				"token_ttl": &framework.FieldSchema{
 					Type: framework.TypeDurationSecond,
@@ -301,7 +301,7 @@ TTL will be set to the value of this parameter.`,
 				},
 				"token_num_uses": &framework.FieldSchema{
 					Type:        framework.TypeInt,
-					Description: `Number of times the issued token can be used`,
+					Description: `Number of times issued tokens can be used`,
 				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -2093,7 +2093,7 @@ of the secret. If the 'secret_id_num_uses' field in the response is 0, it
 represents a non-expiring 'secret_id'.`,
 	},
 	"role-token-num-uses": {
-		"Defines the number of allowed uses of the token issued",
+		"Number of times issued tokens can be used",
 		`By default, this will be set to zero, indicating that the issued
 tokens can be used any number of times.`,
 	},
