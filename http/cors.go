@@ -59,6 +59,7 @@ func wrapCORSHandler(h http.Handler, core *vault.Core) http.Handler {
 			for k, v := range preflightHeaders {
 				w.Header().Set(k, v)
 			}
+			return
 		}
 
 		h.ServeHTTP(w, req)
