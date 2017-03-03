@@ -39,8 +39,8 @@ func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldDat
 	}
 
 	auth := &logical.Auth{
-		NumUses: role.TokenNumUses,
-		Period:  role.Period,
+		TokenNumUses: role.TokenNumUses,
+		Period:       role.Period,
 		InternalData: map[string]interface{}{
 			"role_name": roleName,
 		},

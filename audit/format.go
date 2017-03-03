@@ -250,11 +250,12 @@ func (f *AuditFormatter) FormatResponse(
 	var respAuth *AuditAuth
 	if resp.Auth != nil {
 		respAuth = &AuditAuth{
-			ClientToken: resp.Auth.ClientToken,
-			Accessor:    resp.Auth.Accessor,
-			DisplayName: resp.Auth.DisplayName,
-			Policies:    resp.Auth.Policies,
-			Metadata:    resp.Auth.Metadata,
+			ClientToken:  resp.Auth.ClientToken,
+			Accessor:     resp.Auth.Accessor,
+			DisplayName:  resp.Auth.DisplayName,
+			Policies:     resp.Auth.Policies,
+			Metadata:     resp.Auth.Metadata,
+			TokenNumUses: resp.Auth.TokenNumUses,
 		}
 	}
 
@@ -362,11 +363,12 @@ type AuditResponse struct {
 }
 
 type AuditAuth struct {
-	ClientToken string            `json:"client_token"`
-	Accessor    string            `json:"accessor"`
-	DisplayName string            `json:"display_name"`
-	Policies    []string          `json:"policies"`
-	Metadata    map[string]string `json:"metadata"`
+	ClientToken  string            `json:"client_token"`
+	Accessor     string            `json:"accessor"`
+	DisplayName  string            `json:"display_name"`
+	Policies     []string          `json:"policies"`
+	Metadata     map[string]string `json:"metadata"`
+	TokenNumUses int               `json:"token_num_uses"`
 }
 
 type AuditSecret struct {
