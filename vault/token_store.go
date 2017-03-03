@@ -1713,10 +1713,10 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Generate the response
 	resp.Auth = &logical.Auth{
-		TokenNumUses: te.NumUses,
-		DisplayName:  te.DisplayName,
-		Policies:     te.Policies,
-		Metadata:     te.Meta,
+		NumUses:     te.NumUses,
+		DisplayName: te.DisplayName,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
 		LeaseOptions: logical.LeaseOptions{
 			TTL:       te.TTL,
 			Renewable: renewable,

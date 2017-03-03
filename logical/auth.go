@@ -50,7 +50,7 @@ type Auth struct {
 	Period time.Duration `json:"period" mapstructure:"period" structs:"period"`
 
 	// Number of allowed uses of the issued token
-	TokenNumUses int `json:"token_num_uses" mapstructure:"token_num_uses" structs:"token_num_uses"`
+	NumUses int `json:"num_uses" mapstructure:"num_uses" structs:"num_uses"`
 }
 
 func (a *Auth) GoString() string {

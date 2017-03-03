@@ -255,7 +255,7 @@ func (f *AuditFormatter) FormatResponse(
 			DisplayName:  resp.Auth.DisplayName,
 			Policies:     resp.Auth.Policies,
 			Metadata:     resp.Auth.Metadata,
-			TokenNumUses: resp.Auth.TokenNumUses,
+			TokenNumUses: resp.Auth.NumUses,
 		}
 	}
 
