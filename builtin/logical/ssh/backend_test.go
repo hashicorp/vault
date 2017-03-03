@@ -537,7 +537,6 @@ func TestBackend_AbleToAutoGenerateSigningKeys(t *testing.T) {
 			logicaltest.TestStep{
 				Operation: logical.UpdateOperation,
 				Path:      "config/ca",
-				Data:      map[string]interface{}{},
 			},
 
 			logicaltest.TestStep{

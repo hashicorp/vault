@@ -19,7 +19,7 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchPublicKey(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get("public_key")
+	entry, err := req.Storage.Get("config/ca_public_key")
 	if err != nil {
 		return nil, err
 	}
