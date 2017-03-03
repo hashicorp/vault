@@ -56,6 +56,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/approle: Support for restricting the number of uses on the tokens
+   issued [GH-2435]
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
    Subnet ID and Region [GH-2407]
  * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
