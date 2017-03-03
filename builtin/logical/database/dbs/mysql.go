@@ -21,12 +21,12 @@ type MySQL struct {
 	sync.RWMutex
 }
 
-func (p *MySQL) Type() string {
+func (m *MySQL) Type() string {
 	return mySQLTypeName
 }
 
-func (p *MySQL) getConnection() (*sql.DB, error) {
-	db, err := p.Connection()
+func (m *MySQL) getConnection() (*sql.DB, error) {
+	db, err := m.Connection()
 	if err != nil {
 		return nil, err
 	}
@@ -34,17 +34,17 @@ func (p *MySQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (p *MySQL) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
+func (m *MySQL) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
 	// Get the connection
-	db, err := p.getConnection()
+	db, err := m.getConnection()
 	if err != nil {
 		return err
 	}
 
 	// TODO: This is racey
 	// Grab a read lock
-	p.RLock()
-	defer p.RUnlock()
+	m.RLock()
+	defer m.RUnlock()
 
 	// Start a transaction
 	tx, err := db.Begin()
@@ -82,20 +82,20 @@ func (p *MySQL) CreateUser(createStmts, rollbackStmts, username, password, expir
 }
 
 // NOOP
-func (p *MySQL) RenewUser(username, expiration string) error {
+func (m *MySQL) RenewUser(username, expiration string) error {
 	return nil
 }
 
-func (p *MySQL) RevokeUser(username, revocationStmts string) error {
+func (m *MySQL) RevokeUser(username, revocationStmts string) error {
 	// Get the connection
-	db, err := p.getConnection()
+	db, err := m.getConnection()
 	if err != nil {
 		return err
 	}
 
 	// Grab the read lock
-	p.RLock()
-	defer p.RUnlock()
+	m.RLock()
+	defer m.RUnlock()
 
 	// Use a default SQL statement for revocation if one cannot be fetched from the role
 
