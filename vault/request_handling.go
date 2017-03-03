@@ -415,6 +415,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 			DisplayName:  auth.DisplayName,
 			CreationTime: time.Now().Unix(),
 			TTL:          auth.TTL,
+			NumUses:      auth.NumUses,
 		}
 
 		te.Policies = policyutil.SanitizePolicies(te.Policies, true)
