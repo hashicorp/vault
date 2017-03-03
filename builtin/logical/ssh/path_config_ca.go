@@ -12,6 +12,11 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	PublicCAKeyStoragePath  = "config/ca_public_key"
+	PrivateCAKeyStoragePath = "config/ca_bundle"
+)
+
 func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
@@ -46,10 +51,10 @@ For security reasons, the private key cannot be retrieved later.`,
 
 func (b *backend) pathConfigCADelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	if err := req.Storage.Delete("config/ca_bundle"); err != nil {
+	if err := req.Storage.Delete(PrivateCAKeyStoragePath); err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Delete("config/ca_public_key"); err != nil {
+	if err := req.Storage.Delete(PublicCAKeyStoragePath); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -112,12 +117,12 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 		return nil, fmt.Errorf("failed to generate or parse the keys")
 	}
 
-	publicKeyEntry, err := req.Storage.Get("config/ca_public_key")
+	publicKeyEntry, err := req.Storage.Get(PublicCAKeyStoragePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed while reading ca_public_key: %v", err)
 	}
 
-	privateKeyEntry, err := req.Storage.Get("config/ca_bundle")
+	privateKeyEntry, err := req.Storage.Get(PrivateCAKeyStoragePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed while reading ca_bundle: %v", err)
 	}
@@ -127,7 +132,7 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "config/ca_public_key",
+		Key:   PublicCAKeyStoragePath,
 		Value: []byte(publicKey),
 	})
 	if err != nil {
@@ -138,7 +143,7 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 		Certificate: privateKey,
 	}
 
-	entry, err := logical.StorageEntryJSON("config/ca_bundle", bundle)
+	entry, err := logical.StorageEntryJSON(PrivateCAKeyStoragePath, bundle)
 	if err != nil {
 		return nil, err
 	}

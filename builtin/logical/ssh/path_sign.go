@@ -152,7 +152,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	storedBundle, err := req.Storage.Get("config/ca_bundle")
+	storedBundle, err := req.Storage.Get(PrivateCAKeyStoragePath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to fetch local CA certificate/key: %v", err)
 	}
@@ -199,7 +199,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 
 func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPrincipal, principalsAllowedByRole string, validatePrincipal func([]string, string) bool) ([]string, error) {
 	if principalsAllowedByRole == "" {
-		return nil, fmt.Errorf(`"role is not configured to allow any principles`)
+		return nil, fmt.Errorf("role is not configured to allow any principles")
 	}
 
 	validPrincipals := data.Get("valid_principals").(string)
@@ -208,7 +208,7 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 			return []string{defaultPrincipal}, nil
 		}
 
-		return nil, fmt.Errorf(`"valid_principals" not supplied and no default set in the role`)
+		return nil, fmt.Errorf("valid_principals not supplied and no default set in the role")
 	}
 
 	parsedPrincipals := strings.Split(validPrincipals, ",")
