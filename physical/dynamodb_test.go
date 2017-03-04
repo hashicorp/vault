@@ -198,13 +198,12 @@ func testDynamoDBLockTTL(t *testing.T, ha HABackend) {
 	// The first lock should have lost the leader channel
 	leaderChClosed := false
 	blocking := make(chan struct{})
-	time.AfterFunc(watchInterval*3, func() {
-		close(blocking)
-	})
 	// Attempt to read from the leader or the blocking channel, which ever one
 	// happens first.
 	go func() {
 		select {
+		case <-time.After(watchInterval * 3):
+			return
 		case <-leaderCh:
 			leaderChClosed = true
 			close(blocking)
