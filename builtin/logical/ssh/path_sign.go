@@ -109,7 +109,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 
 	userPublicKey, err := parsePublicSSHKey(publicKey)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("unable to decode \"public_key\" as SSH key: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("failed to parse public_key as SSH key: %s", err)), nil
 	}
 
 	keyId := data.Get("key_id").(string)
@@ -152,9 +152,9 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	storedBundle, err := req.Storage.Get(PrivateCAKeyStoragePath)
+	storedBundle, err := req.Storage.Get(CAPrivateKeyStoragePath)
 	if err != nil {
-		return nil, fmt.Errorf("unable to fetch local CA certificate/key: %v", err)
+		return nil, fmt.Errorf("failed to read CA private key: %v", err)
 	}
 	if storedBundle == nil {
 		return logical.ErrorResponse("backend must be configured with a CA certificate/key"), nil
@@ -162,10 +162,10 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 
 	var bundle signingBundle
 	if err := storedBundle.DecodeJSON(&bundle); err != nil {
-		return nil, fmt.Errorf("unable to decode local CA certificate/key: %v", err)
+		return nil, fmt.Errorf("failed to decode CA private key: %v", err)
 	}
 
-	signingBundle := creationBundle{
+	cBundle := creationBundle{
 		KeyId:           keyId,
 		PublicKey:       userPublicKey,
 		SigningBundle:   bundle,
@@ -177,7 +177,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		extensions:      extensions,
 	}
 
-	certificate, err := signingBundle.sign()
+	certificate, err := cBundle.sign()
 	if err != nil {
 		return nil, err
 	}
