@@ -134,9 +134,9 @@ func (b *backend) pathRoleCreate(
 	key := data.Get("key").(string)
 	issuer := data.Get("issuer").(string)
 	account_name := data.Get("account_name").(string)
-	period := data.Get("period").(uint)
+	period := data.Get("period").(int)
 	algorithm := data.Get("algorithm").(string)
-	digits := data.Get("digits").(uint)
+	digits := data.Get("digits").(int)
 
 	// Set optional parameters if neccessary
 	if period == 0 {
@@ -178,9 +178,9 @@ type roleEntry struct {
 	Key          string `json:"key" mapstructure:"key" structs:"key"`
 	Issuer       string `json:"issuer" mapstructure:"issuer" structs:"issuer"`
 	Account_Name string `json:"account_name" mapstructure:"account_name" structs:"account_name"`
-	Period       uint   `json:"period" mapstructure:"period" structs:"period"`
+	Period       int    `json:"period" mapstructure:"period" structs:"period"`
 	Algorithm    string `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
-	Digits       uint   `json:"digits" mapstructure:"digits" structs:"digits"`
+	Digits       int    `json:"digits" mapstructure:"digits" structs:"digits"`
 }
 
 const pathRoleHelpSyn = `

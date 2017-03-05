@@ -69,9 +69,11 @@ func (b *backend) pathRoleCreateRead(
 		algorithm = otplib.AlgorithmSHA1
 	}
 
+	period := uint(role.Period)
+
 	// Generate password using totp library
 	totpToken, err := totplib.GenerateCodeCustom(role.Key, time.Now().UTC(), totplib.ValidateOpts{
-		Period:    role.Period,
+		Period:    period,
 		Digits:    digits,
 		Algorithm: algorithm,
 	})
