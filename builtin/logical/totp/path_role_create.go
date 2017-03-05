@@ -6,7 +6,8 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/pquerna/otp/totp"
+	otplib  "github.com/pquerna/otp/
+	totplib "github.com/pquerna/otp/totp"
 )
 
 func pathRoleCreate(b *backend) *framework.Path {
@@ -45,8 +46,31 @@ func (b *backend) pathRoleCreateRead(
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 	}
 
+	// Translate digits and algorithm to a format the totp library understands
+	digits otplib.Digits
+	switch role.Digits{
+		case 6:
+			digits = otplib.DigitsSix
+		case 8:
+			digits = otplib.DigitsEight
+	}
+	
+	algorithm otplib.Algorithm
+	switch role.Algorithm{
+		case "SHA1":
+			algorithm = otplib.AlgorithmSHA1
+		case "SHA256":
+			algorithm = otplib.AlgorithmSHA256
+		case "SHA512":
+			algorithm = otplib.AlgorithmSHA512
+		case "MD5":
+			algorithm = otplib.AlgorithmMD5
+		default:
+			algorithm = otplib.AlgorithmSHA1
+	}
+	
 	// Generate password using totp library
-	totpToken, err := totp.GenerateCodeCustom(role.Key, time.Now().UTC(), ValdidateOpts{
+	totpToken, err := totplib.GenerateCodeCustom(role.Key, time.Now().UTC(), totplib.ValidateOpts{
 		Period:    role.Period,
 		Digits:    role.Digits,
 		Algorithm: role.Algorithm,
@@ -59,7 +83,7 @@ func (b *backend) pathRoleCreateRead(
 	// Return the secret
 	b.logger.Trace("totp/pathRoleCreateRead: generating secret")
 
-	resp := &logical.Response{
+	resp, err := &logical.Response{
 		Data: map[string]interface{}{
 			"token": totpToken,
 		},

@@ -178,9 +178,9 @@ type roleEntry struct {
 	Key          string `json:"key" mapstructure:"key" structs:"key"`
 	Issuer       string `json:"issuer" mapstructure:"issuer" structs:"issuer"`
 	Account_Name string `json:"account_name" mapstructure:"account_name" structs:"account_name"`
-	Period       string `json:"period" mapstructure:"period" structs:"period"`
+	Period       uint   `json:"period" mapstructure:"period" structs:"period"`
 	Algorithm    string `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
-	Digits       string `json:"digits" mapstructure:"digits" structs:"digits"`
+	Digits       uint   `json:"digits" mapstructure:"digits" structs:"digits"`
 }
 
 const pathRoleHelpSyn = `
