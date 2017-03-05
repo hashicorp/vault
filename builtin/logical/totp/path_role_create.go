@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	otplib  "github.com/pquerna/otp/
+	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
 
@@ -47,33 +47,33 @@ func (b *backend) pathRoleCreateRead(
 	}
 
 	// Translate digits and algorithm to a format the totp library understands
-	digits otplib.Digits
-	switch role.Digits{
-		case 6:
-			digits = otplib.DigitsSix
-		case 8:
-			digits = otplib.DigitsEight
+	var digits otplib.Digits
+	switch role.Digits {
+	case 6:
+		digits = otplib.DigitsSix
+	case 8:
+		digits = otplib.DigitsEight
 	}
-	
-	algorithm otplib.Algorithm
-	switch role.Algorithm{
-		case "SHA1":
-			algorithm = otplib.AlgorithmSHA1
-		case "SHA256":
-			algorithm = otplib.AlgorithmSHA256
-		case "SHA512":
-			algorithm = otplib.AlgorithmSHA512
-		case "MD5":
-			algorithm = otplib.AlgorithmMD5
-		default:
-			algorithm = otplib.AlgorithmSHA1
+
+	var algorithm otplib.Algorithm
+	switch role.Algorithm {
+	case "SHA1":
+		algorithm = otplib.AlgorithmSHA1
+	case "SHA256":
+		algorithm = otplib.AlgorithmSHA256
+	case "SHA512":
+		algorithm = otplib.AlgorithmSHA512
+	case "MD5":
+		algorithm = otplib.AlgorithmMD5
+	default:
+		algorithm = otplib.AlgorithmSHA1
 	}
-	
+
 	// Generate password using totp library
 	totpToken, err := totplib.GenerateCodeCustom(role.Key, time.Now().UTC(), totplib.ValidateOpts{
 		Period:    role.Period,
-		Digits:    role.Digits,
-		Algorithm: role.Algorithm,
+		Digits:    digits,
+		Algorithm: algorithm,
 	})
 
 	if err != nil {

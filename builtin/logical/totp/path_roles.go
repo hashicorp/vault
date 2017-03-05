@@ -134,9 +134,9 @@ func (b *backend) pathRoleCreate(
 	key := data.Get("key").(string)
 	issuer := data.Get("issuer").(string)
 	account_name := data.Get("account_name").(string)
-	period := data.Get("period").(int)
+	period := data.Get("period").(uint)
 	algorithm := data.Get("algorithm").(string)
-	digits := data.Get("digits").(int)
+	digits := data.Get("digits").(uint)
 
 	// Set optional parameters if neccessary
 	if period == 0 {
