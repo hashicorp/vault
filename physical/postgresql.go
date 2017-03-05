@@ -71,7 +71,8 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 		get_query:    "SELECT value FROM " + quoted_table + " WHERE path = $1 AND key = $2",
 		delete_query: "DELETE FROM " + quoted_table + " WHERE path = $1 AND key = $2",
 		list_query: "SELECT key FROM " + quoted_table + " WHERE path = $1" +
-			"UNION SELECT substr(path, length($1)+1) FROM " + quoted_table + "WHERE parent_path = $1",
+			"UNION SELECT DISTINCT substring(substr(path, length($1)+1) from '^.*?/') FROM " +
+			quoted_table + " WHERE parent_path LIKE concat($1, '%')",
 		logger: logger,
 	}
 

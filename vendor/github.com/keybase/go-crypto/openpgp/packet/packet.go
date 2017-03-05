@@ -11,6 +11,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/des"
+	"crypto/elliptic"
 	"io"
 	"math/big"
 
@@ -421,7 +422,7 @@ const (
 // key of the given type.
 func (pka PublicKeyAlgorithm) CanEncrypt() bool {
 	switch pka {
-	case PubKeyAlgoRSA, PubKeyAlgoRSAEncryptOnly, PubKeyAlgoElGamal:
+	case PubKeyAlgoRSA, PubKeyAlgoRSAEncryptOnly, PubKeyAlgoElGamal, PubKeyAlgoECDH:
 		return true
 	}
 	return false
@@ -523,6 +524,25 @@ func writeMPI(w io.Writer, bitLength uint16, mpiBytes []byte) (err error) {
 		_, err = w.Write(mpiBytes)
 	}
 	return
+}
+
+func WritePaddedBigInt(w io.Writer, length int, X *big.Int) (n int, err error) {
+	bytes := X.Bytes()
+	n1, err := w.Write(make([]byte, length-len(bytes)))
+	if err != nil {
+		return n1, err
+	}
+	n2, err := w.Write(bytes)
+	if err != nil {
+		return n2, err
+	}
+	return (n1 + n2), err
+}
+
+// Minimum number of bytes to fit the curve coordinates. All
+// coordinates have to be 0-padded to this length.
+func mpiPointByteLength(curve elliptic.Curve) int {
+	return (curve.Params().P.BitLen() + 7) / 8
 }
 
 // writeBig serializes a *big.Int to w.

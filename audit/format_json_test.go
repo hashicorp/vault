@@ -19,6 +19,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		Auth   *logical.Auth
 		Req    *logical.Request
 		Err    error
+		Prefix string
 		Result string
 	}{
 		"auth, request": {
@@ -37,6 +38,26 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 				},
 			},
 			errors.New("this is an error"),
+			"",
+			testFormatJSONReqBasicStr,
+		},
+		"auth, request with prefix": {
+			&logical.Auth{ClientToken: "foo", Policies: []string{"root"}},
+			&logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": []string{"bar"},
+				},
+			},
+			errors.New("this is an error"),
+			"@cee: ",
 			testFormatJSONReqBasicStr,
 		},
 	}
@@ -44,7 +65,9 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	for name, tc := range cases {
 		var buf bytes.Buffer
 		formatter := AuditFormatter{
-			AuditFormatWriter: &JSONFormatWriter{},
+			AuditFormatWriter: &JSONFormatWriter{
+				Prefix: tc.Prefix,
+			},
 		}
 		salter, _ := salt.NewSalt(nil, nil)
 		config := FormatterConfig{
@@ -54,13 +77,17 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 
+		if !strings.HasPrefix(buf.String(), tc.Prefix) {
+			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, tc.Result, tc.Prefix)
+		}
+
 		var expectedjson = new(AuditRequestEntry)
 		if err := jsonutil.DecodeJSON([]byte(tc.Result), &expectedjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
 
 		var actualjson = new(AuditRequestEntry)
-		if err := jsonutil.DecodeJSON([]byte(buf.String()), &actualjson); err != nil {
+		if err := jsonutil.DecodeJSON([]byte(buf.String())[len(tc.Prefix):], &actualjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
 
@@ -71,7 +98,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			t.Fatalf("unable to marshal json: %s", err)
 		}
 
-		if strings.TrimSpace(buf.String()) != string(expectedBytes) {
+		if !strings.HasSuffix(strings.TrimSpace(buf.String()), string(expectedBytes)) {
 			t.Fatalf(
 				"bad: %s\nResult:\n\n'%s'\n\nExpected:\n\n'%s'",
 				name, buf.String(), string(expectedBytes))

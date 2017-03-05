@@ -6,6 +6,11 @@ import (
 	"testing"
 )
 
+var (
+	TestCoreUnsealedWithConfigs = testCoreUnsealedWithConfigs
+	TestSealDefConfigs          = testSealDefConfigs
+)
+
 type TestSeal struct {
 	defseal              *DefaultSeal
 	barrierKeys          [][]byte
@@ -78,6 +83,10 @@ func (d *TestSeal) RecoveryConfig() (*SealConfig, error) {
 }
 
 func (d *TestSeal) SetRecoveryConfig(config *SealConfig) error {
+	if config == nil {
+		return nil
+	}
+
 	d.recoveryConfig = config
 	return nil
 }
@@ -96,7 +105,7 @@ func (d *TestSeal) SetRecoveryKey(key []byte) error {
 	return nil
 }
 
-func TestCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
+func testCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
 	seal := &TestSeal{}
 	core := TestCoreWithSeal(t, seal)
 	result, err := core.Initialize(&InitParams{
@@ -129,7 +138,7 @@ func TestCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealCo
 	return core, result.SecretShares, result.RecoveryShares, result.RootToken
 }
 
-func TestSealDefConfigs() (*SealConfig, *SealConfig) {
+func testSealDefConfigs() (*SealConfig, *SealConfig) {
 	return &SealConfig{
 			SecretShares:    5,
 			SecretThreshold: 3,

@@ -79,7 +79,7 @@ remains mounted.
 
 ```
 $ vault unmount generic/
-Successfully unmounted 'generic/'!
+Successfully unmounted 'generic/' if it was mounted
 ```
 
 In addition to unmounting, you can remount a backend. Remounting a

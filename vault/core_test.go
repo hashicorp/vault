@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
@@ -198,7 +199,7 @@ func TestCore_Route_Sealed(t *testing.T) {
 		Path:      "sys/mounts",
 	}
 	_, err := c.HandleRequest(req)
-	if err != ErrSealed {
+	if err != consts.ErrSealed {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -1013,7 +1014,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Create the second core and initialize it
@@ -1060,7 +1061,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 		t.Fatalf("should not be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Seal the standby core with the correct token. Shouldn't go down
@@ -1124,7 +1125,7 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Create the second core and initialize it
@@ -1171,7 +1172,7 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("should not be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	req := &logical.Request{
@@ -1212,7 +1213,7 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal2 {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal2)
 	}
 
 	// Check the leader is not local
@@ -1224,7 +1225,7 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("should not be leader")
 	}
 	if advertise != redirectOriginal2 {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal2)
 	}
 
 	// Step down core2
@@ -1255,7 +1256,7 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Check the leader is not local
@@ -1267,7 +1268,7 @@ func TestCore_StepDown(t *testing.T) {
 		t.Fatalf("should not be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 }
 
@@ -1342,7 +1343,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Create a second core, attached to same in-memory store
@@ -1389,7 +1390,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 		t.Fatalf("should not be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Seal the first core, should step down
@@ -1419,7 +1420,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal2 {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal2)
 	}
 
 	// Give time for the entries to clear out; it is conservative at 1/second
@@ -1501,7 +1502,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Create a second core, attached to same in-memory store
@@ -1541,7 +1542,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 
 	// Request should fail in standby mode
 	_, err = core2.HandleRequest(req)
-	if err != ErrStandby {
+	if err != consts.ErrStandby {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -1554,7 +1555,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		t.Fatalf("should not be leader")
 	}
 	if advertise != redirectOriginal {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal)
 	}
 
 	// Seal the first core, should step down
@@ -1600,7 +1601,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 		t.Fatalf("should be leader")
 	}
 	if advertise != redirectOriginal2 {
-		t.Fatalf("Bad advertise: %v", advertise)
+		t.Fatalf("Bad advertise: %v, orig is %v", advertise, redirectOriginal2)
 	}
 
 	if inm.(*physical.InmemHABackend) == inmha.(*physical.InmemHABackend) {

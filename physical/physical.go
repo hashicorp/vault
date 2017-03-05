@@ -9,6 +9,16 @@ import (
 
 const DefaultParallelOperations = 128
 
+// The operation type
+type Operation string
+
+const (
+	DeleteOperation Operation = "delete"
+	GetOperation              = "get"
+	ListOperation             = "list"
+	PutOperation              = "put"
+)
+
 // ShutdownSignal
 type ShutdownChannel chan struct{}
 
@@ -121,20 +131,27 @@ var builtinBackends = map[string]Factory{
 	"inmem": func(_ map[string]string, logger log.Logger) (Backend, error) {
 		return NewInmem(logger), nil
 	},
+	"inmem_transactional": func(_ map[string]string, logger log.Logger) (Backend, error) {
+		return NewTransactionalInmem(logger), nil
+	},
 	"inmem_ha": func(_ map[string]string, logger log.Logger) (Backend, error) {
 		return NewInmemHA(logger), nil
 	},
-	"consul":     newConsulBackend,
-	"zookeeper":  newZookeeperBackend,
-	"file":       newFileBackend,
-	"s3":         newS3Backend,
-	"azure":      newAzureBackend,
-	"dynamodb":   newDynamoDBBackend,
-	"etcd":       newEtcdBackend,
-	"mysql":      newMySQLBackend,
-	"postgresql": newPostgreSQLBackend,
-	"swift":      newSwiftBackend,
-	"gcs":        newGCSBackend,
+	"inmem_transactional_ha": func(_ map[string]string, logger log.Logger) (Backend, error) {
+		return NewTransactionalInmemHA(logger), nil
+	},
+	"file_transactional": newTransactionalFileBackend,
+	"consul":             newConsulBackend,
+	"zookeeper":          newZookeeperBackend,
+	"file":               newFileBackend,
+	"s3":                 newS3Backend,
+	"azure":              newAzureBackend,
+	"dynamodb":           newDynamoDBBackend,
+	"etcd":               newEtcdBackend,
+	"mysql":              newMySQLBackend,
+	"postgresql":         newPostgreSQLBackend,
+	"swift":              newSwiftBackend,
+	"gcs":                newGCSBackend,
 }
 
 // PermitPool is used to limit maximum outstanding requests

@@ -3,6 +3,7 @@ package vault
 import (
 	"time"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -45,7 +46,10 @@ func (d dynamicSystemView) SudoPrivilege(path string, token string) bool {
 	// The operation type isn't important here as this is run from a path the
 	// user has already been given access to; we only care about whether they
 	// have sudo
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, path)
+	req := new(logical.Request)
+	req.Operation = logical.ReadOperation
+	req.Path = path
+	_, rootPrivs := acl.AllowOperation(req)
 	return rootPrivs
 }
 
@@ -76,8 +80,8 @@ func (d dynamicSystemView) CachingDisabled() bool {
 }
 
 // Checks if this is a primary Vault instance.
-func (d dynamicSystemView) ReplicationState() logical.ReplicationState {
-	var state logical.ReplicationState
+func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
+	var state consts.ReplicationState
 	d.core.clusterParamsLock.RLock()
 	state = d.core.replicationState
 	d.core.clusterParamsLock.RUnlock()

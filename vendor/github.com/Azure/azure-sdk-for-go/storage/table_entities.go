@@ -98,7 +98,7 @@ func (c *TableServiceClient) QueryTableEntities(tableName AzureTable, previousCo
 
 	headers["Content-Length"] = "0"
 
-	resp, err := c.client.execTable(http.MethodGet, uri, headers, nil)
+	resp, err := c.client.execInternalJSON(http.MethodGet, uri, headers, nil, c.auth)
 
 	if err != nil {
 		return nil, nil, err
@@ -147,7 +147,7 @@ func (c *TableServiceClient) execTable(table AzureTable, entity TableEntity, spe
 
 	headers["Content-Length"] = fmt.Sprintf("%d", buf.Len())
 
-	resp, err := c.client.execTable(method, uri, headers, &buf)
+	resp, err := c.client.execInternalJSON(method, uri, headers, &buf, c.auth)
 
 	if err != nil {
 		return 0, err
@@ -202,7 +202,7 @@ func (c *TableServiceClient) DeleteEntity(table AzureTable, entity TableEntity, 
 	headers["Content-Length"] = "0"
 	headers["If-Match"] = ifMatch
 
-	resp, err := c.client.execTable(http.MethodDelete, uri, headers, nil)
+	resp, err := c.client.execInternalJSON(http.MethodDelete, uri, headers, nil, c.auth)
 
 	if err != nil {
 		return err

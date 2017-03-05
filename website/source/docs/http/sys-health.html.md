@@ -75,6 +75,7 @@ description: |-
 
  * `200` if initialized, unsealed, and active.
  * `429` if unsealed and standby.
- * `500` if sealed, or if not initialized.
+ * `501` if not initialized.
+ * `503` if sealed.
 	</dd>
 </dl>

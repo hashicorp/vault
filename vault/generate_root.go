@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/shamir"
@@ -34,10 +35,10 @@ func (c *Core) GenerateRootProgress() (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return 0, ErrSealed
+		return 0, consts.ErrSealed
 	}
 	if c.standby {
-		return 0, ErrStandby
+		return 0, consts.ErrStandby
 	}
 
 	c.generateRootLock.Lock()
@@ -52,10 +53,10 @@ func (c *Core) GenerateRootConfiguration() (*GenerateRootConfig, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	c.generateRootLock.Lock()
@@ -101,10 +102,10 @@ func (c *Core) GenerateRootInit(otp, pgpKey string) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return ErrSealed
+		return consts.ErrSealed
 	}
 	if c.standby {
-		return ErrStandby
+		return consts.ErrStandby
 	}
 
 	c.generateRootLock.Lock()
@@ -170,10 +171,10 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	c.generateRootLock.Lock()
@@ -308,10 +309,10 @@ func (c *Core) GenerateRootCancel() error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return ErrSealed
+		return consts.ErrSealed
 	}
 	if c.standby {
-		return ErrStandby
+		return consts.ErrStandby
 	}
 
 	c.generateRootLock.Lock()

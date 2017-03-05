@@ -374,6 +374,9 @@ func NewServerTransport(protocol string, conn net.Conn, config *ServerConfig) (S
 type ConnectOptions struct {
 	// UserAgent is the application user agent.
 	UserAgent string
+	// Authority is the :authority pseudo-header to use. This field has no effect if
+	// TransportCredentials is set.
+	Authority string
 	// Dialer specifies how to dial a network address.
 	Dialer func(context.Context, string) (net.Conn, error)
 	// FailOnNonTempDialError specifies if gRPC fails on non-temporary dial errors.

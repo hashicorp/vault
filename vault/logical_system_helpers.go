@@ -7,7 +7,9 @@ import (
 )
 
 // tuneMount is used to set config on a mount point
-func (b *SystemBackend) tuneMountTTLs(path string, meConfig *MountConfig, newDefault, newMax *time.Duration) error {
+func (b *SystemBackend) tuneMountTTLs(path string, me *MountEntry, newDefault, newMax *time.Duration) error {
+	meConfig := &me.Config
+
 	if newDefault == nil && newMax == nil {
 		return nil
 	}
@@ -65,9 +67,9 @@ func (b *SystemBackend) tuneMountTTLs(path string, meConfig *MountConfig, newDef
 	var err error
 	switch {
 	case strings.HasPrefix(path, "auth/"):
-		err = b.Core.persistAuth(b.Core.auth)
+		err = b.Core.persistAuth(b.Core.auth, me.Local)
 	default:
-		err = b.Core.persistMounts(b.Core.mounts)
+		err = b.Core.persistMounts(b.Core.mounts, me.Local)
 	}
 	if err != nil {
 		meConfig.MaxLeaseTTL = origMax

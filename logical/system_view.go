@@ -1,6 +1,10 @@
 package logical
 
-import "time"
+import (
+	"time"
+
+	"github.com/hashicorp/vault/helper/consts"
+)
 
 // SystemView exposes system configuration information in a safe way
 // for logical backends to consume
@@ -32,7 +36,7 @@ type SystemView interface {
 	CachingDisabled() bool
 
 	// ReplicationState indicates the state of cluster replication
-	ReplicationState() ReplicationState
+	ReplicationState() consts.ReplicationState
 }
 
 type StaticSystemView struct {
@@ -42,7 +46,7 @@ type StaticSystemView struct {
 	TaintedVal          bool
 	CachingDisabledVal  bool
 	Primary             bool
-	ReplicationStateVal ReplicationState
+	ReplicationStateVal consts.ReplicationState
 }
 
 func (d StaticSystemView) DefaultLeaseTTL() time.Duration {
@@ -65,6 +69,6 @@ func (d StaticSystemView) CachingDisabled() bool {
 	return d.CachingDisabledVal
 }
 
-func (d StaticSystemView) ReplicationState() ReplicationState {
+func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }

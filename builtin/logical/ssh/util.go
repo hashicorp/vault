@@ -188,3 +188,26 @@ func createSSHComm(logger log.Logger, username, ip string, port int, hostkey str
 
 	return SSHCommNew(fmt.Sprintf("%s:%d", ip, port), config)
 }
+
+func parsePublicSSHKey(key string) (ssh.PublicKey, error) {
+	keyParts := strings.Split(key, " ")
+	if len(keyParts) > 1 {
+		// Someone has sent the 'full' public key rather than just the base64 encoded part that the ssh library wants
+		key = keyParts[1]
+	}
+
+	decodedKey, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return ssh.ParsePublicKey([]byte(decodedKey))
+}
+
+func convertMapToStringValue(initial map[string]interface{}) map[string]string {
+	result := map[string]string{}
+	for key, value := range initial {
+		result[key] = fmt.Sprintf("%v", value)
+	}
+	return result
+}

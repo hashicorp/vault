@@ -64,8 +64,8 @@ sending a SIGHUP to the server process. These are denoted below.
   subsystem. This will very significantly impact performance.
 
 * `disable_mlock` (optional) - A boolean. If true, this will disable the
-  server from executing the `mlock` syscall to prevent memory from being
-  swapped to disk. This is not recommended in production (see below).
+  server from executing the `mlock` syscall. `mlock` prevents memory from being
+  swapped to disk. Disabling `mlock` is not recommended in production (see below).
 
 * `telemetry` (optional)  - Configures the telemetry reporting system
   (see below).
@@ -379,7 +379,7 @@ backend "consul" {
   scheme = "http"
 
   // token is a Consul ACL Token that has write privileges to the path
-  // specified below.  Use of a Consul ACL Token is a best pracitce.
+  // specified below.  Use of a Consul ACL Token is a best practice.
   token = "[redacted]" // Vault's Consul ACL Token
 
   // path must be writable by the Consul ACL Token
@@ -446,6 +446,15 @@ Unseal Progress: 0
 
 #### Backend Reference: etcd (Community-Supported)
 
+The etcd physical backend supports both v2 and v3 APIs. To explicitly specify
+the API version, use the `etcd_api` configuration parameter. The default
+version is auto-detected based on the version of the etcd cluster. If the
+cluster version is 3.1+ and there has been no data written using the v2 API,
+the auto-detected default is v3.
+
+The v2 API has known issues with HA support and should not be used in HA
+scenarios.
+
 For etcd, the following options are supported:
 
   * `path` (optional) - The path within etcd where data will be stored.
@@ -455,6 +464,9 @@ For etcd, the following options are supported:
     Can be comma separated list (protocol://host:port) of many etcd instances.
     Defaults to "http://localhost:2379" if not specified. May also be specified
     via the ETCD_ADDR environment variable.
+
+  * `etcd_api` (optional) - Set to `"v2"` or `"v3"` to explicitly set the API
+    version that the backend will use.
 
   * `sync` (optional) - Should we synchronize the list of available etcd
     servers on startup?  This is a **string** value to allow for auto-sync to
@@ -542,11 +554,10 @@ ACL check.
 
 #### Backend Reference: DynamoDB (Community-Supported)
 
-The DynamoDB optionally supports HA. Because Dynamo does not support session
-lifetimes on its locks, a Vault node that has failed, rather than shut down in
-an orderly fashion, will require manual cleanup rather than failing over
-automatically. See the documentation of `recovery_mode` to better understand
-this process. To enable HA, set the `ha_enabled` option.
+DynamoDB optionally supports HA. Because Dynamo uses the time on the Vault
+node to implement the session lifetimes on its locks, significant clock skew
+on the Vault nodes could cause contention issues on the lock.
+To enable HA, set the `ha_enabled` option.
 
 The DynamoDB backend has the following options:
 
@@ -587,21 +598,10 @@ The DynamoDB backend has the following options:
     DynamoDB. Defaults to `"128"`.
 
   * `ha_enabled` (optional) - Setting this to `"1"`, `"t"`, or `"true"` will
-    enable HA mode. Please ensure you have read the documentation for the
-    `recovery_mode` option before enabling this. This option can also be
-    provided via the environment variable `DYNAMODB_HA_ENABLED`. If you are
-    upgrading from a version of Vault where HA support was enabled by default,
-    it is _very important_ that you set this parameter _before_ upgrading!
-
-  * `recovery_mode` (optional) - When the Vault leader crashes or is killed
-    without being able to shut down properly, no other node can become the new
-    leader because the DynamoDB table still holds the old leader's lock record.
-    To recover from this situation, one can start a single Vault node with this
-    option set to `"1"`, `"t"`, or `"true"` and the node will remove the old
-    lock from DynamoDB. It is important that only one node is running in
-    recovery mode! After this node has become the leader, other nodes can be
-    started with regular configuration. This option can also be provided via
-    the environment variable `RECOVERY_MODE`.
+    enable HA mode. This option can also be provided via the environment
+    variable `DYNAMODB_HA_ENABLED`. If you are upgrading from a version of
+    Vault where HA support was enabled by default, it is _very important_
+    that you set this parameter _before_ upgrading!
 
 For more information about the read/write capacity of DynamoDB tables, see the
 [official AWS DynamoDB

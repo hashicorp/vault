@@ -1444,6 +1444,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 		stepCount++
 		//t.Logf("test step %d\nissue vals: %#v\n", stepCount, issueTestStep)
 		roleTestStep.Data = structs.New(roleVals).Map()
+		roleTestStep.Data["generate_lease"] = false
 		ret = append(ret, roleTestStep)
 		issueTestStep.Data = structs.New(issueVals).Map()
 		switch {
@@ -1473,6 +1474,27 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			expected := strutil.ParseDedupAndSortStrings(role.OU, ",")
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
+			}
+			return nil
+		}
+	}
+
+	getOrganizationCheck := func(role roleEntry) logicaltest.TestCheckFunc {
+		var certBundle certutil.CertBundle
+		return func(resp *logical.Response) error {
+			err := mapstructure.Decode(resp.Data, &certBundle)
+			if err != nil {
+				return err
+			}
+			parsedCertBundle, err := certBundle.ToParsedCertBundle()
+			if err != nil {
+				return fmt.Errorf("Error checking generated certificate: %s", err)
+			}
+			cert := parsedCertBundle.Certificate
+
+			expected := strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
+				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
 			}
 			return nil
 		}
@@ -1754,6 +1776,14 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 
 		roleVals.OU = "foo,bar"
 		addTests(getOuCheck(roleVals))
+	}
+	// Organization tests
+	{
+		roleVals.Organization = "system:masters"
+		addTests(getOrganizationCheck(roleVals))
+
+		roleVals.Organization = "foo,bar"
+		addTests(getOrganizationCheck(roleVals))
 	}
 	// IP SAN tests
 	{

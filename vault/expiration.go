@@ -12,6 +12,7 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -125,46 +126,114 @@ func (m *ExpirationManager) Restore() error {
 	if err != nil {
 		return fmt.Errorf("failed to scan for leases: %v", err)
 	}
-
 	m.logger.Debug("expiration: leases collected", "num_existing", len(existing))
 
-	// Restore each key
-	for i, leaseID := range existing {
-		if i%500 == 0 {
-			m.logger.Trace("expiration: leases loading", "progress", i)
-		}
-		// Load the entry
-		le, err := m.loadEntry(leaseID)
-		if err != nil {
-			return err
-		}
+	// Make the channels used for the worker pool
+	broker := make(chan string)
+	quit := make(chan bool)
+	// Buffer these channels to prevent deadlocks
+	errs := make(chan error, len(existing))
+	result := make(chan *leaseEntry, len(existing))
 
-		// If there is no entry, nothing to restore
-		if le == nil {
-			continue
-		}
+	// Use a wait group
+	wg := &sync.WaitGroup{}
 
-		// If there is no expiry time, don't do anything
-		if le.ExpireTime.IsZero() {
-			continue
-		}
+	// Create 64 workers to distribute work to
+	for i := 0; i < consts.ExpirationRestoreWorkerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-		// Determine the remaining time to expiration
-		expires := le.ExpireTime.Sub(time.Now())
-		if expires <= 0 {
-			expires = minRevokeDelay
-		}
+			for {
+				select {
+				case leaseID, ok := <-broker:
+					// broker has been closed, we are done
+					if !ok {
+						return
+					}
 
-		// Setup revocation timer
-		m.pending[le.LeaseID] = time.AfterFunc(expires, func() {
-			m.expireID(le.LeaseID)
-		})
+					le, err := m.loadEntry(leaseID)
+					if err != nil {
+						errs <- err
+						continue
+					}
+
+					// Write results out to the result channel
+					result <- le
+
+				// quit early
+				case <-quit:
+					return
+				}
+			}
+		}()
 	}
+
+	// Distribute the collected keys to the workers in a go routine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i, leaseID := range existing {
+			if i%500 == 0 {
+				m.logger.Trace("expiration: leases loading", "progress", i)
+			}
+
+			select {
+			case <-quit:
+				return
+
+			default:
+				broker <- leaseID
+			}
+		}
+
+		// Close the broker, causing worker routines to exit
+		close(broker)
+	}()
+
+	// Restore each key by pulling from the result chan
+	for i := 0; i < len(existing); i++ {
+		select {
+		case err := <-errs:
+			// Close all go routines
+			close(quit)
+
+			return err
+
+		case le := <-result:
+
+			// If there is no entry, nothing to restore
+			if le == nil {
+				continue
+			}
+
+			// If there is no expiry time, don't do anything
+			if le.ExpireTime.IsZero() {
+				continue
+			}
+
+			// Determine the remaining time to expiration
+			expires := le.ExpireTime.Sub(time.Now())
+			if expires <= 0 {
+				expires = minRevokeDelay
+			}
+
+			// Setup revocation timer
+			m.pending[le.LeaseID] = time.AfterFunc(expires, func() {
+				m.expireID(le.LeaseID)
+			})
+		}
+	}
+
+	// Let all go routines finish
+	wg.Wait()
+
 	if len(m.pending) > 0 {
 		if m.logger.IsInfo() {
 			m.logger.Info("expire: leases restored", "restored_lease_count", len(m.pending))
 		}
 	}
+
 	return nil
 }
 

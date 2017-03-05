@@ -310,6 +310,8 @@ func (e *jsonEncDriver) quoteStr(s string) {
 	w.writen1('"')
 	start := 0
 	for i := 0; i < len(s); {
+		// encode all bytes < 0x20 (except \r, \n).
+		// also encode < > & to prevent security holes when served to some browsers.
 		if b := s[i]; b < utf8.RuneSelf {
 			if 0x20 <= b && b != '\\' && b != '"' && b != '<' && b != '>' && b != '&' {
 				i++
@@ -331,9 +333,14 @@ func (e *jsonEncDriver) quoteStr(s string) {
 				w.writen2('\\', 'f')
 			case '\t':
 				w.writen2('\\', 't')
+			case '<', '>', '&':
+				if e.h.HTMLCharsAsIs {
+					w.writen1(b)
+				} else {
+					w.writestr(`\u00`)
+					w.writen2(hex[b>>4], hex[b&0xF])
+				}
 			default:
-				// encode all bytes < 0x20 (except \r, \n).
-				// also encode < > & to prevent security holes when served to some browsers.
 				w.writestr(`\u00`)
 				w.writen2(hex[b>>4], hex[b&0xF])
 			}
@@ -352,7 +359,7 @@ func (e *jsonEncDriver) quoteStr(s string) {
 			continue
 		}
 		// U+2028 is LINE SEPARATOR. U+2029 is PARAGRAPH SEPARATOR.
-		// Both technically valid JSON, but bomb on JSONP, so fix here.
+		// Both technically valid JSON, but bomb on JSONP, so fix here unconditionally.
 		if c == '\u2028' || c == '\u2029' {
 			if start < i {
 				w.writestr(s[start:i])
@@ -1173,6 +1180,12 @@ type JsonHandle struct {
 	//             containing the exact integer representation as a decimal.
 	//   - else    encode all integers as a json number (default)
 	IntegerAsString uint8
+
+	// HTMLCharsAsIs controls how to encode some special characters to html: < > &
+	//
+	// By default, we encode them as \uXXX
+	// to prevent security holes when served from some browsers.
+	HTMLCharsAsIs bool
 }
 
 func (h *JsonHandle) SetInterfaceExt(rt reflect.Type, tag uint64, ext InterfaceExt) (err error) {
