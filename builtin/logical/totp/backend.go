@@ -1,7 +1,6 @@
 package totp
 
 import (
-	"fmt"
 	"strings"
 
 	log "github.com/mgutz/logxi/v1"
@@ -34,14 +33,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 type backend struct {
 	*framework.Backend
-
 	logger log.Logger
 }
 
-// This needs to be updated
 const backendHelp = `
-The PostgreSQL backend dynamically generates database users.
-
-After mounting this backend, configure it using the endpoints within
-the "config/" path.
+The TOTP backend dynamically generates time-based one-time use passwords.
 `
