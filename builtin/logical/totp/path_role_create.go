@@ -1,16 +1,14 @@
-package postgresql
+package totp
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/pquerna/totp"
+	"github.com/pquerna/otp/totp"
 )
 
-// Update with TOTP values
 func pathRoleCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
@@ -47,41 +45,32 @@ func (b *backend) pathRoleCreateRead(
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 	}
 
-	// Generate TOTP token
-	/*
-		//Generate key using totp library
-		totpKey, err := totp.GenerateCodeCustom(role.key, time.Now().UTC(), ValdidateOpts{
-			Period: role.period,
-			Skew: 1,
-			Digits: otp.DigitsSix
-			Algorithm: otp.AlgorithmSHA1
-		});
+	// Generate password using totp library
+	totpToken, err := totp.GenerateCodeCustom(role.Key, time.Now().UTC(), ValdidateOpts{
+		Period:    role.Period,
+		Digits:    role.Digits,
+		Algorithm: role.Algorithm,
+	})
 
-		if err != nil {
-			return nil, err
-		}
-	*/
+	if err != nil {
+		return nil, err
+	}
 
 	// Return the secret
 	b.logger.Trace("totp/pathRoleCreateRead: generating secret")
 
-	/*
-			return &logical.Response{
-			Data: map[string]interface{}{
-				"token":            totpKey,
-			},
-		}, nil
-	*/
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"token": totpToken,
+		},
+	}, nil
+
 	return resp, nil
 }
 
-// Update help strings
 const pathRoleCreateReadHelpSyn = `
-Request database credentials for a certain role.
+Request time-based one-time use password for a certain role.
 `
-
 const pathRoleCreateReadHelpDesc = `
-This path reads database credentials for a certain role. The
-database credentials will be generated on demand and will be automatically
-revoked when the lease is up.
+This path generates a time-based one-time use password for a certain role. 
 `
