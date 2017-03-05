@@ -1,10 +1,6 @@
-package postgresql
+package totp
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -31,17 +27,34 @@ func pathRoles(b *backend) *framework.Path {
 				Description: "Name of the role.",
 			},
 
-			"sql": {
+			"key": {
 				Type:        framework.TypeString,
-				Description: "SQL string to create a user. See help for more info.",
+				Description: "The shared master key used to generate a TOTP token.",
 			},
 
-			"revocation_sql": {
-				Type: framework.TypeString,
-				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
-string, a base64-encoded semicolon-separated string, a serialized JSON string
-array, or a base64-encoded serialized JSON string array. The '{{name}}' value
-will be substituted.`,
+			"issuer": {
+				Type:        framework.TypeString,
+				Description: `The name of the key's issuing organization.`,
+			},
+
+			"account_name": {
+				Type:        framework.TypeString,
+				Description: `The name of the account associated with the key.`,
+			},
+
+			"period": {
+				Type:        framework.TypeInt,
+				Description: `The length of time used to generate a counter for the TOTP token calculation.`,
+			},
+
+			"algorithm": {
+				Type:        framework.TypeString,
+				Description: `The hashing algorithm used to generate the TOTP token.`,
+			},
+
+			"digits": {
+				Type:        framework.TypeInt,
+				Description: `The number of digits in the generated TOTP token.`,
 			},
 		},
 
@@ -92,11 +105,15 @@ func (b *backend) pathRoleRead(
 	if role == nil {
 		return nil, nil
 	}
-	
+
 	// Return values of role
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"period":            role.period
+			"issuer":       role.Issuer,
+			"account_name": role.Account_Name,
+			"period":       role.Period,
+			"algorithm":    role.Algorithm,
+			"digits":       role.Digits,
 		},
 	}, nil
 }
@@ -114,12 +131,38 @@ func (b *backend) pathRoleList(
 func (b *backend) pathRoleCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	sql := data.Get("sql").(string)
+	key := data.Get("key").(string)
+	issuer := data.Get("issuer").(string)
+	account_name := data.Get("account_name").(string)
+	period := data.Get("period").(int)
+	algorithm := data.Get("algorithm").(string)
+	digits := data.Get("digits").(int)
+
+	// Set optional parameters if neccessary
+	if period == 0 {
+		period = 30
+	}
+
+	switch algorithm {
+	case "SHA1", "SHA256", "SHA512", "MD5":
+	default:
+		algorithm = "SHA1"
+	}
+
+	switch digits {
+	case 6, 8:
+	default:
+		digits = 6
+	}
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		SQL:           sql,
-		RevocationSQL: data.Get("revocation_sql").(string),
+		Key:          key,
+		Issuer:       issuer,
+		Account_Name: aaccount_name,
+		Period:       period,
+		Algorithm:    algorithm,
+		Digits:       digits,
 	})
 	if err != nil {
 		return nil, err
@@ -132,8 +175,12 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	SQL           string `json:"sql" mapstructure:"sql" structs:"sql"`
-	RevocationSQL string `json:"revocation_sql" mapstructure:"revocation_sql" structs:"revocation_sql"`
+	Key          string `json:"key" mapstructure:"key" structs:"key"`
+	Issuer       string `json:"issuer" mapstructure:"issuer" structs:"issuer"`
+	Account_Name string `json:"account_name" mapstructure:"account_name" structs:"account_name"`
+	Period       string `json:"period" mapstructure:"period" structs:"period"`
+	Algorithm    string `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
+	Digits       string `json:"digits" mapstructure:"digits" structs:"digits"`
 }
 
 const pathRoleHelpSyn = `
@@ -143,33 +190,17 @@ Manage the roles that can be created with this backend.
 const pathRoleHelpDesc = `
 This path lets you manage the roles that can be created with this backend.
 
-The "sql" parameter customizes the SQL string used to create the role.
-This can be a sequence of SQL queries. Some substitution will be done to the
-SQL string for certain keys. The names of the variables must be surrounded
-by "{{" and "}}" to be replaced.
+Role Parameters:
 
-  * "name" - The random username generated for the DB user.
+  * "key" - required - The shared master key used to generate a TOTP token.
 
-  * "password" - The random password generated for the DB user.
+  * "issuer" - required - The name of the key's issuing organization.
 
-  * "expiration" - The timestamp when this user will expire.
+  * "account_name" - required - The name of the account associated with the key.
 
-Example of a decent SQL query to use:
+  * "period" - optional - The length of time used to generate a counter for the TOTP token calculation. Default value is 30 seconds.
 
-	CREATE ROLE "{{name}}" WITH
-	  LOGIN
-	  PASSWORD '{{password}}'
-	  VALID UNTIL '{{expiration}}';
-	GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
+  * "algorithm" - optional - The hashing algorithm used to generate the TOTP token. Default value is "SHA1". Other options include "SHA256", "SHA512" and "MD5". 
 
-Note the above user would be able to access everything in schema public.
-For more complex GRANT clauses, see the PostgreSQL manual.
-
-The "revocation_sql" parameter customizes the SQL string used to revoke a user.
-Example of a decent revocation SQL query to use:
-
-	REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {{name}};
-	REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {{name}};
-	REVOKE USAGE ON SCHEMA public FROM {{name}};
-	DROP ROLE IF EXISTS {{name}};
+  * "digits" - optional - The number of digits in the generated TOTP token. Default value is 6. Options include 6 or 8.
 `
