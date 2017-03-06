@@ -3,7 +3,6 @@
 
 // Remote fonts
 @import url('https://fonts.googleapis.com/css?family=Open+Sans:300,400,600');
-@import url('https://fonts.googleapis.com/css?family=Fira+Mono');
 
 // Core variables and mixins
 @import '_variables';
@@ -25,11 +24,12 @@
 @import '_sidebar';
 
 // Pages
-@import '_home';
+@import '_api';
 @import '_community';
 @import '_docs';
 @import '_downloads';
-@import '_api';
+@import '_home';
+@import '_syntax';
 
 // Demo
 @import '_demo';

@@ -29,21 +29,6 @@ h1 {
   margin-bottom: 24px;
 }
 
-.highlight{
-  margin-bottom: 18px;
-}
-
-pre {
-  background-color: $black;
-  color: $white;
-  font-size: 14px;
-  font-weight: normal;
-  font-family: $font-family-monospace;
-  border: none;
-  padding: 20px;
-  margin-bottom: 0;
-}
-
 //all below styles are overriding corrections for below (min-width: 992px)
 //below (min-width: 992px) these styles change
 .navbar-nav {

@@ -128,7 +128,10 @@ body.layout-intro {
   }
 
   pre {
+    font-family: $font-family-monospace;
     font-size: ($docs-font-size - 3);
+    font-weight: normal;
+    padding: 20px;
     margin: 0 0 $docs-font-size;
 
     // This will force the code to scroll horizontally on small screens
