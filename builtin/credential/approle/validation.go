@@ -6,11 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -299,39 +299,12 @@ func createHMAC(key, value string) (string, error) {
 	return hex.EncodeToString(hm.Sum(nil)), nil
 }
 
-// secretIDLock is used to get a lock from the pre-initialized map of locks.
-// Map is indexed based on the first 2 characters of the secretIDHMAC. If the
-// input is not hex encoded or if empty, a "custom" lock will be returned.
-func (b *backend) secretIDLock(secretIDHMAC string) *sync.RWMutex {
-	var lock *sync.RWMutex
-	var ok bool
-	if len(secretIDHMAC) >= 2 {
-		lock, ok = b.secretIDLocksMap[secretIDHMAC[0:2]]
-	}
-	if !ok || lock == nil {
-		// Fall back for custom lock to make sure that this method
-		// never returns nil
-		lock = b.secretIDLocksMap["custom"]
-	}
-	return lock
+func (b *backend) secretIDLock(secretIDHMAC string) *locksutil.LockEntry {
+	return locksutil.LockForKey(b.secretIDLocks, secretIDHMAC)
 }
 
-// secretIDAccessorLock is used to get a lock from the pre-initialized map
-// of locks. Map is indexed based on the first 2 characters of the
-// secretIDAccessor. If the input is not hex encoded or if empty, a "custom"
-// lock will be returned.
-func (b *backend) secretIDAccessorLock(secretIDAccessor string) *sync.RWMutex {
-	var lock *sync.RWMutex
-	var ok bool
-	if len(secretIDAccessor) >= 2 {
-		lock, ok = b.secretIDAccessorLocksMap[secretIDAccessor[0:2]]
-	}
-	if !ok || lock == nil {
-		// Fall back for custom lock to make sure that this method
-		// never returns nil
-		lock = b.secretIDAccessorLocksMap["custom"]
-	}
-	return lock
+func (b *backend) secretIDAccessorLock(secretIDAccessor string) *locksutil.LockEntry {
+	return locksutil.LockForKey(b.secretIDAccessorLocks, secretIDAccessor)
 }
 
 // nonLockedSecretIDStorageEntry fetches the secret ID properties from physical
