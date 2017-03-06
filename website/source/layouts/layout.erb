@@ -30,7 +30,7 @@
   </head>
 
   <body id="<%= body_id_for(current_page) %>" class="<%= body_classes_for(current_page) %>">
-    <div id="announcement-bnr">
+    <div id="announcement-bnr" class="hidden-print">
       <div class="container">
         <div class="row">
           <div class="col-md-offset-1 col-md-10 col-xs-12">
@@ -49,7 +49,7 @@
       </div>
     </div>
 
-    <div id="header" class="navigation navbar-static-top">
+    <div id="header" class="navigation navbar-static-top hidden-print">
       <div class="container">
         <div class="row">
           <div class="col-md-offset-1 col-md-10 col-xs-12">
@@ -95,7 +95,7 @@
     <%= partial "ember_templates" %>
     <%= partial "ember_steps" %>
 
-    <div id="footer" class="navigation">
+    <div id="footer" class="navigation hidden-print">
       <div class="container">
         <div class="row">
           <div class="col-md-offset-1 col-md-10 col-xs-12">
