@@ -47,9 +47,11 @@ $sidebar-icon-height: 20px;
   li > a {
     background-color: $link-bg;
   }
+
   li:hover > a {
     background-color: $link-hover-bg;
   }
+
   li:focus > a, li > a:focus {
     background-color: $link-bg;
   }

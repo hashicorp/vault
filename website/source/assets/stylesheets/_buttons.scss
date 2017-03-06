@@ -2,36 +2,37 @@
 // Button Styles
 // --------------------------------------------------
 
-.v-btn{
+.v-btn {
 	display: inline-block;
 	background-color: $white;
 	color: $black;
 	border: 1px solid $black;
+	text-decoration: none;
 	@include transition(color .3s ease-in-out);
 	@include btn-shadow();
 
-	&.lrg{
+	&.lrg {
 		font-size: 18px;
 		padding: 10px 50px;
 	}
 
-	&.sml{
+	&.sml {
 		font-size: 15px;
 		padding: 8px 40px;
 	}
 
-	&.blue{
+	&.blue {
 		color: $blue;
 		border: 1px solid $blue;
 	}
 
-	&.gray{
+	&.gray {
 		font-weight: 300;
 		color: $gray;
 		border: 1px solid $light-gray;
 	}
 
-	&.terminal{
+	&.terminal {
 		padding-left: 52px;
 		padding-right: 30px;
 		margin-left: 12px;
@@ -39,23 +40,23 @@
 	   	@include img-retina("icon-terminal.png", "icon-terminal@2x.png", 26px, 25px);
 	}
 
-	&.started{
+	&.started {
 		margin-bottom: 12px;
 	}
 
-	&:hover{
+	&:hover, &:active, &:focus {
 		text-decoration: none;
 		@include transition(color .3s ease-in-out);
 
-		&.blue{
+		&.blue {
 			color: darken($blue, 8%);
 		}
 
-		&.black{
+		&.black {
 			color: lighten($black, 50%);
 		}
 
-		&.gray{
+		&.gray {
 			color: $black;
 		}
 	}
