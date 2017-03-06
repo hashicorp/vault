@@ -1,253 +1,253 @@
 <% wrap_layout :inner do %>
-	<% content_for :sidebar do %>
-		<div class="docs-sidebar hidden-print affix-top" role="complementary">
-			<ul class="nav docs-sidenav">
-				<li<%= sidebar_current("docs-home") %>>
-					<a href="/docs/index.html">Docs Home</a>
-				</li>
+  <% content_for :sidebar do %>
+    <div class="docs-sidebar hidden-print affix-top" role="complementary">
+      <ul class="nav docs-sidenav">
+        <li<%= sidebar_current("docs-home") %>>
+          <a href="/docs/index.html">Docs Home</a>
+        </li>
 
-				<li<%= sidebar_current("docs-internal") %>>
-					<a href="/docs/internals/index.html">Internals</a>
-					<ul class="nav">
-						<li<%= sidebar_current("docs-internals-architecture") %>>
-							<a href="/docs/internals/architecture.html">Architecture</a>
-						</li>
+        <li<%= sidebar_current("docs-internal") %>>
+          <a href="/docs/internals/index.html">Internals</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-internals-architecture") %>>
+              <a href="/docs/internals/architecture.html">Architecture</a>
+            </li>
 
-						<li<%= sidebar_current("docs-internals-ha") %>>
-							<a href="/docs/internals/high-availability.html">High Availability</a>
-						</li>
+            <li<%= sidebar_current("docs-internals-ha") %>>
+              <a href="/docs/internals/high-availability.html">High Availability</a>
+            </li>
 
-						<li<%= sidebar_current("docs-internals-security") %>>
-							<a href="/docs/internals/security.html">Security Model</a>
-						</li>
+            <li<%= sidebar_current("docs-internals-security") %>>
+              <a href="/docs/internals/security.html">Security Model</a>
+            </li>
 
-						<li<%= sidebar_current("docs-internals-telemetry") %>>
-							<a href="/docs/internals/telemetry.html">Telemetry</a>
-						</li>
+            <li<%= sidebar_current("docs-internals-telemetry") %>>
+              <a href="/docs/internals/telemetry.html">Telemetry</a>
+            </li>
 
-						<li<%= sidebar_current("docs-internals-token") %>>
-							<a href="/docs/internals/token.html">Token Authentication</a>
-						</li>
+            <li<%= sidebar_current("docs-internals-token") %>>
+              <a href="/docs/internals/token.html">Token Authentication</a>
+            </li>
 
-						<li<%= sidebar_current("docs-internals-rotation") %>>
-							<a href="/docs/internals/rotation.html">Key Rotation</a>
-						</li>
+            <li<%= sidebar_current("docs-internals-rotation") %>>
+              <a href="/docs/internals/rotation.html">Key Rotation</a>
+            </li>
 
-						<li<%= sidebar_current("docs-internals-replication") %>>
-							<a href="/docs/internals/replication.html">Replication</a>
-						</li>
-					</ul>
-				</li>
+            <li<%= sidebar_current("docs-internals-replication") %>>
+              <a href="/docs/internals/replication.html">Replication</a>
+            </li>
+          </ul>
+        </li>
 
-				<li<%= sidebar_current("docs-install") %>>
-					<a href="/docs/install/index.html">Install &amp; Upgrade</a>
-				</li>
+        <li<%= sidebar_current("docs-install") %>>
+          <a href="/docs/install/index.html">Install &amp; Upgrade</a>
+        </li>
 
-				<li<%= sidebar_current("docs-concepts") %>>
-					<a href="/docs/concepts/index.html">Basic Concepts</a>
-					<ul class="nav">
-						<li<%= sidebar_current("docs-concepts-devserver") %>>
-							<a href="/docs/concepts/dev-server.html">"Dev" Server</a>
-						</li>
+        <li<%= sidebar_current("docs-concepts") %>>
+          <a href="/docs/concepts/index.html">Basic Concepts</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-concepts-devserver") %>>
+              <a href="/docs/concepts/dev-server.html">"Dev" Server</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-seal") %>>
-							<a href="/docs/concepts/seal.html">Seal/Unseal</a>
-						</li>
+            <li<%= sidebar_current("docs-concepts-seal") %>>
+              <a href="/docs/concepts/seal.html">Seal/Unseal</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-lease") %>>
-							<a href="/docs/concepts/lease.html">Lease, Renew, and Revoke</a>
-						</li>
+            <li<%= sidebar_current("docs-concepts-lease") %>>
+              <a href="/docs/concepts/lease.html">Lease, Renew, and Revoke</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-auth") %>>
-							<a href="/docs/concepts/auth.html">Authentication</a>
-						</li>
+            <li<%= sidebar_current("docs-concepts-auth") %>>
+              <a href="/docs/concepts/auth.html">Authentication</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-tokens") %>>
-							<a href="/docs/concepts/tokens.html">Tokens</a>
-						</li>
+            <li<%= sidebar_current("docs-concepts-tokens") %>>
+              <a href="/docs/concepts/tokens.html">Tokens</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-response-wrapping") %>>
-							<a href="/docs/concepts/response-wrapping.html">Response Wrapping</a>
-						</li>
+            <li<%= sidebar_current("docs-concepts-response-wrapping") %>>
+              <a href="/docs/concepts/response-wrapping.html">Response Wrapping</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-policies") %>>
-							<a href="/docs/concepts/policies.html">Access Control Policies</a>
-						</li>
+            <li<%= sidebar_current("docs-concepts-policies") %>>
+              <a href="/docs/concepts/policies.html">Access Control Policies</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-ha") %>>
-							<a href="/docs/concepts/ha.html">High Availability</a>
-						</li>
+            <li<%= sidebar_current("docs-concepts-ha") %>>
+              <a href="/docs/concepts/ha.html">High Availability</a>
+            </li>
 
-						<li<%= sidebar_current("docs-concepts-pgp-gpg-keybase") %>>
-							<a href="/docs/concepts/pgp-gpg-keybase.html">PGP, GPG, and Keybase</a>
-						</li>
-					</ul>
-				</li>
+            <li<%= sidebar_current("docs-concepts-pgp-gpg-keybase") %>>
+              <a href="/docs/concepts/pgp-gpg-keybase.html">PGP, GPG, and Keybase</a>
+            </li>
+          </ul>
+        </li>
 
-				<li<%= sidebar_current("docs-config") %>>
-					<a href="/docs/config/index.html">Configuration</a>
-				</li>
+        <li<%= sidebar_current("docs-config") %>>
+          <a href="/docs/config/index.html">Configuration</a>
+        </li>
 
-				<li<%= sidebar_current("docs-commands") %>>
-					<a href="/docs/commands/index.html">Commands (CLI)</a>
-					<ul class="nav">
-						<li<%= sidebar_current("docs-commands-path-help") %>>
-							<a href="/docs/commands/help.html">Path Help</a>
-						</li>
+        <li<%= sidebar_current("docs-commands") %>>
+          <a href="/docs/commands/index.html">Commands (CLI)</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-commands-path-help") %>>
+              <a href="/docs/commands/help.html">Path Help</a>
+            </li>
 
-						<li<%= sidebar_current("docs-commands-readwrite") %>>
-							<a href="/docs/commands/read-write.html">Reading and Writing Data</a>
-						</li>
-						<li<%= sidebar_current("docs-commands-environment") %>>
-							<a href="/docs/commands/environment.html">Environment Variables</a>
-						</li>
-					</ul>
-				</li>
+            <li<%= sidebar_current("docs-commands-readwrite") %>>
+              <a href="/docs/commands/read-write.html">Reading and Writing Data</a>
+            </li>
+            <li<%= sidebar_current("docs-commands-environment") %>>
+              <a href="/docs/commands/environment.html">Environment Variables</a>
+            </li>
+          </ul>
+        </li>
 
-				<li<%= sidebar_current("docs-http") %>>
-					<a href="/docs/http/index.html">API & Libraries</a>
-				</li>
+        <li<%= sidebar_current("docs-http") %>>
+          <a href="/docs/http/index.html">API & Libraries</a>
+        </li>
 
-				<li<%= sidebar_current("docs-guides") %>>
-					<a href="/docs/guides/index.html">Guides</a>
-					<ul class="nav">
-						<li<%= sidebar_current("docs-guides-generate-root") %>>
-							<a href="/docs/guides/generate-root.html">Root Token Generation</a>
-						</li>
-					</ul>
-				</li>
+        <li<%= sidebar_current("docs-guides") %>>
+          <a href="/docs/guides/index.html">Guides</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-guides-generate-root") %>>
+              <a href="/docs/guides/generate-root.html">Root Token Generation</a>
+            </li>
+          </ul>
+        </li>
 
-				<hr>
+        <hr>
 
-				<li<%= sidebar_current("docs-secrets") %>>
-					<a href="/docs/secrets/index.html">Secret Backends</a>
-					<ul class="nav">
-						<li<%= sidebar_current("docs-secrets-aws") %>>
-							<a href="/docs/secrets/aws/index.html">AWS</a>
-						</li>
+        <li<%= sidebar_current("docs-secrets") %>>
+          <a href="/docs/secrets/index.html">Secret Backends</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-secrets-aws") %>>
+              <a href="/docs/secrets/aws/index.html">AWS</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-cassandra") %>>
-							<a href="/docs/secrets/cassandra/index.html">Cassandra</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-cassandra") %>>
+              <a href="/docs/secrets/cassandra/index.html">Cassandra</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-consul") %>>
-							<a href="/docs/secrets/consul/index.html">Consul</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-consul") %>>
+              <a href="/docs/secrets/consul/index.html">Consul</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-cubbyhole") %>>
-							<a href="/docs/secrets/cubbyhole/index.html">Cubbyhole</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-cubbyhole") %>>
+              <a href="/docs/secrets/cubbyhole/index.html">Cubbyhole</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-generic") %>>
-							<a href="/docs/secrets/generic/index.html">Generic</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-generic") %>>
+              <a href="/docs/secrets/generic/index.html">Generic</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-mongodb") %>>
-							<a href="/docs/secrets/mongodb/index.html">MongoDB</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-mongodb") %>>
+              <a href="/docs/secrets/mongodb/index.html">MongoDB</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-mssql") %>>
-							<a href="/docs/secrets/mssql/index.html">MSSQL</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-mssql") %>>
+              <a href="/docs/secrets/mssql/index.html">MSSQL</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-mysql") %>>
-							<a href="/docs/secrets/mysql/index.html">MySQL</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-mysql") %>>
+              <a href="/docs/secrets/mysql/index.html">MySQL</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-pki") %>>
-							<a href="/docs/secrets/pki/index.html">PKI (Certificates)</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-pki") %>>
+              <a href="/docs/secrets/pki/index.html">PKI (Certificates)</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-postgresql") %>>
-							<a href="/docs/secrets/postgresql/index.html">PostgreSQL</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-postgresql") %>>
+              <a href="/docs/secrets/postgresql/index.html">PostgreSQL</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-rabbitmq") %>>
-							<a href="/docs/secrets/rabbitmq/index.html">RabbitMQ</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-rabbitmq") %>>
+              <a href="/docs/secrets/rabbitmq/index.html">RabbitMQ</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-ssh") %>>
-							<a href="/docs/secrets/ssh/index.html">SSH</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-ssh") %>>
+              <a href="/docs/secrets/ssh/index.html">SSH</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-transit") %>>
-							<a href="/docs/secrets/transit/index.html">Transit</a>
-						</li>
+            <li<%= sidebar_current("docs-secrets-transit") %>>
+              <a href="/docs/secrets/transit/index.html">Transit</a>
+            </li>
 
-						<li<%= sidebar_current("docs-secrets-custom") %>>
-							<a href="/docs/secrets/custom.html">Custom</a>
-						</li>
-					</ul>
-				</li>
+            <li<%= sidebar_current("docs-secrets-custom") %>>
+              <a href="/docs/secrets/custom.html">Custom</a>
+            </li>
+          </ul>
+        </li>
 
-				<li<%= sidebar_current("docs-auth") %>>
-					<a href="/docs/auth/index.html">Auth Backends</a>
-					<ul class="nav">
-						<li<%= sidebar_current("docs-auth-appid") %>>
-							<a href="/docs/auth/app-id.html">App ID</a>
-						</li>
+        <li<%= sidebar_current("docs-auth") %>>
+          <a href="/docs/auth/index.html">Auth Backends</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-auth-appid") %>>
+              <a href="/docs/auth/app-id.html">App ID</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-approle") %>>
-							<a href="/docs/auth/approle.html">AppRole</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-approle") %>>
+              <a href="/docs/auth/approle.html">AppRole</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-aws-ec2") %>>
-							<a href="/docs/auth/aws-ec2.html">AWS EC2</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-aws-ec2") %>>
+              <a href="/docs/auth/aws-ec2.html">AWS EC2</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-github") %>>
-							<a href="/docs/auth/github.html">GitHub</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-github") %>>
+              <a href="/docs/auth/github.html">GitHub</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-ldap") %>>
-							<a href="/docs/auth/ldap.html">LDAP</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-ldap") %>>
+              <a href="/docs/auth/ldap.html">LDAP</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-mfa") %>>
-							<a href="/docs/auth/mfa.html">MFA</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-mfa") %>>
+              <a href="/docs/auth/mfa.html">MFA</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-okta") %>>
-							<a href="/docs/auth/okta.html">Okta</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-okta") %>>
+              <a href="/docs/auth/okta.html">Okta</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-radius") %>>
-							<a href="/docs/auth/radius.html">RADIUS</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-radius") %>>
+              <a href="/docs/auth/radius.html">RADIUS</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-cert") %>>
-							<a href="/docs/auth/cert.html">TLS Certificates</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-cert") %>>
+              <a href="/docs/auth/cert.html">TLS Certificates</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-token") %>>
-							<a href="/docs/auth/token.html">Tokens</a>
-						</li>
+            <li<%= sidebar_current("docs-auth-token") %>>
+              <a href="/docs/auth/token.html">Tokens</a>
+            </li>
 
-						<li<%= sidebar_current("docs-auth-userpass") %>>
-							<a href="/docs/auth/userpass.html">Username &amp; Password</a>
-						</li>
-					</ul>
-				</li>
+            <li<%= sidebar_current("docs-auth-userpass") %>>
+              <a href="/docs/auth/userpass.html">Username &amp; Password</a>
+            </li>
+          </ul>
+        </li>
 
-				<li<%= sidebar_current("docs-audit") %>>
-					<a href="/docs/audit/index.html">Audit Backends</a>
-					<ul class="nav">
-						<li<%= sidebar_current("docs-audit-file") %>>
-							<a href="/docs/audit/file.html">File</a>
+        <li<%= sidebar_current("docs-audit") %>>
+          <a href="/docs/audit/index.html">Audit Backends</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-audit-file") %>>
+              <a href="/docs/audit/file.html">File</a>
                         </li>
 
-						<li<%= sidebar_current("docs-audit-syslog") %>>
-							<a href="/docs/audit/syslog.html">Syslog</a>
-						</li>
+            <li<%= sidebar_current("docs-audit-syslog") %>>
+              <a href="/docs/audit/syslog.html">Syslog</a>
+            </li>
 
-						<li<%= sidebar_current("docs-audit-socket") %>>
-							<a href="/docs/audit/socket.html">Socket</a>
-						</li>
-					</ul>
-				</li>
-			</ul>
-		</div>
-	<% end %>
+            <li<%= sidebar_current("docs-audit-socket") %>>
+              <a href="/docs/audit/socket.html">Socket</a>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  <% end %>
 
-	<%= yield %>
+  <%= yield %>
 <% end %>
