@@ -1,5 +1,5 @@
 ---
-layout: "install"
+layout: "docs"
 page_title: "Upgrading to Vault 0.6.1"
 sidebar_current: "docs-install-upgrade-to-0.6.1"
 description: |-
@@ -79,7 +79,7 @@ filtering groups were tried in all cases to one where specific filters are
 defined by the administrator. This vastly increases overall directory
 compatibility, especially with Active Directory when using nested groups, but
 unfortunately has the side effect that `memberOf` is no longer searched for by
-default, which is a breaking change for many existing setups. 
+default, which is a breaking change for many existing setups.
 
 `Scenario 2` in the [updated
 documentation](https://www.vaultproject.io/docs/auth/ldap.html) shows an

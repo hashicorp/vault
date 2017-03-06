@@ -1,7 +1,7 @@
 ---
-layout: "install"
+layout: "docs"
 page_title: "Upgrading to Vault 0.6"
-sidebar_current: "docs-install-upgrade-to-0.6"
+sidebar_current: "docs-install-upgrade-to-0.6.0"
 description: |-
   Learn how to upgrade to Vault 0.6
 ---

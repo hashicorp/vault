@@ -8,7 +8,7 @@
   flex-shrink:0;
 
   .navbar-brand {
-    .logo{
+    .logo {
       width: $project-logo-width;
       padding-left: 50px;
       font-size: 0;
@@ -19,11 +19,11 @@
     }
   }
 
-  .by-hashicorp{
+  .by-hashicorp {
     @include project-by-hashicorp-style();
   }
 
-  .buttons{
+  .buttons {
     margin-top: 2px; //baseline everything
   }
 }
@@ -31,13 +31,8 @@
 @media (max-width: 414px) {
   #header {
     .navbar-brand {
-      .logo{
+      .logo {
         width: $project-logo-width * .8;
-
-        img{
-          //width: 72px;
-          //height: 14px;
-        }
       }
     }
   }
