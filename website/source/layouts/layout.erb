@@ -99,7 +99,7 @@
       <div class="container">
         <div class="row">
           <div class="col-md-offset-1 col-md-10 col-xs-12">
-            <% if current_page.url != '/' %>
+            <% if current_page.url != '/' && current_page.url != '/index.html' %>
               <div class="edit-page-link"><a href="<%= github_url :current_page %>">Edit this page</a></div>
             <% end %>
             <div class="footer-links">
