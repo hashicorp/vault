@@ -10,16 +10,11 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/duration"
-	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"golang.org/x/crypto/ssh"
 )
-
-type signingBundle struct {
-	Certificate string `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-}
 
 type creationBundle struct {
 	KeyId           string
@@ -159,7 +154,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 
 	signer, err := ssh.ParsePrivateKey([]byte(storedPrivateKey))
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("stored SSH signing key cannot be parsed: %v", err)}
+		return nil, fmt.Errorf("failed to parse stored CA private key: %v", err)
 	}
 
 	cBundle := creationBundle{
@@ -382,8 +377,6 @@ func (b *creationBundle) sign() (*ssh.Certificate, error) {
 			Extensions:      b.extensions,
 		},
 	}
-
-	fmt.Printf("public key associated with private key: %q", string(b.Signer.PublicKey().Marshal()))
 
 	err = certificate.SignCert(rand.Reader, b.Signer)
 	if err != nil {

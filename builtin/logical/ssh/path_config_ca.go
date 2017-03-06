@@ -81,9 +81,9 @@ func caKey(storage logical.Storage, keyType string) (string, error) {
 	}
 
 	if entry == nil {
-		// If the entry if not found, look for an older path. If found, upgrade
-		// the older entry.
-		entry, err = storage.Get(path)
+		// If the entry is not found, look at an older path. If found, upgrade
+		// it.
+		entry, err = storage.Get(deprecatedPath)
 		if err != nil {
 			return "", err
 		}
