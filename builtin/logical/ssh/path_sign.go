@@ -24,8 +24,8 @@ type creationBundle struct {
 	TTL             time.Duration
 	Signer          ssh.Signer
 	Role            *sshRole
-	criticalOptions map[string]string
-	extensions      map[string]string
+	CriticalOptions map[string]string
+	Extensions      map[string]string
 }
 
 func pathSign(b *backend) *framework.Path {
@@ -165,8 +165,8 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		TTL:             ttl,
 		CertificateType: certificateType,
 		Role:            role,
-		criticalOptions: criticalOptions,
-		extensions:      extensions,
+		CriticalOptions: criticalOptions,
+		Extensions:      extensions,
 	}
 
 	certificate, err := cBundle.sign()
@@ -305,7 +305,7 @@ func (b *backend) calculateExtensions(data *framework.FieldData, role *sshRole) 
 		}
 
 		if len(notAllowed) != 0 {
-			return nil, fmt.Errorf("Extensions not on allowed list: %v", notAllowed)
+			return nil, fmt.Errorf("extensions %v are not on allowed list", notAllowed)
 		}
 	}
 
@@ -373,8 +373,8 @@ func (b *creationBundle) sign() (*ssh.Certificate, error) {
 		ValidBefore:     uint64(now.Add(b.TTL).In(time.UTC).Unix()),
 		CertType:        b.CertificateType,
 		Permissions: ssh.Permissions{
-			CriticalOptions: b.criticalOptions,
-			Extensions:      b.extensions,
+			CriticalOptions: b.CriticalOptions,
+			Extensions:      b.Extensions,
 		},
 	}
 
