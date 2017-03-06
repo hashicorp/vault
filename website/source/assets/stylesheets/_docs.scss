@@ -8,12 +8,12 @@ body.layout-docs,
 body.layout-inner,
 body.layout-downloads,
 body.layout-intro {
-  >.container{
-    .col-md-8[role=main]{
+  >.container {
+    .col-md-8[role=main] {
       min-height: 800px;
       background-color: white;
 
-      >div{
+      >div {
         position: relative;
         z-index: 10;
       }
@@ -80,6 +80,12 @@ body.layout-intro {
           }
         }
       }
+
+      // For forcing sub-navs to appear - in the long term, this should not
+      // be a thing anymore...
+      > ul.nav-visible {
+        display: block;
+      }
     }
 
     li.active {
@@ -92,7 +98,7 @@ body.layout-intro {
       }
 
       // Open nested navigations
-      ul.nav {
+      > ul.nav {
         display: block;
       }
     }
