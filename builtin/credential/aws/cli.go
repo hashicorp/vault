@@ -96,7 +96,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 func (h *CLIHandler) Help() string {
 	help := `
-The AWS credentaial provider allows you to authenticate with
+The AWS credential provider allows you to authenticate with
 AWS IAM credentials. To use it, you specify valid AWS IAM credentials
 in one of a number of ways. They can be specified explicitly on the
 command line (which in general you should not do), via the standard AWS
