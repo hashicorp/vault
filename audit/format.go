@@ -105,6 +105,7 @@ func (f *AuditFormatter) FormatRequest(
 			DisplayName: auth.DisplayName,
 			Policies:    auth.Policies,
 			Metadata:    auth.Metadata,
+			NumUses:     req.ClientTokenNumUses,
 		},
 
 		Request: AuditRequest{

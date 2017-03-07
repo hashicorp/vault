@@ -85,6 +85,10 @@ type Request struct {
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
 
+	// ClientTokenNumUses represents the allowed number of uses left on the
+	// token supplied
+	ClientTokenNumUses int `json:"client_token_num_uses" structs:"client_token_num_uses" mapstructure:"client_token_num_uses"`
+
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write
 	lastRemoteWAL uint64
