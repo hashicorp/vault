@@ -1,6 +1,9 @@
 package totp
 
 import (
+	"encoding/base32"
+	"fmt"
+
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -138,6 +141,30 @@ func (b *backend) pathRoleCreate(
 	algorithm := data.Get("algorithm").(string)
 	digits := data.Get("digits").(int)
 
+	// Enforce input value requirements
+	if key == "" {
+		return logical.ErrorResponse("The key value is required."), nil
+	}
+
+	_, err := base32.StdEncoding.DecodeString(key)
+
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf(
+			"Invalid key value: %s", err)), nil
+	}
+
+	if period < 0 {
+		return logical.ErrorResponse("The period value must be greater than zero."), nil
+	}
+
+	if issuer == "" {
+		return logical.ErrorResponse("The issuer value is required."), nil
+	}
+
+	if account_name == "" {
+		return logical.ErrorResponse("The account_name value is required."), nil
+	}
+
 	// Set optional parameters if neccessary
 	if period == 0 {
 		period = 30
@@ -145,14 +172,18 @@ func (b *backend) pathRoleCreate(
 
 	switch algorithm {
 	case "SHA1", "SHA256", "SHA512", "MD5":
-	default:
+	case "":
 		algorithm = "SHA1"
+	default:
+		return logical.ErrorResponse("The algorithm value is not valid."), nil
 	}
 
 	switch digits {
 	case 6, 8:
-	default:
+	case 0:
 		digits = 6
+	default:
+		return logical.ErrorResponse("The digit value can only be 6 or 8."), nil
 	}
 
 	// Store it
