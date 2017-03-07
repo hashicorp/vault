@@ -1,4 +1,4 @@
-package duration
+package parseutil
 
 import (
 	"encoding/json"
@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 func ParseDurationSecond(in interface{}) (time.Duration, error) {
@@ -49,4 +51,12 @@ func ParseDurationSecond(in interface{}) (time.Duration, error) {
 	}
 
 	return dur, nil
+}
+
+func ParseBool(in interface{}) (bool, error) {
+	var result bool
+	if err := mapstructure.WeakDecode(in, &result); err != nil {
+		return false, err
+	}
+	return result, nil
 }

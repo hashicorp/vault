@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -432,7 +432,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		maxTTL = maxSystemTTL
 	} else {
 		var err error
-		maxTTL, err = duration.ParseDurationSecond(role.MaxTTL)
+		maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf(
 				"Invalid max ttl: %s", err))
@@ -445,7 +445,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 	ttl := b.System().DefaultLeaseTTL()
 	if len(role.TTL) != 0 {
 		var err error
-		ttl, err = duration.ParseDurationSecond(role.TTL)
+		ttl, err = parseutil.ParseDurationSecond(role.TTL)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf(
 				"Invalid ttl: %s", err))
