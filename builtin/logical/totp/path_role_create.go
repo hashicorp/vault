@@ -99,4 +99,5 @@ Request time-based one-time use password for a certain role.
 `
 const pathRoleCreateReadHelpDesc = `
 This path generates a time-based one-time use password for a certain role. 
+
 `

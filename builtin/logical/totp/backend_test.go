@@ -3,19 +3,36 @@ package totp
 import (
 	"fmt"
 	"log"
+	"path"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
 
-var (
-	masterKey string
-)
+/*
+	Test each algorithm type
+	Test digits
+	Test periods
+	Test defaults
+	Test invalid period (negative)
+	Test invalid key
+	Test invalid account_name
+	Test invalid issuer
+*/
+
+func createKey() (string, error) {
+	keyUrl, err := totplib.Generate(totplib.GenerateOpts{
+		Issuer:      "Vault",
+		AccountName: "Test",
+	})
+
+	key := keyUrl.Secret()
+
+	return key, err
+}
 
 func TestBackend_basic(t *testing.T) {
 	config := logical.TestBackendConfig()
@@ -25,12 +42,20 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Generate a new shared key
+	key := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, connData, false),
-			testAccStepCreateRole(t, "web", testRole, false),
-			testAccStepReadCreds(t, b, config.StorageView, "web", connURL),
+			testAccStepCreateRole(t, "test", roleData, false),
+			testAccStepReadCreds(t, b, config.StorageView, "test", key),
 		},
 	})
 }
@@ -43,38 +68,39 @@ func TestBackend_roleCrud(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	key := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"digits":       6,
+		"period":       30,
+		"algorithm":    "SHA1",
+	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
-			testAccStepConfig(t, connData, false),
-			testAccStepCreateRole(t, "web", testRole, false),
-			testAccStepReadRole(t, "web", testRole),
-			testAccStepDeleteRole(t, "web"),
-			testAccStepReadRole(t, "web", ""),
+			testAccStepCreateRole(t, "test", roleData, false),
+			testAccStepReadRole(t, "test", expected),
+			testAccStepDeleteRole(t, "test"),
+			testAccStepReadRole(t, "test", ""),
 		},
 	})
 }
 
-func testAccStepCreateRole(t *testing.T, name string, sql string, expectFail bool) logicaltest.TestStep {
+func testAccStepCreateRole(t *testing.T, name string, data map[string]interface{}, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      path.Join("roles", name),
-		Data: map[string]interface{}{
-			"sql": sql,
-		},
-		ErrorOk: expectFail,
-	}
-}
-
-func testAccStepCreateRoleWithRevocationSQL(t *testing.T, name, sql, revocationSQL string, expectFail bool) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      path.Join("roles", name),
-		Data: map[string]interface{}{
-			"sql":            sql,
-			"revocation_sql": revocationSQL,
-		},
-		ErrorOk: expectFail,
+		Data:      data,
+		ErrorOk:   expectFail,
 	}
 }
 
@@ -85,84 +111,23 @@ func testAccStepDeleteRole(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, connURL string) logicaltest.TestStep {
+func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, key string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      path.Join("creds", name),
 		Check: func(resp *logical.Response) error {
 			var d struct {
-				Username string `mapstructure:"username"`
-				Password string `mapstructure:"password"`
+				Token string `mapstructure:"token"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
-			conn, err := pq.ParseURL(connURL)
 
-			if err != nil {
-				t.Fatal(err)
-			}
+			valid := totplib.Validate(d.Token, key)
 
-			conn += " timezone=utc"
-
-			db, err := sql.Open("postgres", conn)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			returnedRows := func() int {
-				stmt, err := db.Prepare("SELECT DISTINCT schemaname FROM pg_tables WHERE has_table_privilege($1, 'information_schema.role_column_grants', 'select');")
-				if err != nil {
-					return -1
-				}
-				defer stmt.Close()
-
-				rows, err := stmt.Query(d.Username)
-				if err != nil {
-					return -1
-				}
-				defer rows.Close()
-
-				i := 0
-				for rows.Next() {
-					i++
-				}
-				return i
-			}
-
-			// minNumPermissions is the minimum number of permissions that will always be present.
-			const minNumPermissions = 2
-
-			userRows := returnedRows()
-			if userRows < minNumPermissions {
-				t.Fatalf("did not get expected number of rows, got %d", userRows)
-			}
-
-			resp, err = b.HandleRequest(&logical.Request{
-				Operation: logical.RevokeOperation,
-				Storage:   s,
-				Secret: &logical.Secret{
-					InternalData: map[string]interface{}{
-						"secret_type": "creds",
-						"username":    d.Username,
-						"role":        name,
-					},
-				},
-			})
-			if err != nil {
-				return err
-			}
-			if resp != nil {
-				if resp.IsError() {
-					return fmt.Errorf("Error on resp: %#v", *resp)
-				}
-			}
-
-			userRows = returnedRows()
-			// User shouldn't exist so returnedRows() should encounter an error and exit with -1
-			if userRows != -1 {
-				t.Fatalf("did not get expected number of rows, got %d", userRows)
+			if !valid {
+				t.Fatalf("Generated token isn't valid.")
 			}
 
 			return nil
@@ -170,28 +135,41 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 	}
 }
 
-func testAccStepReadRole(t *testing.T, name string, sql string) logicaltest.TestStep {
+func testAccStepReadRole(t *testing.T, name string, expected map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "roles/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
-				if sql == "" {
+				if expected == nil {
 					return nil
 				}
-
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
 			var d struct {
-				SQL string `mapstructure:"sql"`
+				Issuer       string `mapstructure:"issuer"`
+				Account_Name string `mapstructure:"account_name"`
+				Period       int    `mapstructure:"period"`
+				Algorithm    string `mapstructure:"algorithm"`
+				Digits       int    `mapstructure:"digits"`
 			}
+
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
 
-			if d.SQL != sql {
-				return fmt.Errorf("bad: %#v", resp)
+			switch {
+			case d.Issuer != expected.Get("issuer"):
+				return fmt.Errorf("Issuer should equal: %s", expected.Get("issuer"))
+			case d.Account_Name != expected.Get("account_name"):
+				return fmt.Errorf("Account_Name should equal: %s", expected.Get("account_name"))
+			case d.Period != expected.Get("period"):
+				return fmt.Errorf("Period should equal: %i", expected.Get("period"))
+			case d.Algorithm != expected.Get("algorithm"):
+				return fmt.Errorf("Algorithm should equal: %s", expected.Get("algorithm"))
+			case d.Digits != expected.Get("digits"):
+				return fmt.Errorf("Digits should equal: %i", expected.Get("digits"))
 			}
 
 			return nil

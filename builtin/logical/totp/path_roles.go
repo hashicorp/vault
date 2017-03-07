@@ -221,17 +221,4 @@ Manage the roles that can be created with this backend.
 const pathRoleHelpDesc = `
 This path lets you manage the roles that can be created with this backend.
 
-Role Parameters:
-
-  * "key" - required - The shared master key used to generate a TOTP token.
-
-  * "issuer" - required - The name of the key's issuing organization.
-
-  * "account_name" - required - The name of the account associated with the key.
-
-  * "period" - optional - The length of time used to generate a counter for the TOTP token calculation. Default value is 30 seconds.
-
-  * "algorithm" - optional - The hashing algorithm used to generate the TOTP token. Default value is "SHA1". Other options include "SHA256", "SHA512" and "MD5". 
-
-  * "digits" - optional - The number of digits in the generated TOTP token. Default value is 6. Options include 6 or 8.
 `
