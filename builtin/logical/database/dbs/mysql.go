@@ -13,8 +13,6 @@ const defaultRevocationStmts = `
 `
 
 type MySQL struct {
-	db *sql.DB
-
 	ConnectionProducer
 	CredentialsProducer
 }

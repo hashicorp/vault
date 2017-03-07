@@ -10,8 +10,6 @@ import (
 )
 
 type PostgreSQL struct {
-	db *sql.DB
-
 	ConnectionProducer
 	CredentialsProducer
 }
