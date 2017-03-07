@@ -40,7 +40,7 @@ description: |-
 
     ```javascript
     {
-        "capabilities": ["read", "list"]
+      "capabilities": ["read", "list"]
     }
     ```
 

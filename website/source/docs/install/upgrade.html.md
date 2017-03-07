@@ -1,5 +1,5 @@
 ---
-layout: "install"
+layout: "docs"
 page_title: "Upgrade Vault"
 sidebar_current: "docs-install-upgrade"
 description: |-

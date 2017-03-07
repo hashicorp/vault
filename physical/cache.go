@@ -1,7 +1,7 @@
 package physical
 
 import (
-	"crypto/sha1"
+	"crypto/md5"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -59,7 +59,7 @@ func NewCache(b Backend, size int, logger log.Logger) *Cache {
 }
 
 func (c *Cache) lockHashForKey(key string) string {
-	hf := sha1.New()
+	hf := md5.New()
 	hf.Write([]byte(key))
 	return strings.ToLower(hex.EncodeToString(hf.Sum(nil))[:2])
 }

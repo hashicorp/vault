@@ -30,11 +30,11 @@ description: |-
 
     ```javascript
     {
-        "headers":{
-            "X-Forwarded-For": {
-                "hmac":true
-            }
+      "headers": {
+        "X-Forwarded-For": {
+          "hmac":true
         }
+      }
     }
     ```
 
@@ -68,9 +68,9 @@ description: |-
 
     ```javascript
     {
-        "X-Forwarded-For":{
-            "hmac":true
-        }
+      "X-Forwarded-For": {
+        "hmac":true
+      }
     }
     ```
 
@@ -87,7 +87,7 @@ description: |-
 
   <dt>Method</dt>
   <dd>PUT</dd>
- 
+
   <dt>URL</dt>
   <dd>`/sys/config/auditing/request-headers/<name>`</dd>
 

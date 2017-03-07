@@ -1,0 +1,14 @@
+pre.highlight code {
+  color: $gray-dark;
+}
+
+<%= Rouge::Themes::Github.render(scope: ".highlight") %>
+
+pre.highlight {
+  border: 1px solid $light-gray;
+}
+
+pre.highlight code span.c1 {
+  font-style: normal;
+  opacity: 0.8;
+}
