@@ -3,7 +3,6 @@ package dbs
 import (
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -20,7 +19,6 @@ type Cassandra struct {
 	// can close it and use a new connection; hence the lock
 	ConnectionProducer
 	CredentialsProducer
-	sync.RWMutex
 }
 
 func (c *Cassandra) Type() string {
@@ -28,7 +26,7 @@ func (c *Cassandra) Type() string {
 }
 
 func (c *Cassandra) getConnection() (*gocql.Session, error) {
-	session, err := c.Connection()
+	session, err := c.connection()
 	if err != nil {
 		return nil, err
 	}
@@ -37,26 +35,15 @@ func (c *Cassandra) getConnection() (*gocql.Session, error) {
 }
 
 func (c *Cassandra) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
+	// Grab the lock
+	c.Lock()
+	defer c.Unlock()
+
 	// Get the connection
 	session, err := c.getConnection()
 	if err != nil {
 		return err
 	}
-
-	// TODO: This is racey
-	// Grab a read lock
-	c.RLock()
-	defer c.RUnlock()
-
-	// Set consistency
-	/*	if .Consistency != "" {
-		consistencyValue, err := gocql.ParseConsistencyWrapper(role.Consistency)
-		if err != nil {
-			return err
-		}
-
-		session.SetConsistency(consistencyValue)
-	}*/
 
 	// Execute each query
 	for _, query := range strutil.ParseArbitraryStringSlice(createStmts, ";") {
@@ -94,13 +81,14 @@ func (c *Cassandra) RenewUser(username, expiration string) error {
 }
 
 func (c *Cassandra) RevokeUser(username, revocationStmts string) error {
+	// Grab the lock
+	c.Lock()
+	defer c.Unlock()
+
 	session, err := c.getConnection()
 	if err != nil {
 		return err
 	}
-	// TODO: this is Racey
-	c.RLock()
-	defer c.RUnlock()
 
 	err = session.Query(fmt.Sprintf("DROP USER '%s'", username)).Exec()
 	if err != nil {

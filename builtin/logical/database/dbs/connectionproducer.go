@@ -18,8 +18,10 @@ import (
 )
 
 type ConnectionProducer interface {
-	Connection() (interface{}, error)
 	Close()
+
+	sync.Locker
+	connection() (interface{}, error)
 }
 
 // sqlConnectionProducer impliments ConnectionProducer and provides a generic producer for most sql databases
@@ -32,12 +34,8 @@ type sqlConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *sqlConnectionProducer) Connection() (interface{}, error) {
-	// Grab the write lock
-	c.Lock()
-	defer c.Unlock()
-
-	// If we already have a DB, we got it!
+func (c *sqlConnectionProducer) connection() (interface{}, error) {
+	// If we already have a DB, test it and return
 	if c.db != nil {
 		if err := c.db.Ping(); err == nil {
 			return c.db, nil
@@ -106,7 +104,7 @@ type cassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *cassandraConnectionProducer) Connection() (interface{}, error) {
+func (c *cassandraConnectionProducer) connection() (interface{}, error) {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()

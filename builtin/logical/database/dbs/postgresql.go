@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/lib/pq"
@@ -15,7 +14,6 @@ type PostgreSQL struct {
 
 	ConnectionProducer
 	CredentialsProducer
-	sync.RWMutex
 }
 
 func (p *PostgreSQL) Type() string {
@@ -23,7 +21,7 @@ func (p *PostgreSQL) Type() string {
 }
 
 func (p *PostgreSQL) getConnection() (*sql.DB, error) {
-	db, err := p.Connection()
+	db, err := p.connection()
 	if err != nil {
 		return nil, err
 	}
@@ -32,16 +30,15 @@ func (p *PostgreSQL) getConnection() (*sql.DB, error) {
 }
 
 func (p *PostgreSQL) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
+	// Grab the lock
+	p.Lock()
+	defer p.Unlock()
+
 	// Get the connection
 	db, err := p.getConnection()
 	if err != nil {
 		return err
 	}
-
-	// TODO: This is racey
-	// Grab a read lock
-	p.RLock()
-	defer p.RUnlock()
 
 	// Start a transaction
 	//	b.logger.Trace("postgres/pathRoleCreateRead: starting transaction")
@@ -89,14 +86,14 @@ func (p *PostgreSQL) CreateUser(createStmts, rollbackStmts, username, password, 
 }
 
 func (p *PostgreSQL) RenewUser(username, expiration string) error {
+	// Grab the lock
+	p.Lock()
+	defer p.Unlock()
+
 	db, err := p.getConnection()
 	if err != nil {
 		return err
 	}
-	// TODO: This is Racey
-	// Grab the read lock
-	p.RLock()
-	defer p.RUnlock()
 
 	query := fmt.Sprintf(
 		"ALTER ROLE %s VALID UNTIL '%s';",
@@ -116,9 +113,9 @@ func (p *PostgreSQL) RenewUser(username, expiration string) error {
 }
 
 func (p *PostgreSQL) RevokeUser(username, revocationStmts string) error {
-	// Grab the read lock
-	p.RLock()
-	defer p.RUnlock()
+	// Grab the lock
+	p.Lock()
+	defer p.Unlock()
 
 	if revocationStmts == "" {
 		return p.defaultRevokeUser(username)

@@ -3,7 +3,6 @@ package dbs
 import (
 	"database/sql"
 	"strings"
-	"sync"
 
 	"github.com/hashicorp/vault/helper/strutil"
 )
@@ -18,7 +17,6 @@ type MySQL struct {
 
 	ConnectionProducer
 	CredentialsProducer
-	sync.RWMutex
 }
 
 func (m *MySQL) Type() string {
@@ -26,7 +24,7 @@ func (m *MySQL) Type() string {
 }
 
 func (m *MySQL) getConnection() (*sql.DB, error) {
-	db, err := m.Connection()
+	db, err := m.connection()
 	if err != nil {
 		return nil, err
 	}
@@ -35,16 +33,15 @@ func (m *MySQL) getConnection() (*sql.DB, error) {
 }
 
 func (m *MySQL) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
 	// Get the connection
 	db, err := m.getConnection()
 	if err != nil {
 		return err
 	}
-
-	// TODO: This is racey
-	// Grab a read lock
-	m.RLock()
-	defer m.RUnlock()
 
 	// Start a transaction
 	tx, err := db.Begin()
@@ -87,18 +84,17 @@ func (m *MySQL) RenewUser(username, expiration string) error {
 }
 
 func (m *MySQL) RevokeUser(username, revocationStmts string) error {
+	// Grab the read lock
+	m.Lock()
+	defer m.Unlock()
+
 	// Get the connection
 	db, err := m.getConnection()
 	if err != nil {
 		return err
 	}
 
-	// Grab the read lock
-	m.RLock()
-	defer m.RUnlock()
-
 	// Use a default SQL statement for revocation if one cannot be fetched from the role
-
 	if revocationStmts == "" {
 		revocationStmts = defaultRevocationStmts
 	}
