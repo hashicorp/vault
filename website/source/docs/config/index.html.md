@@ -251,7 +251,8 @@ to help you, but may refer you to the backend author.
     been shown to work at high scale under heavy load.
 
   * `etcd` - Store data within [etcd](https://coreos.com/etcd/).
-    This backend supports HA. This is a community-supported backend.
+    This is a community-supported backend. The etcd3 backend supports HA and
+    is maintained by the [etcd team](https://github.com/coreos/etcd/blob/master/MAINTAINERS#L1-L4).
 
   * `zookeeper` - Store data within [Zookeeper](https://zookeeper.apache.org/).
     This backend supports HA. This is a community-supported backend.
