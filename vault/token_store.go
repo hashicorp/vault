@@ -10,9 +10,9 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -1128,7 +1128,8 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 
 		for _, child := range children {
 			// Look up tainted entries so we can be sure that if this isn't
-			// found, it doesn't exist
+			// found, it doesn't exist. Doing the following without locking
+			// since appropriate locks cannot be held with salted token IDs.
 			te, _ := ts.lookupSalted(child, true)
 			if te == nil {
 				err = ts.view.Delete(parentPrefix + parent + "/" + child)
@@ -1162,11 +1163,14 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			}
 		}
 
-		saltedId := ts.SaltID(accessorEntry.TokenID)
+		lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
+		lock.RLock()
 
 		// Look up tainted variants so we only find entries that truly don't
 		// exist
+		saltedId := ts.SaltID(accessorEntry.TokenID)
 		te, err := ts.lookupSalted(saltedId, true)
+		lock.RUnlock()
 
 		// If token entry is not found assume that the token is not valid any
 		// more and conclude that accessor, leases, and secondary index entries

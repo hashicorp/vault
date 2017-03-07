@@ -2377,7 +2377,7 @@ Enable a new audit backend or disable an existing backend.
 	"tidy_leases": {
 		`This endpoint performs cleanup tasks that can be run if certain error
 conditions have occurred.`,
-		`This endpoint performs cleanup tasks that can be run to clean up the 
+		`This endpoint performs cleanup tasks that can be run to clean up the
 lease entries after certain error conditions. Usually running this is not
 necessary, and is only required if upgrade notes or support personnel suggest
 it.`,
