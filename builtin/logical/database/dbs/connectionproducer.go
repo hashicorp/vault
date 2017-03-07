@@ -105,11 +105,7 @@ type cassandraConnectionProducer struct {
 }
 
 func (c *cassandraConnectionProducer) connection() (interface{}, error) {
-	// Grab the write lock
-	c.Lock()
-	defer c.Unlock()
-
-	// If we already have a DB, we got it!
+	// If we already have a DB, return it
 	if c.session != nil {
 		return c.session, nil
 	}
