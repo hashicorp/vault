@@ -69,7 +69,7 @@
             </li>
           </ul>
         </li>
-        
+
         <li<%= sidebar_current("docs-concepts") %>>
           <a href="/docs/concepts/index.html">Basic Concepts</a>
           <ul class="nav">
@@ -145,6 +145,18 @@
         </li>
 
         <hr>
+
+        <li<%= sidebar_current("docs-backends-storage")%>>
+          <a href="/docs/backends/storage/index.html">Storage Backends</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-backends-storage-consul")%>>
+              <a href="/docs/backends/storage/consul.html">Consul</a>
+            </li>
+            <li<%= sidebar_current("docs-backends-storage-etcd")%>>
+              <a href="/docs/backends/storage/etcd.html">Etcd</a>
+            </li>
+          </ul>
+        </li>
 
         <li<%= sidebar_current("docs-secrets") %>>
           <a href="/docs/secrets/index.html">Secret Backends</a>
@@ -261,7 +273,7 @@
           <ul class="nav">
             <li<%= sidebar_current("docs-audit-file") %>>
               <a href="/docs/audit/file.html">File</a>
-                        </li>
+            </li>
 
             <li<%= sidebar_current("docs-audit-syslog") %>>
               <a href="/docs/audit/syslog.html">Syslog</a>
