@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 )
 
 const (
@@ -211,14 +211,14 @@ func parsePaths(result *Policy, list *ast.ObjectList) error {
 			}
 		}
 		if pc.MinWrappingTTLHCL != nil {
-			dur, err := duration.ParseDurationSecond(pc.MinWrappingTTLHCL)
+			dur, err := parseutil.ParseDurationSecond(pc.MinWrappingTTLHCL)
 			if err != nil {
 				return errwrap.Wrapf("error parsing min_wrapping_ttl: {{err}}", err)
 			}
 			pc.Permissions.MinWrappingTTL = dur
 		}
 		if pc.MaxWrappingTTLHCL != nil {
-			dur, err := duration.ParseDurationSecond(pc.MaxWrappingTTLHCL)
+			dur, err := parseutil.ParseDurationSecond(pc.MaxWrappingTTLHCL)
 			if err != nil {
 				return errwrap.Wrapf("error parsing max_wrapping_ttl: {{err}}", err)
 			}

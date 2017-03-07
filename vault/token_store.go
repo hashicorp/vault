@@ -11,7 +11,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -1582,7 +1582,7 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	if data.ExplicitMaxTTL != "" {
-		dur, err := duration.ParseDurationSecond(data.ExplicitMaxTTL)
+		dur, err := parseutil.ParseDurationSecond(data.ExplicitMaxTTL)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
@@ -1598,7 +1598,7 @@ func (ts *TokenStore) handleCreateCommon(
 			return logical.ErrorResponse("root or sudo privileges required to create periodic token"),
 				logical.ErrInvalidRequest
 		}
-		dur, err := duration.ParseDurationSecond(data.Period)
+		dur, err := parseutil.ParseDurationSecond(data.Period)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
@@ -1611,7 +1611,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Parse the TTL/lease if any
 	if data.TTL != "" {
-		dur, err := duration.ParseDurationSecond(data.TTL)
+		dur, err := parseutil.ParseDurationSecond(data.TTL)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
