@@ -11,9 +11,11 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -112,6 +114,58 @@ func (c *Core) stopExpiration() error {
 		c.expiration = nil
 	}
 	return nil
+}
+
+// Tidy cleans up stale leases which are associated with invalid tokens
+func (m *ExpirationManager) Tidy() error {
+	var tidyErrors *multierror.Error
+
+	tidyFunc := func(leaseID string) {
+		le, err := m.loadEntry(leaseID)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to load the lease ID %q: %v", leaseID, err))
+			return
+		}
+
+		if le == nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("nil entry for lease ID %q: %v", leaseID, err))
+			return
+		}
+
+		if le.ClientToken == "" {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing client token for lease ID %q: %v", leaseID, err))
+			return
+		}
+
+		saltedId := m.tokenStore.SaltID(le.ClientToken)
+
+		lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
+		lock.RLock()
+		defer lock.RUnlock()
+
+		te, err := m.tokenStore.lookupSalted(saltedId, true)
+		if te == nil {
+			// Force the revocation and skip going through the token store
+			// again
+			err = m.revokeCommon(leaseID, true, true)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke an invalid lease with ID %q: %v", leaseID, err))
+				return
+			}
+		}
+	}
+
+	if err := logical.ScanView(m.idView, tidyFunc); err != nil {
+		return err
+	}
+
+	// If no errors were encountered, return a normal error instead of a
+	// multierror
+	if tidyErrors == nil {
+		return nil
+	}
+
+	return tidyErrors
 }
 
 // Restore is used to recover the lease states when starting.
