@@ -37,7 +37,7 @@ func TestLoadConfigFile(t *testing.T) {
 			},
 		},
 
-		Backend: &Backend{
+		Storage: &Storage{
 			Type:         "consul",
 			RedirectAddr: "foo",
 			Config: map[string]string{
@@ -45,7 +45,7 @@ func TestLoadConfigFile(t *testing.T) {
 			},
 		},
 
-		HABackend: &Backend{
+		HAStorage: &Storage{
 			Type:         "consul",
 			RedirectAddr: "snafu",
 			Config: map[string]string{
@@ -105,7 +105,7 @@ func TestLoadConfigFile_json(t *testing.T) {
 			},
 		},
 
-		Backend: &Backend{
+		Storage: &Storage{
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
@@ -171,7 +171,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			},
 		},
 
-		Backend: &Backend{
+		Storage: &Storage{
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",
@@ -179,7 +179,7 @@ func TestLoadConfigFile_json2(t *testing.T) {
 			DisableClustering: true,
 		},
 
-		HABackend: &Backend{
+		HAStorage: &Storage{
 			Type: "consul",
 			Config: map[string]string{
 				"bar": "baz",
@@ -234,7 +234,7 @@ func TestLoadConfigDir(t *testing.T) {
 			},
 		},
 
-		Backend: &Backend{
+		Storage: &Storage{
 			Type: "consul",
 			Config: map[string]string{
 				"foo": "bar",

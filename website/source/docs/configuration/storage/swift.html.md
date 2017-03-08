@@ -22,7 +22,7 @@ The Swift storage backend is used to persist Vault's data in an
   you may be referred to the original author.
 
 ```hcl
-backend "swift" {
+storage "swift" {
   auth_url  = "https://..."
   username  = "admin"
   password  = "secret123!"
@@ -59,7 +59,7 @@ backend "swift" {
 This example shows a default configuration for Swift.
 
 ```hcl
-backend "swift" {
+storage "swift" {
   auth_url  = "https://os.initernal/v1/auth"
   container = "container-239"
 
