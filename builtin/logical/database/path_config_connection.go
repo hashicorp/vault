@@ -197,22 +197,22 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 		b.connections[name] = db
 	}
 
-	/*
-		// Don't check the connection_url if verification is disabled
-		verifyConnection := data.Get("verify_connection").(bool)
-		if verifyConnection {
-			// Verify the string
-			db, err := sql.Open("postgres", connURL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"Error validating connection info: %s", err)), nil
-			}
-			defer db.Close()
-			if err := db.Ping(); err != nil {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"Error validating connection info: %s", err)), nil
-			}
+	/*  TODO:
+	// Don't check the connection_url if verification is disabled
+	verifyConnection := data.Get("verify_connection").(bool)
+	if verifyConnection {
+		// Verify the string
+		db, err := sql.Open("postgres", connURL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error validating connection info: %s", err)), nil
 		}
+		defer db.Close()
+		if err := db.Ping(); err != nil {
+			return logical.ErrorResponse(fmt.Sprintf(
+				"Error validating connection info: %s", err)), nil
+		}
+	}
 	*/
 
 	// Store it

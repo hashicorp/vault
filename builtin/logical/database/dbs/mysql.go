@@ -2,6 +2,7 @@ package dbs
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/strutil"
@@ -39,6 +40,10 @@ func (m *MySQL) CreateUser(statements Statements, username, password, expiration
 	db, err := m.getConnection()
 	if err != nil {
 		return err
+	}
+
+	if statements.CreationStatements == "" {
+		return fmt.Errorf("Empty creation statements")
 	}
 
 	// Start a transaction

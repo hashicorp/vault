@@ -11,18 +11,8 @@ const SecretCredsType = "creds"
 
 func secretCreds(b *databaseBackend) *framework.Secret {
 	return &framework.Secret{
-		Type: SecretCredsType,
-		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Username",
-			},
-
-			"password": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "Password",
-			},
-		},
+		Type:   SecretCredsType,
+		Fields: map[string]*framework.FieldSchema{},
 
 		Renew:  b.secretCredsRenew,
 		Revoke: b.secretCredsRevoke,
