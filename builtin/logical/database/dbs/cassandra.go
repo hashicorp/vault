@@ -45,8 +45,17 @@ func (c *Cassandra) CreateUser(statements Statements, username, password, expira
 		return err
 	}
 
+	creationCQL := statements.CreationStatements
+	if creationCQL == "" {
+		creationCQL = defaultCreationCQL
+	}
+	rollbackCQL := statements.RollbackStatements
+	if rollbackCQL == "" {
+		rollbackCQL = defaultRollbackCQL
+	}
+
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(creationCQL, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
@@ -57,7 +66,7 @@ func (c *Cassandra) CreateUser(statements Statements, username, password, expira
 			"password": password,
 		})).Exec()
 		if err != nil {
-			for _, query := range strutil.ParseArbitraryStringSlice(statements.RollbackStatements, ";") {
+			for _, query := range strutil.ParseArbitraryStringSlice(rollbackCQL, ";") {
 				query = strings.TrimSpace(query)
 				if len(query) == 0 {
 					continue

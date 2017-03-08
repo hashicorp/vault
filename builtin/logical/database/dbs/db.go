@@ -94,6 +94,8 @@ type DatabaseConfig struct {
 	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
 }
 
+// Statments set in role creation and passed into the database type's functions.
+// TODO: Add a way of setting defaults here.
 type Statements struct {
 	CreationStatements   string `json:"creation_statments" mapstructure:"creation_statements" structs:"creation_statments"`
 	RevocationStatements string `json:"revocation_statements" mapstructure:"revocation_statements" structs:"revocation_statements"`
