@@ -1,9 +1,10 @@
 ---
 layout: "docs"
-page_title: "Upgrading to Vault 0.5.1"
-sidebar_current: "docs-install-upgrade-to-0.5.1"
+page_title: "Upgrading to Vault 0.5.1 - Guides"
+sidebar_current: "docs-guides-upgrading-to-0.5.1"
 description: |-
-  Learn how to upgrade to Vault 0.5.1
+  This page contains the list of breaking changes for Vault 0.5.1. Please read
+  it carefully.
 ---
 
 # Overview
@@ -41,11 +42,11 @@ The `cert` backend now performs a variant of channel binding at renewal time
 for increased security. In order to not overly burden clients, a notion of
 identity is used, as follows:
 
-* At both login and renewal time, the validity of the presented client
+- At both login and renewal time, the validity of the presented client
   certificate is checked
-* At login time, the key ID of both the client certificate and its issuing
+- At login time, the key ID of both the client certificate and its issuing
   certificate are stored
-* At renewal time, the key ID of both the client certificate and its issuing
+- At renewal time, the key ID of both the client certificate and its issuing
   certificate must match those stored at login time
 
 Matching on the key ID rather than the serial number allows tokens to be

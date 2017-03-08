@@ -1,9 +1,10 @@
 ---
 layout: "docs"
-page_title: "Upgrading to Vault 0.5"
-sidebar_current: "docs-install-upgrade-to-0.5.0"
+page_title: "Upgrading to Vault 0.5.0 - Guides"
+sidebar_current: "docs-guides-upgrading-to-0.5.0"
 description: |-
-  Learn how to upgrade to Vault 0.5
+  This page contains the full list of breaking changes for Vault 0.5, including
+  actions you must take to facilitate a smooth upgrade path.
 ---
 
 # Overview
@@ -112,29 +113,29 @@ cannot be less restrictive than the mount's maximum TTL.)
 
 #### Credential (Auth) Backends
 
-* `github`: The renewal function now uses the backend's configured maximum
+- `github` – The renewal function now uses the backend's configured maximum
   TTL, if set; otherwise, the mount maximum TTL is used.
-* `ldap`: The renewal function now uses the mount default TTL instead of always
+- `ldap` – The renewal function now uses the mount default TTL instead of always
   using one hour.
-* `token`: Tokens can no longer be renewed forever; instead, they now honor the
+- `token` – Tokens can no longer be renewed forever; instead, they now honor the
   mount default/max TTL.
-* `userpass`: The renew function now uses the backend's configured maximum TTL,
+- `userpass` – The renew function now uses the backend's configured maximum TTL,
   if set; otherwise the mount maximum TTL is used.
 
 #### Secret Backends
 
-* `aws`: New IAM roles no longer always have a default TTL of one hour, instead
+- `aws` – New IAM roles no longer always have a default TTL of one hour, instead
   honoring the configured default if available and the mount default TTL if not
   (renewal always used the configured values if available). STS tokens return a
   TTL corresponding to the lifetime of the token in AWS and cannot be renewed.
-* `cassandra`: `lease_grace_period` has been removed since Vault no longer uses
+- `cassandra` – `lease_grace_period` has been removed since Vault no longer uses
   grace periods.
-* `consul`: The mount default TTL is now used as the default TTL if there is no
+- `consul` – The mount default TTL is now used as the default TTL if there is no
   backend configuration parameter. Renewal now uses the mount default and
   maximum TTLs.
-* `mysql`: The mount default TTL is now used as the default TTL if there is no
+- `mysql` – The mount default TTL is now used as the default TTL if there is no
   backend configuration parameter.
-* `postgresql`: The mount default TTL is now used as the default TTL if there
+- `postgresql` – The mount default TTL is now used as the default TTL if there
   is no backend configuration parameter. In addition, there is no longer any
   grace period with the time configured for password expiration within Postgres
   itself.
