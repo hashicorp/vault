@@ -107,9 +107,10 @@ Mount Options:
                                  the previously set value. Set to '0' to
                                  explicitly set it to use the global default.
 
-  -force-no-cache                Forces the backend to disable caching. If not specified,
-                                 uses the global default. This does not affect caching of
-                                 underlying physical storage.
+  -force-no-cache                Forces the backend to disable caching. If not
+                                 specified, uses the global default. This does
+                                 not affect caching of the underlying encrypted
+                                 data storage.
 
   -local                         Mark the mount as a local mount. Local mounts
                                  are not replicated nor (if a secondary)
