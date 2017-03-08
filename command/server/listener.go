@@ -97,10 +97,10 @@ func listenerWrapTLS(
 		}
 		tlsConf.PreferServerCipherSuites = preferServer
 	}
-	if v, ok := config["tls_require_valid_client_cert"]; ok {
+	if v, ok := config["tls_require_and_verify_client_cert"]; ok {
 		requireClient, err := strconv.ParseBool(v)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_require_valid_client_cert': %v", err)
+			return nil, nil, nil, fmt.Errorf("invalid value for 'tls_require_and_verify_client_cert': %v", err)
 		}
 		if requireClient {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
