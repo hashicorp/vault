@@ -192,7 +192,7 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 		return nil, fmt.Errorf("keys are already configured; delete them before reconfiguring")
 	}
 
-	entry, err := logical.StorageEntryJSON(caPublicKeyStoragePath, keyStorageEntry{
+	entry, err := logical.StorageEntryJSON(caPublicKeyStoragePath, &keyStorageEntry{
 		Key: publicKey,
 	})
 	if err != nil {
@@ -205,7 +205,7 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 		return nil, err
 	}
 
-	entry, err = logical.StorageEntryJSON(caPrivateKeyStoragePath, keyStorageEntry{
+	entry, err = logical.StorageEntryJSON(caPrivateKeyStoragePath, &keyStorageEntry{
 		Key: privateKey,
 	})
 	if err != nil {
