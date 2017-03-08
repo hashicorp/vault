@@ -153,7 +153,7 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 		CreationStatements:   creationStmts,
 		RevocationStatements: revocationStmts,
 		RollbackStatements:   rollbackStmts,
-		RenewStatements:      rollbackStmts,
+		RenewStatements:      renewStmts,
 	}
 
 	// TODO: Think about preparing the statments to test.

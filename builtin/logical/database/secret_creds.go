@@ -70,7 +70,7 @@ func (b *databaseBackend) secretCredsRenew(req *logical.Request, d *framework.Fi
 	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
 		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
 
-		err := db.RenewUser(username, expiration)
+		err := db.RenewUser(role.Statements, username, expiration)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +87,6 @@ func (b *databaseBackend) secretCredsRevoke(req *logical.Request, d *framework.F
 	}
 	username, ok := usernameRaw.(string)
 
-	var revocationSQL string
 	var resp *logical.Response
 
 	roleNameRaw, ok := req.Secret.InternalData["role"]
@@ -129,7 +128,7 @@ func (b *databaseBackend) secretCredsRevoke(req *logical.Request, d *framework.F
 		return nil, fmt.Errorf("Could not find database with name: %s", role.DBName)
 	}
 
-	err = db.RevokeUser(username, revocationSQL)
+	err = db.RevokeUser(role.Statements, username)
 	if err != nil {
 		return nil, err
 	}
