@@ -177,6 +177,11 @@ body.layout-intro {
     margin-bottom: $docs-font-size;
     line-height: 1.3;
   }
+
+  h2 {
+    padding-bottom: 3px;
+    border-bottom: 1px solid $gray-light;
+  }
 }
 
 @media (max-width: 992px) {
