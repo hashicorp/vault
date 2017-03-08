@@ -1,4 +1,4 @@
-package duration
+package parseutil
 
 import (
 	"encoding/json"
@@ -27,5 +27,29 @@ func Test_ParseDurationSecond(t *testing.T) {
 	}
 	if outp != time.Duration(4352)*time.Second {
 		t.Fatal("not equivalent")
+	}
+}
+
+func Test_ParseBool(t *testing.T) {
+	outp, err := ParseBool("true")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !outp {
+		t.Fatal("wrong output")
+	}
+	outp, err = ParseBool(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !outp {
+		t.Fatal("wrong output")
+	}
+	outp, err = ParseBool(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !outp {
+		t.Fatal("wrong output")
 	}
 }

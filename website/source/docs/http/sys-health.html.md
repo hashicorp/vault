@@ -60,15 +60,15 @@ description: |-
     <dd>
 
     ```javascript
-{
-  "cluster_id": "c9abceea-4f46-4dab-a688-5ce55f89e228",
-  "cluster_name": "vault-cluster-5515c810",
-  "version": "0.6.1-dev"
-  "server_time_utc": 1469555798,
-  "standby": false,
-  "sealed": false,
-  "initialized": true
-}
+    {
+      "cluster_id": "c9abceea-4f46-4dab-a688-5ce55f89e228",
+      "cluster_name": "vault-cluster-5515c810",
+      "version": "0.6.1-dev"
+      "server_time_utc": 1469555798,
+      "standby": false,
+      "sealed": false,
+      "initialized": true
+    }
     ```
 
     Default Status Codes (GET/HEAD):

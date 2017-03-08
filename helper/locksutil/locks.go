@@ -1,28 +1,32 @@
 package locksutil
 
 import (
-	"fmt"
+	"crypto/md5"
 	"sync"
 )
 
-// Takes in a map, indexed by string and creates new 'sync.RWMutex' items.
-// This utility creates 'count' number of mutexes (with a cap of 256) and
-// places them in the map. The indices will be 2 character hexadecimal
-// string values from 0 to count.
-func CreateLocks(p map[string]*sync.RWMutex, count int64) error {
-	// Since the indices of the map entries are based on 2 character
-	// hex values, this utility can only create upto 256 locks.
-	if count <= 0 || count > 256 {
-		return fmt.Errorf("invalid count: %d", count)
-	}
+const (
+	LockCount = 256
+)
 
-	if p == nil {
-		return fmt.Errorf("map of locks is not initialized")
-	}
+type LockEntry struct {
+	sync.RWMutex
+}
 
-	for i := int64(0); i < count; i++ {
-		p[fmt.Sprintf("%02x", i)] = &sync.RWMutex{}
+func CreateLocks() []*LockEntry {
+	ret := make([]*LockEntry, LockCount)
+	for i := range ret {
+		ret[i] = new(LockEntry)
 	}
+	return ret
+}
 
-	return nil
+func LockIndexForKey(key string) uint8 {
+	hf := md5.New()
+	hf.Write([]byte(key))
+	return uint8(hf.Sum(nil)[0])
+}
+
+func LockForKey(locks []*LockEntry, key string) *LockEntry {
+	return locks[LockIndexForKey(key)]
 }

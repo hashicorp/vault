@@ -38,6 +38,10 @@ const (
 	// for a highly-available deploy.
 	coreLockPath = "core/lock"
 
+	// The poison pill is used as a check during certain scenarios to indicate
+	// to standby nodes that they should seal
+	poisonPillPath = "core/poison-pill"
+
 	// coreLeaderPrefix is the prefix used for the UUID that contains
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
@@ -1416,13 +1420,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			// Purge the backend if supported; the keyring/barrier init could have
-			// been swapped out from underneath us, e.g. in replication scenarios
-			// so we need to do this before the checks below.
-			if purgable, ok := c.physical.(physical.Purgable); ok {
-				purgable.Purge()
-			}
-
 			c.seal.SetBarrierConfig(nil)
 			if c.seal.RecoveryKeySupported() {
 				c.seal.SetRecoveryConfig(nil)
@@ -1431,7 +1428,7 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 			if err := c.performKeyUpgrades(); err != nil {
 				// We call this in a goroutine so that we can give up the
 				// statelock and have this shut us down; sealInternal has a
-				// workflow where it watches for the stopCh to close do we want
+				// workflow where it watches for the stopCh to close so we want
 				// to return from here
 				go c.Shutdown()
 				c.logger.Error("core: error performing key upgrades", "error", err)
@@ -1534,6 +1531,16 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 			standby := c.standby
 			c.stateLock.RUnlock()
 			if !standby {
+				continue
+			}
+
+			// Check for a poison pill. If we can read it, it means we have stale
+			// keys (e.g. from replication being activated) and we need to seal to
+			// be unsealed again.
+			entry, _ := c.barrier.Get(poisonPillPath)
+			if entry != nil && len(entry.Value) > 0 {
+				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
+				go c.Shutdown()
 				continue
 			}
 

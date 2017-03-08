@@ -1,5 +1,5 @@
 ---
-layout: "install"
+layout: "docs"
 page_title: "Upgrading to Vault 0.6.4"
 sidebar_current: "docs-install-upgrade-to-0.6.4"
 description: |-

@@ -31,8 +31,8 @@ description: |-
     ```javascript
     {
       "file": {
-        "type: "file",
-        "description: "Store logs in a file",
+        "type": "file",
+        "description": "Store logs in a file",
         "options": {
           "path": "/var/log/file"
         }

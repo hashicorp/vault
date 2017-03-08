@@ -3,12 +3,12 @@ package approle
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/cidrutil"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -518,7 +518,6 @@ func (b *backend) pathRoleExistenceCheck(req *logical.Request, data *framework.F
 
 // pathRoleList is used to list all the Roles registered with the backend.
 func (b *backend) pathRoleList(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	// This will return the "custom" lock
 	lock := b.roleLock("")
 
 	lock.RLock()
@@ -1926,39 +1925,12 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 	}, nil
 }
 
-// roleIDLock is used to get a lock from the pre-initialized map
-// of locks. Map is indexed based on the first 2 characters of the
-// RoleID, which is a random UUID. If the input is not hex encoded
-// or if it is empty a "custom" lock will be returned.
-func (b *backend) roleIDLock(roleID string) *sync.RWMutex {
-	var lock *sync.RWMutex
-	var ok bool
-	if len(roleID) >= 2 {
-		lock, ok = b.roleIDLocksMap[roleID[0:2]]
-	}
-	if !ok || lock == nil {
-		lock = b.roleIDLocksMap["custom"]
-	}
-	return lock
+func (b *backend) roleIDLock(roleID string) *locksutil.LockEntry {
+	return locksutil.LockForKey(b.roleIDLocks, roleID)
 }
 
-// roleLock is used to get a lock from the pre-initialized map of locks. Map is
-// indexed based on the first 2 characters of the salted role name, which is a
-// random UUID. If the input is empty, a "custom" lock will be returned.
-func (b *backend) roleLock(roleName string) *sync.RWMutex {
-	var lock *sync.RWMutex
-	var ok bool
-
-	// Salting is used to induce randomness so that roles starting with
-	// similar characters will likely end up having different locks
-	index := b.salt.SaltID(roleName)
-	if len(index) >= 2 {
-		lock, ok = b.roleLocksMap[index[0:2]]
-	}
-	if !ok || lock == nil {
-		lock = b.roleLocksMap["custom"]
-	}
-	return lock
+func (b *backend) roleLock(roleName string) *locksutil.LockEntry {
+	return locksutil.LockForKey(b.roleLocks, roleName)
 }
 
 // setRoleIDEntry creates a storage entry that maps RoleID to Role

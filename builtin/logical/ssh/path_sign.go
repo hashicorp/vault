@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -330,7 +330,7 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 		ttl = b.System().DefaultLeaseTTL()
 	} else {
 		var err error
-		ttl, err = duration.ParseDurationSecond(ttlField)
+		ttl, err = parseutil.ParseDurationSecond(ttlField)
 		if err != nil {
 			return 0, fmt.Errorf("invalid requested ttl: %s", err)
 		}
@@ -340,7 +340,7 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 		maxTTL = b.System().MaxLeaseTTL()
 	} else {
 		var err error
-		maxTTL, err = duration.ParseDurationSecond(role.MaxTTL)
+		maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 		if err != nil {
 			return 0, fmt.Errorf("invalid requested max ttl: %s", err)
 		}

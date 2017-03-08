@@ -87,6 +87,9 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	if err != nil {
 		return err
 	}
+	if backend == nil {
+		return fmt.Errorf("nil audit backend of type %q returned from factory", entry.Type)
+	}
 
 	newTable := c.audit.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
@@ -300,14 +303,18 @@ func (c *Core) setupAudits() error {
 		view := NewBarrierView(c.barrier, viewPath)
 
 		// Initialize the backend
-		audit, err := c.newAuditBackend(entry, view, entry.Options)
+		backend, err := c.newAuditBackend(entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("core: failed to create audit entry", "path", entry.Path, "error", err)
 			continue
 		}
+		if backend == nil {
+			c.logger.Error("core: created audit entry was nil", "path", entry.Path, "type", entry.Type)
+			continue
+		}
 
 		// Mount the backend
-		broker.Register(entry.Path, audit, view)
+		broker.Register(entry.Path, backend, view)
 
 		successCount += 1
 	}
@@ -375,6 +382,9 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 	})
 	if err != nil {
 		return nil, err
+	}
+	if be == nil {
+		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
 
 	switch entry.Type {
