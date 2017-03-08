@@ -20,7 +20,7 @@ The Zookeeper storage backend is used to persist Vault's data in
   you may be referred to the original author.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   address = "localhost:2181"
   path    = "vault/"
 }
@@ -89,7 +89,7 @@ This example shows configuring Vault to communicate with a Zookeeper
 installation running on a custom port and to store data at a custom path.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   address = "localhost:3253"
   path    = "my-vault-data/"
 }
@@ -102,7 +102,7 @@ access only to the user "vaultUser". As per Zookeeper's ACL model, the digest
 value in `znode_owner` must match the user in `znode_owner`.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   znode_owner = "digest:vaultUser:raxgVAfnDRljZDAcJFxznkZsExs="
   auth_info   = "digest:vaultUser:abc"
 }
@@ -115,7 +115,7 @@ This example instructs Vault to only allow access from localhost. As this is the
 for the ACL check.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   znode_owner = "ip:127.0.0.1"
 }
 ```

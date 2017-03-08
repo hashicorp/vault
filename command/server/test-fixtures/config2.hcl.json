@@ -12,12 +12,12 @@
       }
     }
   ],
-  "backend":{
+  "storage":{
     "consul":{
       "foo":"bar"
     }
   },
-  "ha_backend":{
+  "ha_storage":{
     "consul":{
       "bar":"baz",
       "disable_clustering": "true"

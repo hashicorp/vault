@@ -18,13 +18,13 @@ based on the version of the Etcd cluster.
   The v2 API has known issues with HA support and should not be used in HA
   scenarios.
 
-- **Community Supported** – the Etcd storage backend is supported by the
-  community. While it has undergone review by HashiCorp employees, they may not
-  be as knowledgeable about the technology. If you encounter problems with them,
-  you may be referred to the original author.
+- **Community Supported** – the Etcd storage backend is supported by CoreOS.
+  While it has undergone review by HashiCorp employees, they may not be as
+  knowledgeable about the technology. If you encounter problems with them, you
+  may be referred to the original author.
 
 ```hcl
-backend "etcd" {
+storage "etcd" {
   address  = "http://localhost:2379"
   etcd_api = "v3"
 }
@@ -92,7 +92,7 @@ discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
 This example shows connecting to the Etcd cluster using a username and password.
 
 ```hcl
-backend "etcd" {
+storage "etcd" {
   username = "user1234"
   password = "pass5678"
 }
@@ -103,7 +103,7 @@ backend "etcd" {
 This example shows storing data in a custom path.
 
 ```hcl
-backend "etcd" {
+storage "etcd" {
   path = "my-vault-data/"
 }
 ```
@@ -113,7 +113,7 @@ backend "etcd" {
 This example show enabling high availability for the Etcd storage backend.
 
 ```hcl
-backend "etcd" {
+storage "etcd" {
   ha_enabled    = true
   redirect_addr = "vault-leader.my-company.internal"
 }

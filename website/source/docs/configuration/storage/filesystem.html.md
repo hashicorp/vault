@@ -21,7 +21,7 @@ situations, or to develop locally where durability is not critical.
   HashiCorp.
 
 ```hcl
-backend "file" {
+storage "file" {
   path = "/mnt/vault/data"
 }
 ```
@@ -41,7 +41,7 @@ This example shows the Filesytem storage backend being mounted at
 `/mnt/vault/data`.
 
 ```hcl
-backend "file" {
+storage "file" {
   path = "/mnt/vault/data"
 }
 ```

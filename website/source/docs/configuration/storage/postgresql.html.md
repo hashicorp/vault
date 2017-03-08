@@ -21,7 +21,7 @@ The PostgreSQL storage backend is used to persist Vault's data in a
   you may be referred to the original author.
 
 ```hcl
-backend "postgresql" {
+storage "postgresql" {
   connection_url = "postgres://user123:secret123!@localhost:5432/vault"
 }
 ```
@@ -60,7 +60,7 @@ This example shows connecting to a PostgresSQL cluster using full SSL
 verification (recommended).
 
 ```hcl
-backend "postgresql" {
+storage "postgresql" {
   connection_url = "postgres://user:pass@localhost:5432/database?sslmode=verify-full"
 }
 ```
@@ -69,7 +69,7 @@ To disable SSL verification (not recommended), replace `verify-full` with
 `disable`:
 
 ```hcl
-backend "postgresql" {
+storage "postgresql" {
   connection_url = "postgres://user:pass@localhost:5432/database?sslmode=disable"
 }
 ```

@@ -13,7 +13,7 @@ The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
 An example configuration is shown below:
 
 ```javascript
-backend "consul" {
+storage "consul" {
   address = "127.0.0.1:8500"
   path    = "vault"
 }
@@ -37,15 +37,15 @@ sending a SIGHUP to the server process. These are denoted below.
 
 ## Parameters
 
-- `backend` <tt>([StorageBackend][storage-backend]: \<required\>)</tt> -
+- `storage` <tt>([StorageBackend][storage-backend]: \<required\>)</tt> -
   Configures the storage backend where Vault data is stored. Please see the
   [storage backends documentation][storage-backend] for the full list of
   available storage backends.
 
-- `ha_backend` <tt>([StorageBackend][storage-backend]: nil)</tt> - Configures
+- `ha_storage` <tt>([StorageBackend][storage-backend]: nil)</tt> - Configures
   the storage backend where Vault HA coordination will take place. This must be
   an HA-supporting backend. If not set, HA will be attempted on the backend
-  given in the `backend` parameter.
+  given in the `storage` parameter.
 
 - `cluster_name` `(string: <generated>)` – Specifies the identifier for the
   Vault cluster. If omitted, Vault will generate a value. When connecting to

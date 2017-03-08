@@ -173,8 +173,8 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Ensure that a backend is provided
-	if config.Backend == nil {
-		c.Ui.Output("A physical backend must be specified")
+	if config.Storage == nil {
+		c.Ui.Output("A storage backend must be specified")
 		return 1
 	}
 
@@ -194,11 +194,11 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Initialize the backend
 	backend, err := physical.NewBackend(
-		config.Backend.Type, c.logger, config.Backend.Config)
+		config.Storage.Type, c.logger, config.Storage.Config)
 	if err != nil {
 		c.Ui.Output(fmt.Sprintf(
-			"Error initializing backend of type %s: %s",
-			config.Backend.Type, err))
+			"Error initializing storage of type %s: %s",
+			config.Storage.Type, err))
 		return 1
 	}
 
@@ -224,7 +224,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	coreConfig := &vault.CoreConfig{
 		Physical:           backend,
-		RedirectAddr:       config.Backend.RedirectAddr,
+		RedirectAddr:       config.Storage.RedirectAddr,
 		HAPhysical:         nil,
 		Seal:               seal,
 		AuditBackends:      c.AuditBackends,
@@ -244,39 +244,39 @@ func (c *ServerCommand) Run(args []string) int {
 
 	var disableClustering bool
 
-	// Initialize the separate HA physical backend, if it exists
+	// Initialize the separate HA storage backend, if it exists
 	var ok bool
-	if config.HABackend != nil {
+	if config.HAStorage != nil {
 		habackend, err := physical.NewBackend(
-			config.HABackend.Type, c.logger, config.HABackend.Config)
+			config.HAStorage.Type, c.logger, config.HAStorage.Config)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
-				"Error initializing backend of type %s: %s",
-				config.HABackend.Type, err))
+				"Error initializing HA storage of type %s: %s",
+				config.HAStorage.Type, err))
 			return 1
 		}
 
 		if coreConfig.HAPhysical, ok = habackend.(physical.HABackend); !ok {
-			c.Ui.Output("Specified HA backend does not support HA")
+			c.Ui.Output("Specified HA storage does not support HA")
 			return 1
 		}
 
 		if !coreConfig.HAPhysical.HAEnabled() {
-			c.Ui.Output("Specified HA backend has HA support disabled; please consult documentation")
+			c.Ui.Output("Specified HA storage has HA support disabled; please consult documentation")
 			return 1
 		}
 
-		coreConfig.RedirectAddr = config.HABackend.RedirectAddr
-		disableClustering = config.HABackend.DisableClustering
+		coreConfig.RedirectAddr = config.HAStorage.RedirectAddr
+		disableClustering = config.HAStorage.DisableClustering
 		if !disableClustering {
-			coreConfig.ClusterAddr = config.HABackend.ClusterAddr
+			coreConfig.ClusterAddr = config.HAStorage.ClusterAddr
 		}
 	} else {
 		if coreConfig.HAPhysical, ok = backend.(physical.HABackend); ok {
-			coreConfig.RedirectAddr = config.Backend.RedirectAddr
-			disableClustering = config.Backend.DisableClustering
+			coreConfig.RedirectAddr = config.Storage.RedirectAddr
+			disableClustering = config.Storage.DisableClustering
 			if !disableClustering {
-				coreConfig.ClusterAddr = config.Backend.ClusterAddr
+				coreConfig.ClusterAddr = config.Storage.ClusterAddr
 			}
 		}
 	}
@@ -378,12 +378,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.reloadFuncsLock = coreConfig.ReloadFuncsLock
 
 	// Compile server information for output later
-	info["backend"] = config.Backend.Type
+	info["storage"] = config.Storage.Type
 	info["log level"] = logLevel
 	info["mlock"] = fmt.Sprintf(
 		"supported: %v, enabled: %v",
 		mlock.Supported(), !config.DisableMlock && mlock.Supported())
-	infoKeys = append(infoKeys, "log level", "mlock", "backend")
+	infoKeys = append(infoKeys, "log level", "mlock", "storage")
 
 	if coreConfig.ClusterAddr != "" {
 		info["cluster address"] = coreConfig.ClusterAddr
@@ -394,16 +394,16 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		infoKeys = append(infoKeys, "redirect address")
 	}
 
-	if config.HABackend != nil {
-		info["HA backend"] = config.HABackend.Type
-		infoKeys = append(infoKeys, "HA backend")
+	if config.HAStorage != nil {
+		info["HA storage"] = config.HAStorage.Type
+		infoKeys = append(infoKeys, "HA storage")
 	} else {
-		// If the backend supports HA, then note it
+		// If the storage supports HA, then note it
 		if coreConfig.HAPhysical != nil {
 			if coreConfig.HAPhysical.HAEnabled() {
-				info["backend"] += " (HA available)"
+				info["storage"] += " (HA available)"
 			} else {
-				info["backend"] += " (HA disabled)"
+				info["storage"] += " (HA disabled)"
 			}
 		}
 	}

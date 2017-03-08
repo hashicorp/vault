@@ -24,7 +24,7 @@ to the storage container.
   you may be referred to the original author.
 
 ```hcl
-backend "azure" {
+storage "azure" {
   accountName = "my-storage-account"
   accountKey  = "abcd1234"
   container   = "container-efgh5678"
@@ -52,7 +52,7 @@ This example shows configuring the Azure storage backend with a custom number of
 maximum parallel connections.
 
 ```hcl
-backend "azure" {
+storage "azure" {
   accountName  = "my-storage-account"
   accountKey   = "abcd1234"
   container    = "container-efgh5678"

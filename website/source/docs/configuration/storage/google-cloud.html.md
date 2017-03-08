@@ -21,7 +21,7 @@ The Google Cloud storage backend is used to persist Vault's data in
   you may be referred to the original author.
 
 ```hcl
-backend "gcs" {
+storage "gcs" {
   bucket           = "my-storage-bucket"
   credentials_file = "/tmp/credentials.json"
 }
@@ -49,7 +49,7 @@ backend "gcs" {
 This example shows a default configuration for the Google Cloud Storage backend.
 
 ```hcl
-backend "gcs" {
+storage "gcs" {
   bucket           = "my-storage-bucket"
   credentials_file = "/tmp/credentials.json"
 }

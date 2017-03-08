@@ -20,10 +20,10 @@ choose one from the navigation on the left.
 ## Configuration
 
 Storage backend configuration is done through the Vault configuration file using
-the `backend` stanza:
+the `storage` stanza:
 
 ```hcl
-backend [NAME] {
+storage [NAME] {
   [PARAMETERS...]
 }
 ```
@@ -31,7 +31,7 @@ backend [NAME] {
 For example:
 
 ```hcl
-backend "file" {
+storage "file" {
   path = "/mnt/vault/data"
 }
 ```

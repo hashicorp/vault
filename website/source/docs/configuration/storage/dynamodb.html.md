@@ -23,7 +23,7 @@ The DynamoDB storage backend is used to persist Vault's data in
   you may be referred to the original author.
 
 ```hcl
-backend "dynamodb" {
+storage "dynamodb" {
   ha_enabled = true
   region     = "us-west-2"
   table      = "vault-data"
@@ -99,7 +99,7 @@ discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
 This example shows using a custom table name and read/write capacity.
 
 ```hcl
-backend "dynamodb" {
+storage "dynamodb" {
   table = "my-vault-data"
 
   read_capacity  = 10
@@ -112,7 +112,7 @@ backend "dynamodb" {
 This example show enabling high availability for the DynamoDB storage backend.
 
 ```hcl
-backend "dynamodb" {
+storage "dynamodb" {
   ha_enabled    = true
   redirect_addr = "vault-leader.my-company.internal"
 }
