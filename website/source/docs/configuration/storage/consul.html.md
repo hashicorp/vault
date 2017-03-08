@@ -1,9 +1,12 @@
 ---
 layout: "docs"
-page_title: "Storage Backends"
-sidebar_current: "docs-backends-storage-consul"
+page_title: "Consul - Storage Backends - Configuration"
+sidebar_current: "docs-configuration-storage-consul"
 description: |-
-  TODO
+  The Consul storage backend is used to persist Vault's data in Consul's
+  key-value store. In addition to providing durable storage, inclusion of this
+  backend will also register Vault as a service in Consul with a default health
+  check.
 ---
 
 # Consul Storage Backend
@@ -13,9 +16,10 @@ key-value store. In addition to providing durable storage, inclusion of this
 backend will also register Vault as a service in Consul with a default health
 check.
 
-- **High Availability** - the Consul backend supports high availability.
+- **High Availability** – the Consul storage backend supports high availability.
 
-- **Support Level** - the Consul backend is supported by HashiCorp.
+- **HashiCorp Supported** – the Consul storage backend is officially supported
+  by HashiCorp.
 
 ```hcl
 backend "consul" {
@@ -112,6 +116,20 @@ connection. You can read more about encrypting Consul connections on the
 - `tls_skip_verify` `(bool: false)` – Specifies if the TLS host verification
   should be disabled. It is highly discouraged that you disable this option.
 
+This backend also supports the following high availability parameters. These are
+discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
+
+- `cluster_addr` `(string: "")` – Specifies the address to advertise to other
+  Vault servers in the cluster for request forwarding. This can also be provided
+  via the environment variable `VAULT_CLUSTER_ADDR`.
+
+- `disable_clustering` `(bool: false)` – Specifies whether clustering features
+  such as request forwarding are enabled. Setting this to true on one Vault node
+  will disable these features _only when that node is the active node_.
+
+- `redirect_addr` `(string: <required>)` – Specifies the address to advertise to
+  other Vault servers in the cluster for client redirection. This can also be
+  provided via the environment variable `VAULT_REDIRECT_ADDR`.
 
 ## `consul` Examples
 
