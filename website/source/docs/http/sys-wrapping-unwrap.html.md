@@ -50,14 +50,14 @@ description: |-
 
     ```javascript
     {
-        "request_id": "8e33c808-f86c-cff8-f30a-fbb3ac22c4a8",
-        "lease_id": "",
-        "lease_duration": 2592000,
-        "renewable": false,
-        "data": {
-                "zip": "zap"
-        },
-        "warnings": null
+      "request_id": "8e33c808-f86c-cff8-f30a-fbb3ac22c4a8",
+      "lease_id": "",
+      "lease_duration": 2592000,
+      "renewable": false,
+      "data": {
+        "zip": "zap"
+      },
+      "warnings": null
     }
     ```
 

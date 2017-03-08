@@ -212,6 +212,9 @@ func (c *Core) mount(entry *MountEntry) error {
 	if err != nil {
 		return err
 	}
+	if backend == nil {
+		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
+	}
 
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected
@@ -283,9 +286,9 @@ func (c *Core) unmount(path string) (bool, error) {
 	}
 
 	// Call cleanup function if it exists
-	b, ok := c.router.root.Get(path)
-	if ok {
-		b.(*routeEntry).backend.Cleanup()
+	backend := c.router.MatchingBackend(path)
+	if backend != nil {
+		backend.Cleanup()
 	}
 
 	// Unmount the backend entirely
@@ -638,6 +641,9 @@ func (c *Core) setupMounts() error {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
 		}
+		if backend == nil {
+			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
+		}
 
 		if err := backend.Initialize(); err != nil {
 			return err
@@ -680,10 +686,9 @@ func (c *Core) unloadMounts() error {
 	if c.mounts != nil {
 		mountTable := c.mounts.shallowClone()
 		for _, e := range mountTable.Entries {
-			prefix := e.Path
-			b, ok := c.router.root.Get(prefix)
-			if ok {
-				b.(*routeEntry).backend.Cleanup()
+			backend := c.router.MatchingBackend(e.Path)
+			if backend != nil {
+				backend.Cleanup()
 			}
 		}
 	}
@@ -711,6 +716,9 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 	b, err := f(config)
 	if err != nil {
 		return nil, err
+	}
+	if b == nil {
+		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 	return b, nil
 }

@@ -279,3 +279,39 @@ $$`,
 		t.Fatalf("bad: expected:\n%#v\nactual:\n%#v", jsonExpected, actual)
 	}
 }
+
+func TestGlobbedStringsMatch(t *testing.T) {
+	type tCase struct {
+		item   string
+		val    string
+		expect bool
+	}
+
+	tCases := []tCase{
+		tCase{"", "", true},
+		tCase{"*", "*", true},
+		tCase{"**", "**", true},
+		tCase{"*t", "t", true},
+		tCase{"*t", "test", true},
+		tCase{"t*", "test", true},
+		tCase{"*test", "test", true},
+		tCase{"*test", "a test", true},
+		tCase{"test", "a test", false},
+		tCase{"*test", "tests", false},
+		tCase{"test*", "test", true},
+		tCase{"test*", "testsss", true},
+		tCase{"test**", "testsss", false},
+		tCase{"test**", "test*", true},
+		tCase{"**test", "*test", true},
+		tCase{"TEST", "test", false},
+		tCase{"test", "test", true},
+	}
+
+	for _, tc := range tCases {
+		actual := GlobbedStringsMatch(tc.item, tc.val)
+
+		if actual != tc.expect {
+			t.Fatalf("Bad testcase %#v, expected %b, got %b", tc, tc.expect, actual)
+		}
+	}
+}

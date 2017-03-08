@@ -38,15 +38,15 @@ description: |-
 
     ```javascript
     {
-        "request_id": "481320f5-fdf8-885d-8050-65fa767fd19b",
-        "lease_id": "",
-        "lease_duration": 0,
-        "renewable": false,
-        "data": {
-                "creation_time": "2016-09-28T14:16:13.07103516-04:00",
-                "creation_ttl": 300
-        },
-        "warnings": null
+      "request_id": "481320f5-fdf8-885d-8050-65fa767fd19b",
+      "lease_id": "",
+      "lease_duration": 0,
+      "renewable": false,
+      "data": {
+        "creation_time": "2016-09-28T14:16:13.07103516-04:00",
+        "creation_ttl": 300
+      },
+      "warnings": null
     }
     ```
 
