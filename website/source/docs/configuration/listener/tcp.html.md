@@ -51,6 +51,10 @@ listener "tcp" {
 - `tls_prefer_server_cipher_suites` `(bool: false)` – Specifies to prefer the
   server's ciphersuite over the client ciphersuites.
 
+- `tls_require_and_verify_client_cert` `(bool: false)` – Turns on client
+  authentication for this listener; the listener will require a presented
+  client cert that successfully validates against system CAs.
+
 ## `tcp` Listener Examples
 
 ### Configuring TLS
