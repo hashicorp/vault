@@ -147,7 +147,7 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	storedPrivateKey, err := caKey(req.Storage, "private")
+	storedPrivateKey, err := caKey(req.Storage, caPrivateKey)
 	if err != nil || storedPrivateKey == "" {
 		return nil, fmt.Errorf("failed to read CA private key: %v", err)
 	}
