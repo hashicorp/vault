@@ -27,7 +27,7 @@ func (p *PostgreSQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (p *PostgreSQL) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
+func (p *PostgreSQL) CreateUser(statements Statements, username, password, expiration string) error {
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
@@ -51,7 +51,7 @@ func (p *PostgreSQL) CreateUser(createStmts, rollbackStmts, username, password, 
 	// Return the secret
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(createStmts, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
@@ -83,7 +83,7 @@ func (p *PostgreSQL) CreateUser(createStmts, rollbackStmts, username, password, 
 	return nil
 }
 
-func (p *PostgreSQL) RenewUser(username, expiration string) error {
+func (p *PostgreSQL) RenewUser(statements Statements, username, expiration string) error {
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
@@ -110,16 +110,16 @@ func (p *PostgreSQL) RenewUser(username, expiration string) error {
 	return nil
 }
 
-func (p *PostgreSQL) RevokeUser(username, revocationStmts string) error {
+func (p *PostgreSQL) RevokeUser(statements Statements, username string) error {
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
 
-	if revocationStmts == "" {
+	if statements.RevocationStatements == "" {
 		return p.defaultRevokeUser(username)
 	}
 
-	return p.customRevokeUser(username, revocationStmts)
+	return p.customRevokeUser(username, statements.RevocationStatements)
 }
 
 func (p *PostgreSQL) customRevokeUser(username, revocationStmts string) error {

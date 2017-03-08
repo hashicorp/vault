@@ -34,7 +34,7 @@ func (c *Cassandra) getConnection() (*gocql.Session, error) {
 	return session.(*gocql.Session), nil
 }
 
-func (c *Cassandra) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
+func (c *Cassandra) CreateUser(statements Statements, username, password, expiration string) error {
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()
@@ -46,7 +46,7 @@ func (c *Cassandra) CreateUser(createStmts, rollbackStmts, username, password, e
 	}
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(createStmts, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
@@ -57,7 +57,7 @@ func (c *Cassandra) CreateUser(createStmts, rollbackStmts, username, password, e
 			"password": password,
 		})).Exec()
 		if err != nil {
-			for _, query := range strutil.ParseArbitraryStringSlice(rollbackStmts, ";") {
+			for _, query := range strutil.ParseArbitraryStringSlice(statements.RollbackStatements, ";") {
 				query = strings.TrimSpace(query)
 				if len(query) == 0 {
 					continue
@@ -75,12 +75,12 @@ func (c *Cassandra) CreateUser(createStmts, rollbackStmts, username, password, e
 	return nil
 }
 
-func (c *Cassandra) RenewUser(username, expiration string) error {
+func (c *Cassandra) RenewUser(statements Statements, username, expiration string) error {
 	// NOOP
 	return nil
 }
 
-func (c *Cassandra) RevokeUser(username, revocationStmts string) error {
+func (c *Cassandra) RevokeUser(statements Statements, username string) error {
 	// Grab the lock
 	c.Lock()
 	defer c.Unlock()

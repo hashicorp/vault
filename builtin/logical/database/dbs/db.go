@@ -78,9 +78,9 @@ func Factory(conf *DatabaseConfig) (DatabaseType, error) {
 
 type DatabaseType interface {
 	Type() string
-	CreateUser(createStmt, rollbackStmt, username, password, expiration string) error
-	RenewUser(username, expiration string) error
-	RevokeUser(username, revocationStmt string) error
+	CreateUser(statements Statements, username, password, expiration string) error
+	RenewUser(statements Statements, username, expiration string) error
+	RevokeUser(statements Statements, username string) error
 
 	ConnectionProducer
 	CredentialsProducer
@@ -92,6 +92,13 @@ type DatabaseConfig struct {
 	MaxOpenConnections    int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
+}
+
+type Statements struct {
+	CreationStatements   string `json:"creation_statments" mapstructure:"creation_statements" structs:"creation_statments"`
+	RevocationStatements string `json:"revocation_statements" mapstructure:"revocation_statements" structs:"revocation_statements"`
+	RollbackStatements   string `json:"rollback_statements" mapstructure:"rollback_statements" structs:"rollback_statements"`
+	RenewStatements      string `json:"renew_statements" mapstructure:"renew_statements" structs:"renew_statements"`
 }
 
 // Query templates a query for us.

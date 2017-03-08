@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 )
 
-const defaultRevocationStmts = `
+const defaultMysqlRevocationStmts = `
 	REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
 	DROP USER '{{name}}'@'%'
 `
@@ -30,7 +30,7 @@ func (m *MySQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MySQL) CreateUser(createStmts, rollbackStmts, username, password, expiration string) error {
+func (m *MySQL) CreateUser(statements Statements, username, password, expiration string) error {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -49,7 +49,7 @@ func (m *MySQL) CreateUser(createStmts, rollbackStmts, username, password, expir
 	defer tx.Rollback()
 
 	// Execute each query
-	for _, query := range strutil.ParseArbitraryStringSlice(createStmts, ";") {
+	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
 		query = strings.TrimSpace(query)
 		if len(query) == 0 {
 			continue
@@ -77,11 +77,11 @@ func (m *MySQL) CreateUser(createStmts, rollbackStmts, username, password, expir
 }
 
 // NOOP
-func (m *MySQL) RenewUser(username, expiration string) error {
+func (m *MySQL) RenewUser(statements Statements, username, expiration string) error {
 	return nil
 }
 
-func (m *MySQL) RevokeUser(username, revocationStmts string) error {
+func (m *MySQL) RevokeUser(statements Statements, username string) error {
 	// Grab the read lock
 	m.Lock()
 	defer m.Unlock()
@@ -92,9 +92,10 @@ func (m *MySQL) RevokeUser(username, revocationStmts string) error {
 		return err
 	}
 
+	revocationStmts := statements.RevocationStatements
 	// Use a default SQL statement for revocation if one cannot be fetched from the role
 	if revocationStmts == "" {
-		revocationStmts = defaultRevocationStmts
+		revocationStmts = defaultMysqlRevocationStmts
 	}
 
 	// Start a transaction

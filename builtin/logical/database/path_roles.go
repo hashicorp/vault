@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/database/dbs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -42,12 +43,18 @@ func pathRoles(b *databaseBackend) *framework.Path {
 
 			"revocation_statements": {
 				Type: framework.TypeString,
-				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
+				Description: `Statements to be executed to revoke a user. Must be a semicolon-separated
 							string, a base64-encoded semicolon-separated string, a serialized JSON string
 							array, or a base64-encoded serialized JSON string array. The '{{name}}' value
 							will be substituted.`,
 			},
-
+			"renew_statements": {
+				Type: framework.TypeString,
+				Description: `Statements to be executed to renew a user. Must be a semicolon-separated
+							string, a base64-encoded semicolon-separated string, a serialized JSON string
+							array, or a base64-encoded serialized JSON string array. The '{{name}}' value
+							will be substituted.`,
+			},
 			"rollback_statements": {
 				Type: framework.TypeString,
 				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
@@ -98,9 +105,10 @@ func (b *databaseBackend) pathRoleRead(req *logical.Request, data *framework.Fie
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"creation_statments":    role.CreationStatements,
-			"revocation_statements": role.RevocationStatements,
-			"rollback_statements":   role.RollbackStatements,
+			"creation_statments":    role.Statements.CreationStatements,
+			"revocation_statements": role.Statements.RevocationStatements,
+			"rollback_statements":   role.Statements.RollbackStatements,
+			"renew_statements":      role.Statements.RenewStatements,
 			"default_ttl":           role.DefaultTTL.String(),
 			"max_ttl":               role.MaxTTL.String(),
 		},
@@ -119,9 +127,14 @@ func (b *databaseBackend) pathRoleList(req *logical.Request, d *framework.FieldD
 func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	dbName := data.Get("db_name").(string)
+
+	// Get statements
 	creationStmts := data.Get("creation_statements").(string)
 	revocationStmts := data.Get("revocation_statements").(string)
 	rollbackStmts := data.Get("rollback_statements").(string)
+	renewStmts := data.Get("renew_statements").(string)
+
+	// Get TTLs
 	defaultTTLRaw := data.Get("default_ttl").(string)
 	maxTTLRaw := data.Get("max_ttl").(string)
 
@@ -136,16 +149,21 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 			"Invalid max_ttl: %s", err)), nil
 	}
 
+	statements := dbs.Statements{
+		CreationStatements:   creationStmts,
+		RevocationStatements: revocationStmts,
+		RollbackStatements:   rollbackStmts,
+		RenewStatements:      rollbackStmts,
+	}
+
 	// TODO: Think about preparing the statments to test.
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		DBName:               dbName,
-		CreationStatements:   creationStmts,
-		RevocationStatements: revocationStmts,
-		RollbackStatements:   rollbackStmts,
-		DefaultTTL:           defaultTTL,
-		MaxTTL:               maxTTL,
+		DBName:     dbName,
+		Statements: statements,
+		DefaultTTL: defaultTTL,
+		MaxTTL:     maxTTL,
 	})
 	if err != nil {
 		return nil, err
@@ -158,12 +176,10 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 }
 
 type roleEntry struct {
-	DBName               string        `json:"db_name" mapstructure:"db_name" structs:"db_name"`
-	CreationStatements   string        `json:"creation_statment" mapstructure:"creation_statement" structs:"creation_statment"`
-	RevocationStatements string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
-	RollbackStatements   string        `json:"revocation_statement" mapstructure:"revocation_statement" structs:"revocation_statement"`
-	DefaultTTL           time.Duration `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
-	MaxTTL               time.Duration `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
+	DBName     string         `json:"db_name" mapstructure:"db_name" structs:"db_name"`
+	Statements dbs.Statements `json:"statments" mapstructure:"statements" structs:"statments"`
+	DefaultTTL time.Duration  `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
+	MaxTTL     time.Duration  `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
 }
 
 const pathRoleHelpSyn = `

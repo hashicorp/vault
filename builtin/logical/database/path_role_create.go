@@ -67,7 +67,7 @@ func (b *databaseBackend) pathRoleCreateRead(req *logical.Request, data *framewo
 
 	expiration := db.GenerateExpiration(role.DefaultTTL)
 
-	err = db.CreateUser(role.CreationStatements, role.RollbackStatements, username, password, expiration)
+	err = db.CreateUser(role.Statements, username, password, expiration)
 	if err != nil {
 		return nil, err
 	}
