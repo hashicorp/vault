@@ -284,8 +284,8 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	originalReqID := req.ID
 
 	// Cache the client token's number of uses in the request
-	originalClientTokenNumUses := req.ClientTokenNumUses
-	req.ClientTokenNumUses = 0
+	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
+	req.ClientTokenRemainingUses = 0
 
 	// Cache the headers and hide them from backends
 	headers := req.Headers
@@ -308,7 +308,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 		req.ID = originalReqID
 		req.Storage = nil
 		req.ClientToken = clientToken
-		req.ClientTokenNumUses = originalClientTokenNumUses
+		req.ClientTokenRemainingUses = originalClientTokenRemainingUses
 		req.WrapInfo = wrapInfo
 		req.Headers = headers
 		// This is only set in one place, after routing, so should never be set

@@ -102,10 +102,10 @@ func (f *AuditFormatter) FormatRequest(
 		Error: errString,
 
 		Auth: AuditAuth{
-			DisplayName: auth.DisplayName,
-			Policies:    auth.Policies,
-			Metadata:    auth.Metadata,
-			NumUses:     req.ClientTokenNumUses,
+			DisplayName:   auth.DisplayName,
+			Policies:      auth.Policies,
+			Metadata:      auth.Metadata,
+			RemainingUses: req.ClientTokenRemainingUses,
 		},
 
 		Request: AuditRequest{
@@ -364,12 +364,13 @@ type AuditResponse struct {
 }
 
 type AuditAuth struct {
-	ClientToken string            `json:"client_token"`
-	Accessor    string            `json:"accessor"`
-	DisplayName string            `json:"display_name"`
-	Policies    []string          `json:"policies"`
-	Metadata    map[string]string `json:"metadata"`
-	NumUses     int               `json:"num_uses,omitempty"`
+	ClientToken   string            `json:"client_token"`
+	Accessor      string            `json:"accessor"`
+	DisplayName   string            `json:"display_name"`
+	Policies      []string          `json:"policies"`
+	Metadata      map[string]string `json:"metadata"`
+	NumUses       int               `json:"num_uses,omitempty"`
+	RemainingUses int               `json:"remaining_uses,omitempty"`
 }
 
 type AuditSecret struct {
