@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -161,7 +161,7 @@ func (d *FieldData) getPrimitive(
 		case float64:
 			result = int(inp)
 		case string:
-			dur, err := duration.ParseDurationSecond(inp)
+			dur, err := parseutil.ParseDurationSecond(inp)
 			if err != nil {
 				return nil, true, err
 			}

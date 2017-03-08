@@ -2,276 +2,204 @@
 // Docs
 // --------------------------------------------------
 
-body.layout-atlas,
-body.layout-consul,
-body.layout-dnsimple,
-body.layout-dme,
-body.layout-cloudflare,
-body.layout-cloudstack,
-body.layout-google,
-body.layout-heroku,
-body.layout-mailgun,
-body.layout-digitalocean,
-body.layout-aws,
+$docs-font-size: 15px;
+
 body.layout-docs,
 body.layout-inner,
 body.layout-downloads,
-body.layout-intro{
-  display: flex;
-  flex-direction: column;
+body.layout-intro {
+  >.container {
+    .col-md-8[role=main] {
+      min-height: 800px;
+      background-color: white;
 
-	>.container{
-    flex: 1 0 auto;
+      >div {
+        position: relative;
+        z-index: 10;
+      }
+    }
+  }
 
-		.col-md-8[role=main]{
-			background-color: white;
+  *:focus {
+    outline: none;
+  }
 
-			>div{
-				position: relative;
-				z-index: 10;
-			}
-		}
-	}
+  h1 > code,
+  h2 > code,
+  h3 > code,
+  h4 > code,
+  h5 > code
+  h6 > code,
+  li > code,
+  table code,
+  p code,
+  tt,
+  .alert code {
+    font-family: $font-family-monospace;
+    font-size: 90%;
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+  }
 }
 
-.docs-sidebar{
-  	position: relative;
-  	z-index: 20;
-  	margin-bottom: 30px;
-	margin-top: 50px;
-	margin-right: 4%;
-	@include open();
+.docs-sidebar {
+  margin-bottom: 30px;
+  margin-top: 50px;
 
-	a{
-		color: $dark-blue;
-	}
+  ul.nav.docs-sidenav {
+    display: block;
+    padding-bottom: 15px;
 
-	.nav.docs-sidenav{
-		padding-bottom: 15px;
+    li {
+      a {
+        color: $sidebar-link-color;
+        font-size: 13px;
+        padding: 10px 0 10px 15px;
 
-		:last-child{
-			border-bottom: none;
-		}
+        &:before {
+          color: $dark-blue;
+          content: '\203A';
+          font-size: $docs-font-size;
+          left: 0;
+          line-height: 100%;
+          opacity: 0.4;
+          position: absolute;
 
-		//all li
-		li{
-			position: relative;
-
-			> a{
-				padding: 10px 0 10px 8px;
-				font-size: 13px;
-				color: $dark-blue;
-
-				&:before{
-					@include bez-1-transition();
-				}
-
-				&:hover{
-					background-color: transparent !important;
-
-					&:before{
-						@include bez-1-transition();
-					}
-				}
-			}
-		}
-
-		$parent-active-state: -14px;
-		$parent-default-state: -10px;
-		$child-active-state: -4px;
-		$child-default-state: 0px;
-
-		//first teir li
-		> li {
-			margin: 0 0 0 10px;
-
-			&.active {
-				>a{
-          			color: lighten($black, 4%);
-
-					&:hover{
-						&:before{
-							left: $parent-default-state;
-						}
-					}
-
-					&:before{
-						background: image-url("triangle-sprite.png") 0 0 no-repeat;
-						@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 7px, 25px);
-					}
-				}
-
-				.nav {
-					display: block;
-				}
-			}
-
-			> a {
-        		-webkit-font-smoothing: antialiased;
-
-				&:hover{
-					&:before{
-						left: $parent-active-state;
-					}
-				}
-
-				&:before{
-					content: '';
-					position: absolute;
-			        width: 7px;
-			        height: 8px;
-					top: 15px;
-					left: $parent-default-state;
-					overflow: hidden;
-					background: image-url("triangle-sprite.png") 0 -9px no-repeat;
-					@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 7px, 25px);
-				}
-			}
-		}
-
-		//nested ul.nav
-		.nav {
-			display: none;
-			margin-bottom: 15px;
-
-			> li{
-				margin-left: 10px;
-
-				&.active{
-					> a{
-		            	color: $black;
-
-						&:hover{
-							&:before{
-								left: $child-default-state;
-							}
-						}
-
-						&:before{
-							background: image-url("triangle-sprite.png") 0 0 no-repeat;
-							@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 5px, 19px);
-						}
-					}
-				}
-
-				> a{
-          			-webkit-font-smoothing: antialiased;
-					padding: 6px 15px;
-
-					&:hover{
-						&:before{
-							left: $child-active-state;
-						}
-					}
-
-					&:before{
-						opacity: .75;
-						content: '';
-						position: absolute;
-				        width: 5px;
-				        height: 7px;
-						top: 12px;
-						left: $child-default-state;
-						overflow: hidden;
-						background: image-url("triangle-sprite.png") 0 -13px no-repeat;
-						@include img-retina("triangle-sprite.png", "triangle-sprite@2x.png", 5px, 19px);
-					}
-				}
-			}
-		}
-
-        .nav-visible {
-            display: block;
+          height: 100%;
+          width: 8px
         }
-	}
+
+        &:focus,
+        &:hover {
+          background-color: transparent;
+          color: $sidebar-link-color-hover;
+
+          &:before {
+            opacity: 1;
+          }
+        }
+      }
+
+      // For forcing sub-navs to appear - in the long term, this should not
+      // be a thing anymore...
+      > ul.nav-visible {
+        display: block;
+      }
+    }
+
+    li.active {
+      > a {
+        color: $sidebar-link-color-active;
+
+        &:before {
+          opacity: 1;
+        }
+      }
+
+      // Open nested navigations
+      > ul.nav {
+        display: block;
+      }
+    }
+
+    // subnav
+    ul.nav {
+      display: none;
+      margin: 10px;
+
+      li {
+        margin-left: 10px;
+
+        a {
+          padding: 6px 15px;
+        }
+      }
+    }
+  }
 }
 
+.bs-docs-section {
+  padding-top: 10px;
+  padding-left: 3%;
+  padding-bottom: 80px;
 
-.bs-docs-section{
-	padding-top: 10px;
-	padding-left: 3%;
-	padding-bottom: 80px;
+  p, li, .alert {
+    font-size: $docs-font-size;
+    font-family: $font-family-open-sans;
+    font-weight: $font-weight-reg;
+    line-height: 1.84em;
+    margin: 0 0 $docs-font-size;
+    -webkit-font-smoothing: antialiased;
+  }
 
-	.lead{
-		margin-bottom: 48px
-	}
+  pre {
+    font-family: $font-family-monospace;
+    font-size: ($docs-font-size - 3);
+    font-weight: normal;
+    padding: 20px;
+    margin: 0 0 $docs-font-size;
 
-	.doc-sectional{
-		margin-bottom: 48px;
-	}
+    // This will force the code to scroll horizontally on small screens
+    // instead of wrapping.
+    code {
+      overflow-wrap: normal;
+      white-space: pre;
+    }
+  }
 
-	p, li, .alert {
-		font-size: 20px;
-		font-family: $font-family-open-sans;
-		font-weight: $font-weight-open;
-    	line-height: 1.5em;
-		margin: 0 0 18px;
-    	-webkit-font-smoothing: antialiased;
-	}
+  a {
+    color: $dark-blue;
+    text-decoration: none;
 
-    pre{
-        margin: 0 0 18px;
+    &:hover {
+      text-decoration: underline;
     }
 
-	a{
-		color: $dark-blue;
-		&:hover{
-			text-decoration: underline;
-		}
-	}
-
-    img{
-        max-width: 650px;
-        margin-top: 25px;
-        margin-bottom: 25px;
+    code {
+      background: inherit;
+      color: $dark-blue;
     }
+  }
 
-	h1{
-		color: $black;
-		font-size: 36px;
-		margin-top: 50px;
-		margin-bottom: 24px;
-    	//@include lato-light();
-    	@include open();
-	}
+  img {
+    max-width: 650px;
+    margin-top: 25px;
+    margin-bottom: 25px;
+  }
 
-	h2, h3, h4{
-		margin-bottom: 16px;
-	}
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: $body-font-color;
+    margin-top: 54px;
+    margin-bottom: $docs-font-size;
+    line-height: 1.3;
+  }
 
-    #graph {
-        margin-top: 30px;
-    }
+  h2 {
+    padding-bottom: 3px;
+    border-bottom: 1px solid $gray-light;
+  }
 }
-
 
 @media (max-width: 992px) {
-
-  .bs-docs-section{
-  	  padding-left: 0;
+  .bs-docs-section {
+    padding-left: 0;
   }
 }
 
 @media (max-width: 768px) {
-	.bs-docs-section{
-		padding-top: 0;
-		h1{
-			margin-top: 0;
-		}
-	}
+  .bs-docs-section {
+    padding-top: 0;
+  }
 }
 
-
-
-
 @media (max-width: 480px) {
-	.bs-docs-section{
-        img{
-            max-width: 450px;
-        }
-
-		h1{
-			font-size: 32px;
-		}
-	}
+  .bs-docs-section {
+    img {
+      max-width: 450px;
+    }
+  }
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/parseutil"
 )
 
 // Config is the configuration for the vault server.
@@ -25,18 +26,21 @@ type Config struct {
 
 	HSM *HSM `hcl:"-"`
 
-	CacheSize    int  `hcl:"cache_size"`
-	DisableCache bool `hcl:"disable_cache"`
-	DisableMlock bool `hcl:"disable_mlock"`
+	CacheSize       int         `hcl:"cache_size"`
+	DisableCache    bool        `hcl:"-"`
+	DisableCacheRaw interface{} `hcl:"disable_cache"`
+	DisableMlock    bool        `hcl:"-"`
+	DisableMlockRaw interface{} `hcl:"disable_mlock"`
 
-	EnableUI bool `hcl:"ui"`
+	EnableUI    bool        `hcl:"-"`
+	EnableUIRaw interface{} `hcl:"ui"`
 
 	Telemetry *Telemetry `hcl:"telemetry"`
 
 	MaxLeaseTTL        time.Duration `hcl:"-"`
-	MaxLeaseTTLRaw     string        `hcl:"max_lease_ttl"`
+	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
-	DefaultLeaseTTLRaw string        `hcl:"default_lease_ttl"`
+	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
 	ClusterName string `hcl:"cluster_name"`
 }
@@ -309,13 +313,31 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		return nil, err
 	}
 
-	if result.MaxLeaseTTLRaw != "" {
-		if result.MaxLeaseTTL, err = time.ParseDuration(result.MaxLeaseTTLRaw); err != nil {
+	if result.MaxLeaseTTLRaw != nil {
+		if result.MaxLeaseTTL, err = parseutil.ParseDurationSecond(result.MaxLeaseTTLRaw); err != nil {
 			return nil, err
 		}
 	}
-	if result.DefaultLeaseTTLRaw != "" {
-		if result.DefaultLeaseTTL, err = time.ParseDuration(result.DefaultLeaseTTLRaw); err != nil {
+	if result.DefaultLeaseTTLRaw != nil {
+		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableUIRaw != nil {
+		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableCacheRaw != nil {
+		if result.DisableCache, err = parseutil.ParseBool(result.DisableCacheRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableMlockRaw != nil {
+		if result.DisableMlock, err = parseutil.ParseBool(result.DisableMlockRaw); err != nil {
 			return nil, err
 		}
 	}

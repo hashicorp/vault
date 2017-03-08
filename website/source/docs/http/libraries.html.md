@@ -18,12 +18,18 @@ These libraries are officially maintained by HashiCorp.
 ### Go
 
 * [Vault Go Client](https://github.com/hashicorp/vault/tree/master/api)
-  * `go get github.com/hashicorp/vault/api`
+
+```shell
+$ go get github.com/hashicorp/vault/api
+```
 
 ### Ruby
 
 * [Vault Ruby Client](https://github.com/hashicorp/vault-ruby)
-  * `gem install vault`
+
+```shell
+$ gem install vault
+```
 
 ## Community
 
@@ -32,14 +38,24 @@ These libraries are provided by the community.
 ### Ansible
 
 * [Ansible Modules Hashivault](https://pypi.python.org/pypi/ansible-modules-hashivault)
-  * `pip install ansible-modules-hashivault`
+
+```shell
+$ pip install ansible-modules-hashivault
+```
 
 ### C&#35;
 
 * [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Standard = 1.4 (.NET Core >= 1.0.0) and also .NET 4.5.x, .NET 4.6.x)
-  * `Install-Package VaultSharp`
+
+```shell
+$ Install-Package VaultSharp
+```
+
 * [Vault.NET](https://github.com/Chatham/Vault.NET)
-  * `Install-Package Vault`
+
+```shell
+$ Install-Package Vault
+```
 
 ### Clojure
 
@@ -53,10 +69,17 @@ These libraries are provided by the community.
 
 * [vc](https://github.com/adfinis-sygroup/vault-client)
 
+```shell
+$ go get github.com/adfinis-sygroup/vault-client
+```
+
 ### Haskell
 
 * [vault-tool](https://hackage.haskell.org/package/vault-tool)
-  * `cabal install vault-tool`
+
+```shell
+$ cabal install vault-tool
+```
 
 ### Java
 
@@ -71,21 +94,38 @@ These libraries are provided by the community.
 ### Node.js
 
 * [node-vault](https://github.com/kr1sp1n/node-vault)
-  * `npm install node-vault`
+
+```shell
+$ npm install node-vault
+```
+
 * [vaulted](https://github.com/chiefy/vaulted)
-  * `npm install vaulted`
+
+```shell
+$ npm install vaulted
+```
 
 ### PHP
 
 * [vault-php-sdk](https://github.com/jippi/vault-php-sdk)
-  * `composer require jippi/vault-php-sdk`
+
+```shell
+$ composer require jippi/vault-php-sdk
+```
+
 * [vault-php-sdk](https://github.com/violuke/vault-php-sdk) extended from jipppi
-  * `composer require violuke/vault-php-sdk`
+
+```shell
+$ composer require violuke/vault-php-sdk
+```
 
 ### Python
 
 * [HVAC](https://github.com/ianunruh/hvac)
-  * `pip install hvac`
+
+```shell
+$ pip install hvac
+```
 
 ### Rust
 

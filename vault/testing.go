@@ -511,6 +511,7 @@ type TestClusterCore struct {
 	CACertBytes []byte
 	CACert      *x509.Certificate
 	TLSConfig   *tls.Config
+	ClusterID   string
 	Client      *api.Client
 }
 
@@ -553,7 +554,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		Certificates: []tls.Certificate{serverCert},
 		RootCAs:      rootCAs,
 		ClientCAs:    rootCAs,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientAuth:   tls.VerifyClientCertIfGiven,
 	}
 	tlsConfig.BuildNameToCertificate()
 
@@ -620,6 +621,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	server1 := &http.Server{
 		Handler: handlers[0],
 	}
+	if err := http2.ConfigureServer(server1, nil); err != nil {
+		t.Fatal(err)
+	}
 	for _, ln := range c1lns {
 		go server1.Serve(ln)
 	}
@@ -638,6 +642,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	}
 	server2 := &http.Server{
 		Handler: handlers[1],
+	}
+	if err := http2.ConfigureServer(server2, nil); err != nil {
+		t.Fatal(err)
 	}
 	for _, ln := range c2lns {
 		go server2.Serve(ln)
@@ -658,6 +665,9 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	server3 := &http.Server{
 		Handler: handlers[2],
 	}
+	if err := http2.ConfigureServer(server3, nil); err != nil {
+		t.Fatal(err)
+	}
 	for _, ln := range c3lns {
 		go server3.Serve(ln)
 	}
@@ -669,8 +679,6 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	// the redirect addr. This has now been changed to 10 ports above, but if
 	// we ever do more than three nodes in a cluster it may need to be bumped.
 	coreConfig := &CoreConfig{
-		Physical:           physical.NewInmem(logger),
-		HAPhysical:         physical.NewInmemHA(logger),
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
@@ -680,6 +688,14 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	}
 
 	if base != nil {
+		if base.Physical != nil {
+			coreConfig.Physical = base.Physical
+		}
+
+		if base.HAPhysical != nil {
+			coreConfig.HAPhysical = base.HAPhysical
+		}
+
 		// Used to set something non-working to test fallback
 		switch base.ClusterAddr {
 		case "empty":
@@ -707,6 +723,13 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		if base.Logger != nil {
 			coreConfig.Logger = base.Logger
 		}
+	}
+
+	if coreConfig.Physical == nil {
+		coreConfig.Physical = physical.NewInmem(logger)
+	}
+	if coreConfig.HAPhysical == nil {
+		coreConfig.HAPhysical = physical.NewInmemHA(logger)
 	}
 
 	c1, err := NewCore(coreConfig)
@@ -800,10 +823,14 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		}
 	}
 
+	cluster, err := c1.Cluster()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	getAPIClient := func(port int) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig
-		http2.ConfigureTransport(transport)
 		client := &http.Client{
 			Transport: transport,
 			CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -832,6 +859,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		CACertBytes: caBytes,
 		CACert:      caCert,
 		TLSConfig:   tlsConfig,
+		ClusterID:   cluster.ID,
 		Client:      getAPIClient(c1lns[0].Address.Port),
 	})
 
@@ -844,6 +872,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		CACertBytes: caBytes,
 		CACert:      caCert,
 		TLSConfig:   tlsConfig,
+		ClusterID:   cluster.ID,
 		Client:      getAPIClient(c2lns[0].Address.Port),
 	})
 
@@ -856,6 +885,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		CACertBytes: caBytes,
 		CACert:      caCert,
 		TLSConfig:   tlsConfig,
+		ClusterID:   cluster.ID,
 		Client:      getAPIClient(c3lns[0].Address.Port),
 	})
 

@@ -1,4 +1,4 @@
-## Next (Unreleased)
+## 0.7.0 (Unreleased)
 
 DEPRECATIONS/CHANGES:
 
@@ -25,8 +25,39 @@ DEPRECATIONS/CHANGES:
    and ensuring lifetimes are reasonable, and issue long-lived certificates via
    a different role with leases disabled.
 
+FEATURES:
+
+ * **Replication (Enterprise)**: Vault Enterprise now has support for creating
+   a multi-datacenter replication set between clusters. The current replication
+   offering is based on an asynchronous primary/secondary (1:N) model that
+   replicates static data while keeping dynamic data (leases, tokens)
+   cluster-local, focusing on horizontal scaling for high-throughput and
+   high-fanout deployments.
+ * **Response Wrapping & Replication in the Vault Enterprise UI**: Vault
+   Enterprise UI now supports looking up and rotating response wrapping tokens,
+   as well as creating tokens with arbitrary values inside. It also now
+   supports replication functionality, enabling the configuration of a
+   replication set in the UI.
+ * **Expanded Access Control Policies**: Access control policies can now
+   specify allowed and denied parameters -- and, optionally, their values -- to
+   control what a client can and cannot submit during an API call. Policies can
+   also specify minimum/maximum response wrapping TTLs to both enforce the use
+   of response wrapping and control the duration of resultant wrapping tokens.
+   See the [policies concepts
+   page](https://www.vaultproject.io/docs/concepts/policies.html) for more
+   information.
+ * **SSH Backend As Certificate Authority**: The SSH backend can now be
+   configured to sign host and user certificates. Each mount of the backend
+   acts as an independent signing authority. The CA key pair can be configured
+   for each mount and the public key is accessible via an unauthenticated API
+   call; additionally, the backend can generate a public/private key pair for
+   you. We recommend using separate mounts for signing host and user
+   certificates.
+
 IMPROVEMENTS:
 
+ * auth/approle: Support for restricting the number of uses on the tokens
+   issued [GH-2435]
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
    Subnet ID and Region [GH-2407]
  * auth/ldap: Use the value of the `LOGNAME` or `USER` env vars for the
@@ -35,12 +66,16 @@ IMPROVEMENTS:
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * physical/dynamodb: Implement a session timeout to avoid having to use
+   recovery mode in the case of an unclean shutdown, which makes HA much safer
+   [GH-2141]
  * secret/pki: O (Organization) values can now be set to role-defined values
    for issued/signed certificates [GH-2369]
  * secret/pki: Certificates issued/signed from PKI backend does not generate
    leases by default [GH-2403]
  * secret/pki: When using DER format, still return the private key type
    [GH-2405]
+ * secret/ssh: SSH backend as CA to sign user and host certificates [GH-2208]
 
 BUG FIXES:
 

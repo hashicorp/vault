@@ -140,8 +140,8 @@ func (m *RollbackManager) startRollback(path string) *rollbackState {
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(path string, rs *rollbackState) (err error) {
 	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.Replace(path, "/", "-", -1)}, time.Now())
-	if m.logger.IsDebug() {
-		m.logger.Debug("rollback: attempting rollback", "path", path)
+	if m.logger.IsTrace() {
+		m.logger.Trace("rollback: attempting rollback", "path", path)
 	}
 
 	defer func() {

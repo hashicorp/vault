@@ -38,6 +38,10 @@ const (
 	// for a highly-available deploy.
 	coreLockPath = "core/lock"
 
+	// The poison pill is used as a check during certain scenarios to indicate
+	// to standby nodes that they should seal
+	poisonPillPath = "core/poison-pill"
+
 	// coreLeaderPrefix is the prefix used for the UUID that contains
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
@@ -91,6 +95,7 @@ var (
 	enterprisePreSeal    = enterprisePreSealImpl
 	startReplication     = startReplicationImpl
 	stopReplication      = stopReplicationImpl
+	LastRemoteWAL        = lastRemoteWALImpl
 )
 
 // ReloadFunc are functions that are called when a reload is requested.
@@ -284,8 +289,8 @@ type Core struct {
 	localClusterPrivateKey crypto.Signer
 	// The local cluster cert
 	localClusterCert []byte
-	// The cert pool containing trusted cluster CAs
-	clusterCertPool *x509.CertPool
+	// The parsed form of the local cluster cert
+	localClusterParsedCert *x509.Certificate
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
 	// The setup function that gives us the handler to use
@@ -308,6 +313,8 @@ type Core struct {
 	clusterLeaderUUID string
 	// Most recent leader redirect addr
 	clusterLeaderRedirectAddr string
+	// Lock for the cluster leader values
+	clusterLeaderParamsLock sync.RWMutex
 	// The grpc Server that handles server RPC calls
 	rpcServer *grpc.Server
 	// The function for canceling the client connection
@@ -421,7 +428,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		maxLeaseTTL:                      conf.MaxLeaseTTL,
 		cachingDisabled:                  conf.DisableCache,
 		clusterName:                      conf.ClusterName,
-		clusterCertPool:                  x509.NewCertPool(),
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 	}
@@ -683,17 +689,6 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Check if we are the leader
 	if !c.standby {
-		// If we have connections from talking to a previous leader, close them
-		// out to free resources
-		if c.requestForwardingConnection != nil {
-			c.requestForwardingConnectionLock.Lock()
-			// Verify that the condition hasn't changed
-			if c.requestForwardingConnection != nil {
-				c.requestForwardingConnection.transport.CloseIdleConnections()
-			}
-			c.requestForwardingConnection = nil
-			c.requestForwardingConnectionLock.Unlock()
-		}
 		return true, c.redirectAddr, nil
 	}
 
@@ -712,10 +707,25 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		return false, "", nil
 	}
 
+	c.clusterLeaderParamsLock.RLock()
+	localLeaderUUID := c.clusterLeaderUUID
+	localRedirAddr := c.clusterLeaderRedirectAddr
+	c.clusterLeaderParamsLock.RUnlock()
+
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
+	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
+		return false, localRedirAddr, nil
+	}
+
+	c.logger.Trace("core: found new active node information, refreshing")
+
+	c.clusterLeaderParamsLock.Lock()
+	defer c.clusterLeaderParamsLock.Unlock()
+
+	// Validate base conditions again
 	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
-		return false, c.clusterLeaderRedirectAddr, nil
+		return false, localRedirAddr, nil
 	}
 
 	key := coreLeaderPrefix + leaderUUID
@@ -734,10 +744,13 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	if err != nil {
 		// Fall back to pre-struct handling
 		adv.RedirectAddr = string(entry.Value)
+		c.logger.Trace("core: parsed redirect addr for new active node", "redirect_addr", adv.RedirectAddr)
 		oldAdv = true
 	}
 
 	if !oldAdv {
+		c.logger.Trace("core: parsing information for new active node", "active_cluster_addr", adv.ClusterAddr, "active_redirect_addr", adv.RedirectAddr)
+
 		// Ensure we are using current values
 		err = c.loadLocalClusterTLS(adv)
 		if err != nil {
@@ -757,7 +770,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 	c.clusterLeaderRedirectAddr = adv.RedirectAddr
 	c.clusterLeaderUUID = leaderUUID
 
-	return false, c.clusterLeaderRedirectAddr, nil
+	return false, adv.RedirectAddr, nil
 }
 
 // SecretProgress returns the number of keys provided so far
@@ -1155,6 +1168,13 @@ func (c *Core) sealInternal() error {
 	// Enable that we are sealed to prevent furthur transactions
 	c.sealed = true
 
+	c.logger.Debug("core: marked as sealed")
+
+	// Clear forwarding clients
+	c.requestForwardingConnectionLock.Lock()
+	c.clearForwardingClients()
+	c.requestForwardingConnectionLock.Unlock()
+
 	// Do pre-seal teardown if HA is not enabled
 	if c.ha == nil {
 		// Even in a non-HA context we key off of this for some things
@@ -1173,10 +1193,11 @@ func (c *Core) sealInternal() error {
 		c.stateLock.Lock()
 	}
 
+	c.logger.Debug("core: sealing barrier")
 	if err := c.barrier.Seal(); err != nil {
+		c.logger.Error("core: error sealing barrier", "error", err)
 		return err
 	}
-	c.logger.Info("core: vault is sealed")
 
 	if c.ha != nil {
 		sd, ok := c.ha.(physical.ServiceDiscovery)
@@ -1188,6 +1209,8 @@ func (c *Core) sealInternal() error {
 			}
 		}
 	}
+
+	c.logger.Info("core: vault is sealed")
 
 	return nil
 }
@@ -1205,33 +1228,22 @@ func (c *Core) postUnseal() (retErr error) {
 	}()
 	c.logger.Info("core: post-unseal setup starting")
 
+	// Clear forwarding clients; we're active
+	c.requestForwardingConnectionLock.Lock()
+	c.clearForwardingClients()
+	c.requestForwardingConnectionLock.Unlock()
+
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
 		purgable.Purge()
 	}
 
-	// HA mode requires us to handle keyring rotation and rekeying
-	if c.ha != nil {
-		// We want to reload these from disk so that in case of a rekey we're
-		// not using cached values
-		c.seal.SetBarrierConfig(nil)
-		if c.seal.RecoveryKeySupported() {
-			c.seal.SetRecoveryConfig(nil)
-		}
-
-		if err := c.checkKeyUpgrades(); err != nil {
-			return err
-		}
-		if err := c.barrier.ReloadMasterKey(); err != nil {
-			return err
-		}
-		if err := c.barrier.ReloadKeyring(); err != nil {
-			return err
-		}
-		if err := c.scheduleUpgradeCleanup(); err != nil {
-			return err
-		}
+	// Purge these for safety in case of a rekey
+	c.seal.SetBarrierConfig(nil)
+	if c.seal.RecoveryKeySupported() {
+		c.seal.SetRecoveryConfig(nil)
 	}
+
 	if err := enterprisePostUnseal(c); err != nil {
 		return err
 	}
@@ -1297,9 +1309,7 @@ func (c *Core) preSeal() error {
 	}
 	var result error
 
-	if c.ha != nil {
-		c.stopClusterListener()
-	}
+	c.stopClusterListener()
 
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down audits: {{err}}", err))
@@ -1372,6 +1382,11 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		default:
 		}
 
+		// Clear forwarding clients
+		c.requestForwardingConnectionLock.Lock()
+		c.clearForwardingClients()
+		c.requestForwardingConnectionLock.Unlock()
+
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
 		if err != nil {
@@ -1398,8 +1413,40 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		activeTime := time.Now()
 
 		// Grab the lock as we need it for cluster setup, which needs to happen
-		// before advertising
+		// before advertising;
 		c.stateLock.Lock()
+
+		// This block is used to wipe barrier/seal state and verify that
+		// everything is sane. If we have no sanity in the barrier, we actually
+		// seal, as there's little we can do.
+		{
+			c.seal.SetBarrierConfig(nil)
+			if c.seal.RecoveryKeySupported() {
+				c.seal.SetRecoveryConfig(nil)
+			}
+
+			if err := c.performKeyUpgrades(); err != nil {
+				// We call this in a goroutine so that we can give up the
+				// statelock and have this shut us down; sealInternal has a
+				// workflow where it watches for the stopCh to close so we want
+				// to return from here
+				go c.Shutdown()
+				c.logger.Error("core: error performing key upgrades", "error", err)
+				c.stateLock.Unlock()
+				lock.Unlock()
+				metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+				return
+			}
+		}
+
+		// Clear previous local cluster cert info so we generate new. Since the
+		// UUID will have changed, standbys will know to look for new info
+		c.clusterParamsLock.Lock()
+		c.localClusterCert = nil
+		c.localClusterParsedCert = nil
+		c.localClusterPrivateKey = nil
+		c.clusterParamsLock.Unlock()
+
 		if err := c.setupCluster(); err != nil {
 			c.stateLock.Unlock()
 			c.logger.Error("core: cluster setup failed", "error", err)
@@ -1487,6 +1534,16 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 				continue
 			}
 
+			// Check for a poison pill. If we can read it, it means we have stale
+			// keys (e.g. from replication being activated) and we need to seal to
+			// be unsealed again.
+			entry, _ := c.barrier.Get(poisonPillPath)
+			if entry != nil && len(entry.Value) > 0 {
+				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
+				go c.Shutdown()
+				continue
+			}
+
 			if err := c.checkKeyUpgrades(); err != nil {
 				c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
 			}
@@ -1540,6 +1597,26 @@ func (c *Core) scheduleUpgradeCleanup() error {
 			}
 		}
 	})
+	return nil
+}
+
+func (c *Core) performKeyUpgrades() error {
+	if err := c.checkKeyUpgrades(); err != nil {
+		return errwrap.Wrapf("error checking for key upgrades: {{err}}", err)
+	}
+
+	if err := c.barrier.ReloadMasterKey(); err != nil {
+		return errwrap.Wrapf("error reloading master key: {{err}}", err)
+	}
+
+	if err := c.barrier.ReloadKeyring(); err != nil {
+		return errwrap.Wrapf("error reloading keyring: {{err}}", err)
+	}
+
+	if err := c.scheduleUpgradeCleanup(); err != nil {
+		return errwrap.Wrapf("error scheduling upgrade cleanup: {{err}}", err)
+	}
+
 	return nil
 }
 
@@ -1691,4 +1768,8 @@ func (c *Core) BarrierKeyLength() (min, max int) {
 
 func (c *Core) AuditedHeadersConfig() *AuditedHeadersConfig {
 	return c.auditedHeaders
+}
+
+func lastRemoteWALImpl(c *Core) uint64 {
+	return 0
 }
