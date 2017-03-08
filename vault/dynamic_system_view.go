@@ -76,7 +76,7 @@ func (d dynamicSystemView) Tainted() bool {
 
 // CachingDisabled indicates whether to use caching behavior
 func (d dynamicSystemView) CachingDisabled() bool {
-	return d.core.cachingDisabled
+	return d.core.cachingDisabled || (d.mountEntry != nil && d.mountEntry.Config.ForceNoCache)
 }
 
 // Checks if this is a primary Vault instance.
