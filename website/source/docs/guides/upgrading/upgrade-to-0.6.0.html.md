@@ -1,9 +1,10 @@
 ---
 layout: "docs"
-page_title: "Upgrading to Vault 0.6"
-sidebar_current: "docs-install-upgrade-to-0.6.0"
+page_title: "Upgrading to Vault 0.6.0 - Guides"
+sidebar_current: "docs-guides-upgrading-to-0.6.0"
 description: |-
-  Learn how to upgrade to Vault 0.6
+  This page contains the list of breaking changes for Vault 0.6. Please read it
+  carefully.
 ---
 
 # Overview
@@ -11,8 +12,8 @@ description: |-
 This page contains the list of breaking changes for Vault 0.6. Please read it
 carefully.
 
-Please note that this includes the full list of breaking changes __since Vault
-0.5__. Some of these changes were introduced in later releases in the Vault
+Please note that this includes the full list of breaking changes **since Vault
+0.5**. Some of these changes were introduced in later releases in the Vault
 0.5.x series.
 
 ## PKI Backend Disallows RSA Keys < 2048 Bits
@@ -58,11 +59,11 @@ The `cert` backend now performs a variant of channel binding at renewal time
 for increased security. In order to not overly burden clients, a notion of
 identity is used, as follows:
 
-* At both login and renewal time, the validity of the presented client
+- At both login and renewal time, the validity of the presented client
   certificate is checked
-* At login time, the key ID of both the client certificate and its issuing
+- At login time, the key ID of both the client certificate and its issuing
   certificate are stored
-* At renewal time, the key ID of both the client certificate and its issuing
+- At renewal time, the key ID of both the client certificate and its issuing
   certificate must match those stored at login time
 
 Matching on the key ID rather than the serial number allows tokens to be

@@ -1,9 +1,10 @@
 ---
 layout: "docs"
-page_title: "Upgrading to Vault 0.6.1"
-sidebar_current: "docs-install-upgrade-to-0.6.1"
+page_title: "Upgrading to Vault 0.6.1 - Guides"
+sidebar_current: "docs-guides-upgrading-to-0.6.1"
 description: |-
-  Learn how to upgrade to Vault 0.6.1
+  This page contains the list of breaking changes for Vault 0.6.1. Please read
+  it carefully.
 ---
 
 # Overview

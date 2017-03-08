@@ -1,16 +1,17 @@
 ---
 layout: "docs"
-page_title: "Upgrade Vault"
-sidebar_current: "docs-install-upgrade"
+page_title: "Upgrading Vault - Guides"
+sidebar_current: "docs-guides-upgrading"
 description: |-
-  Learn how to upgrade Vault.
+  These are general upgrade instructions for Vault for both non-HA and HA
+  setups. Please ensure that you also read the version-specific upgrade notes.
 ---
 
 # Upgrading Vault
 
 These are general upgrade instructions for Vault for both non-HA and HA setups.
-Please ensure that you also read the version-specific upgrade notes for the
-version you are upgrading to.
+Please ensure that you also read the version-specific upgrade notes which can be
+found in the sidebar.
 
 ## Non-HA Installations
 
