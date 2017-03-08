@@ -32,11 +32,11 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 	}
 
 	// Reading it should return the key as well as upgrade the storage path
-	storedPrivateKey, err := caKey(config.StorageView, caPrivateKey)
+	privateKeyEntry, err := caKey(config.StorageView, caPrivateKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if storedPrivateKey == "" {
+	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
 		t.Fatalf("failed to read the stored private key")
 	}
 
@@ -66,11 +66,11 @@ func TestSSH_ConfigCAStorageUpgrade(t *testing.T) {
 	}
 
 	// Reading it should return the key as well as upgrade the storage path
-	storedPublicKey, err := caKey(config.StorageView, caPublicKey)
+	publicKeyEntry, err := caKey(config.StorageView, caPublicKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if storedPublicKey == "" {
+	if publicKeyEntry == nil || publicKeyEntry.Key == "" {
 		t.Fatalf("failed to read the stored public key")
 	}
 

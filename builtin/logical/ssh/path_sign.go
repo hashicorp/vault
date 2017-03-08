@@ -147,12 +147,15 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	storedPrivateKey, err := caKey(req.Storage, caPrivateKey)
-	if err != nil || storedPrivateKey == "" {
+	privateKeyEntry, err := caKey(req.Storage, caPrivateKey)
+	if err != nil {
 		return nil, fmt.Errorf("failed to read CA private key: %v", err)
 	}
+	if privateKeyEntry == nil {
+		return nil, fmt.Errorf("failed to read CA private key")
+	}
 
-	signer, err := ssh.ParsePrivateKey([]byte(storedPrivateKey))
+	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse stored CA private key: %v", err)
 	}

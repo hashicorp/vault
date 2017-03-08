@@ -22,6 +22,10 @@ const (
 	caPrivateKeyStoragePathDeprecated = "config/ca_bundle"
 )
 
+type keyStorageEntry struct {
+	Key string `json:"key" structs:"key" mapstructure:"key"`
+}
+
 func pathConfigCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/ca",
@@ -65,7 +69,7 @@ func (b *backend) pathConfigCADelete(
 	return nil, nil
 }
 
-func caKey(storage logical.Storage, keyType string) (string, error) {
+func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 	var path, deprecatedPath string
 	switch keyType {
 	case caPrivateKey:
@@ -75,12 +79,12 @@ func caKey(storage logical.Storage, keyType string) (string, error) {
 		path = caPublicKeyStoragePath
 		deprecatedPath = caPublicKeyStoragePathDeprecated
 	default:
-		return "", fmt.Errorf("unrecognized key type %q", keyType)
+		return nil, fmt.Errorf("unrecognized key type %q", keyType)
 	}
 
 	entry, err := storage.Get(path)
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("failed to ca key of type %q: %v", keyType, err)
 	}
 
 	if entry == nil {
@@ -88,26 +92,33 @@ func caKey(storage logical.Storage, keyType string) (string, error) {
 		// it.
 		entry, err = storage.Get(deprecatedPath)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		if entry != nil {
-			err = storage.Put(&logical.StorageEntry{
-				Key:   path,
-				Value: entry.Value,
+			entry, err = logical.StorageEntryJSON(path, keyStorageEntry{
+				Key: string(entry.Value),
 			})
 			if err != nil {
-				return "", err
+				return nil, err
+			}
+			if err := storage.Put(entry); err != nil {
+				return nil, err
 			}
 			if err = storage.Delete(deprecatedPath); err != nil {
-				return "", err
+				return nil, err
 			}
 		}
 	}
 	if entry == nil {
-		return "", nil
+		return nil, nil
 	}
 
-	return string(entry.Value), nil
+	var keyEntry keyStorageEntry
+	if err := entry.DecodeJSON(&keyEntry); err != nil {
+		return nil, err
+	}
+
+	return &keyEntry, nil
 }
 
 func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -167,32 +178,42 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 		return nil, fmt.Errorf("failed to generate or parse the keys")
 	}
 
-	storedPublicKey, err := caKey(req.Storage, caPublicKey)
+	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA public key: %v", err)
 	}
 
-	storedPrivateKey, err := caKey(req.Storage, caPrivateKey)
+	privateKeyEntry, err := caKey(req.Storage, caPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read CA private key: %v", err)
 	}
 
-	if storedPublicKey != "" || storedPrivateKey != "" {
+	if (publicKeyEntry != nil && publicKeyEntry.Key != "") || (privateKeyEntry != nil && privateKeyEntry.Key != "") {
 		return nil, fmt.Errorf("keys are already configured; delete them before reconfiguring")
 	}
 
-	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   caPublicKeyStoragePath,
-		Value: []byte(publicKey),
+	entry, err := logical.StorageEntryJSON(caPublicKeyStoragePath, keyStorageEntry{
+		Key: publicKey,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   caPrivateKeyStoragePath,
-		Value: []byte(privateKey),
+	// Save the public key
+	err = req.Storage.Put(entry)
+	if err != nil {
+		return nil, err
+	}
+
+	entry, err = logical.StorageEntryJSON(caPrivateKeyStoragePath, keyStorageEntry{
+		Key: privateKey,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Save the private key
+	err = req.Storage.Put(entry)
 	if err != nil {
 		var mErr *multierror.Error
 
@@ -207,7 +228,6 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 
 		return nil, err
 	}
-
 	return nil, nil
 }
 
