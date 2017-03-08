@@ -2,10 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="<%= description_for(current_page) %>">
 
-    <link rel="shortcut icon" href="<%= image_path('favicon.png') %>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<%= image_path("favicons/apple-touch-icon.png") %>">
+    <link rel="icon" type="image/png" href="<%= image_path("favicons/favicon-32x32.png") %>" sizes="32x32">
+    <link rel="icon" type="image/png" href="<%= image_path("favicons/favicon-16x16.png") %>" sizes="16x16">
+    <link rel="manifest" href="/android-manifest.json">
+    <link rel="mask-icon" href="<%= image_path("favicons/safari-pinned-tab.svg") %>" color="#23414a">
+    <meta name="msapplication-config" content="/microsoft-tile.xml" />
+    <meta name="theme-color" content="#ffffff">
 
     <title><%= title_for(current_page) %></title>
 
@@ -170,7 +177,7 @@
         "alternateName": "Vault by HashiCorp",
         "manufacturer": "HashiCorp",
         "url": "https://www.vaultproject.io",
-        "logo": "<%= File.join(base_url, image_path("logo_large.png")) %>",
+        "logo": "<%= File.join(base_url, image_path("logo.svg")) %>",
         "sameAs": [
           "https://github.com/hashicorp/vault"
         ]
