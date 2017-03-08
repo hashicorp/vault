@@ -15,28 +15,32 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/parseutil"
 )
 
 // Config is the configuration for the vault server.
 type Config struct {
 	Listeners []*Listener `hcl:"-"`
-	Backend   *Backend    `hcl:"-"`
-	HABackend *Backend    `hcl:"-"`
+	Storage   *Storage    `hcl:"-"`
+	HAStorage *Storage    `hcl:"-"`
 
 	HSM *HSM `hcl:"-"`
 
-	CacheSize    int  `hcl:"cache_size"`
-	DisableCache bool `hcl:"disable_cache"`
-	DisableMlock bool `hcl:"disable_mlock"`
+	CacheSize       int         `hcl:"cache_size"`
+	DisableCache    bool        `hcl:"-"`
+	DisableCacheRaw interface{} `hcl:"disable_cache"`
+	DisableMlock    bool        `hcl:"-"`
+	DisableMlockRaw interface{} `hcl:"disable_mlock"`
 
-	EnableUI bool `hcl:"ui"`
+	EnableUI    bool        `hcl:"-"`
+	EnableUIRaw interface{} `hcl:"ui"`
 
 	Telemetry *Telemetry `hcl:"telemetry"`
 
 	MaxLeaseTTL        time.Duration `hcl:"-"`
-	MaxLeaseTTLRaw     string        `hcl:"max_lease_ttl"`
+	MaxLeaseTTLRaw     interface{}   `hcl:"max_lease_ttl"`
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
-	DefaultLeaseTTLRaw string        `hcl:"default_lease_ttl"`
+	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
 	ClusterName string `hcl:"cluster_name"`
 }
@@ -47,7 +51,7 @@ func DevConfig(ha, transactional bool) *Config {
 		DisableCache: false,
 		DisableMlock: true,
 
-		Backend: &Backend{
+		Storage: &Storage{
 			Type: "inmem",
 		},
 
@@ -71,11 +75,11 @@ func DevConfig(ha, transactional bool) *Config {
 
 	switch {
 	case ha && transactional:
-		ret.Backend.Type = "inmem_transactional_ha"
+		ret.Storage.Type = "inmem_transactional_ha"
 	case !ha && transactional:
-		ret.Backend.Type = "inmem_transactional"
+		ret.Storage.Type = "inmem_transactional"
 	case ha && !transactional:
-		ret.Backend.Type = "inmem_ha"
+		ret.Storage.Type = "inmem_ha"
 	}
 
 	return ret
@@ -91,8 +95,8 @@ func (l *Listener) GoString() string {
 	return fmt.Sprintf("*%#v", *l)
 }
 
-// Backend is the backend configuration for the server.
-type Backend struct {
+// Storage is the underlying storage configuration for the server.
+type Storage struct {
 	Type              string
 	RedirectAddr      string
 	ClusterAddr       string
@@ -100,7 +104,7 @@ type Backend struct {
 	Config            map[string]string
 }
 
-func (b *Backend) GoString() string {
+func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
@@ -211,14 +215,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.Listeners = append(result.Listeners, l)
 	}
 
-	result.Backend = c.Backend
-	if c2.Backend != nil {
-		result.Backend = c2.Backend
+	result.Storage = c.Storage
+	if c2.Storage != nil {
+		result.Storage = c2.Storage
 	}
 
-	result.HABackend = c.HABackend
-	if c2.HABackend != nil {
-		result.HABackend = c2.HABackend
+	result.HAStorage = c.HAStorage
+	if c2.HAStorage != nil {
+		result.HAStorage = c2.HAStorage
 	}
 
 	result.HSM = c.HSM
@@ -309,13 +313,31 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		return nil, err
 	}
 
-	if result.MaxLeaseTTLRaw != "" {
-		if result.MaxLeaseTTL, err = time.ParseDuration(result.MaxLeaseTTLRaw); err != nil {
+	if result.MaxLeaseTTLRaw != nil {
+		if result.MaxLeaseTTL, err = parseutil.ParseDurationSecond(result.MaxLeaseTTLRaw); err != nil {
 			return nil, err
 		}
 	}
-	if result.DefaultLeaseTTLRaw != "" {
-		if result.DefaultLeaseTTL, err = time.ParseDuration(result.DefaultLeaseTTLRaw); err != nil {
+	if result.DefaultLeaseTTLRaw != nil {
+		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableUIRaw != nil {
+		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableCacheRaw != nil {
+		if result.DisableCache, err = parseutil.ParseBool(result.DisableCacheRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableMlockRaw != nil {
+		if result.DisableMlock, err = parseutil.ParseBool(result.DisableMlockRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -327,6 +349,8 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 
 	valid := []string{
 		"atlas",
+		"storage",
+		"ha_storage",
 		"backend",
 		"ha_backend",
 		"hsm",
@@ -344,15 +368,28 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		return nil, err
 	}
 
-	if o := list.Filter("backend"); len(o.Items) > 0 {
-		if err := parseBackends(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'backend': %s", err)
+	// Look for storage but still support old backend
+	if o := list.Filter("storage"); len(o.Items) > 0 {
+		if err := parseStorage(&result, o, "storage"); err != nil {
+			return nil, fmt.Errorf("error parsing 'storage': %s", err)
+		}
+	} else {
+		if o := list.Filter("backend"); len(o.Items) > 0 {
+			if err := parseStorage(&result, o, "backend"); err != nil {
+				return nil, fmt.Errorf("error parsing 'backend': %s", err)
+			}
 		}
 	}
 
-	if o := list.Filter("ha_backend"); len(o.Items) > 0 {
-		if err := parseHABackends(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'ha_backend': %s", err)
+	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
+		if err := parseHAStorage(&result, o, "ha_storage"); err != nil {
+			return nil, fmt.Errorf("error parsing 'ha_storage': %s", err)
+		}
+	} else {
+		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
+			if err := parseHAStorage(&result, o, "ha_backend"); err != nil {
+				return nil, fmt.Errorf("error parsing 'ha_backend': %s", err)
+			}
 		}
 	}
 
@@ -454,22 +491,22 @@ func isTemporaryFile(name string) bool {
 		(strings.HasPrefix(name, "#") && strings.HasSuffix(name, "#")) // emacs
 }
 
-func parseBackends(result *Config, list *ast.ObjectList) error {
+func parseStorage(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'backend' block is permitted")
+		return fmt.Errorf("only one %q block is permitted", name)
 	}
 
 	// Get our item
 	item := list.Items[0]
 
-	key := "backend"
+	key := name
 	if len(item.Keys) > 0 {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
 	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 	}
 
 	// Pull out the redirect address since it's common to all backends
@@ -494,12 +531,12 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 	if v, ok := m["disable_clustering"]; ok {
 		disableClustering, err = strconv.ParseBool(v)
 		if err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 		}
 		delete(m, "disable_clustering")
 	}
 
-	result.Backend = &Backend{
+	result.Storage = &Storage{
 		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
 		DisableClustering: disableClustering,
@@ -509,22 +546,22 @@ func parseBackends(result *Config, list *ast.ObjectList) error {
 	return nil
 }
 
-func parseHABackends(result *Config, list *ast.ObjectList) error {
+func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	if len(list.Items) > 1 {
-		return fmt.Errorf("only one 'ha_backend' block is permitted")
+		return fmt.Errorf("only one %q block is permitted", name)
 	}
 
 	// Get our item
 	item := list.Items[0]
 
-	key := "backend"
+	key := name
 	if len(item.Keys) > 0 {
 		key = item.Keys[0].Token.Value().(string)
 	}
 
 	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
-		return multierror.Prefix(err, fmt.Sprintf("ha_backend.%s:", key))
+		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 	}
 
 	// Pull out the redirect address since it's common to all backends
@@ -549,12 +586,12 @@ func parseHABackends(result *Config, list *ast.ObjectList) error {
 	if v, ok := m["disable_clustering"]; ok {
 		disableClustering, err = strconv.ParseBool(v)
 		if err != nil {
-			return multierror.Prefix(err, fmt.Sprintf("backend.%s:", key))
+			return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
 		}
 		delete(m, "disable_clustering")
 	}
 
-	result.HABackend = &Backend{
+	result.HAStorage = &Storage{
 		RedirectAddr:      redirectAddr,
 		ClusterAddr:       clusterAddr,
 		DisableClustering: disableClustering,
@@ -625,6 +662,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"tls_min_version",
 			"tls_cipher_suites",
 			"tls_prefer_server_cipher_suites",
+			"tls_require_and_verify_client_cert",
 			"token",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {

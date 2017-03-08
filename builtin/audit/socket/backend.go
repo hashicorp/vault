@@ -10,7 +10,7 @@ import (
 
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -33,7 +33,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 	if !ok {
 		writeDeadline = "2s"
 	}
-	writeDuration, err := duration.ParseDurationSecond(writeDeadline)
+	writeDuration, err := parseutil.ParseDurationSecond(writeDeadline)
 	if err != nil {
 		return nil, err
 	}

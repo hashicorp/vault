@@ -32,6 +32,7 @@ func TestSysMounts(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -41,6 +42,7 @@ func TestSysMounts(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -50,6 +52,7 @@ func TestSysMounts(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": true,
 			},
@@ -60,6 +63,7 @@ func TestSysMounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -69,6 +73,7 @@ func TestSysMounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -78,6 +83,7 @@ func TestSysMounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": true,
 		},
@@ -119,6 +125,7 @@ func TestSysMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -128,6 +135,7 @@ func TestSysMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -137,6 +145,7 @@ func TestSysMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -146,6 +155,7 @@ func TestSysMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": true,
 			},
@@ -156,6 +166,7 @@ func TestSysMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -165,6 +176,7 @@ func TestSysMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -174,6 +186,7 @@ func TestSysMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -183,6 +196,7 @@ func TestSysMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": true,
 		},
@@ -246,6 +260,7 @@ func TestSysRemount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -255,6 +270,7 @@ func TestSysRemount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -264,6 +280,7 @@ func TestSysRemount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -273,6 +290,7 @@ func TestSysRemount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": true,
 			},
@@ -283,6 +301,7 @@ func TestSysRemount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -292,6 +311,7 @@ func TestSysRemount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -301,6 +321,7 @@ func TestSysRemount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -310,6 +331,7 @@ func TestSysRemount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": true,
 		},
@@ -354,6 +376,7 @@ func TestSysUnmount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -363,6 +386,7 @@ func TestSysUnmount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -372,6 +396,7 @@ func TestSysUnmount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": true,
 			},
@@ -382,6 +407,7 @@ func TestSysUnmount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -391,6 +417,7 @@ func TestSysUnmount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -400,6 +427,7 @@ func TestSysUnmount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": true,
 		},
@@ -441,6 +469,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -450,6 +479,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -459,6 +489,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -468,6 +499,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": true,
 			},
@@ -478,6 +510,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -487,6 +520,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -496,6 +530,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -505,6 +540,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": true,
 		},
@@ -567,6 +603,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("259196400"),
 					"max_lease_ttl":     json.Number("259200000"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -576,6 +613,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -585,6 +623,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": false,
 			},
@@ -594,6 +633,7 @@ func TestSysTuneMount(t *testing.T) {
 				"config": map[string]interface{}{
 					"default_lease_ttl": json.Number("0"),
 					"max_lease_ttl":     json.Number("0"),
+					"force_no_cache":    false,
 				},
 				"local": true,
 			},
@@ -604,6 +644,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("259196400"),
 				"max_lease_ttl":     json.Number("259200000"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -613,6 +654,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -622,6 +664,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -631,6 +674,7 @@ func TestSysTuneMount(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": json.Number("0"),
 				"max_lease_ttl":     json.Number("0"),
+				"force_no_cache":    false,
 			},
 			"local": true,
 		},
@@ -656,9 +700,11 @@ func TestSysTuneMount(t *testing.T) {
 		"data": map[string]interface{}{
 			"default_lease_ttl": json.Number("259196400"),
 			"max_lease_ttl":     json.Number("259200000"),
+			"force_no_cache":    false,
 		},
 		"default_lease_ttl": json.Number("259196400"),
 		"max_lease_ttl":     json.Number("259200000"),
+		"force_no_cache":    false,
 	}
 
 	testResponseStatus(t, resp, 200)
@@ -687,9 +733,11 @@ func TestSysTuneMount(t *testing.T) {
 		"data": map[string]interface{}{
 			"default_lease_ttl": json.Number("40"),
 			"max_lease_ttl":     json.Number("80"),
+			"force_no_cache":    false,
 		},
 		"default_lease_ttl": json.Number("40"),
 		"max_lease_ttl":     json.Number("80"),
+		"force_no_cache":    false,
 	}
 
 	testResponseStatus(t, resp, 200)

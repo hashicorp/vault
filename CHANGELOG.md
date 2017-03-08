@@ -66,6 +66,8 @@ IMPROVEMENTS:
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * core: Add option to disable caching on a per-mount level [GH-2455]
+ * core: Add ability to require valid client certs in listener config [GH-2457]
  * physical/dynamodb: Implement a session timeout to avoid having to use
    recovery mode in the case of an unclean shutdown, which makes HA much safer
    [GH-2141]
