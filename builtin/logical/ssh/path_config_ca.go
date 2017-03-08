@@ -84,7 +84,7 @@ func caKey(storage logical.Storage, keyType string) (*keyStorageEntry, error) {
 
 	entry, err := storage.Get(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to ca key of type %q: %v", keyType, err)
+		return nil, fmt.Errorf("failed to read CA key of type %q: %v", keyType, err)
 	}
 
 	if entry == nil {
