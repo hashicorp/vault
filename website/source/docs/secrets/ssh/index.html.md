@@ -446,10 +446,13 @@ username@<IP of remote host>:~$
         <span class="param-flags">required for Dynamic Key type, required
         for OTP type, optional for CA type</span>
           (String)
-          Default username for which a credential will be generated.  When the
+          Default username for which a credential will be generated. When the
           endpoint 'creds/' is used without a username, this value will be used
-          as default username. For the CA type, if you wish this to be a valid
-          principal, it must also be in `allowed_users`.
+          as default username. Its recommended to create individual roles for
+          each username to ensure absolute isolation between usernames.
+
+          For the CA type, if you wish this to be a valid principal, it must
+          also be in `allowed_users`.
       </li>
       <li>
         <span class="param">cidr_list</span>
@@ -507,11 +510,13 @@ username@<IP of remote host>:~$
         <span class="param">allowed_users</span>
         <span class="param-flags">optional for all types</span>
           (String)
-          If this option is not specified, credentials can be created only for
-          `default_user` at the remote host. If this field is set, credentials
-          can be created only for the users in this list and for the
-          `default_user`.  If this option is explicitly set to `*`, then
-          credentials can be created for any username.
+          If this option is not specified, client can request for a credential
+          for any valid user at the remote host, including the admin user. If
+          only certain usernames are to be allowed, then this list enforces it.
+          If this field is set, then credentials can only be created for
+          `default_user` and usernames present in this list. Setting this
+          option will enable all the users with access this role to fetch
+          credentials for all other usernames in this list. Use with caution.
       </li>
       <li>
         <span class="param">allowed_domains</span>
