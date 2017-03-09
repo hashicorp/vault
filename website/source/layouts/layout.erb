@@ -2,17 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="<%= description_for(current_page) %>">
 
-    <link rel="shortcut icon" href="<%= image_path('favicon.png') %>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<%= image_path("favicons/apple-touch-icon.png") %>">
+    <link rel="icon" type="image/png" href="<%= image_path("favicons/favicon-32x32.png") %>" sizes="32x32">
+    <link rel="icon" type="image/png" href="<%= image_path("favicons/favicon-16x16.png") %>" sizes="16x16">
+    <link rel="manifest" href="/android-manifest.json">
+    <link rel="mask-icon" href="<%= image_path("favicons/safari-pinned-tab.svg") %>" color="#23414a">
+    <meta name="msapplication-config" content="/microsoft-tile.xml" />
+    <meta name="theme-color" content="#ffffff">
 
     <title><%= title_for(current_page) %></title>
 
     <%= stylesheet_link_tag "application" %>
 
     <!--[if lt IE 9]>
-      <%= javascript_include_tag "html5shiv", "respond.min" %>
+      <%= javascript_include_tag "ie-compat" %>
     <![endif]-->
 
     <!-- Google Tag Manager -->
@@ -30,33 +37,16 @@
   </head>
 
   <body id="<%= body_id_for(current_page) %>" class="<%= body_classes_for(current_page) %>">
-    <div id="announcement-bnr" class="hidden-print">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-offset-1 col-md-10 col-xs-12">
-            <p>
-              Announcing
-              <a class="enterprise-logo" href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=top-banner&utm_campaign=vault">
-                <%= partial "layouts/svg/svg-enterprise" %>
-              </a>
-              <span class="tagline">Secure Infrastructure Automation.</span>
-              <a class="link-blue" href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=top-banner&utm_campaign=vault">
-                Find out more <span class="hcaret"></span>
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+
+   <%= mega_nav :vault %>
 
     <div id="header" class="navigation navbar-static-top hidden-print">
       <div class="container">
         <div class="row">
-          <div class="col-md-offset-1 col-md-10 col-xs-12">
+          <div class="col-xs-12">
             <div class="navbar-header">
               <div class="navbar-brand">
                 <a class="logo" href="/">Vault</a>
-                <a class="by-hashicorp" href="https://hashicorp.com/"><span class="svg-wrap">by</span><%= partial "layouts/svg/svg-by-hashicorp" %><%= partial "layouts/svg/svg-hashicorp-logo" %>Hashicorp</a>
               </div>
               <button class="navbar-toggle" type="button">
                 <span class="sr-only">Toggle navigation</span>
@@ -98,7 +88,7 @@
     <div id="footer" class="navigation hidden-print">
       <div class="container">
         <div class="row">
-          <div class="col-md-offset-1 col-md-10 col-xs-12">
+          <div class="col-xs-12">
             <% if current_page.url != '/' && current_page.url != '/index.html' %>
               <div class="edit-page-link"><a href="<%= github_url :current_page %>">Edit this page</a></div>
             <% end %>
@@ -170,7 +160,7 @@
         "alternateName": "Vault by HashiCorp",
         "manufacturer": "HashiCorp",
         "url": "https://www.vaultproject.io",
-        "logo": "<%= File.join(base_url, image_path("logo_large.png")) %>",
+        "logo": "<%= File.join(base_url, image_path("logo.svg")) %>",
         "sameAs": [
           "https://github.com/hashicorp/vault"
         ]

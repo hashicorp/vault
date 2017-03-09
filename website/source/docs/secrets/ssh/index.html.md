@@ -12,15 +12,16 @@ Name: `ssh`
 
 Vault SSH backend dynamically generates SSH credentials for remote hosts. This
 increases security by removing the need to share private keys with all users
-needing access to infrastructure. It also solves the problem of management and distribution of keys belonging to remote hosts.
+needing access to infrastructure. It also solves the problem of management and
+distribution of keys belonging to remote hosts.
 
 This backend supports two types of credential creation: Dynamic Key and
 One-Time Password (OTP), which address these problems in different ways.
 
 Read and carefully understand both of them before choosing the one which best
 suits your needs. The Vault team strongly recommends the OTP type whenever
-possible, and the drawbacks to the dynamic key type should be carefully considered
-before choosing it.
+possible, and the drawbacks to the dynamic key type should be carefully
+considered before choosing it.
 
 This page will show a quick start for this backend. For detailed documentation
 on every path, use `vault path-help` after mounting the backend.
@@ -43,10 +44,10 @@ wants to SSH into a remote host, using a helper command on the remote host to
 perform verification.
 
 An authenticated client requests credentials from the Vault server and, if
-authorized, is issued an OTP. When the client establishes an SSH connection
-to the desired remote host, the OTP used during SSH authentication is received
-by the Vault helper, which then validates the OTP with the Vault server. The
-Vault server then deletes this OTP, ensuring that it is only used once.
+authorized, is issued an OTP. When the client establishes an SSH connection to
+the desired remote host, the OTP used during SSH authentication is received by
+the Vault helper, which then validates the OTP with the Vault server. The Vault
+server then deletes this OTP, ensuring that it is only used once.
 
 Since the Vault server is contacted during SSH connection establishment, every
 login attempt and the correlating Vault lease information is logged to the
@@ -58,10 +59,10 @@ details on the helper.
 ### Drawbacks
 
 The main concern with the OTP backend type is the remote host's connection to
-Vault; if compromised, an attacker could spoof the Vault server returning
-a successful request. This risk can be mitigated by using TLS for the
-connection to Vault and checking certificate validity; future enhancements to
-this backend may allow for extra security on top of what TLS provides.
+Vault; if compromised, an attacker could spoof the Vault server returning a
+successful request. This risk can be mitigated by using TLS for the connection
+to Vault and checking certificate validity; future enhancements to this backend
+may allow for extra security on top of what TLS provides.
 
 ### Creating a Role
 
@@ -79,7 +80,8 @@ Success! Data written to: ssh/roles/otp_key_role
 
 ### Create a Credential
 
-Create an OTP credential for an IP of the remote host that belongs to `otp_key_role`.
+Create an OTP credential for an IP of the remote host that belongs to
+`otp_key_role`.
 
 ```text
 $ vault write ssh/creds/otp_key_role ip=x.x.x.x
@@ -133,8 +135,8 @@ request, Vault creates a new SSH key pair and appends the newly-generated
 public key to the `authorized_keys` file for the configured username on the
 remote host. Vault uses a configurable install script to achieve this.
 
-The backend does not prompt for `sudo` passwords; the `NOPASSWD` option
-for sudoers should be enabled at all remote hosts for the Vault administrative
+The backend does not prompt for `sudo` passwords; the `NOPASSWD` option for
+sudoers should be enabled at all remote hosts for the Vault administrative
 user.
 
 The private key returned to the user will be leased and can be renewed if
@@ -150,16 +152,16 @@ machine.
 The dynamic key type has several serious drawbacks:
 
 1. _Audit logs are unreliable_: Vault can only log when users request
-credentials, not when they use the given keys. If user A and user B both
-request access to a machine, and are given a lease valid for five minutes,
-it is impossible to know whether two accesses to that user account on the
-remote machine were A, A; A, B; B, A; or B, B.
+   credentials, not when they use the given keys. If user A and user B both
+   request access to a machine, and are given a lease valid for five minutes,
+   it is impossible to know whether two accesses to that user account on the
+   remote machine were A, A; A, B; B, A; or B, B.
 2. _Generating dynamic keys consumes entropy_: Unless equipped with a hardware
-entropy generating device, a machine can quickly run out of entropy when
-generating SSH keys. This will cause further requests for various Vault
-operations to stall until more entropy is available, which could take a
-significant amount of time, after which the next request for a new SSH key
-will use the generated entropy and cause stalling again.
+   entropy generating device, a machine can quickly run out of entropy when
+   generating SSH keys. This will cause further requests for various Vault
+   operations to stall until more entropy is available, which could take a
+   significant amount of time, after which the next request for a new SSH key
+   will use the generated entropy and cause stalling again.
 
 Because of these drawbacks, the Vault team recommends use of the OTP type
 whenever possible. Care should be taken with respect to the above issues with
@@ -186,8 +188,8 @@ First, however, the shared secret key must be specified.
 
 #### Registering the shared secret key
 
-Register a key with a name; this key must have administrative capabilities
-on the remote hosts.
+Register a key with a name; this key must have administrative capabilities on
+the remote hosts.
 
 ```text
 $ vault write ssh/keys/dev_key \
@@ -209,24 +211,26 @@ $ vault write ssh/roles/dynamic_key_role \
 Success! Data written to: ssh/roles/dynamic_key_role
 ```
 
-`cidr_list` is a comma separated list of CIDR blocks for which a role can generate
-credentials. If this is empty, the role can only generate credentials if it belongs
-to the set of zero-address roles.
+`cidr_list` is a comma separated list of CIDR blocks for which a role can
+generate credentials. If this is empty, the role can only generate credentials
+if it belongs to the set of zero-address roles.
 
-Zero-address roles, configured via `/ssh/config/zeroaddress` endpoint, takes comma separated list
-of role names that can generate credentials for any IP address.
+Zero-address roles, configured via `/ssh/config/zeroaddress` endpoint, takes
+comma separated list of role names that can generate credentials for any IP
+address.
 
 Use the `install_script` option to provide an install script if the remote
 hosts do not resemble a typical Linux machine. The default script is compiled
-into the Vault binary, but it is straight forward to specify an alternate.
-The script takes three arguments which are explained in the comments.
+into the Vault binary, but it is straight forward to specify an alternate.  The
+script takes three arguments which are explained in the comments.
 
-To see the default, see [linux_install_script.go](https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/linux_install_script.go)
+To see the default, see
+[linux_install_script.go](https://github.com/hashicorp/vault/blob/master/builtin/logical/ssh/linux_install_script.go)
 
 ### Create a credential
 
-Create a dynamic key for an IP of the remote host that is covered by `dynamic_key_role`'s CIDR
-list.
+Create a dynamic key for an IP of the remote host that is covered by
+`dynamic_key_role`'s CIDR list.
 
 ```text
 $ vault write ssh/creds/dynamic_key_role ip=x.x.x.x
@@ -269,8 +273,8 @@ username       	username
 
 ### Establish an SSH session
 
-Save the key to a file (e.g. `dyn_key.pem`) and then use it to establish an
-SSH session.
+Save the key to a file (e.g. `dyn_key.pem`) and then use it to establish an SSH
+session.
 
 ```text
 $ ssh -i dyn_key.pem username@<IP of remote host>
@@ -290,15 +294,15 @@ username@<IP of remote host>:~$
 ----------------------------------------------------
 ## III. CA Key Type
 
-When using this type, an SSH key is generated and then used to sign other SSH keys.
-The public half of the key is distributed to remote hosts while the private part
-stays within Vault. This allows SSH public keys to be signed by Vault and then
-verified using only the public key.
+When using this type, an SSH key is generated and then used to sign other SSH
+keys.  The public half of the key is distributed to remote hosts while the
+private part stays within Vault. This allows SSH public keys to be signed by
+Vault and then verified using only the public key.
 
 ### Configure a CA certificate
 
-The first thing to do is to get Vault to generate the key pair that will be used to sign any
-SSH keys:
+The first thing to do is to get Vault to generate the key pair that will be
+used to sign any SSH keys:
 
 ```text
 $ vault write -f ssh/config/ca
@@ -368,7 +372,7 @@ username@<IP of remote host>:~$
         <span class="param">key</span>
         <span class="param-flags">required</span>
         (String)
-	      SSH private key with appropriate privileges on remote hosts.
+        SSH private key with appropriate privileges on remote hosts.
       </li>
     </ul>
   </dd>
@@ -442,10 +446,13 @@ username@<IP of remote host>:~$
         <span class="param-flags">required for Dynamic Key type, required
         for OTP type, optional for CA type</span>
           (String)
-          Default username for which a credential will be generated.  When the
+          Default username for which a credential will be generated. When the
           endpoint 'creds/' is used without a username, this value will be used
-          as default username. For the CA type, if you wish this to be a valid
-          principal, it must also be in `allowed_users`.
+          as default username. Its recommended to create individual roles for
+          each username to ensure absolute isolation between usernames.
+
+          For the CA type, if you wish this to be a valid principal, it must
+          also be in `allowed_users`.
       </li>
       <li>
         <span class="param">cidr_list</span>
@@ -469,7 +476,7 @@ username@<IP of remote host>:~$
         <span class="param">port</span>
         <span class="param-flags">optional for Dynamic Key type, optional for
         OTP type, N/A for CA type</span>
-	      (Integer)
+        (Integer)
         Port number for SSH connection. The default is '22'. Port number
         does not play any role in OTP generation. For the 'otp' backend
         type, this is just a way to inform the client about the port number
@@ -479,7 +486,7 @@ username@<IP of remote host>:~$
       <li>
         <span class="param">key_type</span>
         <span class="param-flags">required for all types</span>
-	      (String)
+        (String)
         Type of credentials generated by this role. Can be either `otp`,
         `dynamic` or `ca`.
       </li>
@@ -487,27 +494,29 @@ username@<IP of remote host>:~$
         <span class="param">key_bits</span>
         <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
         N/A for CA type</span>
-	      (Integer)
-	      Length of the RSA dynamic key in bits; can be either 1024 or 2048.
+        (Integer)
+        Length of the RSA dynamic key in bits; can be either 1024 or 2048.
         1024 the default.
       </li>
       <li>
         <span class="param">install_script</span>
         <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
         N/A for CA type</span>
-	      (String)
-	      Script used to install and uninstall public keys in the target
+        (String)
+        Script used to install and uninstall public keys in the target
         machine. Defaults to the built-in script.
       </li>
       <li>
         <span class="param">allowed_users</span>
         <span class="param-flags">optional for all types</span>
-	      (String)
-	      If this option is not specified, credentials can be created only for
-              `default_user` at the remote host. If this field is set, credentials
-              can be created only for the users in this list and for the `default_user`.
-              If this option is explicitly set to `*`, then credentials can be created
-              for any username.
+          (String)
+          If this option is not specified, client can request for a credential
+          for any valid user at the remote host, including the admin user. If
+          only certain usernames are to be allowed, then this list enforces it.
+          If this field is set, then credentials can only be created for
+          `default_user` and usernames present in this list. Setting this
+          option will enable all the users with access this role to fetch
+          credentials for all other usernames in this list. Use with caution.
       </li>
       <li>
         <span class="param">allowed_domains</span>
@@ -523,7 +532,7 @@ username@<IP of remote host>:~$
         <span class="param">key_option_specs</span>
         <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
         N/A for CA type</span>
-	      (String)
+        (String)
         Comma separated option specification which will be prefixed to RSA
         keys in	the remote host's authorized_keys file. N.B.: Vault does
         not check this string for validity.
@@ -776,7 +785,7 @@ username@<IP of remote host>:~$
 ```
 
   </dd>
-  
+
 #### POST
 
 <dl class="api">
@@ -859,7 +868,7 @@ username@<IP of remote host>:~$
       <li>
         <span class="param">ip</span>
         <span class="param-flags">required</span>
-	      (String)
+        (String)
         IP of the remote host.
       </li>
     </ul>
@@ -935,7 +944,7 @@ username@<IP of remote host>:~$
       <li>
         <span class="param">ip</span>
         <span class="param-flags">required</span>
-	      (String)
+        (String)
         IP of the remote host.
       </li>
     </ul>
@@ -980,7 +989,7 @@ username@<IP of remote host>:~$
       <li>
         <span class="param">otp</span>
         <span class="param-flags">required</span>
-	      (String)
+        (String)
         One-Time-Key that needs to be validated.
       </li>
     </ul>

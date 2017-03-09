@@ -19,19 +19,18 @@ func pathFetchPublicKey(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchPublicKey(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	entry, err := req.Storage.Get("config/ca_public_key")
+	publicKeyEntry, err := caKey(req.Storage, caPublicKey)
 	if err != nil {
 		return nil, err
 	}
-
-	if entry == nil {
+	if publicKeyEntry == nil || publicKeyEntry.Key == "" {
 		return nil, nil
 	}
 
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			logical.HTTPContentType: "text/plain",
-			logical.HTTPRawBody:     entry.Value,
+			logical.HTTPRawBody:     []byte(publicKeyEntry.Key),
 			logical.HTTPStatusCode:  200,
 		},
 	}

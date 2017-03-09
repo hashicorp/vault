@@ -143,11 +143,14 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for all types]
-				If this option is not specified, client can request for a credential for
-				any valid user at the remote host, including the admin user. If only certain
-				usernames are to be allowed, then this list enforces it. If this field is
-				set, then credentials can only be created for default_user and usernames
-				present in this list.
+				If this option is not specified, client can request for a
+				credential for any valid user at the remote host, including the
+				admin user. If only certain usernames are to be allowed, then
+				this list enforces it. If this field is set, then credentials
+				can only be created for default_user and usernames present in
+				this list. Setting this option will enable all the users with
+				access this role to fetch credentials for all other usernames
+				in this list. Use with caution.
 				`,
 			},
 			"allowed_domains": &framework.FieldSchema{

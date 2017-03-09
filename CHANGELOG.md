@@ -56,6 +56,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * audit: Logging the token's use count with authentication response and
+   logging the remaining uses of the client token with request [GH-2437]
  * auth/approle: Support for restricting the number of uses on the tokens
    issued [GH-2435]
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,

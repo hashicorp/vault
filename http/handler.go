@@ -275,6 +275,7 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logic
 		te, err := core.LookupToken(v)
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
+			req.ClientTokenRemainingUses = te.NumUses
 		}
 	}
 
