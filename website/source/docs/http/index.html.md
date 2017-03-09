@@ -8,6 +8,8 @@ description: |-
 
 # HTTP API
 
+The Vault HTTP API is a
+
 The Vault HTTP API gives you full access to Vault via HTTP. Every
 aspect of Vault can be controlled via this API. The Vault CLI uses
 the HTTP API to access Vault.
@@ -170,5 +172,5 @@ The following HTTP status codes are used throughout the API.
 
 ## Limits
 
-A maximum request size of 32MB is imposed to prevent a denial 
+A maximum request size of 32MB is imposed to prevent a denial
 of service attack with arbitrarily large requests.

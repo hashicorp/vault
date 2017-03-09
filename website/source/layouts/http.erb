@@ -5,193 +5,155 @@
         <li<%= sidebar_current("docs-http-overview") %>>
           <a href="/docs/http/index.html">Overview</a>
         </li>
-
         <li<%= sidebar_current("docs-http-libraries") %>>
-          <a href="/docs/http/libraries.html">Libraries</a>
+          <a href="/docs/http/libraries.html">Client Libraries</a>
         </li>
 
-        <li<%= sidebar_current("docs-http-sys-init") %>>
-          <a href="#">Initialization/Recovery</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-sys-init") %>>
-              <a href="/docs/http/sys-init.html">/sys/init</a>
-            </li>
-            <li<%= sidebar_current("docs-http-sys-generate-root") %>>
-              <a href="/docs/http/sys-generate-root.html">/sys/generate-root</a>
-            </li>
-
-          </ul>
-        </li>
-
-        <li<%= sidebar_current("docs-http-seal") %>>
-          <a href="#">Seal/Unseal</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-seal-status") %>>
-              <a href="/docs/http/sys-seal-status.html">/sys/seal-status</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-seal-seal") %>>
-              <a href="/docs/http/sys-seal.html">/sys/seal</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-seal-unseal") %>>
-              <a href="/docs/http/sys-unseal.html">/sys/unseal</a>
-            </li>
-          </ul>
-        </li>
-
-        <li<%= sidebar_current("docs-http-config") %>>
-          <a href="#">Core Configuration</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-config-auditing") %>>
-              <a href="/docs/http/sys-config-auditing.html">/sys/config/auditing</a>
-            </li>
-          </ul>
-        </li>
-
-        <li<%= sidebar_current("docs-http-mounts") %>>
-          <a href="#">Secret Mounts</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-mounts-mounts") %>>
-              <a href="/docs/http/sys-mounts.html">/sys/mounts</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-mounts-remount") %>>
-              <a href="/docs/http/sys-remount.html">/sys/remount</a>
-            </li>
-          </ul>
-        </li>
+        <hr>
 
         <li<%= sidebar_current("docs-http-auth") %>>
-          <a href="#">Auth &amp; ACLs</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-auth-auth") %>>
-              <a href="/docs/http/sys-auth.html">/sys/auth</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-auth-policy") %>>
-              <a href="/docs/http/sys-policy.html">/sys/policy</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-auth-capabilities") %>>
-              <a href="/docs/http/sys-capabilities.html">/sys/capabilities</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-auth-capabilities-self") %>>
-              <a href="/docs/http/sys-capabilities-self.html">/sys/capabilities-self</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-auth-capabilities-accessor") %>>
-              <a href="/docs/http/sys-capabilities-accessor.html">/sys/capabilities-accessor</a>
-            </li>
-          </ul>
+          <a href="#">Auth Backends</a>
         </li>
-
-        <li<%= sidebar_current("docs-http-audits") %>>
-          <a href="#">Audit Backends</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-audits-audits") %>>
-              <a href="/docs/http/sys-audit.html">/sys/audit</a>
-            </li>
-            <li<%= sidebar_current("docs-http-audits-hash") %>>
-              <a href="/docs/http/sys-audit-hash.html">/sys/audit-hash</a>
-            </li>
-          </ul>
-        </li>
-
-        <li<%= sidebar_current("docs-http-lease") %>>
-          <a href="#">Leases</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-lease-renew") %>>
-              <a href="/docs/http/sys-renew.html">/sys/renew</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-lease-revoke-single") %>>
-              <a href="/docs/http/sys-revoke.html">/sys/revoke</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-lease-revoke-prefix") %>>
-              <a href="/docs/http/sys-revoke-prefix.html">/sys/revoke-prefix</a>
-            </li>
-
-            <li<%= sidebar_current("docs-http-lease-revoke-force") %>>
-              <a href="/docs/http/sys-revoke-force.html">/sys/revoke-force</a>
-            </li>
-          </ul>
-                </li>
-
-        <li<%= sidebar_current("docs-http-wrapping") %>>
-          <a href="#">Response Wrapping</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-wrapping-lookup") %>>
-              <a href="/docs/http/sys-wrapping-lookup.html">/sys/wrapping/lookup</a>
-            </li>
-            <li<%= sidebar_current("docs-http-wrapping-rewrap") %>>
-              <a href="/docs/http/sys-wrapping-rewrap.html">/sys/wrapping/rewrap</a>
-            </li>
-            <li<%= sidebar_current("docs-http-wrapping-unwrap") %>>
-              <a href="/docs/http/sys-wrapping-unwrap.html">/sys/wrapping/unwrap</a>
-            </li>
-            <li<%= sidebar_current("docs-http-wrapping-wrap") %>>
-              <a href="/docs/http/sys-wrapping-wrap.html">/sys/wrapping/wrap</a>
-            </li>
-          </ul>
-                </li>
-
-                <li<%= sidebar_current("docs-http-ha") %>>
-          <a href="#">High Availability</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-ha-leader") %>>
-              <a href="/docs/http/sys-leader.html">/sys/leader</a>
-            </li>
-            <li<%= sidebar_current("docs-http-ha-step-down") %>>
-              <a href="/docs/http/sys-step-down.html">/sys/step-down</a>
-            </li>
-          </ul>
-                </li>
-
-                <li<%= sidebar_current("docs-http-rotate") %>>
-          <a href="#">Key Rotation</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-rotate-key-status") %>>
-              <a href="/docs/http/sys-key-status.html">/sys/key-status</a>
-                        </li>
-
-            <li<%= sidebar_current("docs-http-rotate-rekey") %>>
-              <a href="/docs/http/sys-rekey.html">/sys/rekey/</a>
-                        </li>
-
-            <li<%= sidebar_current("docs-http-rotate-rotate") %>>
-              <a href="/docs/http/sys-rotate.html">/sys/rotate</a>
-            </li>
-          </ul>
-                </li>
-
-                <li<%= sidebar_current("docs-http-debug") %>>
-          <a href="#">Debug</a>
-          <ul class="nav nav-visible">
-            <li<%= sidebar_current("docs-http-debug-raw") %>>
-              <a href="/docs/http/sys-raw.html">/sys/raw</a>
-                        </li>
-
-            <li<%= sidebar_current("docs-http-debug-health") %>>
-              <a href="/docs/http/sys-health.html">/sys/health</a>
-            </li>
-          </ul>
-                </li>
-
-                <hr>
 
         <li<%= sidebar_current("docs-http-secret") %>>
-          <a href="/docs/secrets/index.html">Secret Backends</a>
+          <a href="/docs/http/secret/index.html">Secret Backends</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-http-secret-aws") %>>
+              <a href="/docs/http/secret/aws/index.html">AWS</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-cassandra") %>>
+              <a href="/docs/http/secret/cassandra/index.html">Cassandra</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-consul") %>>
+              <a href="/docs/http/secret/consul/index.html">Consul</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-cubbyhole") %>>
+              <a href="/docs/http/secret/cubbyhole/index.html">Cubbyhole</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-generic") %>>
+              <a href="/docs/http/secret/generic/index.html">Generic</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-mongodb") %>>
+              <a href="/docs/http/secret/mongodb/index.html">MongoDB</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-mssql") %>>
+              <a href="/docs/http/secret/mssql/index.html">MSSQL</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-mysql") %>>
+              <a href="/docs/http/secret/mysql/index.html">MySQL</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-pki") %>>
+              <a href="/docs/http/secret/pki/index.html">PKI</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-postgresql") %>>
+              <a href="/docs/http/secret/postgresql/index.html">PostgreSQL</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-rabbitmq") %>>
+              <a href="/docs/http/secret/rabbitmq/index.html">RabbitMQ</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-ssh") %>>
+              <a href="/docs/http/secret/ssh/index.html">SSH</a>
+            </li>
+            <li<%= sidebar_current("docs-http-secret-transit") %>>
+              <a href="/docs/http/secret/transit/index.html">Transit</a>
+            </li>
+          </ul>
         </li>
 
-        <li<%= sidebar_current("docs-http-authbackends") %>>
-          <a href="/docs/auth/index.html">Auth Backends</a>
-                </li>
-
-        <li<%= sidebar_current("docs-http-auditbackends") %>>
-          <a href="/docs/audit/index.html">Audit Backends</a>
+        <li<%= sidebar_current("docs-http-system")%>>
+          <a href="/docs/http/system/index.html">System Backend</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-http-system-audit/") %>>
+              <a href="/docs/http/system/audit.html"><tt>/sys/audit</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-audit-hash") %>>
+              <a href="/docs/http/system/audit-hash.html"><tt>/sys/audit-hash</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-auth") %>>
+              <a href="/docs/http/system/auth.html"><tt>/sys/auth</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-capabilities/") %>>
+              <a href="/docs/http/system/capabilities.html"><tt>/sys/capabilities</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-capabilities-accessor") %>>
+              <a href="/docs/http/system/capabilities-accessor.html"><tt>/sys/capabilities-accessor</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-capabilities-self") %>>
+              <a href="/docs/http/system/capabilities-self.html"><tt>/sys/capabilities-self</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-config-auditing") %>>
+              <a href="/docs/http/system/config-auditing.html"><tt>/sys/config/auditing</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-generate-root") %>>
+              <a href="/docs/http/system/generate-root.html"><tt>/sys/generate-root</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-health") %>>
+              <a href="/docs/http/system/health.html"><tt>/sys/health</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-init") %>>
+              <a href="/docs/http/system/init.html"><tt>/sys/init</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-key-status") %>>
+              <a href="/docs/http/system/key-status.html"><tt>/sys/key-status</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-leader") %>>
+              <a href="/docs/http/system/leader.html"><tt>/sys/leader</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-mounts") %>>
+              <a href="/docs/http/system/mounts.html"><tt>/sys/mounts</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-policy") %>>
+              <a href="/docs/http/system/policy.html"><tt>/sys/policy</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-raw") %>>
+              <a href="/docs/http/system/raw.html"><tt>/sys/raw</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-rekey") %>>
+              <a href="/docs/http/system/rekey.html"><tt>/sys/rekey</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-remount") %>>
+              <a href="/docs/http/system/remount.html"><tt>/sys/remount</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-renew") %>>
+              <a href="/docs/http/system/renew.html"><tt>/sys/renew</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-revoke/") %>>
+              <a href="/docs/http/system/revoke.html"><tt>/sys/revoke</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-revoke-force") %>>
+              <a href="/docs/http/system/revoke-force.html"><tt>/sys/revoke-force</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-revoke-prefix") %>>
+              <a href="/docs/http/system/revoke-prefix.html"><tt>/sys/revoke-prefix</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-rotate") %>>
+              <a href="/docs/http/system/rotate.html"><tt>/sys/rotate</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-seal/") %>>
+              <a href="/docs/http/system/seal.html"><tt>/sys/seal</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-seal-status") %>>
+              <a href="/docs/http/system/seal-status.html"><tt>/sys/seal-status</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-step-down") %>>
+              <a href="/docs/http/system/step-down.html"><tt>/sys/step-down</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-unseal") %>>
+              <a href="/docs/http/system/unseal.html"><tt>/sys/unseal</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-wrapping-lookup") %>>
+              <a href="/docs/http/system/wrapping-lookup.html"><tt>/sys/wrapping/lookup</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-wrapping-rewrap") %>>
+              <a href="/docs/http/system/wrapping-rewrap.html"><tt>/sys/wrapping/rewrap</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-wrapping-unwrap") %>>
+              <a href="/docs/http/system/wrapping-unwrap.html"><tt>/sys/wrapping/unwrap</tt></a>
+            </li>
+            <li<%= sidebar_current("docs-http-system-wrapping-wrap") %>>
+              <a href="/docs/http/system/wrapping-wrap.html"><tt>/sys/wrapping/wrap</tt></a>
+            </li>
+          </ul>
         </li>
       </ul>
     </div>
