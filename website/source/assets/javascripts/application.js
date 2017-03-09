@@ -12,6 +12,8 @@
 //= require lib/Chainable
 //= require lib/dbg
 
+//= require hashicorp/mega-nav
+
 //= require app/Sidebar
 //= require app/DotLockup
 //= require app/Init
