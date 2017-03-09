@@ -446,10 +446,13 @@ username@<IP of remote host>:~$
         <span class="param-flags">required for Dynamic Key type, required
         for OTP type, optional for CA type</span>
           (String)
-          Default username for which a credential will be generated.  When the
+          Default username for which a credential will be generated. When the
           endpoint 'creds/' is used without a username, this value will be used
-          as default username. For the CA type, if you wish this to be a valid
-          principal, it must also be in `allowed_users`.
+          as default username. Its recommended to create individual roles for
+          each username to ensure absolute isolation between usernames.
+
+          For the CA type, if you wish this to be a valid principal, it must
+          also be in `allowed_users`.
       </li>
       <li>
         <span class="param">cidr_list</span>
