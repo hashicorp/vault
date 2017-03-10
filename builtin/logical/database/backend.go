@@ -39,7 +39,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			secretCreds(&b),
 		},
 
-		Clean: b.resetAllDBs,
+		Clean: b.closeAllDBs,
 	}
 
 	b.logger = conf.Logger
@@ -56,7 +56,7 @@ type databaseBackend struct {
 }
 
 // resetAllDBs closes all connections from all database types
-func (b *databaseBackend) resetAllDBs() {
+func (b *databaseBackend) closeAllDBs() {
 	b.logger.Trace("postgres/resetdb: enter")
 	defer b.logger.Trace("postgres/resetdb: exit")
 
