@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	//otplib "github.com/pquerna/otp/"
+	otplib "github.com/pquerna/otp/"
 	totplib "github.com/pquerna/otp/totp"
 )
 
@@ -126,14 +126,19 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 
-			role, err := (backend) b.Role(s, name)
+			// Read saved role entry
+			entry, err := s.Get("role/" + name)
 
 			if err != nil {
 				t.Fatalf("Error retrieving role.")
 			}
-
-			if role == nil {
+			if entry == nil {
 				t.Fatalf("Retrieved role is nil.")
+			}
+
+			var role roleEntry
+			if err := entry.DecodeJSON(&role); err != nil {
+				t.Fatalf("JSON decoding error while reading role entry.")
 			}
 
 			// Translate digits and algorithm to a format the totp library understands
