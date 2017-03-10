@@ -55,6 +55,7 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 		return nil, err
 	}
 
+	req.URL.User = r.URL.User
 	req.URL.Scheme = r.URL.Scheme
 	req.URL.Host = r.URL.Host
 	req.Host = r.URL.Host

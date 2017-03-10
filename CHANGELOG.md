@@ -56,6 +56,10 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * api/request: Passing username and password information in API request
+   [GH-2469]
+ * audit: Logging the token's use count with authentication response and
+   logging the remaining uses of the client token with request [GH-2437]
  * auth/approle: Support for restricting the number of uses on the tokens
    issued [GH-2435]
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
@@ -66,6 +70,8 @@ IMPROVEMENTS:
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * core: Add option to disable caching on a per-mount level [GH-2455]
+ * core: Add ability to require valid client certs in listener config [GH-2457]
  * physical/dynamodb: Implement a session timeout to avoid having to use
    recovery mode in the case of an unclean shutdown, which makes HA much safer
    [GH-2141]

@@ -1,3 +1,4 @@
+//= require turbolinks
 //= require jquery
 //= require bootstrap
 //= require jquery.waypoints
@@ -10,6 +11,8 @@
 //= require lib/Base
 //= require lib/Chainable
 //= require lib/dbg
+
+//= require hashicorp/mega-nav
 
 //= require app/Sidebar
 //= require app/DotLockup

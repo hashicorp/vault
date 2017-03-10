@@ -11,7 +11,7 @@
 			"node_id": "foo_node"
 		}
 	}],
-	"backend": {
+	"storage": {
 		"consul": {
 			"foo": "bar",
 			"disable_clustering": "true"

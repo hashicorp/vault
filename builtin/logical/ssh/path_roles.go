@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -143,11 +143,14 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for all types]
-				If this option is not specified, client can request for a credential for
-				any valid user at the remote host, including the admin user. If only certain
-				usernames are to be allowed, then this list enforces it. If this field is
-				set, then credentials can only be created for default_user and usernames
-				present in this list.
+				If this option is not specified, client can request for a
+				credential for any valid user at the remote host, including the
+				admin user. If only certain usernames are to be allowed, then
+				this list enforces it. If this field is set, then credentials
+				can only be created for default_user and usernames present in
+				this list. Setting this option will enable all the users with
+				access this role to fetch credentials for all other usernames
+				in this list. Use with caution.
 				`,
 			},
 			"allowed_domains": &framework.FieldSchema{
@@ -432,7 +435,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		maxTTL = maxSystemTTL
 	} else {
 		var err error
-		maxTTL, err = duration.ParseDurationSecond(role.MaxTTL)
+		maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf(
 				"Invalid max ttl: %s", err))
@@ -445,7 +448,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 	ttl := b.System().DefaultLeaseTTL()
 	if len(role.TTL) != 0 {
 		var err error
-		ttl, err = duration.ParseDurationSecond(role.TTL)
+		ttl, err = parseutil.ParseDurationSecond(role.TTL)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf(
 				"Invalid ttl: %s", err))
