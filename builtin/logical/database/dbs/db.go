@@ -84,7 +84,11 @@ func PluginFactory(conf *DatabaseConfig) (DatabaseType, error) {
 		return nil, errors.New("ERROR")
 	}
 
-	db, err := newPluginClient(conf.PluginCommand)
+	if conf.PluginChecksum == "" {
+		return nil, errors.New("ERROR")
+	}
+
+	db, err := newPluginClient(conf.PluginCommand, conf.PluginChecksum)
 	if err != nil {
 		return nil, err
 	}
@@ -109,6 +113,7 @@ type DatabaseConfig struct {
 	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
 	PluginCommand         string                 `json:"plugin_command" structs:"plugin_command" mapstructure:"plugin_command"`
+	PluginChecksum        string                 `json:"plugin_checksum" structs:"plugin_checksum" mapstructure:"plugin_checksum"`
 }
 
 func (dc *DatabaseConfig) GetFactory() Factory {

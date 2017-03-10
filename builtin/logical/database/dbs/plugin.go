@@ -44,7 +44,7 @@ func (dc *DatabasePluginClient) Close() {
 	dc.client.Kill()
 }
 
-func newPluginClient(command string) (DatabaseType, error) {
+func newPluginClient(command, checksum string) (DatabaseType, error) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"database": new(DatabasePlugin),
