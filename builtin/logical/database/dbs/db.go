@@ -20,7 +20,9 @@ var (
 	ErrUnsupportedDatabaseType = errors.New("Unsupported database type")
 )
 
-func Factory(conf *DatabaseConfig) (DatabaseType, error) {
+type Factory func(*DatabaseConfig) (DatabaseType, error)
+
+func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 	switch conf.DatabaseType {
 	case postgreSQLTypeName:
 		var connProducer *sqlConnectionProducer
@@ -72,21 +74,22 @@ func Factory(conf *DatabaseConfig) (DatabaseType, error) {
 			ConnectionProducer:  connProducer,
 			CredentialsProducer: credsProducer,
 		}, nil
-
-	case pluginTypeName:
-		if conf.PluginCommand == "" {
-			return nil, errors.New("ERROR")
-		}
-
-		db, err := newPluginClient(conf.PluginCommand)
-		if err != nil {
-			return nil, err
-		}
-
-		return db, nil
 	}
 
 	return nil, ErrUnsupportedDatabaseType
+}
+
+func PluginFactory(conf *DatabaseConfig) (DatabaseType, error) {
+	if conf.PluginCommand == "" {
+		return nil, errors.New("ERROR")
+	}
+
+	db, err := newPluginClient(conf.PluginCommand)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 type DatabaseType interface {
@@ -106,6 +109,14 @@ type DatabaseConfig struct {
 	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
 	PluginCommand         string                 `json:"plugin_command" structs:"plugin_command" mapstructure:"plugin_command"`
+}
+
+func (dc *DatabaseConfig) GetFactory() Factory {
+	if dc.DatabaseType == pluginTypeName {
+		return PluginFactory
+	}
+
+	return BuiltinFactory
 }
 
 // Statments set in role creation and passed into the database type's functions.

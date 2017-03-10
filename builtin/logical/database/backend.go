@@ -20,8 +20,15 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
+		PathsSpecial: &logical.Paths{
+			Root: []string{
+				"dbs/plugin/*",
+			},
+		},
+
 		Paths: []*framework.Path{
-			pathConfigConnection(&b),
+			pathConfigureConnection(&b),
+			pathConfigurePluginConnection(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathRoleCreate(&b),
