@@ -40,12 +40,19 @@ sending a SIGHUP to the server process. These are denoted below.
 - `storage` <tt>([StorageBackend][storage-backend]: \<required\>)</tt> -
   Configures the storage backend where Vault data is stored. Please see the
   [storage backends documentation][storage-backend] for the full list of
-  available storage backends.
+  available storage backends. Running Vault in HA mode would require
+  coordination semantics to be supported by the backend. If the storage backend
+  supports HA coordination, HA backend options can also be specified in this
+  parameter block. If not, a separate `ha_storage` parameter should be
+  configured with a backend that supports HA, along with corresponding HA
+  options.
 
 - `ha_storage` <tt>([StorageBackend][storage-backend]: nil)</tt> - Configures
   the storage backend where Vault HA coordination will take place. This must be
   an HA-supporting backend. If not set, HA will be attempted on the backend
-  given in the `storage` parameter.
+  given in the `storage` parameter. This parameter is not required if the
+  storage backend supports HA coordination and if HA specific options are
+  already specified with `storage` parameter.
 
 - `cluster_name` `(string: <generated>)` – Specifies the identifier for the
   Vault cluster. If omitted, Vault will generate a value. When connecting to
