@@ -111,6 +111,12 @@ reduced to the same size.`,
 				Description: `Maximum amount of time a connection may be reused;
 				a zero or negative value reuses connections forever.`,
 			},
+
+			"plugin_command": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Maximum amount of time a connection may be reused;
+				a zero or negative value reuses connections forever.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -146,6 +152,9 @@ func (b *databaseBackend) pathConnectionRead(req *logical.Request, data *framewo
 
 func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	connType := data.Get("connection_type").(string)
+	if connType == "" {
+		return logical.ErrorResponse("connection_type not set"), nil
+	}
 
 	maxOpenConns := data.Get("max_open_connections").(int)
 	if maxOpenConns == 0 {
@@ -173,6 +182,7 @@ func (b *databaseBackend) pathConnectionWrite(req *logical.Request, data *framew
 		MaxOpenConnections:    maxOpenConns,
 		MaxIdleConnections:    maxIdleConns,
 		MaxConnectionLifetime: maxConnLifetime,
+		PluginCommand:         data.Get("plugin_command").(string),
 	}
 
 	name := data.Get("name").(string)

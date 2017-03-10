@@ -13,6 +13,7 @@ const (
 	postgreSQLTypeName = "postgres"
 	mySQLTypeName      = "mysql"
 	cassandraTypeName  = "cassandra"
+	pluginTypeName     = "plugin"
 )
 
 var (
@@ -71,6 +72,18 @@ func Factory(conf *DatabaseConfig) (DatabaseType, error) {
 			ConnectionProducer:  connProducer,
 			CredentialsProducer: credsProducer,
 		}, nil
+
+	case pluginTypeName:
+		if conf.PluginCommand == "" {
+			return nil, errors.New("ERROR")
+		}
+
+		db, err := newPluginClient(conf.PluginCommand)
+		if err != nil {
+			return nil, err
+		}
+
+		return db, nil
 	}
 
 	return nil, ErrUnsupportedDatabaseType
@@ -82,7 +95,7 @@ type DatabaseType interface {
 	RenewUser(statements Statements, username, expiration string) error
 	RevokeUser(statements Statements, username string) error
 
-	ConnectionProducer
+	Close()
 	CredentialsProducer
 }
 
@@ -92,6 +105,7 @@ type DatabaseConfig struct {
 	MaxOpenConnections    int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
+	PluginCommand         string                 `json:"plugin_command" structs:"plugin_command" mapstructure:"plugin_command"`
 }
 
 // Statments set in role creation and passed into the database type's functions.

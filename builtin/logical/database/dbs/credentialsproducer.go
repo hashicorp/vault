@@ -11,7 +11,7 @@ import (
 type CredentialsProducer interface {
 	GenerateUsername(displayName string) (string, error)
 	GeneratePassword() (string, error)
-	GenerateExpiration(ttl time.Duration) string
+	GenerateExpiration(ttl time.Duration) (string, error)
 }
 
 // sqlCredentialsProducer impliments CredentialsProducer and provides a generic credentials producer for most sql database types.
@@ -46,10 +46,10 @@ func (scp *sqlCredentialsProducer) GeneratePassword() (string, error) {
 	return password, nil
 }
 
-func (scp *sqlCredentialsProducer) GenerateExpiration(ttl time.Duration) string {
+func (scp *sqlCredentialsProducer) GenerateExpiration(ttl time.Duration) (string, error) {
 	return time.Now().
 		Add(ttl).
-		Format("2006-01-02 15:04:05-0700")
+		Format("2006-01-02 15:04:05-0700"), nil
 }
 
 type cassandraCredentialsProducer struct{}
@@ -74,6 +74,6 @@ func (ccp *cassandraCredentialsProducer) GeneratePassword() (string, error) {
 	return password, nil
 }
 
-func (ccp *cassandraCredentialsProducer) GenerateExpiration(ttl time.Duration) string {
-	return ""
+func (ccp *cassandraCredentialsProducer) GenerateExpiration(ttl time.Duration) (string, error) {
+	return "", nil
 }
