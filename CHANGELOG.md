@@ -56,6 +56,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * api/request: Passing username and password information in API request
+   [GH-2469]
  * audit: Logging the token's use count with authentication response and
    logging the remaining uses of the client token with request [GH-2437]
  * auth/approle: Support for restricting the number of uses on the tokens
