@@ -25,6 +25,7 @@ type S3Backend struct {
 	bucket string
 	client *s3.S3
 	logger log.Logger
+	permitPool *PermitPool
 }
 
 // newS3Backend constructs a S3 backend using a pre-existing
@@ -85,10 +86,23 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 		return nil, fmt.Errorf("unable to access bucket '%s': %v", bucket, err)
 	}
 
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("s3: max_parallel set", "max_parallel", maxParInt)
+		}
+	}
+
 	s := &S3Backend{
 		client: s3conn,
 		bucket: bucket,
 		logger: logger,
+		permitPool: NewPermitPool(maxParInt),
 	}
 	return s, nil
 }
@@ -96,6 +110,9 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 // Put is used to insert or update an entry
 func (s *S3Backend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"s3", "put"}, time.Now())
+
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
 
 	_, err := s.client.PutObject(&s3.PutObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -114,6 +131,9 @@ func (s *S3Backend) Put(entry *Entry) error {
 func (s *S3Backend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"s3", "get"}, time.Now())
 
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
+
 	resp, err := s.client.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
@@ -122,9 +142,8 @@ func (s *S3Backend) Get(key string) (*Entry, error) {
 		// Return nil on 404s, error on anything else
 		if awsErr.StatusCode() == 404 {
 			return nil, nil
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 	if err != nil {
 		return nil, err
@@ -151,6 +170,9 @@ func (s *S3Backend) Get(key string) (*Entry, error) {
 func (s *S3Backend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"s3", "delete"}, time.Now())
 
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
+
 	_, err := s.client.DeleteObject(&s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
@@ -167,6 +189,9 @@ func (s *S3Backend) Delete(key string) error {
 // prefix, up to the next prefix.
 func (s *S3Backend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"s3", "list"}, time.Now())
+
+	s.permitPool.Acquire()
+	defer s.permitPool.Release()
 
 	params := &s3.ListObjectsV2Input{
 		Bucket: aws.String(s.bucket),
