@@ -343,6 +343,24 @@
 			"revisionTime": "2016-10-13T10:26:35Z"
 		},
 		{
+			"checksumSHA1": "tLl952GRIVsso2Pk/IH3cMJaK8E=",
+			"path": "github.com/boombuler/barcode",
+			"revision": "c07adc95a07cb6213cf4c104caab763bce2d49c0",
+			"revisionTime": "2017-01-31T17:48:17Z"
+		},
+		{
+			"checksumSHA1": "tbwzn+sWiZv6veyXae3qRfTjlcQ=",
+			"path": "github.com/boombuler/barcode/qr",
+			"revision": "c07adc95a07cb6213cf4c104caab763bce2d49c0",
+			"revisionTime": "2017-01-31T17:48:17Z"
+		},
+		{
+			"checksumSHA1": "axe0OTdOjYa+XKDUYqzOv7FGaWo=",
+			"path": "github.com/boombuler/barcode/utils",
+			"revision": "c07adc95a07cb6213cf4c104caab763bce2d49c0",
+			"revisionTime": "2017-01-31T17:48:17Z"
+		},
+		{
 			"checksumSHA1": "m6QMy+u/IX6knzP28DqMn4sdLSw=",
 			"path": "github.com/cenk/backoff",
 			"revision": "b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3",
@@ -1109,6 +1127,13 @@
 			"path": "github.com/pkg/errors",
 			"revision": "248dadf4e9068a0b3e79f02ed0a610d935de5302",
 			"revisionTime": "2016-10-29T09:36:37Z"
+		},
+		{
+			"checksumSHA1": "Uldkr4yJ25TcI1+KPc6NP66c4Gg=",
+			"path": "github.com/pquerna/otp",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z",
+			"tree": true
 		},
 		{
 			"checksumSHA1": "ZOhewV1DsQjTYlx8a+ifrZki2Vg=",
