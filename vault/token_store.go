@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"container/list"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
@@ -1026,25 +1027,23 @@ func (ts *TokenStore) RevokeTree(id string) error {
 // revokeTreeSalted is used to invalide a given token and all
 // child tokens using a saltedID.
 func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
-	// Scan for child tokens
-	path := parentPrefix + saltedId + "/"
-	children, err := ts.view.List(path)
-	if err != nil {
-		return fmt.Errorf("failed to scan for children: %v", err)
-	}
-
-	// Recursively nuke the children. The subtle nuance here is that
-	// we don't have the acutal ID of the child, but we have the salted
-	// value. Turns out, this is good enough!
-	for _, child := range children {
-		if err := ts.revokeTreeSalted(child); err != nil {
-			return err
+	//store the Id's in a list
+	dfs := list.New()
+	dfs.PushBack(saltedId)
+	for dfs.Front() != nil {
+		id := dfs.Front()
+		path := parentPrefix + id + "/"
+		children, no_child := ts.view.List(path)
+		if no_child != nil { 
+			/* we have reached a leaf node, so we need to delete this
+			 * , before the parent, i think */
+			 if err := ts.revokeSalted(id); err != nil {
+				 return fmt.Errorf("failed to revoke entry: %v", err)
+			 }
+			 dfs.Remove(id)
+		} else { //there are children and we need to prepend them to the list
+			dfs.PushFront(children)
 		}
-	}
-
-	// Revoke this entry
-	if err := ts.revokeSalted(saltedId); err != nil {
-		return fmt.Errorf("failed to revoke entry: %v", err)
 	}
 	return nil
 }
