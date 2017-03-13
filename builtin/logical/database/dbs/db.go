@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -25,11 +23,7 @@ type Factory func(*DatabaseConfig) (DatabaseType, error)
 func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 	switch conf.DatabaseType {
 	case postgreSQLTypeName:
-		var connProducer *sqlConnectionProducer
-		err := mapstructure.Decode(conf.ConnectionDetails, &connProducer)
-		if err != nil {
-			return nil, err
-		}
+		connProducer := &sqlConnectionProducer{}
 		connProducer.config = conf
 
 		credsProducer := &sqlCredentialsProducer{
@@ -43,11 +37,7 @@ func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 		}, nil
 
 	case mySQLTypeName:
-		var connProducer *sqlConnectionProducer
-		err := mapstructure.Decode(conf.ConnectionDetails, &connProducer)
-		if err != nil {
-			return nil, err
-		}
+		connProducer := &sqlConnectionProducer{}
 		connProducer.config = conf
 
 		credsProducer := &sqlCredentialsProducer{
@@ -61,11 +51,7 @@ func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 		}, nil
 
 	case cassandraTypeName:
-		var connProducer *cassandraConnectionProducer
-		err := mapstructure.Decode(conf.ConnectionDetails, &connProducer)
-		if err != nil {
-			return nil, err
-		}
+		connProducer := &cassandraConnectionProducer{}
 		connProducer.config = conf
 
 		credsProducer := &cassandraCredentialsProducer{}
@@ -102,6 +88,7 @@ type DatabaseType interface {
 	RenewUser(statements Statements, username, expiration string) error
 	RevokeUser(statements Statements, username string) error
 
+	Initialize(map[string]interface{}) error
 	Close()
 	CredentialsProducer
 }

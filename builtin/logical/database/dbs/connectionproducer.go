@@ -3,6 +3,7 @@ package dbs
 import (
 	"crypto/tls"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -11,14 +12,20 @@ import (
 	// Import sql drivers
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
 )
 
+var (
+	errNotInitalized = errors.New("Connection has not been initalized")
+)
+
 type ConnectionProducer interface {
 	Close()
+	Initialize(map[string]interface{}) error
 
 	sync.Locker
 	connection() (interface{}, error)
@@ -30,8 +37,26 @@ type sqlConnectionProducer struct {
 
 	config *DatabaseConfig
 
-	db *sql.DB
+	initalized bool
+	db         *sql.DB
 	sync.Mutex
+}
+
+func (c *sqlConnectionProducer) Initialize(conf map[string]interface{}) error {
+	c.Lock()
+	defer c.Unlock()
+
+	err := mapstructure.Decode(conf, c)
+	if err != nil {
+		return err
+	}
+	c.initalized = true
+
+	if _, err := c.connection(); err != nil {
+		return fmt.Errorf("Error Initalizing Connection: %s", err)
+	}
+
+	return nil
 }
 
 func (c *sqlConnectionProducer) connection() (interface{}, error) {
@@ -98,13 +123,34 @@ type cassandraConnectionProducer struct {
 	TLSMinVersion   string `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 	Consistency     string `json:"consistency" structs:"consistency" mapstructure:"consistency"`
 
-	config *DatabaseConfig
-
-	session *gocql.Session
+	config     *DatabaseConfig
+	initalized bool
+	session    *gocql.Session
 	sync.Mutex
 }
 
+func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}) error {
+	c.Lock()
+	defer c.Unlock()
+
+	err := mapstructure.Decode(conf, c)
+	if err != nil {
+		return err
+	}
+	c.initalized = true
+
+	if _, err := c.connection(); err != nil {
+		return fmt.Errorf("Error Initalizing Connection: %s", err)
+	}
+
+	return nil
+}
+
 func (c *cassandraConnectionProducer) connection() (interface{}, error) {
+	if !c.initalized {
+		return nil, errNotInitalized
+	}
+
 	// If we already have a DB, return it
 	if c.session != nil {
 		return c.session, nil

@@ -140,6 +140,12 @@ func (dr *databasePluginRPCClient) RevokeUser(statements Statements, username st
 	return err
 }
 
+func (dr *databasePluginRPCClient) Initialize(conf map[string]interface{}) error {
+	err := dr.client.Call("Plugin.Initialize", conf, &struct{}{})
+
+	return err
+}
+
 func (dr *databasePluginRPCClient) Close() error {
 	err := dr.client.Call("Plugin.Close", struct{}{}, &struct{}{})
 
@@ -191,6 +197,12 @@ func (ds *databasePluginRPCServer) RenewUser(args *RenewUserRequest, _ *struct{}
 
 func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequest, _ *struct{}) error {
 	err := ds.impl.RevokeUser(args.Statements, args.Username)
+
+	return err
+}
+
+func (ds *databasePluginRPCServer) Initialize(args map[string]interface{}, _ *struct{}) error {
+	err := ds.impl.Initialize(args)
 
 	return err
 }

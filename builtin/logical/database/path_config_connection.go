@@ -3,6 +3,7 @@ package database
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fatih/structs"
@@ -63,6 +64,11 @@ func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framew
 	factory := config.GetFactory()
 
 	db, err = factory(&config)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+	}
+
+	err = db.Initialize(config.ConnectionDetails)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 	}
@@ -207,6 +213,11 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 		}
 
 		name := data.Get("name").(string)
+		if name == "" {
+			return logical.ErrorResponse("Empty name attribute given"), nil
+		}
+
+		verifyConnection := data.Get("verify_connection").(bool)
 
 		// Grab the mutex lock
 		b.Lock()
@@ -223,6 +234,19 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 			db, err = factory(config)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+			}
+
+			err := db.Initialize(config.ConnectionDetails)
+			if err != nil {
+				if !strings.Contains(err.Error(), "Error Initializing Connection") {
+					return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+
+				}
+
+				if verifyConnection {
+					return logical.ErrorResponse(err.Error()), nil
+
+				}
 			}
 
 			b.connections[name] = db
