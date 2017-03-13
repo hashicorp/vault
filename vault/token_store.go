@@ -1032,15 +1032,15 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	dfs.PushFront(saltedId)
 	for dfs.Front() != nil {
 		id := dfs.Front()
-		path := parentPrefix + id.Value + "/"
+		path := parentPrefix + id.Value.(string) + "/"
 		children, no_child := ts.view.List(path)
 		if no_child != nil { 
 			/* we have reached a leaf node, so we need to delete this
 			 * , before the parent, i think */
-			 if err := ts.revokeSalted((string)id.Value); err != nil {
+			 if err := ts.revokeSalted(id.Value.(string)); err != nil {
 				 return fmt.Errorf("failed to revoke entry: %v", err)
 			 }
-			 dfs.Remove(id.Value)
+			 dfs.Remove(id)
 		} else { //there are children and we need to prepend them to the list
 			dfs.PushFront(children)
 		}
