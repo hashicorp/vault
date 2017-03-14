@@ -228,6 +228,17 @@ func (b *backend) pathConfigCAUpdate(req *logical.Request, data *framework.Field
 
 		return nil, err
 	}
+
+	if generateSigningKey {
+		response := &logical.Response{
+			Data: map[string]interface{}{
+				"public_key": publicKey,
+			},
+		}
+
+		return response, nil
+	}
+
 	return nil, nil
 }
 
