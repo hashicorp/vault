@@ -82,6 +82,8 @@ IMPROVEMENTS:
  * secret/pki: When using DER format, still return the private key type
    [GH-2405]
  * secret/ssh: SSH backend as CA to sign user and host certificates [GH-2208]
+ * secret/ssh: Support reading of SSH CA public key from `config/ca` endpoint
+   and also return it when CA key pair is generated [GH-2483]
 
 BUG FIXES:
 
