@@ -69,7 +69,7 @@ func (b *backend) pathConfigCARead(
 	}
 
 	if publicKeyEntry == nil {
-		return nil, fmt.Errorf("keys haven't been configured yet")
+		return logical.ErrorResponse("keys haven't been configured yet"), nil
 	}
 
 	response := &logical.Response{
