@@ -90,6 +90,12 @@ func PluginFactory(conf *DatabaseConfig) (DatabaseType, error) {
 		return nil, err
 	}
 
+	// Wrap with metrics middleware
+	db = &databaseMetricsMiddleware{
+		next:    db,
+		typeStr: db.Type(),
+	}
+
 	return db, nil
 }
 
