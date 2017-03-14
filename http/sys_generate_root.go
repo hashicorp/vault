@@ -120,7 +120,7 @@ func handleSysGenerateRootUpdate(core *vault.Core) http.Handler {
 		if req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
-				errors.New("'key' must specified in request body as JSON"))
+				errors.New("'key' must be specified in request body as JSON"))
 			return
 		}
 
