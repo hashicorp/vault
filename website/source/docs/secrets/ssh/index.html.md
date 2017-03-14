@@ -1075,6 +1075,39 @@ username@<IP of remote host>:~$
   </dd>
 </dl>
 
+#### GET
+
+<dl class="api">
+  <dt>Description</dt>
+  <dd>
+    Reads the configured/generated public key.
+  </dd>
+
+  <dt>Method</dt>
+  <dd>GET</dd>
+
+  <dt>URL</dt>
+  <dd>`/ssh/config/ca`</dd>
+
+  <dt>Parameters</dt>
+  <dd>None</dd>
+
+  <dt>Returns</dt>
+  <dd>
+    ```json
+    {
+      "lease_id": "",
+      "renewable": false,
+      "lease_duration": 0,
+      "data": {
+        "public_key": "ssh-rsa AAAAHHNzaC1y...\n"
+        },
+      "warnings": null
+    }
+    ```
+  </dd>
+</dl>
+
 ### /ssh/sign
 #### POST
 
