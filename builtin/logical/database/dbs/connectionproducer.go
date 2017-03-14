@@ -24,7 +24,7 @@ var (
 )
 
 type ConnectionProducer interface {
-	Close()
+	Close() error
 	Initialize(map[string]interface{}) error
 
 	sync.Locker
@@ -97,7 +97,7 @@ func (c *sqlConnectionProducer) connection() (interface{}, error) {
 	return c.db, nil
 }
 
-func (c *sqlConnectionProducer) Close() {
+func (c *sqlConnectionProducer) Close() error {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
@@ -107,6 +107,8 @@ func (c *sqlConnectionProducer) Close() {
 	}
 
 	c.db = nil
+
+	return nil
 }
 
 type cassandraConnectionProducer struct {
@@ -167,7 +169,7 @@ func (c *cassandraConnectionProducer) connection() (interface{}, error) {
 	return session, nil
 }
 
-func (c *cassandraConnectionProducer) Close() {
+func (c *cassandraConnectionProducer) Close() error {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
@@ -177,6 +179,8 @@ func (c *cassandraConnectionProducer) Close() {
 	}
 
 	c.session = nil
+
+	return nil
 }
 
 func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {

@@ -38,10 +38,11 @@ type DatabasePluginClient struct {
 	*databasePluginRPCClient
 }
 
-func (dc *DatabasePluginClient) Close() {
-	dc.databasePluginRPCClient.Close()
-
+func (dc *DatabasePluginClient) Close() error {
+	err := dc.databasePluginRPCClient.Close()
 	dc.client.Kill()
+
+	return err
 }
 
 func newPluginClient(command, checksum string) (DatabaseType, error) {
@@ -179,7 +180,7 @@ type databasePluginRPCServer struct {
 }
 
 func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {
-	*resp = "string"
+	*resp = ds.impl.Type()
 	return nil
 }
 

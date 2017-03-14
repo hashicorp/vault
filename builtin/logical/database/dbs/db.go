@@ -21,6 +21,8 @@ var (
 type Factory func(*DatabaseConfig) (DatabaseType, error)
 
 func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
+	var dbType DatabaseType
+
 	switch conf.DatabaseType {
 	case postgreSQLTypeName:
 		connProducer := &sqlConnectionProducer{}
@@ -31,10 +33,10 @@ func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 			usernameLen:    63,
 		}
 
-		return &PostgreSQL{
+		dbType = &PostgreSQL{
 			ConnectionProducer:  connProducer,
 			CredentialsProducer: credsProducer,
-		}, nil
+		}
 
 	case mySQLTypeName:
 		connProducer := &sqlConnectionProducer{}
@@ -45,10 +47,10 @@ func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 			usernameLen:    16,
 		}
 
-		return &MySQL{
+		dbType = &MySQL{
 			ConnectionProducer:  connProducer,
 			CredentialsProducer: credsProducer,
-		}, nil
+		}
 
 	case cassandraTypeName:
 		connProducer := &cassandraConnectionProducer{}
@@ -56,13 +58,22 @@ func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 
 		credsProducer := &cassandraCredentialsProducer{}
 
-		return &Cassandra{
+		dbType = &Cassandra{
 			ConnectionProducer:  connProducer,
 			CredentialsProducer: credsProducer,
-		}, nil
+		}
+
+	default:
+		return nil, ErrUnsupportedDatabaseType
 	}
 
-	return nil, ErrUnsupportedDatabaseType
+	// Wrap with metrics middleware
+	dbType = &databaseMetricsMiddleware{
+		next:    dbType,
+		typeStr: dbType.Type(),
+	}
+
+	return dbType, nil
 }
 
 func PluginFactory(conf *DatabaseConfig) (DatabaseType, error) {
@@ -89,7 +100,7 @@ type DatabaseType interface {
 	RevokeUser(statements Statements, username string) error
 
 	Initialize(map[string]interface{}) error
-	Close()
+	Close() error
 	CredentialsProducer
 }
 
