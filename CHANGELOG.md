@@ -83,6 +83,7 @@ IMPROVEMENTS:
    [GH-2405]
  * secret/pki: Add an intermediate to the CA chain even if it lacks an
    authority key ID [GH-2465]
+ * secret/pki: Add role option to use CSR SANs [GH-2489]
  * secret/ssh: SSH backend as CA to sign user and host certificates [GH-2208]
  * secret/ssh: Support reading of SSH CA public key from `config/ca` endpoint
    and also return it when CA key pair is generated [GH-2483]
