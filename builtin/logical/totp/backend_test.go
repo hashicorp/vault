@@ -10,19 +10,19 @@ import (
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 	"github.com/mitchellh/mapstructure"
-	otplib "github.com/pquerna/otp/"
+	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
 
 /*
-	Test each algorithm type
-	Test digits
-	Test periods
-	Test defaults
-	Test invalid period (negative)
-	Test invalid key
-	Test invalid account_name
-	Test invalid issuer
+	X Test each algorithm type
+	X Test digits
+	X Test periods
+	X Test defaults
+	X Test invalid period (negative)
+	X Test invalid key
+	X Test invalid account_name
+	X Test invalid issuer
 */
 
 func createKey() (string, error) {
@@ -36,7 +36,7 @@ func createKey() (string, error) {
 	return key, err
 }
 
-func TestBackend_basic(t *testing.T) {
+func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(config)
@@ -53,11 +53,206 @@ func TestBackend_basic(t *testing.T) {
 		"key":          key,
 	}
 
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"digits":       6,
+		"period":       30,
+		"algorithm":    "SHA1",
+		"key":          key,
+	}
+
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: b,
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateRole(t, "test", roleData, false),
-			testAccStepReadCreds(t, b, config.StorageView, "test"),
+			testAccStepReadRole(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"digits":       8,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"digits":       8,
+		"period":       30,
+		"algorithm":    "SHA1",
+		"key":          key,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, false),
+			testAccStepReadRole(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"period":       90,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"digits":       6,
+		"period":       90,
+		"algorithm":    "SHA1",
+		"key":          key,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, false),
+			testAccStepReadRole(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_readCredentialsSHA256(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"algorithm":    "SHA256",
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"digits":       6,
+		"period":       30,
+		"algorithm":    "SHA256",
+		"key":          key,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, false),
+			testAccStepReadRole(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_readCredentialsSHA512(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"algorithm":    "SHA512",
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"digits":       6,
+		"period":       30,
+		"algorithm":    "SHA512",
+		"key":          key,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, false),
+			testAccStepReadRole(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_readCredentialsMD5(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"algorithm":    "MD5",
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"digits":       6,
+		"period":       30,
+		"algorithm":    "MD5",
+		"key":          key,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, false),
+			testAccStepReadRole(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
 		},
 	})
 }
@@ -84,6 +279,7 @@ func TestBackend_roleCrudDefaultValues(t *testing.T) {
 		"digits":       6,
 		"period":       30,
 		"algorithm":    "SHA1",
+		"key":          key,
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -92,6 +288,183 @@ func TestBackend_roleCrudDefaultValues(t *testing.T) {
 			testAccStepCreateRole(t, "test", roleData, false),
 			testAccStepReadRole(t, "test", expected),
 			testAccStepDeleteRole(t, "test"),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_createRoleInvalidPeriod(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"algorithm":    "SHA256",
+		"period":       -50,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_createRoleMissingKey(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_createRoleInvalidKey(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          "1",
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_createRoleInvalidAlgorithm(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"algorithm":    "BADALGORITHM",
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_createRoleInvalidDigits(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"digits":       20,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_createRoleMissingAccountName(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer": "Vault",
+		"key":    key,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_createRoleMissingIssuer(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"account_name": "Test",
+		"key":          key,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
 			testAccStepReadRole(t, "test", nil),
 		},
 	})
@@ -113,7 +486,7 @@ func testAccStepDeleteRole(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string) logicaltest.TestStep {
+func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, validation map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      path.Join("creds", name),
@@ -126,24 +499,9 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 
-			// Read saved role entry
-			entry, err := s.Get("role/" + name)
-
-			if err != nil {
-				t.Fatalf("Error retrieving role.")
-			}
-			if entry == nil {
-				t.Fatalf("Retrieved role is nil.")
-			}
-
-			var role roleEntry
-			if err := entry.DecodeJSON(&role); err != nil {
-				t.Fatalf("JSON decoding error while reading role entry.")
-			}
-
 			// Translate digits and algorithm to a format the totp library understands
 			var digits otplib.Digits
-			switch role.Digits {
+			switch validation["digits"] {
 			case 6:
 				digits = otplib.DigitsSix
 			case 8:
@@ -151,7 +509,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 
 			var algorithm otplib.Algorithm
-			switch role.Algorithm {
+			switch validation["algorithm"] {
 			case "SHA1":
 				algorithm = otplib.AlgorithmSHA1
 			case "SHA256":
@@ -164,10 +522,11 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 				algorithm = otplib.AlgorithmSHA1
 			}
 
-			period := uint(role.Period)
+			period := validation["period"].(int)
+			key := validation["key"].(string)
 
-			valid := totplib.ValidateCustom(d.Token, role.Key, time.Now().UTC(), totplib.ValidateOpts{
-				Period:    period,
+			valid, _ := totplib.ValidateCustom(d.Token, key, time.Now().UTC(), totplib.ValidateOpts{
+				Period:    uint(period),
 				Skew:      1,
 				Digits:    digits,
 				Algorithm: algorithm,
