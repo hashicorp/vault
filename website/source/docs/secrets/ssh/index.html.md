@@ -619,6 +619,14 @@ username@<IP of remote host>:~$
         subdomains of those listed in "allowed_users". Defaults
         to false.
       </li>
+      <li>
+        <span class="param">allow_user_key_ids</span>
+        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
+        optional for CA type</span>
+        If true, users can override the key ID for a signed certificate with the "key_id" field.
+        When false, the key ID will always be the token display name.
+        The key ID is logged by the SSH server and can be useful for auditing.
+      </li>
     </ul>
   </dd>
 
@@ -678,6 +686,7 @@ username@<IP of remote host>:~$
   "allow_bare_domains": false,
   "allow_host_certificates": true,
   "allow_subdomains": false,
+  "allow_user_key_ids": false,
   "allow_user_certificates": true,
   "allowed_critical_options": "",
   "allowed_extensions": "",
