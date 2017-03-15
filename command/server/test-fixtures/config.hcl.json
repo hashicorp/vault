@@ -11,7 +11,7 @@
 			"node_id": "foo_node"
 		}
 	}],
-	"backend": {
+	"storage": {
 		"consul": {
 			"foo": "bar",
 			"disable_clustering": "true"
@@ -22,5 +22,6 @@
 	},
 	"max_lease_ttl": "10h",
 	"default_lease_ttl": "10h",
-	"cluster_name":"testcluster"
+	"cluster_name":"testcluster",
+	"ui":true
 }

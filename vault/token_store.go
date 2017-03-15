@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/policyutil"
@@ -88,7 +87,7 @@ type TokenStore struct {
 
 	policyLookupFunc func(string) (*Policy, error)
 
-	tokenLocks map[string]*sync.RWMutex
+	tokenLocks []*locksutil.LockEntry
 
 	cubbyholeDestroyer func(*TokenStore, string) error
 }
@@ -109,23 +108,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		t.policyLookupFunc = c.policyStore.GetPolicy
 	}
 
-	// Setup the salt
-	salt, err := salt.NewSalt(view, &salt.Config{
-		HashFunc: salt.SHA1Hash,
-	})
-	if err != nil {
-		return nil, err
-	}
-	t.salt = salt
-
-	t.tokenLocks = map[string]*sync.RWMutex{}
-
-	// Create 256 locks
-	if err = locksutil.CreateLocks(t.tokenLocks, 256); err != nil {
-		return nil, fmt.Errorf("failed to create locks: %v", err)
-	}
-
-	t.tokenLocks["custom"] = &sync.RWMutex{}
+	t.tokenLocks = locksutil.CreateLocks()
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -135,6 +118,15 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 			Root: []string{
 				"revoke-orphan/*",
 				"accessors*",
+			},
+
+			// Most token store items are local since tokens are local, but a
+			// notable exception is roles
+			LocalStorage: []string{
+				lookupPrefix,
+				accessorPrefix,
+				parentPrefix,
+				"salt",
 			},
 		},
 
@@ -467,11 +459,26 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				HelpDescription: strings.TrimSpace(tokenTidyDesc),
 			},
 		},
+
+		Init: t.Initialize,
 	}
 
 	t.Backend.Setup(config)
 
 	return t, nil
+}
+
+func (ts *TokenStore) Initialize() error {
+	// Setup the salt
+	salt, err := salt.NewSalt(ts.view, &salt.Config{
+		HashFunc: salt.SHA1Hash,
+	})
+	if err != nil {
+		return err
+	}
+	ts.salt = salt
+
+	return nil
 }
 
 // TokenEntry is used to represent a given token
@@ -726,21 +733,6 @@ func (ts *TokenStore) storeCommon(entry *TokenEntry, writeSecondary bool) error 
 	return nil
 }
 
-func (ts *TokenStore) getTokenLock(id string) *sync.RWMutex {
-	// Find our multilevel lock, or fall back to global
-	var lock *sync.RWMutex
-	var ok bool
-	if len(id) >= 2 {
-		lock, ok = ts.tokenLocks[id[0:2]]
-	}
-	if !ok || lock == nil {
-		// Fall back for custom token IDs
-		lock = ts.tokenLocks["custom"]
-	}
-
-	return lock
-}
-
 // UseToken is used to manage restricted use tokens and decrement their
 // available uses. Returns two values: a potentially updated entry or, if the
 // token has been revoked, nil; and whether an error was encountered. The
@@ -759,8 +751,7 @@ func (ts *TokenStore) UseToken(te *TokenEntry) (*TokenEntry, error) {
 		return te, nil
 	}
 
-	lock := ts.getTokenLock(te.ID)
-
+	lock := locksutil.LockForKey(ts.tokenLocks, te.ID)
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -813,7 +804,7 @@ func (ts *TokenStore) Lookup(id string) (*TokenEntry, error) {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
 
-	lock := ts.getTokenLock(id)
+	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
 
@@ -917,7 +908,7 @@ func (ts *TokenStore) revokeSalted(saltedId string) (ret error) {
 		return nil
 	}
 
-	lock := ts.getTokenLock(entry.ID)
+	lock := locksutil.LockForKey(ts.tokenLocks, entry.ID)
 	lock.Lock()
 
 	// Lookup the token first
@@ -1085,7 +1076,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 		return aEntry, fmt.Errorf("failed to read index using accessor: %s", err)
 	}
 	if entry == nil {
-		return aEntry, &StatusBadRequest{Err: "invalid accessor"}
+		return aEntry, &logical.StatusBadRequest{Err: "invalid accessor"}
 	}
 
 	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
@@ -1225,7 +1216,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 	if accessor == "" {
 		accessor = data.Get("urlaccessor").(string)
 		if accessor == "" {
-			return nil, &StatusBadRequest{Err: "missing accessor"}
+			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 		}
 		urlaccessor = true
 	}
@@ -1279,7 +1270,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 	if accessor == "" {
 		accessor = data.Get("urlaccessor").(string)
 		if accessor == "" {
-			return nil, &StatusBadRequest{Err: "missing accessor"}
+			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 		}
 		urlaccessor = true
 	}
@@ -1567,7 +1558,7 @@ func (ts *TokenStore) handleCreateCommon(
 	}
 
 	if data.ExplicitMaxTTL != "" {
-		dur, err := duration.ParseDurationSecond(data.ExplicitMaxTTL)
+		dur, err := parseutil.ParseDurationSecond(data.ExplicitMaxTTL)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
@@ -1583,7 +1574,7 @@ func (ts *TokenStore) handleCreateCommon(
 			return logical.ErrorResponse("root or sudo privileges required to create periodic token"),
 				logical.ErrInvalidRequest
 		}
-		dur, err := duration.ParseDurationSecond(data.Period)
+		dur, err := parseutil.ParseDurationSecond(data.Period)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
@@ -1596,7 +1587,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Parse the TTL/lease if any
 	if data.TTL != "" {
-		dur, err := duration.ParseDurationSecond(data.TTL)
+		dur, err := parseutil.ParseDurationSecond(data.TTL)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}
@@ -1698,6 +1689,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Generate the response
 	resp.Auth = &logical.Auth{
+		NumUses:     te.NumUses,
 		DisplayName: te.DisplayName,
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
@@ -1836,7 +1828,7 @@ func (ts *TokenStore) handleLookup(
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	lock := ts.getTokenLock(id)
+	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
 

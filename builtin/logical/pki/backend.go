@@ -29,6 +29,12 @@ func Backend() *backend {
 				"crl/pem",
 				"crl",
 			},
+
+			LocalStorage: []string{
+				"revoked/",
+				"crl",
+				"certs/",
+			},
 		},
 
 		Paths: []*framework.Path{

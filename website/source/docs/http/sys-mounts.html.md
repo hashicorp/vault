@@ -39,7 +39,8 @@ description: |-
         "description": "AWS keys",
         "config": {
           "default_lease_ttl": 0,
-          "max_lease_ttl": 0
+          "max_lease_ttl": 0,
+          "force_no_cache": false
         }
       },
 
@@ -48,7 +49,8 @@ description: |-
         "description": "system endpoint",
         "config": {
           "default_lease_ttl": 0,
-          "max_lease_ttl": 0
+          "max_lease_ttl": 0,
+          "force_no_cache": false
         }
       }
     }
@@ -88,11 +90,10 @@ description: |-
         <span class="param">config</span>
         <span class="param-flags">optional</span>
         Config options for this mount. This is an object with
-        two possible values: `default_lease_ttl` and
-        `max_lease_ttl`. These control the default and
-        maximum lease time-to-live, respectively. If set
-        on a specific mount, this overrides the global
-        defaults.
+        three possible values: `default_lease_ttl`,
+        `max_lease_ttl`, and`force_no_cache`. These control the default and
+        maximum lease time-to-live, and force disabling backend caching respectively.
+        If set on a specific mount, this overrides the global defaults.
       </li>
     </ul>
   </dd>
@@ -154,7 +155,8 @@ description: |-
     ```javascript
     {
       "default_lease_ttl": 3600,
-      "max_lease_ttl": 7200
+      "max_lease_ttl": 7200,
+      "force_no_cache": false
     }
     ```
 

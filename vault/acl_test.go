@@ -3,6 +3,7 @@ package vault
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 )
@@ -59,12 +60,15 @@ func TestACL_Root(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	allowed, rootPrivs := acl.AllowOperation(logical.UpdateOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.UpdateOperation
+	request.Path = "sys/mount/foo"
+	allowed, rootPrivs := acl.AllowOperation(request)
 	if !rootPrivs {
 		t.Fatalf("expected root")
 	}
 	if !allowed {
-		t.Fatalf("expected permission")
+		t.Fatalf("expected permissions")
 	}
 }
 
@@ -81,7 +85,10 @@ func TestACL_Single(t *testing.T) {
 
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.ReadOperation
+	request.Path = "sys/mount/foo"
+	_, rootPrivs := acl.AllowOperation(request)
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -117,7 +124,10 @@ func TestACL_Single(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		request := new(logical.Request)
+		request.Operation = tc.op
+		request.Path = tc.path
+		allowed, rootPrivs := acl.AllowOperation(request)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
@@ -148,7 +158,10 @@ func TestACL_Layered(t *testing.T) {
 func testLayeredACL(t *testing.T, acl *ACL) {
 	// Type of operation is not important here as we only care about checking
 	// sudo/root
-	_, rootPrivs := acl.AllowOperation(logical.ReadOperation, "sys/mount/foo")
+	request := new(logical.Request)
+	request.Operation = logical.ReadOperation
+	request.Path = "sys/mount/foo"
+	_, rootPrivs := acl.AllowOperation(request)
 	if rootPrivs {
 		t.Fatalf("unexpected root")
 	}
@@ -189,12 +202,215 @@ func testLayeredACL(t *testing.T, acl *ACL) {
 	}
 
 	for _, tc := range tcases {
-		allowed, rootPrivs := acl.AllowOperation(tc.op, tc.path)
+		request := new(logical.Request)
+		request.Operation = tc.op
+		request.Path = tc.path
+		allowed, rootPrivs := acl.AllowOperation(request)
 		if allowed != tc.allowed {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
 		}
 		if rootPrivs != tc.rootPrivs {
 			t.Fatalf("bad: case %#v: %v, %v", tc, allowed, rootPrivs)
+		}
+	}
+}
+
+func TestACL_PolicyMerge(t *testing.T) {
+	policy, err := Parse(mergingPolicies)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	acl, err := NewACL([]*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	type tcase struct {
+		path           string
+		minWrappingTTL *time.Duration
+		maxWrappingTTL *time.Duration
+		allowed        map[string][]interface{}
+		denied         map[string][]interface{}
+	}
+
+	createDuration := func(seconds int) *time.Duration {
+		ret := time.Duration(seconds) * time.Second
+		return &ret
+	}
+
+	tcases := []tcase{
+		{"foo/bar", nil, nil, nil, map[string][]interface{}{"zip": []interface{}{}, "baz": []interface{}{}}},
+		{"hello/universe", createDuration(50), createDuration(200), map[string][]interface{}{"foo": []interface{}{}, "bar": []interface{}{}}, nil},
+		{"allow/all", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
+		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
+		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
+		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
+		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
+		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}},
+	}
+
+	for _, tc := range tcases {
+		raw, ok := acl.exactRules.Get(tc.path)
+		if !ok {
+			t.Fatalf("Could not find acl entry for path %s", tc.path)
+		}
+
+		p := raw.(*Permissions)
+		if !reflect.DeepEqual(tc.allowed, p.AllowedParameters) {
+			t.Fatalf("Allowed paramaters did not match, Expected: %#v, Got: %#v", tc.allowed, p.AllowedParameters)
+		}
+		if !reflect.DeepEqual(tc.denied, p.DeniedParameters) {
+			t.Fatalf("Denied paramaters did not match, Expected: %#v, Got: %#v", tc.denied, p.DeniedParameters)
+		}
+		if tc.minWrappingTTL != nil && *tc.minWrappingTTL != p.MinWrappingTTL {
+			t.Fatalf("Min wrapping TTL did not match, Expected: %#v, Got: %#v", tc.minWrappingTTL, p.MinWrappingTTL)
+		}
+		if tc.minWrappingTTL != nil && *tc.maxWrappingTTL != p.MaxWrappingTTL {
+			t.Fatalf("Max wrapping TTL did not match, Expected: %#v, Got: %#v", tc.maxWrappingTTL, p.MaxWrappingTTL)
+		}
+	}
+}
+
+func TestACL_AllowOperation(t *testing.T) {
+	policy, err := Parse(permissionsPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	acl, err := NewACL([]*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	toperations := []logical.Operation{
+		logical.UpdateOperation,
+		logical.CreateOperation,
+	}
+	type tcase struct {
+		path        string
+		wrappingTTL *time.Duration
+		parameters  []string
+		allowed     bool
+	}
+
+	createDuration := func(seconds int) *time.Duration {
+		ret := time.Duration(seconds) * time.Second
+		return &ret
+	}
+
+	tcases := []tcase{
+		{"dev/ops", nil, []string{"zip"}, true},
+		{"foo/bar", nil, []string{"zap"}, false},
+		{"foo/bar", nil, []string{"zip"}, false},
+		{"foo/bar", createDuration(50), []string{"zip"}, false},
+		{"foo/bar", createDuration(450), []string{"zip"}, false},
+		{"foo/bar", createDuration(350), []string{"zip"}, true},
+		{"foo/baz", nil, []string{"hello"}, false},
+		{"foo/baz", createDuration(50), []string{"hello"}, false},
+		{"foo/baz", createDuration(450), []string{"hello"}, true},
+		{"foo/baz", nil, []string{"zap"}, false},
+		{"broken/phone", nil, []string{"steve"}, false},
+		{"working/phone", nil, []string{""}, false},
+		{"working/phone", createDuration(450), []string{""}, false},
+		{"working/phone", createDuration(350), []string{""}, true},
+		{"hello/world", nil, []string{"one"}, false},
+		{"tree/fort", nil, []string{"one"}, true},
+		{"tree/fort", nil, []string{"foo"}, false},
+		{"fruit/apple", nil, []string{"pear"}, false},
+		{"fruit/apple", nil, []string{"one"}, false},
+		{"cold/weather", nil, []string{"four"}, true},
+		{"var/aws", nil, []string{"cold", "warm", "kitty"}, false},
+	}
+
+	for _, tc := range tcases {
+		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
+		for _, parameter := range tc.parameters {
+			request.Data[parameter] = ""
+		}
+		if tc.wrappingTTL != nil {
+			request.WrapInfo = &logical.RequestWrapInfo{
+				TTL: *tc.wrappingTTL,
+			}
+		}
+		for _, op := range toperations {
+			request.Operation = op
+			allowed, _ := acl.AllowOperation(&request)
+			if allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, allowed)
+			}
+		}
+	}
+}
+
+func TestACL_ValuePermissions(t *testing.T) {
+	policy, err := Parse(valuePermissionsPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	acl, err := NewACL([]*Policy{policy})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	toperations := []logical.Operation{
+		logical.UpdateOperation,
+		logical.CreateOperation,
+	}
+	type tcase struct {
+		path       string
+		parameters []string
+		values     []interface{}
+		allowed    bool
+	}
+
+	tcases := []tcase{
+		{"dev/ops", []string{"allow"}, []interface{}{"good"}, true},
+		{"dev/ops", []string{"allow"}, []interface{}{"bad"}, false},
+		{"foo/bar", []string{"deny"}, []interface{}{"bad"}, false},
+		{"foo/bar", []string{"deny"}, []interface{}{"bad glob"}, false},
+		{"foo/bar", []string{"deny"}, []interface{}{"good"}, true},
+		{"foo/bar", []string{"allow"}, []interface{}{"good"}, true},
+		{"foo/baz", []string{"aLLow"}, []interface{}{"good"}, true},
+		{"foo/baz", []string{"deny"}, []interface{}{"bad"}, false},
+		{"foo/baz", []string{"deny"}, []interface{}{"good"}, false},
+		{"foo/baz", []string{"allow", "deny"}, []interface{}{"good", "bad"}, false},
+		{"foo/baz", []string{"deny", "allow"}, []interface{}{"good", "bad"}, false},
+		{"foo/baz", []string{"deNy", "allow"}, []interface{}{"bad", "good"}, false},
+		{"foo/baz", []string{"aLLow"}, []interface{}{"bad"}, false},
+		{"foo/baz", []string{"Neither"}, []interface{}{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good1"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good2"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good2"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good3"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
+		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
+		{"fizz/buzz", []string{"deny_multi"}, []interface{}{"bad2"}, false},
+		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []interface{}{"good", "good2"}, false},
+		//	{"test/types", []string{"array"}, []interface{}{[1]string{"good"}}, true},
+		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"good": "one"}}, true},
+		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"bad": "one"}}, false},
+		{"test/types", []string{"int"}, []interface{}{1}, true},
+		{"test/types", []string{"int"}, []interface{}{3}, false},
+		{"test/types", []string{"bool"}, []interface{}{false}, true},
+		{"test/types", []string{"bool"}, []interface{}{true}, false},
+		{"test/star", []string{"anything"}, []interface{}{true}, true},
+		{"test/star", []string{"foo"}, []interface{}{true}, true},
+		{"test/star", []string{"bar"}, []interface{}{false}, true},
+		{"test/star", []string{"bar"}, []interface{}{true}, false},
+	}
+
+	for _, tc := range tcases {
+		request := logical.Request{Path: tc.path, Data: make(map[string]interface{})}
+		for i, parameter := range tc.parameters {
+			request.Data[parameter] = tc.values[i]
+		}
+		for _, op := range toperations {
+			request.Operation = op
+			allowed, _ := acl.AllowOperation(&request)
+			if allowed != tc.allowed {
+				t.Fatalf("bad: case %#v: %v", tc, allowed)
+			}
 		}
 	}
 }
@@ -253,5 +469,267 @@ path "sys/seal" {
 }
 path "foo/bar" {
 	capabilities = ["deny"]
+}
+`
+
+//test merging
+var mergingPolicies = `
+name = "ops"
+path "foo/bar" {
+	policy = "write"
+	denied_parameters = {
+		"baz" = []
+	}
+}
+path "foo/bar" {
+	policy = "write"
+	denied_parameters = {
+		"zip" = []
+	}
+}
+path "hello/universe" {
+	policy = "write"
+	allowed_parameters = {
+		"foo" = []
+	}
+	max_wrapping_ttl = 300
+	min_wrapping_ttl = 100
+}
+path "hello/universe" {
+	policy = "write"
+	allowed_parameters = {
+		"bar" = []
+	}
+	max_wrapping_ttl = 200
+	min_wrapping_ttl = 50
+}
+path "allow/all" {
+	policy = "write"
+	allowed_parameters = {
+		"test" = []
+		"test1" = ["foo"]
+	}
+}
+path "allow/all" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+	}
+}
+path "allow/all1" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+	}
+}
+path "allow/all1" {
+	policy = "write"
+	allowed_parameters = {
+		"test" = []
+		"test1" = ["foo"]
+	}
+}
+path "deny/all" {
+	policy = "write"
+	denied_parameters = {
+		"test" = []
+	}
+}
+path "deny/all" {
+	policy = "write"
+	denied_parameters = {
+		"*" = []
+	}
+}
+path "deny/all1" {
+	policy = "write"
+	denied_parameters = {
+		"*" = []
+	}
+}
+path "deny/all1" {
+	policy = "write"
+	denied_parameters = {
+		"test" = []
+	}
+}
+path "value/merge" {
+	policy = "write"
+	allowed_parameters = {
+		"test" = [1, 2]
+	}
+	denied_parameters = {
+		"test" = [1, 2]
+	}
+}
+path "value/merge" {
+	policy = "write"
+	allowed_parameters = {
+		"test" = [3, 4]
+	}
+	denied_parameters = {
+		"test" = [3, 4]
+	}
+}
+path "value/empty" {
+	policy = "write"
+	allowed_parameters = {
+		"empty" = []
+	}
+	denied_parameters = {
+		"empty" = [1]
+	}
+}
+path "value/empty" {
+	policy = "write"
+	allowed_parameters = {
+		"empty" = [1]
+	}
+	denied_parameters = {
+		"empty" = []
+	}
+}
+`
+
+//allow operation testing
+var permissionsPolicy = `
+name = "dev"
+path "dev/*" {
+	policy = "write"
+	
+	allowed_parameters = {
+		"zip" = []
+	}
+}
+path "foo/bar" {
+	policy = "write"
+	denied_parameters = {
+		"zap" = []
+	}
+	min_wrapping_ttl = 300
+	max_wrapping_ttl = 400
+}
+path "foo/baz" {
+	policy = "write"
+	allowed_parameters = {
+		"hello" = []
+	}
+	denied_parameters = {
+		"zap" = []
+	}
+	min_wrapping_ttl = 300
+}
+path "working/phone" {
+	policy = "write"
+	max_wrapping_ttl = 400
+}
+path "broken/phone" {
+	policy = "write"
+	allowed_parameters = {
+	  "steve" = []
+	}
+	denied_parameters = {
+	  "steve" = []
+	}
+}
+path "hello/world" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+	}
+	denied_parameters = {
+		"*" = []
+	}
+}
+path "tree/fort" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+	}
+	denied_parameters = {
+		"foo" = []
+	}
+}
+path "fruit/apple" {
+	policy = "write"
+	allowed_parameters = {
+		"pear" = []
+	}
+	denied_parameters = {
+		"*" = []
+	}
+}
+path "cold/weather" {
+	policy = "write"
+	allowed_parameters = {}
+	denied_parameters = {}
+}
+path "var/aws" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+	}
+	denied_parameters = {
+		"soft" = []
+		"warm" = []
+		"kitty" = []
+	}
+}
+`
+
+//allow operation testing
+var valuePermissionsPolicy = `
+name = "op"
+path "dev/*" {
+	policy = "write"
+	
+	allowed_parameters = {
+		"allow" = ["good"]
+	}
+}
+path "foo/bar" {
+	policy = "write"
+	denied_parameters = {
+		"deny" = ["bad*"]
+	}
+}
+path "foo/baz" {
+	policy = "write"
+	allowed_parameters = {
+		"ALLOW" = ["good"]
+	}
+	denied_parameters = {
+		"dEny" = ["bad"]
+	}
+}
+path "fizz/buzz" {
+	policy = "write"
+	allowed_parameters = {
+		"allow_multi" = ["good", "good1", "good2", "*good3"]
+		"allow" = ["good"]
+	}
+	denied_parameters = {
+		"deny_multi" = ["bad", "bad1", "bad2"]
+	}
+}
+path "test/types" {
+	policy = "write"
+	allowed_parameters = {
+		"map" = [{"good" = "one"}]
+		"int" = [1, 2]
+		"bool" = [false]
+	}
+	denied_parameters = {
+	}
+}
+path "test/star" {
+	policy = "write"
+	allowed_parameters = {
+		"*" = []
+		"foo" = []
+		"bar" = [false]
+	}
+	denied_parameters = {
+	}
 }
 `

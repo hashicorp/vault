@@ -1,10 +1,8 @@
 package transit
 
 import (
-	"encoding/base64"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -15,10 +13,13 @@ func TestTransit_BatchDecryptionCase1(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchEncryptionInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"Cg=="}]`
-	batchEncryptionInputB64 := base64.StdEncoding.EncodeToString([]byte(batchEncryptionInput))
+	batchEncryptionInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "Cg=="},
+	}
+
 	batchEncryptionData := map[string]interface{}{
-		"batch_input": batchEncryptionInputB64,
+		"batch_input": batchEncryptionInput,
 	}
 
 	batchEncryptionReq := &logical.Request{
@@ -32,9 +33,8 @@ func TestTransit_BatchDecryptionCase1(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionInput := resp.Data["batch_results"].(string)
 	batchDecryptionData := map[string]interface{}{
-		"batch_input": batchDecryptionInput,
+		"batch_input": resp.Data["batch_results"],
 	}
 
 	batchDecryptionReq := &logical.Request{
@@ -56,10 +56,12 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 
 	b, s := createBackendWithStorage(t)
 
-	batchEncryptionInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA=="},{"plaintext":"Cg=="}]`
-	batchEncryptionInputB64 := base64.StdEncoding.EncodeToString([]byte(batchEncryptionInput))
+	batchEncryptionInput := []interface{}{
+		map[string]interface{}{"plaintext": "Cg=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+	}
 	batchEncryptionData := map[string]interface{}{
-		"batch_input": batchEncryptionInputB64,
+		"batch_input": batchEncryptionInput,
 	}
 
 	batchEncryptionReq := &logical.Request{
@@ -73,10 +75,13 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchDecryptionInput := resp.Data["batch_results"].(string)
-	batchDecryptionInputB64 := base64.StdEncoding.EncodeToString([]byte(batchDecryptionInput))
+	batchResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
+	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
+	for i, item := range batchResponseItems {
+		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+	}
 	batchDecryptionData := map[string]interface{}{
-		"batch_input": batchDecryptionInputB64,
+		"batch_input": batchDecryptionInput,
 	}
 
 	batchDecryptionReq := &logical.Request{
@@ -90,14 +95,11 @@ func TestTransit_BatchDecryptionCase2(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchDecryptionResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchDecryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	plaintext1 := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 	plaintext2 := "Cg=="
-	for _, item := range batchDecryptionResponseArray {
+	for _, item := range batchDecryptionResponseItems {
 		if item.Plaintext != plaintext1 && item.Plaintext != plaintext2 {
 			t.Fatalf("bad: plaintext: %q", item.Plaintext)
 		}
@@ -127,13 +129,13 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	batchInput := `[{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dGVzdGNvbnRleHQ="},{"plaintext":"dGhlIHF1aWNrIGJyb3duIGZveA==",
-"context":"dGVzdGNvbnRleHQ="}]`
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dGVzdGNvbnRleHQ="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "context": "dGVzdGNvbnRleHQ="},
+	}
 
-	batchInputB64 := base64.StdEncoding.EncodeToString([]byte(batchInput))
 	batchData := map[string]interface{}{
-		"batch_input": batchInputB64,
+		"batch_input": batchInput,
 	}
 	batchReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -146,24 +148,15 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var decryptionRequestItems []BatchRequestItem
-	var batchResponseArray []BatchRequestItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchResponseArray); err != nil {
-		t.Fatal(err)
-	}
-	for _, item := range batchResponseArray {
-		item.Context = []byte("testcontext")
-		decryptionRequestItems = append(decryptionRequestItems, item)
+	batchDecryptionInputItems := resp.Data["batch_results"].([]BatchResponseItem)
+
+	batchDecryptionInput := make([]interface{}, len(batchDecryptionInputItems))
+	for i, item := range batchDecryptionInputItems {
+		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "context": "dGVzdGNvbnRleHQ="}
 	}
 
-	batchDecryptionInput, err := jsonutil.EncodeJSON(decryptionRequestItems)
-	if err != nil {
-		t.Fatalf("failed to encode batch decryption input")
-	}
-
-	batchDecryptionInputB64 := base64.StdEncoding.EncodeToString(batchDecryptionInput)
 	batchDecryptionData := map[string]interface{}{
-		"batch_input": batchDecryptionInputB64,
+		"batch_input": batchDecryptionInput,
 	}
 
 	batchDecryptionReq := &logical.Request{
@@ -177,13 +170,10 @@ func TestTransit_BatchDecryptionCase3(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	var batchDecryptionResponseArray []BatchResponseItem
-	if err := jsonutil.DecodeJSON([]byte(resp.Data["batch_results"].(string)), &batchDecryptionResponseArray); err != nil {
-		t.Fatal(err)
-	}
+	batchDecryptionResponseItems := resp.Data["batch_results"].([]BatchResponseItem)
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
-	for _, item := range batchDecryptionResponseArray {
+	for _, item := range batchDecryptionResponseItems {
 		if item.Plaintext != plaintext {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, item.Plaintext)
 		}

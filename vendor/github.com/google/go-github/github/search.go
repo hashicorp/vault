@@ -6,6 +6,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 
 	qs "github.com/google/go-querystring/query"
@@ -14,12 +15,12 @@ import (
 // SearchService provides access to the search related functions
 // in the GitHub API.
 //
-// GitHub API docs: http://developer.github.com/v3/search/
+// GitHub API docs: https://developer.github.com/v3/search/
 type SearchService service
 
 // SearchOptions specifies optional parameters to the SearchService methods.
 type SearchOptions struct {
-	// How to sort the search results.  Possible values are:
+	// How to sort the search results. Possible values are:
 	//   - for repositories: stars, fork, updated
 	//   - for commits: author-date, committer-date
 	//   - for code: indexed
@@ -48,10 +49,10 @@ type RepositoriesSearchResult struct {
 
 // Repositories searches repositories via various criteria.
 //
-// GitHub API docs: http://developer.github.com/v3/search/#search-repositories
-func (s *SearchService) Repositories(query string, opt *SearchOptions) (*RepositoriesSearchResult, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/search/#search-repositories
+func (s *SearchService) Repositories(ctx context.Context, query string, opt *SearchOptions) (*RepositoriesSearchResult, *Response, error) {
 	result := new(RepositoriesSearchResult)
-	resp, err := s.search("repositories", query, opt, result)
+	resp, err := s.search(ctx, "repositories", query, opt, result)
 	return result, resp, err
 }
 
@@ -79,10 +80,10 @@ type CommitResult struct {
 
 // Commits searches commits via various criteria.
 //
-// GitHub API Docs: https://developer.github.com/v3/search/#search-commits
-func (s *SearchService) Commits(query string, opt *SearchOptions) (*CommitsSearchResult, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/search/#search-commits
+func (s *SearchService) Commits(ctx context.Context, query string, opt *SearchOptions) (*CommitsSearchResult, *Response, error) {
 	result := new(CommitsSearchResult)
-	resp, err := s.search("commits", query, opt, result)
+	resp, err := s.search(ctx, "commits", query, opt, result)
 	return result, resp, err
 }
 
@@ -95,10 +96,10 @@ type IssuesSearchResult struct {
 
 // Issues searches issues via various criteria.
 //
-// GitHub API docs: http://developer.github.com/v3/search/#search-issues
-func (s *SearchService) Issues(query string, opt *SearchOptions) (*IssuesSearchResult, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/search/#search-issues
+func (s *SearchService) Issues(ctx context.Context, query string, opt *SearchOptions) (*IssuesSearchResult, *Response, error) {
 	result := new(IssuesSearchResult)
-	resp, err := s.search("issues", query, opt, result)
+	resp, err := s.search(ctx, "issues", query, opt, result)
 	return result, resp, err
 }
 
@@ -111,10 +112,10 @@ type UsersSearchResult struct {
 
 // Users searches users via various criteria.
 //
-// GitHub API docs: http://developer.github.com/v3/search/#search-users
-func (s *SearchService) Users(query string, opt *SearchOptions) (*UsersSearchResult, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/search/#search-users
+func (s *SearchService) Users(ctx context.Context, query string, opt *SearchOptions) (*UsersSearchResult, *Response, error) {
 	result := new(UsersSearchResult)
-	resp, err := s.search("users", query, opt, result)
+	resp, err := s.search(ctx, "users", query, opt, result)
 	return result, resp, err
 }
 
@@ -160,16 +161,16 @@ func (c CodeResult) String() string {
 
 // Code searches code via various criteria.
 //
-// GitHub API docs: http://developer.github.com/v3/search/#search-code
-func (s *SearchService) Code(query string, opt *SearchOptions) (*CodeSearchResult, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/search/#search-code
+func (s *SearchService) Code(ctx context.Context, query string, opt *SearchOptions) (*CodeSearchResult, *Response, error) {
 	result := new(CodeSearchResult)
-	resp, err := s.search("code", query, opt, result)
+	resp, err := s.search(ctx, "code", query, opt, result)
 	return result, resp, err
 }
 
 // Helper function that executes search queries against different
 // GitHub search types (repositories, commits, code, issues, users)
-func (s *SearchService) search(searchType string, query string, opt *SearchOptions, result interface{}) (*Response, error) {
+func (s *SearchService) search(ctx context.Context, searchType string, query string, opt *SearchOptions, result interface{}) (*Response, error) {
 	params, err := qs.Values(opt)
 	if err != nil {
 		return nil, err
@@ -193,5 +194,5 @@ func (s *SearchService) search(searchType string, query string, opt *SearchOptio
 		req.Header.Set("Accept", "application/vnd.github.v3.text-match+json")
 	}
 
-	return s.client.Do(req, result)
+	return s.client.Do(ctx, req, result)
 }

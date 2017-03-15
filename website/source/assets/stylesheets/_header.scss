@@ -8,22 +8,22 @@
   flex-shrink:0;
 
   .navbar-brand {
-    .logo{
+    .logo {
       width: $project-logo-width;
       padding-left: 50px;
       font-size: 0;
       text-transform: uppercase;
-      background: image-url('logo-header.png') 0 0 no-repeat;
-      @include img-retina("logo-header.png", "logo-header@2x.png", $project-logo-width, $project-logo-height);
+      background: image-url('logo-text.svg') 0 0 no-repeat;
       background-position: 0 46%;
+      background-size: contain;
     }
   }
 
-  .by-hashicorp{
+  .by-hashicorp {
     @include project-by-hashicorp-style();
   }
 
-  .buttons{
+  .buttons {
     margin-top: 2px; //baseline everything
   }
 }
@@ -31,25 +31,8 @@
 @media (max-width: 414px) {
   #header {
     .navbar-brand {
-      .logo{
+      .logo {
         width: $project-logo-width * .8;
-        @include img-retina("logo-header.png", "logo-header@2x.png", $project-logo-width * .8, $project-logo-height * .8);
-
-        img{
-          //width: 72px;
-          //height: 14px;
-        }
-      }
-    }
-  }
-}
-
-
-@media (max-width: 320px) {
-  #header {
-    .navbar-brand {
-      .logo{
-
       }
     }
   }

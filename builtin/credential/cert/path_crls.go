@@ -45,6 +45,12 @@ func (b *backend) populateCRLs(storage logical.Storage) error {
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
 
+	if b.crls != nil {
+		return nil
+	}
+
+	b.crls = map[string]CRLInfo{}
+
 	keys, err := storage.List("crls/")
 	if err != nil {
 		return fmt.Errorf("error listing CRLs: %v", err)
@@ -56,6 +62,7 @@ func (b *backend) populateCRLs(storage logical.Storage) error {
 	for _, key := range keys {
 		entry, err := storage.Get("crls/" + key)
 		if err != nil {
+			b.crls = nil
 			return fmt.Errorf("error loading CRL %s: %v", key, err)
 		}
 		if entry == nil {
@@ -64,6 +71,7 @@ func (b *backend) populateCRLs(storage logical.Storage) error {
 		var crlInfo CRLInfo
 		err = entry.DecodeJSON(&crlInfo)
 		if err != nil {
+			b.crls = nil
 			return fmt.Errorf("error decoding CRL %s: %v", key, err)
 		}
 		b.crls[key] = crlInfo
@@ -121,6 +129,10 @@ func (b *backend) pathCRLDelete(
 		return logical.ErrorResponse(`"name" parameter cannot be empty`), nil
 	}
 
+	if err := b.populateCRLs(req.Storage); err != nil {
+		return nil, err
+	}
+
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
 
@@ -131,8 +143,7 @@ func (b *backend) pathCRLDelete(
 		)), nil
 	}
 
-	err := req.Storage.Delete("crls/" + name)
-	if err != nil {
+	if err := req.Storage.Delete("crls/" + name); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf(
 			"error deleting crl %s: %v", name, err),
 		), nil
@@ -148,6 +159,10 @@ func (b *backend) pathCRLRead(
 	name := strings.ToLower(d.Get("name").(string))
 	if name == "" {
 		return logical.ErrorResponse(`"name" parameter must be set`), nil
+	}
+
+	if err := b.populateCRLs(req.Storage); err != nil {
+		return nil, err
 	}
 
 	b.crlUpdateMutex.RLock()
@@ -183,6 +198,10 @@ func (b *backend) pathCRLWrite(
 	}
 	if certList == nil {
 		return logical.ErrorResponse("parsed CRL is nil"), nil
+	}
+
+	if err := b.populateCRLs(req.Storage); err != nil {
+		return nil, err
 	}
 
 	b.crlUpdateMutex.Lock()

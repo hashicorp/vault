@@ -665,6 +665,12 @@ func (cn *conn) simpleQuery(q string) (res *rows, err error) {
 					cn: cn,
 				}
 			}
+			// Set the result and tag to the last command complete if there wasn't a
+			// query already run. Although queries usually return from here and cede
+			// control to Next, a query with zero results does not.
+			if t == 'C' && res.colNames == nil {
+				res.result, res.tag = cn.parseComplete(r.string())
+			}
 			res.done = true
 		case 'Z':
 			cn.processReadyForQuery(r)
@@ -1333,6 +1339,8 @@ type rows struct {
 	colFmts  []format
 	done     bool
 	rb       readBuf
+	result   driver.Result
+	tag      string
 }
 
 func (rs *rows) Close() error {
@@ -1356,6 +1364,17 @@ func (rs *rows) Columns() []string {
 	return rs.colNames
 }
 
+func (rs *rows) Result() driver.Result {
+	if rs.result == nil {
+		return emptyRows
+	}
+	return rs.result
+}
+
+func (rs *rows) Tag() string {
+	return rs.tag
+}
+
 func (rs *rows) Next(dest []driver.Value) (err error) {
 	if rs.done {
 		return io.EOF
@@ -1373,6 +1392,9 @@ func (rs *rows) Next(dest []driver.Value) (err error) {
 		case 'E':
 			err = parseError(&rs.rb)
 		case 'C', 'I':
+			if t == 'C' {
+				rs.result, rs.tag = conn.parseComplete(rs.rb.string())
+			}
 			continue
 		case 'Z':
 			conn.processReadyForQuery(&rs.rb)

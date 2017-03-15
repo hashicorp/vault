@@ -1,27 +1,19 @@
 package vault
 
-import "sort"
+import (
+	"sort"
 
-// Struct to identify user input errors.
-// This is helpful in responding the appropriate status codes to clients
-// from the HTTP endpoints.
-type StatusBadRequest struct {
-	Err string
-}
-
-// Implementing error interface
-func (s *StatusBadRequest) Error() string {
-	return s.Err
-}
+	"github.com/hashicorp/vault/logical"
+)
 
 // Capabilities is used to fetch the capabilities of the given token on the given path
 func (c *Core) Capabilities(token, path string) ([]string, error) {
 	if path == "" {
-		return nil, &StatusBadRequest{Err: "missing path"}
+		return nil, &logical.StatusBadRequest{Err: "missing path"}
 	}
 
 	if token == "" {
-		return nil, &StatusBadRequest{Err: "missing token"}
+		return nil, &logical.StatusBadRequest{Err: "missing token"}
 	}
 
 	te, err := c.tokenStore.Lookup(token)
@@ -29,7 +21,7 @@ func (c *Core) Capabilities(token, path string) ([]string, error) {
 		return nil, err
 	}
 	if te == nil {
-		return nil, &StatusBadRequest{Err: "invalid token"}
+		return nil, &logical.StatusBadRequest{Err: "invalid token"}
 	}
 
 	if te.Policies == nil {

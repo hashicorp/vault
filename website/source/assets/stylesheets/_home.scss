@@ -1,584 +1,109 @@
-//
-// Home
-// --------------------------------------------------
-
-#hero{
-	/* opacity: 0;
-	@include translate3d(0, -10px, 0); */
-	text-align: center;
-
-    /* &.showit{
-        opacity: 1;
-        @include translate3d(0, 0px, 0);
-        transition: all 1s ease;
-    } */
-
-	#logo-lockup{
-		position: relative;
-		display: inline-block;
-		width: 228px;
-		height: 43px;
-		margin-top: 120px;
-	    background: image-url('logo-lockup.png') 0 0 no-repeat;
-	   	@include img-retina("logo-lockup.png", "logo-lockup@2x.png", 228px, 43px);
-
-	   	.keys{
-	   		position: absolute;
-	   		left: 15px;
-	   		top: 8px;
-	   		width: 12px;
-
-	   		span{
-	   			width: 3px;
-	   			height: 3px;
-	   			border-radius: 2px;
-	   			float: left;
-	   			margin-left: 1px;
-	   			margin-bottom: 1px;
-	   			background-color: $blue;
-	   			transition: all 250ms ease-in;
-
-	   			&:nth-child(1){
-	   				opacity: .85;
-	   			}
-
-	   			&:nth-child(2){
-	   				opacity: .4;
-	   			}
-
-	   			&:nth-child(3){
-	   				opacity: .8;
-	   			}
-
-	   			&:nth-child(4){
-	   				opacity: .9;
-	   			}
-
-	   			&:nth-child(5){
-	   				opacity: .8;
-	   			}
-
-	   			&:nth-child(6){
-	   				opacity: .5;
-	   			}
-
-	   			&:nth-child(7){
-	   				opacity: .65;
-	   			}
-
-	   			&:nth-child(8){
-	   				opacity: .7;
-	   			}
-
-	   			&:nth-child(9){
-	   				opacity: 1;
-	   			}
-
-	   			&:nth-child(10){
-	   				opacity: 1;
-	   				margin-left: 5px;
-	   			}
-
-	   			&.full{
-	   				opacity: 1;
-	   				transition: all 250ms ease-in;
-	   			}
-
-	   			&.full.off{
-	   				opacity: .55;
-	   				transition: all 250ms ease-in;
-	   			}
-
-	   			&.full.press{
-
-					animation-name: press;
-					-webkit-animation-name: press;
-
-					animation-duration: 600ms;
-					-webkit-animation-duration: 600ms;
-
-					animation-timing-function: ease;
-					-webkit-animation-timing-function: ease;
-	   			}
-	   		}
-	   	}
-	}
-
-	#tag-line{
-		margin: 15px 0 20px 0;
-		font-size: 24px;
-		font-weight: 300;
-	}
-
-	#diagram{
-		display: inline-block;
-		width: 490px;
-		height: 193px;
-		margin-top: 120px;
-	    background: image-url('hero.png') 0 0 no-repeat;
-	   	@include img-retina("hero.png", "hero@2x.png", 490px, 193px);
-	}
-
-	p{
-		margin-top: 60px;
-		text-align: left;
-		font-size: 18px;
-		font-weight: 300;
-		line-height: 2em;
-
-		.strong{
-			font-size: 20px;
-			font-weight: 500;
-		}
-	}
-}
-
-#content{
-	margin-top: 180px;
-	text-align: center;
-
-	h2{
-		margin-bottom: 120px;
-		font-size: 44px;
-		@include lato-light();
-		color: $blue;
-		text-transform: uppercase;
-	}
-
-	.feature{
-		margin-bottom: 150px;
-
-		&#crud{
-			.graphic{
-				width: 335px;
-				height: 128px;
-			    background: image-url('graphic-crud.png') 0 0 no-repeat;
-			   	@include img-retina("graphic-crud.png", "graphic-crud@2x.png", 335px, 128px);
-			}
-		}
-
-		&#key{
-			.graphic{
-				width: 243px;
-				height: 140px;
-			    background: image-url('graphic-key.png') 0 0 no-repeat;
-			   	@include img-retina("graphic-key.png", "graphic-key@2x.png", 243px, 140px);
-			}
-		}
-
-		&#audit{
-			.graphic{
-				width: 491px;
-				height: 129px;
-			    background: image-url('graphic-audit.png') 0 0 no-repeat;
-			   	@include img-retina("graphic-audit.png", "graphic-audit@2x.png", 491px, 129px);
-			}
-		}
-
-		.graphic{
-			display: inline-block;
-		}
-
-		h3{
-			margin: 30px 0;
-			color: $black;
-			font-size: 34px;
-			line-height: 34px;
-			letter-spacing: 1px;
-			@include lato-light();
-		}
-
-		p{
-			margin-bottom: 30px;
-			text-align: left;
-			font-size: 16px;
-			line-height: 1.75em;
-			font-weight: 300;
-			@include lato-light();
-		}
-
-		.feature-footer{
-			a{
-				margin-bottom: 15px;
-				margin-left: 15px;
-
-				&:first-child{
-					margin-left: 0;
-				}
-			}
-		}
-	}
-
-	#cta {
-		position: relative;
-		padding: 160px 0;
-		background: image-url('bg-icons.png') center center no-repeat;
-		@include img-retina("bg-icons.png", "bg-icons@2x.png", 669px, 260px);
-		background-position: center center;
-		border-top: 1px solid $faint-gray;
-		border-bottom: 1px solid $faint-gray;
-
-		a{
-			margin-bottom: 5px;
-		}
-
-		p{
-			margin-top: 10px;
-			color: $black;
-			font-size: 14px;
-			font-weight: 600;
-	    	line-height: 1.5esm;
-
-	    	&.cta-gray{
-	    		color: $gray;
-	    		font-weight: 300;
-	    	}
-		}
-
-		.outline-btn {
-			padding: 16px 40px;
-			display: inline-block;
-			&:focus {
-		    	outline: 0;
-			}
-		}
-	}
-}
-
-#demos{
-	position: relative;
-	padding: 180px 0 60px;
-	margin-top: -80px;
-
-	>.container{
-		z-index: 31;
-	}
-
-	#demo-bg{
-		background-color: #000;
-		@include skewY(-3deg);
-		z-index: 30;
-	}
-
-	.explantion {
-		margin: 40px 0 60px 15px;
-		border-left: 8px solid #1e1e1e;
-
-		h2 {
-			margin-top: 0;
-			font-size: 28px;
-			color: lighten($purple, 8%);
-			@include lato-light();
-		}
-
-		p{
-			margin-bottom: 0;
-			font-size: 16px;
-			letter-spacing: 1px;
-			line-height: 1.5em;
-			color: $gray-light;
-			font-weight: 400;
-		}
-	}
-
-	.terminals{
-		margin-bottom: 80px;
-
-		.terminal-item{
-			margin-bottom: 120px;
-
-			&.last{
-				border-bottom: none;
-			}
-			>header{
-				.left{
-					span.icn{
-						display: inline-block;
-						width: 83px;
-						height: 74px;
-					}
-				}
-
-				.right{
-					padding-left: 25px;
-
-					h2{
-						margin-top: 0;
-						font-size: 28px;
-						text-transform: uppercase;
-					}
-
-					p{
-						font-size: 16px;
-					}
-				}
-			}
-
-			.terminal{
-				border: 2px solid #1e1e1e;
-				//border-radius: 4px;
-
-				header{
-					position: relative;
-					text-align: center;
-					padding: 3px;
-					//background-color: #1e1e1e;
-					border-bottom: 2px solid #1e1e1e;
-
-					h4{
-						font-size: 14px;
-						letter-spacing: 1px;
-						color: white;
-						font-family: $font-family-lato;
-						font-weight: $font-weight-lato-xb;
-					}
-
-					ul.shell-dots{
-						position: absolute;
-						top: 10px;
-						left: 8px;
-						padding-left: 0;
-
-						li{
-							&.d1{
-								background-color: #4a08a7;
-							}
-							&.d2{
-								background-color: #6517cf;
-							}
-							&.d3{
-								background-color: #7b29ee;
-							}
-
-							display: inline-block;
-							width: 12px;
-							height: 12px;
-							border-radius: 6px;
-							margin-left: 6px;
-						}
-					}
-				}
-
-				.terminal-window{
-					min-height: 140px;
-					padding: 20px;
-					font-size: 15px;
-					font-family: "Courier New", Monaco, Menlo, Consolas, monospace;
-					color: $white;
-					background-color: transparent;
-					overflow:auto;
-					font-weight: 500;
-					-webkit-font-smoothing: antialiased;
-
-					.txt-spe {
-						color: lighten($blue, 5%);
-						font-weight: 600;
-					}
-
-					.txt-var {
-						color: lighten($purple, 8%);
-						font-weight: 600;
-					}
-
-					.txt-str {
-						color: lighten($green, 2%);
-					}
-
-					.txt-int {
-						color: lighten($orange, 2%);
-						font-weight: 600;
-					}
-
-					p{
-						margin-bottom: 2px;
-						white-space: pre-wrap;
-					}
-					.cursor {
-						background-color: lighten($purple, 5%);
-					}
-				}
-			}
-
-			.feature-bullets{
-				list-style-type: none;
-				padding-left: 35px;
-
-				li{
-					padding: 5px 0 5px 45px;
-				}
-			}
-		}
-	}
-}
-
-
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-	#demos{
-		.terminals{
-			.terminal-item{
-				.feature-bullets{
-					li{
-						background-size: 12px 12px;
-					}
-				}
-			}
-		}
-	}
-}
-
-
-@media (min-width: 1200px) {
-
-}
-
-
-@media (max-width: 1200px) {
-
-}
-
-@media (min-width: 992px) and (max-width:1200px) {
-	#cta a {
-		margin-top: 15px;
-		font-size: 18px;
-	}
-}
-
-@media (min-width: 768px) and (max-width:992px) {
-	#cta a {
-		margin-top: 10px;
-	}
-}
-
-@media (max-width: 992px) {
-
-	#demos{
-		.terminals{
-			.terminal-item{
-				>header{
-					.left{
-						span.icn{
-						}
-					}
-
-					.right{
-						padding-left: 54px;
-					}
-				}
-			}
-		}
-	}
-}
-
-@media (max-width: 768px) {
-
-	#demos{
-		.explantion {
-			margin: 40px 0 60px 0;
-		}
-
-		.terminals{
-			.terminal-item{
-				>header{
-					.left{
-						span.icn{
-							padding-bottom: 15px;
-						}
-					}
-
-					.right{
-						padding-left: 15px;
-					}
-				}
-			}
-		}
-	}
-
-	#cta{
-		.intro{
-			text-align: center;
-			p{
-				text-align: center;
-				margin-bottom: 15px;
-			}
-		}
-	}
-}
-
-
-@media (max-width: 480px) {
-
-
-	#hero{
-		#diagram{
-			width: 100%;
-			height: 132px;
-		    background: image-url('hero.png') center 0 no-repeat;
-		   	@include img-retina("hero.png", "hero@2x.png", 320px, 132px);
-		}
-	}
-
-	#content{
-		.feature{
-			&#audit{
-				.graphic{
-					width: 100%;
-					height: 84px;
-				    background: image-url('graphic-audit.png') center 0 no-repeat;
-				   	@include img-retina("graphic-audit.png", "graphic-audit@2x.png", 320px, 84px);
-				}
-			}
-		}
-	}
-
-	.feature-footer{
-		text-align: center;
-		a{
-			margin-bottom: 15px;
-			margin-left: 0 !important;
-		}
-	}
-}
-
-
-@media (max-width: 320px) {
-
-	#hero{
-		#diagram{
-			width: 100%;
-			height: 132px;
-		    background: image-url('hero.png') center 0 no-repeat;
-		   	@include img-retina("hero.png", "hero@2x.png", 320px, 132px);
-		}
-	}
-
-	#content{
-		.feature{
-			&#crud{
-				.graphic{
-					width: 100%;
-					height: 111px;
-				    background: image-url('graphic-crud.png') center 0 no-repeat;
-				   	@include img-retina("graphic-crud.png", "graphic-crud@2x.png", 290px, 111px);
-				}
-			}
-
-			&#audit{
-				.graphic{
-					width: 100%;
-					height: 76px;
-				    background: image-url('graphic-audit.png') center 0 no-repeat;
-				   	@include img-retina("graphic-audit.png", "graphic-audit@2x.png", 290px, 76px);
-				}
-			}
-		}
-	}
-
-	#demos .explantion{
-		border-left: 8px solid transparent;
-	}
-
-	#cta a {
-		font-size: 14px;
-		font-weight: 400;
-	}
+#page-home {
+  #container {
+    margin-top: 140px;
+    position: relative;
+    text-align: center;
+    z-index: 1;
+
+    #tag-line {
+      display: block;
+      font-size: 24px;
+      font-weight: 300;
+      margin: 15px 0 40px 0;
+    }
+
+    #diagram {
+      background-image: image-url("hero@2x.png");
+      background-origin: content-box;
+      background-position: center center;
+      background-repeat: no-repeat;
+      background-size: contain;
+      display: block;
+      margin: 60px 0;
+      padding: 15px;
+
+      height: 193px;
+      width: 100%;
+    }
+
+    h2.features-header {
+      color: $blue;
+      display: inline-block;
+      font-size: 44px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      margin: 120px auto 40px auto;
+      text-transform: uppercase;
+    }
+
+    h3.feature-header {
+      color: $black;
+      font-size: 36px;
+      font-weight: 300;
+      margin: 30px 0;
+      text-transform: none;
+    }
+
+    p {
+      font-size: 18px;
+      font-weight: 300;
+      line-height: 36px;
+      margin: 25px 0;
+      padding: 15px;
+      text-align: left;
+    }
+
+    .feature {
+      margin-bottom: 150px;
+
+      .graphic {
+        background-origin: content-box;
+        background-position: center center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        display: block;
+        margin: 60px 0;
+        padding: 15px;
+
+        height: 160px;
+        width: 100%;
+      }
+
+      &#crud {
+        .graphic {
+          background-image: image-url("graphic-crud@2x.png");
+        }
+      }
+
+      &#key {
+        .graphic {
+          background-image: image-url("graphic-key@2x.png");
+        }
+      }
+
+      &#audit {
+        .graphic {
+          background-image: image-url("graphic-audit@2x.png");
+        }
+      }
+    }
+
+    #cta {
+      @include img-retina("bg-icons.png", "bg-icons@2x.png", 669px, 260px);
+      background: image-url("bg-icons.png") center center no-repeat;
+      background-position: center center;
+      border-top: 1px solid $faint-gray;
+      border-bottom: 1px solid $faint-gray;
+      padding: 140px 0;
+
+      p {
+        margin-top: 10px;
+        color: $black;
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.5esm;
+        text-align: center;
+      }
+    }
+  }
 }

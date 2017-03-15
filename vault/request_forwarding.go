@@ -3,6 +3,7 @@ package vault
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
 	"net/http"
@@ -24,8 +25,16 @@ const (
 
 // Starts the listeners and servers necessary to handle forwarded requests
 func (c *Core) startForwarding() error {
+	c.logger.Trace("core: cluster listener setup function")
+	defer c.logger.Trace("core: leaving cluster listener setup function")
+
 	// Clean up in case we have transitioned from a client to a server
+	c.requestForwardingConnectionLock.Lock()
 	c.clearForwardingClients()
+	c.requestForwardingConnectionLock.Unlock()
+
+	// Resolve locally to avoid races
+	ha := c.ha != nil
 
 	// Get our base handler (for our RPC server) and our wrapped handler (for
 	// straight HTTP/2 forwarding)
@@ -34,7 +43,7 @@ func (c *Core) startForwarding() error {
 	// Get our TLS config
 	tlsConfig, err := c.ClusterTLSConfig()
 	if err != nil {
-		c.logger.Error("core/startClusterListener: failed to get tls configuration", "error", err)
+		c.logger.Error("core: failed to get tls configuration when starting forwarding", "error", err)
 		return err
 	}
 
@@ -42,11 +51,22 @@ func (c *Core) startForwarding() error {
 	tlsConfig.NextProtos = []string{"h2", "req_fw_sb-act_v1"}
 
 	// Create our RPC server and register the request handler server
+	c.clusterParamsLock.Lock()
+
+	if c.rpcServer != nil {
+		c.logger.Warn("core: forwarding rpc server already running")
+		return nil
+	}
+
 	c.rpcServer = grpc.NewServer()
-	RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
-		core:    c,
-		handler: baseHandler,
-	})
+
+	if ha {
+		RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
+			core:    c,
+			handler: baseHandler,
+		})
+	}
+	c.clusterParamsLock.Unlock()
 
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
@@ -82,6 +102,7 @@ func (c *Core) startForwarding() error {
 
 			// Wrap the listener with TLS
 			tlsLn := tls.NewListener(tcpLn, tlsConfig)
+			defer tlsLn.Close()
 
 			if c.logger.IsInfo() {
 				c.logger.Info("core/startClusterListener: serving cluster requests", "cluster_listen_address", tlsLn.Addr())
@@ -89,7 +110,6 @@ func (c *Core) startForwarding() error {
 
 			for {
 				if atomic.LoadUint32(&shutdown) > 0 {
-					tlsLn.Close()
 					return
 				}
 
@@ -100,10 +120,11 @@ func (c *Core) startForwarding() error {
 
 				// Accept the connection
 				conn, err := tlsLn.Accept()
+				if conn != nil {
+					// Always defer although it may be closed ahead of time
+					defer conn.Close()
+				}
 				if err != nil {
-					if conn != nil {
-						conn.Close()
-					}
 					continue
 				}
 
@@ -113,7 +134,7 @@ func (c *Core) startForwarding() error {
 				err = tlsConn.Handshake()
 				if err != nil {
 					if c.logger.IsDebug() {
-						c.logger.Debug("core/startClusterListener/Accept: error handshaking", "error", err)
+						c.logger.Debug("core: error handshaking cluster connection", "error", err)
 					}
 					if conn != nil {
 						conn.Close()
@@ -123,19 +144,29 @@ func (c *Core) startForwarding() error {
 
 				switch tlsConn.ConnectionState().NegotiatedProtocol {
 				case "h2":
-					c.logger.Debug("core/startClusterListener/Accept: got h2 connection")
+					if !ha {
+						conn.Close()
+						continue
+					}
+
+					c.logger.Trace("core: got h2 connection")
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: wrappedHandler,
 					})
 
 				case "req_fw_sb-act_v1":
-					c.logger.Debug("core/startClusterListener/Accept: got req_fw_sb-act_v1 connection")
+					if !ha {
+						conn.Close()
+						continue
+					}
+
+					c.logger.Trace("core: got req_fw_sb-act_v1 connection")
 					go fws.ServeConn(conn, &http2.ServeConnOpts{
 						Handler: c.rpcServer,
 					})
 
 				default:
-					c.logger.Debug("core/startClusterListener/Accept: unknown negotiated protocol")
+					c.logger.Debug("core: unknown negotiated protocol on cluster port")
 					conn.Close()
 					continue
 				}
@@ -154,8 +185,12 @@ func (c *Core) startForwarding() error {
 		<-c.clusterListenerShutdownCh
 
 		// Stop the RPC server
+		c.logger.Info("core: shutting down forwarding rpc listeners")
+		c.clusterParamsLock.Lock()
 		c.rpcServer.Stop()
-		c.logger.Info("core/startClusterListener: shutting down listeners")
+		c.rpcServer = nil
+		c.clusterParamsLock.Unlock()
+		c.logger.Info("core: forwarding rpc listeners stopped")
 
 		// Set the shutdown flag. This will cause the listeners to shut down
 		// within the deadline in clusterListenerAcceptDeadline
@@ -163,7 +198,7 @@ func (c *Core) startForwarding() error {
 
 		// Wait for them all to shut down
 		shutdownWg.Wait()
-		c.logger.Info("core/startClusterListener: listeners successfully shut down")
+		c.logger.Info("core: rpc listeners successfully shut down")
 
 		// Tell the main thread that shutdown is done.
 		c.clusterListenerShutdownSuccessCh <- struct{}{}
@@ -176,29 +211,23 @@ func (c *Core) startForwarding() error {
 // alive and that the current active address value matches the most
 // recently-known address.
 func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
+	c.logger.Trace("core: refreshing forwarding connection")
+	defer c.logger.Trace("core: done refreshing forwarding connection")
+
 	c.requestForwardingConnectionLock.Lock()
 	defer c.requestForwardingConnectionLock.Unlock()
 
-	// It's nil but we don't have an address anyways, so exit
-	if c.requestForwardingConnection == nil && clusterAddr == "" {
-		return nil
-	}
+	// Clean things up first
+	c.clearForwardingClients()
 
-	// NOTE: We don't fast path the case where we have a connection because the
-	// address is the same, because the cert/key could have changed if the
-	// active node ended up being the same node. Before we hit this function in
-	// Leader() we'll have done a hash on the advertised info to ensure that we
-	// won't hit this function unnecessarily anyways.
-
-	// Disabled, potentially, so clean up anything that might be around.
+	// If we don't have anything to connect to, just return
 	if clusterAddr == "" {
-		c.clearForwardingClients()
 		return nil
 	}
 
 	clusterURL, err := url.Parse(clusterAddr)
 	if err != nil {
-		c.logger.Error("core/refreshRequestForwardingConnection: error parsing cluster address", "error", err)
+		c.logger.Error("core: error parsing cluster address attempting to refresh forwarding connection", "error", err)
 		return err
 	}
 
@@ -207,7 +236,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		// Set up normal HTTP forwarding handling
 		tlsConfig, err := c.ClusterTLSConfig()
 		if err != nil {
-			c.logger.Error("core/refreshRequestForwardingConnection: error fetching cluster tls configuration", "error", err)
+			c.logger.Error("core: error fetching cluster tls configuration when trying to create connection", "error", err)
 			return err
 		}
 		tp := &http2.Transport{
@@ -223,11 +252,12 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		// It's not really insecure, but we have to dial manually to get the
 		// ALPN header right. It's just "insecure" because GRPC isn't managing
 		// the TLS state.
+
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		c.rpcClientConnCancelFunc = cancelFunc
-		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "")), grpc.WithInsecure())
+		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)), grpc.WithInsecure())
 		if err != nil {
-			c.logger.Error("core/refreshRequestForwardingConnection: err setting up rpc client", "error", err)
+			c.logger.Error("core: err setting up forwarding rpc client", "error", err)
 			return err
 		}
 		c.rpcForwardingClient = NewRequestForwardingClient(c.rpcClientConn)
@@ -237,22 +267,23 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 }
 
 func (c *Core) clearForwardingClients() {
+	c.logger.Trace("core: clearing forwarding clients")
+	defer c.logger.Trace("core: done clearing forwarding clients")
+
 	if c.requestForwardingConnection != nil {
 		c.requestForwardingConnection.transport.CloseIdleConnections()
 		c.requestForwardingConnection = nil
 	}
 
-	c.rpcForwardingClient = nil
-
 	if c.rpcClientConnCancelFunc != nil {
 		c.rpcClientConnCancelFunc()
 		c.rpcClientConnCancelFunc = nil
 	}
-
 	if c.rpcClientConn != nil {
 		c.rpcClientConn.Close()
 		c.rpcClientConn = nil
 	}
+	c.rpcForwardingClient = nil
 }
 
 // ForwardRequest forwards a given request to the active node and returns the
@@ -330,7 +361,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 // getGRPCDialer is used to return a dialer that has the correct TLS
 // configuration. Otherwise gRPC tries to be helpful and stomps all over our
 // NextProtos.
-func (c *Core) getGRPCDialer(alpnProto, serverName string) func(string, time.Duration) (net.Conn, error) {
+func (c *Core) getGRPCDialer(alpnProto, serverName string, caCert *x509.Certificate) func(string, time.Duration) (net.Conn, error) {
 	return func(addr string, timeout time.Duration) (net.Conn, error) {
 		tlsConfig, err := c.ClusterTLSConfig()
 		if err != nil {
@@ -340,6 +371,13 @@ func (c *Core) getGRPCDialer(alpnProto, serverName string) func(string, time.Dur
 		if serverName != "" {
 			tlsConfig.ServerName = serverName
 		}
+		if caCert != nil {
+			pool := x509.NewCertPool()
+			pool.AddCert(caCert)
+			tlsConfig.RootCAs = pool
+			tlsConfig.ClientCAs = pool
+		}
+		c.logger.Trace("core: creating rpc dialer", "host", tlsConfig.ServerName)
 
 		tlsConfig.NextProtos = []string{alpnProto}
 		dialer := &net.Dialer{
@@ -355,6 +393,8 @@ type forwardedRequestRPCServer struct {
 }
 
 func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *forwarding.Request) (*forwarding.Response, error) {
+	//s.core.logger.Trace("forwarding: serving rpc forwarded request")
+
 	// Parse an http.Request out of it
 	req, err := forwarding.ParseForwardedRequest(freq)
 	if err != nil {

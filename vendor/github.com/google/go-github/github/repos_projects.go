@@ -5,12 +5,15 @@
 
 package github
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // ListProjects lists the projects for a repo.
 //
 // GitHub API docs: https://developer.github.com/v3/projects/#list-repository-projects
-func (s *RepositoriesService) ListProjects(owner, repo string, opt *ListOptions) ([]*Project, *Response, error) {
+func (s *RepositoriesService) ListProjects(ctx context.Context, owner, repo string, opt *ListOptions) ([]*Project, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/projects", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -26,18 +29,18 @@ func (s *RepositoriesService) ListProjects(owner, repo string, opt *ListOptions)
 	req.Header.Set("Accept", mediaTypeProjectsPreview)
 
 	projects := []*Project{}
-	resp, err := s.client.Do(req, &projects)
+	resp, err := s.client.Do(ctx, req, &projects)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return projects, resp, err
+	return projects, resp, nil
 }
 
 // CreateProject creates a GitHub Project for the specified repository.
 //
 // GitHub API docs: https://developer.github.com/v3/projects/#create-a-repository-project
-func (s *RepositoriesService) CreateProject(owner, repo string, opt *ProjectOptions) (*Project, *Response, error) {
+func (s *RepositoriesService) CreateProject(ctx context.Context, owner, repo string, opt *ProjectOptions) (*Project, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/projects", owner, repo)
 	req, err := s.client.NewRequest("POST", u, opt)
 	if err != nil {
@@ -48,10 +51,10 @@ func (s *RepositoriesService) CreateProject(owner, repo string, opt *ProjectOpti
 	req.Header.Set("Accept", mediaTypeProjectsPreview)
 
 	project := &Project{}
-	resp, err := s.client.Do(req, project)
+	resp, err := s.client.Do(ctx, req, project)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return project, resp, err
+	return project, resp, nil
 }

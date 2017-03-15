@@ -5,7 +5,10 @@
 
 package github
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 // Subscription identifies a repository or thread subscription.
 type Subscription struct {
@@ -24,8 +27,8 @@ type Subscription struct {
 
 // ListWatchers lists watchers of a particular repo.
 //
-// GitHub API Docs: http://developer.github.com/v3/activity/watching/#list-watchers
-func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]*User, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/activity/watching/#list-watchers
+func (s *ActivityService) ListWatchers(ctx context.Context, owner, repo string, opt *ListOptions) ([]*User, *Response, error) {
 	u := fmt.Sprintf("repos/%s/%s/subscribers", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
@@ -38,7 +41,7 @@ func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]
 	}
 
 	var watchers []*User
-	resp, err := s.client.Do(req, &watchers)
+	resp, err := s.client.Do(ctx, req, &watchers)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -46,11 +49,11 @@ func (s *ActivityService) ListWatchers(owner, repo string, opt *ListOptions) ([]
 	return watchers, resp, nil
 }
 
-// ListWatched lists the repositories the specified user is watching.  Passing
+// ListWatched lists the repositories the specified user is watching. Passing
 // the empty string will fetch watched repos for the authenticated user.
 //
-// GitHub API Docs: https://developer.github.com/v3/activity/watching/#list-repositories-being-watched
-func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]*Repository, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/activity/watching/#list-repositories-being-watched
+func (s *ActivityService) ListWatched(ctx context.Context, user string, opt *ListOptions) ([]*Repository, *Response, error) {
 	var u string
 	if user != "" {
 		u = fmt.Sprintf("users/%v/subscriptions", user)
@@ -68,7 +71,7 @@ func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]*Reposit
 	}
 
 	var watched []*Repository
-	resp, err := s.client.Do(req, &watched)
+	resp, err := s.client.Do(ctx, req, &watched)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -77,11 +80,11 @@ func (s *ActivityService) ListWatched(user string, opt *ListOptions) ([]*Reposit
 }
 
 // GetRepositorySubscription returns the subscription for the specified
-// repository for the authenticated user.  If the authenticated user is not
+// repository for the authenticated user. If the authenticated user is not
 // watching the repository, a nil Subscription is returned.
 //
-// GitHub API Docs: https://developer.github.com/v3/activity/watching/#get-a-repository-subscription
-func (s *ActivityService) GetRepositorySubscription(owner, repo string) (*Subscription, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/activity/watching/#get-a-repository-subscription
+func (s *ActivityService) GetRepositorySubscription(ctx context.Context, owner, repo string) (*Subscription, *Response, error) {
 	u := fmt.Sprintf("repos/%s/%s/subscription", owner, repo)
 
 	req, err := s.client.NewRequest("GET", u, nil)
@@ -90,14 +93,14 @@ func (s *ActivityService) GetRepositorySubscription(owner, repo string) (*Subscr
 	}
 
 	sub := new(Subscription)
-	resp, err := s.client.Do(req, sub)
+	resp, err := s.client.Do(ctx, req, sub)
 	if err != nil {
 		// if it's just a 404, don't return that as an error
 		_, err = parseBoolResponse(err)
 		return nil, resp, err
 	}
 
-	return sub, resp, err
+	return sub, resp, nil
 }
 
 // SetRepositorySubscription sets the subscription for the specified repository
@@ -107,8 +110,8 @@ func (s *ActivityService) GetRepositorySubscription(owner, repo string) (*Subscr
 // To ignore notifications made within a repository, set subscription.Ignored to true.
 // To stop watching a repository, use DeleteRepositorySubscription.
 //
-// GitHub API Docs: https://developer.github.com/v3/activity/watching/#set-a-repository-subscription
-func (s *ActivityService) SetRepositorySubscription(owner, repo string, subscription *Subscription) (*Subscription, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/activity/watching/#set-a-repository-subscription
+func (s *ActivityService) SetRepositorySubscription(ctx context.Context, owner, repo string, subscription *Subscription) (*Subscription, *Response, error) {
 	u := fmt.Sprintf("repos/%s/%s/subscription", owner, repo)
 
 	req, err := s.client.NewRequest("PUT", u, subscription)
@@ -117,12 +120,12 @@ func (s *ActivityService) SetRepositorySubscription(owner, repo string, subscrip
 	}
 
 	sub := new(Subscription)
-	resp, err := s.client.Do(req, sub)
+	resp, err := s.client.Do(ctx, req, sub)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return sub, resp, err
+	return sub, resp, nil
 }
 
 // DeleteRepositorySubscription deletes the subscription for the specified
@@ -131,13 +134,13 @@ func (s *ActivityService) SetRepositorySubscription(owner, repo string, subscrip
 // This is used to stop watching a repository. To control whether or not to
 // receive notifications from a repository, use SetRepositorySubscription.
 //
-// GitHub API Docs: https://developer.github.com/v3/activity/watching/#delete-a-repository-subscription
-func (s *ActivityService) DeleteRepositorySubscription(owner, repo string) (*Response, error) {
+// GitHub API docs: https://developer.github.com/v3/activity/watching/#delete-a-repository-subscription
+func (s *ActivityService) DeleteRepositorySubscription(ctx context.Context, owner, repo string) (*Response, error) {
 	u := fmt.Sprintf("repos/%s/%s/subscription", owner, repo)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.client.Do(req, nil)
+	return s.client.Do(ctx, req, nil)
 }

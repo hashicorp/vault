@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/physical"
@@ -44,10 +45,10 @@ func (c *Core) RekeyThreshold(recovery bool) (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return 0, ErrSealed
+		return 0, consts.ErrSealed
 	}
 	if c.standby {
-		return 0, ErrStandby
+		return 0, consts.ErrStandby
 	}
 
 	c.rekeyLock.RLock()
@@ -72,10 +73,10 @@ func (c *Core) RekeyProgress(recovery bool) (int, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return 0, ErrSealed
+		return 0, consts.ErrSealed
 	}
 	if c.standby {
-		return 0, ErrStandby
+		return 0, consts.ErrStandby
 	}
 
 	c.rekeyLock.RLock()
@@ -92,10 +93,10 @@ func (c *Core) RekeyConfig(recovery bool) (*SealConfig, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	c.rekeyLock.Lock()
@@ -146,10 +147,10 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return ErrSealed
+		return consts.ErrSealed
 	}
 	if c.standby {
-		return ErrStandby
+		return consts.ErrStandby
 	}
 
 	c.rekeyLock.Lock()
@@ -196,10 +197,10 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return ErrSealed
+		return consts.ErrSealed
 	}
 	if c.standby {
-		return ErrStandby
+		return consts.ErrStandby
 	}
 
 	c.rekeyLock.Lock()
@@ -240,10 +241,10 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	// Verify the key length
@@ -410,6 +411,16 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := c.barrier.Put(&Entry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(c.barrierRekeyConfig.Nonce),
+	}); err != nil {
+		c.logger.Error("core: error saving keyring canary", "error", err)
+		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
+	}
+
 	// Done!
 	c.barrierRekeyProgress = nil
 	c.barrierRekeyConfig = nil
@@ -422,10 +433,10 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	// Verify the key length
@@ -578,6 +589,16 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 		return nil, fmt.Errorf("failed to save rekey seal configuration: %v", err)
 	}
 
+	// Write to the canary path, which will force a synchronous truing during
+	// replication
+	if err := c.barrier.Put(&Entry{
+		Key:   coreKeyringCanaryPath,
+		Value: []byte(c.recoveryRekeyConfig.Nonce),
+	}); err != nil {
+		c.logger.Error("core: error saving keyring canary", "error", err)
+		return nil, fmt.Errorf("failed to save keyring canary: %v", err)
+	}
+
 	// Done!
 	c.recoveryRekeyProgress = nil
 	c.recoveryRekeyConfig = nil
@@ -589,10 +610,10 @@ func (c *Core) RekeyCancel(recovery bool) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return ErrSealed
+		return consts.ErrSealed
 	}
 	if c.standby {
-		return ErrStandby
+		return consts.ErrStandby
 	}
 
 	c.rekeyLock.Lock()
@@ -615,10 +636,10 @@ func (c *Core) RekeyRetrieveBackup(recovery bool) (*RekeyBackup, error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, ErrSealed
+		return nil, consts.ErrSealed
 	}
 	if c.standby {
-		return nil, ErrStandby
+		return nil, consts.ErrStandby
 	}
 
 	c.rekeyLock.RLock()
@@ -652,10 +673,10 @@ func (c *Core) RekeyDeleteBackup(recovery bool) error {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return ErrSealed
+		return consts.ErrSealed
 	}
 	if c.standby {
-		return ErrStandby
+		return consts.ErrStandby
 	}
 
 	c.rekeyLock.Lock()

@@ -47,9 +47,11 @@ $sidebar-icon-height: 20px;
   li > a {
     background-color: $link-bg;
   }
+
   li:hover > a {
     background-color: $link-hover-bg;
   }
+
   li:focus > a, li > a:focus {
     background-color: $link-bg;
   }
@@ -143,11 +145,11 @@ $sidebar-icon-height: 20px;
   }
 
   .sidebar-image {
-    padding-top: 24px;
-    img {
-      display: block;
-      margin: 0 auto;
-    }
+    background-image: image-url('logo-text.svg');
+    background-position: center center;
+    background-repeat: no-repeat;
+    height: 72px;
+    margin-top: 24px;
   }
 
 
@@ -249,17 +251,6 @@ $sidebar-icon-height: 20px;
   .sidebar.open {
     min-width: $sidebar-width;
     width: $sidebar-width;
-  }
-
-  .sidebar .sidebar-header {
-    //height: $sidebar-width * 9/16; // 16:9 header dimension
-  }
-
-  .sidebar .sidebar-image {
-    /* img {
-    width: $sidebar-width/4 - $sidebar-padding;
-    height: $sidebar-width/4 - $sidebar-padding;
-  } */
   }
 }
 

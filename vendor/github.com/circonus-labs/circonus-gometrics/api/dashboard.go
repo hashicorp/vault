@@ -144,11 +144,11 @@ type DashboardWidgetSettings struct {
 	HostStatusSettings  StatusWidgetHostStatusSettings  `json:"host_status_settings,omitempty"`  // status
 	KeyInline           bool                            `json:"key_inline,omitempty"`            // graphs
 	KeyLoc              string                          `json:"key_loc,omitempty"`               // graphs
-	KeySize             string                          `json:"key_size,omitempty"`              // graphs
+	KeySize             uint                            `json:"key_size,omitempty"`              // graphs
 	KeyWrap             bool                            `json:"key_wrap,omitempty"`              // graphs
 	Label               string                          `json:"label,omitempty"`                 // graphs
 	Layout              string                          `json:"layout,omitempty"`                // clusters
-	Limit               string                          `json:"limit,omitempty"`                 // lists
+	Limit               uint                            `json:"limit,omitempty"`                 // lists
 	Maintenance         string                          `json:"maintenance,omitempty"`           // alerts
 	Markup              string                          `json:"markup,omitempty"`                // html
 	MetricDisplayName   string                          `json:"metric_display_name,omitempty"`   // gauges
@@ -156,7 +156,7 @@ type DashboardWidgetSettings struct {
 	MinAge              string                          `json:"min_age,omitempty"`               // alerts
 	OffHours            []uint                          `json:"off_hours,omitempty"`             // alerts
 	OverlaySetID        string                          `json:"overlay_set_id,omitempty"`        // graphs
-	Period              interface{}                     `json:"period,omitempty"`                // BUG type switching between widgets (doc: string; gauges, text: uint; graphs: string)
+	Period              uint                            `json:"period,omitempty"`                // gauges, text, graphs
 	RangeHigh           int                             `json:"range_high,omitempty"`            // gauges
 	RangeLow            int                             `json:"range_low,omitempty"`             // gauges
 	Realtime            bool                            `json:"realtime,omitempty"`              // graphs
