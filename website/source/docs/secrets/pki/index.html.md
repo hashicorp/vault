@@ -1221,7 +1221,24 @@ subpath for interactive help output.
         <span class="param-flags">optional</span>
         If set, when used with the CSR signing endpoint, the common name in the
         CSR will be used instead of taken from the JSON data. This does `not`
-        include any requested SANs in the CSR. Defaults to `false`.
+        include any requested SANs in the CSR; use `use_csr_sans` for that.
+        Defaults to `true`.
+      </li>
+      <li>
+        <span class="param">use_csr_sans</span>
+        <span class="param-flags">optional</span>
+        If set, when used with the CSR signing endpoint, the subject alternate
+        names in the CSR will be used instead of taken from the JSON data. This
+        does `not` include the common name in the CSR; use
+        `use_csr_common_name` for that. Defaults to `true`.
+      </li>
+      <li>
+        <span class="param">allow_token_displayname</span>
+        <span class="param-flags">optional</span>
+        If set, the display name of the token used when requesting a
+        certificate will be considered to be a valid host name by the role.
+        Normal verification behavior applies with respect to subdomains and
+        wildcards.
       </li>
       <li>
         <span class="param">ou</span>

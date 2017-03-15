@@ -561,10 +561,8 @@ func generateCreationBundle(b *backend,
 	// Get the common name
 	var cn string
 	{
-		if csr != nil {
-			if role.UseCSRCommonName {
-				cn = csr.Subject.CommonName
-			}
+		if csr != nil && role.UseCSRCommonName {
+			cn = csr.Subject.CommonName
 		}
 		if cn == "" {
 			cn = data.Get("common_name").(string)
@@ -594,6 +592,11 @@ func generateCreationBundle(b *backend,
 	dnsNames := []string{}
 	emailAddresses := []string{}
 	{
+		if csr != nil && role.UseCSRSANs {
+			dnsNames = csr.DNSNames
+			emailAddresses = csr.EmailAddresses
+		}
+
 		if !data.Get("exclude_cn_from_sans").(bool) {
 			if strings.Contains(cn, "@") {
 				// Note: emails are not disallowed if the role's email protection
@@ -606,15 +609,18 @@ func generateCreationBundle(b *backend,
 				dnsNames = append(dnsNames, cn)
 			}
 		}
-		cnAltInt, ok := data.GetOk("alt_names")
-		if ok {
-			cnAlt := cnAltInt.(string)
-			if len(cnAlt) != 0 {
-				for _, v := range strings.Split(cnAlt, ",") {
-					if strings.Contains(v, "@") {
-						emailAddresses = append(emailAddresses, v)
-					} else {
-						dnsNames = append(dnsNames, v)
+
+		if csr == nil || !role.UseCSRSANs {
+			cnAltInt, ok := data.GetOk("alt_names")
+			if ok {
+				cnAlt := cnAltInt.(string)
+				if len(cnAlt) != 0 {
+					for _, v := range strings.Split(cnAlt, ",") {
+						if strings.Contains(v, "@") {
+							emailAddresses = append(emailAddresses, v)
+						} else {
+							dnsNames = append(dnsNames, v)
+						}
 					}
 				}
 			}
@@ -644,21 +650,29 @@ func generateCreationBundle(b *backend,
 	ipAddresses := []net.IP{}
 	var ipAltInt interface{}
 	{
-		ipAltInt, ok = data.GetOk("ip_sans")
-		if ok {
-			ipAlt := ipAltInt.(string)
-			if len(ipAlt) != 0 {
-				if !role.AllowIPSANs {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
-				}
-				for _, v := range strings.Split(ipAlt, ",") {
-					parsedIP := net.ParseIP(v)
-					if parsedIP == nil {
+		if csr != nil && role.UseCSRSANs {
+			if !role.AllowIPSANs {
+				return nil, errutil.UserError{Err: fmt.Sprintf(
+					"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+			}
+			ipAddresses = csr.IPAddresses
+		} else {
+			ipAltInt, ok = data.GetOk("ip_sans")
+			if ok {
+				ipAlt := ipAltInt.(string)
+				if len(ipAlt) != 0 {
+					if !role.AllowIPSANs {
 						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the value '%s' is not a valid IP address", v)}
+							"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
 					}
-					ipAddresses = append(ipAddresses, parsedIP)
+					for _, v := range strings.Split(ipAlt, ",") {
+						parsedIP := net.ParseIP(v)
+						if parsedIP == nil {
+							return nil, errutil.UserError{Err: fmt.Sprintf(
+								"the value '%s' is not a valid IP address", v)}
+						}
+						ipAddresses = append(ipAddresses, parsedIP)
+					}
 				}
 			}
 		}

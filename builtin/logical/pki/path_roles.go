@@ -169,6 +169,14 @@ does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
 			},
 
+			"use_csr_sans": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, when used with a signing profile,
+the SANs in the CSR will be used. This does *not*
+include the Common Name (cn). Defaults to true.`,
+			},
+
 			"ou": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
@@ -371,6 +379,7 @@ func (b *backend) pathRoleCreate(
 		KeyType:             data.Get("key_type").(string),
 		KeyBits:             data.Get("key_bits").(int),
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
+		UseCSRSANs:          data.Get("use_csr_sans").(bool),
 		KeyUsage:            data.Get("key_usage").(string),
 		OU:                  data.Get("ou").(string),
 		Organization:        data.Get("organization").(string),
@@ -487,6 +496,7 @@ type roleEntry struct {
 	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
 	EmailProtectionFlag   bool   `json:"email_protection_flag" structs:"email_protection_flag" mapstructure:"email_protection_flag"`
 	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
+	UseCSRSANs            bool   `json:"use_csr_sans" structs:"use_csr_sans" mapstructure:"use_csr_sans"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 	MaxPathLength         *int   `json:",omitempty" structs:"max_path_length,omitempty" mapstructure:"max_path_length"`
