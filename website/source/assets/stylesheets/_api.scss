@@ -2,6 +2,15 @@
 // API
 // --------------------------------------------------
 
+body.layout-http {
+  // Extend bootstrap's table and table-striped classes on generic markdown
+  // tables. This enables GHFM tables instead of HTML.
+  table {
+    @extend .table;
+    @extend .table-striped;
+  }
+}
+
 .bs-api-section dl, dl.api {
   margin-top: 30px;
   line-height: 20px;
