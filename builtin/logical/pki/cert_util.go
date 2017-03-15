@@ -66,8 +66,10 @@ func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
 	chain := []*certutil.CertBlock{}
 
 	// Include issuing CA in Chain, not including Root Authority
-	if len(b.Certificate.AuthorityKeyId) > 0 &&
-		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId) {
+	if (len(b.Certificate.AuthorityKeyId) > 0 &&
+		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId)) ||
+		(len(b.Certificate.AuthorityKeyId) == 0 &&
+			!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject)) {
 
 		chain = append(chain, &certutil.CertBlock{
 			Certificate: b.Certificate,
