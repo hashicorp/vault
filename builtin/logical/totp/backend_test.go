@@ -14,17 +14,6 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-/*
-	X Test each algorithm type
-	X Test digits
-	X Test periods
-	X Test defaults
-	X Test invalid period (negative)
-	X Test invalid key
-	X Test invalid account_name
-	X Test invalid issuer
-*/
-
 func createKey() (string, error) {
 	keyUrl, err := totplib.Generate(totplib.GenerateOpts{
 		Issuer:      "Vault",
