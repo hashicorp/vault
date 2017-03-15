@@ -4,6 +4,16 @@
 
 $docs-font-size: 15px;
 
+body.layout-http {
+  h2 {
+    margin-top: 150px;
+
+    &:first-of-type {
+      margin-top: 50px;
+    }
+  }
+}
+
 body.layout-docs,
 body.layout-inner,
 body.layout-downloads,
@@ -54,13 +64,13 @@ body.layout-intro {
     li {
       a {
         color: $sidebar-link-color;
-        font-size: 13px;
+        font-size: $sidebar-font-size;
         padding: 10px 0 10px 15px;
 
         &:before {
-          color: $dark-blue;
+          color: $sidebar-link-color-active;
           content: '\203A';
-          font-size: $docs-font-size;
+          font-size: $font-size;
           left: 0;
           line-height: 100%;
           opacity: 0.4;

@@ -89,33 +89,15 @@
       <div class="container">
         <div class="row">
           <div class="col-xs-12">
-            <% if current_page.url != '/' && current_page.url != '/index.html' %>
-              <div class="edit-page-link"><a href="<%= github_url :current_page %>">Edit this page</a></div>
-            <% end %>
-            <div class="footer-links">
-              <ul class="main-links nav navbar-nav">
-                <li><a href="/intro/index.html">Intro</a></li>
-                <li><a href="/docs/index.html">Docs</a></li>
-                <li><a href="/community.html">Community</a></li>
-                <li><a href="/security.html">Security</a></li>
-              </ul>
-              <ul class="external-links nav navbar-nav">
-                <li class="first download">
-                  <a href="/downloads.html"><%= partial "layouts/svg/svg-download" %>Download</a>
-                </li>
-                <li class="github">
-                  <a href="https://github.com/hashicorp/vault"><%= partial "layouts/svg/svg-github" %>GitHub</a>
-                </li>
-              </ul>
-            </div>
-            <div class="footer-hashi pull-right">
-              <a class="hashicorp-project" href="https://www.hashicorp.com">
-                <span class="project-text">A </span>
-                <%= partial "layouts/svg/svg-by-hashicorp" %>
-                <span class="project-text">Project</span>
-                <%= partial "layouts/svg/svg-hashicorp-logo" %>
-              </a>
-            </div>
+            <ul class="footer-links nav navbar-nav">
+              <li><a href="/intro/index.html">Intro</a></li>
+              <li><a href="/docs/index.html">Docs</a></li>
+              <li><a href="/community.html">Community</a></li>
+              <li><a href="/security.html">Security</a></li>
+            </ul>
+            <ul class="footer-links nav navbar-nav navbar-right">
+              <li><a href="<%= github_url :current_page %>">Edit this page</a></li>
+            </ul>
           </div>
         </div>
       </div>
