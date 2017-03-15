@@ -19,8 +19,9 @@ to provide two pieces of special functionality:
    allowing for automatic unsealing
 
 HSM support is currently limited to devices that support PKCS#11 interfaces and
-provide integration libraries. This includes AWS'
-[CloudHSM](https://aws.amazon.com/cloudhsm/) offering.
+provide integration libraries. It has successfully been tested with AWS'
+[CloudHSM](https://aws.amazon.com/cloudhsm/), as well as Thales, Utimaco, and
+SafeNet/Gemalto devices.
 
 Some parts of Vault work differently when using an HSM. Please see the
 [Behavioral Changes](/docs/vault-enterprise/hsm/behavior.html) page for important information
