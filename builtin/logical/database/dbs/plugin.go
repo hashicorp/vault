@@ -1,6 +1,8 @@
 package dbs
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/rpc"
 	"os/exec"
@@ -77,11 +79,22 @@ func newPluginClient(sys logical.SystemView, command, checksum string) (Database
 	cmd := exec.Command(command)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", pluginutil.PluginUnwrapTokenEnv, wrapToken))
 
+	checksumDecoded, err := hex.DecodeString(checksum)
+	if err != nil {
+		return nil, err
+	}
+
+	secureConfig := &plugin.SecureConfig{
+		Checksum: checksumDecoded,
+		Hash:     sha256.New(),
+	}
+
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		Cmd:             cmd,
 		TLSConfig:       clientTLSConfig,
+		SecureConfig:    secureConfig,
 	})
 
 	// Connect via RPC
