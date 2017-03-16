@@ -257,7 +257,6 @@ func pathRoles(b *backend) *framework.Path {
 			},
 			"allow_user_key_ids": &framework.FieldSchema{
 				Type: framework.TypeBool,
-				Default: true,
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If true, users can override the key ID for a signed certificate with the "key_id" field.
