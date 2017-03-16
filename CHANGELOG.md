@@ -1,4 +1,12 @@
-## 0.7.0 (Unreleased)
+## 0.7.0 (Early Access; final release March 21th, 2017)
+
+SECURITY:
+
+ * Common name not being validated when `exclude_cn_from_sans` option used in
+   `pki` backend: When using a role in the `pki` backend that specified the
+   `exclude_cn_from_sans` option, the common name would not then be properly
+   validated against the role's constraints. This has been fixed. We recommend
+   any users of this feature to upgrade to 0.7 as soon as feasible.
 
 DEPRECATIONS/CHANGES:
 
