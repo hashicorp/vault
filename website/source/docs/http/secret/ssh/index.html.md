@@ -125,12 +125,8 @@ This endpoint creates or updates a named role.
 - `key_bits` `(int: 1024)` – Specifies the length of the RSA dynamic key in
   bits. This can be either 1024 or 2048.
 
-- `install_script`
-  <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
-  N/A for CA type</span>
-  (String)
-  Script used to install and uninstall public keys in the target
-  machine. Defaults to the built-in script.
+- `install_script` `(string: "")` – Specifies the script used to install and
+  uninstall public keys in the target machine. Defaults to the built-in script.
 
 - `allowed_users` `(string: "")` – If this option is not specified, client can
   request for a credential for any valid user at the remote host, including the
