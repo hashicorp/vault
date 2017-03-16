@@ -3,7 +3,7 @@ layout: "http"
 page_title: "Generic Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-generic"
 description: |-
-  TODO
+  This is the API documentation for the Vault Generic secret backend.
 ---
 
 # Generic Secret Backend HTTP API

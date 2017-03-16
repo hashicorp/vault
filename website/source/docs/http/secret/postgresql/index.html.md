@@ -3,7 +3,7 @@ layout: "http"
 page_title: "PostgreSQL Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-postgresql"
 description: |-
-  TODO
+  This is the API documentation for the Vault PostgreSQL secret backend.
 ---
 
 # PostgreSQL Secret Backend HTTP API

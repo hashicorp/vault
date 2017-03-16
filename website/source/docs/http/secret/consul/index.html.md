@@ -3,7 +3,7 @@ layout: "http"
 page_title: "Consul Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-consul"
 description: |-
-  TODO
+  This is the API documentation for the Vault Consul secret backend.
 ---
 
 # Consul Secret Backend HTTP API

@@ -3,7 +3,7 @@ layout: "http"
 page_title: "Transit Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-transit"
 description: |-
-  TODO
+  This is the API documentation for the Vault Transit secret backend.
 ---
 
 # Transit Secret Backend HTTP API

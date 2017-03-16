@@ -3,7 +3,7 @@ layout: "http"
 page_title: "HTTP API"
 sidebar_current: "docs-http-secret-aws"
 description: |-
-  TODO
+  This is the API documentation for the Vault AWS secret backend.
 ---
 
 # AWS Secret Backend HTTP API

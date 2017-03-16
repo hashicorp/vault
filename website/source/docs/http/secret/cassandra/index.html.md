@@ -3,7 +3,7 @@ layout: "http"
 page_title: "Cassandra Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-cassandra"
 description: |-
-  TODO
+  This is the API documentation for the Vault Cassandra secret backend.
 ---
 
 # Cassandra Secret Backend HTTP API

@@ -3,7 +3,7 @@ layout: "http"
 page_title: "MSSQL Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-mssql"
 description: |-
-  TODO
+  This is the API documentation for the Vault MSSQL secret backend.
 ---
 
 # MSSQL Secret Backend HTTP API

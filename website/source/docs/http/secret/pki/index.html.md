@@ -3,7 +3,7 @@ layout: "http"
 page_title: "PKI Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-pki"
 description: |-
-  TODO
+  This is the API documentation for the Vault PKI secret backend.
 ---
 
 # PKI Secret Backend HTTP API

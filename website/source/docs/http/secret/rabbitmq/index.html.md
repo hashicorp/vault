@@ -3,7 +3,7 @@ layout: "http"
 page_title: "RabbitMQ Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-rabbitmq"
 description: |-
-  TODO
+  This is the API documentation for the Vault RabbitMQ secret backend.
 ---
 
 # RabbitMQ Secret Backend HTTP API

@@ -3,7 +3,7 @@ layout: "http"
 page_title: "MongoDB Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-mongodb"
 description: |-
-  TODO
+  This is the API documentation for the Vault MongoDB secret backend.
 ---
 
 # MongoDB Secret Backend HTTP API

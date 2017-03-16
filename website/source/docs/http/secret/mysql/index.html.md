@@ -3,7 +3,7 @@ layout: "http"
 page_title: "MySQL Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-mysql"
 description: |-
-  TODO
+  This is the API documentation for the Vault MySQL secret backend.
 ---
 
 # MySQL Secret Backend HTTP API

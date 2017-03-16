@@ -3,7 +3,7 @@ layout: "http"
 page_title: "Cubbyhole Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-cubbyhole"
 description: |-
-  TODO
+  This is the API documentation for the Vault Cubbyhole secret backend.
 ---
 
 # Cubbyhole Secret Backend HTTP API

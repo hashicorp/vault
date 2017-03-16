@@ -3,7 +3,7 @@ layout: "http"
 page_title: "SSH Secret Backend - HTTP API"
 sidebar_current: "docs-http-secret-ssh"
 description: |-
-  TODO
+  This is the API documentation for the Vault SSH secret backend.
 ---
 
 # SSH Secret Backend HTTP API
