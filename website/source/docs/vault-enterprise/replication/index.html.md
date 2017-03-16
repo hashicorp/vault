@@ -75,7 +75,7 @@ horizontally.
 
 Details on the internal design of the replication feature can be found in the
 [replication
-internals](https://www.vaultproject.io/docs/internals/replication.html)
+internals](/docs/internals/replication.html)
 document.
 
 ## Security Model
@@ -131,7 +131,7 @@ its encrypted barrier.
 
 ## Setup and Best Practices
 
-A [setup guide](https://www.vaultproject.io/docs/guides/replication.html) is
+A [setup guide](/docs/guides/replication.html) is
 available to help you get started; this guide also contains best practices
 around operationalizing the replication feature.
 

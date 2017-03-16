@@ -31,7 +31,7 @@ the sub-fields are not merged together.
 
 Starting in Vault 0.6, almost any response (except those from `sys/` endpoints)
 from Vault can be wrapped (see the [Response
-Wrapping](https://www.vaultproject.io/docs/concepts/response-wrapping.html)
+Wrapping](/docs/concepts/response-wrapping.html)
 concept page for details).
 
 The TTL for the token is set by the client using the `X-Vault-Wrap-TTL` header
