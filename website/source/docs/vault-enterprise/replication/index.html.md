@@ -33,7 +33,7 @@ Multiple Vault clusters communicate in a one-to-many near real-time flow.
 
 The primary cluster acts as the system or record and asynchronously replicates
 most Vault data to a series of remote clusters, known as secondary clusters or
-secondaries. 
+secondaries.
 
 The secondaries keep track of their own tokens and leases but share the
 underlying configuration, policies, and supporting secrets (K/V values,
@@ -137,9 +137,6 @@ around operationalizing the replication feature.
 
 ## API
 
-API documents are available with the endpoints relevant to the
-[primary](https://www.vaultproject.io/docs/http/sys-replication-primary.html)
-cluster, the
-[secondary](https://www.vaultproject.io/docs/http/sys-replication-secondary.html)
-cluster, and endpoints [relevant to
-both](https://www.vaultproject.io/docs/http/sys-replication.html).
+The Consul replication component has a full HTTP API. Please see the
+[Vault Replication API](/docs/http/system/replication.html) for more
+details.
