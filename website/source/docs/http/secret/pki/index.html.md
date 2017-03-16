@@ -1449,8 +1449,3 @@ update your API calls accordingly.
     A `204` status code.
   </dd>
 </dl>
-=======
-The PKI secret backend has a full HTTP API. Please see the
-[PKI secret backend API](/docs/http/secret/pki/index.html) for more
-details.
->>>>>>> e54ffcd1... Break out API documentation for secret backends

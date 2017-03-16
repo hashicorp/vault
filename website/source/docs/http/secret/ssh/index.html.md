@@ -16,300 +16,222 @@ This documentation assumes the SSH backend is mounted at the `/ssh` path in
 Vault. Since it is possible to mount secret backends at any location, please
 update your API calls accordingly.
 
-### /ssh/keys/
-#### POST
+## Create/Update Key
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Creates or updates a named key.
-  </dd>
+This endpoint creates or updates a named key.
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/keys/:name`            | `204 (empty body)`     |
 
-  <dt>URL</dt>
-  <dd>`/ssh/keys/<key name>`</dd>
+### Parameters
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">key</span>
-        <span class="param-flags">required</span>
-        (String)
-        SSH private key with appropriate privileges on remote hosts.
-      </li>
-    </ul>
-  </dd>
+- `name` `(string: <required>)` – Specifies the name of the key to create. This
+  is part of the request URL.
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
+- `key` `(string: <required>)` – Specifies an SSH private key with appropriate
+  privileges on remote hosts.
 
-#### DELETE
+### Sample Payload
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes a named key.
-  </dd>
+```json
+{
+  "key": "..."
+}
+```
 
-  <dt>Method</dt>
-  <dd>DELETE</dd>
+### Sample Request
 
-  <dt>URL</dt>
-  <dd>`/ssh/keys/<key name>`</dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/keys/my-key
+```
 
-  <dt>Parameters</dt>
-  <dd>None</dd>
+## Delete Key
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
+This endpoint deletes a named key.
 
-### /ssh/roles/
-#### POST
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/keys/:name`            | `204 (empty body)`     |
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Creates or updates a named role.
-  </dd>
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+### Parameters
 
-  <dt>URL</dt>
-  <dd>`/ssh/roles/<role name>`</dd>
+- `name` `(string: <required>)` – Specifies the name of the key to delete. This
+  is part of the request URL.
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">key</span>
-        <span class="param-flags">required for Dynamic Key type, N/A for
-        OTP type, N/A for CA type</span>
-          (String)
-          Name of the registered key in Vault. Before creating the role, use
-          the `keys/` endpoint to create a named key.
-      </li>
-      <li>
-        <span class="param">admin_user</span>
-        <span class="param-flags">required for Dynamic Key type, N/A for OTP
-        type, N/A for CA type</span>
-          (String)
-          Admin user at remote host. The shared key being registered should be
-          for this user and should have root or sudo privileges. Every time a
-          dynamic	credential is generated for a client, Vault uses this admin
-          username to login to remote host and install the generated
-          credential.
-      </li>
-      <li>
-        <span class="param">default_user</span>
-        <span class="param-flags">required for Dynamic Key type, required
-        for OTP type, optional for CA type</span>
-          (String)
-          Default username for which a credential will be generated. When the
-          endpoint 'creds/' is used without a username, this value will be used
-          as default username. Its recommended to create individual roles for
-          each username to ensure absolute isolation between usernames.
+### Sample Request
 
-          For the CA type, if you wish this to be a valid principal, it must
-          also be in `allowed_users`.
-      </li>
-      <li>
-        <span class="param">cidr_list</span>
-        <span class="param-flags">optional for Dynamic Key type, optional for
-        OTP type, N/A for CA type</span>
-          (String)
-          Comma separated list of CIDR blocks for which the role is applicable
-          for.	CIDR blocks can belong to more than one role.
-      </li>
-      <li>
-        <span class="param">exclude_cidr_list</span>
-        <span class="param-flags">optional for Dynamic Key type, optional for
-        OTP type, N/A for CA type</span>
-          (String)
-          Comma-separated list of CIDR blocks. IP addresses belonging to these
-          blocks are not accepted by the role. This is particularly useful when
-          big CIDR blocks are being used by the role and certain parts need to
-          be kept out.
-      </li>
-      <li>
-        <span class="param">port</span>
-        <span class="param-flags">optional for Dynamic Key type, optional for
-        OTP type, N/A for CA type</span>
-        (Integer)
-        Port number for SSH connection. The default is '22'. Port number
-        does not play any role in OTP generation. For the 'otp' backend
-        type, this is just a way to inform the client about the port number
-        to use. The port number will be	returned to the client by Vault
-        along with the OTP.
-      </li>
-      <li>
-        <span class="param">key_type</span>
-        <span class="param-flags">required for all types</span>
-        (String)
-        Type of credentials generated by this role. Can be either `otp`,
-        `dynamic` or `ca`.
-      </li>
-      <li>
-        <span class="param">key_bits</span>
-        <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
-        N/A for CA type</span>
-        (Integer)
-        Length of the RSA dynamic key in bits; can be either 1024 or 2048.
-        1024 the default.
-      </li>
-      <li>
-        <span class="param">install_script</span>
-        <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
-        N/A for CA type</span>
-        (String)
-        Script used to install and uninstall public keys in the target
-        machine. Defaults to the built-in script.
-      </li>
-      <li>
-        <span class="param">allowed_users</span>
-        <span class="param-flags">optional for all types</span>
-          (String)
-          If this option is not specified, client can request for a credential
-          for any valid user at the remote host, including the admin user. If
-          only certain usernames are to be allowed, then this list enforces it.
-          If this field is set, then credentials can only be created for
-          `default_user` and usernames present in this list. Setting this
-          option will enable all the users with access this role to fetch
-          credentials for all other usernames in this list. Use with caution.
-      </li>
-      <li>
-        <span class="param">allowed_domains</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-          (String)
-          If this option is not specified, client can request for a signed certificate for any
-          valid host. If only certain domains are allowed, then this list enforces it.
-          If this option is explicitly set to `*`, then credentials can be created
-          for any domain.
-      </li>
-      <li>
-        <span class="param">key_option_specs</span>
-        <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
-        N/A for CA type</span>
-        (String)
-        Comma separated option specification which will be prefixed to RSA
-        keys in	the remote host's authorized_keys file. N.B.: Vault does
-        not check this string for validity.
-      </li>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        The Time To Live value provided as a string duration with time suffix.
-        Hour is the largest suffix.  If not set, uses the system default value
-        or the value of `max_ttl`, whichever is shorter.
-      </li>
-      <li>
-        <span class="param">max_ttl</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        The maximum Time To Live provided as a string duration with time
-        suffix. Hour is the largest suffix. If not set, defaults to the system
-        maximum lease TTL.
-      </li>
-      <li>
-        <span class="param">allowed_critical_options</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A comma-separated list of critical options that certificates can have when
-        signed. To allow any critical options, set this to an empty string. Will
-        default to allowing any critical options.
-      </li>
-      <li>
-        <span class="param">allowed_extensions</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A comma-separated list of extensions that certificates can have when
-        signed. To allow any critical options, set this to an empty string. Will
-        default to allowing any extensions.
-      </li>
-      <li>
-        <span class="param">default_critical_options</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A map of critical options certificates should have if none are provided
-        when signing. This field takes in key value pairs in JSON format. Note
-        that these are not restricted by `allowed_critical_options`. Defaults
-        to none.
-      </li>
-      <li>
-        <span class="param">default_extensions</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A map of extensions certificates should have if none are provided when
-        signing. This field takes in key value pairs in JSON format. Note that
-        these are not restricted by `allowed_extensions`. Defaults to none.
-      </li>
-      <li>
-        <span class="param">allow_user_certificates</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, certificates are allowed to be signed for use as a 'user'.
-        Defaults to false.
-      </li>
-      <li>
-        <span class="param">allow_host_certificates</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, certificates are allowed to be signed for use as a 'host'.
-        Defaults to false.
-      </li>
-      <li>
-        <span class="param">allow_bare_domains</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, host certificates that are requested are allowed to use the base
-        domains listed in "allowed_users", e.g. "example.com". This
-        is a separate option as in some cases this can be considered a security
-        threat. Defaults to false.
-      </li>
-      <li>
-        <span class="param">allow_subdomains</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, host certificates that are requested are allowed to use
-        subdomains of those listed in "allowed_users". Defaults
-        to false.
-      </li>
-    </ul>
-  </dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/ssh/keys/my-key
+```
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
+## Create Role
 
-#### GET
+This endpoint creates or updates a named role.
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Queries a named role.
-  </dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/roles/:name`           | `204 (empty body)`     |
 
-  <dt>Method</dt>
-  <dd>GET</dd>
+### Parameters
 
-  <dt>URL</dt>
-  <dd>`/ssh/roles/<role name>`</dd>
+- `name` `(string: <required>)` – Specifies the name of the role to create. This
+  is part of the request URL.
 
-  <dt>Parameters</dt>
-  <dd>None</dd>
+- `key` `(string: "")` – Specifies the name of the registered key in Vault.
+  Before creating the role, use the `keys/` endpoint to create a named key. This
+  is required for "Dynamic Key" type.
 
-  <dt>Returns</dt>
-  <dd>Note: these are examples only. For a dynamic key role:
+- `admin_user` `(string: "")` – Specifies the admin user at remote host. The
+  shared key being registered should be for this user and should have root or
+  sudo privileges. Every time a dynamic	credential is generated for a client,
+  Vault uses this admin username to login to remote host and install the
+  generated credential. This is required for Dynamic Key type.
+
+- `default_user` `(string: "")` – Specifies the default username for which a
+  credential will be generated. When the endpoint `creds/` is used without a
+  username, this value will be used as default username. Its recommended to
+  create individual roles for each username to ensure absolute isolation between
+  usernames. This is required for Dynamic Key type and OTP type.
+
+    For the CA type, if you wish this to be a valid principal, it must also be
+    in `allowed_users`.
+
+- `cidr_list` `(string: "")` – Specifies a comma separated list of CIDR blocks
+  for which the role is applicable for.CIDR blocks can belong to more than one
+  role.
+
+- `exclude_cidr_list` `(string: "")` – Specifies a comma-separated list of CIDR
+  blocks. IP addresses belonging to these blocks are not accepted by the role.
+  This is particularly useful when big CIDR blocks are being used by the role
+  and certain parts need to be kept out.
+
+- `port` `(int: 22)` – Specifies the port number for SSH connection. Port number
+  does not play any role in OTP generation. For the `otp` backend type, this is
+  just a way to inform the client about the port number to use. The port number
+  will be	returned to the client by Vault along with the OTP.
+
+- `key_type` `(string: <required>)` – Specifies the type of credentials
+  generated by this role. This can be either `otp`, `dynamic` or `ca`.
+
+- `key_bits` `(int: 1024)` – Specifies the length of the RSA dynamic key in
+  bits. This can be either 1024 or 2048.
+
+- `install_script`
+  <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
+  N/A for CA type</span>
+  (String)
+  Script used to install and uninstall public keys in the target
+  machine. Defaults to the built-in script.
+
+- `allowed_users` `(string: "")` – If this option is not specified, client can
+  request for a credential for any valid user at the remote host, including the
+  admin user. If only certain usernames are to be allowed, then this list
+  enforces it. If this field is set, then credentials can only be created for
+  `default_user` and usernames present in this list. Setting this option will
+  enable all the users with access this role to fetch credentials for all other
+  usernames in this list. Use with caution.
+
+- `allowed_domains` `(string: "")` – If this option is not specified, client can
+  request for a signed certificate for any valid host. If only certain domains
+  are allowed, then this list enforces it. If this option is explicitly set to
+  `"*"`, then credentials can be created for any domain.
+
+- `key_option_specs` `(string: "")` – Specifies a aomma separated option
+  specification which will be prefixed to RSA keys in	the remote host's
+  authorized_keys file. N.B.: Vault does not check this string for validity.
+
+- `ttl` `(string: "")` – Specifies the Time To Live value provided as a string
+  duration with time suffix. Hour is the largest suffix.  If not set, uses the
+  system default value or the value of `max_ttl`, whichever is shorter.
+
+- `max_ttl` `(string: "")` – Specifies the maximum Time To Live provided as a
+  string duration with time suffix. Hour is the largest suffix. If not set,
+  defaults to the system maximum lease TTL.
+
+- `allowed_critical_options` `(string: "")` – Specifies a comma-separated list
+  of critical options that certificates can have when signed. To allow any
+  critical options, set this to an empty string. Will default to allowing any
+  critical options.
+
+- `allowed_extensions` `(string: "")` – Specifies a comma-separated list of
+  extensions that certificates can have when signed. To allow any critical
+  options, set this to an empty string. Will default to allowing any extensions.
+
+- `default_critical_options` `(map<string|string>: "")` – Specifies a map of
+  critical options certificates should have if none are provided when signing.
+  This field takes in key value pairs in JSON format. Note that these are not
+  restricted by `allowed_critical_options`. Defaults to none.
+
+- `default_extensions` `(map<string|string>: "")` – Specifies a map of
+  extensions certificates should have if none are provided when signing. This
+  field takes in key value pairs in JSON format. Note that these are not
+  restricted by `allowed_extensions`. Defaults to none.
+
+- `allow_user_certificates` `(bool: false)` – Specifies if certificates are
+  allowed to be signed for use as a 'user'.
+
+- `allow_host_certificates` `(bool: false)` – Specifies if certificates are
+  allowed to be signed for use as a 'host'.
+
+- `allow_bare_domains` `(bool: false)` – Specifies if host certificates that are
+  requested are allowed to use the base domains listed in "allowed_users", e.g.
+  "example.com". This is a separate option as in some cases this can be
+  considered a security threat.
+
+- `allow_subdomains` `(bool: false)` – Specifies if host certificates that are
+  requested are allowed to use subdomains of those listed in "allowed_users".
+
+### Sample Payload
+
+```json
+{
+  "key_type": "otp"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/roles/my-role
+```
+
+## Read Role
+
+This endpoint queries a named role.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/ssh/roles/:name`           | `200 application/json` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the role to read. This
+  is part of the request URL.
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://vault.rocks/v1/ssh/roles/my-role
+```
+
+### Sample Response
+
+For a dynamic key role:
 
 ```json
 {
@@ -322,9 +244,7 @@ update your API calls accordingly.
 }
 ```
 
-  </dd>
-
-  <dd>For an OTP role:
+For an OTP role:
 
 ```json
 {
@@ -334,8 +254,8 @@ update your API calls accordingly.
   "port": 22
 }
 ```
-  </dd>
-  <dd>For a CA role:
+
+For a CA role:
 
 ```json
 {
@@ -351,89 +271,79 @@ update your API calls accordingly.
   "ttl": "4h"
 }
 ```
-  </dd>
 
-#### LIST
+## List Roles
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Returns a list of available roles. Only the role names are returned, not
-    any values.
-  </dd>
+This endpoint returns a list of available roles. Only the role names are
+returned, not any values.
 
-  <dt>Method</dt>
-  <dd>LIST/GET</dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `LIST`   | `/ssh/roles`                 | `200 application/json` |
 
-  <dt>URL</dt>
-  <dd>`/ssh/roles` (LIST) or `/ssh/roles?list=true` (GET)</dd>
+### Sample Request
 
-  <dt>Parameters</dt>
-  <dd>
-     None
-  </dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    https://vault.rocks/v1/ssh/roles
+```
 
-  <dt>Returns</dt>
-  <dd>
+### Sample Response
 
-  ```json
-  {
-    "auth": null,
-    "data": {
-      "keys": ["dev", "prod"]
-    },
-    "lease_duration": 2764800,
-    "lease_id": "",
-    "renewable": false
-  }
-  ```
+```json
+{
+  "auth": null,
+  "data": {
+    "keys": ["dev", "prod"]
+  },
+  "lease_duration": 2764800,
+  "lease_id": "",
+  "renewable": false
+}
+```
 
-  </dd>
-</dl>
+## Delete Role
 
-#### DELETE
+This endpoint deletes a named role.
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes a named role.
-  </dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/roles/:name`           | `204 (empty body)`     |
 
-  <dt>Method</dt>
-  <dd>DELETE</dd>
+### Parameters
 
-  <dt>URL</dt>
-  <dd>`/ssh/roles/<role name>`</dd>
+- `name` `(string: <required>)` – Specifies the name of the role to delete. This
+  is part of the request URL.
 
-  <dt>Parameters</dt>
-  <dd>None</dd>
+### Sample Request
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/roles/my-role
+```
 
-### /ssh/config/zeroaddress
+## List Zero-Address Roles
 
-#### GET
+This endpoint returns the list of configured zero-address roles.
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Returns the list of configured zero-address roles.
-  </dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/ssh/config/zeroaddress`    | `200 application/json` |
 
-  <dt>Method</dt>
-  <dd>GET</dd>
+### Sample Request
 
-  <dt>URL</dt>
-  <dd>`/ssh/config/zeroaddress`</dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://vault.rocks/v1/ssh/config/zeroaddress
+```
 
-  <dt>Parameters</dt>
-  <dd>None</dd>
-
-  <dt>Returns</dt>
-  <dd>
+### Sample Response
 
 ```json
 {  
@@ -450,98 +360,94 @@ update your API calls accordingly.
 }
 ```
 
-  </dd>
+## Configure Zero-Address Roles
 
-#### POST
+This endpoint configures zero-address roles.
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Configures zero-address roles.
-  </dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/config/zeroaddress`    | `204 (empty body)`     |
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+### Parameters
 
-  <dt>URL</dt>
-  <dd>`/ssh/config/zeroaddress`</dd>
+- `roles` `(string: <required>)` – Specifies a string containing comma separated
+  list of role names which allows credentials to be requested for any IP
+  address. CIDR blocks previously registered under these roles will be ignored.
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">roles</span>
-        <span class="param-flags">required</span>
-        A string containing comma separated list of role names which allows credentials to be requested
-        for any IP address. CIDR blocks previously registered under these roles will be ignored.
-      </li>
-    </ul>
-  </dd>
+### Sample Payload
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
+```json
+{
+  "roles": ["otp_key_role"]
+}
+```
 
-#### DELETE
+### Sample Request
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes the zero-address roles configuration.
-  </dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/config/zeroaddress
+```
 
-  <dt>Method</dt>
-  <dd>DELETE</dd>
+## Delete Zero-Address Role
 
-  <dt>URL</dt>
-  <dd>`/ssh/config/zeroaddress`</dd>
+This endpoint deletes the zero-address roles configuration.
 
-  <dt>Parameters</dt>
-  <dd>None</dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `DELETE` | `/ssh/config/zeroaddress`    | `204 (empty body)`     |
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
+### Sample Request
 
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/ssh/config/zeroaddress
+```
 
-### /ssh/creds/
-#### POST
+## Generate SSH Credentials
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Creates credentials for a specific username and IP with the
-    parameters defined in the given role.
-  </dd>
+This endpoint creates credentials for a specific username and IP with the
+parameters defined in the given role.
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/creds/:name`           | `200 application/json` |
 
-  <dt>URL</dt>
-  <dd>`/ssh/creds/<role name>`</dd>
+### Parameters
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">username</span>
-        <span class="param-flags">optional</span>
-        (String)
-        Username on the remote host.
-      </li>
-      <li>
-        <span class="param">ip</span>
-        <span class="param-flags">required</span>
-        (String)
-        IP of the remote host.
-      </li>
-    </ul>
-  </dd>
+- `name` `(string: <required>)` – Specifies the name of the role to create
+  credentials against. This is part of the request URL.
 
-  <dt>Returns</dt>
-  <dd>For a dynamic key role:
+- `username` `(string: "")` – Specifies the username on the remote host.
+
+- `ip` `(string: <required>)` – Specifies the IP of the remote host.
+
+### Sample Payload
+
+```json
+{
+  "ip": "1.2.3.4"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/creds/my-role
+```
+
+### Sample Response
+
+For a dynamic key role:
 
 ```json
 {
@@ -549,26 +455,24 @@ update your API calls accordingly.
   "renewable": false,
   "lease_duration": 0,
   "data": {
-            "admin_user": "rajanadar",
-            "allowed_users": "",
-            "cidr_list": "x.x.x.x/y",
-            "default_user": "rajanadar",
-            "exclude_cidr_list": "x.x.x.x/y",
-            "install_script": "pretty_large_script",
-            "key": "5d9ee6a1-c787-47a9-9738-da243f4f69bf",
-            "key_bits": 1024,
-            "key_option_specs": "",
-            "key_type": "dynamic",
-            "port": 22
-           },
+    "admin_user": "rajanadar",
+    "allowed_users": "",
+    "cidr_list": "x.x.x.x/y",
+    "default_user": "rajanadar",
+    "exclude_cidr_list": "x.x.x.x/y",
+    "install_script": "pretty_large_script",
+    "key": "5d9ee6a1-c787-47a9-9738-da243f4f69bf",
+    "key_bits": 1024,
+    "key_option_specs": "",
+    "key_type": "dynamic",
+    "port": 22
+   },
   "warnings": null,
   "auth": null
 }
 ```
 
-  </dd>
-
-  <dd>For an OTP role:
+For an OTP role:
 
 ```json
 {
@@ -576,48 +480,50 @@ update your API calls accordingly.
   "renewable": false,
   "lease_duration": 2764800,
   "data": {
-            "ip": "127.0.0.1",
-            "key": "6d6411fd-f622-ea0a-7e2c-989a745cbbb2",
-            "key_type": "otp",
-            "port": 22,
-            "username": "rajanadar"
-           },
+    "ip": "127.0.0.1",
+    "key": "6d6411fd-f622-ea0a-7e2c-989a745cbbb2",
+    "key_type": "otp",
+    "port": 22,
+    "username": "rajanadar"
+   },
   "warnings": null,
   "auth": null
 }
 ```
-  </dd>
 
+## List Roles by IP
 
-### /ssh/lookup
-#### POST
+This endpoint lists all of the roles with which the given IP is associated.
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Lists all of the roles with which the given IP is associated.
-  </dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/lookup`                | `200 application/json` |
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+### Parameters
 
-  <dt>URL</dt>
-  <dd>`/ssh/lookup`</dd>
+- `ip` `(string: <required>)` – Specifies the IP of the remote host.
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">ip</span>
-        <span class="param-flags">required</span>
-        (String)
-        IP of the remote host.
-      </li>
-    </ul>
-  </dd>
+### Sample Payload
 
-  <dt>Returns</dt>
-  <dd>An array of roles as a secret structure.
+```json
+{
+  "ip": "1.2.3.4"
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/lookup
+```
+
+### Sample Response
+
+An array of roles as a secret structure.
 
 ```json
 {
@@ -625,237 +531,217 @@ update your API calls accordingly.
   "renewable": false,
   "lease_duration": 0,
   "data": {
-            "roles": ["fe6f61b7-7e4a-46a6-b2c8-0d530b8513df", "6d6411fd-f622-ea0a-7e2c-989a745cbbb2"]
-          },
+    "roles": [
+      "fe6f61b7-7e4a-46a6-b2c8-0d530b8513df",
+      "6d6411fd-f622-ea0a-7e2c-989a745cbbb2"
+    ]
+  },
   "warnings": null,
   "auth": null
 }
 ```
-  </dd>
 
-### /ssh/verify
-#### POST
+## Verify SSH OTP
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Verifies if the given OTP is valid. This is an unauthenticated
-    endpoint.
-  </dd>
+This endpoint verifies if the given OTP is valid. This is an unauthenticated
+endpoint.
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/verify`                | `200 application/json` |
 
-  <dt>URL</dt>
-  <dd>`/ssh/verify`</dd>
+## Parameters
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">otp</span>
-        <span class="param-flags">required</span>
-        (String)
-        One-Time-Key that needs to be validated.
-      </li>
-    </ul>
-  </dd>
+- `otp` `(string: <required>)` – Specifies the One-Time-Key that needs to be
+  validated.
 
-  <dt>Returns</dt>
-    <dd>A `200` response code for a valid OTP.
+### Sample Payload
+
+```json
+{
+  "otp": "bad2b3-..."
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/verify
+
+### Sample Response
 
 ```json
 {
   "lease_id":"",
   "renewable":false,
   "lease_duration":0,
-  "data":{
-         "ip":"127.0.0.1",
-         "username":"rajanadar"
-         },
+  "data": {
+    "ip":"127.0.0.1",
+    "username":"rajanadar"
+  },
   "warnings":null,
   "auth":null
 }
 ```
 
-  </dd>
+## Submit CA Information
 
-  <dd>A `400` BadRequest response code with 'OTP not found' message, for an invalid OTP.</dd>
+This endpoint allows submitting the CA information for the backend via an SSH
+key pair. _If you have already set a certificate and key, they will be
+overridden._
 
-### /ssh/config/ca
-#### POST
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/config/ca`             | `200/204 application/json` |
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Allows submitting the CA information for the backend via an SSH key pair.
-    _If you have already set a certificate and key, they will be overridden._<br /><br />
-  </dd>
+### Parameters
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+- `private_key` `(string: "")` – Specifies the private key part the SSH CA key
+  pair; required if `generate_signing_key` is false.
 
-  <dt>URL</dt>
-  <dd>`/ssh/config/ca`</dd>
+- `public_key` `(string: "")` – Specifies the public key part of the SSH CA key
+  pair; required if `generate_signing_key` is false.
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">private_key</span>
-        <span class="param-flags">optional</span>
-        The private key part the SSH CA key pair; required if generate_signing_key is false.
-      </li>
-      <li>
-        <span class="param">public_key</span>
-        <span class="param-flags">optional</span>
-        The public key part of the SSH CA key pair; required if generate_signing_key is false.
-      </li>
-      <li>
-        <span class="param">generate_signing_key</span>
-        <span class="param-flags">optional</span>
-        Generate the signing key pair interally if true, otherwise use the private_key and public_key fields.
-        The generated public key will be returned so you can add it to your configuration.
-      </li>
-    </ul>
-  </dd>
+- `generate_signing_key` `(bool: false)` – Specifies if Vault should generate
+  the signing key pair internally. The generated public key will be returned so
+  you can add it to your configuration.
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code. And if generate_signing_key was true:
-  </dd>
-  <dd>
-    ```json
-    {
-      "lease_id": "",
-      "renewable": false,
-      "lease_duration": 0,
-      "data": {
-        "public_key": "ssh-rsa AAAAHHNzaC1y...\n"
-        },
-      "warnings": null
-    }
-    ```
-  </dd>
-</dl>
+### Sample Payload
 
-#### GET
+```json
+{
+  "generate_signing_key": true
+}
+```
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Reads the configured/generated public key.
-  </dd>
+### Sample Request
 
-  <dt>Method</dt>
-  <dd>GET</dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/config/ca
+```
 
-  <dt>URL</dt>
-  <dd>`/ssh/config/ca`</dd>
+### Sample Response
 
-  <dt>Parameters</dt>
-  <dd>None</dd>
+This will return a `204` response if `generate_signing_key` was unset or false.
 
-  <dt>Returns</dt>
-  <dd>
-    ```json
-    {
-      "lease_id": "",
-      "renewable": false,
-      "lease_duration": 0,
-      "data": {
-        "public_key": "ssh-rsa AAAAHHNzaC1y...\n"
-        },
-      "warnings": null
-    }
-    ```
-  </dd>
-</dl>
+This will return a `200` response if `generate_signing_key` was true:
 
-### /ssh/sign
-#### POST
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "public_key": "ssh-rsa AAAAHHNzaC1y...\n"
+  },
+  "warnings": null
+}
+```
 
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Signs an SSH public key based on the supplied parameters, subject to the
-    restrictions contained in the role named in the endpoint.
-  </dd>
+## Read Public Key
 
-  <dt>Method</dt>
-  <dd>POST</dd>
+This endpoint reads the configured/generated public key.
 
-  <dt>URL</dt>
-  <dd>`/ssh/sign/<role name>`</dd>
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/ssh/config/ca`             | `200 application/json` |
 
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">public_key</span>
-        <span class="param-flags">required</span>
-        SSH public key that should be signed.
-      </li>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">optional</span>
-        Requested Time To Live. Cannot be greater than the role's `max_ttl`
-        value. If not provided, the role's `ttl` value will be used. Note that
-        the role values default to system values if not explicitly set.
-      </li>
-      <li>
-        <span class="param">valid_principals</span>
-        <span class="param-flags">optional</span>
-        Valid principals, either usernames or hostnames, that the certificate
-        should be signed for. Defaults to none.
-      </li>
-      <li>
-        <span class="param">cert_type</span>
-        <span class="param-flags">optional</span>
-        Type of certificate to be created; either "user" or "host". Defaults to
-        "user".
-      </li>
-      <li>
-        <span class="param">key_id</span>
-        <span class="param-flags">optional</span>
-        Key id that the created certificate should have. If not specified,
-        the display name of the token will be used.
-      </li>
-      <li>
-        <span class="param">critical_options</span>
-        <span class="param-flags">optional</span>
-        A map of the critical options that the certificate should be signed for.
-        Defaults to none.
-      </li>
-      <li>
-        <span class="param">extensions</span>
-        <span class="param-flags">optional</span>
-        A map of the extensions that the certificate should be signed for.
-        Defaults to none
-      </li>
-    </ul>
-  </dd>
+### Sample Request
 
-  <dt>Returns</dt>
-  <dd>
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://vault.rocks/v1/ssh/config/ca
+```
 
-    ```json
-    {
-      "lease_id": "ssh/sign/example/097bf207-96dd-0041-0e83-b23bd1923993",
-      "renewable": false,
-      "lease_duration": 21600,
-      "data": {
-        "serial_number": "f65ed2fd21443d5c",
-        "signed_key": "ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1y...\n"
-        },
-      "auth": null
-    }
-    ```
+### Sample Response
 
-  </dd>
-</dl>
-=======
-The SSH secret backend has a full HTTP API. Please see the
-[SSH secret backend API](/docs/http/secret/ssh/index.html) for more
-details.
->>>>>>> e54ffcd1... Break out API documentation for secret backends
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "public_key": "ssh-rsa AAAAHHNzaC1y...\n"
+  },
+  "warnings": null
+}
+```
+
+## Sigh SSH Key
+
+This endpoint signs an SSH public key based on the supplied parameters, subject
+to the restrictions contained in the role named in the endpoint.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/ssh/sign/:name`            | `200 application/json` |
+
+### Parameters
+
+- `name` `(string: <required>)` – Specifies the name of the role to sign. This
+  is part of the request URL.
+
+- `public_key` `(string: <required>)` – Specifies the SSH public key that should
+  be signed.
+
+- `ttl` `(string: "")` – Specifies the Requested Time To Live. Cannot be greater
+  than the role's `max_ttl` value. If not provided, the role's `ttl` value will
+  be used. Note that the role values default to system values if not explicitly
+  set.
+
+- `vauld_principals` `(string: "")` – Specifies valid principals, either
+  usernames or hostnames, that the certificate should be signed for.
+
+- `cert_type` `(string: "user")` – Specifies the type of certificate to be
+  created; either "user" or "host".
+
+- `key_id` `(string: "")` – Specifies the key id that the created certificate
+  should have. If not specified, the display name of the token will be used.
+
+- `critical_options` `(map<string|string>: "")` – Specifies a map of the
+  critical options that the certificate should be signed for. Defaults to none.
+
+- `extension` `(map<string|string>: "")` – Specifies a map of the extensions
+  that the certificate should be signed for. Defaults to none.
+
+### Sample Payload
+
+```json
+{
+  "public_key": "ssh-rsa ..."
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/ssh/sign/my-key
+```
+
+### Sample Response
+
+```json
+{
+  "lease_id": "ssh/sign/example/097bf207-96dd-0041-0e83-b23bd1923993",
+  "renewable": false,
+  "lease_duration": 21600,
+  "data": {
+    "serial_number": "f65ed2fd21443d5c",
+    "signed_key": "ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1y...\n"
+  },
+  "auth": null
+}
+```
