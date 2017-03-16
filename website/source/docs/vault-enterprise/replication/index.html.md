@@ -1,7 +1,7 @@
 ---
 layout: "docs"
 page_title: "Vault Enterprise Replication"
-sidebar_current: "docs-vault-enterprise"
+sidebar_current: "docs-vault-enterprise-replication"
 description: |-
   Vault Enterprise has support for Replication, allowing critical data to be replicated across clusters to support horizontally scaling workloads.
 
