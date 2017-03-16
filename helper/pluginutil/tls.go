@@ -25,7 +25,9 @@ import (
 )
 
 var (
-	PluginUnwrapTokenEnv = "VAULT_WRAP_TOKEN"
+	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
+	// plugin.
+	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
 )
 
 // GenerateCACert returns a CA cert used to later sign the certificates for the
