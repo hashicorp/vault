@@ -190,6 +190,11 @@ This endpoint creates or updates a named role.
 - `allow_subdomains` `(bool: false)` – Specifies if host certificates that are
   requested are allowed to use subdomains of those listed in "allowed_users".
 
+- `allow_user_key_ids` `(bool: false)` – Specifies if users can override the key
+  ID for a signed certificate with the "key_id" field. When false, the key ID
+  will always be the token display name. The key ID is logged by the SSH server
+  and can be useful for auditing.
+
 ### Sample Payload
 
 ```json
@@ -262,6 +267,7 @@ For a CA role:
   "allow_bare_domains": false,
   "allow_host_certificates": true,
   "allow_subdomains": false,
+  "allow_user_key_ids": false,
   "allow_user_certificates": true,
   "allowed_critical_options": "",
   "allowed_extensions": "",
