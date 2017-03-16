@@ -1,8 +1,6 @@
 package dbs
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net/rpc"
 	"os/exec"
@@ -56,57 +54,34 @@ func newPluginClient(sys logical.SystemView, command, checksum string) (Database
 		"database": new(DatabasePlugin),
 	}
 
-	CACertBytes, CACert, CAKey, err := pluginutil.GenerateX509Cert()
+	// Get a CA TLS Certificate
+	CACertBytes, CACert, CAKey, err := pluginutil.GenerateCACert()
 	if err != nil {
 		return nil, err
 	}
 
-	clientCertBytes, clientCert, clientKey, err := pluginutil.GenerateClientCert(CACert, CAKey)
+	// Use CA to sign a client cert and return a configured TLS config
+	clientTLSConfig, err := pluginutil.CreateClientTLSConfig(CACert, CAKey)
 	if err != nil {
 		return nil, err
 	}
 
-	/*	serverCert, serverKey, err := generateClientCert(CACert, CAKey)
-		if err != nil {
-			return nil, err
-		}*/
-	serverKey, err := x509.MarshalECPrivateKey(CAKey)
+	// Use CA to sign a server cert and wrap the values in a response wrapped
+	// token.
+	wrapToken, err := pluginutil.WrapServerConfig(sys, CACertBytes, CACert, CAKey)
 	if err != nil {
 		return nil, err
 	}
-	cert := tls.Certificate{
-		Certificate: [][]byte{clientCertBytes, CACertBytes},
-		PrivateKey:  clientKey,
-		Leaf:        clientCert,
-	}
 
-	clientCertPool := x509.NewCertPool()
-	clientCertPool.AddCert(CACert)
-
-	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      clientCertPool,
-		ClientCAs:    clientCertPool,
-		ServerName:   CACert.Subject.CommonName,
-		MinVersion:   tls.VersionTLS12,
-	}
-
-	tlsConfig.BuildNameToCertificate()
-
-	wrapToken, err := sys.ResponseWrapData(map[string]interface{}{
-		"CACert":     CACertBytes,
-		"ServerCert": CACertBytes,
-		"ServerKey":  serverKey,
-	}, time.Second*10, true)
-
+	// Add the response wrap token to the ENV of the plugin
 	cmd := exec.Command(command)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("VAULT_WRAP_TOKEN=%s", wrapToken))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", pluginutil.PluginUnwrapTokenEnv, wrapToken))
 
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		Cmd:             cmd,
-		TLSConfig:       tlsConfig,
+		TLSConfig:       clientTLSConfig,
 	})
 
 	// Connect via RPC

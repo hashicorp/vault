@@ -21,9 +21,16 @@ import (
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/logical"
 )
 
-func GenerateX509Cert() ([]byte, *x509.Certificate, *ecdsa.PrivateKey, error) {
+var (
+	PluginUnwrapTokenEnv = "VAULT_WRAP_TOKEN"
+)
+
+// GenerateCACert returns a CA cert used to later sign the certificates for the
+// plugin client and server.
+func GenerateCACert() ([]byte, *x509.Certificate, *ecdsa.PrivateKey, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, nil, nil, err
@@ -65,7 +72,9 @@ func GenerateX509Cert() ([]byte, *x509.Certificate, *ecdsa.PrivateKey, error) {
 	return certBytes, caCert, key, nil
 }
 
-func GenerateClientCert(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) ([]byte, *x509.Certificate, []byte, error) {
+// generateSignedCert is used internally to create certificates for the plugin
+// client and server. These certs are signed by the given CA Cert and Key.
+func generateSignedCert(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) ([]byte, *x509.Certificate, *ecdsa.PrivateKey, error) {
 	host, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, nil, err
@@ -101,22 +110,71 @@ func GenerateClientCert(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) ([]by
 		return nil, nil, nil, fmt.Errorf("error parsing generated replication certificate: %v", err)
 	}
 
-	keyBytes, err := x509.MarshalECPrivateKey(clientKey)
+	return certBytes, clientCert, clientKey, nil
+}
+
+// CreateClientTLSConfig creates a signed certificate and returns a configured
+// TLS config.
+func CreateClientTLSConfig(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) (*tls.Config, error) {
+	clientCertBytes, clientCert, clientKey, err := generateSignedCert(CACert, CAKey)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	return certBytes, clientCert, keyBytes, nil
+	cert := tls.Certificate{
+		Certificate: [][]byte{clientCertBytes},
+		PrivateKey:  clientKey,
+		Leaf:        clientCert,
+	}
+
+	clientCertPool := x509.NewCertPool()
+	clientCertPool.AddCert(CACert)
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      clientCertPool,
+		ClientCAs:    clientCertPool,
+		ServerName:   CACert.Subject.CommonName,
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	tlsConfig.BuildNameToCertificate()
+
+	return tlsConfig, nil
+}
+
+// WrapServerConfig is used to create a server certificate and private key, then
+// wrap them in an unwrap token for later retrieval by the plugin.
+func WrapServerConfig(sys logical.SystemView, CACertBytes []byte, CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) (string, error) {
+	serverCertBytes, _, serverKey, err := generateSignedCert(CACert, CAKey)
+	if err != nil {
+		return "", err
+	}
+	rawKey, err := x509.MarshalECPrivateKey(serverKey)
+	if err != nil {
+		return "", err
+	}
+
+	wrapToken, err := sys.ResponseWrapData(map[string]interface{}{
+		"CACert":     CACertBytes,
+		"ServerCert": serverCertBytes,
+		"ServerKey":  rawKey,
+	}, time.Second*10, true)
+
+	return wrapToken, err
 }
 
 // VaultPluginTLSProvider is run inside a plugin and retrives the response
-// wrapped TLS certificate from vault. It returns a configured tlsConfig.
+// wrapped TLS certificate from vault. It returns a configured TLS Config.
 func VaultPluginTLSProvider() (*tls.Config, error) {
-	unwrapToken := os.Getenv("VAULT_WRAP_TOKEN")
+	unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
+
+	// Ensure unwrap token is a JWT
 	if strings.Count(unwrapToken, ".") != 2 {
 		return nil, errors.New("Could not parse unwraptoken")
 	}
 
+	// Parse the JWT and retrieve the vault address
 	wt, err := jws.ParseJWT([]byte(unwrapToken))
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error decoding token: %s", err))
@@ -142,6 +200,7 @@ func VaultPluginTLSProvider() (*tls.Config, error) {
 		return nil, errors.New(fmt.Sprintf("error parsing the vault address: %s", err))
 	}
 
+	// Unwrap the token
 	clientConf := api.DefaultConfig()
 	clientConf.Address = vaultAddr
 	client, err := api.NewClient(clientConf)
@@ -154,9 +213,10 @@ func VaultPluginTLSProvider() (*tls.Config, error) {
 		return nil, errwrap.Wrapf("error during token unwrap request: {{err}}", err)
 	}
 
+	// Retrieve and parse the CA Certificate
 	CABytesRaw, ok := secret.Data["CACert"].(string)
 	if !ok {
-		return nil, errors.New("error unmarshalling certificate")
+		return nil, errors.New("error unmarshalling CA certificate")
 	}
 
 	CABytes, err := base64.StdEncoding.DecodeString(CABytesRaw)
@@ -169,6 +229,7 @@ func VaultPluginTLSProvider() (*tls.Config, error) {
 		return nil, fmt.Errorf("error parsing certificate: %v", err)
 	}
 
+	// Retrieve and parse the server's certificate
 	serverCertBytesRaw, ok := secret.Data["ServerCert"].(string)
 	if !ok {
 		return nil, errors.New("error unmarshalling certificate")
@@ -184,19 +245,27 @@ func VaultPluginTLSProvider() (*tls.Config, error) {
 		return nil, fmt.Errorf("error parsing certificate: %v", err)
 	}
 
-	serverKeyRaw, ok := secret.Data["ServerKey"].(string)
+	// Retrieve and parse the server's private key
+	serverKeyB64, ok := secret.Data["ServerKey"].(string)
 	if !ok {
 		return nil, errors.New("error unmarshalling certificate")
 	}
 
-	serverKey, err := base64.StdEncoding.DecodeString(serverKeyRaw)
+	serverKeyRaw, err := base64.StdEncoding.DecodeString(serverKeyB64)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing certificate: %v", err)
 	}
 
+	serverKey, err := x509.ParseECPrivateKey(serverKeyRaw)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing certificate: %v", err)
+	}
+
+	// Add CA cert to the cert pool
 	caCertPool := x509.NewCertPool()
 	caCertPool.AddCert(CACert)
 
+	// Build a certificate object out of the server's cert and private key.
 	cert := tls.Certificate{
 		Certificate: [][]byte{serverCertBytes},
 		PrivateKey:  serverKey,
