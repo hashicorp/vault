@@ -149,12 +149,6 @@ $ curl \
     https://vault.rocks/v1/cassandra/roles/my-role
 ```
 
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
 ## Read Role
 
 This endpoint queries the role definition.
