@@ -8,8 +8,6 @@ description: |-
 
 # HTTP API
 
-The Vault HTTP API is a
-
 The Vault HTTP API gives you full access to Vault via HTTP. Every
 aspect of Vault can be controlled via this API. The Vault CLI uses
 the HTTP API to access Vault.
