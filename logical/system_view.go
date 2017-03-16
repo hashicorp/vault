@@ -1,6 +1,7 @@
 package logical
 
 import (
+	"errors"
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
@@ -37,6 +38,10 @@ type SystemView interface {
 
 	// ReplicationState indicates the state of cluster replication
 	ReplicationState() consts.ReplicationState
+
+	// ResponseWrapData wraps the given data in a cubbyhole and returns the
+	// token used to unwrap.
+	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error)
 }
 
 type StaticSystemView struct {
@@ -71,4 +76,8 @@ func (d StaticSystemView) CachingDisabled() bool {
 
 func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
+}
+
+func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error) {
+	return "", errors.New("ResponseWrapData is not implimented in StaticSystemView")
 }

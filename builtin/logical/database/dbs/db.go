@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/vault/logical"
 )
 
 const (
@@ -18,9 +20,9 @@ var (
 	ErrUnsupportedDatabaseType = errors.New("Unsupported database type")
 )
 
-type Factory func(*DatabaseConfig) (DatabaseType, error)
+type Factory func(*DatabaseConfig, logical.SystemView) (DatabaseType, error)
 
-func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
+func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView) (DatabaseType, error) {
 	var dbType DatabaseType
 
 	switch conf.DatabaseType {
@@ -76,7 +78,7 @@ func BuiltinFactory(conf *DatabaseConfig) (DatabaseType, error) {
 	return dbType, nil
 }
 
-func PluginFactory(conf *DatabaseConfig) (DatabaseType, error) {
+func PluginFactory(conf *DatabaseConfig, sys logical.SystemView) (DatabaseType, error) {
 	if conf.PluginCommand == "" {
 		return nil, errors.New("ERROR")
 	}
@@ -85,7 +87,7 @@ func PluginFactory(conf *DatabaseConfig) (DatabaseType, error) {
 		return nil, errors.New("ERROR")
 	}
 
-	db, err := newPluginClient(conf.PluginCommand, conf.PluginChecksum)
+	db, err := newPluginClient(sys, conf.PluginCommand, conf.PluginChecksum)
 	if err != nil {
 		return nil, err
 	}

@@ -87,3 +87,30 @@ func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
 	d.core.clusterParamsLock.RUnlock()
 	return state
 }
+
+// ResponseWrapData wraps the given data in a cubbyhole and returns the
+// token used to unwrap.
+func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error) {
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "sys/init",
+	}
+
+	resp := &logical.Response{
+		WrapInfo: &logical.ResponseWrapInfo{
+			TTL: ttl,
+		},
+		Data: data,
+	}
+
+	if jwt {
+		resp.WrapInfo.Format = "jwt"
+	}
+
+	_, err := d.core.wrapInCubbyhole(req, resp)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.WrapInfo.Token, nil
+}

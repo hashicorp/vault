@@ -63,7 +63,7 @@ func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framew
 
 	factory := config.GetFactory()
 
-	db, err = factory(&config)
+	db, err = factory(&config, b.System())
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 	}
@@ -231,7 +231,7 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 				return logical.ErrorResponse("Can not change type of existing connection."), nil
 			}
 		} else {
-			db, err = factory(config)
+			db, err = factory(config, b.System())
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 			}
