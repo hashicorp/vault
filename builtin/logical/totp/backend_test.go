@@ -409,56 +409,6 @@ func TestBackend_createRoleInvalidDigits(t *testing.T) {
 	})
 }
 
-func TestBackend_createRoleMissingAccountName(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Generate a new shared key
-	key, _ := createKey()
-
-	roleData := map[string]interface{}{
-		"issuer": "Vault",
-		"key":    key,
-	}
-
-	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
-		Steps: []logicaltest.TestStep{
-			testAccStepCreateRole(t, "test", roleData, true),
-			testAccStepReadRole(t, "test", nil),
-		},
-	})
-}
-
-func TestBackend_createRoleMissingIssuer(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Generate a new shared key
-	key, _ := createKey()
-
-	roleData := map[string]interface{}{
-		"account_name": "Test",
-		"key":          key,
-	}
-
-	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
-		Steps: []logicaltest.TestStep{
-			testAccStepCreateRole(t, "test", roleData, true),
-			testAccStepReadRole(t, "test", nil),
-		},
-	})
-}
-
 func testAccStepCreateRole(t *testing.T, name string, roleData map[string]interface{}, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,

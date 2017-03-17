@@ -160,14 +160,6 @@ func (b *backend) pathRoleCreate(
 		return logical.ErrorResponse("The period value must be greater than zero."), nil
 	}
 
-	if issuer == "" {
-		return logical.ErrorResponse("The issuer value is required."), nil
-	}
-
-	if account_name == "" {
-		return logical.ErrorResponse("The account_name value is required."), nil
-	}
-
 	// Set optional parameters if neccessary
 	if period == 0 {
 		period = 30
