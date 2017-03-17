@@ -47,16 +47,19 @@ func pathRoles(b *backend) *framework.Path {
 
 			"period": {
 				Type:        framework.TypeInt,
+				Default:     30,
 				Description: `The length of time used to generate a counter for the TOTP token calculation.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
+				Default:     "SHA1",
 				Description: `The hashing algorithm used to generate the TOTP token.`,
 			},
 
 			"digits": {
 				Type:        framework.TypeInt,
+				Default:     6,
 				Description: `The number of digits in the generated TOTP token.`,
 			},
 		},
