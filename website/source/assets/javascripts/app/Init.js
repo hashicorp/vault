@@ -59,6 +59,8 @@ var Init = {
 
 };
 
-Init.start();
+$(function() {
+  Init.start();
+});
 
 })(window.Sidebar, window.DotLockup);
