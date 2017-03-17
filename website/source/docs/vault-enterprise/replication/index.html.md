@@ -138,5 +138,5 @@ around operationalizing the replication feature.
 ## API
 
 The Consul replication component has a full HTTP API. Please see the
-[Vault Replication API](/docs/http/system/replication.html) for more
+[Vault Replication API](/api/system/replication.html) for more
 details.

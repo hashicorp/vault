@@ -15,7 +15,7 @@ effect when using Vault with an HSM.
 
 Normally, Vault uses a single set of unseal keys to perform both decryption of
 the cryptographic barrier and to authorize recovery operations, such as the
-[`generate-root`](/docs/http/sys-generate-root.html)
+[`generate-root`](/api/sys-generate-root.html)
 functionality.
 
 When using an HSM, because the HSM automatically unseals the barrier but
@@ -40,7 +40,7 @@ rather than change parameters set by an operator.)
 Vault does not currently support rekeying the master key when protected by an
 HSM; however, it _does_ continue to support rotation of the underlying data
 encryption key that the master key protects via the
-[`/sys/rotate`](/docs/http/sys-rotate.html) API
+[`/sys/rotate`](/api/sys-rotate.html) API
 endpoint.
 
 ## Recovery Key
@@ -58,7 +58,7 @@ keys for this purpose, rather than the barrier unseal keys, is automatic.
 
 When initializing, the split is performed according to the following CLI flags
 and their API equivalents in the
-[/sys/init](/docs/http/sys-init.html) endpoint:
+[/sys/init](/api/sys-init.html) endpoint:
 
  * `recovery-shares`: The number of shares into which to split the recovery
    key. This value is equivalent to the `recovery_shares` value in the API
@@ -83,6 +83,6 @@ this is performed by using the `-recovery-key=true` flag to `vault rekey`.
 
 Via the API, the rekey operation is performed with the same parameters as the
 [normal `/sys/rekey`
-endpoint](/docs/http/sys-rekey.html); however, the
+endpoint](/api/sys-rekey.html); however, the
 API prefix for this operation is at `/sys/rekey-recovery-key` rather than
 `/sys/rekey`.

@@ -12,7 +12,7 @@ details can be found in the
 [replication internals](/docs/internals/replication.html) document.
 
 Vault replication also includes a complete API. For more information, please see
-the [Vault Replication API documentation](/docs/http/system/replication.html)
+the [Vault Replication API documentation](/api/system/replication.html)
 
 
 ## Activating Replication

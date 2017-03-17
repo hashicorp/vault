@@ -95,5 +95,5 @@ subpath for interactive help output.
 ## API
 
 The Cassandra secret backend has a full HTTP API. Please see the
-[Cassandra secret backend API](/docs/http/secret/cassandra/index.html) for more
+[Cassandra secret backend API](/api/secret/cassandra/index.html) for more
 details.

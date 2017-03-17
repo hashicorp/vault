@@ -90,5 +90,5 @@ As expected, the value previously set is returned to us.
 ## API
 
 The Cubbyhole secret backend has a full HTTP API. Please see the
-[Cubbyhole secret backend API](/docs/http/secret/cubbyhole/index.html) for more
+[Cubbyhole secret backend API](/api/secret/cubbyhole/index.html) for more
 details.

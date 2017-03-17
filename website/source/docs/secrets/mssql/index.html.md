@@ -111,5 +111,5 @@ allowed to read.
 ## API
 
 The MSSQL secret backend has a full HTTP API. Please see the
-[MSSQL secret backend API](/docs/http/secret/mssql/index.html) for more
+[MSSQL secret backend API](/api/secret/mssql/index.html) for more
 details.

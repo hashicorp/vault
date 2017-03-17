@@ -71,5 +71,5 @@ seconds (one hour) as specified.
 ## API
 
 The Generic secret backend has a full HTTP API. Please see the
-[Generic secret backend API](/docs/http/secret/generic/index.html) for more
+[Generic secret backend API](/api/secret/generic/index.html) for more
 details.

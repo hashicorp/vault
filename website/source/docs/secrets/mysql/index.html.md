@@ -120,5 +120,5 @@ the default on versions prior to that.
 ## API
 
 The MySQL secret backend has a full HTTP API. Please see the
-[MySQL secret backend API](/docs/http/secret/mysql/index.html) for more
+[MySQL secret backend API](/api/secret/mysql/index.html) for more
 details.

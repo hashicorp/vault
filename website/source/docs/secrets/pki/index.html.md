@@ -383,5 +383,5 @@ subpath for interactive help output.
 ## API
 
 The PKI secret backend has a full HTTP API. Please see the
-[PKI secret backend API](/docs/http/secret/pki/index.html) for more
+[PKI secret backend API](/api/secret/pki/index.html) for more
 details.

@@ -39,7 +39,7 @@ each status code (including `500`).
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
 another root token or the
-[`generate-root`](/docs/http/sys-generate-root.html)
+[`generate-root`](/api/sys-generate-root.html)
 endpoint or CLI command.
 
 ## PKI Backend Certificates Will Contain Default Key Usages

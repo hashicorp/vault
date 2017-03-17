@@ -99,5 +99,5 @@ Permission denied
 ## API
 
 The Consul secret backend has a full HTTP API. Please see the
-[Consul secret backend API](/docs/http/secret/consul/index.html) for more
+[Consul secret backend API](/api/secret/consul/index.html) for more
 details.

@@ -365,5 +365,5 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
 ## API
 
 The AWS secret backend has a full HTTP API. Please see the
-[AWS secret backend API](/docs/http/secret/aws/index.html) for more
+[AWS secret backend API](/api/secret/aws/index.html) for more
 details.

@@ -111,5 +111,5 @@ subpath for interactive help output.
 ## API
 
 The RabbitMQ secret backend has a full HTTP API. Please see the
-[RabbitMQ secret backend API](/docs/http/secret/rabbitmq/index.html) for more
+[RabbitMQ secret backend API](/api/secret/rabbitmq/index.html) for more
 details.

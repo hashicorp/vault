@@ -110,5 +110,5 @@ subpath for interactive help output.
 ## API
 
 The PostgreSQL secret backend has a full HTTP API. Please see the
-[PostgreSQL secret backend API](/docs/http/secret/postgresql/index.html) for more
+[PostgreSQL secret backend API](/api/secret/postgresql/index.html) for more
 details.

@@ -353,5 +353,5 @@ username@<IP of remote host>:~$
 ## API
 
 The SSH secret backend has a full HTTP API. Please see the
-[SSH secret backend API](/docs/http/secret/ssh/index.html) for more
+[SSH secret backend API](/api/secret/ssh/index.html) for more
 details.

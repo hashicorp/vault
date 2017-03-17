@@ -121,5 +121,5 @@ applications are restricted in the credentials they are allowed to read.
 ## API
 
 The MongoDB secret backend has a full HTTP API. Please see the
-[MongoDB secret backend API](/docs/http/secret/mongodb/index.html) for more
+[MongoDB secret backend API](/api/secret/mongodb/index.html) for more
 details.

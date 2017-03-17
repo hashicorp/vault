@@ -132,5 +132,5 @@ only encrypt or decrypt using the named keys they need access to.
 ## API
 
 The Transit secret backend has a full HTTP API. Please see the
-[Transit secret backend API](/docs/http/secret/transit/index.html) for more
+[Transit secret backend API](/api/secret/transit/index.html) for more
 details.
