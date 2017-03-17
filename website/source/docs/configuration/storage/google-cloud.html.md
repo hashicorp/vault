@@ -56,5 +56,5 @@ storage "gcs" {
 ```
 
 [gcs]: https://cloud.google.com/storage/
-[gcs-service-account]: (https://cloud.google.com/compute/docs/access/service-accounts
+[gcs-service-account]: https://cloud.google.com/compute/docs/access/service-accounts
 [gcs-private-key]: https://cloud.google.com/storage/docs/authentication#generating-a-private-key
