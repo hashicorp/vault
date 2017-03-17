@@ -36,6 +36,8 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 	return &databasePluginRPCClient{client: c}, nil
 }
 
+// DatabasePluginClient embeds a databasePluginRPCClient and wraps it's close
+// method to also call Close() on the plugin.Client.
 type DatabasePluginClient struct {
 	client *plugin.Client
 	sync.Mutex
@@ -50,6 +52,9 @@ func (dc *DatabasePluginClient) Close() error {
 	return err
 }
 
+// newPluginClient returns a databaseRPCClient with a connection to a running
+// plugin. The client is wrapped in a DatabasePluginClient object to ensure the
+// plugin is killed on call of Close().
 func newPluginClient(sys logical.SystemView, command, checksum string) (DatabaseType, error) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
@@ -119,6 +124,9 @@ func newPluginClient(sys logical.SystemView, command, checksum string) (Database
 	}, nil
 }
 
+// NewPluginServer is called from within a plugin and wraps the provided
+// DatabaseType implimentation in a databasePluginRPCServer object and starts a
+// RPC server.
 func NewPluginServer(db DatabaseType) {
 	dbPlugin := &DatabasePlugin{
 		impl: db,
@@ -138,12 +146,18 @@ func NewPluginServer(db DatabaseType) {
 
 // ---- RPC client domain ----
 
+// databasePluginRPCClient impliments DatabaseType and is used on the client to
+// make RPC calls to a plugin.
 type databasePluginRPCClient struct {
 	client *rpc.Client
 }
 
 func (dr *databasePluginRPCClient) Type() string {
-	return "plugin"
+	var dbType string
+	//TODO: catch error
+	dr.client.Call("Plugin.Type", struct{}{}, &dbType)
+
+	return fmt.Sprintf("plugin-%s", dbType)
 }
 
 func (dr *databasePluginRPCClient) CreateUser(statements Statements, username, password, expiration string) error {
@@ -216,6 +230,8 @@ func (dr *databasePluginRPCClient) GenerateExpiration(duration time.Duration) (s
 }
 
 // ---- RPC server domain ----
+
+// databasePluginRPCServer impliments DatabaseType and is run inside a plugin
 type databasePluginRPCServer struct {
 	impl DatabaseType
 }
