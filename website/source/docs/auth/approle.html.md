@@ -58,7 +58,7 @@ entry, even if these are then distributed via different paths. However, in Pull
 mode, even though the RoleID must be known in order to distribute it to the
 client, the SecretID can be kept confidential from all parties except for the
 final authenticating client by using [Response
-Wrapping](https://www.vaultproject.io/docs/concepts/response-wrapping.html).
+Wrapping](/docs/concepts/response-wrapping.html).
 
 Push mode is available for App-ID workflow compatibility, which in some
 specific cases is preferable, but in most cases Pull mode is more secure and

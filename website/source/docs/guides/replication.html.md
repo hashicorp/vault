@@ -7,21 +7,15 @@ description: |-
 ---
 
 If you're unfamiliar with Vault Replication concepts, please first look at the
-[general information
-page](https://www.vaultproject.io/docs/vault-enterprise/replication/index.html).
-More details can be found in the [replication
-internals](https://www.vaultproject.io/docs/internals/replication.html)
-document.
+[general information page](/docs/vault-enterprise/replication/index.html). More
+details can be found in the
+[replication internals](/docs/internals/replication.html) document.
 
-Also, note that full details of the API are available the endpoints relevant to
-the
-[primary](https://www.vaultproject.io/docs/http/sys-replication-primary.html)
-cluster, the
-[secondary](https://www.vaultproject.io/docs/http/sys-replication-secondary.html)
-cluster, and endpoints [relevant to
-both](https://www.vaultproject.io/docs/http/sys-replication.html).
+Vault replication also includes a complete API. For more information, please see
+the [Vault Replication API documentation](/docs/http/system/replication.html)
 
-## Activating Replication 
+
+## Activating Replication
 
 ### Activating the Primary
 
@@ -47,7 +41,7 @@ To fetch a secondary bootstrap token, run:
 The value for `id` is opaque to Vault and can be any identifying value you want;
 this can be used later to revoke the secondary and will be listed when you read
 replication status on the primary. You will get back a normal wrapped response,
-except that the token will be a JWT instead of UUID-formatted random bytes. 
+except that the token will be a JWT instead of UUID-formatted random bytes.
 
 ### Activating a Secondary
 
@@ -79,7 +73,7 @@ remove it from rotation (e.g. if using Consul for service discovery), but if a
 standby does not attempt taking over it will throw errors. We hope to make this
 workflow better in a future update.
 
-### Dev-Mode Root Tokens 
+### Dev-Mode Root Tokens
 
 To ease development and testing, when both the primary and secondary are
 running in development mode, the initial root token created by the primary
@@ -95,7 +89,7 @@ as policies and auth backend configuration are replicated.
 The generate-root command can be also be used to generate a root token local to
 the secondary cluster.
 
-## Managing Vault Replication 
+## Managing Vault Replication
 
 Vault’s replication model is intended to allow horizontally scaling Vault’s
 functions rather than to act in a strict Disaster Recovery (DR) capacity. As a
@@ -161,7 +155,7 @@ mounts would be unable to be read).
 
 In normal Vault usage, if Vault has at least one audit backend configured and
 is unable to successfully log to at least one backend, it will block further
-requests. 
+requests.
 
 Replicated audit mounts must be able to successfully log on all replicated
 clusters. For example, if using the file backend, the configured path must be
@@ -177,12 +171,10 @@ secondaries are ever reconnected.
 ### Disaster Recovery
 
 At the moment, because leases and tokens are not replicated, if you need true
-DR, you will need a DR solution per cluster (similar to non-replicated Vault). 
+DR, you will need a DR solution per cluster (similar to non-replicated Vault).
 
 Local backend mounts are not replicated and their use will require existing DR
-mechanisms if DR is necessary in your implementation. 
+mechanisms if DR is necessary in your implementation.
 
 We may pursue a dedicated Disaster Recovery-focused Replication Mode at a
-future time. 
-
-
+future time.

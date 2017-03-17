@@ -170,5 +170,5 @@ The following HTTP status codes are used throughout the API.
 
 ## Limits
 
-A maximum request size of 32MB is imposed to prevent a denial 
+A maximum request size of 32MB is imposed to prevent a denial
 of service attack with arbitrarily large requests.

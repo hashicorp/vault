@@ -143,7 +143,7 @@ values) that a user is allowed to specify when calling a path.
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
-[wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping.html), with a granularity of a second. These can either be specified as a number of seconds or a string with a `s`, `m`, or `h` suffix indicating seconds, minutes, and hours respectively.
+[wrapped](/docs/concepts/response-wrapping.html), with a granularity of a second. These can either be specified as a number of seconds or a string with a `s`, `m`, or `h` suffix indicating seconds, minutes, and hours respectively.
 
 In practice, setting a minimum TTL of one second effectively makes response
 wrapping mandatory for a particular path.
