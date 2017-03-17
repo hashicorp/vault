@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: MySQL"
+page_title: "MySQL Secret Backend"
 sidebar_current: "docs-secrets-mysql"
 description: |-
   The MySQL secret backend for Vault generates database credentials to access MySQL.

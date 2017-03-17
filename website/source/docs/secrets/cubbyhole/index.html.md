@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: Cubbyhole"
+page_title: "Cubbyhole Secret Backend"
 sidebar_current: "docs-secrets-cubbyhole"
 description: |-
   The cubbyhole secret backend can store arbitrary secrets scoped to a single token.

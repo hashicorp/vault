@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: mongodb"
+page_title: "MongoDB Secret Backend"
 sidebar_current: "docs-secrets-mongodb"
 description: |-
   The mongodb secret backend for Vault generates database credentials to access MongoDB.

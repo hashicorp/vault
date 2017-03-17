@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: Generic"
+page_title: "Generic Secret Backend"
 sidebar_current: "docs-secrets-generic"
 description: |-
   The generic secret backend can store arbitrary secrets.

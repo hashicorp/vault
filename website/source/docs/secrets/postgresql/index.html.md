@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: PostgreSQL"
+page_title: "PostgreSQL Secret Backend"
 sidebar_current: "docs-secrets-postgresql"
 description: |-
   The PostgreSQL secret backend for Vault generates database credentials to access PostgreSQL.

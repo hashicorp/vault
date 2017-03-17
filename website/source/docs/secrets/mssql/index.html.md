@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: mssql"
+page_title: "MSSQL Secret Backend"
 sidebar_current: "docs-secrets-mssql"
 description: |-
   The MSSQL secret backend for Vault generates database credentials to access Microsoft Sql Server.

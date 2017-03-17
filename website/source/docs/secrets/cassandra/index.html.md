@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: Cassandra"
+page_title: "Cassandra Secret Backend"
 sidebar_current: "docs-secrets-cassandra"
 description: |-
   The Cassandra secret backend for Vault generates database credentials to access Cassandra.

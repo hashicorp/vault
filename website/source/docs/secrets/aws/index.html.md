@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: AWS"
+page_title: "AWS Secret Backend"
 sidebar_current: "docs-secrets-aws"
 description: |-
   The AWS secret backend for Vault generates access keys dynamically based on IAM policies.

@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: SSH"
+page_title: "SSH Secret Backend"
 sidebar_current: "docs-secrets-ssh"
 description: |-
   The SSH secret backend for Vault generates dynamic SSH keys or One-Time-Passwords.

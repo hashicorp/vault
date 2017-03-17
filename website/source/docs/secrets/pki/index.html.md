@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: PKI"
+page_title: "PKI Secret Backend"
 sidebar_current: "docs-secrets-pki"
 description: |-
   The PKI secret backend for Vault generates TLS certificates.

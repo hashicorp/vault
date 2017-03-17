@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: Consul"
+page_title: "Consul Secret Backend"
 sidebar_current: "docs-secrets-consul"
 description: |-
   The Consul secret backend for Vault generates tokens for Consul dynamically.

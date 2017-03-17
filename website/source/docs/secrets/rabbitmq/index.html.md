@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: RabbitMQ"
+page_title: "RabbitMQ Secret Backend"
 sidebar_current: "docs-secrets-rabbitmq"
 description: |-
   The RabbitMQ secret backend for Vault generates user credentials to access RabbitMQ.
