@@ -16,7 +16,7 @@ carefully.
 
 Once an active node is running 0.6.1, only standby nodes running 0.6.1+ will be
 able to form an HA cluster. If following our [general upgrade
-instructions](/docs/install/upgrade.html) this will
+instructions](/docs/guides/upgrading/index.html) this will
 not be an issue.
 
 ## Health Endpoint Status Code Changes
@@ -39,7 +39,7 @@ each status code (including `500`).
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
 another root token or the
-[`generate-root`](/api/sys-generate-root.html)
+[`generate-root`](/api/system/generate-root.html)
 endpoint or CLI command.
 
 ## PKI Backend Certificates Will Contain Default Key Usages
@@ -57,7 +57,7 @@ details.
 
 If using DynamoDB and want to use HA support, you will need to explicitly
 enable it in Vault's configuration; see the
-[documentation](/docs/config/index.html#ha_enabled)
+[documentation](/docs/configuration/index.html#ha_enabled)
 for details.
 
 If you are already using DynamoDB in an HA fashion and wish to keep doing so,
