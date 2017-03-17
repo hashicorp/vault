@@ -21,6 +21,7 @@
     <!--[if lt IE 9]>
       <%= javascript_include_tag "ie-compat" %>
     <![endif]-->
+    <%= javascript_include_tag "application" %>
 
     <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -46,7 +47,7 @@
           <div class="col-xs-12">
             <div class="navbar-header">
               <div class="navbar-brand">
-                <a class="logo" href="/">Vault</a>
+                <a class="logo" href="/" data-turbolinks="false">Vault</a>
               </div>
               <button class="navbar-toggle" type="button">
                 <span class="sr-only">Toggle navigation</span>
@@ -134,7 +135,7 @@
     }());
     </script>
 
-    <%= javascript_include_tag "application" %>
+    <%= yield_content :scripts %>
 
     <script type="application/ld+json">
       {
