@@ -20,8 +20,8 @@ import (
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
 	ProtocolVersion:  1,
-	MagicCookieKey:   "BASIC_PLUGIN",
-	MagicCookieValue: "hello",
+	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
+	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
 type DatabasePlugin struct {
