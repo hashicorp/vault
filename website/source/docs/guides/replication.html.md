@@ -25,7 +25,11 @@ both](https://www.vaultproject.io/docs/http/sys-replication.html).
 
 ### Activating the Primary
 
-To activate the primary, run `vault write -f sys/replication/primary/enable`. 
+To activate the primary, run:
+
+
+    $ vault write -f sys/replication/primary/enable
+
 
 There is currently one optional argument: `primary_cluster_addr`. This can be
 used to override the cluster address that the primary advertises to the
@@ -34,18 +38,24 @@ members of a single cluster and primary/secondary clusters.
 
 ### Fetching a Secondary Token
 
-To fetch a secondary bootstrap token, run `vault write
-sys/replication/primary/secondary-token id=<id>`. 
+To fetch a secondary bootstrap token, run:
 
-The value for ID is opaque to Vault and can be any identifying value you want;
+
+    $ vault write sys/replication/primary/secondary-token id=<id>
+
+
+The value for `id` is opaque to Vault and can be any identifying value you want;
 this can be used later to revoke the secondary and will be listed when you read
 replication status on the primary. You will get back a normal wrapped response,
 except that the token will be a JWT instead of UUID-formatted random bytes. 
 
 ### Activating a Secondary
 
-To activate a secondary, run `vault write sys/replication/secondary/enable
-token=<token>`. 
+To activate a secondary using the fetched token, run:
+
+
+    $ vault write sys/replication/secondary/enable token=<token>
+
 
 You must provide the full token value. Be very careful when running this
 command, as it will destroy all data currently stored in the secondary.
