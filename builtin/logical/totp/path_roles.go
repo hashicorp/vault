@@ -166,7 +166,7 @@ func (b *backend) pathRoleCreate(
 	}
 
 	switch algorithm {
-	case "SHA1", "SHA256", "SHA512", "MD5":
+	case "SHA1", "SHA256", "SHA512":
 	case "":
 		algorithm = "SHA1"
 	default:

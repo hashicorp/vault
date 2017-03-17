@@ -63,8 +63,6 @@ func (b *backend) pathRoleCreateRead(
 		algorithm = otplib.AlgorithmSHA256
 	case "SHA512":
 		algorithm = otplib.AlgorithmSHA512
-	case "MD5":
-		algorithm = otplib.AlgorithmMD5
 	default:
 		algorithm = otplib.AlgorithmSHA1
 	}

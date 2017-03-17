@@ -37,14 +37,12 @@ func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 	key, _ := createKey()
 
 	roleData := map[string]interface{}{
-		"issuer":       "Vault",
-		"account_name": "Test",
-		"key":          key,
+		"key": key,
 	}
 
 	expected := map[string]interface{}{
-		"issuer":       "Vault",
-		"account_name": "Test",
+		"issuer":       "",
+		"account_name": "",
 		"digits":       6,
 		"period":       30,
 		"algorithm":    "SHA1",
@@ -196,43 +194,6 @@ func TestBackend_readCredentialsSHA512(t *testing.T) {
 		"digits":       6,
 		"period":       30,
 		"algorithm":    "SHA512",
-		"key":          key,
-	}
-
-	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
-		Steps: []logicaltest.TestStep{
-			testAccStepCreateRole(t, "test", roleData, false),
-			testAccStepReadRole(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
-		},
-	})
-}
-
-func TestBackend_readCredentialsMD5(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Generate a new shared key
-	key, _ := createKey()
-
-	roleData := map[string]interface{}{
-		"issuer":       "Vault",
-		"account_name": "Test",
-		"key":          key,
-		"algorithm":    "MD5",
-	}
-
-	expected := map[string]interface{}{
-		"issuer":       "Vault",
-		"account_name": "Test",
-		"digits":       6,
-		"period":       30,
-		"algorithm":    "MD5",
 		"key":          key,
 	}
 
@@ -455,8 +416,6 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 				algorithm = otplib.AlgorithmSHA256
 			case "SHA512":
 				algorithm = otplib.AlgorithmSHA512
-			case "MD5":
-				algorithm = otplib.AlgorithmMD5
 			default:
 				algorithm = otplib.AlgorithmSHA1
 			}
