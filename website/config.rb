@@ -27,7 +27,7 @@ helpers do
   #
   # @return [String]
   def description_for(page)
-    return escape_html(page.data.description || "")
+    return escape_html((page.data.description || "").gsub(/\n+/, ' ').squeeze(' '))
   end
 
   # This helps by setting the "active" class for sidebar nav elements
