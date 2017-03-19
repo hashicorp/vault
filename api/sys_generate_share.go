@@ -15,7 +15,7 @@ func (c *Sys) GenerateShareStatus() (*GenerateShareStatusResponse, error) {
 
 func (c *Sys) GenerateShareInit(pgpKey string) (*GenerateShareStatusResponse, error) {
 	body := map[string]interface{}{
-		"pgp_key": pgpKey
+		"pgp_key": pgpKey,
 	}
 
 	r := c.c.NewRequest("PUT", "/v1/sys/generate-share/attempt")
@@ -43,9 +43,9 @@ func (c *Sys) GenerateShareCancel() error {
 	return err
 }
 
-func (c *Sys) GenerateShareUpdate(shard string) (*GenerateShareStatusResponse, error) {
+func (c *Sys) GenerateShareUpdate(share string) (*GenerateShareStatusResponse, error) {
 	body := map[string]interface{}{
-		"key":   shard
+		"key": share,
 	}
 
 	r := c.c.NewRequest("PUT", "/v1/sys/generate-share/update")
@@ -65,10 +65,10 @@ func (c *Sys) GenerateShareUpdate(shard string) (*GenerateShareStatusResponse, e
 }
 
 type GenerateShareStatusResponse struct {
-	Started          bool
-	Progress         int
-	Required         int
-	Complete         bool
-	Key              string `json:"key"`
-	PGPFingerprint   string `json:"pgp_fingerprint"`
+	Started        bool
+	Progress       int
+	Required       int
+	Complete       bool
+	Key            string `json:"key"`
+	PGPFingerprint string `json:"pgp_fingerprint"`
 }

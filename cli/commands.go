@@ -219,6 +219,12 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 			}, nil
 		},
 
+		"generate-share": func() (cli.Command, error) {
+			return &command.GenerateShareCommand{
+				Meta: *metaPtr,
+			}, nil
+		},
+
 		"renew": func() (cli.Command, error) {
 			return &command.RenewCommand{
 				Meta: *metaPtr,

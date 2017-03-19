@@ -145,6 +145,12 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
+				Pattern:         "generate-share(/atempt)?$",
+				HelpSynopsis:    strings.TrimSpace(sysHelp["generate-share"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["generate-share"][1]),
+			},
+
+			&framework.Path{
 				Pattern:         "init$",
 				HelpSynopsis:    strings.TrimSpace(sysHelp["init"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["init"][1]),
@@ -2021,6 +2027,26 @@ HTTP methods are listed below.
         Cancels any in-progress root generation attempt. This clears any
         progress made. This must be called to change the OTP or PGP key being
         used.
+		`,
+	},
+	"generate-share": {
+		"Reads, generates, or deletes a master key share generation process.",
+		`
+This path responds to multiple HTTP methods which change the behavior. Those
+HTTP methods are listed below.
+
+    GET /attempt
+        Reads the configuration and progress of the current share generation
+        attempt.
+
+    POST /attempt
+        Initializes a new share generation attempt. Only a single share generation
+        attempt can take place at a time. One pgp_key may be passed to encrypt the
+		newly generated share.
+
+    DELETE /attempt
+        Cancels any in-progress share generation attempt. This clears any
+        progress made. This must be called to change the PGP key beingused.
 		`,
 	},
 	"seal-status": {

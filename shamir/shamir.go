@@ -143,6 +143,61 @@ func add(a, b uint8) uint8 {
 	return a ^ b
 }
 
+// evaluateAt combines the given parts and evaluates the polynomials
+// at position.
+// This can be used for constructing generic shares.
+func evaluateAt(parts [][]byte, position uint8) ([]byte, error) {
+
+	// Verify enough parts provided
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret")
+	}
+
+	// Verify the parts are all the same length
+	firstPartLen := len(parts[0])
+	if firstPartLen < 2 {
+		return nil, fmt.Errorf("parts must be at least two bytes")
+	}
+	for i := 1; i < len(parts); i++ {
+		if len(parts[i]) != firstPartLen {
+			return nil, fmt.Errorf("all parts must be the same length")
+		}
+	}
+
+	// Create a buffer to store the reconstructed secret
+	combinedValue := make([]byte, firstPartLen-1)
+
+	// Buffer to store the samples
+	xSamples := make([]uint8, len(parts))
+	ySamples := make([]uint8, len(parts))
+
+	// Set the x value for each sample and ensure no x_sample values are the same,
+	// otherwise div() can be unhappy
+	checkMap := map[byte]bool{}
+	for i, part := range parts {
+		samp := part[firstPartLen-1]
+		if exists := checkMap[samp]; exists {
+			return nil, fmt.Errorf("duplicate part detected")
+		}
+		checkMap[samp] = true
+		xSamples[i] = samp
+	}
+
+	// Reconstruct each byte
+	for idx := range combinedValue {
+		// Set the y value for each sample
+		for i, part := range parts {
+			ySamples[i] = part[idx]
+		}
+
+		// Interpolte the polynomial and compute the value at position
+		val := interpolatePolynomial(xSamples, ySamples, position)
+
+		combinedValue[idx] = val
+	}
+	return combinedValue, nil
+}
+
 // Split takes an arbitrarily long secret and generates a `parts`
 // number of shares, `threshold` of which are required to reconstruct
 // the secret. The parts and threshold must be at least 2, and less
@@ -202,53 +257,25 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 // Combine is used to reverse a Split and reconstruct a secret
 // once a `threshold` number of parts are available.
 func Combine(parts [][]byte) ([]byte, error) {
-	// Verify enough parts provided
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret")
+
+	// the secret is the combination of the values at 0
+	return evaluateAt(parts, 0)
+}
+
+// GetShare is used to construct a share from values at a specific x co-ordinate.
+func GetShare(parts [][]byte, shareNumber uint8) ([]byte, error) {
+
+	shareValue, err := evaluateAt(parts, shareNumber)
+	if err != nil {
+		return nil, err
 	}
 
-	// Verify the parts are all the same length
-	firstPartLen := len(parts[0])
-	if firstPartLen < 2 {
-		return nil, fmt.Errorf("parts must be at least two bytes")
-	}
-	for i := 1; i < len(parts); i++ {
-		if len(parts[i]) != firstPartLen {
-			return nil, fmt.Errorf("all parts must be the same length")
-		}
-	}
+	shareLength := len(shareValue) + 1
 
-	// Create a buffer to store the reconstructed secret
-	secret := make([]byte, firstPartLen-1)
+	share := make([]byte, shareLength)
+	copy(share, shareValue)
 
-	// Buffer to store the samples
-	x_samples := make([]uint8, len(parts))
-	y_samples := make([]uint8, len(parts))
+	share[shareLength-1] = shareNumber
 
-	// Set the x value for each sample and ensure no x_sample values are the same,
-	// otherwise div() can be unhappy
-	checkMap := map[byte]bool{}
-	for i, part := range parts {
-		samp := part[firstPartLen-1]
-		if exists := checkMap[samp]; exists {
-			return nil, fmt.Errorf("duplicate part detected")
-		}
-		checkMap[samp] = true
-		x_samples[i] = samp
-	}
-
-	// Reconstruct each byte
-	for idx := range secret {
-		// Set the y value for each sample
-		for i, part := range parts {
-			y_samples[i] = part[idx]
-		}
-
-		// Interpolte the polynomial and compute the value at 0
-		val := interpolatePolynomial(x_samples, y_samples, 0)
-
-		// Evaluate the 0th value to get the intercept
-		secret[idx] = val
-	}
-	return secret, nil
+	return share, nil
 }
