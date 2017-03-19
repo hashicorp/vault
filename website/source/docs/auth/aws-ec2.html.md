@@ -145,7 +145,7 @@ not specify the policy component, the client will inherit the allowed policies s
 on the role. If the role tag creation specifies the policy component but it contains
 no policies, the token will contain only the `default` policy; by default, this policy
 allows only manipulation (revocation, renewal, lookup) of the existing token, plus
-access to its [cubbyhole](https://www.vaultproject.io/docs/secrets/cubbyhole/index.html).
+access to its [cubbyhole](/docs/secrets/cubbyhole/index.html).
 This can be useful to allow instances access to a secure "scratch space" for
 storing data (via the token's cubbyhole) but without granting any access to
 other resources provided by or resident in Vault.

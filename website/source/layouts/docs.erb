@@ -154,8 +154,45 @@
           </ul>
         </li>
 
-        <li<%= sidebar_current("docs-http") %>>
-          <a href="/docs/http/index.html">API &amp; Libraries</a>
+        <li<%= sidebar_current("docs-guides") %>>
+          <a href="/docs/guides/index.html">Guides</a>
+          <ul class="nav">
+            <li<%= sidebar_current("docs-guides-generate-root") %>>
+              <a href="/docs/guides/generate-root.html">Root Token Generation</a>
+            </li>
+            <li<%= sidebar_current("docs-guides-replication") %>>
+              <a href="/docs/guides/replication.html">Replication Setup and Guidance</a>
+            </li>
+            <li<%= sidebar_current("docs-guides-upgrading")%>>
+              <a href="/docs/guides/upgrading/index.html">Upgrading</a>
+              <ul class="nav">
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.5.0") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.5.0.html">Upgrade to 0.5.0</a>
+                </li>
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.5.1") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.5.1.html">Upgrade to 0.5.1</a>
+                </li>
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.0") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.6.0.html">Upgrade to 0.6.0</a>
+                </li>
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.1") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.6.1.html">Upgrade to 0.6.1</a>
+                </li>
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.2") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.6.2.html">Upgrade to 0.6.2</a>
+                </li>
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.3") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.6.3.html">Upgrade to 0.6.3</a>
+                </li>
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.4") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.6.4.html">Upgrade to 0.6.4</a>
+                </li>
+                <li<%= sidebar_current("docs-guides-upgrading-to-0.7.0") %>>
+                  <a href="/docs/guides/upgrading/upgrade-to-0.7.0.html">Upgrade to 0.7.0</a>
+                </li>
+              </ul>
+            </li>
+          </ul>
         </li>
 
         <hr>
@@ -289,41 +326,40 @@
 
         <hr>
 
-        <li<%= sidebar_current("docs-guides") %>>
-          <a href="/docs/guides/index.html">Guides</a>
+        <li<%= sidebar_current("docs-vault-enterprise") %>>
+          <a href="/docs/vault-enterprise/index.html">Vault Enterprise</a>
           <ul class="nav">
-            <li<%= sidebar_current("docs-guides-generate-root") %>>
-              <a href="/docs/guides/generate-root.html">Root Token Generation</a>
+            <li <%= sidebar_current("docs-vault-enterprise-replication")%> >
+              <a href="/docs/vault-enterprise/replication/index.html">Replication</a>
             </li>
-            <li<%= sidebar_current("docs-guides-upgrading")%>>
-              <a href="/docs/guides/upgrading/index.html">Upgrading</a>
+            <li <%= sidebar_current("docs-vault-enterprise-vsi")%> >
+              <a href="/docs/vault-enterprise/vsi/">Secure Introduction</a>
               <ul class="nav">
-                <li<%= sidebar_current("docs-guides-upgrading-to-0.5.0") %>>
-                  <a href="/docs/guides/upgrading/upgrade-to-0.5.0.html">Upgrade to 0.5.0</a>
+                <li <%= sidebar_current("docs-vault-enterprise-vsi-configuration")%> >
+                  <a href="/docs/vault-enterprise/vsi/configuration.html">Configuration</a>
                 </li>
-                <li<%= sidebar_current("docs-guides-upgrading-to-0.5.1") %>>
-                  <a href="/docs/guides/upgrading/upgrade-to-0.5.1.html">Upgrade to 0.5.1</a>
+                <li <%= sidebar_current("docs-vault-enterprise-vsi-security")%> >
+                  <a href="/docs/vault-enterprise/vsi/security.html">Security</a>
                 </li>
-                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.0") %>>
-                  <a href="/docs/guides/upgrading/upgrade-to-0.6.0.html">Upgrade to 0.6.0</a>
+              </ul>
+            </li>
+            <li <%= sidebar_current("docs-vault-enterprise-hsm")%> >
+              <a href="/docs/vault-enterprise/hsm/">HSM Support</a>
+              <ul class="nav">
+                <li <%= sidebar_current("docs-vault-enterprise-hsm-behavior")%>>
+                  <a href="/docs/vault-enterprise/hsm/behavior.html">Behavioral Changes</a>
                 </li>
-                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.1") %>>
-                  <a href="/docs/guides/upgrading/upgrade-to-0.6.1.html">Upgrade to 0.6.1</a>
+                <li <%= sidebar_current("docs-vault-enterprise-hsm-configuration")%>>
+                  <a href="/docs/vault-enterprise/hsm/configuration.html">Configuration</a>
                 </li>
-                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.2") %>>
-                  <a href="/docs/guides/upgrading/upgrade-to-0.6.2.html">Upgrade to 0.6.2</a>
-                </li>
-                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.3") %>>
-                  <a href="/docs/guides/upgrading/upgrade-to-0.6.3.html">Upgrade to 0.6.3</a>
-                </li>
-                <li<%= sidebar_current("docs-guides-upgrading-to-0.6.4") %>>
-                  <a href="/docs/guides/upgrading/upgrade-to-0.6.4.html">Upgrade to 0.6.4</a>
+                <li <%= sidebar_current("docs-vault-enterprise-hsm-security")%>>
+                  <a href="/docs/vault-enterprise/hsm/security.html">Security</a>
                 </li>
               </ul>
             </li>
           </ul>
         </li>
-      </hr>
+      </ul>
     </div>
   <% end %>
 

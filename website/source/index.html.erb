@@ -1,3 +1,11 @@
+---
+description: |-
+  Vault secures, stores, and tightly controls access to tokens, passwords,
+  certificates, API keys, and other secrets in modern computing. Vault handles
+  leasing, key revocation, key rolling, auditing, and provides secrets as a
+  service through a unified API.
+---
+
 <%= partial "layouts/sidebar" %>
 
 <div id="demo-app"></div>
@@ -9,7 +17,7 @@
 
     <div>
       <a class="v-btn blue lrg started" href="/intro">Get Started</a>
-      <a class="v-btn black lrg terminal" href="/#/demo/0">Launch Interactive Tutorial</a>
+      <a class="v-btn black lrg terminal" href="/#/demo/0" data-turbolinks="false">Launch Interactive Tutorial</a>
     </div>
 
     <div id="diagram"></div>
@@ -93,3 +101,8 @@
     </div>
   </div>
 </div>
+
+
+<% content_for(:scripts) do %>
+  <%= javascript_include_tag "demo-app" %>
+<% end %>

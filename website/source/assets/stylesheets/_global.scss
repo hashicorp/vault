@@ -29,25 +29,6 @@ h1 {
   margin-bottom: 24px;
 }
 
-//all below styles are overriding corrections for below (min-width: 992px)
-//below (min-width: 992px) these styles change
-.navbar-nav {
-  margin: 0;
-}
-
-.navbar-right {
-  float: right !important;
-}
-
-.navbar-nav > li {
-  float: left;
-}
-
-.navbar-nav > li > a {
-  padding-top: 15px;
-  padding-bottom: 15px;
-}
-
 .center {
   text-align: center;
 }

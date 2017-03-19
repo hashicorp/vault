@@ -32,8 +32,20 @@ $font-weight-bold:      600;
 
 // Body
 $body-font-color: $gray-darker;
+$body-link-color: $dark-blue;
 
 // Sidebar
+$sidebar-font-size: $font-size - 2;
 $sidebar-link-color: $body-font-color;
 $sidebar-link-color-hover: $black;
 $sidebar-link-color-active: $dark-blue;
+
+// Header
+$header-font-size: $font-size - 2;
+$header-link-color: $body-font-color;
+$header-link-color-hover: $black;
+
+// Footer
+$footer-font-size: $font-size - 2;
+$footer-link-color: $body-font-color;
+$footer-link-color-hover: $black;

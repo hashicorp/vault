@@ -254,7 +254,7 @@ This should return a response like this:
 }
 ```
 
-You can see the documentation on the [HTTP APIs](/docs/http/index.html) for
+You can see the documentation on the [HTTP APIs](/api/index.html) for
 more details on other available endpoints.
 
 Congratulations! You now know all the basics to get started with Vault.
