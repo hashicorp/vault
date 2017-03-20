@@ -58,20 +58,22 @@
             </div>
             <div class="buttons hidden-xs">
               <nav class="navigation-links" role="navigation">
-                <ul class="external-links nav navbar-nav navbar-right">
-                  <li class="first download">
-                    <a href="/downloads.html"><%= partial "layouts/svg/svg-download" %>Download</a>
-                  </li>
-                  <li class="github">
-                    <a href="https://github.com/hashicorp/vault"><%= partial "layouts/svg/svg-github" %>GitHub</a>
-                  </li>
-                </ul>
                 <ul class="main-links nav navbar-nav navbar-right">
-                  <li class="first li-under"><a href="/intro/index.html">Intro</a></li>
-                  <li class="li-under"><a href="/docs/index.html">Docs</a></li>
-                  <li class="li-under"><a href="/api/index.html">API</a></li>
-                  <li class="li-under"><a href="/community.html">Community</a></li>
-                  <li class="li-under"><a href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=header-nav&utm_campaign=vault">Enterprise</a></li>
+                  <li><a href="/intro/index.html">Intro</a></li>
+                  <li><a href="/docs/index.html">Docs</a></li>
+                  <li><a href="/api/index.html">API</a></li>
+                  <li><a href="/community.html">Community</a></li>
+                  <li><a href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=header-nav&utm_campaign=vault">Enterprise</a></li>
+                  <li>
+                    <a href="/downloads.html">
+                      <%= inline_svg "download.svg" %> Download
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://github.com/hashicorp/vault">
+                      <%= inline_svg "github.svg" %> GitHub
+                    </a>
+                  </li>
                 </ul>
               </nav>
             </div>

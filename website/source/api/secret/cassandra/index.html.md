@@ -223,7 +223,7 @@ role.
 
 ```
 $ curl \
-    --header "X-Vault-Token: ..." \Z
+    --header "X-Vault-Token: ..." \
     https://vault.rocks/v1/cassandra/creds/my-role
 ```
 
