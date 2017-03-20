@@ -53,6 +53,8 @@ func (b *backend) pathRoleCreateRead(
 		digits = otplib.DigitsSix
 	case 8:
 		digits = otplib.DigitsEight
+	default:
+		return logical.ErrorResponse("The digit value can only be 6 or 8."), nil
 	}
 
 	var algorithm otplib.Algorithm
@@ -64,7 +66,7 @@ func (b *backend) pathRoleCreateRead(
 	case "SHA512":
 		algorithm = otplib.AlgorithmSHA512
 	default:
-		algorithm = otplib.AlgorithmSHA1
+		return logical.ErrorResponse("The algorithm value is not valid."), nil
 	}
 
 	period := uint(role.Period)
@@ -85,7 +87,7 @@ func (b *backend) pathRoleCreateRead(
 
 	resp, err := &logical.Response{
 		Data: map[string]interface{}{
-			"token": totpToken,
+			"code": totpToken,
 		},
 	}, nil
 

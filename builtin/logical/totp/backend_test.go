@@ -392,7 +392,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 		Path:      path.Join("creds", name),
 		Check: func(resp *logical.Response) error {
 			var d struct {
-				Token string `mapstructure:"token"`
+				Code string `mapstructure:"code"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -423,7 +423,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			period := validation["period"].(int)
 			key := validation["key"].(string)
 
-			valid, _ := totplib.ValidateCustom(d.Token, key, time.Now().UTC(), totplib.ValidateOpts{
+			valid, _ := totplib.ValidateCustom(d.Code, key, time.Now().UTC(), totplib.ValidateOpts{
 				Period:    uint(period),
 				Skew:      1,
 				Digits:    digits,
@@ -431,7 +431,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			})
 
 			if !valid {
-				t.Fatalf("Generated token isn't valid.")
+				t.Fatalf("Generated code isn't valid.")
 			}
 
 			return nil
@@ -452,11 +452,11 @@ func testAccStepReadRole(t *testing.T, name string, expected map[string]interfac
 			}
 
 			var d struct {
-				Issuer       string `mapstructure:"issuer"`
-				Account_Name string `mapstructure:"account_name"`
-				Period       int    `mapstructure:"period"`
-				Algorithm    string `mapstructure:"algorithm"`
-				Digits       int    `mapstructure:"digits"`
+				Issuer      string `mapstructure:"issuer"`
+				AccountName string `mapstructure:"account_name"`
+				Period      int    `mapstructure:"period"`
+				Algorithm   string `mapstructure:"algorithm"`
+				Digits      int    `mapstructure:"digits"`
 			}
 
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
@@ -466,7 +466,7 @@ func testAccStepReadRole(t *testing.T, name string, expected map[string]interfac
 			switch {
 			case d.Issuer != expected["issuer"]:
 				return fmt.Errorf("Issuer should equal: %s", expected["issuer"])
-			case d.Account_Name != expected["account_name"]:
+			case d.AccountName != expected["account_name"]:
 				return fmt.Errorf("Account_Name should equal: %s", expected["account_name"])
 			case d.Period != expected["period"]:
 				return fmt.Errorf("Period should equal: %i", expected["period"])

@@ -116,7 +116,7 @@ func (b *backend) pathRoleRead(
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"issuer":       role.Issuer,
-			"account_name": role.Account_Name,
+			"account_name": role.AccountName,
 			"period":       role.Period,
 			"algorithm":    role.Algorithm,
 			"digits":       role.Digits,
@@ -156,39 +156,30 @@ func (b *backend) pathRoleCreate(
 			"Invalid key value: %s", err)), nil
 	}
 
-	if period < 0 {
+	if period <= 0 {
 		return logical.ErrorResponse("The period value must be greater than zero."), nil
-	}
-
-	// Set optional parameters if neccessary
-	if period == 0 {
-		period = 30
 	}
 
 	switch algorithm {
 	case "SHA1", "SHA256", "SHA512":
-	case "":
-		algorithm = "SHA1"
 	default:
 		return logical.ErrorResponse("The algorithm value is not valid."), nil
 	}
 
 	switch digits {
 	case 6, 8:
-	case 0:
-		digits = 6
 	default:
 		return logical.ErrorResponse("The digit value can only be 6 or 8."), nil
 	}
 
 	// Store it
 	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
-		Key:          key,
-		Issuer:       issuer,
-		Account_Name: account_name,
-		Period:       period,
-		Algorithm:    algorithm,
-		Digits:       digits,
+		Key:         key,
+		Issuer:      issuer,
+		AccountName: account_name,
+		Period:      period,
+		Algorithm:   algorithm,
+		Digits:      digits,
 	})
 	if err != nil {
 		return nil, err
@@ -201,12 +192,12 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	Key          string `json:"key" mapstructure:"key" structs:"key"`
-	Issuer       string `json:"issuer" mapstructure:"issuer" structs:"issuer"`
-	Account_Name string `json:"account_name" mapstructure:"account_name" structs:"account_name"`
-	Period       int    `json:"period" mapstructure:"period" structs:"period"`
-	Algorithm    string `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
-	Digits       int    `json:"digits" mapstructure:"digits" structs:"digits"`
+	Key         string `json:"key" mapstructure:"key" structs:"key"`
+	Issuer      string `json:"issuer" mapstructure:"issuer" structs:"issuer"`
+	AccountName string `json:"account_name" mapstructure:"account_name" structs:"account_name"`
+	Period      int    `json:"period" mapstructure:"period" structs:"period"`
+	Algorithm   string `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
+	Digits      int    `json:"digits" mapstructure:"digits" structs:"digits"`
 }
 
 const pathRoleHelpSyn = `
