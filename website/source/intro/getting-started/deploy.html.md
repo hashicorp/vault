@@ -99,7 +99,7 @@ file.
 ```
 
 For guidance on dealing with this issue, see the discussion of
-`disable_mlock` in [Server Configuration](/docs/config/index.html).
+`disable_mlock` in [Server Configuration](/docs/configuration/index.html).
 
 ## Initializing the Vault
 

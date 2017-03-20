@@ -125,6 +125,7 @@ func (b *backend) pathSignVerbatim(
 		EnforceHostnames: false,
 		KeyType:          "any",
 		UseCSRCommonName: true,
+		UseCSRSANs:       true,
 	}
 
 	return b.pathIssueSignCert(req, data, role, true, true)
