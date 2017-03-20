@@ -15,11 +15,13 @@
 // Anchor links
 @import 'hashicorp/anchor-links';
 
+// Sidebar
+@import 'hashicorp/sidebar';
+
 // Components
 @import '_header';
 @import '_footer';
 @import '_buttons';
-@import '_sidebar';
 
 // Pages
 @import '_api';

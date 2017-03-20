@@ -3,5 +3,4 @@
 //= require bootstrap
 
 //= require hashicorp/mega-nav
-
-//= require app/Sidebar
+//= require hashicorp/sidebar
