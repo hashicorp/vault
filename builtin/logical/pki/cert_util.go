@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/ryanuber/go-glob"
 )
 
 type certExtKeyUsage int
@@ -323,15 +324,15 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 							// Compare the sanitized name against the hostname
 							// portion of the email address in the roken
 							// display name
-							if strings.HasSuffix(sanitizedName, "."+splitDisplay[1]) {
+							if glob.Glob("*."+splitDisplay[1], sanitizedName) {
 								continue
 							}
 						}
 					}
 				}
 
-				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) ||
-					(isWildcard && sanitizedName == req.DisplayName) {
+				if glob.Glob("*."+req.DisplayName, sanitizedName) ||
+					(isWildcard && glob.Glob(req.DisplayName, sanitizedName)) {
 					continue
 				}
 			}
@@ -348,15 +349,15 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if role.AllowBareDomains &&
-					(name == currDomain ||
-						(isEmail && emailDomain == currDomain)) {
+					(glob.Glob(currDomain, name) ||
+						(isEmail && glob.Glob(currDomain, emailDomain))) {
 					valid = true
 					break
 				}
 
 				if role.AllowSubdomains {
-					if strings.HasSuffix(sanitizedName, "."+currDomain) ||
-						(isWildcard && sanitizedName == currDomain) {
+					if glob.Glob("*."+currDomain, sanitizedName) ||
+						(isWildcard && glob.Glob(currDomain, sanitizedName)) {
 						valid = true
 						break
 					}
