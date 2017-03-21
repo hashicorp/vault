@@ -639,7 +639,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/certificate/<account_id>`</dd>
+  <dd>`/auth/aws-ec2/config/sts/<account_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>
