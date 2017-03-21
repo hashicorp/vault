@@ -43,9 +43,9 @@ func (c *Sys) GenerateShareCancel() error {
 	return err
 }
 
-func (c *Sys) GenerateShareUpdate(share string) (*GenerateShareStatusResponse, error) {
+func (c *Sys) GenerateShareUpdate(key string) (*GenerateShareStatusResponse, error) {
 	body := map[string]interface{}{
-		"key": share,
+		"key": key,
 	}
 
 	r := c.c.NewRequest("PUT", "/v1/sys/generate-share/update")
