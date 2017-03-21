@@ -10,8 +10,8 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/consts"
+        "github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 )
