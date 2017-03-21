@@ -2039,14 +2039,18 @@ HTTP methods are listed below.
         Reads the configuration and progress of the current share generation
         attempt.
 
-    POST /attempt
+    PUT /attempt
         Initializes a new share generation attempt. Only a single share generation
-        attempt can take place at a time. One pgp_key may be passed to encrypt the
+        attempt can take place at a time. One pgp_key must be passed to encrypt the
 		newly generated share.
 
     DELETE /attempt
         Cancels any in-progress share generation attempt. This clears any
         progress made. This must be called to change the PGP key beingused.
+
+	PUT /update 
+        Updates the share generation attempt with a share. The threshold number of 
+		shares must be provided before a new share can be generated and returned.
 		`,
 	},
 	"seal-status": {
