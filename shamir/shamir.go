@@ -150,7 +150,7 @@ func evaluateAt(parts [][]byte, position uint8) ([]byte, error) {
 
 	// Verify enough parts provided
 	if len(parts) < 2 {
-		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret")
+		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret at position %v", position)
 	}
 
 	// Verify the parts are all the same length

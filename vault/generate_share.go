@@ -68,6 +68,32 @@ func (c *Core) GenerateShareConfiguration() (*GenerateShareConfig, error) {
 
 // GenerateShareInit is used to initialize the share generation settings
 func (c *Core) GenerateShareInit(pgpKey string) error {
+
+	// Get the seal configuration
+	var config *SealConfig
+	var err error
+	if c.seal.RecoveryKeySupported() {
+		config, err = c.seal.RecoveryConfig()
+		if err != nil {
+			return err
+		}
+	} else {
+		config, err = c.seal.BarrierConfig()
+		if err != nil {
+			return err
+		}
+	}
+
+	// Ensure the barrier is initialized
+	if config == nil {
+		return ErrNotInit
+	}
+
+	// Ensure key threshold is greater than 1
+	if config.SecretThreshold == 1 {
+		return fmt.Errorf("key threshold must be greater than 1 to generate additional shares")
+	}
+
 	var fingerprint string
 	switch {
 	case len(pgpKey) > 0:
@@ -186,18 +212,18 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 		}, nil
 	}
 
+	if config.SecretThreshold == 1 {
+		return nil, fmt.Errorf("key threshold must be greater than 1 to generate additional shares")
+	}
+
 	// Recover the master key
 	var masterKey []byte
-	if config.SecretThreshold == 1 {
-		masterKey = c.generateShareProgress[0]
-		c.generateShareProgress = nil
-	} else {
-		masterKey, err = shamir.Combine(c.generateShareProgress)
-		c.generateShareProgress = nil
-		if err != nil {
-			return nil, fmt.Errorf("failed to compute master key: %v", err)
-		}
+	masterKey, err = shamir.Combine(c.generateShareProgress)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute master key: %v", err)
 	}
+
+	// TODO: Don't do anything if secret threshold is only 1.
 
 	// Verify the master key
 	if c.seal.RecoveryKeySupported() {
@@ -214,21 +240,25 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 
 	// Generate the new share at position N + 1
 	var newShareBytes []byte
-	recoveryConfig, err := c.seal.RecoveryConfig()
-	if err != nil {
-		c.logger.Error("core: failed to retrieve recovery config", "error", err)
-		return nil, err
-	}
-
-	newShareBytes, err = shamir.GetShare(c.generateShareProgress, uint8(recoveryConfig.SecretShares+1))
+	newShareBytes, err = shamir.GetShare(c.generateShareProgress, uint8(config.SecretShares+1))
 	if err != nil {
 		c.logger.Error("core: share generation aborted, share generated failed", "error", err)
 		return nil, err
 	}
 
+	// Update barrier config with greater number of shares
+	newConfig := config.Clone()
+	newConfig.SecretShares++
+	if c.seal.SetBarrierConfig(newConfig) != nil {
+		c.logger.Error("core: unable to set barrier config", "error", err)
+		return nil, err
+	}
+
 	// Encrypt the share if a PGP key was given
 	if len(c.generateShareConfig.PGPKey) > 0 {
-		_, keyBytesArr, err := pgpkeys.EncryptShares([][]byte{[]byte(newShareBytes)}, []string{c.generateShareConfig.PGPKey})
+		hexEncodedShares := make([][]byte, 1)
+		hexEncodedShares[0] = []byte(base64.StdEncoding.EncodeToString(newShareBytes))
+		_, keyBytesArr, err := pgpkeys.EncryptShares(hexEncodedShares, []string{c.generateShareConfig.PGPKey})
 		if err != nil {
 			c.logger.Error("core: error encrypting new master key share", "error", err)
 			return nil, err
@@ -240,7 +270,7 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 		Progress:       progress,
 		Required:       config.SecretThreshold,
 		Key:            base64.StdEncoding.EncodeToString(newShareBytes),
-		PGPFingerprint: c.generateRootConfig.PGPFingerprint,
+		PGPFingerprint: c.generateShareConfig.PGPFingerprint,
 	}
 
 	if c.logger.IsInfo() {

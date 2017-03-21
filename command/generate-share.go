@@ -1,23 +1,23 @@
 package command
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/password"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/meta"
 )
 
 // GenerateShareCommand is a Command that generates a new master key share.
 type GenerateShareCommand struct {
 	meta.Meta
+
+	// Key can be used to pre-seed the key. If it is set, it will not
+	// be asked with the `password` helper.
+	Key string
 }
 
 func (c *GenerateShareCommand) Run(args []string) int {
@@ -56,7 +56,7 @@ func (c *GenerateShareCommand) Run(args []string) int {
 		checkPgp = true
 	case cancel:
 	case status:
-	case rootGenerationStatus.Started:
+	case shareGenerationStatus.Started:
 	default:
 		checkPgp = true
 	}
@@ -135,24 +135,6 @@ func (c *GenerateShareCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *GenerateShareCommand) decode(encodedVal string) int {
-	tokenBytes, err := xor.XORBase64(encodedVal, otp)
-	if err != nil {
-		c.Ui.Error(err.Error())
-		return 1
-	}
-
-	token, err := uuid.FormatUUID(tokenBytes)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Error formatting base64 token value: %v", err))
-		return 1
-	}
-
-	c.Ui.Output(fmt.Sprintf("Root token: %s", token))
-
-	return 0
-}
-
 // initGenerateShare is used to start the generation process
 func (c *GenerateShareCommand) initGenerateShare(client *api.Client, pgpKey string) int {
 	// Start the rekey
@@ -196,7 +178,7 @@ func (c *GenerateShareCommand) shareGenerationStatus(client *api.Client) int {
 func (c *GenerateShareCommand) dumpStatus(status *api.GenerateShareStatusResponse) {
 	// Dump the status
 	statString := fmt.Sprintf(
-			"Started: %v\n"+
+		"Started: %v\n"+
 			"Generate Share Progress: %d\n"+
 			"Required Keys: %d\n"+
 			"Complete: %t",
@@ -208,6 +190,10 @@ func (c *GenerateShareCommand) dumpStatus(status *api.GenerateShareStatusRespons
 	if len(status.PGPFingerprint) > 0 {
 		statString = fmt.Sprintf("%s\nPGP Fingerprint: %s", statString, status.PGPFingerprint)
 	}
+	if len(status.Key) > 0 {
+		statString = fmt.Sprintf("%s\nShare: %s", statString, status.Key)
+	}
+
 	c.Ui.Output(statString)
 }
 

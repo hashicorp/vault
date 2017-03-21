@@ -135,7 +135,7 @@ func handleSysGenerateShareUpdate(core *vault.Core) http.Handler {
 		}
 
 		// Use the key to make progress on root generation
-		result, err := core.GenerateShareUpdate(key, req.Nonce)
+		result, err := core.GenerateShareUpdate(key)
 		if err != nil {
 			respondError(w, http.StatusBadRequest, err)
 			return
@@ -163,7 +163,7 @@ type GenerateShareStatusResponse struct {
 	Progress       int    `json:"progress"`
 	Required       int    `json:"required"`
 	Complete       bool   `json:"complete"`
-	Key            string `json:"encoded_root_token"`
+	Key            string `json:"key"`
 	PGPFingerprint string `json:"pgp_fingerprint"`
 }
 
