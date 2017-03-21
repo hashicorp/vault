@@ -211,15 +211,15 @@ Usage: vault generate-share [options] [key]
   operation is done online, but requires that a threshold of the current unseal
   keys be provided.
 
-  The following may be provided at attempt initialization time:
+  The following must be provided at attempt initialization time:
 
-  2) A file containing a PGP key (binary or base64-encoded) or a Keybase.io
+  A file containing a PGP key (binary or base64-encoded) or a Keybase.io
   username in the format of "keybase:<username>" in the '-pgp-key' flag. The
   final share value will be encrypted with this public key and base64-encoded.
 
 General Options:
 ` + meta.GeneralOptionsUsage() + `
-Generate Root Options:
+Generate Share Options:
 
   -init                   Initialize the share generation attempt. This can only
                           be done if no generation is already initiated.
@@ -230,8 +230,6 @@ Generate Root Options:
   -status                 Prints the status of the current attempt. This can be
                           used to see the status without attempting to provide
                           an unseal key.
-
-  -decode=abcd            Decodes and outputs the generated master key share. 
 
   -pgp-key                A file on disk containing a binary- or base64-format
                           public PGP key, or a Keybase username specified as
