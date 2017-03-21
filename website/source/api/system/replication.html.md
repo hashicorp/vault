@@ -8,7 +8,7 @@ description: |-
 
 # `/sys/replication`
 
-~> **Enterprise Only** – This endpoint requires Vault Pro or Vault Enterprise.
+~> **Enterprise Only** – These endpoints require Vault Enterprise.
 
 ## Attempt Recovery
 
