@@ -41,7 +41,7 @@ func (c *GenerateShareCommand) Run(args []string) int {
 		return 2
 	}
 
-	// Check if the root generation is started
+	// Check if the share generation is started
 	shareGenerationStatus, err := client.Sys().GenerateShareStatus()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error reading share generation status: %s", err))
@@ -137,7 +137,7 @@ func (c *GenerateShareCommand) Run(args []string) int {
 
 // initGenerateShare is used to start the generation process
 func (c *GenerateShareCommand) initGenerateShare(client *api.Client, pgpKey string) int {
-	// Start the rekey
+	// Start the share generation
 	status, err := client.Sys().GenerateShareInit(pgpKey)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Error initializing share generation: %s", err))
