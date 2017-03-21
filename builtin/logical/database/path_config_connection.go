@@ -223,52 +223,38 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 		b.Lock()
 		defer b.Unlock()
 
-		var db dbs.DatabaseType
+		db, err := factory(config, b.System())
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+		}
+
+		err = db.Initialize(config.ConnectionDetails)
+		if err != nil {
+			if !strings.Contains(err.Error(), "Error Initializing Connection") {
+				return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+			}
+
+			if verifyConnection {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+		}
+
 		if _, ok := b.connections[name]; ok {
+			// Don't update connection until the reset api is hit, close for
+			// now.
+			err = db.Close()
+			if err != nil {
+				return nil, err
+			}
 
 			// Don't allow the connection type to change
 			if b.connections[name].Type() != connType {
 				return logical.ErrorResponse("Can not change type of existing connection."), nil
 			}
 		} else {
-			db, err = factory(config, b.System())
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
-			}
-
-			err := db.Initialize(config.ConnectionDetails)
-			if err != nil {
-				if !strings.Contains(err.Error(), "Error Initializing Connection") {
-					return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
-
-				}
-
-				if verifyConnection {
-					return logical.ErrorResponse(err.Error()), nil
-
-				}
-			}
-
+			// Save the new connection
 			b.connections[name] = db
 		}
-
-		/*  TODO:
-		// Don't check the connection_url if verification is disabled
-		verifyConnection := data.Get("verify_connection").(bool)
-		if verifyConnection {
-			// Verify the string
-			db, err := sql.Open("postgres", connURL)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"Error validating connection info: %s", err)), nil
-			}
-			defer db.Close()
-			if err := db.Ping(); err != nil {
-				return logical.ErrorResponse(fmt.Sprintf(
-					"Error validating connection info: %s", err)), nil
-			}
-		}
-		*/
 
 		// Store it
 		entry, err := logical.StorageEntryJSON(fmt.Sprintf("dbs/%s", name), config)
