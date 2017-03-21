@@ -35,10 +35,13 @@ $body-font-color: $gray-darker;
 $body-link-color: $dark-blue;
 
 // Sidebar
+$sidebar-background-color: $white;
 $sidebar-font-size: $font-size - 2;
 $sidebar-link-color: $body-font-color;
 $sidebar-link-color-hover: $black;
 $sidebar-link-color-active: $dark-blue;
+$sidebar-font-family: $font-family-open-sans;
+$sidebar-font-weight: $font-weight-reg;
 
 // Header
 $header-font-size: $font-size - 2;
