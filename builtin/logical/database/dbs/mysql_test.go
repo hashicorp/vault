@@ -15,8 +15,8 @@ var (
 )
 
 func prepareMySQLTestContainer(t *testing.T) (cid dockertest.ContainerID, retURL string) {
-	if os.Getenv("PG_URL") != "" {
-		return "", os.Getenv("PG_URL")
+	if os.Getenv("MYSQL_URL") != "" {
+		return "", os.Getenv("MYSQL_URL")
 	}
 
 	// Without this the checks for whether the container has started seem to
@@ -75,7 +75,7 @@ func TestMySQL_Initialize(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	// Deconsturct the middleware chain to get the underlying postgres object
+	// Deconsturct the middleware chain to get the underlying mysql object
 	dbMetrics := dbRaw.(*databaseMetricsMiddleware)
 	db := dbMetrics.next.(*MySQL)
 
