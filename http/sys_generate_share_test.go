@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"testing"
 
+	"encoding/base64"
+
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 )
@@ -204,7 +206,34 @@ func TestSysGenerateShare_Update_PGP(t *testing.T) {
 		t.Fatal("decoded key buffer is nil")
 	}
 
-	// newShare := decodedKeyBuf.String()
+	newShare := decodedKeyBuf.String()
+	newShareBytes, err := base64.StdEncoding.DecodeString(newShare)
 
-	// TODO: ... need to test that the new share will unseal Vault...
+	keys[0] = newShareBytes
+
+	for i, key := range keys {
+		resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
+			"key": hex.EncodeToString(key),
+		})
+
+		var actual map[string]interface{}
+		expected := map[string]interface{}{
+			"sealed":   true,
+			"t":        json.Number("3"),
+			"n":        json.Number("3"),
+			"progress": json.Number(fmt.Sprintf("%d", i+1)),
+			"nonce":    "",
+		}
+		if i == len(keys)-1 {
+			expected["sealed"] = false
+			expected["progress"] = json.Number("0")
+		}
+		testResponseStatus(t, resp, 200)
+		testResponseBody(t, resp, &actual)
+		if i < len(keys)-1 && (actual["nonce"] == nil || actual["nonce"].(string) == "") {
+			t.Fatalf("got nil nonce, actual is %#v", actual)
+		} else {
+			expected["nonce"] = actual["nonce"]
+		}
+	}
 }
