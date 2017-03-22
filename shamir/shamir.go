@@ -143,14 +143,13 @@ func add(a, b uint8) uint8 {
 	return a ^ b
 }
 
-// evaluateAt combines the given parts and evaluates the polynomials
-// at position.
-// This can be used for constructing generic shares.
-func evaluateAt(parts [][]byte, position uint8) ([]byte, error) {
+// generateShareAt combines the given parts and evaluates the polynomials
+// at x to produce a share.
+func generateShareAt(parts [][]byte, x uint8) ([]byte, error) {
 
 	// Verify enough parts provided
 	if len(parts) < 2 {
-		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret at position %v", position)
+		return nil, fmt.Errorf("less than two parts cannot be used to reconstruct the secret at x= %v", x)
 	}
 
 	// Verify the parts are all the same length
@@ -191,7 +190,7 @@ func evaluateAt(parts [][]byte, position uint8) ([]byte, error) {
 		}
 
 		// Interpolte the polynomial and compute the value at position
-		val := interpolatePolynomial(xSamples, ySamples, position)
+		val := interpolatePolynomial(xSamples, ySamples, x)
 
 		combinedValue[idx] = val
 	}
@@ -258,14 +257,14 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 // once a `threshold` number of parts are available.
 func Combine(parts [][]byte) ([]byte, error) {
 
-	// the secret is the combination of the values at 0
-	return evaluateAt(parts, 0)
+	// the secret is the value at x=0
+	return generateShareAt(parts, 0)
 }
 
-// GetShare is used to construct a share from values at a specific x co-ordinate.
-func GetShare(parts [][]byte, shareNumber uint8) ([]byte, error) {
+// GetShareAt is used to construct a share at a specific x co-ordinate.
+func GetShareAt(parts [][]byte, x uint8) ([]byte, error) {
 
-	shareValue, err := evaluateAt(parts, shareNumber)
+	shareValue, err := generateShareAt(parts, x)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +274,7 @@ func GetShare(parts [][]byte, shareNumber uint8) ([]byte, error) {
 	share := make([]byte, shareLength)
 	copy(share, shareValue)
 
-	share[shareLength-1] = shareNumber
+	share[shareLength-1] = x
 
 	return share, nil
 }

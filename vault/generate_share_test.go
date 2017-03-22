@@ -48,7 +48,7 @@ func testCore_GenerateShare_Lifecycle_Common(t *testing.T, c *Core, keys [][]byt
 	}
 
 	// Start a share generation
-	err = c.GenerateShareInit("")
+	err = c.GenerateShareInit(pgpkeys.TestPubKey1)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

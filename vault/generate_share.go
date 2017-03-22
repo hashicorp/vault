@@ -223,8 +223,6 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 		return nil, fmt.Errorf("failed to compute master key: %v", err)
 	}
 
-	// TODO: Don't do anything if secret threshold is only 1.
-
 	// Verify the master key
 	if c.seal.RecoveryKeySupported() {
 		if err := c.seal.VerifyRecoveryKey(masterKey); err != nil {
@@ -240,7 +238,7 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 
 	// Generate the new share at position N + 1
 	var newShareBytes []byte
-	newShareBytes, err = shamir.GetShare(c.generateShareProgress, uint8(config.SecretShares+1))
+	newShareBytes, err = shamir.GetShareAt(c.generateShareProgress, uint8(config.SecretShares+1))
 	if err != nil {
 		c.logger.Error("core: share generation aborted, share generated failed", "error", err)
 		return nil, err
