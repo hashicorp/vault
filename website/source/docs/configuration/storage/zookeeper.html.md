@@ -20,7 +20,7 @@ The Zookeeper storage backend is used to persist Vault's data in
   you may be referred to the original author.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   address = "localhost:2181"
   path    = "vault/"
 }
@@ -71,15 +71,17 @@ discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
 
 - `cluster_addr` `(string: "")` – Specifies the address to advertise to other
   Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`.
+  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
+  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
+  use TLS with a private key/certificate).
 
 - `disable_clustering` `(bool: false)` – Specifies whether clustering features
   such as request forwarding are enabled. Setting this to true on one Vault node
   will disable these features _only when that node is the active node_.
 
-- `redirect_addr` `(string: <required>)` – Specifies the address to advertise to
-  other Vault servers in the cluster for client redirection. This can also be
-  provided via the environment variable `VAULT_REDIRECT_ADDR`.
+- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
+  advertise to other Vault servers in the cluster for client redirection. This
+  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
 
 ## `zookeeper` Examples
 
@@ -89,7 +91,7 @@ This example shows configuring Vault to communicate with a Zookeeper
 installation running on a custom port and to store data at a custom path.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   address = "localhost:3253"
   path    = "my-vault-data/"
 }
@@ -102,7 +104,7 @@ access only to the user "vaultUser". As per Zookeeper's ACL model, the digest
 value in `znode_owner` must match the user in `znode_owner`.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   znode_owner = "digest:vaultUser:raxgVAfnDRljZDAcJFxznkZsExs="
   auth_info   = "digest:vaultUser:abc"
 }
@@ -115,7 +117,7 @@ This example instructs Vault to only allow access from localhost. As this is the
 for the ACL check.
 
 ```hcl
-backend "zookeeper" {
+storage "zookeeper" {
   znode_owner = "ip:127.0.0.1"
 }
 ```

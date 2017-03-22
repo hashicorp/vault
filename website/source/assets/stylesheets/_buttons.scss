@@ -3,13 +3,13 @@
 // --------------------------------------------------
 
 .v-btn {
+	box-shadow: 2px 3px 2px rgba(0,0,0,0.08);
 	display: inline-block;
 	background-color: $white;
 	color: $black;
 	border: 1px solid $black;
 	text-decoration: none;
 	@include transition(color .3s ease-in-out);
-	@include btn-shadow();
 
 	&.lrg {
 		font-size: 18px;

@@ -6,7 +6,7 @@ description: |-
   The In-Memory storage backend is used to persist Vault's data entirely
   in-memory on the same machine in which Vault is running. This is useful for
   development and experimentation, but use of this backend is highly discouraged
-  in production.
+  in production except in very specific use-cases.
 ---
 
 # In-Memory Storage Backend
@@ -27,7 +27,7 @@ is restarted.
   HashiCorp.
 
 ```hcl
-backend "inmem" {}
+storage "inmem" {}
 ```
 
 ## `inmem` Parameters
@@ -39,5 +39,5 @@ The In-Memory storage backend has no configuration parameters.
 This example shows activating the In-Memory storage backend.
 
 ```hcl
-backend "inmem" {}
+storage "inmem" {}
 ```

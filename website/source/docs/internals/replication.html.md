@@ -144,6 +144,25 @@ Vault uses the merkle index as the source of truth, allowing the WAL streams to
 be completely distinct and unsynchronized.  This simplifies administration of
 Vault Replication for operators.
 
+# Caveats
+
+* **Read-After-Write Consistency**: All write requests are forwarded from
+  secondaries to the primary cluster in order to avoid potential conflicts.
+  While replication is near real-time, it is not instantaneous, meaning there
+  is a potential for a client to write to a secondary and a subsequent read to
+  return an old value. Secondaries attempt to mask this from an individual
+  client making subsequent requests by stalling write requests until the write
+  is replicated or a timeout is reached (2 seconds). If the timeout is reached,
+  the client will receive a warning.
+
+* **Stale Reads**: Secondary clusters service reads based on their
+  locally-replicated data. During normal operation updates from a primary are
+  received in near real-time by secondaries. However, during an outage or
+  network service disruption, replication may stall and secondaries may have
+  stale data. The cluster will automatically recover and reconcile any stale
+  data once the outage has recovered, but reads in the intervening period may
+  receive stale data.
+
 [wal]: https://en.wikipedia.org/wiki/Write-ahead_logging
 [merkle]: https://en.wikipedia.org/wiki/Merkle_tree
 [aries]: https://en.wikipedia.org/wiki/Algorithms_for_Recovery_and_Isolation_Exploiting_Semantics

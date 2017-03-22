@@ -21,7 +21,7 @@ server or cluster.
   you may be referred to the original author.
 
 ```hcl
-backend "mysql" {
+storage "mysql" {
   username = "user1234"
   password = "secret123!"
   database = "vault"
@@ -58,7 +58,7 @@ This example shows configuring the MySQL backend to use a custom database and
 table name.
 
 ```hcl
-backend "mysql" {
+storage "mysql" {
   database = "my-vault"
   table    = "vault-data"
   username = "user1234"

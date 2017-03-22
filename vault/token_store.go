@@ -1689,6 +1689,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Generate the response
 	resp.Auth = &logical.Auth{
+		NumUses:     te.NumUses,
 		DisplayName: te.DisplayName,
 		Policies:    te.Policies,
 		Metadata:    te.Meta,

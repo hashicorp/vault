@@ -22,7 +22,7 @@ check.
   by HashiCorp.
 
 ```hcl
-backend "consul" {
+storage "consul" {
   address = "127.0.0.1:8500"
   path    = "vault"
 }
@@ -121,15 +121,17 @@ discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
 
 - `cluster_addr` `(string: "")` – Specifies the address to advertise to other
   Vault servers in the cluster for request forwarding. This can also be provided
-  via the environment variable `VAULT_CLUSTER_ADDR`.
+  via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
+  `redirect_addr`, but Vault will ignore the scheme (all cluster members always
+  use TLS with a private key/certificate).
 
 - `disable_clustering` `(bool: false)` – Specifies whether clustering features
   such as request forwarding are enabled. Setting this to true on one Vault node
   will disable these features _only when that node is the active node_.
 
-- `redirect_addr` `(string: <required>)` – Specifies the address to advertise to
-  other Vault servers in the cluster for client redirection. This can also be
-  provided via the environment variable `VAULT_REDIRECT_ADDR`.
+- `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
+  advertise to other Vault servers in the cluster for client redirection. This
+  can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
 
 ## `consul` Examples
 
@@ -139,7 +141,7 @@ This example shows a sample physical backend configuration which communicates
 with a local Consul agent running on `127.0.0.1:8500`.
 
 ```hcl
-backend "consul" {}
+storage "consul" {}
 ```
 
 ### Detailed Customization
@@ -148,7 +150,7 @@ This example shows communicating with Consul on a custom address with an ACL
 token.
 
 ```hcl
-backend "consul" {
+storage "consul" {
   address = "10.5.7.92:8194"
   token   = "abcd1234"
 }
@@ -161,7 +163,7 @@ This path must be readable and writable by the Consul ACL token, if Consul
 configured to use ACLs.
 
 ```hcl
-backend "consul" {
+storage "consul" {
   path = "vault/"
 }
 ```
@@ -171,7 +173,7 @@ backend "consul" {
 This example shows communicating with Consul over a local unix socket.
 
 ```hcl
-backend "consul" {
+storage "consul" {
   address = "unix:///tmp/.consul.http.sock"
 }
 ```
@@ -182,7 +184,7 @@ This example shows using a custom CA, certificate, and key file to securely
 communicate with Consul over TLS.
 
 ```hcl
-backend "consul" {
+storage "consul" {
   scheme        = "https"
   tls_ca_file   = "/etc/pem/vault.ca"
   tls_cert_file = "/etc/pem/vault.cert"

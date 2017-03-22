@@ -48,6 +48,10 @@ func TestSysMountConfig(t *testing.T) {
 		t.Fatalf("Expected default lease TTL: %d, got %d",
 			expectedMaxTTL, mountConfig.MaxLeaseTTL)
 	}
+
+	if mountConfig.ForceNoCache == true {
+		t.Fatalf("did not expect force cache")
+	}
 }
 
 // testMount sets up a test mount of a generic backend w/ a random path; caller

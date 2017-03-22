@@ -1,8 +1,7 @@
 @import 'bootstrap-sprockets';
 @import 'bootstrap';
 
-// Remote fonts
-@import url('https://fonts.googleapis.com/css?family=Open+Sans:300,400,600');
+@import url("//fonts.googleapis.com/css?family=Open+Sans:400,600");
 
 // Core variables and mixins
 @import '_variables';
@@ -10,18 +9,20 @@
 //Global Site
 @import '_global';
 
-// Hashicorp Shared Project Styles
-@import 'hashicorp-shared/_hashicorp-utility';
-@import 'hashicorp-shared/_project-utility';
-@import 'hashicorp-shared/_hashicorp-header';
-@import 'hashicorp-shared/_hashicorp-sidebar';
+//Mega Nav
+@import 'hashicorp/mega-nav';
+
+// Anchor links
+@import 'hashicorp/anchor-links';
+
+// Sidebar
+@import 'hashicorp/sidebar';
 
 // Components
-@import '_announcement-bnr';
 @import '_header';
 @import '_footer';
 @import '_buttons';
-@import '_sidebar';
+@import '_latest';
 
 // Pages
 @import '_api';

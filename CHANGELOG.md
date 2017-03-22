@@ -1,4 +1,12 @@
-## 0.7.0 (Unreleased)
+## 0.7.0 (Early Access; final release March 21th, 2017)
+
+SECURITY:
+
+ * Common name not being validated when `exclude_cn_from_sans` option used in
+   `pki` backend: When using a role in the `pki` backend that specified the
+   `exclude_cn_from_sans` option, the common name would not then be properly
+   validated against the role's constraints. This has been fixed. We recommend
+   any users of this feature to upgrade to 0.7 as soon as feasible.
 
 DEPRECATIONS/CHANGES:
 
@@ -56,6 +64,10 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * api/request: Passing username and password information in API request
+   [GH-2469]
+ * audit: Logging the token's use count with authentication response and
+   logging the remaining uses of the client token with request [GH-2437]
  * auth/approle: Support for restricting the number of uses on the tokens
    issued [GH-2435]
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
@@ -66,16 +78,23 @@ IMPROVEMENTS:
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * core: Add option to disable caching on a per-mount level [GH-2455]
+ * core: Add ability to require valid client certs in listener config [GH-2457]
  * physical/dynamodb: Implement a session timeout to avoid having to use
    recovery mode in the case of an unclean shutdown, which makes HA much safer
    [GH-2141]
  * secret/pki: O (Organization) values can now be set to role-defined values
    for issued/signed certificates [GH-2369]
- * secret/pki: Certificates issued/signed from PKI backend does not generate
+ * secret/pki: Certificates issued/signed from PKI backend do not generate
    leases by default [GH-2403]
  * secret/pki: When using DER format, still return the private key type
    [GH-2405]
+ * secret/pki: Add an intermediate to the CA chain even if it lacks an
+   authority key ID [GH-2465]
+ * secret/pki: Add role option to use CSR SANs [GH-2489]
  * secret/ssh: SSH backend as CA to sign user and host certificates [GH-2208]
+ * secret/ssh: Support reading of SSH CA public key from `config/ca` endpoint
+   and also return it when CA key pair is generated [GH-2483]
 
 BUG FIXES:
 
