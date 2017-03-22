@@ -196,6 +196,9 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 			return nil, fmt.Errorf("failed to delete connection configuration")
 		}
 
+		b.Lock()
+		defer b.Unlock()
+
 		if _, ok := b.connections[name]; ok {
 			err = b.connections[name].Close()
 			if err != nil {
