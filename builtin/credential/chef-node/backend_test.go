@@ -15,6 +15,8 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"crypto/rsa"
+
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -357,8 +359,8 @@ ywIDAQAB
 	sig := headers.Get("X-Ops-Authorization")
 	ts := headers.Get("X-Ops-Timestamp")
 	key, _ := parsePublicKey(pubKey)
-
-	if !authenticate("test_client", ts, sig, sigVer, key, vaultURL.Path) {
+	keys := []*rsa.PublicKey{key}
+	if !authenticate("test_client", ts, sig, sigVer, keys, vaultURL.Path) {
 		t.Fatal("Couldn't authenticate request")
 	}
 }
@@ -430,6 +432,8 @@ func TestBackendAcc_Login(t *testing.T) {
 	tagList := []string{tag1, tag2}
 	roleList := []string{role1, role2}
 	nodeKey, err := setupTestNode(nodeName, env, roleList, tagList)
+	secondaryKey, err := addClientKey(nodeName)
+
 	if err != nil {
 		t.Fatalf("Couldn't setup test node %s", nodeName)
 	}
@@ -591,6 +595,39 @@ func TestBackendAcc_Login(t *testing.T) {
 	if !policyutil.EquivalentPolicies(exPols, resp.Auth.Policies) {
 		t.Fatalf("policies didn't match:\nexpected: %#v\ngot: %#v\n", exPols, resp.Auth.Policies)
 	}
+
+	conf2 := &config{
+		ClientName: nodeName,
+		ClientKey:  string(secondaryKey),
+	}
+
+	h2, err := authHeaders(conf2, testURL, "POST", nil, false)
+
+	loginInput = map[string]interface{}{
+		"signature_version": h2.Get("X-Ops-Sign"),
+		"client_name":       nodeName,
+		"signature":         h2.Get("X-Ops-Authorization"),
+		"timestamp":         h2.Get("X-Ops-Timestamp"),
+	}
+
+	loginRequest = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "login",
+		Storage:   storage,
+		Data:      loginInput,
+	}
+
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.Auth == nil || resp.IsError() {
+		t.Fatalf("login attempt with secondary key failed")
+	}
+
+	if !policyutil.EquivalentPolicies(exPols, resp.Auth.Policies) {
+		t.Fatalf("policies didn't match:\nexpected: %#v\ngot: %#v\n", exPols, resp.Auth.Policies)
+	}
 }
 
 func randString() string {
@@ -717,6 +754,42 @@ func setupTestNode(name string, env string, roles []string, tags []string) (stri
 	}
 
 	return clientRespStruct.PrivateKey, nil
+}
+
+func addClientKey(name string) (string, error) {
+	keyReq := struct {
+		Name   string `json:"name"`
+		Exp    string `json:"expiration_date"`
+		Create bool   `json:"create_key"`
+	}{
+		name + "_2",
+		"infinity",
+		true,
+	}
+	keyJSON, err := json.Marshal(keyReq)
+	if err != nil {
+		return "", err
+	}
+
+	keyResp, err := chefRequest("clients/"+name+"/keys", "POST", keyJSON)
+	if err != nil {
+		return "", err
+	}
+	defer keyResp.Body.Close()
+	kBody, err := ioutil.ReadAll(keyResp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	var KeyRespStruct struct {
+		PrivateKey string `json:"private_key"`
+	}
+	err = json.Unmarshal(kBody, &KeyRespStruct)
+	if err != nil {
+		return "", err
+	}
+
+	return KeyRespStruct.PrivateKey, nil
 }
 
 func teardownTestNode(name string) error {

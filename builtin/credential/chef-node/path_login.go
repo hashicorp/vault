@@ -73,12 +73,12 @@ func (b *backend) pathLogin(req *logical.Request, data *framework.FieldData) (*l
 	sig := data.Get("signature").(string)
 	sigVer := data.Get("signature_version").(string)
 
-	key, err := b.retrievePubKey(req, client)
+	keys, err := b.retrievePubKey(req, client)
 	if err != nil {
 		return nil, err
 	}
 	reqPath := "/v1/" + req.MountPoint + req.Path
-	auth := authenticate(client, ts, sig, sigVer, key, reqPath)
+	auth := authenticate(client, ts, sig, sigVer, keys, reqPath)
 	if !auth {
 		return logical.ErrorResponse("Couldn't authenticate client"), nil
 	}
@@ -128,12 +128,12 @@ func (b *backend) pathLoginRenew(req *logical.Request, d *framework.FieldData) (
 	client := req.Auth.InternalData["client_name"].(string)
 	ts := req.Auth.InternalData["timestamp"].(string)
 
-	key, err := b.retrievePubKey(req, client)
+	keys, err := b.retrievePubKey(req, client)
 	if err != nil {
 		return nil, err
 	}
 
-	auth := authenticate(client, ts, sig, sigVer, key, reqPath)
+	auth := authenticate(client, ts, sig, sigVer, keys, reqPath)
 	if !auth {
 		return nil, fmt.Errorf("couldn't authenticate renew request")
 	}
@@ -268,23 +268,24 @@ func (b *backend) retrieveNodeInfo(req *logical.Request, targetName string) (*no
 	return &jb, nil
 }
 
-func (b *backend) retrievePubKey(req *logical.Request, targetName string) (*rsa.PublicKey, error) {
+func (b *backend) retrievePubKey(req *logical.Request, targetName string) ([]*rsa.PublicKey, error) {
+	var keys []*rsa.PublicKey
 	config, err := b.Config(req.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	keyURL, err := url.Parse(config.BaseURL + "/clients/" + targetName)
+	keysURL, err := url.Parse(config.BaseURL + "/clients/" + targetName + "/keys")
 	if err != nil {
 		return nil, err
 	}
 
-	headers, err := authHeaders(config, keyURL, "GET", nil, true)
+	headers, err := authHeaders(config, keysURL, "GET", nil, true)
 	if err != nil {
 		return nil, err
 	}
 
-	clientReq, err := http.NewRequest("GET", keyURL.String(), nil)
+	clientReq, err := http.NewRequest("GET", keysURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -300,18 +301,57 @@ func (b *backend) retrievePubKey(req *logical.Request, targetName string) (*rsa.
 	if err != nil {
 		return nil, err
 	}
-	var jb clientResponse
-	if err := json.Unmarshal(body, &jb); err != nil {
+	var kr []keyInfo
+	if err := json.Unmarshal(body, &kr); err != nil {
 		return nil, err
 	}
-	key, err := parsePublicKey(jb.ClientKey)
-	if err != nil {
-		return nil, err
+	for i := range kr {
+		if kr[i].Expired {
+			continue
+		}
+		keyURL, err := url.Parse(kr[i].URI)
+		if err != nil {
+			return nil, err
+		}
+
+		keyHeaders, err := authHeaders(config, keyURL, "GET", nil, true)
+		if err != nil {
+			return nil, err
+		}
+
+		keyReq, err := http.NewRequest("GET", keyURL.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+
+		keyReq.Header = keyHeaders
+		keyClient := &http.Client{}
+		keyResp, err := keyClient.Do(keyReq)
+		if err != nil {
+			return nil, err
+		}
+		defer keyResp.Body.Close()
+		keyBody, err := ioutil.ReadAll(keyResp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		var ck struct {
+			ClientKey string `json:"public_key"`
+		}
+		err = json.Unmarshal(keyBody, &ck)
+		if err != nil {
+			return nil, err
+		}
+
+		cKey, err := parsePublicKey(ck.ClientKey)
+		keys = append(keys, cKey)
 	}
-	return key, nil
+
+	return keys, nil
 }
 
-func authenticate(client string, ts string, sig string, sigVer string, key *rsa.PublicKey, path string) bool {
+func authenticate(client string, ts string, sig string, sigVer string, keys []*rsa.PublicKey, path string) bool {
 	bodyHash := sha1.Sum([]byte(""))
 	hashedPath := sha1.Sum([]byte(path))
 	headers := []string{
@@ -326,11 +366,13 @@ func authenticate(client string, ts string, sig string, sigVer string, key *rsa.
 	if err != nil {
 		return false
 	}
-	err = rsa.VerifyPKCS1v15(key, crypto.Hash(0), []byte(headerString), decSig)
-	if err != nil {
-		return false
+	for i := range keys {
+		err = rsa.VerifyPKCS1v15(keys[i], crypto.Hash(0), []byte(headerString), decSig)
+		if err == nil {
+			return true
+		}
 	}
-	return true
+	return false
 }
 
 func authHeaders(conf *config, url *url.URL, method string, body io.Reader, split bool) (http.Header, error) {
@@ -409,7 +451,12 @@ func parsePublicKey(key string) (*rsa.PublicKey, error) {
 	return pubkey.(*rsa.PublicKey), nil
 }
 
-type clientResponse struct {
+type keyInfo struct {
+	URI     string `json:"uri"`
+	Expired bool   `json:"expired"`
+}
+
+type keyResponse struct {
 	ClientKey string `json:"public_key"`
 }
 
