@@ -27,24 +27,29 @@ type GenerateShareResult struct {
 }
 
 // GenerateShare is used to return the share generation progress (num shares)
-func (c *Core) GenerateShareProgress() (int, error) {
+func (c *Core) GenerateShareProgress() (progress int, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return 0, consts.ErrSealed
+		progress = 0
+		err = consts.ErrSealed
+		return
 	}
 	if c.standby {
-		return 0, consts.ErrStandby
+		progress = 0
+		err = consts.ErrStandby
+		return
 	}
 
 	c.generateShareLock.Lock()
 	defer c.generateShareLock.Unlock()
 
-	return len(c.generateShareProgress), nil
+	progress = len(c.generateShareProgress)
+	return
 }
 
 // GenerateShareConfig is used to read the share generation configuration
-func (c *Core) GenerateShareConfiguration() (*GenerateShareConfig, error) {
+func (c *Core) GenerateShareConfiguration() (conf *GenerateShareConfig, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
@@ -58,12 +63,11 @@ func (c *Core) GenerateShareConfiguration() (*GenerateShareConfig, error) {
 	defer c.generateShareLock.Unlock()
 
 	// Copy the config if any
-	var conf *GenerateShareConfig
 	if c.generateShareConfig != nil {
 		conf = new(GenerateShareConfig)
 		*conf = *c.generateShareConfig
 	}
-	return conf, nil
+	return
 }
 
 // GenerateShareInit is used to initialize the share generation settings
@@ -140,45 +144,49 @@ func (c *Core) GenerateShareInit(pgpKey string) error {
 }
 
 // GenerateShareUpdate is used to provide a new key part
-func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
+func (c *Core) GenerateShareUpdate(key []byte) (shareResult *GenerateShareResult, err error) {
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead
 	if len(key) < min {
-		return nil, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+		err = &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+		return
 	}
 	if len(key) > max {
-		return nil, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+		err = &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+		return
 	}
 
 	// Get the seal configuration
 	var config *SealConfig
-	var err error
 	if c.seal.RecoveryKeySupported() {
 		config, err = c.seal.RecoveryConfig()
 		if err != nil {
-			return nil, err
+			return
 		}
 	} else {
 		config, err = c.seal.BarrierConfig()
 		if err != nil {
-			return nil, err
+			return
 		}
 	}
 
 	// Ensure the barrier is initialized
 	if config == nil {
-		return nil, ErrNotInit
+		err = ErrNotInit
+		return
 	}
 
 	// Ensure we are already unsealed
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return nil, consts.ErrSealed
+		err = consts.ErrSealed
+		return
 	}
 	if c.standby {
-		return nil, consts.ErrStandby
+		err = consts.ErrStandby
+		return
 	}
 
 	c.generateShareLock.Lock()
@@ -186,13 +194,15 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 
 	// Ensure a generateShare is in progress
 	if c.generateShareConfig == nil {
-		return nil, fmt.Errorf("no share generation in progress")
+		err = fmt.Errorf("no share generation in progress")
+		return
 	}
 
 	// Check if we already have this piece
 	for _, existing := range c.generateShareProgress {
 		if bytes.Equal(existing, key) {
-			return nil, fmt.Errorf("given key has already been provided during this generation operation")
+			err = fmt.Errorf("given key has already been provided during this generation operation")
+			return
 		}
 	}
 
@@ -205,34 +215,37 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 		if c.logger.IsDebug() {
 			c.logger.Debug("core: cannot generate share, not enough keys", "keys", progress, "threshold", config.SecretThreshold)
 		}
-		return &GenerateShareResult{
+		shareResult = &GenerateShareResult{
 			Progress:       progress,
 			Required:       config.SecretThreshold,
 			PGPFingerprint: c.generateShareConfig.PGPFingerprint,
-		}, nil
+		}
+		return
 	}
 
 	if config.SecretThreshold == 1 {
-		return nil, fmt.Errorf("key threshold must be greater than 1 to generate additional shares")
+		err = fmt.Errorf("key threshold must be greater than 1 to generate additional shares")
+		return
 	}
 
 	// Recover the master key
 	var masterKey []byte
 	masterKey, err = shamir.Combine(c.generateShareProgress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compute master key: %v", err)
+		err = fmt.Errorf("failed to compute master key: %v", err)
+		return
 	}
 
 	// Verify the master key
 	if c.seal.RecoveryKeySupported() {
-		if err := c.seal.VerifyRecoveryKey(masterKey); err != nil {
+		if err = c.seal.VerifyRecoveryKey(masterKey); err != nil {
 			c.logger.Error("core: share generation aborted, recovery key verification failed", "error", err)
-			return nil, err
+			return
 		}
 	} else {
-		if err := c.barrier.VerifyMaster(masterKey); err != nil {
+		if err = c.barrier.VerifyMaster(masterKey); err != nil {
 			c.logger.Error("core: share generation aborted, master key verification failed", "error", err)
-			return nil, err
+			return
 		}
 	}
 
@@ -241,7 +254,7 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 	newShareBytes, err = shamir.GetShareAt(c.generateShareProgress, uint8(config.SecretShares+1))
 	if err != nil {
 		c.logger.Error("core: share generation aborted, share generated failed", "error", err)
-		return nil, err
+		return
 	}
 
 	// Update barrier config with greater number of shares
@@ -249,22 +262,23 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 	newConfig.SecretShares++
 	if c.seal.SetBarrierConfig(newConfig) != nil {
 		c.logger.Error("core: unable to set barrier config", "error", err)
-		return nil, err
+		return
 	}
 
 	// Encrypt the share if a PGP key was given
 	if len(c.generateShareConfig.PGPKey) > 0 {
 		hexEncodedShares := make([][]byte, 1)
 		hexEncodedShares[0] = []byte(base64.StdEncoding.EncodeToString(newShareBytes))
-		_, keyBytesArr, err := pgpkeys.EncryptShares(hexEncodedShares, []string{c.generateShareConfig.PGPKey})
-		if err != nil {
-			c.logger.Error("core: error encrypting new master key share", "error", err)
-			return nil, err
+		_, keyBytesArr, er := pgpkeys.EncryptShares(hexEncodedShares, []string{c.generateShareConfig.PGPKey})
+		if er != nil {
+			c.logger.Error("core: error encrypting new master key share", "error", er)
+			err = er
+			return
 		}
 		newShareBytes = keyBytesArr[0]
 	}
 
-	results := &GenerateShareResult{
+	shareResult = &GenerateShareResult{
 		Progress:       progress,
 		Required:       config.SecretThreshold,
 		Key:            base64.StdEncoding.EncodeToString(newShareBytes),
@@ -277,18 +291,20 @@ func (c *Core) GenerateShareUpdate(key []byte) (*GenerateShareResult, error) {
 
 	c.generateShareProgress = nil
 	c.generateShareConfig = nil
-	return results, nil
+	return
 }
 
 // GenerateShareCancel is used to cancel an in-progress master key share generation
-func (c *Core) GenerateShareCancel() error {
+func (c *Core) GenerateShareCancel() (err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.sealed {
-		return consts.ErrSealed
+		err = consts.ErrSealed
+		return
 	}
 	if c.standby {
-		return consts.ErrStandby
+		err = consts.ErrStandby
+		return
 	}
 
 	c.generateShareLock.Lock()
@@ -297,5 +313,5 @@ func (c *Core) GenerateShareCancel() error {
 	// Clear any progress or config
 	c.generateShareConfig = nil
 	c.generateShareProgress = nil
-	return nil
+	return
 }

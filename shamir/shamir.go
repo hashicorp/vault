@@ -262,19 +262,19 @@ func Combine(parts [][]byte) ([]byte, error) {
 }
 
 // GetShareAt is used to construct a share at a specific x co-ordinate.
-func GetShareAt(parts [][]byte, x uint8) ([]byte, error) {
+func GetShareAt(parts [][]byte, x uint8) (share []byte, err error) {
 
 	shareValue, err := generateShareAt(parts, x)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	shareLength := len(shareValue) + 1
 
-	share := make([]byte, shareLength)
+	share = make([]byte, shareLength)
 	copy(share, shareValue)
 
 	share[shareLength-1] = x
 
-	return share, nil
+	return
 }
