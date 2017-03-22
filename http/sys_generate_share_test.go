@@ -1,14 +1,13 @@
 package http
 
 import (
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
-
-	"encoding/base64"
 
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
@@ -154,7 +153,7 @@ func TestSysGenerateShare_Update_PGP(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
+	resp := testHttpPut(t, token, addr+"/v1/sys/generate-share/attempt", map[string]interface{}{
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
 	testResponseStatus(t, resp, 200)
@@ -230,10 +229,5 @@ func TestSysGenerateShare_Update_PGP(t *testing.T) {
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
-		if i < len(keys)-1 && (actual["nonce"] == nil || actual["nonce"].(string) == "") {
-			t.Fatalf("got nil nonce, actual is %#v", actual)
-		} else {
-			expected["nonce"] = actual["nonce"]
-		}
 	}
 }
