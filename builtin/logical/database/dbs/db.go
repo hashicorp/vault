@@ -18,6 +18,7 @@ const (
 
 var (
 	ErrUnsupportedDatabaseType = errors.New("Unsupported database type")
+	ErrEmptyCreationStatement  = errors.New("Empty creation statements")
 )
 
 type Factory func(*DatabaseConfig, logical.SystemView) (DatabaseType, error)

@@ -28,6 +28,10 @@ func (p *PostgreSQL) getConnection() (*sql.DB, error) {
 }
 
 func (p *PostgreSQL) CreateUser(statements Statements, username, password, expiration string) error {
+	if statements.CreationStatements == "" {
+		return ErrEmptyCreationStatement
+	}
+
 	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
