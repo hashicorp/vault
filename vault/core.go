@@ -419,7 +419,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		physical:                         conf.Physical,
 		seal:                             conf.Seal,
 		barrier:                          barrier,
-		router:                           NewRouter(),
+		router:                           NewRouter(conf.Logger),
 		sealed:                           true,
 		standby:                          true,
 		logger:                           conf.Logger,

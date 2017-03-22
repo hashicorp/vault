@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -10,11 +11,13 @@ import (
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
 	l              sync.RWMutex
+	logger         log.Logger
 	root           *radix.Tree
 	tokenStoreSalt *salt.Salt
 
@@ -25,8 +28,9 @@ type Router struct {
 }
 
 // NewRouter returns a new router
-func NewRouter() *Router {
+func NewRouter(logger log.Logger) *Router {
 	r := &Router{
+		logger:        logger,
 		root:          radix.New(),
 		storagePrefix: radix.New(),
 	}
@@ -51,6 +55,8 @@ func (re *routeEntry) SaltID(id string) string {
 // Mount is used to expose a logical backend at a given prefix, using a unique salt,
 // and the barrier view for that path.
 func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *MountEntry, storageView *BarrierView) error {
+	stack := debug.Stack()
+	r.logger.Trace("router: mounting", "entry", fmt.Sprintf("%#v", *mountEntry), "prefix", prefix, "stack_trace", string(stack))
 	r.l.Lock()
 	defer r.l.Unlock()
 
