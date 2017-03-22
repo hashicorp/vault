@@ -42,7 +42,7 @@ func (b *databaseBackend) pathRoleCreateRead(req *logical.Request, data *framewo
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 	}
 
-	// Generate the username, password and expiration. PG limits user to 63 characters
+	// Generate the username, password and expiration
 
 	// Get our handle
 	b.logger.Trace("postgres/pathRoleCreateRead: getting database handle")

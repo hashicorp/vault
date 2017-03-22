@@ -78,15 +78,22 @@ func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framew
 	return nil, nil
 }
 
-func pathConfigureConnection(b *databaseBackend) *framework.Path {
-	return buildConfigConnectionPath("dbs/%s", b.connectionWriteHandler(dbs.BuiltinFactory), b.connectionReadHandler())
+// pathConfigureBuiltinConnection returns a configured framework.Path setup to
+// operate on builtin databases.
+func pathConfigureBuiltinConnection(b *databaseBackend) *framework.Path {
+	return buildConfigConnectionPath("dbs/%s", b.connectionWriteHandler(dbs.BuiltinFactory), b.connectionReadHandler(), b.connectionDeleteHandler())
 }
 
+// pathConfigurePluginConnection returns a configured framework.Path setup to
+// operate on plugins.
 func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
-	return buildConfigConnectionPath("dbs/plugin/%s", b.connectionWriteHandler(dbs.PluginFactory), b.connectionReadHandler())
+	return buildConfigConnectionPath("dbs/plugin/%s", b.connectionWriteHandler(dbs.PluginFactory), b.connectionReadHandler(), b.connectionDeleteHandler())
 }
 
-func buildConfigConnectionPath(path string, updateOp, readOp framework.OperationFunc) *framework.Path {
+// buildConfigConnectionPath reutns a configured framework.Path using the passed
+// in operation functions to complete the request. Used to distinguish calls
+// between builtin and plugin databases.
+func buildConfigConnectionPath(path string, updateOp, readOp, deleteOp framework.OperationFunc) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf(path, framework.GenericNameRegex("name")),
 		Fields: map[string]*framework.FieldSchema{
@@ -145,6 +152,7 @@ reduced to the same size.`,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: updateOp,
 			logical.ReadOperation:   readOp,
+			logical.DeleteOperation: deleteOp,
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
@@ -175,6 +183,34 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 	}
 }
 
+// connectionDeleteHandler deletes the connection configuration
+func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+		if name == "" {
+			return logical.ErrorResponse("Empty name attribute given"), nil
+		}
+
+		err := req.Storage.Delete(fmt.Sprintf("dbs/%s", name))
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete connection configuration")
+		}
+
+		if _, ok := b.connections[name]; ok {
+			err = b.connections[name].Close()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		delete(b.connections, name)
+
+		return nil, nil
+	}
+}
+
+// connectionWriteHandler returns a handler function for creating and updating
+// both builtin and plugin database types.
 func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		connType := data.Get("connection_type").(string)
