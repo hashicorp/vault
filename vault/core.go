@@ -420,7 +420,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		redirectAddr:                     conf.RedirectAddr,
 		clusterAddr:                      conf.ClusterAddr,
 		seal:                             conf.Seal,
-		router:                           NewRouter(),
+		router:                           NewRouter(conf.Logger),
 		sealed:                           true,
 		standby:                          true,
 		logger:                           conf.Logger,

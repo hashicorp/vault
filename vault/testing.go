@@ -254,11 +254,11 @@ func testTokenStore(t testing.TB, c *Core) *TokenStore {
 	}
 	ts := tokenstore.(*TokenStore)
 
-	router := NewRouter()
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+	router := NewRouter(logger)
 	router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: ""}, ts.view)
 
 	subview := c.systemBarrierView.SubView(expirationSubPath)
-	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	exp := NewExpirationManager(router, subview, ts, logger)
 	ts.SetExpirationManager(exp)

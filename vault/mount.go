@@ -453,6 +453,8 @@ func (c *Core) remount(src, dst string) error {
 
 // loadMounts is invoked as part of postUnseal to load the mount table
 func (c *Core) loadMounts() error {
+	c.logger.Trace("core: loadMounts")
+	defer c.logger.Trace("core: leaving loadMounts")
 	mountTable := &MountTable{}
 	localMountTable := &MountTable{}
 	// Load the existing mount table
@@ -488,28 +490,39 @@ func (c *Core) loadMounts() error {
 		c.mounts.Entries = append(c.mounts.Entries, localMountTable.Entries...)
 	}
 
+	if c.mounts != nil {
+		for _, entry := range c.mounts.Entries {
+			c.logger.Trace("core: loaded entry from raw", "entry", fmt.Sprintf("%#v", *entry))
+		}
+	}
+
 	// Ensure that required entries are loaded, or new ones
 	// added may never get loaded at all. Note that this
 	// is only designed to work with singletons, as it checks
 	// by type only.
 	if c.mounts != nil {
+		c.logger.Trace("core: mounts not nil, checking persist")
 		needPersist := false
 
 		// Upgrade to typed mount table
 		if c.mounts.Type == "" {
 			c.mounts.Type = mountTableType
+			c.logger.Trace("core: mount table type not set")
 			needPersist = true
 		}
 
 		for _, requiredMount := range requiredMountTable().Entries {
+			c.logger.Trace("core: checking required mount", "mount", fmt.Sprintf("%#v", *requiredMount))
 			foundRequired := false
 			for _, coreMount := range c.mounts.Entries {
 				if coreMount.Type == requiredMount.Type {
+					c.logger.Trace("core: found required mount", "mount", fmt.Sprintf("%#v", *coreMount))
 					foundRequired = true
 					break
 				}
 			}
 			if !foundRequired {
+				c.logger.Trace("core: required mount not found")
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
@@ -517,7 +530,9 @@ func (c *Core) loadMounts() error {
 
 		// Upgrade to table-scoped entries
 		for _, entry := range c.mounts.Entries {
+			c.logger.Trace("core: checking upgrades", "mount", fmt.Sprintf("%#v", *entry))
 			if entry.Type == "cubbyhole" && !entry.Local {
+				c.logger.Trace("core: cubbyhole local upgrading")
 				entry.Local = true
 				needPersist = true
 			}
@@ -533,6 +548,7 @@ func (c *Core) loadMounts() error {
 			return nil
 		}
 	} else {
+		c.logger.Trace("core: mounts nil, loading default")
 		// Create and persist the default mount table
 		c.mounts = defaultMountTable()
 	}
@@ -618,6 +634,9 @@ func (c *Core) persistMounts(table *MountTable, localOnly bool) error {
 // setupMounts is invoked after we've loaded the mount table to
 // initialize the logical backends and setup the router
 func (c *Core) setupMounts() error {
+	c.logger.Trace("core: setupMounts")
+	defer c.logger.Trace("core: leaving setupMounts")
+
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
@@ -626,6 +645,7 @@ func (c *Core) setupMounts() error {
 	var err error
 
 	for _, entry := range c.mounts.Entries {
+		c.logger.Trace("core: setting up mount", "mount", fmt.Sprintf("%#v", *entry))
 		// Initialize the backend, special casing for system
 		barrierPath := backendBarrierPrefix + entry.UUID + "/"
 		if entry.Type == "system" {
@@ -695,7 +715,7 @@ func (c *Core) unloadMounts() error {
 	}
 
 	c.mounts = nil
-	c.router = NewRouter()
+	c.router = NewRouter(c.logger)
 	c.systemBarrierView = nil
 	return nil
 }
