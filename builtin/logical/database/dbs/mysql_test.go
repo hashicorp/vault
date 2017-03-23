@@ -185,11 +185,6 @@ func TestMySQL_CreateUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	/*	statements.CreationStatements = testBlockStatementRole
-		err = db.CreateUser(statements, username, password, expiration)
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}*/
 }
 
 func TestMySQL_RenewUser(t *testing.T) {
