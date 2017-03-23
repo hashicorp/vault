@@ -24,7 +24,7 @@ func prepareMySQLTestContainer(t *testing.T) (cid dockertest.ContainerID, retURL
 	// containers, so don't.
 	dockertest.BindDockerToLocalhost = "yep"
 
-	testImagePull.Do(func() {
+	testMySQLImagePull.Do(func() {
 		dockertest.Pull("mysql")
 	})
 

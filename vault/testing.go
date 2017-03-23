@@ -231,6 +231,18 @@ func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][
 	return core, keys, token
 }
 
+func TestCoreUnsealedWithListener(t testing.TB) (*Core, [][]byte, string, net.Listener) {
+	core, keys, token := TestCoreUnsealed(t)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	addr := "http://" + ln.Addr().String()
+	core.redirectAddr = addr
+
+	return core, keys, token, ln
+}
+
 func testTokenStore(t testing.TB, c *Core) *TokenStore {
 	me := &MountEntry{
 		Table:       credentialTableType,
@@ -291,6 +303,10 @@ func TestKeyCopy(key []byte) []byte {
 	result := make([]byte, len(key))
 	copy(result, key)
 	return result
+}
+
+func TestDynamicSystemView(c *Core) *dynamicSystemView {
+	return &dynamicSystemView{c, nil}
 }
 
 var testLogicalBackends = map[string]logical.Factory{}

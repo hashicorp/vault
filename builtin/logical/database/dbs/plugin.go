@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"net/rpc"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/logical"
 )
 
 // handshakeConfigs are used to just do a basic handshake between
@@ -55,7 +55,7 @@ func (dc *DatabasePluginClient) Close() error {
 // newPluginClient returns a databaseRPCClient with a connection to a running
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
-func newPluginClient(sys logical.SystemView, command, checksum string) (DatabaseType, error) {
+func newPluginClient(sys pluginutil.Wrapper, command, checksum string) (DatabaseType, error) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"database": new(DatabasePlugin),
@@ -81,7 +81,8 @@ func newPluginClient(sys logical.SystemView, command, checksum string) (Database
 	}
 
 	// Add the response wrap token to the ENV of the plugin
-	cmd := exec.Command(command)
+	commandArr := strings.Split(command, " ")
+	cmd := exec.Command(commandArr[0], commandArr[1])
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", pluginutil.PluginUnwrapTokenEnv, wrapToken))
 
 	checksumDecoded, err := hex.DecodeString(checksum)
@@ -265,7 +266,7 @@ func (ds *databasePluginRPCServer) Initialize(args map[string]interface{}, _ *st
 	return err
 }
 
-func (ds *databasePluginRPCServer) Close(_ interface{}, _ *struct{}) error {
+func (ds *databasePluginRPCServer) Close(_ struct{}, _ *struct{}) error {
 	ds.impl.Close()
 	return nil
 }

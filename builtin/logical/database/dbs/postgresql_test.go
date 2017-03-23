@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	testImagePull sync.Once
+	testPostgresImagePull sync.Once
 )
 
-func prepareTestContainer(t *testing.T) (cid dockertest.ContainerID, retURL string) {
+func preparePostgresTestContainer(t *testing.T) (cid dockertest.ContainerID, retURL string) {
 	if os.Getenv("PG_URL") != "" {
 		return "", os.Getenv("PG_URL")
 	}
@@ -24,7 +24,7 @@ func prepareTestContainer(t *testing.T) (cid dockertest.ContainerID, retURL stri
 	// containers, so don't.
 	dockertest.BindDockerToLocalhost = "yep"
 
-	testImagePull.Do(func() {
+	testPostgresImagePull.Do(func() {
 		dockertest.Pull("postgres")
 	})
 
@@ -65,7 +65,7 @@ func cleanupTestContainer(t *testing.T, cid dockertest.ContainerID) {
 }
 
 func TestPostgreSQL_Initialize(t *testing.T) {
-	cid, connURL := prepareTestContainer(t)
+	cid, connURL := preparePostgresTestContainer(t)
 	if cid != "" {
 		defer cleanupTestContainer(t, cid)
 	}
@@ -107,7 +107,7 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 }
 
 func TestPostgreSQL_CreateUser(t *testing.T) {
-	cid, connURL := prepareTestContainer(t)
+	cid, connURL := preparePostgresTestContainer(t)
 	if cid != "" {
 		defer cleanupTestContainer(t, cid)
 	}
@@ -150,7 +150,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 	}
 
 	statements := Statements{
-		CreationStatements: testRole,
+		CreationStatements: testPostgresRole,
 	}
 
 	err = db.CreateUser(statements, username, password, expiration)
@@ -172,7 +172,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	statements.CreationStatements = testReadOnlyRole
+	statements.CreationStatements = testPostgresReadOnlyRole
 	err = db.CreateUser(statements, username, password, expiration)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -200,7 +200,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 }
 
 func TestPostgreSQL_RenewUser(t *testing.T) {
-	cid, connURL := prepareTestContainer(t)
+	cid, connURL := preparePostgresTestContainer(t)
 	if cid != "" {
 		defer cleanupTestContainer(t, cid)
 	}
@@ -237,7 +237,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 	}
 
 	statements := Statements{
-		CreationStatements: testRole,
+		CreationStatements: testPostgresRole,
 	}
 
 	err = db.CreateUser(statements, username, password, expiration)
@@ -256,7 +256,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 }
 
 func TestPostgreSQL_RevokeUser(t *testing.T) {
-	cid, connURL := prepareTestContainer(t)
+	cid, connURL := preparePostgresTestContainer(t)
 	if cid != "" {
 		defer cleanupTestContainer(t, cid)
 	}
@@ -293,7 +293,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 	}
 
 	statements := Statements{
-		CreationStatements: testRole,
+		CreationStatements: testPostgresRole,
 	}
 
 	err = db.CreateUser(statements, username, password, expiration)
@@ -333,7 +333,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 	}
 
 	// Test custom revoke statements
-	statements.RevocationStatements = defaultRevocationSQL
+	statements.RevocationStatements = defaultPostgresRevocationSQL
 	err = db.RevokeUser(statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -341,7 +341,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 
 }
 
-const testRole = `
+const testPostgresRole = `
 CREATE ROLE "{{name}}" WITH
   LOGIN
   PASSWORD '{{password}}'
@@ -349,7 +349,7 @@ CREATE ROLE "{{name}}" WITH
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
 `
 
-const testReadOnlyRole = `
+const testPostgresReadOnlyRole = `
 CREATE ROLE "{{name}}" WITH
   LOGIN
   PASSWORD '{{password}}'
@@ -358,7 +358,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
 GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";
 `
 
-const testBlockStatementRole = `
+const testPostgresBlockStatementRole = `
 DO $$
 BEGIN
    IF NOT EXISTS (SELECT * FROM pg_catalog.pg_roles WHERE rolname='foo-role') THEN
@@ -380,7 +380,7 @@ ALTER ROLE "{{name}}" SET search_path = foo;
 GRANT CONNECT ON DATABASE "postgres" TO "{{name}}";
 `
 
-var testBlockStatementRoleSlice = []string{
+var testPostgresBlockStatementRoleSlice = []string{
 	`
 DO $$
 BEGIN
@@ -403,7 +403,7 @@ $$
 	`GRANT CONNECT ON DATABASE "postgres" TO "{{name}}";`,
 }
 
-const defaultRevocationSQL = `
+const defaultPostgresRevocationSQL = `
 REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{name}}";
 REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{name}}";
 REVOKE USAGE ON SCHEMA public FROM "{{name}}";
