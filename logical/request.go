@@ -84,6 +84,14 @@ type Request struct {
 
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
+
+	// ClientTokenRemainingUses represents the allowed number of uses left on the
+	// token supplied
+	ClientTokenRemainingUses int `json:"client_token_remaining_uses" structs:"client_token_remaining_uses" mapstructure:"client_token_remaining_uses"`
+
+	// For replication, contains the last WAL on the remote side after handling
+	// the request, used for best-effort avoidance of stale read-after-write
+	lastRemoteWAL uint64
 }
 
 // Get returns a data field and guards for nil Data
@@ -103,6 +111,14 @@ func (r *Request) GetString(key string) string {
 
 func (r *Request) GoString() string {
 	return fmt.Sprintf("*%#v", *r)
+}
+
+func (r *Request) LastRemoteWAL() uint64 {
+	return r.lastRemoteWAL
+}
+
+func (r *Request) SetLastRemoteWAL(last uint64) {
+	r.lastRemoteWAL = last
 }
 
 // RenewRequest creates the structure of the renew request.

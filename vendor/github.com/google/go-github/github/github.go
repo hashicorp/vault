@@ -7,6 +7,7 @@ package github
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,12 +25,7 @@ import (
 )
 
 const (
-	// StatusUnprocessableEntity is the status code returned when sending a request with invalid fields.
-	StatusUnprocessableEntity = 422
-)
-
-const (
-	libraryVersion = "2"
+	libraryVersion = "3"
 	defaultBaseURL = "https://api.github.com/"
 	uploadBaseURL  = "https://uploads.github.com/"
 	userAgent      = "go-github/" + libraryVersion
@@ -119,7 +115,6 @@ type Client struct {
 
 	rateMu     sync.Mutex
 	rateLimits [categories]Rate // Rate limits for the client as determined by the most recent API calls.
-	mostRecent rateLimitCategory
 
 	common service // Reuse a single struct instead of allocating one for each service on the heap.
 
@@ -383,26 +378,18 @@ func parseRate(r *http.Response) Rate {
 	return rate
 }
 
-// Rate specifies the current rate limit for the client as determined by the
-// most recent API call. If the client is used in a multi-user application,
-// this rate may not always be up-to-date.
-//
-// Deprecated: Use the Response.Rate returned from most recent API call instead.
-// Call RateLimits() to check the current rate.
-func (c *Client) Rate() Rate {
-	c.rateMu.Lock()
-	rate := c.rateLimits[c.mostRecent]
-	c.rateMu.Unlock()
-	return rate
-}
-
 // Do sends an API request and returns the API response. The API response is
 // JSON decoded and stored in the value pointed to by v, or returned as an
 // error if an API error has occurred. If v implements the io.Writer
 // interface, the raw response body will be written to v, without attempting to
 // first decode it. If rate limit is exceeded and reset time is in the future,
 // Do returns *RateLimitError immediately without making a network API call.
-func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
+//
+// The provided ctx must be non-nil. If it is canceled or times out,
+// ctx.Err() will be returned.
+func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Response, error) {
+	req = req.WithContext(ctx)
+
 	rateLimitCategory := category(req.URL.Path)
 
 	// If we've hit rate limit, don't make further requests before Reset time.
@@ -412,12 +399,22 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 
 	resp, err := c.client.Do(req)
 	if err != nil {
+		// If we got an error, and the context has been canceled,
+		// the context's error is probably more useful.
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		// If the error type is *url.Error, sanitize its URL before returning.
 		if e, ok := err.(*url.Error); ok {
 			if url, err := url.Parse(e.URL); err == nil {
 				e.URL = sanitizeURL(url).String()
 				return nil, e
 			}
 		}
+
 		return nil, err
 	}
 
@@ -431,7 +428,6 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 
 	c.rateMu.Lock()
 	c.rateLimits[rateLimitCategory] = response.Rate
-	c.mostRecent = rateLimitCategory
 	c.rateMu.Unlock()
 
 	err = CheckResponse(resp)
@@ -485,7 +481,7 @@ func (c *Client) checkRateLimitBeforeDo(req *http.Request, rateLimitCategory rat
 /*
 An ErrorResponse reports one or more errors caused by an API request.
 
-GitHub API docs: http://developer.github.com/v3/#client-errors
+GitHub API docs: https://developer.github.com/v3/#client-errors
 */
 type ErrorResponse struct {
 	Response *http.Response // HTTP response that caused this error
@@ -591,7 +587,7 @@ These are the possible validation error codes:
         some resources return this (e.g. github.User.CreateKey()), additional
         information is set in the Message field of the Error
 
-GitHub API docs: http://developer.github.com/v3/#client-errors
+GitHub API docs: https://developer.github.com/v3/#client-errors
 */
 type Error struct {
 	Resource string `json:"resource"` // resource on which the error occurred
@@ -730,22 +726,8 @@ func category(path string) rateLimitCategory {
 	}
 }
 
-// RateLimit returns the core rate limit for the current client.
-//
-// Deprecated: RateLimit is deprecated, use RateLimits instead.
-func (c *Client) RateLimit() (*Rate, *Response, error) {
-	limits, resp, err := c.RateLimits()
-	if err != nil {
-		return nil, resp, err
-	}
-	if limits == nil {
-		return nil, resp, errors.New("RateLimits returned nil limits and error; unable to extract Core rate limit")
-	}
-	return limits.Core, resp, nil
-}
-
 // RateLimits returns the rate limits for the current client.
-func (c *Client) RateLimits() (*RateLimits, *Response, error) {
+func (c *Client) RateLimits(ctx context.Context) (*RateLimits, *Response, error) {
 	req, err := c.NewRequest("GET", "rate_limit", nil)
 	if err != nil {
 		return nil, nil, err
@@ -754,7 +736,7 @@ func (c *Client) RateLimits() (*RateLimits, *Response, error) {
 	response := new(struct {
 		Resources *RateLimits `json:"resources"`
 	})
-	resp, err := c.Do(req, response)
+	resp, err := c.Do(ctx, req, response)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -786,7 +768,7 @@ that need to use a higher rate limit associated with your OAuth application.
 This will append the querystring params client_id=xxx&client_secret=yyy to all
 requests.
 
-See http://developer.github.com/v3/#unauthenticated-rate-limited-requests for
+See https://developer.github.com/v3/#unauthenticated-rate-limited-requests for
 more information.
 */
 type UnauthenticatedRateLimitedTransport struct {

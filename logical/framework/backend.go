@@ -13,7 +13,7 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
@@ -551,7 +551,7 @@ func (s *FieldSchema) DefaultOrZero() interface{} {
 			case float64:
 				result = int(inp)
 			case string:
-				dur, err := duration.ParseDurationSecond(inp)
+				dur, err := parseutil.ParseDurationSecond(inp)
 				if err != nil {
 					return s.Type.Zero()
 				}

@@ -91,6 +91,9 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	if err != nil {
 		return err
 	}
+	if backend == nil {
+		return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+	}
 
 	if err := backend.Initialize(); err != nil {
 		return err
@@ -99,7 +102,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	// Update the auth table
 	newTable := c.auth.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
-	if err := c.persistAuth(newTable); err != nil {
+	if err := c.persistAuth(newTable, entry.Local); err != nil {
 		return errors.New("failed to update auth table")
 	}
 
@@ -151,6 +154,12 @@ func (c *Core) disableCredential(path string) (bool, error) {
 		return true, err
 	}
 
+	// Call cleanup function if it exists
+	backend := c.router.MatchingBackend(fullPath)
+	if backend != nil {
+		backend.Cleanup()
+	}
+
 	// Unmount the backend
 	if err := c.router.Unmount(fullPath); err != nil {
 		return true, err
@@ -180,10 +189,14 @@ func (c *Core) removeCredEntry(path string) error {
 
 	// Taint the entry from the auth table
 	newTable := c.auth.shallowClone()
-	newTable.remove(path)
+	entry := newTable.remove(path)
+	if entry == nil {
+		c.logger.Error("core: nil entry found removing entry in auth table", "path", path)
+		return logical.CodedError(500, "failed to remove entry in auth table")
+	}
 
 	// Update the auth table
-	if err := c.persistAuth(newTable); err != nil {
+	if err := c.persistAuth(newTable, entry.Local); err != nil {
 		return errors.New("failed to update auth table")
 	}
 
@@ -200,15 +213,15 @@ func (c *Core) taintCredEntry(path string) error {
 	// Taint the entry from the auth table
 	// We do this on the original since setting the taint operates
 	// on the entries which a shallow clone shares anyways
-	found := c.auth.setTaint(path, true)
+	entry := c.auth.setTaint(path, true)
 
 	// Ensure there was a match
-	if !found {
+	if entry == nil {
 		return fmt.Errorf("no matching backend")
 	}
 
 	// Update the auth table
-	if err := c.persistAuth(c.auth); err != nil {
+	if err := c.persistAuth(c.auth, entry.Local); err != nil {
 		return errors.New("failed to update auth table")
 	}
 
@@ -268,16 +281,14 @@ func (c *Core) loadCredentials() error {
 			}
 		}
 
-		if needPersist {
-			return c.persistAuth(c.auth)
+		if !needPersist {
+			return nil
 		}
-
-		return nil
+	} else {
+		c.auth = defaultAuthTable()
 	}
 
-	// Create and persist the default auth table
-	c.auth = defaultAuthTable()
-	if err := c.persistAuth(c.auth); err != nil {
+	if err := c.persistAuth(c.auth, false); err != nil {
 		c.logger.Error("core: failed to persist auth table", "error", err)
 		return errLoadAuthFailed
 	}
@@ -285,7 +296,7 @@ func (c *Core) loadCredentials() error {
 }
 
 // persistAuth is used to persist the auth table after modification
-func (c *Core) persistAuth(table *MountTable) error {
+func (c *Core) persistAuth(table *MountTable, localOnly bool) error {
 	if table.Type != credentialTableType {
 		c.logger.Error("core: given table to persist has wrong type", "actual_type", table.Type, "expected_type", credentialTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
@@ -314,33 +325,35 @@ func (c *Core) persistAuth(table *MountTable) error {
 		}
 	}
 
-	// Marshal the table
-	compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalAuth, nil)
-	if err != nil {
-		c.logger.Error("core: failed to encode and/or compress auth table", "error", err)
-		return err
-	}
+	if !localOnly {
+		// Marshal the table
+		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalAuth, nil)
+		if err != nil {
+			c.logger.Error("core: failed to encode and/or compress auth table", "error", err)
+			return err
+		}
 
-	// Create an entry
-	entry := &Entry{
-		Key:   coreAuthConfigPath,
-		Value: compressedBytes,
-	}
+		// Create an entry
+		entry := &Entry{
+			Key:   coreAuthConfigPath,
+			Value: compressedBytes,
+		}
 
-	// Write to the physical backend
-	if err := c.barrier.Put(entry); err != nil {
-		c.logger.Error("core: failed to persist auth table", "error", err)
-		return err
+		// Write to the physical backend
+		if err := c.barrier.Put(entry); err != nil {
+			c.logger.Error("core: failed to persist auth table", "error", err)
+			return err
+		}
 	}
 
 	// Repeat with local auth
-	compressedBytes, err = jsonutil.EncodeJSONAndCompress(localAuth, nil)
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(localAuth, nil)
 	if err != nil {
 		c.logger.Error("core: failed to encode and/or compress local auth table", "error", err)
 		return err
 	}
 
-	entry = &Entry{
+	entry := &Entry{
 		Key:   coreLocalAuthConfigPath,
 		Value: compressedBytes,
 	}
@@ -382,6 +395,9 @@ func (c *Core) setupCredentials() error {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
 			return errLoadAuthFailed
 		}
+		if backend == nil {
+			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+		}
 
 		if err := backend.Initialize(); err != nil {
 			return err
@@ -411,7 +427,7 @@ func (c *Core) setupCredentials() error {
 	}
 
 	if persistNeeded {
-		return c.persistAuth(c.auth)
+		return c.persistAuth(c.auth, false)
 	}
 
 	return nil
@@ -426,10 +442,9 @@ func (c *Core) teardownCredentials() error {
 	if c.auth != nil {
 		authTable := c.auth.shallowClone()
 		for _, e := range authTable.Entries {
-			prefix := e.Path
-			b, ok := c.router.root.Get(prefix)
-			if ok {
-				b.(*routeEntry).backend.Cleanup()
+			backend := c.router.MatchingBackend(credentialRoutePrefix + e.Path)
+			if backend != nil {
+				backend.Cleanup()
 			}
 		}
 	}

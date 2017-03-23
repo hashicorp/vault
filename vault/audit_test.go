@@ -220,7 +220,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 	}
 
 	c.audit.Entries[1].Local = true
-	if err := c.persistAudit(c.audit); err != nil {
+	if err := c.persistAudit(c.audit, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -444,6 +444,7 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	b.Register("bar", a2, nil)
 
 	auth := &logical.Auth{
+		NumUses:     10,
 		ClientToken: "foo",
 		Policies:    []string{"dev", "ops"},
 		Metadata: map[string]string{

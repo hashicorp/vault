@@ -58,7 +58,7 @@ entry, even if these are then distributed via different paths. However, in Pull
 mode, even though the RoleID must be known in order to distribute it to the
 client, the SecretID can be kept confidential from all parties except for the
 final authenticating client by using [Response
-Wrapping](https://www.vaultproject.io/docs/concepts/response-wrapping.html).
+Wrapping](/docs/concepts/response-wrapping.html).
 
 Push mode is available for App-ID workflow compatibility, which in some
 specific cases is preferable, but in most cases Pull mode is more secure and
@@ -90,7 +90,7 @@ $ vault auth-enable approle
 #### Create a role
 
 ```shell
-$ vault write auth/approle/role/testrole secret_id_ttl=10m token_ttl=20m token_max_ttl=30m secret_id_num_uses=40
+$ vault write auth/approle/role/testrole secret_id_ttl=10m token_num_uses=10 token_ttl=20m token_max_ttl=30m secret_id_num_uses=40
 ```
 
 #### Fetch the RoleID of the AppRole
@@ -326,6 +326,13 @@ $ curl -X POST \
         <span class="param-flags">optional</span>
         Duration in either an integer number of seconds (`3600`) or an integer
         time unit (`60m`) after which any SecretID expires.
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <span class="param">token_num_uses</span>
+        <span class="param-flags">optional</span>
+        Number of times issued tokens can be used.
       </li>
     </ul>
     <ul>

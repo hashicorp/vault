@@ -64,21 +64,22 @@ type vaultFormatter struct {
 }
 
 func (v *vaultFormatter) Format(writer io.Writer, level int, msg string, args []interface{}) {
+	currTime := time.Now()
 	v.Lock()
 	defer v.Unlock()
 	switch v.style {
 	case stylejson:
-		v.formatJSON(writer, level, msg, args)
+		v.formatJSON(writer, currTime, level, msg, args)
 	default:
-		v.formatDefault(writer, level, msg, args)
+		v.formatDefault(writer, currTime, level, msg, args)
 	}
 }
 
-func (v *vaultFormatter) formatDefault(writer io.Writer, level int, msg string, args []interface{}) {
+func (v *vaultFormatter) formatDefault(writer io.Writer, currTime time.Time, level int, msg string, args []interface{}) {
 	// Write a trailing newline
 	defer writer.Write([]byte("\n"))
 
-	writer.Write([]byte(time.Now().Local().Format("2006/01/02 15:04:05.000000")))
+	writer.Write([]byte(currTime.Local().Format("2006/01/02 15:04:05.000000")))
 
 	switch level {
 	case log.LevelCritical:
@@ -123,10 +124,10 @@ func (v *vaultFormatter) formatDefault(writer io.Writer, level int, msg string, 
 	}
 }
 
-func (v *vaultFormatter) formatJSON(writer io.Writer, level int, msg string, args []interface{}) {
+func (v *vaultFormatter) formatJSON(writer io.Writer, currTime time.Time, level int, msg string, args []interface{}) {
 	vals := map[string]interface{}{
 		"@message":   msg,
-		"@timestamp": time.Now().Format("2006-01-02T15:04:05.000000Z07:00"),
+		"@timestamp": currTime.Format("2006-01-02T15:04:05.000000Z07:00"),
 	}
 
 	var levelStr string

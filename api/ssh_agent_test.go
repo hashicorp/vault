@@ -2,9 +2,9 @@ package api
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
-	"net/http"
 )
 
 func TestSSH_CreateTLSClient(t *testing.T) {

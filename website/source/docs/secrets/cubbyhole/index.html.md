@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: Cubbyhole"
+page_title: "Cubbyhole Secret Backend"
 sidebar_current: "docs-secrets-cubbyhole"
 description: |-
   The cubbyhole secret backend can store arbitrary secrets scoped to a single token.
@@ -31,7 +31,7 @@ the sub-fields are not merged together.
 
 Starting in Vault 0.6, almost any response (except those from `sys/` endpoints)
 from Vault can be wrapped (see the [Response
-Wrapping](https://www.vaultproject.io/docs/concepts/response-wrapping.html)
+Wrapping](/docs/concepts/response-wrapping.html)
 concept page for details).
 
 The TTL for the token is set by the client using the `X-Vault-Wrap-TTL` header
@@ -89,139 +89,6 @@ As expected, the value previously set is returned to us.
 
 ## API
 
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Retrieves the secret at the specified location.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/cubbyhole/<path>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-     None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```javascript
-    {
-      "auth": null,
-      "data": {
-        "foo": "bar"
-      },
-      "lease_duration": 0,
-      "lease_id": "",
-      "renewable": false
-    }
-    ```
-
-  </dd>
-</dl>
-
-#### LIST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Returns a list of secret entries at the specified location. Folders are
-    suffixed with `/`. The input must be a folder; list on a file will not
-    return a value. The values themselves are not accessible via this command.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>LIST/GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/cubbyhole/<path>` (LIST) or `/cubbyhole/<path>?list=true` (GET)</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-     None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-  The example below shows output for a query path of `cubbyhole/` when there
-  are secrets at `cubbyhole/foo` and `cubbyhole/foo/bar`; note the difference
-  in the two entries.
-
-  ```javascript
-  {
-    "auth": null,
-    "data": {
-      "keys": ["foo", "foo/"]
-    },
-    "lease_duration": 2764800,
-    "lease_id": "",
-    "renewable": false
-  }
-  ```
-
-  </dd>
-</dl>
-
-#### POST/PUT
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Stores a secret at the specified location.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST/PUT</dd>
-
-  <dt>URL</dt>
-  <dd>`/cubbyhole/<path>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">(key)</span>
-        <span class="param-flags">optional</span>
-        A key, paired with an associated value, to be held at the
-        given location. Multiple key/value pairs can be specified,
-        and all will be returned on a read operation.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-  A `204` response code.
-  </dd>
-</dl>
-
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes the secret at the specified location.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/cubbyhole/<path>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-     None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-  A `204` response code.
-  </dd>
-</dl>
+The Cubbyhole secret backend has a full HTTP API. Please see the
+[Cubbyhole secret backend API](/api/secret/cubbyhole/index.html) for more
+details.

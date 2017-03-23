@@ -66,8 +66,10 @@ func (b *caInfoBundle) GetCAChain() []*certutil.CertBlock {
 	chain := []*certutil.CertBlock{}
 
 	// Include issuing CA in Chain, not including Root Authority
-	if len(b.Certificate.AuthorityKeyId) > 0 &&
-		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId) {
+	if (len(b.Certificate.AuthorityKeyId) > 0 &&
+		!bytes.Equal(b.Certificate.AuthorityKeyId, b.Certificate.SubjectKeyId)) ||
+		(len(b.Certificate.AuthorityKeyId) == 0 &&
+			!bytes.Equal(b.Certificate.RawIssuer, b.Certificate.RawSubject)) {
 
 		chain = append(chain, &certutil.CertBlock{
 			Certificate: b.Certificate,
@@ -215,7 +217,7 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
-func validateNames(req *logical.Request, names []string, role *roleEntry) (string, error) {
+func validateNames(req *logical.Request, names []string, role *roleEntry) string {
 	for _, name := range names {
 		sanitizedName := name
 		emailDomain := name
@@ -231,7 +233,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 		if strings.Contains(name, "@") {
 			splitEmail := strings.Split(name, "@")
 			if len(splitEmail) != 2 {
-				return name, nil
+				return name
 			}
 			sanitizedName = splitEmail[1]
 			emailDomain = splitEmail[1]
@@ -248,7 +250,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 
 		// Email addresses using wildcard domain names do not make sense
 		if isEmail && isWildcard {
-			return name, nil
+			return name
 		}
 
 		// AllowAnyName is checked after this because EnforceHostnames still
@@ -257,7 +259,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 		// wildcard prefix.
 		if role.EnforceHostnames {
 			if !hostnameRegex.MatchString(sanitizedName) {
-				return name, nil
+				return name
 			}
 		}
 
@@ -366,10 +368,10 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) (strin
 		}
 
 		//panic(fmt.Sprintf("\nName is %s\nRole is\n%#v\n", name, role))
-		return name, nil
+		return name
 	}
 
-	return "", nil
+	return ""
 }
 
 func generateCert(b *backend,
@@ -558,18 +560,103 @@ func generateCreationBundle(b *backend,
 	var err error
 	var ok bool
 
-	// Get the common name
+	// Read in names -- CN, DNS and email addresses
 	var cn string
+	dnsNames := []string{}
+	emailAddresses := []string{}
 	{
-		if csr != nil {
-			if role.UseCSRCommonName {
-				cn = csr.Subject.CommonName
-			}
+		if csr != nil && role.UseCSRCommonName {
+			cn = csr.Subject.CommonName
 		}
 		if cn == "" {
 			cn = data.Get("common_name").(string)
 			if cn == "" {
 				return nil, errutil.UserError{Err: `the common_name field is required, or must be provided in a CSR with "use_csr_common_name" set to true`}
+			}
+		}
+
+		if csr != nil && role.UseCSRSANs {
+			dnsNames = csr.DNSNames
+			emailAddresses = csr.EmailAddresses
+		}
+
+		if !data.Get("exclude_cn_from_sans").(bool) {
+			if strings.Contains(cn, "@") {
+				// Note: emails are not disallowed if the role's email protection
+				// flag is false, because they may well be included for
+				// informational purposes; it is up to the verifying party to
+				// ensure that email addresses in a subject alternate name can be
+				// used for the purpose for which they are presented
+				emailAddresses = append(emailAddresses, cn)
+			} else {
+				dnsNames = append(dnsNames, cn)
+			}
+		}
+
+		if csr == nil || !role.UseCSRSANs {
+			cnAltRaw, ok := data.GetOk("alt_names")
+			if ok {
+				cnAlt := strutil.ParseDedupAndSortStrings(cnAltRaw.(string), ",")
+				for _, v := range cnAlt {
+					if strings.Contains(v, "@") {
+						emailAddresses = append(emailAddresses, v)
+					} else {
+						dnsNames = append(dnsNames, v)
+					}
+				}
+			}
+		}
+
+		// Check the CN. This ensures that the CN is checked even if it's
+		// excluded from SANs.
+		badName := validateNames(req, []string{cn}, role)
+		if len(badName) != 0 {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"common name %s not allowed by this role", badName)}
+		}
+
+		// Check for bad email and/or DNS names
+		badName = validateNames(req, dnsNames, role)
+		if len(badName) != 0 {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"subject alternate name %s not allowed by this role", badName)}
+		}
+
+		badName = validateNames(req, emailAddresses, role)
+		if len(badName) != 0 {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"email address %s not allowed by this role", badName)}
+		}
+	}
+
+	// Get and verify any IP SANs
+	ipAddresses := []net.IP{}
+	var ipAltInt interface{}
+	{
+		if csr != nil && role.UseCSRSANs {
+			if !role.AllowIPSANs {
+				return nil, errutil.UserError{Err: fmt.Sprintf(
+					"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+			}
+			ipAddresses = csr.IPAddresses
+		} else {
+			ipAltInt, ok = data.GetOk("ip_sans")
+			if ok {
+				ipAlt := ipAltInt.(string)
+				if len(ipAlt) != 0 {
+					if !role.AllowIPSANs {
+						return nil, errutil.UserError{Err: fmt.Sprintf(
+							"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
+					}
+					for _, v := range strings.Split(ipAlt, ",") {
+						parsedIP := net.ParseIP(v)
+						if parsedIP == nil {
+							return nil, errutil.UserError{Err: fmt.Sprintf(
+								"the value '%s' is not a valid IP address", v)}
+						}
+						ipAddresses = append(ipAddresses, parsedIP)
+					}
+				}
 			}
 		}
 	}
@@ -587,80 +674,6 @@ func generateCreationBundle(b *backend,
 	{
 		if role.Organization != "" {
 			organization = strutil.ParseDedupAndSortStrings(role.Organization, ",")
-		}
-	}
-
-	// Read in alternate names -- DNS and email addresses
-	dnsNames := []string{}
-	emailAddresses := []string{}
-	{
-		if !data.Get("exclude_cn_from_sans").(bool) {
-			if strings.Contains(cn, "@") {
-				// Note: emails are not disallowed if the role's email protection
-				// flag is false, because they may well be included for
-				// informational purposes; it is up to the verifying party to
-				// ensure that email addresses in a subject alternate name can be
-				// used for the purpose for which they are presented
-				emailAddresses = append(emailAddresses, cn)
-			} else {
-				dnsNames = append(dnsNames, cn)
-			}
-		}
-		cnAltInt, ok := data.GetOk("alt_names")
-		if ok {
-			cnAlt := cnAltInt.(string)
-			if len(cnAlt) != 0 {
-				for _, v := range strings.Split(cnAlt, ",") {
-					if strings.Contains(v, "@") {
-						emailAddresses = append(emailAddresses, v)
-					} else {
-						dnsNames = append(dnsNames, v)
-					}
-				}
-			}
-		}
-
-		// Check for bad email and/or DNS names
-		badName, err := validateNames(req, dnsNames, role)
-		if len(badName) != 0 {
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"name %s not allowed by this role", badName)}
-		} else if err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf(
-				"error validating name %s: %s", badName, err)}
-		}
-
-		badName, err = validateNames(req, emailAddresses, role)
-		if len(badName) != 0 {
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"email %s not allowed by this role", badName)}
-		} else if err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf(
-				"error validating name %s: %s", badName, err)}
-		}
-	}
-
-	// Get and verify any IP SANs
-	ipAddresses := []net.IP{}
-	var ipAltInt interface{}
-	{
-		ipAltInt, ok = data.GetOk("ip_sans")
-		if ok {
-			ipAlt := ipAltInt.(string)
-			if len(ipAlt) != 0 {
-				if !role.AllowIPSANs {
-					return nil, errutil.UserError{Err: fmt.Sprintf(
-						"IP Subject Alternative Names are not allowed in this role, but was provided %s", ipAlt)}
-				}
-				for _, v := range strings.Split(ipAlt, ",") {
-					parsedIP := net.ParseIP(v)
-					if parsedIP == nil {
-						return nil, errutil.UserError{Err: fmt.Sprintf(
-							"the value '%s' is not a valid IP address", v)}
-					}
-					ipAddresses = append(ipAddresses, parsedIP)
-				}
-			}
 		}
 	}
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -168,6 +169,14 @@ does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
 			},
 
+			"use_csr_sans": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, when used with a signing profile,
+the SANs in the CSR will be used. This does *not*
+include the Common Name (cn). Defaults to true.`,
+			},
+
 			"ou": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
@@ -180,6 +189,20 @@ this value in certificates issued by this role.`,
 				Default: "",
 				Description: `If set, the O (Organization) will be set to
 this value in certificates issued by this role.`,
+			},
+
+			"generate_lease": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `
+If set, certificates issued/signed against this role will have Vault leases
+attached to them. Defaults to "false". Certificates can be added to the CRL by
+"vault revoke <lease_id>" when certificates are associated with leases.  It can
+also be done using the "pki/revoke" endpoint. However, when lease generation is
+disabled, invoking "pki/revoke" would be the only way to add the certificates
+to the CRL.  When large number of certificates are generated with long
+lifetimes, it is recommended that lease generation be disabled, as large amount of
+leases adversely affect the startup time of Vault.`,
 			},
 		},
 
@@ -247,6 +270,16 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		modified = true
 	}
 
+	// Upgrade generate_lease in role
+	if result.GenerateLease == nil {
+		// All the new roles will have GenerateLease always set to a value. A
+		// nil value indicates that this role needs an upgrade. Set it to
+		// `true` to not alter its current behavior.
+		result.GenerateLease = new(bool)
+		*result.GenerateLease = true
+		modified = true
+	}
+
 	if modified {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -272,7 +305,12 @@ func (b *backend) pathRoleDelete(
 
 func (b *backend) pathRoleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := b.getRole(req.Storage, data.Get("name").(string))
+	roleName := data.Get("name").(string)
+	if roleName == "" {
+		return logical.ErrorResponse("missing role name"), nil
+	}
+
+	role, err := b.getRole(req.Storage, roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -341,10 +379,14 @@ func (b *backend) pathRoleCreate(
 		KeyType:             data.Get("key_type").(string),
 		KeyBits:             data.Get("key_bits").(int),
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
+		UseCSRSANs:          data.Get("use_csr_sans").(bool),
 		KeyUsage:            data.Get("key_usage").(string),
 		OU:                  data.Get("ou").(string),
 		Organization:        data.Get("organization").(string),
+		GenerateLease:       new(bool),
 	}
+
+	*entry.GenerateLease = data.Get("generate_lease").(bool)
 
 	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
 		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
@@ -355,10 +397,10 @@ func (b *backend) pathRoleCreate(
 	if len(entry.MaxTTL) == 0 {
 		maxTTL = maxSystemTTL
 	} else {
-		maxTTL, err = time.ParseDuration(entry.MaxTTL)
+		maxTTL, err = parseutil.ParseDurationSecond(entry.MaxTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid ttl: %s", err)), nil
+				"Invalid max ttl: %s", err)), nil
 		}
 	}
 	if maxTTL > maxSystemTTL {
@@ -367,7 +409,7 @@ func (b *backend) pathRoleCreate(
 
 	ttl := b.System().DefaultLeaseTTL()
 	if len(entry.TTL) != 0 {
-		ttl, err = time.ParseDuration(entry.TTL)
+		ttl, err = parseutil.ParseDurationSecond(entry.TTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"Invalid ttl: %s", err)), nil
@@ -454,12 +496,14 @@ type roleEntry struct {
 	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
 	EmailProtectionFlag   bool   `json:"email_protection_flag" structs:"email_protection_flag" mapstructure:"email_protection_flag"`
 	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
+	UseCSRSANs            bool   `json:"use_csr_sans" structs:"use_csr_sans" mapstructure:"use_csr_sans"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
-	MaxPathLength         *int   `json:",omitempty" structs:",omitempty"`
+	MaxPathLength         *int   `json:",omitempty" structs:"max_path_length,omitempty" mapstructure:"max_path_length"`
 	KeyUsage              string `json:"key_usage" structs:"key_usage" mapstructure:"key_usage"`
 	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
+	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`

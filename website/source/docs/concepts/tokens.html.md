@@ -37,7 +37,7 @@ Read on for a deeper dive into token concepts.
 
 Often in documentation or in help channels, the "token store" is referenced.
 This is the same as the [`token` authentication
-backend](https://www.vaultproject.io/docs/auth/token.html). This is a special
+backend](/docs/auth/token.html). This is a special
 backend in that it is responsible for creating and storing tokens, and cannot
 be disabled. It is also the only authentication backend that has no login
 capability -- all actions require existing authenticated tokens.
@@ -63,7 +63,7 @@ used for just enough initial setup (usually, setting up authentication backends
 and policies necessary to allow administrators to acquire more limited tokens)
 or in emergencies, and are revoked immediately after they are no longer needed.
 If a new root token is needed, the `generate-root` command and associated [API
-endpoint](https://www.vaultproject.io/docs/http/sys-generate-root.html) can be
+endpoint](/api/system/generate-root.html) can be
 used to generate one on-the-fly.
 
 It is also good security practice for there to be multiple eyes on a terminal
@@ -149,7 +149,7 @@ token's information is looked up. It is based on a combination of factors:
 1. The system max TTL, which is 32 days but can be changed in Vault's
    configuration file
 2. The max TTL set on a mount using [mount
-   tuning](https://www.vaultproject.io/docs/http/sys-mounts.html). This value
+   tuning](/api/system/mounts.html). This value
    is allowed to override the system max TTL -- it can be longer or shorter,
    and if set this value will be respected.
 3. A value suggested by the authentication backend that issued the token. This

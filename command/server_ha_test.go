@@ -64,8 +64,8 @@ func TestServer_GoodSeparateHA(t *testing.T) {
 		t.Fatalf("bad: %d\n\n%s\n\n%s", code, ui.ErrorWriter.String(), ui.OutputWriter.String())
 	}
 
-	if !strings.Contains(ui.OutputWriter.String(), "HA Backend:") {
-		t.Fatalf("did not find HA Backend: %s", ui.OutputWriter.String())
+	if !strings.Contains(ui.OutputWriter.String(), "HA Storage:") {
+		t.Fatalf("did not find HA Storage: %s", ui.OutputWriter.String())
 	}
 }
 

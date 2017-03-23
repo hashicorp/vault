@@ -88,7 +88,7 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 		if !req.Reset && req.Key == "" {
 			respondError(
 				w, http.StatusBadRequest,
-				errors.New("'key' must specified in request body as JSON, or 'reset' set to true"))
+				errors.New("'key' must be specified in request body as JSON, or 'reset' set to true"))
 			return
 		}
 

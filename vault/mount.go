@@ -95,15 +95,15 @@ func (t *MountTable) Hash() ([]byte, error) {
 }
 
 // setTaint is used to set the taint on given entry
-func (t *MountTable) setTaint(path string, value bool) bool {
+func (t *MountTable) setTaint(path string, value bool) *MountEntry {
 	n := len(t.Entries)
 	for i := 0; i < n; i++ {
 		if t.Entries[i].Path == path {
 			t.Entries[i].Tainted = value
-			return true
+			return t.Entries[i]
 		}
 	}
-	return false
+	return nil
 }
 
 // remove is used to remove a given path entry; returns the entry that was
@@ -146,6 +146,7 @@ type MountEntry struct {
 type MountConfig struct {
 	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	ForceNoCache    bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
 }
 
 // Returns a deep copy of the mount entry
@@ -212,6 +213,9 @@ func (c *Core) mount(entry *MountEntry) error {
 	if err != nil {
 		return err
 	}
+	if backend == nil {
+		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
+	}
 
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected
@@ -221,7 +225,7 @@ func (c *Core) mount(entry *MountEntry) error {
 
 	newTable := c.mounts.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
-	if err := c.persistMounts(newTable); err != nil {
+	if err := c.persistMounts(newTable, entry.Local); err != nil {
 		c.logger.Error("core: failed to update mount table", "error", err)
 		return logical.CodedError(500, "failed to update mount table")
 	}
@@ -283,9 +287,9 @@ func (c *Core) unmount(path string) (bool, error) {
 	}
 
 	// Call cleanup function if it exists
-	b, ok := c.router.root.Get(path)
-	if ok {
-		b.(*routeEntry).backend.Cleanup()
+	backend := c.router.MatchingBackend(path)
+	if backend != nil {
+		backend.Cleanup()
 	}
 
 	// Unmount the backend entirely
@@ -315,7 +319,11 @@ func (c *Core) removeMountEntry(path string) error {
 
 	// Remove the entry from the mount table
 	newTable := c.mounts.shallowClone()
-	newTable.remove(path)
+	entry := newTable.remove(path)
+	if entry == nil {
+		c.logger.Error("core: nil entry found removing entry in mounts table", "path", path)
+		return logical.CodedError(500, "failed to remove entry in mounts table")
+	}
 
 	// When unmounting all entries the JSON code will load back up from storage
 	// as a nil slice, which kills tests...just set it nil explicitly
@@ -324,9 +332,9 @@ func (c *Core) removeMountEntry(path string) error {
 	}
 
 	// Update the mount table
-	if err := c.persistMounts(newTable); err != nil {
-		c.logger.Error("core: failed to update mount table", "error", err)
-		return logical.CodedError(500, "failed to update mount table")
+	if err := c.persistMounts(newTable, entry.Local); err != nil {
+		c.logger.Error("core: failed to remove entry from mounts table", "error", err)
+		return logical.CodedError(500, "failed to remove entry from mounts table")
 	}
 
 	c.mounts = newTable
@@ -340,12 +348,16 @@ func (c *Core) taintMountEntry(path string) error {
 
 	// As modifying the taint of an entry affects shallow clones,
 	// we simply use the original
-	c.mounts.setTaint(path, true)
+	entry := c.mounts.setTaint(path, true)
+	if entry == nil {
+		c.logger.Error("core: nil entry found tainting entry in mounts table", "path", path)
+		return logical.CodedError(500, "failed to taint entry in mounts table")
+	}
 
 	// Update the mount table
-	if err := c.persistMounts(c.mounts); err != nil {
-		c.logger.Error("core: failed to update mount table", "error", err)
-		return logical.CodedError(500, "failed to update mount table")
+	if err := c.persistMounts(c.mounts, entry.Local); err != nil {
+		c.logger.Error("core: failed to taint entry in mounts table", "error", err)
+		return logical.CodedError(500, "failed to taint entry in mounts table")
 	}
 
 	return nil
@@ -408,13 +420,18 @@ func (c *Core) remount(src, dst string) error {
 		}
 	}
 
+	if ent == nil {
+		c.logger.Error("core: failed to find entry in mounts table")
+		return logical.CodedError(500, "failed to find entry in mounts table")
+	}
+
 	// Update the mount table
-	if err := c.persistMounts(c.mounts); err != nil {
+	if err := c.persistMounts(c.mounts, ent.Local); err != nil {
 		ent.Path = src
 		ent.Tainted = true
 		c.mountsLock.Unlock()
-		c.logger.Error("core: failed to update mount table", "error", err)
-		return logical.CodedError(500, "failed to update mount table")
+		c.logger.Error("core: failed to update mounts table", "error", err)
+		return logical.CodedError(500, "failed to update mounts table")
 	}
 	c.mountsLock.Unlock()
 
@@ -500,6 +517,10 @@ func (c *Core) loadMounts() error {
 
 		// Upgrade to table-scoped entries
 		for _, entry := range c.mounts.Entries {
+			if entry.Type == "cubbyhole" && !entry.Local {
+				entry.Local = true
+				needPersist = true
+			}
 			if entry.Table == "" {
 				entry.Table = c.mounts.Type
 				needPersist = true
@@ -516,7 +537,7 @@ func (c *Core) loadMounts() error {
 		c.mounts = defaultMountTable()
 	}
 
-	if err := c.persistMounts(c.mounts); err != nil {
+	if err := c.persistMounts(c.mounts, false); err != nil {
 		c.logger.Error("core: failed to persist mount table", "error", err)
 		return errLoadMountsFailed
 	}
@@ -524,7 +545,7 @@ func (c *Core) loadMounts() error {
 }
 
 // persistMounts is used to persist the mount table after modification
-func (c *Core) persistMounts(table *MountTable) error {
+func (c *Core) persistMounts(table *MountTable, localOnly bool) error {
 	if table.Type != mountTableType {
 		c.logger.Error("core: given table to persist has wrong type", "actual_type", table.Type, "expected_type", mountTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
@@ -553,33 +574,35 @@ func (c *Core) persistMounts(table *MountTable) error {
 		}
 	}
 
-	// Encode the mount table into JSON and compress it (lzw).
-	compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalMounts, nil)
-	if err != nil {
-		c.logger.Error("core: failed to encode and/or compress the mount table", "error", err)
-		return err
-	}
+	if !localOnly {
+		// Encode the mount table into JSON and compress it (lzw).
+		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalMounts, nil)
+		if err != nil {
+			c.logger.Error("core: failed to encode and/or compress the mount table", "error", err)
+			return err
+		}
 
-	// Create an entry
-	entry := &Entry{
-		Key:   coreMountConfigPath,
-		Value: compressedBytes,
-	}
+		// Create an entry
+		entry := &Entry{
+			Key:   coreMountConfigPath,
+			Value: compressedBytes,
+		}
 
-	// Write to the physical backend
-	if err := c.barrier.Put(entry); err != nil {
-		c.logger.Error("core: failed to persist mount table", "error", err)
-		return err
+		// Write to the physical backend
+		if err := c.barrier.Put(entry); err != nil {
+			c.logger.Error("core: failed to persist mount table", "error", err)
+			return err
+		}
 	}
 
 	// Repeat with local mounts
-	compressedBytes, err = jsonutil.EncodeJSONAndCompress(localMounts, nil)
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(localMounts, nil)
 	if err != nil {
 		c.logger.Error("core: failed to encode and/or compress the local mount table", "error", err)
 		return err
 	}
 
-	entry = &Entry{
+	entry := &Entry{
 		Key:   coreLocalMountConfigPath,
 		Value: compressedBytes,
 	}
@@ -618,6 +641,9 @@ func (c *Core) setupMounts() error {
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
+		}
+		if backend == nil {
+			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
 		}
 
 		if err := backend.Initialize(); err != nil {
@@ -661,10 +687,9 @@ func (c *Core) unloadMounts() error {
 	if c.mounts != nil {
 		mountTable := c.mounts.shallowClone()
 		for _, e := range mountTable.Entries {
-			prefix := e.Path
-			b, ok := c.router.root.Get(prefix)
-			if ok {
-				b.(*routeEntry).backend.Cleanup()
+			backend := c.router.MatchingBackend(e.Path)
+			if backend != nil {
+				backend.Cleanup()
 			}
 		}
 	}
@@ -692,6 +717,9 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 	b, err := f(config)
 	if err != nil {
 		return nil, err
+	}
+	if b == nil {
+		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 	return b, nil
 }

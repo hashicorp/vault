@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -39,13 +40,15 @@ func populateFieldValueFromPath(msg proto.Message, fieldPath []string, values []
 	if m.Kind() != reflect.Ptr {
 		return fmt.Errorf("unexpected type %T: %v", msg, msg)
 	}
+	var props *proto.Properties
 	m = m.Elem()
 	for i, fieldName := range fieldPath {
 		isLast := i == len(fieldPath)-1
 		if !isLast && m.Kind() != reflect.Struct {
 			return fmt.Errorf("non-aggregate type in the mid of path: %s", strings.Join(fieldPath, "."))
 		}
-		f := fieldByProtoName(m, fieldName)
+		var f reflect.Value
+		f, props = fieldByProtoName(m, fieldName)
 		if !f.IsValid() {
 			grpclog.Printf("field not found in %T: %s", msg, strings.Join(fieldPath, "."))
 			return nil
@@ -59,7 +62,7 @@ func populateFieldValueFromPath(msg proto.Message, fieldPath []string, values []
 			if !isLast {
 				return fmt.Errorf("unexpected repeated field in %s", strings.Join(fieldPath, "."))
 			}
-			return populateRepeatedField(f, values)
+			return populateRepeatedField(f, values, props)
 		case reflect.Ptr:
 			if f.IsNil() {
 				m = reflect.New(f.Type().Elem())
@@ -81,23 +84,29 @@ func populateFieldValueFromPath(msg proto.Message, fieldPath []string, values []
 	default:
 		grpclog.Printf("too many field values: %s", strings.Join(fieldPath, "."))
 	}
-	return populateField(m, values[0])
+	return populateField(m, values[0], props)
 }
 
 // fieldByProtoName looks up a field whose corresponding protobuf field name is "name".
 // "m" must be a struct value. It returns zero reflect.Value if no such field found.
-func fieldByProtoName(m reflect.Value, name string) reflect.Value {
+func fieldByProtoName(m reflect.Value, name string) (reflect.Value, *proto.Properties) {
 	props := proto.GetProperties(m.Type())
 	for _, p := range props.Prop {
 		if p.OrigName == name {
-			return m.FieldByName(p.Name)
+			return m.FieldByName(p.Name), p
 		}
 	}
-	return reflect.Value{}
+	return reflect.Value{}, nil
 }
 
-func populateRepeatedField(f reflect.Value, values []string) error {
+func populateRepeatedField(f reflect.Value, values []string, props *proto.Properties) error {
 	elemType := f.Type().Elem()
+
+	// is the destination field a slice of an enumeration type?
+	if enumValMap := proto.EnumValueMap(props.Enum); enumValMap != nil {
+		return populateFieldEnumRepeated(f, values, enumValMap)
+	}
+
 	conv, ok := convFromType[elemType.Kind()]
 	if !ok {
 		return fmt.Errorf("unsupported field type %s", elemType)
@@ -113,7 +122,7 @@ func populateRepeatedField(f reflect.Value, values []string) error {
 	return nil
 }
 
-func populateField(f reflect.Value, value string) error {
+func populateField(f reflect.Value, value string, props *proto.Properties) error {
 	// Handle well known type
 	type wkt interface {
 		XXX_WellKnownType() string
@@ -137,6 +146,11 @@ func populateField(f reflect.Value, value string) error {
 		}
 	}
 
+	// is the destination field an enumeration type?
+	if enumValMap := proto.EnumValueMap(props.Enum); enumValMap != nil {
+		return populateFieldEnum(f, value, enumValMap)
+	}
+
 	conv, ok := convFromType[f.Kind()]
 	if !ok {
 		return fmt.Errorf("unsupported field type %T", f)
@@ -146,6 +160,47 @@ func populateField(f reflect.Value, value string) error {
 		return err.(error)
 	}
 	f.Set(result[0].Convert(f.Type()))
+	return nil
+}
+
+func convertEnum(value string, t reflect.Type, enumValMap map[string]int32) (reflect.Value, error) {
+	// see if it's an enumeration string
+	if enumVal, ok := enumValMap[value]; ok {
+		return reflect.ValueOf(enumVal).Convert(t), nil
+	}
+
+	// check for an integer that matches an enumeration value
+	eVal, err := strconv.Atoi(value)
+	if err != nil {
+		return reflect.Value{}, fmt.Errorf("%s is not a valid %s", value, t)
+	}
+	for _, v := range enumValMap {
+		if v == int32(eVal) {
+			return reflect.ValueOf(eVal).Convert(t), nil
+		}
+	}
+	return reflect.Value{}, fmt.Errorf("%s is not a valid %s", value, t)
+}
+
+func populateFieldEnum(f reflect.Value, value string, enumValMap map[string]int32) error {
+	cval, err := convertEnum(value, f.Type(), enumValMap)
+	if err != nil {
+		return err
+	}
+	f.Set(cval)
+	return nil
+}
+
+func populateFieldEnumRepeated(f reflect.Value, values []string, enumValMap map[string]int32) error {
+	elemType := f.Type().Elem()
+	f.Set(reflect.MakeSlice(f.Type(), len(values), len(values)).Convert(f.Type()))
+	for i, v := range values {
+		result, err := convertEnum(v, elemType, enumValMap)
+		if err != nil {
+			return err
+		}
+		f.Index(i).Set(result)
+	}
 	return nil
 }
 

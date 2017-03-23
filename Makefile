@@ -22,7 +22,7 @@ dev-dynamic: generate
 
 # test runs the unit tests and vets the code
 test: generate
-	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=10m -parallel=4
+	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=20m -parallel=4
 
 testcompile: generate
 	@for pkg in $(TEST) ; do \

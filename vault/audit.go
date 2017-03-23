@@ -87,10 +87,13 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 	if err != nil {
 		return err
 	}
+	if backend == nil {
+		return fmt.Errorf("nil audit backend of type %q returned from factory", entry.Type)
+	}
 
 	newTable := c.audit.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
-	if err := c.persistAudit(newTable); err != nil {
+	if err := c.persistAudit(newTable, entry.Local); err != nil {
 		return errors.New("failed to update audit table")
 	}
 
@@ -132,7 +135,7 @@ func (c *Core) disableAudit(path string) (bool, error) {
 	}
 
 	// Update the audit table
-	if err := c.persistAudit(newTable); err != nil {
+	if err := c.persistAudit(newTable, entry.Local); err != nil {
 		return true, errors.New("failed to update audit table")
 	}
 
@@ -200,23 +203,21 @@ func (c *Core) loadAudits() error {
 			}
 		}
 
-		if needPersist {
-			return c.persistAudit(c.audit)
+		if !needPersist {
+			return nil
 		}
-
-		return nil
+	} else {
+		c.audit = defaultAuditTable()
 	}
 
-	// Create and persist the default audit table
-	c.audit = defaultAuditTable()
-	if err := c.persistAudit(c.audit); err != nil {
+	if err := c.persistAudit(c.audit, false); err != nil {
 		return errLoadAuditFailed
 	}
 	return nil
 }
 
 // persistAudit is used to persist the audit table after modification
-func (c *Core) persistAudit(table *MountTable) error {
+func (c *Core) persistAudit(table *MountTable, localOnly bool) error {
 	if table.Type != auditTableType {
 		c.logger.Error("core: given table to persist has wrong type", "actual_type", table.Type, "expected_type", auditTableType)
 		return fmt.Errorf("invalid table type given, not persisting")
@@ -245,33 +246,35 @@ func (c *Core) persistAudit(table *MountTable) error {
 		}
 	}
 
-	// Marshal the table
-	compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalAudit, nil)
-	if err != nil {
-		c.logger.Error("core: failed to encode and/or compress audit table", "error", err)
-		return err
-	}
+	if !localOnly {
+		// Marshal the table
+		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalAudit, nil)
+		if err != nil {
+			c.logger.Error("core: failed to encode and/or compress audit table", "error", err)
+			return err
+		}
 
-	// Create an entry
-	entry := &Entry{
-		Key:   coreAuditConfigPath,
-		Value: compressedBytes,
-	}
+		// Create an entry
+		entry := &Entry{
+			Key:   coreAuditConfigPath,
+			Value: compressedBytes,
+		}
 
-	// Write to the physical backend
-	if err := c.barrier.Put(entry); err != nil {
-		c.logger.Error("core: failed to persist audit table", "error", err)
-		return err
+		// Write to the physical backend
+		if err := c.barrier.Put(entry); err != nil {
+			c.logger.Error("core: failed to persist audit table", "error", err)
+			return err
+		}
 	}
 
 	// Repeat with local audit
-	compressedBytes, err = jsonutil.EncodeJSONAndCompress(localAudit, nil)
+	compressedBytes, err := jsonutil.EncodeJSONAndCompress(localAudit, nil)
 	if err != nil {
 		c.logger.Error("core: failed to encode and/or compress local audit table", "error", err)
 		return err
 	}
 
-	entry = &Entry{
+	entry := &Entry{
 		Key:   coreLocalAuditConfigPath,
 		Value: compressedBytes,
 	}
@@ -300,14 +303,18 @@ func (c *Core) setupAudits() error {
 		view := NewBarrierView(c.barrier, viewPath)
 
 		// Initialize the backend
-		audit, err := c.newAuditBackend(entry, view, entry.Options)
+		backend, err := c.newAuditBackend(entry, view, entry.Options)
 		if err != nil {
 			c.logger.Error("core: failed to create audit entry", "path", entry.Path, "error", err)
 			continue
 		}
+		if backend == nil {
+			c.logger.Error("core: created audit entry was nil", "path", entry.Path, "type", entry.Type)
+			continue
+		}
 
 		// Mount the backend
-		broker.Register(entry.Path, audit, view)
+		broker.Register(entry.Path, backend, view)
 
 		successCount += 1
 	}
@@ -375,6 +382,9 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 	})
 	if err != nil {
 		return nil, err
+	}
+	if be == nil {
+		return nil, fmt.Errorf("nil backend returned from %q factory function", entry.Type)
 	}
 
 	switch entry.Type {

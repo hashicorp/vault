@@ -6,6 +6,7 @@
 package github
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -44,8 +45,8 @@ func (w WeeklyStats) String() string {
 // it is now computing the requested statistics. A follow up request, after a
 // delay of a second or so, should result in a successful request.
 //
-// GitHub API Docs: https://developer.github.com/v3/repos/statistics/#contributors
-func (s *RepositoriesService) ListContributorsStats(owner, repo string) ([]*ContributorStats, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/statistics/#contributors
+func (s *RepositoriesService) ListContributorsStats(ctx context.Context, owner, repo string) ([]*ContributorStats, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/contributors", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -53,7 +54,7 @@ func (s *RepositoriesService) ListContributorsStats(owner, repo string) ([]*Cont
 	}
 
 	var contributorStats []*ContributorStats
-	resp, err := s.client.Do(req, &contributorStats)
+	resp, err := s.client.Do(ctx, req, &contributorStats)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -83,8 +84,8 @@ func (w WeeklyCommitActivity) String() string {
 // it is now computing the requested statistics. A follow up request, after a
 // delay of a second or so, should result in a successful request.
 //
-// GitHub API Docs: https://developer.github.com/v3/repos/statistics/#commit-activity
-func (s *RepositoriesService) ListCommitActivity(owner, repo string) ([]*WeeklyCommitActivity, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/statistics/#commit-activity
+func (s *RepositoriesService) ListCommitActivity(ctx context.Context, owner, repo string) ([]*WeeklyCommitActivity, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/commit_activity", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -92,7 +93,7 @@ func (s *RepositoriesService) ListCommitActivity(owner, repo string) ([]*WeeklyC
 	}
 
 	var weeklyCommitActivity []*WeeklyCommitActivity
-	resp, err := s.client.Do(req, &weeklyCommitActivity)
+	resp, err := s.client.Do(ctx, req, &weeklyCommitActivity)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -110,8 +111,8 @@ func (s *RepositoriesService) ListCommitActivity(owner, repo string) ([]*WeeklyC
 // it is now computing the requested statistics. A follow up request, after a
 // delay of a second or so, should result in a successful request.
 //
-// GitHub API Docs: https://developer.github.com/v3/repos/statistics/#code-frequency
-func (s *RepositoriesService) ListCodeFrequency(owner, repo string) ([]*WeeklyStats, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/statistics/#code-frequency
+func (s *RepositoriesService) ListCodeFrequency(ctx context.Context, owner, repo string) ([]*WeeklyStats, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/code_frequency", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -119,7 +120,7 @@ func (s *RepositoriesService) ListCodeFrequency(owner, repo string) ([]*WeeklySt
 	}
 
 	var weeks [][]int
-	resp, err := s.client.Do(req, &weeks)
+	resp, err := s.client.Do(ctx, req, &weeks)
 
 	// convert int slices into WeeklyStats
 	var stats []*WeeklyStats
@@ -163,8 +164,8 @@ func (r RepositoryParticipation) String() string {
 // it is now computing the requested statistics. A follow up request, after a
 // delay of a second or so, should result in a successful request.
 //
-// GitHub API Docs: https://developer.github.com/v3/repos/statistics/#participation
-func (s *RepositoriesService) ListParticipation(owner, repo string) (*RepositoryParticipation, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/statistics/#participation
+func (s *RepositoriesService) ListParticipation(ctx context.Context, owner, repo string) (*RepositoryParticipation, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/participation", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -172,7 +173,7 @@ func (s *RepositoriesService) ListParticipation(owner, repo string) (*Repository
 	}
 
 	participation := new(RepositoryParticipation)
-	resp, err := s.client.Do(req, participation)
+	resp, err := s.client.Do(ctx, req, participation)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -196,8 +197,8 @@ type PunchCard struct {
 // it is now computing the requested statistics. A follow up request, after a
 // delay of a second or so, should result in a successful request.
 //
-// GitHub API Docs: https://developer.github.com/v3/repos/statistics/#punch-card
-func (s *RepositoriesService) ListPunchCard(owner, repo string) ([]*PunchCard, *Response, error) {
+// GitHub API docs: https://developer.github.com/v3/repos/statistics/#punch-card
+func (s *RepositoriesService) ListPunchCard(ctx context.Context, owner, repo string) ([]*PunchCard, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/stats/punch_card", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
@@ -205,7 +206,7 @@ func (s *RepositoriesService) ListPunchCard(owner, repo string) ([]*PunchCard, *
 	}
 
 	var results [][]int
-	resp, err := s.client.Do(req, &results)
+	resp, err := s.client.Do(ctx, req, &results)
 
 	// convert int slices into Punchcards
 	var cards []*PunchCard
