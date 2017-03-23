@@ -8,8 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"strings"
-
 	"fmt"
 
 	"bytes"
@@ -181,135 +179,6 @@ AhXEa2Ie+mNe5fKzBIhREz9cQo6kF+3lYeL3XeKZiWMMgEsFlmFZ
 	}
 }
 
-func TestBackend_Environment(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-	b, err := Backend().Setup(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data := map[string]interface{}{
-		"policies": "pol1,pol2",
-	}
-
-	resp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "environment/env1",
-		Data:      data,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil && resp.IsError() {
-		t.Fatal("Failed to create environment")
-	}
-
-	resp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "environment/env1",
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatal("Failed to read environment")
-	}
-	if !policyutil.EquivalentPolicies(strings.Split(data["policies"].(string), ","), resp.Data["policies"].([]string)) {
-		t.Fatalf("policies didn't match: expected: %#v\ngot: %#v\n", data, resp.Data)
-	}
-
-}
-
-func TestBackend_Tag(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-	b, err := Backend().Setup(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data := map[string]interface{}{
-		"policies": "pol1,pol2",
-	}
-
-	resp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "tag/tag1",
-		Data:      data,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil && resp.IsError() {
-		t.Fatal("Failed to create tag")
-	}
-
-	resp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "tag/tag1",
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatal("Failed to read tag")
-	}
-	if !policyutil.EquivalentPolicies(strings.Split(data["policies"].(string), ","), resp.Data["policies"].([]string)) {
-		t.Fatalf("policies didn't match: expected: %#v\ngot: %#v\n", data, resp.Data)
-	}
-
-}
-
-func TestBackend_Role(t *testing.T) {
-	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
-	b, err := Backend().Setup(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	data := map[string]interface{}{
-		"policies": "pol1,pol2",
-	}
-
-	resp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "role/role1",
-		Data:      data,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp != nil && resp.IsError() {
-		t.Fatal("Failed to create role")
-	}
-
-	resp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "role/role1",
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.IsError() {
-		t.Fatal("Failed to read role")
-	}
-	if !policyutil.EquivalentPolicies(strings.Split(data["policies"].(string), ","), resp.Data["policies"].([]string)) {
-		t.Fatalf("policies didn't match: expected: %#v\ngot: %#v\n", data, resp.Data)
-	}
-
-}
-
 func TestBackend_Authenticate(t *testing.T) {
 	privKey := `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAulLSQ7sdr06pntGFWloywCFfaZGcxZ5HoRtpyAlpwmlzkK4R
@@ -406,32 +275,8 @@ func TestBackendAcc_Login(t *testing.T) {
 		t.Fatalf("env var VAULT_CHEF_URL not set")
 	}
 
-	env := randString()
-	err := setupTestEnv(env)
-	if err != nil {
-		t.Fatalf("Couldn't setup test environment %s", env)
-	}
-	defer teardownTestEnv(env)
-
-	role1 := randString()
-	role2 := randString()
-	err = setupTestRole(role1)
-	if err != nil {
-		t.Fatalf("Couldn't setup test role %s", role1)
-	}
-	err = setupTestRole(role2)
-	if err != nil {
-		t.Fatalf("Couldn't setup test role %s", role2)
-	}
-	defer teardownTestRole(role1)
-	defer teardownTestRole(role2)
-
 	nodeName := randString()
-	tag1 := randString()
-	tag2 := randString()
-	tagList := []string{tag1, tag2}
-	roleList := []string{role1, role2}
-	nodeKey, err := setupTestNode(nodeName, env, roleList, tagList)
+	nodeKey, err := setupTestNode(nodeName)
 	secondaryKey, err := addClientKey(nodeName)
 
 	if err != nil {
@@ -479,85 +324,6 @@ func TestBackendAcc_Login(t *testing.T) {
 		t.Fatalf("Failed to create client")
 	}
 
-	epData := map[string]interface{}{
-		"policies": "ep",
-	}
-
-	epResp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "environment/" + env,
-		Data:      epData,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if epResp != nil && epResp.IsError() {
-		t.Fatalf("Failed to create environment")
-	}
-
-	rpData := map[string]interface{}{
-		"policies": "rp1",
-	}
-	rpResp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "role/" + role1,
-		Data:      rpData,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if rpResp != nil && rpResp.IsError() {
-		t.Fatalf("Failed to create first role")
-	}
-	rpData = map[string]interface{}{
-		"policies": "rp2",
-	}
-	rpResp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "role/" + role2,
-		Data:      rpData,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if rpResp != nil && rpResp.IsError() {
-		t.Fatalf("Failed to create second role")
-	}
-
-	tpData := map[string]interface{}{
-		"policies": "tp1",
-	}
-	tagResp, err := b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "tag/" + tag1,
-		Data:      tpData,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if tagResp != nil && tagResp.IsError() {
-		t.Fatal("Failed to create tag")
-	}
-	tpData = map[string]interface{}{
-		"policies": "tp2",
-	}
-	tagResp, err = b.HandleRequest(&logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "tag/" + tag2,
-		Data:      tpData,
-		Storage:   storage,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if tagResp != nil && tagResp.IsError() {
-		t.Fatal("Failed to create tag")
-	}
-
 	conf := &config{
 		ClientName: nodeName,
 		ClientKey:  string(nodeKey),
@@ -591,7 +357,7 @@ func TestBackendAcc_Login(t *testing.T) {
 		t.Fatalf("login attempt failed")
 	}
 
-	exPols := []string{"default", "cp", "ep", "rp1", "rp2", "tp1", "tp2"}
+	exPols := []string{"default", "cp"}
 	if !policyutil.EquivalentPolicies(exPols, resp.Auth.Policies) {
 		t.Fatalf("policies didn't match:\nexpected: %#v\ngot: %#v\n", exPols, resp.Auth.Policies)
 	}
@@ -667,31 +433,7 @@ func chefRequest(object string, method string, body []byte) (*http.Response, err
 	return resp, nil
 }
 
-func setupTestEnv(env string) error {
-	envData := map[string]string{
-		"name": env,
-	}
-	envJSON, err := json.Marshal(envData)
-	if err != nil {
-		return err
-	}
-	_, err = chefRequest("environments", "POST", envJSON)
-	return err
-}
-
-func setupTestRole(role string) error {
-	roleData := map[string]string{
-		"name": role,
-	}
-	roleJSON, err := json.Marshal(roleData)
-	if err != nil {
-		return err
-	}
-	_, err = chefRequest("roles", "POST", roleJSON)
-	return err
-}
-
-func setupTestNode(name string, env string, roles []string, tags []string) (string, error) {
+func setupTestNode(name string) (string, error) {
 	clientData := struct {
 		Name        string `json:"name"`
 		GenerateKey bool   `json:"create_key"`
@@ -722,27 +464,9 @@ func setupTestNode(name string, env string, roles []string, tags []string) (stri
 	}
 
 	nodeData := struct {
-		Name        string `json:"name"`
-		ChefEnv     string `json:"chef_environment"`
-		NormalAttrs struct {
-			Tags []string `json:"tags"`
-		} `json:"normal"`
-		AutoAttrs struct {
-			Roles []string `json:"roles"`
-		} `json:"automatic"`
+		Name string `json:"name"`
 	}{
 		name,
-		env,
-		struct {
-			Tags []string `json:"tags"`
-		}{
-			tags,
-		},
-		struct {
-			Roles []string `json:"roles"`
-		}{
-			roles,
-		},
 	}
 	nodeJSON, err := json.Marshal(nodeData)
 	if err != nil {
@@ -798,15 +522,5 @@ func teardownTestNode(name string) error {
 		return err
 	}
 	_, err = chefRequest("clients/"+name, "DELETE", []byte(""))
-	return err
-}
-
-func teardownTestRole(name string) error {
-	_, err := chefRequest("roles/"+name, "DELETE", []byte(""))
-	return err
-}
-
-func teardownTestEnv(name string) error {
-	_, err := chefRequest("environments/"+name, "DELETE", []byte(""))
 	return err
 }

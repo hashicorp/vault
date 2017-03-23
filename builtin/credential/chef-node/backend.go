@@ -27,12 +27,6 @@ func Backend() *backend {
 		Paths: append([]*framework.Path{
 			pathLogin(&b),
 			pathConfig(&b),
-			pathEnvironments(&b),
-			pathEnvironmentsList(&b),
-			pathRoles(&b),
-			pathRolesList(&b),
-			pathTags(&b),
-			pathTagsList(&b),
 			pathClients(&b),
 			pathClientsList(&b),
 		}),

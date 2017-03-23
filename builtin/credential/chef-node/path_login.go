@@ -169,11 +169,6 @@ func constructAuthorization(h http.Header) string {
 }
 
 func (b *backend) getNodePolicies(req *logical.Request, node string) ([]string, error) {
-	nodeInfo, err := b.retrieveNodeInfo(req, node)
-	if err != nil {
-		return nil, err
-	}
-
 	var clientPols []string
 	clientEntry, err := b.Client(req.Storage, node)
 	if err != nil {
@@ -183,89 +178,11 @@ func (b *backend) getNodePolicies(req *logical.Request, node string) ([]string, 
 		clientPols = clientEntry.Policies
 	}
 
-	var envPols []string
-	envEntry, err := b.Environment(req.Storage, nodeInfo.ChefEnv)
-	if err != nil {
-		return nil, err
-	}
-	if envEntry != nil {
-		envPols = envEntry.Policies
-	}
-
-	var rolePols []string
-	roles := nodeInfo.AutoAttrs.Roles
-	for _, v := range roles {
-		roleEntry, err := b.Role(req.Storage, v)
-		if err != nil {
-			return nil, err
-		}
-		if roleEntry != nil {
-			rolePols = append(rolePols, roleEntry.Policies...)
-		}
-	}
-
-	var tagPols []string
-	tags := nodeInfo.NormalAttrs.Tags
-	for _, v := range tags {
-		tagEntry, err := b.Tag(req.Storage, v)
-		if err != nil {
-			return nil, err
-		}
-		if tagEntry != nil {
-			tagPols = append(tagPols, tagEntry.Policies...)
-		}
-	}
-
 	var allPol []string
 	allPol = append(allPol, clientPols...)
-	allPol = append(allPol, envPols...)
-	allPol = append(allPol, rolePols...)
-	allPol = append(allPol, tagPols...)
 	allPol = strutil.RemoveDuplicates(allPol)
 
 	return allPol, nil
-}
-
-func (b *backend) retrieveNodeInfo(req *logical.Request, targetName string) (*nodeResponse, error) {
-	config, err := b.Config(req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeURL, err := url.Parse(config.BaseURL + "/nodes/" + targetName)
-	if err != nil {
-		return nil, err
-	}
-
-	headers, err := authHeaders(config, nodeURL, "GET", nil, true)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeReq, err := http.NewRequest("GET", nodeURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	nodeReq.Header = headers
-	client := &http.Client{}
-	resp, err := client.Do(nodeReq)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var jb nodeResponse
-	if err := json.Unmarshal(body, &jb); err != nil {
-		return nil, err
-	}
-
-	return &jb, nil
 }
 
 func (b *backend) retrievePubKey(req *logical.Request, targetName string) ([]*rsa.PublicKey, error) {
@@ -458,18 +375,6 @@ type keyInfo struct {
 
 type keyResponse struct {
 	ClientKey string `json:"public_key"`
-}
-
-type nodeResponse struct {
-	ChefEnv string `json:"chef_environment"`
-
-	AutoAttrs struct {
-		Roles []string
-	} `json:"automatic"`
-
-	NormalAttrs struct {
-		Tags []string
-	} `json:"normal"`
 }
 
 const pathLoginSyn = `
