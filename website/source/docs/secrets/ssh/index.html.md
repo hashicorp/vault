@@ -1,43 +1,135 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: SSH"
+page_title: "SSH Secret Backend"
 sidebar_current: "docs-secrets-ssh"
 description: |-
-  The SSH secret backend for Vault generates dynamic SSH keys or One-Time-Passwords.
+  The SSH secret backend for Vault generates signed SSH certificates, dynamic SSH keys or One-Time-Passwords.
 ---
 
 # SSH Secret Backend
 
 Name: `ssh`
 
-Vault SSH backend dynamically generates SSH credentials for remote hosts. This
-increases security by removing the need to share private keys with all users
-needing access to infrastructure. It also solves the problem of management and
-distribution of keys belonging to remote hosts.
+Vault SSH backend tries to solve the problem of managing access to machine
+infrastructure by providing different ways to issue SSH credentials.
 
-This backend supports two types of credential creation: Dynamic Key and
-One-Time Password (OTP), which address these problems in different ways.
-
-Read and carefully understand both of them before choosing the one which best
-suits your needs. The Vault team strongly recommends the OTP type whenever
-possible, and the drawbacks to the dynamic key type should be carefully
-considered before choosing it.
+The backend issues in 3 types of credentials: CA signed keys, Dynamic keys and
+OTP keys. Read and carefully understand all the types before choosing the one
+which best suits your needs. In relation to the dynamic key and OTP key type,
+the CA key signing is the simplest and most powerful in terms of setup
+complexity and in terms of being platform agnostic.
 
 This page will show a quick start for this backend. For detailed documentation
 on every path, use `vault path-help` after mounting the backend.
 
-### Mounting SSH
+----------------------------------------------------
+## I. CA Key Type
 
-The `ssh` backend is not mounted by default and needs to be explicitly mounted.
-This is a common step for both OTP and Dynamic Key types.
+When using this type, an SSH CA signing key is generated or configured at the
+backend's mount. This key will be used to sign other SSH keys. The private half
+of the signing key always stays within Vault and the public half is exposed via
+the API. Each mount of this backend represents a unique signing key pair. It is
+recommended that the host keys and client keys are signed using different
+mounts of this backend.
+
+### Mount a backend's instance for signing host keys
 
 ```text
-$ vault mount ssh
-Successfully mounted 'ssh' at 'ssh'!
+vault mount -path ssh-host-signer ssh
+Successfully mounted 'ssh' at 'ssh-host-signer'!
 ```
 
+### Mount a backend's instance for signing client keys
+
+```text
+vault mount -path ssh-client-signer ssh
+Successfully mounted 'ssh' at 'ssh-client-signer'!
+```
+
+### Configure the host CA certificate
+
+```text
+vault write -f ssh-host-signer/config/ca
+Key             Value
+---             -----
+public_key      ssh-rsa
+AAAAB3NzaC1yc2EAAAADAQABAAACAQDB7lbQ4ub8/7AbfnF4zntCxPGijXzdo50MrUz0I1Vz/n98pBPyrUEcNqFeCr6Qs9kRL8J8Bu48W/DtSxAiScIIlzyezulH+wxdZnCN3sxDUhFbTUosWstSt6P5BZbJsMTpfHfuYbOexewX9ljw636fUrRtU3/0Emq2FkOcKEv9v7z+Qwdaom+8R6CvRA0Kit0yyh6DXD+IjPnOmhYFoNH6ZhPU2xJ+7M16vLpCmH6OO1krHlDK+ZUvVKD2ZjfmbegoYEV/9FETSzVnQ/pOrP0SdwpmGhei7VO7hQwa6zOWIah66TYYdaIopHFha60rZPybliZFAi/CcUO7NYldq7Q2ty68RKp+Im2ROPbXLKYc2N+PThWwbxA1yQ7shvgSy/JEbAcYQuDLGn6tA6n5sXpvFcJe+vlf75w+laXIPUXTVHr2g1O5Irzwunpg03Pa+Kab8Hp8uq61XfTfNtCwHYr/K5YO27rHcpMA/gBKkOFmBbcI3VlUbi266HiyFANz0JMObzXS5hEGm90NevMD2nEFvZHYHx4hXRtoox7Bh4CCj2fUPaThnuTvv1hLBgryWxwDXL7OwHGx6wd/dpXo/1fG1DRUotfVcJP7k7FG9MUAB6tOR2RCuXEaTF6bv3tCpbsdzzzyhs/aIa6IeYRV4HUo3nW5g/IRT+6F/MLd63Cq5w==
+```
+
+The returned host CA public key should be added to `known_hosts` file in all
+the client machines with a `@cert-authority *.domain` prefix. The host CA
+public key can also be retrieved using `vault read ssh-host-signer/config/ca`.
+
+### Configure the client CA certificate
+
+```text
+vault write -f ssh-client-signer/config/ca
+Key             Value
+---             -----
+public_key      ssh-rsa
+AAAAB3NzaC1yc2EAAAADAQABAAACAQDoYiTm0QrK+NGkv8H/Sq1Q9l2PQwxY1ROSPpRqOoFAgCM7vtEZSGchm8j3/Da6Vj84sUg+09N+dwMZ6z3HG57dBWyfHGCbEt+fIJtRcCV7KkQ4xktBdapq5PychBg0bYIP0+JWXe7yOAR6s+DWJgUUHwmYiY0GlrzoztvtYcU/pvj4zWY/EWcCAYRiZThqJOJ9rDzhEzmVHVYelZ8dlehKZsUOQ3dY5fCHgWJ5/IKSfGUI1w1h/3ENAToBKInbW2J/Wy0mbsfUJhha84zgqSeHd4gZ9YqaSpzYffVvDz6Ud+KtPWt4ejJDyvJVFAVnVIvVUCkuXVefBlC10Ww6l52DXex/rdxQW+46ZNV5zlFOUi4VWFPT6bOlIEj1hgHG0cfFKARQXcVlp03xTi5DRJp3jlBf/QLeUy4kZEFUdQl+gkVLwySrOh+1kHwE15JQWpNHxfxWzYnNnjokT2RCW2ANO4Y8vfMPCVM5OKSVNISHm3UurNkJNTAomK/ElnXQgP23UcVgbF3mNRBPx9U3/+9HHkXcqDefSI7XBC7npIBFdetCxFt3nW/cX4l1zfq6ZExCVde+/40V1U+TOoLZVLIZZzEuA40J4H99oK7QN5/MtCGaSr7kgAx+7ymfSY37rXB6wOVi5HTBlhyh+VFGU+Wmy+q5sxfr6+ZLGwoGpvNh0Q==
+```
+
+The returned client CA public key should be added to `TrustedUserCAKeys` list
+in `sshd_config` of the host machine. The client CA public key can also be
+retrieved using `vault read ssh-client-signer/config/ca`.
+
+### Allow host certificate to have longer TTLs
+
+```text
+vault mount-tune -max-lease-ttl=87600h ssh-host-signer
+Successfully tuned mount 'ssh-host-signer'!
+```
+
+### Create a role to sign host keys
+
+```text
+vault write ssh-host-signer/roles/hostrole ttl=87600h allow_host_certificates=true key_type=ca
+Success! Data written to: ssh-host-signer/roles/hostrole
+```
+
+### Create a role to sign client keys
+
+```text
+vault write ssh-client-signer/roles/clientrole allow_user_certificates=true ttl=5m key_type=ca
+Success! Data written to: ssh-client-signer/roles/clientrole
+```
+
+### Sign the host key
+
+```text
+cat hostkey.pub | vault write -format=json ssh-host-signer/sign/hostrole public_key=- cert_type=host
+Key             Value
+---             -----
+serial_number   3746eb17371540d9
+signed_key      ssh-rsa-cert-v01@openssh.com
+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
+```
+
+Set the signed certificate as `HostCertificate` in the `sshd_config` in host
+machine.
+
+### Sign the client key
+
+```text
+cat clientkey.pub | vault write ssh-client-signer/sign/clientrole public_key=-
+Key             Value
+---             -----
+serial_number   c73f26d2340276aa
+signed_key      ssh-rsa-cert-v01@openssh.com
+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
+```
+
+Save the signed key in a file, say `signed-client-cert.pub`.
+
+### SSH into the host machine
+
+```text
+ssh -i signed-client-cert.pub username@<IP of remote host>
+username@<IP of remote host>:~$
+```
 ----------------------------------------------------
-## I. One-Time-Password (OTP) Type
+## II. One-Time-Password (OTP) Type
 
 This backend type allows a Vault server to issue an OTP every time a client
 wants to SSH into a remote host, using a helper command on the remote host to
@@ -64,7 +156,14 @@ successful request. This risk can be mitigated by using TLS for the connection
 to Vault and checking certificate validity; future enhancements to this backend
 may allow for extra security on top of what TLS provides.
 
-### Creating a Role
+### Mount the backend
+
+```text
+$ vault mount ssh
+Successfully mounted 'ssh' at 'ssh'!
+```
+
+### Create a Role
 
 Create a role with the `key_type` parameter set to `otp`. All of the machines
 represented by the role's CIDR list should have helper properly installed and
@@ -127,7 +226,7 @@ Note: `sshpass` cannot handle host key checking. Host key checking can be
 disabled by setting `-strict-host-key-checking=no`.
 
 ----------------------------------------------------
-## II. Dynamic Key Type
+## III. Dynamic Key Type
 
 When using this type, the administrator registers a secret key with appropriate
 `sudo` privileges on the remote machines; for every authorized credential
@@ -185,6 +284,13 @@ vaultadmin   ALL=(ALL)NOPASSWD: ALL
 
 Next, infrastructure configuration must be registered with Vault via roles.
 First, however, the shared secret key must be specified.
+
+### Mount the backend
+
+```text
+$ vault mount ssh
+Successfully mounted 'ssh' at 'ssh'!
+```
 
 #### Registering the shared secret key
 
@@ -292,852 +398,8 @@ username@<IP of remote host>:~$
 ```
 
 ----------------------------------------------------
-## III. CA Key Type
-
-When using this type, an SSH key is generated and then used to sign other SSH
-keys.  The public half of the key is distributed to remote hosts while the
-private part stays within Vault. This allows SSH public keys to be signed by
-Vault and then verified using only the public key.
-
-### Configure a CA certificate
-
-The first thing to do is to get Vault to generate the key pair that will be
-used to sign any SSH keys:
-
-```text
-$ vault write -f ssh/config/ca
-Success! Data written to: ssh/config/ca
-```
-
-### Creating a Role
-
-The next step is to configure a role. A role is a logical name that maps to a
-policy used to generate those credentials. For example, let's create an
-"example" role:
-
-```text
-$ vault write ssh/roles/example ttl=4h allow_user_certificates=true key_type=ca
-Success! Data written to: ssh/roles/example
-```
-
-### Create a Credential
-
-By writing to the `roles/example` path we are defining the `example` role. To
-sign an SSH public key, we simply write to the `sign` end point with that role
-name: Vault is now configured to create and manage SSH certificates!
-
-```text
-$ cat dummy.pub | vault write ssh/sign/example public_key=- 
-Key             Value
----             -----
-lease_id        ssh/sign/example/3c3740ee-6066-55c0-4a5d-82a544a474a3
-lease_duration  768h0m0s
-lease_renewable false
-serial_number   8343f840b8a027a7
-signed_key      ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1yc2EtY2VydC12MDFAb3BlbnNzaC5jb20AAAAgxSlUi1Fd38w93emsotVQBjLYorkQTmCyRo0XPxJw/poAAAADAQABAAABAQCgbXubSftRY1JFEfFpkoHkf/4WkGNQr8g+X1H8kcU/UJUoFZl5IXaZrDzRUTUUQsC3bZA6EPerqSlgpy9gSYn/dtGcCCoPyOUQpaz3vRbF180ddzJnjaJvIAg1PHecFFLC+WjCPFeGkZPc5Yr1NyGhL5GiMUbv5fIYfSM5REkydcEn5+fryfZq8ZCSNBa0KfHflWvy9Nn3i3ns1ZphkMPp+DRkGw0Iy4VetfvUWd3bbVRP8PMZOz0o9Bo/90qzST3qBJ6DZip9LehBXfoNk3dvD/Rkst4IdjBLVv/gHnwX9V0yG8NMUCHh695S0anNtbjCFW1JedYXH7h5ayGOPfivg0P4QLigJ6cAAAABAAAABHJvb3QAAAAAAAAAAFhfuTMAAAAAWF/xkQAAAAAAAAAAAAAAAAAAARcAAAAHc3NoLXJzYQAAAAMBAAEAAAEBALiUMk0TnJh++UOYEU6LcsRAxTcZbR31XbbvtXBGLdK9P92ufZuSxvASVjEoHiJuI+a+rnw7q4GGwoBZQ4wooN/Az5Iy7ez04sz629UINQgUfHbp8RHVk3tCBrJ1F0aQKNEDz3LKNNuAF6kJZrXZ2d0pdCDorm0cNfaYZxOmyKAQtVH454xR2gP0VYUwOWcxTPF8lnoNecL6drEKxg0eyGl2dK+MndsE2TwE9b1S2LDatzfmVzVKQWL5JJWgNwGNiy65E0C858TLzQ7imrVqPomp3SppWLItMUNHZgy9uujyS3BeMqzLT6e1e+ndWMD92Ei2/t95JaSR9IMmClQS0BkAAAEPAAAAB3NzaC1yc2EAAAEAM4vtt9WhBtB98XfJsVo5TXI+XU6aAXm/yZH8wRpCl3ghhBDk5ZFdZredLna2v8jYELTNJGt8LuFZVy7XoXgsPC58kwhWcYx2BbtN3GpBDijlG7Odozwf03RrJ48LgheI9UfF+8mituwrerQDYppPgW5tws+THllhcWD099LU+iDvuC69aVEDy+CZJZKBvaYVDQYtu5bVlqdlGo5KE1ASro2h/jLQG2atl4iwpQ7NKi5VF5YuNFNX9NsWFIqnm5ErwXLdroBJb/XOSSWNE8Vlsi+UhNRJ33o3/QwQ3nMAjyxh1btnv2HW0r4Z3D4a63r+HizFP+RrGdRzNf7xj9UiRw==
-```
-
-### Establish an SSH session
-
-Save the key to a file (e.g. `dummy-cert.pem`) and then use it to establish an
-SSH session.
-
-```text
-$ ssh -i dummy.pem username@<IP of remote host>
-username@<IP of remote host>:~$
-```
-
-----------------------------------------------------
 ## API
 
-### /ssh/keys/
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Creates or updates a named key.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/keys/<key name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">key</span>
-        <span class="param-flags">required</span>
-        (String)
-        SSH private key with appropriate privileges on remote hosts.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes a named key.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/keys/<key name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>None</dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-
-### /ssh/roles/
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Creates or updates a named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/roles/<role name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">key</span>
-        <span class="param-flags">required for Dynamic Key type, N/A for
-        OTP type, N/A for CA type</span>
-          (String)
-          Name of the registered key in Vault. Before creating the role, use
-          the `keys/` endpoint to create a named key.
-      </li>
-      <li>
-        <span class="param">admin_user</span>
-        <span class="param-flags">required for Dynamic Key type, N/A for OTP
-        type, N/A for CA type</span>
-          (String)
-          Admin user at remote host. The shared key being registered should be
-          for this user and should have root or sudo privileges. Every time a
-          dynamic	credential is generated for a client, Vault uses this admin
-          username to login to remote host and install the generated
-          credential.
-      </li>
-      <li>
-        <span class="param">default_user</span>
-        <span class="param-flags">required for Dynamic Key type, required
-        for OTP type, optional for CA type</span>
-          (String)
-          Default username for which a credential will be generated. When the
-          endpoint 'creds/' is used without a username, this value will be used
-          as default username. Its recommended to create individual roles for
-          each username to ensure absolute isolation between usernames.
-
-          For the CA type, if you wish this to be a valid principal, it must
-          also be in `allowed_users`.
-      </li>
-      <li>
-        <span class="param">cidr_list</span>
-        <span class="param-flags">optional for Dynamic Key type, optional for
-        OTP type, N/A for CA type</span>
-          (String)
-          Comma separated list of CIDR blocks for which the role is applicable
-          for.	CIDR blocks can belong to more than one role.
-      </li>
-      <li>
-        <span class="param">exclude_cidr_list</span>
-        <span class="param-flags">optional for Dynamic Key type, optional for
-        OTP type, N/A for CA type</span>
-          (String)
-          Comma-separated list of CIDR blocks. IP addresses belonging to these
-          blocks are not accepted by the role. This is particularly useful when
-          big CIDR blocks are being used by the role and certain parts need to
-          be kept out.
-      </li>
-      <li>
-        <span class="param">port</span>
-        <span class="param-flags">optional for Dynamic Key type, optional for
-        OTP type, N/A for CA type</span>
-        (Integer)
-        Port number for SSH connection. The default is '22'. Port number
-        does not play any role in OTP generation. For the 'otp' backend
-        type, this is just a way to inform the client about the port number
-        to use. The port number will be	returned to the client by Vault
-        along with the OTP.
-      </li>
-      <li>
-        <span class="param">key_type</span>
-        <span class="param-flags">required for all types</span>
-        (String)
-        Type of credentials generated by this role. Can be either `otp`,
-        `dynamic` or `ca`.
-      </li>
-      <li>
-        <span class="param">key_bits</span>
-        <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
-        N/A for CA type</span>
-        (Integer)
-        Length of the RSA dynamic key in bits; can be either 1024 or 2048.
-        1024 the default.
-      </li>
-      <li>
-        <span class="param">install_script</span>
-        <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
-        N/A for CA type</span>
-        (String)
-        Script used to install and uninstall public keys in the target
-        machine. Defaults to the built-in script.
-      </li>
-      <li>
-        <span class="param">allowed_users</span>
-        <span class="param-flags">optional for all types</span>
-          (String)
-          If this option is not specified, client can request for a credential
-          for any valid user at the remote host, including the admin user. If
-          only certain usernames are to be allowed, then this list enforces it.
-          If this field is set, then credentials can only be created for
-          `default_user` and usernames present in this list. Setting this
-          option will enable all the users with access this role to fetch
-          credentials for all other usernames in this list. Use with caution.
-      </li>
-      <li>
-        <span class="param">allowed_domains</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-          (String)
-          If this option is not specified, client can request for a signed certificate for any
-          valid host. If only certain domains are allowed, then this list enforces it.
-          If this option is explicitly set to `*`, then credentials can be created
-          for any domain.
-      </li>
-      <li>
-        <span class="param">key_option_specs</span>
-        <span class="param-flags">optional for Dynamic Key type, N/A for OTP type,
-        N/A for CA type</span>
-        (String)
-        Comma separated option specification which will be prefixed to RSA
-        keys in	the remote host's authorized_keys file. N.B.: Vault does
-        not check this string for validity.
-      </li>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        The Time To Live value provided as a string duration with time suffix.
-        Hour is the largest suffix.  If not set, uses the system default value
-        or the value of `max_ttl`, whichever is shorter.
-      </li>
-      <li>
-        <span class="param">max_ttl</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        The maximum Time To Live provided as a string duration with time
-        suffix. Hour is the largest suffix. If not set, defaults to the system
-        maximum lease TTL.
-      </li>
-      <li>
-        <span class="param">allowed_critical_options</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A comma-separated list of critical options that certificates can have when
-        signed. To allow any critical options, set this to an empty string. Will
-        default to allowing any critical options.
-      </li>
-      <li>
-        <span class="param">allowed_extensions</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A comma-separated list of extensions that certificates can have when
-        signed. To allow any critical options, set this to an empty string. Will
-        default to allowing any extensions.
-      </li>
-      <li>
-        <span class="param">default_critical_options</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A map of critical options certificates should have if none are provided
-        when signing. This field takes in key value pairs in JSON format. Note
-        that these are not restricted by `allowed_critical_options`. Defaults
-        to none.
-      </li>
-      <li>
-        <span class="param">default_extensions</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        A map of extensions certificates should have if none are provided when
-        signing. This field takes in key value pairs in JSON format. Note that
-        these are not restricted by `allowed_extensions`. Defaults to none.
-      </li>
-      <li>
-        <span class="param">allow_user_certificates</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, certificates are allowed to be signed for use as a 'user'.
-        Defaults to false.
-      </li>
-      <li>
-        <span class="param">allow_host_certificates</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, certificates are allowed to be signed for use as a 'host'.
-        Defaults to false.
-      </li>
-      <li>
-        <span class="param">allow_bare_domains</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, host certificates that are requested are allowed to use the base
-        domains listed in "allowed_users", e.g. "example.com". This
-        is a separate option as in some cases this can be considered a security
-        threat. Defaults to false.
-      </li>
-      <li>
-        <span class="param">allow_subdomains</span>
-        <span class="param-flags">N/A for Dynamic Key type, N/A for OTP type,
-        optional for CA type</span>
-        If set, host certificates that are requested are allowed to use
-        subdomains of those listed in "allowed_users". Defaults
-        to false.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Queries a named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/roles/<role name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>None</dd>
-
-  <dt>Returns</dt>
-  <dd>Note: these are examples only. For a dynamic key role:
-
-```json
-{
-  "admin_user": "username",
-  "cidr_list": "x.x.x.x/y",
-  "default_user": "username",
-  "key": "<key name>",
-  "key_type": "dynamic",
-  "port": 22
-}
-```
-
-  </dd>
-
-  <dd>For an OTP role:
-
-```json
-{
-  "cidr_list": "x.x.x.x/y",
-  "default_user": "username",
-  "key_type": "otp",
-  "port": 22
-}
-```
-  </dd>
-  <dd>For a CA role:
-
-```json
-{
-  "allow_bare_domains": false,
-  "allow_host_certificates": true,
-  "allow_subdomains": false,
-  "allow_user_certificates": true,
-  "allowed_critical_options": "",
-  "allowed_extensions": "",
-  "default_critical_options": {},
-  "default_extensions": {},
-  "max_ttl": "768h",
-  "ttl": "4h"
-}
-```
-  </dd>
-
-#### LIST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Returns a list of available roles. Only the role names are returned, not
-    any values.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>LIST/GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/roles` (LIST) or `/ssh/roles?list=true` (GET)</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-     None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-  ```json
-  {
-    "auth": null,
-    "data": {
-      "keys": ["dev", "prod"]
-    },
-    "lease_duration": 2764800,
-    "lease_id": "",
-    "renewable": false
-  }
-  ```
-
-  </dd>
-</dl>
-
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes a named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/roles/<role name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>None</dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-
-### /ssh/config/zeroaddress
-
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Returns the list of configured zero-address roles.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/config/zeroaddress`</dd>
-
-  <dt>Parameters</dt>
-  <dd>None</dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-```json
-{  
-   "lease_id":"",
-   "renewable":false,
-   "lease_duration":0,
-   "data":{  
-      "roles":[  
-         "otp_key_role"
-      ]
-   },
-   "warnings":null,
-   "auth":null
-}
-```
-
-  </dd>
-
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Configures zero-address roles.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/config/zeroaddress`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">roles</span>
-        <span class="param-flags">required</span>
-        A string containing comma separated list of role names which allows credentials to be requested
-        for any IP address. CIDR blocks previously registered under these roles will be ignored.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes the zero-address roles configuration.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/config/zeroaddress`</dd>
-
-  <dt>Parameters</dt>
-  <dd>None</dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-
-
-### /ssh/creds/
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Creates credentials for a specific username and IP with the
-    parameters defined in the given role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/creds/<role name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">username</span>
-        <span class="param-flags">optional</span>
-        (String)
-        Username on the remote host.
-      </li>
-      <li>
-        <span class="param">ip</span>
-        <span class="param-flags">required</span>
-        (String)
-        IP of the remote host.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>For a dynamic key role:
-
-```json
-{
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-            "admin_user": "rajanadar",
-            "allowed_users": "",
-            "cidr_list": "x.x.x.x/y",
-            "default_user": "rajanadar",
-            "exclude_cidr_list": "x.x.x.x/y",
-            "install_script": "pretty_large_script",
-            "key": "5d9ee6a1-c787-47a9-9738-da243f4f69bf",
-            "key_bits": 1024,
-            "key_option_specs": "",
-            "key_type": "dynamic",
-            "port": 22
-           },
-  "warnings": null,
-  "auth": null
-}
-```
-
-  </dd>
-
-  <dd>For an OTP role:
-
-```json
-{
-  "lease_id": "sshs/creds/c3c2e60c-5a48-415a-9d5a-a41e0e6cdec5/3ee6ad28-383f-d482-2427-70498eba4d96",
-  "renewable": false,
-  "lease_duration": 2764800,
-  "data": {
-            "ip": "127.0.0.1",
-            "key": "6d6411fd-f622-ea0a-7e2c-989a745cbbb2",
-            "key_type": "otp",
-            "port": 22,
-            "username": "rajanadar"
-           },
-  "warnings": null,
-  "auth": null
-}
-```
-  </dd>
-
-
-### /ssh/lookup
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Lists all of the roles with which the given IP is associated.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/lookup`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">ip</span>
-        <span class="param-flags">required</span>
-        (String)
-        IP of the remote host.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>An array of roles as a secret structure.
-
-```json
-{
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-            "roles": ["fe6f61b7-7e4a-46a6-b2c8-0d530b8513df", "6d6411fd-f622-ea0a-7e2c-989a745cbbb2"]
-          },
-  "warnings": null,
-  "auth": null
-}
-```
-  </dd>
-
-### /ssh/verify
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Verifies if the given OTP is valid. This is an unauthenticated
-    endpoint.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/verify`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">otp</span>
-        <span class="param-flags">required</span>
-        (String)
-        One-Time-Key that needs to be validated.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-    <dd>A `200` response code for a valid OTP.
-
-```json
-{
-  "lease_id":"",
-  "renewable":false,
-  "lease_duration":0,
-  "data":{
-         "ip":"127.0.0.1",
-         "username":"rajanadar"
-         },
-  "warnings":null,
-  "auth":null
-}
-```
-
-  </dd>
-
-  <dd>A `400` BadRequest response code with 'OTP not found' message, for an invalid OTP.</dd>
-
-### /ssh/config/ca
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Allows submitting the CA information for the backend via an SSH key pair.
-    _If you have already set a certificate and key, they will be overridden._<br /><br />
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/config/ca`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">private_key</span>
-        <span class="param-flags">optional</span>
-        The private key part the SSH CA key pair; required if generate_signing_key is false.
-      </li>
-      <li>
-        <span class="param">public_key</span>
-        <span class="param-flags">optional</span>
-        The public key part of the SSH CA key pair; required if generate_signing_key is false.
-      </li>
-      <li>
-        <span class="param">generate_signing_key</span>
-        <span class="param-flags">optional</span>
-        Generate the signing key pair interally if true, otherwise use the private_key and public_key fields.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-### /ssh/sign
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Signs an SSH public key based on the supplied parameters, subject to the
-    restrictions contained in the role named in the endpoint.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/ssh/sign/<role name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">public_key</span>
-        <span class="param-flags">required</span>
-        SSH public key that should be signed.
-      </li>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">optional</span>
-        Requested Time To Live. Cannot be greater than the role's `max_ttl`
-        value. If not provided, the role's `ttl` value will be used. Note that
-        the role values default to system values if not explicitly set.
-      </li>
-      <li>
-        <span class="param">valid_principals</span>
-        <span class="param-flags">optional</span>
-        Valid principals, either usernames or hostnames, that the certificate
-        should be signed for. Defaults to none.
-      </li>
-      <li>
-        <span class="param">cert_type</span>
-        <span class="param-flags">optional</span>
-        Type of certificate to be created; either "user" or "host". Defaults to
-        "user".
-      </li>
-      <li>
-        <span class="param">key_id</span>
-        <span class="param-flags">optional</span>
-        Key id that the created certificate should have. If not specified,
-        the display name of the token will be used.
-      </li>
-      <li>
-        <span class="param">critical_options</span>
-        <span class="param-flags">optional</span>
-        A map of the critical options that the certificate should be signed for.
-        Defaults to none.
-      </li>
-      <li>
-        <span class="param">extensions</span>
-        <span class="param-flags">optional</span>
-        A map of the extensions that the certificate should be signed for.
-        Defaults to none
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-
-    ```json
-    {
-      "lease_id": "ssh/sign/example/097bf207-96dd-0041-0e83-b23bd1923993",
-      "renewable": false,
-      "lease_duration": 21600,
-      "data": {
-        "serial_number": "f65ed2fd21443d5c",
-        "signed_key": "ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1y...\n"
-        },
-      "auth": null
-    }
-    ```
-
-  </dd>
-</dl>
+The SSH secret backend has a full HTTP API. Please see the
+[SSH secret backend API](/api/secret/ssh/index.html) for more
+details.

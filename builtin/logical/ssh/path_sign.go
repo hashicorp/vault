@@ -2,6 +2,8 @@ package ssh
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -107,13 +109,13 @@ func (b *backend) pathSignCertificate(req *logical.Request, data *framework.Fiel
 		return logical.ErrorResponse(fmt.Sprintf("failed to parse public_key as SSH key: %s", err)), nil
 	}
 
-	keyId := data.Get("key_id").(string)
-	if keyId == "" {
-		keyId = req.DisplayName
-	}
-
 	// Note that these various functions always return "user errors" so we pass
 	// them as 4xx values
+	keyId, err := b.calculateKeyId(data, req, role, userPublicKey)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
 	certificateType, err := b.calculateCertificateType(data, role)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -261,6 +263,28 @@ func (b *backend) calculateCertificateType(data *framework.FieldData, role *sshR
 	}
 
 	return certificateType, nil
+}
+
+func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request, role *sshRole, pubKey ssh.PublicKey) (string, error) {
+	reqId := data.Get("key_id").(string)
+
+	if reqId != "" {
+		if !role.AllowUserKeyIDs {
+			return "", fmt.Errorf("setting key_id is not allowed by role")
+		}
+		return reqId, nil
+	}
+
+	keyHash := sha256.Sum256(pubKey.Marshal())
+	keyId := hex.EncodeToString(keyHash[:])
+
+	if req.DisplayName != "" {
+		keyId = fmt.Sprintf("%s-%s", req.DisplayName, keyId)
+	}
+
+	keyId = fmt.Sprintf("vault-%s", keyId)
+
+	return keyId, nil
 }
 
 func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshRole) (map[string]string, error) {
