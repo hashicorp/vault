@@ -700,7 +700,7 @@ to the restrictions contained in the role named in the endpoint.
   be used. Note that the role values default to system values if not explicitly
   set.
 
-- `vauld_principals` `(string: "")` – Specifies valid principals, either
+- `valid_principals` `(string: "")` – Specifies valid principals, either
   usernames or hostnames, that the certificate should be signed for.
 
 - `cert_type` `(string: "user")` – Specifies the type of certificate to be
