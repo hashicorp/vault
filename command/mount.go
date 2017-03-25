@@ -32,7 +32,7 @@ func (c *MountCommand) Run(args []string) int {
 	if len(args) != 1 {
 		flags.Usage()
 		c.Ui.Error(fmt.Sprintf(
-			"\nMount expects one argument: the type to mount."))
+			"\nmount expects one argument: the type to mount."))
 		return 1
 	}
 
@@ -95,7 +95,7 @@ Mount Options:
                                  the mount. This shows up in the mounts command.
 
   -path=<path>                   Mount point for the logical backend. This
-                                 defauls to the type of the mount.
+                                 defaults to the type of the mount.
 
   -default-lease-ttl=<duration>  Default lease time-to-live for this backend.
                                  If not specified, uses the global default, or

@@ -278,15 +278,15 @@ func (c *SSHCommand) Help() string {
 	helpText := `
 Usage: vault ssh [options] username@ip
 
-  Establishes an SSH connection with the target machine.
+  Establishes a SSH connection with the target machine.
 
-  This command generates a key and uses it to establish an SSH
+  This command generates a key and uses it to establish a SSH
   connection with the target machine. This operation requires
-  that SSH backend is mounted and at least one 'role' be registed
-  with vault at priori.
+  that the SSH backend is mounted and at least one 'role' is
+  registered with Vault beforehand.
 
   For setting up SSH backends with one-time-passwords, installation
-  of agent in target machines is required. 
+  of vault-ssh-helper on target machines is required.
   See [https://github.com/hashicorp/vault-ssh-agent]
 
 General Options:

@@ -58,12 +58,12 @@ Usage: vault audit-disable [options] id
 
   Disable an audit backend.
 
-  Once the audit backend is disabled, no more audit logs will be sent to
+  Once the audit backend is disabled no more audit logs will be sent to
   it. The data associated with the audit backend isn't affected.
 
-  The "id" parameter should map to the id used with "audit-enable". If
-  no specific ID was specified, then it is the name of the backend (the
-  type of the backend).
+  The "id" parameter should map to the "path" used in "audit-enable". If
+  no path was provided to "audit-enable" you should use the backend
+  type (e.g. "file").
 
 General Options:
 ` + meta.GeneralOptionsUsage()

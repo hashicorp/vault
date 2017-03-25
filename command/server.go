@@ -564,12 +564,12 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterSetupFuncs(vault.WrapHandlerForClustering(handler, c.logger))
 
-	// If we're in dev mode, then initialize the core
+	// If we're in Dev mode, then initialize the core
 	if dev {
 		init, err := c.enableDev(core, devRootTokenID)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
-				"Error initializing dev mode: %s", err))
+				"Error initializing Dev mode: %s", err))
 			return 1
 		}
 
@@ -675,7 +675,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 		return nil, err
 	}
 	if !unsealed {
-		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
+		return nil, fmt.Errorf("failed to unseal Vault for Dev mode")
 	}
 
 	isLeader, _, err := core.Leader()
@@ -974,7 +974,7 @@ Usage: vault server [options]
   with "vault unseal" or the API before this server can respond to requests.
   This must be done for every server.
 
-  If the server is being started against a storage backend that has
+  If the server is being started against a storage backend that is
   brand new (no existing Vault data in it), it must be initialized with
   "vault init" or the API first.
 
