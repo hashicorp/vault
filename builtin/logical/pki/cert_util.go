@@ -324,7 +324,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 							// Compare the sanitized name against the hostname
 							// portion of the email address in the roken
 							// display name
-							if glob.Glob("*."+splitDisplay[1], sanitizedName) {
+							if strings.HasSuffix(sanitizedName, "."+splitDisplay[1]) {
 								continue
 							}
 						}
@@ -350,7 +350,7 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 				// is enabled
 				if role.AllowBareDomains &&
 					(glob.Glob(currDomain, name) ||
-						(isEmail && glob.Glob(currDomain, emailDomain))) {
+						(isEmail && emailDomain == currDomain)) {
 					valid = true
 					break
 				}
