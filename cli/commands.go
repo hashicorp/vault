@@ -12,6 +12,7 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	credAwsEc2 "github.com/hashicorp/vault/builtin/credential/aws-ec2"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
+	credChefNode "github.com/hashicorp/vault/builtin/credential/chef-node"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
@@ -78,6 +79,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"ldap":     credLdap.Factory,
 					"okta":     credOkta.Factory,
 					"radius":   credRadius.Factory,
+					"chef-node": credChefNode.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,
@@ -119,6 +121,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"okta":     &credOkta.CLIHandler{},
 					"cert":     &credCert.CLIHandler{},
 					"radius":   &credUserpass.CLIHandler{DefaultMount: "radius"},
+					"chef-node": &credChefNode.CLIHandler{},
 				},
 			}, nil
 		},
