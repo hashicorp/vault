@@ -3,6 +3,7 @@ package oauth2
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -21,7 +22,11 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 
 	username, ok := m["username"]
 	if !ok {
-		return "", fmt.Errorf("'username' var must be set")
+		user, err := user.Current()
+		if err != nil {
+			return "", fmt.Errorf("'username' unset and failed to get from OS")
+		}
+		username = user.Username
 	}
 	password, ok := m["password"]
 	if !ok {
