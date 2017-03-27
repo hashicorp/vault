@@ -48,11 +48,15 @@ helpers do
   # Returns the id for this page.
   # @return [String]
   def body_id_for(page)
-    if name = page.data.sidebar_current && !name.blank?
+    if !(name = page.data.sidebar_current).blank?
       return "page-#{name.strip}"
     end
-    return "page-home"
+    if page.url == "/" || page.url == "/index.html"
+      return "page-home"
+    end
+    return ""
   end
+
 
   # Returns the list of classes for this page.
   # @return [String]

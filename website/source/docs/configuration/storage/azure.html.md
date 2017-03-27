@@ -43,7 +43,7 @@ The current implementation is limited to a maximum of 4 megabytes per blob.
 - `container` `(string: <required>)` – Specifies the Azure Storage Blob
   container name.
 
-- `max_parallel` `(int: 128)` – Specifies The maximum number of concurrent
+- `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
   requests to Azure.
 
 ## `azure` Examples
