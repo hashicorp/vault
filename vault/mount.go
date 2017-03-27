@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"time"
@@ -590,7 +591,14 @@ func (c *Core) persistMounts(table *MountTable, localOnly bool) error {
 		}
 	}
 
+	stack := debug.Stack()
+	c.logger.Trace("core: persisting mounts", "localOnly", localOnly, "stack_trace", string(stack))
+
 	if !localOnly {
+		for _, entry := range nonLocalMounts.Entries {
+			c.logger.Trace("core: persisting non local mount", "mount", fmt.Sprintf("%#v", *entry))
+		}
+
 		// Encode the mount table into JSON and compress it (lzw).
 		compressedBytes, err := jsonutil.EncodeJSONAndCompress(nonLocalMounts, nil)
 		if err != nil {
@@ -609,6 +617,10 @@ func (c *Core) persistMounts(table *MountTable, localOnly bool) error {
 			c.logger.Error("core: failed to persist mount table", "error", err)
 			return err
 		}
+	}
+
+	for _, entry := range localMounts.Entries {
+		c.logger.Trace("core: persisting local mount", "mount", fmt.Sprintf("%#v", *entry))
 	}
 
 	// Repeat with local mounts
