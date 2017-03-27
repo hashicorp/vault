@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -505,6 +506,13 @@ func (c *Core) persistMounts(table *MountTable) error {
 			c.logger.Error("core: given entry to persist in mount table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
 			return fmt.Errorf("invalid mount entry found, not persisting")
 		}
+	}
+
+	stack := debug.Stack()
+	c.logger.Trace("core: persisting mounts", "stack_trace", string(stack))
+
+	for _, entry := range table.Entries {
+		c.logger.Trace("core: persisting mount", "mount", fmt.Sprintf("%#v", *entry))
 	}
 
 	// Encode the mount table into JSON and compress it (lzw).
