@@ -9,7 +9,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"sync"
 	"testing"
 	"time"
 
@@ -17,10 +16,6 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
-)
-
-var (
-	testPluginImagePull sync.Once
 )
 
 type mockPlugin struct {
@@ -119,6 +114,8 @@ func getCore(t *testing.T) (*vault.Core, net.Listener, logical.SystemView) {
 	return core, ln, sys
 }
 
+// This is not an actual test case, it's a helper function that will be executed
+// by the go-plugin client via an exec call.
 func TestPlugin_Main(t *testing.T) {
 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
 		return
