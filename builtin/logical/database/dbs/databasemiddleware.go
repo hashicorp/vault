@@ -4,7 +4,111 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	log "github.com/mgutz/logxi/v1"
 )
+
+// ---- Tracing Middleware Domain ----
+
+type databaseTracingMiddleware struct {
+	next   DatabaseType
+	logger log.Logger
+
+	typeStr string
+}
+
+func (mw *databaseTracingMiddleware) Type() string {
+	return mw.next.Type()
+}
+
+func (mw *databaseTracingMiddleware) CreateUser(statements Statements, username, password, expiration string) (err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/CreateUser: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/CreateUser: starting", "type", mw.typeStr)
+	}
+	return mw.next.CreateUser(statements, username, password, expiration)
+}
+
+func (mw *databaseTracingMiddleware) RenewUser(statements Statements, username, expiration string) (err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/RenewUser: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/RenewUser: starting", "type", mw.typeStr)
+	}
+	return mw.next.RenewUser(statements, username, expiration)
+}
+
+func (mw *databaseTracingMiddleware) RevokeUser(statements Statements, username string) (err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/RevokeUser: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/RevokeUser: starting", "type", mw.typeStr)
+	}
+	return mw.next.RevokeUser(statements, username)
+}
+
+func (mw *databaseTracingMiddleware) Initialize(conf map[string]interface{}) (err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/Initialize: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/Initialize: starting", "type", mw.typeStr)
+	}
+	return mw.next.Initialize(conf)
+}
+
+func (mw *databaseTracingMiddleware) Close() (err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/Close: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/Close: starting", "type", mw.typeStr)
+	}
+	return mw.next.Close()
+}
+
+func (mw *databaseTracingMiddleware) GenerateUsername(displayName string) (_ string, err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/GenerateUsername: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/GenerateUsername: starting", "type", mw.typeStr)
+	}
+	return mw.next.GenerateUsername(displayName)
+}
+
+func (mw *databaseTracingMiddleware) GeneratePassword() (_ string, err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/GeneratePassword: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/GeneratePassword: starting", "type", mw.typeStr)
+	}
+	return mw.next.GeneratePassword()
+}
+
+func (mw *databaseTracingMiddleware) GenerateExpiration(duration time.Duration) (_ string, err error) {
+	if mw.logger.IsTrace() {
+		defer func(then time.Time) {
+			mw.logger.Trace("database/GenerateExpiration: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+		}(time.Now())
+
+		mw.logger.Trace("database/GenerateExpiration: starting", "type", mw.typeStr)
+	}
+	return mw.next.GenerateExpiration(duration)
+}
+
+// ---- Metrics Middleware Domain ----
 
 type databaseMetricsMiddleware struct {
 	next DatabaseType

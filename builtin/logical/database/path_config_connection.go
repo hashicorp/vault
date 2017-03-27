@@ -63,7 +63,7 @@ func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framew
 
 	factory := config.GetFactory()
 
-	db, err = factory(&config, b.System())
+	db, err = factory(&config, b.System(), b.logger)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 	}
@@ -262,7 +262,7 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 		b.Lock()
 		defer b.Unlock()
 
-		db, err := factory(config, b.System())
+		db, err := factory(config, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 		}

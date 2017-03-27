@@ -82,7 +82,12 @@ func newPluginClient(sys pluginutil.Wrapper, command, checksum string) (Database
 
 	// Add the response wrap token to the ENV of the plugin
 	commandArr := strings.Split(command, " ")
-	cmd := exec.Command(commandArr[0], commandArr[1])
+	var cmd *exec.Cmd
+	if len(commandArr) > 1 {
+		cmd = exec.Command(commandArr[0], commandArr[1])
+	} else {
+		cmd = exec.Command(commandArr[0])
+	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", pluginutil.PluginUnwrapTokenEnv, wrapToken))
 
 	checksumDecoded, err := hex.DecodeString(checksum)

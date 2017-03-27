@@ -43,13 +43,11 @@ func (p *PostgreSQL) CreateUser(statements Statements, username, password, expir
 	}
 
 	// Start a transaction
-	//	b.logger.Trace("postgres/pathRoleCreateRead: starting transaction")
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		//		b.logger.Trace("postgres/pathRoleCreateRead: rolling back transaction")
 		tx.Rollback()
 	}()
 	// Return the secret
@@ -61,7 +59,6 @@ func (p *PostgreSQL) CreateUser(statements Statements, username, password, expir
 			continue
 		}
 
-		//		b.logger.Trace("postgres/pathRoleCreateRead: preparing statement")
 		stmt, err := tx.Prepare(queryHelper(query, map[string]string{
 			"name":       username,
 			"password":   password,
@@ -71,15 +68,12 @@ func (p *PostgreSQL) CreateUser(statements Statements, username, password, expir
 			return err
 		}
 		defer stmt.Close()
-		//		b.logger.Trace("postgres/pathRoleCreateRead: executing statement")
 		if _, err := stmt.Exec(); err != nil {
 			return err
 		}
 	}
 
 	// Commit the transaction
-
-	//	b.logger.Trace("postgres/pathRoleCreateRead: committing transaction")
 	if err := tx.Commit(); err != nil {
 		return err
 	}

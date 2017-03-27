@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 const (
@@ -21,9 +22,9 @@ var (
 	ErrEmptyCreationStatement  = errors.New("Empty creation statements")
 )
 
-type Factory func(*DatabaseConfig, logical.SystemView) (DatabaseType, error)
+type Factory func(*DatabaseConfig, logical.SystemView, log.Logger) (DatabaseType, error)
 
-func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView) (DatabaseType, error) {
+func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logger) (DatabaseType, error) {
 	var dbType DatabaseType
 
 	switch conf.DatabaseType {
@@ -76,10 +77,17 @@ func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView) (DatabaseType,
 		typeStr: dbType.Type(),
 	}
 
+	// Wrap with tracing middleware
+	dbType = &databaseTracingMiddleware{
+		next:    dbType,
+		typeStr: dbType.Type(),
+		logger:  logger,
+	}
+
 	return dbType, nil
 }
 
-func PluginFactory(conf *DatabaseConfig, sys logical.SystemView) (DatabaseType, error) {
+func PluginFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logger) (DatabaseType, error) {
 	if conf.PluginCommand == "" {
 		return nil, errors.New("ERROR")
 	}
@@ -97,6 +105,13 @@ func PluginFactory(conf *DatabaseConfig, sys logical.SystemView) (DatabaseType, 
 	db = &databaseMetricsMiddleware{
 		next:    db,
 		typeStr: db.Type(),
+	}
+
+	// Wrap with tracing middleware
+	db = &databaseTracingMiddleware{
+		next:    db,
+		typeStr: db.Type(),
+		logger:  logger,
 	}
 
 	return db, nil
