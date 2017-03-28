@@ -32,6 +32,8 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		headerValue = ""
 	}
 
+	// Grab any supplied credentials off the command line
+	// Ensure we're able to fall back to the SDK default credential providers
 	credConfig := &awsutil.CredentialsConfig{
 		AccessKey:    m["aws_access_key_id"],
 		SecretKey:    m["aws_secret_access_key"],
@@ -45,6 +47,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		return "", fmt.Errorf("could not compile valid credential providers from static config, environemnt, shared, or instance metadata")
 	}
 
+	// Use the credentials we've found to construct an STS session
 	stsSession, err := session.NewSessionWithOptions(session.Options{
 		Config: aws.Config{Credentials: creds},
 	})
@@ -55,10 +58,14 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	var params *sts.GetCallerIdentityInput
 	svc := sts.New(stsSession)
 	stsRequest, _ := svc.GetCallerIdentityRequest(params)
+
+	// Inject the required auth header value, if suplied, and then sign the request including that header
 	if headerValue != "" {
-		stsRequest.HTTPRequest.Header.Add(magicVaultHeader, headerValue)
+		stsRequest.HTTPRequest.Header.Add(iamServerIdHeader, headerValue)
 	}
 	stsRequest.Sign()
+
+	// Now extract out the relevant parts of the request
 	headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
 	if err != nil {
 		return "", err
@@ -72,9 +79,9 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	headers := base64.StdEncoding.EncodeToString(headersJson)
 	body := base64.StdEncoding.EncodeToString(requestBody)
 
+	// And pass them on to the Vault server
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, map[string]interface{}{
-		"auth_type":       "iam",
 		"request_method":  method,
 		"request_url":     targetUrl,
 		"request_headers": headers,

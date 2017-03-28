@@ -40,7 +40,7 @@ func pathConfigClient(b *backend) *framework.Path {
 				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
 			},
 
-			"iam_auth_header_value": &framework.FieldSchema{
+			"iam_server_id_header_value": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "Value to require in the X-Vault-AWSIAM-Server-ID request header",
@@ -200,14 +200,14 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry.STSEndpoint = data.Get("sts_endpoint").(string)
 	}
 
-	headerValStr, ok := data.GetOk("iam_auth_header_value")
+	headerValStr, ok := data.GetOk("iam_server_id_header_value")
 	if ok {
 		if configEntry.HeaderValue != headerValStr.(string) {
 			// NOT setting changedCreds here, since this isn't really cached
 			configEntry.HeaderValue = headerValStr.(string)
 		}
 	} else if req.Operation == logical.CreateOperation {
-		configEntry.HeaderValue = data.Get("iam_auth_header_value").(string)
+		configEntry.HeaderValue = data.Get("iam_server_id_header_value").(string)
 	}
 
 	// Since this endpoint supports both create operation and update operation,

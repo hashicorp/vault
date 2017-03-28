@@ -42,13 +42,6 @@ bearing the name of the AMI ID of the EC2 instance that is trying to login.
 If a matching role is not found, login fails.`,
 			},
 
-			"auth_type": {
-				Type:    framework.TypeString,
-				Default: "ec2",
-				Description: `The login type to use upon logging in. The valid choices are
-ec2 (default) or iam.`,
-			},
-
 			"pkcs7": {
 				Type: framework.TypeString,
 				Description: `PKCS7 signature of the identity document when using an auth_type
@@ -79,7 +72,7 @@ presigned request. Currently, POST is the only supported value`,
 
 			"request_url": {
 				Type: framework.TypeString,
-				Description: `Full URL against which to make the AWS request when auth_method is
+				Description: `Full URL against which to make the AWS request when auth_type is
 iam. If using a POST request with the action
 specified in the body, this should just be "/".`,
 			},
@@ -364,13 +357,21 @@ func (b *backend) parseIdentityDocument(s logical.Storage, pkcs7B64 string) (*id
 
 func (b *backend) pathLoginUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	auth_type := data.Get("auth_type")
-	if auth_type == "ec2" {
+	anyEc2, allEc2 := hasValuesForEc2Auth(data)
+	anyIam, allIam := hasValuesForIamAuth(data)
+	switch {
+	case anyEc2 && anyIam:
+		return logical.ErrorResponse("supplied auth values for both ec2 and iam auth types"), nil
+	case anyEc2 && !allEc2:
+		return logical.ErrorResponse("supplied some of the auth values for the ec2 auth type but not all"), nil
+	case anyEc2:
 		return b.pathLoginUpdateEc2(req, data)
-	} else if auth_type == "iam" {
+	case anyIam && !allIam:
+		return logical.ErrorResponse("supplied some of the auth values for the iam auth type but not all"), nil
+	case anyIam:
 		return b.pathLoginUpdateIam(req, data)
-	} else {
-		return logical.ErrorResponse("unrecognized auth_type, must be one of ec2 or iam"), nil
+	default:
+		return logical.ErrorResponse("didn't supply required authentication values"), nil
 	}
 }
 
@@ -763,7 +764,6 @@ func (b *backend) pathLoginUpdateEc2(
 				"role_tag_max_ttl": rTagMaxTTL.String(),
 				"role":             roleName,
 				"ami_id":           identityDocParsed.AmiID,
-				"auth_type":        "ec2",
 			},
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
@@ -1092,7 +1092,7 @@ func (b *backend) pathLoginUpdateIam(
 		if config.HeaderValue != "" {
 			ok, msg := ensureVaultHeaderValue(headers, parsedUrl, config.HeaderValue)
 			if !ok {
-				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %s", magicVaultHeader, msg)), nil
+				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %s", iamServerIdHeader, msg)), nil
 			}
 		}
 		if config.STSEndpoint != "" {
@@ -1145,7 +1145,7 @@ func (b *backend) pathLoginUpdateIam(
 
 		// It's a bit of a hack to use the inferred "EC2" region to get a region for the IAM client
 		// IAM is a "global" service and so doesn't really have a region, so it wouldn't matter
-		// Except that the region is used to infer the partion (i.e., aws, aws-cn, or aws-us-gov),
+		// Except that the region is used to infer the partition (i.e., aws, aws-cn, or aws-us-gov),
 		// and we can safely assume that the EC2 client will be in the same partition as IAM
 		iamClient, err := b.clientIAM(req.Storage, roleEntry.InferredAWSRegion, accountID)
 		if err != nil {
@@ -1222,6 +1222,27 @@ func (b *backend) pathLoginUpdateIam(
 	return resp, nil
 }
 
+// These two methods (hasValuesFor*) return two bools
+// The first is a hasAll, that is, does the request have all the values
+// necessary for this auth method
+// The second is a hasAny, that is, does the request have any of the fields
+// exclusive to this auth method
+func hasValuesForEc2Auth(data *framework.FieldData) (bool, bool) {
+	_, hasPkcs7 := data.GetOk("pkcs7")
+	_, hasIdentity := data.GetOk("identity")
+	_, hasSignature := data.GetOk("signature")
+	return (hasPkcs7 || (hasIdentity && hasSignature)), (hasPkcs7 || hasIdentity || hasSignature)
+}
+
+func hasValuesForIamAuth(data *framework.FieldData) (bool, bool) {
+	_, hasRequestMethod := data.GetOk("request_method")
+	_, hasRequestUrl := data.GetOk("request_url")
+	_, hasRequestBody := data.GetOk("request_body")
+	_, hasRequestHeaders := data.GetOk("request_headers")
+	return (hasRequestMethod && hasRequestUrl && hasRequestBody && hasRequestHeaders),
+		(hasRequestMethod || hasRequestUrl || hasRequestBody || hasRequestHeaders)
+}
+
 func parseIamArn(iamArn string) (string, string, string, error) {
 	fullParts := strings.Split(iamArn, ":")
 	principalFullName := fullParts[5]
@@ -1241,13 +1262,13 @@ func parseIamArn(iamArn string) (string, string, string, error) {
 func ensureVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) (bool, string) {
 	providedValue := ""
 	for k, v := range headers {
-		if strings.ToLower(magicVaultHeader) == strings.ToLower(k) {
+		if strings.ToLower(iamServerIdHeader) == strings.ToLower(k) {
 			providedValue = strings.Join(v, ",")
 			break
 		}
 	}
 	if providedValue == "" {
-		return false, fmt.Sprintf("didn't find %s", magicVaultHeader)
+		return false, fmt.Sprintf("didn't find %s", iamServerIdHeader)
 	}
 
 	// NOT doing a constant time compare here since the value is NOT intended to be secret
@@ -1268,7 +1289,7 @@ func ensureVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHe
 			return false, "found multiple SignedHeaders components"
 		}
 		signedHeaders := string(matches[1])
-		return ensureHeaderIsSigned(signedHeaders, magicVaultHeader)
+		return ensureHeaderIsSigned(signedHeaders, iamServerIdHeader)
 	}
 	// TODO: If we support GET requests, then we need to parse the X-Amz-SignedHeaders
 	// argument out of the query string and search in there for the header value
@@ -1414,7 +1435,7 @@ type roleTagLoginResponse struct {
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
 }
 
-const magicVaultHeader = "X-Vault-AWSIAM-Server-Id"
+const iamServerIdHeader = "X-Vault-AWSIAM-Server-Id"
 
 const pathLoginSyn = `
 Authenticates an EC2 instance with Vault.

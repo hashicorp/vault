@@ -34,11 +34,12 @@ func (b *backend) getClientConfig(s logical.Storage, region, clientType string) 
 	endpoint := aws.String("")
 	if config != nil {
 		// Override the default endpoint with the configured endpoint.
-		if clientType == "ec2" && config.Endpoint != "" {
+		switch {
+		case clientType == "ec2" && config.Endpoint != "":
 			endpoint = aws.String(config.Endpoint)
-		} else if clientType == "iam" && config.IAMEndpoint != "" {
+		case clientType == "iam" && config.IAMEndpoint != "":
 			endpoint = aws.String(config.IAMEndpoint)
-		} else if clientType == "sts" && config.STSEndpoint != "" {
+		case clientType == "sts" && config.STSEndpoint != "":
 			endpoint = aws.String(config.STSEndpoint)
 		}
 

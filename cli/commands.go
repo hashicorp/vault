@@ -72,7 +72,6 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"approle":  credAppRole.Factory,
 					"cert":     credCert.Factory,
 					"aws":      credAws.Factory,
-					"aws-ec2":  credAws.Factory,
 					"app-id":   credAppId.Factory,
 					"github":   credGitHub.Factory,
 					"userpass": credUserpass.Factory,

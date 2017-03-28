@@ -92,25 +92,25 @@ func TestBackend_ensureVaultHeaderValue(t *testing.T) {
 		"Authorization": []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 	postHeadersInvalid := http.Header{
-		"Host":           []string{"Foo"},
-		magicVaultHeader: []string{"InvalidValue"},
-		"Authorization":  []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Host":            []string{"Foo"},
+		iamServerIdHeader: []string{"InvalidValue"},
+		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 	postHeadersUnsigned := http.Header{
-		"Host":           []string{"Foo"},
-		magicVaultHeader: []string{canaryHeaderValue},
-		"Authorization":  []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Host":            []string{"Foo"},
+		iamServerIdHeader: []string{canaryHeaderValue},
+		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 	postHeadersValid := http.Header{
-		"Host":           []string{"Foo"},
-		magicVaultHeader: []string{canaryHeaderValue},
-		"Authorization":  []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Host":            []string{"Foo"},
+		iamServerIdHeader: []string{canaryHeaderValue},
+		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
 	postHeadersSplit := http.Header{
-		"Host":           []string{"Foo"},
-		magicVaultHeader: []string{canaryHeaderValue},
-		"Authorization":  []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Host":            []string{"Foo"},
+		iamServerIdHeader: []string{canaryHeaderValue},
+		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
 	found, errMsg := ensureVaultHeaderValue(postHeadersMissing, requestUrl, canaryHeaderValue)

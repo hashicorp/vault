@@ -1293,7 +1293,6 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 		return nil, err
 	}
 	return map[string]interface{}{
-		"auth_type":       "iam",
 		"request_method":  request.Method,
 		"request_url":     request.URL.String(),
 		"request_headers": base64.StdEncoding.EncodeToString(headersJson),
@@ -1379,7 +1378,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	const testInvalidRoleName = "invalid-role"
 
 	clientConfigData := map[string]interface{}{
-		"iam_auth_header_value": testVaultHeaderValue,
+		"iam_server_id_header_value": testVaultHeaderValue,
 	}
 	clientRequest := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -1399,7 +1398,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		"allowed_auth_types":      "iam",
 	}
 	roleRequest := &logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Path:      "role/" + testValidRoleName,
 		Storage:   storage,
 		Data:      roleData,
@@ -1465,7 +1464,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// and reading the body modifies the underlying request, so it's just cleaner
 	// to get new requests.
 	stsRequestInvalidHeader, _ := stsService.GetCallerIdentityRequest(stsInputParams)
-	stsRequestInvalidHeader.HTTPRequest.Header.Add(magicVaultHeader, "InvalidValue")
+	stsRequestInvalidHeader.HTTPRequest.Header.Add(iamServerIdHeader, "InvalidValue")
 	stsRequestInvalidHeader.Sign()
 	loginData, err = buildCallerIdentityLoginData(stsRequestInvalidHeader.HTTPRequest, testValidRoleName)
 	if err != nil {
@@ -1484,7 +1483,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// Now, valid request against invalid role
 	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
-	stsRequestValid.HTTPRequest.Header.Add(magicVaultHeader, testVaultHeaderValue)
+	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
 	stsRequestValid.Sign()
 	loginData, err = buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testInvalidRoleName)
 	if err != nil {

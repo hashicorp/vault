@@ -24,11 +24,12 @@ clients.
 
 ## Authentication Workflow
 
-There are two authentication types present in the aws backend: ec2 (which was
-formerly the only type supplied in the aws-ec2 auth backend) and iam. Each has a
-different authentication workflow, and each can solve different use cases. See
-the section on comparing the two auth methods below to help determine which
-method is more appropriate for your use cases.
+There are two authentication types present in the aws backend: `ec2` and `iam`.
+Based on how you attempt to authenticate, Vault will determine if you are
+attempting to use the `ec2` or `iam` type.  Each has a different authentication
+workflow, and each can solve different use cases.  See the section on comparing
+the two auth methods below to help determine which method is more appropriate
+for your use cases.
 
 ### EC2 Authentication Method
 
@@ -86,7 +87,7 @@ and relies upon AWS to authenticate that signature.
 While AWS API endpoints support both signed GET and POST requests, for
 simplicity, the aws backend supports only POST requests. It also does not
 support `presigned` requests, i.e., requests with `X-Amz-Credential`,
-`X-Amz-signature`, and `X-Amz-SignedHeaders` GET query parameter containing the
+`X-Amz-signature`, and `X-Amz-SignedHeaders` GET query parameters containing the
 authenticating information.
 
 It's also important to note that Amazon does NOT appear to include any sort
@@ -188,19 +189,19 @@ type will be enforced by Vault_. Some examples:
 
 1. You configure a role only allowing the ec2 auth type, with a bound AMI ID. A
    client would not be able to login using the iam auth type.
-1. You configure a role only allowing the iam auth type, with a bound IAM
+2. You configure a role only allowing the iam auth type, with a bound IAM
    principal ARN. A client would not be able to login with the ec2 auth method.
-1. You configure a role only allowing the iam auth type and further configure
+3. You configure a role only allowing the iam auth type and further configure
    inferencing. You have a bound AMI ID and a bound IAM principal ARN. A client
    must login using the iam method; the RoleSessionName must be a valid instance
    ID viewable by Vault, and the instance must have come from the bound AMI ID.
-1. You configure a role to allow both iam and ec2 auth types, but you have not
+4. You configure a role to allow both iam and ec2 auth types, but you have not
    configured inferencing. You configure both a bound AMI ID and a bound IAM
    principal ARN. If a client chooses to login with the ec2 auth method, only the
    bound AMI is checked; the bound IAM principal ARN is ignored. Similarly, if a
    client logs in with the iam auth method, then only the bound IAM principal ARN
    is checked; the bound AMI ID is ignored.
-1. You configure a role to allow both iam and ec2 auth types, and you have
+5. You configure a role to allow both iam and ec2 auth types, and you have
    further configured inferencing, with a bound IAM principal ARN and a bound AMI
    ID. If a client logs in with the ec2 auth method, then only the bound AMI ID
    is checked. If a client logs in with the iam auth method, then the same
@@ -516,7 +517,7 @@ $ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5
 ```
 $ vault write auth/aws/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
 
-$ vault write auth/aws/role/dev-role-iam allowed_auth_methods=iam \
+$ vault write auth/aws/role/dev-role-iam allowed_auth_types=iam \
               bound_iam_principal_arn=arn:aws:iam::123456789012:role/MyRole policies=prod,dev max_ttl=500h
 ```
 
@@ -631,7 +632,7 @@ curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/config/cl
 ```
 curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role -d '{"bound_ami_id":"ami-fce3c696","policies":"prod,dev","max_ttl":"500h"}'
 
-curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role-iam -d '{"allowed_auth_methods":"iam","policies":"prod,dev","max_ttl":"500h","bound_iam_principal_arn":"arn:aws:iam::123456789012:role/MyRole"}'
+curl -X POST -H "x-vault-token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-role-iam -d '{"allowed_auth_types":"iam","policies":"prod,dev","max_ttl":"500h","bound_iam_principal_arn":"arn:aws:iam::123456789012:role/MyRole"}'
 ```
 
 #### Perform the login operation
@@ -655,8 +656,7 @@ The response will be in JSON. For example:
       "region": "us-east-1",
       "nonce": "5defbf9e-a8f9-3063-bdfc-54b7a42a1f95",
       "instance_id": "i-a832f734",
-      "ami_id": "ami-f083709d",
-      "auth_type": "ec2"
+      "ami_id": "ami-f083709d"
     },
     "policies": [
       "default",
@@ -739,7 +739,7 @@ The response will be in JSON. For example:
     </ul>
     <ul>
       <li>
-        <span class="param">iam_auth_header_value</span>
+        <span class="param">iam_server_id_header_value</span>
         <span class="param-flags">optional</span>
         The value to require in the `X-Vault-AWSIAM-Server-ID` header as part of
         GetCallerIdentity requests that are used in the iam auth method. If not
@@ -791,7 +791,7 @@ The response will be in JSON. For example:
     "endpoint" "",
     "iam_endpoint" "",
     "sts_endpoint" "",
-    "iam_auth_header_value" "",
+    "iam_server_id_header_value" "",
   },
   "lease_duration": 0,
   "renewable": false,
@@ -1774,13 +1774,6 @@ auth method only when inferring an ec2 instance.
     </ul>
     <ul>
       <li>
-        <span class="param">auth_method</span>
-        <span class="param-flags">optional</span>
-        The auth method to use, either ec2 or iam. If omitted, assumes ec2.
-      </li>
-    </ul>
-    <ul>
-      <li>
         <span class="param">identity</span>
         <span class="param-flags">required</span>
         Base64 encoded EC2 instance identity document. This needs to be
@@ -1861,7 +1854,7 @@ auth method only when inferring an ec2 instance.
         Base64-encoded, JSON-serialized representation of the HTTP request
         headers. The JSON serialization assumes that each header key maps to an
         array of string values (though the length of that array will probably
-        only be one). If the iam_auth_header_value is configured in Vault for
+        only be one). If the iam_server_id_header_value is configured in Vault for
         the aws auth mount, then the headers must include the
         X-Vault-AWSIAM-Server-Id header, its value must match the value
         configured, and the header must be included in the signed headers. This
@@ -1883,7 +1876,7 @@ auth method only when inferring an ec2 instance.
       "instance_id": "i-de0f1344"
       "ami_id": "ami-fce36983"
       "role": "dev-role",
-      "auth_method": "ec2"
+      "auth_type": "ec2"
     },
     "policies": [
       "default",
