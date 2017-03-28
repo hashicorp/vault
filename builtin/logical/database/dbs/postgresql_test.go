@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	log "github.com/mgutz/logxi/v1"
 	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
@@ -77,21 +78,22 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 		},
 	}
 
-	dbRaw, err := BuiltinFactory(conf, nil)
+	dbRaw, err := BuiltinFactory(conf, nil, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Deconsturct the middleware chain to get the underlying postgres object
-	dbMetrics := dbRaw.(*databaseMetricsMiddleware)
+	dbTracer := dbRaw.(*databaseTracingMiddleware)
+	dbMetrics := dbTracer.next.(*databaseMetricsMiddleware)
 	db := dbMetrics.next.(*PostgreSQL)
+	connProducer := db.ConnectionProducer.(*sqlConnectionProducer)
 
 	err = dbRaw.Initialize(conf.ConnectionDetails)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	connProducer := db.ConnectionProducer.(*sqlConnectionProducer)
 	if !connProducer.initalized {
 		t.Fatal("Database should be initalized")
 	}
@@ -119,7 +121,7 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		},
 	}
 
-	db, err := BuiltinFactory(conf, nil)
+	db, err := BuiltinFactory(conf, nil, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -212,7 +214,7 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		},
 	}
 
-	db, err := BuiltinFactory(conf, nil)
+	db, err := BuiltinFactory(conf, nil, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -268,7 +270,7 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		},
 	}
 
-	db, err := BuiltinFactory(conf, nil)
+	db, err := BuiltinFactory(conf, nil, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

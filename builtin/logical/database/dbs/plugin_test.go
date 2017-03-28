@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
+	log "github.com/mgutz/logxi/v1"
 )
 
 type mockPlugin struct {
@@ -134,7 +135,7 @@ func TestPlugin_Initialize(t *testing.T) {
 	defer ln.Close()
 
 	conf := getConf(t)
-	dbRaw, err := PluginFactory(conf, sys)
+	dbRaw, err := PluginFactory(conf, sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -155,7 +156,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 	defer ln.Close()
 
 	conf := getConf(t)
-	db, err := PluginFactory(conf, sys)
+	db, err := PluginFactory(conf, sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -209,7 +210,7 @@ func TestPlugin_RenewUser(t *testing.T) {
 	defer ln.Close()
 
 	conf := getConf(t)
-	db, err := PluginFactory(conf, sys)
+	db, err := PluginFactory(conf, sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -255,7 +256,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	defer ln.Close()
 
 	conf := getConf(t)
-	db, err := PluginFactory(conf, sys)
+	db, err := PluginFactory(conf, sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
