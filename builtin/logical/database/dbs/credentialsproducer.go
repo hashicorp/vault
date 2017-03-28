@@ -8,20 +8,22 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
+// CredentialsProducer can be used as an embeded interface in the DatabaseType
+// definition. It implements the methods for generating user information for a
+// particular database type and is used in all the builtin database types.
 type CredentialsProducer interface {
 	GenerateUsername(displayName string) (string, error)
 	GeneratePassword() (string, error)
 	GenerateExpiration(ttl time.Duration) (string, error)
 }
 
-// sqlCredentialsProducer impliments CredentialsProducer and provides a generic credentials producer for most sql database types.
+// sqlCredentialsProducer implements CredentialsProducer and provides a generic credentials producer for most sql database types.
 type sqlCredentialsProducer struct {
 	displayNameLen int
 	usernameLen    int
 }
 
 func (scp *sqlCredentialsProducer) GenerateUsername(displayName string) (string, error) {
-	// Generate the username, password and expiration. PG limits user to 63 characters
 	if scp.displayNameLen > 0 && len(displayName) > scp.displayNameLen {
 		displayName = displayName[:scp.displayNameLen]
 	}
@@ -52,6 +54,8 @@ func (scp *sqlCredentialsProducer) GenerateExpiration(ttl time.Duration) (string
 		Format("2006-01-02 15:04:05-0700"), nil
 }
 
+// cassandraCredentialsProducer implements CredentialsProducer and provides an
+// interface for cassandra databases to generate user information.
 type cassandraCredentialsProducer struct{}
 
 func (ccp *cassandraCredentialsProducer) GenerateUsername(displayName string) (string, error) {

@@ -23,6 +23,9 @@ var (
 	errNotInitalized = errors.New("connection has not been initalized")
 )
 
+// ConnectionProducer can be used as an embeded interface in the DatabaseType
+// definition. It implements the methods dealing with individual database
+// connections and is used in all the builtin database types.
 type ConnectionProducer interface {
 	Close() error
 	Initialize(map[string]interface{}) error
@@ -31,7 +34,7 @@ type ConnectionProducer interface {
 	connection() (interface{}, error)
 }
 
-// sqlConnectionProducer impliments ConnectionProducer and provides a generic producer for most sql databases
+// sqlConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type sqlConnectionProducer struct {
 	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
 
@@ -111,6 +114,8 @@ func (c *sqlConnectionProducer) Close() error {
 	return nil
 }
 
+// cassandraConnectionProducer implements ConnectionProducer and provides an
+// interface for cassandra databases to make connections.
 type cassandraConnectionProducer struct {
 	Hosts           string `json:"hosts" structs:"hosts" mapstructure:"hosts"`
 	Username        string `json:"username" structs:"username" mapstructure:"username"`
