@@ -84,7 +84,7 @@ func newPluginClient(sys pluginutil.Wrapper, command, checksum string) (Database
 	commandArr := strings.Split(command, " ")
 	var cmd *exec.Cmd
 	if len(commandArr) > 1 {
-		cmd = exec.Command(commandArr[0], commandArr[1])
+		cmd = exec.Command(commandArr[0], commandArr[1:]...)
 	} else {
 		cmd = exec.Command(commandArr[0])
 	}
