@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/subtle"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -28,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -61,6 +63,14 @@ const (
 	// leaderPrefixCleanDelay is how long to wait between deletions
 	// of orphaned leader keys, to prevent slamming the backend.
 	leaderPrefixCleanDelay = 200 * time.Millisecond
+
+	// coreSecretSharesMetadataPath is the path used to store the metadata about
+	// unseal key shards.
+	coreSecretSharesMetadataPath = "core/secret_shares_metadata"
+
+	// coreRecoverySharesMetadataPath is the path used to store the metadata about
+	// recovery key shards.
+	coreRecoverySharesMetadataPath = "core/recovery_shares_metadata"
 
 	// coreKeyringCanaryPath is used as a canary to indicate to replicated
 	// clusters that they need to perform a rekey operation synchronously; this
@@ -873,14 +883,6 @@ func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
 		return nil, nil
 	}
 
-	// Best-effort memzero of unlock parts once we're done with them
-	defer func() {
-		for i, _ := range c.unlockInfo.Parts {
-			memzero(c.unlockInfo.Parts[i])
-		}
-		c.unlockInfo = nil
-	}()
-
 	// Recover the master key
 	var masterKey []byte
 	var err error
@@ -908,6 +910,52 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	if c.logger.IsInfo() {
 		c.logger.Info("core: vault is unsealed")
 	}
+
+	// Fetch the metadata associated with the unseal keys
+	keySharesMetadataEntry, err := c.barrier.Get(coreSecretSharesMetadataPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to fetch unseal metadata entry: %v", err)
+	}
+
+	// For BC compatibility, log the metadata information only if it is
+	// available
+	var secretSharesMetadataValue keySharesMetadataStorageValue
+	if keySharesMetadataEntry != nil {
+		// Decode the unseal metadata information
+		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &secretSharesMetadataValue); err != nil {
+			return false, fmt.Errorf("failed to decode unseal metadata entry: %v", err)
+		}
+
+		for _, unlockPart := range c.unlockInfo.Parts {
+			// Fetch the metadata associated to the unseal key shard
+			secretShareMetadata, ok := secretSharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
+
+			// If the storage entry is successfully read, metadata associated
+			// with all the unseal key shares must be available.
+			if !ok || secretShareMetadata == nil {
+				c.logger.Error("core: failed to fetch unseal key metadata")
+				return false, fmt.Errorf("failed to fetch unseal key metadata")
+			}
+
+			switch {
+			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+				c.logger.Info(fmt.Sprintf("core: unseal key share with identifier %q and name %q supplied for unsealing", secretShareMetadata.ID, secretShareMetadata.Name))
+			case secretShareMetadata.ID != "":
+				c.logger.Info(fmt.Sprintf("core: unseal key share with identifier %q supplied for unsealing", secretShareMetadata.ID))
+			default:
+				c.logger.Error("core: missing unseal key share metadata")
+				return false, fmt.Errorf("missing unseal key share metadata")
+			}
+		}
+	}
+
+	// Best-effort memzero of unlock parts once we're done with them
+	defer func() {
+		for i, _ := range c.unlockInfo.Parts {
+			memzero(c.unlockInfo.Parts[i])
+		}
+		c.unlockInfo = nil
+	}()
 
 	// Do post-unseal setup if HA is not enabled
 	if c.ha == nil {

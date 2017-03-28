@@ -11,7 +11,7 @@ import (
 
 func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
 	bc, rc := TestSealDefConfigs()
-	c, masterKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, masterKeys, _, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
 	c.seal.(*TestSeal).recoveryKeysDisabled = true
 	testCore_GenerateRoot_Lifecycle_Common(t, c, masterKeys)
 
@@ -88,7 +88,7 @@ func TestCore_GenerateRoot_Init(t *testing.T) {
 	testCore_GenerateRoot_Init_Common(t, c)
 
 	bc, rc := TestSealDefConfigs()
-	c, _, _, _ = TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, _, _, _, _ = TestCoreUnsealedWithConfigs(t, bc, rc)
 	testCore_GenerateRoot_Init_Common(t, c)
 }
 
@@ -114,8 +114,9 @@ func TestCore_GenerateRoot_InvalidMasterNonce(t *testing.T) {
 	bc, rc := TestSealDefConfigs()
 	bc.SecretShares = 1
 	bc.SecretThreshold = 1
+	bc.SecretSharesIdentifierNames = "one"
 	bc.StoredShares = 0
-	c, masterKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, masterKeys, _, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
 	c.seal.(*TestSeal).recoveryKeysDisabled = true
 	// Make the master invalid
 	masterKeys[0][0]++
@@ -130,7 +131,7 @@ func TestCore_GenerateRoot_InvalidMasterNonce(t *testing.T) {
 	rc.SecretShares = 5
 	rc.SecretThreshold = 5
 	// In this case, pass in master keys instead as they'll be invalid
-	c, masterKeys, _, _ = TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, masterKeys, _, _, _ = TestCoreUnsealedWithConfigs(t, bc, rc)
 	testCore_GenerateRoot_InvalidMasterNonce_Common(t, c, masterKeys)
 }
 
@@ -171,12 +172,12 @@ func testCore_GenerateRoot_InvalidMasterNonce_Common(t *testing.T, c *Core, keys
 
 func TestCore_GenerateRoot_Update_OTP(t *testing.T) {
 	bc, rc := TestSealDefConfigs()
-	c, masterKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, masterKeys, _, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
 	c.seal.(*TestSeal).recoveryKeysDisabled = true
 	testCore_GenerateRoot_Update_OTP_Common(t, c, masterKeys[0:bc.SecretThreshold])
 
 	bc, rc = TestSealDefConfigs()
-	c, _, recoveryKeys, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, _, recoveryKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
 	testCore_GenerateRoot_Update_OTP_Common(t, c, recoveryKeys[0:rc.SecretThreshold])
 }
 
@@ -259,12 +260,12 @@ func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byt
 
 func TestCore_GenerateRoot_Update_PGP(t *testing.T) {
 	bc, rc := TestSealDefConfigs()
-	c, masterKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, masterKeys, _, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
 	c.seal.(*TestSeal).recoveryKeysDisabled = true
 	testCore_GenerateRoot_Update_PGP_Common(t, c, masterKeys[0:bc.SecretThreshold])
 
 	bc, rc = TestSealDefConfigs()
-	c, _, recoveryKeys, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
+	c, _, recoveryKeys, _, _ := TestCoreUnsealedWithConfigs(t, bc, rc)
 	testCore_GenerateRoot_Update_PGP_Common(t, c, recoveryKeys[0:rc.SecretThreshold])
 }
 

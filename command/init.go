@@ -23,7 +23,7 @@ func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
 	var pgpKeys, recoveryPgpKeys, rootTokenPgpKey pgpkeys.PubKeyFilesFlag
 	var auto, check bool
-	var consulServiceName string
+	var consulServiceName, secretSharesIdentifierNames, recoverySharesIdentifierNames string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	flags.IntVar(&shares, "key-shares", 5, "")
@@ -37,18 +37,22 @@ func (c *InitCommand) Run(args []string) int {
 	flags.BoolVar(&check, "check", false, "")
 	flags.BoolVar(&auto, "auto", false, "")
 	flags.StringVar(&consulServiceName, "consul-service", physical.DefaultServiceName, "")
+	flags.StringVar(&secretSharesIdentifierNames, "key-shares-identifier-names", "", "")
+	flags.StringVar(&recoverySharesIdentifierNames, "recovery-shares-identifier-names", "", "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
 
 	initRequest := &api.InitRequest{
-		SecretShares:      shares,
-		SecretThreshold:   threshold,
-		StoredShares:      storedShares,
-		PGPKeys:           pgpKeys,
-		RecoveryShares:    recoveryShares,
-		RecoveryThreshold: recoveryThreshold,
-		RecoveryPGPKeys:   recoveryPgpKeys,
+		SecretShares:                  shares,
+		SecretThreshold:               threshold,
+		StoredShares:                  storedShares,
+		PGPKeys:                       pgpKeys,
+		RecoveryShares:                recoveryShares,
+		RecoveryThreshold:             recoveryThreshold,
+		RecoveryPGPKeys:               recoveryPgpKeys,
+		SecretSharesIdentifierNames:   secretSharesIdentifierNames,
+		RecoverySharesIdentifierNames: recoverySharesIdentifierNames,
 	}
 
 	switch len(rootTokenPgpKey) {
@@ -231,11 +235,50 @@ func (c *InitCommand) runInit(check bool, initRequest *api.InitRequest) int {
 			c.Ui.Output(fmt.Sprintf("Unseal Key %d: %s", i+1, key))
 		}
 	}
+
+	if len(resp.SecretSharesMetadata) > 0 {
+		if len(resp.Keys) != len(resp.SecretSharesMetadata) {
+			c.Ui.Error("Number of key shares returned is not matching the number of key shares metadata items")
+			return 1
+		}
+
+		for i, secretShareMetadata := range resp.SecretSharesMetadata {
+			switch {
+			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+				c.Ui.Output(fmt.Sprintf("Unseal key identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
+			case secretShareMetadata.ID != "":
+				c.Ui.Output(fmt.Sprintf("Unseal key identifier %d: %s", i+1, secretShareMetadata.ID))
+			default:
+				c.Ui.Error("Invalid unseal key shares metadata")
+				return 1
+			}
+		}
+	}
+
 	for i, key := range resp.RecoveryKeys {
 		if resp.RecoveryKeysB64 != nil && len(resp.RecoveryKeysB64) == len(resp.RecoveryKeys) {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, resp.RecoveryKeysB64[i]))
 		} else {
 			c.Ui.Output(fmt.Sprintf("Recovery Key %d: %s", i+1, key))
+		}
+	}
+
+	if len(resp.RecoverySharesMetadata) > 0 {
+		if len(resp.RecoveryKeys) != len(resp.RecoverySharesMetadata) {
+			c.Ui.Error("Number of recovery key shares returned is not matching the number of recovery key shares metadata items")
+			return 1
+		}
+
+		for i, recoveryShareMetadata := range resp.RecoverySharesMetadata {
+			switch {
+			case recoveryShareMetadata.ID != "" && recoveryShareMetadata.Name != "":
+				c.Ui.Output(fmt.Sprintf("Recovery key identifier %d with name %q: %s", i+1, recoveryShareMetadata.Name, recoveryShareMetadata.ID))
+			case recoveryShareMetadata.ID != "":
+				c.Ui.Output(fmt.Sprintf("Recovery key identifier %d: %s", i+1, recoveryShareMetadata.ID))
+			default:
+				c.Ui.Error("Invalid recovery key shares metadata")
+				return 1
+			}
 		}
 	}
 
@@ -322,6 +365,12 @@ Init Options:
   -key-threshold=3          The number of key shares required to reconstruct
                             the master key.
 
+  -key-shares-identifier-names
+                            If provided, must be a comma-separated list of names
+                            to be associated with the unseal key identifiers. The
+                            number of unique names supplied should match the value
+                            of 'key-threshold'.
+
   -stored-shares=0          The number of unseal keys to store. Only used with 
                             Vault HSM. Must currently be equivalent to the
                             number of shares.
@@ -352,6 +401,12 @@ Init Options:
 
   -recovery-threshold=3     The number of key shares required to reconstruct
                             the recovery key. Only used with Vault HSM.
+
+  -recovery-shares-identifier-names
+                            If provided, must be a comma-separated list of names
+                            to be associated with the recovery key identifiers. The
+                            number of unique names supplied should match the value
+                            of 'recovery-threshold'.
 
   -recovery-pgp-keys        If provided, behaves like "pgp-keys" but for the
                             recovery key shares. Only used with Vault HSM.

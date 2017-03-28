@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -84,6 +85,136 @@ func TestSysInit_pgpKeysEntriesForRecovery(t *testing.T) {
 		"recovery_pgp_keys":  []string{"pgpkey1"},
 	})
 	testResponseStatus(t, resp, 400)
+}
+
+func TestSysInit_SecretSharesMetadata(t *testing.T) {
+	core := vault.TestCore(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	var actual map[string]interface{}
+
+	// basic case of getting unseal metadata back
+	initInput := map[string]interface{}{
+		"secret_shares":    5,
+		"secret_threshold": 3,
+	}
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", initInput)
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+
+	secretSharesMetadata := actual["secret_shares_metadata"].([]interface{})
+	if len(secretSharesMetadata) != 5 {
+		t.Fatalf("bad: length of secret_shares_metadata: expected: 5, actual: %d", len(secretSharesMetadata))
+	}
+
+	for _, item := range secretSharesMetadata {
+		metadata := item.(map[string]interface{})
+		if metadata["id"].(string) == "" {
+			t.Fatalf("bad: missing identifier in secretSharesMetadata: %#v", secretSharesMetadata)
+		}
+	}
+}
+
+// Test key identifiers to have valid IDs
+func TestSysInit_KeyIdentifiersCase1(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	var actual InitKeySharesIdentifiersResponse
+	resp := testHttpGet(t, token, addr+"/v1/sys/init/unseal-shares-identifiers")
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+
+	if len(actual.KeyIdentifiers) != 3 {
+		t.Fatalf("bad: number of key identifiers; expected: 5, actual: %d", len(actual.KeyIdentifiers))
+	}
+
+	for _, identifier := range actual.KeyIdentifiers {
+		if identifier.ID == "" {
+			t.Fatalf("bad: key identifier is empty")
+		}
+	}
+}
+
+// Test key identifiers to have valid IDs and names
+func TestSysInit_KeyIdentifiersCase2(t *testing.T) {
+	bc, rc := vault.TestSealDefConfigs()
+	core, _, _, token, keyIdentifiers := vault.TestCoreUnsealedWithConfigs(t, bc, rc)
+
+	if len(keyIdentifiers) != 5 {
+		t.Fatalf("bad: number of key identifiers; expected: 5, actual: %d", len(keyIdentifiers))
+	}
+
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	var actual InitKeySharesIdentifiersResponse
+	resp := testHttpGet(t, token, addr+"/v1/sys/init/unseal-shares-identifiers")
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+
+	nameList := []string{"first", "second", "third", "forth", "fifth"}
+
+	for _, identifier := range actual.KeyIdentifiers {
+		if identifier.ID == "" {
+			t.Fatalf("bad: key identifier is empty")
+		}
+		if identifier.Name == "" {
+			t.Fatalf("bad: key identifier name is empty")
+		}
+		nameList = strutil.StrListDelete(nameList, identifier.Name)
+	}
+
+	if len(nameList) != 0 {
+		t.Fatalf("bad: length of key identifier names list: expected 0, actual: %d", len(nameList))
+	}
+}
+
+func TestSysInit_SecretSharesMetadataKeyIdentifierNames(t *testing.T) {
+	core := vault.TestCore(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	var actual map[string]interface{}
+
+	// basic case of getting unseal metadata back
+	initInput := map[string]interface{}{
+		"secret_shares":                  5,
+		"secret_threshold":               3,
+		"secret_shares_identifier_names": "first,second,third,forth,fifth",
+	}
+
+	// set the key identifier names and check if the associated metadata has
+	// names in it
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", initInput)
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+
+	secretSharesMetadata := actual["secret_shares_metadata"].([]interface{})
+	nameList := []string{"first", "second", "third", "forth", "fifth"}
+
+	if len(secretSharesMetadata) != 5 {
+		t.Fatalf("bad: length of secret_shares_metadata: expected: 5, actual: %d", len(secretSharesMetadata))
+	}
+
+	for _, item := range secretSharesMetadata {
+		metadata := item.(map[string]interface{})
+		if metadata["id"].(string) == "" {
+			t.Fatalf("bad: missing identifier in secretSharesMetadata: %#v", secretSharesMetadata)
+		}
+		if metadata["name"].(string) == "" {
+			t.Fatalf("invalid key identifier name")
+		}
+		nameList = strutil.StrListDelete(nameList, metadata["name"].(string))
+	}
+
+	if len(nameList) != 0 {
+		t.Fatalf("bad: length of key identifier names list: expected 0, actual: %d", len(nameList))
+	}
 }
 
 func TestSysInit_put(t *testing.T) {

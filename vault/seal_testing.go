@@ -105,7 +105,7 @@ func (d *TestSeal) SetRecoveryKey(key []byte) error {
 	return nil
 }
 
-func testCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string) {
+func testCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealConfig) (*Core, [][]byte, [][]byte, string, []*KeyShareMetadata) {
 	seal := &TestSeal{}
 	core := TestCoreWithSeal(t, seal)
 	result, err := core.Initialize(&InitParams{
@@ -135,14 +135,15 @@ func testCoreUnsealedWithConfigs(t *testing.T, barrierConf, recoveryConf *SealCo
 		}
 	}
 
-	return core, result.SecretShares, result.RecoveryShares, result.RootToken
+	return core, result.SecretShares, result.RecoveryShares, result.RootToken, result.SecretSharesMetadata
 }
 
 func testSealDefConfigs() (*SealConfig, *SealConfig) {
 	return &SealConfig{
-			SecretShares:    5,
-			SecretThreshold: 3,
-			StoredShares:    2,
+			SecretShares:                5,
+			SecretThreshold:             3,
+			StoredShares:                2,
+			SecretSharesIdentifierNames: "first,second,third,forth,fifth",
 		}, &SealConfig{
 			SecretShares:    5,
 			SecretThreshold: 3,

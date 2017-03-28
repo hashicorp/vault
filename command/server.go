@@ -591,10 +591,48 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"]+quote+"\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
-				"Unseal Key: %s\nRoot Token: %s\n",
+				"Unseal Key: %s",
 			base64.StdEncoding.EncodeToString(init.SecretShares[0]),
-			init.RootToken,
 		))
+
+		if len(init.SecretSharesMetadata) > 0 {
+			if len(init.SecretShares) != len(init.SecretSharesMetadata) {
+				c.Ui.Error("Number of keys returned is not matching the number of key metadata items")
+				return 1
+			}
+			for i, secretShareMetadata := range init.SecretSharesMetadata {
+				switch {
+				case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+					c.Ui.Output(fmt.Sprintf("Unseal key identifier %d with name %q: %s", i+1, secretShareMetadata.Name, secretShareMetadata.ID))
+				case secretShareMetadata.ID != "":
+					c.Ui.Output(fmt.Sprintf("Unseal key identifier %d: %s", i+1, secretShareMetadata.ID))
+				default:
+					c.Ui.Error("Invalid unseal key shares metadata")
+					return 1
+				}
+			}
+		}
+
+		if len(init.RecoverySharesMetadata) > 0 {
+			if len(init.RecoveryShares) != len(init.RecoverySharesMetadata) {
+				c.Ui.Error("Number of recovery key shares returned is not matching the number of recovery key shares metadata items")
+				return 1
+			}
+
+			for i, recoveryShareMetadata := range init.RecoverySharesMetadata {
+				switch {
+				case recoveryShareMetadata.ID != "" && recoveryShareMetadata.Name != "":
+					c.Ui.Output(fmt.Sprintf("Recovery key identifier %d with name %q: %s", i+1, recoveryShareMetadata.Name, recoveryShareMetadata.ID))
+				case recoveryShareMetadata.ID != "":
+					c.Ui.Output(fmt.Sprintf("Recovery key identifier %d: %s", i+1, recoveryShareMetadata.ID))
+				default:
+					c.Ui.Error("Invalid recovery key shares metadata")
+					return 1
+				}
+			}
+		}
+
+		c.Ui.Output(fmt.Sprintf("Root Token: %s\n", init.RootToken))
 	}
 
 	// Initialize the HTTP server
