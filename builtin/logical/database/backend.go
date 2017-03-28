@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -52,20 +53,57 @@ type databaseBackend struct {
 	logger      log.Logger
 
 	*framework.Backend
-	sync.RWMutex
+	sync.Mutex
 }
 
 // resetAllDBs closes all connections from all database types
 func (b *databaseBackend) closeAllDBs() {
-	b.logger.Trace("postgres/resetdb: enter")
-	defer b.logger.Trace("postgres/resetdb: exit")
-
 	b.Lock()
 	defer b.Unlock()
 
 	for _, db := range b.connections {
 		db.Close()
 	}
+}
+
+// This function is used to retrieve a database object either from the cached
+// connection map or by using the database config in storage. The caller of this
+// function needs to hold the backend's lock.
+func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbs.DatabaseType, error) {
+	// if the object already is built and cached, return it
+	db, ok := b.connections[name]
+	if ok {
+		return db, nil
+	}
+
+	entry, err := s.Get(fmt.Sprintf("dbs/%s", name))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read connection configuration with name: %s", name)
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("failed to find entry for connection with name: %s", name)
+	}
+
+	var config dbs.DatabaseConfig
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+
+	factory := config.GetFactory()
+
+	db, err = factory(&config, b.System(), b.logger)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Initialize(config.ConnectionDetails)
+	if err != nil {
+		return nil, err
+	}
+
+	b.connections[name] = db
+
+	return db, nil
 }
 
 func (b *databaseBackend) Role(s logical.Storage, n string) (*roleEntry, error) {

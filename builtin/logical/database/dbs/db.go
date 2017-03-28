@@ -18,10 +18,11 @@ const (
 )
 
 var (
-	ErrUnsupportedDatabaseType = errors.New("Unsupported database type")
-	ErrEmptyCreationStatement  = errors.New("Empty creation statements")
+	ErrUnsupportedDatabaseType = errors.New("unsupported database type")
+	ErrEmptyCreationStatement  = errors.New("empty creation statements")
 )
 
+// Factory function for
 type Factory func(*DatabaseConfig, logical.SystemView, log.Logger) (DatabaseType, error)
 
 func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logger) (DatabaseType, error) {

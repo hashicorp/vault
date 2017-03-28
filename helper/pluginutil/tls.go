@@ -217,6 +217,9 @@ func VaultPluginTLSProvider() (*tls.Config, error) {
 	if err != nil {
 		return nil, errwrap.Wrapf("error during token unwrap request: {{err}}", err)
 	}
+	if secret == nil {
+		return nil, errors.New("error during token unwrap request secret is nil")
+	}
 
 	// Retrieve and parse the CA Certificate
 	CABytesRaw, ok := secret.Data["CACert"].(string)

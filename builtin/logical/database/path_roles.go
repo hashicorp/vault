@@ -126,7 +126,14 @@ func (b *databaseBackend) pathRoleList(req *logical.Request, d *framework.FieldD
 
 func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("Empty role name attribute given"), nil
+	}
+
 	dbName := data.Get("db_name").(string)
+	if dbName == "" {
+		return logical.ErrorResponse("Empty database name attribute given"), nil
+	}
 
 	// Get statements
 	creationStmts := data.Get("creation_statements").(string)

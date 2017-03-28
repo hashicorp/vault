@@ -29,7 +29,7 @@ func (b *databaseBackend) secretCredsRenew(req *logical.Request, d *framework.Fi
 
 	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
-		return nil, fmt.Errorf("Could not find role with name: %s", req.Secret.InternalData["role"])
+		return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
 	}
 
 	role, err := b.Role(req.Storage, roleNameRaw.(string))
@@ -37,7 +37,7 @@ func (b *databaseBackend) secretCredsRenew(req *logical.Request, d *framework.Fi
 		return nil, err
 	}
 	if role == nil {
-		return nil, fmt.Errorf("Could not find role with name: %s", req.Secret.InternalData["role"])
+		return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
 	}
 
 	f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
@@ -47,13 +47,13 @@ func (b *databaseBackend) secretCredsRenew(req *logical.Request, d *framework.Fi
 	}
 
 	// Grab the read lock
-	b.RLock()
-	defer b.RUnlock()
+	b.Lock()
+	defer b.Unlock()
 
 	// Get our connection
-	db, ok := b.connections[role.DBName]
-	if !ok {
-		return nil, fmt.Errorf("Could not find connection with name %s", role.DBName)
+	db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
+	if err != nil {
+		return nil, fmt.Errorf("could not find connection with name %s, got err: %s", role.DBName, err)
 	}
 
 	// Make sure we increase the VALID UNTIL endpoint for this user.
@@ -81,7 +81,7 @@ func (b *databaseBackend) secretCredsRevoke(req *logical.Request, d *framework.F
 
 	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
-		return nil, fmt.Errorf("Could not find role with name: %s", req.Secret.InternalData["role"])
+		return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
 	}
 
 	role, err := b.Role(req.Storage, roleNameRaw.(string))
@@ -89,7 +89,7 @@ func (b *databaseBackend) secretCredsRevoke(req *logical.Request, d *framework.F
 		return nil, err
 	}
 	if role == nil {
-		return nil, fmt.Errorf("Could not find role with name: %s", req.Secret.InternalData["role"])
+		return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
 	}
 
 	/* TODO: think about how to handle this case.
@@ -109,13 +109,13 @@ func (b *databaseBackend) secretCredsRevoke(req *logical.Request, d *framework.F
 	}*/
 
 	// Grab the read lock
-	b.RLock()
-	defer b.RUnlock()
+	b.Lock()
+	defer b.Unlock()
 
 	// Get our connection
-	db, ok := b.connections[role.DBName]
-	if !ok {
-		return nil, fmt.Errorf("Could not find database with name: %s", role.DBName)
+	db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
+	if err != nil {
+		return nil, fmt.Errorf("could not find database with name: %s, got error: %s", role.DBName, err)
 	}
 
 	err = db.RevokeUser(role.Statements, username)

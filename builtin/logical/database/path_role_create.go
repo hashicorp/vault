@@ -27,34 +27,28 @@ func pathRoleCreate(b *databaseBackend) *framework.Path {
 }
 
 func (b *databaseBackend) pathRoleCreateRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.logger.Trace("postgres/pathRoleCreateRead: enter")
-	defer b.logger.Trace("postgres/pathRoleCreateRead: exit")
-
 	name := data.Get("name").(string)
 
 	// Get the role
-	b.logger.Trace("postgres/pathRoleCreateRead: getting role")
 	role, err := b.Role(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
 	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", name)), nil
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	// Get the Database object
+	db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
+	if err != nil {
+		// TODO: return a resp error instead?
+		return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
 	}
 
 	// Generate the username, password and expiration
-
-	// Get our handle
-	b.logger.Trace("postgres/pathRoleCreateRead: getting database handle")
-
-	b.RLock()
-	defer b.RUnlock()
-	db, ok := b.connections[role.DBName]
-	if !ok {
-		// TODO: return a resp error instead?
-		return nil, fmt.Errorf("Cound not find DB with name: %s", role.DBName)
-	}
-
 	username, err := db.GenerateUsername(req.DisplayName)
 	if err != nil {
 		return nil, err
@@ -70,12 +64,12 @@ func (b *databaseBackend) pathRoleCreateRead(req *logical.Request, data *framewo
 		return nil, err
 	}
 
+	// Create the user
 	err = db.CreateUser(role.Statements, username, password, expiration)
 	if err != nil {
 		return nil, err
 	}
 
-	b.logger.Trace("postgres/pathRoleCreateRead: generating secret")
 	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
 		"username": username,
 		"password": password,

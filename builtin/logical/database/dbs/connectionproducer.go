@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	errNotInitalized = errors.New("Connection has not been initalized")
+	errNotInitalized = errors.New("connection has not been initalized")
 )
 
 type ConnectionProducer interface {
@@ -142,7 +142,7 @@ func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}) er
 	c.initalized = true
 
 	if _, err := c.connection(); err != nil {
-		return fmt.Errorf("Error Initalizing Connection: %s", err)
+		return fmt.Errorf("error Initalizing Connection: %s", err)
 	}
 
 	return nil
@@ -244,7 +244,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 
 	session, err := clusterConfig.CreateSession()
 	if err != nil {
-		return nil, fmt.Errorf("Error creating session: %s", err)
+		return nil, fmt.Errorf("error creating session: %s", err)
 	}
 
 	// Set consistency
@@ -260,7 +260,7 @@ func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	// Verify the info
 	err = session.Query(`LIST USERS`).Exec()
 	if err != nil {
-		return nil, fmt.Errorf("Error validating connection info: %s", err)
+		return nil, fmt.Errorf("error validating connection info: %s", err)
 	}
 
 	return session, nil

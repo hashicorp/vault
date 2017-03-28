@@ -1,7 +1,6 @@
 package database
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -34,46 +33,23 @@ func pathResetConnection(b *databaseBackend) *framework.Path {
 func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	if name == "" {
-		return nil, errors.New("No database name set")
+		return logical.ErrorResponse("Empty name attribute given"), nil
 	}
 
 	// Grab the mutex lock
 	b.Lock()
 	defer b.Unlock()
 
-	entry, err := req.Storage.Get(fmt.Sprintf("dbs/%s", name))
-	if err != nil {
-		return nil, fmt.Errorf("failed to read connection configuration")
-	}
-	if entry == nil {
-		return nil, nil
+	db, ok := b.connections[name]
+	if ok {
+		db.Close()
+		delete(b.connections, name)
 	}
 
-	var config dbs.DatabaseConfig
-	if err := entry.DecodeJSON(&config); err != nil {
+	db, err := b.getOrCreateDBObj(req.Storage, name)
+	if err != nil {
 		return nil, err
 	}
-
-	db, ok := b.connections[name]
-	if !ok {
-		return logical.ErrorResponse("Can not change type of existing connection."), nil
-	}
-
-	db.Close()
-
-	factory := config.GetFactory()
-
-	db, err = factory(&config, b.System(), b.logger)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
-	}
-
-	err = db.Initialize(config.ConnectionDetails)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
-	}
-
-	b.connections[name] = db
 
 	return nil, nil
 }
@@ -306,7 +282,6 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 			return nil, err
 		}
 
-		// Reset the DB connection
 		resp := &logical.Response{}
 		resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection string or URL as it is, including passwords, if any.")
 
