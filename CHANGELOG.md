@@ -5,6 +5,11 @@ IMPROVEMENTS:
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
    requests [GH-2466]
 
+BUG FIXES:
+
+ * storage/etcd3: Ensure locks are released if client is improperly shut down
+   [GH-2526]
+
 ## 0.7.0 (March 21th, 2017)
 
 SECURITY:
