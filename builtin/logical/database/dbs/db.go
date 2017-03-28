@@ -20,11 +20,15 @@ const (
 var (
 	ErrUnsupportedDatabaseType = errors.New("unsupported database type")
 	ErrEmptyCreationStatement  = errors.New("empty creation statements")
+	ErrEmptyPluginCommand      = errors.New("empty plugin command")
+	ErrEmptyPluginChecksum     = errors.New("empty plugin checksum")
 )
 
-// Factory function for
+// Factory function definition
 type Factory func(*DatabaseConfig, logical.SystemView, log.Logger) (DatabaseType, error)
 
+// BuiltinFactory is used to build builtin database types. It wraps the database
+// object in a logging and metrics middleware.
 func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logger) (DatabaseType, error) {
 	var dbType DatabaseType
 
@@ -88,14 +92,19 @@ func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Log
 	return dbType, nil
 }
 
+// PluginFactory is used to build plugin database types. It wraps the database
+// object in a logging and metrics middleware.
 func PluginFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logger) (DatabaseType, error) {
 	if conf.PluginCommand == "" {
-		return nil, errors.New("ERROR")
+		return nil, ErrEmptyPluginCommand
 	}
 
 	if conf.PluginChecksum == "" {
-		return nil, errors.New("ERROR")
+		return nil, ErrEmptyPluginChecksum
 	}
+
+	// Make sure the database type is set to plugin
+	conf.DatabaseType = pluginTypeName
 
 	db, err := newPluginClient(sys, conf.PluginCommand, conf.PluginChecksum)
 	if err != nil {
@@ -118,6 +127,7 @@ func PluginFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logg
 	return db, nil
 }
 
+// DatabaseType is the interface that all database objects must implement.
 type DatabaseType interface {
 	Type() string
 	CreateUser(statements Statements, username, password, expiration string) error
@@ -129,8 +139,12 @@ type DatabaseType interface {
 	CredentialsProducer
 }
 
+// DatabaseConfig is used by the Factory function to configure a DatabaseType
+// object.
 type DatabaseConfig struct {
-	DatabaseType          string                 `json:"type" structs:"type" mapstructure:"type"`
+	DatabaseType string `json:"type" structs:"type" mapstructure:"type"`
+	// ConnectionDetails stores the database specific connection settings needed
+	// by each database type.
 	ConnectionDetails     map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
 	MaxOpenConnections    int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
@@ -139,6 +153,8 @@ type DatabaseConfig struct {
 	PluginChecksum        string                 `json:"plugin_checksum" structs:"plugin_checksum" mapstructure:"plugin_checksum"`
 }
 
+// GetFactory returns the appropriate factory method for the given database
+// type.
 func (dc *DatabaseConfig) GetFactory() Factory {
 	if dc.DatabaseType == pluginTypeName {
 		return PluginFactory
