@@ -1,4 +1,11 @@
-## 0.7.0 (Early Access; final release March 21th, 2017)
+## 0.7.1 (Unreleased)
+
+IMPROVEMENTS:
+
+ * storage/s3: Support `max_parallel` option to limit concurrent outstanding
+   requests [GH-2466]
+
+## 0.7.0 (March 21th, 2017)
 
 SECURITY:
 

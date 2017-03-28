@@ -1,8 +1,3 @@
-// Global values
-$header-height:     90px;
-$btn-border-radius: 4px;
-$el-border-radius:  6px;
-
 // Colors
 $white:        #FFFFFF;
 $black:        #000000;
@@ -22,6 +17,18 @@ $red:          #DD4E58;
 $red-dark:     #C5454E;
 $purple:       #822FF7;
 
+// Colors
+$white: #FFFFFF;
+$black: #000000;
+$gray-darker: #555555;
+
+$packer-blue: #1DAEFF;
+$packer-blue-dark: #1D94DD;
+$vagrant-blue: #1563FF;
+$vagrant-blue-dark: #104EB2;
+$vault-black: #000000;
+$vault-blue: #00ABE0;
+
 // Typography
 $font-family-klavika:   'klavika-web', 'Open Sans', "Helvetica Neue", Helvetica, Arial, sans-serif;
 $font-family-open-sans: 'Open Sans', "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -32,18 +39,24 @@ $font-weight-bold:      600;
 
 // Body
 $body-font-color: $gray-darker;
-$body-link-color: $dark-blue;
+$body-link-color: $vault-blue;
 
 // Sidebar
 $sidebar-background-color: $white;
 $sidebar-font-size: $font-size - 2;
 $sidebar-link-color: $body-font-color;
 $sidebar-link-color-hover: $black;
-$sidebar-link-color-active: $dark-blue;
+$sidebar-link-color-active: $body-link-color;
 $sidebar-font-family: $font-family-open-sans;
 $sidebar-font-weight: $font-weight-reg;
 
 // Header
+$header-font-size: $font-size - 2;
+$header-link-color: $body-font-color;
+$header-link-color-hover: $black;
+
+// Header
+$header-height: 92px;
 $header-font-size: $font-size - 2;
 $header-link-color: $body-font-color;
 $header-link-color-hover: $black;
