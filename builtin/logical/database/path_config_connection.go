@@ -279,6 +279,8 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 		}
 
 		if _, ok := b.connections[name]; ok {
+			newType := db.Type()
+
 			// Don't update connection until the reset api is hit, close for
 			// now.
 			err = db.Close()
@@ -287,7 +289,7 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 			}
 
 			// Don't allow the connection type to change
-			if b.connections[name].Type() != connType {
+			if b.connections[name].Type() != newType {
 				return logical.ErrorResponse("Can not change type of existing connection."), nil
 			}
 		} else {
