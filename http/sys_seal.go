@@ -188,6 +188,13 @@ func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Req
 	}
 
 	progress, nonce := core.SecretProgress()
+	// When the vault is unsealed, it makes more sense for progress to be
+	// set to the value of SecretThreshold as a value of 0 would imply a
+	// sealed state. Achieving this behaviour in SecretProgress() is quite
+	// a bit harder, so we are doing it here.
+	if !sealed {
+		progress = sealConfig.SecretThreshold
+	}
 
 	respondOk(w, &SealStatusResponse{
 		Sealed:      sealed,

@@ -70,7 +70,7 @@ Sample response when Vault is unsealed.
   "sealed": false,
   "t": 3,
   "n": 5,
-  "progress": 0,
+  "progress": 3,
   "version": "0.6.2",
   "cluster_name": "vault-cluster-d6ec3c7f",
   "cluster_id": "3e8b3fec-3749-e056-ba41-b62a63b997e8"
