@@ -12,12 +12,12 @@ description: |-
 
 <div id="container" class="col-md-offset-3 col-md-6 col-sm-offset-2 col-sm-8">
   <div class="row">
-    <img src="<%= image_path("logo-text.svg") %>" alt="Vault" height="80">
+    <%= inline_svg "logo-text.svg", height: 120, class: "logo" %>
     <span id="tag-line">A tool for managing secrets</span>
 
     <div>
-      <a class="v-btn blue lrg started" href="/intro">Get Started</a>
-      <a class="v-btn black lrg terminal" href="/#/demo/0" data-turbolinks="false">Launch Interactive Tutorial</a>
+      <a class="button primary started" href="/intro">Get Started</a>
+      <a class="button terminal" href="/#/demo/0" data-turbolinks="false">Launch Interactive Tutorial</a>
     </div>
 
     <div id="diagram"></div>
@@ -52,7 +52,7 @@ description: |-
         secrets.
       </p>
       <div class="feature-footer">
-        <a class="v-btn black sml" href="/intro/use-cases.html">Learn more</a>
+        <a class="button" href="/intro/use-cases.html">Learn more</a>
       </div>
     </div>
   </div>
@@ -71,7 +71,7 @@ description: |-
         rolling is easy to enforce.
       </p>
       <div class="feature-footer">
-        <a class="v-btn black sml" href="/docs/concepts/lease.html">Learn more</a>
+        <a class="button" href="/docs/concepts/lease.html">Learn more</a>
       </div>
     </div>
   </div>
@@ -89,14 +89,14 @@ description: |-
         trace the lifetime and origin of any secret.
       </p>
       <div class="feature-footer">
-        <a class="v-btn black sml" href="/docs/audit/index.html">Learn more</a>
+        <a class="button" href="/docs/audit/index.html">Learn more</a>
       </div>
     </div>
   </div>
 
   <div class="row">
     <div id="cta">
-      <a class="v-btn black sml" href="/intro/index.html">Get Started with Vault</a>
+      <a class="button" href="/intro/index.html">Get Started with Vault</a>
       <p class="cta-black">Completely free and open source.</p>
     </div>
   </div>
@@ -113,7 +113,7 @@ description: |-
           We are pleased to announce the release of Vault v0.6.5. This release includes several new features, improvements, and bug fixes.
         </p>
         <div class="latest-footer">
-          <a class="v-btn sml" href="https://www.hashicorp.com/blog/vault-v0-6-5/">Read more</a>
+          <a class="button" href="https://www.hashicorp.com/blog/vault-v0-6-5/">Read more</a>
         </div>
       </div>
       <div class="latest-item">
@@ -122,7 +122,7 @@ description: |-
           Listen to the recording with Adam Stacoviak on the popular Changelog podcast to talk about modern secrets management.
         </p>
         <div class="latest-footer">
-          <a class="v-btn sml" href="https://www.hashicorp.com/blog/vault-on-the-changelog-podcast/">Listen</a>
+          <a class="button" href="https://www.hashicorp.com/blog/vault-on-the-changelog-podcast/">Listen</a>
         </div>
       </div>
     </div>
