@@ -556,54 +556,11 @@ $ vault auth -method=aws header_value=vault.example.com role=dev-role-iam \
         aws_security_token=<security_token>
 ```
 
-For reference, the following Go program also demonstrates how to generate the
-required parameters (assuming you are using a default AWS credential provider),
-filling in the value for the header value as appropriate:
-
-```
-package main
-
-import (
-        "encoding/base64"
-        "encoding/json"
-        "fmt"
-        "io/ioutil"
-
-        "github.com/aws/aws-sdk-go/aws/session"
-        "github.com/aws/aws-sdk-go/service/sts"
-)
-
-func main() {
-        sess, err := session.NewSession()
-        if err != nil {
-                fmt.Println("failed to create session,", err)
-                return
-        }
-
-        svc := sts.New(sess)
-        var params *sts.GetCallerIdentityInput
-        stsRequest, _ := svc.GetCallerIdentityRequest(params)
-        stsRequest.HTTPRequest.Header.Add("X-Vault-AWSIAM-Server-ID", "vault.example.com")
-        stsRequest.Sign()
-
-        headersJson, err := json.Marshal(stsRequest.HTTPRequest.Header)
-        if err != nil {
-                fmt.Println(fmt.Errorf("Error:", err))
-                return
-        }
-        requestBody, err := ioutil.ReadAll(stsRequest.HTTPRequest.Body)
-        if err != nil {
-                fmt.Println(fmt.Errorf("Error:", err))
-                return
-        }
-        fmt.Println("request_method=" + stsRequest.HTTPRequest.Method)
-        fmt.Println("request_url=" + stsRequest.HTTPRequest.URL.String())
-        fmt.Println("request_headers=" + base64.StdEncoding.EncodeToString(headersJson))
-        fmt.Println("request_body=" + base64.StdEncoding.EncodeToString(requestBody))
-}
-
-```
-Using this, we can get the values to pass in to the `vault write` operation:
+An example of how to generate the required request values for the `login` method
+can be found found in the [vault cli
+source code](https://github.com/hashicorp/vault/blob/master/builtin/credential/aws/cli.go).
+Using an approach such as this, the request parameters can be generated and
+passed to the `login` method:
 
 ```
 $ vault write auth/aws/login role=dev-role-iam \

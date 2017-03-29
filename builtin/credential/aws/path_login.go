@@ -1362,7 +1362,7 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 func roleAllowsAuthMethod(authMethod string, roleEntry *awsRoleEntry) bool {
 	allowedAuthMethod := false
 	for _, allowedAuthType := range roleEntry.AllowedAuthTypes {
-		if allowedAuthType == "iam" {
+		if allowedAuthType == authMethod {
 			allowedAuthMethod = true
 			break
 		}

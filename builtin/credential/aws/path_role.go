@@ -282,6 +282,16 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 		}
 	}
 
+	// Check if there was no pre-existing AllowedAuthTypes set (from older versions)
+	if len(result.AllowedAuthTypes) == 0 {
+		// then default to the original behavior of ec2
+		result.AllowedAuthTypes = []string{"ec2"}
+		// and save the result
+		if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
+			return nil, fmt.Errorf("failed to save default allowed_auth_types")
+		}
+	}
+
 	return &result, nil
 }
 
