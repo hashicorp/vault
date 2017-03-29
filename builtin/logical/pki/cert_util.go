@@ -331,8 +331,8 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 					}
 				}
 
-				if glob.Glob("*."+req.DisplayName, sanitizedName) ||
-					(isWildcard && glob.Glob(req.DisplayName, sanitizedName)) {
+				if strings.HasSuffix(sanitizedName, "."+req.DisplayName) ||
+					(isWildcard && sanitizedName == req.DisplayName) {
 					continue
 				}
 			}
