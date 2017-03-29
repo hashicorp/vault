@@ -4,6 +4,7 @@ IMPROVEMENTS:
 
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
    requests [GH-2466]
+ * storage/s3: Use pooled transport for http client [GH-2481]
 
 BUG FIXES:
 
