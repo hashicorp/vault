@@ -47,7 +47,9 @@
           <div class="col-xs-12">
             <div class="navbar-header">
               <div class="navbar-brand">
-                <a class="logo" href="/" data-turbolinks="false">Vault</a>
+                <a href="/" data-turbolinks="false">
+                  <%= inline_svg "logo-text.svg", height: 50, class: "logo" %>
+                </a>
               </div>
               <button class="navbar-toggle" type="button">
                 <span class="sr-only">Toggle navigation</span>
@@ -116,25 +118,7 @@
 
       ga('create', 'UA-62364009-1', 'vaultproject.io');
       ga('require', 'linkid');
-      ga('send', 'pageview');
-    </script>
-
-    <script type="text/javascript">
-    adroll_adv_id = "6QAAFJDIWBG3DJBDRJ7BEX";
-    adroll_pix_id = "PYT5HSNKNRDS7LMUR5B6YG";
-    (function () {
-    var oldonload = window.onload;
-    window.onload = function(){
-       __adroll_loaded=true;
-       var scr = document.createElement("script");
-       var host = (("https:" == document.location.protocol) ? "https://s.adroll.com" : "http://a.adroll.com");
-       scr.setAttribute('async', 'true');
-       scr.type = "text/javascript";
-       scr.src = host + "/j/roundtrip.js";
-       ((document.getElementsByTagName('head') || [null])[0] ||
-        document.getElementsByTagName('script')[0].parentNode).appendChild(scr);
-       if(oldonload){oldonload()}};
-    }());
+      ga('send', 'pageview', location.pathname);
     </script>
 
     <%= yield_content :scripts %>
@@ -147,7 +131,7 @@
         "alternateName": "Vault by HashiCorp",
         "manufacturer": "HashiCorp",
         "url": "https://www.vaultproject.io",
-        "logo": "<%= File.join(base_url, image_path("logo.svg")) %>",
+        "logo": "<%= File.join(base_url, image_path("logo-text.svg")) %>",
         "sameAs": [
           "https://github.com/hashicorp/vault"
         ]

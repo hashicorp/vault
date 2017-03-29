@@ -1,60 +1,37 @@
-.v-btn {
-  box-shadow: 2px 3px 2px rgba(0,0,0,0.08);
+.button {
+  background: $button-background;
+  border: 1px solid $button-font-color;
+  box-shadow: 3px 4px 0 rgba(0,0,0,0.1);
+  color: $button-font-color;
   display: inline-block;
-  background-color: $white;
-  color: $black;
-  border: 1px solid $black;
+  font-family: $button-font-family;
+  font-size: $button-font-size;
+  font-weight: $button-font-weight;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  padding: 10px 30px;
+  text-transform: uppercase;
   text-decoration: none;
-  @include transition(color .3s ease-in-out);
 
-  &.lrg {
-    font-size: 18px;
-    padding: 10px 50px;
-  }
-
-  &.sml {
-    font-size: 15px;
-    line-height: 1;
-    padding: 8px 30px;
-  }
-
-  &.blue {
-    color: $blue;
-    border: 1px solid $blue;
-  }
-
-  &.gray {
-    font-weight: 300;
-    color: $gray;
-    border: 1px solid $light-gray;
-  }
-
-  &.terminal {
-    padding-left: 52px;
-    padding-right: 30px;
-    margin-left: 12px;
-      background: image-url('icon-terminal.png') 16px center no-repeat;
-       @include img-retina("icon-terminal.png", "icon-terminal@2x.png", 26px, 25px);
-  }
-
-  &.started {
-    margin-bottom: 12px;
-  }
-
-  &:hover, &:active, &:focus {
+  &:hover,
+  &:active,
+  &:focus {
     text-decoration: none;
-    @include transition(color .3s ease-in-out);
+  }
 
-    &.blue {
-      color: darken($blue, 8%);
-    }
+  &:hover {
+    background: $button-font-color;
+    border: 1px solid $button-font-color;
+    color: $button-background;
+  }
 
-    &.black {
-      color: lighten($black, 50%);
-    }
+  &.primary {
+    background: $button-primary-background;
+    border: 1px solid darken($button-primary-background, 5%);
+    color: $button-primary-font-color;
 
-    &.gray {
-      color: $black;
+    &:hover {
+      background: lighten($button-primary-background, 5%);
     }
   }
 }
