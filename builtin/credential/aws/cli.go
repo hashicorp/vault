@@ -82,11 +82,11 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	// And pass them on to the Vault server
 	path := fmt.Sprintf("auth/%s/login", mount)
 	secret, err := c.Logical().Write(path, map[string]interface{}{
-		"request_method":  method,
-		"request_url":     targetUrl,
-		"request_headers": headers,
-		"request_body":    body,
-		"role":            role,
+		"iam_http_request_method": method,
+		"iam_request_url":         targetUrl,
+		"iam_request_headers":     headers,
+		"iam_request_body":        body,
+		"role":                    role,
 	})
 
 	if err != nil {
@@ -97,8 +97,6 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	}
 
 	return secret.Auth.ClientToken, nil
-
-	return "", nil
 }
 
 func (h *CLIHandler) Help() string {
@@ -123,7 +121,7 @@ Key/Value Pairs:
   aws_access_key_id=<access key>      Explicitly specified AWS access key
   aws_secret_access_key=<secret key>  Explicitly specified AWS secret key
   aws_security_token=<token>          Security token for temporary credentials
-  header_value                        The Value of the X-Vault-AWSIAM-Server-ID header.
+  header_value                        The Value of the X-Vault-AWS-IAM-Server-ID header.
   role                                The name of the role you're requesting a token for
   `
 

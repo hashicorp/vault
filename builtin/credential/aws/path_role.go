@@ -8,6 +8,7 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/policyutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -22,7 +23,7 @@ func pathRole(b *backend) *framework.Path {
 			},
 			"allowed_auth_types": {
 				Type:    framework.TypeString,
-				Default: "ec2",
+				Default: ec2AuthType,
 				Description: `The comma-separated list of allowed auth_type values that
 are allowed to authenticate to this role.`,
 			},
@@ -65,7 +66,7 @@ the value specified by this parameter. The value is prefix-matched
 (as though it were a glob ending in '*'). This is only checked when
 auth_type is ec2.`,
 			},
-			"role_inferred_type": {
+			"inferred_entity_type": {
 				Type: framework.TypeString,
 				Description: `When auth_type is iam, the
 AWS entity type to infer from the authenticated principal. The only supported
@@ -79,7 +80,7 @@ among running instances, then authentication will fail.`,
 			"inferred_aws_region": {
 				Type: framework.TypeString,
 				Description: `When auth_type is iam and
-role_inferred_type is set, the region to assume the inferred entity exists in.`,
+inferred_entity_type is set, the region to assume the inferred entity exists in.`,
 			},
 			"bound_vpc_id": {
 				Type: framework.TypeString,
@@ -101,7 +102,7 @@ field should be the 'key' of the tag on the EC2 instance. The 'value'
 of the tag should be generated using 'role/<role>/tag' endpoint.
 Defaults to an empty string, meaning that role tags are disabled. This
 is only checked if auth_type is ec2 or
-role_inferred_type is ec2_instance`,
+inferred_entity_type is ec2_instance`,
 			},
 			"period": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
@@ -285,7 +286,7 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 	// Check if there was no pre-existing AllowedAuthTypes set (from older versions)
 	if len(result.AllowedAuthTypes) == 0 {
 		// then default to the original behavior of ec2
-		result.AllowedAuthTypes = []string{"ec2"}
+		result.AllowedAuthTypes = []string{ec2AuthType}
 		// and save the result
 		if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
 			return nil, fmt.Errorf("failed to save default allowed_auth_types")
@@ -403,7 +404,7 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundIamPrincipalARN = boundIamPrincipalARNRaw.(string)
 	}
 
-	if inferRoleTypeRaw, ok := data.GetOk("role_inferred_type"); ok {
+	if inferRoleTypeRaw, ok := data.GetOk("inferred_entity_type"); ok {
 		roleEntry.RoleInferredType = inferRoleTypeRaw.(string)
 	}
 
@@ -413,49 +414,20 @@ func (b *backend) pathRoleCreateUpdate(
 
 	var allowEc2Auth, allowIamAuth bool
 
-	parseAllowedAuthTypes := func(input string) string {
-		allowedAuthTypes := []string{}
-		for _, t := range strings.Split(input, ",") {
-			switch t {
-			case "ec2":
-				allowedAuthTypes = append(allowedAuthTypes, t)
-			case "iam":
-				allowedAuthTypes = append(allowedAuthTypes, t)
-			case "":
-			default:
-				return fmt.Sprintf("unrecognized auth type: '%s'", t)
-			}
-		}
-		roleEntry.AllowedAuthTypes = allowedAuthTypes
-		return ""
-	}
-
 	if allowedAuthTypesRaw, ok := data.GetOk("allowed_auth_types"); ok {
-		err := parseAllowedAuthTypes(allowedAuthTypesRaw.(string))
-		if err != "" {
-			return logical.ErrorResponse(err), nil
-		}
+		roleEntry.AllowedAuthTypes = strutil.ParseDedupAndSortStrings(allowedAuthTypesRaw.(string), ",")
 	} else if req.Operation == logical.CreateOperation {
-		err := parseAllowedAuthTypes(data.Get("allowed_auth_types").(string))
-		if err != "" {
-			return logical.ErrorResponse(err), nil
-		}
+		roleEntry.AllowedAuthTypes = strutil.ParseDedupAndSortStrings(data.Get("allowed_auth_types").(string), ",")
 	}
 
-	// Reparse the existing roleEntry.AllowedAuthTypes
-	// We need to do this to support the use case where an existing role is being updated, and
-	// allowed_auth_types isn't being updated as part of the role. We need to make sure that any
-	// new bindings requested are still valid bindings. For example, let's say a role is created
-	// with an auth_type of iam and no inferencing is configured; then, in a subsequent role update,
-	// bound_ami_id is specified. This is how that edge case is caught.
 	for _, t := range roleEntry.AllowedAuthTypes {
 		switch t {
-		case "ec2":
+		case ec2AuthType:
 			allowEc2Auth = true
-		case "iam":
+		case iamAuthType:
 			allowIamAuth = true
 		default:
-			return nil, fmt.Errorf("Unrecognized auth_type in roleEntry: %s", t)
+			return nil, fmt.Errorf("Unrecognized auth_type in roleEntry: %q", t)
 		}
 	}
 
@@ -464,15 +436,15 @@ func (b *backend) pathRoleCreateUpdate(
 	if roleEntry.RoleInferredType != "" {
 		switch {
 		case !allowIamAuth:
-			return logical.ErrorResponse("specified role_inferred_type but didn't allow iam auth_type"), nil
-		case roleEntry.RoleInferredType != "ec2_instance":
-			return logical.ErrorResponse(fmt.Sprintf("specified invalid role_inferred_type: %s", roleEntry.RoleInferredType)), nil
+			return logical.ErrorResponse("specified inferred_entity_type but didn't allow iam auth_type"), nil
+		case roleEntry.RoleInferredType != ec2EntityType:
+			return logical.ErrorResponse(fmt.Sprintf("specified invalid inferred_entity_type: %s", roleEntry.RoleInferredType)), nil
 		case roleEntry.InferredAWSRegion == "":
-			return logical.ErrorResponse("specified role_inferred_type but not inferred_aws_region"), nil
+			return logical.ErrorResponse("specified inferred_entity_type but not inferred_aws_region"), nil
 		}
 		allowEc2Binds = true
 	} else if roleEntry.InferredAWSRegion != "" {
-		return logical.ErrorResponse("specified inferred_aws_region but not role_inferred_type"), nil
+		return logical.ErrorResponse("specified inferred_aws_region but not inferred_entity_type"), nil
 	}
 
 	numBinds := 0
@@ -493,21 +465,21 @@ func (b *backend) pathRoleCreateUpdate(
 
 	if roleEntry.BoundAmiID != "" {
 		if !allowEc2Binds {
-			return logical.ErrorResponse("specified bound_ami_id but not allowing ec2 auth_type or inferring ec2_instance"), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_ami_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if roleEntry.BoundIamInstanceProfileARN != "" {
 		if !allowEc2Binds {
-			return logical.ErrorResponse("specified bound_iam_instance_profile_arn but not allowing ec2 auth_type or inferring ec2_instance"), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_iam_instance_profile_arn but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if roleEntry.BoundIamRoleARN != "" {
 		if !allowEc2Binds {
-			return logical.ErrorResponse("specified bound_iam_role_arn but not allowing ec2 auth_type or inferring ec2_instance"), nil
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_iam_role_arn but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}

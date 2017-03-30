@@ -81,7 +81,7 @@ func TestBackend_pathLogin_parseIamArn(t *testing.T) {
 	}
 }
 
-func TestBackend_ensureVaultHeaderValue(t *testing.T) {
+func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	const canaryHeaderValue = "Vault-Server"
 	requestUrl, err := url.Parse("https://sts.amazonaws.com/")
 	if err != nil {
@@ -89,12 +89,12 @@ func TestBackend_ensureVaultHeaderValue(t *testing.T) {
 	}
 	postHeadersMissing := http.Header{
 		"Host":          []string{"Foo"},
-		"Authorization": []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Authorization": []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 	postHeadersInvalid := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{"InvalidValue"},
-		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 	postHeadersUnsigned := http.Header{
 		"Host":            []string{"Foo"},
@@ -104,37 +104,37 @@ func TestBackend_ensureVaultHeaderValue(t *testing.T) {
 	postHeadersValid := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
-		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
 	postHeadersSplit := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
-		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-awsiam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
+		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
-	found, errMsg := ensureVaultHeaderValue(postHeadersMissing, requestUrl, canaryHeaderValue)
-	if found {
+	err = validateVaultHeaderValue(postHeadersMissing, requestUrl, canaryHeaderValue)
+	if err == nil {
 		t.Error("validated POST request with missing Vault header")
 	}
 
-	found, errMsg = ensureVaultHeaderValue(postHeadersInvalid, requestUrl, canaryHeaderValue)
-	if found {
+	err = validateVaultHeaderValue(postHeadersInvalid, requestUrl, canaryHeaderValue)
+	if err == nil {
 		t.Error("validated POST request with invalid Vault header value")
 	}
 
-	found, errMsg = ensureVaultHeaderValue(postHeadersUnsigned, requestUrl, canaryHeaderValue)
-	if found {
+	err = validateVaultHeaderValue(postHeadersUnsigned, requestUrl, canaryHeaderValue)
+	if err == nil {
 		t.Error("validated POST request with unsigned Vault header")
 	}
 
-	found, errMsg = ensureVaultHeaderValue(postHeadersValid, requestUrl, canaryHeaderValue)
-	if !found {
-		t.Errorf("did NOT validate valid POST request: %s", errMsg)
+	err = validateVaultHeaderValue(postHeadersValid, requestUrl, canaryHeaderValue)
+	if err != nil {
+		t.Errorf("did NOT validate valid POST request: %s", err)
 	}
 
-	found, errMsg = ensureVaultHeaderValue(postHeadersSplit, requestUrl, canaryHeaderValue)
-	if !found {
-		t.Errorf("did NOT validate valid POST request with split Authorization header: %s", errMsg)
+	err = validateVaultHeaderValue(postHeadersSplit, requestUrl, canaryHeaderValue)
+	if err != nil {
+		t.Errorf("did NOT validate valid POST request with split Authorization header: %s", err)
 	}
 }

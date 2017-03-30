@@ -31,12 +31,12 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		t.Fatal(err)
 	}
 	// at this point, resp == nil is valid as no client config exists
-	// if resp != nil, then resp.Data must have EndPoint and HeaderValue as nil
+	// if resp != nil, then resp.Data must have EndPoint and IAMServerIdHeaderValue as nil
 	if resp != nil {
 		if resp.IsError() {
 			t.Fatalf("failed to read client config entry")
-		} else if resp.Data["endpoint"] != nil || resp.Data["vault_header_value"] != nil {
-			t.Fatalf("returned endpoint or vault_header_value non-nil")
+		} else if resp.Data["endpoint"] != nil || resp.Data["iam_server_id_header_value"] != nil {
+			t.Fatalf("returned endpoint or iam_server_id_header_value non-nil")
 		}
 	}
 
@@ -69,8 +69,8 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	if resp == nil || resp.IsError() {
 		t.Fatal("failed to read the client config entry")
 	}
-	if resp.Data["iam_server_id_header_value"] != data["vault_header_value"] {
-		t.Fatalf("expected vault_header_value: '%#v'; returned vault_header_value: '%#v'",
+	if resp.Data["iam_server_id_header_value"] != data["iam_server_id_header_value"] {
+		t.Fatalf("expected iam_server_id_header_value: '%#v'; returned iam_server_id_header_value: '%#v'",
 			data["iam_server_id_header_value"], resp.Data["iam_server_id_header_value"])
 	}
 }

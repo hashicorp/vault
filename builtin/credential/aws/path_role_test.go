@@ -169,7 +169,7 @@ func TestBackend_pathIam(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"allowed_auth_types":      "iam",
+		"allowed_auth_types":      iamAuthType,
 		"policies":                "p,q,r,s",
 		"max_ttl":                 "2h",
 		"bound_iam_principal_arn": "n:aws:iam::123456789012:user/MyUserName",
@@ -203,7 +203,7 @@ func TestBackend_pathIam(t *testing.T) {
 		t.Fatalf("bad: policies: expected %#v\ngot: %#v\n", data, resp.Data)
 	}
 
-	data["role_inferred_type"] = "invalid"
+	data["inferred_entity_type"] = "invalid"
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ShouldNeverExist",
@@ -211,13 +211,13 @@ func TestBackend_pathIam(t *testing.T) {
 		Storage:   storage,
 	})
 	if resp == nil || !resp.IsError() {
-		t.Fatalf("Created role with invalid role_inferred_type")
+		t.Fatalf("Created role with invalid inferred_entity_type")
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data["role_inferred_type"] = "ec2_instance"
+	data["inferred_entity_type"] = ec2EntityType
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/ShouldNeverExist",
@@ -329,11 +329,8 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	}
 
 	resp, err := submitCreateRequest("shouldNeverExist")
-	if resp != nil && !resp.IsError() {
+	if (resp != nil && !resp.IsError()) || err == nil {
 		t.Fatalf("created role with invalid allowed_auth_type")
-	}
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	data["allowed_auth_types"] = "ec2,,iam"
@@ -365,7 +362,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	}
 
 	delete(data, "bound_iam_principal_arn")
-	data["role_inferred_type"] = "ec2_instance"
+	data["inferred_entity_type"] = ec2EntityType
 	data["inferred_aws_region"] = "us-east-1"
 	resp, err = submitCreateRequest("multipleTypesInferred")
 	if err != nil {
@@ -428,7 +425,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"allowed_auth_types":             []string{"ec2"},
+		"allowed_auth_types":             []string{ec2AuthType},
 		"bound_ami_id":                   "testamiid",
 		"bound_account_id":               "testaccountid",
 		"bound_region":                   "testregion",

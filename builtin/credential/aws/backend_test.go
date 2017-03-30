@@ -1092,7 +1092,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	// place the correct IAM role ARN, but make the auth type wrong
 	data["bound_iam_role_arn"] = iamARN
 	data["bound_iam_principal_arn"] = iamARN
-	data["allowed_auth_types"] = "iam"
+	data["allowed_auth_types"] = iamAuthType
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1106,7 +1106,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	// Place the correct auth type
 	delete(data, "bound_iam_principal_arn")
-	data["allowed_auth_types"] = "ec2"
+	data["allowed_auth_types"] = ec2AuthType
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1293,11 +1293,11 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 		return nil, err
 	}
 	return map[string]interface{}{
-		"request_method":  request.Method,
-		"request_url":     request.URL.String(),
-		"request_headers": base64.StdEncoding.EncodeToString(headersJson),
-		"request_body":    base64.StdEncoding.EncodeToString(requestBody),
-		"request_role":    roleName,
+		"iam_http_request_method": request.Method,
+		"iam_request_url":         request.URL.String(),
+		"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
+		"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
+		"request_role":            roleName,
 	}, nil
 }
 
@@ -1395,7 +1395,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	roleData := map[string]interface{}{
 		"bound_iam_principal_arn": testIdentityArn,
 		"policies":                "root",
-		"allowed_auth_types":      "iam",
+		"allowed_auth_types":      iamAuthType,
 	}
 	roleRequest := &logical.Request{
 		Operation: logical.CreateOperation,

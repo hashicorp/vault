@@ -43,7 +43,7 @@ func pathConfigClient(b *backend) *framework.Path {
 			"iam_server_id_header_value": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
-				Description: "Value to require in the X-Vault-AWSIAM-Server-ID request header",
+				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
 		},
 
@@ -193,7 +193,12 @@ func (b *backend) pathConfigClientCreateUpdate(
 	stsEndpointStr, ok := data.GetOk("sts_endpoint")
 	if ok {
 		if configEntry.STSEndpoint != stsEndpointStr.(string) {
-			// NOT setting changedCreds here, since this isn't really cached
+			// We don't directly cache STS clients as they are ever directly used.
+			// However, they are potentially indirectly used as credential providers
+			// for the EC2 and IAM clients, and thus we would be indirectly caching
+			// them there. So, if we change the STS endpoint, we should flush those
+			// cached clients.
+			changedCreds = true
 			configEntry.STSEndpoint = stsEndpointStr.(string)
 		}
 	} else if req.Operation == logical.CreateOperation {
@@ -202,12 +207,12 @@ func (b *backend) pathConfigClientCreateUpdate(
 
 	headerValStr, ok := data.GetOk("iam_server_id_header_value")
 	if ok {
-		if configEntry.HeaderValue != headerValStr.(string) {
+		if configEntry.IAMServerIdHeaderValue != headerValStr.(string) {
 			// NOT setting changedCreds here, since this isn't really cached
-			configEntry.HeaderValue = headerValStr.(string)
+			configEntry.IAMServerIdHeaderValue = headerValStr.(string)
 		}
 	} else if req.Operation == logical.CreateOperation {
-		configEntry.HeaderValue = data.Get("iam_server_id_header_value").(string)
+		configEntry.IAMServerIdHeaderValue = data.Get("iam_server_id_header_value").(string)
 	}
 
 	// Since this endpoint supports both create operation and update operation,
@@ -235,12 +240,12 @@ func (b *backend) pathConfigClientCreateUpdate(
 // Struct to hold 'aws_access_key' and 'aws_secret_key' that are required to
 // interact with the AWS EC2 API.
 type clientConfig struct {
-	AccessKey   string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
-	SecretKey   string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
-	Endpoint    string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
-	IAMEndpoint string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
-	STSEndpoint string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
-	HeaderValue string `json:"vault_header_value" structs:"vault_header_value" mapstructure:"vault_header_value"`
+	AccessKey              string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
+	SecretKey              string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
+	Endpoint               string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
+	IAMEndpoint            string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
+	STSEndpoint            string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
+	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" structs:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
 }
 
 const pathConfigClientHelpSyn = `
