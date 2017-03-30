@@ -733,7 +733,7 @@ func processResponse(ctx context.Context, sess *tdsSession, ch chan tokenStruct)
 
 	// Loop over multiple responses.
 	for {
-		ts.dlog("initiating resonse reading")
+		ts.dlog("initiating response reading")
 
 		tokChan := make(chan tokenStruct)
 		go processSingleResponse(sess, tokChan)
