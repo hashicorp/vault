@@ -29,8 +29,9 @@ helpers do
   def description_for(page)
     description = (page.data.description || "")
       .gsub('"', '')
-      .gsub("/\n+/", ' ')
+      .gsub(/\n+/, ' ')
       .squeeze(' ')
+
     return escape_html(description)
   end
 
@@ -54,17 +55,36 @@ helpers do
     if page.url == "/" || page.url == "/index.html"
       return "page-home"
     end
+    if !(title = page.data.page_title).blank?
+      return title
+        .downcase
+        .gsub('"', '')
+        .gsub(/[^\w]+/, '-')
+        .gsub(/_+/, '-')
+        .squeeze('-')
+        .squeeze(' ')
+    end
     return ""
   end
-
 
   # Returns the list of classes for this page.
   # @return [String]
   def body_classes_for(page)
     classes = []
 
-    if page && page.data.layout
+    if !(layout = page.data.layout).blank?
       classes << "layout-#{page.data.layout}"
+    end
+
+    if !(title = page.data.page_title).blank?
+      title = title
+        .downcase
+        .gsub('"', '')
+        .gsub(/[^\w]+/, '-')
+        .gsub(/_+/, '-')
+        .squeeze('-')
+        .squeeze(' ')
+      classes << "page-#{title}"
     end
 
     return classes.join(" ")
