@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/hashicorp/vault/logical"
@@ -52,15 +53,16 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	oauthConfig := cfg.OauthConfig()
-	auth, err := oauthConfig.PasswordCredentialsToken(goauth2.NoContext, username, password)
+	token, err := oauthConfig.PasswordCredentialsToken(goauth2.NoContext, username, password)
 	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("Oauth2 auth failed: %v", err)), nil
 	}
-	if auth == nil {
+	if token == nil {
 		return nil, logical.ErrorResponse("Oauth2 auth backend unexpected failure"), nil
 	}
 
-	oauthGroups, err := b.getOauthGroups(cfg, auth)
+	// Get groups assigned by oauth provider from UserInfoURL
+	oauthGroups, err := b.getOauthGroups(cfg, oauthConfig, token)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
@@ -78,7 +80,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	var allGroups []string
-	// Import the custom added groups from oauth backend
+	// Get locally-assigned group memberships
 	user, err := b.User(req.Storage, username)
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
@@ -89,7 +91,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Merge local and oauth groups
 	allGroups = append(allGroups, oauthGroups...)
 
-	// Retrieve policies
+	// Retrieve policies for given groups
 	var policies []string
 	for _, groupName := range allGroups {
 		group, err := b.Group(req.Storage, groupName)
@@ -98,7 +100,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		}
 	}
 
-	// Merge local policies into oauth policies
+	// Merge individually-assigned user policies into group policies
 	if user != nil && user.Policies != nil {
 		policies = append(policies, user.Policies...)
 	}
@@ -116,26 +118,27 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	return policies, oauthResponse, nil
 }
 
-func (b *backend) getOauthGroups(cfg *ConfigEntry, token *goauth2.Token) ([]string, error) {
-	/*  FIXME
-	if cfg.Token != "" {
-		client := cfg.OauthConfig()
-		groups, err := client.Groups(userID)
+func (b *backend) getOauthGroups(cfg *ConfigEntry, oauthConfig *goauth2.Config, token *goauth2.Token) ([]string, error) {
+	groups := []string{"mock-oauth-entitlement"} // FIXME
+	if len(cfg.UserInfoURL) != 0 {
+		client := oauthConfig.Client(goauth2.NoContext, token)
+		res, err := client.Get(cfg.UserInfoURL)
 		if err != nil {
 			return nil, err
 		}
 
-		oauthGroups := make([]string, 0, len(*groups))
-		for _, group := range *groups {
-			oauthGroups = append(oauthGroups, group.Profile.Name)
+		var parsed map[string]interface{}
+		err = json.NewDecoder(res.Body).Decode(&parsed)
+		if err != nil {
+			return nil, err
 		}
-		return oauthGroups, err
+		groupsRaw := parsed["groups"].([]interface{})
+		groups := make([]string, 0, len(groupsRaw))
+		for i, group := range groupsRaw {
+			groups[i] = group.(string)
+		}
 	}
-	return nil, nil
-	*/
-	oauthGroups := make([]string, 0, 1)
-	oauthGroups = append(oauthGroups, "testOauthGroup")
-	return oauthGroups, nil
+	return groups, nil
 }
 
 const backendHelp = `

@@ -13,6 +13,14 @@ func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `config`,
 		Fields: map[string]*framework.FieldSchema{
+			"provider_url": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The Oauth2 API endpoint to use to authenticate users.",
+			},
+			"userinfo_url": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The URL to query after authenticating a user to get any group memberships",
+			},
 			"client_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The Client ID Vault should use to authenticate with the oauth2 provider.",
@@ -21,9 +29,9 @@ func pathConfig(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "The Client Secret Vault should use to authenticate with the oauth2 provider.",
 			},
-			"provider_url": &framework.FieldSchema{
+			"scope": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The Oauth2 API endpoint to use to authenticate users.",
+				Description: "The Oauth Scope that will provide access to group membership when making a request to the UserInfoURL.",
 			},
 		},
 
@@ -73,8 +81,10 @@ func (b *backend) pathConfigRead(
 	// Don't reveal the client secret
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"ClientID":    cfg.ClientID,
 			"ProviderURL": cfg.ProviderURL,
+			"UserInfoURL": cfg.UserInfoURL,
+			"ClientID":    cfg.ClientID,
+			"Scope":       cfg.Scope,
 		},
 	}
 
@@ -82,42 +92,43 @@ func (b *backend) pathConfigRead(
 }
 
 func (b *backend) pathConfigWrite(
-	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	cfg, err := b.Config(req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
-	// Due to the existence check, entry will only be nil if it's a create
-	// operation, so just create a new one
-	if cfg == nil {
-		cfg = &ConfigEntry{}
-	}
-
-	// Client ID & Secret Vault should use to authenticate with oauth2 provider
-	cfg.ClientID = d.Get("client_id").(string)
-	cfg.ClientSecret = d.Get("client_secret").(string)
-
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// URL of provider
-	providerURL, ok := d.GetOk("provider_url")
-	if ok {
-		providerURLString := providerURL.(string)
-		if len(providerURLString) != 0 {
-			_, err = url.Parse(providerURLString)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("Error parsing given provider_url: %s", err)), nil
-			}
-			cfg.ProviderURL = providerURLString
-		}
-	} else if req.Operation == logical.CreateOperation {
-		cfg.ProviderURL = d.Get("provider_url").(string)
+	providerURL := data.Get("provider_url").(string)
+	if len(providerURL) == 0 {
+		return logical.ErrorResponse("A provider_url must be specified."), nil
+	}
+	_, err := url.Parse(providerURL)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("Error parsing given provider_url: %s", err)), nil
 	}
 
-	jsonCfg, err := logical.StorageEntryJSON("config", cfg)
+	// URL of userinfo endpoint to query groups.  If blank, only local
+	// groups will be used.
+	userinfoURL := data.Get("userinfo_url").(string)
+	if len(userinfoURL) != 0 {
+		_, err = url.Parse(userinfoURL)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Error parsing given userinfo_url: %s", err)), nil
+		}
+	}
+
+	// Client ID, Secret, & Scope Vault should use to authenticate with oauth2 provider
+	clientID := data.Get("client_id").(string)
+	clientSecret := data.Get("client_secret").(string)
+	scope := data.Get("scope").(string)
+
+	entry, err := logical.StorageEntryJSON("config", ConfigEntry{
+		ProviderURL:  providerURL,
+		UserInfoURL:  userinfoURL,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		Scope:        scope,
+	})
 	if err != nil {
 		return nil, err
 	}
-	if err := req.Storage.Put(jsonCfg); err != nil {
+	if err = req.Storage.Put(entry); err != nil {
 		return nil, err
 	}
 
@@ -142,7 +153,7 @@ func (c *ConfigEntry) OauthConfig() *goauth2.Config {
 		Endpoint: goauth2.Endpoint{
 			TokenURL: c.ProviderURL,
 		},
-		//Scopes: []string{},
+		Scopes: []string{c.Scope},
 	}
 	return config
 }
@@ -150,8 +161,10 @@ func (c *ConfigEntry) OauthConfig() *goauth2.Config {
 // Vault ConfigEntry for oauth2
 type ConfigEntry struct {
 	ProviderURL  string `json:"provider_url"`
+	UserInfoURL  string `json:"userinfo_url"`
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
+	Scope        string `json:"scope"`
 }
 
 const pathConfigHelp = `

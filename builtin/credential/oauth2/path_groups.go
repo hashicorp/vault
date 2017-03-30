@@ -25,7 +25,7 @@ func pathGroups(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the oauth group.",
+				Description: "Name of the group.",
 			},
 
 			"policies": &framework.FieldSchema{
@@ -138,7 +138,7 @@ Manage users allowed to authenticate.
 
 const pathGroupHelpDesc = `
 This endpoint allows you to create, read, update, and delete configuration
-for oauth groups that are allowed to authenticate, and associate policies to
+for groups that are allowed to authenticate, and associate policies to
 them.
 
 Deleting a group will not revoke auth for prior authenticated users in that

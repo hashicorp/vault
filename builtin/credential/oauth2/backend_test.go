@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/logformat"
+	"github.com/hashicorp/vault/helper/policyutil"
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/hashicorp/vault/logical"
@@ -29,7 +30,9 @@ func TestBackend_Config(t *testing.T) {
 	configData := map[string]interface{}{
 		"client_id":     os.Getenv("VT_OAUTH_CLIENT_ID"),
 		"client_secret": os.Getenv("VT_OAUTH_CLIENT_SECRET"),
-		"provider_url":  os.Getenv("VT_OAUTH_URL"),
+		"provider_url":  os.Getenv("VT_OAUTH_PROVIDER_URL"),
+		"userinfo_url":  os.Getenv("VT_OAUTH_USERINFO_URL"),
+		"scope":         os.Getenv("VT_OAUTH_SCOPE"),
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -37,18 +40,28 @@ func TestBackend_Config(t *testing.T) {
 		PreCheck:       func() { testAccPreCheck(t) },
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
+			// Write config
 			testConfigCreate(t, configData),
+			// Read config back out
 			testConfigRead(t, configData),
+			// Login should fail with bad creds
 			testLoginWrite(t, username, "wrong", "auth failed", nil),
+			// Login should fail with successful creds but no policy assignments
 			testLoginWrite(t, username, password, "user is not a member of any authorized policy", nil),
+			// Update user with local group membership
 			testAccUserGroups(t, username, "local_group,local_group2"),
+			// Add policy to group
 			testAccGroups(t, "local_group", "local_group_policy"),
+			// Test user has group policy
 			testLoginWrite(t, username, password, "", []string{"local_group_policy"}),
-			testAccGroups(t, "Everyone", "everyone_group_policy,every_group_policy2"),
-			testLoginWrite(t, username, password, "", []string{"local_group_policy"}),
-			testLoginWrite(t, username, password, "", []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
-			testAccGroups(t, "local_group2", "testgroup_group_policy"),
-			testLoginWrite(t, username, password, "", []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
+			// Add policy to second local group
+			testAccGroups(t, "local_group2", "local_group2_policy"),
+			// Test user got policy from second local group
+			testLoginWrite(t, username, password, "", []string{"local_group_policy", "local_group2_policy"}),
+			// Add two policies to the "Everyone" group
+			testAccGroups(t, "local_group3", "local_group3_policy"),
+			// Test user didn't get policies of group3
+			testLoginWrite(t, username, password, "", []string{"local_group_policy", "local_group2_policy"}),
 		},
 	})
 }
@@ -67,17 +80,15 @@ func testLoginWrite(t *testing.T, username, password, reason string, policies []
 				if reason == "" {
 					return resp.Error()
 				} else if !strings.Contains(resp.Error().Error(), reason) {
-					return fmt.Errorf("Expected '%s' but got '%s'\n", reason, resp.Error().Error())
+					return fmt.Errorf("expected '%s' but got '%s'", reason, resp.Error().Error())
 				}
 			}
 
-			/*
-				if resp.Auth != nil {
-					if !policyutil.EquivalentPolicies(resp.Auth.Policies, policies) {
-						return fmt.Errorf("policy mismatch expected %v but got %v", policies, resp.Auth.Policies)
-					}
+			if resp.Auth != nil {
+				if !policyutil.EquivalentPolicies(resp.Auth.Policies, policies) {
+					return fmt.Errorf("policy mismatch; expected %v but got %v", policies, resp.Auth.Policies)
 				}
-			*/
+			}
 
 			return nil
 		},
@@ -113,12 +124,20 @@ func testConfigRead(t *testing.T, d map[string]interface{}) logicaltest.TestStep
 				return fmt.Errorf("ProviderURL mismatch expected %s but got %s", d["provider_url"], resp.Data["ProviderURL"])
 			}
 
+			if resp.Data["UserInfoURL"] != d["userinfo_url"] {
+				return fmt.Errorf("UserInfoURL mismatch expected %s but got %s", d["userinfo_url"], resp.Data["UserInfoURL"])
+			}
+
 			if resp.Data["ClientID"] != d["client_id"] {
 				return fmt.Errorf("ClientID mismatch expected %s but got %s", d["client_id"], resp.Data["ClientID"])
 			}
 
+			if resp.Data["Scope"] != d["scope"] {
+				return fmt.Errorf("Scope mismatch expected %s but got %s", d["scope"], resp.Data["Scope"])
+			}
+
 			if _, present := resp.Data["ClientSecret"]; present {
-				return fmt.Errorf("ClientSecret should not be readable!")
+				return fmt.Errorf("ClientSecret should not be readable")
 			}
 
 			return nil
@@ -133,6 +152,10 @@ func testAccPreCheck(t *testing.T) {
 
 	if v := os.Getenv("VT_OAUTH_PASSWORD"); v == "" {
 		t.Fatal("VT_OAUTH_PASSWORD must be set for acceptance tests")
+	}
+
+	if v := os.Getenv("VT_OAUTH_PROVIDER_URL"); v == "" {
+		t.Fatal("VT_OAUTH_PROVIDER_URL must be set for acceptance tests")
 	}
 }
 
