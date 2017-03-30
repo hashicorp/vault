@@ -1,5 +1,6 @@
 #header {
-  // Hamburger menu
+  background: $header-background-color;
+
   .navbar-toggle {
     height: $header-height;
     margin: 0;
@@ -7,44 +8,42 @@
     border-radius: 0;
 
     .icon-bar {
-      border: 1px solid $black;
+      border: 1px solid $white;
       border-radius: 0;
     }
   }
 
-  // Logo
   .navbar-brand {
     display: block;
     margin: 0;
     padding: 0;
 
-    .logo {
-      color: $header-link-color;
-      display: inline-block;
-      font-family: $font-family-klavika;
-      font-weight: $font-weight-bold;
-      font-size: 0;
+    a {
+      display: flex;
+      align-items: center;
       height: $header-height;
       line-height: $header-height;
-      width: 200px;
-      padding-left: 64px;
-      background: image-url('logo-text.svg') 0 0 no-repeat;
-      background-position: left center;
 
-      &:hover, &:focus, &:active {
-        outline: 0;
-        text-decoration: none;
+      svg.logo {
+        transition: opacity 0.15s ease-in-out;
+        @extend svg.logo.white;
+
+        &:hover, &:focus, &:active {
+          opacity: 0.6;
+          outline: 0;
+          text-decoration: none;
+        }
       }
     }
   }
 
-  // Nav
   ul.nav {
     li {
       a {
         color: $header-link-color;
         font-size: $header-font-size;
         font-family: $font-family-open-sans;
+        font-weight: $font-weight-bold;
         height: $header-height;
         line-height: $header-height;
         padding: 0 10px;

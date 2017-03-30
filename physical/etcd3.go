@@ -32,6 +32,9 @@ type EtcdBackend struct {
 	etcd *clientv3.Client
 }
 
+// etcd default lease duration is 60s. set to 15s for faster recovery.
+const etcd3LockTimeoutInSeconds = 15
+
 // newEtcd3Backend constructs a etcd3 backend.
 func newEtcd3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 	// Get the etcd path form the configuration.
@@ -228,7 +231,7 @@ type EtcdLock struct {
 
 // Lock is used for mutual exclusion based on the given key.
 func (c *EtcdBackend) LockWith(key, value string) (Lock, error) {
-	session, err := concurrency.NewSession(c.etcd)
+	session, err := concurrency.NewSession(c.etcd, concurrency.WithTTL(etcd3LockTimeoutInSeconds))
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +265,7 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		}
 		return nil, err
 	}
-	if _, err := c.etcd.Put(ctx, c.etcdMu.Key(), c.value); err != nil {
+	if _, err := c.etcd.Put(ctx, c.etcdMu.Key(), c.value, clientv3.WithLease(c.etcdSession.Lease())); err != nil {
 		return nil, err
 	}
 
