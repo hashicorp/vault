@@ -10,7 +10,7 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 )
 
-func TestMySQLBackend(t *testing.T) {
+func TestMsSQLBackend(t *testing.T) {
 	server := os.Getenv("MSSQL_SERVER")
 	if server == "" {
 		t.SkipNow()
