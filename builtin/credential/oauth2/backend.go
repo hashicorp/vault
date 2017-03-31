@@ -3,6 +3,7 @@ package oauth2
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -67,7 +68,8 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/oauth2: Groups fetched", "num_groups", len(oauthGroups), "groups", oauthGroups)
+		b.Logger().Debug("auth/oauth2: Groups fetched", "num_groups", len(oauthGroups),
+			"groups", oauthGroups)
 	}
 
 	oauthResponse := &logical.Response{
@@ -84,7 +86,8 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	user, err := b.User(req.Storage, username)
 	if err == nil && user != nil && user.Groups != nil {
 		if b.Logger().IsDebug() {
-			b.Logger().Debug("auth/oauth2: adding local groups", "num_local_groups", len(user.Groups), "local_groups", user.Groups)
+			b.Logger().Debug("auth/oauth2: adding local groups", "num_local_groups",
+				len(user.Groups), "local_groups", user.Groups)
 		}
 		allGroups = append(allGroups, user.Groups...)
 	}
@@ -119,23 +122,25 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 }
 
 func (b *backend) getOauthGroups(cfg *ConfigEntry, oauthConfig *goauth2.Config, token *goauth2.Token) ([]string, error) {
-	groups := []string{"mock-oauth-entitlement"} // FIXME
+	groups := []string{}
 	if len(cfg.UserInfoURL) != 0 {
 		client := oauthConfig.Client(goauth2.NoContext, token)
 		res, err := client.Get(cfg.UserInfoURL)
 		if err != nil {
 			return nil, err
 		}
+		defer res.Body.Close()
 
 		var parsed map[string]interface{}
 		err = json.NewDecoder(res.Body).Decode(&parsed)
 		if err != nil {
 			return nil, err
 		}
-		groupsRaw := parsed["groups"].([]interface{})
-		groups := make([]string, 0, len(groupsRaw))
-		for i, group := range groupsRaw {
-			groups[i] = group.(string)
+
+		// groups are expected to be returned as a comma-separated string
+		groups = strings.Split(parsed[cfg.UserInfoGroupKey].(string), ",")
+		for i, group := range groups {
+			groups[i] = strings.TrimSpace(group)
 		}
 	}
 	return groups, nil

@@ -15,23 +15,29 @@ func pathConfig(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"provider_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The Oauth2 API endpoint to use to authenticate users.",
+				Description: `The Oauth2 API endpoint to use to authenticate users.`,
 			},
 			"userinfo_url": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The URL to query after authenticating a user to get any group memberships",
+				Description: `The URL to query after authenticating a user to get any group memberships`,
+			},
+			"userinfo_group_key": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `The key name of the field in the userinfo JSON response body that
+ contains a comma-separated list of groups to which the user belongs.`,
 			},
 			"client_id": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The Client ID Vault should use to authenticate with the oauth2 provider.",
+				Description: `The Client ID Vault should use to authenticate with the oauth2 provider.`,
 			},
 			"client_secret": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The Client Secret Vault should use to authenticate with the oauth2 provider.",
+				Description: `The Client Secret Vault should use to authenticate with the oauth2 provider.`,
 			},
 			"scope": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "The Oauth Scope that will provide access to group membership when making a request to the UserInfoURL.",
+				Type: framework.TypeString,
+				Description: `The Oauth Scope that will provide access to group membership when making
+ a request to the UserInfoURL.`,
 			},
 		},
 
@@ -81,10 +87,11 @@ func (b *backend) pathConfigRead(
 	// Don't reveal the client secret
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"ProviderURL": cfg.ProviderURL,
-			"UserInfoURL": cfg.UserInfoURL,
-			"ClientID":    cfg.ClientID,
-			"Scope":       cfg.Scope,
+			"ProviderURL":      cfg.ProviderURL,
+			"UserInfoURL":      cfg.UserInfoURL,
+			"UserInfoGroupKey": cfg.UserInfoGroupKey,
+			"ClientID":         cfg.ClientID,
+			"Scope":            cfg.Scope,
 		},
 	}
 
@@ -113,17 +120,18 @@ func (b *backend) pathConfigWrite(
 		}
 	}
 
-	// Client ID, Secret, & Scope Vault should use to authenticate with oauth2 provider
+	userinfoGroupKey := data.Get("userinfo_group_key").(string)
 	clientID := data.Get("client_id").(string)
 	clientSecret := data.Get("client_secret").(string)
 	scope := data.Get("scope").(string)
 
 	entry, err := logical.StorageEntryJSON("config", ConfigEntry{
-		ProviderURL:  providerURL,
-		UserInfoURL:  userinfoURL,
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		Scope:        scope,
+		ProviderURL:      providerURL,
+		UserInfoURL:      userinfoURL,
+		UserInfoGroupKey: userinfoGroupKey,
+		ClientID:         clientID,
+		ClientSecret:     clientSecret,
+		Scope:            scope,
 	})
 	if err != nil {
 		return nil, err
@@ -153,18 +161,21 @@ func (c *ConfigEntry) OauthConfig() *goauth2.Config {
 		Endpoint: goauth2.Endpoint{
 			TokenURL: c.ProviderURL,
 		},
-		Scopes: []string{c.Scope},
+	}
+	if len(c.Scope) != 0 {
+		config.Scopes = []string{c.Scope}
 	}
 	return config
 }
 
 // Vault ConfigEntry for oauth2
 type ConfigEntry struct {
-	ProviderURL  string `json:"provider_url"`
-	UserInfoURL  string `json:"userinfo_url"`
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	Scope        string `json:"scope"`
+	ProviderURL      string `json:"provider_url"`
+	UserInfoURL      string `json:"userinfo_url"`
+	UserInfoGroupKey string `json:"userinfo_group_key"`
+	ClientID         string `json:"client_id"`
+	ClientSecret     string `json:"client_secret"`
+	Scope            string `json:"scope"`
 }
 
 const pathConfigHelp = `

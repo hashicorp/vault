@@ -63,7 +63,6 @@ login by specifying username and password. If password is not provided
 on the command line, it will be read from stdin.
 
     Example: vault auth -method=oauth2 username=jdoe
-
     `
 
 	return strings.TrimSpace(help)
