@@ -440,7 +440,7 @@ func (s *Session) routingKeyInfo(ctx context.Context, stmt string) (*routingKeyI
 	if cached {
 		// done accessing the cache
 		s.routingKeyInfoCache.mu.Unlock()
-		// the entry is an inflight struct similiar to that used by
+		// the entry is an inflight struct similar to that used by
 		// Conn to prepare statements
 		inflight := entry.(*inflightCachedEntry)
 
@@ -471,7 +471,7 @@ func (s *Session) routingKeyInfo(ctx context.Context, stmt string) (*routingKeyI
 	conn := s.getConn()
 	if conn == nil {
 		// TODO: better error?
-		inflight.err = errors.New("gocql: unable to fetch preapred info: no connection avilable")
+		inflight.err = errors.New("gocql: unable to fetch prepared info: no connection available")
 		return nil, inflight.err
 	}
 
@@ -1022,6 +1022,7 @@ func (q *Query) reset() {
 	q.defaultTimestamp = false
 	q.disableSkipMetadata = false
 	q.disableAutoPage = false
+	q.context = nil
 }
 
 // Iter represents an iterator that can be used to iterate over all rows that

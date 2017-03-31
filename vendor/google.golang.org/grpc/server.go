@@ -53,6 +53,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/internal"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/tap"
@@ -116,12 +117,21 @@ type options struct {
 	statsHandler         stats.Handler
 	maxConcurrentStreams uint32
 	useHandlerImpl       bool // use http.Handler-based server
+	unknownStreamDesc    *StreamDesc
+	keepaliveParams      keepalive.ServerParameters
 }
 
 var defaultMaxMsgSize = 1024 * 1024 * 4 // use 4MB as the default message size limit
 
 // A ServerOption sets options.
 type ServerOption func(*options)
+
+// KeepaliveParams returns a ServerOption that sets keepalive and max-age parameters for the server.
+func KeepaliveParams(kp keepalive.ServerParameters) ServerOption {
+	return func(o *options) {
+		o.keepaliveParams = kp
+	}
+}
 
 // CustomCodec returns a ServerOption that sets a codec for message marshaling and unmarshaling.
 func CustomCodec(codec Codec) ServerOption {
@@ -205,6 +215,24 @@ func InTapHandle(h tap.ServerInHandle) ServerOption {
 func StatsHandler(h stats.Handler) ServerOption {
 	return func(o *options) {
 		o.statsHandler = h
+	}
+}
+
+// UnknownServiceHandler returns a ServerOption that allows for adding a custom
+// unknown service handler. The provided method is a bidi-streaming RPC service
+// handler that will be invoked instead of returning the the "unimplemented" gRPC
+// error whenever a request is received for an unregistered service or method.
+// The handling function has full access to the Context of the request and the
+// stream, and the invocation passes through interceptors.
+func UnknownServiceHandler(streamHandler StreamHandler) ServerOption {
+	return func(o *options) {
+		o.unknownStreamDesc = &StreamDesc{
+			StreamName: "unknown_service_handler",
+			Handler:    streamHandler,
+			// We need to assume that the users of the streamHandler will want to use both.
+			ClientStreams: true,
+			ServerStreams: true,
+		}
 	}
 }
 
@@ -446,10 +474,11 @@ func (s *Server) handleRawConn(rawConn net.Conn) {
 // transport.NewServerTransport).
 func (s *Server) serveHTTP2Transport(c net.Conn, authInfo credentials.AuthInfo) {
 	config := &transport.ServerConfig{
-		MaxStreams:   s.opts.maxConcurrentStreams,
-		AuthInfo:     authInfo,
-		InTapHandle:  s.opts.inTapHandle,
-		StatsHandler: s.opts.statsHandler,
+		MaxStreams:      s.opts.maxConcurrentStreams,
+		AuthInfo:        authInfo,
+		InTapHandle:     s.opts.inTapHandle,
+		StatsHandler:    s.opts.statsHandler,
+		KeepaliveParams: s.opts.keepaliveParams,
 	}
 	st, err := transport.NewServerTransport("http2", c, config)
 	if err != nil {
@@ -815,15 +844,19 @@ func (s *Server) processStreamingRPC(t transport.ServerTransport, stream *transp
 		}()
 	}
 	var appErr error
+	var server interface{}
+	if srv != nil {
+		server = srv.server
+	}
 	if s.opts.streamInt == nil {
-		appErr = sd.Handler(srv.server, ss)
+		appErr = sd.Handler(server, ss)
 	} else {
 		info := &StreamServerInfo{
 			FullMethod:     stream.Method(),
 			IsClientStream: sd.ClientStreams,
 			IsServerStream: sd.ServerStreams,
 		}
-		appErr = s.opts.streamInt(srv.server, ss, info, sd.Handler)
+		appErr = s.opts.streamInt(server, ss, info, sd.Handler)
 	}
 	if appErr != nil {
 		if err, ok := appErr.(*rpcError); ok {
@@ -883,6 +916,10 @@ func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Str
 	method := sm[pos+1:]
 	srv, ok := s.m[service]
 	if !ok {
+		if unknownDesc := s.opts.unknownStreamDesc; unknownDesc != nil {
+			s.processStreamingRPC(t, stream, nil, unknownDesc, trInfo)
+			return
+		}
 		if trInfo != nil {
 			trInfo.tr.LazyLog(&fmtStringer{"Unknown service %v", []interface{}{service}}, true)
 			trInfo.tr.SetError()
@@ -912,6 +949,10 @@ func (s *Server) handleStream(t transport.ServerTransport, stream *transport.Str
 	if trInfo != nil {
 		trInfo.tr.LazyLog(&fmtStringer{"Unknown method %v", []interface{}{method}}, true)
 		trInfo.tr.SetError()
+	}
+	if unknownDesc := s.opts.unknownStreamDesc; unknownDesc != nil {
+		s.processStreamingRPC(t, stream, nil, unknownDesc, trInfo)
+		return
 	}
 	errDesc := fmt.Sprintf("unknown method %v", method)
 	if err := t.WriteStatus(stream, codes.Unimplemented, errDesc); err != nil {

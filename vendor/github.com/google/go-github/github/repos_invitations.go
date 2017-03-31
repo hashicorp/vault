@@ -28,8 +28,8 @@ type RepositoryInvitation struct {
 // ListInvitations lists all currently-open repository invitations.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/invitations/#list-invitations-for-a-repository
-func (s *RepositoriesService) ListInvitations(ctx context.Context, repoID int, opt *ListOptions) ([]*RepositoryInvitation, *Response, error) {
-	u := fmt.Sprintf("repositories/%v/invitations", repoID)
+func (s *RepositoriesService) ListInvitations(ctx context.Context, owner, repo string, opt *ListOptions) ([]*RepositoryInvitation, *Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/invitations", owner, repo)
 	u, err := addOptions(u, opt)
 	if err != nil {
 		return nil, nil, err
@@ -55,8 +55,8 @@ func (s *RepositoriesService) ListInvitations(ctx context.Context, repoID int, o
 // DeleteInvitation deletes a repository invitation.
 //
 // GitHub API docs: https://developer.github.com/v3/repos/invitations/#delete-a-repository-invitation
-func (s *RepositoriesService) DeleteInvitation(ctx context.Context, repoID, invitationID int) (*Response, error) {
-	u := fmt.Sprintf("repositories/%v/invitations/%v", repoID, invitationID)
+func (s *RepositoriesService) DeleteInvitation(ctx context.Context, owner, repo string, invitationID int) (*Response, error) {
+	u := fmt.Sprintf("repos/%v/%v/invitations/%v", owner, repo, invitationID)
 	req, err := s.client.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return nil, err
@@ -75,11 +75,11 @@ func (s *RepositoriesService) DeleteInvitation(ctx context.Context, repoID, invi
 // on the repository. Possible values are: "read", "write", "admin".
 //
 // GitHub API docs: https://developer.github.com/v3/repos/invitations/#update-a-repository-invitation
-func (s *RepositoriesService) UpdateInvitation(ctx context.Context, repoID, invitationID int, permissions string) (*RepositoryInvitation, *Response, error) {
+func (s *RepositoriesService) UpdateInvitation(ctx context.Context, owner, repo string, invitationID int, permissions string) (*RepositoryInvitation, *Response, error) {
 	opts := &struct {
 		Permissions string `json:"permissions"`
 	}{Permissions: permissions}
-	u := fmt.Sprintf("repositories/%v/invitations/%v", repoID, invitationID)
+	u := fmt.Sprintf("repos/%v/%v/invitations/%v", owner, repo, invitationID)
 	req, err := s.client.NewRequest("PATCH", u, opts)
 	if err != nil {
 		return nil, nil, err

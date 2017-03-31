@@ -508,6 +508,26 @@ func (sig *Signature) KeyExpired(currentTime time.Time) bool {
 	return currentTime.After(expiry)
 }
 
+// ExpiresBeforeOther checks if other signature has expiration at
+// later date than sig.
+func (sig *Signature) ExpiresBeforeOther(other *Signature) bool {
+	if sig.KeyLifetimeSecs == nil {
+		// This sig never expires, or has infinitely long expiration
+		// time.
+		return false
+	} else if other.KeyLifetimeSecs == nil {
+		// This sig expires at some non-infinite point, but the other
+		// sig never expires.
+		return true
+	}
+
+	getExpiryDate := func(s *Signature) time.Time {
+		return s.CreationTime.Add(time.Duration(*s.KeyLifetimeSecs) * time.Second)
+	}
+
+	return getExpiryDate(other).After(getExpiryDate(sig))
+}
+
 // buildHashSuffix constructs the HashSuffix member of sig in preparation for signing.
 func (sig *Signature) buildHashSuffix() (err error) {
 	hashedSubpacketsLen := subpacketsLength(sig.outSubpackets, true)
@@ -596,6 +616,12 @@ func (sig *Signature) Sign(h hash.Hash, priv *PrivateKey, config *Config) (err e
 			sig.ECDSASigR = FromBig(r)
 			sig.ECDSASigS = FromBig(s)
 		}
+	case PubKeyAlgoEdDSA:
+		r, s, err := priv.PrivateKey.(*EdDSAPrivateKey).Sign(digest)
+		if err == nil {
+			sig.EdDSASigR = FromBytes(r)
+			sig.EdDSASigS = FromBytes(s)
+		}
 	default:
 		err = errors.UnsupportedError("public key algorithm: " + strconv.Itoa(int(sig.PubKeyAlgo)))
 	}
@@ -651,7 +677,10 @@ func (sig *Signature) Serialize(w io.Writer) (err error) {
 	if len(sig.outSubpackets) == 0 {
 		sig.outSubpackets = sig.rawSubpackets
 	}
-	if sig.RSASignature.bytes == nil && sig.DSASigR.bytes == nil && sig.ECDSASigR.bytes == nil {
+	if sig.RSASignature.bytes == nil &&
+		sig.DSASigR.bytes == nil &&
+		sig.ECDSASigR.bytes == nil &&
+		sig.EdDSASigR.bytes == nil {
 		return errors.InvalidArgumentError("Signature: need to call Sign, SignUserId or SignKey before Serialize")
 	}
 
