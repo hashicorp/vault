@@ -63,12 +63,23 @@ func newSwiftBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		tenant = conf["tenant"]
 	}
 
+	domain := os.Getenv("OS_USER_DOMAIN_NAME")
+	if domain == "" {
+		domain = conf["domain"]
+	}
+	tenantDomain := os.Getenv("OS_PROJECT_DOMAIN_NAME")
+	if tenantDomain == "" {
+		tenantDomain = conf["tenant-domain"]
+	}
+
 	c := swift.Connection{
-		UserName:  username,
-		ApiKey:    password,
-		AuthUrl:   authUrl,
-		Tenant:    tenant,
-		Transport: cleanhttp.DefaultPooledTransport(),
+		Domain:       domain,
+		UserName:     username,
+		ApiKey:       password,
+		AuthUrl:      authUrl,
+		Tenant:       tenant,
+		TenantDomain: tenantDomain,
+		Transport:    cleanhttp.DefaultPooledTransport(),
 	}
 
 	err := c.Authenticate()
