@@ -13,10 +13,9 @@ import (
 )
 
 func cloneTLSConfig(c *tls.Config) *tls.Config {
-	// MODIFIED from upstream to work around Go bug
-	ret := c.Clone()
-	ret.GetClientCertificate = c.GetClientCertificate
-	return ret
+	c2 := c.Clone()
+	c2.GetClientCertificate = c.GetClientCertificate // golang.org/issue/19264
+	return c2
 }
 
 var _ http.Pusher = (*responseWriter)(nil)

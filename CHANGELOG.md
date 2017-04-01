@@ -8,6 +8,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * storage/consul: Properly handle state events rather than timing out
+   [GH-2548]
  * storage/etcd3: Ensure locks are released if client is improperly shut down
    [GH-2526]
 

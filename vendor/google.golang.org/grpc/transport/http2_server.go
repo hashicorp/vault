@@ -38,9 +38,12 @@ import (
 	"errors"
 	"io"
 	"math"
+	"math/rand"
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
@@ -48,6 +51,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/grpclog"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
@@ -90,11 +94,22 @@ type http2Server struct {
 
 	stats stats.Handler
 
+	// Flag to keep track of reading activity on transport.
+	// 1 is true and 0 is false.
+	activity uint32 // Accessed atomically.
+	// Keepalive and max-age parameters for the server.
+	kp keepalive.ServerParameters
+
 	mu            sync.Mutex // guard the following
 	state         transportState
 	activeStreams map[uint32]*Stream
 	// the per-stream outbound flow control window size set by the peer.
 	streamSendQuota uint32
+	// idle is the time instant when the connection went idle.
+	// This is either the begining of the connection or when the number of
+	// RPCs go down to 0.
+	// When the connection is busy, this value is set to 0.
+	idle time.Time
 }
 
 // newHTTP2Server constructs a ServerTransport based on HTTP2. ConnectionError is
@@ -128,6 +143,24 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 			return nil, connectionErrorf(true, err, "transport: %v", err)
 		}
 	}
+	kp := config.KeepaliveParams
+	if kp.MaxConnectionIdle == 0 {
+		kp.MaxConnectionIdle = defaultMaxConnectionIdle
+	}
+	if kp.MaxConnectionAge == 0 {
+		kp.MaxConnectionAge = defaultMaxConnectionAge
+	}
+	// Add a jitter to MaxConnectionAge.
+	kp.MaxConnectionAge += getJitter(kp.MaxConnectionAge)
+	if kp.MaxConnectionAgeGrace == 0 {
+		kp.MaxConnectionAgeGrace = defaultMaxConnectionAgeGrace
+	}
+	if kp.Time == 0 {
+		kp.Time = defaultServerKeepaliveTime
+	}
+	if kp.Timeout == 0 {
+		kp.Timeout = defaultServerKeepaliveTimeout
+	}
 	var buf bytes.Buffer
 	t := &http2Server{
 		ctx:             context.Background(),
@@ -149,6 +182,8 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 		activeStreams:   make(map[uint32]*Stream),
 		streamSendQuota: defaultWindowSize,
 		stats:           config.StatsHandler,
+		kp:              kp,
+		idle:            time.Now(),
 	}
 	if t.stats != nil {
 		t.ctx = t.stats.TagConn(t.ctx, &stats.ConnTagInfo{
@@ -159,6 +194,7 @@ func newHTTP2Server(conn net.Conn, config *ServerConfig) (_ ServerTransport, err
 		t.stats.HandleConn(t.ctx, connBegin)
 	}
 	go t.controller()
+	go t.keepalive()
 	t.writableChan <- 0
 	return t, nil
 }
@@ -248,6 +284,9 @@ func (t *http2Server) operateHeaders(frame *http2.MetaHeadersFrame, handle func(
 	t.maxStreamID = s.id
 	s.sendQuotaPool = newQuotaPool(int(t.streamSendQuota))
 	t.activeStreams[s.id] = s
+	if len(t.activeStreams) == 1 {
+		t.idle = time.Time{}
+	}
 	t.mu.Unlock()
 	s.windowHandler = func(n int) {
 		t.updateWindow(s, uint32(n))
@@ -295,6 +334,7 @@ func (t *http2Server) HandleStreams(handle func(*Stream), traceCtx func(context.
 		t.Close()
 		return
 	}
+	atomic.StoreUint32(&t.activity, 1)
 	sf, ok := frame.(*http2.SettingsFrame)
 	if !ok {
 		grpclog.Printf("transport: http2Server.HandleStreams saw invalid preface type %T from client", frame)
@@ -305,6 +345,7 @@ func (t *http2Server) HandleStreams(handle func(*Stream), traceCtx func(context.
 
 	for {
 		frame, err := t.framer.readFrame()
+		atomic.StoreUint32(&t.activity, 1)
 		if err != nil {
 			if se, ok := err.(http2.StreamError); ok {
 				t.mu.Lock()
@@ -381,7 +422,7 @@ func (t *http2Server) updateWindow(s *Stream, n uint32) {
 }
 
 func (t *http2Server) handleData(f *http2.DataFrame) {
-	size := len(f.Data())
+	size := f.Header().Length
 	if err := t.fc.onData(uint32(size)); err != nil {
 		grpclog.Printf("transport: http2Server %v", err)
 		t.Close()
@@ -396,6 +437,11 @@ func (t *http2Server) handleData(f *http2.DataFrame) {
 		return
 	}
 	if size > 0 {
+		if f.Header().Flags.Has(http2.FlagDataPadded) {
+			if w := t.fc.onRead(uint32(size) - uint32(len(f.Data()))); w > 0 {
+				t.controlBuf.put(&windowUpdate{0, w})
+			}
+		}
 		s.mu.Lock()
 		if s.state == streamDone {
 			s.mu.Unlock()
@@ -411,13 +457,20 @@ func (t *http2Server) handleData(f *http2.DataFrame) {
 			t.controlBuf.put(&resetStream{s.id, http2.ErrCodeFlowControl})
 			return
 		}
+		if f.Header().Flags.Has(http2.FlagDataPadded) {
+			if w := s.fc.onRead(uint32(size) - uint32(len(f.Data()))); w > 0 {
+				t.controlBuf.put(&windowUpdate{s.id, w})
+			}
+		}
 		s.mu.Unlock()
 		// TODO(bradfitz, zhaoq): A copy is required here because there is no
 		// guarantee f.Data() is consumed before the arrival of next frame.
 		// Can this copy be eliminated?
-		data := make([]byte, size)
-		copy(data, f.Data())
-		s.write(recvMsg{data: data})
+		if len(f.Data()) > 0 {
+			data := make([]byte, len(f.Data()))
+			copy(data, f.Data())
+			s.write(recvMsg{data: data})
+		}
 	}
 	if f.Header().Flags.Has(http2.FlagDataEndStream) {
 		// Received the end of stream from the client.
@@ -723,6 +776,91 @@ func (t *http2Server) applySettings(ss []http2.Setting) {
 	}
 }
 
+// keepalive running in a separate goroutine does the following:
+// 1. Gracefully closes an idle connection after a duration of keepalive.MaxConnectionIdle.
+// 2. Gracefully closes any connection after a duration of keepalive.MaxConnectionAge.
+// 3. Forcibly closes a connection after an additive period of keepalive.MaxConnectionAgeGrace over keepalive.MaxConnectionAge.
+// 4. Makes sure a connection is alive by sending pings with a frequency of keepalive.Time and closes a non-resposive connection
+// after an additional duration of keepalive.Timeout.
+func (t *http2Server) keepalive() {
+	p := &ping{}
+	var pingSent bool
+	maxIdle := time.NewTimer(t.kp.MaxConnectionIdle)
+	maxAge := time.NewTimer(t.kp.MaxConnectionAge)
+	keepalive := time.NewTimer(t.kp.Time)
+	// NOTE: All exit paths of this function should reset their
+	// respecitve timers. A failure to do so will cause the
+	// following clean-up to deadlock and eventually leak.
+	defer func() {
+		if !maxIdle.Stop() {
+			<-maxIdle.C
+		}
+		if !maxAge.Stop() {
+			<-maxAge.C
+		}
+		if !keepalive.Stop() {
+			<-keepalive.C
+		}
+	}()
+	for {
+		select {
+		case <-maxIdle.C:
+			t.mu.Lock()
+			idle := t.idle
+			if idle.IsZero() { // The connection is non-idle.
+				t.mu.Unlock()
+				maxIdle.Reset(t.kp.MaxConnectionIdle)
+				continue
+			}
+			val := t.kp.MaxConnectionIdle - time.Since(idle)
+			if val <= 0 {
+				// The connection has been idle for a duration of keepalive.MaxConnectionIdle or more.
+				// Gracefully close the connection.
+				t.state = draining
+				t.mu.Unlock()
+				t.Drain()
+				// Reseting the timer so that the clean-up doesn't deadlock.
+				maxIdle.Reset(infinity)
+				return
+			}
+			t.mu.Unlock()
+			maxIdle.Reset(val)
+		case <-maxAge.C:
+			t.mu.Lock()
+			t.state = draining
+			t.mu.Unlock()
+			t.Drain()
+			maxAge.Reset(t.kp.MaxConnectionAgeGrace)
+			select {
+			case <-maxAge.C:
+				// Close the connection after grace period.
+				t.Close()
+				// Reseting the timer so that the clean-up doesn't deadlock.
+				maxAge.Reset(infinity)
+			case <-t.shutdownChan:
+			}
+			return
+		case <-keepalive.C:
+			if atomic.CompareAndSwapUint32(&t.activity, 1, 0) {
+				pingSent = false
+				keepalive.Reset(t.kp.Time)
+				continue
+			}
+			if pingSent {
+				t.Close()
+				// Reseting the timer so that the clean-up doesn't deadlock.
+				keepalive.Reset(infinity)
+				return
+			}
+			pingSent = true
+			t.controlBuf.put(p)
+			keepalive.Reset(t.kp.Timeout)
+		case <-t.shutdownChan:
+			return
+		}
+	}
+}
+
 // controller running in a separate goroutine takes charge of sending control
 // frames (e.g., window update, reset stream, setting, etc.) to the server.
 func (t *http2Server) controller() {
@@ -804,6 +942,9 @@ func (t *http2Server) Close() (err error) {
 func (t *http2Server) closeStream(s *Stream) {
 	t.mu.Lock()
 	delete(t.activeStreams, s.id)
+	if len(t.activeStreams) == 0 {
+		t.idle = time.Now()
+	}
 	if t.state == draining && len(t.activeStreams) == 0 {
 		defer t.Close()
 	}
@@ -832,4 +973,16 @@ func (t *http2Server) RemoteAddr() net.Addr {
 
 func (t *http2Server) Drain() {
 	t.controlBuf.put(&goAway{})
+}
+
+var rgen = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func getJitter(v time.Duration) time.Duration {
+	if v == infinity {
+		return 0
+	}
+	// Generate a jitter between +/- 10% of the value.
+	r := int64(v / 10)
+	j := rgen.Int63n(2*r) - r
+	return time.Duration(j)
 }
