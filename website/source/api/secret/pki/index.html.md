@@ -68,7 +68,7 @@ $ curl \
 
 ## Read Certificate
 
-This endpoint etrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
+This endpoint retrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
 `certificate` key of the JSON object.
 
 This is an unauthenticated endpoint.
