@@ -1339,6 +1339,8 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// good enough rather than having to muck around in the low-level details
 	for _, envvar := range []string{
 		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SECURITY_TOKEN", "AWS_SESSION_TOKEN"} {
+		// restore existing environment variables (in case future tests need them)
+		defer os.Setenv(envvar, os.Getenv(envvar))
 		os.Setenv(envvar, os.Getenv("TEST_"+envvar))
 	}
 	awsSession, err := session.NewSession()
@@ -1348,7 +1350,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	stsService := sts.New(awsSession)
-	var stsInputParams *sts.GetCallerIdentityInput
+	stsInputParams := &sts.GetCallerIdentityInput{}
 
 	testIdentity, err := stsService.GetCallerIdentity(stsInputParams)
 	if err != nil {

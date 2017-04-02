@@ -1379,7 +1379,7 @@ auth method only when inferring an ec2 instance.
         <span class="param-flags">optional</span>
         If set, enables the role tags for this role. The value set for this
         field should be the 'key' of the tag on the EC2 instance. The 'value'
-        of the tag should be generated using 'role/<role>/tag' endpoint.
+        of the tag should be generated using `role/<role>/tag` endpoint.
         Defaults to an empty string, meaning that role tags are disabled. This
         constraint is checked by the ec2 auth method as well as the iam auth
         method only when inferring an EC2 instance.

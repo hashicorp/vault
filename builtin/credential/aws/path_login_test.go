@@ -85,7 +85,7 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	const canaryHeaderValue = "Vault-Server"
 	requestUrl, err := url.Parse("https://sts.amazonaws.com/")
 	if err != nil {
-		t.Fatalf("error parsing test URL: %s", err)
+		t.Fatalf("error parsing test URL: %v", err)
 	}
 	postHeadersMissing := http.Header{
 		"Host":          []string{"Foo"},
@@ -130,11 +130,11 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 
 	err = validateVaultHeaderValue(postHeadersValid, requestUrl, canaryHeaderValue)
 	if err != nil {
-		t.Errorf("did NOT validate valid POST request: %s", err)
+		t.Errorf("did NOT validate valid POST request: %v", err)
 	}
 
 	err = validateVaultHeaderValue(postHeadersSplit, requestUrl, canaryHeaderValue)
 	if err != nil {
-		t.Errorf("did NOT validate valid POST request with split Authorization header: %s", err)
+		t.Errorf("did NOT validate valid POST request with split Authorization header: %v", err)
 	}
 }

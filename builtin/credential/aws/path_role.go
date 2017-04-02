@@ -405,7 +405,7 @@ func (b *backend) pathRoleCreateUpdate(
 	}
 
 	if inferRoleTypeRaw, ok := data.GetOk("inferred_entity_type"); ok {
-		roleEntry.RoleInferredType = inferRoleTypeRaw.(string)
+		roleEntry.InferredEntityType = inferRoleTypeRaw.(string)
 	}
 
 	if inferredAWSRegionRaw, ok := data.GetOk("inferred_aws_region"); ok {
@@ -433,12 +433,12 @@ func (b *backend) pathRoleCreateUpdate(
 
 	allowEc2Binds := allowEc2Auth
 
-	if roleEntry.RoleInferredType != "" {
+	if roleEntry.InferredEntityType != "" {
 		switch {
 		case !allowIamAuth:
 			return logical.ErrorResponse("specified inferred_entity_type but didn't allow iam auth_type"), nil
-		case roleEntry.RoleInferredType != ec2EntityType:
-			return logical.ErrorResponse(fmt.Sprintf("specified invalid inferred_entity_type: %s", roleEntry.RoleInferredType)), nil
+		case roleEntry.InferredEntityType != ec2EntityType:
+			return logical.ErrorResponse(fmt.Sprintf("specified invalid inferred_entity_type: %s", roleEntry.InferredEntityType)), nil
 		case roleEntry.InferredAWSRegion == "":
 			return logical.ErrorResponse("specified inferred_entity_type but not inferred_aws_region"), nil
 		}
@@ -603,7 +603,7 @@ type awsRoleEntry struct {
 	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
 	BoundSubnetID              string        `json:"bound_subnet_id" structs:"bound_subnet_id" mapstructure:"bound_subnet_id"`
 	BoundVpcID                 string        `json:"bound_vpc_id" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
-	RoleInferredType           string        `json:"infer_role_type" structs:"infer_role_type" mapstructure:"infer_role_type"`
+	InferredEntityType         string        `json:"inferred_entity_type" structs:"inferred_entity_type" mapstructure:"inferred_entity_type"`
 	InferredAWSRegion          string        `json:"inferred_aws_region" structs:"inferred_aws_region" mapstructure:"inferred_aws_region"`
 	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`

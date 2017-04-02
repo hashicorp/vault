@@ -383,6 +383,10 @@ func (b *backend) pathLoginUpdate(
 
 // Returns whether the EC2 instance meets the requirements of the particular
 // AWS role entry.
+// The first error return value is whether there's some sort of validation
+// error that means the instance doesn't meet the role requirements
+// The second error return value indicates whether there's an error in even
+// trying to validate those requirements
 func (b *backend) verifyInstanceMeetsRoleRequirements(
 	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (*roleTagLoginResponse, error, error) {
 
@@ -410,11 +414,6 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 	stsRole := ""
 	if sts != nil {
 		stsRole = sts.StsRole
-	}
-
-	iamClient, err := b.clientIAM(s, identityDoc.Region, stsRole)
-	if err != nil {
-		iamClient = nil
 	}
 
 	// Verify that the AMI ID of the instance trying to login matches the
@@ -498,8 +497,11 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
-		if iamClient == nil {
-			return nil, nil, fmt.Errorf("could not fetch IAM client")
+		iamClient, err := b.clientIAM(s, identityDoc.Region, stsRole)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not fetch IAM client: %v", err)
+		} else if iamClient == nil {
+			return nil, nil, fmt.Errorf("received a nil iamClient")
 		}
 		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileName)
 		if err != nil {
@@ -935,7 +937,7 @@ func (b *backend) pathLoginRenewIam(
 			}
 			_, err := b.validateInstance(req.Storage, instanceID, roleEntry.InferredAWSRegion, req.Auth.Metadata["accountID"])
 			if err != nil {
-				return nil, fmt.Errorf("failed to verify instance ID %q: %s", instanceID, err)
+				return nil, fmt.Errorf("failed to verify instance ID %q: %v", instanceID, err)
 			}
 		} else {
 			return nil, fmt.Errorf("unrecognized entity_type in metadata: %q", entityType)
@@ -1094,7 +1096,7 @@ func (b *backend) pathLoginUpdateIam(
 	var headers http.Header
 	err = jsonutil.DecodeJSON(headersJson, &headers)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to JSON decode iam_request_headers %q: %s", headersJson, err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("failed to JSON decode iam_request_headers %q: %v", headersJson, err)), nil
 	}
 
 	config, err := b.lockedClientConfigEntry(req.Storage)
@@ -1108,21 +1110,21 @@ func (b *backend) pathLoginUpdateIam(
 		if config.IAMServerIdHeaderValue != "" {
 			err = validateVaultHeaderValue(headers, parsedUrl, config.IAMServerIdHeaderValue)
 			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %s", iamServerIdHeader, err)), nil
+				return logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
 		}
 		if config.STSEndpoint != "" {
-			endpoint = config.Endpoint
+			endpoint = config.STSEndpoint
 		}
 	}
 
 	clientArn, accountID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
 	canonicalArn, principalName, sessionName, err := parseIamArn(clientArn)
 	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error parsing arn: %s", err)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Error parsing arn: %v", err)), nil
 	}
 
 	roleName := data.Get("role").(string)
@@ -1153,7 +1155,7 @@ func (b *backend) pathLoginUpdateIam(
 
 	inferredEntityType := ""
 	inferredEntityId := ""
-	if roleEntry.RoleInferredType == ec2EntityType {
+	if roleEntry.InferredEntityType == ec2EntityType {
 		instance, err := b.validateInstance(req.Storage, sessionName, roleEntry.InferredAWSRegion, accountID)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", sessionName, roleEntry.InferredAWSRegion)), nil
@@ -1265,7 +1267,7 @@ func parseIamArn(iamArn string) (string, string, string, error) {
 	// 1. arn:aws:iam::<account_id>:user/<UserName>
 	// 2. arn:aws:sts::<account_id>:assumed-role/<RoleName>/<RoleSessionName>
 	// if we get something like 2, then we want to transform that back to what
-	// most people would expect, which is arn;aws:iam::<account_id>:role/<RoleName>
+	// most people would expect, which is arn:aws:iam::<account_id>:role/<RoleName>
 	fullParts := strings.Split(iamArn, ":")
 	principalFullName := fullParts[5]
 	// principalFullName would now be something like user/<UserName> or assumed-role/<RoleName>/<RoleSessionName>
@@ -1394,7 +1396,7 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	client := cleanhttp.DefaultClient()
 	response, err := client.Do(request)
 	if err != nil {
-		return "", "", fmt.Errorf("error making request: %s", err)
+		return "", "", fmt.Errorf("error making request: %v", err)
 	}
 	if response != nil {
 		defer response.Body.Close()

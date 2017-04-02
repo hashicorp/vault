@@ -13,14 +13,14 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// getClientConfig creates a aws-sdk-go config, which is used to create client
+// getRawClientConfig creates a aws-sdk-go config, which is used to create client
 // that can interact with AWS API. This builds credentials in the following
 // order of preference:
 //
 // * Static credentials from 'config/client'
 // * Environment variables
 // * Instance metadata role
-func (b *backend) getClientConfig(s logical.Storage, region, clientType string) (*aws.Config, error) {
+func (b *backend) getRawClientConfig(s logical.Storage, region, clientType string) (*aws.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{
 		Region: region,
 	}
@@ -66,33 +66,35 @@ func (b *backend) getClientConfig(s logical.Storage, region, clientType string) 
 	}, nil
 }
 
-// getStsClientConfig returns an aws-sdk-go config, with assumed credentials
-// It uses getClientConfig to obtain config for the runtime environemnt, which is
-// then used to obtain a set of assumed credentials. The credentials will expire
-// after 15 minutes but will auto-refresh.
-func (b *backend) getStsClientConfig(s logical.Storage, region, stsRole, clientType string) (*aws.Config, error) {
-	stsConfig, err := b.getClientConfig(s, region, "sts")
-	if err != nil {
-		return nil, err
-	}
-	if stsConfig == nil {
-		return nil, fmt.Errorf("could not configure STS client")
-	}
+// getClientConfig returns an aws-sdk-go config, with optionally assumed credentials
+// It uses getRawClientConfig to obtain config for the runtime environemnt, and if
+// stsRole is a non-empty string, it will use AssumeRole to obtain a set of assumed
+// credentials. The credentials will expire after 15 minutes but will auto-refresh.
+func (b *backend) getClientConfig(s logical.Storage, region, stsRole, clientType string) (*aws.Config, error) {
 
-	config, err := b.getClientConfig(s, region, clientType)
+	config, err := b.getRawClientConfig(s, region, clientType)
 	if err != nil {
 		return nil, err
 	}
 	if config == nil {
 		return nil, fmt.Errorf("could not compile valid credentials through the default provider chain")
 	}
-	assumedCredentials := stscreds.NewCredentials(session.New(stsConfig), stsRole)
-	// Test that we actually have permissions to assume the role
-	if _, err = assumedCredentials.Get(); err != nil {
-		return nil, err
-	}
 
-	config.Credentials = assumedCredentials
+	if stsRole != "" {
+		assumeRoleConfig, err := b.getRawClientConfig(s, region, "sts")
+		if err != nil {
+			return nil, err
+		}
+		if assumeRoleConfig == nil {
+			return nil, fmt.Errorf("could not configure STS client")
+		}
+		assumedCredentials := stscreds.NewCredentials(session.New(assumeRoleConfig), stsRole)
+		// Test that we actually have permissions to assume the role
+		if _, err = assumedCredentials.Get(); err != nil {
+			return nil, err
+		}
+		config.Credentials = assumedCredentials
+	}
 
 	return config, nil
 }
@@ -141,12 +143,7 @@ func (b *backend) clientEC2(s logical.Storage, region string, stsRole string) (*
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
 	var err error
-	// The empty stsRole signifies the master account
-	if stsRole == "" {
-		awsConfig, err = b.getClientConfig(s, region, "ec2")
-	} else {
-		awsConfig, err = b.getStsClientConfig(s, region, stsRole, "ec2")
-	}
+	awsConfig, err = b.getClientConfig(s, region, stsRole, "ec2")
 
 	if err != nil {
 		return nil, err
@@ -192,12 +189,7 @@ func (b *backend) clientIAM(s logical.Storage, region string, stsRole string) (*
 	// Create an AWS config object using a chain of providers
 	var awsConfig *aws.Config
 	var err error
-	// The empty stsRole signifies the master account
-	if stsRole == "" {
-		awsConfig, err = b.getClientConfig(s, region, "iam")
-	} else {
-		awsConfig, err = b.getStsClientConfig(s, region, stsRole, "iam")
-	}
+	awsConfig, err = b.getClientConfig(s, region, stsRole, "iam")
 
 	if err != nil {
 		return nil, err

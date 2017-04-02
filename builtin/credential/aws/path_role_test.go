@@ -434,7 +434,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"bound_iam_instance_profile_arn": "testiaminstanceprofilearn",
 		"bound_subnet_id":                "testsubnetid",
 		"bound_vpc_id":                   "testvpcid",
-		"infer_role_type":                "",
+		"inferred_entity_type":           "",
 		"inferred_aws_region":            "",
 		"role_tag":                       "testtag",
 		"allow_instance_migration":       true,
