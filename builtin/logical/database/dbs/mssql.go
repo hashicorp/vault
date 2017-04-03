@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"log"
-
 	"github.com/hashicorp/vault/helper/strutil"
 )
 
@@ -50,7 +48,6 @@ func (m *MSSQL) CreateUser(statements Statements, username, password, expiration
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
-		log.Println("here 1")
 		return err
 	}
 	defer tx.Rollback()
@@ -67,20 +64,16 @@ func (m *MSSQL) CreateUser(statements Statements, username, password, expiration
 			"password": password,
 		}))
 		if err != nil {
-			log.Println("here 2")
 			return err
 		}
 		defer stmt.Close()
 		if _, err := stmt.Exec(); err != nil {
-			log.Println("here 3")
-			log.Println(stmt)
 			return err
 		}
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		log.Println("here 4")
 		return err
 	}
 
