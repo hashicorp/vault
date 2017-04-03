@@ -40,9 +40,8 @@ func prepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	}
 
 	retURL = fmt.Sprintf("sqlserver://sa:yourStrong(!)Password@localhost:%s", resource.GetPort("1433/tcp"))
-	// exponential backoff-retry, because the DynamoDB may not be able to accept
-	// connections yet
 
+	// exponential backoff-retry, because the mssql container may not be able to accept connections yet
 	if err = pool.Retry(func() error {
 		var err error
 		var db *sql.DB
