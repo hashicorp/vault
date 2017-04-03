@@ -107,6 +107,9 @@ func (b *Builder) add(raw string) error {
 		}
 	}
 
+	if existingValue, ok := b.result[key]; ok {
+		value = strings.Join([]string{existingValue.(string), value}, ",")
+	}
 	b.result[key] = value
 	return nil
 }

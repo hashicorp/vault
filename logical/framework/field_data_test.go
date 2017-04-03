@@ -146,6 +146,39 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			0,
 		},
+
+		"comma string type, one value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "value1",
+			},
+			"foo",
+			[]string{"value1"},
+		},
+
+		"comma string type, multi value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "value1,value2,value3",
+			},
+			"foo",
+			[]string{"value1", "value2", "value3"},
+		},
+
+		"comma string type, empty slice value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "",
+			},
+			"foo",
+			[]string(nil),
+		},
 	}
 
 	for name, tc := range cases {

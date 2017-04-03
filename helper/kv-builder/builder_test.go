@@ -85,3 +85,19 @@ func TestBuilder_stdinTwice(t *testing.T) {
 		t.Fatal("should error")
 	}
 }
+
+func TestBuilder_keyTwiceToCommaString(t *testing.T) {
+	var b Builder
+	err := b.Add("foo=bar", "foo=baz")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := map[string]interface{}{
+		"foo": "bar,baz",
+	}
+	actual := b.Map()
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
+	}
+}

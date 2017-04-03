@@ -3,6 +3,7 @@ package framework
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
@@ -105,7 +106,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString:
+	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeCommaStringSlice:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -174,6 +175,17 @@ func (d *FieldData) getPrimitive(
 			result = int(valInt64)
 		default:
 			return nil, false, fmt.Errorf("invalid input '%v'", raw)
+		}
+		return result, true, nil
+
+	case TypeCommaStringSlice:
+		var result []string
+		var decodeResult string
+		if err := mapstructure.WeakDecode(raw, &decodeResult); err != nil {
+			return nil, true, err
+		}
+		if decodeResult != "" {
+			result = strings.Split(decodeResult, ",")
 		}
 		return result, true, nil
 
