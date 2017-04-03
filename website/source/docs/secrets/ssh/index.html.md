@@ -22,6 +22,9 @@ complexity and in terms of being platform agnostic.
 This page will show a quick start for this backend. For detailed documentation
 on every path, use `vault path-help` after mounting the backend.
 
+__N.B.__: The Dynamic Key type (which is not recommended for most cases) makes
+connections to client hosts; when this happens the host key is *not* verified.
+
 ----------------------------------------------------
 ## I. CA Key Type
 
