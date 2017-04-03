@@ -165,7 +165,58 @@ func TestMSSQL_CreateUser(t *testing.T) {
 	}
 }
 
+func TestMSSQL_RevokeUser(t *testing.T) {
+	cleanup, connURL := prepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	conf := &DatabaseConfig{
+		DatabaseType: msSQLTypeName,
+		ConnectionDetails: map[string]interface{}{
+			"connection_url": connURL,
+		},
+	}
+
+	db, err := BuiltinFactory(conf, nil, &log.NullLogger{})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	err = db.Initialize(conf.ConnectionDetails)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	username, err := db.GenerateUsername("test")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	password, err := db.GeneratePassword()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expiration, err := db.GenerateExpiration(time.Minute)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	statements := Statements{
+		CreationStatements: testMSSQLRole,
+	}
+
+	err = db.CreateUser(statements, username, password, expiration)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Test default revoke statememts
+	err = db.RevokeUser(statements, username)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
 const testMSSQLRole = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 CREATE USER [{{name}}] FOR LOGIN [{{name}}];
-GRANT SELECT, INSERT, UPDATE ON SCHEMA::dbo TO [{{name}}];`
+GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{{name}}];`

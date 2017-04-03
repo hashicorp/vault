@@ -74,6 +74,12 @@ func (c *sqlConnectionProducer) connection() (interface{}, error) {
 		c.db.Close()
 	}
 
+	// For mssql backend, switch to sqlserver instead
+	dbType := c.config.DatabaseType
+	if c.config.DatabaseType == "mssql" {
+		dbType = "sqlserver"
+	}
+
 	// Otherwise, attempt to make connection
 	conn := c.ConnectionURL
 
@@ -87,7 +93,7 @@ func (c *sqlConnectionProducer) connection() (interface{}, error) {
 	}
 
 	var err error
-	c.db, err = sql.Open(c.config.DatabaseType, conn)
+	c.db, err = sql.Open(dbType, conn)
 	if err != nil {
 		return nil, err
 	}
