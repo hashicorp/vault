@@ -100,7 +100,7 @@ storage "etcd" {
 }
 ```
 
-### Custon Path
+### Custom Path
 
 This example shows storing data in a custom path.
 
