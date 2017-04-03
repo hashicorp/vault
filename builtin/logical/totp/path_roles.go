@@ -6,11 +6,12 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	otplib "github.com/pquerna/otp"
 )
 
 func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/?$",
+		Pattern: "keys/?$",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
@@ -23,7 +24,7 @@ func pathListRoles(b *backend) *framework.Path {
 
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "roles/" + framework.GenericNameRegex("name"),
+		Pattern: "keys/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -76,7 +77,7 @@ func pathRoles(b *backend) *framework.Path {
 }
 
 func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+	entry, err := s.Get("key/" + n)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +95,7 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 
 func (b *backend) pathRoleDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete("role/" + data.Get("name").(string))
+	err := req.Storage.Delete("key/" + data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +113,7 @@ func (b *backend) pathRoleRead(
 		return nil, nil
 	}
 
-	// Return values of role
+	// Return values of key
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"issuer":       role.Issuer,
@@ -126,7 +127,7 @@ func (b *backend) pathRoleRead(
 
 func (b *backend) pathRoleList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	entries, err := req.Storage.List("role/")
+	entries, err := req.Storage.List("key/")
 	if err != nil {
 		return nil, err
 	}
@@ -160,26 +161,40 @@ func (b *backend) pathRoleCreate(
 		return logical.ErrorResponse("The period value must be greater than zero."), nil
 	}
 
-	switch algorithm {
-	case "SHA1", "SHA256", "SHA512":
-	default:
-		return logical.ErrorResponse("The algorithm value is not valid."), nil
-	}
-
+	// Translate digits and algorithm to a format the totp library understands
+	var role_digits otplib.Digits
 	switch digits {
-	case 6, 8:
+	case 6:
+		role_digits = otplib.DigitsSix
+	case 8:
+		role_digits = otplib.DigitsEight
 	default:
 		return logical.ErrorResponse("The digit value can only be 6 or 8."), nil
 	}
 
+	var role_algorithm otplib.Algorithm
+	switch algorithm {
+	case "SHA1":
+		role_algorithm = otplib.AlgorithmSHA1
+	case "SHA256":
+		role_algorithm = otplib.AlgorithmSHA256
+	case "SHA512":
+		role_algorithm = otplib.AlgorithmSHA512
+	default:
+		return logical.ErrorResponse("The algorithm value is not valid."), nil
+	}
+
+	// Period needs to be an unsigned int
+	uint_period := uint(period)
+
 	// Store it
-	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
+	entry, err := logical.StorageEntryJSON("key/"+name, &roleEntry{
 		Key:         key,
 		Issuer:      issuer,
 		AccountName: account_name,
-		Period:      period,
-		Algorithm:   algorithm,
-		Digits:      digits,
+		Period:      uint_period,
+		Algorithm:   role_algorithm,
+		Digits:      role_digits,
 	})
 	if err != nil {
 		return nil, err
@@ -192,12 +207,12 @@ func (b *backend) pathRoleCreate(
 }
 
 type roleEntry struct {
-	Key         string `json:"key" mapstructure:"key" structs:"key"`
-	Issuer      string `json:"issuer" mapstructure:"issuer" structs:"issuer"`
-	AccountName string `json:"account_name" mapstructure:"account_name" structs:"account_name"`
-	Period      int    `json:"period" mapstructure:"period" structs:"period"`
-	Algorithm   string `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
-	Digits      int    `json:"digits" mapstructure:"digits" structs:"digits"`
+	Key         string           `json:"key" mapstructure:"key" structs:"key"`
+	Issuer      string           `json:"issuer" mapstructure:"issuer" structs:"issuer"`
+	AccountName string           `json:"account_name" mapstructure:"account_name" structs:"account_name"`
+	Period      uint             `json:"period" mapstructure:"period" structs:"period"`
+	Algorithm   otplib.Algorithm `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
+	Digits      otplib.Digits    `json:"digits" mapstructure:"digits" structs:"digits"`
 }
 
 const pathRoleHelpSyn = `

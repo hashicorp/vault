@@ -43,9 +43,9 @@ func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":       "",
 		"account_name": "",
-		"digits":       6,
+		"digits":       otplib.DigitsSix,
 		"period":       30,
-		"algorithm":    "SHA1",
+		"algorithm":    otplib.AlgorithmSHA1,
 		"key":          key,
 	}
 
@@ -80,9 +80,9 @@ func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":       "Vault",
 		"account_name": "Test",
-		"digits":       8,
+		"digits":       otplib.DigitsEight,
 		"period":       30,
-		"algorithm":    "SHA1",
+		"algorithm":    otplib.AlgorithmSHA1,
 		"key":          key,
 	}
 
@@ -117,9 +117,9 @@ func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":       "Vault",
 		"account_name": "Test",
-		"digits":       6,
+		"digits":       otplib.DigitsSix,
 		"period":       90,
-		"algorithm":    "SHA1",
+		"algorithm":    otplib.AlgorithmSHA1,
 		"key":          key,
 	}
 
@@ -154,9 +154,9 @@ func TestBackend_readCredentialsSHA256(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":       "Vault",
 		"account_name": "Test",
-		"digits":       6,
+		"digits":       otplib.DigitsSix,
 		"period":       30,
-		"algorithm":    "SHA256",
+		"algorithm":    otplib.AlgorithmSHA256,
 		"key":          key,
 	}
 
@@ -191,9 +191,9 @@ func TestBackend_readCredentialsSHA512(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":       "Vault",
 		"account_name": "Test",
-		"digits":       6,
+		"digits":       otplib.DigitsSix,
 		"period":       30,
-		"algorithm":    "SHA512",
+		"algorithm":    otplib.AlgorithmSHA512,
 		"key":          key,
 	}
 
@@ -226,9 +226,9 @@ func TestBackend_roleCrudDefaultValues(t *testing.T) {
 	expected := map[string]interface{}{
 		"issuer":       "Vault",
 		"account_name": "Test",
-		"digits":       6,
+		"digits":       otplib.DigitsSix,
 		"period":       30,
-		"algorithm":    "SHA1",
+		"algorithm":    otplib.AlgorithmSHA1,
 		"key":          key,
 	}
 
@@ -238,34 +238,6 @@ func TestBackend_roleCrudDefaultValues(t *testing.T) {
 			testAccStepCreateRole(t, "test", roleData, false),
 			testAccStepReadRole(t, "test", expected),
 			testAccStepDeleteRole(t, "test"),
-			testAccStepReadRole(t, "test", nil),
-		},
-	})
-}
-
-func TestBackend_createRoleInvalidPeriod(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Generate a new shared key
-	key, _ := createKey()
-
-	roleData := map[string]interface{}{
-		"issuer":       "Vault",
-		"account_name": "Test",
-		"key":          key,
-		"algorithm":    "SHA256",
-		"period":       -50,
-	}
-
-	logicaltest.Test(t, logicaltest.TestCase{
-		Backend: b,
-		Steps: []logicaltest.TestStep{
-			testAccStepCreateRole(t, "test", roleData, true),
 			testAccStepReadRole(t, "test", nil),
 		},
 	})
@@ -343,6 +315,33 @@ func TestBackend_createRoleInvalidAlgorithm(t *testing.T) {
 	})
 }
 
+func TestBackend_createRoleInvalidPeriod(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a new shared key
+	key, _ := createKey()
+
+	roleData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"key":          key,
+		"period":       -1,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateRole(t, "test", roleData, true),
+			testAccStepReadRole(t, "test", nil),
+		},
+	})
+}
+
 func TestBackend_createRoleInvalidDigits(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -373,7 +372,7 @@ func TestBackend_createRoleInvalidDigits(t *testing.T) {
 func testAccStepCreateRole(t *testing.T, name string, roleData map[string]interface{}, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
-		Path:      path.Join("roles", name),
+		Path:      path.Join("keys", name),
 		Data:      roleData,
 		ErrorOk:   expectFail,
 	}
@@ -382,14 +381,14 @@ func testAccStepCreateRole(t *testing.T, name string, roleData map[string]interf
 func testAccStepDeleteRole(t *testing.T, name string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
-		Path:      path.Join("roles", name),
+		Path:      path.Join("keys", name),
 	}
 }
 
 func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, validation map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      path.Join("creds", name),
+		Path:      path.Join("code", name),
 		Check: func(resp *logical.Response) error {
 			var d struct {
 				Code string `mapstructure:"code"`
@@ -399,31 +398,12 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 			}
 			log.Printf("[TRACE] Generated credentials: %v", d)
 
-			// Translate digits and algorithm to a format the totp library understands
-			var digits otplib.Digits
-			switch validation["digits"] {
-			case 6:
-				digits = otplib.DigitsSix
-			case 8:
-				digits = otplib.DigitsEight
-			}
-
-			var algorithm otplib.Algorithm
-			switch validation["algorithm"] {
-			case "SHA1":
-				algorithm = otplib.AlgorithmSHA1
-			case "SHA256":
-				algorithm = otplib.AlgorithmSHA256
-			case "SHA512":
-				algorithm = otplib.AlgorithmSHA512
-			default:
-				algorithm = otplib.AlgorithmSHA1
-			}
-
 			period := validation["period"].(int)
 			key := validation["key"].(string)
+			algorithm := validation["algorithm"].(otplib.Algorithm)
+			digits := validation["digits"].(otplib.Digits)
 
-			valid, _ := totplib.ValidateCustom(d.Code, key, time.Now().UTC(), totplib.ValidateOpts{
+			valid, _ := totplib.ValidateCustom(d.Code, key, time.Now(), totplib.ValidateOpts{
 				Period:    uint(period),
 				Skew:      1,
 				Digits:    digits,
@@ -442,7 +422,7 @@ func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, na
 func testAccStepReadRole(t *testing.T, name string, expected map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
-		Path:      "roles/" + name,
+		Path:      "keys/" + name,
 		Check: func(resp *logical.Response) error {
 			if resp == nil {
 				if expected == nil {
@@ -452,23 +432,25 @@ func testAccStepReadRole(t *testing.T, name string, expected map[string]interfac
 			}
 
 			var d struct {
-				Issuer      string `mapstructure:"issuer"`
-				AccountName string `mapstructure:"account_name"`
-				Period      int    `mapstructure:"period"`
-				Algorithm   string `mapstructure:"algorithm"`
-				Digits      int    `mapstructure:"digits"`
+				Issuer      string           `mapstructure:"issuer"`
+				AccountName string           `mapstructure:"account_name"`
+				Period      uint             `mapstructure:"period"`
+				Algorithm   otplib.Algorithm `mapstructure:"algorithm"`
+				Digits      otplib.Digits    `mapstructure:"digits"`
 			}
 
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
 			}
 
+			period := expected["period"].(int)
+
 			switch {
 			case d.Issuer != expected["issuer"]:
 				return fmt.Errorf("Issuer should equal: %s", expected["issuer"])
 			case d.AccountName != expected["account_name"]:
 				return fmt.Errorf("Account_Name should equal: %s", expected["account_name"])
-			case d.Period != expected["period"]:
+			case d.Period != uint(period):
 				return fmt.Errorf("Period should equal: %i", expected["period"])
 			case d.Algorithm != expected["algorithm"]:
 				return fmt.Errorf("Algorithm should equal: %s", expected["algorithm"])
