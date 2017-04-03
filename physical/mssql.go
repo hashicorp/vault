@@ -60,6 +60,11 @@ func newMsSQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		logLevel = "0"
 	}
 
+	schema, ok := conf["schema"]
+	if !ok {
+		schema = "dbo"
+	}
+
 	connectionString := "server=" + server + ";app name" + appname + ";connection timeout=" + connectionTimeout + ";log=" + logLevel
 	if username != "" {
 		connectionString += ";user id=" + username
@@ -81,6 +86,30 @@ func newMsSQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 	dbTable := database + ".." + table
 	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='" + table + "') CREATE TABLE " + dbTable +
 		" (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
+
+	if schema != "dbo" {
+		dbTable = database + "." + schema + "." + table
+		createQuery = "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='" + table + "' AND TABLE_SCHEMA='" + schema +
+			"') CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
+
+		if _, err := db.Exec("USE " + database); err != nil {
+			return nil, fmt.Errorf("failed to switch mssql database: %v", err)
+		}
+
+		var num int
+		err = db.QueryRow("SELECT 1 FROM sys.schemas WHERE name = '" + schema + "'").Scan(&num)
+
+		switch {
+		case err == sql.ErrNoRows:
+			if _, err := db.Exec("CREATE SCHEMA " + schema); err != nil {
+				return nil, fmt.Errorf("failed to create mssql schema: %v", err)
+			}
+
+		case err != nil:
+			return nil, fmt.Errorf("failed to check if mssql schema exists: %v", err)
+		}
+	}
+
 	if _, err := db.Exec(createQuery); err != nil {
 		return nil, fmt.Errorf("failed to create mssql table: %v", err)
 	}
