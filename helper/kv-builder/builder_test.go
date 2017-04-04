@@ -86,7 +86,7 @@ func TestBuilder_stdinTwice(t *testing.T) {
 	}
 }
 
-func TestBuilder_keyTwiceToCommaString(t *testing.T) {
+func TestBuilder_sameKeyTwice(t *testing.T) {
 	var b Builder
 	err := b.Add("foo=bar", "foo=baz")
 	if err != nil {
@@ -94,7 +94,7 @@ func TestBuilder_keyTwiceToCommaString(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"foo": "bar,baz",
+		"foo": []interface{}{"bar", "baz"},
 	}
 	actual := b.Map()
 	if !reflect.DeepEqual(actual, expected) {

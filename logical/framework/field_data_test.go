@@ -147,7 +147,7 @@ func TestFieldDataGet(t *testing.T) {
 			0,
 		},
 
-		"comma string type, one value": {
+		"comma string type, string slice with one value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
 			},
@@ -158,7 +158,7 @@ func TestFieldDataGet(t *testing.T) {
 			[]string{"value1"},
 		},
 
-		"comma string type, multi value": {
+		"comma string type, string slice with multi value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
 			},
@@ -169,7 +169,7 @@ func TestFieldDataGet(t *testing.T) {
 			[]string{"value1", "value2", "value3"},
 		},
 
-		"comma string type, empty slice value": {
+		"comma string type, nil string slice value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
 			},
@@ -177,7 +177,40 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": "",
 			},
 			"foo",
-			[]string(nil),
+			[]string{},
+		},
+
+		"string slice type, string slice with one value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": []string{"value1"},
+			},
+			"foo",
+			[]string{"value1"},
+		},
+
+		"string slice type, string slice with multi value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": []string{"value1", "value2", "value3"},
+			},
+			"foo",
+			[]string{"value1", "value2", "value3"},
+		},
+
+		"string slice type, empty string slice value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": []string{},
+			},
+			"foo",
+			[]string{},
 		},
 	}
 

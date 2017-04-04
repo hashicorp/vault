@@ -3,7 +3,6 @@ package framework
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/mitchellh/mapstructure"
@@ -180,12 +179,17 @@ func (d *FieldData) getPrimitive(
 
 	case TypeCommaStringSlice:
 		var result []string
-		var decodeResult string
-		if err := mapstructure.WeakDecode(raw, &decodeResult); err != nil {
-			return nil, true, err
+		config := &mapstructure.DecoderConfig{
+			Result:           &result,
+			WeaklyTypedInput: true,
+			DecodeHook:       mapstructure.StringToSliceHookFunc(","),
 		}
-		if decodeResult != "" {
-			result = strings.Split(decodeResult, ",")
+		decoder, err := mapstructure.NewDecoder(config)
+		if err != nil {
+			return nil, false, err
+		}
+		if err := decoder.Decode(raw); err != nil {
+			return nil, false, err
 		}
 		return result, true, nil
 

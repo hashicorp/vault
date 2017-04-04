@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -107,9 +108,24 @@ func (b *Builder) add(raw string) error {
 		}
 	}
 
+	// Repeated keys will be converted into a slice
 	if existingValue, ok := b.result[key]; ok {
-		value = strings.Join([]string{existingValue.(string), value}, ",")
+		var sliceValue []interface{}
+		rt := reflect.TypeOf(existingValue)
+		switch rt.Kind() {
+		case reflect.Slice:
+			s := reflect.ValueOf(existingValue)
+			for i := 0; i < s.Len(); i++ {
+				sliceValue = append(sliceValue, s.Index(i))
+			}
+		case reflect.String:
+			sliceValue = append(sliceValue, existingValue)
+		}
+		sliceValue = append(sliceValue, value)
+		b.result[key] = sliceValue
+		return nil
 	}
+
 	b.result[key] = value
 	return nil
 }
