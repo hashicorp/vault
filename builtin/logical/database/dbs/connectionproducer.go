@@ -54,11 +54,12 @@ func (c *sqlConnectionProducer) Initialize(conf map[string]interface{}) error {
 	if err != nil {
 		return err
 	}
-	c.initalized = true
 
 	if _, err := c.connection(); err != nil {
-		return fmt.Errorf("Error Initalizing Connection: %s", err)
+		return fmt.Errorf("error initalizing connection: %s", err)
 	}
+
+	c.initalized = true
 
 	return nil
 }
