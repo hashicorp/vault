@@ -185,7 +185,7 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
-				"foo": []string{"value1"},
+				"foo": []interface{}{"value1"},
 			},
 			"foo",
 			[]string{"value1"},
@@ -196,7 +196,7 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
-				"foo": []string{"value1", "value2", "value3"},
+				"foo": []interface{}{"value1", "value2", "value3"},
 			},
 			"foo",
 			[]string{"value1", "value2", "value3"},
@@ -207,7 +207,7 @@ func TestFieldDataGet(t *testing.T) {
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},
 			},
 			map[string]interface{}{
-				"foo": []string{},
+				"foo": []interface{}{},
 			},
 			"foo",
 			[]string{},
