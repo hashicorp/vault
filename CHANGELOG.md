@@ -5,6 +5,8 @@ IMPROVEMENTS:
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
    requests [GH-2466]
  * storage/s3: Use pooled transport for http client [GH-2481]
+ * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
+   servers [GH-2521]
 
 BUG FIXES:
 
