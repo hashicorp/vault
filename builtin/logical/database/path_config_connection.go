@@ -243,28 +243,22 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 			}
 
 			if verifyConnection {
-				return logical.ErrorResponse(err.Error()), nil
+				return logical.ErrorResponse("Could not verify connection"), nil
 			}
 		}
 
 		if _, ok := b.connections[name]; ok {
-			newType := db.Type()
-
-			// Don't update connection until the reset api is hit, close for
-			// now.
-			err = db.Close()
+			// Close and remove the old connection
+			err := b.connections[name].Close()
 			if err != nil {
 				return nil, err
 			}
 
-			// Don't allow the connection type to change
-			if b.connections[name].Type() != newType {
-				return logical.ErrorResponse("Can not change type of existing connection."), nil
-			}
-		} else {
-			// Save the new connection
-			b.connections[name] = db
+			delete(b.connections, name)
 		}
+
+		// Save the new connection
+		b.connections[name] = db
 
 		// Store it
 		entry, err := logical.StorageEntryJSON(fmt.Sprintf("dbs/%s", name), config)
