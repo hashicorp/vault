@@ -204,6 +204,17 @@ to the CRL.  When large number of certificates are generated with long
 lifetimes, it is recommended that lease generation be disabled, as large amount of
 leases adversely affect the startup time of Vault.`,
 			},
+			"no_store": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `
+If set, certificates issued/signed against this role will not be stored in the
+in the storage backend. This can improve performance when issuing large numbers
+of certificates. However, certificates issued in this way cannot be enumerated
+or revoked, so this option is recommended only for certificates that are
+non-sensitive, or extremely short-lived. This option implies a value of "false"
+for "generate_lease".`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -277,6 +288,13 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		// `true` to not alter its current behavior.
 		result.GenerateLease = new(bool)
 		*result.GenerateLease = true
+		modified = true
+	}
+
+	// analogous upgrade for no_store
+	if result.NoStore == nil {
+		result.NoStore = new(bool)
+		*result.NoStore = false
 		modified = true
 	}
 
@@ -384,9 +402,16 @@ func (b *backend) pathRoleCreate(
 		OU:                  data.Get("ou").(string),
 		Organization:        data.Get("organization").(string),
 		GenerateLease:       new(bool),
+		NoStore:             new(bool),
 	}
 
-	*entry.GenerateLease = data.Get("generate_lease").(bool)
+	*entry.NoStore = data.Get("no_store").(bool)
+	// no_store implies generate_lease := false
+	if *entry.NoStore {
+		*entry.GenerateLease = false
+	} else {
+		*entry.GenerateLease = data.Get("generate_lease").(bool)
+	}
 
 	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
 		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
@@ -504,6 +529,7 @@ type roleEntry struct {
 	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
 	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
+	NoStore               *bool  `json:"no_store,omitempty" structs:"no_store,omitempty"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
