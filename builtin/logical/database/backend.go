@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const databaseConfigPath = "database/dbs/"
+
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return Backend(conf).Setup(conf)
 }
@@ -130,8 +132,8 @@ func (b *databaseBackend) invalidate(key string) {
 	defer b.Unlock()
 
 	switch {
-	case strings.HasPrefix(key, "database/dbs/"):
-		name := strings.TrimPrefix(key, "database/dbs/")
+	case strings.HasPrefix(key, databaseConfigPath):
+		name := strings.TrimPrefix(key, databaseConfigPath)
 		b.clearConnection(name)
 	}
 }
