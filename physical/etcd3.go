@@ -48,10 +48,9 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (Backend, error)
 		path = "/" + path
 	}
 
-	// Set a default machines list and check for an overriding address value.
-	endpoints := []string{"http://127.0.0.1:2379"}
-	if address, ok := conf["address"]; ok {
-		endpoints = strings.Split(address, ",")
+	endpoints, err := getEtcdEndpoints(conf)
+	if err != nil {
+		return nil, err
 	}
 
 	cfg := clientv3.Config{
