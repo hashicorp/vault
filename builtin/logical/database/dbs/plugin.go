@@ -169,24 +169,24 @@ func (dr *databasePluginRPCClient) Close() error {
 }
 
 func (dr *databasePluginRPCClient) GenerateUsername(displayName string) (string, error) {
-	var username string
-	err := dr.client.Call("Plugin.GenerateUsername", displayName, &username)
+	resp := &GenerateUsernameResponse{}
+	err := dr.client.Call("Plugin.GenerateUsername", displayName, resp)
 
-	return username, err
+	return resp.Username, err
 }
 
 func (dr *databasePluginRPCClient) GeneratePassword() (string, error) {
-	var password string
-	err := dr.client.Call("Plugin.GeneratePassword", struct{}{}, &password)
+	resp := &GeneratePasswordResponse{}
+	err := dr.client.Call("Plugin.GeneratePassword", struct{}{}, resp)
 
-	return password, err
+	return resp.Password, err
 }
 
 func (dr *databasePluginRPCClient) GenerateExpiration(duration time.Duration) (string, error) {
-	var expiration string
-	err := dr.client.Call("Plugin.GenerateExpiration", duration, &expiration)
+	resp := &GenerateExpirationResponse{}
+	err := dr.client.Call("Plugin.GenerateExpiration", duration, resp)
 
-	return expiration, err
+	return resp.Expiration, err
 }
 
 // ---- RPC server domain ----
@@ -230,28 +230,28 @@ func (ds *databasePluginRPCServer) Close(_ struct{}, _ *struct{}) error {
 	return nil
 }
 
-func (ds *databasePluginRPCServer) GenerateUsername(args string, resp *string) error {
+func (ds *databasePluginRPCServer) GenerateUsername(args string, resp *GenerateUsernameResponse) error {
 	var err error
-	*resp, err = ds.impl.GenerateUsername(args)
+	resp.Username, err = ds.impl.GenerateUsername(args)
 
 	return err
 }
 
-func (ds *databasePluginRPCServer) GeneratePassword(_ struct{}, resp *string) error {
+func (ds *databasePluginRPCServer) GeneratePassword(_ struct{}, resp *GeneratePasswordResponse) error {
 	var err error
-	*resp, err = ds.impl.GeneratePassword()
+	resp.Password, err = ds.impl.GeneratePassword()
 
 	return err
 }
 
-func (ds *databasePluginRPCServer) GenerateExpiration(args time.Duration, resp *string) error {
+func (ds *databasePluginRPCServer) GenerateExpiration(args time.Duration, resp *GenerateExpirationResponse) error {
 	var err error
-	*resp, err = ds.impl.GenerateExpiration(args)
+	resp.Expiration, err = ds.impl.GenerateExpiration(args)
 
 	return err
 }
 
-// ---- Request Args domain ----
+// ---- Request Args Domain ----
 
 type CreateUserRequest struct {
 	Statements Statements
@@ -269,4 +269,16 @@ type RenewUserRequest struct {
 type RevokeUserRequest struct {
 	Statements Statements
 	Username   string
+}
+
+// ---- Response Args Domain ----
+
+type GenerateUsernameResponse struct {
+	Username string
+}
+type GenerateExpirationResponse struct {
+	Expiration string
+}
+type GeneratePasswordResponse struct {
+	Password string
 }
