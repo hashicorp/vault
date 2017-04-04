@@ -125,7 +125,6 @@ func (b *databaseBackend) Role(s logical.Storage, n string) (*roleEntry, error) 
 	return &result, nil
 }
 
-// TODO: Handle cassandra, which uses session
 func (b *databaseBackend) invalidate(key string) {
 	b.Lock()
 	defer b.Unlock()
