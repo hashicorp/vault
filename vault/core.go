@@ -335,6 +335,12 @@ type Core struct {
 	// pluginDirectory is the location vault will look for plugins
 	pluginDirectory string
 
+	// vaultBinaryLocation is used to run builtin plugins in secure mode
+	vaultBinaryLocation string
+
+	// vaultBinarySHA256 is used to run builtin plugins in secure mode
+	vaultBinarySHA256 []byte
+
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 }
@@ -381,7 +387,9 @@ type CoreConfig struct {
 
 	EnableUI bool `json:"ui" structs:"ui" mapstructure:"ui"`
 
-	PluginDirectory string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
+	PluginDirectory     string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
+	VaultBinaryLocation string `json:"vault_binary_location" structs:"vault_binary_location" mapstructure:"vault_binary_location"`
+	VaultBinarySHA256   []byte `json:"vault_binary_sha256" structs:"vault_binary_sha256" mapstructure:"vault_binary_sha256"`
 
 	ReloadFuncs     *map[string][]ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
@@ -439,6 +447,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+		vaultBinaryLocation:              conf.VaultBinaryLocation,
+		vaultBinarySHA256:                conf.VaultBinarySHA256,
 	}
 
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped

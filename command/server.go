@@ -1,8 +1,10 @@
 package command
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -131,6 +133,33 @@ func (c *ServerCommand) Run(args []string) int {
 		dev = true
 	}
 
+	// Record the vault binary's location and SHA-256 checksum for use in
+	// builtin plugins.
+	ex, err := os.Executable()
+	if err != nil {
+		c.Ui.Output(fmt.Sprintf(
+			"Error looking up vault binary: %s", err))
+		return 1
+	}
+
+	file, err := os.Open(ex)
+	if err != nil {
+		c.Ui.Output(fmt.Sprintf(
+			"Error loading vault binary: %s", err))
+		return 1
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		c.Ui.Output(fmt.Sprintf(
+			"Error checksumming vault binary: %s", err))
+		return 1
+	}
+
+	sha256Value := hash.Sum(nil)
+
 	// Validation
 	if !dev {
 		switch {
@@ -225,21 +254,23 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	coreConfig := &vault.CoreConfig{
-		Physical:           backend,
-		RedirectAddr:       config.Backend.RedirectAddr,
-		HAPhysical:         nil,
-		Seal:               seal,
-		AuditBackends:      c.AuditBackends,
-		CredentialBackends: c.CredentialBackends,
-		LogicalBackends:    c.LogicalBackends,
-		Logger:             c.logger,
-		DisableCache:       config.DisableCache,
-		DisableMlock:       config.DisableMlock,
-		MaxLeaseTTL:        config.MaxLeaseTTL,
-		DefaultLeaseTTL:    config.DefaultLeaseTTL,
-		ClusterName:        config.ClusterName,
-		CacheSize:          config.CacheSize,
-		PluginDirectory:    config.PluginDirectory,
+		Physical:            backend,
+		RedirectAddr:        config.Backend.RedirectAddr,
+		HAPhysical:          nil,
+		Seal:                seal,
+		AuditBackends:       c.AuditBackends,
+		CredentialBackends:  c.CredentialBackends,
+		LogicalBackends:     c.LogicalBackends,
+		Logger:              c.logger,
+		DisableCache:        config.DisableCache,
+		DisableMlock:        config.DisableMlock,
+		MaxLeaseTTL:         config.MaxLeaseTTL,
+		DefaultLeaseTTL:     config.DefaultLeaseTTL,
+		ClusterName:         config.ClusterName,
+		CacheSize:           config.CacheSize,
+		PluginDirectory:     config.PluginDirectory,
+		VaultBinaryLocation: ex,
+		VaultBinarySHA256:   sha256Value,
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID
@@ -252,7 +283,7 @@ func (c *ServerCommand) Run(args []string) int {
 				"Error getting user's home directory: %v", err))
 			return 1
 		}
-		coreConfig.PluginDirectory = filepath.Join(homePath, "/vault-plugins/")
+		coreConfig.PluginDirectory = filepath.Join(homePath, "/.vault-plugins/")
 	}
 
 	var disableClustering bool

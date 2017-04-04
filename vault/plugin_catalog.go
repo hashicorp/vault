@@ -10,50 +10,62 @@ import (
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
 var (
 	pluginCatalogPrefix = "plugin-catalog/"
+	builtinPlugins      = []string{"mysql-database-plugin", "postgres-database-plugin"}
 )
 
 type PluginCatalog struct {
-	catalogView *BarrierView
-	directory   string
+	catalogView  *BarrierView
+	directory    string
+	vaultCommand string
+	vaultSHA256  []byte
 
 	lock    sync.RWMutex
 	builtin map[string]*pluginutil.PluginRunner
 }
 
-func NewPluginCatalog(view *BarrierView, directory string) *PluginCatalog {
-	return &PluginCatalog{
-		catalogView: view.SubView(pluginCatalogPrefix),
-		directory:   directory,
-	}
-}
-
 func (c *Core) setupPluginCatalog() error {
-	catalog := NewPluginCatalog(c.systemBarrierView, c.pluginDirectory)
-	c.pluginCatalog = catalog
+	c.pluginCatalog = &PluginCatalog{
+		catalogView:  c.systemBarrierView.SubView(pluginCatalogPrefix),
+		directory:    c.pluginDirectory,
+		vaultCommand: c.vaultBinaryLocation,
+		vaultSHA256:  c.vaultBinarySHA256,
+	}
 
 	return nil
 }
 
 func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
+	// Look for external plugins in the barrier
 	out, err := c.catalogView.Get(name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve plugin \"%s\": %v", name, err)
 	}
-	if out == nil {
+	if out != nil {
+		entry := new(pluginutil.PluginRunner)
+		if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
+			return nil, fmt.Errorf("failed to decode plugin entry: %v", err)
+		}
+
+		return entry, nil
+	}
+
+	// Look for builtin plugins
+	if !strutil.StrListContains(builtinPlugins, name) {
 		return nil, fmt.Errorf("no plugin found with name: %s", name)
 	}
 
-	entry := new(pluginutil.PluginRunner)
-	if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
-		return nil, fmt.Errorf("failed to decode plugin entry: %v", err)
-	}
-
-	return entry, nil
+	return &pluginutil.PluginRunner{
+		Name:    name,
+		Command: c.vaultCommand,
+		Args:    []string{"plugin-exec", name},
+		Sha256:  c.vaultSHA256,
+	}, nil
 }
 
 func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
