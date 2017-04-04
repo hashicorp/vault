@@ -41,6 +41,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		},
 
 		Clean: b.closeAllDBs,
+
+		Invalidate: b.invalidate,
 	}
 
 	b.logger = conf.Logger
@@ -123,9 +125,28 @@ func (b *databaseBackend) Role(s logical.Storage, n string) (*roleEntry, error) 
 	return &result, nil
 }
 
+// TODO: Handle cassandra, which uses session
+func (b *databaseBackend) invalidate(key string) {
+	b.Lock()
+	defer b.Unlock()
+
+	switch {
+	case strings.HasPrefix(key, "database/dbs/"):
+		name := strings.TrimPrefix(key, "database/dbs/")
+		db, ok := b.connections[name]
+		if !ok {
+			return
+		}
+
+		db.Close()
+	}
+}
+
 const backendHelp = `
-The PostgreSQL backend dynamically generates database users.
+The database backend supports using many different databases
+as secret backends, including but not limited to:
+cassandra, msslq, mysql, postgres
 
 After mounting this backend, configure it using the endpoints within
-the "config/" path.
+the "database/dbs/" path.
 `
