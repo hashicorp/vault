@@ -137,7 +137,11 @@ func (b *databaseBackend) invalidate(key string) {
 			return
 		}
 
-		db.Close()
+		err := db.Close()
+		if err != nil {
+			return
+		}
+		delete(b.connections, name)
 	}
 }
 
