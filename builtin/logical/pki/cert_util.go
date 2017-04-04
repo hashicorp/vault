@@ -665,7 +665,7 @@ func generateCreationBundle(b *backend,
 	ou := []string{}
 	{
 		if role.OU != "" {
-			ou = strutil.ParseDedupAndSortStrings(role.OU, ",")
+			ou = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.OU, ","), false)
 		}
 	}
 
@@ -673,7 +673,7 @@ func generateCreationBundle(b *backend,
 	organization := []string{}
 	{
 		if role.Organization != "" {
-			organization = strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			organization = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.Organization, ","), false)
 		}
 	}
 
