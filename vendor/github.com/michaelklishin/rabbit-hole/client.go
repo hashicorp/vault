@@ -3,7 +3,7 @@ package rabbithole
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 )
@@ -89,7 +89,7 @@ func newRequestWithBody(client *Client, method string, path string, body []byte)
 	req.Close = true
 	req.SetBasicAuth(client.Username, client.Password)
 	// set Opaque to preserve the percent-encoded path.
-        req.URL.Opaque = "//" + client.host + "/api/" + path
+	req.URL.Opaque = "//" + client.host + "/api/" + path
 
 	req.Header.Add("Content-Type", "application/json")
 
@@ -125,8 +125,14 @@ func executeAndParseRequest(client *Client, req *http.Request, rec interface{}) 
 	}
 	defer res.Body.Close() // always close body
 
-	if isNotFound(res) {
-		return errors.New("not found")
+	if res.StatusCode >= http.StatusBadRequest {
+		rme := ErrorResponse{}
+		err = json.NewDecoder(res.Body).Decode(&rme)
+		if err != nil {
+			return fmt.Errorf("Error %d from RabbitMQ: %s", res.StatusCode, err)
+		}
+		rme.StatusCode = res.StatusCode
+		return rme
 	}
 
 	err = json.NewDecoder(res.Body).Decode(&rec)
@@ -135,10 +141,6 @@ func executeAndParseRequest(client *Client, req *http.Request, rec interface{}) 
 	}
 
 	return nil
-}
-
-func isNotFound(res *http.Response) bool {
-	return res.StatusCode == http.StatusNotFound
 }
 
 // This is an ugly hack: we copy relevant bits from

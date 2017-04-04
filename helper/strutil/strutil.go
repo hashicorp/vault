@@ -39,7 +39,7 @@ func ParseDedupAndSortStrings(input string, sep string) []string {
 		// Don't return nil
 		return parsed
 	}
-	return RemoveDuplicates(strings.Split(input, sep))
+	return RemoveDuplicates(strings.Split(input, sep), true)
 }
 
 // Parses a comma separated list of `<key>=<value>` tuples into a
@@ -174,19 +174,21 @@ func ParseArbitraryStringSlice(input string, sep string) []string {
 	return ret
 }
 
-// Removes duplicate and empty elements from a slice of strings.
-// This also converts the items in the slice to lower case and
-// returns a sorted slice.
-func RemoveDuplicates(items []string) []string {
+// Removes duplicate and empty elements from a slice of strings. This also may
+// convert the items in the slice to lower case and returns a sorted slice.
+func RemoveDuplicates(items []string, lowercase bool) []string {
 	itemsMap := map[string]bool{}
 	for _, item := range items {
-		item = strings.ToLower(strings.TrimSpace(item))
+		item = strings.TrimSpace(item)
+		if lowercase {
+			item = strings.ToLower(item)
+		}
 		if item == "" {
 			continue
 		}
 		itemsMap[item] = true
 	}
-	items = []string{}
+	items = make([]string, 0, len(itemsMap))
 	for item, _ := range itemsMap {
 		items = append(items, item)
 	}

@@ -1,4 +1,22 @@
-## 0.7.0 (Early Access; final release March 21th, 2017)
+## 0.7.1 (Unreleased)
+
+IMPROVEMENTS:
+
+ * storage/s3: Support `max_parallel` option to limit concurrent outstanding
+   requests [GH-2466]
+ * storage/s3: Use pooled transport for http client [GH-2481]
+ * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
+   servers [GH-2521]
+
+BUG FIXES:
+
+ * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
+ * storage/consul: Properly handle state events rather than timing out
+   [GH-2548]
+ * storage/etcd3: Ensure locks are released if client is improperly shut down
+   [GH-2526]
+
+## 0.7.0 (March 21th, 2017)
 
 SECURITY:
 

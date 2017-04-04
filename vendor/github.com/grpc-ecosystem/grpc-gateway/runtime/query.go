@@ -56,6 +56,9 @@ func populateFieldValueFromPath(msg proto.Message, fieldPath []string, values []
 
 		switch f.Kind() {
 		case reflect.Bool, reflect.Float32, reflect.Float64, reflect.Int32, reflect.Int64, reflect.String, reflect.Uint32, reflect.Uint64:
+			if !isLast {
+				return fmt.Errorf("unexpected nested field %s in %s", fieldPath[i+1], strings.Join(fieldPath[:i+1], "."))
+			}
 			m = f
 		case reflect.Slice:
 			// TODO(yugui) Support []byte

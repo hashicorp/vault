@@ -232,3 +232,17 @@ func (s *Section) DeleteKey(name string) {
 		}
 	}
 }
+
+// ChildSections returns a list of child sections of current section.
+// For example, "[parent.child1]" and "[parent.child12]" are child sections
+// of section "[parent]".
+func (s *Section) ChildSections() []*Section {
+	prefix := s.name + "."
+	children := make([]*Section, 0, 3)
+	for _, name := range s.f.sectionList {
+		if strings.HasPrefix(name, prefix) {
+			children = append(children, s.f.sections[name])
+		}
+	}
+	return children
+}

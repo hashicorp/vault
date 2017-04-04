@@ -558,7 +558,7 @@ func (f *framer) parseErrorFrame() frame {
 		stmtId := f.readShortBytes()
 		return &RequestErrUnprepared{
 			errorFrame:  errD,
-			StatementId: copyBytes(stmtId), // defensivly copy
+			StatementId: copyBytes(stmtId), // defensively copy
 		}
 	case errReadFailure:
 		res := &RequestErrReadFailure{
