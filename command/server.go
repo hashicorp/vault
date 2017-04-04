@@ -675,7 +675,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 		return nil, err
 	}
 	if !unsealed {
-		return nil, fmt.Errorf("failed to unseal Vault for Dev mode")
+		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
 	}
 
 	isLeader, _, err := core.Leader()

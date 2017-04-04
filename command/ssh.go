@@ -271,23 +271,23 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 }
 
 func (c *SSHCommand) Synopsis() string {
-	return "Initiate a SSH session"
+	return "Initiate an SSH session"
 }
 
 func (c *SSHCommand) Help() string {
 	helpText := `
 Usage: vault ssh [options] username@ip
 
-  Establishes a SSH connection with the target machine.
+  Establishes an SSH connection with the target machine.
 
-  This command generates a key and uses it to establish a SSH
+  This command generates a key and uses it to establish an SSH
   connection with the target machine. This operation requires
   that the SSH backend is mounted and at least one 'role' is
   registered with Vault beforehand.
 
   For setting up SSH backends with one-time-passwords, installation
-  of vault-ssh-helper on target machines is required.
-  See [https://github.com/hashicorp/vault-ssh-agent]
+  of vault-ssh-helper or a compatible agent on target machines
+  is required. See [https://github.com/hashicorp/vault-ssh-agent].
 
 General Options:
 ` + meta.GeneralOptionsUsage() + `

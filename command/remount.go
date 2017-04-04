@@ -62,8 +62,8 @@ Usage: vault remount [options] from to
 
   This command remounts a secret backend that is already mounted to
   a new path. All the secrets from the old path will be revoked, but
-  the Vault data associated with the backend (such as configuration)
-  will be preserved.
+  the data associated with the backend (such as configuration), will
+  be preserved.
 
   Example: vault remount secret/ generic/
 
