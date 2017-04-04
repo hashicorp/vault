@@ -10,6 +10,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * storage/consul: Properly handle state events rather than timing out
    [GH-2548]
  * storage/etcd3: Ensure locks are released if client is improperly shut down
