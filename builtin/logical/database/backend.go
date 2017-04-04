@@ -132,15 +132,16 @@ func (b *databaseBackend) invalidate(key string) {
 	switch {
 	case strings.HasPrefix(key, "database/dbs/"):
 		name := strings.TrimPrefix(key, "database/dbs/")
-		db, ok := b.connections[name]
-		if !ok {
-			return
-		}
+		b.clearConnection(name)
+	}
+}
 
-		err := db.Close()
-		if err != nil {
-			return
-		}
+// clearConnection closes the database connection and
+// removes it from the b.connections map.
+func (b *databaseBackend) clearConnection(name string) {
+	db, ok := b.connections[name]
+	if ok {
+		db.Close()
 		delete(b.connections, name)
 	}
 }
