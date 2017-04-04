@@ -13,6 +13,7 @@ import (
 const (
 	postgreSQLTypeName = "postgres"
 	mySQLTypeName      = "mysql"
+	msSQLTypeName      = "mssql"
 	cassandraTypeName  = "cassandra"
 	pluginTypeName     = "plugin"
 )
@@ -56,6 +57,20 @@ func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Log
 		}
 
 		dbType = &MySQL{
+			ConnectionProducer:  connProducer,
+			CredentialsProducer: credsProducer,
+		}
+
+	case msSQLTypeName:
+		connProducer := &sqlConnectionProducer{}
+		connProducer.config = conf
+
+		credsProducer := &sqlCredentialsProducer{
+			displayNameLen: 10,
+			usernameLen:    63,
+		}
+
+		dbType = &MSSQL{
 			ConnectionProducer:  connProducer,
 			CredentialsProducer: credsProducer,
 		}
@@ -162,7 +177,7 @@ func (dc *DatabaseConfig) GetFactory() Factory {
 	return BuiltinFactory
 }
 
-// Statments set in role creation and passed into the database type's functions.
+// Statements set in role creation and passed into the database type's functions.
 // TODO: Add a way of setting defaults here.
 type Statements struct {
 	CreationStatements   string `json:"creation_statments" mapstructure:"creation_statements" structs:"creation_statments"`
