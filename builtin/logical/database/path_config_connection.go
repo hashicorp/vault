@@ -40,13 +40,9 @@ func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framew
 	b.Lock()
 	defer b.Unlock()
 
-	db, ok := b.connections[name]
-	if ok {
-		db.Close()
-		delete(b.connections, name)
-	}
+	b.clearConnection(name)
 
-	db, err := b.getOrCreateDBObj(req.Storage, name)
+	_, err := b.getOrCreateDBObj(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}

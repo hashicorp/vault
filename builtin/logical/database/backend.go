@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+const databaseConfigPath = "database/dbs/"
+
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return Backend(conf).Setup(conf)
 }
@@ -41,6 +43,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		},
 
 		Clean: b.closeAllDBs,
+
+		Invalidate: b.invalidate,
 	}
 
 	b.logger = conf.Logger
@@ -123,9 +127,32 @@ func (b *databaseBackend) Role(s logical.Storage, n string) (*roleEntry, error) 
 	return &result, nil
 }
 
+func (b *databaseBackend) invalidate(key string) {
+	b.Lock()
+	defer b.Unlock()
+
+	switch {
+	case strings.HasPrefix(key, databaseConfigPath):
+		name := strings.TrimPrefix(key, databaseConfigPath)
+		b.clearConnection(name)
+	}
+}
+
+// clearConnection closes the database connection and
+// removes it from the b.connections map.
+func (b *databaseBackend) clearConnection(name string) {
+	db, ok := b.connections[name]
+	if ok {
+		db.Close()
+		delete(b.connections, name)
+	}
+}
+
 const backendHelp = `
-The PostgreSQL backend dynamically generates database users.
+The database backend supports using many different databases
+as secret backends, including but not limited to:
+cassandra, msslq, mysql, postgres
 
 After mounting this backend, configure it using the endpoints within
-the "config/" path.
+the "database/dbs/" path.
 `
