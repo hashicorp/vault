@@ -153,49 +153,10 @@ func TestPki_RoleNoStore(t *testing.T) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
-	// no_store cannot be nil
-	noStore := resp.Data["no_store"].(*bool)
-	if noStore == nil {
-		t.Fatalf("no_store should not be nil")
-	}
-
-	// By default, generate_lease should be `false`
-	if *noStore {
+	// By default, no_store should be `false`
+	noStore := resp.Data["no_store"].(bool)
+	if noStore {
 		t.Fatalf("no_store should not be set by default")
-	}
-
-	// role.GenerateLease will be nil after the decode
-	var role roleEntry
-	err = mapstructure.Decode(resp.Data, &role)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Make it explicit
-	role.NoStore = nil
-
-	entry, err := logical.StorageEntryJSON("role/testrole", role)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := storage.Put(entry); err != nil {
-		t.Fatal(err)
-	}
-
-	// Reading should upgrade no_store
-	resp, err = b.HandleRequest(roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: err: %v resp: %#v", err, resp)
-	}
-
-	noStore = resp.Data["no_store"].(*bool)
-	if noStore == nil {
-		t.Fatalf("no_store should not be nil")
-	}
-
-	// Upgrade should set no_store to `false`
-	if *noStore {
-		t.Fatalf("no_store should be false after an upgrade")
 	}
 
 	// Make sure that setting no_store to `true` works properly
@@ -217,11 +178,8 @@ func TestPki_RoleNoStore(t *testing.T) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
-	noStore = resp.Data["no_store"].(*bool)
-	if noStore == nil {
-		t.Fatalf("no_store should not be nil")
-	}
-	if !*noStore {
+	noStore = resp.Data["no_store"].(bool)
+	if !noStore {
 		t.Fatalf("no_store should have been set to true")
 	}
 

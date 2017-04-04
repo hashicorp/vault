@@ -291,13 +291,6 @@ func (b *backend) getRole(s logical.Storage, n string) (*roleEntry, error) {
 		modified = true
 	}
 
-	// analogous upgrade for no_store
-	if result.NoStore == nil {
-		result.NoStore = new(bool)
-		*result.NoStore = false
-		modified = true
-	}
-
 	if modified {
 		jsonEntry, err := logical.StorageEntryJSON("role/"+n, &result)
 		if err != nil {
@@ -402,12 +395,11 @@ func (b *backend) pathRoleCreate(
 		OU:                  data.Get("ou").(string),
 		Organization:        data.Get("organization").(string),
 		GenerateLease:       new(bool),
-		NoStore:             new(bool),
+		NoStore:             data.Get("no_store").(bool),
 	}
 
-	*entry.NoStore = data.Get("no_store").(bool)
 	// no_store implies generate_lease := false
-	if *entry.NoStore {
+	if entry.NoStore {
 		*entry.GenerateLease = false
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
@@ -529,7 +521,7 @@ type roleEntry struct {
 	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
 	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
-	NoStore               *bool  `json:"no_store,omitempty" structs:"no_store,omitempty"`
+	NoStore               bool   `json:"no_store" structs:"no_store" mapstructure:"no_store"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
