@@ -111,12 +111,11 @@ func (b *Builder) add(raw string) error {
 	// Repeated keys will be converted into a slice
 	if existingValue, ok := b.result[key]; ok {
 		var sliceValue []interface{}
-		rt := reflect.TypeOf(existingValue)
-		switch rt.Kind() {
+		switch reflect.TypeOf(existingValue).Kind() {
 		case reflect.Slice:
 			s := reflect.ValueOf(existingValue)
 			for i := 0; i < s.Len(); i++ {
-				sliceValue = append(sliceValue, s.Index(i))
+				sliceValue = append(sliceValue, s.Index(i).Interface())
 			}
 		case reflect.String:
 			sliceValue = append(sliceValue, existingValue)
