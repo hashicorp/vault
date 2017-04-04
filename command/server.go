@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
+	homedir "github.com/mitchellh/go-homedir"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -237,9 +239,20 @@ func (c *ServerCommand) Run(args []string) int {
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
+		PluginDirectory:    config.PluginDirectory,
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID
+	}
+
+	if config.PluginDirectory == "" {
+		homePath, err := homedir.Dir()
+		if err != nil {
+			c.Ui.Output(fmt.Sprintf(
+				"Error getting user's home directory: %v", err))
+			return 1
+		}
+		coreConfig.PluginDirectory = filepath.Join(homePath, "/vault-plugins/")
 	}
 
 	var disableClustering bool

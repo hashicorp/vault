@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -113,4 +114,8 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 	}
 
 	return resp.WrapInfo.Token, nil
+}
+
+func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+	return d.core.pluginCatalog.Get(name)
 }

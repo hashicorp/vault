@@ -20,8 +20,7 @@ const (
 var (
 	ErrUnsupportedDatabaseType = errors.New("unsupported database type")
 	ErrEmptyCreationStatement  = errors.New("empty creation statements")
-	ErrEmptyPluginCommand      = errors.New("empty plugin command")
-	ErrEmptyPluginChecksum     = errors.New("empty plugin checksum")
+	ErrEmptyPluginName         = errors.New("empty plugin name")
 )
 
 // Factory function definition
@@ -95,18 +94,19 @@ func BuiltinFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Log
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
 func PluginFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logger) (DatabaseType, error) {
-	if conf.PluginCommand == "" {
-		return nil, ErrEmptyPluginCommand
+	if conf.PluginName == "" {
+		return nil, ErrEmptyPluginName
 	}
 
-	if conf.PluginChecksum == "" {
-		return nil, ErrEmptyPluginChecksum
+	pluginMeta, err := sys.LookupPlugin(conf.PluginName)
+	if err != nil {
+		return nil, err
 	}
 
 	// Make sure the database type is set to plugin
 	conf.DatabaseType = pluginTypeName
 
-	db, err := newPluginClient(sys, conf.PluginCommand, conf.PluginChecksum)
+	db, err := newPluginClient(sys, pluginMeta)
 	if err != nil {
 		return nil, err
 	}
@@ -149,8 +149,7 @@ type DatabaseConfig struct {
 	MaxOpenConnections    int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
 	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
 	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
-	PluginCommand         string                 `json:"plugin_command" structs:"plugin_command" mapstructure:"plugin_command"`
-	PluginChecksum        string                 `json:"plugin_checksum" structs:"plugin_checksum" mapstructure:"plugin_checksum"`
+	PluginName            string                 `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
 }
 
 // GetFactory returns the appropriate factory method for the given database

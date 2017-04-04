@@ -1,12 +1,8 @@
 package dbs
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/rpc"
-	"os/exec"
-	"strings"
 	"sync"
 	"time"
 
@@ -55,58 +51,16 @@ func (dc *DatabasePluginClient) Close() error {
 // newPluginClient returns a databaseRPCClient with a connection to a running
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
-func newPluginClient(sys pluginutil.Wrapper, command, checksum string) (DatabaseType, error) {
+func newPluginClient(sys pluginutil.Wrapper, pluginRunner *pluginutil.PluginRunner) (DatabaseType, error) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"database": new(DatabasePlugin),
 	}
 
-	// Get a CA TLS Certificate
-	CACertBytes, CACert, CAKey, err := pluginutil.GenerateCACert()
+	client, err := pluginRunner.Run(sys, pluginMap, handshakeConfig, []string{})
 	if err != nil {
 		return nil, err
 	}
-
-	// Use CA to sign a client cert and return a configured TLS config
-	clientTLSConfig, err := pluginutil.CreateClientTLSConfig(CACert, CAKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// Use CA to sign a server cert and wrap the values in a response wrapped
-	// token.
-	wrapToken, err := pluginutil.WrapServerConfig(sys, CACertBytes, CACert, CAKey)
-	if err != nil {
-		return nil, err
-	}
-
-	// Add the response wrap token to the ENV of the plugin
-	commandArr := strings.Split(command, " ")
-	var cmd *exec.Cmd
-	if len(commandArr) > 1 {
-		cmd = exec.Command(commandArr[0], commandArr[1:]...)
-	} else {
-		cmd = exec.Command(commandArr[0])
-	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", pluginutil.PluginUnwrapTokenEnv, wrapToken))
-
-	checksumDecoded, err := hex.DecodeString(checksum)
-	if err != nil {
-		return nil, err
-	}
-
-	secureConfig := &plugin.SecureConfig{
-		Checksum: checksumDecoded,
-		Hash:     sha256.New(),
-	}
-
-	client := plugin.NewClient(&plugin.ClientConfig{
-		HandshakeConfig: handshakeConfig,
-		Plugins:         pluginMap,
-		Cmd:             cmd,
-		TLSConfig:       clientTLSConfig,
-		SecureConfig:    secureConfig,
-	})
 
 	// Connect via RPC
 	rpcClient, err := client.Client()

@@ -63,6 +63,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
+				"plugin-catalog",
+				"plugin-catalog/*",
 			},
 
 			Unauthenticated: []string{
@@ -692,6 +694,30 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
+			&framework.Path{
+				Pattern: "plugin-catalog/(?P<name>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"name": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"sha_256": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+					"command": &framework.FieldSchema{
+						Type: framework.TypeString,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handlePluginCatalogUpdate,
+					logical.DeleteOperation: b.handlePluginCatalogDelete,
+					logical.ReadOperation:   b.handlePluginCatalogRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
+			},
 		},
 	}
 
@@ -722,6 +748,69 @@ func (b *SystemBackend) invalidate(key string) {
 			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policySubPath))
 		}
 	}
+}
+
+func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+
+	sha256 := d.Get("sha_256").(string)
+	if sha256 == "" {
+		return logical.ErrorResponse("missing SHA-256 value"), nil
+	}
+
+	command := d.Get("command").(string)
+	if command == "" {
+		return logical.ErrorResponse("missing command value"), nil
+	}
+
+	sha256Bytes, err := hex.DecodeString(sha256)
+	if err != nil {
+		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
+	}
+
+	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"plugin": plugin,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"plugin": plugin,
+		},
+	}, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry

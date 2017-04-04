@@ -112,13 +112,7 @@ reduced to the same size.`,
 				a zero or negative value reuses connections forever.`,
 			},
 
-			"plugin_command": &framework.FieldSchema{
-				Type: framework.TypeString,
-				Description: `Maximum amount of time a connection may be reused;
-				a zero or negative value reuses connections forever.`,
-			},
-
-			"plugin_checksum": &framework.FieldSchema{
+			"plugin_name": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `Maximum amount of time a connection may be reused;
 				a zero or negative value reuses connections forever.`,
@@ -223,8 +217,7 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 			MaxOpenConnections:    maxOpenConns,
 			MaxIdleConnections:    maxIdleConns,
 			MaxConnectionLifetime: maxConnLifetime,
-			PluginCommand:         data.Get("plugin_command").(string),
-			PluginChecksum:        data.Get("plugin_checksum").(string),
+			PluginName:            data.Get("plugin_name").(string),
 		}
 
 		name := data.Get("name").(string)

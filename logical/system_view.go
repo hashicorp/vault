@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
 // SystemView exposes system configuration information in a safe way
@@ -42,6 +43,8 @@ type SystemView interface {
 	// ResponseWrapData wraps the given data in a cubbyhole and returns the
 	// token used to unwrap.
 	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error)
+
+	LookupPlugin(string) (*pluginutil.PluginRunner, error)
 }
 
 type StaticSystemView struct {
@@ -80,4 +83,8 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 
 func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error) {
 	return "", errors.New("ResponseWrapData is not implimented in StaticSystemView")
+}
+
+func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+	return nil, errors.New("LookupPlugin is not implimented in StaticSystemView")
 }
