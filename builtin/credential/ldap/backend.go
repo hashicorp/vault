@@ -124,9 +124,9 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	// We re-bind to the BindDN if it's defined because we assume
 	// the BindDN should be the one to search, not the user logging in.
-	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
+	if cfg.BindDN != "" && cfg.BindPassword != "" {
 		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
-			return nil, logical.ErrorResponse(err.Error()), nil
+			return nil, logical.ErrorResponse("Encountered an error while attempting to bind with the BindDN User: " + err.Error()), nil
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/ldap: Re-Bound to original BindDN")
