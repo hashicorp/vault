@@ -8,7 +8,6 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/policyutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -21,11 +20,11 @@ func pathRole(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-			"allowed_auth_types": {
+			"auth_type": {
 				Type:    framework.TypeString,
 				Default: ec2AuthType,
-				Description: `The comma-separated list of allowed auth_type values that
-are allowed to authenticate to this role.`,
+				Description: `The auth_type permitted to authenticate to this role. Cannot be
+changed once set.`,
 			},
 			"bound_ami_id": {
 				Type: framework.TypeString,
@@ -283,13 +282,13 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 		}
 	}
 
-	// Check if there was no pre-existing AllowedAuthTypes set (from older versions)
-	if len(result.AllowedAuthTypes) == 0 {
+	// Check if there was no pre-existing AuthType set (from older versions)
+	if result.AuthType == "" {
 		// then default to the original behavior of ec2
-		result.AllowedAuthTypes = []string{ec2AuthType}
+		result.AuthType = ec2AuthType
 		// and save the result
 		if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
-			return nil, fmt.Errorf("failed to save default allowed_auth_types")
+			return nil, fmt.Errorf("failed to save default auth_type")
 		}
 	}
 
@@ -412,30 +411,27 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.InferredAWSRegion = inferredAWSRegionRaw.(string)
 	}
 
-	var allowEc2Auth, allowIamAuth bool
-
-	if allowedAuthTypesRaw, ok := data.GetOk("allowed_auth_types"); ok {
-		roleEntry.AllowedAuthTypes = strutil.ParseDedupAndSortStrings(allowedAuthTypesRaw.(string), ",")
-	} else if req.Operation == logical.CreateOperation {
-		roleEntry.AllowedAuthTypes = strutil.ParseDedupAndSortStrings(data.Get("allowed_auth_types").(string), ",")
-	}
-
-	for _, t := range roleEntry.AllowedAuthTypes {
-		switch t {
-		case ec2AuthType:
-			allowEc2Auth = true
-		case iamAuthType:
-			allowIamAuth = true
-		default:
-			return nil, fmt.Errorf("Unrecognized auth_type in roleEntry: %q", t)
+	// auth_type is a special case as it's immutable and can't be changed once a role is created
+	if authTypeRaw, ok := data.GetOk("auth_type"); ok {
+		if roleEntry.AuthType == "" {
+			switch authTypeRaw.(string) {
+			case ec2AuthType, iamAuthType:
+				roleEntry.AuthType = authTypeRaw.(string)
+			default:
+				return logical.ErrorResponse(fmt.Sprintf("unrecognized auth_type: %v", authTypeRaw.(string))), nil
+			}
+		} else if authTypeRaw.(string) != roleEntry.AuthType {
+			return logical.ErrorResponse("attempted to change auth_type on role"), nil
 		}
+	} else if req.Operation == logical.CreateOperation {
+		roleEntry.AuthType = data.Get("auth_type").(string)
 	}
 
-	allowEc2Binds := allowEc2Auth
+	allowEc2Binds := roleEntry.AuthType == ec2AuthType
 
 	if roleEntry.InferredEntityType != "" {
 		switch {
-		case !allowIamAuth:
+		case roleEntry.AuthType != iamAuthType:
 			return logical.ErrorResponse("specified inferred_entity_type but didn't allow iam auth_type"), nil
 		case roleEntry.InferredEntityType != ec2EntityType:
 			return logical.ErrorResponse(fmt.Sprintf("specified invalid inferred_entity_type: %s", roleEntry.InferredEntityType)), nil
@@ -450,14 +446,14 @@ func (b *backend) pathRoleCreateUpdate(
 	numBinds := 0
 
 	if roleEntry.BoundAccountID != "" {
-		if !allowEc2Auth {
-			return logical.ErrorResponse("specified bound_account_id but not allowing ec2 auth_type"), nil
+		if !allowEc2Binds {
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_account_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
 		}
 		numBinds++
 	}
 
 	if roleEntry.BoundRegion != "" {
-		if !allowEc2Auth {
+		if roleEntry.AuthType != ec2AuthType {
 			return logical.ErrorResponse("specified bound_region but not allowing ec2 auth_type"), nil
 		}
 		numBinds++
@@ -485,7 +481,7 @@ func (b *backend) pathRoleCreateUpdate(
 	}
 
 	if roleEntry.BoundIamPrincipalARN != "" {
-		if !allowIamAuth {
+		if roleEntry.AuthType != iamAuthType {
 			return logical.ErrorResponse("specified bound_iam_principal_arn but not allowing iam auth_type"), nil
 		}
 		numBinds++
@@ -504,15 +500,21 @@ func (b *backend) pathRoleCreateUpdate(
 
 	disallowReauthenticationBool, ok := data.GetOk("disallow_reauthentication")
 	if ok {
+		if roleEntry.AuthType != ec2AuthType {
+			return logical.ErrorResponse("specified disallow_reauthentication when not using ec2 auth type"), nil
+		}
 		roleEntry.DisallowReauthentication = disallowReauthenticationBool.(bool)
-	} else if req.Operation == logical.CreateOperation {
+	} else if req.Operation == logical.CreateOperation && roleEntry.AuthType == ec2AuthType {
 		roleEntry.DisallowReauthentication = data.Get("disallow_reauthentication").(bool)
 	}
 
 	allowInstanceMigrationBool, ok := data.GetOk("allow_instance_migration")
 	if ok {
+		if roleEntry.AuthType != ec2AuthType {
+			return logical.ErrorResponse("specified allow_instance_migration when not using ec2 auth type"), nil
+		}
 		roleEntry.AllowInstanceMigration = allowInstanceMigrationBool.(bool)
-	} else if req.Operation == logical.CreateOperation {
+	} else if req.Operation == logical.CreateOperation && roleEntry.AuthType == ec2AuthType {
 		roleEntry.AllowInstanceMigration = data.Get("allow_instance_migration").(bool)
 	}
 
@@ -564,13 +566,16 @@ func (b *backend) pathRoleCreateUpdate(
 
 	roleTagStr, ok := data.GetOk("role_tag")
 	if ok {
+		if roleEntry.AuthType != ec2AuthType {
+			return logical.ErrorResponse("tried to enable role_tag when not using ec2 auth method"), nil
+		}
 		roleEntry.RoleTag = roleTagStr.(string)
 		// There is a limit of 127 characters on the tag key for AWS EC2 instances.
 		// Complying to that requirement, do not allow the value of 'key' to be more than that.
 		if len(roleEntry.RoleTag) > 127 {
 			return logical.ErrorResponse("length of role tag exceeds the EC2 key limit of 127 characters"), nil
 		}
-	} else if req.Operation == logical.CreateOperation {
+	} else if req.Operation == logical.CreateOperation && roleEntry.AuthType == ec2AuthType {
 		roleEntry.RoleTag = data.Get("role_tag").(string)
 	}
 
@@ -594,7 +599,7 @@ func (b *backend) pathRoleCreateUpdate(
 
 // Struct to hold the information associated with an AMI ID in Vault.
 type awsRoleEntry struct {
-	AllowedAuthTypes           []string      `json:"allowed_auth_types" structs:"allowed_auth_types" mapstructure:"allowed_auth_types"`
+	AuthType                   string        `json:"auth_type" structs:"auth_type" mapstructure:"auth_type"`
 	BoundAmiID                 string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
 	BoundAccountID             string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
 	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn" structs:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`

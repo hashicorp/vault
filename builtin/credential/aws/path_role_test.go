@@ -169,7 +169,7 @@ func TestBackend_pathIam(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"allowed_auth_types":      iamAuthType,
+		"auth_type":               iamAuthType,
 		"policies":                "p,q,r,s",
 		"max_ttl":                 "2h",
 		"bound_iam_principal_arn": "n:aws:iam::123456789012:user/MyUserName",
@@ -185,7 +185,7 @@ func TestBackend_pathIam(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatal("failed to create the role entry")
+		t.Fatalf("failed to create the role entry; resp: %#v", resp)
 	}
 
 	resp, err = b.HandleRequest(&logical.Request{
@@ -314,57 +314,60 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
-		"policies":           "p,q,r,s",
-		"bound_ami_id":       "ami-abc1234",
-		"allowed_auth_types": "ec2,invalid",
+		"policies":     "p,q,r,s",
+		"bound_ami_id": "ami-abc1234",
+		"auth_type":    "ec2,invalid",
 	}
 
-	submitCreateRequest := func(roleName string) (*logical.Response, error) {
+	submitRequest := func(roleName string, op logical.Operation) (*logical.Response, error) {
 		return b.HandleRequest(&logical.Request{
-			Operation: logical.CreateOperation,
+			Operation: op,
 			Path:      "role/" + roleName,
 			Data:      data,
 			Storage:   storage,
 		})
 	}
 
-	resp, err := submitCreateRequest("shouldNeverExist")
-	if (resp != nil && !resp.IsError()) || err == nil {
-		t.Fatalf("created role with invalid allowed_auth_type")
-	}
-
-	data["allowed_auth_types"] = "ec2,,iam"
-	resp, err = submitCreateRequest("shouldNeverExist")
-	if resp != nil && !resp.IsError() {
-		t.Fatalf("created role without required bound_iam_principal_arn")
+	resp, err := submitRequest("shouldNeverExist", logical.CreateOperation)
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("created role with invalid auth_type; resp: %#v", resp)
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data["bound_iam_principal_arn"] = "arn:aws:iam::123456789012:role/MyRole"
+	data["auth_type"] = "ec2,,iam"
+	resp, err = submitRequest("shouldNeverExist", logical.CreateOperation)
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("created role mixed auth types")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data["auth_type"] = ec2AuthType
+	resp, err = submitRequest("ec2_to_iam", logical.CreateOperation)
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create valid role; resp: %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data["auth_type"] = iamAuthType
 	delete(data, "bound_ami_id")
-	resp, err = submitCreateRequest("shouldNeverExist")
-	if resp != nil && !resp.IsError() {
-		t.Fatalf("created role without required ec2 binding")
+	data["bound_iam_principal_arn"] = "arn:aws:iam::123456789012:role/MyRole"
+	resp, err = submitRequest("ec2_to_iam", logical.UpdateOperation)
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("changed auth type on the role")
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	data["bound_ami_id"] = "ami-1234567"
-	resp, err = submitCreateRequest("multipleTypes")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.IsError() {
-		t.Fatalf("didn't allow creation of valid role with multiple bindings of different types")
-	}
-
-	delete(data, "bound_iam_principal_arn")
 	data["inferred_entity_type"] = ec2EntityType
 	data["inferred_aws_region"] = "us-east-1"
-	resp, err = submitCreateRequest("multipleTypesInferred")
+	resp, err = submitRequest("multipleTypesInferred", logical.CreateOperation)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -425,7 +428,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"allowed_auth_types":             []string{ec2AuthType},
+		"auth_type":                      ec2AuthType,
 		"bound_ami_id":                   "testamiid",
 		"bound_account_id":               "testaccountid",
 		"bound_region":                   "testregion",

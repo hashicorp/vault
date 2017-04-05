@@ -1043,7 +1043,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	}
 
 	roleReq := &logical.Request{
-		Operation: logical.UpdateOperation,
+		Operation: logical.CreateOperation,
 		Path:      "role/" + roleName,
 		Storage:   storage,
 		Data:      data,
@@ -1062,6 +1062,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	}
 
 	// Place the correct AMI ID, but make the AccountID wrong
+	roleReq.Operation = logical.UpdateOperation
 	data["bound_ami_id"] = amiID
 	data["bound_account_id"] = "wrong-account-id"
 	resp, err = b.HandleRequest(roleReq)
@@ -1089,24 +1090,8 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// place the correct IAM role ARN, but make the auth type wrong
+	// place the correct IAM role ARN
 	data["bound_iam_role_arn"] = iamARN
-	data["bound_iam_principal_arn"] = iamARN
-	data["allowed_auth_types"] = iamAuthType
-	resp, err = b.HandleRequest(roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
-	}
-
-	// Attempt to login and expect a fail because auth_type is wrong
-	resp, err = b.HandleRequest(loginRequest)
-	if err != nil || resp == nil || (resp != nil && !resp.IsError()) {
-		t.Fatalf("bad: expected error response: resp:%#v\nerr:%v", resp, err)
-	}
-
-	// Place the correct auth type
-	delete(data, "bound_iam_principal_arn")
-	data["allowed_auth_types"] = ec2AuthType
 	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
@@ -1397,7 +1382,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	roleData := map[string]interface{}{
 		"bound_iam_principal_arn": testIdentityArn,
 		"policies":                "root",
-		"allowed_auth_types":      iamAuthType,
+		"auth_type":               iamAuthType,
 	}
 	roleRequest := &logical.Request{
 		Operation: logical.CreateOperation,
@@ -1426,20 +1411,12 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
 	}
 
-	roleDataEc2["allowed_auth_types"] = "ec2,iam"
-	roleDataEc2["bound_iam_principal_arn"] = testIdentityArn
-	roleRequestEc2.Path = "role/ec2Iam"
-	resp, err = b.HandleRequest(roleRequestEc2)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
-	}
-
 	// now we're creating the invalid role we won't be able to login to
 	roleData["bound_iam_principal_arn"] = "arn:aws:iam::123456789012:role/FakeRole"
 	roleRequest.Path = "role/" + testInvalidRoleName
 	resp, err = b.HandleRequest(roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
+		t.Fatalf("bad: didn't fail to create role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	// now, create the request without the signed header
@@ -1511,15 +1488,6 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// finally, the happy path tests :)
 
 	loginData["role"] = testValidRoleName
-	resp, err = b.HandleRequest(loginRequest)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Errorf("bad: expected valid login: resp:%#v", resp)
-	}
-
-	loginData["role"] = "ec2Iam"
 	resp, err = b.HandleRequest(loginRequest)
 	if err != nil {
 		t.Fatal(err)

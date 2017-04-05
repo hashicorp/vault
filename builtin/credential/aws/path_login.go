@@ -388,27 +388,27 @@ func (b *backend) pathLoginUpdate(
 // The second error return value indicates whether there's an error in even
 // trying to validate those requirements
 func (b *backend) verifyInstanceMeetsRoleRequirements(
-	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (*roleTagLoginResponse, error, error) {
+	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (error, error) {
 
 	switch {
 	case instance == nil:
-		return nil, nil, fmt.Errorf("nil instance")
+		return nil, fmt.Errorf("nil instance")
 	case roleEntry == nil:
-		return nil, nil, fmt.Errorf("nil roleEntry")
+		return nil, fmt.Errorf("nil roleEntry")
 	case identityDoc == nil:
-		return nil, nil, fmt.Errorf("nil identityDoc")
+		return nil, fmt.Errorf("nil identityDoc")
 	}
 
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on role
 	if roleEntry.BoundAccountID != "" && identityDoc.AccountID != roleEntry.BoundAccountID {
-		return nil, fmt.Errorf("account ID %q does not belong to role %q", identityDoc.AccountID, roleName), nil
+		return fmt.Errorf("account ID %q does not belong to role %q", identityDoc.AccountID, roleName), nil
 	}
 
 	// Check if an STS configuration exists for the AWS account
 	sts, err := b.lockedAwsStsEntry(s, identityDoc.AccountID)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching STS config for account ID %q: %q\n", identityDoc.AccountID, err), nil
+		return fmt.Errorf("error fetching STS config for account ID %q: %q\n", identityDoc.AccountID, err), nil
 	}
 	// An empty STS role signifies the master account
 	stsRole := ""
@@ -427,30 +427,30 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 	// is ec2 or iam.
 	if roleEntry.BoundAmiID != "" {
 		if instance.ImageId == nil {
-			return nil, nil, fmt.Errorf("AMI ID in the instance description is nil")
+			return nil, fmt.Errorf("AMI ID in the instance description is nil")
 		}
 		if roleEntry.BoundAmiID != *instance.ImageId {
-			return nil, fmt.Errorf("AMI ID %q does not belong to role %q", instance.ImageId, roleName), nil
+			return fmt.Errorf("AMI ID %q does not belong to role %q", instance.ImageId, roleName), nil
 		}
 	}
 
 	// Validate the SubnetID if corresponding bound was set on the role
 	if roleEntry.BoundSubnetID != "" {
 		if instance.SubnetId == nil {
-			return nil, nil, fmt.Errorf("subnet ID in the instance description is nil")
+			return nil, fmt.Errorf("subnet ID in the instance description is nil")
 		}
 		if roleEntry.BoundSubnetID != *instance.SubnetId {
-			return nil, fmt.Errorf("subnet ID %q does not satisfy the constraint on role %q", *instance.SubnetId, roleName), nil
+			return fmt.Errorf("subnet ID %q does not satisfy the constraint on role %q", *instance.SubnetId, roleName), nil
 		}
 	}
 
 	// Validate the VpcID if corresponding bound was set on the role
 	if roleEntry.BoundVpcID != "" {
 		if instance.VpcId == nil {
-			return nil, nil, fmt.Errorf("VPC ID in the instance description is nil")
+			return nil, fmt.Errorf("VPC ID in the instance description is nil")
 		}
 		if roleEntry.BoundVpcID != *instance.VpcId {
-			return nil, fmt.Errorf("VPC ID %q does not satisfy the constraint on role %q", *instance.VpcId, roleName), nil
+			return fmt.Errorf("VPC ID %q does not satisfy the constraint on role %q", *instance.VpcId, roleName), nil
 		}
 	}
 
@@ -459,14 +459,14 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 	// on the role
 	if roleEntry.BoundIamInstanceProfileARN != "" {
 		if instance.IamInstanceProfile == nil {
-			return nil, nil, fmt.Errorf("IAM instance profile in the instance description is nil")
+			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
 		}
 		if instance.IamInstanceProfile.Arn == nil {
-			return nil, nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
+			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
 		}
 		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
 		if !strings.HasPrefix(iamInstanceProfileARN, roleEntry.BoundIamInstanceProfileARN) {
-			return nil, fmt.Errorf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName), nil
+			return fmt.Errorf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName), nil
 		}
 	}
 
@@ -474,17 +474,17 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 	// the IAM role ARN specified as a constraint on the role.
 	if roleEntry.BoundIamRoleARN != "" {
 		if instance.IamInstanceProfile == nil {
-			return nil, nil, fmt.Errorf("IAM instance profile in the instance description is nil")
+			return nil, fmt.Errorf("IAM instance profile in the instance description is nil")
 		}
 		if instance.IamInstanceProfile.Arn == nil {
-			return nil, nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
+			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is nil")
 		}
 
 		// Fetch the instance profile ARN from the instance description
 		iamInstanceProfileARN := *instance.IamInstanceProfile.Arn
 
 		if iamInstanceProfileARN == "" {
-			return nil, nil, fmt.Errorf("IAM instance profile ARN in the instance description is empty")
+			return nil, fmt.Errorf("IAM instance profile ARN in the instance description is empty")
 		}
 
 		// Extract out the instance profile name from the instance
@@ -493,41 +493,30 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
 
 		if iamInstanceProfileName == "" {
-			return nil, nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
+			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
 		iamClient, err := b.clientIAM(s, identityDoc.Region, stsRole)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not fetch IAM client: %v", err)
+			return nil, fmt.Errorf("could not fetch IAM client: %v", err)
 		} else if iamClient == nil {
-			return nil, nil, fmt.Errorf("received a nil iamClient")
+			return nil, fmt.Errorf("received a nil iamClient")
 		}
 		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileName)
 		if err != nil {
-			return nil, nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
+			return nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
 		}
 		if iamRoleARN == "" {
-			return nil, nil, fmt.Errorf("IAM role ARN could not be fetched")
+			return nil, fmt.Errorf("IAM role ARN could not be fetched")
 		}
 
 		if !strings.HasPrefix(iamRoleARN, roleEntry.BoundIamRoleARN) {
-			return nil, fmt.Errorf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName), nil
+			return fmt.Errorf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName), nil
 		}
 	}
 
-	var roleTagResp *roleTagLoginResponse
-	if roleEntry.RoleTag != "" {
-		roleTagResp, err := b.handleRoleTagLogin(s, roleName, roleEntry, instance)
-		if err != nil {
-			return nil, nil, err
-		}
-		if roleTagResp == nil {
-			return nil, fmt.Errorf("failed to fetch and verify the role tag"), nil
-		}
-	}
-
-	return roleTagResp, nil, nil
+	return nil, nil
 }
 
 // pathLoginUpdateEc2 is used to create a Vault token by the EC2 instances
@@ -602,7 +591,7 @@ func (b *backend) pathLoginUpdateEc2(
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %q not found", roleName)), nil
 	}
 
-	if !strutil.StrListContains(roleEntry.AllowedAuthTypes, ec2AuthType) {
+	if roleEntry.AuthType != ec2AuthType {
 		return logical.ErrorResponse(fmt.Sprintf("auth method ec2 not allowed for role %s", roleName)), nil
 	}
 
@@ -620,7 +609,7 @@ func (b *backend) pathLoginUpdateEc2(
 		return logical.ErrorResponse(fmt.Sprintf("Region %q does not satisfy the constraint on role %q", identityDocParsed.Region, roleName)), nil
 	}
 
-	roleTagResp, validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, identityDocParsed)
+	validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, identityDocParsed)
 	if err != nil {
 		return nil, err
 	}
@@ -628,6 +617,16 @@ func (b *backend) pathLoginUpdateEc2(
 		return logical.ErrorResponse(fmt.Sprintf("Error validating instance: %s", validationError)), nil
 	}
 
+	var roleTagResp *roleTagLoginResponse
+	if roleEntry.RoleTag != "" {
+		roleTagResp, err := b.handleRoleTagLogin(req.Storage, roleName, roleEntry, instance)
+		if err != nil {
+			return nil, err
+		}
+		if roleTagResp == nil {
+			return logical.ErrorResponse("failed to fetch and verify the role tag"), nil
+		}
+	}
 	// Get the entry from the identity whitelist, if there is one
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDocParsed.InstanceID)
 	if err != nil {
@@ -1140,7 +1139,7 @@ func (b *backend) pathLoginUpdateIam(
 		return logical.ErrorResponse(fmt.Sprintf("entry for role %s not found", roleName)), nil
 	}
 
-	if !strutil.StrListContains(roleEntry.AllowedAuthTypes, iamAuthType) {
+	if roleEntry.AuthType != iamAuthType {
 		return logical.ErrorResponse(fmt.Sprintf("auth method iam not allowed for role %s", roleName)), nil
 	}
 
@@ -1171,20 +1170,12 @@ func (b *backend) pathLoginUpdateIam(
 			PendingTime: instance.LaunchTime.Format(time.RFC3339),
 		}
 
-		roleTagResp, validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, identityDoc)
+		validationError, err := b.verifyInstanceMeetsRoleRequirements(req.Storage, instance, roleEntry, roleName, identityDoc)
 		if err != nil {
 			return nil, err
 		}
 		if validationError != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error validating instance: %s", validationError)), nil
-		}
-
-		if roleTagResp != nil {
-			if len(roleTagResp.Policies) != 0 {
-				policies = roleTagResp.Policies
-			}
-
-			rTagMaxTTL = roleTagResp.MaxTTL
 		}
 
 		inferredEntityType = ec2EntityType
