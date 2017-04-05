@@ -148,6 +148,7 @@ var builtinBackends = map[string]Factory{
 	"azure":              newAzureBackend,
 	"dynamodb":           newDynamoDBBackend,
 	"etcd":               newEtcdBackend,
+	"mssql":              newMsSQLBackend,
 	"mysql":              newMySQLBackend,
 	"postgresql":         newPostgreSQLBackend,
 	"swift":              newSwiftBackend,
