@@ -186,7 +186,8 @@ $ vault write auth/ldap/config \
 * Group membership will be resolved via the `memberOf` attribute of _user_ objects. That search will begin under `ou=Users,dc=example,dc=com`.
 
 ```
-$ vault write auth/ldap/config url="ldap://ldap.example.com" \
+$ vault write auth/ldap/config \
+    url="ldap://ldap.example.com" \
     userattr=sAMAccountName \
     userdn="ou=Users,dc=example,dc=com" \
     groupdn="ou=Users,dc=example,dc=com" \
@@ -211,7 +212,8 @@ $ vault write auth/ldap/config url="ldap://ldap.example.com" \
 * Group names are identified using the `cn` attribute.
 
 ```
-$ vault write auth/ldap/config url="ldaps://ldap.example.com" \
+$ vault write auth/ldap/config \
+    url="ldaps://ldap.example.com" \
     userattr="uid" \
     userdn="ou=Users,dc=example,dc=com" \
     discoverdn=true \
@@ -293,7 +295,7 @@ It should be noted that user -> policy mapping happens at token creation time. A
     </ul>
     <ul>
       <li>
-        <span class="param">tls_in_version</span>
+        <span class="param">tls_min_version</span>
         <span class="param-flags">optional</span>
         Minimum TLS version to use. Accepted values are `tls10`, `tls11` or
         `tls12`. Defaults to `tls12`.
