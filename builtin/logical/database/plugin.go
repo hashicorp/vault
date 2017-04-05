@@ -1,6 +1,7 @@
-package dbs
+package database
 
 import (
+	"errors"
 	"fmt"
 	"net/rpc"
 	"sync"
@@ -8,7 +9,46 @@ import (
 
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
+
+var (
+	ErrEmptyPluginName = errors.New("empty plugin name")
+)
+
+// PluginFactory is used to build plugin database types. It wraps the database
+// object in a logging and metrics middleware.
+func PluginFactory(conf *DatabaseConfig, sys logical.SystemView, logger log.Logger) (DatabaseType, error) {
+	if conf.PluginName == "" {
+		return nil, ErrEmptyPluginName
+	}
+
+	pluginMeta, err := sys.LookupPlugin(conf.PluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := newPluginClient(sys, pluginMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wrap with metrics middleware
+	db = &databaseMetricsMiddleware{
+		next:    db,
+		typeStr: db.Type(),
+	}
+
+	// Wrap with tracing middleware
+	db = &databaseTracingMiddleware{
+		next:    db,
+		typeStr: db.Type(),
+		logger:  logger,
+	}
+
+	return db, nil
+}
 
 // handshakeConfigs are used to just do a basic handshake between
 // a plugin and host. If the handshake fails, a user friendly error is shown.
@@ -33,7 +73,7 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 }
 
 // DatabasePluginClient embeds a databasePluginRPCClient and wraps it's close
-// method to also call Close() on the plugin.Client.
+// method to also call Kill() on the plugin.Client.
 type DatabasePluginClient struct {
 	client *plugin.Client
 	sync.Mutex

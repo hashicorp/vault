@@ -3,10 +3,8 @@ package database
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/fatih/structs"
-	"github.com/hashicorp/vault/builtin/logical/database/dbs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -50,16 +48,10 @@ func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framew
 	return nil, nil
 }
 
-// pathConfigureBuiltinConnection returns a configured framework.Path setup to
-// operate on builtin databases.
-func pathConfigureBuiltinConnection(b *databaseBackend) *framework.Path {
-	return buildConfigConnectionPath("dbs/%s", b.connectionWriteHandler(dbs.BuiltinFactory), b.connectionReadHandler(), b.connectionDeleteHandler())
-}
-
 // pathConfigurePluginConnection returns a configured framework.Path setup to
 // operate on plugins.
 func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
-	return buildConfigConnectionPath("dbs/plugin/%s", b.connectionWriteHandler(dbs.PluginFactory), b.connectionReadHandler(), b.connectionDeleteHandler())
+	return buildConfigConnectionPath("config/%s", b.connectionWriteHandler(), b.connectionReadHandler(), b.connectionDeleteHandler())
 }
 
 // buildConfigConnectionPath reutns a configured framework.Path using the passed
@@ -74,38 +66,10 @@ func buildConfigConnectionPath(path string, updateOp, readOp, deleteOp framework
 				Description: "Name of this DB type",
 			},
 
-			"connection_type": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: "DB type (e.g. postgres)",
-			},
-
 			"verify_connection": &framework.FieldSchema{
 				Type:        framework.TypeBool,
 				Default:     true,
 				Description: `If set, connection_url is verified by actually connecting to the database`,
-			},
-
-			"max_open_connections": &framework.FieldSchema{
-				Type: framework.TypeInt,
-				Description: `Maximum number of open connections to the database;
-a zero uses the default value of two and a
-negative value means unlimited`,
-			},
-
-			"max_idle_connections": &framework.FieldSchema{
-				Type: framework.TypeInt,
-				Description: `Maximum number of idle connections to the database;
-a zero uses the value of max_open_connections
-and a negative value disables idle connections.
-If larger than max_open_connections it will be
-reduced to the same size.`,
-			},
-
-			"max_connection_lifetime": &framework.FieldSchema{
-				Type:    framework.TypeString,
-				Default: "0s",
-				Description: `Maximum amount of time a connection may be reused;
-				a zero or negative value reuses connections forever.`,
 			},
 
 			"plugin_name": &framework.FieldSchema{
@@ -139,7 +103,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 			return nil, nil
 		}
 
-		var config dbs.DatabaseConfig
+		var config DatabaseConfig
 		if err := entry.DecodeJSON(&config); err != nil {
 			return nil, err
 		}
@@ -180,40 +144,12 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 
 // connectionWriteHandler returns a handler function for creating and updating
 // both builtin and plugin database types.
-func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.OperationFunc {
+func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-		connType := data.Get("connection_type").(string)
-		if connType == "" {
-			return logical.ErrorResponse("connection_type not set"), nil
-		}
 
-		maxOpenConns := data.Get("max_open_connections").(int)
-		if maxOpenConns == 0 {
-			maxOpenConns = 2
-		}
-
-		maxIdleConns := data.Get("max_idle_connections").(int)
-		if maxIdleConns == 0 {
-			maxIdleConns = maxOpenConns
-		}
-		if maxIdleConns > maxOpenConns {
-			maxIdleConns = maxOpenConns
-		}
-
-		maxConnLifetimeRaw := data.Get("max_connection_lifetime").(string)
-		maxConnLifetime, err := time.ParseDuration(maxConnLifetimeRaw)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid max_connection_lifetime: %s", err)), nil
-		}
-
-		config := &dbs.DatabaseConfig{
-			DatabaseType:          connType,
-			ConnectionDetails:     data.Raw,
-			MaxOpenConnections:    maxOpenConns,
-			MaxIdleConnections:    maxIdleConns,
-			MaxConnectionLifetime: maxConnLifetime,
-			PluginName:            data.Get("plugin_name").(string),
+		config := &DatabaseConfig{
+			ConnectionDetails: data.Raw,
+			PluginName:        data.Get("plugin_name").(string),
 		}
 
 		name := data.Get("name").(string)
@@ -227,7 +163,7 @@ func (b *databaseBackend) connectionWriteHandler(factory dbs.Factory) framework.
 		b.Lock()
 		defer b.Unlock()
 
-		db, err := factory(config, b.System(), b.logger)
+		db, err := PluginFactory(config, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 		}

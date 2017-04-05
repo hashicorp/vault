@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/meta"
 )
 
@@ -29,7 +29,7 @@ func (c *PluginExec) Run(args []string) int {
 
 	pluginName := args[0]
 
-	runner, ok := pluginutil.BuiltinPlugins[pluginName]
+	runner, ok := builtinplugins.BuiltinPlugins[pluginName]
 	if !ok {
 		c.Ui.Error(fmt.Sprintf(
 			"No plugin with the name %s found", pluginName))

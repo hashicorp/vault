@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
@@ -53,7 +54,7 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 	}
 
 	// Look for builtin plugins
-	if _, ok := pluginutil.BuiltinPlugins[name]; !ok {
+	if _, ok := builtinplugins.BuiltinPlugins[name]; !ok {
 		return nil, fmt.Errorf("no plugin found with name: %s", name)
 	}
 
