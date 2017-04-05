@@ -25,8 +25,7 @@ type PluginCatalog struct {
 	vaultCommand string
 	vaultSHA256  []byte
 
-	lock    sync.RWMutex
-	builtin map[string]*pluginutil.PluginRunner
+	lock sync.RWMutex
 }
 
 func (c *Core) setupPluginCatalog() error {
