@@ -14,8 +14,8 @@ const (
 	// integer or go duration format string (e.g. 24h)
 	TypeDurationSecond
 
-	// TypeCommaStringSlice represents a slice as a comma-seperated
-	// string (value1,value2 => ["value1", "value2"])
+	// TypeCommaStringSlice represents a slice either as native slice or
+	// a comma-seperated string (value1,value2 => ["value1", "value2"])
 	TypeCommaStringSlice
 )
 
@@ -32,7 +32,7 @@ func (t FieldType) String() string {
 	case TypeDurationSecond:
 		return "duration (sec)"
 	case TypeCommaStringSlice:
-		return "string slice"
+		return "slice"
 	default:
 		return "unknown type"
 	}
