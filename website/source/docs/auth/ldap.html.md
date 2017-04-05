@@ -164,6 +164,7 @@ Use `vault path-help` for more details.
 ```
 $ vault write auth/ldap/config \
     url="ldap://ldap.example.com" \
+    userdn="ou=Users,dc=example,dc=com" \
     groupdn="ou=Groups,dc=example,dc=com" \
     groupfilter="(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))" \
     groupattr="cn" \
