@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/meta"
 )
 
 type PluginExec struct {
 	meta.Meta
-}
-
-var builtinFactories = map[string]func() error{
-//	"mysql-database-plugin":    mysql.Factory,
-//	"postgres-database-plugin": postgres.Factory,
 }
 
 func (c *PluginExec) Run(args []string) int {
@@ -33,14 +29,14 @@ func (c *PluginExec) Run(args []string) int {
 
 	pluginName := args[0]
 
-	factory, ok := builtinFactories[pluginName]
+	runner, ok := pluginutil.BuiltinPlugins[pluginName]
 	if !ok {
 		c.Ui.Error(fmt.Sprintf(
 			"No plugin with the name %s found", pluginName))
 		return 1
 	}
 
-	err := factory()
+	err := runner()
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf(
 			"Error running plugin: %s", err))
@@ -51,19 +47,18 @@ func (c *PluginExec) Run(args []string) int {
 }
 
 func (c *PluginExec) Synopsis() string {
-	return "Force the Vault node to give up active duty"
+	return "Runs a builtin plugin. Should only be called by vault."
 }
 
 func (c *PluginExec) Help() string {
 	helpText := `
-Usage: vault step-down [options]
+Usage: vault plugin-exec type
 
-  Force the Vault node to step down from active duty.
+  Runs a builtin plugin. Should only be called by vault.
 
-  This causes the indicated node to give up active status. Note that while the
-  affected node will have a short delay before attempting to grab the lock
-  again, if no other node grabs the lock beforehand, it is possible for the
-  same node to re-grab the lock and become active again.
+  This will execute a plugin for use in a plugable location in vault. If run by
+  a cli user it will print a message indicating it can not be executed by anyone
+  other than vault. For supported plugin types see the vault documentation.
 
 General Options:
 ` + meta.GeneralOptionsUsage()

@@ -10,13 +10,11 @@ import (
 
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
 var (
 	pluginCatalogPrefix = "plugin-catalog/"
-	builtinPlugins      = []string{"mysql-database-plugin", "postgres-database-plugin"}
 )
 
 type PluginCatalog struct {
@@ -55,7 +53,7 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 	}
 
 	// Look for builtin plugins
-	if !strutil.StrListContains(builtinPlugins, name) {
+	if _, ok := pluginutil.BuiltinPlugins[name]; !ok {
 		return nil, fmt.Errorf("no plugin found with name: %s", name)
 	}
 
