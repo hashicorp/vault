@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -186,25 +187,46 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
 	var path string
 
+	serial = strings.Replace(strings.ToLower(serial), "-", ":", -1)
+
 	switch {
 	// Revoked goes first as otherwise ca/crl get hardcoded paths which fail if
 	// we actually want revocation info
 	case strings.HasPrefix(prefix, "revoked/"):
-		path = "revoked/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		path = "revoked/" + base64.URLEncoding.EncodeToString([]byte(serial))
 	case serial == "ca":
 		path = "ca"
 	case serial == "crl":
 		path = "crl"
 	default:
-		path = "certs/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		path = "certs/" + base64.URLEncoding.EncodeToString([]byte(serial))
 	}
 
 	certEntry, err := req.Storage.Get(path)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
+
 	if certEntry == nil {
-		return nil, nil
+		// If storage entry was not found, then attempt to check for
+		// entries that have base64 URL encoded serials in the paths
+		if serial != "" && serial != "ca" && serial != "crl" {
+			switch {
+			case strings.HasPrefix(prefix, "revoked/"):
+				path = "revoked/" + base64.URLEncoding.EncodeToString([]byte(serial))
+			default:
+				path = "certs/" + base64.URLEncoding.EncodeToString([]byte(serial))
+			}
+		}
+
+		certEntry, err = req.Storage.Get(path)
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
+		}
+
+		if certEntry == nil {
+			return nil, nil
+		}
 	}
 
 	if certEntry.Value == nil || len(certEntry.Value) == 0 {

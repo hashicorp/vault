@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -86,7 +87,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
 
-		revEntry, err = logical.StorageEntryJSON("revoked/"+serial, revInfo)
+		revEntry, err = logical.StorageEntryJSON("revoked/"+base64.URLEncoding.EncodeToString([]byte(serial)), revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating revocation entry")
 		}

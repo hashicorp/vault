@@ -1,8 +1,10 @@
 package pki
 
 import (
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -102,12 +104,23 @@ func pathFetchListCerts(b *backend) *framework.Path {
 }
 
 func (b *backend) pathFetchCertList(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
-	entries, err := req.Storage.List("certs/")
+	serials, err := req.Storage.List("certs/")
 	if err != nil {
 		return nil, err
 	}
 
-	return logical.ListResponse(entries), nil
+	// Base64 decode the serials
+	for i := 0; i < len(serials); i++ {
+		if !strings.Contains(serials[i], ":") {
+			decodedSerialBytes, err := base64.URLEncoding.DecodeString(serials[i])
+			if err != nil {
+				fmt.Printf("failed to decode the serial: %v\n", err)
+			}
+			serials[i] = string(decodedSerialBytes)
+		}
+	}
+
+	return logical.ListResponse(serials), nil
 }
 
 func (b *backend) pathFetchRead(req *logical.Request, data *framework.FieldData) (response *logical.Response, retErr error) {
