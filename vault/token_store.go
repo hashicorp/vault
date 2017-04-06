@@ -1,12 +1,12 @@
 package vault
 
 import (
+	"container/list"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
 	"time"
-	"container/list"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
@@ -1034,15 +1034,17 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 		id := dfs.Front()
 		path := parentPrefix + id.Value.(string) + "/"
 		children, no_child := ts.view.List(path)
-		if no_child != nil { 
+		if no_child != nil {
 			/* we have reached a leaf node, so we need to delete this
 			 * , before the parent, i think */
-			 if err := ts.revokeSalted(id.Value.(string)); err != nil {
-				 return fmt.Errorf("failed to revoke entry: %v", err)
-			 }
-			 dfs.Remove(id)
+			if err := ts.revokeSalted(id.Value.(string)); err != nil {
+				return fmt.Errorf("failed to revoke entry: %v", err)
+			}
+			dfs.Remove(id)
 		} else { //there are children and we need to prepend them to the list
-			dfs.PushFront(children)
+			for i := 0; i < len(children); i++ {
+				dfs.PushFront(children[i])
+			}
 		}
 	}
 	return nil
