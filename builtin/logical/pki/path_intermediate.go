@@ -3,6 +3,7 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
@@ -196,7 +197,7 @@ func (b *backend) pathSetSignedIntermediate(
 		return nil, err
 	}
 
-	entry.Key = "certs/" + cb.SerialNumber
+	entry.Key = "certs/" + strings.ToLower(strings.Replace(cb.SerialNumber, ":", "-", -1))
 	entry.Value = inputBundle.CertificateBytes
 	err = req.Storage.Put(entry)
 	if err != nil {

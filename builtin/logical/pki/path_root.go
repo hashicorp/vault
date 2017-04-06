@@ -3,6 +3,7 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/errutil"
 	"github.com/hashicorp/vault/logical"
@@ -145,7 +146,7 @@ func (b *backend) pathCAGenerateRoot(
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
 	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "certs/" + cb.SerialNumber,
+		Key:   "certs/" + strings.ToLower(strings.Replace(cb.SerialNumber, ":", "-", -1)),
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
@@ -277,7 +278,7 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "certs/" + cb.SerialNumber,
+		Key:   "certs/" + strings.ToLower(strings.Replace(cb.SerialNumber, ":", "-", -1)),
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {

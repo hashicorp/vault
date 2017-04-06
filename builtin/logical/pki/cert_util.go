@@ -185,30 +185,66 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 // separate pathing for CA, CRL, and revoked certificates.
 func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
 	var path string
+	var err error
+	var certEntry *logical.StorageEntry
 
 	switch {
 	// Revoked goes first as otherwise ca/crl get hardcoded paths which fail if
 	// we actually want revocation info
 	case strings.HasPrefix(prefix, "revoked/"):
-		path = "revoked/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		path = "revoked/" + strings.Replace(strings.ToLower(serial), ":", "-", -1)
 	case serial == "ca":
 		path = "ca"
 	case serial == "crl":
 		path = "crl"
 	default:
+		path = "certs/" + strings.Replace(strings.ToLower(serial), ":", "-", -1)
+	}
+
+	certEntry, err = req.Storage.Get(path)
+	if err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
+	}
+	if certEntry != nil {
+		if certEntry.Value == nil || len(certEntry.Value) == 0 {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
+		}
+		return certEntry, nil
+	}
+
+	// No point checking these, no old/new style colons/hyphens
+	if path == "ca" || path == "crl" {
+		return nil, nil
+	}
+
+	// Save the desired path
+	desiredPath := path
+
+	// If we get here we need to check for old-style paths using colons
+	switch {
+	case strings.HasPrefix(prefix, "revoked/"):
+		path = "revoked/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+	default:
 		path = "certs/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
 	}
 
-	certEntry, err := req.Storage.Get(path)
+	certEntry, err = req.Storage.Get(path)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
 	if certEntry == nil {
 		return nil, nil
 	}
-
 	if certEntry.Value == nil || len(certEntry.Value) == 0 {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
+	}
+
+	certEntry.Key = desiredPath
+	if err = req.Storage.Put(certEntry); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
+	}
+	if err = req.Storage.Delete(path); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
 
 	return certEntry, nil

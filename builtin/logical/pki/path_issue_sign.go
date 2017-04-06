@@ -3,6 +3,7 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -242,11 +243,11 @@ func (b *backend) pathIssueSignCert(
 
 	if !role.NoStore {
 		err = req.Storage.Put(&logical.StorageEntry{
-			Key:   "certs/" + cb.SerialNumber,
+			Key:   "certs/" + strings.ToLower(strings.Replace(cb.SerialNumber, ":", "-", -1)),
 			Value: parsedBundle.CertificateBytes,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+			return nil, fmt.Errorf("unable to store certificate locally: %v", err)
 		}
 	}
 
