@@ -1063,10 +1063,10 @@
 			"revisionTime": "2016-12-03T19:45:07Z"
 		},
 		{
-			"checksumSHA1": "wTMmmuol+KHkz9EwVKaOjd2O4cs=",
+			"checksumSHA1": "MlX15lJuV8DYARX5RJY8rqrSEWQ=",
 			"path": "github.com/mitchellh/mapstructure",
-			"revision": "db1efb556f84b25a0a13a04aad883943538ad2e0",
-			"revisionTime": "2017-01-25T05:19:37Z"
+			"revision": "53818660ed4955e899c0bcafa97299a388bd7c8e",
+			"revisionTime": "2017-03-07T20:11:23Z"
 		},
 		{
 			"checksumSHA1": "67Y6z6rHipvOvFwCZZXqKH+TWao=",

@@ -6,10 +6,10 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 // Builder is a struct to build a key/value mapping based on a list
@@ -111,14 +111,8 @@ func (b *Builder) add(raw string) error {
 	// Repeated keys will be converted into a slice
 	if existingValue, ok := b.result[key]; ok {
 		var sliceValue []interface{}
-		switch reflect.TypeOf(existingValue).Kind() {
-		case reflect.Slice:
-			s := reflect.ValueOf(existingValue)
-			for i := 0; i < s.Len(); i++ {
-				sliceValue = append(sliceValue, s.Index(i).Interface())
-			}
-		case reflect.String:
-			sliceValue = append(sliceValue, existingValue)
+		if err := mapstructure.WeakDecode(existingValue, &sliceValue); err != nil {
+			return err
 		}
 		sliceValue = append(sliceValue, value)
 		b.result[key] = sliceValue
