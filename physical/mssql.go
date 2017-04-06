@@ -61,11 +61,11 @@ func newMsSQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 	}
 
 	schema, ok := conf["schema"]
-	if !ok {
+	if !ok || schema == "" {
 		schema = "dbo"
 	}
 
-	connectionString := "server=" + server + ";app name" + appname + ";connection timeout=" + connectionTimeout + ";log=" + logLevel
+	connectionString := fmt.Sprintf("server=%s;app name=%s;connection timeout=%s;log=%s", server, appname, connectionTimeout, logLevel)
 	if username != "" {
 		connectionString += ";user id=" + username
 	}
@@ -83,15 +83,11 @@ func newMsSQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		return nil, fmt.Errorf("failed to create mssql database: %v", err)
 	}
 
-	dbTable := database + ".." + table
-	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='" + table + "') CREATE TABLE " + dbTable +
-		" (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
+	dbTable := database + "." + schema + "." + table
+	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='" + table + "' AND TABLE_SCHEMA='" + schema +
+		"') CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
-		dbTable = database + "." + schema + "." + table
-		createQuery = "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='" + table + "' AND TABLE_SCHEMA='" + schema +
-			"') CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
-
 		if _, err := db.Exec("USE " + database); err != nil {
 			return nil, fmt.Errorf("failed to switch mssql database: %v", err)
 		}
