@@ -241,6 +241,10 @@ type SealConfig struct {
 
 	// How many keys to store, for seals that support storage.
 	StoredShares int `json:"stored_shares"`
+
+	// This is a list of Shard information that each of them contains shard
+	// number, shard xor hash and salt. It is created at the init -polyhash
+	PolyhashEntries []string `json:"polyhash"`
 }
 
 // Validate is used to sanity check the seal configuration
@@ -292,6 +296,7 @@ func (s *SealConfig) Clone() *SealConfig {
 		Nonce:           s.Nonce,
 		Backup:          s.Backup,
 		StoredShares:    s.StoredShares,
+		PolyhashEntries: s.PolyhashEntries,
 	}
 	if len(s.PGPKeys) > 0 {
 		ret.PGPKeys = make([]string, len(s.PGPKeys))

@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/polyhash"
 	"github.com/hashicorp/vault/shamir"
 )
 
@@ -803,17 +804,6 @@ func (c *Core) ResetUnsealProcess() {
 // should be made.
 func (c *Core) Unseal(key []byte) (bool, error) {
 	defer metrics.MeasureSince([]string{"core", "unseal"}, time.Now())
-
-	// Verify the key length
-	min, max := c.barrier.KeyLength()
-	max += shamir.ShareOverhead
-	if len(key) < min {
-		return false, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
-	}
-	if len(key) > max {
-		return false, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
-	}
-
 	// Get the seal configuration
 	config, err := c.seal.BarrierConfig()
 	if err != nil {
@@ -825,12 +815,35 @@ func (c *Core) Unseal(key []byte) (bool, error) {
 		return false, ErrNotInit
 	}
 
+	// If it's a regular share, not polyhash password
+	if config.PolyhashEntries == nil {
+		// Verify the key length
+		min, max := c.barrier.KeyLength()
+		max += shamir.ShareOverhead
+		if len(key) < min {
+			return false, &ErrInvalidKey{fmt.Sprintf("key is shorter than minimum %d bytes", min)}
+		}
+		if len(key) > max {
+			return false, &ErrInvalidKey{fmt.Sprintf("key is longer than maximum %d bytes", max)}
+		}
+	}
+
 	c.stateLock.Lock()
 	defer c.stateLock.Unlock()
 
 	// Check if already unsealed
 	if !c.sealed {
 		return true, nil
+	}
+
+	// Check if it's using polyhash.
+	// If so, extract share out based on the password and share_xor_hash value
+	if config.PolyhashEntries != nil {
+		var shareno int
+		var password string
+		output := string(key)
+		fmt.Sscanf(output, "%d,%s", &shareno, &password)
+		key = polyhash.RecoverShareFromPolyhash(shareno, config.PolyhashEntries, password)
 	}
 
 	masterKey, err := c.unsealPart(config, key)

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/polyhash"
 )
 
 // InitCommand is a Command that initializes a new Vault server.
@@ -23,6 +24,7 @@ func (c *InitCommand) Run(args []string) int {
 	var threshold, shares, storedShares, recoveryThreshold, recoveryShares int
 	var pgpKeys, recoveryPgpKeys, rootTokenPgpKey pgpkeys.PubKeyFilesFlag
 	var auto, check bool
+	var polyhash polyhash.PolyhashPasswordsFlag
 	var consulServiceName string
 	flags := c.Meta.FlagSet("init", meta.FlagSetDefault)
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -36,6 +38,7 @@ func (c *InitCommand) Run(args []string) int {
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
 	flags.BoolVar(&check, "check", false, "")
 	flags.BoolVar(&auto, "auto", false, "")
+	flags.Var(&polyhash, "polyhash", "")
 	flags.StringVar(&consulServiceName, "consul-service", physical.DefaultServiceName, "")
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -49,6 +52,7 @@ func (c *InitCommand) Run(args []string) int {
 		RecoveryShares:    recoveryShares,
 		RecoveryThreshold: recoveryThreshold,
 		RecoveryPGPKeys:   recoveryPgpKeys,
+		PolyhashPasswords: polyhash,
 	}
 
 	switch len(rootTokenPgpKey) {
@@ -375,12 +379,18 @@ Init Options:
                             output for easy selection.
 
   -consul-service           Service name under which all the nodes of a Vault
-                            cluster are registered with Consul. Note that, when
+  							cluster are registered with Consul. Note that, when
                             Vault uses Consul as its HA backend, by default,
                             Vault will register itself as a service with Consul
                             with the service name "vault". This name can be
                             modified in Vault's configuration file, using the
                             "service" option for the Consul backend.
+
+  -polyhash                 If provided, the user must pass in a comma-separated list of 
+  							passwords to initialize vault as a polyhashing store. 
+							Upon unseal, use the same flag to pass in the password 
+							rather than the shard. Note that fundamental features of 
+							Vault are unchanged.
 `
 	return strings.TrimSpace(helpText)
 }

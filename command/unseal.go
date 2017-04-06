@@ -19,9 +19,10 @@ type UnsealCommand struct {
 }
 
 func (c *UnsealCommand) Run(args []string) int {
-	var reset bool
+	var reset, polyhash bool
 	flags := c.Meta.FlagSet("unseal", meta.FlagSetDefault)
 	flags.BoolVar(&reset, "reset", false, "")
+	flags.BoolVar(&polyhash, "polyhash", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -71,7 +72,7 @@ func (c *UnsealCommand) Run(args []string) int {
 				return 1
 			}
 		}
-		sealStatus, err = client.Sys().Unseal(strings.TrimSpace(value))
+		sealStatus, err = client.Sys().Unseal(strings.TrimSpace(value), polyhash)
 	}
 
 	if err != nil {
@@ -122,6 +123,9 @@ Unseal Options:
 
   -reset                  Reset the unsealing process by throwing away
                           prior keys in process to unseal the vault.
+
+  -polyhash               Indicate the server that this is
+                          a password used for polyhashing.
 
 `
 	return strings.TrimSpace(helpText)

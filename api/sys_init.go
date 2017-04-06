@@ -39,6 +39,7 @@ type InitRequest struct {
 	RecoveryThreshold int      `json:"recovery_threshold"`
 	RecoveryPGPKeys   []string `json:"recovery_pgp_keys"`
 	RootTokenPGPKey   string   `json:"root_token_pgp_key"`
+	PolyhashPasswords []string `json:"polyhash"`
 }
 
 type InitStatusResponse struct {

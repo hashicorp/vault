@@ -104,20 +104,28 @@ func handleSysUnseal(core *vault.Core) http.Handler {
 			}
 			core.ResetUnsealProcess()
 		} else {
+			var key []byte
+			var err error
 			// Decode the key, which is base64 or hex encoded
-			min, max := core.BarrierKeyLength()
-			key, err := hex.DecodeString(req.Key)
-			// We check min and max here to ensure that a string that is base64
-			// encoded but also valid hex will not be valid and we instead base64
-			// decode it
-			if err != nil || len(key) < min || len(key) > max {
-				key, err = base64.StdEncoding.DecodeString(req.Key)
-				if err != nil {
-					respondError(
-						w, http.StatusBadRequest,
-						errors.New("'key' must be a valid hex or base64 string"))
-					return
+			if !req.Polyhash {
+				min, max := core.BarrierKeyLength()
+				key, err = hex.DecodeString(req.Key)
+
+				// We check min and max here to ensure that a string that is base64
+				// encoded but also valid hex will not be valid and we instead base64
+				// decode it
+				if err != nil || len(key) < min || len(key) > max {
+					key, err = base64.StdEncoding.DecodeString(req.Key)
+					if err != nil {
+						respondError(
+							w, http.StatusBadRequest,
+							errors.New("'key' must be a valid hex or base64 string"))
+						return
+					}
 				}
+				// If polyhash is set, directly set the key
+			} else {
+				key = []byte(req.Key)
 			}
 
 			// Attempt the unseal
@@ -213,6 +221,7 @@ type SealStatusResponse struct {
 }
 
 type UnsealRequest struct {
-	Key   string
-	Reset bool
+	Key      string
+	Polyhash bool
+	Reset    bool
 }
