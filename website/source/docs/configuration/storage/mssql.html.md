@@ -34,25 +34,25 @@ storage "mssql" {
 
 ## `mssql` Parameters
 
-- `server` `(string: "localhost")` – host or host\instance.
+- `server` `(string: <required>)` – host or host\instance.
 
-- `username` `(string: "user1234")` - enter the SQL Server Authentication user id or 
+- `username` `(string: "")` - enter the SQL Server Authentication user id or 
   the Windows Authentication user id in the DOMAIN\User format. 
   On Windows, if user id is empty or missing Single-Sign-On is used.
   
-- `password` `(string: "secret123!")` – specifies the MSSQL password to connect to
+- `password` `(string: "")` – specifies the MSSQL password to connect to
   the database.
 
-- `database` `(string: "vault")` – Specifies the name of the database. If the
+- `database` `(string: "Vault")` – Specifies the name of the database. If the
   database does not exist, Vault will attempt to create it.
 
-- `table` `(string: "vault")` – Specifies the name of the table. If the table
+- `table` `(string: "Vault")` – Specifies the name of the table. If the table
   does not exist, Vault will attempt to create it.
   
 - `schema` `(string: "dbo")` – Specifies the name of the schema. If the schema
   does not exist, Vault will attempt to create it.
 
-- `appname` `(string: "vault")` – the application name.
+- `appname` `(string: "Vault")` – the application name.
 
 - `connectionTimeout` `(int: 30)` – in seconds (default is 30).
 
@@ -62,7 +62,7 @@ storage "mssql" {
 
 ### Custom Database, Table and Schema
 
-This example shows configuring the MySQL backend to use a custom database and
+This example shows configuring the MSSQL backend to use a custom database and
 table name.
 
 ```hcl
