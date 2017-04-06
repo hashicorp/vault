@@ -634,11 +634,13 @@ func generateCreationBundle(b *backend,
 	var ipAltInt interface{}
 	{
 		if csr != nil && role.UseCSRSANs {
-			if !role.AllowIPSANs {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+			if len(csr.IPAddresses) > 0 {
+				if !role.AllowIPSANs {
+					return nil, errutil.UserError{Err: fmt.Sprintf(
+						"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+				}
+				ipAddresses = csr.IPAddresses
 			}
-			ipAddresses = csr.IPAddresses
 		} else {
 			ipAltInt, ok = data.GetOk("ip_sans")
 			if ok {
