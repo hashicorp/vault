@@ -14,5 +14,12 @@ guidance to do them safely.
 
 The following guides are available:
 
-* [Generate Root](/docs/guides/generate-root.html) - This guide covers how to
-generate new root tokens using unseal keys.
+* [Root Token Generation](/docs/guides/generate-root.html) - This guide covers
+  how to generate new root tokens using unseal keys.
+
+* [Replication Setup and Guidance](/docs/guides/replication.html) - This
+  guide covers how to set up and manage Vault Replication, a part of Vault
+  Enterprise.
+
+* [Upgrading](/docs/guides/upgrading/index.html) - This guide provides general 
+  upgrade instructions for Vault with version-specific upgrade notes.

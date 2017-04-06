@@ -175,7 +175,7 @@ func (s *SearchService) search(ctx context.Context, searchType string, query str
 	if err != nil {
 		return nil, err
 	}
-	params.Add("q", query)
+	params.Set("q", query)
 	u := fmt.Sprintf("search/%s?%s", searchType, params.Encode())
 
 	req, err := s.client.NewRequest("GET", u, nil)

@@ -145,7 +145,7 @@ not specify the policy component, the client will inherit the allowed policies s
 on the role. If the role tag creation specifies the policy component but it contains
 no policies, the token will contain only the `default` policy; by default, this policy
 allows only manipulation (revocation, renewal, lookup) of the existing token, plus
-access to its [cubbyhole](https://www.vaultproject.io/docs/secrets/cubbyhole/index.html).
+access to its [cubbyhole](/docs/secrets/cubbyhole/index.html).
 This can be useful to allow instances access to a secure "scratch space" for
 storing data (via the token's cubbyhole) but without granting any access to
 other resources provided by or resident in Vault.
@@ -264,9 +264,10 @@ instance fails to renew the token on time.
 
 ### Cross Account Access
 
-To allow Vault to authenticate EC2 instances running in other accounts, AWS STS (Security
-Token Service) can be used to retrieve temporary credentials by assuming an IAM Role
-in those accounts.
+To allow Vault to authenticate EC2 instances running in other accounts, AWS STS
+(Security Token Service) can be used to retrieve temporary credentials by
+assuming an IAM Role in those accounts. All these accounts should be configured
+at the backend using the `auth/aws-ec2/config/sts/<account_id>` endpoint.
 
 The account in which Vault is running (i.e. the master account) must be listed as
 a trusted entity in the IAM Role being assumed on the remote account. The Role itself
@@ -639,7 +640,7 @@ The response will be in JSON. For example:
   <dd>POST</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/aws-ec2/config/certificate/<account_id>`</dd>
+  <dd>`/auth/aws-ec2/config/sts/<account_id>`</dd>
 
   <dt>Parameters</dt>
   <dd>

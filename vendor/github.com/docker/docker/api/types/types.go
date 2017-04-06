@@ -97,6 +97,7 @@ type ContainerStats struct {
 // GET "/_ping"
 type Ping struct {
 	APIVersion   string
+	OSType       string
 	Experimental bool
 }
 
@@ -390,19 +391,21 @@ type MountPoint struct {
 
 // NetworkResource is the body of the "get network" http response message
 type NetworkResource struct {
-	Name       string                      // Name is the requested name of the network
-	ID         string                      `json:"Id"` // ID uniquely identifies a network on a single machine
-	Created    time.Time                   // Created is the time the network created
-	Scope      string                      // Scope describes the level at which the network exists (e.g. `global` for cluster-wide or `local` for machine level)
-	Driver     string                      // Driver is the Driver name used to create the network (e.g. `bridge`, `overlay`)
-	EnableIPv6 bool                        // EnableIPv6 represents whether to enable IPv6
-	IPAM       network.IPAM                // IPAM is the network's IP Address Management
-	Internal   bool                        // Internal represents if the network is used internal only
-	Attachable bool                        // Attachable represents if the global scope is manually attachable by regular containers from workers in swarm mode.
-	Containers map[string]EndpointResource // Containers contains endpoints belonging to the network
-	Options    map[string]string           // Options holds the network specific options to use for when creating the network
-	Labels     map[string]string           // Labels holds metadata specific to the network being created
-	Peers      []network.PeerInfo          `json:",omitempty"` // List of peer nodes for an overlay network
+	Name       string                         // Name is the requested name of the network
+	ID         string                         `json:"Id"` // ID uniquely identifies a network on a single machine
+	Created    time.Time                      // Created is the time the network created
+	Scope      string                         // Scope describes the level at which the network exists (e.g. `global` for cluster-wide or `local` for machine level)
+	Driver     string                         // Driver is the Driver name used to create the network (e.g. `bridge`, `overlay`)
+	EnableIPv6 bool                           // EnableIPv6 represents whether to enable IPv6
+	IPAM       network.IPAM                   // IPAM is the network's IP Address Management
+	Internal   bool                           // Internal represents if the network is used internal only
+	Attachable bool                           // Attachable represents if the global scope is manually attachable by regular containers from workers in swarm mode.
+	Ingress    bool                           // Ingress indicates the network is providing the routing-mesh for the swarm cluster.
+	Containers map[string]EndpointResource    // Containers contains endpoints belonging to the network
+	Options    map[string]string              // Options holds the network specific options to use for when creating the network
+	Labels     map[string]string              // Labels holds metadata specific to the network being created
+	Peers      []network.PeerInfo             `json:",omitempty"` // List of peer nodes for an overlay network
+	Services   map[string]network.ServiceInfo `json:",omitempty"`
 }
 
 // EndpointResource contains network resources allocated and used for a container in a network
@@ -416,12 +419,20 @@ type EndpointResource struct {
 
 // NetworkCreate is the expected body of the "create network" http request message
 type NetworkCreate struct {
+	// Check for networks with duplicate names.
+	// Network is primarily keyed based on a random ID and not on the name.
+	// Network name is strictly a user-friendly alias to the network
+	// which is uniquely identified using ID.
+	// And there is no guaranteed way to check for duplicates.
+	// Option CheckDuplicate is there to provide a best effort checking of any networks
+	// which has the same name but it is not guaranteed to catch all name collisions.
 	CheckDuplicate bool
 	Driver         string
 	EnableIPv6     bool
 	IPAM           *network.IPAM
 	Internal       bool
 	Attachable     bool
+	Ingress        bool
 	Options        map[string]string
 	Labels         map[string]string
 }

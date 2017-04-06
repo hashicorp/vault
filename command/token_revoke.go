@@ -99,7 +99,7 @@ Usage: vault token-revoke [options] [token|accessor]
   Token can be revoked using the token accessor. This can be done by
   setting the '-accessor' flag. Note that when '-accessor' flag is set,
   '-mode' should not be set for 'orphan' or 'path'. This is because,
-  a token accessor always revokes the token along with it's child tokens.
+  a token accessor always revokes the token along with its child tokens.
 
 General Options:
 ` + meta.GeneralOptionsUsage() + `

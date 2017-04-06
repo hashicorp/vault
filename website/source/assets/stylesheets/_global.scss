@@ -1,7 +1,3 @@
-//
-// Global Site
-// --------------------------------------------------
-
 html {
   height: 100%;
   min-height: 100%;
@@ -29,52 +25,11 @@ h1 {
   margin-bottom: 24px;
 }
 
-//all below styles are overriding corrections for below (min-width: 992px)
-//below (min-width: 992px) these styles change
-.navbar-nav {
-  margin: 0;
-}
-
-.navbar-right {
-  float: right !important;
-}
-
-.navbar-nav > li {
-  float: left;
-}
-
-.navbar-nav > li > a {
-  padding-top: 15px;
-  padding-bottom: 15px;
-}
-
-.center {
-  text-align: center;
-}
-
-.alert p:last-child {
-  margin-bottom: 0;
-}
-
-//Typekit utilites for hiding FOUC
+// Avoid FOUT
 .wf-loading {
   visibility: hidden;
 }
 
 .wf-active, .wf-inactive {
   visibility: visible;
-}
-
-//fixed grid below 992 to prevent smaller responsive sizes
-@media (min-width: 768px) and (max-width: 992px) {
-  .container{
-    width: 100%;
-  }
-}
-
-//guarantees nav list fits at tablet viewport size
-@media (min-width: 768px) and (max-width: 800px) {
-  #header .navbar-nav a {
-    font-size: 12px !important;
-  }
 }

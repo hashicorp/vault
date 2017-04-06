@@ -24,7 +24,10 @@ listener "tcp" {
 
 - `cluster_address` `(string: "127.0.0.1:8201")` – Specifies the address to bind
   to for cluster server-to-server requests. This defaults to one port higher
-  than the value of `address`.
+  than the value of `address`. This does not usually need to be set, but can be
+  useful in case Vault servers are isolated from each other in such a way that
+  they need to hop through a TCP load balancer or some other scheme in order to
+  talk.
 
 - `tls_disable` `(bool: false)` – Specifies if TLS will be disabled. Vault
   assumes TLS by default, so you must explicitly disable TLS to opt-in to

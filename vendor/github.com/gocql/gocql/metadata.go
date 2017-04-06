@@ -90,7 +90,7 @@ func (c ColumnKind) String() string {
 	case ColumnStatic:
 		return "static"
 	default:
-		return fmt.Sprintf("unkown_column_%d", c)
+		return fmt.Sprintf("unknown_column_%d", c)
 	}
 }
 
@@ -247,7 +247,7 @@ func compileMetadata(
 		table.OrderedColumns = append(table.OrderedColumns, columns[i].Name)
 	}
 
-	if protoVersion == 1 {
+	if protoVersion == protoVersion1 {
 		compileV1Metadata(tables)
 	} else {
 		compileV2Metadata(tables)
@@ -505,9 +505,8 @@ func getTableMetadata(session *Session, keyspaceName string) ([]TableMetadata, e
 			}
 			return r
 		}
-	} else if session.cfg.ProtoVersion < protoVersion4 {
+	} else if session.cfg.ProtoVersion == protoVersion1 {
 		// we have key aliases
-		// TODO: Do we need key_aliases?
 		stmt = `
 		SELECT
 			columnfamily_name,

@@ -333,6 +333,7 @@ func (c *Client) NewRequest(method, path string) *Request {
 	req := &Request{
 		Method: method,
 		URL: &url.URL{
+			User:   c.addr.User,
 			Scheme: c.addr.Scheme,
 			Host:   c.addr.Host,
 			Path:   path,

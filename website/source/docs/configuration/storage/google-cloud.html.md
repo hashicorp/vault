@@ -39,7 +39,7 @@ storage "gcs" {
   in [JSON format][gcs-private-key]. This can also be provided via the
   environment variable `GOOGLE_APPLICATION_CREDENTIALS`.
 
-- `max_parallel` `(int: 128)` – Specifies the maximum number of concurrent
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests.
 
 ## `gcs` Examples
@@ -56,5 +56,5 @@ storage "gcs" {
 ```
 
 [gcs]: https://cloud.google.com/storage/
-[gcs-service-account]: (https://cloud.google.com/compute/docs/access/service-accounts
+[gcs-service-account]: https://cloud.google.com/compute/docs/access/service-accounts
 [gcs-private-key]: https://cloud.google.com/storage/docs/authentication#generating-a-private-key

@@ -597,7 +597,7 @@ func (hdr transDescrHdr) pack() (res []byte) {
 }
 
 func writeAllHeaders(w io.Writer, headers []headerStruct) (err error) {
-	// calculatint total length
+	// Calculating total length.
 	var totallen uint32 = 4
 	for _, hdr := range headers {
 		totallen += 4 + 2 + uint32(len(hdr.data))
@@ -718,7 +718,7 @@ func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
 		// May be the end of the value or an escaped closing brace, depending on the next character
 		parserStateBracedValueClosingBrace
 
-		// After a value. Next character should be a semi-colon or whitespace.
+		// After a value. Next character should be a semicolon or whitespace.
 		parserStateEndValue
 	)
 
@@ -1297,6 +1297,10 @@ continue_login:
 			sess.loginAck = token
 		case error:
 			return nil, fmt.Errorf("Login error: %s", token.Error())
+		case doneStruct:
+			if token.isError(){
+				return nil, fmt.Errorf("Login error: %s", token.getError())
+			}
 		}
 	}
 	if sspi_msg != nil {

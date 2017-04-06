@@ -377,7 +377,7 @@ type rpcError struct {
 }
 
 func (e *rpcError) Error() string {
-	return fmt.Sprintf("rpc error: code = %d desc = %s", e.code, e.desc)
+	return fmt.Sprintf("rpc error: code = %s desc = %s", e.code, e.desc)
 }
 
 // Code returns the error code for err if it was produced by the rpc system.
@@ -527,3 +527,6 @@ type ServiceConfig struct {
 // requires a synchronised update of grpc-go and protoc-gen-go. This constant
 // should not be referenced from any other code.
 const SupportPackageIsVersion4 = true
+
+// Version is the current grpc version.
+const Version = "1.3.0-dev"

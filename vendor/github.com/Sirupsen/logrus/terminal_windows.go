@@ -8,8 +8,8 @@
 package logrus
 
 import (
-	"io"	
-	"os"	
+	"io"
+	"os"
 	"syscall"
 	"unsafe"
 )

@@ -16,7 +16,7 @@ carefully.
 
 Once an active node is running 0.6.1, only standby nodes running 0.6.1+ will be
 able to form an HA cluster. If following our [general upgrade
-instructions](https://www.vaultproject.io/docs/install/upgrade.html) this will
+instructions](/docs/guides/upgrading/index.html) this will
 not be an issue.
 
 ## Health Endpoint Status Code Changes
@@ -39,7 +39,7 @@ each status code (including `500`).
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
 another root token or the
-[`generate-root`](https://www.vaultproject.io/docs/http/sys-generate-root.html)
+[`generate-root`](/api/system/generate-root.html)
 endpoint or CLI command.
 
 ## PKI Backend Certificates Will Contain Default Key Usages
@@ -50,14 +50,14 @@ compatibility with some software that requires strict adherence to RFCs, such
 as OpenVPN.
 
 This behavior is fully adjustable; see the [PKI backend
-documentation](https://www.vaultproject.io/docs/secrets/pki/index.html) for
+documentation](/docs/secrets/pki/index.html) for
 details.
 
 ## DynamoDB Does Not Support HA By Default
 
 If using DynamoDB and want to use HA support, you will need to explicitly
 enable it in Vault's configuration; see the
-[documentation](https://www.vaultproject.io/docs/config/index.html#ha_enabled)
+[documentation](/docs/configuration/index.html#ha_enabled)
 for details.
 
 If you are already using DynamoDB in an HA fashion and wish to keep doing so,
@@ -83,7 +83,7 @@ unfortunately has the side effect that `memberOf` is no longer searched for by
 default, which is a breaking change for many existing setups.
 
 `Scenario 2` in the [updated
-documentation](https://www.vaultproject.io/docs/auth/ldap.html) shows an
+documentation](/docs/auth/ldap.html) shows an
 example of configuring the backend to query `memberOf`. It is recommended that
 a test Vault server be set up and that successful authentication can be
 performed using the new configuration before upgrading a primary or production
@@ -97,7 +97,7 @@ configuration can be specified successfully.
 ## App-ID is Deprecated
 
 With the addition of of the new [AppRole
-backend](https://www.vaultproject.io/docs/auth/approle.html), App-ID is
+backend](/docs/auth/approle.html), App-ID is
 deprecated. There are no current plans to remove it, but we encourage using
 AppRole whenever possible, as it offers enhanced functionality and can
 accommodate many more types of authentication paradigms. App-ID will receive

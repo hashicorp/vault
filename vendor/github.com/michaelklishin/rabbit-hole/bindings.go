@@ -58,7 +58,7 @@ func (c *Client) ListBindings() (rec []BindingInfo, err error) {
 
 // Returns all bindings in a virtual host.
 func (c *Client) ListBindingsIn(vhost string) (rec []BindingInfo, err error) {
-	req, err := newGETRequest(c, "bindings/" + PathEscape(vhost))
+	req, err := newGETRequest(c, "bindings/"+PathEscape(vhost))
 	if err != nil {
 		return []BindingInfo{}, err
 	}
@@ -94,7 +94,7 @@ func (c *Client) ListBindingsIn(vhost string) (rec []BindingInfo, err error) {
 
 // Returns all bindings of individual queue.
 func (c *Client) ListQueueBindings(vhost, queue string) (rec []BindingInfo, err error) {
-	req, err := newGETRequest(c, "queues/" + PathEscape(vhost) + "/" + PathEscape(queue) + "/bindings")
+	req, err := newGETRequest(c, "queues/"+PathEscape(vhost)+"/"+PathEscape(queue)+"/bindings")
 	if err != nil {
 		return []BindingInfo{}, err
 	}
@@ -122,9 +122,9 @@ func (c *Client) DeclareBinding(vhost string, info BindingInfo) (res *http.Respo
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "POST", "bindings/" + PathEscape(vhost) +
-		"/e/" + PathEscape(info.Source) + "/" + PathEscape(string(info.DestinationType[0])) +
-		"/" + PathEscape(info.Destination), body)
+	req, err := newRequestWithBody(c, "POST", "bindings/"+PathEscape(vhost)+
+		"/e/"+PathEscape(info.Source)+"/"+PathEscape(string(info.DestinationType[0]))+
+		"/"+PathEscape(info.Destination), body)
 
 	if err != nil {
 		return nil, err
@@ -144,9 +144,9 @@ func (c *Client) DeclareBinding(vhost string, info BindingInfo) (res *http.Respo
 
 // DeleteBinding delets an individual binding
 func (c *Client) DeleteBinding(vhost string, info BindingInfo) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "bindings/" + PathEscape(vhost) +
-		"/e/" + PathEscape(info.Source) + "/" + PathEscape(string(info.DestinationType[0])) +
-		"/" + PathEscape(info.Destination) + "/" + PathEscape(info.PropertiesKey), nil)
+	req, err := newRequestWithBody(c, "DELETE", "bindings/"+PathEscape(vhost)+
+		"/e/"+PathEscape(info.Source)+"/"+PathEscape(string(info.DestinationType[0]))+
+		"/"+PathEscape(info.Destination)+"/"+PathEscape(info.PropertiesKey), nil)
 	if err != nil {
 		return nil, err
 	}
