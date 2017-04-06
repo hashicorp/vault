@@ -12,6 +12,11 @@ type Looker interface {
 	LookupPlugin(string) (*PluginRunner, error)
 }
 
+type LookWrapper interface {
+	Looker
+	Wrapper
+}
+
 type PluginRunner struct {
 	Name    string   `json:"name"`
 	Command string   `json:"command"`

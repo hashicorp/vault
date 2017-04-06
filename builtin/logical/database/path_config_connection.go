@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/fatih/structs"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -163,7 +164,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		b.Lock()
 		defer b.Unlock()
 
-		db, err := PluginFactory(config, b.System(), b.logger)
+		db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 		}

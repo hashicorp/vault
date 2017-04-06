@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -155,7 +156,7 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 			"Invalid max_ttl: %s", err)), nil
 	}
 
-	statements := Statements{
+	statements := dbplugin.Statements{
 		CreationStatements:   creationStmts,
 		RevocationStatements: revocationStmts,
 		RollbackStatements:   rollbackStmts,
@@ -182,10 +183,10 @@ func (b *databaseBackend) pathRoleCreate(req *logical.Request, data *framework.F
 }
 
 type roleEntry struct {
-	DBName     string        `json:"db_name" mapstructure:"db_name" structs:"db_name"`
-	Statements Statements    `json:"statments" mapstructure:"statements" structs:"statments"`
-	DefaultTTL time.Duration `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
-	MaxTTL     time.Duration `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
+	DBName     string              `json:"db_name" mapstructure:"db_name" structs:"db_name"`
+	Statements dbplugin.Statements `json:"statments" mapstructure:"statements" structs:"statments"`
+	DefaultTTL time.Duration       `json:"default_ttl" mapstructure:"default_ttl" structs:"default_ttl"`
+	MaxTTL     time.Duration       `json:"max_ttl" mapstructure:"max_ttl" structs:"max_ttl"`
 }
 
 const pathRoleHelpSyn = `

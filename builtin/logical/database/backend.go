@@ -4,30 +4,15 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	log "github.com/mgutz/logxi/v1"
 
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 const databaseConfigPath = "database/dbs/"
-
-// DatabaseType is the interface that all database objects must implement.
-type DatabaseType interface {
-	Type() string
-	CreateUser(statements Statements, username, password, expiration string) error
-	RenewUser(statements Statements, username, expiration string) error
-	RevokeUser(statements Statements, username string) error
-
-	Initialize(map[string]interface{}) error
-	Close() error
-
-	GenerateUsername(displayName string) (string, error)
-	GeneratePassword() (string, error)
-	GenerateExpiration(ttl time.Duration) (string, error)
-}
 
 // DatabaseConfig is used by the Factory function to configure a DatabaseType
 // object.
@@ -35,19 +20,7 @@ type DatabaseConfig struct {
 	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
 	// ConnectionDetails stores the database specific connection settings needed
 	// by each database type.
-	ConnectionDetails     map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
-	MaxOpenConnections    int                    `json:"max_open_connections" structs:"max_open_connections" mapstructure:"max_open_connections"`
-	MaxIdleConnections    int                    `json:"max_idle_connections" structs:"max_idle_connections" mapstructure:"max_idle_connections"`
-	MaxConnectionLifetime time.Duration          `json:"max_connection_lifetime" structs:"max_connection_lifetime" mapstructure:"max_connection_lifetime"`
-}
-
-// Statements set in role creation and passed into the database type's functions.
-// TODO: Add a way of setting defaults here.
-type Statements struct {
-	CreationStatements   string `json:"creation_statments" mapstructure:"creation_statements" structs:"creation_statments"`
-	RevocationStatements string `json:"revocation_statements" mapstructure:"revocation_statements" structs:"revocation_statements"`
-	RollbackStatements   string `json:"rollback_statements" mapstructure:"rollback_statements" structs:"rollback_statements"`
-	RenewStatements      string `json:"renew_statements" mapstructure:"renew_statements" structs:"renew_statements"`
+	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
 }
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -83,12 +56,12 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	}
 
 	b.logger = conf.Logger
-	b.connections = make(map[string]DatabaseType)
+	b.connections = make(map[string]dbplugin.DatabaseType)
 	return &b
 }
 
 type databaseBackend struct {
-	connections map[string]DatabaseType
+	connections map[string]dbplugin.DatabaseType
 	logger      log.Logger
 
 	*framework.Backend
@@ -108,7 +81,7 @@ func (b *databaseBackend) closeAllDBs() {
 // This function is used to retrieve a database object either from the cached
 // connection map or by using the database config in storage. The caller of this
 // function needs to hold the backend's lock.
-func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (DatabaseType, error) {
+func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbplugin.DatabaseType, error) {
 	// if the object already is built and cached, return it
 	db, ok := b.connections[name]
 	if ok {
@@ -128,7 +101,7 @@ func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (Data
 		return nil, err
 	}
 
-	db, err = PluginFactory(&config, b.System(), b.logger)
+	db, err = dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
 	if err != nil {
 		return nil, err
 	}
