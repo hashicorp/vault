@@ -29,7 +29,7 @@ func (c *PluginExec) Run(args []string) int {
 
 	pluginName := args[0]
 
-	runner, ok := builtinplugins.BuiltinPlugins[pluginName]
+	runner, ok := builtinplugins.BuiltinPlugins.Get(pluginName)
 	if !ok {
 		c.Ui.Error(fmt.Sprintf(
 			"No plugin with the name %s found", pluginName))

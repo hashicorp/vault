@@ -81,7 +81,7 @@ func (b *databaseBackend) secretCredsRevoke(req *logical.Request, d *framework.F
 
 	roleNameRaw, ok := req.Secret.InternalData["role"]
 	if !ok {
-		return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
+		return nil, fmt.Errorf("no role name was provided")
 	}
 
 	role, err := b.Role(req.Storage, roleNameRaw.(string))

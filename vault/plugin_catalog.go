@@ -54,7 +54,7 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 	}
 
 	// Look for builtin plugins
-	if _, ok := builtinplugins.BuiltinPlugins[name]; !ok {
+	if _, ok := builtinplugins.BuiltinPlugins.Get(name); !ok {
 		return nil, fmt.Errorf("no plugin found with name: %s", name)
 	}
 

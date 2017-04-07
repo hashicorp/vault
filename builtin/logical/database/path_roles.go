@@ -105,7 +105,7 @@ func (b *databaseBackend) pathRoleRead(req *logical.Request, data *framework.Fie
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"creation_statments":    role.Statements.CreationStatements,
+			"creation_statements":   role.Statements.CreationStatements,
 			"revocation_statements": role.Statements.RevocationStatements,
 			"rollback_statements":   role.Statements.RollbackStatements,
 			"renew_statements":      role.Statements.RenewStatements,
