@@ -2,6 +2,9 @@
 
 IMPROVEMENTS:
 
+ * secret/pki: Add `no_store` option that allows certificates to be issued
+   without being stored. This removes the ability to look up and/or add to a
+   CRL but helps with scaling to very large numbers of certificates. [GH-2565]
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
    requests [GH-2466]
  * storage/s3: Use pooled transport for http client [GH-2481]
