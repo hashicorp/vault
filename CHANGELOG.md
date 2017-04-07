@@ -1,5 +1,10 @@
 ## 0.7.1 (Unreleased)
 
+FEATURES:
+
+ * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
+   Vault physical data store [GH-2546]
+
 IMPROVEMENTS:
 
  * secret/pki: Add `no_store` option that allows certificates to be issued
