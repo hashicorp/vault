@@ -30,7 +30,8 @@ func (d *FieldData) Validate() error {
 		}
 
 		switch schema.Type {
-		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString:
+		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeSlice,
+			TypeStringSlice, TypeCommaStringSlice:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
 				return fmt.Errorf("Error converting input %v for field %s: %s", value, field, err)
@@ -105,7 +106,8 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 	}
 
 	switch schema.Type {
-	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeCommaStringSlice:
+	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString,
+		TypeSlice, TypeStringSlice, TypeCommaStringSlice:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -174,6 +176,20 @@ func (d *FieldData) getPrimitive(
 			result = int(valInt64)
 		default:
 			return nil, false, fmt.Errorf("invalid input '%v'", raw)
+		}
+		return result, true, nil
+
+	case TypeSlice:
+		var result []interface{}
+		if err := mapstructure.WeakDecode(raw, &result); err != nil {
+			return nil, true, err
+		}
+		return result, true, nil
+
+	case TypeStringSlice:
+		var result []string
+		if err := mapstructure.WeakDecode(raw, &result); err != nil {
+			return nil, true, err
 		}
 		return result, true, nil
 
