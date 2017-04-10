@@ -1,8 +1,6 @@
 package dbplugin
 
 import (
-	"time"
-
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
@@ -39,8 +37,9 @@ func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {
 	return nil
 }
 
-func (ds *databasePluginRPCServer) CreateUser(args *CreateUserRequest, _ *struct{}) error {
-	err := ds.impl.CreateUser(args.Statements, args.Username, args.Password, args.Expiration)
+func (ds *databasePluginRPCServer) CreateUser(args *CreateUserRequest, resp *CreateUserResponse) error {
+	var err error
+	resp.Username, resp.Password, err = ds.impl.CreateUser(args.Statements, args.UsernamePrefix, args.Expiration)
 
 	return err
 }
@@ -66,25 +65,4 @@ func (ds *databasePluginRPCServer) Initialize(args map[string]interface{}, _ *st
 func (ds *databasePluginRPCServer) Close(_ struct{}, _ *struct{}) error {
 	ds.impl.Close()
 	return nil
-}
-
-func (ds *databasePluginRPCServer) GenerateUsername(args string, resp *GenerateUsernameResponse) error {
-	var err error
-	resp.Username, err = ds.impl.GenerateUsername(args)
-
-	return err
-}
-
-func (ds *databasePluginRPCServer) GeneratePassword(_ struct{}, resp *GeneratePasswordResponse) error {
-	var err error
-	resp.Password, err = ds.impl.GeneratePassword()
-
-	return err
-}
-
-func (ds *databasePluginRPCServer) GenerateExpiration(args time.Duration, resp *GenerateExpirationResponse) error {
-	var err error
-	resp.Expiration, err = ds.impl.GenerateExpiration(args)
-
-	return err
 }

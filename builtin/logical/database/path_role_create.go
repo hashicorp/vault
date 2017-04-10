@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -48,24 +49,10 @@ func (b *databaseBackend) pathRoleCreateRead(req *logical.Request, data *framewo
 		return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
 	}
 
-	// Generate the username, password and expiration
-	username, err := db.GenerateUsername(req.DisplayName)
-	if err != nil {
-		return nil, err
-	}
-
-	password, err := db.GeneratePassword()
-	if err != nil {
-		return nil, err
-	}
-
-	expiration, err := db.GenerateExpiration(role.DefaultTTL)
-	if err != nil {
-		return nil, err
-	}
+	expiration := time.Now().Add(role.DefaultTTL)
 
 	// Create the user
-	err = db.CreateUser(role.Statements, username, password, expiration)
+	username, password, err := db.CreateUser(role.Statements, req.DisplayName, expiration)
 	if err != nil {
 		return nil, err
 	}

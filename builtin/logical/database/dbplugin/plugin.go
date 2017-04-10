@@ -17,16 +17,12 @@ var (
 // DatabaseType is the interface that all database objects must implement.
 type DatabaseType interface {
 	Type() string
-	CreateUser(statements Statements, username, password, expiration string) error
-	RenewUser(statements Statements, username, expiration string) error
+	CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error)
+	RenewUser(statements Statements, username string, expiration time.Time) error
 	RevokeUser(statements Statements, username string) error
 
 	Initialize(map[string]interface{}) error
 	Close() error
-
-	GenerateUsername(displayName string) (string, error)
-	GeneratePassword() (string, error)
-	GenerateExpiration(ttl time.Duration) (string, error)
 }
 
 // Statements set in role creation and passed into the database type's functions.
@@ -96,16 +92,15 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 // ---- RPC Request Args Domain ----
 
 type CreateUserRequest struct {
-	Statements Statements
-	Username   string
-	Password   string
-	Expiration string
+	Statements     Statements
+	UsernamePrefix string
+	Expiration     time.Time
 }
 
 type RenewUserRequest struct {
 	Statements Statements
 	Username   string
-	Expiration string
+	Expiration time.Time
 }
 
 type RevokeUserRequest struct {
@@ -115,12 +110,7 @@ type RevokeUserRequest struct {
 
 // ---- RPC Response Args Domain ----
 
-type GenerateUsernameResponse struct {
+type CreateUserResponse struct {
 	Username string
-}
-type GenerateExpirationResponse struct {
-	Expiration string
-}
-type GeneratePasswordResponse struct {
 	Password string
 }

@@ -58,9 +58,7 @@ func (b *databaseBackend) secretCredsRenew(req *logical.Request, d *framework.Fi
 
 	// Make sure we increase the VALID UNTIL endpoint for this user.
 	if expireTime := resp.Secret.ExpirationTime(); !expireTime.IsZero() {
-		expiration := expireTime.Format("2006-01-02 15:04:05-0700")
-
-		err := db.RenewUser(role.Statements, username, expiration)
+		err := db.RenewUser(role.Statements, username, expireTime)
 		if err != nil {
 			return nil, err
 		}

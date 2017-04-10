@@ -78,20 +78,20 @@ func (dr *databasePluginRPCClient) Type() string {
 	return fmt.Sprintf("plugin-%s", dbType)
 }
 
-func (dr *databasePluginRPCClient) CreateUser(statements Statements, username, password, expiration string) error {
+func (dr *databasePluginRPCClient) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
 	req := CreateUserRequest{
-		Statements: statements,
-		Username:   username,
-		Password:   password,
-		Expiration: expiration,
+		Statements:     statements,
+		UsernamePrefix: usernamePrefix,
+		Expiration:     expiration,
 	}
 
-	err := dr.client.Call("Plugin.CreateUser", req, &struct{}{})
+	var resp CreateUserResponse
+	err = dr.client.Call("Plugin.CreateUser", req, &resp)
 
-	return err
+	return resp.Username, resp.Password, err
 }
 
-func (dr *databasePluginRPCClient) RenewUser(statements Statements, username, expiration string) error {
+func (dr *databasePluginRPCClient) RenewUser(statements Statements, username string, expiration time.Time) error {
 	req := RenewUserRequest{
 		Statements: statements,
 		Username:   username,
@@ -124,25 +124,4 @@ func (dr *databasePluginRPCClient) Close() error {
 	err := dr.client.Call("Plugin.Close", struct{}{}, &struct{}{})
 
 	return err
-}
-
-func (dr *databasePluginRPCClient) GenerateUsername(displayName string) (string, error) {
-	resp := &GenerateUsernameResponse{}
-	err := dr.client.Call("Plugin.GenerateUsername", displayName, resp)
-
-	return resp.Username, err
-}
-
-func (dr *databasePluginRPCClient) GeneratePassword() (string, error) {
-	resp := &GeneratePasswordResponse{}
-	err := dr.client.Call("Plugin.GeneratePassword", struct{}{}, resp)
-
-	return resp.Password, err
-}
-
-func (dr *databasePluginRPCClient) GenerateExpiration(duration time.Duration) (string, error) {
-	resp := &GenerateExpirationResponse{}
-	err := dr.client.Call("Plugin.GenerateExpiration", duration, resp)
-
-	return resp.Expiration, err
 }
