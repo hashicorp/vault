@@ -53,15 +53,15 @@ func (mw *databaseTracingMiddleware) RevokeUser(statements Statements, username 
 	return mw.next.RevokeUser(statements, username)
 }
 
-func (mw *databaseTracingMiddleware) Initialize(conf map[string]interface{}) (err error) {
+func (mw *databaseTracingMiddleware) Initialize(conf map[string]interface{}, verifyConnection bool) (err error) {
 	if mw.logger.IsTrace() {
 		defer func(then time.Time) {
-			mw.logger.Trace("database/Initialize: finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+			mw.logger.Trace("database/Initialize: finished", "type", mw.typeStr, "verify", verifyConnection, "err", err, "took", time.Since(then))
 		}(time.Now())
 
 		mw.logger.Trace("database/Initialize: starting", "type", mw.typeStr)
 	}
-	return mw.next.Initialize(conf)
+	return mw.next.Initialize(conf, verifyConnection)
 }
 
 func (mw *databaseTracingMiddleware) Close() (err error) {
@@ -135,7 +135,7 @@ func (mw *databaseMetricsMiddleware) RevokeUser(statements Statements, username 
 	return mw.next.RevokeUser(statements, username)
 }
 
-func (mw *databaseMetricsMiddleware) Initialize(conf map[string]interface{}) (err error) {
+func (mw *databaseMetricsMiddleware) Initialize(conf map[string]interface{}, verifyConnection bool) (err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "Initialize"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "Initialize"}, now)
@@ -148,7 +148,7 @@ func (mw *databaseMetricsMiddleware) Initialize(conf map[string]interface{}) (er
 
 	metrics.IncrCounter([]string{"database", "Initialize"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "Initialize"}, 1)
-	return mw.next.Initialize(conf)
+	return mw.next.Initialize(conf, verifyConnection)
 }
 
 func (mw *databaseMetricsMiddleware) Close() (err error) {

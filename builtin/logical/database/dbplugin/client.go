@@ -114,8 +114,13 @@ func (dr *databasePluginRPCClient) RevokeUser(statements Statements, username st
 	return err
 }
 
-func (dr *databasePluginRPCClient) Initialize(conf map[string]interface{}) error {
-	err := dr.client.Call("Plugin.Initialize", conf, &struct{}{})
+func (dr *databasePluginRPCClient) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+	req := InitializeRequest{
+		Config:           conf,
+		VerifyConnection: verifyConnection,
+	}
+
+	err := dr.client.Call("Plugin.Initialize", req, &struct{}{})
 
 	return err
 }

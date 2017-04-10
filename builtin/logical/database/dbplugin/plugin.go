@@ -21,12 +21,11 @@ type DatabaseType interface {
 	RenewUser(statements Statements, username string, expiration time.Time) error
 	RevokeUser(statements Statements, username string) error
 
-	Initialize(map[string]interface{}) error
+	Initialize(config map[string]interface{}, verifyConnection bool) error
 	Close() error
 }
 
 // Statements set in role creation and passed into the database type's functions.
-// TODO: Add a way of setting defaults here.
 type Statements struct {
 	CreationStatements   string `json:"creation_statments" mapstructure:"creation_statements" structs:"creation_statments"`
 	RevocationStatements string `json:"revocation_statements" mapstructure:"revocation_statements" structs:"revocation_statements"`
@@ -90,6 +89,11 @@ func (DatabasePlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, e
 }
 
 // ---- RPC Request Args Domain ----
+
+type InitializeRequest struct {
+	Config           map[string]interface{}
+	VerifyConnection bool
+}
 
 type CreateUserRequest struct {
 	Statements     Statements

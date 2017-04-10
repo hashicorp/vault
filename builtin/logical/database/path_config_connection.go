@@ -2,7 +2,6 @@ package database
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -169,23 +168,17 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 		}
 
-		err = db.Initialize(config.ConnectionDetails)
+		err = db.Initialize(config.ConnectionDetails, verifyConnection)
 		if err != nil {
-			if !strings.Contains(err.Error(), "error initalizing connection") {
-				db.Close()
-				return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
-			}
-
-			if verifyConnection {
-				db.Close()
-				return logical.ErrorResponse("Could not verify connection"), nil
-			}
+			db.Close()
+			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 		}
 
 		if _, ok := b.connections[name]; ok {
 			// Close and remove the old connection
 			err := b.connections[name].Close()
 			if err != nil {
+				db.Close()
 				return nil, err
 			}
 

@@ -56,8 +56,8 @@ func (ds *databasePluginRPCServer) RevokeUser(args *RevokeUserRequest, _ *struct
 	return err
 }
 
-func (ds *databasePluginRPCServer) Initialize(args map[string]interface{}, _ *struct{}) error {
-	err := ds.impl.Initialize(args)
+func (ds *databasePluginRPCServer) Initialize(args *InitializeRequest, _ *struct{}) error {
+	err := ds.impl.Initialize(args.Config, args.VerifyConnection)
 
 	return err
 }

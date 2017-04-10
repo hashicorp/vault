@@ -106,7 +106,7 @@ func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbpl
 		return nil, err
 	}
 
-	err = db.Initialize(config.ConnectionDetails)
+	err = db.Initialize(config.ConnectionDetails, true)
 	if err != nil {
 		return nil, err
 	}
