@@ -14,7 +14,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -320,10 +319,8 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 	return &dynamicSystemView{c, me}
 }
 
-func TestAddTestPlugin(t testing.TB, c *Core, name, command string) {
-	parts := strings.Split(command, " ")
-
-	file, err := os.Open(parts[0])
+func TestAddTestPlugin(t testing.TB, c *Core, name, testFunc string) {
+	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -337,15 +334,13 @@ func TestAddTestPlugin(t testing.TB, c *Core, name, command string) {
 	}
 
 	sum := hash.Sum(nil)
-	c.pluginCatalog.directory, err = filepath.EvalSymlinks(parts[0])
+	c.pluginCatalog.directory, err = filepath.EvalSymlinks(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 	c.pluginCatalog.directory = filepath.Dir(c.pluginCatalog.directory)
 
-	parts[0] = filepath.Base(parts[0])
-	command = strings.Join(parts, " ")
-
+	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
 	err = c.pluginCatalog.Set(name, command, sum)
 	if err != nil {
 		t.Fatal(err)

@@ -81,7 +81,7 @@ func getCore(t *testing.T) (*vault.Core, net.Listener, logical.SystemView, strin
 	core, _, token, ln := vault.TestCoreUnsealedWithListener(t)
 	http.TestServerWithListener(t, ln, "", core)
 	sys := vault.TestDynamicSystemView(core)
-	vault.TestAddTestPlugin(t, core, "postgresql-database-plugin", fmt.Sprintf("%s -test.run=TestBackend_PluginMain", os.Args[0]))
+	vault.TestAddTestPlugin(t, core, "postgresql-database-plugin", "TestBackend_PluginMain")
 
 	return core, ln, sys, token
 }

@@ -1,17 +1,13 @@
-package dbplugin
+package dbplugin_test
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
-	"fmt"
-	"io"
 	"net"
 	"os"
-	"os/exec"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -21,27 +17,26 @@ import (
 
 type mockPlugin struct {
 	users map[string][]string
-	CredentialsProducer
 }
 
 func (m *mockPlugin) Type() string { return "mock" }
-func (m *mockPlugin) CreateUser(statements Statements, username, password, expiration string) error {
-	err := errors.New("err")
-	if username == "" || password == "" || expiration == "" {
-		return err
+func (m *mockPlugin) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+	err = errors.New("err")
+	if usernamePrefix == "" || expiration.IsZero() {
+		return "", "", err
 	}
 
-	if _, ok := m.users[username]; ok {
-		return err
+	if _, ok := m.users[usernamePrefix]; ok {
+		return "", "", err
 	}
 
-	m.users[username] = []string{password, expiration}
+	m.users[usernamePrefix] = []string{password}
 
-	return nil
+	return usernamePrefix, "test", nil
 }
-func (m *mockPlugin) RenewUser(statements Statements, username, expiration string) error {
+func (m *mockPlugin) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
 	err := errors.New("err")
-	if username == "" || expiration == "" {
+	if username == "" || expiration.IsZero() {
 		return err
 	}
 
@@ -51,7 +46,7 @@ func (m *mockPlugin) RenewUser(statements Statements, username, expiration strin
 
 	return nil
 }
-func (m *mockPlugin) RevokeUser(statements Statements, username string) error {
+func (m *mockPlugin) RevokeUser(statements dbplugin.Statements, username string) error {
 	err := errors.New("err")
 	if username == "" {
 		return err
@@ -77,40 +72,11 @@ func (m *mockPlugin) Close() error {
 	return nil
 }
 
-func getConf(t *testing.T) *DatabaseConfig {
-	command := fmt.Sprintf("%s -test.run=TestPlugin_Main", os.Args[0])
-	cmd := exec.Command(os.Args[0])
-	hash := sha256.New()
-
-	file, err := os.Open(cmd.Path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-
-	_, err = io.Copy(hash, file)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	sum := hash.Sum(nil)
-
-	conf := &DatabaseConfig{
-		DatabaseType:   pluginTypeName,
-		PluginCommand:  command,
-		PluginChecksum: hex.EncodeToString(sum),
-		ConnectionDetails: map[string]interface{}{
-			"test": true,
-		},
-	}
-
-	return conf
-}
-
 func getCore(t *testing.T) (*vault.Core, net.Listener, logical.SystemView) {
 	core, _, _, ln := vault.TestCoreUnsealedWithListener(t)
 	http.TestServerWithListener(t, ln, "", core)
 	sys := vault.TestDynamicSystemView(core)
+	vault.TestAddTestPlugin(t, core, "test-plugin", "TestPlugin_Main")
 
 	return core, ln, sys
 }
@@ -123,24 +89,26 @@ func TestPlugin_Main(t *testing.T) {
 	}
 
 	plugin := &mockPlugin{
-		users:               make(map[string][]string),
-		CredentialsProducer: &sqlCredentialsProducer{5, 50},
+		users: make(map[string][]string),
 	}
 
-	NewPluginServer(plugin)
+	dbplugin.NewPluginServer(plugin)
 }
 
 func TestPlugin_Initialize(t *testing.T) {
 	_, ln, sys := getCore(t)
 	defer ln.Close()
 
-	conf := getConf(t)
-	dbRaw, err := PluginFactory(conf, sys, &log.NullLogger{})
+	dbRaw, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	err = dbRaw.Initialize(conf.ConnectionDetails)
+	connectionDetails := map[string]interface{}{
+		"test": 1,
+	}
+
+	err = dbRaw.Initialize(connectionDetails)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -155,53 +123,34 @@ func TestPlugin_CreateUser(t *testing.T) {
 	_, ln, sys := getCore(t)
 	defer ln.Close()
 
-	conf := getConf(t)
-	db, err := PluginFactory(conf, sys, &log.NullLogger{})
+	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	defer db.Close()
 
-	err = db.Initialize(conf.ConnectionDetails)
+	connectionDetails := map[string]interface{}{
+		"test": 1,
+	}
+
+	err = db.Initialize(connectionDetails)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	username, err := db.GenerateUsername("test")
+	us, pw, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+	if us != "test" || pw != "test" {
+		t.Fatal("expected username and password to be 'test'")
 	}
 
-	password, err := db.GeneratePassword()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	expiration, err := db.GenerateExpiration(time.Minute)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = db.CreateUser(Statements{}, username, password, expiration)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
 	// try and save the same user again to verify it saved the first time, this
 	// should return an error
-	err = db.CreateUser(Statements{}, username, password, expiration)
+	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("expected an error, user wasn't created correctly")
-	}
-
-	// Create one more user
-	username, err = db.GenerateUsername("test")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = db.CreateUser(Statements{}, username, password, expiration)
-	if err != nil {
-		t.Fatalf("err: %s", err)
 	}
 }
 
@@ -209,43 +158,26 @@ func TestPlugin_RenewUser(t *testing.T) {
 	_, ln, sys := getCore(t)
 	defer ln.Close()
 
-	conf := getConf(t)
-	db, err := PluginFactory(conf, sys, &log.NullLogger{})
+	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	defer db.Close()
 
-	err = db.Initialize(conf.ConnectionDetails)
+	connectionDetails := map[string]interface{}{
+		"test": 1,
+	}
+	err = db.Initialize(connectionDetails)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	username, err := db.GenerateUsername("test")
+	us, _, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	password, err := db.GeneratePassword()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	expiration, err := db.GenerateExpiration(time.Minute)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = db.CreateUser(Statements{}, username, password, expiration)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	expiration, err = db.GenerateExpiration(time.Minute)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	err = db.RenewUser(Statements{}, username, expiration)
+	err = db.RenewUser(dbplugin.Statements{}, us, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -255,69 +187,34 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	_, ln, sys := getCore(t)
 	defer ln.Close()
 
-	conf := getConf(t)
-	db, err := PluginFactory(conf, sys, &log.NullLogger{})
+	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 	defer db.Close()
 
-	err = db.Initialize(conf.ConnectionDetails)
+	connectionDetails := map[string]interface{}{
+		"test": 1,
+	}
+	err = db.Initialize(connectionDetails)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
-	username, err := db.GenerateUsername("test")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	password, err := db.GeneratePassword()
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	expiration, err := db.GenerateExpiration(time.Minute)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = db.CreateUser(Statements{}, username, password, expiration)
+	us, _, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Test default revoke statememts
-	err = db.RevokeUser(Statements{}, username)
+	err = db.RevokeUser(dbplugin.Statements{}, us)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
 	// Try adding the same username back so we can verify it was removed
-	err = db.CreateUser(Statements{}, username, password, expiration)
+	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
-	username, err = db.GenerateUsername("test")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	expiration, err = db.GenerateExpiration(time.Minute)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	// try once more
-	err = db.CreateUser(Statements{}, username, password, expiration)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	err = db.RevokeUser(Statements{}, username)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
 }
