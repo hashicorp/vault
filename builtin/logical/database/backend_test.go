@@ -2,13 +2,11 @@ package database
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"reflect"
-	"strings"
 	"sync"
 	"testing"
 
@@ -209,8 +207,8 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
 	}
 
-	if testCredsByCount(t, credsResp, connURL) != 2 {
-		t.Fatalf("Got wrong number of creds")
+	if !testCredsExist(t, credsResp, connURL) {
+		t.Fatalf("Creds should exist")
 	}
 
 	// Revoke creds
@@ -229,10 +227,151 @@ func TestBackend_basic(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	if testCredsByCount(t, credsResp, connURL) != -1 {
-		t.Fatalf("Got wrong number of creds")
+	if testCredsExist(t, credsResp, connURL) {
+		t.Fatalf("Creds should not exist")
 	}
 
+}
+
+func TestBackend_connectionCrud(t *testing.T) {
+	_, ln, sys, _ := getCore(t)
+	defer ln.Close()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup()
+
+	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url":    "test",
+		"plugin_name":       "postgresql-database-plugin",
+		"verify_connection": false,
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Create a role
+	data = map[string]interface{}{
+		"db_name":               "plugin-test",
+		"creation_statements":   testRole,
+		"revocation_statements": defaultRevocationSQL,
+		"default_ttl":           "5m",
+		"max_ttl":               "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Update the connection
+	data = map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Read connection
+	expected := map[string]interface{}{
+		"plugin_name":        "postgresql-database-plugin",
+		"connection_details": data,
+	}
+	req.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+	if !reflect.DeepEqual(expected, resp.Data) {
+		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
+	}
+
+	// Reset Connection
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "reset/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Get creds
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/plugin-role-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err := b.HandleRequest(req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+
+	if !testCredsExist(t, credsResp, connURL) {
+		t.Fatalf("Creds should exist")
+	}
+
+	// Delete Connection
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Read connection
+	req.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Should be empty
+	if resp != nil {
+		t.Fatal("Expected response to be nil")
+	}
 }
 
 func TestBackend_roleCrud(t *testing.T) {
@@ -346,119 +485,7 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 }
 
-func TestBackend_roleReadOnly(t *testing.T) {
-	_, ln, sys, _ := getCore(t)
-	defer ln.Close()
-
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	config.System = sys
-
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Cleanup()
-
-	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
-	defer cleanup()
-
-	// Configure a connection
-	data := map[string]interface{}{
-		"connection_url": connURL,
-		"plugin_name":    "postgresql-database-plugin",
-	}
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config/plugin-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err := b.HandleRequest(req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-
-	// Create a role
-	data = map[string]interface{}{
-		"db_name":             "plugin-test",
-		"creation_statements": testRole,
-		"default_ttl":         "5m",
-		"max_ttl":             "10m",
-	}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-
-	// Create a readonly role
-	data = map[string]interface{}{
-		"db_name":             "plugin-test",
-		"creation_statements": testReadOnlyRole,
-		"default_ttl":         "5m",
-		"max_ttl":             "10m",
-	}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "roles/plugin-readonly-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-
-	// Get creds
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	credsResp, err := b.HandleRequest(req)
-	if err != nil || (credsResp != nil && credsResp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
-	}
-
-	if i := testCredsByCount(t, credsResp, connURL); i != 2 {
-		t.Fatalf("Got wrong number of creds got %d, expected 2", i)
-	}
-
-	// Get readonly creds
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "creds/plugin-readonly-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	readOnlyCredsResp, err := b.HandleRequest(req)
-	if err != nil || (credsResp != nil && credsResp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, readOnlyCredsResp)
-	}
-
-	if i := testCredsByCount(t, readOnlyCredsResp, connURL); i != 2 {
-		t.Fatalf("Got wrong number of creds got %d, expected 2", i)
-	}
-
-	if err := testCreateTable(t, readOnlyCredsResp, connURL); err == nil {
-		t.Fatal("Read only creds should return error on table creation")
-	}
-
-	if err := testCreateTable(t, credsResp, connURL); err != nil {
-		t.Fatalf("Error on table creation: %s", err)
-	}
-}
-
-func testCredsByCount(t *testing.T, resp *logical.Response, connURL string) int {
+func testCredsExist(t *testing.T, resp *logical.Response, connURL string) bool {
 	var d struct {
 		Username string `mapstructure:"username"`
 		Password string `mapstructure:"password"`
@@ -500,44 +527,7 @@ func testCredsByCount(t *testing.T, resp *logical.Response, connURL string) int 
 		return i
 	}
 
-	return returnedRows()
-}
-
-func testCreateTable(t *testing.T, resp *logical.Response, connURL string) error {
-	var d struct {
-		Username string `mapstructure:"username"`
-		Password string `mapstructure:"password"`
-	}
-	if err := mapstructure.Decode(resp.Data, &d); err != nil {
-		t.Fatal(err)
-	}
-
-	connURL = strings.Replace(connURL, "postgres:secret", fmt.Sprintf("%s:%s", d.Username, d.Password), 1)
-
-	fmt.Println(connURL)
-	log.Printf("[TRACE] Generated credentials: %v", d)
-	conn, err := pq.ParseURL(connURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	conn += " timezone=utc"
-
-	db, err := sql.Open("postgres", conn)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	r, err := db.Exec("CREATE TABLE test1 (id SERIAL PRIMARY KEY);")
-	if err != nil {
-		return err
-	}
-
-	if i, _ := r.RowsAffected(); i != 1 {
-		return errors.New("Did not create db")
-	}
-
-	return nil
+	return returnedRows() == 2
 }
 
 const testRole = `
@@ -546,16 +536,6 @@ CREATE ROLE "{{name}}" WITH
   PASSWORD '{{password}}'
   VALID UNTIL '{{expiration}}';
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";
-`
-
-const testReadOnlyRole = `
-CREATE ROLE "{{name}}" WITH
-  LOGIN
-  PASSWORD '{{password}}'
-  VALID UNTIL '{{expiration}}';
-REVOKE ALL ON SCHEMA public FROM "{{name}}";
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";
-GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{name}}";
 `
 
 const defaultRevocationSQL = `

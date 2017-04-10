@@ -171,7 +171,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		err = db.Initialize(config.ConnectionDetails)
 		if err != nil {
-			if !strings.Contains(err.Error(), "Error Initializing Connection") {
+			if !strings.Contains(err.Error(), "error initalizing connection") {
 				db.Close()
 				return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 			}
