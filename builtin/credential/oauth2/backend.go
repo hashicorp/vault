@@ -2,6 +2,7 @@ package oauth2
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -122,7 +123,6 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 }
 
 func (b *backend) getOauthGroups(cfg *ConfigEntry, oauthConfig *goauth2.Config, token *goauth2.Token) ([]string, error) {
-	groups := []string{}
 	if len(cfg.UserInfoURL) != 0 {
 		client := oauthConfig.Client(goauth2.NoContext, token)
 		res, err := client.Get(cfg.UserInfoURL)
@@ -137,13 +137,25 @@ func (b *backend) getOauthGroups(cfg *ConfigEntry, oauthConfig *goauth2.Config, 
 			return nil, err
 		}
 
-		// groups are expected to be returned as a comma-separated string
-		groups = strings.Split(parsed[cfg.UserInfoGroupKey].(string), ",")
-		for i, group := range groups {
-			groups[i] = strings.TrimSpace(group)
+		// Allow groups to be a JSON array or a CSV list
+		switch parsedGroups := parsed[cfg.UserInfoGroupKey].(type) {
+		case []interface{}:
+			groups := make([]string, len(parsedGroups))
+			for i, group := range parsedGroups {
+				groups[i] = group.(string)
+			}
+			return groups, nil
+		case string:
+			groups := strings.Split(parsedGroups, ",")
+			for i, group := range groups {
+				groups[i] = strings.TrimSpace(group)
+			}
+			return groups, nil
+		default:
+			return nil, errors.New("Failed to parse groups")
 		}
 	}
-	return groups, nil
+	return []string{}, nil
 }
 
 const backendHelp = `
