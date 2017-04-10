@@ -94,14 +94,14 @@ func (b *backend) pathValidateCode(
 
 	valid, err := totplib.ValidateCustom(code, role.Key, time.Now(), totplib.ValidateOpts{
 		Period:    role.Period,
-		Skew:      1,
+		Skew:      role.Skew,
 		Digits:    role.Digits,
 		Algorithm: role.Algorithm,
 	})
 
 	resp, err := &logical.Response{
 		Data: map[string]interface{}{
-			"code": valid,
+			"valid": valid,
 		},
 	}, nil
 
