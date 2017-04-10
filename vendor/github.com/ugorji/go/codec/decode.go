@@ -1338,6 +1338,7 @@ func (d *Decoder) Reset(r io.Reader) {
 
 func (d *Decoder) ResetBytes(in []byte) {
 	// d.s = d.sa[:0]
+	d.bytes = true
 	d.rb.reset(in)
 	d.r = &d.rb
 	d.resetCommon()

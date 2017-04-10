@@ -36,6 +36,10 @@ storage "etcd" {
   Etcd instances as a comma-separated list. This can also be provided via the
   environment variable `ETCD_ADDR`.
 
+- `discovery_srv` `(string: "example.com")` - Specifies the domain name to
+  query for SRV records describing cluster endpoints. This can also be provided
+  via the environment variable `ETCD_DISCOVERY_SRV`.
+
 - `etcd_api` `(string: "<varies>")` – Specifies the version of the API to
   communicate with. By default, this is derived automatically. If the cluster
   version is 3.1+ and there has been no data written using the v2 API, the
@@ -89,6 +93,18 @@ discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
 
 ## `etcd` Examples
 
+### DNS Discovery of cluster members
+
+This example configures vault to discover the Etcd cluster members via SRV
+records as outlined in the
+[DNS Discovery protocol documentation][dns discovery].
+
+```hcl
+storage "etcd" {
+  discovery_srv = "example.com"
+}
+```
+
 ### Custom Authentication
 
 This example shows connecting to the Etcd cluster using a username and password.
@@ -100,7 +116,7 @@ storage "etcd" {
 }
 ```
 
-### Custon Path
+### Custom Path
 
 This example shows storing data in a custom path.
 
@@ -122,3 +138,4 @@ storage "etcd" {
 ```
 
 [etcd]: https://coreos.com/etcd "Etcd by CoreOS"
+[dns discovery]: https://coreos.com/etcd/docs/latest/op-guide/clustering.html#dns-discovery "Etcd cluster DNS Discovery"

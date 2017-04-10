@@ -4,15 +4,15 @@ Gabs is a small utility for dealing with dynamic or unknown JSON structures in g
 
 https://godoc.org/github.com/Jeffail/gabs
 
-##How to install:
+## How to install:
 
 ```bash
 go get github.com/Jeffail/gabs
 ```
 
-##How to use
+## How to use
 
-###Parsing and searching JSON
+### Parsing and searching JSON
 
 ```go
 ...
@@ -55,7 +55,7 @@ exists := jsonParsed.ExistsP("does.not.exist")
 ...
 ```
 
-###Iterating objects
+### Iterating objects
 
 ```go
 ...
@@ -71,7 +71,7 @@ for key, child := range children {
 ...
 ```
 
-###Iterating arrays
+### Iterating arrays
 
 ```go
 ...
@@ -97,7 +97,7 @@ third
 
 Children() will return all children of an array in order. This also works on objects, however, the children will be returned in a random order.
 
-###Searching through arrays
+### Searching through arrays
 
 If your JSON structure contains arrays you can still search the fields of the objects within the array, this returns a JSON array containing the results for each element.
 
@@ -116,7 +116,7 @@ Will print:
 [1,2,3]
 ```
 
-###Generating JSON
+### Generating JSON
 
 ```go
 ...
@@ -165,7 +165,7 @@ Will print:
 }
 ```
 
-###Generating Arrays
+### Generating Arrays
 
 ```go
 ...
@@ -221,7 +221,7 @@ Will print:
 {"foo":["test1","test2",[1,2,3]]}
 ```
 
-###Converting back to JSON
+### Converting back to JSON
 
 This is the easiest part:
 
@@ -265,7 +265,7 @@ jsonOutput := jsonParsedObj.Search("outter").String()
 ...
 ```
 
-### Parsing Numbers
+### Parsing Numbers
 
 Gabs uses the `json` package under the bonnet, which by default will parse all number values into `float64`. If you need to parse `Int` values then you should use a `json.Decoder` (https://golang.org/pkg/encoding/json/#Decoder):
 

@@ -48,7 +48,9 @@ type Client struct {
 	Auth
 	Maintenance
 
-	conn             *grpc.ClientConn
+	conn     *grpc.ClientConn
+	dialerrc chan error
+
 	cfg              Config
 	creds            *credentials.TransportCredentials
 	balancer         *simpleBalancer
@@ -75,6 +77,14 @@ func New(cfg Config) (*Client, error) {
 	return newClient(&cfg)
 }
 
+// NewCtxClient creates a client with a context but no underlying grpc
+// connection. This is useful for embedded cases that override the
+// service interface implementations and do not need connection management.
+func NewCtxClient(ctx context.Context) *Client {
+	cctx, cancel := context.WithCancel(ctx)
+	return &Client{ctx: cctx, cancel: cancel}
+}
+
 // NewFromURL creates a new etcdv3 client from a URL.
 func NewFromURL(url string) (*Client, error) {
 	return New(Config{Endpoints: []string{url}})
@@ -85,7 +95,10 @@ func (c *Client) Close() error {
 	c.cancel()
 	c.Watcher.Close()
 	c.Lease.Close()
-	return toErr(c.ctx, c.conn.Close())
+	if c.conn != nil {
+		return toErr(c.ctx, c.conn.Close())
+	}
+	return c.ctx.Err()
 }
 
 // Ctx is a context for "out of band" messages (e.g., for sending
@@ -214,7 +227,14 @@ func (c *Client) dialSetupOpts(endpoint string, dopts ...grpc.DialOption) (opts 
 		default:
 		}
 		dialer := &net.Dialer{Timeout: t}
-		return dialer.DialContext(c.ctx, proto, host)
+		conn, err := dialer.DialContext(c.ctx, proto, host)
+		if err != nil {
+			select {
+			case c.dialerrc <- err:
+			default:
+			}
+		}
+		return conn, err
 	}
 	opts = append(opts, grpc.WithDialer(f))
 
@@ -316,11 +336,12 @@ func newClient(cfg *Config) (*Client, error) {
 
 	ctx, cancel := context.WithCancel(baseCtx)
 	client := &Client{
-		conn:   nil,
-		cfg:    *cfg,
-		creds:  creds,
-		ctx:    ctx,
-		cancel: cancel,
+		conn:     nil,
+		dialerrc: make(chan error, 1),
+		cfg:      *cfg,
+		creds:    creds,
+		ctx:      ctx,
+		cancel:   cancel,
 	}
 	if cfg.Username != "" && cfg.Password != "" {
 		client.Username = cfg.Username
@@ -347,9 +368,14 @@ func newClient(cfg *Config) (*Client, error) {
 		case <-waitc:
 		}
 		if !hasConn {
+			err := grpc.ErrClientConnTimeout
+			select {
+			case err = <-client.dialerrc:
+			default:
+			}
 			client.cancel()
 			conn.Close()
-			return nil, grpc.ErrClientConnTimeout
+			return nil, err
 		}
 	}
 

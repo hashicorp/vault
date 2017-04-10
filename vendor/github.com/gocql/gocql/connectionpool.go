@@ -153,7 +153,7 @@ func (p *policyConnPool) SetHosts(hosts []*HostInfo) {
 		pool := <-pools
 		createCount--
 		if pool.Size() > 0 {
-			// add pool onyl if there a connections available
+			// add pool only if there a connections available
 			p.hostConnPools[string(pool.host.Peer())] = pool
 		}
 	}

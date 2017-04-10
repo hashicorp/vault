@@ -106,6 +106,9 @@ func (s *Session) handleEvent(framer *framer) {
 }
 
 func (s *Session) handleSchemaEvent(frames []frame) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if s.schemaDescriber == nil {
 		return
 	}

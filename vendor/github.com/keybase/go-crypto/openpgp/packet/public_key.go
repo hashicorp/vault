@@ -21,9 +21,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/agl/ed25519"
 	"github.com/keybase/go-crypto/brainpool"
 	"github.com/keybase/go-crypto/curve25519"
+	"github.com/keybase/go-crypto/ed25519"
 	"github.com/keybase/go-crypto/openpgp/ecdh"
 	"github.com/keybase/go-crypto/openpgp/elgamal"
 	"github.com/keybase/go-crypto/openpgp/errors"
@@ -65,15 +65,22 @@ type edDSAkey struct {
 }
 
 func (e *edDSAkey) Verify(payload []byte, r parsedMPI, s parsedMPI) bool {
-	var key [ed25519.PublicKeySize]byte
 	var sig [ed25519.SignatureSize]byte
 
-	// NOTE(maxtaco): I'm not entirely sure why we need to ignore the first byte.
-	copy(key[:], e.p.bytes[1:])
+	// NOTE: The first byte is 0x40 - MPI header
+	// TODO: Maybe clean the code up and use 0x40 as a header when
+	// reading and keep only actual number in p field. Find out how
+	// other MPIs are stored.
+	key := e.p.bytes[1:]
+
+	// Note: it may happen that R + S do not form 64-byte signature buffer that
+	// ed25519 expects, but because we copy it over to an array of exact size,
+	// we will always pass correctly sized slice to Verify. Slice too short
+	// would make ed25519 panic().
 	n := copy(sig[:], r.bytes)
 	copy(sig[n:], s.bytes)
 
-	return ed25519.Verify(&key, payload, &sig)
+	return ed25519.Verify(key, payload, sig[:])
 }
 
 // parseOID reads the OID for the curve as defined in RFC 6637, Section 9.
@@ -97,7 +104,7 @@ func (f *ecdsaKey) parse(r io.Reader) (err error) {
 		return err
 	}
 	f.p.bytes, f.p.bitLength, err = readMPI(r)
-	return
+	return err
 }
 
 func (f *ecdsaKey) serialize(w io.Writer) (err error) {
@@ -286,6 +293,9 @@ func NewDSAPublicKey(creationTime time.Time, pub *dsa.PublicKey) *PublicKey {
 func (e *edDSAkey) check() error {
 	if !bytes.Equal(e.oid, oidEdDSA) {
 		return errors.UnsupportedError(fmt.Sprintf("Bad OID for EdDSA key: %v", e.oid))
+	}
+	if bLen := len(e.p.bytes); bLen != 33 { // 32 bytes for ed25519 key and 1 byte for 0x40 header
+		return errors.UnsupportedError(fmt.Sprintf("Unexpected EdDSA public key length: %d", bLen))
 	}
 	return nil
 }
@@ -882,7 +892,9 @@ func writeMPIs(w io.Writer, mpis ...parsedMPI) (err error) {
 	return
 }
 
-// BitLength returns the bit length for the given public key.
+// BitLength returns the bit length for the given public key. Used for
+// displaying key information, actual buffers and BigInts inside may
+// have non-matching different size if the key is invalid.
 func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 	switch pk.PubKeyAlgo {
 	case PubKeyAlgoRSA, PubKeyAlgoRSAEncryptOnly, PubKeyAlgoRSASignOnly:
@@ -891,6 +903,17 @@ func (pk *PublicKey) BitLength() (bitLength uint16, err error) {
 		bitLength = pk.p.bitLength
 	case PubKeyAlgoElGamal:
 		bitLength = pk.p.bitLength
+	case PubKeyAlgoECDH:
+		ecdhPublicKey := pk.PublicKey.(*ecdh.PublicKey)
+		bitLength = uint16(ecdhPublicKey.Curve.Params().BitSize)
+	case PubKeyAlgoECDSA:
+		ecdsaPublicKey := pk.PublicKey.(*ecdsa.PublicKey)
+		bitLength = uint16(ecdsaPublicKey.Curve.Params().BitSize)
+	case PubKeyAlgoEdDSA:
+		// EdDSA only support ed25519 curves right now, just return
+		// the length. Also, we don't have any PublicKey.Curve object
+		// to look the size up from.
+		bitLength = 256
 	default:
 		err = errors.InvalidArgumentError("bad public-key algorithm")
 	}

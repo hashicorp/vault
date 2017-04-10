@@ -6,6 +6,8 @@ description: |-
   Learn how to set up and manage Vault Enterprise Replication.
 ---
 
+# Replication Setup and Guidance
+
 If you're unfamiliar with Vault Replication concepts, please first look at the
 [general information page](/docs/vault-enterprise/replication/index.html). More
 details can be found in the

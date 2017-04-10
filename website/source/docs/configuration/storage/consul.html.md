@@ -69,7 +69,7 @@ at Consul's service discovery layer.
 - `disable_registration` `(bool: false)` – Specifies whether Vault should
   register itself with Consul.
 
-- `max_parallel` `(int: 128)` – Specifies the maximum number of concurrent
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to Consul.
 
 - `path` `(string: "vault/")` – Specifies the path in Consul's key-value store

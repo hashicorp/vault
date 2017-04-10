@@ -202,7 +202,7 @@ type SignedURLOptions struct {
 	// If provided, the client should provide the exact value on the request
 	// header in order to use the signed URL.
 	// Optional.
-	MD5 []byte
+	MD5 string
 }
 
 // SignedURL returns a URL for the specified object. Signed URLs allow
@@ -225,6 +225,12 @@ func SignedURL(bucket, name string, opts *SignedURLOptions) (string, error) {
 	if opts.Expires.IsZero() {
 		return "", errors.New("storage: missing required expires option")
 	}
+	if opts.MD5 != "" {
+		md5, err := base64.StdEncoding.DecodeString(opts.MD5)
+		if err != nil || len(md5) != 16 {
+			return "", errors.New("storage: invalid MD5 checksum")
+		}
+	}
 
 	signBytes := opts.SignBytes
 	if opts.PrivateKey != nil {
@@ -241,8 +247,6 @@ func SignedURL(bucket, name string, opts *SignedURLOptions) (string, error) {
 				sum[:],
 			)
 		}
-	} else {
-		signBytes = opts.SignBytes
 	}
 
 	u := &url.URL{
@@ -254,7 +258,9 @@ func SignedURL(bucket, name string, opts *SignedURLOptions) (string, error) {
 	fmt.Fprintf(buf, "%s\n", opts.MD5)
 	fmt.Fprintf(buf, "%s\n", opts.ContentType)
 	fmt.Fprintf(buf, "%d\n", opts.Expires.Unix())
-	fmt.Fprintf(buf, "%s", strings.Join(opts.Headers, "\n"))
+	if len(opts.Headers) > 0 {
+		fmt.Fprintf(buf, "%s\n", strings.Join(opts.Headers, "\n"))
+	}
 	fmt.Fprintf(buf, "%s", u.String())
 
 	b, err := signBytes(buf.Bytes())
@@ -656,6 +662,7 @@ func (o *ObjectAttrs) toRawObject(bucket string) *raw.Object {
 		ContentLanguage:    o.ContentLanguage,
 		CacheControl:       o.CacheControl,
 		ContentDisposition: o.ContentDisposition,
+		StorageClass:       o.StorageClass,
 		Acl:                acl,
 		Metadata:           o.Metadata,
 	}
@@ -724,14 +731,13 @@ type ObjectAttrs struct {
 	// of a particular object. This field is read-only.
 	MetaGeneration int64
 
-	// StorageClass is the storage class of the bucket.
+	// StorageClass is the storage class of the object.
 	// This value defines how objects in the bucket are stored and
 	// determines the SLA and the cost of storage. Typical values are
 	// "MULTI_REGIONAL", "REGIONAL", "NEARLINE", "COLDLINE", "STANDARD"
 	// and "DURABLE_REDUCED_AVAILABILITY".
 	// It defaults to "STANDARD", which is equivalent to "MULTI_REGIONAL"
-	// or "REGIONAL" depending on the bucket's location settings. This
-	// field is read-only.
+	// or "REGIONAL" depending on the bucket's location settings.
 	StorageClass string
 
 	// Created is the time the object was created. This field is read-only.

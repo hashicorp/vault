@@ -68,7 +68,7 @@ $ curl \
 
 ## Read Certificate
 
-This endpoint etrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
+This endpoint retrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
 `certificate` key of the JSON object.
 
 This is an unauthenticated endpoint.
@@ -727,6 +727,13 @@ that is not allowed by the CN policy in the role, the request is denied.
   generated with long lifetimes, it is recommended that lease generation be
   disabled, as large amount of leases adversely affect the startup time of
   Vault.
+
+- `no_store` `(bool: false)` – If set, certificates issued/signed against this
+role will not be stored in the in the storage backend. This can improve
+performance when issuing large numbers of certificates. However, certificates
+issued in this way cannot be enumerated or revoked, so this option is
+recommended only for certificates that are non-sensitive, or extremely
+short-lived. This option implies a value of `false` for `generate_lease`.
 
 ### Sample Payload
 

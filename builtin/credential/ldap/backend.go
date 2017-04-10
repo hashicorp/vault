@@ -165,11 +165,11 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 			policies = append(policies, group.Policies...)
 		}
 	}
-	if user !=nil && user.Policies != nil {
+	if user != nil && user.Policies != nil {
 		policies = append(policies, user.Policies...)
 	}
 	// Policies from each group may overlap
-	policies = strutil.RemoveDuplicates(policies)
+	policies = strutil.RemoveDuplicates(policies, true)
 
 	if len(policies) == 0 {
 		errStr := "user is not a member of any authorized group"
