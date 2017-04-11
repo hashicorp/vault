@@ -295,12 +295,12 @@ Usage: vault generate-root [options] [key]
 
   'generate-root' is used to create a new root token.
 
-  Root generation can only be done when the Vault is already unsealed. The
+  Root generation can only be done when the vault is already unsealed. The
   operation is done online, but requires that a threshold of the current unseal
   keys be provided.
 
-  One (and only one) of the following must be provided at attempt
-  initialization time:
+  One (and only one) of the following must be provided when initializing the
+  root generation attempt:
 
   1) A 16-byte, base64-encoded One Time Password (OTP) provided in the '-otp'
   flag; the token is XOR'd with this value before it is returned once the final

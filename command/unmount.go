@@ -23,7 +23,7 @@ func (c *UnmountCommand) Run(args []string) int {
 	if len(args) != 1 {
 		flags.Usage()
 		c.Ui.Error(fmt.Sprintf(
-			"\nUnmount expects one argument: the path to unmount"))
+			"\nunmount expects one argument: the path to unmount"))
 		return 1
 	}
 

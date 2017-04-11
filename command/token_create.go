@@ -120,7 +120,7 @@ General Options:
 Token Options:
 
   -id="7699125c-d8...."   The token value that clients will use to authenticate
-                          with vault. If not provided this defaults to a 36
+                          with Vault. If not provided this defaults to a 36
                           character UUID. A root token is required to specify
                           the ID of a token.
 
@@ -151,8 +151,8 @@ Token Options:
                           up in the audit log. This can be specified multiple
                           times.
 
-  -orphan                 If specified, the token will have no parent. Only
-                          This prevents the new token from being revoked with
+  -orphan                 If specified, the token will have no parent. This
+                          prevents the new token from being revoked with
                           your token. Requires a root/sudo token to use.
 
   -no-default-policy      If specified, the token will not have the "default"

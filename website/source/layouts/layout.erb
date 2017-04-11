@@ -14,6 +14,17 @@
     <meta name="msapplication-config" content="/microsoft-tile.xml" />
     <meta name="theme-color" content="#ffffff">
 
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@HashiCorp" />
+    <meta name="twitter:creator" content="@HashiCorp" />
+    <meta property="og:url" content="<%= File.join(base_url, current_page.url) %>" />
+    <meta property="og:title" content="<%= title_for(current_page) %>" />
+    <meta property="og:site_name" content="Vault by HashiCorp"/>
+    <meta property="og:image" content="<%= image_url("og-image.png") %>"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="1200"/>
+    <meta property="og:description" content="<%= description_for(current_page) %>" />
+
     <title><%= title_for(current_page) %></title>
 
     <%= stylesheet_link_tag "application" %>
@@ -101,6 +112,7 @@
               <li><a href="/api/index.html">API</a></li>
               <li><a href="/community.html">Community</a></li>
               <li><a href="/security.html">Security</a></li>
+              <li><a href="/assets/files/press-kit.zip">Press Kit</a></li>
             </ul>
             <ul class="footer-links nav navbar-nav navbar-right">
               <li><a href="<%= github_url :current_page %>">Edit this page</a></li>

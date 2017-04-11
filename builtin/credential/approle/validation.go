@@ -31,7 +31,7 @@ type secretIDStorageEntry struct {
 	// operation
 	SecretIDNumUses int `json:"secret_id_num_uses" structs:"secret_id_num_uses" mapstructure:"secret_id_num_uses"`
 
-	// Duration after which this SecretID should expire. This is croleed by
+	// Duration after which this SecretID should expire. This is capped by
 	// the backend mount's max TTL value.
 	SecretIDTTL time.Duration `json:"secret_id_ttl" structs:"secret_id_ttl" mapstructure:"secret_id_ttl"`
 

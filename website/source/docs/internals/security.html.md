@@ -80,7 +80,7 @@ barrier for all requests made to the backend. The security barrier automatically
 all data leaving Vault using the [Advanced Encryption Standard (AES)](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard)
 cipher in the [Galois Counter Mode (GCM)](https://en.wikipedia.org/wiki/Galois/Counter_Mode).
 The nonce is randomly generated for every encrypted object. When data is read from the
-security barrier the GCM authentication tag is verified prior to decryption to detect
+security barrier the GCM authentication tag is verified during the decryption process to detect
 any tampering.
 
 Depending on the backend used, Vault may communicate with the backend over TLS
