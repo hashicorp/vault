@@ -76,6 +76,8 @@ func (b *databaseBackend) closeAllDBs() {
 	for _, db := range b.connections {
 		db.Close()
 	}
+
+	b.connections = nil
 }
 
 // This function is used to retrieve a database object either from the cached

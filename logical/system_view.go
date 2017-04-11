@@ -44,7 +44,12 @@ type SystemView interface {
 	// token used to unwrap.
 	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error)
 
+	// LookupPlugin looks into the plugin catalog for a plugin with the given
+	// name. Returns a PluginRunner or an error if a plugin can not be found.
 	LookupPlugin(string) (*pluginutil.PluginRunner, error)
+
+	// MlockDisabled returns the configuration setting for DisableMlock.
+	MlockDisabled() bool
 }
 
 type StaticSystemView struct {
@@ -54,6 +59,7 @@ type StaticSystemView struct {
 	TaintedVal          bool
 	CachingDisabledVal  bool
 	Primary             bool
+	DisableMlock        bool
 	ReplicationStateVal consts.ReplicationState
 }
 
@@ -87,4 +93,8 @@ func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time
 
 func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
 	return nil, errors.New("LookupPlugin is not implimented in StaticSystemView")
+}
+
+func (d StaticSystemView) MlockDisabled() bool {
+	return d.DisableMlock
 }

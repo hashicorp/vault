@@ -3,13 +3,27 @@ package pluginutil
 import (
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"os/exec"
+	"time"
 
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/mlock"
+)
+
+var (
+	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
+	// plugin.
+	PluginMlockEnabled = "VAULT_PLUGIN_MLOCK_ENABLED"
 )
 
 type Looker interface {
 	LookupPlugin(string) (*PluginRunner, error)
+}
+
+type Wrapper interface {
+	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error)
+	MlockDisabled() bool
 }
 
 type LookWrapper interface {
@@ -22,6 +36,7 @@ type PluginRunner struct {
 	Command string   `json:"command"`
 	Args    []string `json:"args"`
 	Sha256  []byte   `json:"sha256"`
+	Builtin bool     `json:"builtin"`
 }
 
 func (r *PluginRunner) Run(wrapper Wrapper, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string) (*plugin.Client, error) {
@@ -44,10 +59,17 @@ func (r *PluginRunner) Run(wrapper Wrapper, pluginMap map[string]plugin.Plugin, 
 		return nil, err
 	}
 
-	// Add the response wrap token to the ENV of the plugin
+	mlock := "true"
+	if wrapper.MlockDisabled() {
+		mlock = "false"
+	}
+
 	cmd := exec.Command(r.Command, r.Args...)
 	cmd.Env = append(cmd.Env, env...)
+	// Add the response wrap token to the ENV of the plugin
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
+	// Add the mlock setting to the ENV of the plugin
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, mlock))
 
 	secureConfig := &plugin.SecureConfig{
 		Checksum: r.Sha256,
@@ -63,4 +85,12 @@ func (r *PluginRunner) Run(wrapper Wrapper, pluginMap map[string]plugin.Plugin, 
 	})
 
 	return client, nil
+}
+
+func OptionallyEnableMlock() error {
+	if os.Getenv(PluginMlockEnabled) == "true" {
+		return mlock.LockMemory()
+	}
+
+	return nil
 }

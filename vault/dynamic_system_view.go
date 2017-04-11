@@ -116,6 +116,13 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 	return resp.WrapInfo.Token, nil
 }
 
+// LookupPlugin looks for a plugin with the given name in the plugin catalog. It
+// returns a PluginRunner or an error if no plugin was found.
 func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
 	return d.core.pluginCatalog.Get(name)
+}
+
+// MlockDisabled returns the configuration setting "DisableMlock".
+func (d dynamicSystemView) MlockDisabled() bool {
+	return d.core.disableMlock
 }

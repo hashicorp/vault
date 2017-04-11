@@ -1,6 +1,8 @@
 package dbplugin
 
 import (
+	"fmt"
+
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
@@ -16,6 +18,12 @@ func NewPluginServer(db DatabaseType) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"database": dbPlugin,
+	}
+
+	err := pluginutil.OptionallyEnableMlock()
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
 	plugin.Serve(&plugin.ServeConfig{

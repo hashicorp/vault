@@ -332,7 +332,7 @@ type Core struct {
 	// uiEnabled indicates whether Vault Web UI is enabled or not
 	uiEnabled bool
 
-	// pluginDirectory is the location vault will look for plugins
+	// pluginDirectory is the location vault will look for plugin binaries
 	pluginDirectory string
 
 	// vaultBinaryLocation is used to run builtin plugins in secure mode
@@ -343,6 +343,8 @@ type Core struct {
 
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
+
+	disableMlock bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -449,6 +451,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 		vaultBinaryLocation:              conf.VaultBinaryLocation,
 		vaultBinarySHA256:                conf.VaultBinarySHA256,
+		disableMlock:                     conf.DisableMlock,
 	}
 
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped

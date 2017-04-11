@@ -29,10 +29,6 @@ var (
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
 )
 
-type Wrapper interface {
-	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error)
-}
-
 // GenerateCACert returns a CA cert used to later sign the certificates for the
 // plugin client and server.
 func GenerateCACert() ([]byte, *x509.Certificate, *ecdsa.PrivateKey, error) {

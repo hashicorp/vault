@@ -63,6 +63,7 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 		Command: c.vaultCommand,
 		Args:    []string{"plugin-exec", name},
 		Sha256:  c.vaultSHA256,
+		Builtin: true,
 	}, nil
 }
 
@@ -93,6 +94,7 @@ func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
 		Command: command,
 		Args:    args,
 		Sha256:  sha256,
+		Builtin: false,
 	}
 
 	buf, err := json.Marshal(entry)
