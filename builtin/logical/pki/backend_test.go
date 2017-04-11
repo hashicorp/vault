@@ -1787,6 +1787,12 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// IP SAN tests
 	{
+		roleVals.UseCSRSANs = true
+		roleVals.AllowIPSANs = false
+		issueTestStep.ErrorOk = false
+		addTests(nil)
+
+		roleVals.UseCSRSANs = false
 		issueVals.IPSANs = "127.0.0.1,::1"
 		issueTestStep.ErrorOk = true
 		addTests(nil)
