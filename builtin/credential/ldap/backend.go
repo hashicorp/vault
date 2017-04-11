@@ -110,7 +110,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/ldap: BindDN fetched", "username", username, "binddn", userBindDN)
+		b.Logger().Debug("auth/ldap: User BindDN fetched", "username", username, "binddn", userBindDN)
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
@@ -126,7 +126,7 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// the BindDN should be the one to search, not the user logging in.
 	if cfg.BindDN != "" && cfg.BindPassword != "" {
 		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
-			return nil, logical.ErrorResponse("Encountered an error while attempting to re-bind with the BindDN User: " + err.Error()), nil
+			return nil, logical.ErrorResponse(fmt.Sprintf("Encountered an error while attempting to re-bind with the BindDN User: %s", err.Error())), nil
 		}
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("auth/ldap: Re-Bound to original BindDN")
