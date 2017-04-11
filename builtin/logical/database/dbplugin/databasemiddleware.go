@@ -9,6 +9,8 @@ import (
 
 // ---- Tracing Middleware Domain ----
 
+// databaseTracingMiddleware wraps a implementation of DatabaseType and executes
+// trace logging on function call.
 type databaseTracingMiddleware struct {
 	next   DatabaseType
 	logger log.Logger
@@ -77,6 +79,8 @@ func (mw *databaseTracingMiddleware) Close() (err error) {
 
 // ---- Metrics Middleware Domain ----
 
+// databaseMetricsMiddleware wraps an implementation of DatabaseTypes and on
+// function call logs metrics about this instance.
 type databaseMetricsMiddleware struct {
 	next DatabaseType
 

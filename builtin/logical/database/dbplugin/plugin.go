@@ -40,11 +40,13 @@ func PluginFactory(pluginName string, sys pluginutil.LookWrapper, logger log.Log
 		return nil, ErrEmptyPluginName
 	}
 
+	// Look for plugin in the plugin catalog
 	pluginMeta, err := sys.LookupPlugin(pluginName)
 	if err != nil {
 		return nil, err
 	}
 
+	// create a DatabasePluginClient instance
 	db, err := newPluginClient(sys, pluginMeta)
 	if err != nil {
 		return nil, err
@@ -76,6 +78,8 @@ var handshakeConfig = plugin.HandshakeConfig{
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
 
+// DatabasePlugin implements go-plugin's Plugin interface. It has methods for
+// retrieving a server and a client instance of the plugin.
 type DatabasePlugin struct {
 	impl DatabaseType
 }

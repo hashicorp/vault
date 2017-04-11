@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
+// pathResetConnection configures a path to reset a plugin.
 func pathResetConnection(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("reset/%s", framework.GenericNameRegex("name")),
@@ -20,32 +21,36 @@ func pathResetConnection(b *databaseBackend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConnectionReset,
+			logical.UpdateOperation: b.pathConnectionReset(),
 		},
 
-		HelpSynopsis:    pathConfigConnectionHelpSyn,
-		HelpDescription: pathConfigConnectionHelpDesc,
+		HelpSynopsis:    pathResetConnectionHelpSyn,
+		HelpDescription: pathResetConnectionHelpDesc,
 	}
 }
 
-func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
-	if name == "" {
-		return logical.ErrorResponse("Empty name attribute given"), nil
+// pathConnectionReset resets a plugin by closing the existing instance and
+// creating a new one.
+func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
+		if name == "" {
+			return logical.ErrorResponse("Empty name attribute given"), nil
+		}
+
+		// Grab the mutex lock
+		b.Lock()
+		defer b.Unlock()
+
+		b.clearConnection(name)
+
+		_, err := b.getOrCreateDBObj(req.Storage, name)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
 	}
-
-	// Grab the mutex lock
-	b.Lock()
-	defer b.Unlock()
-
-	b.clearConnection(name)
-
-	_, err := b.getOrCreateDBObj(req.Storage, name)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
 }
 
 // pathConfigurePluginConnection returns a configured framework.Path setup to
@@ -60,15 +65,17 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			},
 
 			"verify_connection": &framework.FieldSchema{
-				Type:        framework.TypeBool,
-				Default:     true,
-				Description: `If set, connection_url is verified by actually connecting to the database`,
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, the connection details are verified by
+							actually connecting to the database`,
 			},
 
 			"plugin_name": &framework.FieldSchema{
 				Type: framework.TypeString,
-				Description: `Maximum amount of time a connection may be reused;
-				a zero or negative value reuses connections forever.`,
+				Description: `The name of a builtin or previously registered
+							plugin known to vault. This endpoint will create an instance of
+							that plugin type.`,
 			},
 		},
 
@@ -198,16 +205,32 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 }
 
 const pathConfigConnectionHelpSyn = `
-Configure the connection string to talk to PostgreSQL.
+Configure connection details to a database plugin.
 `
 
 const pathConfigConnectionHelpDesc = `
-This path configures the connection string used to connect to PostgreSQL.
-The value of the string can be a URL, or a PG style string in the
-format of "user=foo host=bar" etc.
+This path configures the connection details used to connect to a particular
+database. This path runs the provided plugin name and passes the configured
+connection details to the plugin. See the documentation for the plugin specified
+for a full list of accepted connection details. 
 
-The URL looks like:
-"postgresql://user:pass@host:port/dbname"
+In addition to the database specific connection details, this endpoing also
+accepts:
 
-When configuring the connection string, the backend will verify its validity.
+	* "plugin_name" (required) - The name of a builtin or previously registered
+	   plugin known to vault. This endpoint will create an instance of that
+	   plugin type.
+
+	* "verify_connection" - A boolean value denoting if the plugin should verify
+	   it is able to connect to the database using the provided connection
+       details.
+`
+
+const pathResetConnectionHelpSyn = `
+Resets a database plugin.
+`
+
+const pathResetConnectionHelpDesc = `
+This path resets the database connection by closing the existing database plugin
+instance and running a new one.
 `

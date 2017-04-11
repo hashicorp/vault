@@ -19,7 +19,7 @@ func pathRoleCreate(b *databaseBackend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathRoleCreateRead,
+			logical.ReadOperation: b.pathRoleCreateRead(),
 		},
 
 		HelpSynopsis:    pathRoleCreateReadHelpSyn,
@@ -27,45 +27,47 @@ func pathRoleCreate(b *databaseBackend) *framework.Path {
 	}
 }
 
-func (b *databaseBackend) pathRoleCreateRead(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
+func (b *databaseBackend) pathRoleCreateRead() framework.OperationFunc {
+	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		name := data.Get("name").(string)
 
-	// Get the role
-	role, err := b.Role(req.Storage, name)
-	if err != nil {
-		return nil, err
+		// Get the role
+		role, err := b.Role(req.Storage, name)
+		if err != nil {
+			return nil, err
+		}
+		if role == nil {
+			return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", name)), nil
+		}
+
+		b.Lock()
+		defer b.Unlock()
+
+		// Get the Database object
+		db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
+		if err != nil {
+			// TODO: return a resp error instead?
+			return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+		}
+
+		expiration := time.Now().Add(role.DefaultTTL)
+
+		// Create the user
+		username, password, err := db.CreateUser(role.Statements, req.DisplayName, expiration)
+		if err != nil {
+			return nil, err
+		}
+
+		resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
+			"username": username,
+			"password": password,
+		}, map[string]interface{}{
+			"username": username,
+			"role":     name,
+		})
+		resp.Secret.TTL = role.DefaultTTL
+		return resp, nil
 	}
-	if role == nil {
-		return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", name)), nil
-	}
-
-	b.Lock()
-	defer b.Unlock()
-
-	// Get the Database object
-	db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
-	if err != nil {
-		// TODO: return a resp error instead?
-		return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
-	}
-
-	expiration := time.Now().Add(role.DefaultTTL)
-
-	// Create the user
-	username, password, err := db.CreateUser(role.Statements, req.DisplayName, expiration)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
-		"username": username,
-		"password": password,
-	}, map[string]interface{}{
-		"username": username,
-		"role":     name,
-	})
-	resp.Secret.TTL = role.DefaultTTL
-	return resp, nil
 }
 
 const pathRoleCreateReadHelpSyn = `

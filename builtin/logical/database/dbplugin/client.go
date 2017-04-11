@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
-// DatabasePluginClient embeds a databasePluginRPCClient and wraps it's close
+// DatabasePluginClient embeds a databasePluginRPCClient and wraps it's Close
 // method to also call Kill() on the plugin.Client.
 type DatabasePluginClient struct {
 	client *plugin.Client
@@ -64,7 +64,7 @@ func newPluginClient(sys pluginutil.Wrapper, pluginRunner *pluginutil.PluginRunn
 
 // ---- RPC client domain ----
 
-// databasePluginRPCClient impliments DatabaseType and is used on the client to
+// databasePluginRPCClient implements DatabaseType and is used on the client to
 // make RPC calls to a plugin.
 type databasePluginRPCClient struct {
 	client *rpc.Client

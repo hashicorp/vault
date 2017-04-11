@@ -88,11 +88,11 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 }
 
 func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error) {
-	return "", errors.New("ResponseWrapData is not implimented in StaticSystemView")
+	return "", errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
-	return nil, errors.New("LookupPlugin is not implimented in StaticSystemView")
+	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) MlockDisabled() bool {
