@@ -51,15 +51,8 @@ func (b *databaseBackend) pathConnectionReset(req *logical.Request, data *framew
 // pathConfigurePluginConnection returns a configured framework.Path setup to
 // operate on plugins.
 func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
-	return buildConfigConnectionPath("config/%s", b.connectionWriteHandler(), b.connectionReadHandler(), b.connectionDeleteHandler())
-}
-
-// buildConfigConnectionPath reutns a configured framework.Path using the passed
-// in operation functions to complete the request. Used to distinguish calls
-// between builtin and plugin databases.
-func buildConfigConnectionPath(path string, updateOp, readOp, deleteOp framework.OperationFunc) *framework.Path {
 	return &framework.Path{
-		Pattern: fmt.Sprintf(path, framework.GenericNameRegex("name")),
+		Pattern: fmt.Sprintf("config/%s", framework.GenericNameRegex("name")),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -80,9 +73,9 @@ func buildConfigConnectionPath(path string, updateOp, readOp, deleteOp framework
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: updateOp,
-			logical.ReadOperation:   readOp,
-			logical.DeleteOperation: deleteOp,
+			logical.UpdateOperation: b.connectionWriteHandler(),
+			logical.ReadOperation:   b.connectionReadHandler(),
+			logical.DeleteOperation: b.connectionDeleteHandler(),
 		},
 
 		HelpSynopsis:    pathConfigConnectionHelpSyn,
