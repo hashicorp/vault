@@ -702,8 +702,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					logical.ListOperation: b.handlePluginCatalogList,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
 			&framework.Path{
 				Pattern: "plugin-catalog/(?P<name>.+)",
@@ -726,8 +726,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					logical.ReadOperation:   b.handlePluginCatalogRead,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
 		},
 	}
@@ -2505,5 +2505,22 @@ This path responds to the following HTTP methods.
 	"audited-headers": {
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
+	},
+	"plugin-catalog": {
+		`Configures the plugins known to vault`,
+		`
+This path responds to the following HTTP methods.
+    GET /
+        Returns a list of names of configured plugins.
+
+    GET /<name>
+        Retrieve the metadata for the named plugin.
+
+    PUT /<name>
+        Add or update plugin.
+
+    DELETE /<name>
+        Delete the plugin with the given name.
+		`,
 	},
 }

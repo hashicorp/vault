@@ -19,6 +19,9 @@ var (
 	pluginCatalogPrefix = "plugin-catalog/"
 )
 
+// PluginCatalog keeps a record of plugins known to vault. External plugins need
+// to be registered to the catalog before they can be used in backends. Builtin
+// plugins are automatically detected and included in the catalog.
 type PluginCatalog struct {
 	catalogView  *BarrierView
 	directory    string
@@ -39,6 +42,9 @@ func (c *Core) setupPluginCatalog() error {
 	return nil
 }
 
+// Get retrieves a plugin with the specified name from the catalog. It first
+// looks for external plugins with this name and then looks for builtin plugins.
+// It returns a PluginRunner or an error if no plugin was found.
 func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -71,6 +77,8 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 	}, nil
 }
 
+// Set registers a new external plugin with the catalog, or updates an existing
+// external plugin. It takes the name, command and SHA256 of the plugin.
 func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -119,6 +127,8 @@ func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
 	return nil
 }
 
+// Delete is used to remove an external plugin from the catalog. Builtin plugins
+// can not be deleted.
 func (c *PluginCatalog) Delete(name string) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -126,17 +136,22 @@ func (c *PluginCatalog) Delete(name string) error {
 	return c.catalogView.Delete(name)
 }
 
+// List returns a list of all the known plugin names. If an external and builtin
+// plugin share the same name, only one instance of the name will be returned.
 func (c *PluginCatalog) List() ([]string, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
+	// Collect keys for external plugins in the barrier.
 	keys, err := logical.CollectKeys(c.catalogView)
 	if err != nil {
 		return nil, err
 	}
 
+	// Get the keys for builtin plugins
 	builtinKeys := builtinplugins.BuiltinPlugins.Keys()
 
+	// Use a map to unique the two lists
 	mapKeys := make(map[string]bool)
 
 	for _, plugin := range keys {
