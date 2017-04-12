@@ -14,7 +14,7 @@ read and write our first secret.
 One of the core features of Vault is the ability to read and write
 arbitrary secrets securely. On this page, we'll do this using the CLI,
 but there is also a complete
-[HTTP API](/docs/http/index.html)
+[HTTP API](/api/index.html)
 that can be used to programmatically do anything with Vault.
 
 Secrets written to Vault are encrypted and then written to backend

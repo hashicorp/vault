@@ -366,6 +366,7 @@ func TestACL_ValuePermissions(t *testing.T) {
 		{"dev/ops", []string{"allow"}, []interface{}{"good"}, true},
 		{"dev/ops", []string{"allow"}, []interface{}{"bad"}, false},
 		{"foo/bar", []string{"deny"}, []interface{}{"bad"}, false},
+		{"foo/bar", []string{"deny"}, []interface{}{"bad glob"}, false},
 		{"foo/bar", []string{"deny"}, []interface{}{"good"}, true},
 		{"foo/bar", []string{"allow"}, []interface{}{"good"}, true},
 		{"foo/baz", []string{"aLLow"}, []interface{}{"good"}, true},
@@ -379,6 +380,9 @@ func TestACL_ValuePermissions(t *testing.T) {
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good"}, true},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good1"}, true},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good2"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good2"}, false},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good3"}, true},
+		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
 		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
 		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
 		{"fizz/buzz", []string{"deny_multi"}, []interface{}{"bad2"}, false},
@@ -686,7 +690,7 @@ path "dev/*" {
 path "foo/bar" {
 	policy = "write"
 	denied_parameters = {
-		"deny" = ["bad"]
+		"deny" = ["bad*"]
 	}
 }
 path "foo/baz" {
@@ -701,7 +705,7 @@ path "foo/baz" {
 path "fizz/buzz" {
 	policy = "write"
 	allowed_parameters = {
-		"allow_multi" = ["good", "good1", "good2"]
+		"allow_multi" = ["good", "good1", "good2", "*good3"]
 		"allow" = ["good"]
 	}
 	denied_parameters = {

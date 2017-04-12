@@ -1,79 +1,22 @@
-body.page-sub{
-  #footer{
-    padding: 0 0 40px 0;
-    .col-md-10{
-      padding-top: 40px;
-      border-top: 1px solid $faint-gray;
-    }
-  }
-}
+#footer {
+  padding-top: 50px;
 
-#footer{
-  flex-shrink:0;
-  padding: 64px 0;
+  ul.footer-links {
+    li {
+      a {
+        color: $footer-link-color;
+        font-size: $footer-font-size;
+        font-family: $font-family-open-sans;
+        text-decoration: none;
 
-  .hashicorp-project{
-    margin-top: 24px;
-    @include project-by-hashicorp-style();
+        &:hover, &:focus, &:active {
+          background-color: transparent;
+          color: $footer-link-color-hover;
+          outline: 0;
+        }
 
-    &:hover{
-      color: $black;
-    }
-  }
-
-  .pull-right{
-    padding-right: 15px;
-  }
-}
-
-.edit-page-link{
-  position: absolute;
-  top: -50px;
-  right: 15px;
-  z-index: 10;
-
-  a{
-    text-transform: uppercase;
-    color: $black;
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 992px) {
-  .footer-links {
-    display: block;
-    text-align: center;
-
-    ul{
-      display: inline-block;;
-      float: none !important;
-    }
-
-    .footer-hashi{
-      display: block;
-      float: none !important;
-    }
-  }
-}
-
-@media (max-width: 414px) {
-  #footer{
-    ul{
-      display: block;
-      li{
-        display: block;
-        float: none;
-      }
-
-      &.external-links{
-        li{
-          svg{
-            position: relative;
-            left: 0;
-            top: 2px;
-            margin-top: 0;
-            margin-right: 4px;
-          }
+        @media (max-width: 992px) {
+          text-align: center;
         }
       }
     }

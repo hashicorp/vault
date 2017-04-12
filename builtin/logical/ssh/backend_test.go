@@ -587,7 +587,7 @@ func TestBackend_ValidPrincipalsValidatedForHostCertificates(t *testing.T) {
 				},
 			}),
 
-			signCertificateStep("testing", "root", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
 				"option": "value",
 			}, map[string]string{
 				"extension": "extended",
@@ -632,7 +632,7 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 				},
 			}),
 
-			signCertificateStep("testing", "root", ssh.UserCert, []string{"tuber"}, map[string]string{
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.UserCert, []string{"tuber"}, map[string]string{
 				"secondary": "value",
 			}, map[string]string{
 				"additional": "value",
@@ -709,7 +709,7 @@ func validateSSHCertificate(cert *ssh.Certificate, keyId string, certType int, v
 	ttl time.Duration) error {
 
 	if cert.KeyId != keyId {
-		return fmt.Errorf("Incorrect KeyId: %v", cert.KeyId)
+		return fmt.Errorf("Incorrect KeyId: %v, wanted %v", cert.KeyId, keyId)
 	}
 
 	if cert.CertType != uint32(certType) {

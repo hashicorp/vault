@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -348,7 +349,14 @@ func valueInParameterList(v interface{}, list []interface{}) bool {
 
 func valueInSlice(v interface{}, list []interface{}) bool {
 	for _, el := range list {
-		if reflect.DeepEqual(el, v) {
+		if reflect.TypeOf(el).String() == "string" && reflect.TypeOf(v).String() == "string" {
+			item := el.(string)
+			val := v.(string)
+
+			if strutil.GlobbedStringsMatch(item, val) {
+				return true
+			}
+		} else if reflect.DeepEqual(el, v) {
 			return true
 		}
 	}

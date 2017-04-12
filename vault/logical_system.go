@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -1030,6 +1030,7 @@ func (b *SystemBackend) handleMountTable(
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+				"force_no_cache":    entry.Config.ForceNoCache,
 			},
 			"local": entry.Local,
 		}
@@ -1064,6 +1065,7 @@ func (b *SystemBackend) handleMount(
 	var apiConfig struct {
 		DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
 		MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+		ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
 	}
 	configMap := data.Get("config").(map[string]interface{})
 	if configMap != nil && len(configMap) != 0 {
@@ -1079,7 +1081,7 @@ func (b *SystemBackend) handleMount(
 	case "":
 	case "system":
 	default:
-		tmpDef, err := duration.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
+		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
@@ -1092,7 +1094,7 @@ func (b *SystemBackend) handleMount(
 	case "":
 	case "system":
 	default:
-		tmpMax, err := duration.ParseDurationSecond(apiConfig.MaxLeaseTTL)
+		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
@@ -1111,6 +1113,11 @@ func (b *SystemBackend) handleMount(
 		return logical.ErrorResponse(fmt.Sprintf(
 				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
 			logical.ErrInvalidRequest
+	}
+
+	// Copy over the force no cache if set
+	if apiConfig.ForceNoCache {
+		config.ForceNoCache = true
 	}
 
 	if logicalType == "" {
@@ -1248,10 +1255,17 @@ func (b *SystemBackend) handleTuneReadCommon(path string) (*logical.Response, er
 		return handleError(fmt.Errorf("sys: cannot fetch sysview for path %s", path))
 	}
 
+	mountEntry := b.Core.router.MatchingMountEntry(path)
+	if mountEntry == nil {
+		b.Backend.Logger().Error("sys: cannot fetch mount entry", "path", path)
+		return handleError(fmt.Errorf("sys: cannot fetch mount entry for path %s", path))
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"default_lease_ttl": int(sysView.DefaultLeaseTTL().Seconds()),
 			"max_lease_ttl":     int(sysView.MaxLeaseTTL().Seconds()),
+			"force_no_cache":    mountEntry.Config.ForceNoCache,
 		},
 	}
 
@@ -1327,7 +1341,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			tmpDef := time.Duration(0)
 			newDefault = &tmpDef
 		default:
-			tmpDef, err := duration.ParseDurationSecond(defTTL)
+			tmpDef, err := parseutil.ParseDurationSecond(defTTL)
 			if err != nil {
 				return handleError(err)
 			}
@@ -1341,7 +1355,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 			tmpMax := time.Duration(0)
 			newMax = &tmpMax
 		default:
-			tmpMax, err := duration.ParseDurationSecond(maxTTL)
+			tmpMax, err := parseutil.ParseDurationSecond(maxTTL)
 			if err != nil {
 				return handleError(err)
 			}

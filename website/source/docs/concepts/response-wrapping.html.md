@@ -18,7 +18,7 @@ accidental disclosure, especially if the secret is being transmitted in
 plaintext.
 
 In Vault 0.3 the
-[`cubbyhole`](https://www.vaultproject.io/docs/secrets/cubbyhole/index.html)
+[`cubbyhole`](/docs/secrets/cubbyhole/index.html)
 backend was introduced, providing storage scoped to a single token. The
 [Cubbyhole Principles blog
 post](https://www.hashicorp.com/blog/vault-cubbyhole-principles.html) described
@@ -33,11 +33,11 @@ Starting in 0.6, this concept is taken to its logical conclusion: almost every
 response that Vault generates can be automatically wrapped inside a single-use,
 limited-time-to-live token's cubbyhole. Details can be found in the
 [`cubbyhole` backend
-documentation](https://www.vaultproject.io/docs/secrets/cubbyhole/index.html).
+documentation](/docs/secrets/cubbyhole/index.html).
 
 This capability should be carefully considered when planning your security
 architecture. For instance, many Vault deployments use the
-[`pki`](https://www.vaultproject.io/docs/secrets/pki/index.html) backend to
+[`pki`](/docs/secrets/pki/index.html) backend to
 generate TLS certificates and private keys for services. If you do not wish
 these services to have access to the generation API, a trusted third party
 could generate the certificates and private keys and pass the resulting

@@ -139,11 +139,15 @@ values) that a user is allowed to specify when calling a path.
     `denied_parameters` object all keys not specified will be allowed (unless
     `allowed_parameters` is also set, in which case normal rules will apply).
 
+String values inside a populated value array support prefix/suffix globbing. 
+Globbing is enabled by prepending or appending a `*` to the value (e.g. 
+`["*foo", "bar*"]` would match `"...foo"` and `"bar..."`).
+
 ### Required Minimum/Maximum Response Wrapping TTLs
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
-[wrapped](https://www.vaultproject.io/docs/concepts/response-wrapping.html), with a granularity of a second. These can either be specified as a number of seconds or a string with a `s`, `m`, or `h` suffix indicating seconds, minutes, and hours respectively.
+[wrapped](/docs/concepts/response-wrapping.html), with a granularity of a second. These can either be specified as a number of seconds or a string with a `s`, `m`, or `h` suffix indicating seconds, minutes, and hours respectively.
 
 In practice, setting a minimum TTL of one second effectively makes response
 wrapping mandatory for a particular path.

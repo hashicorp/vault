@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/consts"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
@@ -274,6 +274,7 @@ func requestAuth(core *vault.Core, r *http.Request, req *logical.Request) *logic
 		te, err := core.LookupToken(v)
 		if err == nil && te != nil {
 			req.ClientTokenAccessor = te.Accessor
+			req.ClientTokenRemainingUses = te.NumUses
 		}
 	}
 
@@ -289,7 +290,7 @@ func requestWrapInfo(r *http.Request, req *logical.Request) (*logical.Request, e
 	}
 
 	// If it has an allowed suffix parse as a duration string
-	dur, err := duration.ParseDurationSecond(wrapTTL)
+	dur, err := parseutil.ParseDurationSecond(wrapTTL)
 	if err != nil {
 		return req, err
 	}

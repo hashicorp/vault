@@ -146,6 +146,7 @@ type MountEntry struct {
 type MountConfig struct {
 	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
+	ForceNoCache    bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
 }
 
 // Returns a deep copy of the mount entry
@@ -211,6 +212,9 @@ func (c *Core) mount(entry *MountEntry) error {
 	backend, err := c.newLogicalBackend(entry.Type, sysView, view, nil)
 	if err != nil {
 		return err
+	}
+	if backend == nil {
+		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
 	}
 
 	// Call initialize; this takes care of init tasks that must be run after
@@ -283,9 +287,9 @@ func (c *Core) unmount(path string) (bool, error) {
 	}
 
 	// Call cleanup function if it exists
-	b, ok := c.router.root.Get(path)
-	if ok {
-		b.(*routeEntry).backend.Cleanup()
+	backend := c.router.MatchingBackend(path)
+	if backend != nil {
+		backend.Cleanup()
 	}
 
 	// Unmount the backend entirely
@@ -638,6 +642,9 @@ func (c *Core) setupMounts() error {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
 		}
+		if backend == nil {
+			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
+		}
 
 		if err := backend.Initialize(); err != nil {
 			return err
@@ -680,10 +687,9 @@ func (c *Core) unloadMounts() error {
 	if c.mounts != nil {
 		mountTable := c.mounts.shallowClone()
 		for _, e := range mountTable.Entries {
-			prefix := e.Path
-			b, ok := c.router.root.Get(prefix)
-			if ok {
-				b.(*routeEntry).backend.Cleanup()
+			backend := c.router.MatchingBackend(e.Path)
+			if backend != nil {
+				backend.Cleanup()
 			}
 		}
 	}
@@ -711,6 +717,9 @@ func (c *Core) newLogicalBackend(t string, sysView logical.SystemView, view logi
 	b, err := f(config)
 	if err != nil {
 		return nil, err
+	}
+	if b == nil {
+		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 	return b, nil
 }

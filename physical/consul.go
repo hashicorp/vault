@@ -321,6 +321,9 @@ func (c *ConsulBackend) Transaction(txns []TxnEntry) error {
 		ops = append(ops, cop)
 	}
 
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
+
 	ok, resp, _, err := c.kv.Txn(ops, nil)
 	if err != nil {
 		return err

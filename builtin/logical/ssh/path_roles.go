@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/cidrutil"
-	"github.com/hashicorp/vault/helper/duration"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -44,6 +44,7 @@ type sshRole struct {
 	AllowHostCertificates  bool              `mapstructure:"allow_host_certificates" json:"allow_host_certificates"`
 	AllowBareDomains       bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
 	AllowSubdomains        bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
+	AllowUserKeyIDs        bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -143,11 +144,14 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `
 				[Optional for all types]
-				If this option is not specified, client can request for a credential for
-				any valid user at the remote host, including the admin user. If only certain
-				usernames are to be allowed, then this list enforces it. If this field is
-				set, then credentials can only be created for default_user and usernames
-				present in this list.
+				If this option is not specified, client can request for a
+				credential for any valid user at the remote host, including the
+				admin user. If only certain usernames are to be allowed, then
+				this list enforces it. If this field is set, then credentials
+				can only be created for default_user and usernames present in
+				this list. Setting this option will enable all the users with
+				access this role to fetch credentials for all other usernames
+				in this list. Use with caution.
 				`,
 			},
 			"allowed_domains": &framework.FieldSchema{
@@ -249,6 +253,15 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				If set, host certificates that are requested are allowed to use subdomains of those listed in "allowed_domains".
+				`,
+			},
+			"allow_user_key_ids": &framework.FieldSchema{
+				Type: framework.TypeBool,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				If true, users can override the key ID for a signed certificate with the "key_id" field.
+				When false, the key ID will always be the token display name.
+				The key ID is logged by the SSH server and can be useful for auditing.
 				`,
 			},
 		},
@@ -407,7 +420,6 @@ func (b *backend) pathRoleWrite(req *logical.Request, d *framework.FieldData) (*
 }
 
 func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework.FieldData) (*sshRole, *logical.Response) {
-
 	role := &sshRole{
 		MaxTTL: data.Get("max_ttl").(string),
 		TTL:    data.Get("ttl").(string),
@@ -420,7 +432,12 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		DefaultUser:            defaultUser,
 		AllowBareDomains:       data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:        data.Get("allow_subdomains").(bool),
+		AllowUserKeyIDs:        data.Get("allow_user_key_ids").(bool),
 		KeyType:                KeyTypeCA,
+	}
+
+	if !role.AllowUserCertificates && !role.AllowHostCertificates {
+		return nil, logical.ErrorResponse("Either 'allow_user_certificates' or 'allow_host_certificates' must be set to 'true'")
 	}
 
 	defaultCriticalOptions := convertMapToStringValue(data.Get("default_critical_options").(map[string]interface{}))
@@ -432,7 +449,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		maxTTL = maxSystemTTL
 	} else {
 		var err error
-		maxTTL, err = duration.ParseDurationSecond(role.MaxTTL)
+		maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf(
 				"Invalid max ttl: %s", err))
@@ -445,7 +462,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 	ttl := b.System().DefaultLeaseTTL()
 	if len(role.TTL) != 0 {
 		var err error
-		ttl, err = duration.ParseDurationSecond(role.TTL)
+		ttl, err = parseutil.ParseDurationSecond(role.TTL)
 		if err != nil {
 			return nil, logical.ErrorResponse(fmt.Sprintf(
 				"Invalid ttl: %s", err))
@@ -533,6 +550,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 				"allow_host_certificates":  role.AllowHostCertificates,
 				"allow_bare_domains":       role.AllowBareDomains,
 				"allow_subdomains":         role.AllowSubdomains,
+				"allow_user_key_ids":       role.AllowUserKeyIDs,
 				"key_type":                 role.KeyType,
 				"default_critical_options": role.DefaultCriticalOptions,
 				"default_extensions":       role.DefaultExtensions,

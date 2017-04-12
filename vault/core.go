@@ -1565,6 +1565,16 @@ func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 				continue
 			}
 
+			// Check for a poison pill. If we can read it, it means we have stale
+			// keys (e.g. from replication being activated) and we need to seal to
+			// be unsealed again.
+			entry, _ := c.barrier.Get(poisonPillPath)
+			if entry != nil && len(entry.Value) > 0 {
+				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
+				go c.Shutdown()
+				continue
+			}
+
 			if err := c.checkKeyUpgrades(); err != nil {
 				c.logger.Error("core: key rotation periodic upgrade check failed", "error", err)
 			}
@@ -1581,16 +1591,6 @@ func (c *Core) checkKeyUpgrades() error {
 		// Check for an upgrade
 		didUpgrade, newTerm, err := c.barrier.CheckUpgrade()
 		if err != nil {
-			// The problem might be that we can't decrypt the value, e.g. if
-			// replication has been turned on, so check to see if a poison pill
-			// was written. If we can read it, it means we have stale keys and
-			// we need to seal to be unsealed again.
-			entry, _ := c.barrier.Get(poisonPillPath)
-			if entry != nil && len(entry.Value) > 0 {
-				c.logger.Warn("core: encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
-				go c.Shutdown()
-				return nil
-			}
 			return err
 		}
 

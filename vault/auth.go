@@ -91,6 +91,9 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	if err != nil {
 		return err
 	}
+	if backend == nil {
+		return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+	}
 
 	if err := backend.Initialize(); err != nil {
 		return err
@@ -149,6 +152,12 @@ func (c *Core) disableCredential(path string) (bool, error) {
 	// Revoke credentials from this path
 	if err := c.expiration.RevokePrefix(fullPath); err != nil {
 		return true, err
+	}
+
+	// Call cleanup function if it exists
+	backend := c.router.MatchingBackend(fullPath)
+	if backend != nil {
+		backend.Cleanup()
 	}
 
 	// Unmount the backend
@@ -386,6 +395,9 @@ func (c *Core) setupCredentials() error {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
 			return errLoadAuthFailed
 		}
+		if backend == nil {
+			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+		}
 
 		if err := backend.Initialize(); err != nil {
 			return err
@@ -430,10 +442,9 @@ func (c *Core) teardownCredentials() error {
 	if c.auth != nil {
 		authTable := c.auth.shallowClone()
 		for _, e := range authTable.Entries {
-			prefix := e.Path
-			b, ok := c.router.root.Get(prefix)
-			if ok {
-				b.(*routeEntry).backend.Cleanup()
+			backend := c.router.MatchingBackend(credentialRoutePrefix + e.Path)
+			if backend != nil {
+				backend.Cleanup()
 			}
 		}
 	}
