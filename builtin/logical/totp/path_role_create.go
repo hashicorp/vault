@@ -109,9 +109,9 @@ func (b *backend) pathValidateCode(
 }
 
 const pathRoleCreateReadHelpSyn = `
-Request time-based one-time use password for a certain role.
+Request time-based one-time use password or validate a password for a certain role .
 `
 const pathRoleCreateReadHelpDesc = `
-This path generates a time-based one-time use password for a certain role. 
+This path generates and validates time-based one-time use passwords for a certain role. 
 
 `
