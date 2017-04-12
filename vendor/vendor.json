@@ -325,6 +325,18 @@
 			"revisionTime": "2016-10-13T10:26:35Z"
 		},
 		{
+			"checksumSHA1": "tLl952GRIVsso2Pk/IH3cMJaK8E=",
+			"path": "github.com/boombuler/barcode",
+			"revision": "9fb68fa6ca3535187c2a32f11a25e8d58f294bed",
+			"revisionTime": "2017-04-12T13:03:35Z"
+		},
+		{
+			"checksumSHA1": "tbwzn+sWiZv6veyXae3qRfTjlcQ=",
+			"path": "github.com/boombuler/barcode/qr",
+			"revision": "9fb68fa6ca3535187c2a32f11a25e8d58f294bed",
+			"revisionTime": "2017-04-12T13:03:35Z"
+		},
+		{
 			"checksumSHA1": "gX06B03sIRw/1yCms1kMwKX8krE=",
 			"path": "github.com/cenk/backoff",
 			"revision": "5d150e7eec023ce7a124856b37c68e54b4050ac7",
@@ -1103,6 +1115,30 @@
 			"path": "github.com/pkg/errors",
 			"revision": "ff09b135c25aae272398c51a07235b90a75aa4f0",
 			"revisionTime": "2017-03-16T20:15:38Z"
+		},
+		{
+			"checksumSHA1": "woY3inKe+d7B1jPTFxVKNCCFH9c=",
+			"path": "github.com/pquerna/otp",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z"
+		},
+		{
+			"checksumSHA1": "5xpnYLhCOqNnsgykOk85MnTqVu0=",
+			"path": "github.com/pquerna/otp/example",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z"
+		},
+		{
+			"checksumSHA1": "xo32aXW4ZXXRHJ/9E6m10vXJZAo=",
+			"path": "github.com/pquerna/otp/hotp",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z"
+		},
+		{
+			"checksumSHA1": "Ie55pTQw1rnOZ8KDekSDXUWDT1I=",
+			"path": "github.com/pquerna/otp/totp",
+			"revision": "9e1935374bc73ffe011187dafed51a412b90fe43",
+			"revisionTime": "2017-02-23T01:06:52Z"
 		},
 		{
 			"checksumSHA1": "ZOhewV1DsQjTYlx8a+ifrZki2Vg=",
