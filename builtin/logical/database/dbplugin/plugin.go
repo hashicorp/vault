@@ -2,6 +2,7 @@ package dbplugin
 
 import (
 	"errors"
+	"fmt"
 	"net/rpc"
 	"time"
 
@@ -16,7 +17,7 @@ var (
 
 // DatabaseType is the interface that all database objects must implement.
 type DatabaseType interface {
-	Type() string
+	Type() (string, error)
 	CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error)
 	RenewUser(statements Statements, username string, expiration time.Time) error
 	RevokeUser(statements Statements, username string) error
@@ -52,16 +53,21 @@ func PluginFactory(pluginName string, sys pluginutil.LookWrapper, logger log.Log
 		return nil, err
 	}
 
+	typeStr, err := db.Type()
+	if err != nil {
+		return nil, fmt.Errorf("error getting plugin type: %s", err)
+	}
+
 	// Wrap with metrics middleware
 	db = &databaseMetricsMiddleware{
 		next:    db,
-		typeStr: db.Type(),
+		typeStr: typeStr,
 	}
 
 	// Wrap with tracing middleware
 	db = &databaseTracingMiddleware{
 		next:    db,
-		typeStr: db.Type(),
+		typeStr: typeStr,
 		logger:  logger,
 	}
 

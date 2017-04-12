@@ -19,7 +19,7 @@ type mockPlugin struct {
 	users map[string][]string
 }
 
-func (m *mockPlugin) Type() string { return "mock" }
+func (m *mockPlugin) Type() (string, error) { return "mock", nil }
 func (m *mockPlugin) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
 	err = errors.New("err")
 	if usernamePrefix == "" || expiration.IsZero() {
@@ -59,7 +59,7 @@ func (m *mockPlugin) RevokeUser(statements dbplugin.Statements, username string)
 	delete(m.users, username)
 	return nil
 }
-func (m *mockPlugin) Initialize(conf map[string]interface{}) error {
+func (m *mockPlugin) Initialize(conf map[string]interface{}, _ bool) error {
 	err := errors.New("err")
 	if len(conf) != 1 {
 		return err
@@ -108,7 +108,7 @@ func TestPlugin_Initialize(t *testing.T) {
 		"test": 1,
 	}
 
-	err = dbRaw.Initialize(connectionDetails)
+	err = dbRaw.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -133,7 +133,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 		"test": 1,
 	}
 
-	err = db.Initialize(connectionDetails)
+	err = db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -167,7 +167,7 @@ func TestPlugin_RenewUser(t *testing.T) {
 	connectionDetails := map[string]interface{}{
 		"test": 1,
 	}
-	err = db.Initialize(connectionDetails)
+	err = db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -196,7 +196,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	connectionDetails := map[string]interface{}{
 		"test": 1,
 	}
-	err = db.Initialize(connectionDetails)
+	err = db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

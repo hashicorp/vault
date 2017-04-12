@@ -42,8 +42,9 @@ type databasePluginRPCServer struct {
 }
 
 func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {
-	*resp = ds.impl.Type()
-	return nil
+	var err error
+	*resp, err = ds.impl.Type()
+	return err
 }
 
 func (ds *databasePluginRPCServer) CreateUser(args *CreateUserRequest, resp *CreateUserResponse) error {

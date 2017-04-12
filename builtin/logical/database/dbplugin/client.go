@@ -52,10 +52,11 @@ func newPluginClient(sys pluginutil.Wrapper, pluginRunner *pluginutil.PluginRunn
 		return nil, err
 	}
 
-	// We should have a Greeter now! This feels like a normal interface
+	// We should have a database type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	databaseRPC := raw.(*databasePluginRPCClient)
 
+	// Wrap RPC implimentation in DatabasePluginClient
 	return &DatabasePluginClient{
 		client:                  client,
 		databasePluginRPCClient: databaseRPC,
@@ -70,12 +71,11 @@ type databasePluginRPCClient struct {
 	client *rpc.Client
 }
 
-func (dr *databasePluginRPCClient) Type() string {
+func (dr *databasePluginRPCClient) Type() (string, error) {
 	var dbType string
-	//TODO: catch error
-	dr.client.Call("Plugin.Type", struct{}{}, &dbType)
+	err := dr.client.Call("Plugin.Type", struct{}{}, &dbType)
 
-	return fmt.Sprintf("plugin-%s", dbType)
+	return fmt.Sprintf("plugin-%s", dbType), err
 }
 
 func (dr *databasePluginRPCClient) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {

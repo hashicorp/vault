@@ -18,7 +18,7 @@ type databaseTracingMiddleware struct {
 	typeStr string
 }
 
-func (mw *databaseTracingMiddleware) Type() string {
+func (mw *databaseTracingMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 
@@ -87,7 +87,7 @@ type databaseMetricsMiddleware struct {
 	typeStr string
 }
 
-func (mw *databaseMetricsMiddleware) Type() string {
+func (mw *databaseMetricsMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 

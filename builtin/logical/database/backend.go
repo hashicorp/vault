@@ -162,5 +162,5 @@ as secret backends, including but not limited to:
 cassandra, msslq, mysql, postgres
 
 After mounting this backend, configure it using the endpoints within
-the "database/dbs/" path.
+the "database/config/" path.
 `
