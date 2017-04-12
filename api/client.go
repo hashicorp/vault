@@ -336,7 +336,7 @@ func (c *Client) NewRequest(method, path string) *Request {
 			User:   c.addr.User,
 			Scheme: c.addr.Scheme,
 			Host:   c.addr.Host,
-			Path:   path,
+      Path:   strings.TrimSuffix(c.addr.Path, "/") + path,
 		},
 		ClientToken: c.token,
 		Params:      make(map[string][]string),
