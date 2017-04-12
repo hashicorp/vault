@@ -98,7 +98,7 @@ var LDAPResultCodeMap = map[uint8]string{
 	LDAPResultAffectsMultipleDSAs:          "Affects Multiple DSAs",
 	LDAPResultOther:                        "Other",
 
-	ErrorNetwork:            "Newwork Error",
+	ErrorNetwork:            "Network Error",
 	ErrorFilterCompile:      "Filter Compile Error",
 	ErrorFilterDecompile:    "Filter Decompile Error",
 	ErrorDebugging:          "Debugging Error",

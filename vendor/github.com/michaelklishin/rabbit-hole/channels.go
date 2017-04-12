@@ -71,7 +71,7 @@ func (c *Client) ListChannels() (rec []ChannelInfo, err error) {
 
 // Returns channel information.
 func (c *Client) GetChannel(name string) (rec *ChannelInfo, err error) {
-	req, err := newGETRequest(c, "channels/" + PathEscape(name))
+	req, err := newGETRequest(c, "channels/"+PathEscape(name))
 	if err != nil {
 		return nil, err
 	}

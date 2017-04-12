@@ -264,9 +264,10 @@ instance fails to renew the token on time.
 
 ### Cross Account Access
 
-To allow Vault to authenticate EC2 instances running in other accounts, AWS STS (Security
-Token Service) can be used to retrieve temporary credentials by assuming an IAM Role
-in those accounts.
+To allow Vault to authenticate EC2 instances running in other accounts, AWS STS
+(Security Token Service) can be used to retrieve temporary credentials by
+assuming an IAM Role in those accounts. All these accounts should be configured
+at the backend using the `auth/aws-ec2/config/sts/<account_id>` endpoint.
 
 The account in which Vault is running (i.e. the master account) must be listed as
 a trusted entity in the IAM Role being assumed on the remote account. The Role itself

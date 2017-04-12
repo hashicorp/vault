@@ -67,6 +67,9 @@ const (
 	typeNText   = 0x63
 	typeVariant = 0x62
 )
+const PLP_NULL = 0xFFFFFFFFFFFFFFFF
+const UNKNOWN_PLP_LEN = 0xFFFFFFFFFFFFFFFE
+const PLP_TERMINATOR = 0x00000000
 
 // TYPE_INFO rule
 // http://msdn.microsoft.com/en-us/library/dd358284.aspx
@@ -77,8 +80,29 @@ type typeInfo struct {
 	Prec      uint8
 	Buffer    []byte
 	Collation collation
+	UdtInfo   udtInfo
+	XmlInfo   xmlInfo
 	Reader    func(ti *typeInfo, r *tdsBuffer) (res interface{})
 	Writer    func(w io.Writer, ti typeInfo, buf []byte) (err error)
+}
+
+// Common Language Runtime (CLR) Instances
+// http://msdn.microsoft.com/en-us/library/dd357962.aspx
+type udtInfo struct {
+	//MaxByteSize         uint32
+	DBName                string
+	SchemaName            string
+	TypeName              string
+	AssemblyQualifiedName string
+}
+
+// XML Values
+// http://msdn.microsoft.com/en-us/library/dd304764.aspx
+type xmlInfo struct {
+	SchemaPresent       uint8
+	DBName              string
+	OwningSchema        string
+	XmlSchemaCollection string
 }
 
 func readTypeInfo(r *tdsBuffer) (res typeInfo) {
@@ -115,7 +139,8 @@ func writeTypeInfo(w io.Writer, ti *typeInfo) (err error) {
 	switch ti.TypeId {
 	case typeNull, typeInt1, typeBit, typeInt2, typeInt4, typeDateTim4,
 		typeFlt4, typeMoney, typeDateTime, typeFlt8, typeMoney4, typeInt8:
-		// those are fixed length types
+		// those are fixed length
+		ti.Writer = writeFixedType
 	default: // all others are VARLENTYPE
 		err = writeVarLen(w, ti)
 		if err != nil {
@@ -125,10 +150,15 @@ func writeTypeInfo(w io.Writer, ti *typeInfo) (err error) {
 	return
 }
 
+func writeFixedType(w io.Writer, ti typeInfo, buf []byte) (err error) {
+	_, err = w.Write(buf)
+	return
+}
+
 func writeVarLen(w io.Writer, ti *typeInfo) (err error) {
 	switch ti.TypeId {
 	case typeDateN:
-
+		ti.Writer = writeByteLenType
 	case typeTimeN, typeDateTime2N, typeDateTimeOffsetN:
 		if err = binary.Write(w, binary.LittleEndian, ti.Scale); err != nil {
 			return
@@ -186,14 +216,19 @@ func writeVarLen(w io.Writer, ti *typeInfo) (err error) {
 				return
 			}
 		case typeXml:
-			var schemapresent uint8 = 0
-			if err = binary.Write(w, binary.LittleEndian, schemapresent); err != nil {
+			if err = binary.Write(w, binary.LittleEndian, ti.XmlInfo.SchemaPresent); err != nil {
 				return
 			}
 		}
 	case typeText, typeImage, typeNText, typeVariant:
 		// LONGLEN_TYPE
-		panic("LONGLEN_TYPE not implemented")
+		if err = binary.Write(w, binary.LittleEndian, uint32(ti.Size)); err != nil {
+			return
+		}
+		if err = writeCollation(w, ti.Collation); err != nil {
+			return
+		}
+		ti.Writer = writeLongLenType
 	default:
 		panic("Invalid type")
 	}
@@ -420,6 +455,33 @@ func readLongLenType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	}
 	panic("shoulnd't get here")
 }
+func writeLongLenType(w io.Writer, ti typeInfo, buf []byte) (err error) {
+	//textptr
+	err = binary.Write(w, binary.LittleEndian, byte(0x10))
+	if err != nil {
+		return
+	}
+	err = binary.Write(w, binary.LittleEndian, uint64(0xFFFFFFFFFFFFFFFF))
+	if err != nil {
+		return
+	}
+	err = binary.Write(w, binary.LittleEndian, uint64(0xFFFFFFFFFFFFFFFF))
+	if err != nil {
+		return
+	}
+	//timestamp?
+	err = binary.Write(w, binary.LittleEndian, uint64(0xFFFFFFFFFFFFFFFF))
+	if err != nil {
+		return
+	}
+
+	err = binary.Write(w, binary.LittleEndian, uint32(ti.Size))
+	if err != nil {
+		return
+	}
+	_, err = w.Write(buf)
+	return
+}
 
 // reads variant value
 // http://msdn.microsoft.com/en-us/library/dd303302.aspx
@@ -519,10 +581,10 @@ func readPLPType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 	size := r.uint64()
 	var buf *bytes.Buffer
 	switch size {
-	case 0xffffffffffffffff:
+	case PLP_NULL:
 		// null
 		return nil
-	case 0xfffffffffffffffe:
+	case UNKNOWN_PLP_LEN:
 		// size unknown
 		buf = bytes.NewBuffer(make([]byte, 0, 1000))
 	default:
@@ -553,15 +615,16 @@ func readPLPType(ti *typeInfo, r *tdsBuffer) (interface{}) {
 }
 
 func writePLPType(w io.Writer, ti typeInfo, buf []byte) (err error) {
-	if err = binary.Write(w, binary.LittleEndian, uint64(len(buf))); err != nil {
+	if err = binary.Write(w, binary.LittleEndian, uint64(UNKNOWN_PLP_LEN)); err != nil {
 		return
 	}
 	for {
 		chunksize := uint32(len(buf))
-		if err = binary.Write(w, binary.LittleEndian, chunksize); err != nil {
+		if chunksize == 0 {
+			err = binary.Write(w, binary.LittleEndian, uint32(PLP_TERMINATOR))
 			return
 		}
-		if chunksize == 0 {
+		if err = binary.Write(w, binary.LittleEndian, chunksize); err != nil {
 			return
 		}
 		if _, err = w.Write(buf[:chunksize]); err != nil {
@@ -611,19 +674,27 @@ func readVarLen(ti *typeInfo, r *tdsBuffer) {
 		}
 		ti.Reader = readByteLenType
 	case typeXml:
-		schemapresent := r.byte()
-		if schemapresent != 0 {
-			// just ignore this for now
+		ti.XmlInfo.SchemaPresent = r.byte()
+		if ti.XmlInfo.SchemaPresent != 0 {
 			// dbname
-			r.BVarChar()
+			ti.XmlInfo.DBName = r.BVarChar()
 			// owning schema
-			r.BVarChar()
+			ti.XmlInfo.OwningSchema = r.BVarChar()
 			// xml schema collection
-			r.UsVarChar()
+			ti.XmlInfo.XmlSchemaCollection = r.UsVarChar()
 		}
 		ti.Reader = readPLPType
+	case typeUdt:
+		ti.Size = int(r.uint16())
+		ti.UdtInfo.DBName = r.BVarChar()
+		ti.UdtInfo.SchemaName = r.BVarChar()
+		ti.UdtInfo.TypeName = r.BVarChar()
+		ti.UdtInfo.AssemblyQualifiedName = r.UsVarChar()
+
+		ti.Buffer = make([]byte, ti.Size)
+		ti.Reader = readPLPType
 	case typeBigVarBin, typeBigVarChar, typeBigBinary, typeBigChar,
-		typeNVarChar, typeNChar, typeUdt:
+		typeNVarChar, typeNChar:
 		// short len types
 		ti.Size = int(r.uint16())
 		switch ti.TypeId {
@@ -793,8 +864,8 @@ func decodeXml(ti typeInfo, buf []byte) string {
 	return decodeUcs2(buf)
 }
 
-func decodeUdt(ti typeInfo, buf []byte) int {
-	panic("Not implemented")
+func decodeUdt(ti typeInfo, buf []byte) []byte {
+	return buf
 }
 
 // makes go/sql type instance as described below
@@ -894,6 +965,12 @@ func makeGoLangScanType(ti typeInfo) reflect.Type {
 
 func makeDecl(ti typeInfo) string {
 	switch ti.TypeId {
+	case typeInt1:
+		return "tinyint"
+	case typeInt2:
+		return "smallint"
+	case typeInt4:
+		return "int"
 	case typeInt8:
 		return "bigint"
 	case typeFlt4:
@@ -922,11 +999,36 @@ func makeDecl(ti typeInfo) string {
 		default:
 			panic("invalid size of FLNNTYPE")
 		}
+	case typeDecimal, typeDecimalN:
+		return fmt.Sprintf("decimal(%d, %d)", ti.Prec, ti.Scale)
+	case typeMoney4:
+		return "smallmoney"
+	case typeMoney:
+		return "money"
+	case typeMoneyN:
+		switch ti.Size {
+		case 4:
+			return "smallmoney"
+		case 8:
+			return "money"
+		default:
+			panic("invalid size of MONEYNTYPE")
+		}
 	case typeBigVarBin:
 		if ti.Size > 8000 || ti.Size == 0 {
 			return "varbinary(max)"
 		} else {
 			return fmt.Sprintf("varbinary(%d)", ti.Size)
+		}
+	case typeNChar:
+		return fmt.Sprintf("nchar(%d)", ti.Size/2)
+	case typeBigChar, typeChar:
+		return fmt.Sprintf("char(%d)", ti.Size)
+	case typeBigVarChar, typeVarChar:
+		if ti.Size > 4000 || ti.Size == 0 {
+			return fmt.Sprintf("varchar(max)")
+		} else {
+			return fmt.Sprintf("varchar(%d)", ti.Size)
 		}
 	case typeNVarChar:
 		if ti.Size > 8000 || ti.Size == 0 {
@@ -936,12 +1038,33 @@ func makeDecl(ti typeInfo) string {
 		}
 	case typeBit, typeBitN:
 		return "bit"
-	case typeDateTimeN:
+	case typeDateTim4:
+		return "smalldatetime"
+	case typeDateN:
+		return "date"
+	case typeDateTime:
 		return "datetime"
+	case typeDateTimeN:
+		switch ti.Size {
+		case 4:
+			return "smalldatetime"
+		case 8:
+			return "datetime"
+		default:
+			panic("invalid size of DATETIMNTYPE")
+		}
+	case typeDateTime2N:
+		return fmt.Sprintf("datetime2(%d)", ti.Scale)
 	case typeDateTimeOffsetN:
 		return fmt.Sprintf("datetimeoffset(%d)", ti.Scale)
+	case typeText:
+		return "text"
+	case typeNText:
+		return "ntext"
+	case typeUdt:
+		return ti.UdtInfo.TypeName
 	default:
-		panic(fmt.Sprintf("not implemented makeDecl for type %d", ti.TypeId))
+		panic(fmt.Sprintf("not implemented makeDecl for type %#x", ti.TypeId))
 	}
 }
 

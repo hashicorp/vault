@@ -58,10 +58,10 @@ Usage: vault auth-disable [options] path
 
   Disable an already-enabled auth provider.
 
-  Once the auth provider is disabled, that path cannot be used anymore
+  Once the auth provider is disabled its path can no longer be used
   to authenticate. All access tokens generated via the disabled auth provider
   will be revoked. This command will block until all tokens are revoked.
-  If the command is exited early, the tokens will still be revoked.
+  If the command is exited early the tokens will still be revoked.
 
 General Options:
 ` + meta.GeneralOptionsUsage()

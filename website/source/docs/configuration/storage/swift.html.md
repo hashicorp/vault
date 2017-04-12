@@ -40,7 +40,7 @@ storage "swift" {
   container. This can also be provided via the environment variable
   `OS_CONTAINER`.
 
-- `max_parallel` `(int: 128)` – The maximum number of concurrent requests.
+- `max_parallel` `(string: "128")` – The maximum number of concurrent requests.
 
 - `password` `(string: <required>)` – Specifies the OpenStack password. This can
   also be provided via the environment variable `OS_PASSWORD`.

@@ -124,11 +124,12 @@ func (c *TableServiceClient) QueryTableEntities(tableName AzureTable, previousCo
 // The function fails if there is an entity with the same
 // PartitionKey and RowKey in the table.
 func (c *TableServiceClient) InsertEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, false, http.MethodPost); err != nil {
-		return checkRespCode(sc, []int{http.StatusCreated})
+	sc, err := c.execTable(table, entity, false, http.MethodPost)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	return checkRespCode(sc, []int{http.StatusCreated})
 }
 
 func (c *TableServiceClient) execTable(table AzureTable, entity TableEntity, specifyKeysInURL bool, method string) (int, error) {
@@ -162,10 +163,12 @@ func (c *TableServiceClient) execTable(table AzureTable, entity TableEntity, spe
 // one passed as parameter. The function fails if there is no entity
 // with the same PartitionKey and RowKey in the table.
 func (c *TableServiceClient) UpdateEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, true, http.MethodPut); err != nil {
-		return checkRespCode(sc, []int{http.StatusNoContent})
+	sc, err := c.execTable(table, entity, true, http.MethodPut)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	return checkRespCode(sc, []int{http.StatusNoContent})
 }
 
 // MergeEntity merges the contents of an entity with the
@@ -173,10 +176,12 @@ func (c *TableServiceClient) UpdateEntity(table AzureTable, entity TableEntity) 
 // The function fails if there is no entity
 // with the same PartitionKey and RowKey in the table.
 func (c *TableServiceClient) MergeEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, true, "MERGE"); err != nil {
-		return checkRespCode(sc, []int{http.StatusNoContent})
+	sc, err := c.execTable(table, entity, true, "MERGE")
+	if err != nil {
+		return err
 	}
-	return nil
+
+	return checkRespCode(sc, []int{http.StatusNoContent})
 }
 
 // DeleteEntityWithoutCheck deletes the entity matching by
@@ -219,19 +224,23 @@ func (c *TableServiceClient) DeleteEntity(table AzureTable, entity TableEntity, 
 // InsertOrReplaceEntity inserts an entity in the specified table
 // or replaced the existing one.
 func (c *TableServiceClient) InsertOrReplaceEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, true, http.MethodPut); err != nil {
-		return checkRespCode(sc, []int{http.StatusNoContent})
+	sc, err := c.execTable(table, entity, true, http.MethodPut)
+	if err != nil {
+		return err
 	}
-	return nil
+
+	return checkRespCode(sc, []int{http.StatusNoContent})
 }
 
 // InsertOrMergeEntity inserts an entity in the specified table
 // or merges the existing one.
 func (c *TableServiceClient) InsertOrMergeEntity(table AzureTable, entity TableEntity) error {
-	if sc, err := c.execTable(table, entity, true, "MERGE"); err != nil {
-		return checkRespCode(sc, []int{http.StatusNoContent})
+	sc, err := c.execTable(table, entity, true, "MERGE")
+	if err != nil {
+		return err
 	}
-	return nil
+
+	return checkRespCode(sc, []int{http.StatusNoContent})
 }
 
 func injectPartitionAndRowKeys(entity TableEntity, buf *bytes.Buffer) error {

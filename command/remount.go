@@ -24,7 +24,7 @@ func (c *RemountCommand) Run(args []string) int {
 	if len(args) != 2 {
 		flags.Usage()
 		c.Ui.Error(fmt.Sprintf(
-			"\nRemount expects two arguments: the from and to path"))
+			"\nremount expects two arguments: the from and to path"))
 		return 1
 	}
 
@@ -62,8 +62,8 @@ Usage: vault remount [options] from to
 
   This command remounts a secret backend that is already mounted to
   a new path. All the secrets from the old path will be revoked, but
-  the Vault data associated with the backend will be preserved (such
-  as configuration data).
+  the data associated with the backend (such as configuration), will
+  be preserved.
 
   Example: vault remount secret/ generic/
 

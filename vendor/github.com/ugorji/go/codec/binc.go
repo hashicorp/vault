@@ -910,7 +910,7 @@ func (h *BincHandle) newEncDriver(e *Encoder) encDriver {
 }
 
 func (h *BincHandle) newDecDriver(d *Decoder) decDriver {
-	return &bincDecDriver{d: d, r: d.r, h: h, br: d.bytes}
+	return &bincDecDriver{d: d, h: h, r: d.r, br: d.bytes}
 }
 
 func (e *bincEncDriver) reset() {
@@ -920,7 +920,7 @@ func (e *bincEncDriver) reset() {
 }
 
 func (d *bincDecDriver) reset() {
-	d.r = d.d.r
+	d.r, d.br = d.d.r, d.d.bytes
 	d.s = nil
 	d.bd, d.bdRead, d.vd, d.vs = 0, false, 0, 0
 }

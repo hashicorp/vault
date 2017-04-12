@@ -12,12 +12,12 @@ description: |-
 
 <div id="container" class="col-md-offset-3 col-md-6 col-sm-offset-2 col-sm-8">
   <div class="row">
-    <img src="<%= image_path("logo-text.svg") %>" alt="Vault" height="80">
-    <span id="tag-line">A tool for managing secrets</span>
+    <%= inline_svg "logo-hashicorp.svg", height: 120, class: "logo" %>
+    <span id="tag-line">A Tool for Managing Secrets</span>
 
     <div>
-      <a class="v-btn blue lrg started" href="/intro">Get Started</a>
-      <a class="v-btn black lrg terminal" href="/#/demo/0" data-turbolinks="false">Launch Interactive Tutorial</a>
+      <a class="button primary started" href="/intro">Get Started</a>
+      <a class="button terminal" href="/#/demo/0" data-turbolinks="false">Launch Interactive Tutorial</a>
     </div>
 
     <div id="diagram"></div>
@@ -52,7 +52,7 @@ description: |-
         secrets.
       </p>
       <div class="feature-footer">
-        <a class="v-btn black sml" href="/intro/use-cases.html">Learn more</a>
+        <a class="button" href="/intro/use-cases.html">Learn more</a>
       </div>
     </div>
   </div>
@@ -71,7 +71,7 @@ description: |-
         rolling is easy to enforce.
       </p>
       <div class="feature-footer">
-        <a class="v-btn black sml" href="/docs/concepts/lease.html">Learn more</a>
+        <a class="button" href="/docs/concepts/lease.html">Learn more</a>
       </div>
     </div>
   </div>
@@ -89,53 +89,44 @@ description: |-
         trace the lifetime and origin of any secret.
       </p>
       <div class="feature-footer">
-        <a class="v-btn black sml" href="/docs/audit/index.html">Learn more</a>
+        <a class="button" href="/docs/audit/index.html">Learn more</a>
       </div>
     </div>
   </div>
 
   <div class="row">
     <div id="cta">
-      <a class="v-btn black sml" href="/intro/index.html">Get Started with Vault</a>
+      <a class="button" href="/intro/index.html">Get Started with Vault</a>
       <p class="cta-black">Completely free and open source.</p>
     </div>
   </div>
 
   <div id="latest-announcement" class="row">
     <div class="col-sm-12">
-  		<h2>Latest News</h2>
-  	</div>
+      <h2>Latest Vault News</h2>
+    </div>
 
-  	<div class="latest-col col-sm-12">
-      <div class="latest-item latest-item-text">
-        <img src="<%= image_path('webinar-vault-io.jpg') %>" srcset="<%= image_path('webinar-vault-io@2x.jpg') %> 2x, <%= image_path('webinar-vault-io.jpg') %> 1x">
-        <h3 class="latest-title">Join the live webinar to learn about new Vault product releases and see a demo</h3>
+    <div class="col-sm-12">
+      <div class="latest-item">
+        <h3>Vault v0.6.5 Released</h3>
         <p>
-          <a class="v-btn black sml" href="http://hashi.co/2lV6jbP">Register Now</a>
-        </p>
-      </div>
-
-      <div class="latest-item latest-item-text">
-        <h3 class="latest-title">Vault v0.6.5 Released</h3>
-        <p class="lower-opacity">
           We are pleased to announce the release of Vault v0.6.5. This release includes several new features, improvements, and bug fixes.
         </p>
-  			<p>
-  			<a class="v-btn black sml" href="https://www.hashicorp.com/blog/vault-v0-6-5/">Read more</a>
-  			</p>
+        <div class="latest-footer">
+          <a class="button" href="https://www.hashicorp.com/blog/vault-v0-6-5/">Read more</a>
+        </div>
       </div>
-      <div class="latest-item latest-item-text">
-        <h3 class="">Vault on the Changelog Podcast</h3>
-        <p class="lower-opacity">
+      <div class="latest-item">
+        <h3>Vault on the Changelog Podcast</h3>
+        <p>
           Listen to the recording with Adam Stacoviak on the popular Changelog podcast to talk about modern secrets management.
         </p>
-  			<p>
-  				<a class="v-btn black sml" href="https://www.hashicorp.com/blog/vault-on-the-changelog-podcast/">Listen</a>
-  			</p>
+        <div class="latest-footer">
+          <a class="button" href="https://www.hashicorp.com/blog/vault-on-the-changelog-podcast/">Listen</a>
+        </div>
       </div>
-  	</div>
-  </div><!-- /#latest-announcement -->
-
+    </div>
+  </div>
 </div>
 
 

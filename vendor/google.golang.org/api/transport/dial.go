@@ -177,3 +177,25 @@ func serviceAcctTokenSource(ctx context.Context, filename string, scope ...strin
 	}
 	return cfg.TokenSource(ctx), nil
 }
+
+// DialGRPCInsecure returns an insecure GRPC connection for use communicating
+// with fake or mock Google cloud service implementations, such as emulators.
+// The connection is configured with the given ClientOptions.
+func DialGRPCInsecure(ctx context.Context, opts ...option.ClientOption) (*grpc.ClientConn, error) {
+	var o internal.DialSettings
+	for _, opt := range opts {
+		opt.Apply(&o)
+	}
+	if o.HTTPClient != nil {
+		return nil, errors.New("unsupported HTTP client specified")
+	}
+	if o.GRPCConn != nil {
+		return o.GRPCConn, nil
+	}
+	grpcOpts := []grpc.DialOption{grpc.WithInsecure()}
+	grpcOpts = append(grpcOpts, o.GRPCDialOpts...)
+	if o.UserAgent != "" {
+		grpcOpts = append(grpcOpts, grpc.WithUserAgent(o.UserAgent))
+	}
+	return grpc.DialContext(ctx, o.Endpoint, grpcOpts...)
+}

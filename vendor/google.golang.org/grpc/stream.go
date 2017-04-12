@@ -37,7 +37,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"math"
 	"sync"
 	"time"
 
@@ -208,13 +207,14 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 		break
 	}
 	cs := &clientStream{
-		opts:   opts,
-		c:      c,
-		desc:   desc,
-		codec:  cc.dopts.codec,
-		cp:     cc.dopts.cp,
-		dc:     cc.dopts.dc,
-		cancel: cancel,
+		opts:       opts,
+		c:          c,
+		desc:       desc,
+		codec:      cc.dopts.codec,
+		cp:         cc.dopts.cp,
+		dc:         cc.dopts.dc,
+		maxMsgSize: cc.dopts.maxMsgSize,
+		cancel:     cancel,
 
 		put: put,
 		t:   t,
@@ -259,17 +259,18 @@ func newClientStream(ctx context.Context, desc *StreamDesc, cc *ClientConn, meth
 
 // clientStream implements a client side Stream.
 type clientStream struct {
-	opts   []CallOption
-	c      callInfo
-	t      transport.ClientTransport
-	s      *transport.Stream
-	p      *parser
-	desc   *StreamDesc
-	codec  Codec
-	cp     Compressor
-	cbuf   *bytes.Buffer
-	dc     Decompressor
-	cancel context.CancelFunc
+	opts       []CallOption
+	c          callInfo
+	t          transport.ClientTransport
+	s          *transport.Stream
+	p          *parser
+	desc       *StreamDesc
+	codec      Codec
+	cp         Compressor
+	cbuf       *bytes.Buffer
+	dc         Decompressor
+	maxMsgSize int
+	cancel     context.CancelFunc
 
 	tracing bool // set to EnableTracing when the clientStream is created.
 
@@ -382,7 +383,7 @@ func (cs *clientStream) RecvMsg(m interface{}) (err error) {
 			Client: true,
 		}
 	}
-	err = recv(cs.p, cs.codec, cs.s, cs.dc, m, math.MaxInt32, inPayload)
+	err = recv(cs.p, cs.codec, cs.s, cs.dc, m, cs.maxMsgSize, inPayload)
 	defer func() {
 		// err != nil indicates the termination of the stream.
 		if err != nil {
@@ -405,7 +406,7 @@ func (cs *clientStream) RecvMsg(m interface{}) (err error) {
 		}
 		// Special handling for client streaming rpc.
 		// This recv expects EOF or errors, so we don't collect inPayload.
-		err = recv(cs.p, cs.codec, cs.s, cs.dc, m, math.MaxInt32, nil)
+		err = recv(cs.p, cs.codec, cs.s, cs.dc, m, cs.maxMsgSize, nil)
 		cs.closeTransportStream(err)
 		if err == nil {
 			return toRPCErr(errors.New("grpc: client streaming protocol violation: get <nil>, want <EOF>"))

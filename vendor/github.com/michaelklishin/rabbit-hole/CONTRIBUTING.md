@@ -11,7 +11,8 @@ The workflow is pretty standard:
 
 ## Running Tests
 
-The test suite assumes you have a RabbitMQ node running on localhost and that
+The test suite assumes you have a RabbitMQ node running on localhost with `rabbitmq_management` and
+`rabbitmq_shovel_management` plugins enabled and that
 `rabbitmqctl` is available in `PATH` (or `RABBITHOLE_RABBITMQCTL` points to it).
 
 Before running the tests, make sure to run `bin/ci/before_build.sh` that will create a vhost and user(s) needed

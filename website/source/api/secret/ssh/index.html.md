@@ -128,18 +128,20 @@ This endpoint creates or updates a named role.
 - `install_script` `(string: "")` – Specifies the script used to install and
   uninstall public keys in the target machine. Defaults to the built-in script.
 
-- `allowed_users` `(string: "")` – If this option is not specified, client can
-  request for a credential for any valid user at the remote host, including the
-  admin user. If only certain usernames are to be allowed, then this list
-  enforces it. If this field is set, then credentials can only be created for
-  `default_user` and usernames present in this list. Setting this option will
-  enable all the users with access this role to fetch credentials for all other
-  usernames in this list. Use with caution.
+- `allowed_users` `(string: "")` – If this option is not specified, or if it is
+  `*`, the client can request a credential for any valid user at the remote
+  host, including the admin user. If only certain usernames are to be allowed,
+  then this list enforces it. If this field is set, then credentials can only
+  be created for `default_user` and usernames present in this list. Setting
+  this option will enable all the users with access this role to fetch
+  credentials for all other usernames in this list. Use with caution. N.B.: if
+  the type is `ca`, an empty list does not allow any user; instead you must use
+  `*` to enable this behavior.
 
-- `allowed_domains` `(string: "")` – If this option is not specified, client can
-  request for a signed certificate for any valid host. If only certain domains
-  are allowed, then this list enforces it. If this option is explicitly set to
-  `"*"`, then credentials can be created for any domain.
+- `allowed_domains` `(string: "")` – The list of domains for which a client can
+  request a host certificate. If this option is explicitly set to `"*"`, then
+  credentials can be created for any domain. See also `allow_bare_domains` and
+  `allow_subdomains`.
 
 - `key_option_specs` `(string: "")` – Specifies a aomma separated option
   specification which will be prefixed to RSA keys in	the remote host's
@@ -179,12 +181,14 @@ This endpoint creates or updates a named role.
   allowed to be signed for use as a 'host'.
 
 - `allow_bare_domains` `(bool: false)` – Specifies if host certificates that are
-  requested are allowed to use the base domains listed in "allowed_users", e.g.
+  requested are allowed to use the base domains listed in `allowed_domains`, e.g.
   "example.com". This is a separate option as in some cases this can be
   considered a security threat.
 
 - `allow_subdomains` `(bool: false)` – Specifies if host certificates that are
-  requested are allowed to use subdomains of those listed in "allowed_users".
+  requested are allowed to be subdomains of those listed in `allowed_domains`,
+  e.g. if "example.com" is part of `allowed_domains`, this allows
+  "foo.example.com".
 
 - `allow_user_key_ids` `(bool: false)` – Specifies if users can override the key
   ID for a signed certificate with the "key_id" field. When false, the key ID
@@ -678,7 +682,7 @@ $ curl \
 }
 ```
 
-## Sigh SSH Key
+## Sign SSH Key
 
 This endpoint signs an SSH public key based on the supplied parameters, subject
 to the restrictions contained in the role named in the endpoint.

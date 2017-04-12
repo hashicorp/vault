@@ -28,7 +28,7 @@ func (c *ListCommand) Run(args []string) int {
 
 	args = flags.Args()
 	if len(args) != 1 || len(args[0]) == 0 {
-		c.Ui.Error("read expects one argument")
+		c.Ui.Error("list expects one argument")
 		flags.Usage()
 		return 1
 	}

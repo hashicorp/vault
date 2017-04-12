@@ -563,6 +563,26 @@ func ValidateStruct(s interface{}) (bool, error) {
 		}
 		resultField, err2 := typeCheck(valueField, typeField, val)
 		if err2 != nil {
+
+			// Replace structure name with JSON name if there is a tag on the variable
+			jsonTag := typeField.Tag.Get("json")
+			if jsonTag != "" {
+				switch jsonError := err2.(type) {
+				case Error:
+					jsonError.Name = jsonTag
+					err2 = jsonError
+				case Errors:
+					for _, e := range jsonError.Errors() {
+						switch tempErr := e.(type) {
+						case Error:
+							tempErr.Name = jsonTag
+							e = tempErr
+						}
+					}
+					err2 = jsonError
+				}
+			}
+
 			errs = append(errs, err2)
 		}
 		result = result && resultField
@@ -671,6 +691,29 @@ func StringLength(str string, params ...string) bool {
 	return false
 }
 
+func isInRaw(str string, params ...string) bool {
+	if len(params) == 1 {
+		rawParams := params[0]
+
+		parsedParams := strings.Split(rawParams, "|")
+
+		return IsIn(str, parsedParams...)
+	}
+
+	return false
+}
+
+// check if string str is a member of the set of strings params
+func IsIn(str string, params ...string) bool {
+	for _, param := range params {
+		if str == param {
+			return true
+		}
+	}
+
+	return false
+}
+
 func checkRequired(v reflect.Value, t reflect.StructField, options tagOptionsMap) (bool, error) {
 	if requiredOption, isRequired := options["required"]; isRequired {
 		if len(requiredOption) > 0 {
@@ -703,6 +746,12 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 	}
 
 	options := parseTagIntoMap(tag)
+
+	if isEmptyValue(v) {
+		// an empty value is not validated, check only required
+		return checkRequired(v, t, options)
+	}
+
 	var customTypeErrors Errors
 	var customTypeValidatorsExist bool
 	for validatorName, customErrorMessage := range options {
@@ -722,11 +771,6 @@ func typeCheck(v reflect.Value, t reflect.StructField, o reflect.Value) (bool, e
 			return false, customTypeErrors
 		}
 		return true, nil
-	}
-
-	if isEmptyValue(v) {
-		// an empty value is not validated, check only required
-		return checkRequired(v, t, options)
 	}
 
 	switch v.Kind() {

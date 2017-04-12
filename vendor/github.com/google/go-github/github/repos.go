@@ -339,7 +339,7 @@ func (s *RepositoriesService) Edit(ctx context.Context, owner, repo string, repo
 	}
 
 	// TODO: Remove this preview header after API is fully vetted.
-	req.Header.Add("Accept", mediaTypeSquashPreview)
+	req.Header.Set("Accept", mediaTypeSquashPreview)
 
 	r := new(Repository)
 	resp, err := s.client.Do(ctx, req, r)

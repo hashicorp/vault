@@ -37,7 +37,7 @@ func (c *UnwrapCommand) Run(args []string) int {
 	case 1:
 		tokenID = args[0]
 	default:
-		c.Ui.Error("Unwrap expects zero or one argument (the ID of the wrapping token)")
+		c.Ui.Error("unwrap expects zero or one argument (the ID of the wrapping token)")
 		flags.Usage()
 		return 1
 	}

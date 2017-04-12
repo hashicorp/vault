@@ -52,7 +52,7 @@ func (c *Client) ListUsers() (rec []UserInfo, err error) {
 
 // Returns information about individual user.
 func (c *Client) GetUser(username string) (rec *UserInfo, err error) {
-	req, err := newGETRequest(c, "users/" + PathEscape(username))
+	req, err := newGETRequest(c, "users/"+PathEscape(username))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (c *Client) PutUser(username string, info UserSettings) (res *http.Response
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "PUT", "users/" + PathEscape(username), body)
+	req, err := newRequestWithBody(c, "PUT", "users/"+PathEscape(username), body)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (c *Client) PutUser(username string, info UserSettings) (res *http.Response
 
 // Deletes user.
 func (c *Client) DeleteUser(username string) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "users/" + PathEscape(username), nil)
+	req, err := newRequestWithBody(c, "DELETE", "users/"+PathEscape(username), nil)
 	if err != nil {
 		return nil, err
 	}

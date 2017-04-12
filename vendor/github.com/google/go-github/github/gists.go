@@ -59,7 +59,7 @@ type GistCommit struct {
 	Version      *string      `json:"version,omitempty"`
 	User         *User        `json:"user,omitempty"`
 	ChangeStatus *CommitStats `json:"change_status,omitempty"`
-	CommitedAt   *Timestamp   `json:"commited_at,omitempty"`
+	CommittedAt  *Timestamp   `json:"committed_at,omitempty"`
 }
 
 func (gc GistCommit) String() string {

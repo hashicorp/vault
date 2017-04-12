@@ -1,3 +1,6 @@
+// +build windows
+// +build !appengine
+
 package colorable
 
 import (
@@ -65,12 +68,13 @@ var (
 	procFillConsoleOutputAttribute = kernel32.NewProc("FillConsoleOutputAttribute")
 	procGetConsoleCursorInfo       = kernel32.NewProc("GetConsoleCursorInfo")
 	procSetConsoleCursorInfo       = kernel32.NewProc("SetConsoleCursorInfo")
+	procSetConsoleTitle            = kernel32.NewProc("SetConsoleTitleW")
 )
 
+// Writer provide colorable Writer to the console
 type Writer struct {
 	out     io.Writer
 	handle  syscall.Handle
-	lastbuf bytes.Buffer
 	oldattr word
 	oldpos  coord
 }
@@ -86,9 +90,8 @@ func NewColorable(file *os.File) io.Writer {
 		handle := syscall.Handle(file.Fd())
 		procGetConsoleScreenBufferInfo.Call(uintptr(handle), uintptr(unsafe.Pointer(&csbi)))
 		return &Writer{out: file, handle: handle, oldattr: csbi.attributes, oldpos: coord{0, 0}}
-	} else {
-		return file
 	}
+	return file
 }
 
 // NewColorableStdout return new instance of Writer which handle escape sequence for stdout.
@@ -360,6 +363,45 @@ var color256 = map[int]int{
 	255: 0xeeeeee,
 }
 
+// `\033]0;TITLESTR\007`
+func doTitleSequence(er *bytes.Reader) error {
+	var c byte
+	var err error
+
+	c, err = er.ReadByte()
+	if err != nil {
+		return err
+	}
+	if c != '0' && c != '2' {
+		return nil
+	}
+	c, err = er.ReadByte()
+	if err != nil {
+		return err
+	}
+	if c != ';' {
+		return nil
+	}
+	title := make([]byte, 0, 80)
+	for {
+		c, err = er.ReadByte()
+		if err != nil {
+			return err
+		}
+		if c == 0x07 || c == '\n' {
+			break
+		}
+		title = append(title, c)
+	}
+	if len(title) > 0 {
+		title8, err := syscall.UTF16PtrFromString(string(title))
+		if err == nil {
+			procSetConsoleTitle.Call(uintptr(unsafe.Pointer(title8)))
+		}
+	}
+	return nil
+}
+
 // Write write data on console
 func (w *Writer) Write(data []byte) (n int, err error) {
 	var csbi consoleScreenBufferInfo
@@ -385,12 +427,16 @@ loop:
 		}
 		c2, err := er.ReadByte()
 		if err != nil {
-			w.lastbuf.WriteByte(c1)
 			break loop
 		}
+
+		if c2 == ']' {
+			if err := doTitleSequence(er); err != nil {
+				break loop
+			}
+			continue
+		}
 		if c2 != 0x5b {
-			w.lastbuf.WriteByte(c1)
-			w.lastbuf.WriteByte(c2)
 			continue
 		}
 
@@ -399,9 +445,6 @@ loop:
 		for {
 			c, err := er.ReadByte()
 			if err != nil {
-				w.lastbuf.WriteByte(c1)
-				w.lastbuf.WriteByte(c2)
-				w.lastbuf.Write(buf.Bytes())
 				break loop
 			}
 			if ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '@' {
@@ -479,7 +522,6 @@ loop:
 				case 2:
 					n1, err := strconv.Atoi(token[0])
 					if err != nil {
-						panic(1)
 						continue
 					}
 					n2, err := strconv.Atoi(token[1])
@@ -555,7 +597,7 @@ loop:
 						attr |= foregroundIntensity
 					case n == 7:
 						attr = ((attr & foregroundMask) << 4) | ((attr & backgroundMask) >> 4)
-					case 22 == n || n == 25 || n == 25:
+					case n == 22 || n == 25:
 						attr |= foregroundIntensity
 					case n == 27:
 						attr = ((attr & foregroundMask) << 4) | ((attr & backgroundMask) >> 4)
@@ -708,22 +750,22 @@ func (c consoleColor) backgroundAttr() (attr word) {
 }
 
 var color16 = []consoleColor{
-	consoleColor{0x000000, false, false, false, false},
-	consoleColor{0x000080, false, false, true, false},
-	consoleColor{0x008000, false, true, false, false},
-	consoleColor{0x008080, false, true, true, false},
-	consoleColor{0x800000, true, false, false, false},
-	consoleColor{0x800080, true, false, true, false},
-	consoleColor{0x808000, true, true, false, false},
-	consoleColor{0xc0c0c0, true, true, true, false},
-	consoleColor{0x808080, false, false, false, true},
-	consoleColor{0x0000ff, false, false, true, true},
-	consoleColor{0x00ff00, false, true, false, true},
-	consoleColor{0x00ffff, false, true, true, true},
-	consoleColor{0xff0000, true, false, false, true},
-	consoleColor{0xff00ff, true, false, true, true},
-	consoleColor{0xffff00, true, true, false, true},
-	consoleColor{0xffffff, true, true, true, true},
+	{0x000000, false, false, false, false},
+	{0x000080, false, false, true, false},
+	{0x008000, false, true, false, false},
+	{0x008080, false, true, true, false},
+	{0x800000, true, false, false, false},
+	{0x800080, true, false, true, false},
+	{0x808000, true, true, false, false},
+	{0xc0c0c0, true, true, true, false},
+	{0x808080, false, false, false, true},
+	{0x0000ff, false, false, true, true},
+	{0x00ff00, false, true, false, true},
+	{0x00ffff, false, true, true, true},
+	{0xff0000, true, false, false, true},
+	{0xff00ff, true, false, true, true},
+	{0xffff00, true, true, false, true},
+	{0xffffff, true, true, true, true},
 }
 
 type hsv struct {
