@@ -22,3 +22,15 @@ func (b *builtinPlugins) Get(name string) (func() error, bool) {
 	f, ok := b.plugins[name]
 	return f, ok
 }
+
+func (b *builtinPlugins) Keys() []string {
+	keys := make([]string, len(b.plugins))
+
+	i := 0
+	for k := range b.plugins {
+		keys[i] = k
+		i++
+	}
+
+	return keys
+}

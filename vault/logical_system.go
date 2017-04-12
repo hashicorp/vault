@@ -63,7 +63,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
-				"plugin-catalog",
 				"plugin-catalog/*",
 			},
 
@@ -695,6 +694,18 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
 			&framework.Path{
+				Pattern: "plugin-catalog/$",
+
+				Fields: map[string]*framework.FieldSchema{},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handlePluginCatalogList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
+			},
+			&framework.Path{
 				Pattern: "plugin-catalog/(?P<name>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -750,6 +761,16 @@ func (b *SystemBackend) invalidate(key string) {
 	}
 }
 
+func (b *SystemBackend) handlePluginCatalogList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	plugins, err := b.Core.pluginCatalog.List()
+	if err != nil {
+		return nil, err
+	}
+
+	resp := logical.ListResponse(plugins)
+	return resp, nil
+}
+
 func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("name").(string)
 	if pluginName == "" {
@@ -801,16 +822,12 @@ func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *frame
 	if pluginName == "" {
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
-	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	err := b.Core.pluginCatalog.Delete(pluginName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"plugin": plugin,
-		},
-	}, nil
+	return nil, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
