@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"path"
 
 	"golang.org/x/net/http2"
 
@@ -336,7 +337,7 @@ func (c *Client) NewRequest(method, path string) *Request {
 			User:   c.addr.User,
 			Scheme: c.addr.Scheme,
 			Host:   c.addr.Host,
-			Path:   strings.TrimSuffix(c.addr.Path, "/") + path,
+			Path:   path.Join(c.addr.Path, path),
 		},
 		ClientToken: c.token,
 		Params:      make(map[string][]string),
