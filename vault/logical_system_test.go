@@ -2,6 +2,11 @@ package vault
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -9,6 +14,8 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 )
@@ -1075,4 +1082,90 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 		t.Fatal(err)
 	}
 	return c, b, root
+}
+
+func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+	c.pluginCatalog.vaultCommand = "vault"
+	c.pluginCatalog.vaultSHA256 = []byte{'1'}
+
+	req := logical.TestRequest(t, logical.ListOperation, "plugin-catalog/")
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if len(resp.Data["keys"].([]string)) != len(builtinplugins.BuiltinPlugins.Keys()) {
+		t.Fatalf("Wrong number of plugins, got %d, expected %d", len(resp.Data["keys"].([]string)), len(builtinplugins.BuiltinPlugins.Keys()))
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugin-catalog/mysql-database-plugin")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expectedBuiltin := &pluginutil.PluginRunner{
+		Name:    "mysql-database-plugin",
+		Command: "vault",
+		Args:    []string{"plugin-exec", "mysql-database-plugin"},
+		Sha256:  []byte{'1'},
+		Builtin: true,
+	}
+
+	if !reflect.DeepEqual(resp.Data["plugin"].(*pluginutil.PluginRunner), expectedBuiltin) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", resp.Data["plugin"].(*pluginutil.PluginRunner), expectedBuiltin)
+	}
+
+	// Set a plugin
+	file, err := ioutil.TempFile(os.TempDir(), "temp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	command := fmt.Sprintf("%s --test", filepath.Base(file.Name()))
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugin-catalog/test-plugin")
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = command
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugin-catalog/test-plugin")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected := &pluginutil.PluginRunner{
+		Name:    "test-plugin",
+		Command: filepath.Join(sym, filepath.Base(file.Name())),
+		Args:    []string{"--test"},
+		Sha256:  []byte{'1'},
+		Builtin: false,
+	}
+	if !reflect.DeepEqual(resp.Data["plugin"].(*pluginutil.PluginRunner), expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", resp.Data["plugin"].(*pluginutil.PluginRunner), expected)
+	}
+
+	// Delete plugin
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugin-catalog/test-plugin")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "plugin-catalog/test-plugin")
+	resp, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatalf("expected error, plugin not deleted correctly")
+	}
 }
