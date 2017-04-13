@@ -1,12 +1,18 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+)
+
+var (
+	respErrEmptyPluginName = logical.ErrorResponse("empty plugin name")
+	respErrEmptyName       = logical.ErrorResponse("Empty name attribute given")
 )
 
 // pathResetConnection configures a path to reset a plugin.
@@ -16,7 +22,7 @@ func pathResetConnection(b *databaseBackend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of this DB type",
+				Description: "Name of this database connection",
 			},
 		},
 
@@ -35,15 +41,17 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
-			return logical.ErrorResponse("Empty name attribute given"), nil
+			return respErrEmptyName, nil
 		}
 
 		// Grab the mutex lock
 		b.Lock()
 		defer b.Unlock()
 
+		// Close plugin and delete the entry in the connections cache.
 		b.clearConnection(name)
 
+		// Execute plugin again, we don't need the object so throw away.
 		_, err := b.getOrCreateDBObj(req.Storage, name)
 		if err != nil {
 			return nil, err
@@ -61,14 +69,7 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of this DB type",
-			},
-
-			"verify_connection": &framework.FieldSchema{
-				Type:    framework.TypeBool,
-				Default: true,
-				Description: `If set, the connection details are verified by
-							actually connecting to the database`,
+				Description: "Name of this database connection",
 			},
 
 			"plugin_name": &framework.FieldSchema{
@@ -76,6 +77,13 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 				Description: `The name of a builtin or previously registered
 							plugin known to vault. This endpoint will create an instance of
 							that plugin type.`,
+			},
+
+			"verify_connection": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If true, the connection details are verified by
+							actually connecting to the database. Defaults to true.`,
 			},
 		},
 
@@ -94,10 +102,13 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
+		if name == "" {
+			return respErrEmptyName, nil
+		}
 
-		entry, err := req.Storage.Get(fmt.Sprintf("dbs/%s", name))
+		entry, err := req.Storage.Get(fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return nil, fmt.Errorf("failed to read connection configuration")
+			return nil, errors.New("failed to read connection configuration")
 		}
 		if entry == nil {
 			return nil, nil
@@ -118,12 +129,12 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
-			return logical.ErrorResponse("Empty name attribute given"), nil
+			return respErrEmptyName, nil
 		}
 
-		err := req.Storage.Delete(fmt.Sprintf("dbs/%s", name))
+		err := req.Storage.Delete(fmt.Sprintf("config/%s", name))
 		if err != nil {
-			return nil, fmt.Errorf("failed to delete connection configuration")
+			return nil, errors.New("failed to delete connection configuration")
 		}
 
 		b.Lock()
@@ -134,9 +145,9 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 			if err != nil {
 				return nil, err
 			}
-		}
 
-		delete(b.connections, name)
+			delete(b.connections, name)
+		}
 
 		return nil, nil
 	}
@@ -146,22 +157,22 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 // both builtin and plugin database types.
 func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-
-		config := &DatabaseConfig{
-			ConnectionDetails: data.Raw,
-			PluginName:        data.Get("plugin_name").(string),
+		pluginName := data.Get("plugin_name").(string)
+		if pluginName == "" {
+			return respErrEmptyPluginName, nil
 		}
 
 		name := data.Get("name").(string)
 		if name == "" {
-			return logical.ErrorResponse("Empty name attribute given"), nil
+			return respErrEmptyName, nil
 		}
 
 		verifyConnection := data.Get("verify_connection").(bool)
 
-		// Grab the mutex lock
-		b.Lock()
-		defer b.Unlock()
+		config := &DatabaseConfig{
+			ConnectionDetails: data.Raw,
+			PluginName:        pluginName,
+		}
 
 		db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
 		if err != nil {
@@ -173,6 +184,10 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			db.Close()
 			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
 		}
+
+		// Grab the mutex lock
+		b.Lock()
+		defer b.Unlock()
 
 		if _, ok := b.connections[name]; ok {
 			// Close and remove the old connection
@@ -189,7 +204,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		b.connections[name] = db
 
 		// Store it
-		entry, err := logical.StorageEntryJSON(fmt.Sprintf("dbs/%s", name), config)
+		entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/%s", name), config)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +213,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		resp := &logical.Response{}
-		resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection string or URL as it is, including passwords, if any.")
+		resp.AddWarning("Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.")
 
 		return resp, nil
 	}
@@ -221,7 +236,7 @@ accepts:
 	   plugin known to vault. This endpoint will create an instance of that
 	   plugin type.
 
-	* "verify_connection" - A boolean value denoting if the plugin should verify
+	* "verify_connection" (default: true) - A boolean value denoting if the plugin should verify
 	   it is able to connect to the database using the provided connection
        details.
 `

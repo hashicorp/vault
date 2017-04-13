@@ -1,7 +1,6 @@
 package dbplugin
 
 import (
-	"errors"
 	"fmt"
 	"net/rpc"
 	"time"
@@ -9,10 +8,6 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	log "github.com/mgutz/logxi/v1"
-)
-
-var (
-	ErrEmptyPluginName = errors.New("empty plugin name")
 )
 
 // DatabaseType is the interface that all database objects must implement.
@@ -37,10 +32,6 @@ type Statements struct {
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
 func PluginFactory(pluginName string, sys pluginutil.LookWrapper, logger log.Logger) (DatabaseType, error) {
-	if pluginName == "" {
-		return nil, ErrEmptyPluginName
-	}
-
 	// Look for plugin in the plugin catalog
 	pluginMeta, err := sys.LookupPlugin(pluginName)
 	if err != nil {

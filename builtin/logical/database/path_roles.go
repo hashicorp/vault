@@ -109,6 +109,7 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 
 		return &logical.Response{
 			Data: map[string]interface{}{
+				"db_name":               role.DBName,
 				"creation_statements":   role.Statements.CreationStatements,
 				"revocation_statements": role.Statements.RevocationStatements,
 				"rollback_statements":   role.Statements.RollbackStatements,

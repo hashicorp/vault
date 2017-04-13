@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-const databaseConfigPath = "database/dbs/"
+const databaseConfigPath = "database/config/"
 
 // DatabaseConfig is used by the Factory function to configure a DatabaseType
 // object.
@@ -31,12 +31,6 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	var b databaseBackend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
-
-		PathsSpecial: &logical.Paths{
-			Root: []string{
-				"dbs/plugin/*",
-			},
-		},
 
 		Paths: []*framework.Path{
 			pathConfigurePluginConnection(&b),
@@ -90,7 +84,7 @@ func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbpl
 		return db, nil
 	}
 
-	entry, err := s.Get(fmt.Sprintf("dbs/%s", name))
+	entry, err := s.Get(fmt.Sprintf("config/%s", name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read connection configuration with name: %s", name)
 	}
