@@ -6,14 +6,25 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
 
 var (
-	respErrEmptyPluginName = logical.ErrorResponse("empty plugin name")
+	respErrEmptyPluginName = logical.ErrorResponse("Empty plugin name")
 	respErrEmptyName       = logical.ErrorResponse("Empty name attribute given")
 )
+
+// DatabaseConfig is used by the Factory function to configure a DatabaseType
+// object.
+type DatabaseConfig struct {
+	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
+	// ConnectionDetails stores the database specific connection settings needed
+	// by each database type.
+	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
+	AllowedRoles      []string               `json:"allowed_roles" structs:"allowed_roles" mapstructure:"allowed_roles"`
+}
 
 // pathResetConnection configures a path to reset a plugin.
 func pathResetConnection(b *databaseBackend) *framework.Path {
@@ -75,15 +86,22 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			"plugin_name": &framework.FieldSchema{
 				Type: framework.TypeString,
 				Description: `The name of a builtin or previously registered
-							plugin known to vault. This endpoint will create an instance of
-							that plugin type.`,
+				plugin known to vault. This endpoint will create an instance of
+				that plugin type.`,
 			},
 
 			"verify_connection": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: true,
 				Description: `If true, the connection details are verified by
-							actually connecting to the database. Defaults to true.`,
+				actually connecting to the database. Defaults to true.`,
+			},
+
+			"allowed_roles": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Comma separated list of the role names allowed to
+				get creds from this database connection. If not set all roles
+				are allowed.`,
 			},
 		},
 
@@ -169,9 +187,14 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		verifyConnection := data.Get("verify_connection").(bool)
 
+		// Pasrse and dedupe allowed roles from a comma separated string.
+		allowedRolesRaw := data.Get("allowed_roles").(string)
+		allowedRoles := strutil.ParseDedupAndSortStrings(allowedRolesRaw, ",")
+
 		config := &DatabaseConfig{
 			ConnectionDetails: data.Raw,
 			PluginName:        pluginName,
+			AllowedRoles:      allowedRoles,
 		}
 
 		db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)

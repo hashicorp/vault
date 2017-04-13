@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -38,6 +39,17 @@ func (b *databaseBackend) pathRoleCreateRead() framework.OperationFunc {
 		}
 		if role == nil {
 			return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", name)), nil
+		}
+
+		dbConfig, err := b.DatabaseConfig(req.Storage, role.DBName)
+		if err != nil {
+			return nil, err
+		}
+
+		// If role name isn't in the database's allowed roles, send back a
+		// permission denied.
+		if len(dbConfig.AllowedRoles) > 0 && !strutil.StrListContains(dbConfig.AllowedRoles, name) {
+			return nil, logical.ErrPermissionDenied
 		}
 
 		b.Lock()

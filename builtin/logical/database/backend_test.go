@@ -130,6 +130,7 @@ func TestBackend_config_connection(t *testing.T) {
 	expected := map[string]interface{}{
 		"plugin_name":        "postgresql-database-plugin",
 		"connection_details": configData,
+		"allowed_roles":      []string{},
 	}
 	configReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(configReq)
@@ -306,6 +307,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	expected := map[string]interface{}{
 		"plugin_name":        "postgresql-database-plugin",
 		"connection_details": data,
+		"allowed_roles":      []string{},
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(req)
@@ -482,6 +484,105 @@ func TestBackend_roleCrud(t *testing.T) {
 	// Should be empty
 	if resp != nil {
 		t.Fatal("Expected response to be nil")
+	}
+}
+func TestBackend_allowedRoles(t *testing.T) {
+	_, ln, sys, _ := getCore(t)
+	defer ln.Close()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup()
+
+	cleanup, connURL := preparePostgresTestContainer(t, config.StorageView, b)
+	defer cleanup()
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  "allow, allowed",
+	}
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Create a denied and an allowed role
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
+		"default_ttl":         "5m",
+		"max_ttl":             "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/denied",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	data = map[string]interface{}{
+		"db_name":             "plugin-test",
+		"creation_statements": testRole,
+		"default_ttl":         "5m",
+		"max_ttl":             "10m",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/allowed",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Get creds from denied role, should fail
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/denied",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err := b.HandleRequest(req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	}
+
+	// Get creds from allowed role, should work.
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/allowed",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err = b.HandleRequest(req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+
+	if !testCredsExist(t, credsResp, connURL) {
+		t.Fatalf("Creds should exist")
 	}
 }
 

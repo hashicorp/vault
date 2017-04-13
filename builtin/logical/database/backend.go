@@ -14,15 +14,6 @@ import (
 
 const databaseConfigPath = "database/config/"
 
-// DatabaseConfig is used by the Factory function to configure a DatabaseType
-// object.
-type DatabaseConfig struct {
-	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`
-	// ConnectionDetails stores the database specific connection settings needed
-	// by each database type.
-	ConnectionDetails map[string]interface{} `json:"connection_details" structs:"connection_details" mapstructure:"connection_details"`
-}
-
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return Backend(conf).Setup(conf)
 }
@@ -84,16 +75,8 @@ func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbpl
 		return db, nil
 	}
 
-	entry, err := s.Get(fmt.Sprintf("config/%s", name))
+	config, err := b.DatabaseConfig(s, name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read connection configuration with name: %s", name)
-	}
-	if entry == nil {
-		return nil, fmt.Errorf("failed to find entry for connection with name: %s", name)
-	}
-
-	var config DatabaseConfig
-	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, err
 	}
 
@@ -110,6 +93,23 @@ func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbpl
 	b.connections[name] = db
 
 	return db, nil
+}
+
+func (b *databaseBackend) DatabaseConfig(s logical.Storage, name string) (*DatabaseConfig, error) {
+	entry, err := s.Get(fmt.Sprintf("config/%s", name))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read connection configuration with name: %s", name)
+	}
+	if entry == nil {
+		return nil, fmt.Errorf("failed to find entry for connection with name: %s", name)
+	}
+
+	var config DatabaseConfig
+	if err := entry.DecodeJSON(&config); err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }
 
 func (b *databaseBackend) Role(s logical.Storage, n string) (*roleEntry, error) {
