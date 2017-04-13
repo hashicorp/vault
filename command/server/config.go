@@ -273,6 +273,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableUI = c2.EnableUI
 	}
 
+	result.PluginDirectory = c.PluginDirectory
+	if c2.PluginDirectory != "" {
+		result.PluginDirectory = c2.PluginDirectory
+	}
+
 	return result
 }
 

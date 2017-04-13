@@ -284,6 +284,13 @@ func (c *ServerCommand) Run(args []string) int {
 			return 1
 		}
 		coreConfig.PluginDirectory = filepath.Join(homePath, "/.vault-plugins/")
+		err = os.Mkdir(coreConfig.PluginDirectory, 0700)
+		if err != nil && !os.IsExist(err) {
+			c.Ui.Output(fmt.Sprintf(
+				"Error making default plugin directory: %v", err))
+			return 1
+		}
+
 	}
 
 	var disableClustering bool
