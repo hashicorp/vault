@@ -432,15 +432,25 @@ func testAccStepReadRole(t *testing.T, name string, expected map[string]interfac
 			}
 
 			var d struct {
-				Issuer      string           `mapstructure:"issuer"`
-				AccountName string           `mapstructure:"account_name"`
-				Period      uint             `mapstructure:"period"`
-				Algorithm   otplib.Algorithm `mapstructure:"algorithm"`
-				Digits      otplib.Digits    `mapstructure:"digits"`
+				Issuer      string        `mapstructure:"issuer"`
+				AccountName string        `mapstructure:"account_name"`
+				Period      uint          `mapstructure:"period"`
+				Algorithm   string        `mapstructure:"algorithm"`
+				Digits      otplib.Digits `mapstructure:"digits"`
 			}
 
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
+			}
+
+			var role_algorithm otplib.Algorithm
+			switch d.Algorithm {
+			case "SHA1":
+				role_algorithm = otplib.AlgorithmSHA1
+			case "SHA256":
+				role_algorithm = otplib.AlgorithmSHA256
+			case "SHA512":
+				role_algorithm = otplib.AlgorithmSHA512
 			}
 
 			period := expected["period"].(int)
@@ -452,7 +462,7 @@ func testAccStepReadRole(t *testing.T, name string, expected map[string]interfac
 				return fmt.Errorf("Account_Name should equal: %s", expected["account_name"])
 			case d.Period != uint(period):
 				return fmt.Errorf("Period should equal: %i", expected["period"])
-			case d.Algorithm != expected["algorithm"]:
+			case role_algorithm != expected["algorithm"]:
 				return fmt.Errorf("Algorithm should equal: %s", expected["algorithm"])
 			case d.Digits != expected["digits"]:
 				return fmt.Errorf("Digits should equal: %i", expected["digits"])
