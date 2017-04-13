@@ -1,8 +1,8 @@
 package builtinplugins
 
 import (
-	"github.com/hashicorp/vault-plugins/database/mysql"
-	"github.com/hashicorp/vault-plugins/database/postgresql"
+	"github.com/hashicorp/vault/plugins/database/mysql"
+	"github.com/hashicorp/vault/plugins/database/postgresql"
 )
 
 var BuiltinPlugins *builtinPlugins = &builtinPlugins{

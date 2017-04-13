@@ -1,0 +1,183 @@
+package mysql
+
+import (
+	"database/sql"
+	"strings"
+	"time"
+
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
+	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
+)
+
+const defaultMysqlRevocationStmts = `
+	REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
+	DROP USER '{{name}}'@'%'
+`
+const mySQLTypeName = "mysql"
+
+type MySQL struct {
+	connutil.ConnectionProducer
+	credsutil.CredentialsProducer
+}
+
+func New() *MySQL {
+	connProducer := &connutil.SQLConnectionProducer{}
+	connProducer.Type = mySQLTypeName
+
+	credsProducer := &credsutil.SQLCredentialsProducer{
+		DisplayNameLen: 4,
+		UsernameLen:    16,
+	}
+
+	dbType := &MySQL{
+		ConnectionProducer:  connProducer,
+		CredentialsProducer: credsProducer,
+	}
+
+	return dbType
+}
+
+// Run instantiates a MySQL object, and runs the RPC server for the plugin
+func Run() error {
+	dbType := New()
+
+	dbplugin.NewPluginServer(dbType)
+
+	return nil
+}
+
+func (m *MySQL) Type() (string, error) {
+	return mySQLTypeName, nil
+}
+
+func (m *MySQL) getConnection() (*sql.DB, error) {
+	db, err := m.Connection()
+	if err != nil {
+		return nil, err
+	}
+
+	return db.(*sql.DB), nil
+}
+
+func (m *MySQL) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	// Get the connection
+	db, err := m.getConnection()
+	if err != nil {
+		return "", "", err
+	}
+
+	if statements.CreationStatements == "" {
+		return "", "", dbutil.ErrEmptyCreationStatement
+	}
+
+	username, err = m.GenerateUsername(usernamePrefix)
+	if err != nil {
+		return "", "", err
+	}
+
+	password, err = m.GeneratePassword()
+	if err != nil {
+		return "", "", err
+	}
+
+	expirationStr, err := m.GenerateExpiration(expiration)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return "", "", err
+	}
+	defer tx.Rollback()
+
+	// Execute each query
+	for _, query := range strutil.ParseArbitraryStringSlice(statements.CreationStatements, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+
+		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+			"name":       username,
+			"password":   password,
+			"expiration": expirationStr,
+		}))
+		if err != nil {
+			return "", "", err
+		}
+		defer stmt.Close()
+		if _, err := stmt.Exec(); err != nil {
+			return "", "", err
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
+// NOOP
+func (m *MySQL) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+	return nil
+}
+
+func (m *MySQL) RevokeUser(statements dbplugin.Statements, username string) error {
+	// Grab the read lock
+	m.Lock()
+	defer m.Unlock()
+
+	// Get the connection
+	db, err := m.getConnection()
+	if err != nil {
+		return err
+	}
+
+	revocationStmts := statements.RevocationStatements
+	// Use a default SQL statement for revocation if one cannot be fetched from the role
+	if revocationStmts == "" {
+		revocationStmts = defaultMysqlRevocationStmts
+	}
+
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, query := range strutil.ParseArbitraryStringSlice(revocationStmts, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+
+		// This is not a prepared statement because not all commands are supported
+		// 1295: This command is not supported in the prepared statement protocol yet
+		// Reference https://mariadb.com/kb/en/mariadb/prepare-statement/
+		query = strings.Replace(query, "{{name}}", username, -1)
+		_, err = tx.Exec(query)
+		if err != nil {
+			return err
+		}
+
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
