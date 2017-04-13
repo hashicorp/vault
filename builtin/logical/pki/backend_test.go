@@ -225,7 +225,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 
 	stepCount = len(testCase.Steps)
 
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
+	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
