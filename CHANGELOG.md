@@ -1,7 +1,15 @@
 ## 0.7.1 (Unreleased)
 
+FEATURES:
+
+ * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
+   Vault physical data store [GH-2546]
+
 IMPROVEMENTS:
 
+ * secret/pki: Add `no_store` option that allows certificates to be issued
+   without being stored. This removes the ability to look up and/or add to a
+   CRL but helps with scaling to very large numbers of certificates. [GH-2565]
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
    requests [GH-2466]
  * storage/s3: Use pooled transport for http client [GH-2481]
@@ -10,7 +18,9 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api: Respect a configured path in Vault's address [GH-2588]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
+ * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]
  * storage/consul: Properly handle state events rather than timing out
    [GH-2548]
  * storage/etcd3: Ensure locks are released if client is improperly shut down
