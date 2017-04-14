@@ -1984,6 +1984,172 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	}
 }
 
+func TestBackend_SignVerbatim(t *testing.T) {
+	// create the backend
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b := Backend()
+	_, err := b.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"ttl":         "172800",
+	}
+
+	resp, err := b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      rootData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a CSR and key
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	csrReq := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "foo.bar.com",
+		},
+	}
+	csr, err := x509.CreateCertificateRequest(rand.Reader, csrReq, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(csr) == 0 {
+		t.Fatal("generated csr is empty")
+	}
+	pemCSR := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csr,
+	})
+	if len(pemCSR) == 0 {
+		t.Fatal("pem csr is empty")
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign-verbatim",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"csr": string(pemCSR),
+		},
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to sign-verbatim basic CSR: %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Secret != nil {
+		t.Fatal("secret is not nil")
+	}
+
+	// create a role entry; we use this to check that sign-verbatim when used with a role is still honoring TTLs
+	roleData := map[string]interface{}{
+		"ttl":     "4h",
+		"max_ttl": "8h",
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign-verbatim/test",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"csr": string(pemCSR),
+			"ttl": "5h",
+		},
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to sign-verbatim ttl'd CSR: %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Secret != nil {
+		t.Fatal("got a lease when we should not have")
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign-verbatim/test",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"csr": string(pemCSR),
+			"ttl": "12h",
+		},
+	})
+	if resp != nil && !resp.IsError() {
+		t.Fatalf("sign-verbatim signed too-large-ttl'd CSR: %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// now check that if we set generate-lease it takes it from the role and the TTLs match
+	roleData = map[string]interface{}{
+		"ttl":            "4h",
+		"max_ttl":        "8h",
+		"generate_lease": true,
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test",
+		Storage:   storage,
+		Data:      roleData,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create a role, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "sign-verbatim/test",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"csr": string(pemCSR),
+			"ttl": "5h",
+		},
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to sign-verbatim role-leased CSR: %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Secret == nil {
+		t.Fatalf("secret is nil, response is %#v", *resp)
+	}
+	if math.Abs(float64(resp.Secret.TTL-(5*time.Hour))) > float64(5*time.Hour) {
+		t.Fatalf("ttl not default; wanted %v, got %v", b.System().DefaultLeaseTTL(), resp.Secret.TTL)
+	}
+}
+
 const (
 	rsaCAKey string = `-----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAmPQlK7xD5p+E8iLQ8XlVmll5uU2NKMxKY3UF5tbh+0vkc+Fy

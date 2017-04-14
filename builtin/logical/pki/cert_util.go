@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -695,7 +696,7 @@ func generateCreationBundle(b *backend,
 		if len(ttlField) == 0 {
 			ttl = b.System().DefaultLeaseTTL()
 		} else {
-			ttl, err = time.ParseDuration(ttlField)
+			ttl, err = parseutil.ParseDurationSecond(ttlField)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid requested ttl: %s", err)}
@@ -705,7 +706,7 @@ func generateCreationBundle(b *backend,
 		if len(role.MaxTTL) == 0 {
 			maxTTL = b.System().MaxLeaseTTL()
 		} else {
-			maxTTL, err = time.ParseDuration(role.MaxTTL)
+			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid ttl: %s", err)}
