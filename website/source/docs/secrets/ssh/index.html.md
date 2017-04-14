@@ -189,6 +189,9 @@ writeable by the owner); if you're saving it along with your public/private key
 you can tell the SSH client where to find it (and the associated private key)
 by using `-i` such as `ssh -i ~/.ssh/id_rsa -i my-signed-cert.pub localhost`.
 
+If you want to see the configured extensions, principals, etc., you can use the
+`-L` flag to `ssh-keygen`, e.g. `ssh-keygen -Lf ~/.ssh/id_rsa-cert.pub`.
+
 ### SSH into the host machine
 
 ```text

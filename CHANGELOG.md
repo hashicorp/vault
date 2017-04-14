@@ -18,7 +18,9 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+ * api: Respect a configured path in Vault's address [GH-2588]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
+ * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]
  * storage/consul: Properly handle state events rather than timing out
    [GH-2548]
  * storage/etcd3: Ensure locks are released if client is improperly shut down
