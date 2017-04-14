@@ -677,7 +677,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	}
 }
 
-func TestTokenStore_RevokeTree_nonRecursive(t testing.TB, depth uint64) {
+func TestTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 	root, children := buildTokenTree(t, ts, depth)
@@ -712,7 +712,7 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 	for _, depth := range benchmarks {
 		b.Run(fmt.Sprintf("Tree of Depth %d", depth), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				testTokenStore_RevokeTree_Impl(b, depth)
+				testTokenStore_RevokeTree_NonRecursive(b, depth)
 			}
 		})
 	}
