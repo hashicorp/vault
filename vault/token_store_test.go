@@ -712,7 +712,7 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 	for _, depth := range benchmarks {
 		b.Run(fmt.Sprintf("Tree of Depth %d", depth), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				testTokenStore_RevokeTree_NonRecursive(b, depth)
+				TestTokenStore_RevokeTree_NonRecursive(b, depth)
 			}
 		})
 	}
