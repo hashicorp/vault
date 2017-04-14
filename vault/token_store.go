@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"container/list"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -1027,24 +1026,26 @@ func (ts *TokenStore) RevokeTree(id string) error {
 // revokeTreeSalted is used to invalide a given token and all
 // child tokens using a saltedID.
 func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
-	//store the Id's in a list
-	dfs := list.New()
-	dfs.PushFront(saltedId)
-	for dfs.Front() != nil {
-		id := dfs.Front()
-		path := parentPrefix + id.Value.(string) + "/"
-		children, no_child := ts.view.List(path)
-		if no_child != nil {
-			/* we have reached a leaf node, so we need to delete this
-			 * , before the parent, i think */
-			if err := ts.revokeSalted(id.Value.(string)); err != nil {
+	dfs := make([]string, 0, 64)
+	dfs = append(dfs, saltedId)
+
+	for l := len(dfs); l > 0; l = len(dfs) {
+		id := dfs[0]
+		path := parentPrefix + id + "/"
+		children, leaf := ts.view.List(path)
+		if leaf != nil {
+			/* we have reached a leaf node, so we need to delete it
+			 * before the parent */
+			if err := ts.revokeSalted(id); err != nil {
 				return fmt.Errorf("failed to revoke entry: %v", err)
 			}
-			dfs.Remove(id)
-		} else { //there are children and we need to prepend them to the list
-			for i := 0; i < len(children); i++ {
-				dfs.PushFront(children[i])
+			if l == 1 { //we deleted last node, then return
+				return nil
+			} else {
+				dfs = dfs[1:l] //get rid of first
 			}
+		} else { //there are children and we need to prepend them to the slice
+			dfs = append(children, dfs...) //append used as prepend in this way
 		}
 	}
 	return nil
