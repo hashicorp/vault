@@ -63,7 +63,7 @@ func pathKeys(b *backend) *framework.Path {
 			},
 
 			"period": {
-				Type:        framework.TypeInt,
+				Type:        framework.TypeDurationSecond,
 				Default:     30,
 				Description: `The length of time used to generate a counter for the TOTP token calculation.`,
 			},
@@ -141,46 +141,19 @@ func (b *backend) pathKeyRead(
 		return nil, nil
 	}
 
-	switch key.Generate {
-	case true:
-		keyObject, err := otplib.NewKeyFromURL(key.URL)
+	// Translate algorithm back to string
+	algorithm := key.Algorithm.String()
 
-		if err != nil {
-			return logical.ErrorResponse("an error occured while generating a Key object"), nil
-		}
-
-		barcode, err := keyObject.Image(key.QRSize, key.QRSize)
-
-		if err != nil {
-			return logical.ErrorResponse("an error occured while generating a QR code image"), nil
-		}
-
-		var buff bytes.Buffer
-		png.Encode(&buff, barcode)
-		b64Barcode := base64.StdEncoding.EncodeToString(buff.Bytes())
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"url":     keyObject.String(),
-				"barcode": b64Barcode,
-				"skew":    key.Skew,
-				"qr_size": key.QRSize,
-			},
-		}, nil
-	default:
-		// Translate algorithm back to string
-		algorithm := key.Algorithm.String()
-
-		// Return values of key
-		return &logical.Response{
-			Data: map[string]interface{}{
-				"issuer":       key.Issuer,
-				"account_name": key.AccountName,
-				"period":       key.Period,
-				"algorithm":    algorithm,
-				"digits":       key.Digits,
-			},
-		}, nil
-	}
+	// Return values of key
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"issuer":       key.Issuer,
+			"account_name": key.AccountName,
+			"period":       key.Period,
+			"algorithm":    algorithm,
+			"digits":       key.Digits,
+		},
+	}, nil
 }
 
 func (b *backend) pathKeyList(
@@ -235,8 +208,11 @@ func (b *backend) pathKeyCreate(
 		return logical.ErrorResponse("the period value must be greater than zero"), nil
 	}
 
-	if skew < 0 {
-		return logical.ErrorResponse("the skew value must be greater than zero"), nil
+	switch skew {
+	case 0:
+	case 1:
+	default:
+		return logical.ErrorResponse("the skew value must be 0 or 1"), nil
 	}
 
 	if qrSize <= 0 {
@@ -247,17 +223,6 @@ func (b *backend) pathKeyCreate(
 		return logical.ErrorResponse("the key_size value must be greater than zero"), nil
 	}
 
-	// If the key is generated, Account Name and Issuer are required.
-	if generate {
-		if accountName == "" {
-			return logical.ErrorResponse("the account_name value is required for generated keys"), nil
-		}
-
-		if issuer == "" {
-			return logical.ErrorResponse("the issuer value is required for generated keys"), nil
-		}
-	}
-
 	// Period, Skew and Key Size need to be unsigned ints
 	uintPeriod := uint(period)
 	uintSkew := uint(skew)
@@ -265,8 +230,19 @@ func (b *backend) pathKeyCreate(
 
 	url := ""
 
+	var response logical.Response
+
 	switch generate {
 	case true:
+		// If the key is generated, Account Name and Issuer are required.
+		if accountName == "" {
+			return logical.ErrorResponse("the account_name value is required for generated keys"), nil
+		}
+
+		if issuer == "" {
+			return logical.ErrorResponse("the issuer value is required for generated keys"), nil
+		}
+
 		// Generate a new key
 		keyObject, err := totplib.Generate(totplib.GenerateOpts{
 			Issuer:      issuer,
@@ -281,9 +257,27 @@ func (b *backend) pathKeyCreate(
 			return logical.ErrorResponse("an error occured while generating a key"), nil
 		}
 
-		url = keyObject.String()
+		// Get key string value
 		keyString = keyObject.Secret()
-	case false:
+
+		// Prepare the url and barcode
+		url = keyObject.String()
+		barcode, err := keyObject.Image(qrSize, qrSize)
+
+		if err != nil {
+			return logical.ErrorResponse("an error occured while generating a QR code image"), nil
+		}
+
+		var buff bytes.Buffer
+		png.Encode(&buff, barcode)
+		b64Barcode := base64.StdEncoding.EncodeToString(buff.Bytes())
+		response = logical.Response{
+			Data: map[string]interface{}{
+				"url":     url,
+				"barcode": b64Barcode,
+			},
+		}
+	default:
 		if keyString == "" {
 			return logical.ErrorResponse("the key value is required"), nil
 		}
@@ -316,7 +310,12 @@ func (b *backend) pathKeyCreate(
 		return nil, err
 	}
 
-	return nil, nil
+	switch generate {
+	case true:
+		return &response, nil
+	default:
+		return nil, nil
+	}
 }
 
 type keyEntry struct {
