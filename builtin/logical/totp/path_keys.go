@@ -13,26 +13,26 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-func pathListRoles(b *backend) *framework.Path {
+func pathListKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ListOperation: b.pathRoleList,
+			logical.ListOperation: b.pathKeyList,
 		},
 
-		HelpSynopsis:    pathRoleHelpSyn,
-		HelpDescription: pathRoleHelpDesc,
+		HelpSynopsis:    pathKeyHelpSyn,
+		HelpDescription: pathKeyHelpDesc,
 	}
 }
 
-func pathRoles(b *backend) *framework.Path {
+func pathKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the role.",
+				Description: "Name of the key.",
 			},
 
 			"generate": {
@@ -71,19 +71,19 @@ func pathRoles(b *backend) *framework.Path {
 			"algorithm": {
 				Type:        framework.TypeString,
 				Default:     "SHA1",
-				Description: `The hashing algorithm used to generate the TOTP token.`,
+				Description: `The hashing algorithm used to generate the TOTP token. Options include SHA1, SHA256 and SHA512`,
 			},
 
 			"digits": {
 				Type:        framework.TypeInt,
 				Default:     6,
-				Description: `The number of digits in the generated TOTP token.`,
+				Description: `The number of digits in the generated TOTP token. This value can either be 6 or 8`,
 			},
 
 			"skew": {
 				Type:        framework.TypeInt,
 				Default:     0,
-				Description: `The number of delay periods that are allowed when validating a TOTP token.`,
+				Description: `The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1`,
 			},
 
 			"qr_size": {
@@ -94,17 +94,17 @@ func pathRoles(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleCreate,
-			logical.DeleteOperation: b.pathRoleDelete,
+			logical.ReadOperation:   b.pathKeyRead,
+			logical.UpdateOperation: b.pathKeyCreate,
+			logical.DeleteOperation: b.pathKeyDelete,
 		},
 
-		HelpSynopsis:    pathRoleHelpSyn,
-		HelpDescription: pathRoleHelpDesc,
+		HelpSynopsis:    pathKeyHelpSyn,
+		HelpDescription: pathKeyHelpDesc,
 	}
 }
 
-func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
+func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
 	entry, err := s.Get("key/" + n)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 		return nil, nil
 	}
 
-	var result roleEntry
+	var result keyEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (b *backend) Role(s logical.Storage, n string) (*roleEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathRoleDelete(
+func (b *backend) pathKeyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete("key/" + data.Get("name").(string))
 	if err != nil {
@@ -131,28 +131,28 @@ func (b *backend) pathRoleDelete(
 	return nil, nil
 }
 
-func (b *backend) pathRoleRead(
+func (b *backend) pathKeyRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	role, err := b.Role(req.Storage, data.Get("name").(string))
+	key, err := b.Key(req.Storage, data.Get("name").(string))
 	if err != nil {
 		return nil, err
 	}
-	if role == nil {
+	if key == nil {
 		return nil, nil
 	}
 
-	switch role.Generate {
+	switch key.Generate {
 	case true:
-		key_object, err := otplib.NewKeyFromURL(role.URL)
+		keyObject, err := otplib.NewKeyFromURL(key.URL)
 
 		if err != nil {
-			return logical.ErrorResponse("An error occured while generating a Key object."), nil
+			return logical.ErrorResponse("an error occured while generating a Key object"), nil
 		}
 
-		barcode, err := key_object.Image(role.QRSize, role.QRSize)
+		barcode, err := keyObject.Image(key.QRSize, key.QRSize)
 
 		if err != nil {
-			return logical.ErrorResponse("An error occured while generating a QR code image."), nil
+			return logical.ErrorResponse("an error occured while generating a QR code image"), nil
 		}
 
 		var buff bytes.Buffer
@@ -160,30 +160,30 @@ func (b *backend) pathRoleRead(
 		b64Barcode := base64.StdEncoding.EncodeToString(buff.Bytes())
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"url":     key_object.String(),
+				"url":     keyObject.String(),
 				"barcode": b64Barcode,
-				"skew":    role.Skew,
-				"qr_size": role.QRSize,
+				"skew":    key.Skew,
+				"qr_size": key.QRSize,
 			},
 		}, nil
 	default:
 		// Translate algorithm back to string
-		algorithm := role.Algorithm.String()
+		algorithm := key.Algorithm.String()
 
 		// Return values of key
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"issuer":       role.Issuer,
-				"account_name": role.AccountName,
-				"period":       role.Period,
+				"issuer":       key.Issuer,
+				"account_name": key.AccountName,
+				"period":       key.Period,
 				"algorithm":    algorithm,
-				"digits":       role.Digits,
+				"digits":       key.Digits,
 			},
 		}, nil
 	}
 }
 
-func (b *backend) pathRoleList(
+func (b *backend) pathKeyList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List("key/")
 	if err != nil {
@@ -193,119 +193,119 @@ func (b *backend) pathRoleList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathRoleCreate(
+func (b *backend) pathKeyCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	generate := data.Get("generate").(bool)
-	key_string := data.Get("key").(string)
+	keyString := data.Get("key").(string)
 	issuer := data.Get("issuer").(string)
-	account_name := data.Get("account_name").(string)
+	accountName := data.Get("account_name").(string)
 	period := data.Get("period").(int)
 	algorithm := data.Get("algorithm").(string)
 	digits := data.Get("digits").(int)
 	skew := data.Get("skew").(int)
-	qr_size := data.Get("qr_size").(int)
-	key_size := data.Get("key_size").(int)
+	qrSize := data.Get("qr_size").(int)
+	keySize := data.Get("key_size").(int)
 
 	// Translate digits and algorithm to a format the totp library understands
-	var role_digits otplib.Digits
+	var keyDigits otplib.Digits
 	switch digits {
 	case 6:
-		role_digits = otplib.DigitsSix
+		keyDigits = otplib.DigitsSix
 	case 8:
-		role_digits = otplib.DigitsEight
+		keyDigits = otplib.DigitsEight
 	default:
-		return logical.ErrorResponse("The digit value can only be 6 or 8."), nil
+		return logical.ErrorResponse("the digit value can only be 6 or 8"), nil
 	}
 
-	var role_algorithm otplib.Algorithm
+	var keyAlgorithm otplib.Algorithm
 	switch algorithm {
 	case "SHA1":
-		role_algorithm = otplib.AlgorithmSHA1
+		keyAlgorithm = otplib.AlgorithmSHA1
 	case "SHA256":
-		role_algorithm = otplib.AlgorithmSHA256
+		keyAlgorithm = otplib.AlgorithmSHA256
 	case "SHA512":
-		role_algorithm = otplib.AlgorithmSHA512
+		keyAlgorithm = otplib.AlgorithmSHA512
 	default:
-		return logical.ErrorResponse("The algorithm value is not valid."), nil
+		return logical.ErrorResponse("the algorithm value is not valid"), nil
 	}
 
 	// Enforce input value requirements
 	if period <= 0 {
-		return logical.ErrorResponse("The period value must be greater than zero."), nil
+		return logical.ErrorResponse("the period value must be greater than zero"), nil
 	}
 
 	if skew < 0 {
-		return logical.ErrorResponse("The skew value must be greater than zero."), nil
+		return logical.ErrorResponse("the skew value must be greater than zero"), nil
 	}
 
-	if qr_size <= 0 {
-		return logical.ErrorResponse("The qr_size value must be greater than zero."), nil
+	if qrSize <= 0 {
+		return logical.ErrorResponse("the qr_size value must be greater than zero"), nil
 	}
 
-	if key_size <= 0 {
-		return logical.ErrorResponse("The key_size value must be greater than zero."), nil
+	if keySize <= 0 {
+		return logical.ErrorResponse("the key_size value must be greater than zero"), nil
 	}
 
 	// If the key is generated, Account Name and Issuer are required.
 	if generate {
-		if account_name == "" {
-			return logical.ErrorResponse("The account_name value is required for generated keys."), nil
+		if accountName == "" {
+			return logical.ErrorResponse("the account_name value is required for generated keys"), nil
 		}
 
 		if issuer == "" {
-			return logical.ErrorResponse("The issuer value is required for generated keys."), nil
+			return logical.ErrorResponse("the issuer value is required for generated keys"), nil
 		}
 	}
 
 	// Period, Skew and Key Size need to be unsigned ints
-	uint_period := uint(period)
-	uint_skew := uint(skew)
-	uint_key_size := uint(key_size)
+	uintPeriod := uint(period)
+	uintSkew := uint(skew)
+	uintKeySize := uint(keySize)
 
 	url := ""
 
 	switch generate {
 	case true:
 		// Generate a new key
-		key_object, err := totplib.Generate(totplib.GenerateOpts{
+		keyObject, err := totplib.Generate(totplib.GenerateOpts{
 			Issuer:      issuer,
-			AccountName: account_name,
-			Period:      uint_period,
-			Digits:      role_digits,
-			Algorithm:   role_algorithm,
-			SecretSize:  uint_key_size,
+			AccountName: accountName,
+			Period:      uintPeriod,
+			Digits:      keyDigits,
+			Algorithm:   keyAlgorithm,
+			SecretSize:  uintKeySize,
 		})
 
 		if err != nil {
-			return logical.ErrorResponse("An error occured while generating a key."), nil
+			return logical.ErrorResponse("an error occured while generating a key"), nil
 		}
 
-		url = key_object.String()
-		key_string = key_object.Secret()
+		url = keyObject.String()
+		keyString = keyObject.Secret()
 	case false:
-		if key_string == "" {
-			return logical.ErrorResponse("The key value is required."), nil
+		if keyString == "" {
+			return logical.ErrorResponse("the key value is required"), nil
 		}
 
-		_, err := base32.StdEncoding.DecodeString(key_string)
+		_, err := base32.StdEncoding.DecodeString(keyString)
 
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid key value: %s", err)), nil
+				"invalid key value: %s", err)), nil
 		}
 	}
 
 	// Store it
-	entry, err := logical.StorageEntryJSON("key/"+name, &roleEntry{
-		Key:         key_string,
+	entry, err := logical.StorageEntryJSON("key/"+name, &keyEntry{
+		Key:         keyString,
 		Issuer:      issuer,
-		AccountName: account_name,
-		Period:      uint_period,
-		Algorithm:   role_algorithm,
-		Digits:      role_digits,
-		Skew:        uint_skew,
-		QRSize:      qr_size,
+		AccountName: accountName,
+		Period:      uintPeriod,
+		Algorithm:   keyAlgorithm,
+		Digits:      keyDigits,
+		Skew:        uintSkew,
+		QRSize:      qrSize,
 		URL:         url,
 		Generate:    generate,
 	})
@@ -319,7 +319,7 @@ func (b *backend) pathRoleCreate(
 	return nil, nil
 }
 
-type roleEntry struct {
+type keyEntry struct {
 	Key         string           `json:"key" mapstructure:"key" structs:"key"`
 	Issuer      string           `json:"issuer" mapstructure:"issuer" structs:"issuer"`
 	AccountName string           `json:"account_name" mapstructure:"account_name" structs:"account_name"`
@@ -332,11 +332,11 @@ type roleEntry struct {
 	Generate    bool             `json:"generate" mapstructure:"generate" structs:"generate"`
 }
 
-const pathRoleHelpSyn = `
-Manage the roles that can be created with this backend.
+const pathKeyHelpSyn = `
+Manage the keys that can be created with this backend.
 `
 
-const pathRoleHelpDesc = `
-This path lets you manage the roles that can be created with this backend.
+const pathKeyHelpDesc = `
+This path lets you manage the keys that can be created with this backend.
 
 `

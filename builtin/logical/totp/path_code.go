@@ -9,13 +9,13 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-func pathRoleCreate(b *backend) *framework.Path {
+func pathCode(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "code/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Name of the role.",
+				Description: "Name of the key.",
 			},
 			"code": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -28,8 +28,8 @@ func pathRoleCreate(b *backend) *framework.Path {
 			logical.UpdateOperation: b.pathValidateCode,
 		},
 
-		HelpSynopsis:    pathRoleCreateReadHelpSyn,
-		HelpDescription: pathRoleCreateReadHelpDesc,
+		HelpSynopsis:    pathCodeHelpSyn,
+		HelpDescription: pathCodeHelpDesc,
 	}
 }
 
@@ -42,19 +42,19 @@ func (b *backend) pathReadCode(
 
 	// Get the key
 	b.logger.Trace("totp/pathReadCode: getting key")
-	role, err := b.Role(req.Storage, name)
+	key, err := b.Key(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if role == nil {
+	if key == nil {
 		return logical.ErrorResponse(fmt.Sprintf("unknown key: %s", name)), nil
 	}
 
 	// Generate password using totp library
-	totpToken, err := totplib.GenerateCodeCustom(role.Key, time.Now(), totplib.ValidateOpts{
-		Period:    role.Period,
-		Digits:    role.Digits,
-		Algorithm: role.Algorithm,
+	totpToken, err := totplib.GenerateCodeCustom(key.Key, time.Now(), totplib.ValidateOpts{
+		Period:    key.Period,
+		Digits:    key.Digits,
+		Algorithm: key.Algorithm,
 	})
 
 	if err != nil {
@@ -80,23 +80,23 @@ func (b *backend) pathValidateCode(
 
 	// Enforce input value requirements
 	if code == "" {
-		return logical.ErrorResponse("The code value is required."), nil
+		return logical.ErrorResponse("the code value is required"), nil
 	}
 
 	// Get the key's stored values
-	role, err := b.Role(req.Storage, name)
+	key, err := b.Key(req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
-	if role == nil {
+	if key == nil {
 		return logical.ErrorResponse(fmt.Sprintf("unknown key: %s", name)), nil
 	}
 
-	valid, err := totplib.ValidateCustom(code, role.Key, time.Now(), totplib.ValidateOpts{
-		Period:    role.Period,
-		Skew:      role.Skew,
-		Digits:    role.Digits,
-		Algorithm: role.Algorithm,
+	valid, err := totplib.ValidateCustom(code, key.Key, time.Now(), totplib.ValidateOpts{
+		Period:    key.Period,
+		Skew:      key.Skew,
+		Digits:    key.Digits,
+		Algorithm: key.Algorithm,
 	})
 
 	resp, err := &logical.Response{
@@ -108,10 +108,10 @@ func (b *backend) pathValidateCode(
 	return resp, nil
 }
 
-const pathRoleCreateReadHelpSyn = `
-Request time-based one-time use password or validate a password for a certain role .
+const pathCodeHelpSyn = `
+Request time-based one-time use password or validate a password for a certain key .
 `
-const pathRoleCreateReadHelpDesc = `
-This path generates and validates time-based one-time use passwords for a certain role. 
+const pathCodeHelpDesc = `
+This path generates and validates time-based one-time use passwords for a certain key. 
 
 `

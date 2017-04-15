@@ -19,9 +19,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 		Help: strings.TrimSpace(backendHelp),
 
 		Paths: []*framework.Path{
-			pathListRoles(&b),
-			pathRoles(&b),
-			pathRoleCreate(&b),
+			pathListKeys(&b),
+			pathKeys(&b),
+			pathCode(&b),
 		},
 
 		Secrets: []*framework.Secret{},
