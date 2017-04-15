@@ -197,12 +197,7 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 		return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
 	}
 
-	// Fail on non-determinism
-	if len(trustedChains) > 1 {
-		return nil, logical.ErrorResponse("login certificate matched multiple configured roles; unsure which to apply"), nil
-	}
-
-	// Return the sole matching entry
+	// Return the first matching entry (for backwards compatibility, we continue to just pick one if multiple match)
 	return matches[0], nil, nil
 }
 
