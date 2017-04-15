@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+
+	"github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -159,7 +161,7 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 			// Check for client cert being explicitly listed in the config (and matching other constraints)
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
 				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
-				b.matchPolicy(connState.PeerCertificates[0], trustedNonCA.Certificates, trustedNonCA) {
+				b.matchesConstraints(connState.PeerCertificates[0], trustedNonCA.Certificates, trustedNonCA) {
 				return trustedNonCA, nil, nil
 			}
 		}
@@ -183,7 +185,7 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 			for _, chain := range trustedChains { // For each root chain that we matched
 				for _, cCert := range chain { // For each cert in the matched chain
 					if tCert.Equal(cCert) && // ParsedCert intersects with matched chain
-						b.matchPolicy(connState.PeerCertificates[0], chain, trust) { // validate client cert + matched chain against the config
+						b.matchesConstraints(connState.PeerCertificates[0], chain, trust) { // validate client cert + matched chain against the config
 						// Add the match to the list
 						matches = append(matches, trust)
 					}
@@ -201,10 +203,27 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	return matches[0], nil, nil
 }
 
-func (b *backend) matchPolicy(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
-	return !b.checkForChainInCRLs(trustedChain) &&
-		strings.HasPrefix(clientCert.Subject.CommonName, config.Entry.CNPrefix) &&
-		strings.HasSuffix(clientCert.Subject.CommonName, config.Entry.CNSuffix)
+func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
+	nameMatched := (config.Entry.RequiredName == "")
+	if config.Entry.RequiredName != "" {
+		if glob.Glob(config.Entry.RequiredName, clientCert.Subject.CommonName) {
+			nameMatched = true
+		}
+
+		for _, name := range clientCert.DNSNames {
+			if glob.Glob(config.Entry.RequiredName, name) {
+				nameMatched = true
+			}
+		}
+
+		for _, name := range clientCert.EmailAddresses {
+			if glob.Glob(config.Entry.RequiredName, name) {
+				nameMatched = true
+			}
+		}
+	}
+
+	return !b.checkForChainInCRLs(trustedChain) && nameMatched
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend

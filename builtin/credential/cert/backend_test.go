@@ -242,41 +242,6 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	// Add a failing constraint on the Common Name
-	certData["cn_prefix"] = "invalid"
-	certData["cn_suffix"] = ""
-
-	// And update the config
-	resp, err = b.HandleRequest(certReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	// Attempt login with the updated configuration
-	resp, err = b.HandleRequest(loginReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil || !resp.IsError() {
-		t.Fatalf("expected failure due to violating prefix/suffix constraints")
-	}
-
-	// Add a passing constraint on the Common Name
-	certData["cn_prefix"] = ""
-	certData["cn_suffix"] = "myvault.com"
-
-	// And update the config
-	resp, err = b.HandleRequest(certReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	// Attempt login with the updated configuration
-	resp, err = b.HandleRequest(loginReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
 	// Register a CRL containing the issued client certificate used above.
 	issuedCRL, err := ioutil.ReadFile(testIssuedCertCRL)
 	if err != nil {
@@ -383,9 +348,9 @@ func TestBackend_CertWrites(t *testing.T) {
 	tc := logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepCert(t, "aaa", ca1, "foo", false),
-			testAccStepCert(t, "bbb", ca2, "foo", false),
-			testAccStepCert(t, "ccc", ca3, "foo", true),
+			testAccStepCert(t, "aaa", ca1, "foo", "", false),
+			testAccStepCert(t, "bbb", ca2, "foo", "", false),
+			testAccStepCert(t, "ccc", ca3, "foo", "", true),
 		},
 	}
 	tc.Steps = append(tc.Steps, testAccStepListCerts(t, []string{"aaa", "bbb"})...)
@@ -403,13 +368,17 @@ func TestBackend_basic_CA(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepCert(t, "web", ca, "foo", false),
+			testAccStepCert(t, "web", ca, "foo", "", false),
 			testAccStepLogin(t, connState),
 			testAccStepCertLease(t, "web", ca, "foo"),
 			testAccStepCertTTL(t, "web", ca, "foo"),
 			testAccStepLogin(t, connState),
 			testAccStepCertNoLease(t, "web", ca, "foo"),
 			testAccStepLoginDefaultLease(t, connState),
+			testAccStepCert(t, "web", ca, "foo", "*.example.com", false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", "*.invalid.com", false),
+			testAccStepLoginInvalid(t, connState),
 		},
 	})
 }
@@ -440,10 +409,10 @@ func TestBackend_Basic_CRLs(t *testing.T) {
 	})
 }
 
-// Test a self-signed client that is trusted
+// Test a self-signed client (root CA) that is trusted
 func TestBackend_basic_singleCert(t *testing.T) {
-	connState := testConnState(t, "test-fixtures/keys/cert.pem",
-		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	connState := testConnState(t, "test-fixtures/root/rootcacert.pem",
+		"test-fixtures/root/rootcakey.pem", "test-fixtures/root/rootcacert.pem")
 	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -451,13 +420,17 @@ func TestBackend_basic_singleCert(t *testing.T) {
 	logicaltest.Test(t, logicaltest.TestCase{
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
-			testAccStepCert(t, "web", ca, "foo", false),
+			testAccStepCert(t, "web", ca, "foo", "", false),
 			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", "example.com", false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", "invalid", false),
+			testAccStepLoginInvalid(t, connState),
 		},
 	})
 }
 
-// Test an untrusted self-signed client
+// Test an untrusted client
 func TestBackend_untrusted(t *testing.T) {
 	connState := testConnState(t, "test-fixtures/keys/cert.pem",
 		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
@@ -607,16 +580,17 @@ func testAccStepListCerts(
 }
 
 func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, expectError bool) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string, requiredName string, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
 		Data: map[string]interface{}{
-			"certificate":  string(cert),
-			"policies":     policies,
-			"display_name": name,
-			"lease":        1000,
+			"certificate":   string(cert),
+			"policies":      policies,
+			"display_name":  name,
+			"required_name": requiredName,
+			"lease":         1000,
 		},
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
@@ -765,9 +739,16 @@ func Test_Renew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.pathLogin(req, nil)
+	empty_login_fd := &framework.FieldData{
+		Raw:    map[string]interface{}{},
+		Schema: pathLogin(b).Fields,
+	}
+	resp, err = b.pathLogin(req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatalf("got error: %#v", *resp)
 	}
 	req.Auth.InternalData = resp.Auth.InternalData
 	req.Auth.Metadata = resp.Auth.Metadata
@@ -776,7 +757,7 @@ func Test_Renew(t *testing.T) {
 	req.Auth.IssueTime = time.Now()
 
 	// Normal renewal
-	resp, err = b.pathLoginRenew(req, nil)
+	resp, err = b.pathLoginRenew(req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -794,7 +775,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.pathLoginRenew(req, nil)
+	resp, err = b.pathLoginRenew(req, empty_login_fd)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -806,7 +787,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.pathLoginRenew(req, nil)
+	resp, err = b.pathLoginRenew(req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -823,7 +804,7 @@ func Test_Renew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err = b.pathLoginRenew(req, nil)
+	resp, err = b.pathLoginRenew(req, empty_login_fd)
 	if err != nil {
 		t.Fatal(err)
 	}

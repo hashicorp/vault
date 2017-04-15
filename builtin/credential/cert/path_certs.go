@@ -39,14 +39,9 @@ func pathCerts(b *backend) *framework.Path {
 Must be x509 PEM encoded.`,
 			},
 
-			"cn_prefix": &framework.FieldSchema{
+			"required_name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: `A required prefix for the Common Name in the client certificate.`,
-			},
-
-			"cn_suffix": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `A required suffix for the Common Name in the client certificate.`,
+				Description: `A name that must exist in either the Common Name or SANs. Supports globbing.`,
 			},
 
 			"display_name": &framework.FieldSchema{
@@ -149,8 +144,7 @@ func (b *backend) pathCertWrite(
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)
 	policies := policyutil.ParsePolicies(d.Get("policies").(string))
-	cnPrefix := d.Get("cn_prefix").(string)
-	cnSuffix := d.Get("cn_suffix").(string)
+	requiredName := d.Get("required_name").(string)
 
 	// Default the display name to the certificate name if not given
 	if displayName == "" {
@@ -177,12 +171,11 @@ func (b *backend) pathCertWrite(
 	}
 
 	certEntry := &CertEntry{
-		Name:        name,
-		Certificate: certificate,
-		DisplayName: displayName,
-		Policies:    policies,
-		CNPrefix:    cnPrefix,
-		CNSuffix:    cnSuffix,
+		Name:         name,
+		Certificate:  certificate,
+		DisplayName:  displayName,
+		Policies:     policies,
+		RequiredName: requiredName,
 	}
 
 	// Parse the lease duration or default to backend/system default
@@ -210,13 +203,12 @@ func (b *backend) pathCertWrite(
 }
 
 type CertEntry struct {
-	Name        string
-	Certificate string
-	DisplayName string
-	Policies    []string
-	TTL         time.Duration
-	CNPrefix    string
-	CNSuffix    string
+	Name         string
+	Certificate  string
+	DisplayName  string
+	Policies     []string
+	TTL          time.Duration
+	RequiredName string
 }
 
 const pathCertHelpSyn = `
