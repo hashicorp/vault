@@ -207,7 +207,9 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 }
 
 func (b *backend) matchPolicy(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
-	return !b.checkForChainInCRLs(trustedChain)
+	return !b.checkForChainInCRLs(trustedChain) &&
+		strings.HasPrefix(clientCert.Subject.CommonName, config.Entry.CNPrefix) &&
+		strings.HasSuffix(clientCert.Subject.CommonName, config.Entry.CNSuffix)
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend

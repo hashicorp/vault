@@ -242,6 +242,41 @@ func TestBackend_CRLs(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	// Add a failing constraint on the Common Name
+	certData["cn_prefix"] = "invalid"
+	certData["cn_suffix"] = ""
+
+	// And update the config
+	resp, err = b.HandleRequest(certReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Attempt login with the updated configuration
+	resp, err = b.HandleRequest(loginReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected failure due to violating prefix/suffix constraints")
+	}
+
+	// Add a passing constraint on the Common Name
+	certData["cn_prefix"] = ""
+	certData["cn_suffix"] = "myvault.com"
+
+	// And update the config
+	resp, err = b.HandleRequest(certReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Attempt login with the updated configuration
+	resp, err = b.HandleRequest(loginReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
 	// Register a CRL containing the issued client certificate used above.
 	issuedCRL, err := ioutil.ReadFile(testIssuedCertCRL)
 	if err != nil {
