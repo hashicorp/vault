@@ -68,6 +68,21 @@ func (c *Sys) EnableAuthWithOptions(path string, options *EnableAuthOptions) err
 	return nil
 }
 
+func (c *Sys) TuneAuth(path string, input AuthConfigInput) error {
+	body := structs.Map(input)
+	r := c.c.NewRequest("POST", fmt.Sprintf("/v1/sys/auth/%s/tune", path))
+	if err := r.SetJSONBody(body); err != nil {
+		return err
+	}
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 func (c *Sys) DisableAuth(path string) error {
 	r := c.c.NewRequest("DELETE", fmt.Sprintf("/v1/sys/auth/%s", path))
 	resp, err := c.c.RawRequest(r)
@@ -92,6 +107,11 @@ type AuthMount struct {
 	Description string           `json:"description" structs:"description" mapstructure:"description"`
 	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
 	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
+}
+
+type AuthConfigInput struct {
+	DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
 }
 
 type AuthConfigOutput struct {
