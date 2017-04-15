@@ -27,7 +27,12 @@ type ParsedCert struct {
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
-		Fields:  map[string]*framework.FieldSchema{},
+		Fields: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The name of the certificate to authenticate against.",
+			},
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathLogin,
 		},
@@ -38,7 +43,7 @@ func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	var matched *ParsedCert
-	if verifyResp, resp, err := b.verifyCredentials(req); err != nil {
+	if verifyResp, resp, err := b.verifyCredentials(req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -95,7 +100,7 @@ func (b *backend) pathLoginRenew(
 
 	if !config.DisableBinding {
 		var matched *ParsedCert
-		if verifyResp, resp, err := b.verifyCredentials(req); err != nil {
+		if verifyResp, resp, err := b.verifyCredentials(req, d); err != nil {
 			return nil, err
 		} else if resp != nil {
 			return resp, nil
@@ -138,7 +143,7 @@ func (b *backend) pathLoginRenew(
 	return framework.LeaseExtend(cert.TTL, 0, b.System())(req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical.Response, error) {
+func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
 	// Get the connection state
 	if req.Connection == nil || req.Connection.ConnState == nil {
 		return nil, logical.ErrorResponse("tls connection required"), nil
@@ -149,8 +154,11 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 		return nil, logical.ErrorResponse("client certificate must be supplied"), nil
 	}
 
+	// Allow constraining the login request to a single CertEntry
+	certName := d.Get("name").(string)
+
 	// Load the trusted certificates
-	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage)
+	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
@@ -227,7 +235,7 @@ func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain 
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
+func (b *backend) loadTrustedCerts(store logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
@@ -237,6 +245,10 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 		return
 	}
 	for _, name := range names {
+		// If we are trying to select a single CertEntry and this isn't it
+		if certName != "" && name != certName {
+			continue
+		}
 		entry, err := b.Cert(store, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
 			b.Logger().Error("cert: failed to load trusted cert", "name", name, "error", err)

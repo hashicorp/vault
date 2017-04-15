@@ -430,6 +430,28 @@ func TestBackend_basic_singleCert(t *testing.T) {
 	})
 }
 
+// Test against a collection of matching and non-matching rules
+func TestBackend_mixed_constraints(t *testing.T) {
+	connState := testConnState(t, "test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "1unconstrained", ca, "foo", "", false),
+			testAccStepCert(t, "2matching", ca, "foo", "*.example.com", false),
+			testAccStepCert(t, "3invalid", ca, "foo", "invalid", false),
+			testAccStepLogin(t, connState),
+			// Assumes CertEntries are processed in alphabetical order (due to store.List), so we only match 2matching if 1unconstrained doesn't match
+			testAccStepLoginWithName(t, connState, "2matching"),
+			testAccStepLoginWithNameInvalid(t, connState, "3invalid"),
+		},
+	})
+}
+
 // Test an untrusted client
 func TestBackend_untrusted(t *testing.T) {
 	connState := testConnState(t, "test-fixtures/keys/cert.pem",
@@ -484,6 +506,10 @@ func testAccStepDeleteCRL(t *testing.T, connState tls.ConnectionState) logicalte
 }
 
 func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
+	return testAccStepLoginWithName(t, connState, "")
+}
+
+func testAccStepLoginWithName(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.UpdateOperation,
 		Path:            "login",
@@ -494,8 +520,15 @@ func testAccStepLogin(t *testing.T, connState tls.ConnectionState) logicaltest.T
 				t.Fatalf("bad lease length: %#v", resp.Auth)
 			}
 
+			if certName != "" && resp.Auth.DisplayName != ("mnt-"+certName) {
+				t.Fatalf("matched the wrong cert: %#v", resp.Auth.DisplayName)
+			}
+
 			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
 			return fn(resp)
+		},
+		Data: map[string]interface{}{
+			"name": certName,
 		},
 	}
 }
@@ -518,6 +551,10 @@ func testAccStepLoginDefaultLease(t *testing.T, connState tls.ConnectionState) l
 }
 
 func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logicaltest.TestStep {
+	return testAccStepLoginWithNameInvalid(t, connState, "")
+}
+
+func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState, certName string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation:       logical.UpdateOperation,
 		Path:            "login",
@@ -528,6 +565,9 @@ func testAccStepLoginInvalid(t *testing.T, connState tls.ConnectionState) logica
 				return fmt.Errorf("should not be authorized: %#v", resp)
 			}
 			return nil
+		},
+		Data: map[string]interface{}{
+			"name": certName,
 		},
 		ErrorOk: true,
 	}
