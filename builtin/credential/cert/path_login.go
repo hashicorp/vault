@@ -153,13 +153,19 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
-		policy := b.matchNonCAPolicy(connState.PeerCertificates[0], trustedNonCAs)
-		if policy != nil && !b.checkForChainInCRLs(policy.Certificates) {
-			return policy, nil, nil
+		clientCert := connState.PeerCertificates[0]
+		for _, trustedNonCA := range trustedNonCAs {
+			tCert := trustedNonCA.Certificates[0]
+			// Check for client cert being explicitly listed in the config (and matching other constraints)
+			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
+				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
+				b.matchPolicy(connState.PeerCertificates[0], trustedNonCA.Certificates, trustedNonCA) {
+				return trustedNonCA, nil, nil
+			}
 		}
 	}
 
-	// Validate the connection state is trusted
+	// Get the list of full chains matching the connection
 	trustedChains, err := validateConnState(roots, connState)
 	if err != nil {
 		return nil, nil, err
@@ -170,45 +176,38 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
-	validChain := b.checkForValidChain(trustedChains)
-	if !validChain {
-		return nil, logical.ErrorResponse(
-			"no chain containing non-revoked certificates could be found for this login certificate",
-		), nil
-	}
-
-	// Match the trusted chain with the policy
-	return b.matchPolicy(trustedChains, trusted), nil, nil
-}
-
-// matchNonCAPolicy is used to match the client cert with the registered non-CA
-// policies to establish client identity.
-func (b *backend) matchNonCAPolicy(clientCert *x509.Certificate, trustedNonCAs []*ParsedCert) *ParsedCert {
-	for _, trustedNonCA := range trustedNonCAs {
-		tCert := trustedNonCA.Certificates[0]
-		if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 && bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
-			return trustedNonCA
-		}
-	}
-	return nil
-}
-
-// matchPolicy is used to match the associated policy with the certificate that
-// was used to establish the client identity.
-func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*ParsedCert) *ParsedCert {
-	// There is probably a better way to do this...
-	for _, chain := range chains {
-		for _, trust := range trusted {
-			for _, tCert := range trust.Certificates {
-				for _, cCert := range chain {
-					if tCert.Equal(cCert) {
-						return trust
+	// Search for a ParsedCert that intersects with the validated chains and any additional constraints
+	matches := make([]*ParsedCert, 0)
+	for _, trust := range trusted { // For each ParsedCert in the config
+		for _, tCert := range trust.Certificates { // For each certificate in the entry
+			for _, chain := range trustedChains { // For each root chain that we matched
+				for _, cCert := range chain { // For each cert in the matched chain
+					if tCert.Equal(cCert) && // ParsedCert intersects with matched chain
+						b.matchPolicy(connState.PeerCertificates[0], chain, trust) { // validate client cert + matched chain against the config
+						// Add the match to the list
+						matches = append(matches, trust)
 					}
 				}
 			}
 		}
 	}
-	return nil
+
+	// Fail on no matches
+	if len(matches) == 0 {
+		return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
+	}
+
+	// Fail on non-determinism
+	if len(trustedChains) > 1 {
+		return nil, logical.ErrorResponse("login certificate matched multiple configured roles; unsure which to apply"), nil
+	}
+
+	// Return the sole matching entry
+	return matches[0], nil, nil
+}
+
+func (b *backend) matchPolicy(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
+	return !b.checkForChainInCRLs(trustedChain)
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
