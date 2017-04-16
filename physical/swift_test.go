@@ -21,9 +21,9 @@ func TestSwiftBackend(t *testing.T) {
 	username := os.Getenv("OS_USERNAME")
 	password := os.Getenv("OS_PASSWORD")
 	authUrl := os.Getenv("OS_AUTH_URL")
-	tenant := os.Getenv("OS_TENANT_NAME")
+	project := os.Getenv("OS_PROJECT_NAME")
 	domain := os.Getenv("OS_USER_DOMAIN_NAME")
-	tenantDomain := os.Getenv("OS_PROJECT_DOMAIN_NAME")
+	projectDomain := os.Getenv("OS_PROJECT_DOMAIN_NAME")
 
 	ts := time.Now().UnixNano()
 	container := fmt.Sprintf("vault-test-%d", ts)
@@ -33,8 +33,8 @@ func TestSwiftBackend(t *testing.T) {
 		UserName:     username,
 		ApiKey:       password,
 		AuthUrl:      authUrl,
-		Tenant:       tenant,
-		TenantDomain: tenantDomain,
+		Tenant:       project,
+		TenantDomain: projectDomain,
 		Transport:    cleanhttp.DefaultPooledTransport(),
 	}
 
@@ -67,13 +67,13 @@ func TestSwiftBackend(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	b, err := NewBackend("swift", logger, map[string]string{
-		"username":      username,
-		"password":      password,
-		"container":     container,
-		"auth_url":      authUrl,
-		"tenant":        tenant,
-		"domain":        domain,
-		"tenant-domain": tenantDomain,
+		"username":       username,
+		"password":       password,
+		"container":      container,
+		"auth_url":       authUrl,
+		"project":        project,
+		"domain":         domain,
+		"project-domain": projectDomain,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
