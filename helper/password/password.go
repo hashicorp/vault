@@ -26,7 +26,19 @@ func Read(f *os.File) (string, error) {
 	doneCh := make(chan struct{})
 	go func() {
 		defer close(doneCh)
-		result, resultErr = read(f)
+		stat, err := f.Stat()
+		if err != nil {
+			resultErr = err
+			return
+		}
+
+		bs := make([]byte, stat.Size())
+		_, resultErr = f.Read(bs)
+		if resultErr != nil {
+			return
+		}
+
+		result = string(bs)
 	}()
 
 	// Wait on either the read to finish or the signal to come through
