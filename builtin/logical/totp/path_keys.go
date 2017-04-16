@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image/png"
+	"net/url"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -90,6 +93,11 @@ func pathKeys(b *backend) *framework.Path {
 				Type:        framework.TypeInt,
 				Default:     200,
 				Description: `The pixel size of the generated square QR code.`,
+			},
+
+			"url": {
+				Type:        framework.TypeString,
+				Description: `A TOTP url string containing all of the parameters for key setup.`,
 			},
 		},
 
@@ -179,6 +187,63 @@ func (b *backend) pathKeyCreate(
 	skew := data.Get("skew").(int)
 	qrSize := data.Get("qr_size").(int)
 	keySize := data.Get("key_size").(int)
+	inputURL := data.Get("url").(string)
+
+	// Read parameters from url if given
+	if inputURL != "" {
+		//Parse url
+		urlObject, err := url.Parse(inputURL)
+
+		if err != nil {
+			return logical.ErrorResponse("an error occured while parsing url string"), nil
+		}
+
+		//Set up query object
+		urlQuery := urlObject.Query()
+		path := strings.TrimPrefix(urlObject.Path, "/")
+		index := strings.Index(path, ":")
+
+		//Read issuer
+		urlIssuer := urlQuery.Get("issuer")
+		if urlIssuer != "" {
+			issuer = urlIssuer
+		} else {
+			if index != -1 {
+				issuer = path[:index]
+			}
+		}
+
+		//Read account name
+		if index == -1 {
+			accountName = path
+		} else {
+			accountName = path[index+1:]
+		}
+
+		//Read key string
+		keyString = urlQuery.Get("secret")
+
+		//Read period
+		periodQuery, err := strconv.Atoi(urlQuery.Get("period"))
+
+		if err == nil {
+			period = periodQuery
+		}
+
+		//Read digits
+		digitsQuery, err := strconv.Atoi(urlQuery.Get("digits"))
+
+		if err == nil {
+			digits = digitsQuery
+		}
+
+		//Read algorithm
+		algorithmQuery := urlQuery.Get("algorithm")
+
+		if algorithmQuery != "" {
+			algorithm = algorithmQuery
+		}
+	}
 
 	// Translate digits and algorithm to a format the totp library understands
 	var keyDigits otplib.Digits
@@ -228,7 +293,7 @@ func (b *backend) pathKeyCreate(
 	uintSkew := uint(skew)
 	uintKeySize := uint(keySize)
 
-	url := ""
+	urlString := ""
 
 	var response logical.Response
 
@@ -261,7 +326,7 @@ func (b *backend) pathKeyCreate(
 		keyString = keyObject.Secret()
 
 		// Prepare the url and barcode
-		url = keyObject.String()
+		urlString = keyObject.String()
 		barcode, err := keyObject.Image(qrSize, qrSize)
 
 		if err != nil {
@@ -273,7 +338,7 @@ func (b *backend) pathKeyCreate(
 		b64Barcode := base64.StdEncoding.EncodeToString(buff.Bytes())
 		response = logical.Response{
 			Data: map[string]interface{}{
-				"url":     url,
+				"url":     urlString,
 				"barcode": b64Barcode,
 			},
 		}
@@ -300,7 +365,7 @@ func (b *backend) pathKeyCreate(
 		Digits:      keyDigits,
 		Skew:        uintSkew,
 		QRSize:      qrSize,
-		URL:         url,
+		URL:         urlString,
 		Generate:    generate,
 	})
 	if err != nil {
