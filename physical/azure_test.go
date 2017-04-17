@@ -35,7 +35,8 @@ func TestAzureBackend(t *testing.T) {
 	})
 
 	defer func() {
-		cleanupClient.GetBlobService().DeleteContainerIfExists(container)
+		contObj := cleanupClient.GetBlobService().GetContainerReference(container)
+		contObj.DeleteIfExists()
 	}()
 
 	if err != nil {
