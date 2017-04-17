@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
 
-	"github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/azure-storage-go"
 )
 
 func TestAzureBackend(t *testing.T) {
