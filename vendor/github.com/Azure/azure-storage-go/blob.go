@@ -157,7 +157,7 @@ const (
 
 // Maximum sizes (per REST API) for various concepts
 const (
-	MaxBlobBlockSize = 4 * 1024 * 1024
+	MaxBlobBlockSize = 100 * 1024 * 1024
 	MaxBlobPageSize  = 4 * 1024 * 1024
 )
 
@@ -645,7 +645,7 @@ func (b BlobStorageClient) CreateBlockBlob(container, name string) error {
 // reader. Size must be the number of bytes read from reader. To
 // create an empty blob, use size==0 and reader==nil.
 //
-// The API rejects requests with size > 64 MiB (but this limit is not
+// The API rejects requests with size > 256 MiB (but this limit is not
 // checked by the SDK). To write a larger blob, use CreateBlockBlob,
 // PutBlock, and PutBlockList.
 //
@@ -673,7 +673,7 @@ func (b BlobStorageClient) CreateBlockBlobFromReader(container, name string, siz
 // PutBlock saves the given data chunk to the specified block blob with
 // given ID.
 //
-// The API rejects chunks larger than 4 MiB (but this limit is not
+// The API rejects chunks larger than 100 MB (but this limit is not
 // checked by the SDK).
 //
 // See https://msdn.microsoft.com/en-us/library/azure/dd135726.aspx
@@ -685,7 +685,7 @@ func (b BlobStorageClient) PutBlock(container, name, blockID string, chunk []byt
 // the block blob with given ID. It is an alternative to PutBlocks where data
 // comes as stream but the length is known in advance.
 //
-// The API rejects requests with size > 4 MiB (but this limit is not
+// The API rejects requests with size > 100 MB (but this limit is not
 // checked by the SDK).
 //
 // See https://msdn.microsoft.com/en-us/library/azure/dd135726.aspx
