@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -191,7 +192,7 @@ func (d *FieldData) getPrimitive(
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
 		}
-		return result, true, nil
+		return strutil.TrimStrings(result), true, nil
 
 	case TypeCommaStringSlice:
 		var result []string
@@ -207,7 +208,7 @@ func (d *FieldData) getPrimitive(
 		if err := decoder.Decode(raw); err != nil {
 			return nil, false, err
 		}
-		return result, true, nil
+		return strutil.TrimStrings(result), true, nil
 
 	default:
 		panic(fmt.Sprintf("Unknown type: %s", schema.Type))

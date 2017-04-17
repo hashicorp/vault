@@ -174,6 +174,16 @@ func ParseArbitraryStringSlice(input string, sep string) []string {
 	return ret
 }
 
+// TrimStrings takes a slice of strings and returns a slice of strings
+// with trimmed spaces
+func TrimStrings(items []string) []string {
+	var ret []string
+	for _, item := range items {
+		ret = append(ret, strings.TrimSpace(item))
+	}
+	return ret
+}
+
 // Removes duplicate and empty elements from a slice of strings.
 // This also converts the items in the slice to lower case and
 // returns a sorted slice.
