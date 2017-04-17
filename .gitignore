@@ -39,10 +39,17 @@ website/build
 
 # Vagrant
 .vagrant/
-Vagrantfile
+#Vagrantfile  # removed from ignore list
 
 # Configs
 *.hcl
+
+# ignore my local notes files.
+local.*
+
+# keep demo hcl
+!demo/from-source-dev/audit.hcl
+!demo/from-source-dev/policy_lookup-self.hcl
 
 .DS_Store
 .idea
