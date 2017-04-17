@@ -108,6 +108,7 @@ func (c *Copier) callRewrite(ctx context.Context, src *ObjectHandle, rawObj *raw
 	}
 	var res *raw.RewriteResponse
 	var err error
+	setClientHeader(call.Header())
 	err = runWithRetry(ctx, func() error { res, err = call.Do(); return err })
 	if err != nil {
 		return nil, err
@@ -179,6 +180,7 @@ func (c *Composer) Run(ctx context.Context) (*ObjectAttrs, error) {
 	}
 	var obj *raw.Object
 	var err error
+	setClientHeader(call.Header())
 	err = runWithRetry(ctx, func() error { obj, err = call.Do(); return err })
 	if err != nil {
 		return nil, err

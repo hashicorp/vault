@@ -309,6 +309,7 @@ func DialContext(ctx context.Context, target string, opts ...DialOption) (conn *
 	for _, opt := range opts {
 		opt(&cc.dopts)
 	}
+	cc.mkp = cc.dopts.copts.KeepaliveParams
 
 	grpcUA := "grpc-go/" + Version
 	if cc.dopts.copts.UserAgent != "" {
@@ -458,6 +459,8 @@ type ClientConn struct {
 	mu    sync.RWMutex
 	sc    ServiceConfig
 	conns map[Address]*addrConn
+	// Keepalive parameter can be udated if a GoAway is received.
+	mkp keepalive.ClientParameters
 }
 
 // lbWatcher watches the Notify channel of the balancer in cc and manages
@@ -533,6 +536,9 @@ func (cc *ClientConn) resetAddrConn(addr Address, block bool, tearDownErr error)
 		addr:  addr,
 		dopts: cc.dopts,
 	}
+	cc.mu.RLock()
+	ac.dopts.copts.KeepaliveParams = cc.mkp
+	cc.mu.RUnlock()
 	ac.ctx, ac.cancel = context.WithCancel(cc.ctx)
 	ac.stateCV = sync.NewCond(&ac.mu)
 	if EnableTracing {
@@ -714,6 +720,20 @@ type addrConn struct {
 	tearDownErr error
 }
 
+// adjustParams updates parameters used to create transports upon
+// receiving a GoAway.
+func (ac *addrConn) adjustParams(r transport.GoAwayReason) {
+	switch r {
+	case transport.TooManyPings:
+		v := 2 * ac.dopts.copts.KeepaliveParams.Time
+		ac.cc.mu.Lock()
+		if v > ac.cc.mkp.Time {
+			ac.cc.mkp.Time = v
+		}
+		ac.cc.mu.Unlock()
+	}
+}
+
 // printf records an event in ac's event log, unless ac has been closed.
 // REQUIRES ac.mu is held.
 func (ac *addrConn) printf(format string, a ...interface{}) {
@@ -870,6 +890,7 @@ func (ac *addrConn) transportMonitor() {
 			}
 			return
 		case <-t.GoAway():
+			ac.adjustParams(t.GetGoAwayReason())
 			// If GoAway happens without any network I/O error, ac is closed without shutting down the
 			// underlying transport (the transport will be closed when all the pending RPCs finished or
 			// failed.).
@@ -889,6 +910,7 @@ func (ac *addrConn) transportMonitor() {
 				t.Close()
 				return
 			case <-t.GoAway():
+				ac.adjustParams(t.GetGoAwayReason())
 				ac.cc.resetAddrConn(ac.addr, false, errNetworkIO)
 				return
 			default:

@@ -1423,9 +1423,10 @@ func marshalUUID(info TypeInfo, value interface{}) ([]byte, error) {
 	case UUID:
 		return val.Bytes(), nil
 	case []byte:
-		if len(val) == 16 {
-			return val, nil
+		if len(val) != 16 {
+			return nil, marshalErrorf("can not marshal []byte %d bytes long into %s, must be exactly 16 bytes long", len(val), info)
 		}
+		return val, nil
 	case string:
 		b, err := ParseUUID(val)
 		if err != nil {

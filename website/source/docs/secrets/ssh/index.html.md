@@ -22,9 +22,6 @@ complexity and in terms of being platform agnostic.
 This page will show a quick start for this backend. For detailed documentation
 on every path, use `vault path-help` after mounting the backend.
 
-__N.B.__: The Dynamic Key type (which is not recommended for most cases) makes
-connections to client hosts; when this happens the host key is *not* verified.
-
 ----------------------------------------------------
 ## I. CA Key Type
 
@@ -311,7 +308,13 @@ Note: `sshpass` cannot handle host key checking. Host key checking can be
 disabled by setting `-strict-host-key-checking=no`.
 
 ----------------------------------------------------
-## III. Dynamic Key Type
+## III. Dynamic Key Type (Deprecated)
+
+**Note**: There are several serious drawbacks (detailed below), including some
+with security implications, inherent in this method. Because of these
+drawbacks, the Vault team recommends use of the CA or OTP types whenever
+possible. Care should be taken with respect to the above issues with any
+deployments using the dynamic key type.
 
 When using this type, the administrator registers a secret key with appropriate
 `sudo` privileges on the remote machines; for every authorized credential
@@ -346,10 +349,8 @@ The dynamic key type has several serious drawbacks:
    operations to stall until more entropy is available, which could take a
    significant amount of time, after which the next request for a new SSH key
    will use the generated entropy and cause stalling again.
-
-Because of these drawbacks, the Vault team recommends use of the OTP type
-whenever possible. Care should be taken with respect to the above issues with
-any deployments using the dynamic key type.
+3. This type makes connections to client hosts; when this happens the host key
+   is *not* verified.
 
 ### sudo
 

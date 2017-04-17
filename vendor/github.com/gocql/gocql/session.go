@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -76,16 +77,23 @@ var queryPool = &sync.Pool{
 }
 
 func addrsToHosts(addrs []string, defaultPort int) ([]*HostInfo, error) {
-	hosts := make([]*HostInfo, len(addrs))
-	for i, hostport := range addrs {
+	var hosts []*HostInfo
+	for _, hostport := range addrs {
 		host, err := hostInfo(hostport, defaultPort)
 		if err != nil {
+			// Try other hosts if unable to resolve DNS name
+			if _, ok := err.(*net.DNSError); ok {
+				Logger.Printf("gocql: dns error: %v\n", err)
+				continue
+			}
 			return nil, err
 		}
 
-		hosts[i] = host
+		hosts = append(hosts, host)
 	}
-
+	if len(hosts) == 0 {
+		return nil, errors.New("failed to resolve any of the provided hostnames")
+	}
 	return hosts, nil
 }
 

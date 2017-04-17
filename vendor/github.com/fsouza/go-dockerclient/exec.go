@@ -174,7 +174,9 @@ type ExecInspect struct {
 	OpenStderr    bool              `json:"OpenStderr,omitempty" yaml:"OpenStderr,omitempty" toml:"OpenStderr,omitempty"`
 	OpenStdout    bool              `json:"OpenStdout,omitempty" yaml:"OpenStdout,omitempty" toml:"OpenStdout,omitempty"`
 	ProcessConfig ExecProcessConfig `json:"ProcessConfig,omitempty" yaml:"ProcessConfig,omitempty" toml:"ProcessConfig,omitempty"`
-	Container     Container         `json:"Container,omitempty" yaml:"Container,omitempty" toml:"Container,omitempty"`
+	ContainerID   string            `json:"ContainerID,omitempty" yaml:"ContainerID,omitempty" toml:"ContainerID,omitempty"`
+	DetachKeys    string            `json:"DetachKeys,omitempty" yaml:"DetachKeys,omitempty" toml:"DetachKeys,omitempty"`
+	CanRemove     bool              `json:"CanRemove,omitempty" yaml:"CanRemove,omitempty" toml:"CanRemove,omitempty"`
 }
 
 // InspectExec returns low-level information about the exec command id.

@@ -184,7 +184,7 @@ type End struct {
 	Client bool
 	// EndTime is the time when the RPC ends.
 	EndTime time.Time
-	// Error is the error just happened. Its type is gRPC error.
+	// Error is the error just happened.  It implements status.Status if non-nil.
 	Error error
 }
 
