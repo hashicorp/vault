@@ -613,12 +613,13 @@ $ curl \
 
 ## Create/Update Role
 
-This endpoint ceates or updates the role definition. Note that the
-`allowed_domains`, `allow_subdomains`, and `allow_any_name` attributes are
-additive; between them nearly and across multiple roles nearly any issuing
-policy can be accommodated. `server_flag`, `client_flag`, and
-`code_signing_flag` are additive as well. If a client requests a certificate
-that is not allowed by the CN policy in the role, the request is denied.
+This endpoint creates or updates the role definition. Note that the
+`allowed_domains`, `allow_subdomains`, `allow_glob_domains`, and
+`allow_any_name` attributes are additive; between them nearly and across
+multiple roles nearly any issuing policy can be accommodated. `server_flag`,
+`client_flag`, and `code_signing_flag` are additive as well. If a client
+requests a certificate that is not allowed by the CN policy in the role, the
+request is denied.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -658,6 +659,13 @@ that is not allowed by the CN policy in the role, the request is denied.
   `allowed_domains` value of `example.com` with this option set to true will
   allow `foo.example.com` and `bar.example.com` as well as `*.example.com`. This
   is redundant when using the `allow_any_name` option.
+
+- `allow_glob_domains` `(bool: false)` - Allows names specified in
+  `allowed_domains` to contain glob patterns (e.g. `ftp*.example.com`). Clients
+  will be allowed to request certificates with names matching the glob
+  patterns. _Please note_ that setting this option requires
+  `allow_bare_domains` to be set as well, since a glob match against a
+  non-glob pattern would result in an implicit bare domain match.
 
 - `allow_any_name` `(bool: false)` – Specifies if clients can request any CN.
   Useful in some circumstances, but make sure you understand whether it is

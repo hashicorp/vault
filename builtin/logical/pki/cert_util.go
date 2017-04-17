@@ -349,18 +349,26 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if role.AllowBareDomains &&
-					(glob.Glob(currDomain, name) ||
+					(name == currDomain ||
 						(isEmail && emailDomain == currDomain)) {
 					valid = true
 					break
 				}
 
 				if role.AllowSubdomains {
-					if glob.Glob("*."+currDomain, sanitizedName) ||
-						(isWildcard && glob.Glob(currDomain, sanitizedName)) {
+					if strings.HasSuffix(sanitizedName, "."+currDomain) ||
+						(isWildcard && sanitizedName == currDomain) {
 						valid = true
 						break
 					}
+				}
+
+				// Domain globbing support additionally requires bare domains to be enabled
+				if role.AllowGlobDomains &&
+					role.AllowBareDomains &&
+					glob.Glob(currDomain, name) {
+					valid = true
+					break
 				}
 			}
 			if valid {

@@ -84,6 +84,15 @@ including wildcard subdomains. See the documentation for
 more information.`,
 			},
 
+			"allow_glob_domains": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `If set, domains specified in "allowed_domains"
+can include glob patterns, e.g. "ftp*.example.com". This
+option requires "allow_bare_domains" to be set as well.
+See the documentation for more information.`,
+			},
+
 			"allow_any_name": &framework.FieldSchema{
 				Type:    framework.TypeBool,
 				Default: false,
@@ -369,6 +378,7 @@ func (b *backend) pathRoleCreate(
 		AllowedDomains:      data.Get("allowed_domains").(string),
 		AllowBareDomains:    data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:     data.Get("allow_subdomains").(bool),
+		AllowGlobDomains:    data.Get("allow_glob_domains").(bool),
 		AllowAnyName:        data.Get("allow_any_name").(bool),
 		EnforceHostnames:    data.Get("enforce_hostnames").(bool),
 		AllowIPSANs:         data.Get("allow_ip_sans").(bool),
@@ -488,6 +498,7 @@ type roleEntry struct {
 	AllowBareDomains      bool   `json:"allow_bare_domains" structs:"allow_bare_domains" mapstructure:"allow_bare_domains"`
 	AllowTokenDisplayName bool   `json:"allow_token_displayname" structs:"allow_token_displayname" mapstructure:"allow_token_displayname"`
 	AllowSubdomains       bool   `json:"allow_subdomains" structs:"allow_subdomains" mapstructure:"allow_subdomains"`
+	AllowGlobDomains      bool   `json:"allow_glob_domains" structs:"allow_glob_domains" mapstructure:"allow_glob_domains"`
 	AllowAnyName          bool   `json:"allow_any_name" structs:"allow_any_name" mapstructure:"allow_any_name"`
 	EnforceHostnames      bool   `json:"enforce_hostnames" structs:"enforce_hostnames" mapstructure:"enforce_hostnames"`
 	AllowIPSANs           bool   `json:"allow_ip_sans" structs:"allow_ip_sans" mapstructure:"allow_ip_sans"`
