@@ -41,7 +41,7 @@ type tdsBuffer struct {
 	afterFirst func()
 }
 
-func newTdsBuffer(bufsize int, transport io.ReadWriteCloser) *tdsBuffer {
+func newTdsBuffer(bufsize uint16, transport io.ReadWriteCloser) *tdsBuffer {
 	w := new(tdsBuffer)
 	w.wbuf = make([]byte, bufsize)
 	w.rbuf = make([]byte, bufsize)

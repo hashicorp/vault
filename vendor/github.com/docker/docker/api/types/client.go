@@ -97,6 +97,7 @@ type ContainerStartOptions struct {
 // about files to copy into a container
 type CopyToContainerOptions struct {
 	AllowOverwriteDirWithFile bool
+	CopyUIDGID                bool
 }
 
 // EventsOptions holds parameters to filter events with.
@@ -176,6 +177,7 @@ type ImageBuildOptions struct {
 	CacheFrom   []string
 	SecurityOpt []string
 	ExtraHosts  []string // List of extra hosts
+	Target      string
 }
 
 // ImageBuildResponse holds information
@@ -257,18 +259,6 @@ type ResizeOptions struct {
 	Width  uint
 }
 
-// VersionResponse holds version information for the client and the server
-type VersionResponse struct {
-	Client *Version
-	Server *Version
-}
-
-// ServerOK returns true when the client could connect to the docker server
-// and parse the information received. It returns false otherwise.
-func (v VersionResponse) ServerOK() bool {
-	return v.Server != nil
-}
-
 // NodeListOptions holds parameters to list nodes with.
 type NodeListOptions struct {
 	Filters filters.Args
@@ -327,12 +317,18 @@ type ServiceUpdateOptions struct {
 	Rollback string
 }
 
-// ServiceListOptions holds parameters to list  services with.
+// ServiceListOptions holds parameters to list services with.
 type ServiceListOptions struct {
 	Filters filters.Args
 }
 
-// TaskListOptions holds parameters to list  tasks with.
+// ServiceInspectOptions holds parameters related to the "service inspect"
+// operation.
+type ServiceInspectOptions struct {
+	InsertDefaults bool
+}
+
+// TaskListOptions holds parameters to list tasks with.
 type TaskListOptions struct {
 	Filters filters.Args
 }
