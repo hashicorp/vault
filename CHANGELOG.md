@@ -7,6 +7,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * cli/revoke: Add `-self` option to allow revoking the currently active token
+   [GH-2596]
  * secret/pki: Add `no_store` option that allows certificates to be issued
    without being stored. This removes the ability to look up and/or add to a
    CRL but helps with scaling to very large numbers of certificates. [GH-2565]
