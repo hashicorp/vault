@@ -237,6 +237,8 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
 		consistencyMode:     consistencyMode,
+		notifyActiveCh:      make(chan notifyEvent),
+		notifySealedCh:      make(chan notifyEvent),
 	}
 	return c, nil
 }

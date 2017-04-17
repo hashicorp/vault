@@ -53,8 +53,8 @@ import (
 )
 
 type Person struct {
-	Name string `json:"name"`  // Affects YAML field names too.
-	Age int `json:"age"`
+	Name string `json:"name"` // Affects YAML field names too.
+	Age  int    `json:"age"`
 }
 
 func main() {
@@ -95,6 +95,7 @@ import (
 
 	"github.com/ghodss/yaml"
 )
+
 func main() {
 	j := []byte(`{"name": "John", "age": 30}`)
 	y, err := yaml.JSONToYAML(j)

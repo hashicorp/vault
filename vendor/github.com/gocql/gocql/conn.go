@@ -29,6 +29,7 @@ var (
 	approvedAuthenticators = [...]string{
 		"org.apache.cassandra.auth.PasswordAuthenticator",
 		"com.instaclustr.cassandra.auth.SharedSecretAuthenticator",
+		"com.datastax.bdp.cassandra.auth.DseAuthenticator",
 	}
 )
 
@@ -78,7 +79,7 @@ func (p PasswordAuthenticator) Success(data []byte) error {
 }
 
 type SslOptions struct {
-	tls.Config
+	*tls.Config
 
 	// CertPath and KeyPath are optional depending on server
 	// config, but both fields must be omitted to avoid using a
@@ -590,11 +591,11 @@ func (c *Conn) exec(ctx context.Context, req frameWriter, tracer Tracer) (*frame
 		call = streamPool.Get().(*callReq)
 	}
 	c.calls[stream] = call
-	c.mu.Unlock()
 
 	call.framer = framer
 	call.timeout = make(chan struct{})
 	call.streamID = stream
+	c.mu.Unlock()
 
 	if tracer != nil {
 		framer.trace()
@@ -724,14 +725,14 @@ func (c *Conn) prepareStatement(ctx context.Context, stmt string, tracer Tracer)
 
 	// TODO(zariel): tidy this up, simplify handling of frame parsing so its not duplicated
 	// everytime we need to parse a frame.
-	if len(framer.traceID) > 0 {
+	if len(framer.traceID) > 0 && tracer != nil {
 		tracer.Trace(framer.traceID)
 	}
 
 	switch x := frame.(type) {
 	case *resultPreparedFrame:
 		flight.preparedStatment = &preparedStatment{
-			// defensivly copy as we will recycle the underlying buffer after we
+			// defensively copy as we will recycle the underlying buffer after we
 			// return.
 			id: copyBytes(x.preparedID),
 			// the type info's should _not_ have a reference to the framers read buffer,
@@ -961,11 +962,12 @@ func (c *Conn) executeBatch(batch *Batch) *Iter {
 
 	n := len(batch.Entries)
 	req := &writeBatchFrame{
-		typ:               batch.Type,
-		statements:        make([]batchStatment, n),
-		consistency:       batch.Cons,
-		serialConsistency: batch.serialCons,
-		defaultTimestamp:  batch.defaultTimestamp,
+		typ:                   batch.Type,
+		statements:            make([]batchStatment, n),
+		consistency:           batch.Cons,
+		serialConsistency:     batch.serialCons,
+		defaultTimestamp:      batch.defaultTimestamp,
+		defaultTimestampValue: batch.defaultTimestampValue,
 	}
 
 	stmts := make(map[string]string, len(batch.Entries))

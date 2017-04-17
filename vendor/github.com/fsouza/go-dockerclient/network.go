@@ -268,6 +268,38 @@ func (c *Client) DisconnectNetwork(id string, opts NetworkConnectionOptions) err
 	return nil
 }
 
+// PruneNetworksOptions specify parameters to the PruneNetworks function.
+//
+// See https://goo.gl/kX0S9h for more details.
+type PruneNetworksOptions struct {
+	Filters map[string][]string
+	Context context.Context
+}
+
+// PruneNetworksResults specify results from the PruneNetworks function.
+//
+// See https://goo.gl/kX0S9h for more details.
+type PruneNetworksResults struct {
+	NetworksDeleted []string
+}
+
+// PruneNetworks deletes networks which are unused.
+//
+// See https://goo.gl/kX0S9h for more details.
+func (c *Client) PruneNetworks(opts PruneNetworksOptions) (*PruneNetworksResults, error) {
+	path := "/networks/prune?" + queryString(opts)
+	resp, err := c.do("POST", path, doOptions{context: opts.Context})
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var results PruneNetworksResults
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return nil, err
+	}
+	return &results, nil
+}
+
 // NoSuchNetwork is the error returned when a given network does not exist.
 type NoSuchNetwork struct {
 	ID string

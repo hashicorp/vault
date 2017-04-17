@@ -26,18 +26,18 @@ import (
 	"math/big"
 	"net"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/coreos/etcd/pkg/tlsutil"
 )
 
-func NewListener(addr, scheme string, tlscfg *tls.Config) (l net.Listener, err error) {
+func NewListener(addr, scheme string, tlsinfo *TLSInfo) (l net.Listener, err error) {
 	if l, err = newListener(addr, scheme); err != nil {
 		return nil, err
 	}
-	return wrapTLS(addr, scheme, tlscfg, l)
+	return wrapTLS(addr, scheme, tlsinfo, l)
 }
 
 func newListener(addr string, scheme string) (net.Listener, error) {
@@ -48,15 +48,11 @@ func newListener(addr string, scheme string) (net.Listener, error) {
 	return net.Listen("tcp", addr)
 }
 
-func wrapTLS(addr, scheme string, tlscfg *tls.Config, l net.Listener) (net.Listener, error) {
+func wrapTLS(addr, scheme string, tlsinfo *TLSInfo, l net.Listener) (net.Listener, error) {
 	if scheme != "https" && scheme != "unixs" {
 		return l, nil
 	}
-	if tlscfg == nil {
-		l.Close()
-		return nil, fmt.Errorf("cannot listen on TLS for %s: KeyFile and CertFile are not presented", scheme+"://"+addr)
-	}
-	return tls.NewListener(l, tlscfg), nil
+	return newTLSListener(l, tlsinfo)
 }
 
 type TLSInfo struct {
@@ -68,6 +64,10 @@ type TLSInfo struct {
 
 	// ServerName ensures the cert matches the given host in case of discovery / virtual hosting
 	ServerName string
+
+	// HandshakeFailure is optinally called when a connection fails to handshake. The
+	// connection will be closed immediately afterwards.
+	HandshakeFailure func(*tls.Conn, error)
 
 	selfCert bool
 
@@ -89,8 +89,8 @@ func SelfCert(dirpath string, hosts []string) (info TLSInfo, err error) {
 		return
 	}
 
-	certPath := path.Join(dirpath, "cert.pem")
-	keyPath := path.Join(dirpath, "key.pem")
+	certPath := filepath.Join(dirpath, "cert.pem")
+	keyPath := filepath.Join(dirpath, "key.pem")
 	_, errcert := os.Stat(certPath)
 	_, errkey := os.Stat(keyPath)
 	if errcert == nil && errkey == nil {
@@ -118,10 +118,11 @@ func SelfCert(dirpath string, hosts []string) (info TLSInfo, err error) {
 	}
 
 	for _, host := range hosts {
-		if ip := net.ParseIP(host); ip != nil {
+		h, _, _ := net.SplitHostPort(host)
+		if ip := net.ParseIP(h); ip != nil {
 			tmpl.IPAddresses = append(tmpl.IPAddresses, ip)
 		} else {
-			tmpl.DNSNames = append(tmpl.DNSNames, strings.Split(host, ":")[0])
+			tmpl.DNSNames = append(tmpl.DNSNames, h)
 		}
 	}
 
@@ -268,4 +269,13 @@ func ShallowCopyTLSConfig(cfg *tls.Config) *tls.Config {
 		CurvePreferences:         cfg.CurvePreferences,
 	}
 	return &ncfg
+}
+
+// IsClosedConnError returns true if the error is from closing listener, cmux.
+// copied from golang.org/x/net/http2/http2.go
+func IsClosedConnError(err error) bool {
+	// 'use of closed network connection' (Go <=1.8)
+	// 'use of closed file or network connection' (Go >1.8, internal/poll.ErrClosing)
+	// 'mux: listener closed' (cmux.ErrListenerClosed)
+	return err != nil && strings.Contains(err.Error(), "closed")
 }

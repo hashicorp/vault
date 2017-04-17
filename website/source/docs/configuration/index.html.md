@@ -32,9 +32,6 @@ telemetry {
 After the configuration is written, use the `-config` flag with `vault server`
 to specify where the configuration is.
 
-Starting with 0.5.2, limited configuration options can be changed on-the-fly by
-sending a SIGHUP to the server process. These are denoted below.
-
 ## Parameters
 
 - `storage` <tt>([StorageBackend][storage-backend]: \<required\>)</tt> –

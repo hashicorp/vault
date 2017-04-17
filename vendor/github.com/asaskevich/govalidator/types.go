@@ -32,6 +32,7 @@ var ParamTagMap = map[string]ParamValidator{
 	"runelength":   RuneLength,
 	"stringlength": StringLength,
 	"matches":      StringMatches,
+	"in":           isInRaw,
 }
 
 // ParamTagRegexMap maps param tags to their respective regexes.
@@ -39,6 +40,7 @@ var ParamTagRegexMap = map[string]*regexp.Regexp{
 	"length":       regexp.MustCompile("^length\\((\\d+)\\|(\\d+)\\)$"),
 	"runelength":   regexp.MustCompile("^runelength\\((\\d+)\\|(\\d+)\\)$"),
 	"stringlength": regexp.MustCompile("^stringlength\\((\\d+)\\|(\\d+)\\)$"),
+	"in":           regexp.MustCompile(`^in\((.*)\)`),
 	"matches":      regexp.MustCompile(`^matches\((.+)\)$`),
 }
 
@@ -116,6 +118,8 @@ var TagMap = map[string]Validator{
 	"ssn":            IsSSN,
 	"semver":         IsSemver,
 	"rfc3339":        IsRFC3339,
+	"ISO3166Alpha2":  IsISO3166Alpha2,
+	"ISO3166Alpha3":  IsISO3166Alpha3,
 }
 
 // ISO3166Entry stores country codes

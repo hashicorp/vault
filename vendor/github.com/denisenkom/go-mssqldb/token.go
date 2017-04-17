@@ -149,27 +149,23 @@ func processEnvChg(sess *tdsSession) {
 				badStreamPanic(err)
 			}
 		case envTypLanguage:
-			//currently ignored
-			// old value
-			_, err = readBVarChar(r)
-			if err != nil {
+			// currently ignored
+			// new value
+			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
-			// new value
-			_, err = readBVarChar(r)
-			if err != nil {
+			// old value
+			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
 		case envTypCharset:
-			//currently ignored
-			// old value
-			_, err = readBVarChar(r)
-			if err != nil {
+			// currently ignored
+			// new value
+			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
-			// new value
-			_, err = readBVarChar(r)
-			if err != nil {
+			// old value
+			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
 		case envTypPacketSize:
@@ -188,31 +184,52 @@ func processEnvChg(sess *tdsSession) {
 			sess.buf.ResizeBuffer(packetsizei)
 		case envSortId:
 			// currently ignored
-			// old value, should be 0
+			// new value
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
-			// new value
+			// old value, should be 0
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
 		case envSortFlags:
 			// currently ignored
-			// old value, should be 0
+			// new value
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
-			// new value
+			// old value, should be 0
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
 		case envSqlCollation:
 			// currently ignored
-			// old value
-			if _, err = readBVarChar(r); err != nil {
+			var collationSize uint8
+			err = binary.Read(r, binary.LittleEndian, &collationSize)
+			if err != nil {
 				badStreamPanic(err)
 			}
-			// new value
+
+			// SQL Collation data should contain 5 bytes in length
+			if collationSize != 5 {
+				badStreamPanicf("Invalid SQL Collation size value returned from server: %s", collationSize)
+			}
+
+			// 4 bytes, contains: LCID ColFlags Version
+			var info uint32
+			err = binary.Read(r, binary.LittleEndian, &info)
+			if err != nil {
+				badStreamPanic(err)
+			}
+
+			// 1 byte, contains: sortID
+			var sortID uint8
+			err = binary.Read(r, binary.LittleEndian, &sortID)
+			if err != nil {
+				badStreamPanic(err)
+			}
+
+			// old value, should be 0
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
@@ -251,21 +268,21 @@ func processEnvChg(sess *tdsSession) {
 			sess.tranid = 0
 		case envEnlistDTC:
 			// currently ignored
-			// old value
+			// new value, should be 0
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
-			// new value, should be 0
+			// old value
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
 		case envDefectTran:
 			// currently ignored
-			// old value, should be 0
+			// new value
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
-			// new value
+			// old value, should be 0
 			if _, err = readBVarChar(r); err != nil {
 				badStreamPanic(err)
 			}
@@ -733,7 +750,7 @@ func processResponse(ctx context.Context, sess *tdsSession, ch chan tokenStruct)
 
 	// Loop over multiple responses.
 	for {
-		ts.dlog("initiating resonse reading")
+		ts.dlog("initiating response reading")
 
 		tokChan := make(chan tokenStruct)
 		go processSingleResponse(sess, tokChan)

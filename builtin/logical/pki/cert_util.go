@@ -634,11 +634,13 @@ func generateCreationBundle(b *backend,
 	var ipAltInt interface{}
 	{
 		if csr != nil && role.UseCSRSANs {
-			if !role.AllowIPSANs {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+			if len(csr.IPAddresses) > 0 {
+				if !role.AllowIPSANs {
+					return nil, errutil.UserError{Err: fmt.Sprintf(
+						"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+				}
+				ipAddresses = csr.IPAddresses
 			}
-			ipAddresses = csr.IPAddresses
 		} else {
 			ipAltInt, ok = data.GetOk("ip_sans")
 			if ok {
@@ -665,7 +667,7 @@ func generateCreationBundle(b *backend,
 	ou := []string{}
 	{
 		if role.OU != "" {
-			ou = strutil.ParseDedupAndSortStrings(role.OU, ",")
+			ou = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.OU, ","), false)
 		}
 	}
 
@@ -673,7 +675,7 @@ func generateCreationBundle(b *backend,
 	organization := []string{}
 	{
 		if role.Organization != "" {
-			organization = strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			organization = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.Organization, ","), false)
 		}
 	}
 

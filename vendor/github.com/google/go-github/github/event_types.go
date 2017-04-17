@@ -141,6 +141,30 @@ type EditChange struct {
 	} `json:"body,omitempty"`
 }
 
+// ProjectChange represents the changes when a project has been edited.
+type ProjectChange struct {
+	Name *struct {
+		From *string `json:"from,omitempty"`
+	} `json:"name,omitempty"`
+	Body *struct {
+		From *string `json:"from,omitempty"`
+	} `json:"body,omitempty"`
+}
+
+// ProjectCardChange represents the changes when a project card has been edited.
+type ProjectCardChange struct {
+	Note *struct {
+		From *string `json:"from,omitempty"`
+	} `json:"note,omitempty"`
+}
+
+// ProjectColumnChange represents the changes when a project column has been edited.
+type ProjectColumnChange struct {
+	Name *struct {
+		From *string `json:"from,omitempty"`
+	} `json:"name,omitempty"`
+}
+
 // IntegrationInstallationEvent is triggered when an integration is created or deleted.
 // The Webhook event name is "integration_installation".
 //
@@ -332,6 +356,56 @@ type PingEvent struct {
 	Installation *Installation `json:"installation,omitempty"`
 }
 
+// ProjectEvent is triggered when project is created, modified or deleted.
+// The webhook event name is "project".
+//
+// GitHub API docs: https://developer.github.com/v3/activity/events/types/#projectevent
+type ProjectEvent struct {
+	Action  *string        `json:"action,omitempty"`
+	Changes *ProjectChange `json:"changes,omitempty"`
+	Project *Project       `json:"project,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Repo         *Repository   `json:"repository,omitempty"`
+	Org          *Organization `json:"organization,omitempty"`
+	Sender       *User         `json:"sender,omitempty"`
+	Installation *Installation `json:"installation,omitempty"`
+}
+
+// ProjectCardEvent is triggered when a project card is created, updated, moved, converted to an issue, or deleted.
+// The webhook event name is "project_card".
+//
+// GitHub API docs: https://developer.github.com/v3/activity/events/types/#projectcardevent
+type ProjectCardEvent struct {
+	Action      *string            `json:"action,omitempty"`
+	Changes     *ProjectCardChange `json:"changes,omitempty"`
+	AfterID     *int               `json:"after_id,omitempty"`
+	ProjectCard *ProjectCard       `json:"project_card,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Repo         *Repository   `json:"repository,omitempty"`
+	Org          *Organization `json:"organization,omitempty"`
+	Sender       *User         `json:"sender,omitempty"`
+	Installation *Installation `json:"installation,omitempty"`
+}
+
+// ProjectColumnEvent is triggered when a project column is created, updated, moved, or deleted.
+// The webhook event name is "project_column".
+//
+// GitHub API docs: https://developer.github.com/v3/activity/events/types/#projectcolumnevent
+type ProjectColumnEvent struct {
+	Action        *string              `json:"action,omitempty"`
+	Changes       *ProjectColumnChange `json:"changes,omitempty"`
+	AfterID       *int                 `json:"after_id,omitempty"`
+	ProjectColumn *ProjectColumn       `json:"project_column,omitempty"`
+
+	// The following fields are only populated by Webhook events.
+	Repo         *Repository   `json:"repository,omitempty"`
+	Org          *Organization `json:"organization,omitempty"`
+	Sender       *User         `json:"sender,omitempty"`
+	Installation *Installation `json:"installation,omitempty"`
+}
+
 // PublicEvent is triggered when a private repository is open sourced.
 // According to GitHub: "Without a doubt: the best GitHub event."
 // The Webhook event name is "public".
@@ -487,6 +561,7 @@ type PushEventRepository struct {
 	MasterBranch    *string             `json:"master_branch,omitempty"`
 	Organization    *string             `json:"organization,omitempty"`
 	URL             *string             `json:"url,omitempty"`
+	ArchiveURL      *string             `json:"archive_url,omitempty"`
 	HTMLURL         *string             `json:"html_url,omitempty"`
 	StatusesURL     *string             `json:"statuses_url,omitempty"`
 	GitURL          *string             `json:"git_url,omitempty"`

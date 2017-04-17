@@ -18,7 +18,7 @@ type header struct {
 }
 
 // tdsBuffer reads and writes TDS packets of data to the transport.
-// The write and read buffers are spearate to make sending attn signals
+// The write and read buffers are separate to make sending attn signals
 // possible without locks. Currently attn signals are only sent during
 // reads, not writes.
 type tdsBuffer struct {
@@ -37,11 +37,11 @@ type tdsBuffer struct {
 
 	// afterFirst is assigned to right after tdsBuffer is created and
 	// before the first use. It is executed after the first packet is
-	// writen and then removed.
+	// written and then removed.
 	afterFirst func()
 }
 
-func newTdsBuffer(bufsize int, transport io.ReadWriteCloser) *tdsBuffer {
+func newTdsBuffer(bufsize uint16, transport io.ReadWriteCloser) *tdsBuffer {
 	w := new(tdsBuffer)
 	w.wbuf = make([]byte, bufsize)
 	w.rbuf = make([]byte, bufsize)

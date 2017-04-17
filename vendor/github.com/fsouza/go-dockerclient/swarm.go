@@ -33,7 +33,7 @@ type InitSwarmOptions struct {
 }
 
 // InitSwarm initializes a new Swarm and returns the node ID.
-// See https://goo.gl/hzkgWu for more details.
+// See https://goo.gl/ZWyG1M for more details.
 func (c *Client) InitSwarm(opts InitSwarmOptions) (string, error) {
 	path := "/swarm/init"
 	resp, err := c.do("POST", path, doOptions{
@@ -42,7 +42,7 @@ func (c *Client) InitSwarm(opts InitSwarmOptions) (string, error) {
 		context:   opts.Context,
 	})
 	if err != nil {
-		if e, ok := err.(*Error); ok && e.Status == http.StatusNotAcceptable {
+		if e, ok := err.(*Error); ok && (e.Status == http.StatusNotAcceptable || e.Status == http.StatusServiceUnavailable) {
 			return "", ErrNodeAlreadyInSwarm
 		}
 		return "", err
@@ -63,7 +63,7 @@ type JoinSwarmOptions struct {
 }
 
 // JoinSwarm joins an existing Swarm.
-// See https://goo.gl/TdhJWU for more details.
+// See https://goo.gl/N59IP1 for more details.
 func (c *Client) JoinSwarm(opts JoinSwarmOptions) error {
 	path := "/swarm/join"
 	resp, err := c.do("POST", path, doOptions{
@@ -72,7 +72,7 @@ func (c *Client) JoinSwarm(opts JoinSwarmOptions) error {
 		context:   opts.Context,
 	})
 	if err != nil {
-		if e, ok := err.(*Error); ok && e.Status == http.StatusNotAcceptable {
+		if e, ok := err.(*Error); ok && (e.Status == http.StatusNotAcceptable || e.Status == http.StatusServiceUnavailable) {
 			return ErrNodeAlreadyInSwarm
 		}
 	}
@@ -88,7 +88,7 @@ type LeaveSwarmOptions struct {
 }
 
 // LeaveSwarm leaves a Swarm.
-// See https://goo.gl/UWDlLg for more details.
+// See https://goo.gl/FTX1aD for more details.
 func (c *Client) LeaveSwarm(opts LeaveSwarmOptions) error {
 	params := make(url.Values)
 	params.Set("force", strconv.FormatBool(opts.Force))
@@ -97,7 +97,7 @@ func (c *Client) LeaveSwarm(opts LeaveSwarmOptions) error {
 		context: opts.Context,
 	})
 	if err != nil {
-		if e, ok := err.(*Error); ok && e.Status == http.StatusNotAcceptable {
+		if e, ok := err.(*Error); ok && (e.Status == http.StatusNotAcceptable || e.Status == http.StatusServiceUnavailable) {
 			return ErrNodeNotInSwarm
 		}
 	}
@@ -116,7 +116,7 @@ type UpdateSwarmOptions struct {
 }
 
 // UpdateSwarm updates a Swarm.
-// See https://goo.gl/vFbq36 for more details.
+// See https://goo.gl/iJFnsw for more details.
 func (c *Client) UpdateSwarm(opts UpdateSwarmOptions) error {
 	params := make(url.Values)
 	params.Set("version", strconv.Itoa(opts.Version))
@@ -129,7 +129,7 @@ func (c *Client) UpdateSwarm(opts UpdateSwarmOptions) error {
 		context:   opts.Context,
 	})
 	if err != nil {
-		if e, ok := err.(*Error); ok && e.Status == http.StatusNotAcceptable {
+		if e, ok := err.(*Error); ok && (e.Status == http.StatusNotAcceptable || e.Status == http.StatusServiceUnavailable) {
 			return ErrNodeNotInSwarm
 		}
 	}
@@ -138,13 +138,16 @@ func (c *Client) UpdateSwarm(opts UpdateSwarmOptions) error {
 }
 
 // InspectSwarm inspects a Swarm.
-// See http://goo.gl/nvwytL for more details.
+// See https://goo.gl/MFwgX9 for more details.
 func (c *Client) InspectSwarm(ctx context.Context) (swarm.Swarm, error) {
 	response := swarm.Swarm{}
 	resp, err := c.do("GET", "/swarm", doOptions{
 		context: ctx,
 	})
 	if err != nil {
+		if e, ok := err.(*Error); ok && (e.Status == http.StatusNotAcceptable || e.Status == http.StatusServiceUnavailable) {
+			return response, ErrNodeNotInSwarm
+		}
 		return response, err
 	}
 	defer resp.Body.Close()

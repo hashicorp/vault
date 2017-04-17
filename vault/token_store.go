@@ -10,9 +10,9 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -1468,7 +1468,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 		if len(role.DisallowedPolicies) > 0 {
 			// We don't add the default here because we only want to disallow it if it's explicitly set
-			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies)
+			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies, true)
 
 			for _, finalPolicy := range finalPolicies {
 				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {

@@ -225,7 +225,7 @@ func TestBackend_RSARoles_CSR(t *testing.T) {
 
 	stepCount = len(testCase.Steps)
 
-	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, false)...)
+	testCase.Steps = append(testCase.Steps, generateRoleSteps(t, true)...)
 	if len(os.Getenv("VAULT_VERBOSE_PKITESTS")) > 0 {
 		for i, v := range testCase.Steps {
 			fmt.Printf("Step %d:\n%+v\n\n", i+stepCount, v)
@@ -1787,6 +1787,12 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// IP SAN tests
 	{
+		roleVals.UseCSRSANs = true
+		roleVals.AllowIPSANs = false
+		issueTestStep.ErrorOk = false
+		addTests(nil)
+
+		roleVals.UseCSRSANs = false
 		issueVals.IPSANs = "127.0.0.1,::1"
 		issueTestStep.ErrorOk = true
 		addTests(nil)

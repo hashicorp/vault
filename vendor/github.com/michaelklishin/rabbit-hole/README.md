@@ -256,6 +256,31 @@ resp, err := rmqc.DeleteBinding("/", BindingInfo{
 // => *http.Response, err
 ```
 
+### Operations on Shovels
+
+``` go
+qs, err := rmqc.ListShovels()
+// => []ShovelInfo, err
+
+// list shovels in a vhost
+qs, err := rmqc.ListShovelsIn("/")
+// => []ShovelInfo, err
+
+// information about an individual shovel
+q, err := rmqc.GetShovel("/", "a.shovel")
+// => ShovelInfo, err
+
+// declares a shovel
+shovelDetails := rabbithole.ShovelDefinition{SourceURI: "amqp://sourceURI", SourceQueue: "mySourceQueue", DestinationURI: "amqp://destinationURI", DestinationQueue: "myDestQueue", AddForwardHeaders: true, AckMode: "on-confirm", DeleteAfter: "never"}
+resp, err := rmqc.DeclareShovel("/", "a.shovel", shovelDetails)
+// => *http.Response, err
+
+// deletes an individual shovel
+resp, err := rmqc.DeleteShovel("/", "a.shovel")
+// => *http.Response, err
+
+```
+
 ### HTTPS Connections
 
 ``` go

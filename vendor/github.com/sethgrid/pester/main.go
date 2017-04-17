@@ -1,7 +1,6 @@
-package pester
-
-// pester provides additional resiliency over the standard http client methods by
+// Package pester provides additional resiliency over the standard http client methods by
 // allowing you to control concurrency, retries, and a backoff strategy.
+package pester
 
 import (
 	"bytes"
@@ -9,13 +8,21 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 )
+
+//ErrUnexpectedMethod occurs when an http.Client method is unable to be mapped from a calling method in the pester client
+var ErrUnexpectedMethod = errors.New("unexpected client method, must be one of Do, Get, Head, Post, or PostFrom")
+
+// ErrReadingBody happens when we cannot read the body bytes
+var ErrReadingBody = errors.New("error reading body")
+
+// ErrReadingRequestBody happens when we cannot read the request body bytes
+var ErrReadingRequestBody = errors.New("error reading request body")
 
 // Client wraps the http client and exposes all the functionality of the http.Client.
 // Additionally, Client provides pester specific values for handling resiliency.
@@ -33,6 +40,7 @@ type Client struct {
 	MaxRetries  int
 	Backoff     BackoffStrategy
 	KeepLog     bool
+	LogHook     LogHook
 
 	SuccessReqNum   int
 	SuccessRetryNum int
@@ -76,6 +84,12 @@ type params struct {
 	data     url.Values
 }
 
+var random *rand.Rand
+
+func init() {
+	random = rand.New(rand.NewSource(time.Now().UnixNano()))
+}
+
 // New constructs a new DefaultClient with sensible default values
 func New() *Client {
 	return &Client{
@@ -95,6 +109,10 @@ func NewExtendedClient(hc *http.Client) *Client {
 	return c
 }
 
+// PrintErrStrategy is used to log attempts as they happen.
+// You know, more visible
+type LogHook func(e ErrEntry)
+
 // BackoffStrategy is used to determine how long a retry request should wait until attempted
 type BackoffStrategy func(retry int) time.Duration
 
@@ -108,13 +126,13 @@ func DefaultBackoff(_ int) time.Duration {
 
 // ExponentialBackoff returns ever increasing backoffs by a power of 2
 func ExponentialBackoff(i int) time.Duration {
-	return time.Duration(math.Pow(2, float64(i))) * time.Second
+	return time.Duration(1<<uint(i)) * time.Second
 }
 
 // ExponentialJitterBackoff returns ever increasing backoffs by a power of 2
 // with +/- 0-33% to prevent sychronized reuqests.
 func ExponentialJitterBackoff(i int) time.Duration {
-	return jitter(int(math.Pow(2, float64(i))))
+	return jitter(int(1 << uint(i)))
 }
 
 // LinearBackoff returns increasing durations, each a second longer than the last
@@ -134,14 +152,8 @@ func jitter(i int) time.Duration {
 
 	maxJitter := ms / 3
 
-	rand.Seed(time.Now().Unix())
-	jitter := rand.Intn(maxJitter + 1)
-
-	if rand.Intn(2) == 1 {
-		ms = ms + jitter
-	} else {
-		ms = ms - jitter
-	}
+	// ms ± rand
+	ms += random.Intn(2*maxJitter) - maxJitter
 
 	// a jitter of 0 messes up the time.Tick chan
 	if ms <= 0 {
@@ -206,14 +218,14 @@ func (c *Client) pester(p params) (*http.Response, error) {
 	if p.req != nil && p.req.Body != nil {
 		originalRequestBody, err = ioutil.ReadAll(p.req.Body)
 		if err != nil {
-			return &http.Response{}, errors.New("error reading request body")
+			return nil, ErrReadingRequestBody
 		}
 		p.req.Body.Close()
 	}
 	if p.body != nil {
 		originalBody, err = ioutil.ReadAll(p.body)
 		if err != nil {
-			return &http.Response{}, errors.New("error reading body")
+			return nil, ErrReadingBody
 		}
 	}
 
@@ -238,7 +250,6 @@ func (c *Client) pester(p params) (*http.Response, error) {
 					return
 				default:
 				}
-				resp := &http.Response{}
 
 				// rehydrate the body (it is drained each read)
 				if len(originalRequestBody) > 0 {
@@ -248,6 +259,7 @@ func (c *Client) pester(p params) (*http.Response, error) {
 					p.body = bytes.NewBuffer(originalBody)
 				}
 
+				var resp *http.Response
 				// route the calls
 				switch p.method {
 				case "Do":
@@ -260,6 +272,8 @@ func (c *Client) pester(p params) (*http.Response, error) {
 					resp, err = httpClient.Post(p.url, p.bodyType, p.body)
 				case "PostForm":
 					resp, err = httpClient.PostForm(p.url, p.data)
+				default:
+					err = ErrUnexpectedMethod
 				}
 
 				// Early return if we have a valid result
@@ -320,14 +334,13 @@ func (c *Client) pester(p params) (*http.Response, error) {
 		}
 	}()
 
-	select {
-	case res := <-resultCh:
-		c.Lock()
-		defer c.Unlock()
-		c.SuccessReqNum = res.req
-		c.SuccessRetryNum = res.retry
-		return res.resp, res.err
-	}
+	res := <-resultCh
+	c.Lock()
+	defer c.Unlock()
+	c.SuccessReqNum = res.req
+	c.SuccessRetryNum = res.retry
+	return res.resp, res.err
+
 }
 
 // LogString provides a string representation of the errors the client has seen
@@ -336,10 +349,15 @@ func (c *Client) LogString() string {
 	defer c.Unlock()
 	var res string
 	for _, e := range c.ErrLog {
-		res += fmt.Sprintf("%d %s [%s] %s request-%d retry-%d error: %s\n",
-			e.Time.Unix(), e.Method, e.Verb, e.URL, e.Request, e.Retry, e.Err)
+		res += c.FormatError(e)
 	}
 	return res
+}
+
+// Format the Error to human readable string
+func (c *Client) FormatError(e ErrEntry) string {
+	return fmt.Sprintf("%d %s [%s] %s request-%d retry-%d error: %s\n",
+		e.Time.Unix(), e.Method, e.Verb, e.URL, e.Request, e.Retry, e.Err)
 }
 
 // LogErrCount is a helper method used primarily for test validation
@@ -358,8 +376,12 @@ func (c *Client) EmbedHTTPClient(hc *http.Client) {
 func (c *Client) log(e ErrEntry) {
 	if c.KeepLog {
 		c.Lock()
+		defer c.Unlock()
 		c.ErrLog = append(c.ErrLog, e)
-		c.Unlock()
+	} else if c.LogHook != nil {
+		// NOTE: There is a possibility that Log Printing hook slows it down.
+		// but the consumer can always do the Job in a go-routine.
+		c.LogHook(e)
 	}
 }
 

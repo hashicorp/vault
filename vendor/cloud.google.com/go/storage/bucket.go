@@ -35,12 +35,14 @@ func (b *BucketHandle) Create(ctx context.Context, projectID string, attrs *Buck
 	}
 	bkt.Name = b.name
 	req := b.c.raw.Buckets.Insert(projectID, bkt)
+	setClientHeader(req.Header())
 	return runWithRetry(ctx, func() error { _, err := req.Context(ctx).Do(); return err })
 }
 
 // Delete deletes the Bucket.
 func (b *BucketHandle) Delete(ctx context.Context) error {
 	req := b.c.raw.Buckets.Delete(b.name)
+	setClientHeader(req.Header())
 	return runWithRetry(ctx, func() error { return req.Context(ctx).Do() })
 }
 
@@ -80,10 +82,12 @@ func (b *BucketHandle) Object(name string) *ObjectHandle {
 
 // Attrs returns the metadata for the bucket.
 func (b *BucketHandle) Attrs(ctx context.Context) (*BucketAttrs, error) {
+	req := b.c.raw.Buckets.Get(b.name).Projection("full")
+	setClientHeader(req.Header())
 	var resp *raw.Bucket
 	var err error
 	err = runWithRetry(ctx, func() error {
-		resp, err = b.c.raw.Buckets.Get(b.name).Projection("full").Context(ctx).Do()
+		resp, err = req.Context(ctx).Do()
 		return err
 	})
 	if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusNotFound {
@@ -113,7 +117,7 @@ type BucketAttrs struct {
 	// MetaGeneration is the metadata generation of the bucket.
 	MetaGeneration int64
 
-	// StorageClass is the storage class of the bucket. This defines
+	// StorageClass is the default storage class of the bucket. This defines
 	// how objects in the bucket are stored and determines the SLA
 	// and the cost of storage. Typical values are "MULTI_REGIONAL",
 	// "REGIONAL", "NEARLINE", "COLDLINE", "STANDARD" and
@@ -231,6 +235,7 @@ func (it *ObjectIterator) Next() (*ObjectAttrs, error) {
 
 func (it *ObjectIterator) fetch(pageSize int, pageToken string) (string, error) {
 	req := it.bucket.c.raw.Objects.List(it.bucket.name)
+	setClientHeader(req.Header())
 	req.Projection("full")
 	req.Delimiter(it.query.Delimiter)
 	req.Prefix(it.query.Prefix)
@@ -309,6 +314,7 @@ func (it *BucketIterator) PageInfo() *iterator.PageInfo { return it.pageInfo }
 
 func (it *BucketIterator) fetch(pageSize int, pageToken string) (string, error) {
 	req := it.client.raw.Buckets.List(it.projectID)
+	setClientHeader(req.Header())
 	req.Projection("full")
 	req.Prefix(it.Prefix)
 	req.PageToken(pageToken)
