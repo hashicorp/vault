@@ -55,10 +55,10 @@
 			"revisionTime": "2017-04-14T20:50:12Z"
 		},
 		{
-			"checksumSHA1": "/wyEf3h+8N4zkqMXl+jT/+WWlxg=",
-			"path": "github.com/Azure/azure-sdk-for-go/storage",
-			"revision": "088007b3b08cc02b27f2eadfdcd870958460ce7e",
-			"revisionTime": "2017-04-05T20:18:34Z"
+			"checksumSHA1": "24EW3PGLGVSy/5joAOZdHzN/S2E=",
+			"path": "github.com/Azure/azure-storage-go",
+			"revision": "12ccaadb081cdd217702067d28da9a7ff4305239",
+			"revisionTime": "2017-03-02T22:15:08Z"
 		},
 		{
 			"checksumSHA1": "23FJUX+AInYeEM2hoUMvYZtXZd4=",
