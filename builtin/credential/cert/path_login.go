@@ -30,7 +30,7 @@ func pathLogin(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "The name of the certificate to authenticate against.",
+				Description: "The name of the certificate role to authenticate against.",
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
