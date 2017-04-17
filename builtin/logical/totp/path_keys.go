@@ -364,9 +364,6 @@ func (b *backend) pathKeyCreate(
 		Algorithm:   keyAlgorithm,
 		Digits:      keyDigits,
 		Skew:        uintSkew,
-		QRSize:      qrSize,
-		URL:         urlString,
-		Generate:    generate,
 	})
 	if err != nil {
 		return nil, err
@@ -391,9 +388,6 @@ type keyEntry struct {
 	Algorithm   otplib.Algorithm `json:"algorithm" mapstructure:"algorithm" structs:"algorithm"`
 	Digits      otplib.Digits    `json:"digits" mapstructure:"digits" structs:"digits"`
 	Skew        uint             `json:"skew" mapstructure:"skew" structs:"skew"`
-	QRSize      int              `json:"qr_size" mapstructure:"qr_size" structs:"qr_size"`
-	URL         string           `json:"url" mapstructure:"url" structs:"url"`
-	Generate    bool             `json:"generate" mapstructure:"generate" structs:"generate"`
 }
 
 const pathKeyHelpSyn = `
