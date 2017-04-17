@@ -9,6 +9,8 @@ import (
 )
 
 func TestAwsEc2_RoleCrud(t *testing.T) {
+	var err error
+	var resp *logical.Response
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
@@ -20,6 +22,23 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	_, err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	role1Data := map[string]interface{}{
+		"bound_vpc_id":             "testvpcid",
+		"allow_instance_migration": true,
+		"policies":                 "testpolicy1,testpolicy2",
+	}
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/role1",
+		Data:      role1Data,
+	}
+
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
 	roleData := map[string]interface{}{
@@ -40,14 +59,9 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"period":                    "1m",
 	}
 
-	roleReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Storage:   storage,
-		Path:      "role/testrole",
-		Data:      roleData,
-	}
-
-	resp, err := b.HandleRequest(roleReq)
+	roleReq.Path = "role/testrole"
+	roleReq.Data = roleData
+	resp, err = b.HandleRequest(roleReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
