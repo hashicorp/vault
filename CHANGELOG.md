@@ -20,6 +20,9 @@ IMPROVEMENTS:
  * secret/pki: Add `no_store` option that allows certificates to be issued
    without being stored. This removes the ability to look up and/or add to a
    CRL but helps with scaling to very large numbers of certificates. [GH-2565]
+ * secret/pki: If used with a role parameter, the `sign-verbatim/<role>`
+   endpoint honors the values of `generate_lease`, `no_store`, `ttl` and
+   `max_ttl` from the given role [GH-2593]
  * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
    servers [GH-2521]
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
