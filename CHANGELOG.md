@@ -25,6 +25,8 @@ BUG FIXES:
  * auth/aws-ec2: New bounds added as criteria to allow role creation [GH-2600]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]
+ * secret/ssh: Don't automatically lowercase principles in issued SSH certs
+   [GH-2591]
  * storage/consul: Properly handle state events rather than timing out
    [GH-2548]
  * storage/etcd3: Ensure locks are released if client is improperly shut down
