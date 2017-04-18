@@ -293,8 +293,6 @@ func (b *backend) pathKeyCreate(
 	uintSkew := uint(skew)
 	uintKeySize := uint(keySize)
 
-	urlString := ""
-
 	var response logical.Response
 
 	switch generate {
@@ -326,7 +324,7 @@ func (b *backend) pathKeyCreate(
 		keyString = keyObject.Secret()
 
 		// Prepare the url and barcode
-		urlString = keyObject.String()
+		urlString := keyObject.String()
 		barcode, err := keyObject.Image(qrSize, qrSize)
 
 		if err != nil {
@@ -365,6 +363,7 @@ func (b *backend) pathKeyCreate(
 		Digits:      keyDigits,
 		Skew:        uintSkew,
 	})
+
 	if err != nil {
 		return nil, err
 	}
