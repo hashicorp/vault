@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 // StrListContains looks for a string in a list of strings.
@@ -177,9 +179,9 @@ func ParseArbitraryStringSlice(input string, sep string) []string {
 // TrimStrings takes a slice of strings and returns a slice of strings
 // with trimmed spaces
 func TrimStrings(items []string) []string {
-	var ret []string
-	for _, item := range items {
-		ret = append(ret, strings.TrimSpace(item))
+	ret := make([]string, len(items))
+	for i, item := range items {
+		ret[i] = strutil.TrimStrings(item)
 	}
 	return ret
 }
