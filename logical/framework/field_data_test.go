@@ -146,6 +146,105 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			0,
 		},
+
+		"slice type, empty slice": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSlice},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{},
+			},
+			"foo",
+			[]interface{}{},
+		},
+
+		"slice type, filled, mixed slice": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeSlice},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{123, "abc"},
+			},
+			"foo",
+			[]interface{}{123, "abc"},
+		},
+
+		"string slice type, filled slice": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeStringSlice},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{123, "abc"},
+			},
+			"foo",
+			[]string{"123", "abc"},
+		},
+
+		"comma string slice type, comma string with one value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "value1",
+			},
+			"foo",
+			[]string{"value1"},
+		},
+
+		"comma string slice type, comma string with multi value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "value1,value2,value3",
+			},
+			"foo",
+			[]string{"value1", "value2", "value3"},
+		},
+
+		"comma string slice type, nil string slice value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "",
+			},
+			"foo",
+			[]string{},
+		},
+
+		"commma string slice type, string slice with one value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"value1"},
+			},
+			"foo",
+			[]string{"value1"},
+		},
+
+		"comma string slice type, string slice with multi value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{"value1", "value2", "value3"},
+			},
+			"foo",
+			[]string{"value1", "value2", "value3"},
+		},
+
+		"comma string slice type, empty string slice value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeCommaStringSlice},
+			},
+			map[string]interface{}{
+				"foo": []interface{}{},
+			},
+			"foo",
+			[]string{},
+		},
 	}
 
 	for name, tc := range cases {

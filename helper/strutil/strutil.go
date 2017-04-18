@@ -174,6 +174,16 @@ func ParseArbitraryStringSlice(input string, sep string) []string {
 	return ret
 }
 
+// TrimStrings takes a slice of strings and returns a slice of strings
+// with trimmed spaces
+func TrimStrings(items []string) []string {
+	ret := make([]string, len(items))
+	for i, item := range items {
+		ret[i] = strings.TrimSpace(item)
+	}
+	return ret
+}
+
 // Removes duplicate and empty elements from a slice of strings. This also may
 // convert the items in the slice to lower case and returns a sorted slice.
 func RemoveDuplicates(items []string, lowercase bool) []string {

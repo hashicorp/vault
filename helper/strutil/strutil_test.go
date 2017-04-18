@@ -315,3 +315,12 @@ func TestGlobbedStringsMatch(t *testing.T) {
 		}
 	}
 }
+
+func TestTrimStrings(t *testing.T) {
+	input := []string{"abc", "123", "abcd ", "123  "}
+	expected := []string{"abc", "123", "abcd", "123"}
+	actual := TrimStrings(input)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Bad TrimStrings: expected:%#v, got:%#v", expected, actual)
+	}
+}
