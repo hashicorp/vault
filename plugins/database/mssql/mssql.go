@@ -187,7 +187,7 @@ func (m *MSSQL) RevokeUser(statements dbplugin.Statements, username string) erro
 	// we need to drop the database users before we can drop the login and the role
 	// This isn't done in a transaction because even if we fail along the way,
 	// we want to remove as much access as possible
-	stmt, err := db.Prepare(fmt.Sprintf("EXEC sp_msloginmappings '%s';", username))
+	stmt, err := db.Prepare(fmt.Sprintf("EXEC master.dbo.sp_msloginmappings '%s';", username))
 	if err != nil {
 		return err
 	}
