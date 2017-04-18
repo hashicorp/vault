@@ -75,9 +75,9 @@ presigned request. Currently, POST is the only supported value`,
 
 			"iam_request_url": {
 				Type: framework.TypeString,
-				Description: `Full URL against which to make the AWS request when auth_type is
-iam. If using a POST request with the action
-specified in the body, this should just be "/".`,
+				Description: `Base64-encoded full URL against which to make the AWS request
+when using iam auth_type. If using a POST request with the action specified in the
+body, this should just be "Lw==" ("/" base64-encoded).`,
 			},
 
 			"iam_request_body": {
@@ -405,17 +405,6 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 		return fmt.Errorf("account ID %q does not belong to role %q", identityDoc.AccountID, roleName), nil
 	}
 
-	// Check if an STS configuration exists for the AWS account
-	sts, err := b.lockedAwsStsEntry(s, identityDoc.AccountID)
-	if err != nil {
-		return fmt.Errorf("error fetching STS config for account ID %q: %q\n", identityDoc.AccountID, err), nil
-	}
-	// An empty STS role signifies the master account
-	stsRole := ""
-	if sts != nil {
-		stsRole = sts.StsRole
-	}
-
 	// Verify that the AMI ID of the instance trying to login matches the
 	// AMI ID specified as a constraint on the role.
 	//
@@ -494,6 +483,17 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 
 		if iamInstanceProfileName == "" {
 			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
+		}
+
+		// Check if an STS configuration exists for the AWS account
+		sts, err := b.lockedAwsStsEntry(s, identityDoc.AccountID)
+		if err != nil {
+			return fmt.Errorf("error fetching STS config for account ID %q: %q\n", identityDoc.AccountID, err), nil
+		}
+		// An empty STS role signifies the master account
+		stsRole := ""
+		if sts != nil {
+			stsRole = sts.StsRole
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
@@ -614,19 +614,9 @@ func (b *backend) pathLoginUpdateEc2(
 		return nil, err
 	}
 	if validationError != nil {
-		return logical.ErrorResponse(fmt.Sprintf("Error validating instance: %s", validationError)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Error validating instance: %v", validationError)), nil
 	}
 
-	var roleTagResp *roleTagLoginResponse
-	if roleEntry.RoleTag != "" {
-		roleTagResp, err := b.handleRoleTagLogin(req.Storage, roleName, roleEntry, instance)
-		if err != nil {
-			return nil, err
-		}
-		if roleTagResp == nil {
-			return logical.ErrorResponse("failed to fetch and verify the role tag"), nil
-		}
-	}
 	// Get the entry from the identity whitelist, if there is one
 	storedIdentity, err := whitelistIdentityEntry(req.Storage, identityDocParsed.InstanceID)
 	if err != nil {
@@ -707,6 +697,16 @@ func (b *backend) pathLoginUpdateEc2(
 
 	policies := roleEntry.Policies
 	rTagMaxTTL := time.Duration(0)
+	var roleTagResp *roleTagLoginResponse
+	if roleEntry.RoleTag != "" {
+		roleTagResp, err := b.handleRoleTagLogin(req.Storage, roleName, roleEntry, instance)
+		if err != nil {
+			return nil, err
+		}
+		if roleTagResp == nil {
+			return logical.ErrorResponse("failed to fetch and verify the role tag"), nil
+		}
+	}
 
 	if roleTagResp != nil {
 		// Role tag is enabled on the role.
@@ -1054,7 +1054,7 @@ func (b *backend) pathLoginUpdateIam(
 
 	method := data.Get("iam_http_request_method").(string)
 	if method == "" {
-		return logical.ErrorResponse("missing method"), nil
+		return logical.ErrorResponse("missing iam_http_request_method"), nil
 	}
 
 	// In the future, might consider supporting GET
@@ -1062,11 +1062,15 @@ func (b *backend) pathLoginUpdateIam(
 		return logical.ErrorResponse("invalid iam_http_request_method; currently only 'POST' is supported"), nil
 	}
 
-	rawUrl := data.Get("iam_request_url").(string)
-	if rawUrl == "" {
+	rawUrlB64 := data.Get("iam_request_url").(string)
+	if rawUrlB64 == "" {
 		return logical.ErrorResponse("missing iam_request_url"), nil
 	}
-	parsedUrl, err := url.Parse(rawUrl)
+	rawUrl, err := base64.StdEncoding.DecodeString(rawUrlB64)
+	if err != nil {
+		return logical.ErrorResponse("failed to base64 decode iam_request_url"), nil
+	}
+	parsedUrl, err := url.Parse(string(rawUrl))
 	if err != nil {
 		return logical.ErrorResponse("error parsing iam_request_url"), nil
 	}
@@ -1150,7 +1154,6 @@ func (b *backend) pathLoginUpdateIam(
 	}
 
 	policies := roleEntry.Policies
-	rTagMaxTTL := time.Duration(0)
 
 	inferredEntityType := ""
 	inferredEntityId := ""
@@ -1189,7 +1192,6 @@ func (b *backend) pathLoginUpdateIam(
 				"client_arn":           clientArn,
 				"canonical_arn":        canonicalArn,
 				"auth_type":            iamAuthType,
-				"role_tag_max_ttl":     rTagMaxTTL.String(),
 				"inferred_entity_type": inferredEntityType,
 				"inferred_entity_id":   inferredEntityId,
 				"account_id":           accountID,
@@ -1216,9 +1218,6 @@ func (b *backend) pathLoginUpdateIam(
 		maxTTL := b.System().MaxLeaseTTL()
 		if roleEntry.MaxTTL > time.Duration(0) && roleEntry.MaxTTL < maxTTL {
 			maxTTL = roleEntry.MaxTTL
-		}
-		if rTagMaxTTL > time.Duration(0) && rTagMaxTTL < maxTTL {
-			maxTTL = rTagMaxTTL
 		}
 
 		if shortestTTL > maxTTL {

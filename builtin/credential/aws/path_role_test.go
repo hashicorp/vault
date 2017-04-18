@@ -25,6 +25,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
+		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"max_ttl":      "2h",
 		"bound_ami_id": "ami-abcd123",
@@ -391,6 +392,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	roleData := map[string]interface{}{
+		"auth_type":                      "ec2",
 		"bound_ami_id":                   "testamiid",
 		"bound_account_id":               "testaccountid",
 		"bound_region":                   "testregion",
@@ -500,6 +502,7 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	}
 
 	roleData := map[string]interface{}{
+		"auth_type":                      "ec2",
 		"bound_iam_instance_profile_arn": "testarn",
 		"ttl":     "10s",
 		"max_ttl": "20s",

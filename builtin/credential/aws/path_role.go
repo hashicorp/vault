@@ -22,9 +22,9 @@ func pathRole(b *backend) *framework.Path {
 			},
 			"auth_type": {
 				Type:    framework.TypeString,
-				Default: ec2AuthType,
-				Description: `The auth_type permitted to authenticate to this role. Cannot be
-changed once set.`,
+				Default: iamAuthType,
+				Description: `The auth_type permitted to authenticate to this role. Must be one of
+iam or ec2 and cannot be changed after role creation.`,
 			},
 			"bound_ami_id": {
 				Type: framework.TypeString,
@@ -70,11 +70,13 @@ auth_type is ec2.`,
 				Description: `When auth_type is iam, the
 AWS entity type to infer from the authenticated principal. The only supported
 value is ec2_instance, which will extract the EC2 instance ID from the
-authenticated role and apply restrictions specific to EC2 instances (such as
-role_tag). The configured EC2 client must be able to find the inferred instance
-ID in the results, and the instance must be running. If unable to
-determine the EC2 instance ID or unable to find the EC2 instance ID
-among running instances, then authentication will fail.`,
+authenticated role and apply the following restrictions specific to EC2
+instances: bound_ami_id, bound_account_id, bound_iam_role_arn,
+bound_iam_instance_profile_arn, bound_vpc_id, bound_subnet_id. The configured
+EC2 client must be able to find the inferred instance ID in the results, and the
+instance must be running. If unable to determine the EC2 instance ID or unable
+to find the EC2 instance ID among running instances, then authentication will
+fail.`,
 			},
 			"inferred_aws_region": {
 				Type: framework.TypeString,
@@ -100,8 +102,7 @@ subnet ID that matches the value specified by this parameter.`,
 field should be the 'key' of the tag on the EC2 instance. The 'value'
 of the tag should be generated using 'role/<role>/tag' endpoint.
 Defaults to an empty string, meaning that role tags are disabled. This
-is only checked if auth_type is ec2 or
-inferred_entity_type is ec2_instance`,
+is only allowed if auth_type is ec2.`,
 			},
 			"period": &framework.FieldSchema{
 				Type:    framework.TypeDurationSecond,
@@ -277,9 +278,11 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 		result.BoundIamRoleARN = ""
 
 		// Save the update
-		if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
+		// TODO: Eventually we probably want to write these out to the storage backend
+		// Not doing that for now as this isn't guaranteed to be a safe code path to do so
+		/* if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
 			return nil, fmt.Errorf("failed to move instance profile ARN to bound_iam_instance_profile_arn field")
-		}
+		} */
 	}
 
 	// Check if there was no pre-existing AuthType set (from older versions)
@@ -287,9 +290,11 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 		// then default to the original behavior of ec2
 		result.AuthType = ec2AuthType
 		// and save the result
-		if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
+		// TODO: Same as above, we probably want to write these out to the storage backend
+		// at some point
+		/* if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
 			return nil, fmt.Errorf("failed to save default auth_type")
-		}
+		} */
 	}
 
 	return &result, nil
@@ -421,7 +426,7 @@ func (b *backend) pathRoleCreateUpdate(
 				return logical.ErrorResponse(fmt.Sprintf("unrecognized auth_type: %v", authTypeRaw.(string))), nil
 			}
 		} else if authTypeRaw.(string) != roleEntry.AuthType {
-			return logical.ErrorResponse("attempted to change auth_type on role"), nil
+			return logical.ErrorResponse("changing auth_type on a role is not allowed"), nil
 		}
 	} else if req.Operation == logical.CreateOperation {
 		roleEntry.AuthType = data.Get("auth_type").(string)

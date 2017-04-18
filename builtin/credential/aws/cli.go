@@ -75,7 +75,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		return "", err
 	}
 	method := stsRequest.HTTPRequest.Method
-	targetUrl := stsRequest.HTTPRequest.URL.String()
+	targetUrl := base64.StdEncoding.EncodeToString([]byte(stsRequest.HTTPRequest.URL.String()))
 	headers := base64.StdEncoding.EncodeToString(headersJson)
 	body := base64.StdEncoding.EncodeToString(requestBody)
 

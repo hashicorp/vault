@@ -34,6 +34,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 
 	// create a role entry
 	data := map[string]interface{}{
+		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"bound_ami_id": "abcd-123",
 	}
@@ -704,6 +705,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 
 	// create a role
 	data := map[string]interface{}{
+		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"max_ttl":      "120s",
 		"role_tag":     "VaultRole",
@@ -780,6 +782,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	}
 
 	data := map[string]interface{}{
+		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"max_ttl":      "120s",
 		"role_tag":     "VaultRole",
@@ -845,6 +848,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 
 	// create an role entry
 	data := map[string]interface{}{
+		"auth_type":    "ec2",
 		"policies":     "p,q,r,s",
 		"role_tag":     "VaultRole",
 		"bound_ami_id": "abcd-123",
@@ -1035,6 +1039,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 
 	// Place the wrong AMI ID in the role data.
 	data := map[string]interface{}{
+		"auth_type":          "ec2",
 		"policies":           "root",
 		"max_ttl":            "120s",
 		"bound_ami_id":       "wrong_ami_id",
@@ -1279,7 +1284,7 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 	}
 	return map[string]interface{}{
 		"iam_http_request_method": request.Method,
-		"iam_request_url":         request.URL.String(),
+		"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(request.URL.String())),
 		"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
 		"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
 		"request_role":            roleName,
@@ -1397,6 +1402,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// configuring a valid role we won't be able to login to
 	roleDataEc2 := map[string]interface{}{
+		"auth_type":    "ec2",
 		"policies":     "root",
 		"bound_ami_id": "ami-1234567",
 	}
