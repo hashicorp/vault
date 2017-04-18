@@ -147,15 +147,12 @@ func (b *backend) pathSignVerbatim(
 		if role.MaxTTL != "" {
 			entry.MaxTTL = role.MaxTTL
 		}
+		entry.NoStore = role.NoStore
 	}
 
 	*entry.GenerateLease = false
 	if role != nil && role.GenerateLease != nil {
 		*entry.GenerateLease = *role.GenerateLease
-	}
-
-	if role != nil {
-		entry.NoStore = role.NoStore
 	}
 
 	return b.pathIssueSignCert(req, data, entry, true, true)
