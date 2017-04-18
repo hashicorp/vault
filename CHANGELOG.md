@@ -1,5 +1,11 @@
 ## 0.7.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * LDAP Auth Backend: Group membership queries will now run as the `binddn`
+   user when `binddn`/`bindpass` are configured, rather than as the
+   authenticating user as was the case previously.
+
 FEATURES:
 
  * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
@@ -7,6 +13,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/ldap: Use the binding credentials to search group membership rather
+   than the user credentials [GH-2534]
  * cli/revoke: Add `-self` option to allow revoking the currently active token
    [GH-2596]
  * secret/pki: Add `no_store` option that allows certificates to be issued
