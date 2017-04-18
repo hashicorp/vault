@@ -389,6 +389,7 @@ func (r *ringDescriber) refreshRing() error {
 		if r.session.cfg.HostFilter == nil || r.session.cfg.HostFilter.Accept(h) {
 			if host, ok := r.session.ring.addHostIfMissing(h); !ok {
 				r.session.pool.addHost(h)
+				r.session.policy.AddHost(h)
 			} else {
 				host.update(h)
 			}

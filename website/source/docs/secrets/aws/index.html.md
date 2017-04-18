@@ -71,11 +71,13 @@ is an example IAM policy to get started:
 ```javascript
 {
   "Version": "2012-10-17",
-  "Statement": {
-    "Effect": "Allow",
-    "Action": "iam:*",
-    "Resource": "*"
-  }
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:*",
+      "Resource": "*"
+    }
+  ]
 }
 ```
 

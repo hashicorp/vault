@@ -44,16 +44,17 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/hpack"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
-	// The primary user agent
-	primaryUA = "grpc-go/1.0"
 	// http2MaxFrameLen specifies the max length of a HTTP2 frame.
 	http2MaxFrameLen = 16384 // 16KB frame
 	// http://http2.github.io/http2-spec/#SettingValues
@@ -92,13 +93,15 @@ var (
 // Records the states during HPACK decoding. Must be reset once the
 // decoding of the entire headers are finished.
 type decodeState struct {
-	err error // first error encountered decoding
-
 	encoding string
-	// statusCode caches the stream status received from the trailer
-	// the server sent. Client side only.
-	statusCode codes.Code
-	statusDesc string
+	// statusGen caches the stream status received from the trailer the server
+	// sent.  Client side only.  Do not access directly.  After all trailers are
+	// parsed, use the status method to retrieve the status.
+	statusGen *status.Status
+	// rawStatusCode and rawStatusMsg are set from the raw trailer fields and are not
+	// intended for direct access outside of parsing.
+	rawStatusCode int32
+	rawStatusMsg  string
 	// Server side only fields.
 	timeoutSet bool
 	timeout    time.Duration
@@ -121,6 +124,7 @@ func isReservedHeader(hdr string) bool {
 		"grpc-message",
 		"grpc-status",
 		"grpc-timeout",
+		"grpc-status-details-bin",
 		"te":
 		return true
 	default:
@@ -139,12 +143,6 @@ func isWhitelistedPseudoHeader(hdr string) bool {
 	}
 }
 
-func (d *decodeState) setErr(err error) {
-	if d.err == nil {
-		d.err = err
-	}
-}
-
 func validContentType(t string) bool {
 	e := "application/grpc"
 	if !strings.HasPrefix(t, e) {
@@ -158,56 +156,62 @@ func validContentType(t string) bool {
 	return true
 }
 
-func (d *decodeState) processHeaderField(f hpack.HeaderField) {
+func (d *decodeState) status() *status.Status {
+	if d.statusGen == nil {
+		// No status-details were provided; generate status using code/msg.
+		d.statusGen = status.New(codes.Code(d.rawStatusCode), d.rawStatusMsg)
+	}
+	return d.statusGen
+}
+
+func (d *decodeState) processHeaderField(f hpack.HeaderField) error {
 	switch f.Name {
 	case "content-type":
 		if !validContentType(f.Value) {
-			d.setErr(streamErrorf(codes.FailedPrecondition, "transport: received the unexpected content-type %q", f.Value))
-			return
+			return streamErrorf(codes.FailedPrecondition, "transport: received the unexpected content-type %q", f.Value)
 		}
 	case "grpc-encoding":
 		d.encoding = f.Value
 	case "grpc-status":
 		code, err := strconv.Atoi(f.Value)
 		if err != nil {
-			d.setErr(streamErrorf(codes.Internal, "transport: malformed grpc-status: %v", err))
-			return
+			return streamErrorf(codes.Internal, "transport: malformed grpc-status: %v", err)
 		}
-		d.statusCode = codes.Code(code)
+		d.rawStatusCode = int32(code)
 	case "grpc-message":
-		d.statusDesc = decodeGrpcMessage(f.Value)
+		d.rawStatusMsg = decodeGrpcMessage(f.Value)
+	case "grpc-status-details-bin":
+		_, v, err := metadata.DecodeKeyValue("grpc-status-details-bin", f.Value)
+		if err != nil {
+			return streamErrorf(codes.Internal, "transport: malformed grpc-status-details-bin: %v", err)
+		}
+		s := &spb.Status{}
+		if err := proto.Unmarshal([]byte(v), s); err != nil {
+			return streamErrorf(codes.Internal, "transport: malformed grpc-status-details-bin: %v", err)
+		}
+		d.statusGen = status.FromProto(s)
 	case "grpc-timeout":
 		d.timeoutSet = true
 		var err error
-		d.timeout, err = decodeTimeout(f.Value)
-		if err != nil {
-			d.setErr(streamErrorf(codes.Internal, "transport: malformed time-out: %v", err))
-			return
+		if d.timeout, err = decodeTimeout(f.Value); err != nil {
+			return streamErrorf(codes.Internal, "transport: malformed time-out: %v", err)
 		}
 	case ":path":
 		d.method = f.Value
 	default:
 		if !isReservedHeader(f.Name) || isWhitelistedPseudoHeader(f.Name) {
-			if f.Name == "user-agent" {
-				i := strings.LastIndex(f.Value, " ")
-				if i == -1 {
-					// There is no application user agent string being set.
-					return
-				}
-				// Extract the application user agent string.
-				f.Value = f.Value[:i]
-			}
 			if d.mdata == nil {
 				d.mdata = make(map[string][]string)
 			}
 			k, v, err := metadata.DecodeKeyValue(f.Name, f.Value)
 			if err != nil {
 				grpclog.Printf("Failed to decode (%q, %q): %v", f.Name, f.Value, err)
-				return
+				return nil
 			}
 			d.mdata[k] = append(d.mdata[k], v)
 		}
 	}
+	return nil
 }
 
 type timeoutUnit uint8
@@ -379,6 +383,9 @@ func newFramer(conn net.Conn) *framer {
 		writer: bufio.NewWriterSize(conn, http2IOBufSize),
 	}
 	f.fr = http2.NewFramer(f.writer, f.reader)
+	// Opt-in to Frame reuse API on framer to reduce garbage.
+	// Frames aren't safe to read from after a subsequent call to ReadFrame.
+	f.fr.SetReuseFrames()
 	f.fr.ReadMetaHeaders = hpack.NewDecoder(http2InitHeaderTableSize, nil)
 	return f
 }

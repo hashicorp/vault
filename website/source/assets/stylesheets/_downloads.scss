@@ -8,21 +8,22 @@ body.layout-downloads {
       }
 
       .download {
+        align-items: center;
         border-bottom: 1px solid #b2b2b2;
-        padding-bottom: 15px;
-        margin-top: 10px;
-        margin-bottom: 10px;
+        display: flex;
+        padding: 15px;
 
         .details {
-          padding-left: 95px;
+          padding-left: 20px;
 
           h2 {
-            margin-top: 30px;
+            margin-top: 4px;
+            border: none;
           }
 
           ul {
             padding-left: 0px;
-            margin-top: 8px;
+            margin: -8px 0 0 0;
           }
 
           li {
@@ -39,7 +40,7 @@ body.layout-downloads {
         }
 
         .icon {
-          img {
+          svg {
             width: 75px;
           }
         }
@@ -52,12 +53,7 @@ body.layout-downloads {
 
       .poweredby {
         margin-top: 20px;
-
-        img {
-          display: block;
-          margin: 0 auto;
-          width: 122px;
-        }
+        text-align: center;
       }
     }
   }

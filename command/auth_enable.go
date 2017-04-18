@@ -82,7 +82,7 @@ General Options:
 ` + meta.GeneralOptionsUsage() + `
 Auth Enable Options:
 
-  -description=<desc>     Human-friendly description of the purpose for the
+  -description=<desc>     Human-friendly description of the purpose of the
                           auth provider. This shows up in the auth -methods command.
 
   -path=<path>            Mount point for the auth provider. This defaults

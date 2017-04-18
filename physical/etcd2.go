@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -118,23 +117,9 @@ func newEtcd2Backend(conf map[string]string, logger log.Logger) (Backend, error)
 }
 
 func newEtcdV2Client(conf map[string]string) (client.Client, error) {
-	// Set a default machines list and check for an overriding address value.
-	machines := "http://127.0.0.1:2379"
-	if address, ok := conf["address"]; ok {
-		machines = address
-	}
-	machinesEnv := os.Getenv("ETCD_ADDR")
-	if machinesEnv != "" {
-		machines = machinesEnv
-	}
-	machinesParsed := strings.Split(machines, Etcd2MachineDelimiter)
-
-	// Verify that the machines are valid URLs
-	for _, machine := range machinesParsed {
-		u, urlErr := url.Parse(machine)
-		if urlErr != nil || u.Scheme == "" {
-			return nil, EtcdAddressError
-		}
+	endpoints, err := getEtcdEndpoints(conf)
+	if err != nil {
+		return nil, err
 	}
 
 	// Create a new client from the supplied address and attempt to sync with the
@@ -160,7 +145,7 @@ func newEtcdV2Client(conf map[string]string) (client.Client, error) {
 	}
 
 	cfg := client.Config{
-		Endpoints: machinesParsed,
+		Endpoints: endpoints,
 		Transport: cTransport,
 	}
 

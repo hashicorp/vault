@@ -510,7 +510,7 @@ func (h *SimpleHandle) newEncDriver(e *Encoder) encDriver {
 }
 
 func (h *SimpleHandle) newDecDriver(d *Decoder) decDriver {
-	return &simpleDecDriver{d: d, r: d.r, h: h, br: d.bytes}
+	return &simpleDecDriver{d: d, h: h, r: d.r, br: d.bytes}
 }
 
 func (e *simpleEncDriver) reset() {
@@ -518,7 +518,7 @@ func (e *simpleEncDriver) reset() {
 }
 
 func (d *simpleDecDriver) reset() {
-	d.r = d.d.r
+	d.r, d.br = d.d.r, d.d.bytes
 	d.bd, d.bdRead = 0, false
 }
 

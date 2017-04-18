@@ -96,6 +96,8 @@ func Marshal(info TypeInfo, value interface{}) ([]byte, error) {
 		return marshalTuple(info, value)
 	case TypeUDT:
 		return marshalUDT(info, value)
+	case TypeDate:
+		return marshalDate(info, value)
 	}
 
 	// detect protocol 2 UDT
@@ -155,6 +157,8 @@ func Unmarshal(info TypeInfo, data []byte, value interface{}) error {
 		return unmarshalTuple(info, data, value)
 	case TypeUDT:
 		return unmarshalUDT(info, data, value)
+	case TypeDate:
+		return unmarshalDate(info, data, value)
 	}
 
 	// detect protocol 2 UDT
@@ -1116,6 +1120,66 @@ func unmarshalTimestamp(info TypeInfo, data []byte, value interface{}) error {
 	return unmarshalErrorf("can not unmarshal %s into %T", info, value)
 }
 
+func marshalDate(info TypeInfo, value interface{}) ([]byte, error) {
+	var timestamp int64
+	switch v := value.(type) {
+	case Marshaler:
+		return v.MarshalCQL(info)
+	case int64:
+		timestamp = v
+		x := timestamp/86400000 + int64(1 << 31)
+		return encInt(int32(x)), nil
+	case time.Time:
+		if v.IsZero() {
+			return []byte{}, nil
+		}
+		timestamp = int64(v.UTC().Unix()*1e3) + int64(v.UTC().Nanosecond()/1e6)
+		x := timestamp/86400000 + int64(1 << 31)
+		return encInt(int32(x)), nil
+	case *time.Time:
+		if v.IsZero() {
+			return []byte{}, nil
+		}
+		timestamp = int64(v.UTC().Unix()*1e3) + int64(v.UTC().Nanosecond()/1e6)
+		x := timestamp/86400000 + int64(1 << 31)
+		return encInt(int32(x)), nil
+	case string:
+		if v == "" {
+			return []byte{}, nil
+		}
+		t, err := time.Parse("2006-01-02", v)
+		if err != nil {
+			return nil, marshalErrorf("can not marshal %T into %s, date layout must be '2006-01-02'", value, info)
+		}
+		timestamp = int64(t.UTC().Unix()*1e3) + int64(t.UTC().Nanosecond()/1e6)
+		x := timestamp/86400000 + int64(1 << 31)
+		return encInt(int32(x)), nil
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+	return nil, marshalErrorf("can not marshal %T into %s", value, info)
+}
+
+func unmarshalDate(info TypeInfo, data []byte, value interface{}) error {
+	switch v := value.(type) {
+	case Unmarshaler:
+		return v.UnmarshalCQL(info, data)
+	case *time.Time:
+		if len(data) == 0 {
+			*v = time.Time{}
+			return nil
+		}
+		var origin uint32 = 1 << 31
+		var current uint32 = binary.BigEndian.Uint32(data)
+		timestamp := (int64(current) - int64(origin)) * 86400000
+		*v = time.Unix(0, timestamp*int64(time.Millisecond)).In(time.UTC)
+		return nil
+	}
+	return unmarshalErrorf("can not unmarshal %s into %T", info, value)
+}
+
 func writeCollectionSize(info CollectionType, n int, buf *bytes.Buffer) error {
 	if info.proto > protoVersion2 {
 		if n > math.MaxInt32 {
@@ -1359,9 +1423,10 @@ func marshalUUID(info TypeInfo, value interface{}) ([]byte, error) {
 	case UUID:
 		return val.Bytes(), nil
 	case []byte:
-		if len(val) == 16 {
-			return val, nil
+		if len(val) != 16 {
+			return nil, marshalErrorf("can not marshal []byte %d bytes long into %s, must be exactly 16 bytes long", len(val), info)
 		}
+		return val, nil
 	case string:
 		b, err := ParseUUID(val)
 		if err != nil {
@@ -1797,6 +1862,10 @@ type NativeType struct {
 	proto  byte
 	typ    Type
 	custom string // only used for TypeCustom
+}
+
+func NewNativeType(proto byte, typ Type, custom string) NativeType {
+	return NativeType{proto, typ, custom}
 }
 
 func (t NativeType) New() interface{} {

@@ -35,7 +35,7 @@ func main() {
     logger.Println("Configuring cgm")
 
     cmc := &cgm.Config{}
-    cmc.Debug := false // set to true for debug messages
+    cmc.Debug = false // set to true for debug messages
     cmc.Log = logger
 
     // Circonus API Token key (https://login.circonus.com/user/tokens)

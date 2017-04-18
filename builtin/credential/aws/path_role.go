@@ -492,6 +492,20 @@ func (b *backend) pathRoleCreateUpdate(
 		numBinds++
 	}
 
+	if roleEntry.BoundVpcID != "" {
+		if !allowEc2Binds {
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_vpc_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+		}
+		numBinds++
+	}
+
+	if roleEntry.BoundSubnetID != "" {
+		if !allowEc2Binds {
+			return logical.ErrorResponse(fmt.Sprintf("specified bound_subnet_id but not allowing ec2 auth_type or inferring %s", ec2EntityType)), nil
+		}
+		numBinds++
+	}
+
 	if numBinds == 0 {
 		return logical.ErrorResponse("at least be one bound parameter should be specified on the role"), nil
 	}

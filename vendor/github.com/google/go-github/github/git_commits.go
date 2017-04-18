@@ -28,6 +28,7 @@ type Commit struct {
 	Tree         *Tree                  `json:"tree,omitempty"`
 	Parents      []Commit               `json:"parents,omitempty"`
 	Stats        *CommitStats           `json:"stats,omitempty"`
+	HTMLURL      *string                `json:"html_url,omitempty"`
 	URL          *string                `json:"url,omitempty"`
 	Verification *SignatureVerification `json:"verification,omitempty"`
 
@@ -88,6 +89,7 @@ type createCommit struct {
 }
 
 // CreateCommit creates a new commit in a repository.
+// commit must not be nil.
 //
 // The commit.Committer is optional and will be filled with the commit.Author
 // data if omitted. If the commit.Author is omitted, it will be filled in with
@@ -95,22 +97,25 @@ type createCommit struct {
 //
 // GitHub API docs: https://developer.github.com/v3/git/commits/#create-a-commit
 func (s *GitService) CreateCommit(ctx context.Context, owner string, repo string, commit *Commit) (*Commit, *Response, error) {
+	if commit == nil {
+		return nil, nil, fmt.Errorf("commit must be provided")
+	}
+
 	u := fmt.Sprintf("repos/%v/%v/git/commits", owner, repo)
 
-	body := &createCommit{}
-	if commit != nil {
-		parents := make([]string, len(commit.Parents))
-		for i, parent := range commit.Parents {
-			parents[i] = *parent.SHA
-		}
+	parents := make([]string, len(commit.Parents))
+	for i, parent := range commit.Parents {
+		parents[i] = *parent.SHA
+	}
 
-		body = &createCommit{
-			Author:    commit.Author,
-			Committer: commit.Committer,
-			Message:   commit.Message,
-			Tree:      commit.Tree.SHA,
-			Parents:   parents,
-		}
+	body := &createCommit{
+		Author:    commit.Author,
+		Committer: commit.Committer,
+		Message:   commit.Message,
+		Parents:   parents,
+	}
+	if commit.Tree != nil {
+		body.Tree = commit.Tree.SHA
 	}
 
 	req, err := s.client.NewRequest("POST", u, body)
