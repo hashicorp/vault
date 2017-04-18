@@ -66,7 +66,7 @@ This also provides a convenient method of switching to a new CA certificate
 while keeping CRLs valid from the old CA certificate; simply mount a new
 backend and issue from there.
 
-A common pattern is to have one mount act as your root CA, and which is only
+A common pattern is to have one mount act as your root CA, which is only
 used for signing intermediate CA CSRs mounted at other locations.
 
 ### Keep certificate lifetimes short, for CRL's sake
