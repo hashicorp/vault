@@ -34,6 +34,8 @@ BUG FIXES:
 
  * api: Respect a configured path in Vault's address [GH-2588]
  * auth/aws-ec2: New bounds added as criteria to allow role creation [GH-2600]
+ * auth/ldap: Don't lowercase groups attached to users [GH-2613]
+ * secret/mssql: Update mssql driver to support queries with colons [GH-2610]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]
  * secret/ssh: Don't automatically lowercase principles in issued SSH certs
