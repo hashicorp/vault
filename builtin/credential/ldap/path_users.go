@@ -101,7 +101,7 @@ func (b *backend) pathUserRead(
 func (b *backend) pathUserWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	groups := strutil.ParseDedupAndSortStrings(d.Get("groups").(string), ",")
+	groups := strutil.RemoveDuplicates(strutil.ParseStringSlice(d.Get("groups").(string), ","), false)
 	policies := policyutil.ParsePolicies(d.Get("policies").(string))
 	for i, g := range groups {
 		groups[i] = strings.TrimSpace(g)
