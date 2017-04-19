@@ -225,8 +225,10 @@ func (b *backend) pathConfigClientCreateUpdate(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
-		return nil, err
+	if changedCreds || req.Operation == logical.CreateOperation {
+		if err := req.Storage.Put(entry); err != nil {
+			return nil, err
+		}
 	}
 
 	if changedCreds {

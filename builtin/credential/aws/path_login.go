@@ -76,8 +76,7 @@ presigned request. Currently, POST is the only supported value`,
 			"iam_request_url": {
 				Type: framework.TypeString,
 				Description: `Base64-encoded full URL against which to make the AWS request
-when using iam auth_type. If using a POST request with the action specified in the
-body, this should just be "Lw==" ("/" base64-encoded).`,
+when using iam auth_type.`,
 			},
 
 			"iam_request_body": {
@@ -934,7 +933,11 @@ func (b *backend) pathLoginRenewIam(
 			if !ok {
 				return nil, fmt.Errorf("no inferred entity ID in auth metadata")
 			}
-			_, err := b.validateInstance(req.Storage, instanceID, roleEntry.InferredAWSRegion, req.Auth.Metadata["accountID"])
+			instanceRegion, ok := req.Auth.Metadata["inferred_aws_region"]
+			if !ok {
+				return nil, fmt.Errorf("no inferred AWS region in auth metadata")
+			}
+			_, err := b.validateInstance(req.Storage, instanceID, instanceRegion, req.Auth.Metadata["accountID"])
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify instance ID %q: %v", instanceID, err)
 			}
@@ -1194,6 +1197,7 @@ func (b *backend) pathLoginUpdateIam(
 				"auth_type":            iamAuthType,
 				"inferred_entity_type": inferredEntityType,
 				"inferred_entity_id":   inferredEntityId,
+				"inferred_aws_region":  roleEntry.InferredAWSRegion,
 				"account_id":           accountID,
 			},
 			InternalData: map[string]interface{}{

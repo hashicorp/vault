@@ -78,7 +78,7 @@ the locations AWS has provided for you.
 
 Each signed AWS request includes the current timestamp to mitigate the risk of
 replay attacks. In addition, Vault allows you to require an additional header,
-`X-Vault-AWSIAM-Server-ID`, to be present to mitigate against different types of replay
+`X-Vault-AWS-IAM-Server-ID`, to be present to mitigate against different types of replay
 attacks (such as a signed `GetCallerIdentity` request stolen from a dev Vault
 instance and used to authenticate to a prod Vault instance). Vault further
 requires that this header be one of the headers included in the AWS signature
@@ -513,7 +513,7 @@ $ vault write auth/aws/role/dev-role-iam auth_type=iam \
               bound_iam_principal_arn=arn:aws:iam::123456789012:role/MyRole policies=prod,dev max_ttl=500h
 ```
 
-#### Configure a required X-Vault-AWSIAM-Server-ID Header (recommended)
+#### Configure a required X-Vault-AWS-IAM-Server-ID Header (recommended)
 
 ```
 $ vault write auth/aws/client/config iam_auth_header_vaule=vault.example.xom
@@ -654,15 +654,24 @@ The response will be in JSON. For example:
     <ul>
       <li>
         <span class="param">access_key</span>
-        <span class="param-flags">required</span>
-        AWS Access key with permissions to query EC2 DescribeInstances API.
+        <span class="param-flags">optional</span>
+        AWS Access key with permissions to query AWS APIs. The permissions
+        required depend on the specific configurations. If using the `iam` auth
+        method without inferencing, then no credentials are necessary. If using
+        the `ec2` auth method or using the `iam` auth method with inferencing,
+        then these credentials need access to `ec2:DescribeInstances`. If
+        additionally a `bound_iam_role` is specified, then these credentials
+        also need access to `iam:GetInstanceProfile`. If, however, an alterate
+        sts configuration is set for the target account, then the credentials
+        must be permissioned to call `sts:AssumeRole` on the configured role,
+        and that role must have the permissions described here.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">secret_key</span>
-        <span class="param-flags">required</span>
-        AWS Secret key with permissions to query EC2 DescribeInstances API.
+        <span class="param-flags">optional</span>
+        AWS Secret key with permissions to query AWS APIs.
       </li>
     </ul>
     <ul>
@@ -690,10 +699,10 @@ The response will be in JSON. For example:
       <li>
         <span class="param">iam_server_id_header_value</span>
         <span class="param-flags">optional</span>
-        The value to require in the `X-Vault-AWSIAM-Server-ID` header as part of
+        The value to require in the `X-Vault-AWS-IAM-Server-ID` header as part of
         GetCallerIdentity requests that are used in the iam auth method. If not
         set, then no value is required or validated. If set, clients must
-        include an X-Vault-AWSIAM-Server-ID header in the headers of login
+        include an X-Vault-AWS-IAM-Server-ID header in the headers of login
         requests, and further this header must be among the signed headers
         validated by AWS. This is to protect against different types of replay
         attacks, for example a signed request sent to a dev server being resent
@@ -1266,7 +1275,11 @@ The response will be in JSON. For example:
     are using the role registered using this endpoint, will be able to perform
     the login operation. Contraints can be specified on the role, that are
     applied on the instances or principals attempting to login. At least one
-    constraint should be specified on the role.
+    constraint should be specified on the role. The available constraints you
+    can choose are dependent on the `auth_type` of the role and, if the
+    `auth_type` is `iam`, then whether inferencing is enabled. A role will not
+    let you configure a constraint if it is not checked by the `auth_type` and
+    inferencing configuration of that role.
   </dd>
 
   <dt>Method</dt>
@@ -1289,29 +1302,29 @@ The response will be in JSON. For example:
         <span class="param">auth_type</span>
         <span class="param-flags">optional</span>
         The auth type permitted for this role. Valid choices are "ec2" or "iam".
-        If no value is chosen, then it will default to "ec2" for backwards
-        compatibility. Only those bindings applicable to the auth type chosen by
-        clients will be checked by Vault upon login.
+        If no value is specified, then it will default to "iam". Only those
+        bindings applicable to the auth type chosen by clients will be checked
+        by Vault upon login.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">bound_ami_id</span>
         <span class="param-flags">optional</span>
-        If set, defines a constraint on the EC2 instances that they
-should be using the AMI ID specified by this parameter. This constraint is
-checked during ec2 auth as well as the iam auth method only when inferring an EC2
-instance.
+        If set, defines a constraint on the EC2 instances that they should be
+        using the AMI ID specified by this parameter. This constraint is checked
+        during ec2 auth as well as the iam auth method only when inferring an
+        EC2 instance.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">bound_account_id</span>
         <span class="param-flags">optional</span>
-        If set, defines a constraint on the EC2 instances that the account ID
-in its identity document to match the one specified by this parameter. This
-constraint is checked during ec2 auth as well as the iam auth method only when
-inferring an EC2 instance.
+        If set, defines a constraint on the EC2 instances that the account ID in
+        its identity document to match the one specified by this parameter. This
+        constraint is checked during ec2 auth as well as the iam auth method
+        only when inferring an EC2 instance.
       </li>
     </ul>
     <ul>
@@ -1319,11 +1332,9 @@ inferring an EC2 instance.
         <span class="param">bound_region</span>
         <span class="param-flags">optional</span>
         If set, defines a constraint on the EC2 instances that the region in
-        its identity document to match the one specified by this parameter. This
-        constraint is only checked by the ec2 auth method (as IAM is a global
-        service so it doesn't make sense to bind by region with the iam auth
-        method, and binding by region is implied with the inferred AWS region
-        when inferring an EC2 instance).
+        its identity document must match the one specified by this parameter. This
+        constraint is only checked by the ec2 auth method as well as the iam
+        auth method only when inferring an ec2 instance..
       </li>
     </ul>
     <ul>
@@ -1331,7 +1342,9 @@ inferring an EC2 instance.
         <span class="param">bound_vpc_id</span>
         <span class="param-flags">optional</span>
         If set, defines a constraint on the EC2 instance to be associated with
-        the VPC ID that matches the value specified by this parameter.
+        the VPC ID that matches the value specified by this parameter. This
+        constraint is only checked by the ec2 auth method as well as the iam
+        auth method only when inferring an ec2 instance.
       </li>
     </ul>
     <ul>
@@ -1339,31 +1352,34 @@ inferring an EC2 instance.
         <span class="param">bound_subnet_id</span>
         <span class="param-flags">optional</span>
         If set, defines a constraint on the EC2 instance to be associated with
-        the subnet ID that matches the value specified by this parameter.
+        the subnet ID that matches the value specified by this parameter. This
+        constraint is only checked by the ec2 auth method as well as the iam
+        auth method only when inferring an ec2 instance.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">bound_iam_role_arn</span>
         <span class="param-flags">optional</span>
-	If set, defines a constraint on the authenticating EC2 instance that it
-must match the IAM role ARN specified by this parameter.  The value is
-prefix-matched (as though it were a glob ending in `*`).  The configured
-IAM user or EC2 instance role must be allowed to execute the
-`iam:GetInstanceProfile` action if this is specified. This constraint is checked
-by the ec2 auth method as well as the iam auth method only when inferring an EC2
-instance.
+        If set, defines a constraint on the authenticating EC2 instance that it must
+        match the IAM role ARN specified by this parameter.  The value is
+        prefix-matched (as though it were a glob ending in `*`).  The configured IAM
+        user or EC2 instance role must be allowed to execute the
+        `iam:GetInstanceProfile` action if this is specified. This constraint is
+        checked by the ec2 auth method as well as the iam auth method only when
+        inferring an EC2 instance.
       </li>
     </ul>
     <ul>
       <li>
         <span class="param">bound_iam_instance_profile_arn</span>
         <span class="param-flags">optional</span>
-If set, defines a constraint on the EC2 instances to be associated with an IAM
-instance profile ARN which has a prefix that matches the value specified by
-this parameter. The value is prefix-matched (as though it were a glob ending
-in `*`). This constraint is checked by the ec2 auth method as well as the iam
-auth method only when inferring an ec2 instance.
+        If set, defines a constraint on the EC2 instances to be associated with
+        an IAM instance profile ARN which has a prefix that matches the value
+        specified by this parameter. The value is prefix-matched (as though it
+        were a glob ending in `*`). This constraint is checked by the ec2 auth
+        method as well as the iam auth method only when inferring an ec2
+        instance.
       </li>
     </ul>
     <ul>
@@ -1374,8 +1390,8 @@ auth method only when inferring an ec2 instance.
         field should be the 'key' of the tag on the EC2 instance. The 'value'
         of the tag should be generated using `role/<role>/tag` endpoint.
         Defaults to an empty string, meaning that role tags are disabled. This
-        constraint is valid only with the ec2 auth method and is not checked
-        when using the iam auth method, even when inferencing is enabled.
+        constraint is valid only with the ec2 auth method and is not allowed
+        when an auth_type is iam.
       </li>
     </ul>
     <ul>
@@ -1695,11 +1711,10 @@ auth method only when inferring an ec2 instance.
     Fetch a token. This endpoint verifies the pkcs7 signature of the instance
     identity document or the signature of the signed GetCallerIdentity request.
     With the ec2 auth method, or when inferring an EC2 instance, verifies that
-    the instance is actually in a running state.
-    Cross checks the constraints defined on the role with which the login is being
-    performed. With the ec2 auth method, as an alternative to pkcs7 signature,
-    the identity document along
-    with its RSA digest can be supplied to this endpoint.
+    the instance is actually in a running state.  Cross checks the constraints
+    defined on the role with which the login is being performed. With the ec2
+    auth method, as an alternative to pkcs7 signature, the identity document
+    along with its RSA digest can be supplied to this endpoint.
   </dd>
 
   <dt>Method</dt>
@@ -1782,9 +1797,9 @@ auth method only when inferring an ec2 instance.
         <span class="param">iam_request_url</span>
         <span class="param-flags">required</span>
         Base64-encoded HTTP URL used in the signed request. Most likely just
-        aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8= (base64-encoding of
-        https://sts.amazonaws.com/) as most requests will probably use POST with
-        an empty URI. This is required when using the iam auth method.
+        `aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=` (base64-encoding of
+        `https://sts.amazonaws.com/`) as most requests will probably use POST
+        with an empty URI. This is required when using the iam auth method.
       </li>
     </ul>
     <ul>
@@ -1792,9 +1807,9 @@ auth method only when inferring an ec2 instance.
         <span class="param">iam_request_body</span>
         <span class="param-flags">required</span>
         Base64-encoded body of the signed request. Most likely
-        <em>QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==</em>
+        `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==`
         which is the base64 encoding of
-        <em>Action=GetCallerIdentity&Version=2011-06-15</em>. This is required
+        `Action=GetCallerIdentity&Version=2011-06-15`. This is required
         when using the iam auth method.
       </li>
     </ul>
@@ -1805,10 +1820,10 @@ auth method only when inferring an ec2 instance.
         Base64-encoded, JSON-serialized representation of the HTTP request
         headers. The JSON serialization assumes that each header key maps to an
         array of string values (though the length of that array will probably
-        only be one). If the iam_server_id_header_value is configured in Vault for
-        the aws auth mount, then the headers must include the
-        X-Vault-AWSIAM-Server-Id header, its value must match the value
-        configured, and the header must be included in the signed headers. This
+        only be one). If the `iam_server_id_header_value` is configured in Vault
+        for the aws auth mount, then the headers must include the
+        X-Vault-AWS-IAM-Server-ID header, its value must match the value
+        configured, and the header must be included in the signed headers.  This
         is required when using the iam auth method.
       </li>
     </ul>

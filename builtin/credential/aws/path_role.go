@@ -203,7 +203,49 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 	b.roleMutex.RLock()
 	defer b.roleMutex.RUnlock()
 
-	return b.nonLockedAWSRole(s, roleName)
+	roleEntry, err := b.nonLockedAWSRole(s, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if roleEntry == nil {
+		return nil, nil
+	}
+	needUpgrade, err := upgradeRoleEntry(roleEntry)
+	if err != nil {
+		return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
+	}
+	if needUpgrade {
+		// we need to get a write lock to upgrade the role entry, so we first need to release our read lock
+		// to prevent the write lock from deadlocking on it
+		b.roleMutex.RUnlock()
+		// now we need to ensure that we re-acquire the read lock so the above deferred RUnlock() doesn't
+		// cause a crash trying to unlock the already-unlocked mutex
+		defer b.roleMutex.RLock()
+		// Now grab a write lock on the mutex
+		b.roleMutex.Lock()
+		// and ensure we eventually unlock it
+		defer b.roleMutex.Unlock()
+		// Now that we have a R/W lock, we need to re-read the role entry in case it was
+		// written to between releasing the read lock and acquiring the write lock
+		roleEntry, err = b.nonLockedAWSRole(s, roleName)
+		if err != nil {
+			return nil, err
+		}
+		// somebody deleted the role, so no use in putting it back
+		if roleEntry == nil {
+			return nil, nil
+		}
+		// now re-check to see if we need to upgrade
+		if needUpgrade, err = upgradeRoleEntry(roleEntry); err != nil {
+			return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
+		}
+		if needUpgrade {
+			if err = b.nonLockedSetAWSRole(s, roleName, roleEntry); err != nil {
+				return nil, fmt.Errorf("error saving upgraded roleEntry: %v", err)
+			}
+		}
+	}
+	return roleEntry, nil
 }
 
 // lockedSetAWSRole creates or updates a role in the storage. This method
@@ -248,9 +290,41 @@ func (b *backend) nonLockedSetAWSRole(s logical.Storage, roleName string,
 	return nil
 }
 
+// If needed, updates the role entry and returns a bool indicating if it was updated
+// (and thus needs to be persisted)
+func upgradeRoleEntry(roleEntry *awsRoleEntry) (bool, error) {
+	if roleEntry == nil {
+		return false, fmt.Errorf("received nil roleEntry")
+	}
+	var upgraded bool
+	// Check if the value held by role ARN field is actually an instance profile ARN
+	if roleEntry.BoundIamRoleARN != "" && strings.Contains(roleEntry.BoundIamRoleARN, ":instance-profile/") {
+		// If yes, move it to the correct field
+		roleEntry.BoundIamInstanceProfileARN = roleEntry.BoundIamRoleARN
+
+		// Reset the old field
+		roleEntry.BoundIamRoleARN = ""
+
+		upgraded = true
+	}
+
+	// Check if there was no pre-existing AuthType set (from older versions)
+	if roleEntry.AuthType == "" {
+		// then default to the original behavior of ec2
+		roleEntry.AuthType = ec2AuthType
+		upgraded = true
+	}
+
+	return upgraded, nil
+
+}
+
 // nonLockedAWSRole returns the properties set on the given role. This method
 // does not acquire the read lock before reading the role from the storage. If
 // locking is desired, use lockedAWSRole instead.
+// This method also does NOT check to see if a role upgrade is required. It is
+// the responsibility of the caller to check if a role upgrade is required and,
+// if so, to upgrade the role
 func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	if roleName == "" {
 		return nil, fmt.Errorf("missing role name")
@@ -267,34 +341,6 @@ func (b *backend) nonLockedAWSRole(s logical.Storage, roleName string) (*awsRole
 	var result awsRoleEntry
 	if err := entry.DecodeJSON(&result); err != nil {
 		return nil, err
-	}
-
-	// Check if the value held by role ARN field is actually an instance profile ARN
-	if result.BoundIamRoleARN != "" && strings.Contains(result.BoundIamRoleARN, ":instance-profile/") {
-		// If yes, move it to the correct field
-		result.BoundIamInstanceProfileARN = result.BoundIamRoleARN
-
-		// Reset the old field
-		result.BoundIamRoleARN = ""
-
-		// Save the update
-		// TODO: Eventually we probably want to write these out to the storage backend
-		// Not doing that for now as this isn't guaranteed to be a safe code path to do so
-		/* if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
-			return nil, fmt.Errorf("failed to move instance profile ARN to bound_iam_instance_profile_arn field")
-		} */
-	}
-
-	// Check if there was no pre-existing AuthType set (from older versions)
-	if result.AuthType == "" {
-		// then default to the original behavior of ec2
-		result.AuthType = ec2AuthType
-		// and save the result
-		// TODO: Same as above, we probably want to write these out to the storage backend
-		// at some point
-		/* if err = b.nonLockedSetAWSRole(s, roleName, &result); err != nil {
-			return nil, fmt.Errorf("failed to save default auth_type")
-		} */
 	}
 
 	return &result, nil
@@ -372,6 +418,17 @@ func (b *backend) pathRoleCreateUpdate(
 	}
 	if roleEntry == nil {
 		roleEntry = &awsRoleEntry{}
+	} else {
+		needUpdate, err := upgradeRoleEntry(roleEntry)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("failed to update roleEntry: %v", err)), nil
+		}
+		if needUpdate {
+			err = b.nonLockedSetAWSRole(req.Storage, roleName, roleEntry)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("failed to save upgraded roleEntry: %v", err)), nil
+			}
+		}
 	}
 
 	// Fetch and set the bound parameters. There can't be default values

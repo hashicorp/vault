@@ -117,7 +117,7 @@ If you need to explicitly pass in credentials, you would do it like this:
 Key/Value Pairs:
 
   mount=aws                           The mountpoint for the AWS credential provider.
-                                      Defaults to "aws-iam"
+                                      Defaults to "aws"
   aws_access_key_id=<access key>      Explicitly specified AWS access key
   aws_secret_access_key=<secret key>  Explicitly specified AWS secret key
   aws_security_token=<token>          Security token for temporary credentials
