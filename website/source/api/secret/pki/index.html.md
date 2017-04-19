@@ -68,7 +68,7 @@ $ curl \
 
 ## Read Certificate
 
-This endpoint etrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
+This endpoint retrieves one of a selection of certificates. This endpoint returns the certificate in PEM formatting in the
 `certificate` key of the JSON object.
 
 This is an unauthenticated endpoint.
@@ -707,11 +707,6 @@ that is not allowed by the CN policy in the role, the request is denied.
   data. This does `not` include the common name in the CSR; use
   `use_csr_common_name` for that.
 
-- `allow_token_displayname` `(bool: false)` – If set, the display name of the
-  token used when requesting a certificate will be considered to be a valid host
-  name by the role. Normal verification behavior applies with respect to
-  subdomains and wildcards.
-
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
   subject field of issued certificates. This is a comma-separated string.
 
@@ -727,6 +722,13 @@ that is not allowed by the CN policy in the role, the request is denied.
   generated with long lifetimes, it is recommended that lease generation be
   disabled, as large amount of leases adversely affect the startup time of
   Vault.
+
+- `no_store` `(bool: false)` – If set, certificates issued/signed against this
+role will not be stored in the in the storage backend. This can improve
+performance when issuing large numbers of certificates. However, certificates
+issued in this way cannot be enumerated or revoked, so this option is
+recommended only for certificates that are non-sensitive, or extremely
+short-lived. This option implies a value of `false` for `generate_lease`.
 
 ### Sample Payload
 
@@ -1109,11 +1111,15 @@ refuse to issue an intermediate CA certificate (see the
 **This is a potentially dangerous endpoint and only highly trusted users should
 have access.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/sign-verbatim`         | `200 application/json` |
+| Method   | Path                                 | Produces               |
+| :------- | :----------------------------------- | :--------------------- |
+| `POST`   | `/pki/sign-verbatim(/:name)`         | `200 application/json` |
 
 ### Parameters
+
+- `name` `(string: "")` - Specifies a role. If set, the following parameters
+  from the role will have effect: `ttl`, `max_ttl`, `generate_lease`, and
+  `no_store`.
 
 - `csr` `(string: <required>)` – Specifies the PEM-encoded CSR.
 

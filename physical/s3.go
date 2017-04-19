@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"sort"
 	"strconv"
@@ -18,15 +19,17 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/hashicorp/errwrap"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/vault/helper/consts"
 )
 
 // S3Backend is a physical backend that stores data
 // within an S3 bucket.
 type S3Backend struct {
-	bucket string
-	client *s3.S3
-	logger log.Logger
+	bucket     string
+	client     *s3.S3
+	logger     log.Logger
 	permitPool *PermitPool
 }
 
@@ -77,10 +80,16 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 		return nil, err
 	}
 
+	pooledTransport := cleanhttp.DefaultPooledTransport()
+	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
+
 	s3conn := s3.New(session.New(&aws.Config{
 		Credentials: creds,
-		Endpoint:    aws.String(endpoint),
-		Region:      aws.String(region),
+		HTTPClient: &http.Client{
+			Transport: pooledTransport,
+		},
+		Endpoint: aws.String(endpoint),
+		Region:   aws.String(region),
 	}))
 
 	_, err = s3conn.HeadBucket(&s3.HeadBucketInput{Bucket: &bucket})
@@ -101,9 +110,9 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 	}
 
 	s := &S3Backend{
-		client: s3conn,
-		bucket: bucket,
-		logger: logger,
+		client:     s3conn,
+		bucket:     bucket,
+		logger:     logger,
 		permitPool: NewPermitPool(maxParInt),
 	}
 	return s, nil

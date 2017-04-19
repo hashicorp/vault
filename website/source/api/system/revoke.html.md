@@ -20,7 +20,7 @@ This endpoint revokes a secret immediately.
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to renew.
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke.
 
 ### Sample Request
 

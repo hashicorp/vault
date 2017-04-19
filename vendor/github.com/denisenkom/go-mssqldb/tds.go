@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 	"io"
 	"io/ioutil"
 	"net"
@@ -18,7 +19,6 @@ import (
 	"unicode"
 	"unicode/utf16"
 	"unicode/utf8"
-	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 )
 
 func parseInstances(msg []byte) map[string]map[string]string {
@@ -499,6 +499,11 @@ func readBVarChar(r io.Reader) (res string, err error) {
 	if err != nil {
 		return "", err
 	}
+
+	// A zero length could be returned, return an empty string
+	if numchars == 0 {
+		return "", nil
+	}
 	return readUcs2(r, int(numchars))
 }
 
@@ -597,7 +602,7 @@ func (hdr transDescrHdr) pack() (res []byte) {
 }
 
 func writeAllHeaders(w io.Writer, headers []headerStruct) (err error) {
-	// calculatint total length
+	// Calculating total length.
 	var totallen uint32 = 4
 	for _, hdr := range headers {
 		totallen += 4 + 2 + uint32(len(hdr.data))
@@ -670,6 +675,7 @@ type connectParams struct {
 	typeFlags              uint8
 	failOverPartner        string
 	failOverPort           uint64
+	packetSize             uint16
 }
 
 func splitConnectionString(dsn string) (res map[string]string) {
@@ -718,7 +724,7 @@ func splitConnectionStringOdbc(dsn string) (map[string]string, error) {
 		// May be the end of the value or an escaped closing brace, depending on the next character
 		parserStateBracedValueClosingBrace
 
-		// After a value. Next character should be a semi-colon or whitespace.
+		// After a value. Next character should be a semicolon or whitespace.
 		parserStateEndValue
 	)
 
@@ -960,6 +966,30 @@ func parseConnectParams(dsn string) (connectParams, error) {
 		}
 	}
 
+	// https://docs.microsoft.com/en-us/sql/database-engine/configure-windows/configure-the-network-packet-size-server-configuration-option
+	// Default packet size remains at 4096 bytes
+	p.packetSize = 4096
+	strpsize, ok := params["packet size"]
+	if ok {
+		var err error
+		psize, err := strconv.ParseUint(strpsize, 0, 16)
+		if err != nil {
+			f := "Invalid packet size '%v': %v"
+			return p, fmt.Errorf(f, strpsize, err.Error())
+		}
+
+		// Ensure packet size falls within the TDS protocol range of 512 to 32767 bytes
+		// NOTE: Encrypted connections have a maximum size of 16383 bytes.  If you request
+		// a higher packet size, the server will respond with an ENVCHANGE request to
+		// alter the packet size to 16383 bytes.
+		p.packetSize = uint16(psize)
+		if p.packetSize < 512 {
+			p.packetSize = 512
+		} else if p.packetSize > 32767 {
+			p.packetSize = 32767
+		}
+	}
+
 	// https://msdn.microsoft.com/en-us/library/dd341108.aspx
 	p.dial_timeout = 15 * time.Second
 	p.conn_timeout = 30 * time.Second
@@ -1175,7 +1205,7 @@ initiate_connection:
 
 	toconn := NewTimeoutConn(conn, p.conn_timeout)
 
-	outbuf := newTdsBuffer(4096, toconn)
+	outbuf := newTdsBuffer(p.packetSize, toconn)
 	sess := tdsSession{
 		buf:      outbuf,
 		log:      log,
@@ -1297,6 +1327,10 @@ continue_login:
 			sess.loginAck = token
 		case error:
 			return nil, fmt.Errorf("Login error: %s", token.Error())
+		case doneStruct:
+			if token.isError() {
+				return nil, fmt.Errorf("Login error: %s", token.getError())
+			}
 		}
 	}
 	if sspi_msg != nil {

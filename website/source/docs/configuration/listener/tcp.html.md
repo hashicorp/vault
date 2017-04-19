@@ -58,13 +58,6 @@ listener "tcp" {
   authentication for this listener; the listener will require a presented
   client cert that successfully validates against system CAs.
 
-    -> Use caution with this option; disabling it requires modifying Vault's
-    configuration rather than an ACL'd Vault API call, so it's best used in a
-    defense-in-depth fashion.
-
-    -> Use of this option will generally make it impossible to use Vault's
-    `cert` authentication backend.
-
 ## `tcp` Listener Examples
 
 ### Configuring TLS

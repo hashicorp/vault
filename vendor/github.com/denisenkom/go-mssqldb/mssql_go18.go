@@ -7,11 +7,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"strings"
 )
 
 var _ driver.Pinger = &MssqlConn{}
 
-// Ping is used to check if the remote server is avaiable and satisfies the Pinger interface.
+// Ping is used to check if the remote server is available and satisfies the Pinger interface.
 func (c *MssqlConn) Ping(ctx context.Context) error {
 	stmt := &MssqlStmt{c, `select 1;`, 0, nil}
 	_, err := stmt.ExecContext(ctx, nil)
@@ -51,6 +52,9 @@ func (c *MssqlConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.
 }
 
 func (c *MssqlConn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
+	if len(query) > 10 && strings.EqualFold(query[:10], "INSERTBULK") {		
+		return c.prepareCopyIn(query)
+	}
 	return c.prepareContext(ctx, query)
 }
 

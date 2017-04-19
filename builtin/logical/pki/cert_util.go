@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -596,7 +597,7 @@ func generateCreationBundle(b *backend,
 		if csr == nil || !role.UseCSRSANs {
 			cnAltRaw, ok := data.GetOk("alt_names")
 			if ok {
-				cnAlt := strutil.ParseDedupAndSortStrings(cnAltRaw.(string), ",")
+				cnAlt := strutil.ParseDedupLowercaseAndSortStrings(cnAltRaw.(string), ",")
 				for _, v := range cnAlt {
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
@@ -634,11 +635,13 @@ func generateCreationBundle(b *backend,
 	var ipAltInt interface{}
 	{
 		if csr != nil && role.UseCSRSANs {
-			if !role.AllowIPSANs {
-				return nil, errutil.UserError{Err: fmt.Sprintf(
-					"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+			if len(csr.IPAddresses) > 0 {
+				if !role.AllowIPSANs {
+					return nil, errutil.UserError{Err: fmt.Sprintf(
+						"IP Subject Alternative Names are not allowed in this role, but was provided some via CSR")}
+				}
+				ipAddresses = csr.IPAddresses
 			}
-			ipAddresses = csr.IPAddresses
 		} else {
 			ipAltInt, ok = data.GetOk("ip_sans")
 			if ok {
@@ -665,7 +668,7 @@ func generateCreationBundle(b *backend,
 	ou := []string{}
 	{
 		if role.OU != "" {
-			ou = strutil.ParseDedupAndSortStrings(role.OU, ",")
+			ou = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.OU, ","), false)
 		}
 	}
 
@@ -673,7 +676,7 @@ func generateCreationBundle(b *backend,
 	organization := []string{}
 	{
 		if role.Organization != "" {
-			organization = strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			organization = strutil.RemoveDuplicates(strutil.ParseStringSlice(role.Organization, ","), false)
 		}
 	}
 
@@ -693,7 +696,7 @@ func generateCreationBundle(b *backend,
 		if len(ttlField) == 0 {
 			ttl = b.System().DefaultLeaseTTL()
 		} else {
-			ttl, err = time.ParseDuration(ttlField)
+			ttl, err = parseutil.ParseDurationSecond(ttlField)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid requested ttl: %s", err)}
@@ -703,7 +706,7 @@ func generateCreationBundle(b *backend,
 		if len(role.MaxTTL) == 0 {
 			maxTTL = b.System().MaxLeaseTTL()
 		} else {
-			maxTTL, err = time.ParseDuration(role.MaxTTL)
+			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid ttl: %s", err)}

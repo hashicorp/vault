@@ -123,6 +123,7 @@ includes_Linux='
 #include <linux/falloc.h>
 #include <linux/filter.h>
 #include <linux/netlink.h>
+#include <linux/random.h>
 #include <linux/reboot.h>
 #include <linux/rtnetlink.h>
 #include <linux/ptrace.h>
@@ -131,6 +132,7 @@ includes_Linux='
 #include <linux/icmpv6.h>
 #include <linux/serial.h>
 #include <linux/can.h>
+#include <linux/vm_sockets.h>
 #include <net/route.h>
 #include <asm/termbits.h>
 
@@ -349,9 +351,12 @@ ccflags="$@"
 		$2 ~ /^CLOCK_/ ||
 		$2 ~ /^CAN_/ ||
 		$2 ~ /^ALG_/ ||
+		$2 ~ /^GRND_/ ||
 		$2 ~ /^SPLICE_/ ||
+		$2 ~ /^(VM|VMADDR)_/ ||
 		$2 !~ "WMESGLEN" &&
-		$2 ~ /^W[A-Z0-9]+$/ {printf("\t%s = C.%s\n", $2, $2)}
+		$2 ~ /^W[A-Z0-9]+$/ ||
+		$2 ~ /^BLK/ {printf("\t%s = C.%s\n", $2, $2)}
 		$2 ~ /^__WCOREFLAG$/ {next}
 		$2 ~ /^__W[A-Z0-9]+$/ {printf("\t%s = C.%s\n", substr($2,3), $2)}
 

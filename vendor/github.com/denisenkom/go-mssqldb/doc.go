@@ -8,5 +8,5 @@
 // If the ordinal position is used for query parameters, identifiers will be named
 // "@p1", "@p2", ... "@pN".
 //
-// Please refer to the REAME for the format of the DSN.
+// Please refer to the README for the format of the DSN.
 package mssql

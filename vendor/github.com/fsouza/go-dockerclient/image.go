@@ -333,8 +333,9 @@ func (c *Client) createImage(qs string, headers map[string]string, in io.Reader,
 //
 // See https://goo.gl/rEsBV3 for more details.
 type LoadImageOptions struct {
-	InputStream io.Reader
-	Context     context.Context
+	InputStream  io.Reader
+	OutputStream io.Writer
+	Context      context.Context
 }
 
 // LoadImage imports a tarball docker image
@@ -344,6 +345,7 @@ func (c *Client) LoadImage(opts LoadImageOptions) error {
 	return c.stream("POST", "/images/load", streamOptions{
 		setRawTerminal: true,
 		in:             opts.InputStream,
+		stdout:         opts.OutputStream,
 		context:        opts.Context,
 	})
 }
@@ -440,6 +442,7 @@ type BuildImageOptions struct {
 	Name                string             `qs:"t"`
 	Dockerfile          string             `qs:"dockerfile"`
 	NoCache             bool               `qs:"nocache"`
+	CacheFrom           []string           `qs:"-"`
 	SuppressOutput      bool               `qs:"q"`
 	Pull                bool               `qs:"pull"`
 	RmTmpContainer      bool               `qs:"rm"`
@@ -462,6 +465,7 @@ type BuildImageOptions struct {
 	BuildArgs           []BuildArg         `qs:"-"`
 	NetworkMode         string             `qs:"networkmode"`
 	InactivityTimeout   time.Duration      `qs:"-"`
+	CgroupParent        string             `qs:"cgroupparent"`
 	Context             context.Context
 }
 
@@ -505,8 +509,16 @@ func (c *Client) BuildImage(opts BuildImageOptions) error {
 			return err
 		}
 	}
-
 	qs := queryString(&opts)
+
+	if c.serverAPIVersion.GreaterThanOrEqualTo(apiVersion125) && len(opts.CacheFrom) > 0 {
+		if b, err := json.Marshal(opts.CacheFrom); err == nil {
+			item := url.Values(map[string][]string{})
+			item.Add("cachefrom", string(b))
+			qs = fmt.Sprintf("%s&%s", qs, item.Encode())
+		}
+	}
+
 	if len(opts.Ulimits) > 0 {
 		if b, err := json.Marshal(opts.Ulimits); err == nil {
 			item := url.Values(map[string][]string{})
@@ -664,4 +676,37 @@ func (c *Client) SearchImagesEx(term string, auth AuthConfiguration) ([]APIImage
 	}
 
 	return searchResult, nil
+}
+
+// PruneImagesOptions specify parameters to the PruneImages function.
+//
+// See https://goo.gl/qfZlbZ for more details.
+type PruneImagesOptions struct {
+	Filters map[string][]string
+	Context context.Context
+}
+
+// PruneImagesResults specify results from the PruneImages function.
+//
+// See https://goo.gl/qfZlbZ for more details.
+type PruneImagesResults struct {
+	ImagesDeleted  []struct{ Untagged, Deleted string }
+	SpaceReclaimed int64
+}
+
+// PruneImages deletes images which are unused.
+//
+// See https://goo.gl/qfZlbZ for more details.
+func (c *Client) PruneImages(opts PruneImagesOptions) (*PruneImagesResults, error) {
+	path := "/images/prune?" + queryString(opts)
+	resp, err := c.do("POST", path, doOptions{context: opts.Context})
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var results PruneImagesResults
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return nil, err
+	}
+	return &results, nil
 }

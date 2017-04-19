@@ -45,7 +45,7 @@ func (c *Client) ListPermissions() (rec []PermissionInfo, err error) {
 
 // Returns permissions of a specific user.
 func (c *Client) ListPermissionsOf(username string) (rec []PermissionInfo, err error) {
-	req, err := newGETRequest(c, "users/" + PathEscape(username) + "/permissions")
+	req, err := newGETRequest(c, "users/"+PathEscape(username)+"/permissions")
 	if err != nil {
 		return []PermissionInfo{}, err
 	}
@@ -63,7 +63,7 @@ func (c *Client) ListPermissionsOf(username string) (rec []PermissionInfo, err e
 
 // Returns permissions of user in virtual host.
 func (c *Client) GetPermissionsIn(vhost, username string) (rec PermissionInfo, err error) {
-	req, err := newGETRequest(c, "permissions/" + PathEscape(vhost) + "/" + PathEscape(username))
+	req, err := newGETRequest(c, "permissions/"+PathEscape(vhost)+"/"+PathEscape(username))
 	if err != nil {
 		return PermissionInfo{}, err
 	}
@@ -92,7 +92,7 @@ func (c *Client) UpdatePermissionsIn(vhost, username string, permissions Permiss
 		return nil, err
 	}
 
-	req, err := newRequestWithBody(c, "PUT", "permissions/" + PathEscape(vhost) + "/" + PathEscape(username), body)
+	req, err := newRequestWithBody(c, "PUT", "permissions/"+PathEscape(vhost)+"/"+PathEscape(username), body)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (c *Client) UpdatePermissionsIn(vhost, username string, permissions Permiss
 
 // Clears (deletes) permissions of user in virtual host.
 func (c *Client) ClearPermissionsIn(vhost, username string) (res *http.Response, err error) {
-	req, err := newRequestWithBody(c, "DELETE", "permissions/" + PathEscape(vhost) + "/" + PathEscape(username), nil)
+	req, err := newRequestWithBody(c, "DELETE", "permissions/"+PathEscape(vhost)+"/"+PathEscape(username), nil)
 	if err != nil {
 		return nil, err
 	}

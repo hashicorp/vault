@@ -450,7 +450,7 @@ $ curl \
 
 ## Rewrap Data
 
-This endpoint rewrapw the provided ciphertext using the latest version of the
+This endpoint rewraps the provided ciphertext using the latest version of the
 named key. Because this never returns plaintext, it is possible to delegate this
 functionality to untrusted users or scripts.
 

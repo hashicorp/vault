@@ -61,7 +61,7 @@ func SanitizePolicies(policies []string, addDefault bool) []string {
 		policies = append(policies, "default")
 	}
 
-	return strutil.RemoveDuplicates(policies)
+	return strutil.RemoveDuplicates(policies, true)
 }
 
 // EquivalentPolicies checks whether the given policy sets are equivalent, as in,

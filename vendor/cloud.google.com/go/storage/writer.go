@@ -15,6 +15,7 @@
 package storage
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -31,6 +32,11 @@ type Writer struct {
 	// must be initialized before the first Write call. Nil or zero-valued
 	// attributes are ignored.
 	ObjectAttrs
+
+	// SendCRC specifies whether to transmit a CRC32C field. It should be set
+	// to true in addition to setting the Writer's CRC32C field, because zero
+	// is a valid CRC and normally a zero would not be transmitted.
+	SendCRC32C bool
 
 	// ChunkSize controls the maximum number of bytes of the object that the
 	// Writer will attempt to send to the server in a single request. Objects
@@ -81,7 +87,14 @@ func (w *Writer) open() error {
 	go func() {
 		defer close(w.donec)
 
-		call := w.o.c.raw.Objects.Insert(w.o.bucket, attrs.toRawObject(w.o.bucket)).
+		rawObj := attrs.toRawObject(w.o.bucket)
+		if w.SendCRC32C {
+			rawObj.Crc32c = encodeUint32(attrs.CRC32C)
+		}
+		if w.MD5 != nil {
+			rawObj.Md5Hash = base64.StdEncoding.EncodeToString(w.MD5)
+		}
+		call := w.o.c.raw.Objects.Insert(w.o.bucket, rawObj).
 			Media(pr, mediaOpts...).
 			Projection("full").
 			Context(w.ctx)
@@ -93,6 +106,7 @@ func (w *Writer) open() error {
 		var resp *raw.Object
 		err := applyConds("NewWriter", w.o.gen, w.o.conds, call)
 		if err == nil {
+			setClientHeader(call.Header())
 			resp, err = call.Do()
 		}
 		if err != nil {
@@ -120,7 +134,7 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 
 // Close completes the write operation and flushes any buffered data.
 // If Close doesn't return an error, metadata about the written object
-// can be retrieved by calling Object.
+// can be retrieved by calling Attrs.
 func (w *Writer) Close() error {
 	if !w.opened {
 		if err := w.open(); err != nil {

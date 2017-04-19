@@ -27,6 +27,7 @@ type Issue struct {
 	ID               *int              `json:"id,omitempty"`
 	Number           *int              `json:"number,omitempty"`
 	State            *string           `json:"state,omitempty"`
+	Locked           *bool             `json:"locked,omitempty"`
 	Title            *string           `json:"title,omitempty"`
 	Body             *string           `json:"body,omitempty"`
 	User             *User             `json:"user,omitempty"`
@@ -36,6 +37,7 @@ type Issue struct {
 	ClosedAt         *time.Time        `json:"closed_at,omitempty"`
 	CreatedAt        *time.Time        `json:"created_at,omitempty"`
 	UpdatedAt        *time.Time        `json:"updated_at,omitempty"`
+	ClosedBy         *User             `json:"closed_by,omitempty"`
 	URL              *string           `json:"url,omitempty"`
 	HTMLURL          *string           `json:"html_url,omitempty"`
 	Milestone        *Milestone        `json:"milestone,omitempty"`
