@@ -1471,7 +1471,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupAndSortStrings(role.OU, ",")
+			expected := strutil.ParseDedupLowercaseAndSortStrings(role.OU, ",")
 			if !reflect.DeepEqual(cert.Subject.OrganizationalUnit, expected) {
 				return fmt.Errorf("Error: returned certificate has OU of %s but %s was specified in the role.", cert.Subject.OrganizationalUnit, expected)
 			}
@@ -1492,7 +1492,7 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 			}
 			cert := parsedCertBundle.Certificate
 
-			expected := strutil.ParseDedupAndSortStrings(role.Organization, ",")
+			expected := strutil.ParseDedupLowercaseAndSortStrings(role.Organization, ",")
 			if !reflect.DeepEqual(cert.Subject.Organization, expected) {
 				return fmt.Errorf("Error: returned certificate has Organization of %s but %s was specified in the role.", cert.Subject.Organization, expected)
 			}

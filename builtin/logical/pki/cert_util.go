@@ -597,7 +597,7 @@ func generateCreationBundle(b *backend,
 		if csr == nil || !role.UseCSRSANs {
 			cnAltRaw, ok := data.GetOk("alt_names")
 			if ok {
-				cnAlt := strutil.ParseDedupAndSortStrings(cnAltRaw.(string), ",")
+				cnAlt := strutil.ParseDedupLowercaseAndSortStrings(cnAltRaw.(string), ",")
 				for _, v := range cnAlt {
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
