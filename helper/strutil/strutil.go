@@ -32,7 +32,7 @@ func StrListSubset(super, sub []string) bool {
 // Parses a comma separated list of strings into a slice of strings.
 // The return slice will be sorted and will not contain duplicate or
 // empty items. The values will be converted to lower case.
-func ParseDedupAndSortStrings(input string, sep string) []string {
+func ParseDedupLowercaseAndSortStrings(input string, sep string) []string {
 	input = strings.TrimSpace(input)
 	parsed := []string{}
 	if input == "" {
@@ -49,7 +49,7 @@ func ParseKeyValues(input string, out map[string]string, sep string) error {
 		return fmt.Errorf("'out is nil")
 	}
 
-	keyValues := ParseDedupAndSortStrings(input, sep)
+	keyValues := ParseDedupLowercaseAndSortStrings(input, sep)
 	if len(keyValues) == 0 {
 		return nil
 	}
