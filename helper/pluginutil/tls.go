@@ -29,58 +29,19 @@ var (
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
 )
 
-// GenerateCACert returns a CA cert used to later sign the certificates for the
-// plugin client and server.
-func GenerateCACert() ([]byte, *x509.Certificate, *ecdsa.PrivateKey, error) {
-	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	host, err := uuid.GenerateUUID()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	host = "localhost"
-	template := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: host,
-		},
-		DNSNames: []string{host},
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageServerAuth,
-			x509.ExtKeyUsageClientAuth,
-		},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement | x509.KeyUsageCertSign,
-		SerialNumber: big.NewInt(mathrand.Int63()),
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		// 30 years of single-active uptime ought to be enough for anybody
-		NotAfter:              time.Now().Add(262980 * time.Hour),
-		BasicConstraintsValid: true,
-		IsCA: true,
-	}
-
-	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("unable to generate replicated cluster certificate: %v", err)
-	}
-
-	caCert, err := x509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error parsing generated replication certificate: %v", err)
-	}
-
-	return certBytes, caCert, key, nil
-}
-
 // generateSignedCert is used internally to create certificates for the plugin
 // client and server. These certs are signed by the given CA Cert and Key.
-func generateSignedCert(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) ([]byte, *x509.Certificate, *ecdsa.PrivateKey, error) {
+func GenerateCert() ([]byte, *ecdsa.PrivateKey, error) {
+	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	host, err := uuid.GenerateUUID()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	host = "localhost"
+
 	template := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: host,
@@ -94,48 +55,38 @@ func generateSignedCert(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) ([]by
 		SerialNumber: big.NewInt(mathrand.Int63()),
 		NotBefore:    time.Now().Add(-30 * time.Second),
 		NotAfter:     time.Now().Add(262980 * time.Hour),
+		IsCA:         true,
 	}
 
-	clientKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
 	if err != nil {
-		return nil, nil, nil, errwrap.Wrapf("error generating client key: {{err}}", err)
+		return nil, nil, errwrap.Wrapf("unable to generate client certificate: {{err}}", err)
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, template, CACert, clientKey.Public(), CAKey)
-	if err != nil {
-		return nil, nil, nil, errwrap.Wrapf("unable to generate client certificate: {{err}}", err)
-	}
-
-	clientCert, err := x509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("error parsing generated replication certificate: %v", err)
-	}
-
-	return certBytes, clientCert, clientKey, nil
+	return certBytes, key, nil
 }
 
 // CreateClientTLSConfig creates a signed certificate and returns a configured
 // TLS config.
-func CreateClientTLSConfig(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) (*tls.Config, error) {
-	clientCertBytes, clientCert, clientKey, err := generateSignedCert(CACert, CAKey)
+func CreateClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config, error) {
+	clientCert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error parsing generated plugin certificate: %v", err)
 	}
 
 	cert := tls.Certificate{
-		Certificate: [][]byte{clientCertBytes},
-		PrivateKey:  clientKey,
+		Certificate: [][]byte{certBytes},
+		PrivateKey:  key,
 		Leaf:        clientCert,
 	}
 
 	clientCertPool := x509.NewCertPool()
-	clientCertPool.AddCert(CACert)
+	clientCertPool.AddCert(clientCert)
 
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 		RootCAs:      clientCertPool,
-		ClientCAs:    clientCertPool,
-		ServerName:   CACert.Subject.CommonName,
+		ServerName:   clientCert.Subject.CommonName,
 		MinVersion:   tls.VersionTLS12,
 	}
 
@@ -146,19 +97,14 @@ func CreateClientTLSConfig(CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) (*
 
 // WrapServerConfig is used to create a server certificate and private key, then
 // wrap them in an unwrap token for later retrieval by the plugin.
-func WrapServerConfig(sys Wrapper, CACertBytes []byte, CACert *x509.Certificate, CAKey *ecdsa.PrivateKey) (string, error) {
-	serverCertBytes, _, serverKey, err := generateSignedCert(CACert, CAKey)
-	if err != nil {
-		return "", err
-	}
-	rawKey, err := x509.MarshalECPrivateKey(serverKey)
+func WrapServerConfig(sys Wrapper, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
+	rawKey, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
 		return "", err
 	}
 
 	wrapToken, err := sys.ResponseWrapData(map[string]interface{}{
-		"CACert":     CACertBytes,
-		"ServerCert": serverCertBytes,
+		"ServerCert": certBytes,
 		"ServerKey":  rawKey,
 	}, time.Second*10, true)
 
@@ -217,22 +163,6 @@ func VaultPluginTLSProvider() (*tls.Config, error) {
 		return nil, errors.New("error during token unwrap request secret is nil")
 	}
 
-	// Retrieve and parse the CA Certificate
-	CABytesRaw, ok := secret.Data["CACert"].(string)
-	if !ok {
-		return nil, errors.New("error unmarshalling CA certificate")
-	}
-
-	CABytes, err := base64.StdEncoding.DecodeString(CABytesRaw)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing certificate: %v", err)
-	}
-
-	CACert, err := x509.ParseCertificate(CABytes)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing certificate: %v", err)
-	}
-
 	// Retrieve and parse the server's certificate
 	serverCertBytesRaw, ok := secret.Data["ServerCert"].(string)
 	if !ok {
@@ -267,7 +197,7 @@ func VaultPluginTLSProvider() (*tls.Config, error) {
 
 	// Add CA cert to the cert pool
 	caCertPool := x509.NewCertPool()
-	caCertPool.AddCert(CACert)
+	caCertPool.AddCert(serverCert)
 
 	// Build a certificate object out of the server's cert and private key.
 	cert := tls.Certificate{
