@@ -663,9 +663,7 @@ request is denied.
 - `allow_glob_domains` `(bool: false)` - Allows names specified in
   `allowed_domains` to contain glob patterns (e.g. `ftp*.example.com`). Clients
   will be allowed to request certificates with names matching the glob
-  patterns. _Please note_ that setting this option requires
-  `allow_bare_domains` to be set as well, since a glob match against a
-  non-glob pattern would result in an implicit bare domain match.
+  patterns.
 
 - `allow_any_name` `(bool: false)` – Specifies if clients can request any CN.
   Useful in some circumstances, but make sure you understand whether it is

@@ -88,9 +88,8 @@ more information.`,
 				Type:    framework.TypeBool,
 				Default: false,
 				Description: `If set, domains specified in "allowed_domains"
-can include glob patterns, e.g. "ftp*.example.com". This
-option requires "allow_bare_domains" to be set as well.
-See the documentation for more information.`,
+can include glob patterns, e.g. "ftp*.example.com". See
+the documentation for more information.`,
 			},
 
 			"allow_any_name": &framework.FieldSchema{

@@ -363,9 +363,8 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 					}
 				}
 
-				// Domain globbing support additionally requires bare domains to be enabled
 				if role.AllowGlobDomains &&
-					role.AllowBareDomains &&
+					strings.Contains(currDomain, "*") &&
 					glob.Glob(currDomain, name) {
 					valid = true
 					break
