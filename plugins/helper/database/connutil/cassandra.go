@@ -143,7 +143,7 @@ func (c *CassandraConnectionProducer) createSession() (*gocql.Session, error) {
 		}
 
 		clusterConfig.SslOpts = &gocql.SslOptions{
-			Config: *tlsConfig,
+			Config: tlsConfig,
 		}
 	}
 
