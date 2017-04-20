@@ -71,6 +71,12 @@ single word name or a more complex, nested path.
 
 - `type` `(string: <required>)` – Specifies the type of the audit backend.
 
+Additionally, the following options are only supported on Vault Enterprise:
+    
+- `local` `(bool: false)` – Specifies if the audit backend is a local mount  
+  only. Local mounts are not replicated nor (if a secondary) removed by 
+  replication.
+
 ### Sample Payload
 
 ```json
