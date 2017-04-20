@@ -83,6 +83,12 @@ This endpoint mounts a new secret backend at the given path.
     These control the default and maximum lease time-to-live, and force
     disabling backend caching respectively. If set on a specific mount, this
     overrides the global defaults.
+    
+Additionally, the following options are only supported on Vault Enterprise:
+    
+- `local` `(bool: false)` – Specifies if the secret backend is a local mount  
+  only. Local mounts are not replicated nor (if a secondary) removed by 
+  replication.
 
 ### Sample Payload
 
