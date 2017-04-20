@@ -21,8 +21,7 @@ func pathRole(b *backend) *framework.Path {
 				Description: "Name of the role.",
 			},
 			"auth_type": {
-				Type:    framework.TypeString,
-				Default: iamAuthType,
+				Type: framework.TypeString,
 				Description: `The auth_type permitted to authenticate to this role. Must be one of
 iam or ec2 and cannot be changed after role creation.`,
 			},
@@ -201,9 +200,10 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 	}
 
 	b.roleMutex.RLock()
-	defer b.roleMutex.RUnlock()
-
 	roleEntry, err := b.nonLockedAWSRole(s, roleName)
+	// we manually unlock rather than defer the unlock because we might need to grab
+	// a read/write lock in the upgrade path
+	b.roleMutex.RUnlock()
 	if err != nil {
 		return nil, err
 	}
@@ -215,15 +215,7 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 		return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
 	}
 	if needUpgrade {
-		// we need to get a write lock to upgrade the role entry, so we first need to release our read lock
-		// to prevent the write lock from deadlocking on it
-		b.roleMutex.RUnlock()
-		// now we need to ensure that we re-acquire the read lock so the above deferred RUnlock() doesn't
-		// cause a crash trying to unlock the already-unlocked mutex
-		defer b.roleMutex.RLock()
-		// Now grab a write lock on the mutex
 		b.roleMutex.Lock()
-		// and ensure we eventually unlock it
 		defer b.roleMutex.Unlock()
 		// Now that we have a R/W lock, we need to re-read the role entry in case it was
 		// written to between releasing the read lock and acquiring the write lock
@@ -475,6 +467,8 @@ func (b *backend) pathRoleCreateUpdate(
 
 	// auth_type is a special case as it's immutable and can't be changed once a role is created
 	if authTypeRaw, ok := data.GetOk("auth_type"); ok {
+		// roleEntry.AuthType should only be "" when it's a new role; existing roles without an
+		// auth_type should have already been upgraded to have one before we get here
 		if roleEntry.AuthType == "" {
 			switch authTypeRaw.(string) {
 			case ec2AuthType, iamAuthType:
@@ -486,7 +480,16 @@ func (b *backend) pathRoleCreateUpdate(
 			return logical.ErrorResponse("changing auth_type on a role is not allowed"), nil
 		}
 	} else if req.Operation == logical.CreateOperation {
-		roleEntry.AuthType = data.Get("auth_type").(string)
+		switch req.MountType {
+		// maintain backwards compatibility for old aws-ec2 auth types
+		case "aws-ec2":
+			roleEntry.AuthType = ec2AuthType
+		// but default to iamAuth for new mounts going forward
+		case "aws":
+			roleEntry.AuthType = iamAuthType
+		default:
+			roleEntry.AuthType = iamAuthType
+		}
 	}
 
 	allowEc2Binds := roleEntry.AuthType == ec2AuthType

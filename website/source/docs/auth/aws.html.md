@@ -1302,9 +1302,10 @@ The response will be in JSON. For example:
         <span class="param">auth_type</span>
         <span class="param-flags">optional</span>
         The auth type permitted for this role. Valid choices are "ec2" or "iam".
-        If no value is specified, then it will default to "iam". Only those
-        bindings applicable to the auth type chosen by clients will be checked
-        by Vault upon login.
+        If no value is specified, then it will default to "iam" (except for
+        legacy `aws-ec2` auth types, for which it will default to "ec2"). Only
+        those bindings applicable to the auth type chosen will be allowed to be
+        configured on the role.
       </li>
     </ul>
     <ul>
