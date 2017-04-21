@@ -677,7 +677,11 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	}
 }
 
-func TestTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
+func TestTokenStore_RevokeTree(t *testing.T) {
+  testTokenStore_RevokeTree_NonRecursive(t ,2)
+}
+ 
+func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 
 	_, ts, _, _ := TestCoreWithTokenStore(t)
 	root, children := buildTokenTree(t, ts, depth)
@@ -686,18 +690,21 @@ func TestTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 	if err.Error() != "cannot revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
+	
+	err = ts.RevokeTree(root.ID)
+	
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = ts.RevokeTree(root.ID) //nuke the tree, non recursively
+	 //nuke the tree, non recursively
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	//way to check if child was indeed revoked before parent??
 	children = append(children, root) //append the root, so we can verify that it was revoked
 	for _, entry := range children {
-	  out, err := ts.Lookup(entry.Id)
+		out, err := ts.Lookup(entry.ID)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -706,17 +713,19 @@ func TestTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 		}
 	}
 }
+
 //taken from dadgar's pull request
 func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 	benchmarks := []uint64{0, 1, 2, 4, 8, 16, 20}
 	for _, depth := range benchmarks {
 		b.Run(fmt.Sprintf("Tree of Depth %d", depth), func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				TestTokenStore_RevokeTree_NonRecursive(b, depth)
+				testTokenStore_RevokeTree_NonRecursive(b, depth)
 			}
 		})
 	}
 }
+
 //taken from dadgar's pull request
 func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntry, children []*TokenEntry) {
 	root = &TokenEntry{}
@@ -730,12 +739,12 @@ func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntr
 		next := make([]*TokenEntry, 0, 2*len(frontier))
 		for _, node := range frontier {
 			left := &TokenEntry{Parent: node.ID}
-			if err := ts.create(left); err != nill {
+			if err := ts.create(left); err != nil {
 				t.Fatalf("err: %v", err)
 			}
 
 			right := &TokenEntry{Parent: node.ID}
-			if err := ts.create(right); err != nill {
+			if err := ts.create(right); err != nil {
 				t.Fatalf("err: %v", err)
 			}
 
