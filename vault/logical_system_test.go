@@ -1141,13 +1141,18 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 
 	expectedBuiltin := &pluginutil.PluginRunner{
 		Name:    "mysql-database-plugin",
-		Command: "vault",
-		Args:    []string{"plugin-exec", "mysql-database-plugin"},
-		Sha256:  []byte{'1'},
 		Builtin: true,
 	}
+	expectedBuiltin.BuiltinFactory, _ = builtinplugins.BuiltinPlugins.Get("mysql-database-plugin")
 
-	if !reflect.DeepEqual(resp.Data["plugin"].(*pluginutil.PluginRunner), expectedBuiltin) {
+	p := resp.Data["plugin"].(*pluginutil.PluginRunner)
+	if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {
+		t.Fatal("expected BuiltinFactory did not match actual")
+	}
+
+	expectedBuiltin.BuiltinFactory = nil
+	p.BuiltinFactory = nil
+	if !reflect.DeepEqual(p, expectedBuiltin) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", resp.Data["plugin"].(*pluginutil.PluginRunner), expectedBuiltin)
 	}
 
