@@ -1032,8 +1032,11 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 	for l := len(dfs); l > 0; l = len(dfs) {
 		id := dfs[0]
 		path := parentPrefix + id + "/"
-		children, leaf := ts.view.List(path)
-		if leaf != nil {
+		children, err := ts.view.List(path)
+		if err != nil {
+		  return fmt.Errorf("failed to scan for children: %v", err)
+    }
+		if len(children) == 0 { //len(chil) == 0
 			/* we have reached a leaf node, so we need to delete it */
 			if err := ts.revokeSalted(id); err != nil {
 				return fmt.Errorf("failed to revoke entry: %v", err)
