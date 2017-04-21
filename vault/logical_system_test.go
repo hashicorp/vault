@@ -1122,8 +1122,6 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("error: %v", err)
 	}
 	c.pluginCatalog.directory = sym
-	c.pluginCatalog.vaultCommand = "vault"
-	c.pluginCatalog.vaultSHA256 = []byte{'1'}
 
 	req := logical.TestRequest(t, logical.ListOperation, "plugin-catalog/")
 	resp, err := b.HandleRequest(req)

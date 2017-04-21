@@ -21,8 +21,6 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("error: %v", err)
 	}
 	core.pluginCatalog.directory = sym
-	core.pluginCatalog.vaultCommand = "vault"
-	core.pluginCatalog.vaultSHA256 = []byte{'1'}
 
 	// Get builtin plugin
 	p, err := core.pluginCatalog.Get("mysql-database-plugin")
@@ -99,8 +97,6 @@ func TestPluginCatalog_List(t *testing.T) {
 		t.Fatalf("error: %v", err)
 	}
 	core.pluginCatalog.directory = sym
-	core.pluginCatalog.vaultCommand = "vault"
-	core.pluginCatalog.vaultSHA256 = []byte{'1'}
 
 	// Get builtin plugins and sort them
 	builtinKeys := builtinplugins.BuiltinPlugins.Keys()

@@ -23,6 +23,7 @@ type MySQL struct {
 	credsutil.CredentialsProducer
 }
 
+// New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = mySQLTypeName
