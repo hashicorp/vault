@@ -331,11 +331,5 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 				Ui:          metaPtr.Ui,
 			}, nil
 		},
-
-		"plugin-exec": func() (cli.Command, error) {
-			return &command.PluginExec{
-				Meta: *metaPtr,
-			}, nil
-		},
 	}
 }

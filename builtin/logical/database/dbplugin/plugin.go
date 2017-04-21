@@ -33,15 +33,32 @@ type Statements struct {
 // object in a logging and metrics middleware.
 func PluginFactory(pluginName string, sys pluginutil.LookWrapper, logger log.Logger) (DatabaseType, error) {
 	// Look for plugin in the plugin catalog
-	pluginMeta, err := sys.LookupPlugin(pluginName)
+	pluginRunner, err := sys.LookupPlugin(pluginName)
 	if err != nil {
 		return nil, err
 	}
 
-	// create a DatabasePluginClient instance
-	db, err := newPluginClient(sys, pluginMeta)
-	if err != nil {
-		return nil, err
+	var db DatabaseType
+	if pluginRunner.Builtin {
+		// Plugin is builtin so we can retrieve an instance of the interface
+		// from the pluginRunner. Then cast it to a DatabaseType.
+		dbRaw, err := pluginRunner.BuiltinFactory()
+		if err != nil {
+			return nil, fmt.Errorf("error getting plugin type: %s", err)
+		}
+
+		var ok bool
+		db, ok = dbRaw.(DatabaseType)
+		if !ok {
+			return nil, fmt.Errorf("unsuported database type: %s", pluginName)
+		}
+
+	} else {
+		// create a DatabasePluginClient instance
+		db, err = newPluginClient(sys, pluginRunner)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	typeStr, err := db.Type()

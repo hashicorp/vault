@@ -66,7 +66,9 @@ func TestPostgreSQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := New()
+	dbRaw, _ := New()
+	db := dbRaw.(*PostgreSQL)
+
 	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
 
 	err := db.Initialize(connectionDetails, true)
@@ -92,7 +94,8 @@ func TestPostgreSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := New()
+	dbRaw, _ := New()
+	db := dbRaw.(*PostgreSQL)
 	err := db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -136,7 +139,8 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := New()
+	dbRaw, _ := New()
+	db := dbRaw.(*PostgreSQL)
 	err := db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -176,7 +180,8 @@ func TestPostgreSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := New()
+	dbRaw, _ := New()
+	db := dbRaw.(*PostgreSQL)
 	err := db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)

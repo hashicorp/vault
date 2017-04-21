@@ -23,20 +23,16 @@ var (
 // to be registered to the catalog before they can be used in backends. Builtin
 // plugins are automatically detected and included in the catalog.
 type PluginCatalog struct {
-	catalogView  *BarrierView
-	directory    string
-	vaultCommand string
-	vaultSHA256  []byte
+	catalogView *BarrierView
+	directory   string
 
 	lock sync.RWMutex
 }
 
 func (c *Core) setupPluginCatalog() error {
 	c.pluginCatalog = &PluginCatalog{
-		catalogView:  c.systemBarrierView.SubView(pluginCatalogPrefix),
-		directory:    c.pluginDirectory,
-		vaultCommand: c.vaultBinaryLocation,
-		vaultSHA256:  c.vaultBinarySHA256,
+		catalogView: c.systemBarrierView.SubView(pluginCatalogPrefix),
+		directory:   c.pluginDirectory,
 	}
 
 	return nil
@@ -64,17 +60,15 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 	}
 
 	// Look for builtin plugins
-	if _, ok := builtinplugins.BuiltinPlugins.Get(name); !ok {
-		return nil, fmt.Errorf("no plugin found with name: %s", name)
+	if factory, ok := builtinplugins.BuiltinPlugins.Get(name); ok {
+		return &pluginutil.PluginRunner{
+			Name:           name,
+			Builtin:        true,
+			BuiltinFactory: factory,
+		}, nil
 	}
 
-	return &pluginutil.PluginRunner{
-		Name:    name,
-		Command: c.vaultCommand,
-		Args:    []string{"plugin-exec", name},
-		Sha256:  c.vaultSHA256,
-		Builtin: true,
-	}, nil
+	return nil, fmt.Errorf("no plugin found with name: %s", name)
 }
 
 // Set registers a new external plugin with the catalog, or updates an existing

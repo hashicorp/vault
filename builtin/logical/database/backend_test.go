@@ -11,10 +11,10 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
+	"github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/vault"
 	"github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
@@ -91,8 +91,7 @@ func TestBackend_PluginMain(t *testing.T) {
 		return
 	}
 
-	f, _ := builtinplugins.BuiltinPlugins.Get("postgresql-database-plugin")
-	f()
+	postgresql.Run()
 }
 
 func TestBackend_config_connection(t *testing.T) {

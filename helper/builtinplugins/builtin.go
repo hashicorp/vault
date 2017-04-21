@@ -5,20 +5,22 @@ import (
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 )
 
+type BuiltinFactory func() (interface{}, error)
+
 var BuiltinPlugins *builtinPlugins = &builtinPlugins{
-	plugins: map[string]func() error{
-		"mysql-database-plugin":      mysql.Run,
-		"postgresql-database-plugin": postgresql.Run,
+	plugins: map[string]BuiltinFactory{
+		"mysql-database-plugin":      mysql.New,
+		"postgresql-database-plugin": postgresql.New,
 	},
 }
 
 // The list of builtin plugins should not be changed by any other package, so we
 // store them in an unexported variable in this unexported struct.
 type builtinPlugins struct {
-	plugins map[string]func() error
+	plugins map[string]BuiltinFactory
 }
 
-func (b *builtinPlugins) Get(name string) (func() error, bool) {
+func (b *builtinPlugins) Get(name string) (BuiltinFactory, bool) {
 	f, ok := b.plugins[name]
 	return f, ok
 }

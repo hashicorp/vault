@@ -16,7 +16,8 @@ import (
 
 const postgreSQLTypeName string = "postgres"
 
-func New() *PostgreSQL {
+// New implements builtinplugins.BuiltinFactory
+func New() (interface{}, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = postgreSQLTypeName
 
@@ -30,14 +31,17 @@ func New() *PostgreSQL {
 		CredentialsProducer: credsProducer,
 	}
 
-	return dbType
+	return dbType, nil
 }
 
 // Run instatiates a PostgreSQL object, and runs the RPC server for the plugin
 func Run() error {
-	dbType := New()
+	dbType, err := New()
+	if err != nil {
+		return err
+	}
 
-	dbplugin.NewPluginServer(dbType)
+	dbplugin.NewPluginServer(dbType.(*PostgreSQL))
 
 	return nil
 }

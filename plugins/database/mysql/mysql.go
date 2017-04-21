@@ -23,7 +23,7 @@ type MySQL struct {
 	credsutil.CredentialsProducer
 }
 
-func New() *MySQL {
+func New() (interface{}, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = mySQLTypeName
 
@@ -37,14 +37,17 @@ func New() *MySQL {
 		CredentialsProducer: credsProducer,
 	}
 
-	return dbType
+	return dbType, nil
 }
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run() error {
-	dbType := New()
+	dbType, err := New()
+	if err != nil {
+		return err
+	}
 
-	dbplugin.NewPluginServer(dbType)
+	dbplugin.NewPluginServer(dbType.(*MySQL))
 
 	return nil
 }
