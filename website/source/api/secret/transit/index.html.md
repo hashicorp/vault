@@ -39,7 +39,7 @@ values set here cannot be changed after key creation.
   be unique** or it will compromise the security of your key, and the key space
   for nonces is 96 bit -- not as large as the AES key itself.
 
-- `derived` `(bool: false)` – Specifies if key derivation kist be used. If
+- `derived` `(bool: false)` – Specifies if key derivation is to be used. If
   enabled, all encrypt/decrypt requests to this named key must provide a context
   which is used for key derivation.
 
@@ -450,7 +450,7 @@ $ curl \
 
 ## Rewrap Data
 
-This endpoint rewrapw the provided ciphertext using the latest version of the
+This endpoint rewraps the provided ciphertext using the latest version of the
 named key. Because this never returns plaintext, it is possible to delegate this
 functionality to untrusted users or scripts.
 

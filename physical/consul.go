@@ -233,7 +233,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		kv:                  client.KV(),
 		permitPool:          NewPermitPool(maxParInt),
 		serviceName:         service,
-		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
+		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
 		consistencyMode:     consistencyMode,

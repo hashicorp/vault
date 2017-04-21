@@ -356,6 +356,14 @@ func (c *Commit) GetCommentCount() int {
 	return *c.CommentCount
 }
 
+// GetHTMLURL returns the HTMLURL field if it's non-nil, zero value otherwise.
+func (c *Commit) GetHTMLURL() string {
+	if c == nil || c.HTMLURL == nil {
+		return ""
+	}
+	return *c.HTMLURL
+}
+
 // GetMessage returns the Message field if it's non-nil, zero value otherwise.
 func (c *Commit) GetMessage() string {
 	if c == nil || c.Message == nil {
@@ -500,84 +508,36 @@ func (c *CommitFile) GetStatus() string {
 	return *c.Status
 }
 
-// GetAuthorDate returns the AuthorDate field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetAuthorDate() Timestamp {
-	if c == nil || c.AuthorDate == nil {
-		return Timestamp{}
-	}
-	return *c.AuthorDate
-}
-
-// GetAuthorEmail returns the AuthorEmail field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetAuthorEmail() string {
-	if c == nil || c.AuthorEmail == nil {
+// GetCommentsURL returns the CommentsURL field if it's non-nil, zero value otherwise.
+func (c *CommitResult) GetCommentsURL() string {
+	if c == nil || c.CommentsURL == nil {
 		return ""
 	}
-	return *c.AuthorEmail
+	return *c.CommentsURL
 }
 
-// GetAuthorID returns the AuthorID field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetAuthorID() int {
-	if c == nil || c.AuthorID == nil {
-		return 0
-	}
-	return *c.AuthorID
-}
-
-// GetAuthorName returns the AuthorName field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetAuthorName() string {
-	if c == nil || c.AuthorName == nil {
+// GetHTMLURL returns the HTMLURL field if it's non-nil, zero value otherwise.
+func (c *CommitResult) GetHTMLURL() string {
+	if c == nil || c.HTMLURL == nil {
 		return ""
 	}
-	return *c.AuthorName
+	return *c.HTMLURL
 }
 
-// GetCommitterDate returns the CommitterDate field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetCommitterDate() Timestamp {
-	if c == nil || c.CommitterDate == nil {
-		return Timestamp{}
-	}
-	return *c.CommitterDate
-}
-
-// GetCommitterEmail returns the CommitterEmail field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetCommitterEmail() string {
-	if c == nil || c.CommitterEmail == nil {
+// GetSHA returns the SHA field if it's non-nil, zero value otherwise.
+func (c *CommitResult) GetSHA() string {
+	if c == nil || c.SHA == nil {
 		return ""
 	}
-	return *c.CommitterEmail
+	return *c.SHA
 }
 
-// GetCommitterID returns the CommitterID field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetCommitterID() int {
-	if c == nil || c.CommitterID == nil {
-		return 0
-	}
-	return *c.CommitterID
-}
-
-// GetCommitterName returns the CommitterName field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetCommitterName() string {
-	if c == nil || c.CommitterName == nil {
+// GetURL returns the URL field if it's non-nil, zero value otherwise.
+func (c *CommitResult) GetURL() string {
+	if c == nil || c.URL == nil {
 		return ""
 	}
-	return *c.CommitterName
-}
-
-// GetHash returns the Hash field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetHash() string {
-	if c == nil || c.Hash == nil {
-		return ""
-	}
-	return *c.Hash
-}
-
-// GetMessage returns the Message field if it's non-nil, zero value otherwise.
-func (c *CommitResult) GetMessage() string {
-	if c == nil || c.Message == nil {
-		return ""
-	}
-	return *c.Message
+	return *c.URL
 }
 
 // GetAheadBy returns the AheadBy field if it's non-nil, zero value otherwise.
@@ -4276,6 +4236,14 @@ func (p *PushEventRepoOwner) GetName() string {
 	return *p.Name
 }
 
+// GetArchiveURL returns the ArchiveURL field if it's non-nil, zero value otherwise.
+func (p *PushEventRepository) GetArchiveURL() string {
+	if p == nil || p.ArchiveURL == nil {
+		return ""
+	}
+	return *p.ArchiveURL
+}
+
 // GetCloneURL returns the CloneURL field if it's non-nil, zero value otherwise.
 func (p *PushEventRepository) GetCloneURL() string {
 	if p == nil || p.CloneURL == nil {
@@ -6242,6 +6210,14 @@ func (t *Team) GetID() int {
 		return 0
 	}
 	return *t.ID
+}
+
+// GetLDAPDN returns the LDAPDN field if it's non-nil, zero value otherwise.
+func (t *Team) GetLDAPDN() string {
+	if t == nil || t.LDAPDN == nil {
+		return ""
+	}
+	return *t.LDAPDN
 }
 
 // GetMembersCount returns the MembersCount field if it's non-nil, zero value otherwise.

@@ -25,6 +25,8 @@ type AgentService struct {
 	Port              int
 	Address           string
 	EnableTagOverride bool
+	CreateIndex       uint64
+	ModifyIndex       uint64
 }
 
 // AgentMember represents a cluster member known to the agent

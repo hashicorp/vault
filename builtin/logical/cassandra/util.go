@@ -76,7 +76,7 @@ func createSession(cfg *sessionConfig, s logical.Storage) (*gocql.Session, error
 		}
 
 		clusterConfig.SslOpts = &gocql.SslOptions{
-			Config: *tlsConfig,
+			Config: tlsConfig,
 		}
 	}
 

@@ -1895,7 +1895,7 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 	}
 
 	// Parse the CIDR blocks into a slice
-	secretIDCIDRs := strutil.ParseDedupAndSortStrings(cidrList, ",")
+	secretIDCIDRs := strutil.ParseDedupLowercaseAndSortStrings(cidrList, ",")
 
 	// Ensure that the CIDRs on the secret ID are a subset of that of role's
 	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role.BoundCIDRList); err != nil {

@@ -1,5 +1,11 @@
 ## 0.7.1 (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * LDAP Auth Backend: Group membership queries will now run as the `binddn`
+   user when `binddn`/`bindpass` are configured, rather than as the
+   authenticating user as was the case previously.
+
 FEATURES:
 
  * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
@@ -7,20 +13,33 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * auth/ldap: Use the binding credentials to search group membership rather
+   than the user credentials [GH-2534]
+ * cli/revoke: Add `-self` option to allow revoking the currently active token
+   [GH-2596]
  * secret/pki: Add `no_store` option that allows certificates to be issued
    without being stored. This removes the ability to look up and/or add to a
    CRL but helps with scaling to very large numbers of certificates. [GH-2565]
+ * secret/pki: If used with a role parameter, the `sign-verbatim/<role>`
+   endpoint honors the values of `generate_lease`, `no_store`, `ttl` and
+   `max_ttl` from the given role [GH-2593]
+ * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
+   servers [GH-2521]
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
    requests [GH-2466]
  * storage/s3: Use pooled transport for http client [GH-2481]
- * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
-   servers [GH-2521]
+ * storage/swift: Allow domain values for V3 authentication [GH-2554]
 
 BUG FIXES:
 
  * api: Respect a configured path in Vault's address [GH-2588]
+ * auth/aws-ec2: New bounds added as criteria to allow role creation [GH-2600]
+ * auth/ldap: Don't lowercase groups attached to users [GH-2613]
+ * secret/mssql: Update mssql driver to support queries with colons [GH-2610]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]
+ * secret/ssh: Don't automatically lowercase principles in issued SSH certs
+   [GH-2591]
  * storage/consul: Properly handle state events rather than timing out
    [GH-2548]
  * storage/etcd3: Ensure locks are released if client is improperly shut down

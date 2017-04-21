@@ -324,7 +324,13 @@ role.
   to create this STS credential. This is part of the request URL.
 
 - `ttl` `(string: "3600s")` – Specifies the TTL for the use of the STS token.
-  This is specified as a string with a duration suffix.
+  This is specified as a string with a duration suffix. AWS documentation
+  excerpt: `The duration, in seconds, that the credentials should remain valid.
+  Acceptable durations for IAM user sessions range from 900 seconds (15
+  minutes) to 129600 seconds (36 hours), with 43200 seconds (12 hours) as the
+  default. Sessions for AWS account owners are restricted to a maximum of 3600
+  seconds (one hour). If the duration is longer than one hour, the session for
+  AWS account owners defaults to one hour.`
 
 ### Sample Payload
 

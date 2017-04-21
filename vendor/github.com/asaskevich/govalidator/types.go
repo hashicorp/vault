@@ -118,6 +118,8 @@ var TagMap = map[string]Validator{
 	"ssn":            IsSSN,
 	"semver":         IsSemver,
 	"rfc3339":        IsRFC3339,
+	"ISO3166Alpha2":  IsISO3166Alpha2,
+	"ISO3166Alpha3":  IsISO3166Alpha3,
 }
 
 // ISO3166Entry stores country codes

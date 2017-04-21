@@ -707,11 +707,6 @@ that is not allowed by the CN policy in the role, the request is denied.
   data. This does `not` include the common name in the CSR; use
   `use_csr_common_name` for that.
 
-- `allow_token_displayname` `(bool: false)` – If set, the display name of the
-  token used when requesting a certificate will be considered to be a valid host
-  name by the role. Normal verification behavior applies with respect to
-  subdomains and wildcards.
-
 - `ou` `(string: "")` – Specifies the OU (OrganizationalUnit) values in the
   subject field of issued certificates. This is a comma-separated string.
 
@@ -1116,11 +1111,15 @@ refuse to issue an intermediate CA certificate (see the
 **This is a potentially dangerous endpoint and only highly trusted users should
 have access.**
 
-| Method   | Path                         | Produces               |
-| :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/pki/sign-verbatim`         | `200 application/json` |
+| Method   | Path                                 | Produces               |
+| :------- | :----------------------------------- | :--------------------- |
+| `POST`   | `/pki/sign-verbatim(/:name)`         | `200 application/json` |
 
 ### Parameters
+
+- `name` `(string: "")` - Specifies a role. If set, the following parameters
+  from the role will have effect: `ttl`, `max_ttl`, `generate_lease`, and
+  `no_store`.
 
 - `csr` `(string: <required>)` – Specifies the PEM-encoded CSR.
 
