@@ -304,8 +304,8 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	// Reset the request before returning
 	defer func() {
 		req.Path = originalPath
-		req.MountPoint = ""
-		req.MountType = ""
+		req.MountPoint = mount
+		req.MountType = re.mountEntry.Type
 		req.Connection = originalConn
 		req.ID = originalReqID
 		req.Storage = nil
