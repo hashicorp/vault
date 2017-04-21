@@ -67,7 +67,7 @@ As the user logging in, the primary use case of the token is renewal,
 covered below in the "Auth Leases" section.
 
 To determine what variables are needed for an authentication method,
-supply the `-method` flag without any additional arguments and help
+supply the `-methods` flag without any additional arguments and help
 will be shown.
 
 If you're using a method that isn't supported via the CLI, then the API
