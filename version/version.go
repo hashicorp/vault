@@ -3,6 +3,7 @@ package version
 import (
 	"bytes"
 	"fmt"
+	"runtime"
 )
 
 var (
@@ -22,6 +23,7 @@ type VersionInfo struct {
 	Revision          string
 	Version           string
 	VersionPrerelease string
+	RuntimeVersion    string
 }
 
 func GetVersion() *VersionInfo {
@@ -38,6 +40,7 @@ func GetVersion() *VersionInfo {
 		Revision:          GitCommit,
 		Version:           ver,
 		VersionPrerelease: rel,
+		RuntimeVersion:    runtime.Version(),
 	}
 }
 
@@ -68,6 +71,9 @@ func (c *VersionInfo) FullVersionNumber(rev bool) string {
 	}
 	if rev && c.Revision != "" {
 		fmt.Fprintf(&versionString, " (%s)", c.Revision)
+	}
+	if c.RuntimeVersion != "" {
+		fmt.Fprintf(&versionString, " %s", c.RuntimeVersion)
 	}
 
 	return versionString.String()
