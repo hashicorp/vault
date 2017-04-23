@@ -60,7 +60,6 @@ func (c *Cassandra) getConnection() (*gocql.Session, error) {
 	return session.(*gocql.Session), nil
 }
 
-// func (c *Cassandra) CreateUser(statements dbplugin.Statements, username, password, expiration string) error {
 func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	c.Lock()
