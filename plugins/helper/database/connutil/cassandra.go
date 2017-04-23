@@ -31,6 +31,7 @@ type CassandraConnectionProducer struct {
 	Consistency     string `json:"consistency" structs:"consistency" mapstructure:"consistency"`
 
 	Initialized bool
+	Type        string
 	session     *gocql.Session
 	sync.Mutex
 }
@@ -46,14 +47,14 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	c.Initialized = true
 
 	if verifyConnection {
-		if _, err := c.connection(); err != nil {
+		if _, err := c.Connection(); err != nil {
 			return fmt.Errorf("error Initalizing Connection: %s", err)
 		}
 	}
 	return nil
 }
 
-func (c *CassandraConnectionProducer) connection() (interface{}, error) {
+func (c *CassandraConnectionProducer) Connection() (interface{}, error) {
 	if !c.Initialized {
 		return nil, errNotInitialized
 	}
@@ -106,7 +107,7 @@ func (c *CassandraConnectionProducer) createSession() (*gocql.Session, error) {
 		var tlsConfig *tls.Config
 		if len(c.Certificate) > 0 || len(c.IssuingCA) > 0 {
 			if len(c.Certificate) > 0 && len(c.PrivateKey) == 0 {
-				return nil, fmt.Errorf("Found certificate for TLS authentication but no private key")
+				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
 			}
 
 			certBundle := &certutil.CertBundle{}
