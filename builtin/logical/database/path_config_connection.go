@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	respErrEmptyPluginName = logical.ErrorResponse("Empty plugin name")
-	respErrEmptyName       = logical.ErrorResponse("Empty name attribute given")
+	respErrEmptyPluginName = logical.ErrorResponse("empty plugin name")
+	respErrEmptyName       = logical.ErrorResponse("empty name attribute given")
 )
 
 // DatabaseConfig is used by the Factory function to configure a Database
@@ -199,13 +199,13 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
 		err = db.Initialize(config.ConnectionDetails, verifyConnection)
 		if err != nil {
 			db.Close()
-			return logical.ErrorResponse(fmt.Sprintf("Error creating database object: %s", err)), nil
+			return logical.ErrorResponse(fmt.Sprintf("error creating database object: %s", err)), nil
 		}
 
 		// Grab the mutex lock

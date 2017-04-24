@@ -38,7 +38,7 @@ func (b *databaseBackend) pathRoleCreateRead() framework.OperationFunc {
 			return nil, err
 		}
 		if role == nil {
-			return logical.ErrorResponse(fmt.Sprintf("Unknown role: %s", name)), nil
+			return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 		}
 
 		dbConfig, err := b.DatabaseConfig(req.Storage, role.DBName)

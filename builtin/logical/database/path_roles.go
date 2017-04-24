@@ -136,12 +136,12 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
-			return logical.ErrorResponse("Empty role name attribute given"), nil
+			return logical.ErrorResponse("empty role name attribute given"), nil
 		}
 
 		dbName := data.Get("db_name").(string)
 		if dbName == "" {
-			return logical.ErrorResponse("Empty database name attribute given"), nil
+			return logical.ErrorResponse("empty database name attribute given"), nil
 		}
 
 		// Get statements
@@ -157,12 +157,12 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 		defaultTTL, err := time.ParseDuration(defaultTTLRaw)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid default_ttl: %s", err)), nil
+				"invalid default_ttl: %s", err)), nil
 		}
 		maxTTL, err := time.ParseDuration(maxTTLRaw)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-				"Invalid max_ttl: %s", err)), nil
+				"invalid max_ttl: %s", err)), nil
 		}
 
 		statements := dbplugin.Statements{
