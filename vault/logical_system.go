@@ -63,7 +63,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
-				"plugin-catalog/*",
+				"plugins/catalog/*",
 			},
 
 			Unauthenticated: []string{
@@ -694,7 +694,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
 			&framework.Path{
-				Pattern: "plugin-catalog/$",
+				Pattern: "plugins/catalog/$",
 
 				Fields: map[string]*framework.FieldSchema{},
 
@@ -706,7 +706,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
 			&framework.Path{
-				Pattern: "plugin-catalog/(?P<name>.+)",
+				Pattern: "plugins/catalog/(?P<name>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"name": &framework.FieldSchema{
@@ -2525,7 +2525,7 @@ This path responds to the following HTTP methods.
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
 	},
-	"plugin-catalog": {
+	"plugins/catalog": {
 		`Configures the plugins known to vault`,
 		`
 This path responds to the following HTTP methods.
