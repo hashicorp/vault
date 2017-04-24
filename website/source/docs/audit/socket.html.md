@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Audit Backend: Socket"
+page_title: "Socket - Audit Backend"
 sidebar_current: "docs-audit-socket"
 description: |-
   The "socket" audit backend writes audit writes to a TCP or UDP socket.

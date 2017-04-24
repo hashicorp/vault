@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: Token"
+page_title: "Token - Auth Backend"
 sidebar_current: "docs-auth-token"
 description: |-
   The token store auth backend is used to authenticate using tokens.

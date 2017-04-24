@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: AWS-EC2"
+page_title: "AWS-EC2 - Auth Backend"
 sidebar_current: "docs-auth-aws-ec2"
 description: |-
   The aws-ec2 backend allows automated authentication of AWS EC2 instances.

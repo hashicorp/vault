@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: AppRole"
+page_title: "AppRole - Auth Backend"
 sidebar_current: "docs-auth-approle"
 description: |-
   The AppRole backend allows machines and services to authenticate with Vault.

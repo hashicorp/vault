@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Audit Backend: File"
+page_title: "File - Audit Backend"
 sidebar_current: "docs-audit-file"
 description: |-
   The "file" audit backend writes audit logs to a file.

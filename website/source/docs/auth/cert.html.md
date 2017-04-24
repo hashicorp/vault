@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: TLS Certificates"
+page_title: "TLS Certificates - Auth Backend"
 sidebar_current: "docs-auth-cert"
 description: |-
   The "cert" auth backend allows users to authenticate with Vault using TLS client certificates.
