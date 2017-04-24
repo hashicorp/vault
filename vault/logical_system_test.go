@@ -1123,7 +1123,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 	c.pluginCatalog.directory = sym
 
-	req := logical.TestRequest(t, logical.ListOperation, "plugin-catalog/")
+	req := logical.TestRequest(t, logical.ListOperation, "plugins/catalog/")
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1133,7 +1133,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("Wrong number of plugins, got %d, expected %d", len(resp.Data["keys"].([]string)), len(builtinplugins.Keys()))
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "plugin-catalog/mysql-database-plugin")
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/mysql-database-plugin")
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1164,7 +1164,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	defer file.Close()
 
 	command := fmt.Sprintf("%s --test", filepath.Base(file.Name()))
-	req = logical.TestRequest(t, logical.UpdateOperation, "plugin-catalog/test-plugin")
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/test-plugin")
 	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
 	req.Data["command"] = command
 	resp, err = b.HandleRequest(req)
@@ -1172,7 +1172,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "plugin-catalog/test-plugin")
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/test-plugin")
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1190,13 +1190,13 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Delete plugin
-	req = logical.TestRequest(t, logical.DeleteOperation, "plugin-catalog/test-plugin")
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/test-plugin")
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	req = logical.TestRequest(t, logical.ReadOperation, "plugin-catalog/test-plugin")
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/test-plugin")
 	resp, err = b.HandleRequest(req)
 	if err == nil {
 		t.Fatalf("expected error, plugin not deleted correctly")
