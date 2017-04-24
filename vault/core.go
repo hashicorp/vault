@@ -466,9 +466,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	var err error
-	c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
-	if err != nil {
-		return nil, fmt.Errorf("core setup failed: %v", err)
+	if conf.PluginDirectory != "" {
+		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
+		if err != nil {
+			return nil, fmt.Errorf("core setup failed, could not verify plugin directory: %v", err)
+		}
 	}
 
 	// Construct a new AES-GCM barrier
