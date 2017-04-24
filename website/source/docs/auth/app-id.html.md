@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: App ID"
+page_title: "App ID - Auth Backend"
 sidebar_current: "docs-auth-appid"
 description: |-
   The App ID auth backend is a mechanism for machines to authenticate with Vault.

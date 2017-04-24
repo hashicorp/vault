@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: RADIUS"
+page_title: "RADIUS - Auth Backend"
 sidebar_current: "docs-auth-radius"
 description: |-
   The "radius" auth backend allows users to authenticate with Vault using an existing RADIUS server.

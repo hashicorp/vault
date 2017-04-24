@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Audit Backend: Syslog"
+page_title: "Syslog - Audit Backend"
 sidebar_current: "docs-audit-syslog"
 description: |-
   The "syslog" audit backend writes audit logs to syslog.

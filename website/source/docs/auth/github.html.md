@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: GitHub"
+page_title: "GitHub - Auth Backend"
 sidebar_current: "docs-auth-github"
 description: |-
   The GitHub auth backend allows authentication with Vault using GitHub.

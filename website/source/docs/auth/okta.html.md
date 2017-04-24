@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: Okta"
+page_title: "Okta - Auth Backend"
 sidebar_current: "docs-auth-okta"
 description: |-
   The Okta auth backend allows users to authenticate with Vault using Okta credentials.

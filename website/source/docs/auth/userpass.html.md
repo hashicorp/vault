@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Auth Backend: Username & Password"
+page_title: "Username & Password - Auth Backend"
 sidebar_current: "docs-auth-userpass"
 description: |-
   The "userpass" auth backend allows users to authenticate with Vault using a username and password.
