@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	pluginCatalogPrefix = "plugin-catalog/"
+	pluginCatalogPath         = "core/plugin-catalog/"
+	ErrDirectoryNotConfigured = errors.New("could not set plugin, plugin directory is not configured")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -31,7 +32,7 @@ type PluginCatalog struct {
 
 func (c *Core) setupPluginCatalog() error {
 	c.pluginCatalog = &PluginCatalog{
-		catalogView: c.systemBarrierView.SubView(pluginCatalogPrefix),
+		catalogView: NewBarrierView(c.barrier, pluginCatalogPath),
 		directory:   c.pluginDirectory,
 	}
 
@@ -45,22 +46,24 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	// Look for external plugins in the barrier
-	out, err := c.catalogView.Get(name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve plugin \"%s\": %v", name, err)
-	}
-	if out != nil {
-		entry := new(pluginutil.PluginRunner)
-		if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
-			return nil, fmt.Errorf("failed to decode plugin entry: %v", err)
+	// If the directory isn't set only look for builtin plugins.
+	if c.directory != "" {
+		// Look for external plugins in the barrier
+		out, err := c.catalogView.Get(name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to retrieve plugin \"%s\": %v", name, err)
 		}
+		if out != nil {
+			entry := new(pluginutil.PluginRunner)
+			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
+				return nil, fmt.Errorf("failed to decode plugin entry: %v", err)
+			}
 
-		return entry, nil
+			return entry, nil
+		}
 	}
-
 	// Look for builtin plugins
-	if factory, ok := builtinplugins.BuiltinPlugins.Get(name); ok {
+	if factory, ok := builtinplugins.Get(name); ok {
 		return &pluginutil.PluginRunner{
 			Name:           name,
 			Builtin:        true,
@@ -74,6 +77,10 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
 func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
+	if c.directory == "" {
+		return ErrDirectoryNotConfigured
+	}
+
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -143,7 +150,7 @@ func (c *PluginCatalog) List() ([]string, error) {
 	}
 
 	// Get the keys for builtin plugins
-	builtinKeys := builtinplugins.BuiltinPlugins.Keys()
+	builtinKeys := builtinplugins.Keys()
 
 	// Use a map to unique the two lists
 	mapKeys := make(map[string]bool)

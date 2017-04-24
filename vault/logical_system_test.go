@@ -1129,8 +1129,8 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if len(resp.Data["keys"].([]string)) != len(builtinplugins.BuiltinPlugins.Keys()) {
-		t.Fatalf("Wrong number of plugins, got %d, expected %d", len(resp.Data["keys"].([]string)), len(builtinplugins.BuiltinPlugins.Keys()))
+	if len(resp.Data["keys"].([]string)) != len(builtinplugins.Keys()) {
+		t.Fatalf("Wrong number of plugins, got %d, expected %d", len(resp.Data["keys"].([]string)), len(builtinplugins.Keys()))
 	}
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugin-catalog/mysql-database-plugin")
@@ -1143,7 +1143,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		Name:    "mysql-database-plugin",
 		Builtin: true,
 	}
-	expectedBuiltin.BuiltinFactory, _ = builtinplugins.BuiltinPlugins.Get("mysql-database-plugin")
+	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Get("mysql-database-plugin")
 
 	p := resp.Data["plugin"].(*pluginutil.PluginRunner)
 	if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {

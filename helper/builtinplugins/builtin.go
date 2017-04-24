@@ -7,29 +7,21 @@ import (
 
 type BuiltinFactory func() (interface{}, error)
 
-var BuiltinPlugins *builtinPlugins = &builtinPlugins{
-	plugins: map[string]BuiltinFactory{
-		"mysql-database-plugin":      mysql.New,
-		"postgresql-database-plugin": postgresql.New,
-	},
+var plugins map[string]BuiltinFactory = map[string]BuiltinFactory{
+	"mysql-database-plugin":      mysql.New,
+	"postgresql-database-plugin": postgresql.New,
 }
 
-// The list of builtin plugins should not be changed by any other package, so we
-// store them in an unexported variable in this unexported struct.
-type builtinPlugins struct {
-	plugins map[string]BuiltinFactory
-}
-
-func (b *builtinPlugins) Get(name string) (BuiltinFactory, bool) {
-	f, ok := b.plugins[name]
+func Get(name string) (BuiltinFactory, bool) {
+	f, ok := plugins[name]
 	return f, ok
 }
 
-func (b *builtinPlugins) Keys() []string {
-	keys := make([]string, len(b.plugins))
+func Keys() []string {
+	keys := make([]string, len(plugins))
 
 	i := 0
-	for k := range b.plugins {
+	for k := range plugins {
 		keys[i] = k
 		i++
 	}

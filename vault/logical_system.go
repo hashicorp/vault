@@ -710,13 +710,19 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				Fields: map[string]*framework.FieldSchema{
 					"name": &framework.FieldSchema{
-						Type: framework.TypeString,
+						Type:        framework.TypeString,
+						Description: "The name of the plugin",
 					},
 					"sha_256": &framework.FieldSchema{
 						Type: framework.TypeString,
+						Description: `The SHA256 sum of the executable used in the
+						command field. This should be HEX encoded.`,
 					},
 					"command": &framework.FieldSchema{
 						Type: framework.TypeString,
+						Description: `The command used to start the plugin. The
+						executable defined in this command must exist in vault's
+						plugin directory.`,
 					},
 				},
 
@@ -767,8 +773,7 @@ func (b *SystemBackend) handlePluginCatalogList(req *logical.Request, d *framewo
 		return nil, err
 	}
 
-	resp := logical.ListResponse(plugins)
-	return resp, nil
+	return logical.ListResponse(plugins), nil
 }
 
 func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -2524,7 +2529,7 @@ This path responds to the following HTTP methods.
 		`Configures the plugins known to vault`,
 		`
 This path responds to the following HTTP methods.
-    GET /
+    LIST /
         Returns a list of names of configured plugins.
 
     GET /<name>

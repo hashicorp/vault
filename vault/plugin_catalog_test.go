@@ -32,7 +32,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		Name:    "mysql-database-plugin",
 		Builtin: true,
 	}
-	expectedBuiltin.BuiltinFactory, _ = builtinplugins.BuiltinPlugins.Get("mysql-database-plugin")
+	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Get("mysql-database-plugin")
 
 	if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {
 		t.Fatal("expected BuiltinFactory did not match actual")
@@ -90,7 +90,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 		Name:    "mysql-database-plugin",
 		Builtin: true,
 	}
-	expectedBuiltin.BuiltinFactory, _ = builtinplugins.BuiltinPlugins.Get("mysql-database-plugin")
+	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Get("mysql-database-plugin")
 
 	if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {
 		t.Fatal("expected BuiltinFactory did not match actual")
@@ -113,7 +113,7 @@ func TestPluginCatalog_List(t *testing.T) {
 	core.pluginCatalog.directory = sym
 
 	// Get builtin plugins and sort them
-	builtinKeys := builtinplugins.BuiltinPlugins.Keys()
+	builtinKeys := builtinplugins.Keys()
 	sort.Strings(builtinKeys)
 
 	// List only builtin plugins

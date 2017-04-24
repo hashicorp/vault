@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
-	// plugin.
+	// PluginUnwrapTokenEnv is the ENV name used to pass the configuration for
+	// enabling mlock
 	PluginMlockEnabled = "VAULT_PLUGIN_MLOCK_ENABLED"
 )
 

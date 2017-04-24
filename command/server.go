@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strconv"
@@ -21,7 +20,6 @@ import (
 
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
-	homedir "github.com/mitchellh/go-homedir"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -243,23 +241,6 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID
-	}
-
-	if config.PluginDirectory == "" {
-		homePath, err := homedir.Dir()
-		if err != nil {
-			c.Ui.Output(fmt.Sprintf(
-				"Error getting user's home directory: %v", err))
-			return 1
-		}
-		coreConfig.PluginDirectory = filepath.Join(homePath, "/.vault-plugins/")
-		err = os.Mkdir(coreConfig.PluginDirectory, 0700)
-		if err != nil && !os.IsExist(err) {
-			c.Ui.Output(fmt.Sprintf(
-				"Error making default plugin directory: %v", err))
-			return 1
-		}
-
 	}
 
 	var disableClustering bool
