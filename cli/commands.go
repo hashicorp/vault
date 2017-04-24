@@ -10,7 +10,7 @@ import (
 
 	credAppId "github.com/hashicorp/vault/builtin/credential/app-id"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
-	credAwsEc2 "github.com/hashicorp/vault/builtin/credential/aws-ec2"
+	credAws "github.com/hashicorp/vault/builtin/credential/aws"
 	credCert "github.com/hashicorp/vault/builtin/credential/cert"
 	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
 	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
@@ -71,7 +71,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 				CredentialBackends: map[string]logical.Factory{
 					"approle":  credAppRole.Factory,
 					"cert":     credCert.Factory,
-					"aws-ec2":  credAwsEc2.Factory,
+					"aws":      credAws.Factory,
 					"app-id":   credAppId.Factory,
 					"github":   credGitHub.Factory,
 					"userpass": credUserpass.Factory,
@@ -118,6 +118,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"ldap":     &credLdap.CLIHandler{},
 					"okta":     &credOkta.CLIHandler{},
 					"cert":     &credCert.CLIHandler{},
+					"aws":      &credAws.CLIHandler{},
 					"radius":   &credUserpass.CLIHandler{DefaultMount: "radius"},
 				},
 			}, nil

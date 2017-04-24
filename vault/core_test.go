@@ -1956,7 +1956,7 @@ path "secret/*" {
 	}
 }
 
-func TestCore_HandleRequest_MountPoint(t *testing.T) {
+func TestCore_HandleRequest_MountPointType(t *testing.T) {
 	noop := &NoopBackend{
 		Response: &logical.Response{},
 	}
@@ -1986,11 +1986,14 @@ func TestCore_HandleRequest_MountPoint(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	// Verify Path and MountPoint
+	// Verify Path, MountPoint, and MountType
 	if noop.Requests[0].Path != "test" {
 		t.Fatalf("bad: %#v", noop.Requests)
 	}
 	if noop.Requests[0].MountPoint != "foo/" {
+		t.Fatalf("bad: %#v", noop.Requests)
+	}
+	if noop.Requests[0].MountType != "noop" {
 		t.Fatalf("bad: %#v", noop.Requests)
 	}
 }

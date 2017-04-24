@@ -1,4 +1,4 @@
-package awsec2
+package awsauth
 
 import (
 	"github.com/fatih/structs"
@@ -26,6 +26,24 @@ func pathConfigClient(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "URL to override the default generated endpoint for making AWS EC2 API calls.",
+			},
+
+			"iam_endpoint": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "URL to override the default generated endpoint for making AWS IAM API calls.",
+			},
+
+			"sts_endpoint": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "URL to override the default generated endpoint for making AWS STS API calls.",
+			},
+
+			"iam_server_id_header_value": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Default:     "",
+				Description: "Value to require in the X-Vault-AWS-IAM-Server-ID request header",
 			},
 		},
 
@@ -162,6 +180,41 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry.Endpoint = data.Get("endpoint").(string)
 	}
 
+	iamEndpointStr, ok := data.GetOk("iam_endpoint")
+	if ok {
+		if configEntry.IAMEndpoint != iamEndpointStr.(string) {
+			changedCreds = true
+			configEntry.IAMEndpoint = iamEndpointStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.IAMEndpoint = data.Get("iam_endpoint").(string)
+	}
+
+	stsEndpointStr, ok := data.GetOk("sts_endpoint")
+	if ok {
+		if configEntry.STSEndpoint != stsEndpointStr.(string) {
+			// We don't directly cache STS clients as they are ever directly used.
+			// However, they are potentially indirectly used as credential providers
+			// for the EC2 and IAM clients, and thus we would be indirectly caching
+			// them there. So, if we change the STS endpoint, we should flush those
+			// cached clients.
+			changedCreds = true
+			configEntry.STSEndpoint = stsEndpointStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.STSEndpoint = data.Get("sts_endpoint").(string)
+	}
+
+	headerValStr, ok := data.GetOk("iam_server_id_header_value")
+	if ok {
+		if configEntry.IAMServerIdHeaderValue != headerValStr.(string) {
+			// NOT setting changedCreds here, since this isn't really cached
+			configEntry.IAMServerIdHeaderValue = headerValStr.(string)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		configEntry.IAMServerIdHeaderValue = data.Get("iam_server_id_header_value").(string)
+	}
+
 	// Since this endpoint supports both create operation and update operation,
 	// the error checks for access_key and secret_key not being set are not present.
 	// This allows calling this endpoint multiple times to provide the values.
@@ -172,8 +225,10 @@ func (b *backend) pathConfigClientCreateUpdate(
 		return nil, err
 	}
 
-	if err := req.Storage.Put(entry); err != nil {
-		return nil, err
+	if changedCreds || req.Operation == logical.CreateOperation {
+		if err := req.Storage.Put(entry); err != nil {
+			return nil, err
+		}
 	}
 
 	if changedCreds {
@@ -187,9 +242,12 @@ func (b *backend) pathConfigClientCreateUpdate(
 // Struct to hold 'aws_access_key' and 'aws_secret_key' that are required to
 // interact with the AWS EC2 API.
 type clientConfig struct {
-	AccessKey string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
-	SecretKey string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
-	Endpoint  string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
+	AccessKey              string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
+	SecretKey              string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
+	Endpoint               string `json:"endpoint" structs:"endpoint" mapstructure:"endpoint"`
+	IAMEndpoint            string `json:"iam_endpoint" structs:"iam_endpoint" mapstructure:"iam_endpoint"`
+	STSEndpoint            string `json:"sts_endpoint" structs:"sts_endpoint" mapstructure:"sts_endpoint"`
+	IAMServerIdHeaderValue string `json:"iam_server_id_header_value" structs:"iam_server_id_header_value" mapstructure:"iam_server_id_header_value"`
 }
 
 const pathConfigClientHelpSyn = `
