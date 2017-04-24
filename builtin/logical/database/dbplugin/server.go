@@ -8,9 +8,9 @@ import (
 )
 
 // NewPluginServer is called from within a plugin and wraps the provided
-// DatabaseType implementation in a databasePluginRPCServer object and starts a
+// Database implementation in a databasePluginRPCServer object and starts a
 // RPC server.
-func NewPluginServer(db DatabaseType) {
+func NewPluginServer(db Database) {
 	dbPlugin := &DatabasePlugin{
 		impl: db,
 	}
@@ -35,10 +35,10 @@ func NewPluginServer(db DatabaseType) {
 
 // ---- RPC server domain ----
 
-// databasePluginRPCServer implements an RPC version of DatabaseType and is run
-// inside a plugin. It wraps an underlying implementation of DatabaseType.
+// databasePluginRPCServer implements an RPC version of Database and is run
+// inside a plugin. It wraps an underlying implementation of Database.
 type databasePluginRPCServer struct {
-	impl DatabaseType
+	impl Database
 }
 
 func (ds *databasePluginRPCServer) Type(_ struct{}, resp *string) error {

@@ -15,7 +15,7 @@ import (
 
 const msSQLTypeName = "mssql"
 
-// MSSQL is an implementation of DatabaseType interface
+// MSSQL is an implementation of Database interface
 type MSSQL struct {
 	connutil.ConnectionProducer
 	credsutil.CredentialsProducer

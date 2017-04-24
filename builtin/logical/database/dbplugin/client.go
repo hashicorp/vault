@@ -29,7 +29,7 @@ func (dc *DatabasePluginClient) Close() error {
 // newPluginClient returns a databaseRPCClient with a connection to a running
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
-func newPluginClient(sys pluginutil.Wrapper, pluginRunner *pluginutil.PluginRunner) (DatabaseType, error) {
+func newPluginClient(sys pluginutil.Wrapper, pluginRunner *pluginutil.PluginRunner) (Database, error) {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"database": new(DatabasePlugin),
@@ -65,7 +65,7 @@ func newPluginClient(sys pluginutil.Wrapper, pluginRunner *pluginutil.PluginRunn
 
 // ---- RPC client domain ----
 
-// databasePluginRPCClient implements DatabaseType and is used on the client to
+// databasePluginRPCClient implements Database and is used on the client to
 // make RPC calls to a plugin.
 type databasePluginRPCClient struct {
 	client *rpc.Client

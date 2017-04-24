@@ -16,7 +16,7 @@ var (
 	respErrEmptyName       = logical.ErrorResponse("Empty name attribute given")
 )
 
-// DatabaseConfig is used by the Factory function to configure a DatabaseType
+// DatabaseConfig is used by the Factory function to configure a Database
 // object.
 type DatabaseConfig struct {
 	PluginName string `json:"plugin_name" structs:"plugin_name" mapstructure:"plugin_name"`

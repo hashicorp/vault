@@ -10,8 +10,8 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
-// DatabaseType is the interface that all database objects must implement.
-type DatabaseType interface {
+// Database is the interface that all database objects must implement.
+type Database interface {
 	Type() (string, error)
 	CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error)
 	RenewUser(statements Statements, username string, expiration time.Time) error
@@ -31,24 +31,24 @@ type Statements struct {
 
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
-func PluginFactory(pluginName string, sys pluginutil.LookWrapper, logger log.Logger) (DatabaseType, error) {
+func PluginFactory(pluginName string, sys pluginutil.LookWrapper, logger log.Logger) (Database, error) {
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPlugin(pluginName)
 	if err != nil {
 		return nil, err
 	}
 
-	var db DatabaseType
+	var db Database
 	if pluginRunner.Builtin {
 		// Plugin is builtin so we can retrieve an instance of the interface
-		// from the pluginRunner. Then cast it to a DatabaseType.
+		// from the pluginRunner. Then cast it to a Database.
 		dbRaw, err := pluginRunner.BuiltinFactory()
 		if err != nil {
 			return nil, fmt.Errorf("error getting plugin type: %s", err)
 		}
 
 		var ok bool
-		db, ok = dbRaw.(DatabaseType)
+		db, ok = dbRaw.(Database)
 		if !ok {
 			return nil, fmt.Errorf("unsuported database type: %s", pluginName)
 		}
@@ -95,7 +95,7 @@ var handshakeConfig = plugin.HandshakeConfig{
 // DatabasePlugin implements go-plugin's Plugin interface. It has methods for
 // retrieving a server and a client instance of the plugin.
 type DatabasePlugin struct {
-	impl DatabaseType
+	impl Database
 }
 
 func (d DatabasePlugin) Server(*plugin.MuxBroker) (interface{}, error) {

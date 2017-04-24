@@ -41,12 +41,12 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	}
 
 	b.logger = conf.Logger
-	b.connections = make(map[string]dbplugin.DatabaseType)
+	b.connections = make(map[string]dbplugin.Database)
 	return &b
 }
 
 type databaseBackend struct {
-	connections map[string]dbplugin.DatabaseType
+	connections map[string]dbplugin.Database
 	logger      log.Logger
 
 	*framework.Backend
@@ -62,13 +62,13 @@ func (b *databaseBackend) closeAllDBs() {
 		db.Close()
 	}
 
-	b.connections = nil
+	b.connections = make(map[string]dbplugin.Database)
 }
 
 // This function is used to retrieve a database object either from the cached
 // connection map or by using the database config in storage. The caller of this
 // function needs to hold the backend's lock.
-func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbplugin.DatabaseType, error) {
+func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbplugin.Database, error) {
 	// if the object already is built and cached, return it
 	db, ok := b.connections[name]
 	if ok {
