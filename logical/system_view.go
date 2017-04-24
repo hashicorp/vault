@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 )
 
 // SystemView exposes system configuration information in a safe way
@@ -42,7 +43,7 @@ type SystemView interface {
 
 	// ResponseWrapData wraps the given data in a cubbyhole and returns the
 	// token used to unwrap.
-	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error)
+	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 
 	// LookupPlugin looks into the plugin catalog for a plugin with the given
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
@@ -87,8 +88,8 @@ func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
 }
 
-func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error) {
-	return "", errors.New("ResponseWrapData is not implemented in StaticSystemView")
+func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {

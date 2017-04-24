@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -91,14 +92,14 @@ func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
 
 // ResponseWrapData wraps the given data in a cubbyhole and returns the
 // token used to unwrap.
-func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error) {
+func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	req := &logical.Request{
 		Operation: logical.CreateOperation,
-		Path:      "sys/init",
+		Path:      "sys/wrapping/wrap",
 	}
 
 	resp := &logical.Response{
-		WrapInfo: &logical.ResponseWrapInfo{
+		WrapInfo: &wrapping.ResponseWrapInfo{
 			TTL: ttl,
 		},
 		Data: data,
@@ -110,10 +111,10 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 
 	_, err := d.core.wrapInCubbyhole(req, resp)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return resp.WrapInfo.Token, nil
+	return resp.WrapInfo, nil
 }
 
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It

@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -2075,7 +2076,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 		Data: map[string]interface{}{
 			"response": response,
 		},
-		WrapInfo: &logical.ResponseWrapInfo{
+		WrapInfo: &wrapping.ResponseWrapInfo{
 			TTL: time.Duration(creationTTL),
 		},
 	}, nil

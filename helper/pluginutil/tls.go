@@ -103,12 +103,15 @@ func WrapServerConfig(sys Wrapper, certBytes []byte, key *ecdsa.PrivateKey) (str
 		return "", err
 	}
 
-	wrapToken, err := sys.ResponseWrapData(map[string]interface{}{
+	wrapInfo, err := sys.ResponseWrapData(map[string]interface{}{
 		"ServerCert": certBytes,
 		"ServerKey":  rawKey,
 	}, time.Second*10, true)
+	if err != nil {
+		return "", err
+	}
 
-	return wrapToken, err
+	return wrapInfo.Token, nil
 }
 
 // VaultPluginTLSProvider is run inside a plugin and retrives the response

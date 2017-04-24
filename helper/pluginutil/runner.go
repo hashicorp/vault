@@ -3,18 +3,11 @@ package pluginutil
 import (
 	"crypto/sha256"
 	"fmt"
-	"os"
 	"os/exec"
 	"time"
 
 	plugin "github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/mlock"
-)
-
-var (
-	// PluginUnwrapTokenEnv is the ENV name used to pass the configuration for
-	// enabling mlock
-	PluginMlockEnabled = "VAULT_PLUGIN_MLOCK_ENABLED"
+	"github.com/hashicorp/vault/helper/wrapping"
 )
 
 // Looker defines the plugin Lookup function that looks into the plugin catalog
@@ -27,7 +20,7 @@ type Looker interface {
 // metadata needed to run a plugin process. This includes looking up Mlock
 // configuration and wrapping data in a respose wrapped token.
 type Wrapper interface {
-	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (string, error)
+	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockDisabled() bool
 }
 
@@ -96,14 +89,4 @@ func (r *PluginRunner) Run(wrapper Wrapper, pluginMap map[string]plugin.Plugin, 
 	})
 
 	return client, nil
-}
-
-// OptionallyEnableMlock determines if mlock should be called, and if so enables
-// mlock.
-func OptionallyEnableMlock() error {
-	if os.Getenv(PluginMlockEnabled) == "true" {
-		return mlock.LockMemory()
-	}
-
-	return nil
 }
