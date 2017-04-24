@@ -8,6 +8,12 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * **AWS IAM Authentication**: IAM principals can get Vault tokens
+   automatically using this new backend. Signed client identity information
+   retrieved using the AWS API `sts:GetCallerIdentity` is validated against AWS
+   STS service before issuing a Vault token. This backend is unified with the
+   `aws-ec2` authentication backend, which allows additional EC2 related
+   restrictions to be applied during the IAM authentication. [GH-2441]
  * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
    Vault physical data store [GH-2546]
 
