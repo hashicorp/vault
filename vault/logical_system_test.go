@@ -32,7 +32,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/reindex",
 		"rotate",
 		"config/auditing/*",
-		"plugin-catalog/*",
+		"plugins/catalog/*",
 	}
 
 	b := testSystemBackend(t)
