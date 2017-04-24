@@ -1023,7 +1023,7 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	return nil
 }
 
-// revokeTreeSalted is used to invalide a given token and all
+// revokeTreeSalted is used to invalidate a given token and all
 // child tokens using a saltedID.
 // Updated to be non-recursive and revoke child tokens
 // before parent tokens(DFS).
@@ -1045,10 +1045,11 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 			if err := ts.revokeSalted(id); err != nil {
 				return fmt.Errorf("failed to revoke entry: %v", err)
 			}
-			if l == 1 { //we deleted last node, then return
+			// If the length of l is equal to 1, then the last token has been deleted
+			if l == 1 { 
 				return nil
 			} else {
-				dfs = dfs[1:l] //get rid of first
+				dfs = dfs[1:l] 
 			}
 		} else { 
 		  // If we make it here, the there are children and they must
