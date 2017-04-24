@@ -123,7 +123,7 @@ func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, 
 	return d.core.pluginCatalog.Get(name)
 }
 
-// MlockDisabled returns the configuration setting "DisableMlock".
-func (d dynamicSystemView) MlockDisabled() bool {
-	return d.core.disableMlock
+// MlockEnabled returns the configuration setting for enabling mlock on plugins.
+func (d dynamicSystemView) MlockEnabled() bool {
+	return d.core.enableMlock
 }

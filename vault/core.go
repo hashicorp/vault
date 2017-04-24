@@ -338,7 +338,7 @@ type Core struct {
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 
-	disableMlock bool
+	enableMlock bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -441,7 +441,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		disableMlock:                     conf.DisableMlock,
+		enableMlock:                      !conf.DisableMlock,
 	}
 
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped

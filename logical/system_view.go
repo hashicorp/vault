@@ -49,8 +49,9 @@ type SystemView interface {
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
 	LookupPlugin(string) (*pluginutil.PluginRunner, error)
 
-	// MlockDisabled returns the configuration setting for DisableMlock.
-	MlockDisabled() bool
+	// MlockEnabled returns the configuration setting for Enableing mlock on
+	// plugins.
+	MlockEnabled() bool
 }
 
 type StaticSystemView struct {
@@ -60,7 +61,7 @@ type StaticSystemView struct {
 	TaintedVal          bool
 	CachingDisabledVal  bool
 	Primary             bool
-	DisableMlock        bool
+	EnableMlock         bool
 	ReplicationStateVal consts.ReplicationState
 }
 
@@ -96,6 +97,6 @@ func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, e
 	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) MlockDisabled() bool {
-	return d.DisableMlock
+func (d StaticSystemView) MlockEnabled() bool {
+	return d.EnableMlock
 }

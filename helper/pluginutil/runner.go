@@ -21,7 +21,7 @@ type Looker interface {
 // configuration and wrapping data in a respose wrapped token.
 type Wrapper interface {
 	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
-	MlockDisabled() bool
+	MlockEnabled() bool
 }
 
 // LookWrapper defines the functions for both Looker and Wrapper
@@ -63,17 +63,14 @@ func (r *PluginRunner) Run(wrapper Wrapper, pluginMap map[string]plugin.Plugin, 
 		return nil, err
 	}
 
-	mlock := "true"
-	if wrapper.MlockDisabled() {
-		mlock = "false"
-	}
-
 	cmd := exec.Command(r.Command, r.Args...)
 	cmd.Env = append(cmd.Env, env...)
 	// Add the response wrap token to the ENV of the plugin
 	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
 	// Add the mlock setting to the ENV of the plugin
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, mlock))
+	if wrapper.MlockEnabled() {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
+	}
 
 	secureConfig := &plugin.SecureConfig{
 		Checksum: r.Sha256,
