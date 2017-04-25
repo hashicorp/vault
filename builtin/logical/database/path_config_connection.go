@@ -99,8 +99,8 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			"allowed_roles": &framework.FieldSchema{
 				Type: framework.TypeCommaStringSlice,
 				Description: `Comma separated string or array of the role names
-				allowed to get creds from this database connection. If not set
-				all roles are allowed.`,
+				allowed to get creds from this database connection. If empty no
+				roles are allowed. If "*" all roles are allowed.`,
 			},
 		},
 

@@ -113,6 +113,7 @@ func TestBackend_config_connection(t *testing.T) {
 		"connection_url":    "sample_connection_url",
 		"plugin_name":       "postgresql-database-plugin",
 		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
 	}
 
 	configReq := &logical.Request{
@@ -127,9 +128,11 @@ func TestBackend_config_connection(t *testing.T) {
 	}
 
 	expected := map[string]interface{}{
-		"plugin_name":        "postgresql-database-plugin",
-		"connection_details": configData,
-		"allowed_roles":      []string{},
+		"plugin_name": "postgresql-database-plugin",
+		"connection_details": map[string]interface{}{
+			"connection_url": "sample_connection_url",
+		},
+		"allowed_roles": []string{"*"},
 	}
 	configReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(configReq)
@@ -164,6 +167,7 @@ func TestBackend_basic(t *testing.T) {
 	data := map[string]interface{}{
 		"connection_url": connURL,
 		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
 	}
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -290,6 +294,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	data = map[string]interface{}{
 		"connection_url": connURL,
 		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  []string{"plugin-role-test"},
 	}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -304,9 +309,11 @@ func TestBackend_connectionCrud(t *testing.T) {
 
 	// Read connection
 	expected := map[string]interface{}{
-		"plugin_name":        "postgresql-database-plugin",
-		"connection_details": data,
-		"allowed_roles":      []string{},
+		"plugin_name": "postgresql-database-plugin",
+		"connection_details": map[string]interface{}{
+			"connection_url": connURL,
+		},
+		"allowed_roles": []string{"plugin-role-test"},
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(req)
@@ -506,7 +513,6 @@ func TestBackend_allowedRoles(t *testing.T) {
 	data := map[string]interface{}{
 		"connection_url": connURL,
 		"plugin_name":    "postgresql-database-plugin",
-		"allowed_roles":  "allow, allowed",
 	}
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -563,6 +569,70 @@ func TestBackend_allowedRoles(t *testing.T) {
 		Data:      data,
 	}
 	credsResp, err := b.HandleRequest(req)
+	if err != logical.ErrPermissionDenied {
+		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
+	}
+
+	// update connection with * allowed roles connection
+	data = map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  "*",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Get creds, should work.
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/allowed",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err = b.HandleRequest(req)
+	if err != nil || (credsResp != nil && credsResp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, credsResp)
+	}
+
+	if !testCredsExist(t, credsResp, connURL) {
+		t.Fatalf("Creds should exist")
+	}
+
+	// update connection with allowed roles
+	data = map[string]interface{}{
+		"connection_url": connURL,
+		"plugin_name":    "postgresql-database-plugin",
+		"allowed_roles":  "allow, allowed",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Get creds from denied role, should fail
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "creds/denied",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	credsResp, err = b.HandleRequest(req)
 	if err != logical.ErrPermissionDenied {
 		t.Fatalf("expected error to be:%s got:%#v\n", logical.ErrPermissionDenied, err)
 	}
