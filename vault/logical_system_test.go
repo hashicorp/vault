@@ -1198,7 +1198,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/test-plugin")
 	resp, err = b.HandleRequest(req)
-	if err == nil {
-		t.Fatalf("expected error, plugin not deleted correctly")
+	if resp != nil || err != nil {
+		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
 	}
 }
