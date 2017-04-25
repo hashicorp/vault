@@ -153,6 +153,7 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	if connState.PeerCertificates == nil || len(connState.PeerCertificates) == 0 {
 		return nil, logical.ErrorResponse("client certificate must be supplied"), nil
 	}
+	clientCert := connState.PeerCertificates[0]
 
 	// Allow constraining the login request to a single CertEntry
 	certName := d.Get("name").(string)
@@ -163,13 +164,12 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
-		clientCert := connState.PeerCertificates[0]
 		for _, trustedNonCA := range trustedNonCAs {
 			tCert := trustedNonCA.Certificates[0]
 			// Check for client cert being explicitly listed in the config (and matching other constraints)
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
 				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
-				b.matchesConstraints(connState.PeerCertificates[0], trustedNonCA.Certificates, trustedNonCA) {
+				b.matchesConstraints(clientCert, trustedNonCA.Certificates, trustedNonCA) {
 				return trustedNonCA, nil, nil
 			}
 		}
@@ -193,7 +193,7 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 			for _, chain := range trustedChains { // For each root chain that we matched
 				for _, cCert := range chain { // For each cert in the matched chain
 					if tCert.Equal(cCert) && // ParsedCert intersects with matched chain
-						b.matchesConstraints(connState.PeerCertificates[0], chain, trust) { // validate client cert + matched chain against the config
+						b.matchesConstraints(clientCert, chain, trust) { // validate client cert + matched chain against the config
 						// Add the match to the list
 						matches = append(matches, trust)
 					}
