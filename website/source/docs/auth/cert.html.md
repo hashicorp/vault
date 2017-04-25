@@ -182,7 +182,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
         "certificate": "-----BEGIN CERTIFICATE-----\nMIIEtzCCA5+.......ZRtAfQ6r\nwlW975rYa1ZqEdA=\n-----END CERTIFICATE-----",
         "display_name": "test",
         "policies": "",
-        "required_name": "",
+        "required_names": "",
         "ttl": 2764800
       },
       "warnings": null,
@@ -254,11 +254,12 @@ of the header should be "X-Vault-Token" and the value should be the token.
         The PEM-format CA certificate.
       </li>
       <li>
-        <span class="param">required_name</span>
+        <span class="param">required_names</span>
         <span class="param-flags">optional</span>
         Constrain the Common and Alternative Names in the client certificate
         with a [globbed pattern](https://github.com/ryanuber/go-glob/blob/master/README.md#example).
-        Authentication requires at least one Name matching the pattern.
+        Value is a comma-separated list of patterns.
+        Authentication requires at least one Name matching at least one pattern.
         If not set, defaults to allowing all names.
       </li>
       <li>

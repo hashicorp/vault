@@ -442,7 +442,7 @@ func TestBackend_mixed_constraints(t *testing.T) {
 		Backend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "1unconstrained", ca, "foo", "", false),
-			testAccStepCert(t, "2matching", ca, "foo", "*.example.com", false),
+			testAccStepCert(t, "2matching", ca, "foo", "*.example.com,whatever", false),
 			testAccStepCert(t, "3invalid", ca, "foo", "invalid", false),
 			testAccStepLogin(t, connState),
 			// Assumes CertEntries are processed in alphabetical order (due to store.List), so we only match 2matching if 1unconstrained doesn't match
@@ -620,17 +620,17 @@ func testAccStepListCerts(
 }
 
 func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, requiredName string, expectError bool) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string, requiredNames string, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
 		Data: map[string]interface{}{
-			"certificate":   string(cert),
-			"policies":      policies,
-			"display_name":  name,
-			"required_name": requiredName,
-			"lease":         1000,
+			"certificate":    string(cert),
+			"policies":       policies,
+			"display_name":   name,
+			"required_names": requiredNames,
+			"lease":          1000,
 		},
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
