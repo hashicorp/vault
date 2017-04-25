@@ -84,7 +84,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// start logging too early.
 	logGate := &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
 	var level int
-	logLevel = strings.ToLower(logLevel)
+	logLevel = strings.ToLower(strings.TrimSpace(logLevel))
 	switch logLevel {
 	case "trace":
 		level = log.LevelTrace
