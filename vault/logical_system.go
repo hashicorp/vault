@@ -815,6 +815,9 @@ func (b *SystemBackend) handlePluginCatalogRead(req *logical.Request, d *framewo
 	if err != nil {
 		return nil, err
 	}
+	if plugin == nil {
+		return nil, nil
+	}
 
 	return &logical.Response{
 		Data: map[string]interface{}{

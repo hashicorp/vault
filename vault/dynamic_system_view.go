@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
@@ -120,7 +121,15 @@ func (d dynamicSystemView) ResponseWrapData(data map[string]interface{}, ttl tim
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
 // returns a PluginRunner or an error if no plugin was found.
 func (d dynamicSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
-	return d.core.pluginCatalog.Get(name)
+	r, err := d.core.pluginCatalog.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	if r == nil {
+		return nil, fmt.Errorf("no plugin found with name: %s", name)
+	}
+
+	return r, nil
 }
 
 // MlockEnabled returns the configuration setting for enabling mlock on plugins.

@@ -71,7 +71,7 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 		}, nil
 	}
 
-	return nil, fmt.Errorf("no plugin found with name: %s", name)
+	return nil, nil
 }
 
 // Set registers a new external plugin with the catalog, or updates an existing
