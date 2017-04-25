@@ -27,7 +27,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 			pathConfigurePluginConnection(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
-			pathRoleCreate(&b),
+			pathCredsCreate(&b),
 			pathResetConnection(&b),
 		},
 

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func pathRoleCreate(b *databaseBackend) *framework.Path {
+func pathCredsCreate(b *databaseBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
@@ -20,15 +20,15 @@ func pathRoleCreate(b *databaseBackend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathRoleCreateRead(),
+			logical.ReadOperation: b.pathCredsCreateRead(),
 		},
 
-		HelpSynopsis:    pathRoleCreateReadHelpSyn,
-		HelpDescription: pathRoleCreateReadHelpDesc,
+		HelpSynopsis:    pathCredsCreateReadHelpSyn,
+		HelpDescription: pathCredsCreateReadHelpDesc,
 	}
 }
 
-func (b *databaseBackend) pathRoleCreateRead() framework.OperationFunc {
+func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 
@@ -58,7 +58,6 @@ func (b *databaseBackend) pathRoleCreateRead() framework.OperationFunc {
 		// Get the Database object
 		db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
 		if err != nil {
-			// TODO: return a resp error instead?
 			return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
 		}
 
@@ -82,11 +81,11 @@ func (b *databaseBackend) pathRoleCreateRead() framework.OperationFunc {
 	}
 }
 
-const pathRoleCreateReadHelpSyn = `
+const pathCredsCreateReadHelpSyn = `
 Request database credentials for a certain role.
 `
 
-const pathRoleCreateReadHelpDesc = `
+const pathCredsCreateReadHelpDesc = `
 This path reads database credentials for a certain role. The
 database credentials will be generated on demand and will be automatically
 revoked when the lease is up.
