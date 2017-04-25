@@ -6,7 +6,6 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -187,9 +186,14 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 
 		verifyConnection := data.Get("verify_connection").(bool)
 
-		// Pasrse and dedupe allowed roles from a comma separated string.
-		allowedRolesRaw := data.Get("allowed_roles").(string)
-		allowedRoles := strutil.ParseDedupAndSortStrings(allowedRolesRaw, ",")
+		allowedRoles := data.Get("allowed_roles").([]string)
+
+		// Remove these entries from the data before we store it keyed under
+		// ConnectionDetails.
+		delete(data.Raw, "name")
+		delete(data.Raw, "plugin_name")
+		delete(data.Raw, "allowed_roles")
+		delete(data.Raw, "verify_connection")
 
 		config := &DatabaseConfig{
 			ConnectionDetails: data.Raw,
