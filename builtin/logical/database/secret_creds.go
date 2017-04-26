@@ -38,7 +38,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 			return nil, err
 		}
 		if role == nil {
-			return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("error during renew: could not find role with name %s", req.Secret.InternalData["role"])
 		}
 
 		f := framework.LeaseExtend(role.DefaultTTL, role.MaxTTL, b.System())
@@ -54,7 +54,7 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		// Get our connection
 		db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
 		if err != nil {
-			return nil, fmt.Errorf("could not find connection with name %s, got err: %s", role.DBName, err)
+			return nil, fmt.Errorf("error during renew: %s", err)
 		}
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
@@ -90,24 +90,8 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 			return nil, err
 		}
 		if role == nil {
-			return nil, fmt.Errorf("could not find role with name: %s", req.Secret.InternalData["role"])
+			return nil, fmt.Errorf("error during revoke: could not find role with name %s", req.Secret.InternalData["role"])
 		}
-
-		/* TODO: think about how to handle this case.
-		if !ok {
-			role, err := b.Role(req.Storage, roleNameRaw.(string))
-			if err != nil {
-				return nil, err
-			}
-			if role == nil {
-				if resp == nil {
-					resp = &logical.Response{}
-				}
-				resp.AddWarning(fmt.Sprintf("Role %q cannot be found. Using default revocation SQL.", roleNameRaw.(string)))
-			} else {
-				revocationSQL = role.RevocationStatement
-			}
-		}*/
 
 		// Grab the read lock
 		b.Lock()
@@ -116,7 +100,7 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		// Get our connection
 		db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
 		if err != nil {
-			return nil, fmt.Errorf("could not find database with name: %s, got error: %s", role.DBName, err)
+			return nil, fmt.Errorf("error during revoke: %s", err)
 		}
 
 		err = db.RevokeUser(role.Statements, username)
