@@ -174,7 +174,7 @@ func (m *ExpirationManager) Tidy() error {
 		}
 
 		if revokeLease {
-			m.logger.Debug("expiration: lease is being revoked", "lease_id", leaseID)
+			m.logger.Debug("expiration: invalid lease is being revoked", "lease_id", leaseID)
 			// Force the revocation and skip going through the token store
 			// again
 			err = m.revokeCommon(leaseID, true, true)
