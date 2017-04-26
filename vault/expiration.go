@@ -121,8 +121,10 @@ func (c *Core) stopExpiration() error {
 
 // Tidy cleans up stale leases which are associated with invalid tokens
 func (m *ExpirationManager) Tidy() error {
-
 	var tidyErrors *multierror.Error
+
+	// Create a cache to keep track of looked up tokens
+	tokenCache := make(map[string]string)
 
 	tidyFunc := func(leaseID string) {
 		m.logger.Trace("expiration: checking if lease %q is valid", leaseID)
@@ -144,16 +146,32 @@ func (m *ExpirationManager) Tidy() error {
 			revokeLease = true
 		}
 
-		saltedId := m.tokenStore.SaltID(le.ClientToken)
+		saltedID := m.tokenStore.SaltID(le.ClientToken)
 
-		lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
-		lock.RLock()
-		te, err := m.tokenStore.lookupSalted(saltedId, true)
-		lock.RUnlock()
-
-		if te == nil {
+		switch tokenCache[saltedID] {
+		case "invalid":
 			m.logger.Debug("expiration: lease %q has an invalid token", leaseID)
 			revokeLease = true
+		case "valid":
+			return
+		default:
+			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
+			lock.RLock()
+			te, err := m.tokenStore.lookupSalted(saltedID, true)
+			lock.RUnlock()
+
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup token: %v", err))
+				return
+			}
+
+			if te == nil {
+				m.logger.Debug("expiration: lease %q has an invalid token", leaseID)
+				revokeLease = true
+				tokenCache[saltedID] = "invalid"
+			} else {
+				tokenCache[saltedID] = "valid"
+			}
 		}
 
 		if revokeLease {
