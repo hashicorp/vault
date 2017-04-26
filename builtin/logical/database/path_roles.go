@@ -1,7 +1,6 @@
 package database
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
@@ -65,12 +64,12 @@ func pathRoles(b *databaseBackend) *framework.Path {
 			},
 
 			"default_ttl": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: "Default ttl for role.",
 			},
 
 			"max_ttl": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: "Maximum time a credential is valid for",
 			},
 		},
@@ -114,8 +113,8 @@ func (b *databaseBackend) pathRoleRead() framework.OperationFunc {
 				"revocation_statements": role.Statements.RevocationStatements,
 				"rollback_statements":   role.Statements.RollbackStatements,
 				"renew_statements":      role.Statements.RenewStatements,
-				"default_ttl":           role.DefaultTTL.String(),
-				"max_ttl":               role.MaxTTL.String(),
+				"default_ttl":           role.DefaultTTL.Seconds(),
+				"max_ttl":               role.MaxTTL.Seconds(),
 			},
 		}, nil
 	}
@@ -151,19 +150,10 @@ func (b *databaseBackend) pathRoleCreate() framework.OperationFunc {
 		renewStmts := data.Get("renew_statements").(string)
 
 		// Get TTLs
-		defaultTTLRaw := data.Get("default_ttl").(string)
-		maxTTLRaw := data.Get("max_ttl").(string)
-
-		defaultTTL, err := time.ParseDuration(defaultTTLRaw)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid default_ttl: %s", err)), nil
-		}
-		maxTTL, err := time.ParseDuration(maxTTLRaw)
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid max_ttl: %s", err)), nil
-		}
+		defaultTTLRaw := data.Get("default_ttl").(int)
+		maxTTLRaw := data.Get("max_ttl").(int)
+		defaultTTL := time.Duration(defaultTTLRaw) * time.Second
+		maxTTL := time.Duration(maxTTLRaw) * time.Second
 
 		statements := dbplugin.Statements{
 			CreationStatements:   creationStmts,
