@@ -29,13 +29,14 @@ func TestRevokeCert(t *testing.T) {
 	if block == nil {
 		t.Fatal("failed to decode PEM cert into DER")
 	}
+	certDER := block.Bytes
 
 	var revInfo revocationInfo
 	currTime := time.Now()
-	revInfo.CertificateBytes = block.Bytes
+	revInfo.CertificateBytes = certDER
 	revInfo.RevocationTime = currTime.Unix()
 	revInfo.RevocationTimeUTC = currTime.UTC()
-	encodedCertValue, err := jsonutil.EncodeJSON(revInfo)
+	encodedCertDER, err := jsonutil.EncodeJSON(revInfo)
 	if err != nil {
 		t.Fatalf("error encoding pseudo cert value: %s", err)
 	}
@@ -52,7 +53,7 @@ func TestRevokeCert(t *testing.T) {
 				Storage:   storage,
 			},
 			"7f:e8:e1:29:31:41:9e:a4:ac:df:82:08:d1:64:b5:2f:84:2c:6d:b0",
-			certValue,
+			certDER,
 		},
 		"cert, revoked colon": {
 			&logical.Request{
@@ -61,7 +62,7 @@ func TestRevokeCert(t *testing.T) {
 				Storage:   storage,
 			},
 			"7f:e8:e1:29:31:41:9e:a4:ac:df:82:08:d1:64:b5:2f:84:2c:6d:b0",
-			encodedCertValue,
+			encodedCertDER,
 		},
 		"cert, valid hyphen": {
 			&logical.Request{
@@ -70,7 +71,7 @@ func TestRevokeCert(t *testing.T) {
 				Storage:   storage,
 			},
 			"7f-e8-e1-29-31-41-9e-a4-ac-df-82-08-d1-64-b5-2f-84-2c-6d-b0",
-			certValue,
+			certDER,
 		},
 		"cert, revoked hyphen": {
 			&logical.Request{
@@ -79,7 +80,7 @@ func TestRevokeCert(t *testing.T) {
 				Storage:   storage,
 			},
 			"7f-e8-e1-29-31-41-9e-a4-ac-df-82-08-d1-64-b5-2f-84-2c-6d-b0",
-			encodedCertValue,
+			encodedCertDER,
 		},
 	}
 
