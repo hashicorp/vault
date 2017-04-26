@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -17,6 +18,29 @@ func TestRevokeCert(t *testing.T) {
 
 	b := Backend()
 	_, err := b.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Place CA cert in storage
+	rootCAKeyPEM, err := ioutil.ReadFile("test-fixtures/root/rootcakey.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	rootCACertPEM, err := ioutil.ReadFile("test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	cb := &certutil.CertBundle{}
+	cb.PrivateKey = string(rootCAKeyPEM)
+	cb.PrivateKeyType = certutil.RSAPrivateKey
+	cb.Certificate = string(rootCACertPEM)
+
+	bundleEntry, err := logical.StorageEntryJSON("config/ca_bundle", cb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = storage.Put(bundleEntry)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,9 +118,9 @@ func TestRevokeCert(t *testing.T) {
 			t.Fatalf("error writing to storage on %s: %s", name, err)
 		}
 
-		_, err = revokeCert(b, tc.Req, tc.StorageKey, false)
-		if err != nil {
-			t.Fatalf("revokeCert error on %s: %s", name, err)
+		resp, err := revokeCert(b, tc.Req, tc.StorageKey, false)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("bad: err: %v resp: %#v", err, resp)
 		}
 	}
 }

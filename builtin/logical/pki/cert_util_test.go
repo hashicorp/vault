@@ -79,7 +79,7 @@ func TestFetchCertBySerial(t *testing.T) {
 		}
 
 		// Check for non-nil on valid/revoked certs
-		if certEntry == nil && tc.Req.Path != "ca" && tc.Req.Path != "crl" { // if true
+		if certEntry == nil && tc.Req.Path != "ca" && tc.Req.Path != "crl" {
 			t.Fatalf("fetchBySerial returned nil on %s", name)
 		}
 	}
