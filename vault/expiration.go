@@ -125,6 +125,8 @@ func (m *ExpirationManager) Tidy() error {
 	var tidyErrors *multierror.Error
 
 	tidyFunc := func(leaseID string) {
+		m.logger.Trace("expiration: checking if lease %q is valid", leaseID)
+
 		le, err := m.loadEntry(leaseID)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to load the lease ID %q: %v", leaseID, err))
@@ -136,19 +138,26 @@ func (m *ExpirationManager) Tidy() error {
 			return
 		}
 
+		revokeLease := false
 		if le.ClientToken == "" {
-			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("missing client token for lease ID %q: %v", leaseID, err))
-			return
+			m.logger.Debug("expiration: lease %q has an empty token", leaseID)
+			revokeLease = true
 		}
 
 		saltedId := m.tokenStore.SaltID(le.ClientToken)
 
 		lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
 		lock.RLock()
-		defer lock.RUnlock()
-
 		te, err := m.tokenStore.lookupSalted(saltedId, true)
+		lock.RUnlock()
+
 		if te == nil {
+			m.logger.Debug("expiration: lease %q has an invalid token", leaseID)
+			revokeLease = true
+		}
+
+		if revokeLease {
+			m.logger.Debug("expiration: lease %q is being revoked", leaseID)
 			// Force the revocation and skip going through the token store
 			// again
 			err = m.revokeCommon(leaseID, true, true)
