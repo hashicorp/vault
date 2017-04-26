@@ -445,13 +445,13 @@ message DeleteRangeRequest {
   bytes key = 1;
   // range_end is the key following the last key to delete for the range [key, range_end).
   // If range_end is not given, the range is defined to contain only the key argument.
-  // If range_end is one bit larger than the given key, then the range is all
-  // the all keys with the prefix (the given key).
+  // If range_end is one bit larger than the given key, then the range is all the keys
+  // with the prefix (the given key).
   // If range_end is '\0', the range is all keys greater than or equal to the key argument.
   bytes range_end = 2;
 
   // If prev_kv is set, etcd gets the previous key-value pairs before deleting it.
-  // The previous key-value pairs will be returned in the delte response.
+  // The previous key-value pairs will be returned in the delete response.
   bool prev_kv = 3;
 }
 
@@ -734,6 +734,8 @@ message MemberAddResponse {
   ResponseHeader header = 1;
   // member is the member information for the added member.
   Member member = 2;
+  // members is a list of all members after adding the new member.
+  repeated Member members = 3;
 }
 
 message MemberRemoveRequest {
@@ -743,6 +745,8 @@ message MemberRemoveRequest {
 
 message MemberRemoveResponse {
   ResponseHeader header = 1;
+  // members is a list of all members after removing the member.
+  repeated Member members = 2;
 }
 
 message MemberUpdateRequest {
@@ -754,6 +758,8 @@ message MemberUpdateRequest {
 
 message MemberUpdateResponse{
   ResponseHeader header = 1;
+  // members is a list of all members after updating the member.
+  repeated Member members = 2;
 }
 
 message MemberListRequest {

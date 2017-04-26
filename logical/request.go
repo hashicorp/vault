@@ -82,8 +82,17 @@ type Request struct {
 	// request path with the MountPoint trimmed off.
 	MountPoint string `json:"mount_point" structs:"mount_point" mapstructure:"mount_point"`
 
+	// MountType is provided so that a logical backend can make decisions
+	// based on the specific mount type (e.g., if a mount type has different
+	// aliases, generating different defaults depending on the alias)
+	MountType string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
+
 	// WrapInfo contains requested response wrapping parameters
 	WrapInfo *RequestWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
+
+	// ClientTokenRemainingUses represents the allowed number of uses left on the
+	// token supplied
+	ClientTokenRemainingUses int `json:"client_token_remaining_uses" structs:"client_token_remaining_uses" mapstructure:"client_token_remaining_uses"`
 
 	// For replication, contains the last WAL on the remote side after handling
 	// the request, used for best-effort avoidance of stale read-after-write

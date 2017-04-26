@@ -1,0 +1,164 @@
+<% wrap_layout :inner do %>
+  <% content_for :sidebar do %>
+    <ul class="nav docs-sidenav">
+      <li<%= sidebar_current("docs-http-overview") %>>
+        <a href="/api/index.html">Overview</a>
+      </li>
+      <li<%= sidebar_current("docs-http-libraries") %>>
+        <a href="/api/libraries.html">Client Libraries</a>
+      </li>
+
+      <hr>
+
+      <!-- <li<%= sidebar_current("docs-http-auth") %>>
+        <a href="#">Auth Backends</a>
+      </li> -->
+
+      <li<%= sidebar_current("docs-http-secret") %>>
+        <a href="/api/secret/index.html">Secret Backends</a>
+        <ul class="nav">
+          <li<%= sidebar_current("docs-http-secret-aws") %>>
+            <a href="/api/secret/aws/index.html">AWS</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-cassandra") %>>
+            <a href="/api/secret/cassandra/index.html">Cassandra</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-consul") %>>
+            <a href="/api/secret/consul/index.html">Consul</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-cubbyhole") %>>
+            <a href="/api/secret/cubbyhole/index.html">Cubbyhole</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-generic") %>>
+            <a href="/api/secret/generic/index.html">Generic</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mongodb") %>>
+            <a href="/api/secret/mongodb/index.html">MongoDB</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mssql") %>>
+            <a href="/api/secret/mssql/index.html">MSSQL</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mysql") %>>
+            <a href="/api/secret/mysql/index.html">MySQL</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-pki") %>>
+            <a href="/api/secret/pki/index.html">PKI</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-postgresql") %>>
+            <a href="/api/secret/postgresql/index.html">PostgreSQL</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-rabbitmq") %>>
+            <a href="/api/secret/rabbitmq/index.html">RabbitMQ</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-ssh") %>>
+            <a href="/api/secret/ssh/index.html">SSH</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-transit") %>>
+            <a href="/api/secret/transit/index.html">Transit</a>
+          </li>
+        </ul>
+      </li>
+
+      <li<%= sidebar_current("docs-http-system")%>>
+        <a href="/api/system/index.html">System Backend</a>
+        <ul class="nav">
+          <li<%= sidebar_current("docs-http-system-audit/") %>>
+            <a href="/api/system/audit.html"><tt>/sys/audit</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-audit-hash") %>>
+            <a href="/api/system/audit-hash.html"><tt>/sys/audit-hash</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-auth") %>>
+            <a href="/api/system/auth.html"><tt>/sys/auth</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-capabilities/") %>>
+            <a href="/api/system/capabilities.html"><tt>/sys/capabilities</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-capabilities-accessor") %>>
+            <a href="/api/system/capabilities-accessor.html"><tt>/sys/capabilities-accessor</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-capabilities-self") %>>
+            <a href="/api/system/capabilities-self.html"><tt>/sys/capabilities-self</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-config-auditing") %>>
+            <a href="/api/system/config-auditing.html"><tt>/sys/config/auditing</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-generate-root") %>>
+            <a href="/api/system/generate-root.html"><tt>/sys/generate-root</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-health") %>>
+            <a href="/api/system/health.html"><tt>/sys/health</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-init") %>>
+            <a href="/api/system/init.html"><tt>/sys/init</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-key-status") %>>
+            <a href="/api/system/key-status.html"><tt>/sys/key-status</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-leader") %>>
+            <a href="/api/system/leader.html"><tt>/sys/leader</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-mounts") %>>
+            <a href="/api/system/mounts.html"><tt>/sys/mounts</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-policy") %>>
+            <a href="/api/system/policy.html"><tt>/sys/policy</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-raw") %>>
+            <a href="/api/system/raw.html"><tt>/sys/raw</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-rekey") %>>
+            <a href="/api/system/rekey.html"><tt>/sys/rekey</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-remount") %>>
+            <a href="/api/system/remount.html"><tt>/sys/remount</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-renew") %>>
+            <a href="/api/system/renew.html"><tt>/sys/renew</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-replication") %>>
+            <a href="/api/system/replication.html"><tt>/sys/replication</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-revoke/") %>>
+            <a href="/api/system/revoke.html"><tt>/sys/revoke</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-revoke-force") %>>
+            <a href="/api/system/revoke-force.html"><tt>/sys/revoke-force</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-revoke-prefix") %>>
+            <a href="/api/system/revoke-prefix.html"><tt>/sys/revoke-prefix</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-rotate") %>>
+            <a href="/api/system/rotate.html"><tt>/sys/rotate</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-seal/") %>>
+            <a href="/api/system/seal.html"><tt>/sys/seal</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-seal-status") %>>
+            <a href="/api/system/seal-status.html"><tt>/sys/seal-status</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-step-down") %>>
+            <a href="/api/system/step-down.html"><tt>/sys/step-down</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-unseal") %>>
+            <a href="/api/system/unseal.html"><tt>/sys/unseal</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-wrapping-lookup") %>>
+            <a href="/api/system/wrapping-lookup.html"><tt>/sys/wrapping/lookup</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-wrapping-rewrap") %>>
+            <a href="/api/system/wrapping-rewrap.html"><tt>/sys/wrapping/rewrap</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-wrapping-unwrap") %>>
+            <a href="/api/system/wrapping-unwrap.html"><tt>/sys/wrapping/unwrap</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-wrapping-wrap") %>>
+            <a href="/api/system/wrapping-wrap.html"><tt>/sys/wrapping/wrap</tt></a>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  <% end %>
+
+  <%= yield %>
+<% end %>

@@ -227,6 +227,8 @@ type context struct {
 
 var contextKey = "holds a *context"
 
+// fromContext returns the App Engine context or nil if ctx is not
+// derived from an App Engine context.
 func fromContext(ctx netcontext.Context) *context {
 	c, _ := ctx.Value(&contextKey).(*context)
 	return c
@@ -468,7 +470,7 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	c := fromContext(ctx)
 	if c == nil {
 		// Give a good error message rather than a panic lower down.
-		return errors.New("not an App Engine context")
+		return errNotAppEngineContext
 	}
 
 	// Apply transaction modifications if we're in a transaction.

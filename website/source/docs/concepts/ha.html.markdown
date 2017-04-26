@@ -16,7 +16,7 @@ You can tell if a data store supports high availability mode ("HA") by starting
 the server and seeing if "(HA available)" is output next to the data store
 information. If it is, then Vault will automatically use HA mode. This
 information is also available on the
-[Configuration](https://www.vaultproject.io/docs/config/index.html) page.
+[Configuration](https://www.vaultproject.io/docs/configuration/index.html) page.
 
 To be highly available, one of the Vault server nodes grabs a lock within the
 data store. The successful server node then becomes the active node; all other
@@ -142,7 +142,7 @@ variable, which takes precedence.
 
 Currently there are several backends that support high availability mode,
 including Consul, ZooKeeper and etcd. These may change over time, and the
-[configuration page](/docs/config/index.html) should be referenced.
+[configuration page](/docs/configuration/index.html) should be referenced.
 
 The Consul backend is the recommended HA backend, as it is used in production
 by HashiCorp and its customers with commercial support.

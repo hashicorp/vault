@@ -1,4 +1,67 @@
-## 0.7.0 (Unreleased)
+## 0.7.1 (Unreleased)
+
+DEPRECATIONS/CHANGES:
+
+ * LDAP Auth Backend: Group membership queries will now run as the `binddn`
+   user when `binddn`/`bindpass` are configured, rather than as the
+   authenticating user as was the case previously.
+
+FEATURES:
+
+ * **AWS IAM Authentication**: IAM principals can get Vault tokens
+   automatically, opening AWS-based authentication to users, ECS containers,
+   Lambda instances, and more. Signed client identity information retrieved
+   using the AWS API `sts:GetCallerIdentity` is validated against the AWS STS
+   service before issuing a Vault token. This backend is unified with the
+   `aws-ec2` authentication backend, and allows additional EC2-related
+   restrictions to be applied during the IAM authentication; the previous EC2
+   behavior is also still available. [GH-2441]
+ * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
+   Vault physical data store [GH-2546]
+
+IMPROVEMENTS:
+
+ * auth/ldap: Use the binding credentials to search group membership rather
+   than the user credentials [GH-2534]
+ * cli/revoke: Add `-self` option to allow revoking the currently active token
+   [GH-2596]
+ * secret/pki: Add `no_store` option that allows certificates to be issued
+   without being stored. This removes the ability to look up and/or add to a
+   CRL but helps with scaling to very large numbers of certificates. [GH-2565]
+ * secret/pki: If used with a role parameter, the `sign-verbatim/<role>`
+   endpoint honors the values of `generate_lease`, `no_store`, `ttl` and
+   `max_ttl` from the given role [GH-2593]
+ * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
+   servers [GH-2521]
+ * storage/s3: Support `max_parallel` option to limit concurrent outstanding
+   requests [GH-2466]
+ * storage/s3: Use pooled transport for http client [GH-2481]
+ * storage/swift: Allow domain values for V3 authentication [GH-2554]
+
+BUG FIXES:
+
+ * api: Respect a configured path in Vault's address [GH-2588]
+ * auth/aws-ec2: New bounds added as criteria to allow role creation [GH-2600]
+ * auth/ldap: Don't lowercase groups attached to users [GH-2613]
+ * secret/mssql: Update mssql driver to support queries with colons [GH-2610]
+ * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
+ * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]
+ * secret/ssh: Don't automatically lowercase principles in issued SSH certs
+   [GH-2591]
+ * storage/consul: Properly handle state events rather than timing out
+   [GH-2548]
+ * storage/etcd3: Ensure locks are released if client is improperly shut down
+   [GH-2526]
+
+## 0.7.0 (March 21th, 2017)
+
+SECURITY:
+
+ * Common name not being validated when `exclude_cn_from_sans` option used in
+   `pki` backend: When using a role in the `pki` backend that specified the
+   `exclude_cn_from_sans` option, the common name would not then be properly
+   validated against the role's constraints. This has been fixed. We recommend
+   any users of this feature to upgrade to 0.7 as soon as feasible.
 
 DEPRECATIONS/CHANGES:
 
@@ -56,6 +119,10 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * api/request: Passing username and password information in API request
+   [GH-2469]
+ * audit: Logging the token's use count with authentication response and
+   logging the remaining uses of the client token with request [GH-2437]
  * auth/approle: Support for restricting the number of uses on the tokens
    issued [GH-2435]
  * auth/aws-ec2: AWS EC2 auth backend now supports constraints for VPC ID,
@@ -66,16 +133,23 @@ IMPROVEMENTS:
  * audit: Support adding a configurable prefix (such as `@cee`) before each
    line [GH-2359]
  * core: Canonicalize list operations to use a trailing slash [GH-2390]
+ * core: Add option to disable caching on a per-mount level [GH-2455]
+ * core: Add ability to require valid client certs in listener config [GH-2457]
  * physical/dynamodb: Implement a session timeout to avoid having to use
    recovery mode in the case of an unclean shutdown, which makes HA much safer
    [GH-2141]
  * secret/pki: O (Organization) values can now be set to role-defined values
    for issued/signed certificates [GH-2369]
- * secret/pki: Certificates issued/signed from PKI backend does not generate
+ * secret/pki: Certificates issued/signed from PKI backend do not generate
    leases by default [GH-2403]
  * secret/pki: When using DER format, still return the private key type
    [GH-2405]
+ * secret/pki: Add an intermediate to the CA chain even if it lacks an
+   authority key ID [GH-2465]
+ * secret/pki: Add role option to use CSR SANs [GH-2489]
  * secret/ssh: SSH backend as CA to sign user and host certificates [GH-2208]
+ * secret/ssh: Support reading of SSH CA public key from `config/ca` endpoint
+   and also return it when CA key pair is generated [GH-2483]
 
 BUG FIXES:
 

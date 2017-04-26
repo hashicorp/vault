@@ -312,7 +312,7 @@ func (c *AuthCommand) Help() string {
 	helpText := `
 Usage: vault auth [options] [auth-information]
 
-  Authenticate with Vault with the given token or via any supported
+  Authenticate with Vault using the given token or via any supported
   authentication backend.
 
   By default, the -method is assumed to be token. If not supplied via the
@@ -399,7 +399,7 @@ func (h *tokenAuthHandler) Help() string {
 	help := `
 No method selected with the "-method" flag, so the "auth" command assumes
 you'll be using raw token authentication. For this, specify the token to
-authenticate as as the parameter to "vault auth". Example:
+authenticate as the parameter to "vault auth". Example:
 
     vault auth 123456
 

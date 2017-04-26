@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -19,6 +17,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-rootcerts"
 )
 
 const (
@@ -37,6 +36,26 @@ const (
 	// HTTPSSLEnvName defines an environment variable name which sets
 	// whether or not to use HTTPS.
 	HTTPSSLEnvName = "CONSUL_HTTP_SSL"
+
+	// HTTPCAFile defines an environment variable name which sets the
+	// CA file to use for talking to Consul over TLS.
+	HTTPCAFile = "CONSUL_CACERT"
+
+	// HTTPCAPath defines an environment variable name which sets the
+	// path to a directory of CA certs to use for talking to Consul over TLS.
+	HTTPCAPath = "CONSUL_CAPATH"
+
+	// HTTPClientCert defines an environment variable name which sets the
+	// client cert file to use for talking to Consul over TLS.
+	HTTPClientCert = "CONSUL_CLIENT_CERT"
+
+	// HTTPClientKey defines an environment variable name which sets the
+	// client key file to use for talking to Consul over TLS.
+	HTTPClientKey = "CONSUL_CLIENT_KEY"
+
+	// HTTPTLSServerName defines an environment variable name which sets the
+	// server name to use as the SNI host when connecting via TLS
+	HTTPTLSServerName = "CONSUL_TLS_SERVER_NAME"
 
 	// HTTPSSLVerifyEnvName defines an environment variable name which sets
 	// whether or not to disable certificate checking.
@@ -163,6 +182,8 @@ type Config struct {
 	// Token is used to provide a per-request ACL token
 	// which overrides the agent's default token.
 	Token string
+
+	TLSConfig TLSConfig
 }
 
 // TLSConfig is used to generate a TLSClientConfig that's useful for talking to
@@ -176,6 +197,10 @@ type TLSConfig struct {
 	// CAFile is the optional path to the CA certificate used for Consul
 	// communication, defaults to the system bundle if not specified.
 	CAFile string
+
+	// CAPath is the optional path to a directory of CA certificates to use for
+	// Consul communication, defaults to the system bundle if not specified.
+	CAPath string
 
 	// CertFile is the optional path to the certificate for Consul
 	// communication. If this is set then you need to also set KeyFile.
@@ -254,27 +279,28 @@ func defaultConfig(transportFn func() *http.Transport) *Config {
 		}
 	}
 
-	if verify := os.Getenv(HTTPSSLVerifyEnvName); verify != "" {
-		doVerify, err := strconv.ParseBool(verify)
+	if v := os.Getenv(HTTPTLSServerName); v != "" {
+		config.TLSConfig.Address = v
+	}
+	if v := os.Getenv(HTTPCAFile); v != "" {
+		config.TLSConfig.CAFile = v
+	}
+	if v := os.Getenv(HTTPCAPath); v != "" {
+		config.TLSConfig.CAPath = v
+	}
+	if v := os.Getenv(HTTPClientCert); v != "" {
+		config.TLSConfig.CertFile = v
+	}
+	if v := os.Getenv(HTTPClientKey); v != "" {
+		config.TLSConfig.KeyFile = v
+	}
+	if v := os.Getenv(HTTPSSLVerifyEnvName); v != "" {
+		doVerify, err := strconv.ParseBool(v)
 		if err != nil {
 			log.Printf("[WARN] client: could not parse %s: %s", HTTPSSLVerifyEnvName, err)
 		}
-
 		if !doVerify {
-			tlsClientConfig, err := SetupTLSConfig(&TLSConfig{
-				InsecureSkipVerify: true,
-			})
-
-			// We don't expect this to fail given that we aren't
-			// parsing any of the input, but we panic just in case
-			// since this doesn't have an error return.
-			if err != nil {
-				panic(err)
-			}
-
-			transport := transportFn()
-			transport.TLSClientConfig = tlsClientConfig
-			config.HttpClient.Transport = transport
+			config.TLSConfig.InsecureSkipVerify = true
 		}
 	}
 
@@ -309,17 +335,12 @@ func SetupTLSConfig(tlsConfig *TLSConfig) (*tls.Config, error) {
 		tlsClientConfig.Certificates = []tls.Certificate{tlsCert}
 	}
 
-	if tlsConfig.CAFile != "" {
-		data, err := ioutil.ReadFile(tlsConfig.CAFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read CA file: %v", err)
-		}
-
-		caPool := x509.NewCertPool()
-		if !caPool.AppendCertsFromPEM(data) {
-			return nil, fmt.Errorf("failed to parse CA certificate")
-		}
-		tlsClientConfig.RootCAs = caPool
+	rootConfig := &rootcerts.Config{
+		CAFile: tlsConfig.CAFile,
+		CAPath: tlsConfig.CAPath,
+	}
+	if err := rootcerts.ConfigureTLS(tlsClientConfig, rootConfig); err != nil {
+		return nil, err
 	}
 
 	return tlsClientConfig, nil
@@ -346,6 +367,41 @@ func NewClient(config *Config) (*Client, error) {
 	if config.HttpClient == nil {
 		config.HttpClient = defConfig.HttpClient
 	}
+
+	if config.TLSConfig.Address == "" {
+		config.TLSConfig.Address = defConfig.TLSConfig.Address
+	}
+
+	if config.TLSConfig.CAFile == "" {
+		config.TLSConfig.CAFile = defConfig.TLSConfig.CAFile
+	}
+
+	if config.TLSConfig.CAPath == "" {
+		config.TLSConfig.CAPath = defConfig.TLSConfig.CAPath
+	}
+
+	if config.TLSConfig.CertFile == "" {
+		config.TLSConfig.CertFile = defConfig.TLSConfig.CertFile
+	}
+
+	if config.TLSConfig.KeyFile == "" {
+		config.TLSConfig.KeyFile = defConfig.TLSConfig.KeyFile
+	}
+
+	if !config.TLSConfig.InsecureSkipVerify {
+		config.TLSConfig.InsecureSkipVerify = defConfig.TLSConfig.InsecureSkipVerify
+	}
+
+	tlsClientConfig, err := SetupTLSConfig(&config.TLSConfig)
+
+	// We don't expect this to fail given that we aren't
+	// parsing any of the input, but we panic just in case
+	// since this doesn't have an error return.
+	if err != nil {
+		return nil, err
+	}
+
+	config.HttpClient.Transport.(*http.Transport).TLSClientConfig = tlsClientConfig
 
 	parts := strings.SplitN(config.Address, "://", 2)
 	if len(parts) == 2 {

@@ -124,6 +124,114 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 	}
 }
 
+func TestPki_RoleNoStore(t *testing.T) {
+	var resp *logical.Response
+	var err error
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"allowed_domains": "myvault.com",
+		"ttl":             "5h",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	// By default, no_store should be `false`
+	noStore := resp.Data["no_store"].(bool)
+	if noStore {
+		t.Fatalf("no_store should not be set by default")
+	}
+
+	// Make sure that setting no_store to `true` works properly
+	roleReq.Operation = logical.UpdateOperation
+	roleReq.Path = "roles/testrole_nostore"
+	roleReq.Data["no_store"] = true
+	roleReq.Data["allowed_domain"] = "myvault.com"
+	roleReq.Data["allow_subdomains"] = true
+	roleReq.Data["ttl"] = "5h"
+
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	roleReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(roleReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	noStore = resp.Data["no_store"].(bool)
+	if !noStore {
+		t.Fatalf("no_store should have been set to true")
+	}
+
+	// issue a certificate and test that it's not stored
+	caData := map[string]interface{}{
+		"common_name": "myvault.com",
+		"ttl":         "5h",
+		"ip_sans":     "127.0.0.1",
+	}
+	caReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      caData,
+	}
+	resp, err = b.HandleRequest(caReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	issueData := map[string]interface{}{
+		"common_name": "cert.myvault.com",
+		"format":      "pem",
+		"ip_sans":     "127.0.0.1",
+		"ttl":         "1h",
+	}
+	issueReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/testrole_nostore",
+		Storage:   storage,
+		Data:      issueData,
+	}
+
+	resp, err = b.HandleRequest(issueReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+
+	// list certs
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "certs",
+		Storage:   storage,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, resp)
+	}
+	if len(resp.Data["keys"].([]string)) != 1 {
+		t.Fatalf("Only the CA certificate should be stored: %#v", resp)
+	}
+}
+
 func TestPki_CertsLease(t *testing.T) {
 	var resp *logical.Response
 	var err error

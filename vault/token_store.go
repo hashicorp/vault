@@ -1010,7 +1010,7 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
 	if id == "" {
-		return fmt.Errorf("cannot revoke blank token")
+		return fmt.Errorf("cannot tree-revoke blank token")
 	}
 
 	// Get the salted ID
@@ -1120,7 +1120,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
-		children, err := ts.view.List(parentPrefix + parent)
+		children, err := ts.view.List(parentPrefix + parent + "/")
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
 			continue
@@ -1472,7 +1472,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 		if len(role.DisallowedPolicies) > 0 {
 			// We don't add the default here because we only want to disallow it if it's explicitly set
-			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies)
+			sanitizedRolePolicies = strutil.RemoveDuplicates(role.DisallowedPolicies, true)
 
 			for _, finalPolicy := range finalPolicies {
 				if strutil.StrListContains(sanitizedRolePolicies, finalPolicy) {
@@ -1693,6 +1693,7 @@ func (ts *TokenStore) handleCreateCommon(
 
 	// Generate the response
 	resp.Auth = &logical.Auth{
+		NumUses:     te.NumUses,
 		DisplayName: te.DisplayName,
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
@@ -2205,9 +2206,9 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 
 	disallowedPoliciesStr, ok := data.GetOk("disallowed_policies")
 	if ok {
-		entry.DisallowedPolicies = strutil.ParseDedupAndSortStrings(disallowedPoliciesStr.(string), ",")
+		entry.DisallowedPolicies = strutil.ParseDedupLowercaseAndSortStrings(disallowedPoliciesStr.(string), ",")
 	} else if req.Operation == logical.CreateOperation {
-		entry.DisallowedPolicies = strutil.ParseDedupAndSortStrings(data.Get("disallowed_policies").(string), ",")
+		entry.DisallowedPolicies = strutil.ParseDedupLowercaseAndSortStrings(data.Get("disallowed_policies").(string), ",")
 	}
 
 	// Store it

@@ -116,18 +116,46 @@ func (b *backend) pathSign(
 func (b *backend) pathSignVerbatim(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
+	roleName := data.Get("role").(string)
+
+	// Get the role if one was specified
+	role, err := b.getRole(req.Storage, roleName)
+	if err != nil {
+		return nil, err
+	}
+
 	ttl := b.System().DefaultLeaseTTL()
-	role := &roleEntry{
+	maxTTL := b.System().MaxLeaseTTL()
+
+	entry := &roleEntry{
 		TTL:              ttl.String(),
+		MaxTTL:           maxTTL.String(),
 		AllowLocalhost:   true,
 		AllowAnyName:     true,
 		AllowIPSANs:      true,
 		EnforceHostnames: false,
 		KeyType:          "any",
 		UseCSRCommonName: true,
+		UseCSRSANs:       true,
+		GenerateLease:    new(bool),
 	}
 
-	return b.pathIssueSignCert(req, data, role, true, true)
+	if role != nil {
+		if role.TTL != "" {
+			entry.TTL = role.TTL
+		}
+		if role.MaxTTL != "" {
+			entry.MaxTTL = role.MaxTTL
+		}
+		entry.NoStore = role.NoStore
+	}
+
+	*entry.GenerateLease = false
+	if role != nil && role.GenerateLease != nil {
+		*entry.GenerateLease = *role.GenerateLease
+	}
+
+	return b.pathIssueSignCert(req, data, entry, true, true)
 }
 
 func (b *backend) pathIssueSignCert(
@@ -239,12 +267,14 @@ func (b *backend) pathIssueSignCert(
 		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
 	}
 
-	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "certs/" + cb.SerialNumber,
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+	if !role.NoStore {
+		err = req.Storage.Put(&logical.StorageEntry{
+			Key:   "certs/" + cb.SerialNumber,
+			Value: parsedBundle.CertificateBytes,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+		}
 	}
 
 	return resp, nil

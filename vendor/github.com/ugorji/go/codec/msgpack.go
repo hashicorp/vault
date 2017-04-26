@@ -727,7 +727,7 @@ func (h *MsgpackHandle) newEncDriver(e *Encoder) encDriver {
 }
 
 func (h *MsgpackHandle) newDecDriver(d *Decoder) decDriver {
-	return &msgpackDecDriver{d: d, r: d.r, h: h, br: d.bytes}
+	return &msgpackDecDriver{d: d, h: h, r: d.r, br: d.bytes}
 }
 
 func (e *msgpackEncDriver) reset() {
@@ -735,7 +735,7 @@ func (e *msgpackEncDriver) reset() {
 }
 
 func (d *msgpackDecDriver) reset() {
-	d.r = d.d.r
+	d.r, d.br = d.d.r, d.d.bytes
 	d.bd, d.bdRead = 0, false
 }
 

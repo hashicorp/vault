@@ -1895,7 +1895,7 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 	}
 
 	// Parse the CIDR blocks into a slice
-	secretIDCIDRs := strutil.ParseDedupAndSortStrings(cidrList, ",")
+	secretIDCIDRs := strutil.ParseDedupLowercaseAndSortStrings(cidrList, ",")
 
 	// Ensure that the CIDRs on the secret ID are a subset of that of role's
 	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role.BoundCIDRList); err != nil {
@@ -2086,7 +2086,7 @@ or the 'role/<role_name>/custom-secret-id' endpoints, and if those SecretIDs
 are used to perform the login operation, then the value of 'token-max-ttl'
 defines the maximum lifetime of the tokens issued, after which the tokens
 cannot be renewed. A reauthentication is required after this duration.
-This value will be croleed by the backend mount's maximum TTL value.`,
+This value will be capped by the backend mount's maximum TTL value.`,
 	},
 	"role-id": {
 		"Returns the 'role_id' of the role.",

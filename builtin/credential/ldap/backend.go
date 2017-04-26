@@ -104,13 +104,13 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	// Clean connection
 	defer c.Close()
 
-	bindDN, err := b.getBindDN(cfg, c, username)
+	userBindDN, err := b.getUserBindDN(cfg, c, username)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
 
 	if b.Logger().IsDebug() {
-		b.Logger().Debug("auth/ldap: BindDN fetched", "username", username, "binddn", bindDN)
+		b.Logger().Debug("auth/ldap: User BindDN fetched", "username", username, "binddn", userBindDN)
 	}
 
 	if cfg.DenyNullBind && len(password) == 0 {
@@ -118,11 +118,22 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 	}
 
 	// Try to bind as the login user. This is where the actual authentication takes place.
-	if err = c.Bind(bindDN, password); err != nil {
+	if err = c.Bind(userBindDN, password); err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("LDAP bind failed: %v", err)), nil
 	}
 
-	userDN, err := b.getUserDN(cfg, c, bindDN)
+	// We re-bind to the BindDN if it's defined because we assume
+	// the BindDN should be the one to search, not the user logging in.
+	if cfg.BindDN != "" && cfg.BindPassword != "" {
+		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("Encountered an error while attempting to re-bind with the BindDN User: %s", err.Error())), nil
+		}
+		if b.Logger().IsDebug() {
+			b.Logger().Debug("auth/ldap: Re-Bound to original BindDN")
+		}
+	}
+
+	userDN, err := b.getUserDN(cfg, c, userBindDN)
 	if err != nil {
 		return nil, logical.ErrorResponse(err.Error()), nil
 	}
@@ -165,11 +176,11 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 			policies = append(policies, group.Policies...)
 		}
 	}
-	if user !=nil && user.Policies != nil {
+	if user != nil && user.Policies != nil {
 		policies = append(policies, user.Policies...)
 	}
 	// Policies from each group may overlap
-	policies = strutil.RemoveDuplicates(policies)
+	policies = strutil.RemoveDuplicates(policies, true)
 
 	if len(policies) == 0 {
 		errStr := "user is not a member of any authorized group"
@@ -218,7 +229,7 @@ func (b *backend) getCN(dn string) string {
  * 2. If upndomain is set, the user dn is constructed as 'username@upndomain'. See https://msdn.microsoft.com/en-us/library/cc223499.aspx
  *
  */
-func (b *backend) getBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, error) {
+func (b *backend) getUserBindDN(cfg *ConfigEntry, c *ldap.Conn, username string) (string, error) {
 	bindDN := ""
 	if cfg.DiscoverDN || (cfg.BindDN != "" && cfg.BindPassword != "") {
 		if err := c.Bind(cfg.BindDN, cfg.BindPassword); err != nil {

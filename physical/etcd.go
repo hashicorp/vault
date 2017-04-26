@@ -3,7 +3,10 @@ package physical
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/coreos/etcd/client"
 	"github.com/coreos/go-semver/semver"
@@ -13,6 +16,7 @@ import (
 var (
 	EtcdSyncConfigError          = errors.New("client setup failed: unable to parse etcd sync field in config")
 	EtcdSyncClusterError         = errors.New("client setup failed: unable to sync etcd cluster")
+	EtcdMultipleBootstrapError   = errors.New("client setup failed: multiple discovery or bootstrap flags specified, use either \"address\" or \"discovery_srv\"")
 	EtcdAddressError             = errors.New("client setup failed: address must be valid URL (ex. 'scheme://host:port')")
 	EtcdSemaphoreKeysEmptyError  = errors.New("lock queue is empty")
 	EtcdLockHeldError            = errors.New("lock already held")
@@ -94,4 +98,48 @@ func getEtcdAPIVersion(c client.Client) (string, error) {
 	}
 
 	return "3", nil
+}
+
+// Retrieves the config option in order of priority:
+//  1. The named environment variable if it exist
+//  2. The key in the config map
+func getEtcdOption(conf map[string]string, confKey, envVar string) (string, bool) {
+	confVal, inConf := conf[confKey]
+	envVal, inEnv := os.LookupEnv(envVar)
+	if inEnv {
+		return envVal, true
+	}
+	return confVal, inConf
+}
+
+func getEtcdEndpoints(conf map[string]string) ([]string, error) {
+	address, staticBootstrap := getEtcdOption(conf, "address", "ETCD_ADDR")
+	domain, useSrv := getEtcdOption(conf, "discovery_srv", "ETCD_DISCOVERY_SRV")
+	if useSrv && staticBootstrap {
+		return nil, EtcdMultipleBootstrapError
+	}
+
+	if staticBootstrap {
+		endpoints := strings.Split(address, Etcd2MachineDelimiter)
+		// Verify that the machines are valid URLs
+		for _, e := range endpoints {
+			u, urlErr := url.Parse(e)
+			if urlErr != nil || u.Scheme == "" {
+				return nil, EtcdAddressError
+			}
+		}
+		return endpoints, nil
+	}
+
+	if useSrv {
+		discoverer := client.NewSRVDiscover()
+		endpoints, err := discoverer.Discover(domain)
+		if err != nil {
+			return nil, fmt.Errorf("failed to discover etcd endpoints through SRV discovery: %v", err)
+		}
+		return endpoints, nil
+	}
+
+	// Set a default endpoints list if no option was set
+	return []string{"http://127.0.0.1:2379"}, nil
 }

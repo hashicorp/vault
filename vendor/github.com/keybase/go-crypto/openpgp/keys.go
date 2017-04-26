@@ -600,8 +600,9 @@ func addSubkey(e *Entity, packets *packet.Reader, pub *packet.PublicKey, priv *p
 		}
 		switch sig.SigType {
 		case packet.SigTypeSubkeyBinding:
-			// First writer wins
-			if subKey.Sig == nil {
+			// Does the "new" sig set expiration to later date than
+			// "previous" sig?
+			if subKey.Sig == nil || subKey.Sig.ExpiresBeforeOther(sig) {
 				subKey.Sig = sig
 			}
 		case packet.SigTypeSubkeyRevocation:

@@ -58,17 +58,36 @@ func newSwiftBackend(conf map[string]string, logger log.Logger) (Backend, error)
 			return nil, fmt.Errorf("missing container")
 		}
 	}
-	tenant := os.Getenv("OS_TENANT_NAME")
-	if tenant == "" {
-		tenant = conf["tenant"]
+	project := os.Getenv("OS_PROJECT_NAME")
+	if project == "" {
+		project = conf["project"]
+
+		if project == "" {
+			// Check for KeyStone naming prior to V3
+			project := os.Getenv("OS_TENANT_NAME")
+			if project == "" {
+				project = conf["tenant"]
+			}
+		}
+	}
+
+	domain := os.Getenv("OS_USER_DOMAIN_NAME")
+	if domain == "" {
+		domain = conf["domain"]
+	}
+	projectDomain := os.Getenv("OS_PROJECT_DOMAIN_NAME")
+	if projectDomain == "" {
+		projectDomain = conf["project-domain"]
 	}
 
 	c := swift.Connection{
-		UserName:  username,
-		ApiKey:    password,
-		AuthUrl:   authUrl,
-		Tenant:    tenant,
-		Transport: cleanhttp.DefaultPooledTransport(),
+		Domain:       domain,
+		UserName:     username,
+		ApiKey:       password,
+		AuthUrl:      authUrl,
+		Tenant:       project,
+		TenantDomain: projectDomain,
+		Transport:    cleanhttp.DefaultPooledTransport(),
 	}
 
 	err := c.Authenticate()

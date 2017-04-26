@@ -233,10 +233,12 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		kv:                  client.KV(),
 		permitPool:          NewPermitPool(maxParInt),
 		serviceName:         service,
-		serviceTags:         strutil.ParseDedupAndSortStrings(tags, ","),
+		serviceTags:         strutil.ParseDedupLowercaseAndSortStrings(tags, ","),
 		checkTimeout:        checkTimeout,
 		disableRegistration: disableRegistration,
 		consistencyMode:     consistencyMode,
+		notifyActiveCh:      make(chan notifyEvent),
+		notifySealedCh:      make(chan notifyEvent),
 	}
 	return c, nil
 }
@@ -320,6 +322,9 @@ func (c *ConsulBackend) Transaction(txns []TxnEntry) error {
 
 		ops = append(ops, cop)
 	}
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
 
 	ok, resp, _, err := c.kv.Txn(ops, nil)
 	if err != nil {

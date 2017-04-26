@@ -51,6 +51,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -60,6 +61,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":    false,
 			},
 			"local": false,
 		},
@@ -69,6 +71,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
+				"force_no_cache":    false,
 			},
 			"local": true,
 		},
@@ -90,6 +93,32 @@ func TestSystemBackend_mount(t *testing.T) {
 	}
 	if resp != nil {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_mount_force_no_cache(t *testing.T) {
+	core, b, _ := testCoreSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "mounts/prod/secret/")
+	req.Data["type"] = "generic"
+	req.Data["config"] = map[string]interface{}{
+		"force_no_cache": true,
+	}
+
+	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	mountEntry := core.router.MatchingMountEntry("prod/secret/")
+	if mountEntry == nil {
+		t.Fatalf("missing mount entry")
+	}
+	if !mountEntry.Config.ForceNoCache {
+		t.Fatalf("bad config %#v", mountEntry)
 	}
 }
 

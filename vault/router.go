@@ -257,6 +257,7 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	originalPath := req.Path
 	req.Path = strings.TrimPrefix(req.Path, mount)
 	req.MountPoint = mount
+	req.MountType = re.mountEntry.Type
 	if req.Path == "/" {
 		req.Path = ""
 	}
@@ -283,6 +284,10 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	// Cache the identifier of the request
 	originalReqID := req.ID
 
+	// Cache the client token's number of uses in the request
+	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
+	req.ClientTokenRemainingUses = 0
+
 	// Cache the headers and hide them from backends
 	headers := req.Headers
 	req.Headers = nil
@@ -299,11 +304,13 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	// Reset the request before returning
 	defer func() {
 		req.Path = originalPath
-		req.MountPoint = ""
+		req.MountPoint = mount
+		req.MountType = re.mountEntry.Type
 		req.Connection = originalConn
 		req.ID = originalReqID
 		req.Storage = nil
 		req.ClientToken = clientToken
+		req.ClientTokenRemainingUses = originalClientTokenRemainingUses
 		req.WrapInfo = wrapInfo
 		req.Headers = headers
 		// This is only set in one place, after routing, so should never be set

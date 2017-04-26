@@ -576,7 +576,7 @@ func (h *CborHandle) newEncDriver(e *Encoder) encDriver {
 }
 
 func (h *CborHandle) newDecDriver(d *Decoder) decDriver {
-	return &cborDecDriver{d: d, r: d.r, h: h, br: d.bytes}
+	return &cborDecDriver{d: d, h: h, r: d.r, br: d.bytes}
 }
 
 func (e *cborEncDriver) reset() {
@@ -584,7 +584,7 @@ func (e *cborEncDriver) reset() {
 }
 
 func (d *cborDecDriver) reset() {
-	d.r = d.d.r
+	d.r, d.br = d.d.r, d.d.bytes
 	d.bd, d.bdRead = 0, false
 }
 

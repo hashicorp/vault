@@ -1,6 +1,6 @@
 ---
 layout: "docs"
-page_title: "Secret Backend: AWS"
+page_title: "AWS Secret Backend"
 sidebar_current: "docs-secrets-aws"
 description: |-
   The AWS secret backend for Vault generates access keys dynamically based on IAM policies.
@@ -45,7 +45,7 @@ The following parameters are required:
   credentials.
 - `region` the AWS region for API calls.
 
-Note: the client uses the official AWS SDK and will use environment variable or IAM 
+Note: the client uses the official AWS SDK and will use environment variable or IAM
 role-provided credentials if available.
 
 The next step is to configure a role. A role is a logical name that maps
@@ -71,11 +71,13 @@ is an example IAM policy to get started:
 ```javascript
 {
   "Version": "2012-10-17",
-  "Statement": {
-    "Effect": "Allow",
-    "Action": "iam:*",
-    "Resource": "*"
-  }
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "iam:*",
+      "Resource": "*"
+    }
+  ]
 }
 ```
 
@@ -159,7 +161,7 @@ Here is an example IAM policy that would grant these permissions:
 ```
 
 Note that this policy example is unrelated to the policy you wrote to `aws/roles/deploy`.
-This policy example should be applied to the IAM user (or role) associated with 
+This policy example should be applied to the IAM user (or role) associated with
 the root credentials that you wrote to `aws/config/root`. You have to apply it
 yourself in IAM. The policy you wrote to `aws/roles/deploy` is the policy you
 want the AWS secret backend to apply to the temporary credentials it returns
@@ -364,341 +366,6 @@ errors for exceeding the AWS limit of 32 characters on STS token names.
 
 ## API
 
-### /aws/config/root
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Configures the root IAM credentials used.
-    If static credentials are not provided using
-    this endpoint, then the credentials will be retrieved from the
-    environment variables `AWS_ACCESS_KEY`, `AWS_SECRET_KEY` and `AWS_REGION`
-    respectively. If the credentials are still not found and if the
-    backend is configured on an EC2 instance with metadata querying
-    capabilities, the credentials are fetched automatically.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/config/root`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">access_key</span>
-        <span class="param-flags">required</span>
-        The AWS Access Key
-      </li>
-      <li>
-        <span class="param">secret_key</span>
-        <span class="param-flags">required</span>
-        The AWS Secret Key
-      </li>
-      <li>
-        <span class="param">region</span>
-        <span class="param-flags">required</span>
-        The AWS region for API calls
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-### /aws/config/lease
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Configures the lease settings for generated credentials.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/config/lease`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">lease</span>
-        <span class="param-flags">required</span>
-        The lease value provided as a string duration
-        with time suffix. Hour is the largest suffix.
-      </li>
-      <li>
-        <span class="param">lease_max</span>
-        <span class="param-flags">required</span>
-        The maximum lease value provided as a string duration
-        with time suffix. Hour is the largest suffix.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-### /aws/roles/
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Creates or updates a named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/roles/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">policy</span>
-        <span class="param-flags">required (unless arn specified)</span>
-        The IAM policy in JSON format.
-      </li>
-      <li>
-        <span class="param">arn</span>
-        <span class="param-flags">required (unless policy specified)</span>
-        The full ARN reference to the desired existing policy
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Queries a named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/roles/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    ```javascript
-    {
-      "data": {
-        "policy": "..."       
-      }
-    }
-    ```
-    ```javascript
-    {
-      "data": {
-        "arn": "..."       
-      }
-    }
-    ```
-  </dd>
-</dl>
-
-#### DELETE
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Deletes a named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>DELETE</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/roles/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    A `204` response code.
-  </dd>
-</dl>
-
-#### LIST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Returns a list of existing roles in the backend
-  </dd>
-
-  <dt>Method</dt>
-  <dd>LIST/GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/roles` (LIST) or `/aws/roles/?list=true` (GET)</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-     None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    ```javascript
-{
-  "auth": null,
-  "warnings": null,
-  "wrap_info": null,
-  "data": {
-    "keys": [
-      "devrole",
-      "prodrole",
-      "testrole"
-    ]
-  },
-  "lease_duration": 0,
-  "renewable": false,
-  "lease_id": ""
-}
-    ```
-  </dd>
-</dl>
-
-
-### /aws/creds/
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-    Generates a dynamic IAM credential based on the named role.
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/creds/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    ```javascript
-    {
-      "data": {
-        "access_key": "...",
-        "secret_key": "...",
-        "security_token": null
-      }
-    }
-    ```
-  </dd>
-</dl>
-
-
-### /aws/sts/
-#### GET
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-      Generates a dynamic IAM credential with an STS token based on the named
-      role. The TTL will be 3600 seconds (one hour).
-  </dd>
-
-  <dt>Method</dt>
-  <dd>GET</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/sts/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-      None
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    ```javascript
-    {
-        "data": {
-            "access_key": "...",
-            "secret_key": "...",
-            "security_token": "..."
-        }
-    }
-    ```
-    </dd>
-</dl>
-
-#### POST
-
-<dl class="api">
-  <dt>Description</dt>
-  <dd>
-      Generates a dynamic IAM credential with an STS token based on the named
-      role and the given TTL (defaults to 3600 seconds, or one hour).
-  </dd>
-
-  <dt>Method</dt>
-  <dd>POST</dd>
-
-  <dt>URL</dt>
-  <dd>`/aws/sts/<name>`</dd>
-
-  <dt>Parameters</dt>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">optional</span>
-        The TTL to use for the STS token.
-      </li>
-    </ul>
-  </dd>
-
-  <dt>Returns</dt>
-  <dd>
-    ```javascript
-    {
-        "data": {
-            "access_key": "...",
-            "secret_key": "...",
-            "security_token": "..."
-        }
-    }
-    ```
-  </dd>
-</dl>
+The AWS secret backend has a full HTTP API. Please see the
+[AWS secret backend API](/api/secret/aws/index.html) for more
+details.

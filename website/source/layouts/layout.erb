@@ -2,18 +2,37 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="<%= description_for(current_page) %>">
 
-    <link rel="shortcut icon" href="<%= image_path('favicon.png') %>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<%= image_path("favicons/apple-touch-icon.png") %>">
+    <link rel="icon" type="image/png" href="<%= image_path("favicons/favicon-32x32.png") %>" sizes="32x32">
+    <link rel="icon" type="image/png" href="<%= image_path("favicons/favicon-16x16.png") %>" sizes="16x16">
+    <link rel="manifest" href="/android-manifest.json">
+    <link rel="mask-icon" href="<%= image_path("favicons/safari-pinned-tab.svg") %>" color="#23414a">
+    <meta name="msapplication-config" content="/microsoft-tile.xml" />
+    <meta name="theme-color" content="#ffffff">
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@HashiCorp" />
+    <meta name="twitter:creator" content="@HashiCorp" />
+    <meta property="og:url" content="<%= File.join(base_url, current_page.url) %>" />
+    <meta property="og:title" content="<%= title_for(current_page) %>" />
+    <meta property="og:site_name" content="Vault by HashiCorp"/>
+    <meta property="og:image" content="<%= image_url("og-image.png") %>"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="1200"/>
+    <meta property="og:description" content="<%= description_for(current_page) %>" />
 
     <title><%= title_for(current_page) %></title>
 
     <%= stylesheet_link_tag "application" %>
 
     <!--[if lt IE 9]>
-      <%= javascript_include_tag "html5shiv", "respond.min" %>
+      <%= javascript_include_tag "ie-compat" %>
     <![endif]-->
+    <%= javascript_include_tag "application" %>
 
     <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -30,33 +49,18 @@
   </head>
 
   <body id="<%= body_id_for(current_page) %>" class="<%= body_classes_for(current_page) %>">
-    <div id="announcement-bnr" class="hidden-print">
-      <div class="container">
-        <div class="row">
-          <div class="col-md-offset-1 col-md-10 col-xs-12">
-            <p>
-              Announcing
-              <a class="enterprise-logo" href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=top-banner&utm_campaign=vault">
-                <%= partial "layouts/svg/svg-enterprise" %>
-              </a>
-              <span class="tagline">Secure Infrastructure Automation.</span>
-              <a class="link-blue" href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=top-banner&utm_campaign=vault">
-                Find out more <span class="hcaret"></span>
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+
+    <%= mega_nav :vault %>
 
     <div id="header" class="navigation navbar-static-top hidden-print">
       <div class="container">
         <div class="row">
-          <div class="col-md-offset-1 col-md-10 col-xs-12">
+          <div class="col-xs-12">
             <div class="navbar-header">
               <div class="navbar-brand">
-                <a class="logo" href="/">Vault</a>
-                <a class="by-hashicorp" href="https://hashicorp.com/"><span class="svg-wrap">by</span><%= partial "layouts/svg/svg-by-hashicorp" %><%= partial "layouts/svg/svg-hashicorp-logo" %>Hashicorp</a>
+                <a href="/" data-turbolinks="false">
+                  <%= inline_svg "logo-text.svg", height: 50, class: "logo" %>
+                </a>
               </div>
               <button class="navbar-toggle" type="button">
                 <span class="sr-only">Toggle navigation</span>
@@ -67,19 +71,22 @@
             </div>
             <div class="buttons hidden-xs">
               <nav class="navigation-links" role="navigation">
-                <ul class="external-links nav navbar-nav navbar-right">
-                  <li class="first download">
-                    <a href="/downloads.html"><%= partial "layouts/svg/svg-download" %>Download</a>
-                  </li>
-                  <li class="github">
-                    <a href="https://github.com/hashicorp/vault"><%= partial "layouts/svg/svg-github" %>GitHub</a>
-                  </li>
-                </ul>
                 <ul class="main-links nav navbar-nav navbar-right">
-                  <li class="first li-under"><a href="/intro/index.html">Intro</a></li>
-                  <li class="li-under"><a href="/docs/index.html">Docs</a></li>
-                  <li class="li-under"><a href="/community.html">Community</a></li>
-                  <li class="li-under"><a href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=header-nav&utm_campaign=vault">Enterprise</a></li>
+                  <li><a href="/intro/index.html">Intro</a></li>
+                  <li><a href="/docs/index.html">Docs</a></li>
+                  <li><a href="/api/index.html">API</a></li>
+                  <li><a href="/community.html">Community</a></li>
+                  <li><a href="https://www.hashicorp.com/vault.html?utm_source=oss&utm_medium=header-nav&utm_campaign=vault">Enterprise</a></li>
+                  <li>
+                    <a href="/downloads.html">
+                      <%= inline_svg "download.svg" %> Download
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://github.com/hashicorp/vault">
+                      <%= inline_svg "github.svg" %> GitHub
+                    </a>
+                  </li>
                 </ul>
               </nav>
             </div>
@@ -98,34 +105,18 @@
     <div id="footer" class="navigation hidden-print">
       <div class="container">
         <div class="row">
-          <div class="col-md-offset-1 col-md-10 col-xs-12">
-            <% if current_page.url != '/' && current_page.url != '/index.html' %>
-              <div class="edit-page-link"><a href="<%= github_url :current_page %>">Edit this page</a></div>
-            <% end %>
-            <div class="footer-links">
-              <ul class="main-links nav navbar-nav">
-                <li><a href="/intro/index.html">Intro</a></li>
-                <li><a href="/docs/index.html">Docs</a></li>
-                <li><a href="/community.html">Community</a></li>
-                <li><a href="/security.html">Security</a></li>
-              </ul>
-              <ul class="external-links nav navbar-nav">
-                <li class="first download">
-                  <a href="/downloads.html"><%= partial "layouts/svg/svg-download" %>Download</a>
-                </li>
-                <li class="github">
-                  <a href="https://github.com/hashicorp/vault"><%= partial "layouts/svg/svg-github" %>GitHub</a>
-                </li>
-              </ul>
-            </div>
-            <div class="footer-hashi pull-right">
-              <a class="hashicorp-project" href="https://www.hashicorp.com">
-                <span class="project-text">A </span>
-                <%= partial "layouts/svg/svg-by-hashicorp" %>
-                <span class="project-text">Project</span>
-                <%= partial "layouts/svg/svg-hashicorp-logo" %>
-              </a>
-            </div>
+          <div class="col-xs-12">
+            <ul class="footer-links nav navbar-nav">
+              <li><a href="/intro/index.html">Intro</a></li>
+              <li><a href="/docs/index.html">Docs</a></li>
+              <li><a href="/api/index.html">API</a></li>
+              <li><a href="/community.html">Community</a></li>
+              <li><a href="/security.html">Security</a></li>
+              <li><a href="/assets/files/press-kit.zip">Press Kit</a></li>
+            </ul>
+            <ul class="footer-links nav navbar-nav navbar-right">
+              <li><a href="<%= github_url :current_page %>">Edit this page</a></li>
+            </ul>
           </div>
         </div>
       </div>
@@ -139,28 +130,10 @@
 
       ga('create', 'UA-62364009-1', 'vaultproject.io');
       ga('require', 'linkid');
-      ga('send', 'pageview');
+      ga('send', 'pageview', location.pathname);
     </script>
 
-    <script type="text/javascript">
-    adroll_adv_id = "6QAAFJDIWBG3DJBDRJ7BEX";
-    adroll_pix_id = "PYT5HSNKNRDS7LMUR5B6YG";
-    (function () {
-    var oldonload = window.onload;
-    window.onload = function(){
-       __adroll_loaded=true;
-       var scr = document.createElement("script");
-       var host = (("https:" == document.location.protocol) ? "https://s.adroll.com" : "http://a.adroll.com");
-       scr.setAttribute('async', 'true');
-       scr.type = "text/javascript";
-       scr.src = host + "/j/roundtrip.js";
-       ((document.getElementsByTagName('head') || [null])[0] ||
-        document.getElementsByTagName('script')[0].parentNode).appendChild(scr);
-       if(oldonload){oldonload()}};
-    }());
-    </script>
-
-    <%= javascript_include_tag "application" %>
+    <%= yield_content :scripts %>
 
     <script type="application/ld+json">
       {
@@ -170,7 +143,7 @@
         "alternateName": "Vault by HashiCorp",
         "manufacturer": "HashiCorp",
         "url": "https://www.vaultproject.io",
-        "logo": "<%= File.join(base_url, image_path("logo_large.png")) %>",
+        "logo": "<%= File.join(base_url, image_path("logo-hashicorp.svg")) %>",
         "sameAs": [
           "https://github.com/hashicorp/vault"
         ]

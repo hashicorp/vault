@@ -169,6 +169,14 @@ does *not* include any requested Subject Alternative
 Names. Defaults to true.`,
 			},
 
+			"use_csr_sans": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, when used with a signing profile,
+the SANs in the CSR will be used. This does *not*
+include the Common Name (cn). Defaults to true.`,
+			},
+
 			"ou": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "",
@@ -195,6 +203,17 @@ disabled, invoking "pki/revoke" would be the only way to add the certificates
 to the CRL.  When large number of certificates are generated with long
 lifetimes, it is recommended that lease generation be disabled, as large amount of
 leases adversely affect the startup time of Vault.`,
+			},
+			"no_store": &framework.FieldSchema{
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: `
+If set, certificates issued/signed against this role will not be stored in the
+in the storage backend. This can improve performance when issuing large numbers
+of certificates. However, certificates issued in this way cannot be enumerated
+or revoked, so this option is recommended only for certificates that are
+non-sensitive, or extremely short-lived. This option implies a value of "false"
+for "generate_lease".`,
 			},
 		},
 
@@ -371,13 +390,20 @@ func (b *backend) pathRoleCreate(
 		KeyType:             data.Get("key_type").(string),
 		KeyBits:             data.Get("key_bits").(int),
 		UseCSRCommonName:    data.Get("use_csr_common_name").(bool),
+		UseCSRSANs:          data.Get("use_csr_sans").(bool),
 		KeyUsage:            data.Get("key_usage").(string),
 		OU:                  data.Get("ou").(string),
 		Organization:        data.Get("organization").(string),
 		GenerateLease:       new(bool),
+		NoStore:             data.Get("no_store").(bool),
 	}
 
-	*entry.GenerateLease = data.Get("generate_lease").(bool)
+	// no_store implies generate_lease := false
+	if entry.NoStore {
+		*entry.GenerateLease = false
+	} else {
+		*entry.GenerateLease = data.Get("generate_lease").(bool)
+	}
 
 	if entry.KeyType == "rsa" && entry.KeyBits < 2048 {
 		return logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported"), nil
@@ -487,6 +513,7 @@ type roleEntry struct {
 	CodeSigningFlag       bool   `json:"code_signing_flag" structs:"code_signing_flag" mapstructure:"code_signing_flag"`
 	EmailProtectionFlag   bool   `json:"email_protection_flag" structs:"email_protection_flag" mapstructure:"email_protection_flag"`
 	UseCSRCommonName      bool   `json:"use_csr_common_name" structs:"use_csr_common_name" mapstructure:"use_csr_common_name"`
+	UseCSRSANs            bool   `json:"use_csr_sans" structs:"use_csr_sans" mapstructure:"use_csr_sans"`
 	KeyType               string `json:"key_type" structs:"key_type" mapstructure:"key_type"`
 	KeyBits               int    `json:"key_bits" structs:"key_bits" mapstructure:"key_bits"`
 	MaxPathLength         *int   `json:",omitempty" structs:"max_path_length,omitempty" mapstructure:"max_path_length"`
@@ -494,6 +521,7 @@ type roleEntry struct {
 	OU                    string `json:"ou" structs:"ou" mapstructure:"ou"`
 	Organization          string `json:"organization" structs:"organization" mapstructure:"organization"`
 	GenerateLease         *bool  `json:"generate_lease,omitempty" structs:"generate_lease,omitempty"`
+	NoStore               bool   `json:"no_store" structs:"no_store" mapstructure:"no_store"`
 }
 
 const pathListRolesHelpSyn = `List the existing roles in this backend`
