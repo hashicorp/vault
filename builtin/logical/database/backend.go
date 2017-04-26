@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"net/rpc"
 	"strings"
 	"sync"
 
@@ -149,6 +150,15 @@ func (b *databaseBackend) clearConnection(name string) {
 	if ok {
 		db.Close()
 		delete(b.connections, name)
+	}
+}
+
+func (b *databaseBackend) closeIfShutdown(name string, err error) {
+	// Plugin has shutdown, close it so next call can reconnect.
+	if err == rpc.ErrShutdown {
+		b.Lock()
+		b.clearConnection(name)
+		b.Unlock()
 	}
 }
 

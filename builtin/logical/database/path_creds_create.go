@@ -52,7 +52,9 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return nil, logical.ErrPermissionDenied
 		}
 
+		// Grab the read lock
 		b.RLock()
+		var unlockFunc func() = b.RUnlock
 
 		// Get the Database object
 		db, ok := b.getDBObj(role.DBName)
@@ -60,22 +62,24 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			// Upgrade lock
 			b.RUnlock()
 			b.Lock()
-			defer b.Unlock()
+			unlockFunc = b.Unlock
 
 			// Create a new DB object
 			db, err = b.createDBObj(req.Storage, role.DBName)
 			if err != nil {
+				unlockFunc()
 				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
 			}
-		} else {
-			defer b.RUnlock()
 		}
 
 		expiration := time.Now().Add(role.DefaultTTL)
 
 		// Create the user
 		username, password, err := db.CreateUser(role.Statements, req.DisplayName, expiration)
+		// Unlock
+		unlockFunc()
 		if err != nil {
+			b.closeIfShutdown(role.DBName, err)
 			return nil, err
 		}
 

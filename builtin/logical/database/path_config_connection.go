@@ -216,16 +216,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		b.Lock()
 		defer b.Unlock()
 
-		if _, ok := b.connections[name]; ok {
-			// Close and remove the old connection
-			err := b.connections[name].Close()
-			if err != nil {
-				db.Close()
-				return nil, err
-			}
-
-			delete(b.connections, name)
-		}
+		// Close and remove the old connection
+		b.clearConnection(name)
 
 		// Save the new connection
 		b.connections[name] = db
