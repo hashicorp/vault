@@ -62,7 +62,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 		b.clearConnection(name)
 
 		// Execute plugin again, we don't need the object so throw away.
-		_, err := b.getOrCreateDBObj(req.Storage, name)
+		_, err := b.createDBObj(req.Storage, name)
 		if err != nil {
 			return nil, err
 		}

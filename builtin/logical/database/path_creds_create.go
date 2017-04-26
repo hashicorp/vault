@@ -52,13 +52,23 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return nil, logical.ErrPermissionDenied
 		}
 
-		b.Lock()
-		defer b.Unlock()
+		b.RLock()
 
 		// Get the Database object
-		db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
-		if err != nil {
-			return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+		db, ok := b.getDBObj(role.DBName)
+		if !ok {
+			// Upgrade lock
+			b.RUnlock()
+			b.Lock()
+			defer b.Unlock()
+
+			// Create a new DB object
+			db, err = b.createDBObj(req.Storage, role.DBName)
+			if err != nil {
+				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+			}
+		} else {
+			defer b.RUnlock()
 		}
 
 		expiration := time.Now().Add(role.DefaultTTL)

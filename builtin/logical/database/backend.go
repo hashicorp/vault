@@ -50,7 +50,7 @@ type databaseBackend struct {
 	logger      log.Logger
 
 	*framework.Backend
-	sync.Mutex
+	sync.RWMutex
 }
 
 // resetAllDBs closes all connections from all database types
@@ -66,21 +66,23 @@ func (b *databaseBackend) closeAllDBs() {
 }
 
 // This function is used to retrieve a database object either from the cached
-// connection map or by using the database config in storage. The caller of this
-// function needs to hold the backend's lock.
-func (b *databaseBackend) getOrCreateDBObj(s logical.Storage, name string) (dbplugin.Database, error) {
-	// if the object already is built and cached, return it
+// connection map. The caller of this function needs to hold the backend's read
+// lock.
+func (b *databaseBackend) getDBObj(name string) (dbplugin.Database, bool) {
 	db, ok := b.connections[name]
-	if ok {
-		return db, nil
-	}
+	return db, ok
+}
 
+// This function creates a new db object from the stored configuration and
+// caches it in the connections map. The caller of this function needs to hold
+// the backend's write lock
+func (b *databaseBackend) createDBObj(s logical.Storage, name string) (dbplugin.Database, error) {
 	config, err := b.DatabaseConfig(s, name)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err = dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
+	db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
 	if err != nil {
 		return nil, err
 	}

@@ -48,13 +48,23 @@ func (b *databaseBackend) secretCredsRenew() framework.OperationFunc {
 		}
 
 		// Grab the read lock
-		b.Lock()
-		defer b.Unlock()
+		b.RLock()
 
-		// Get our connection
-		db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
-		if err != nil {
-			return nil, fmt.Errorf("error during renew: %s", err)
+		// Get the Database object
+		db, ok := b.getDBObj(role.DBName)
+		if !ok {
+			// Upgrade lock
+			b.RUnlock()
+			b.Lock()
+			defer b.Unlock()
+
+			// Create a new DB object
+			db, err = b.createDBObj(req.Storage, role.DBName)
+			if err != nil {
+				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+			}
+		} else {
+			defer b.RUnlock()
 		}
 
 		// Make sure we increase the VALID UNTIL endpoint for this user.
@@ -94,13 +104,23 @@ func (b *databaseBackend) secretCredsRevoke() framework.OperationFunc {
 		}
 
 		// Grab the read lock
-		b.Lock()
-		defer b.Unlock()
+		b.RLock()
 
 		// Get our connection
-		db, err := b.getOrCreateDBObj(req.Storage, role.DBName)
-		if err != nil {
-			return nil, fmt.Errorf("error during revoke: %s", err)
+		db, ok := b.getDBObj(role.DBName)
+		if !ok {
+			// Upgrade lock
+			b.RUnlock()
+			b.Lock()
+			defer b.Unlock()
+
+			// Create a new DB object
+			db, err = b.createDBObj(req.Storage, role.DBName)
+			if err != nil {
+				return nil, fmt.Errorf("cound not retrieve db with name: %s, got error: %s", role.DBName, err)
+			}
+		} else {
+			defer b.RUnlock()
 		}
 
 		err = db.RevokeUser(role.Statements, username)
