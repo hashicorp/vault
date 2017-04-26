@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -59,6 +60,8 @@ type ExpirationManager struct {
 
 	pending     map[string]*time.Timer
 	pendingLock sync.Mutex
+
+	tidyLock int64
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -118,6 +121,7 @@ func (c *Core) stopExpiration() error {
 
 // Tidy cleans up stale leases which are associated with invalid tokens
 func (m *ExpirationManager) Tidy() error {
+
 	var tidyErrors *multierror.Error
 
 	tidyFunc := func(leaseID string) {
@@ -155,8 +159,13 @@ func (m *ExpirationManager) Tidy() error {
 		}
 	}
 
-	if err := logical.ScanView(m.idView, tidyFunc); err != nil {
-		return err
+	if atomic.CompareAndSwapInt64(&m.tidylock, 0, 1) {
+		defer atomic.CompareAndSwapInt64(&tidyLock, 1, 0)
+		if err := logical.ScanView(m.idView, tidyFunc); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("tidy operation is already in progress")
 	}
 
 	// If no errors were encountered, return a normal error instead of a
