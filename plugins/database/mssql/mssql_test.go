@@ -27,7 +27,8 @@ func TestMSSQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := New()
+	dbRaw, _ := New()
+	db := dbRaw.(*MSSQL)
 
 	err := db.Initialize(connectionDetails, true)
 	if err != nil {
@@ -55,7 +56,8 @@ func TestMSSQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := New()
+	dbRaw, _ := New()
+	db := dbRaw.(*MSSQL)
 	err := db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -91,7 +93,8 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	db := New()
+	dbRaw, _ := New()
+	db := dbRaw.(*MSSQL)
 	err := db.Initialize(connectionDetails, true)
 	if err != nil {
 		t.Fatalf("err: %s", err)
