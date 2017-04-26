@@ -127,7 +127,7 @@ func (m *ExpirationManager) Tidy() error {
 	tokenCache := make(map[string]string)
 
 	tidyFunc := func(leaseID string) {
-		m.logger.Trace("expiration: checking if lease %q is valid", leaseID)
+		m.logger.Trace("expiration: checking if lease is valid", "lease_id", leaseID)
 
 		le, err := m.loadEntry(leaseID)
 		if err != nil {
@@ -142,19 +142,18 @@ func (m *ExpirationManager) Tidy() error {
 
 		revokeLease := false
 		if le.ClientToken == "" {
-			m.logger.Debug("expiration: lease %q has an empty token", leaseID)
+			m.logger.Debug("expiration: lease has an empty token", "lease_id", leaseID)
 			revokeLease = true
 		}
 
-		saltedID := m.tokenStore.SaltID(le.ClientToken)
-
-		switch tokenCache[saltedID] {
+		switch tokenCache[le.ClientToken] {
 		case "invalid":
-			m.logger.Debug("expiration: lease %q has an invalid token", leaseID)
+			m.logger.Debug("expiration: lease has an invalid token", "lease_id", leaseID)
 			revokeLease = true
 		case "valid":
 			return
 		default:
+			saltedID := m.tokenStore.SaltID(le.ClientToken)
 			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
 			lock.RLock()
 			te, err := m.tokenStore.lookupSalted(saltedID, true)
@@ -166,16 +165,16 @@ func (m *ExpirationManager) Tidy() error {
 			}
 
 			if te == nil {
-				m.logger.Debug("expiration: lease %q has an invalid token", leaseID)
+				m.logger.Debug("expiration: lease has an invalid token", "lease_id", leaseID)
 				revokeLease = true
-				tokenCache[saltedID] = "invalid"
+				tokenCache[le.ClientToken] = "invalid"
 			} else {
-				tokenCache[saltedID] = "valid"
+				tokenCache[le.ClientToken] = "valid"
 			}
 		}
 
 		if revokeLease {
-			m.logger.Debug("expiration: lease %q is being revoked", leaseID)
+			m.logger.Debug("expiration: lease is being revoked", "lease_id", leaseID)
 			// Force the revocation and skip going through the token store
 			// again
 			err = m.revokeCommon(leaseID, true, true)
@@ -192,7 +191,8 @@ func (m *ExpirationManager) Tidy() error {
 			return err
 		}
 	} else {
-		return fmt.Errorf("tidy operation is already in progress")
+		m.logger.Debug("expiration: tidy operation on leases is already in progress")
+		return fmt.Errorf("tidy operation on leases is already in progress")
 	}
 
 	// If no errors were encountered, return a normal error instead of a
