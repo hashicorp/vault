@@ -1316,6 +1316,8 @@ BUG FIXES:
  * everywhere: Don't use http.DefaultClient, as it shares state implicitly and
    is a source of hard-to-track-down bugs [GH-700]
  * credential/token: Allow creating orphan tokens via an API path [GH-748]
+ * secret/aws: Attempt to ensure that user creation has become consistent to
+   IAM before returning a token [GH-687]
  * secret/generic: Validate given duration at write time, not just read time;
    if stored durations are not parseable, return a warning and the default
    duration rather than an error [GH-718]
