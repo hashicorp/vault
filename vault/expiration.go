@@ -168,8 +168,8 @@ func (m *ExpirationManager) Tidy() error {
 		}
 	}
 
-	if atomic.CompareAndSwapInt64(&m.tidylock, 0, 1) {
-		defer atomic.CompareAndSwapInt64(&tidyLock, 1, 0)
+	if atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
+		defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
 		if err := logical.ScanView(m.idView, tidyFunc); err != nil {
 			return err
 		}

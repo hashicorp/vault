@@ -3,9 +3,12 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+
 	"regexp"
 	"strings"
 	"time"
+
+	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
@@ -90,6 +93,8 @@ type TokenStore struct {
 	tokenLocks []*locksutil.LockEntry
 
 	cubbyholeDestroyer func(*TokenStore, string) error
+
+	logger log.Logger
 }
 
 // NewTokenStore is used to construct a token store that is
@@ -102,13 +107,10 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 	t := &TokenStore{
 		view:               view,
 		cubbyholeDestroyer: destroyCubbyhole,
+		logger:             c.logger,
+		policyLookupFunc:   c.policyStore.GetPolicy,
+		tokenLocks:         locksutil.CreateLocks(),
 	}
-
-	if c.policyStore != nil {
-		t.policyLookupFunc = c.policyStore.GetPolicy
-	}
-
-	t.tokenLocks = locksutil.CreateLocks()
 
 	// Setup the framework endpoints
 	t.Backend = &framework.Backend{
@@ -1127,11 +1129,13 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		}
 
 		for _, child := range children {
+			ts.logger.Trace("token_store: checking if salted token %q is valid", child)
 			// Look up tainted entries so we can be sure that if this isn't
 			// found, it doesn't exist. Doing the following without locking
 			// since appropriate locks cannot be held with salted token IDs.
 			te, _ := ts.lookupSalted(child, true)
 			if te == nil {
+				ts.logger.Debug("token_store: deleting invalid salted token %q", child)
 				err = ts.view.Delete(parentPrefix + parent + "/" + child)
 				if err != nil {
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
@@ -1144,6 +1148,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	// a valid one. If not, delete the leases associated with that token
 	// and delete the accessor as well.
 	for _, saltedAccessor := range saltedAccessorList {
+		ts.logger.Trace("token_store: checking if salted accessor is valid")
 		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
@@ -1154,6 +1159,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		// in it. If not, it is an invalid accessor entry and needs to
 		// be deleted.
 		if accessorEntry.TokenID == "" {
+			ts.logger.Trace("token_store: deleting accessor with invalid token ID")
 			// If deletion of accessor fails, move on to the next
 			// item since this is just a best-effort operation
 			err = ts.view.Delete(accessorPrefix + saltedAccessor)
@@ -1176,6 +1182,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		// more and conclude that accessor, leases, and secondary index entries
 		// for this token should not exist as well.
 		if te == nil {
+			ts.logger.Trace("token_store: deleting token which is not associated with a token entry; deleting accessor as well")
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of tidying, it is sufficient if the token
 			// entry only has ID set.
