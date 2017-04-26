@@ -21,7 +21,7 @@ type MSSQL struct {
 	credsutil.CredentialsProducer
 }
 
-func New() *MSSQL {
+func New() (interface{}, error) {
 	connProducer := &connutil.SQLConnectionProducer{}
 	connProducer.Type = msSQLTypeName
 
@@ -35,14 +35,17 @@ func New() *MSSQL {
 		CredentialsProducer: credsProducer,
 	}
 
-	return dbType
+	return dbType, nil
 }
 
 // Run instantiates a MSSQL object, and runs the RPC server for the plugin
 func Run() error {
-	dbType := New()
+	dbType, err := New()
+	if err != nil {
+		return err
+	}
 
-	dbplugin.NewPluginServer(dbType)
+	dbplugin.NewPluginServer(dbType.(*MSSQL))
 
 	return nil
 }
