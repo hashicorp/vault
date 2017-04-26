@@ -701,7 +701,7 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 	}
 
 	err := ts.RevokeTree("")
-	if err.Error() != "cannot revoke blank token" {
+	if err.Error() != "cannot tree-revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
 	err = ts.RevokeTree(ent1.ID)
