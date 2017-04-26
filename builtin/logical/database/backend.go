@@ -78,12 +78,17 @@ func (b *databaseBackend) getDBObj(name string) (dbplugin.Database, bool) {
 // caches it in the connections map. The caller of this function needs to hold
 // the backend's write lock
 func (b *databaseBackend) createDBObj(s logical.Storage, name string) (dbplugin.Database, error) {
+	db, ok := b.connections[name]
+	if ok {
+		return db, nil
+	}
+
 	config, err := b.DatabaseConfig(s, name)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
+	db, err = dbplugin.PluginFactory(config.PluginName, b.System(), b.logger)
 	if err != nil {
 		return nil, err
 	}
