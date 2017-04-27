@@ -371,7 +371,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "(lease/)?revoke-force" + framework.OptionalParamRegex("prefix"),
+				Pattern: "(lease/)?revoke-force/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -389,7 +389,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "(lease/)?revoke-prefix" + framework.OptionalParamRegex("prefix"),
+				Pattern: "(lease/)?revoke-prefix/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -418,7 +418,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "auth" + framework.OptionalParamRegex("path"),
+				Pattern: "auth/(?P<path>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -462,7 +462,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "policy" + framework.OptionalParamRegex("name"),
+				Pattern: "policy/(?P<name>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"name": &framework.FieldSchema{
@@ -504,7 +504,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "audit-hash" + framework.OptionalParamRegex("path"),
+				Pattern: "audit-hash/(?P<path>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -537,7 +537,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "audit" + framework.OptionalParamRegex("path"),
+				Pattern: "audit/(?P<path>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -573,7 +573,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "raw" + framework.OptionalParamRegex("path"),
+				Pattern: "raw/(?P<path>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -690,7 +690,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "config/auditing/request-headers" + framework.OptionalParamRegex("header"),
+				Pattern: "config/auditing/request-headers/(?P<header>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"header": &framework.FieldSchema{
