@@ -1884,13 +1884,11 @@ func (ts *TokenStore) handleLookup(
 			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
 		}
 		if !leaseTimes.ExpireTime.IsZero() {
-			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
+			resp.Data["expire_time"] = leaseTimes.ExpireTime
+			resp.Data["ttl"] = leaseTimes.ttl()
 		}
-		if err := leaseTimes.renewable(); err == nil {
-			resp.Data["renewable"] = true
-		} else {
-			resp.Data["renewable"] = false
-		}
+		resp.Data["renewable"] = leaseTimes.renewable()
+		resp.Data["issue_time"] = leaseTimes.IssueTime
 	}
 
 	if urltoken {

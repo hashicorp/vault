@@ -395,7 +395,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	}
 
 	// Check if the lease is renewable
-	if err := le.renewable(); err != nil {
+	if err := le.renewableErr(); err != nil {
 		return nil, err
 	}
 
@@ -450,7 +450,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	// Check if the lease is renewable. Note that this also checks for a nil
 	// lease and errors in that case as well.
-	if err := le.renewable(); err != nil {
+	if err := le.renewableErr(); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -841,11 +841,18 @@ type leaseEntry struct {
 }
 
 // encode is used to JSON encode the lease entry
-func (l *leaseEntry) encode() ([]byte, error) {
-	return json.Marshal(l)
+func (le *leaseEntry) encode() ([]byte, error) {
+	return json.Marshal(le)
 }
 
-func (le *leaseEntry) renewable() error {
+func (le *leaseEntry) renewable() bool {
+	if err := le.renewableErr(); err == nil {
+		return true
+	}
+	return false
+}
+
+func (le *leaseEntry) renewableErr() error {
 	// If there is no entry, cannot review
 	if le == nil || le.ExpireTime.IsZero() {
 		return fmt.Errorf("lease not found or lease is not renewable")
@@ -864,6 +871,10 @@ func (le *leaseEntry) renewable() error {
 		return fmt.Errorf("lease is not renewable")
 	}
 	return nil
+}
+
+func (le *leaseEntry) ttl() int64 {
+	return int64(le.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry

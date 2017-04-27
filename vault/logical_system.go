@@ -63,7 +63,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
-				"lease*",
+				"lease/lookup*",
 			},
 
 			Unauthenticated: []string{
@@ -1303,6 +1303,10 @@ func (b *SystemBackend) handleTuneWriteCommon(
 func (b *SystemBackend) handleLease(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
 
 	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
 	if err != nil {
@@ -1324,15 +1328,9 @@ func (b *SystemBackend) handleLease(
 	}
 	if !leaseTimes.ExpireTime.IsZero() {
 		resp.Data["expire_time"] = leaseTimes.ExpireTime
+		resp.Data["ttl"] = leaseTimes.ttl()
 	}
-	if leaseTimes.Auth != nil {
-		resp.Data["renewable"] = leaseTimes.Auth.Renewable
-		resp.Data["ttl"] = leaseTimes.Auth.TTL
-	}
-	if leaseTimes.Secret != nil {
-		resp.Data["renewable"] = leaseTimes.Secret.Renewable
-		resp.Data["ttl"] = leaseTimes.Secret.TTL
-	}
+	resp.Data["renewable"] = leaseTimes.renewable()
 
 	return resp, nil
 }
