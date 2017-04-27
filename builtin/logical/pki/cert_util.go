@@ -239,6 +239,7 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
 	}
 
+	// Update old-style paths to new-style paths
 	certEntry.Key = desiredPath
 	if err = req.Storage.Put(certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
