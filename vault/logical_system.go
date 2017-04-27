@@ -231,7 +231,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "mounts/(?P<path>.+?)",
+				Pattern: "mounts" + framework.OptionalParamRegex("path"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -300,27 +300,13 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "lease",
+				Pattern: "lease/lookup" + framework.OptionalParamRegex("prefix"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"lease_id": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
 					},
-				},
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleLease,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["lease"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["lease"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "lease" + framework.OptionalParamRegex("prefix"),
-
-				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease-list-prefix"][0]),
@@ -328,15 +314,16 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ListOperation: b.handleLeaseList,
+					logical.UpdateOperation: b.handleLease,
+					logical.ListOperation:   b.handleLeaseList,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["lease-list"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["lease-list"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["lease"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["lease"][1]),
 			},
 
 			&framework.Path{
-				Pattern: "renew" + framework.OptionalParamRegex("url_lease_id"),
+				Pattern: "(lease/)?renew" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"url_lease_id": &framework.FieldSchema{
@@ -362,7 +349,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke" + framework.OptionalParamRegex("url_lease_id"),
+				Pattern: "(lease/)?revoke" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"url_lease_id": &framework.FieldSchema{
@@ -384,7 +371,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-force/(?P<prefix>.+)",
+				Pattern: "revoke-force" + framework.OptionalParamRegex("prefix"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -402,7 +389,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-prefix/(?P<prefix>.+)",
+				Pattern: "revoke-prefix" + framework.OptionalParamRegex("prefix"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -431,7 +418,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "auth/(?P<path>.+)",
+				Pattern: "auth" + framework.OptionalParamRegex("path"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -475,7 +462,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "policy/(?P<name>.+)",
+				Pattern: "policy" + framework.OptionalParamRegex("name"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"name": &framework.FieldSchema{
@@ -517,7 +504,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "audit-hash/(?P<path>.+)",
+				Pattern: "audit-hash" + framework.OptionalParamRegex("path"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -550,7 +537,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "audit/(?P<path>.+)",
+				Pattern: "audit" + framework.OptionalParamRegex("path"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -586,7 +573,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "raw/(?P<path>.+)",
+				Pattern: "raw" + framework.OptionalParamRegex("path"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -703,7 +690,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "config/auditing/request-headers/(?P<header>.+)",
+				Pattern: "config/auditing/request-headers" + framework.OptionalParamRegex("header"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"header": &framework.FieldSchema{
@@ -723,6 +710,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "config/auditing/request-headers$",
 
