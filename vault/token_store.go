@@ -1113,138 +1113,133 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var tidyErrors *multierror.Error
 
-	if atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
-		ts.logger.Debug("token_store: beginning tidy operation on tokens")
-		defer atomic.CompareAndSwapInt64(&ts.tidyLock, 1, 0)
-		// List out all the accessors
-		saltedAccessorList, err := ts.view.List(accessorPrefix)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch accessor entries: %v", err)
-		}
-
-		// First, clean up secondary index entries that are no longer valid
-		parentList, err := ts.view.List(parentPrefix)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
-		}
-
-		i := 0
-
-		// Scan through the secondary index entries; if there is an entry
-		// with the token's salt ID at the end, remove it
-		for _, parent := range parentList {
-			children, err := ts.view.List(parentPrefix + parent + "/")
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
-				continue
-			}
-
-			for _, child := range children {
-				i++
-				if i%500 == 0 {
-					ts.logger.Debug("token_store: checking validity of tokens in parent list", "progress", i)
-				}
-
-				// Look up tainted entries so we can be sure that if this isn't
-				// found, it doesn't exist. Doing the following without locking
-				// since appropriate locks cannot be held with salted token IDs.
-				te, _ := ts.lookupSalted(child, true)
-				if te == nil {
-					ts.logger.Debug("token_store: deleting invalid token", "salted_token", child)
-					err = ts.view.Delete(parentPrefix + parent + "/" + child)
-					if err != nil {
-						tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
-					}
-				}
-			}
-		}
-
-		i = 0
-		// For each of the accessor, see if the token ID associated with it is
-		// a valid one. If not, delete the leases associated with that token
-		// and delete the accessor as well.
-		for _, saltedAccessor := range saltedAccessorList {
-			i++
-			if i%500 == 0 {
-				ts.logger.Debug("token_store: checking if accessors contain valid tokens", "progress", i)
-			}
-
-			accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
-			if err != nil {
-				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
-				continue
-			}
-
-			// A valid accessor storage entry should always have a token ID
-			// in it. If not, it is an invalid accessor entry and needs to
-			// be deleted.
-			if accessorEntry.TokenID == "" {
-				ts.logger.Debug("token_store: deleting accessor index with invalid token ID", "accessor_id", accessorEntry.AccessorID)
-
-				// If deletion of accessor fails, move on to the next
-				// item since this is just a best-effort operation
-				err = ts.view.Delete(accessorPrefix + saltedAccessor)
-				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
-					continue
-				}
-			}
-
-			lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
-			lock.RLock()
-
-			// Look up tainted variants so we only find entries that truly don't
-			// exist
-			saltedId := ts.SaltID(accessorEntry.TokenID)
-			te, err := ts.lookupSalted(saltedId, true)
-			lock.RUnlock()
-
-			// If token entry is not found assume that the token is not valid any
-			// more and conclude that accessor, leases, and secondary index entries
-			// for this token should not exist as well.
-			if te == nil {
-				ts.logger.Debug("token_store: deleting token with nil entry", "salted_token", saltedId)
-
-				// RevokeByToken expects a '*TokenEntry'. For the
-				// purposes of tidying, it is sufficient if the token
-				// entry only has ID set.
-				tokenEntry := &TokenEntry{
-					ID: accessorEntry.TokenID,
-				}
-
-				// Attempt to revoke the token. This will also revoke
-				// the leases associated with the token.
-				err := ts.expiration.RevokeByToken(tokenEntry)
-				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke leases of expired token: %v", err))
-					continue
-				}
-
-				ts.logger.Debug("token_store: deleting accessor index of the token with nil entry", "accessor_id", accessorEntry.AccessorID)
-
-				// If deletion of accessor fails, move on to the next item since
-				// this is just a best-effort operation. We do this last so that on
-				// next run if something above failed we still have the accessor
-				// entry to try again.
-				err = ts.view.Delete(accessorPrefix + saltedAccessor)
-				if err != nil {
-					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
-					continue
-				}
-			}
-		}
-	} else {
+	if !atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
 		ts.logger.Debug("token_store: tidy operation on tokens is already in progress")
 		return nil, fmt.Errorf("tidy operation on tokens is already in progress")
 	}
 
-	// Later request handling code seems to check if the type is multierror so
-	// if we haven't added any errors we need to just return a normal nil error
-	if tidyErrors == nil {
-		return nil, nil
+	defer atomic.CompareAndSwapInt64(&ts.tidyLock, 1, 0)
+
+	ts.logger.Debug("token_store: beginning tidy operation on tokens")
+	// List out all the accessors
+	saltedAccessorList, err := ts.view.List(accessorPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch accessor entries: %v", err)
 	}
 
-	return nil, tidyErrors
+	// First, clean up secondary index entries that are no longer valid
+	parentList, err := ts.view.List(parentPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
+	}
+
+	i := 0
+
+	// Scan through the secondary index entries; if there is an entry
+	// with the token's salt ID at the end, remove it
+	for _, parent := range parentList {
+		children, err := ts.view.List(parentPrefix + parent + "/")
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
+			continue
+		}
+
+		for _, child := range children {
+			i++
+			if i%500 == 0 {
+				ts.logger.Debug("token_store: checking validity of tokens in parent list", "progress", i)
+			}
+
+			// Look up tainted entries so we can be sure that if this isn't
+			// found, it doesn't exist. Doing the following without locking
+			// since appropriate locks cannot be held with salted token IDs.
+			te, _ := ts.lookupSalted(child, true)
+			if te == nil {
+				ts.logger.Debug("token_store: deleting invalid token", "salted_token", child)
+				err = ts.view.Delete(parentPrefix + parent + "/" + child)
+				if err != nil {
+					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
+				}
+			}
+		}
+	}
+
+	i = 0
+	// For each of the accessor, see if the token ID associated with it is
+	// a valid one. If not, delete the leases associated with that token
+	// and delete the accessor as well.
+	for _, saltedAccessor := range saltedAccessorList {
+		i++
+		if i%500 == 0 {
+			ts.logger.Debug("token_store: checking if accessors contain valid tokens", "progress", i)
+		}
+
+		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
+			continue
+		}
+
+		// A valid accessor storage entry should always have a token ID
+		// in it. If not, it is an invalid accessor entry and needs to
+		// be deleted.
+		if accessorEntry.TokenID == "" {
+			ts.logger.Debug("token_store: deleting accessor index with invalid token ID", "accessor_id", accessorEntry.AccessorID)
+
+			// If deletion of accessor fails, move on to the next
+			// item since this is just a best-effort operation
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
+				continue
+			}
+		}
+
+		lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
+		lock.RLock()
+
+		// Look up tainted variants so we only find entries that truly don't
+		// exist
+		saltedId := ts.SaltID(accessorEntry.TokenID)
+		te, err := ts.lookupSalted(saltedId, true)
+		lock.RUnlock()
+
+		// If token entry is not found assume that the token is not valid any
+		// more and conclude that accessor, leases, and secondary index entries
+		// for this token should not exist as well.
+		if te == nil {
+			ts.logger.Debug("token_store: deleting token with nil entry", "salted_token", saltedId)
+
+			// RevokeByToken expects a '*TokenEntry'. For the
+			// purposes of tidying, it is sufficient if the token
+			// entry only has ID set.
+			tokenEntry := &TokenEntry{
+				ID: accessorEntry.TokenID,
+			}
+
+			// Attempt to revoke the token. This will also revoke
+			// the leases associated with the token.
+			err := ts.expiration.RevokeByToken(tokenEntry)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke leases of expired token: %v", err))
+				continue
+			}
+
+			ts.logger.Debug("token_store: deleting accessor index of the token with nil entry", "accessor_id", accessorEntry.AccessorID)
+
+			// If deletion of accessor fails, move on to the next item since
+			// this is just a best-effort operation. We do this last so that on
+			// next run if something above failed we still have the accessor
+			// entry to try again.
+			err = ts.view.Delete(accessorPrefix + saltedAccessor)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
+				continue
+			}
+		}
+	}
+
+	return nil, tidyErrors.ErrorOrNil()
 }
 
 // handleUpdateLookupAccessor handles the auth/token/lookup-accessor path for returning

@@ -130,7 +130,7 @@ func (m *ExpirationManager) Tidy() error {
 	tidyFunc := func(leaseID string) {
 		i++
 		if i%500 == 0 {
-			m.logger.Debug("expiration: tidying of leases", "progress", i)
+			m.logger.Debug("expiration: tidying leases", "progress", i)
 		}
 
 		le, err := m.loadEntry(leaseID)
@@ -202,13 +202,7 @@ func (m *ExpirationManager) Tidy() error {
 		return fmt.Errorf("tidy operation on leases is already in progress")
 	}
 
-	// If no errors were encountered, return a normal error instead of a
-	// multierror
-	if tidyErrors == nil {
-		return nil
-	}
-
-	return tidyErrors
+	return tidyErrors.ErrorOrNil()
 }
 
 // Restore is used to recover the lease states when starting.
