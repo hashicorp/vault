@@ -1239,6 +1239,8 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		}
 	}
 
+	ts.logger.Debug("token_store: ending tidy operation on tokens")
+
 	return nil, tidyErrors.ErrorOrNil()
 }
 

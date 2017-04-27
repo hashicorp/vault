@@ -123,6 +123,15 @@ func (c *Core) stopExpiration() error {
 func (m *ExpirationManager) Tidy() error {
 	var tidyErrors *multierror.Error
 
+	if !atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
+		m.logger.Debug("expiration: tidy operation on leases is already in progress")
+		return fmt.Errorf("tidy operation on leases is already in progress")
+	}
+
+	defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
+
+	m.logger.Debug("expiration: beginning tidy operation on leases")
+
 	// Create a cache to keep track of looked up tokens
 	tokenCache := make(map[string]bool)
 	i := 0
@@ -191,16 +200,11 @@ func (m *ExpirationManager) Tidy() error {
 		}
 	}
 
-	if atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
-		m.logger.Debug("expiration: beginning tidy operation on leases")
-		defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
-		if err := logical.ScanView(m.idView, tidyFunc); err != nil {
-			return err
-		}
-	} else {
-		m.logger.Debug("expiration: tidy operation on leases is already in progress")
-		return fmt.Errorf("tidy operation on leases is already in progress")
+	if err := logical.ScanView(m.idView, tidyFunc); err != nil {
+		return err
 	}
+
+	m.logger.Debug("expiration: ending tidy operation on leases")
 
 	return tidyErrors.ErrorOrNil()
 }
