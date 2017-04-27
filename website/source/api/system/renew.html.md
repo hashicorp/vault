@@ -16,7 +16,7 @@ This endpoint renews a secret, requesting to extend the lease.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/renew/(:lease_id)`     | `200 application/json` |
+| `PUT`    | `/sys/renew`                 | `200 application/json` |
 
 ### Parameters
 
@@ -30,22 +30,12 @@ This endpoint renews a secret, requesting to extend the lease.
 
 ```json
 {
-  "lease_id": "postgresql/creds/readonly/abcd-1234...",
+  "lease_id": "aws/creds/deploy/abcd-1234...",
   "increment": 1800
 }
 ```
 
 ### Sample Request
-
-With the `lease_id` as part of the URL:
-
-```
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request PUT \
-    --data @payload.json \
-    https://vault.rocks/v1/sys/renew/postgresql/creds/readonly/abcd-1234
-```
 
 With the `lease_id` in the request body:
 
@@ -61,7 +51,7 @@ $ curl \
 
 ```json
 {
-  "lease_id": "aws/creds/deploy/e31b1145-ff27-e62c-cba2-934e9f0d1dbc",
+  "lease_id": "aws/creds/deploy/abcd-1234...",
   "renewable": true,
   "lease_duration": 2764790
 }
