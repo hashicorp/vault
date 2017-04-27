@@ -24,7 +24,7 @@ type Cassandra struct {
 	credsutil.CredentialsProducer
 }
 
-func New() *Cassandra {
+func New() (interface{}, error) {
 	connProducer := &connutil.CassandraConnectionProducer{}
 	connProducer.Type = cassandraTypeName
 
@@ -35,14 +35,17 @@ func New() *Cassandra {
 		CredentialsProducer: credsProducer,
 	}
 
-	return dbType
+	return dbType, nil
 }
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run() error {
-	dbType := New()
+	dbType, err := New()
+	if err != nil {
+		return err
+	}
 
-	dbplugin.NewPluginServer(dbType)
+	dbplugin.NewPluginServer(dbType.(*Cassandra))
 
 	return nil
 }
