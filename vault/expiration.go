@@ -185,7 +185,7 @@ func (m *ExpirationManager) Tidy() error {
 	}
 
 	if atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
-		m.logger.Trace("expiration: beginning tidy operation on leases")
+		m.logger.Debug("expiration: beginning tidy operation on leases")
 		defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
 		if err := logical.ScanView(m.idView, tidyFunc); err != nil {
 			return err

@@ -1122,6 +1122,8 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
 	}
 
+	i := 0
+
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
@@ -1132,7 +1134,11 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		}
 
 		for _, child := range children {
-			ts.logger.Trace("token_store: checking if token is valid", "salted_token", child)
+			i++
+			if i%500 == 0 {
+				ts.logger.Debug("token_store: checking validity of tokens in parent list", "progress", i)
+			}
+
 			// Look up tainted entries so we can be sure that if this isn't
 			// found, it doesn't exist. Doing the following without locking
 			// since appropriate locks cannot be held with salted token IDs.
@@ -1147,11 +1153,16 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		}
 	}
 
+	i = 0
 	// For each of the accessor, see if the token ID associated with it is
 	// a valid one. If not, delete the leases associated with that token
 	// and delete the accessor as well.
 	for _, saltedAccessor := range saltedAccessorList {
-		ts.logger.Trace("token_store: checking if accessor contains valid token", "salted_accessor", saltedAccessor)
+		i++
+		if i%500 == 0 {
+			ts.logger.Debug("token_store: checking if accessors contain valid tokens", "progress", i)
+		}
+
 		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
@@ -1162,7 +1173,8 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		// in it. If not, it is an invalid accessor entry and needs to
 		// be deleted.
 		if accessorEntry.TokenID == "" {
-			ts.logger.Debug("token_store: deleting accessor with invalid token ID", "salted_accessor", saltedAccessor)
+			ts.logger.Debug("token_store: deleting accessor index with invalid token ID", "accessor_id", accessorEntry.AccessorID)
+
 			// If deletion of accessor fails, move on to the next
 			// item since this is just a best-effort operation
 			err = ts.view.Delete(accessorPrefix + saltedAccessor)
@@ -1186,6 +1198,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		// for this token should not exist as well.
 		if te == nil {
 			ts.logger.Debug("token_store: deleting token with nil entry", "salted_token", saltedId)
+
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of tidying, it is sufficient if the token
 			// entry only has ID set.
@@ -1201,7 +1214,8 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 				continue
 			}
 
-			ts.logger.Debug("token_store: deleting accessor of the token with nil entry", "salted_accessor", saltedAccessor)
+			ts.logger.Debug("token_store: deleting accessor index of the token with nil entry", "accessor_id", accessorEntry.AccessorID)
+
 			// If deletion of accessor fails, move on to the next item since
 			// this is just a best-effort operation. We do this last so that on
 			// next run if something above failed we still have the accessor
