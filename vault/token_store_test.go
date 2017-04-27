@@ -1403,6 +1403,14 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+	if resp.Data["issue_time"].(time.Time).IsZero() {
+		t.Fatal("issue time is default time")
+	}
+	delete(resp.Data, "issue_time")
+	if resp.Data["expire_time"].(time.Time).IsZero() {
+		t.Fatal("expire time is default time")
+	}
+	delete(resp.Data, "expire_time")
 
 	// Depending on timing of the test this may have ticked down, so accept 3599
 	if resp.Data["ttl"].(int64) == 3599 {
@@ -1445,6 +1453,14 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+	if resp.Data["issue_time"].(time.Time).IsZero() {
+		t.Fatal("issue time is default time")
+	}
+	delete(resp.Data, "issue_time")
+	if resp.Data["expire_time"].(time.Time).IsZero() {
+		t.Fatal("expire time is default time")
+	}
+	delete(resp.Data, "expire_time")
 
 	// Depending on timing of the test this may have ticked down, so accept 3599
 	if resp.Data["ttl"].(int64) == 3599 {
