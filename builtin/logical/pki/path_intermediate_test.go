@@ -7,10 +7,9 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 )
 
-func TestSetSignedIntermediate(t *testing.T) {
+func TestPki_SetSignedIntermediate(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
@@ -44,19 +43,11 @@ func TestSetSignedIntermediate(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Storage:   storage,
-	}
+	req := logical.TestRequest(t, logical.UpdateOperation, "intermediate/set-signed")
+	req.Data["certificate"] = certValue
+	req.Storage = storage
 
-	fd := &framework.FieldData{
-		Raw: map[string]interface{}{
-			"certificate": certValue,
-		},
-		Schema: pathSetSignedIntermediate(b).Fields,
-	}
-
-	resp, err := b.pathSetSignedIntermediate(req, fd)
+	resp, err := b.HandleRequest(req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}

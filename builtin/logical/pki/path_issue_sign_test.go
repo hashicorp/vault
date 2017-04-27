@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 )
 
-func TestIssueSignCert(t *testing.T) {
+func TestPki_IssueSignCert(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage

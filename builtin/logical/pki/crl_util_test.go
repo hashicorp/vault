@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestRevokeCert(t *testing.T) {
+func TestPki_RevokeCert(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage

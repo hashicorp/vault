@@ -6,7 +6,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-func TestFetchCertBySerial(t *testing.T) {
+func TestPki_FetchCertBySerial(t *testing.T) {
 	storage := &logical.InmemStorage{}
 
 	cases := map[string]struct {

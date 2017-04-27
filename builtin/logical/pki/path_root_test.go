@@ -7,10 +7,9 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/logical/framework"
 )
 
-func TestCAGenerateRoot(t *testing.T) {
+func TestPki_CAGenerateRoot(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
@@ -21,21 +20,12 @@ func TestCAGenerateRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "root/generate/internal",
-		Storage:   storage,
-	}
+	req := logical.TestRequest(t, logical.UpdateOperation, "root/generate/internal")
+	req.Storage = storage
+	req.Data["common_name"] = "test.example.com"
 
-	fd := &framework.FieldData{
-		Raw: map[string]interface{}{
-			"exported":    "internal",
-			"common_name": "test.example.com",
-		},
-		Schema: pathGenerateRoot(b).Fields,
-	}
-
-	resp, err := b.pathCAGenerateRoot(req, fd)
+	// resp, err := b.pathCAGenerateRoot(req, fd)
+	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("error: %s", err)
 	}
@@ -55,7 +45,7 @@ func TestCAGenerateRoot(t *testing.T) {
 	}
 }
 
-func TestCASignIntermediate(t *testing.T) {
+func TestPki_CASignIntermediate(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
@@ -89,26 +79,18 @@ func TestCASignIntermediate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "root/sign-intermediate",
-		Storage:   storage,
-	}
-
 	csrPEM, err := ioutil.ReadFile("test-fixtures/root/csr.pem")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	fd := &framework.FieldData{
-		Raw: map[string]interface{}{
-			"common_name": "test.example.com",
-			"csr":         string(csrPEM),
-		},
-		Schema: pathSignIntermediate(b).Fields,
-	}
+	req := logical.TestRequest(t, logical.UpdateOperation, "root/sign-intermediate")
+	req.Storage = storage
+	req.Data["csr"] = string(csrPEM)
+	req.Data["common_name"] = "test.example.com"
 
-	resp, err := b.pathCASignIntermediate(req, fd)
+	// resp, err := b.pathCASignIntermediate(req, fd)
+	resp, err := b.HandleRequest(req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
