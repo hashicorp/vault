@@ -231,6 +231,17 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
+				Pattern: "mounts$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleMountTable,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "mounts" + framework.OptionalParamRegex("path"),
 
 				Fields: map[string]*framework.FieldSchema{
@@ -264,17 +275,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["mount"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "mounts$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleMountTable,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
 			},
 
 			&framework.Path{
@@ -371,7 +371,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-force" + framework.OptionalParamRegex("prefix"),
+				Pattern: "(lease/)?revoke-force" + framework.OptionalParamRegex("prefix"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -389,7 +389,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-prefix" + framework.OptionalParamRegex("prefix"),
+				Pattern: "(lease/)?revoke-prefix" + framework.OptionalParamRegex("prefix"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
