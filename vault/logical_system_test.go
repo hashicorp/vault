@@ -3,6 +3,7 @@ package vault
 import (
 	"crypto/sha256"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
+	"github.com/mitchellh/mapstructure"
 )
 
 func TestSystemBackend_RootPaths(t *testing.T) {
@@ -312,6 +314,179 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	}
 	if resp.Data["error"] != "cannot remount 'sys/'" {
 		t.Fatalf("bad: %v", resp)
+	}
+}
+
+func TestSystemBackend_lease(t *testing.T) {
+	core, b, root := testCoreSystemBackend(t)
+
+	// Create a key with a lease
+	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
+	req.Data["foo"] = "bar"
+	req.ClientToken = root
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read a key with a LeaseID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read lease
+	req = logical.TestRequest(t, logical.UpdateOperation, "lease")
+	req.Data["lease_id"] = resp.Secret.LeaseID
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["renewable"] == nil || resp.Data["renewable"].(bool) {
+		t.Fatal("generic leases are not renewable")
+	}
+
+	// Invalid lease
+	req = logical.TestRequest(t, logical.UpdateOperation, "lease")
+	req.Data["lease_id"] = "invalid"
+	resp, err = b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("expected invalid request, got err: %v", err)
+	}
+}
+
+func TestSystemBackend_lease_list(t *testing.T) {
+	core, b, root := testCoreSystemBackend(t)
+
+	// Create a key with a lease
+	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
+	req.Data["foo"] = "bar"
+	req.ClientToken = root
+	resp, err := core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read a key with a LeaseID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// List lease
+	req = logical.TestRequest(t, logical.ListOperation, "lease/secret/foo")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	var keys []string
+	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys) != 1 {
+		t.Fatalf("Expected 1 secret lease, got %d: %#v", len(keys), keys)
+	}
+
+	// Generate multiple leases
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ListOperation, "lease/secret/foo")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys) != 3 {
+		t.Fatalf("Expected 3 secret lease, got %d: %#v", len(keys), keys)
+	}
+
+	// Listing subkeys
+	req = logical.TestRequest(t, logical.UpdateOperation, "secret/bar")
+	req.Data["foo"] = "bar"
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read a key with a LeaseID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/bar")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	req = logical.TestRequest(t, logical.ListOperation, "lease/secret")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	var keys2 []string
+	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys2); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys2) != 2 {
+		t.Fatalf("Expected 2 secret lease, got %d: %#v", len(keys), keys)
+	}
+	expected := []string{"bar/", "foo/"}
+	sort.Strings(keys2)
+	if !reflect.DeepEqual(expected, keys2) {
+		t.Fatalf("exp: %#v, act: %#v", expected, keys2)
 	}
 }
 
