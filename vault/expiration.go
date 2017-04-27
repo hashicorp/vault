@@ -125,9 +125,13 @@ func (m *ExpirationManager) Tidy() error {
 
 	// Create a cache to keep track of looked up tokens
 	tokenCache := make(map[string]string)
+	i := 0
 
 	tidyFunc := func(leaseID string) {
-		m.logger.Trace("expiration: checking if lease is valid", "lease_id", leaseID)
+		i++
+		if i%500 == 0 {
+			m.logger.Debug("expiration: tidying of leases", "progress", i)
+		}
 
 		le, err := m.loadEntry(leaseID)
 		if err != nil {
@@ -186,6 +190,7 @@ func (m *ExpirationManager) Tidy() error {
 	}
 
 	if atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
+		m.logger.Trace("expiration: beginning tidy operation on leases")
 		defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
 		if err := logical.ScanView(m.idView, tidyFunc); err != nil {
 			return err

@@ -108,8 +108,11 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 		view:               view,
 		cubbyholeDestroyer: destroyCubbyhole,
 		logger:             c.logger,
-		policyLookupFunc:   c.policyStore.GetPolicy,
 		tokenLocks:         locksutil.CreateLocks(),
+	}
+
+	if c.policyStore != nil {
+		t.policyLookupFunc = c.policyStore.GetPolicy
 	}
 
 	// Setup the framework endpoints
