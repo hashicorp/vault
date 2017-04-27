@@ -1315,10 +1315,8 @@ func (b *SystemBackend) handleLease(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"lease_id":          leaseID,
-			"issue_time":        leaseTimes.IssueTime,
-			"expire_time":       nil,
-			"last_renewal_time": nil,
+			"id":            leaseID,
+			"creation_time": leaseTimes.IssueTime,
 		},
 	}
 	if !leaseTimes.LastRenewalTime.IsZero() {
@@ -1352,11 +1350,7 @@ func (b *SystemBackend) handleLeaseList(
 		return handleError(err)
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"keys": keys,
-		},
-	}, nil
+	return logical.ListResponse(keys), nil
 }
 
 // handleRenew is used to renew a lease with a given LeaseID
