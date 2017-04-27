@@ -3,6 +3,7 @@ package pki
 import (
 	"encoding/pem"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
@@ -109,7 +110,6 @@ func TestPki_RevokeCert(t *testing.T) {
 	}
 
 	for name, tc := range cases {
-		// Put pseudo-cert in inmem storage
 		err := storage.Put(&logical.StorageEntry{
 			Key:   tc.Req.Path,
 			Value: tc.StorageValue,
@@ -121,6 +121,16 @@ func TestPki_RevokeCert(t *testing.T) {
 		resp, err := revokeCert(b, tc.Req, tc.StorageKey, false)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: err: %v resp: %#v", err, resp)
+		}
+
+		// Verify that value was written to storage
+		storageKey := "revoked/" + strings.ToLower(strings.Replace(tc.StorageKey, ":", "-", -1))
+		entry, err := storage.Get(storageKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if entry == nil {
+			t.Fatal("update operation unsucessful, data not written to storage")
 		}
 	}
 }
