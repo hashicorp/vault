@@ -336,9 +336,13 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke/(?P<lease_id>.+)",
+				Pattern: "revoke" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"url_lease_id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
+					},
 					"lease_id": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
@@ -1298,6 +1302,10 @@ func (b *SystemBackend) handleRenew(
 	if leaseID == "" {
 		leaseID = data.Get("url_lease_id").(string)
 	}
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
 	incrementRaw := data.Get("increment").(int)
 
 	// Convert the increment
@@ -1317,6 +1325,13 @@ func (b *SystemBackend) handleRevoke(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		leaseID = data.Get("url_lease_id").(string)
+	}
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
