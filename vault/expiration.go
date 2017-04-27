@@ -124,7 +124,7 @@ func (m *ExpirationManager) Tidy() error {
 	var tidyErrors *multierror.Error
 
 	// Create a cache to keep track of looked up tokens
-	validTokenCache := make(map[string]struct{})
+	tokenCache := make(map[string]bool)
 	i := 0
 
 	tidyFunc := func(leaseID string) {
@@ -150,26 +150,33 @@ func (m *ExpirationManager) Tidy() error {
 			revokeLease = true
 		}
 
-		if _, ok := validTokenCache[le.ClientToken]; ok {
-			return
-		}
+		isValid, ok := tokenCache[le.ClientToken]
+		if !ok {
+			saltedID := m.tokenStore.SaltID(le.ClientToken)
+			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
+			lock.RLock()
+			te, err := m.tokenStore.lookupSalted(saltedID, true)
+			lock.RUnlock()
 
-		saltedID := m.tokenStore.SaltID(le.ClientToken)
-		lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
-		lock.RLock()
-		te, err := m.tokenStore.lookupSalted(saltedID, true)
-		lock.RUnlock()
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup token: %v", err))
+				return
+			}
 
-		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup token: %v", err))
-			return
-		}
-
-		if te == nil {
-			m.logger.Debug("expiration: lease has an invalid token", "lease_id", leaseID)
-			revokeLease = true
+			if te == nil {
+				m.logger.Debug("expiration: lease has an invalid token", "lease_id", leaseID)
+				revokeLease = true
+				tokenCache[le.ClientToken] = false
+			} else {
+				tokenCache[le.ClientToken] = true
+			}
 		} else {
-			validTokenCache[le.ClientToken] = struct{}{}
+			if isValid {
+				return
+			} else {
+				m.logger.Debug("expiration: lease has an invalid token", "lease_id", leaseID)
+				revokeLease = true
+			}
 		}
 
 		if revokeLease {
