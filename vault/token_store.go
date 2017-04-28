@@ -1052,7 +1052,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 				dfs = dfs[1:l] 
 			}
 		} else { 
-		  // If we make it here, the there are children and they must
+		  // If we make it here, there are children and they must
 		  // be prepended. 
 			dfs = append(children, dfs...)
 		}
