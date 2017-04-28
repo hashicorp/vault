@@ -22,8 +22,8 @@ func New() (interface{}, error) {
 	connProducer.Type = postgreSQLTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 4,
-		UsernameLen:    16,
+		DisplayNameLen: 10,
+		UsernameLen:    63,
 	}
 
 	dbType := &PostgreSQL{
