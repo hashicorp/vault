@@ -142,6 +142,51 @@ func (m *MSSQL) RenewUser(statements dbplugin.Statements, username string, expir
 // then kill pending connections from that user, and finally drop the user and login from the
 // database instance.
 func (m *MSSQL) RevokeUser(statements dbplugin.Statements, username string) error {
+	if statements.RevocationStatements == "" {
+		return m.revokeUserDefault(username)
+	}
+
+	// Get connection
+	db, err := m.getConnection()
+	if err != nil {
+		return err
+	}
+
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Execute each query
+	for _, query := range strutil.ParseArbitraryStringSlice(statements.RevocationStatements, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+
+		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+			"name": username,
+		}))
+		if err != nil {
+			return err
+		}
+		defer stmt.Close()
+		if _, err := stmt.Exec(); err != nil {
+			return err
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MSSQL) revokeUserDefault(username string) error {
 	// Get connection
 	db, err := m.getConnection()
 	if err != nil {
