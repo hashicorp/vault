@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -98,6 +99,41 @@ func TestCoreWithSeal(t testing.TB, testSeal Seal) *Core {
 	}
 
 	return c
+}
+
+// TestCoreDataVersion returns an in-memory, ininitialized core with the desired data-version
+// written to the barrier in a sealed state.
+func TestCoreDataVersion(t testing.TB, dataVersion string) (*Core, [][]byte, string) {
+	core, keys, root := TestCoreUnsealed(t)
+
+	// Set up data-version and seal
+	verStruct := &versionStruct{
+		Version: dataVersion,
+	}
+	ver := &Entry{
+		Key: coreDataVersionPath,
+	}
+	var err error
+	ver.Value, err = jsonutil.EncodeJSON(verStruct)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	err = core.barrier.Put(ver)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	core.Seal(root)
+
+	sealed, err := core.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+
+	return core, keys, root
 }
 
 func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {

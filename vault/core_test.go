@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/version"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -175,6 +176,130 @@ func TestCore_Unseal_Single(t *testing.T) {
 	}
 	if prog, _ := c.SecretProgress(); prog != 0 {
 		t.Fatalf("bad progress: %d", prog)
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+}
+
+func TestCore_Unseal_DataVersion(t *testing.T) {
+	// Ignore version pre-release
+	version.VersionPrerelease = ""
+
+	// Case where local-version is greater than data-version
+	version.Version = "0.7.0"
+	c, keys, _ := TestCoreDataVersion(t, "0.6.0")
+
+	for _, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	sealed, err := c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+
+	// Case where local-version is less than data-version
+	version.Version = "0.6.0"
+	c, keys, _ = TestCoreDataVersion(t, "0.7.0")
+
+	for i, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		if err == nil && i+1 == len(keys) {
+			t.Fatal("expected downgrade error")
+		}
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+
+	// Case where local-version is equal to data-version
+	version.Version = "0.7.0"
+	c, keys, _ = TestCoreDataVersion(t, "0.7.0")
+
+	for _, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+}
+
+func TestCore_Unseal_DataVersion_EntTag(t *testing.T) {
+	// Ignore version pre-release
+	version.VersionPrerelease = ""
+
+	// Case where local-version is greater than data-version
+	version.Version = "0.7.0+ent"
+	c, keys, _ := TestCoreDataVersion(t, "0.6.0+ent")
+
+	for _, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	sealed, err := c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+
+	// Case where local-version is less than data-version
+	version.Version = "0.6.0+ent"
+	c, keys, _ = TestCoreDataVersion(t, "0.7.0+ent")
+
+	for i, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		if err == nil && i+1 == len(keys) {
+			t.Fatal("expected downgrade error")
+		}
+	}
+
+	sealed, err = c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !sealed {
+		t.Fatalf("should be sealed")
+	}
+
+	// Case where local-version is equal to data-version
+	version.Version = "0.7.0+ent"
+	c, keys, _ = TestCoreDataVersion(t, "0.7.0+ent")
+
+	for _, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 	}
 
 	sealed, err = c.Sealed()

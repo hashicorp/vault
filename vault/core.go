@@ -146,6 +146,10 @@ type unlockInformation struct {
 	Nonce string
 }
 
+type versionStruct struct {
+	Version string `json:"version"`
+}
+
 // Core is used as the central manager of Vault activity. It is the primary point of
 // interface for API handlers and is responsible for managing the logical and physical
 // backends, router, security barrier, and audit trails.
@@ -915,10 +919,6 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: vault is unsealed")
-	}
-
-	type versionStruct struct {
-		Version string `json:"version"`
 	}
 
 	// check version to make sure a downgrade hasn't happened
