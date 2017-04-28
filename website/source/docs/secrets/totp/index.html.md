@@ -32,7 +32,7 @@ a "test" key by passing in a TOTP key url:
 
 ```text
 $ vault write totp/keys/test \
-    url="otpauth://totp/Google:test@gmail.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Google"
+    url="otpauth://totp/Vault:test@gmail.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault"
 Success! Data written to: totp/keys/test
 ```
 
@@ -61,7 +61,7 @@ In order to generate a new key, set the generate flag to true and pass in an iss
 
 ```text
 $ vault write totp/keys/test \
-    generate=true issuer=Google account_name=test@gmail.com
+    generate=true issuer=Vault account_name=test@gmail.com
 ```
 A base64 encoded barcode and url will be returned upon generating a new key. These can be given to client applications that
 can generate passwords. You can validate those passwords by writing to the `code/test` path.
