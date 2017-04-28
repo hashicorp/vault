@@ -78,7 +78,7 @@ func (b *backend) DB(s logical.Storage) (*sql.DB, error) {
 	}
 	connString := connConfig.ConnectionString
 
-	db, err := sql.Open("mssql", connString)
+	db, err := sql.Open("sqlserver", connString)
 	if err != nil {
 		return nil, err
 	}

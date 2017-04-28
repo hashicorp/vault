@@ -423,6 +423,17 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	if resp.Data["error"] != "lease not found or lease is not renewable" {
 		t.Fatalf("bad: %v", resp)
 	}
+
+	// Attempt renew with other method
+	req = logical.TestRequest(t, logical.UpdateOperation, "renew")
+	req.Data["lease_id"] = "foobarbaz"
+	resp, err = b.HandleRequest(req)
+	if err != logical.ErrInvalidRequest {
+		t.Fatalf("err: %v", err)
+	}
+	if resp.Data["error"] != "lease not found or lease is not renewable" {
+		t.Fatalf("bad: %v", resp)
+	}
 }
 
 func TestSystemBackend_revoke(t *testing.T) {
@@ -471,14 +482,47 @@ func TestSystemBackend_revoke(t *testing.T) {
 	if resp3.Data["error"] != "lease not found or lease is not renewable" {
 		t.Fatalf("bad: %v", resp)
 	}
+
+	// Read a key with a LeaseID
+	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Test the other route path
+	req2 = logical.TestRequest(t, logical.UpdateOperation, "revoke")
+	req2.Data["lease_id"] = resp.Secret.LeaseID
+	resp2, err = b.HandleRequest(req2)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp2)
+	}
+	if resp2 != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
 }
 
 func TestSystemBackend_revoke_invalidID(t *testing.T) {
 	b := testSystemBackend(t)
 
-	// Attempt renew
+	// Attempt revoke
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke/foobarbaz")
 	resp, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Attempt revoke with other method
+	req = logical.TestRequest(t, logical.UpdateOperation, "revoke")
+	req.Data["lease_id"] = "foobarbaz"
+	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

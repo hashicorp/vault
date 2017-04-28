@@ -1,4 +1,4 @@
-package awsec2
+package awsauth
 
 import (
 	"crypto/x509"

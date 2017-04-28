@@ -18,6 +18,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -465,7 +466,7 @@ func signCert(b *backend,
 	}
 	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
 	if err != nil {
-		return nil, errutil.UserError{Err: "certificate request could not be parsed"}
+		return nil, errutil.UserError{Err: fmt.Sprintf("certificate request could not be parsed: %v", err)}
 	}
 
 	switch role.KeyType {
@@ -596,7 +597,7 @@ func generateCreationBundle(b *backend,
 		if csr == nil || !role.UseCSRSANs {
 			cnAltRaw, ok := data.GetOk("alt_names")
 			if ok {
-				cnAlt := strutil.ParseDedupAndSortStrings(cnAltRaw.(string), ",")
+				cnAlt := strutil.ParseDedupLowercaseAndSortStrings(cnAltRaw.(string), ",")
 				for _, v := range cnAlt {
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
@@ -695,7 +696,7 @@ func generateCreationBundle(b *backend,
 		if len(ttlField) == 0 {
 			ttl = b.System().DefaultLeaseTTL()
 		} else {
-			ttl, err = time.ParseDuration(ttlField)
+			ttl, err = parseutil.ParseDurationSecond(ttlField)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid requested ttl: %s", err)}
@@ -705,7 +706,7 @@ func generateCreationBundle(b *backend,
 		if len(role.MaxTTL) == 0 {
 			maxTTL = b.System().MaxLeaseTTL()
 		} else {
-			maxTTL, err = time.ParseDuration(role.MaxTTL)
+			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid ttl: %s", err)}
@@ -969,7 +970,7 @@ func createCSR(creationInfo *creationBundle) (*certutil.ParsedCSRBundle, error) 
 	result.CSRBytes = csr
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
 	}
 
 	return result, nil

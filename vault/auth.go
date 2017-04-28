@@ -35,6 +35,10 @@ const (
 var (
 	// errLoadAuthFailed if loadCredentials encounters an error
 	errLoadAuthFailed = errors.New("failed to setup auth table")
+
+	// credentialAliases maps old backend names to new backend names, allowing us
+	// to move/rename backends but maintain backwards compatibility
+	credentialAliases = map[string]string{"aws-ec2": "aws"}
 )
 
 // enableCredential is used to enable a new credential backend
@@ -457,6 +461,9 @@ func (c *Core) teardownCredentials() error {
 // newCredentialBackend is used to create and configure a new credential backend by name
 func (c *Core) newCredentialBackend(
 	t string, sysView logical.SystemView, view logical.Storage, conf map[string]string) (logical.Backend, error) {
+	if alias, ok := credentialAliases[t]; ok {
+		t = alias
+	}
 	f, ok := c.credentialBackends[t]
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", t)
