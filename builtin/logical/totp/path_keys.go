@@ -47,22 +47,22 @@ func pathKeys(b *backend) *framework.Path {
 			"key_size": {
 				Type:        framework.TypeInt,
 				Default:     20,
-				Description: "Determines the size in bytes of the generated key.",
+				Description: "Determines the size in bytes of the generated key. Only used if generate is true.",
 			},
 
 			"key": {
 				Type:        framework.TypeString,
-				Description: "The shared master key used to generate a TOTP token.",
+				Description: "The shared master key used to generate a TOTP token. Only used if generate is false.",
 			},
 
 			"issuer": {
 				Type:        framework.TypeString,
-				Description: `The name of the key's issuing organization.`,
+				Description: `The name of the key's issuing organization. Required if generate is true and url is not passed.`,
 			},
 
 			"account_name": {
 				Type:        framework.TypeString,
-				Description: `The name of the account associated with the key.`,
+				Description: `The name of the account associated with the key. Required if generate is true and url is not passed.`,
 			},
 
 			"period": {
@@ -74,30 +74,30 @@ func pathKeys(b *backend) *framework.Path {
 			"algorithm": {
 				Type:        framework.TypeString,
 				Default:     "SHA1",
-				Description: `The hashing algorithm used to generate the TOTP token. Options include SHA1, SHA256 and SHA512`,
+				Description: `The hashing algorithm used to generate the TOTP token. Options include SHA1, SHA256 and SHA512.`,
 			},
 
 			"digits": {
 				Type:        framework.TypeInt,
 				Default:     6,
-				Description: `The number of digits in the generated TOTP token. This value can either be 6 or 8`,
+				Description: `The number of digits in the generated TOTP token. This value can either be 6 or 8.`,
 			},
 
 			"skew": {
 				Type:        framework.TypeInt,
 				Default:     0,
-				Description: `The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1`,
+				Description: `The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1. Only used if generate is true.`,
 			},
 
 			"qr_size": {
 				Type:        framework.TypeInt,
 				Default:     200,
-				Description: `The pixel size of the generated square QR code.`,
+				Description: `The pixel size of the generated square QR code. Only used if generate is true.`,
 			},
 
 			"url": {
 				Type:        framework.TypeString,
-				Description: `A TOTP url string containing all of the parameters for key setup.`,
+				Description: `A TOTP url string containing all of the parameters for key setup. Only used if generate is false.`,
 			},
 		},
 
@@ -189,11 +189,19 @@ func (b *backend) pathKeyCreate(
 	keySize := data.Get("key_size").(int)
 	inputURL := data.Get("url").(string)
 
+	if generate == true {
+		if keyString != "" {
+			return logical.ErrorResponse("a key should not be passed if generate is true"), nil
+		}
+		if inputURL != "" {
+			return logical.ErrorResponse("a url should not be passed if generate is true"), nil
+		}
+	}
+
 	// Read parameters from url if given
 	if inputURL != "" {
 		//Parse url
 		urlObject, err := url.Parse(inputURL)
-
 		if err != nil {
 			return logical.ErrorResponse("an error occured while parsing url string"), nil
 		}
@@ -225,21 +233,18 @@ func (b *backend) pathKeyCreate(
 
 		//Read period
 		periodQuery, err := strconv.Atoi(urlQuery.Get("period"))
-
 		if err == nil {
 			period = periodQuery
 		}
 
 		//Read digits
 		digitsQuery, err := strconv.Atoi(urlQuery.Get("digits"))
-
 		if err == nil {
 			digits = digitsQuery
 		}
 
 		//Read algorithm
 		algorithmQuery := urlQuery.Get("algorithm")
-
 		if algorithmQuery != "" {
 			algorithm = algorithmQuery
 		}
@@ -315,7 +320,6 @@ func (b *backend) pathKeyCreate(
 			Algorithm:   keyAlgorithm,
 			SecretSize:  uintKeySize,
 		})
-
 		if err != nil {
 			return logical.ErrorResponse("an error occured while generating a key"), nil
 		}
@@ -326,7 +330,6 @@ func (b *backend) pathKeyCreate(
 		// Prepare the url and barcode
 		urlString := keyObject.String()
 		barcode, err := keyObject.Image(qrSize, qrSize)
-
 		if err != nil {
 			return logical.ErrorResponse("an error occured while generating a QR code image"), nil
 		}
@@ -346,7 +349,6 @@ func (b *backend) pathKeyCreate(
 		}
 
 		_, err := base32.StdEncoding.DecodeString(keyString)
-
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
 				"invalid key value: %s", err)), nil
@@ -363,7 +365,6 @@ func (b *backend) pathKeyCreate(
 		Digits:      keyDigits,
 		Skew:        uintSkew,
 	})
-
 	if err != nil {
 		return nil, err
 	}

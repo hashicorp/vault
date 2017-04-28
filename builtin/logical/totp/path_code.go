@@ -35,13 +35,9 @@ func pathCode(b *backend) *framework.Path {
 
 func (b *backend) pathReadCode(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.logger.Trace("totp/pathReadCode: enter")
-	defer b.logger.Trace("totp/pathReadCode: exit")
-
 	name := data.Get("name").(string)
 
 	// Get the key
-	b.logger.Trace("totp/pathReadCode: getting key")
 	key, err := b.Key(req.Storage, name)
 	if err != nil {
 		return nil, err
@@ -56,14 +52,11 @@ func (b *backend) pathReadCode(
 		Digits:    key.Digits,
 		Algorithm: key.Algorithm,
 	})
-
 	if err != nil {
 		return nil, err
 	}
 
 	// Return the secret
-	b.logger.Trace("totp/pathReadCode: generating secret")
-
 	resp, err := &logical.Response{
 		Data: map[string]interface{}{
 			"code": totpToken,

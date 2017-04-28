@@ -3,8 +3,6 @@ package totp
 import (
 	"strings"
 
-	log "github.com/mgutz/logxi/v1"
-
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -27,13 +25,11 @@ func Backend(conf *logical.BackendConfig) *backend {
 		Secrets: []*framework.Secret{},
 	}
 
-	b.logger = conf.Logger
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
-	logger log.Logger
 }
 
 const backendHelp = `

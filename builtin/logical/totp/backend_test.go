@@ -503,12 +503,11 @@ func TestBackend_urlPassedGeneratedKeyDefaultValues(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	urlString := "otpauth://totp/Vault:test@email.com"
-
 	keyData := map[string]interface{}{
-		"url":      urlString,
-		"generate": true,
-		"key_size": 20,
+		"issuer":       "Vault",
+		"account_name": "test@email.com",
+		"generate":     true,
+		"key_size":     20,
 	}
 
 	expected := map[string]interface{}{
@@ -655,6 +654,50 @@ func TestBackend_invalidURLValue(t *testing.T) {
 	keyData := map[string]interface{}{
 		"url":      "notaurl",
 		"generate": false,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, true),
+			testAccStepReadKey(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_urlAndGenerateTrue(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyData := map[string]interface{}{
+		"url":      "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60",
+		"generate": true,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, true),
+			testAccStepReadKey(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_keyAndGenerateTrue(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyData := map[string]interface{}{
+		"key":      "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
+		"generate": true,
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
