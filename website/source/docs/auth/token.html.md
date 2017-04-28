@@ -515,7 +515,8 @@ of the header should be "X-Vault-Token" and the value should be the token.
   </dd>
 
   <dt>Returns</dt>
-  <dd>`204` response code.
+  <dd>`204` response code when the token is in the request body.<br />
+      `200` response code when the token is in the URL <em>(not recommended)</em>.
   </dd>
 </dl>
 
