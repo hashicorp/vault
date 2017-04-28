@@ -466,7 +466,7 @@ func signCert(b *backend,
 	}
 	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
 	if err != nil {
-		return nil, errutil.UserError{Err: "certificate request could not be parsed"}
+		return nil, errutil.UserError{Err: fmt.Sprintf("certificate request could not be parsed: %v", err)}
 	}
 
 	switch role.KeyType {
@@ -970,7 +970,7 @@ func createCSR(creationInfo *creationBundle) (*certutil.ParsedCSRBundle, error) 
 	result.CSRBytes = csr
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
 	}
 
 	return result, nil
