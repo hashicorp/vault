@@ -1131,7 +1131,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
-		children, err := ts.view.List(parentPrefix + parent + "/")
+		children, err := ts.view.List(parentPrefix + parent)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
 			continue
