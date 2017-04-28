@@ -955,12 +955,6 @@
 			"revisionTime": "2016-07-20T23:31:40Z"
 		},
 		{
-			"checksumSHA1": "MsDVq5l9qwAvRzVM+BuQ/Xfzu5I=",
-			"path": "github.com/jefferai/go-okta",
-			"revision": "9edaa75237ba3c7439b61ff241df6b0e16607806",
-			"revisionTime": "2017-04-27T13:56:47Z"
-		},
-		{
 			"checksumSHA1": "cIinEjB62s8j5cpY1u7sxtg4akg=",
 			"path": "github.com/jefferai/jsonx",
 			"revision": "9cc31c3135eef39b8e72585f37efa92b6ca314d0",
@@ -1175,6 +1169,12 @@
 			"path": "github.com/sethgrid/pester",
 			"revision": "4f4c0a67b6496764028e1ab9fd8dfb630282ed2f",
 			"revisionTime": "2017-04-08T21:24:09Z"
+		},
+		{
+			"checksumSHA1": "7b7psq20O8IOCr885W2Ld6a3KTc=",
+			"path": "github.com/sstarcher/go-okta",
+			"revision": "64b3cb9e3a7b6d0c4e4432576c873e492d152666",
+			"revisionTime": "2017-04-28T20:44:25Z"
 		},
 		{
 			"checksumSHA1": "MxLnUmfrP+r5HfCZM29+WPKebn8=",

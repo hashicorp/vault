@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/jefferai/go-okta"
+	"github.com/sstarcher/go-okta"
 )
 
 func pathConfig(b *backend) *framework.Path {
