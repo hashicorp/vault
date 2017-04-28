@@ -41,6 +41,7 @@ token.
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
+    --header "X-Vault-Wrap-TTL" 1m \
     --request POST \
     --data @payload.json \
     https://vault.rocks/v1/sys/wrapping/wrap
