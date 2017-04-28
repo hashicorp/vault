@@ -3,7 +3,6 @@ package vault
 import (
 	"crypto/sha256"
 	"reflect"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -485,7 +484,6 @@ func TestSystemBackend_lease_list(t *testing.T) {
 		t.Fatalf("Expected 2 secret lease, got %d: %#v", len(keys), keys)
 	}
 	expected := []string{"bar/", "foo/"}
-	sort.Strings(keys2)
 	if !reflect.DeepEqual(expected, keys2) {
 		t.Fatalf("exp: %#v, act: %#v", expected, keys2)
 	}

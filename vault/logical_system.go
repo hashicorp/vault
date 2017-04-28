@@ -55,7 +55,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			Root: []string{
 				"auth/*",
 				"remount",
-				"revoke-prefix/*",
 				"audit",
 				"audit/*",
 				"raw/*",
@@ -64,6 +63,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"rotate",
 				"config/auditing/*",
 				"lease/lookup*",
+				"lease/revoke-prefix/*",
+				"revoke-prefix/*",
 			},
 
 			Unauthenticated: []string{
@@ -231,18 +232,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "mounts$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.ReadOperation: b.handleMountTable,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
-			},
-
-			&framework.Path{
-				Pattern: "mounts" + framework.OptionalParamRegex("path"),
+				Pattern: "mounts/(?P<path>.+?)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"path": &framework.FieldSchema{
@@ -275,6 +265,17 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["mount"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["mount"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "mounts$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.handleMountTable,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["mounts"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["mounts"][1]),
 			},
 
 			&framework.Path{
@@ -314,8 +315,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleLease,
-					logical.ListOperation:   b.handleLeaseList,
+					logical.UpdateOperation: b.handleLeaseLookup,
+					logical.ListOperation:   b.handleLeaseLookupList,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["lease"][0]),
@@ -1300,7 +1301,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 }
 
 // handleLeasse is use to view the metadata for a given LeaseID
-func (b *SystemBackend) handleLease(
+func (b *SystemBackend) handleLeaseLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseID := data.Get("lease_id").(string)
 	if leaseID == "" {
@@ -1321,6 +1322,7 @@ func (b *SystemBackend) handleLease(
 		Data: map[string]interface{}{
 			"id":            leaseID,
 			"creation_time": leaseTimes.IssueTime,
+			"renewable":     leaseTimes.renewable(),
 		},
 	}
 	if !leaseTimes.LastRenewalTime.IsZero() {
@@ -1330,12 +1332,10 @@ func (b *SystemBackend) handleLease(
 		resp.Data["expire_time"] = leaseTimes.ExpireTime
 		resp.Data["ttl"] = leaseTimes.ttl()
 	}
-	resp.Data["renewable"] = leaseTimes.renewable()
-
 	return resp, nil
 }
 
-func (b *SystemBackend) handleLeaseList(
+func (b *SystemBackend) handleLeaseLookupList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	prefix := data.Get("prefix").(string)
 	if !strings.HasSuffix(prefix, "/") {
@@ -1347,7 +1347,6 @@ func (b *SystemBackend) handleLeaseList(
 		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
 		return handleError(err)
 	}
-
 	return logical.ListResponse(keys), nil
 }
 
