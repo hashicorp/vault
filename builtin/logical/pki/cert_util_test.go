@@ -19,16 +19,14 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 	}{
 		"valid cert": {
 			&logical.Request{
-				Operation: logical.ReadOperation,
-				Storage:   storage,
+				Storage: storage,
 			},
 			"certs/",
 			"00:00:00:00:00:00:00:00",
 		},
 		"revoked cert": {
 			&logical.Request{
-				Operation: logical.ReadOperation,
-				Storage:   storage,
+				Storage: storage,
 			},
 			"revoked/",
 			"11:11:11:11:11:11:11:11",
@@ -82,13 +80,45 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 		}
 
 		certEntry, err := fetchCertBySerial(tc.Req, tc.Prefix, tc.Serial)
+		if err != nil || certEntry == nil {
+			t.Fatalf("error on %s for hyphen-based storage path: err: %v, entry: %v", name, err, certEntry)
+		}
+	}
+
+	noConvCases := map[string]struct {
+		Req    *logical.Request
+		Prefix string
+		Serial string
+	}{
+		"ca": {
+			&logical.Request{
+				Storage: storage,
+			},
+			"",
+			"ca",
+		},
+		"crl": {
+			&logical.Request{
+				Storage: storage,
+			},
+			"",
+			"crl",
+		},
+	}
+
+	// Test for ca and crl case
+	for name, tc := range noConvCases {
+		err := storage.Put(&logical.StorageEntry{
+			Key:   tc.Serial,
+			Value: []byte("some data"),
+		})
 		if err != nil {
-			t.Fatalf("error on %s for hyphen-based storage path: %s", name, err)
+			t.Fatalf("error writing to storage on %s: %s", name, err)
 		}
 
-		// Check for non-nil on valid/revoked certs
-		if certEntry == nil {
-			t.Fatalf("nil on %s for hyphen-based storage path", name)
+		certEntry, err := fetchCertBySerial(tc.Req, tc.Prefix, tc.Serial)
+		if err != nil || certEntry == nil {
+			t.Fatalf("error on %s: err: %v, entry: %v", name, err, certEntry)
 		}
 	}
 }
