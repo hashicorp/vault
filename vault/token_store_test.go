@@ -677,10 +677,10 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 	}
 }
 
-// This was the original function name, and now it just calls 
+// This was the original function name, and now it just calls
 // the non recursive version.
 func TestTokenStore_RevokeTree(t *testing.T) {
-  testTokenStore_RevokeTree_NonRecursive(t ,2)
+	testTokenStore_RevokeTree_NonRecursive(t, 2)
 }
 
 // Revokes a given Token Store tree non recursively.
@@ -693,15 +693,15 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 	if err.Error() != "cannot tree-revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
-	
-	// Nuke tree non recursively. 
+
+	// Nuke tree non recursively.
 	err = ts.RevokeTree(root.ID)
-	
+
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	// Append the root to ensure it was successfully 
-	// deleted. 
+	// Append the root to ensure it was successfully
+	// deleted.
 	children = append(children, root)
 	for _, entry := range children {
 		out, err := ts.Lookup(entry.ID)
@@ -715,7 +715,7 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 }
 
 // A benchmark function that tests testTokenStore_RevokeTree_NonRecursive
-// for a variety of different depths. 
+// for a variety of different depths.
 func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 	benchmarks := []uint64{0, 1, 2, 4, 8, 16, 20}
 	for _, depth := range benchmarks {
@@ -727,8 +727,8 @@ func BenchmarkTokenStore_RevokeTree(b *testing.B) {
 	}
 }
 
-// Builds a TokenTree of a specified depth, so that 
-// we may run revoke tests on it. 
+// Builds a TokenTree of a specified depth, so that
+// we may run revoke tests on it.
 func buildTokenTree(t testing.TB, ts *TokenStore, depth uint64) (root *TokenEntry, children []*TokenEntry) {
 	root = &TokenEntry{}
 	if err := ts.create(root); err != nil {

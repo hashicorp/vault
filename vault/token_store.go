@@ -1028,7 +1028,7 @@ func (ts *TokenStore) RevokeTree(id string) error {
 // Updated to be non-recursive and revoke child tokens
 // before parent tokens(DFS).
 func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
-  // Initialize slice to be arbitraty capacity of 64
+	// Initialize slice to be arbitraty capacity of 64
 	dfs := make([]string, 0, 64)
 	dfs = append(dfs, saltedId)
 
@@ -1037,23 +1037,23 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 		path := parentPrefix + id + "/"
 		children, err := ts.view.List(path)
 		if err != nil {
-		  return fmt.Errorf("failed to scan for children: %v", err)
-    }
-    // If the length of the children is equal to zero,
-    // then we are at a leaf node.
+			return fmt.Errorf("failed to scan for children: %v", err)
+		}
+		// If the length of the children is equal to zero,
+		// then we are at a leaf node.
 		if len(children) == 0 {
 			if err := ts.revokeSalted(id); err != nil {
 				return fmt.Errorf("failed to revoke entry: %v", err)
 			}
 			// If the length of l is equal to 1, then the last token has been deleted
-			if l == 1 { 
+			if l == 1 {
 				return nil
 			} else {
-				dfs = dfs[1:l] 
+				dfs = dfs[1:l]
 			}
-		} else { 
-		  // If we make it here, there are children and they must
-		  // be prepended. 
+		} else {
+			// If we make it here, there are children and they must
+			// be prepended.
 			dfs = append(children, dfs...)
 		}
 	}
