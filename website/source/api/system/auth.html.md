@@ -74,6 +74,13 @@ For example, mounting the "foo" auth backend will make it accessible at
 - `type` `(string: <required>)` – Specifies the name of the authentication
   backend type, such as "github" or "token".
 
+Additionally, the following options are allowed in Vault open-source, but 
+relevant functionality is only supported in Vault Enterprise:
+
+- `local` `(bool: false)` – Specifies if the auth backend is a local mount  
+  only. Local mounts are not replicated nor (if a secondary) removed by
+  replication.
+
 ### Sample Payload
 
 ```json
