@@ -620,17 +620,17 @@ func testAccStepListCerts(
 }
 
 func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, requiredNames string, expectError bool) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string, allowedNames string, expectError bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
 		Data: map[string]interface{}{
-			"certificate":    string(cert),
-			"policies":       policies,
-			"display_name":   name,
-			"required_names": requiredNames,
-			"lease":          1000,
+			"certificate":   string(cert),
+			"policies":      policies,
+			"display_name":  name,
+			"allowed_names": allowedNames,
+			"lease":         1000,
 		},
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
