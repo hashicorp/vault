@@ -26,8 +26,8 @@ func New() (interface{}, error) {
 	connProducer.Type = msSQLTypeName
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 4,
-		UsernameLen:    16,
+		DisplayNameLen: 20,
+		UsernameLen:    128,
 	}
 
 	dbType := &MSSQL{
