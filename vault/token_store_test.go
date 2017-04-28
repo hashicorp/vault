@@ -691,7 +691,7 @@ func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64) {
 	root, children := buildTokenTree(t, ts, depth)
 	err := ts.RevokeTree("")
 
-	if err.Error() != "cannot revoke blank token" {
+	if err.Error() != "cannot tree-revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
 	

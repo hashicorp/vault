@@ -1010,7 +1010,7 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
 	if id == "" {
-		return fmt.Errorf("cannot revoke blank token")
+		return fmt.Errorf("cannot tree-revoke blank token")
 	}
 
 	// Get the salted ID

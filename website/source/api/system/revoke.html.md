@@ -16,11 +16,19 @@ This endpoint revokes a secret immediately.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `PUT`    | `/sys/revoke/:lease_id`      | `204 (empty body)`     |
+| `PUT`    | `/sys/revoke`                | `204 (empty body)`     |
 
 ### Parameters
 
 - `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke.
+
+### Sample Payload
+
+```json
+{
+  "lease_id": "postgresql/creds/readonly/abcd-1234..."
+}
+```
 
 ### Sample Request
 
@@ -28,5 +36,6 @@ This endpoint revokes a secret immediately.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
-    https://vault.rocks/v1/sys/revoke/aws/creds/readonly-acbd1234
+    --data @payload.json \
+    https://vault.rocks/v1/sys/revoke
 ```
