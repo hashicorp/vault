@@ -40,8 +40,9 @@ Must be x509 PEM encoded.`,
 			},
 
 			"allowed_names": &framework.FieldSchema{
-				Type:        framework.TypeString,
-				Description: `A comma-separated list of names. At least one must exist in either the Common Name or SANs. Supports globbing.`,
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated list of names.
+At least one must exist in either the Common Name or SANs. Supports globbing.`,
 			},
 
 			"display_name": &framework.FieldSchema{
@@ -144,7 +145,7 @@ func (b *backend) pathCertWrite(
 	certificate := d.Get("certificate").(string)
 	displayName := d.Get("display_name").(string)
 	policies := policyutil.ParsePolicies(d.Get("policies").(string))
-	allowedNames := d.Get("allowed_names").(string)
+	allowedNames := d.Get("allowed_names").([]string)
 
 	// Default the display name to the certificate name if not given
 	if displayName == "" {
@@ -208,7 +209,7 @@ type CertEntry struct {
 	DisplayName  string
 	Policies     []string
 	TTL          time.Duration
-	AllowedNames string
+	AllowedNames []string
 }
 
 const pathCertHelpSyn = `

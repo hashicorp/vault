@@ -212,24 +212,23 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 }
 
 func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
-	nameMatched := (config.Entry.AllowedNames == "")
-	if config.Entry.AllowedNames != "" {
-		// At least one pattern must match at least one name if any patterns are specified
-		for _, allowedName := range strings.Split(config.Entry.AllowedNames, ",") {
-			if glob.Glob(allowedName, clientCert.Subject.CommonName) {
+	// Default behavior (no names) is to allow all names
+	nameMatched := len(config.Entry.AllowedNames) == 0
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedName := range config.Entry.AllowedNames {
+		if glob.Glob(allowedName, clientCert.Subject.CommonName) {
+			nameMatched = true
+		}
+
+		for _, name := range clientCert.DNSNames {
+			if glob.Glob(allowedName, name) {
 				nameMatched = true
 			}
+		}
 
-			for _, name := range clientCert.DNSNames {
-				if glob.Glob(allowedName, name) {
-					nameMatched = true
-				}
-			}
-
-			for _, name := range clientCert.EmailAddresses {
-				if glob.Glob(allowedName, name) {
-					nameMatched = true
-				}
+		for _, name := range clientCert.EmailAddresses {
+			if glob.Glob(allowedName, name) {
+				nameMatched = true
 			}
 		}
 	}
