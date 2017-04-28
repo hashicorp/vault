@@ -18,7 +18,6 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	expected := []string{
 		"auth/*",
 		"remount",
-		"revoke-prefix/*",
 		"audit",
 		"audit/*",
 		"raw/*",
@@ -27,6 +26,8 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"rotate",
 		"config/auditing/*",
 		"lease/lookup*",
+		"lease/revoke-prefix/*",
+		"revoke-prefix/*",
 	}
 
 	b := testSystemBackend(t)
