@@ -25,8 +25,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/reindex",
 		"rotate",
 		"config/auditing/*",
-		"lease/lookup*",
-		"lease/revoke-prefix/*",
+		"leases/revoke-prefix/*",
 		"revoke-prefix/*",
 	}
 
@@ -345,7 +344,7 @@ func TestSystemBackend_lease(t *testing.T) {
 	}
 
 	// Read lease
-	req = logical.TestRequest(t, logical.UpdateOperation, "lease/lookup")
+	req = logical.TestRequest(t, logical.UpdateOperation, "leases/lookup")
 	req.Data["lease_id"] = resp.Secret.LeaseID
 	resp, err = b.HandleRequest(req)
 	if err != nil {
@@ -356,7 +355,7 @@ func TestSystemBackend_lease(t *testing.T) {
 	}
 
 	// Invalid lease
-	req = logical.TestRequest(t, logical.UpdateOperation, "lease/lookup")
+	req = logical.TestRequest(t, logical.UpdateOperation, "leases/lookup")
 	req.Data["lease_id"] = "invalid"
 	resp, err = b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
@@ -391,7 +390,7 @@ func TestSystemBackend_lease_list(t *testing.T) {
 	}
 
 	// List lease
-	req = logical.TestRequest(t, logical.ListOperation, "lease/lookup/secret/foo")
+	req = logical.TestRequest(t, logical.ListOperation, "leases/lookup/secret/foo")
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -429,7 +428,7 @@ func TestSystemBackend_lease_list(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.ListOperation, "lease/lookup/secret/foo")
+	req = logical.TestRequest(t, logical.ListOperation, "leases/lookup/secret/foo")
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -468,7 +467,7 @@ func TestSystemBackend_lease_list(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	req = logical.TestRequest(t, logical.ListOperation, "lease/lookup/secret")
+	req = logical.TestRequest(t, logical.ListOperation, "leases/lookup/secret")
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -517,7 +516,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	}
 
 	// Attempt renew
-	req2 := logical.TestRequest(t, logical.UpdateOperation, "lease/renew/"+resp.Secret.LeaseID)
+	req2 := logical.TestRequest(t, logical.UpdateOperation, "leases/renew/"+resp.Secret.LeaseID)
 	resp2, err := b.HandleRequest(req2)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -553,7 +552,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	}
 
 	// Attempt renew
-	req2 = logical.TestRequest(t, logical.UpdateOperation, "lease/renew/"+resp.Secret.LeaseID)
+	req2 = logical.TestRequest(t, logical.UpdateOperation, "leases/renew/"+resp.Secret.LeaseID)
 	resp2, err = b.HandleRequest(req2)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -569,7 +568,7 @@ func TestSystemBackend_renew(t *testing.T) {
 	}
 
 	// Test the other route path
-	req2 = logical.TestRequest(t, logical.UpdateOperation, "lease/renew")
+	req2 = logical.TestRequest(t, logical.UpdateOperation, "leases/renew")
 	req2.Data["lease_id"] = resp.Secret.LeaseID
 	resp2, err = b.HandleRequest(req2)
 	if err != nil {
@@ -607,7 +606,7 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	b := testSystemBackend(t)
 
 	// Attempt renew
-	req := logical.TestRequest(t, logical.UpdateOperation, "lease/renew/foobarbaz")
+	req := logical.TestRequest(t, logical.UpdateOperation, "leases/renew/foobarbaz")
 	resp, err := b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -617,7 +616,7 @@ func TestSystemBackend_renew_invalidID(t *testing.T) {
 	}
 
 	// Attempt renew with other method
-	req = logical.TestRequest(t, logical.UpdateOperation, "lease/renew")
+	req = logical.TestRequest(t, logical.UpdateOperation, "leases/renew")
 	req.Data["lease_id"] = "foobarbaz"
 	resp, err = b.HandleRequest(req)
 	if err != logical.ErrInvalidRequest {
@@ -734,7 +733,7 @@ func TestSystemBackend_revoke(t *testing.T) {
 	}
 
 	// Test the other route path
-	req2 = logical.TestRequest(t, logical.UpdateOperation, "lease/revoke")
+	req2 = logical.TestRequest(t, logical.UpdateOperation, "leases/revoke")
 	req2.Data["lease_id"] = resp.Secret.LeaseID
 	resp2, err = b.HandleRequest(req2)
 	if err != nil {
@@ -749,7 +748,7 @@ func TestSystemBackend_revoke_invalidID(t *testing.T) {
 	b := testSystemBackend(t)
 
 	// Attempt revoke
-	req := logical.TestRequest(t, logical.UpdateOperation, "lease/revoke/foobarbaz")
+	req := logical.TestRequest(t, logical.UpdateOperation, "leases/revoke/foobarbaz")
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -759,7 +758,7 @@ func TestSystemBackend_revoke_invalidID(t *testing.T) {
 	}
 
 	// Attempt revoke with other method
-	req = logical.TestRequest(t, logical.UpdateOperation, "lease/revoke")
+	req = logical.TestRequest(t, logical.UpdateOperation, "leases/revoke")
 	req.Data["lease_id"] = "foobarbaz"
 	resp, err = b.HandleRequest(req)
 	if err != nil {
@@ -823,7 +822,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	}
 
 	// Attempt revoke
-	req2 := logical.TestRequest(t, logical.UpdateOperation, "lease/revoke-prefix/secret/")
+	req2 := logical.TestRequest(t, logical.UpdateOperation, "leases/revoke-prefix/secret/")
 	resp2, err := b.HandleRequest(req2)
 	if err != nil {
 		t.Fatalf("err: %v %#v", err, resp2)
@@ -833,7 +832,7 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	}
 
 	// Attempt renew
-	req3 := logical.TestRequest(t, logical.UpdateOperation, "lease/renew/"+resp.Secret.LeaseID)
+	req3 := logical.TestRequest(t, logical.UpdateOperation, "leases/renew/"+resp.Secret.LeaseID)
 	resp3, err := b.HandleRequest(req3)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
@@ -936,7 +935,7 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "lease/revoke-prefix/auth/github/")
+	req := logical.TestRequest(t, logical.UpdateOperation, "leases/revoke-prefix/auth/github/")
 	resp, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)

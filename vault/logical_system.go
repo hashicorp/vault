@@ -62,8 +62,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
-				"lease/lookup*",
-				"lease/revoke-prefix/*",
+				"leases/revoke-prefix/*",
 				"revoke-prefix/*",
 			},
 
@@ -301,7 +300,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "lease/lookup" + framework.OptionalParamRegex("prefix"),
+				Pattern: "leases/lookup(/)?" + framework.OptionalParamRegex("prefix"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"lease_id": &framework.FieldSchema{
@@ -324,7 +323,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "(lease/)?renew" + framework.OptionalParamRegex("url_lease_id"),
+				Pattern: "(leases/)?renew" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"url_lease_id": &framework.FieldSchema{
@@ -350,7 +349,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "(lease/)?revoke" + framework.OptionalParamRegex("url_lease_id"),
+				Pattern: "(leases/)?revoke" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"url_lease_id": &framework.FieldSchema{
@@ -372,7 +371,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "(lease/)?revoke-force/(?P<prefix>.+)",
+				Pattern: "(leases/)?revoke-force/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -390,7 +389,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "(lease/)?revoke-prefix/(?P<prefix>.+)",
+				Pattern: "(leases/)?revoke-prefix/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -1300,7 +1299,7 @@ func (b *SystemBackend) handleTuneWriteCommon(
 	return nil, nil
 }
 
-// handleLeasse is use to view the metadata for a given LeaseID
+// handleLease is use to view the metadata for a given LeaseID
 func (b *SystemBackend) handleLeaseLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	leaseID := data.Get("lease_id").(string)
@@ -1320,13 +1319,18 @@ func (b *SystemBackend) handleLeaseLookup(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":            leaseID,
-			"creation_time": leaseTimes.IssueTime,
-			"renewable":     leaseTimes.renewable(),
+			"id":                leaseID,
+			"issue_time":        leaseTimes.IssueTime,
+			"expire_time":       nil,
+			"last_renewal_time": nil,
+			"ttl":               int64(0),
 		},
 	}
+	renewable, _ := leaseTimes.renewable()
+	resp.Data["renewable"] = renewable
+
 	if !leaseTimes.LastRenewalTime.IsZero() {
-		resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime
+		resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
 	}
 	if !leaseTimes.ExpireTime.IsZero() {
 		resp.Data["expire_time"] = leaseTimes.ExpireTime
@@ -1338,9 +1342,10 @@ func (b *SystemBackend) handleLeaseLookup(
 func (b *SystemBackend) handleLeaseLookupList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	prefix := data.Get("prefix").(string)
-	if !strings.HasSuffix(prefix, "/") {
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix = prefix + "/"
 	}
+	prefix = strings.TrimPrefix(prefix, "/")
 
 	keys, err := b.Core.expiration.idView.List(prefix)
 	if err != nil {

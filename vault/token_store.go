@@ -1858,6 +1858,7 @@ func (ts *TokenStore) handleLookup(
 			"orphan":           false,
 			"creation_time":    int64(out.CreationTime),
 			"creation_ttl":     int64(out.TTL.Seconds()),
+			"expire_time":      nil,
 			"ttl":              int64(0),
 			"explicit_max_ttl": int64(out.ExplicitMaxTTL.Seconds()),
 		},
@@ -1887,7 +1888,8 @@ func (ts *TokenStore) handleLookup(
 			resp.Data["expire_time"] = leaseTimes.ExpireTime
 			resp.Data["ttl"] = leaseTimes.ttl()
 		}
-		resp.Data["renewable"] = leaseTimes.renewable()
+		renewable, _ := leaseTimes.renewable()
+		resp.Data["renewable"] = renewable
 		resp.Data["issue_time"] = leaseTimes.IssueTime
 	}
 
