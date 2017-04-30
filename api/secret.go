@@ -38,7 +38,7 @@ type Secret struct {
 	// RawSecret is the unparsed response returned by the API. This will be
 	// useful when clients wish to parse the response differently. For example,
 	// to avoid a `\n` from the JSON formatted string.
-	RawSecret []byte
+	RawSecret []byte `json:"raw_secret,omitempty"`
 }
 
 // SecretWrapInfo contains wrapping information if we have it. If what is
