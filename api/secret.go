@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"io"
 	"time"
 
@@ -33,6 +34,11 @@ type Secret struct {
 	// cubbyhole of the given token (which has a TTL of the given number of
 	// seconds)
 	WrapInfo *SecretWrapInfo `json:"wrap_info,omitempty"`
+
+	// RawSecret is the unparsed response returned by the API. This will be
+	// useful when clients wish to parse the response differently. For example,
+	// to avoid a `\n` from the JSON formatted string.
+	RawSecret []byte
 }
 
 // SecretWrapInfo contains wrapping information if we have it. If what is
@@ -58,11 +64,16 @@ type SecretAuth struct {
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.
 func ParseSecret(r io.Reader) (*Secret, error) {
+	var rawBuffer bytes.Buffer
+	secretReader := io.TeeReader(r, &rawBuffer)
+
 	// First decode the JSON into a map[string]interface{}
 	var secret Secret
-	if err := jsonutil.DecodeJSONFromReader(r, &secret); err != nil {
+	if err := jsonutil.DecodeJSONFromReader(secretReader, &secret); err != nil {
 		return nil, err
 	}
+
+	secret.RawSecret = rawBuffer.Bytes()
 
 	return &secret, nil
 }
