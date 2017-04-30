@@ -1159,6 +1159,12 @@
 			"revisionTime": "2017-02-08T17:17:27Z"
 		},
 		{
+			"checksumSHA1": "6JP37UqrI0H80Gpk0Y2P+KXgn5M=",
+			"path": "github.com/ryanuber/go-glob",
+			"revision": "256dc444b735e061061cf46c809487313d5b0065",
+			"revisionTime": "2017-01-28T01:21:29Z"
+		},
+		{
 			"checksumSHA1": "5SYLEhADhdBVZAGPVHWggQl7H8k=",
 			"path": "github.com/samuel/go-zookeeper/zk",
 			"revision": "1d7be4effb13d2d908342d349d71a284a7542693",
