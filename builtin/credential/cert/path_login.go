@@ -335,7 +335,7 @@ func validateConnState(roots *x509.CertPool, cs *tls.ConnectionState) ([][]*x509
 	}
 
 	certs := cs.PeerCertificates
-	if len(certs) == 0 {
+	if certs == nil || len(certs) == 0 {
 		return nil, nil
 	}
 
