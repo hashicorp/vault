@@ -1883,6 +1883,7 @@ func (ts *TokenStore) handleLookup(
 	if leaseTimes != nil {
 		if !leaseTimes.LastRenewalTime.IsZero() {
 			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+			resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
 		}
 		if !leaseTimes.ExpireTime.IsZero() {
 			resp.Data["expire_time"] = leaseTimes.ExpireTime

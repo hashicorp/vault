@@ -309,7 +309,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					},
 					"prefix": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: strings.TrimSpace(sysHelp["lease-list-prefix"][0]),
+						Description: strings.TrimSpace(sysHelp["leases-list-prefix"][0]),
 					},
 				},
 
@@ -318,8 +318,8 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					logical.ListOperation:   b.handleLeaseLookupList,
 				},
 
-				HelpSynopsis:    strings.TrimSpace(sysHelp["lease"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["lease"][1]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["leases"][1]),
 			},
 
 			&framework.Path{
@@ -1319,11 +1319,11 @@ func (b *SystemBackend) handleLeaseLookup(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"id":                leaseID,
-			"issue_time":        leaseTimes.IssueTime,
-			"expire_time":       nil,
-			"last_renewal_time": nil,
-			"ttl":               int64(0),
+			"id":           leaseID,
+			"issue_time":   leaseTimes.IssueTime,
+			"expire_time":  nil,
+			"last_renewal": nil,
+			"ttl":          int64(0),
 		},
 	}
 	renewable, _ := leaseTimes.renewable()
@@ -2511,18 +2511,21 @@ This path responds to the following HTTP methods.
 		`Returns a list of headers that have been configured to be audited.`,
 	},
 
-	"lease": {
-		``,
-		``,
+	"leases": {
+		`View or list lease metadata.`,
+		`
+This path responds to the following HTTP methods.
+
+    PUT /
+        Retrieve the metadata for the provided lease id.
+
+    LIST /<prefix>
+        Lists the leases for the named prefix.
+		`,
 	},
 
-	"lease-list": {
-		``,
-		``,
-	},
-
-	"lease-list-prefix": {
-		`The path to list leases under. Example: "prod/aws/ops"`,
-		`Returns a list of lease ids.`,
+	"leases-list-prefix": {
+		`The path to list leases under. Example: "aws/creds/deploy"`,
+		"",
 	},
 }

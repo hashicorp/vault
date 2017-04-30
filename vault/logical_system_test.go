@@ -317,7 +317,7 @@ func TestSystemBackend_remount_system(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_lease(t *testing.T) {
+func TestSystemBackend_leases(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
@@ -363,7 +363,7 @@ func TestSystemBackend_lease(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_lease_list(t *testing.T) {
+func TestSystemBackend_leases_list(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
 	// Create a key with a lease
@@ -389,6 +389,26 @@ func TestSystemBackend_lease_list(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
+	// List top level
+	req = logical.TestRequest(t, logical.ListOperation, "leases/lookup")
+	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	var keys []string
+	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if len(keys) != 1 {
+		t.Fatalf("Expected 1 subkey lease, got %d: %#v", len(keys), keys)
+	}
+	if keys[0] != "secret/" {
+		t.Fatal("Expected only secret subkey")
+	}
+
 	// List lease
 	req = logical.TestRequest(t, logical.ListOperation, "leases/lookup/secret/foo")
 	resp, err = b.HandleRequest(req)
@@ -398,8 +418,7 @@ func TestSystemBackend_lease_list(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("bad: %#v", resp)
 	}
-
-	var keys []string
+	keys = []string{}
 	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -436,7 +455,7 @@ func TestSystemBackend_lease_list(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("bad: %#v", resp)
 	}
-
+	keys = []string{}
 	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -475,17 +494,16 @@ func TestSystemBackend_lease_list(t *testing.T) {
 	if resp == nil || resp.Data == nil {
 		t.Fatalf("bad: %#v", resp)
 	}
-
-	var keys2 []string
-	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys2); err != nil {
+	keys = []string{}
+	if err := mapstructure.WeakDecode(resp.Data["keys"], &keys); err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(keys2) != 2 {
+	if len(keys) != 2 {
 		t.Fatalf("Expected 2 secret lease, got %d: %#v", len(keys), keys)
 	}
 	expected := []string{"bar/", "foo/"}
-	if !reflect.DeepEqual(expected, keys2) {
-		t.Fatalf("exp: %#v, act: %#v", expected, keys2)
+	if !reflect.DeepEqual(expected, keys) {
+		t.Fatalf("exp: %#v, act: %#v", expected, keys)
 	}
 }
 
