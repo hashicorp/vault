@@ -74,7 +74,7 @@ to specify where the configuration is.
 
     Disabling `mlock` is not recommended unless the systems running Vault only
     use encrypted swap or do not use swap at all. Vault only supports memory
-    locking on UNIX-like systems that support the mlock() syscall (Linux, FreeBSD, etc). 
+    locking on UNIX-like systems that support the mlock() syscall (Linux, FreeBSD, etc).
     Non UNIX-like systems (e.g. Windows, NaCL, Android) lack the primitives to keep a
     process's entire memory address space from spilling to disk and is therefore
     automatically disabled on unsupported platforms.
@@ -99,6 +99,7 @@ to specify where the configuration is.
 
 - `ui` `(bool: false, Enterprise-only)` – Enables the built-in web UI. Once
   enabled, the UI will be available to browsers at the standard Vault address.
+  This UI will be available on all listeners (address + port) at the `/ui` path.
   This can also be provided via the environment variable `VAULT_UI`.
 
 [storage-backend]: /docs/configuration/storage/index.html
