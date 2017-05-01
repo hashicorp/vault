@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	respErrEmptyPluginName = logical.ErrorResponse("empty plugin name")
-	respErrEmptyName       = logical.ErrorResponse("empty name attribute given")
+	respErrEmptyPluginName = "empty plugin name"
+	respErrEmptyName       = "empty name attribute given"
 )
 
 // DatabaseConfig is used by the Factory function to configure a Database
@@ -51,7 +51,7 @@ func (b *databaseBackend) pathConnectionReset() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
-			return respErrEmptyName, nil
+			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
 		// Grab the mutex lock
@@ -120,7 +120,7 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
-			return respErrEmptyName, nil
+			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
 		entry, err := req.Storage.Get(fmt.Sprintf("config/%s", name))
@@ -146,7 +146,7 @@ func (b *databaseBackend) connectionDeleteHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
 		if name == "" {
-			return respErrEmptyName, nil
+			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
 		err := req.Storage.Delete(fmt.Sprintf("config/%s", name))
@@ -176,12 +176,12 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		pluginName := data.Get("plugin_name").(string)
 		if pluginName == "" {
-			return respErrEmptyPluginName, nil
+			return logical.ErrorResponse(respErrEmptyPluginName), nil
 		}
 
 		name := data.Get("name").(string)
 		if name == "" {
-			return respErrEmptyName, nil
+			return logical.ErrorResponse(respErrEmptyName), nil
 		}
 
 		verifyConnection := data.Get("verify_connection").(bool)
