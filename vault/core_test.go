@@ -249,6 +249,31 @@ func TestCore_Unseal_DataVersion(t *testing.T) {
 	}
 }
 
+func TestCore_Unseal_DataVersion_Override(t *testing.T) {
+	version.Version = "0.6.0"
+	c, keys, _ := TestCoreDataVersion(t, "0.7.0")
+
+	err := c.physical.Delete(coreDataVersionPath)
+	if err != nil {
+		t.Fatalf("cannot delete %s: %s", coreDataVersionPath, err)
+	}
+
+	for _, key := range keys {
+		_, err := TestCoreUnseal(c, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	sealed, err := c.Sealed()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if sealed {
+		t.Fatalf("should not be sealed")
+	}
+}
+
 func TestCore_Unseal_DataVersion_EntTag(t *testing.T) {
 	// Ignore version pre-release
 	version.VersionPrerelease = ""
