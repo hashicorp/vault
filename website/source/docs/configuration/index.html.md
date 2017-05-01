@@ -97,10 +97,10 @@ to specify where the configuration is.
   duration for tokens and secrets. This is specified using a label
   suffix like `"30s"` or `"1h"`.
 
-- `ui` `(bool: false, Enterprise-only)` – Enables the built-in web UI. Once
-  enabled, the UI will be available to browsers at the standard Vault address.
-  This UI will be available on all listeners (address + port) at the `/ui` path.
-  This can also be provided via the environment variable `VAULT_UI`.
+- `ui` `(bool: false, Enterprise-only)` – Enables the built-in web UI, which is
+  available on all listeners (address + port) at the `/ui` path. Browsers accessing
+  the standard Vault API address will automatically redirect there. This can also
+  be provided via the environment variable `VAULT_UI`.
 
 [storage-backend]: /docs/configuration/storage/index.html
 [listener]: /docs/configuration/listener/index.html
