@@ -97,7 +97,7 @@ func CreateClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 
 // WrapServerConfig is used to create a server certificate and private key, then
 // wrap them in an unwrap token for later retrieval by the plugin.
-func WrapServerConfig(sys Wrapper, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
+func WrapServerConfig(sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
 	rawKey, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
 		return "", err

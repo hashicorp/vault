@@ -19,15 +19,15 @@ type Looker interface {
 // Wrapper interface defines the functions needed by the runner to wrap the
 // metadata needed to run a plugin process. This includes looking up Mlock
 // configuration and wrapping data in a respose wrapped token.
-type Wrapper interface {
+type RunnerUtil interface {
 	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
 	MlockEnabled() bool
 }
 
 // LookWrapper defines the functions for both Looker and Wrapper
-type LookWrapper interface {
+type LookRunnerUtil interface {
 	Looker
-	Wrapper
+	RunnerUtil
 }
 
 // PluginRunner defines the metadata needed to run a plugin securely with
@@ -43,7 +43,7 @@ type PluginRunner struct {
 
 // Run takes a wrapper instance, and the go-plugin paramaters and executes a
 // plugin.
-func (r *PluginRunner) Run(wrapper Wrapper, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string) (*plugin.Client, error) {
+func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string) (*plugin.Client, error) {
 	// Get a CA TLS Certificate
 	certBytes, key, err := GenerateCert()
 	if err != nil {
