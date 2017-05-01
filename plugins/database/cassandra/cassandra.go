@@ -1,11 +1,11 @@
 package cassandra
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"github.com/gocql/gocql"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
@@ -14,16 +14,18 @@ import (
 )
 
 const (
-	defaultCreationCQL = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;`
-	defaultRollbackCQL = `DROP USER '{{username}}';`
-	cassandraTypeName  = "cassandra"
+	defaultUserCreationCQL = `CREATE USER '{{username}}' WITH PASSWORD '{{password}}' NOSUPERUSER;`
+	defaultUserDeletionCQL = `DROP USER '{{username}}';`
+	cassandraTypeName      = "cassandra"
 )
 
+// Cassandra is an implementation of Database interface
 type Cassandra struct {
 	connutil.ConnectionProducer
 	credsutil.CredentialsProducer
 }
 
+// New returns a new Cassandra instance
 func New() (interface{}, error) {
 	connProducer := &connutil.CassandraConnectionProducer{}
 	connProducer.Type = cassandraTypeName
@@ -38,7 +40,7 @@ func New() (interface{}, error) {
 	return dbType, nil
 }
 
-// Run instantiates a MySQL object, and runs the RPC server for the plugin
+// Run instantiates a Cassandra object, and runs the RPC server for the plugin
 func Run() error {
 	dbType, err := New()
 	if err != nil {
@@ -50,6 +52,7 @@ func Run() error {
 	return nil
 }
 
+// Type returns the TypeName for this backend
 func (c *Cassandra) Type() (string, error) {
 	return cassandraTypeName, nil
 }
@@ -63,6 +66,8 @@ func (c *Cassandra) getConnection() (*gocql.Session, error) {
 	return session.(*gocql.Session), nil
 }
 
+// CreateUser generates the username/password on the underlying Cassandra secret backend as instructed by
+// the CreationStatement provided.
 func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	c.Lock()
@@ -76,11 +81,11 @@ func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernamePrefix st
 
 	creationCQL := statements.CreationStatements
 	if creationCQL == "" {
-		creationCQL = defaultCreationCQL
+		creationCQL = defaultUserCreationCQL
 	}
 	rollbackCQL := statements.RollbackStatements
 	if rollbackCQL == "" {
-		rollbackCQL = defaultRollbackCQL
+		rollbackCQL = defaultUserDeletionCQL
 	}
 
 	username, err = c.GenerateUsername(usernamePrefix)
@@ -113,7 +118,6 @@ func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernamePrefix st
 
 				session.Query(dbutil.QueryHelper(query, map[string]string{
 					"username": username,
-					"password": password,
 				})).Exec()
 			}
 			return "", "", err
@@ -123,11 +127,13 @@ func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernamePrefix st
 	return username, password, nil
 }
 
+// RenewUser is not supported on Cassandra, so this is a no-op.
 func (c *Cassandra) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
 	return nil
 }
 
+// RevokeUser attempts to drop the specified user.
 func (c *Cassandra) RevokeUser(statements dbplugin.Statements, username string) error {
 	// Grab the lock
 	c.Lock()
@@ -138,10 +144,24 @@ func (c *Cassandra) RevokeUser(statements dbplugin.Statements, username string) 
 		return err
 	}
 
-	err = session.Query(fmt.Sprintf("DROP USER '%s'", username)).Exec()
-	if err != nil {
-		return fmt.Errorf("error removing user '%s': %s", username, err)
+	revocationCQL := statements.RevocationStatements
+	if revocationCQL == "" {
+		revocationCQL = defaultUserDeletionCQL
 	}
 
-	return nil
+	var result *multierror.Error
+	for _, query := range strutil.ParseArbitraryStringSlice(revocationCQL, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+
+		err := session.Query(dbutil.QueryHelper(query, map[string]string{
+			"username": username,
+		})).Exec()
+
+		result = multierror.Append(result, err)
+	}
+
+	return result.ErrorOrNil()
 }
