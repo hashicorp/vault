@@ -21,8 +21,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
- * auth/cert: Support for constraints on subject common name, DNS names and
-   Email addresses in the certificate [GH-2595]
+ * auth/cert: Support for constraints on subject Common Name and DNS/email
+   Subject Alternate Names in certificates [GH-2595]
  * auth/ldap: Use the binding credentials to search group membership rather
    than the user credentials [GH-2534]
  * cli/revoke: Add `-self` option to allow revoking the currently active token
