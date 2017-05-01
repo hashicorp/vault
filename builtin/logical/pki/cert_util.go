@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/ryanuber/go-glob"
 )
 
 type certExtKeyUsage int
@@ -361,6 +362,13 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 						valid = true
 						break
 					}
+				}
+
+				if role.AllowGlobDomains &&
+					strings.Contains(currDomain, "*") &&
+					glob.Glob(currDomain, name) {
+					valid = true
+					break
 				}
 			}
 			if valid {
