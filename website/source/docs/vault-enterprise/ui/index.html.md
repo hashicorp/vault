@@ -14,8 +14,8 @@ Vault Enterprise features a user interface for interacting with Vault. Easily
 create, read, update, and delete secrets, authenticate, unseal, and more with
 the Vault Enterprise UI.
 
-To use the UI, you must have an active or trial Vault Enterprise or Vault Pro
-trial. To start a trial, contact [HashiCorp sales](mailto:sales@hashicorp.com).
+To use the UI, you must have an active or trial license for  Vault Enterprise or
+Vault Pro. To start a trial, contact [HashiCorp sales](mailto:sales@hashicorp.com).
 
 ## Activating the Vault UI
 
