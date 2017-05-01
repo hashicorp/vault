@@ -122,6 +122,26 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 	if err := testCredsExist(t, connURL, username, password); err == nil {
 		t.Fatal("Credentials were not revoked")
 	}
+
+	username, password, err = db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err = testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	// Test custom revoke statememt
+	statements.RevocationStatements = testMSSQLDrop
+	err = db.RevokeUser(statements, username)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := testCredsExist(t, connURL, username, password); err == nil {
+		t.Fatal("Credentials were not revoked")
+	}
 }
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
@@ -140,3 +160,8 @@ const testMSSQLRole = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 CREATE USER [{{name}}] FOR LOGIN [{{name}}];
 GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{{name}}];`
+
+const testMSSQLDrop = `
+DROP USER [{{name}}];
+DROP LOGIN [{{name}}];
+`
