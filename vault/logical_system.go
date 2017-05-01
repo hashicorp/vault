@@ -64,6 +64,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"config/auditing/*",
 				"leases/revoke-prefix/*",
 				"revoke-prefix/*",
+				"leases/lookup/*",
 			},
 
 			Unauthenticated: []string{
@@ -300,13 +301,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "leases/lookup(/)?" + framework.OptionalParamRegex("prefix"),
+				Pattern: "leases/lookup/(?P<prefix>.+?)?",
 
 				Fields: map[string]*framework.FieldSchema{
-					"lease_id": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
-					},
 					"prefix": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["leases-list-prefix"][0]),
@@ -314,8 +311,25 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handleLeaseLookupList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["leases"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "leases/lookup",
+
+				Fields: map[string]*framework.FieldSchema{
+					"lease_id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.handleLeaseLookup,
-					logical.ListOperation:   b.handleLeaseLookupList,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
@@ -1345,7 +1359,6 @@ func (b *SystemBackend) handleLeaseLookupList(
 	if prefix != "" && !strings.HasSuffix(prefix, "/") {
 		prefix = prefix + "/"
 	}
-	prefix = strings.TrimPrefix(prefix, "/")
 
 	keys, err := b.Core.expiration.idView.List(prefix)
 	if err != nil {

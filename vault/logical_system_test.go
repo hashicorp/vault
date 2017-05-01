@@ -27,6 +27,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"config/auditing/*",
 		"leases/revoke-prefix/*",
 		"revoke-prefix/*",
+		"leases/lookup/*",
 	}
 
 	b := testSystemBackend(t)
@@ -390,7 +391,7 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	}
 
 	// List top level
-	req = logical.TestRequest(t, logical.ListOperation, "leases/lookup")
+	req = logical.TestRequest(t, logical.ListOperation, "leases/lookup/")
 	resp, err = b.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
