@@ -444,7 +444,7 @@ func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
 		result.CSRBytes = pemBlock.Bytes
 		result.CSR, err = x509.ParseCertificateRequest(result.CSRBytes)
 		if err != nil {
-			return nil, errutil.UserError{"Error encountered parsing certificate bytes from raw bundle"}
+			return nil, errutil.UserError{fmt.Sprintf("Error encountered parsing certificate bytes from raw bundle: %v", err)}
 		}
 	}
 

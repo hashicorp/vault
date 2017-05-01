@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -84,7 +83,7 @@ func (c *Client) call(endpoint, method string, request, response interface{}) er
 	var url = "https://" + c.org + "." + c.Url + "/api/v1/" + endpoint
 	req, err := http.NewRequest(method, url, bytes.NewBuffer(data))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	req.Header.Add("Accept", `application/json`)
@@ -95,19 +94,19 @@ func (c *Client) call(endpoint, method string, request, response interface{}) er
 
 	resp, err := c.client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	if resp.StatusCode == http.StatusOK {
 		err := json.Unmarshal(body, &response)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	} else {
 		var errors ErrorResponse
