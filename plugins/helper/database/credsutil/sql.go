@@ -21,7 +21,7 @@ func (scp *SQLCredentialsProducer) GenerateUsername(displayName string) (string,
 	if err != nil {
 		return "", err
 	}
-	username := fmt.Sprintf("%s-%s", displayName, userUUID)
+	username := fmt.Sprintf("v-%s-%s", displayName, userUUID)
 	if scp.UsernameLen > 0 && len(username) > scp.UsernameLen {
 		username = username[:scp.UsernameLen]
 	}
