@@ -33,6 +33,61 @@ func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *Expi
 	return c, ts.expiration
 }
 
+func TestExpiration_Tidy(t *testing.T) {
+	exp := mockExpiration(t)
+
+	// Set up a count function to calculate number of leases
+	count := 0
+	countFunc := func(leaseID string) {
+		count++
+	}
+
+	// Scan the storage with the count func set
+	if err := logical.ScanView(exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that there are no leases to begin with
+	if count != 0 {
+		t.Fatalf("bad: lease count; expected:0 actual:%d", count)
+	}
+
+	// Create a lease entry without a client token in it
+	le := &leaseEntry{
+		LeaseID: "lease/with/no/client/token",
+		Path:    "foo/bar",
+	}
+
+	// Persist the invalid lease entry
+	if err := exp.persistEntry(le); err != nil {
+		t.Fatalf("error persisting entry: %v", err)
+	}
+
+	count = 0
+	if err := logical.ScanView(exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that the storage was successful and that the count of leases is
+	// now 1
+	if count != 1 {
+		t.Fatalf("bad: lease count; expected:1 actual:%d", count)
+	}
+
+	// Run the tidy operation
+	err := exp.Tidy()
+
+	count = 0
+	if err := logical.ScanView(exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Post the tidy operation, the invalid lease entry should have been gone
+	if count != 0 {
+		t.Fatalf("bad: lease count; expected:0 actual:%d", count)
+	}
+}
+
 func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
 	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
