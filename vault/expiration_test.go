@@ -78,6 +78,9 @@ func TestExpiration_Tidy(t *testing.T) {
 
 	// Run the tidy operation
 	err = exp.Tidy()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	count = 0
 	if err := logical.ScanView(exp.idView, countFunc); err != nil {
@@ -110,10 +113,18 @@ func TestExpiration_Tidy(t *testing.T) {
 
 	// Run the tidy operation
 	err = exp.Tidy()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	count = 0
 	if err = logical.ScanView(exp.idView, countFunc); err != nil {
 		t.Fatal(err)
+	}
+
+	// Post the tidy operation, the invalid lease entry should have been gone
+	if count != 0 {
+		t.Fatalf("bad: lease count; expected:0 actual:%d", count)
 	}
 
 	// Attach an invalid token with 2 leases
@@ -128,10 +139,78 @@ func TestExpiration_Tidy(t *testing.T) {
 
 	// Run the tidy operation
 	err = exp.Tidy()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	count = 0
 	if err = logical.ScanView(exp.idView, countFunc); err != nil {
 		t.Fatal(err)
+	}
+
+	// Post the tidy operation, the invalid lease entry should have been gone
+	if count != 0 {
+		t.Fatalf("bad: lease count; expected:0 actual:%d", count)
+	}
+
+	for i := 0; i < 1000; i++ {
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "invalid/lease/" + fmt.Sprintf("%d", i+1),
+		}
+		resp := &logical.Response{
+			Secret: &logical.Secret{
+				LeaseOptions: logical.LeaseOptions{
+					TTL: 100 * time.Millisecond,
+				},
+			},
+			Data: map[string]interface{}{
+				"test_key": "test_value",
+			},
+		}
+		_, err := exp.Register(req, resp)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+	}
+
+	count = 0
+	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that there are 1000 leases now
+	if count != 1000 {
+		t.Fatalf("bad: lease count; expected:1000 actual:%d", count)
+	}
+
+	errCh1 := make(chan error)
+	errCh2 := make(chan error)
+
+	// Initiate tidy of the above 1000 invalid leases in quick succession. Only
+	// one tidy operation can be in flight at any time. One of these requests
+	// should error out.
+	go func() {
+		errCh1 <- exp.Tidy()
+	}()
+
+	go func() {
+		errCh2 <- exp.Tidy()
+	}()
+
+	var err1, err2 error
+
+	for i := 0; i < 2; i++ {
+		select {
+		case err1 = <-errCh1:
+			fmt.Printf("err1 received: %#v\n", err1)
+		case err2 = <-errCh2:
+			fmt.Printf("err2 received: %#v\n", err2)
+		}
+	}
+
+	if err1 == nil && err2 == nil {
+		t.Fatal("expected error")
 	}
 }
 
