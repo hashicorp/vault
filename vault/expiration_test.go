@@ -115,6 +115,24 @@ func TestExpiration_Tidy(t *testing.T) {
 	if err = logical.ScanView(exp.idView, countFunc); err != nil {
 		t.Fatal(err)
 	}
+
+	// Attach an invalid token with 2 leases
+	if err = exp.persistEntry(le); err != nil {
+		t.Fatalf("error persisting entry: %v", err)
+	}
+
+	le.LeaseID = "another/invalid/lease"
+	if err = exp.persistEntry(le); err != nil {
+		t.Fatalf("error persisting entry: %v", err)
+	}
+
+	// Run the tidy operation
+	err = exp.Tidy()
+
+	count = 0
+	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
