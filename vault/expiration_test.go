@@ -155,8 +155,9 @@ func TestExpiration_Tidy(t *testing.T) {
 
 	for i := 0; i < 1000; i++ {
 		req := &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      "invalid/lease/" + fmt.Sprintf("%d", i+1),
+			Operation:   logical.ReadOperation,
+			Path:        "invalid/lease/" + fmt.Sprintf("%d", i+1),
+			ClientToken: "invalidtoken",
 		}
 		resp := &logical.Response{
 			Secret: &logical.Secret{
@@ -203,14 +204,13 @@ func TestExpiration_Tidy(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		select {
 		case err1 = <-errCh1:
-			fmt.Printf("err1 received: %#v\n", err1)
 		case err2 = <-errCh2:
-			fmt.Printf("err2 received: %#v\n", err2)
 		}
 	}
 
-	if err1 == nil && err2 == nil {
-		t.Fatal("expected error")
+	if !(err1 != nil && err1.Error() == "tidy operation on leases is already in progress") &&
+		!(err2 != nil && err2.Error() == "tidy operation on leases is already in progress") {
+		t.Fatal("expected at least one of err1 or err2 to be set; err1: %#v\n err2:%#v\n", err1, err2)
 	}
 }
 
