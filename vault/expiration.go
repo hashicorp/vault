@@ -153,8 +153,7 @@ func (m *ExpirationManager) Tidy() error {
 			return
 		}
 
-		var isValid bool
-		var ok bool
+		var isValid, ok bool
 		revokeLease := false
 		if le.ClientToken == "" {
 			m.logger.Debug("expiration: lease has an empty token", "lease_id", leaseID)
