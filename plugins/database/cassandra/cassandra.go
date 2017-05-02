@@ -6,8 +6,10 @@ import (
 
 	"github.com/gocql/gocql"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
@@ -41,13 +43,13 @@ func New() (interface{}, error) {
 }
 
 // Run instantiates a Cassandra object, and runs the RPC server for the plugin
-func Run() error {
+func Run(apiTLSConfig *api.TLSConfig) error {
 	dbType, err := New()
 	if err != nil {
 		return err
 	}
 
-	dbplugin.NewPluginServer(dbType.(*Cassandra))
+	plugins.Serve(dbType.(*Cassandra), apiTLSConfig)
 
 	return nil
 }

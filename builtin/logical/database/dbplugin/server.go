@@ -1,16 +1,15 @@
 package dbplugin
 
 import (
-	"fmt"
+	"crypto/tls"
 
 	"github.com/hashicorp/go-plugin"
-	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
 // Serve is called from within a plugin and wraps the provided
 // Database implementation in a databasePluginRPCServer object and starts a
 // RPC server.
-func Serve(db Database) {
+func Serve(db Database, tlsProvider func() (*tls.Config, error)) {
 	dbPlugin := &DatabasePlugin{
 		impl: db,
 	}
@@ -20,16 +19,10 @@ func Serve(db Database) {
 		"database": dbPlugin,
 	}
 
-	err := pluginutil.OptionallyEnableMlock()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
-		TLSProvider:     pluginutil.VaultPluginTLSProvider,
+		TLSProvider:     tlsProvider,
 	})
 }
 

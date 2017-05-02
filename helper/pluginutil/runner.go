@@ -2,11 +2,13 @@ package pluginutil
 
 import (
 	"crypto/sha256"
+	"flag"
 	"fmt"
 	"os/exec"
 	"time"
 
 	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/wrapping"
 )
 
@@ -86,4 +88,44 @@ func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugi
 	})
 
 	return client, nil
+}
+
+type APIClientMeta struct {
+	// These are set by the command line flags.
+	flagCACert     string
+	flagCAPath     string
+	flagClientCert string
+	flagClientKey  string
+	flagInsecure   bool
+}
+
+func (f *APIClientMeta) FlagSet() *flag.FlagSet {
+	fs := flag.NewFlagSet("tls settings", flag.ContinueOnError)
+
+	fs.StringVar(&f.flagCACert, "ca-cert", "", "")
+	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
+	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
+	fs.StringVar(&f.flagClientKey, "client-key", "", "")
+	fs.BoolVar(&f.flagInsecure, "insecure", false, "")
+	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
+
+	return fs
+}
+
+func (f *APIClientMeta) GetTLSConfig() *api.TLSConfig {
+	// If we need custom TLS configuration, then set it
+	if f.flagCACert != "" || f.flagCAPath != "" || f.flagClientCert != "" || f.flagClientKey != "" || f.flagInsecure {
+		t := &api.TLSConfig{
+			CACert:        f.flagCACert,
+			CAPath:        f.flagCAPath,
+			ClientCert:    f.flagClientCert,
+			ClientKey:     f.flagClientKey,
+			TLSServerName: "",
+			Insecure:      f.flagInsecure,
+		}
+
+		return t
+	}
+
+	return nil
 }

@@ -6,8 +6,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
@@ -35,13 +37,13 @@ func New() (interface{}, error) {
 }
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
-func Run() error {
+func Run(apiTLSConfig *api.TLSConfig) error {
 	dbType, err := New()
 	if err != nil {
 		return err
 	}
 
-	dbplugin.Serve(dbType.(*PostgreSQL))
+	plugins.Serve(dbType.(*PostgreSQL), apiTLSConfig)
 
 	return nil
 }
