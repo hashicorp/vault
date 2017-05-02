@@ -104,7 +104,7 @@ func TestAppRole_RoleConstraints(t *testing.T) {
 	roleData["bind_secret_id"] = false
 	resp, err = b.HandleRequest(roleReq)
 	if resp != nil && resp.IsError() {
-		t.Fatalf("resp:%#v", err, resp)
+		t.Fatalf("err:%v, resp:%#v", err, resp)
 	}
 	if err == nil {
 		t.Fatalf("expected an error")
@@ -433,7 +433,7 @@ func TestAppRole_RoleSecretIDAccessorReadDelete(t *testing.T) {
 	hmacReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(hmacReq)
 	if resp != nil && resp.IsError() {
-		t.Fatalf("error response:%#v", err, resp)
+		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 	if err == nil {
 		t.Fatalf("expected an error")

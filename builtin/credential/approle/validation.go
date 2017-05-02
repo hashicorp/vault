@@ -352,7 +352,7 @@ func (b *backend) nonLockedSecretIDStorageEntry(s logical.Storage, roleNameHMAC,
 
 	if persistNeeded {
 		if err := b.nonLockedSetSecretIDStorageEntry(s, roleNameHMAC, secretIDHMAC, &result); err != nil {
-			return nil, fmt.Errorf("failed to upgrade role storage entry", err)
+			return nil, fmt.Errorf("failed to upgrade role storage entry %s", err)
 		}
 	}
 
