@@ -188,17 +188,20 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 	var err error
 	var certEntry *logical.StorageEntry
 
+	hyphenSerial := strings.Replace(strings.ToLower(serial), ":", "-", -1)
+	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
+
 	switch {
 	// Revoked goes first as otherwise ca/crl get hardcoded paths which fail if
 	// we actually want revocation info
 	case strings.HasPrefix(prefix, "revoked/"):
-		path = "revoked/" + strings.Replace(strings.ToLower(serial), ":", "-", -1)
+		path = "revoked/" + hyphenSerial
 	case serial == "ca":
 		path = "ca"
 	case serial == "crl":
 		path = "crl"
 	default:
-		path = "certs/" + strings.Replace(strings.ToLower(serial), ":", "-", -1)
+		path = "certs/" + hyphenSerial
 	}
 
 	certEntry, err = req.Storage.Get(path)
@@ -223,9 +226,9 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 	// If we get here we need to check for old-style paths using colons
 	switch {
 	case strings.HasPrefix(prefix, "revoked/"):
-		path = "revoked/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		path = "revoked/" + colonSerial
 	default:
-		path = "certs/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		path = "certs/" + colonSerial
 	}
 
 	certEntry, err = req.Storage.Get(path)
