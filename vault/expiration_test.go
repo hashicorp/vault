@@ -212,6 +212,24 @@ func TestExpiration_Tidy(t *testing.T) {
 		!(err2 != nil && err2.Error() == "tidy operation on leases is already in progress") {
 		t.Fatal("expected at least one of err1 or err2 to be set; err1: %#v\n err2:%#v\n", err1, err2)
 	}
+
+	root, err := exp.tokenStore.rootToken()
+	le.ClientToken = root.ID
+
+	// Attach a valid token with the leases
+	if err = exp.persistEntry(le); err != nil {
+		t.Fatalf("error persisting entry: %v", err)
+	}
+
+	count = 0
+	if err = logical.ScanView(exp.idView, countFunc); err != nil {
+		t.Fatal(err)
+	}
+
+	// Post the tidy operation, the valid lease entry should not get affected
+	if count != 1 {
+		t.Fatalf("bad: lease count; expected:1 actual:%d", count)
+	}
 }
 
 func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
