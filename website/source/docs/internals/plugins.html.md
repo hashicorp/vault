@@ -33,7 +33,7 @@ unwrapped, it provides the plugin with a unique generated TLS certificate and
 private key for it to use to talk to the original vault process. 
 
 ## Plugin Registration
-An important aspect of Vault's plugin system is designed to ensure the plugin
+An important consideration of Vault's plugin system is to ensure the plugin
 invoked by vault is authentic and maintains integrity. There are two components
 that a Vault operator needs to configure before external plugins can be run.
 
@@ -52,16 +52,18 @@ between the time of the SHA check and the time of plugin execution.
 ### Plugin Catalog
 The plugin catalog is Vault's list of approved plugins. The catalog is stored in
 Vault's barrier and can only be updated by a vault user with sudo permissions.
-Upon adding a new plugin the SHA256 sum of the executable and the command that
-should be used to run the plugin must be provided. The catalog will make sure
-the executable referenced in the command exists in the plugin directory. When
-added to the catalog the plugin is not automatically executed, it instead
-becomes visible to backends and can be executed by them. 
+Upon adding a new plugin the plugin name, SHA256 sum of the executable, and the
+command that should be used to run the plugin must be provided. The catalog will
+make sure the executable referenced in the command exists in the plugin
+directory. When added to the catalog the plugin is not automatically executed,
+it instead becomes visible to backends and can be executed by them. 
 
 ### Plugin Execution
-When a backend executes a plugin it first checks the executable's SHA256 sum
-against the one configured in the plugin catalog. Like Vault, plugins support
-the use of mlock when availible.
+When a backend wants to run a plugin, it first looks up the plugin, by name, in
+the catalog. It then checks the executable's SHA256 sum against the one
+configured in the plugin catalog. Finally vault runs the command configured in
+the catalog, sending along the JWT formatted response wrapping token and mlock
+settings (like Vault, plugins support the use of mlock when availible).
 
 # Plugin Development
 Because Vault communicates to plugins over a RPC interface, you can build and

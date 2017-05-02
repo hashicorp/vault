@@ -34,7 +34,7 @@ func New() (interface{}, error) {
 	return dbType, nil
 }
 
-// Run instatiates a PostgreSQL object, and runs the RPC server for the plugin
+// Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
 func Run() error {
 	dbType, err := New()
 	if err != nil {
