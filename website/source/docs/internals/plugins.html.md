@@ -35,7 +35,8 @@ private key for it to use to talk to the original vault process.
 ## Plugin Registration
 An important consideration of Vault's plugin system is to ensure the plugin
 invoked by vault is authentic and maintains integrity. There are two components
-that a Vault operator needs to configure before external plugins can be run.
+that a Vault operator needs to configure before external plugins can be run, the
+plugin directory and the plugin catalog entry.
 
 ### Plugin Directory
 The plugin directory is a configuration option of Vault, and can be specified in
@@ -52,7 +53,7 @@ between the time of the SHA check and the time of plugin execution.
 ### Plugin Catalog
 The plugin catalog is Vault's list of approved plugins. The catalog is stored in
 Vault's barrier and can only be updated by a vault user with sudo permissions.
-Upon adding a new plugin the plugin name, SHA256 sum of the executable, and the
+Upon adding a new plugin, the plugin name, SHA256 sum of the executable, and the
 command that should be used to run the plugin must be provided. The catalog will
 make sure the executable referenced in the command exists in the plugin
 directory. When added to the catalog the plugin is not automatically executed,
