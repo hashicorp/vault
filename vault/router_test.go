@@ -95,7 +95,7 @@ func TestRouter_Mount(t *testing.T) {
 	}
 
 	if v := r.MatchingStorageView("prod/aws/foo"); v != view {
-		t.Fatalf("bad: %s", v)
+		t.Fatalf("bad: %v", v)
 	}
 
 	if path := r.MatchingMount("stage/aws/foo"); path != "" {
@@ -103,7 +103,7 @@ func TestRouter_Mount(t *testing.T) {
 	}
 
 	if v := r.MatchingStorageView("stage/aws/foo"); v != nil {
-		t.Fatalf("bad: %s", v)
+		t.Fatalf("bad: %v", v)
 	}
 
 	mount, prefix, ok := r.MatchingStoragePrefix("logical/foo")

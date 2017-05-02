@@ -400,7 +400,7 @@ func (c *ConfigEntry) DialLDAP() (*ldap.Conn, error) {
 			}
 			conn, err = ldap.DialTLS("tcp", net.JoinHostPort(host, port), tlsConfig)
 		default:
-			retErr = multierror.Append(retErr, fmt.Errorf("invalid LDAP scheme in url %q"))
+			retErr = multierror.Append(retErr, fmt.Errorf("invalid LDAP scheme in url %q", net.JoinHostPort(host, port)))
 			continue
 		}
 		if err == nil {
