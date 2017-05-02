@@ -25,7 +25,7 @@ func Serve(plugin interface{}, tlsConfig *api.TLSConfig) {
 	case dbplugin.Database:
 		dbplugin.Serve(p, tlsProvider)
 	default:
-		fmt.Println("Unsuported plugin type")
+		fmt.Println("Unsupported plugin type")
 	}
 
 }

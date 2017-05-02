@@ -106,7 +106,6 @@ func (f *APIClientMeta) FlagSet() *flag.FlagSet {
 	fs.StringVar(&f.flagCAPath, "ca-path", "", "")
 	fs.StringVar(&f.flagClientCert, "client-cert", "", "")
 	fs.StringVar(&f.flagClientKey, "client-key", "", "")
-	fs.BoolVar(&f.flagInsecure, "insecure", false, "")
 	fs.BoolVar(&f.flagInsecure, "tls-skip-verify", false, "")
 
 	return fs
