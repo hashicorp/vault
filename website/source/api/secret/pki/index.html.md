@@ -490,7 +490,7 @@ based on the role named in the endpoint. The issuing CA certificate is returned
 as well, so that only the root CA need be in a client's trust store.
 
 **The private key is _not_ stored. If you do not save the private key, you will
-**need to request a new certificate.**
+need to request a new certificate.**
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
