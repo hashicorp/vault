@@ -41,7 +41,7 @@ func Run() error {
 		return err
 	}
 
-	dbplugin.NewPluginServer(dbType.(*PostgreSQL))
+	dbplugin.Serve(dbType.(*PostgreSQL))
 
 	return nil
 }

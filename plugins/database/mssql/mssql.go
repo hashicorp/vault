@@ -45,7 +45,7 @@ func Run() error {
 		return err
 	}
 
-	dbplugin.NewPluginServer(dbType.(*MSSQL))
+	dbplugin.Serve(dbType.(*MSSQL))
 
 	return nil
 }

@@ -7,10 +7,10 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 )
 
-// NewPluginServer is called from within a plugin and wraps the provided
+// Serve is called from within a plugin and wraps the provided
 // Database implementation in a databasePluginRPCServer object and starts a
 // RPC server.
-func NewPluginServer(db Database) {
+func Serve(db Database) {
 	dbPlugin := &DatabasePlugin{
 		impl: db,
 	}

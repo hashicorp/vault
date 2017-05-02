@@ -48,7 +48,7 @@ func Run() error {
 		return err
 	}
 
-	dbplugin.NewPluginServer(dbType.(*MySQL))
+	dbplugin.Serve(dbType.(*MySQL))
 
 	return nil
 }
