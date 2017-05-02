@@ -790,7 +790,6 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	c1.redirectAddr = coreConfig.RedirectAddr
 
 	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
@@ -800,7 +799,6 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	c2.redirectAddr = coreConfig.RedirectAddr
 
 	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
@@ -810,7 +808,6 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	c2.redirectAddr = coreConfig.RedirectAddr
 
 	//
 	// Clustering setup
