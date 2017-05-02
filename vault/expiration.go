@@ -153,13 +153,16 @@ func (m *ExpirationManager) Tidy() error {
 			return
 		}
 
+		var isValid bool
+		var ok bool
 		revokeLease := false
 		if le.ClientToken == "" {
 			m.logger.Debug("expiration: lease has an empty token", "lease_id", leaseID)
 			revokeLease = true
+			goto REVOKE_CHECK
 		}
 
-		isValid, ok := tokenCache[le.ClientToken]
+		isValid, ok = tokenCache[le.ClientToken]
 		if !ok {
 			saltedID := m.tokenStore.SaltID(le.ClientToken)
 			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
@@ -188,6 +191,7 @@ func (m *ExpirationManager) Tidy() error {
 			}
 		}
 
+	REVOKE_CHECK:
 		if revokeLease {
 			m.logger.Debug("expiration: invalid lease is being revoked", "lease_id", leaseID)
 			// Force the revocation and skip going through the token store
