@@ -54,5 +54,5 @@ The full list of configurable options can be seen in the [MySQL database
 plugin API](/api/secret/database/mysql.html) page.
 
 Or for more information on the Database secret backend's HTTP API please see the [Database secret
-backend API](/api/secret/database/index.html).
+backend API](/api/secret/database/index.html) page.
 
