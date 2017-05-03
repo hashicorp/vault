@@ -23,57 +23,47 @@ func (mw *databaseTracingMiddleware) Type() (string, error) {
 }
 
 func (mw *databaseTracingMiddleware) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
-	if mw.logger.IsTrace() {
-		defer func(then time.Time) {
-			mw.logger.Trace("database", "operation", "CreateUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
-		}(time.Now())
+	defer func(then time.Time) {
+		mw.logger.Trace("database", "operation", "CreateUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+	}(time.Now())
 
-		mw.logger.Trace("database", "operation", "CreateUser", "status", "started", "type", mw.typeStr)
-	}
+	mw.logger.Trace("database", "operation", "CreateUser", "status", "started", "type", mw.typeStr)
 	return mw.next.CreateUser(statements, usernamePrefix, expiration)
 }
 
 func (mw *databaseTracingMiddleware) RenewUser(statements Statements, username string, expiration time.Time) (err error) {
-	if mw.logger.IsTrace() {
-		defer func(then time.Time) {
-			mw.logger.Trace("database", "operation", "RenewUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
-		}(time.Now())
+	defer func(then time.Time) {
+		mw.logger.Trace("database", "operation", "RenewUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+	}(time.Now())
 
-		mw.logger.Trace("database", "operation", "RenewUser", "status", "started", mw.typeStr)
-	}
+	mw.logger.Trace("database", "operation", "RenewUser", "status", "started", mw.typeStr)
 	return mw.next.RenewUser(statements, username, expiration)
 }
 
 func (mw *databaseTracingMiddleware) RevokeUser(statements Statements, username string) (err error) {
-	if mw.logger.IsTrace() {
-		defer func(then time.Time) {
-			mw.logger.Trace("database", "operation", "RevokeUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
-		}(time.Now())
+	defer func(then time.Time) {
+		mw.logger.Trace("database", "operation", "RevokeUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+	}(time.Now())
 
-		mw.logger.Trace("database", "operation", "RevokeUser", "status", "started", "type", mw.typeStr)
-	}
+	mw.logger.Trace("database", "operation", "RevokeUser", "status", "started", "type", mw.typeStr)
 	return mw.next.RevokeUser(statements, username)
 }
 
 func (mw *databaseTracingMiddleware) Initialize(conf map[string]interface{}, verifyConnection bool) (err error) {
-	if mw.logger.IsTrace() {
-		defer func(then time.Time) {
-			mw.logger.Trace("database", "operation", "Initialize", "status", "finished", "type", mw.typeStr, "verify", verifyConnection, "err", err, "took", time.Since(then))
-		}(time.Now())
+	defer func(then time.Time) {
+		mw.logger.Trace("database", "operation", "Initialize", "status", "finished", "type", mw.typeStr, "verify", verifyConnection, "err", err, "took", time.Since(then))
+	}(time.Now())
 
-		mw.logger.Trace("database", "operation", "Initialize", "status", "started", "type", mw.typeStr)
-	}
+	mw.logger.Trace("database", "operation", "Initialize", "status", "started", "type", mw.typeStr)
 	return mw.next.Initialize(conf, verifyConnection)
 }
 
 func (mw *databaseTracingMiddleware) Close() (err error) {
-	if mw.logger.IsTrace() {
-		defer func(then time.Time) {
-			mw.logger.Trace("database", "operation", "Close", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
-		}(time.Now())
+	defer func(then time.Time) {
+		mw.logger.Trace("database", "operation", "Close", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
+	}(time.Now())
 
-		mw.logger.Trace("database", "operation", "Close", "status", "started", "type", mw.typeStr)
-	}
+	mw.logger.Trace("database", "operation", "Close", "status", "started", "type", mw.typeStr)
 	return mw.next.Close()
 }
 

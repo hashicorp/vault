@@ -73,10 +73,12 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 	}
 
 	// Wrap with tracing middleware
-	db = &databaseTracingMiddleware{
-		next:    db,
-		typeStr: typeStr,
-		logger:  logger,
+	if logger.IsTrace() {
+		db = &databaseTracingMiddleware{
+			next:    db,
+			typeStr: typeStr,
+			logger:  logger,
+		}
 	}
 
 	return db, nil
