@@ -1141,14 +1141,14 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	for _, parent := range parentList {
 		children, err := ts.view.List(parentPrefix + parent + "/")
 		if err != nil {
-			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read secondary index entry: %v", err))
 			continue
 		}
 
 		for _, child := range children {
 			countParentList++
 			if countParentList%500 == 0 {
-				ts.logger.Debug("token: checking validity of tokens in parent list", "progress", countParentList)
+				ts.logger.Debug("token: checking validity of tokens in secondary index list", "progress", countParentList)
 			}
 
 			// Look up tainted entries so we can be sure that if this isn't
