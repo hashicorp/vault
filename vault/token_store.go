@@ -1072,8 +1072,8 @@ func (ts *TokenStore) handleCreateAgainstRole(
 	return ts.handleCreateCommon(req, d, false, roleEntry)
 }
 
-func (ts *TokenStore) lookupByAccessor(accessor string) (accessorEntry, error) {
-	return ts.lookupBySaltedAccessor(ts.SaltID(accessor), false)
+func (ts *TokenStore) lookupByAccessor(accessor string, tainted bool) (accessorEntry, error) {
+	return ts.lookupBySaltedAccessor(ts.SaltID(accessor), tainted)
 }
 
 func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool) (accessorEntry, error) {
@@ -1280,7 +1280,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(req *logical.Request, data *fra
 		urlaccessor = true
 	}
 
-	aEntry, err := ts.lookupByAccessor(accessor)
+	aEntry, err := ts.lookupByAccessor(accessor, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1334,7 +1334,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 		urlaccessor = true
 	}
 
-	aEntry, err := ts.lookupByAccessor(accessor)
+	aEntry, err := ts.lookupByAccessor(accessor, true)
 	if err != nil {
 		return nil, err
 	}
