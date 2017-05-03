@@ -188,7 +188,7 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 	var err error
 	var certEntry *logical.StorageEntry
 
-	hyphenSerial := strings.Replace(strings.ToLower(serial), ":", "-", -1)
+	hyphenSerial := normalizeSerial(serial)
 	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
 
 	switch {

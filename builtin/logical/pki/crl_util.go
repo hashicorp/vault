@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/errutil"
@@ -87,7 +86,7 @@ func revokeCert(b *backend, req *logical.Request, serial string, fromLease bool)
 		revInfo.RevocationTime = currTime.Unix()
 		revInfo.RevocationTimeUTC = currTime.UTC()
 
-		revEntry, err = logical.StorageEntryJSON("revoked/"+strings.ToLower(strings.Replace(serial, ":", "-", -1)), revInfo)
+		revEntry, err = logical.StorageEntryJSON("revoked/"+normalizeSerial(serial), revInfo)
 		if err != nil {
 			return nil, fmt.Errorf("Error creating revocation entry")
 		}

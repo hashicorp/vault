@@ -55,7 +55,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 		}
 
 		// Ensure that cert serials are converted/updated after fetch
-		expectedKey := fmt.Sprintf("%s%s", tc.Prefix, strings.Replace(strings.ToLower(tc.Serial), ":", "-", -1))
+		expectedKey := tc.Prefix + normalizeSerial(tc.Serial)
 		se, err := storage.Get(expectedKey)
 		if err != nil {
 			t.Fatalf("error on %s for colon-based storage path:%s", name, err)
@@ -70,7 +70,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 
 	// Test for hyphen-base paths in storage
 	for name, tc := range cases {
-		storageKey := fmt.Sprintf("%s%s", tc.Prefix, strings.Replace(strings.ToLower(tc.Serial), ":", "-", -1))
+		storageKey := tc.Prefix + normalizeSerial(tc.Serial)
 		err := storage.Put(&logical.StorageEntry{
 			Key:   storageKey,
 			Value: []byte("some data"),

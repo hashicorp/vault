@@ -3,7 +3,6 @@ package pki
 import (
 	"encoding/base64"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/helper/certutil"
@@ -243,7 +242,7 @@ func (b *backend) pathIssueSignCert(
 
 	if !role.NoStore {
 		err = req.Storage.Put(&logical.StorageEntry{
-			Key:   "certs/" + strings.ToLower(strings.Replace(cb.SerialNumber, ":", "-", -1)),
+			Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 			Value: parsedBundle.CertificateBytes,
 		})
 		if err != nil {
