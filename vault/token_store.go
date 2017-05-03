@@ -1159,6 +1159,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 				ts.logger.Debug("token: deleting invalid secondary index entry", "salted_token", child)
 				err = ts.view.Delete(parentPrefix + parent + "/" + child)
 				if err != nil {
+					ts.logger.Debug("token: failed to delete secondary index entry", "err", err)
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
 				}
 				deletedCountParentList++
