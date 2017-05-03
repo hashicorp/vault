@@ -6,10 +6,9 @@ description: |-
   The `/sys/leases` endpoints are used to view and manage leases.
 ---
 
-# `/sys/leases/lookup`
+# `/sys/leases`
 
-The `/sys/leases/lookup` endpoint is used to lookup metadata related to 
-leases.
+The `/sys/leases` endpoints are used to view and manage leases in Vault.
 
 ## Read Lease
 
@@ -86,10 +85,6 @@ $ curl \
 }
 ```
 
-# `/sys/leases/renew`
-
-The `/sys/leases/renew` endpoint is used to renew secrets.
-
 ## Renew Secret
 
 This endpoint renews a secret, requesting to extend the lease.
@@ -135,10 +130,6 @@ $ curl \
 }
 ```
 
-# `/sys/leases/revoke`
-
-The `/sys/leases/revoke` endpoint is used to revoke secrets.
-
 ## Revoke Secret
 
 This endpoint revokes a secret immediately.
@@ -169,11 +160,6 @@ $ curl \
     https://vault.rocks/v1/sys/leases/revoke
 ```
 
-# `/sys/leases/revoke-force`
-
-The `/sys/leases/revoke-force` endpoint is used to revoke secrets or tokens 
-based on prefix while ignoring backend errors.
-
 ## Revoke Force
 
 This endpoint revokes all secrets or tokens generated under a given prefix
@@ -203,11 +189,6 @@ $ curl \
     --request PUT \
     https://vault.rocks/v1/sys/leases/revoke-force/aws/creds
 ```
-
-# `/sys/leases/revoke-prefix`
-
-The `/sys/leases/revoke-prefix` endpoint is used to revoke secrets or tokens based on
-prefix.
 
 ## Revoke Prefix
 
