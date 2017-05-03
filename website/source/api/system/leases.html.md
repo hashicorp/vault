@@ -57,6 +57,8 @@ $ curl \
 
 This endpoint returns a list of lease ids.
 
+**This endpoint requires 'sudo' capability.**
+
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
 | `LIST`   | `/sys/leases/lookup/:prefix` | `200 application/json` |
@@ -172,6 +174,8 @@ By ignoring these errors, Vault abdicates responsibility for ensuring that the
 issued credentials or secrets are properly revoked and/or cleaned up. Access to
 this endpoint should be tightly controlled.
 
+**This endpoint requires 'sudo' capability.**
+
 | Method   | Path                                | Produces               |
 | :------- | :---------------------------------- | :--------------------- |
 | `PUT`    | `/sys/leases/revoke-force/:prefix`  | `204 (empty body)`     |
@@ -196,6 +200,8 @@ This endpoint revokes all secrets (via a lease ID prefix) or tokens (via the
 tokens' path property) generated under a given prefix immediately. This requires
 `sudo` capability and access to it should be tightly controlled as it can be
 used to revoke very large numbers of secrets/tokens at once.
+
+**This endpoint requires 'sudo' capability.**
 
 | Method   | Path                                | Produces               |
 | :------- | :---------------------------------- | :--------------------- |

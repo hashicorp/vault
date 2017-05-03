@@ -25,8 +25,9 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/reindex",
 		"rotate",
 		"config/auditing/*",
-		"leases/revoke-prefix/*",
 		"revoke-prefix/*",
+		"leases/revoke-prefix/*",
+		"leases/revoke-force/*",
 		"leases/lookup/*",
 	}
 

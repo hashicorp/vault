@@ -62,8 +62,9 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
-				"leases/revoke-prefix/*",
 				"revoke-prefix/*",
+				"leases/revoke-prefix/*",
+				"leases/revoke-force/*",
 				"leases/lookup/*",
 			},
 
