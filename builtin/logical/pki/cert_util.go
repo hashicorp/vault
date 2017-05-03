@@ -219,7 +219,7 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 		return certEntry, nil
 	}
 
-	// No point checking these, no old/new style colons/hyphens
+	// If legacyPath is unset, it's going to be a CA or CRL; return immediately
 	if legacyPath == "" {
 		return nil, nil
 	}
