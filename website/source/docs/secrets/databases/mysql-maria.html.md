@@ -7,3 +7,52 @@ description: |-
 ---
 
 # MySQL/MariaDB Database Plugin
+
+Name: `mysql-database-plugin`
+
+The MySQL Database Plugin is one of the supported plugins for the Database
+backend. This plugin generates database credentials dynamically based on
+configured roles for the MySQL database.
+
+See the [Database Backend](/docs/secret/database/index.html) docs for more
+information about setting up the Database Backend.
+
+## Quick Start
+
+After the Database Backend is mounted you can configure a MySQL connection
+by specifying this plugin as the `"plugin_name"` argument. Here is an example
+configuration: 
+
+```
+$ vault write database/config/mysql \
+    plugin_name=mysql-database-plugin \
+    connection_url="root:mysql@tcp(127.0.0.1:3306)/" \
+    allowed_roles="readonly"
+
+The following warnings were returned from the Vault server:
+* Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
+```
+
+Once the MySQL connection is configured we can add a role:
+
+```
+$ vault write database/roles/readonly \
+    db_name=mysql \
+    creation_statements="CREATE USER '{{name}}'@'%' IDENTIFIED BY '{{password}}';GRANT SELECT ON *.* TO '{{name}}'@'%';" \
+    default_ttl="1h" \
+    max_ttl="24h"
+
+Success! Data written to: database/roles/readonly
+```
+
+This role can now be used to retrieve a new set of credentials by querying the
+"database/creds/readonly" endpoint.
+
+## API
+
+The full list of configurable options can be seen in the [MySQL database
+plugin API](/api/secret/database/mysql.html) page.
+
+Or for more information on the Database secret backend's HTTP API please see the [Database secret
+backend API](/api/secret/database/index.html).
+
