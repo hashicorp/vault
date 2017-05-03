@@ -11,7 +11,8 @@ description: |-
 The Database backend allows new functionality to be added through a plugin
 interface without needing to modify vault's core code. This allows you write
 your own code to generate credentials in any database you wish. It also allows
-databases that require dynamically linked libraries to be used with vault. 
+databases that require dynamically linked libraries to be used as plugins while
+keeping Vault itself statically linked. 
 
 ~> **Advanced topic!** Plugin development is a highly advanced
 topic in Vault, and is not required knowledge for day-to-day usage.
@@ -81,7 +82,7 @@ Replacing `MyPlugin` with the actual implementation of your plugin.
 
 The second parameter to `Serve` takes in an optional vault `api.TLSConfig` for
 configuring the plugin to communicate with vault for the initial unwrap call.
-This if useful if your vault setup requires client certificate checks. This
+This is useful if your vault setup requires client certificate checks. This
 config wont be used once the plugin unwraps its own TLS cert and key.
 
 ## Running your plugin
