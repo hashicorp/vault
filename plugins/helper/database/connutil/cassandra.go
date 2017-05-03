@@ -23,18 +23,21 @@ type CassandraConnectionProducer struct {
 	Password          string      `json:"password" structs:"password" mapstructure:"password"`
 	TLS               bool        `json:"tls" structs:"tls" mapstructure:"tls"`
 	InsecureTLS       bool        `json:"insecure_tls" structs:"insecure_tls" mapstructure:"insecure_tls"`
-	Certificate       string      `json:"certificate" structs:"certificate" mapstructure:"certificate"`
-	PrivateKey        string      `json:"private_key" structs:"private_key" mapstructure:"private_key"`
-	IssuingCA         string      `json:"issuing_ca" structs:"issuing_ca" mapstructure:"issuing_ca"`
 	ProtocolVersion   int         `json:"protocol_version" structs:"protocol_version" mapstructure:"protocol_version"`
 	ConnectTimeoutRaw interface{} `json:"connect_timeout" structs:"connect_timeout" mapstructure:"connect_timeout"`
 	TLSMinVersion     string      `json:"tls_min_version" structs:"tls_min_version" mapstructure:"tls_min_version"`
 	Consistency       string      `json:"consistency" structs:"consistency" mapstructure:"consistency"`
+	PemBundle         string      `json:"pem_bundle" structs:"pem_bundle" mapstructure:"pem_bundle"`
+	PemJSON           string      `json:"pem_json" structs:"pem_json" mapstructure:"pem_json"`
 
 	connectTimeout time.Duration
-	Initialized    bool
-	Type           string
-	session        *gocql.Session
+	certificate    string
+	privateKey     string
+	issuingCA      string
+
+	Initialized bool
+	Type        string
+	session     *gocql.Session
 	sync.Mutex
 }
 
@@ -54,6 +57,47 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
 		return fmt.Errorf("invalid connect_timeout: %s", err)
+	}
+
+	switch {
+	case len(c.Hosts) == 0:
+		return fmt.Errorf("hosts cannot be empty")
+	case len(c.Username) == 0:
+		return fmt.Errorf("username cannot be empty")
+	case len(c.Password) == 0:
+		return fmt.Errorf("password cannot be empty")
+	}
+
+	var certBundle *certutil.CertBundle
+	var parsedCertBundle *certutil.ParsedCertBundle
+	switch {
+	case len(c.PemJSON) != 0:
+		parsedCertBundle, err = certutil.ParsePKIJSON([]byte(c.PemJSON))
+		if err != nil {
+			return fmt.Errorf("could not parse given JSON; it must be in the format of the output of the PKI backend certificate issuing command: %s", err)
+		}
+		certBundle, err = parsedCertBundle.ToCertBundle()
+		if err != nil {
+			return fmt.Errorf("Error marshaling PEM information: %s", err)
+		}
+		c.certificate = certBundle.Certificate
+		c.privateKey = certBundle.PrivateKey
+		c.issuingCA = certBundle.IssuingCA
+		c.TLS = true
+
+	case len(c.PemBundle) != 0:
+		parsedCertBundle, err = certutil.ParsePEMBundle(c.PemBundle)
+		if err != nil {
+			return fmt.Errorf("Error parsing the given PEM information: %s", err)
+		}
+		certBundle, err = parsedCertBundle.ToCertBundle()
+		if err != nil {
+			return fmt.Errorf("Error marshaling PEM information: %s", err)
+		}
+		c.certificate = certBundle.Certificate
+		c.privateKey = certBundle.PrivateKey
+		c.issuingCA = certBundle.IssuingCA
+		c.TLS = true
 	}
 
 	if verifyConnection {
@@ -114,18 +158,18 @@ func (c *CassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	clusterConfig.Timeout = c.connectTimeout
 	if c.TLS {
 		var tlsConfig *tls.Config
-		if len(c.Certificate) > 0 || len(c.IssuingCA) > 0 {
-			if len(c.Certificate) > 0 && len(c.PrivateKey) == 0 {
+		if len(c.certificate) > 0 || len(c.issuingCA) > 0 {
+			if len(c.certificate) > 0 && len(c.privateKey) == 0 {
 				return nil, fmt.Errorf("found certificate for TLS authentication but no private key")
 			}
 
 			certBundle := &certutil.CertBundle{}
-			if len(c.Certificate) > 0 {
-				certBundle.Certificate = c.Certificate
-				certBundle.PrivateKey = c.PrivateKey
+			if len(c.certificate) > 0 {
+				certBundle.Certificate = c.certificate
+				certBundle.PrivateKey = c.privateKey
 			}
-			if len(c.IssuingCA) > 0 {
-				certBundle.IssuingCA = c.IssuingCA
+			if len(c.issuingCA) > 0 {
+				certBundle.IssuingCA = c.issuingCA
 			}
 
 			parsedCertBundle, err := certBundle.ToParsedCertBundle()

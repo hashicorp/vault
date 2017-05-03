@@ -38,6 +38,10 @@ func (c *SQLConnectionProducer) Initialize(conf map[string]interface{}, verifyCo
 		return err
 	}
 
+	if len(c.ConnectionURL) == 0 {
+		return fmt.Errorf("connection_url cannot be empty")
+	}
+
 	if c.MaxOpenConnections == 0 {
 		c.MaxOpenConnections = 2
 	}
