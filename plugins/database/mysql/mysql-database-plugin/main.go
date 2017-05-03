@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -15,7 +15,7 @@ func main() {
 
 	err := mysql.Run(apiClientMeta.GetTLSConfig())
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		os.Exit(1)
 	}
 }
