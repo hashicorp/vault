@@ -93,11 +93,11 @@ backend running the plugin.
 package main
 
 import (
-	plugin "github.com/hashicorp/vault/builtin/logcial/database/dbplugin"
+	"github.com/hashicorp/vault/plugins"
 )
 
 func main() {
-	plugin.Serve(new(MyPlugin))
+	plugins.Serve(new(MyPlugin), nil)
 }
 ```
 
