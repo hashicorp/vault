@@ -184,7 +184,7 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 // Allows fetching certificates from the backend; it handles the slightly
 // separate pathing for CA, CRL, and revoked certificates.
 func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
-	var path string
+	var path, legacyPath string
 	var err error
 	var certEntry *logical.StorageEntry
 
@@ -195,12 +195,14 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 	// Revoked goes first as otherwise ca/crl get hardcoded paths which fail if
 	// we actually want revocation info
 	case strings.HasPrefix(prefix, "revoked/"):
+		legacyPath = "revoked/" + colonSerial
 		path = "revoked/" + hyphenSerial
 	case serial == "ca":
 		path = "ca"
 	case serial == "crl":
 		path = "crl"
 	default:
+		legacyPath = "certs/" + colonSerial
 		path = "certs/" + hyphenSerial
 	}
 
@@ -216,22 +218,12 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 	}
 
 	// No point checking these, no old/new style colons/hyphens
-	if path == "ca" || path == "crl" {
+	if legacyPath == "" {
 		return nil, nil
 	}
 
-	// Save the desired path
-	desiredPath := path
-
-	// If we get here we need to check for old-style paths using colons
-	switch {
-	case strings.HasPrefix(prefix, "revoked/"):
-		path = "revoked/" + colonSerial
-	default:
-		path = "certs/" + colonSerial
-	}
-
-	certEntry, err = req.Storage.Get(path)
+	// Retrieve the old-style path
+	certEntry, err = req.Storage.Get(legacyPath)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
@@ -243,11 +235,11 @@ func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.St
 	}
 
 	// Update old-style paths to new-style paths
-	certEntry.Key = desiredPath
+	certEntry.Key = path
 	if err = req.Storage.Put(certEntry); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
 	}
-	if err = req.Storage.Delete(path); err != nil {
+	if err = req.Storage.Delete(legacyPath); err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
 
