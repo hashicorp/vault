@@ -1133,7 +1133,8 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		return nil, fmt.Errorf("failed to fetch secondary index entries: %v", err)
 	}
 
-	i := 0
+	countParentList := 0
+	deletedCountParentList := 0
 
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
@@ -1145,9 +1146,9 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		}
 
 		for _, child := range children {
-			i++
-			if i%500 == 0 {
-				ts.logger.Debug("token_store: checking validity of tokens in parent list", "progress", i)
+			countParentList++
+			if countParentList%500 == 0 {
+				ts.logger.Debug("token_store: checking validity of tokens in parent list", "progress", countParentList)
 			}
 
 			// Look up tainted entries so we can be sure that if this isn't
@@ -1160,18 +1161,23 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 				if err != nil {
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
 				}
+				deletedCountParentList++
 			}
 		}
 	}
 
-	i = 0
+	countAccessorList := 0
+	deletedCountAccessorEmptyToken := 0
+	deletedCountAccessorInvalidToken := 0
+	deletedCountInvalidTokenInAccessor := 0
+
 	// For each of the accessor, see if the token ID associated with it is
 	// a valid one. If not, delete the leases associated with that token
 	// and delete the accessor as well.
 	for _, saltedAccessor := range saltedAccessorList {
-		i++
-		if i%500 == 0 {
-			ts.logger.Debug("token_store: checking if accessors contain valid tokens", "progress", i)
+		countAccessorList++
+		if countAccessorList%500 == 0 {
+			ts.logger.Debug("token_store: checking if accessors contain valid tokens", "progress", countAccessorList)
 		}
 
 		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
@@ -1193,6 +1199,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete the accessor entry: %v", err))
 				continue
 			}
+			deletedCountAccessorEmptyToken++
 		}
 
 		lock := locksutil.LockForKey(ts.tokenLocks, accessorEntry.TokenID)
@@ -1224,6 +1231,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke leases of expired token: %v", err))
 				continue
 			}
+			deletedCountInvalidTokenInAccessor++
 
 			ts.logger.Debug("token_store: deleting accessor index of the token with nil entry", "accessor_id", accessorEntry.AccessorID)
 
@@ -1236,10 +1244,18 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete accessor entry: %v", err))
 				continue
 			}
+			deletedCountAccessorInvalidToken++
 		}
 	}
 
 	ts.logger.Debug("token_store: ending tidy operation on tokens")
+
+	ts.logger.Debug("token_store: number of tokens scanned in parent list", "total", countParentList)
+	ts.logger.Debug("token_store: number of tokens revoked in parent list", "deleted_count", deletedCountParentList)
+	ts.logger.Debug("token_store: number of accessor scanned", "total", countAccessorList)
+	ts.logger.Debug("token_store: number of deleted accessors which had empty tokens", "deleted_count", deletedCountAccessorEmptyToken)
+	ts.logger.Debug("token_store: number of revoked tokens which were invalid but present in accessors", "deleted_count", deletedCountInvalidTokenInAccessor)
+	ts.logger.Debug("token_store: number of deleted accessors which had invalid tokens", "deleted_count", deletedCountAccessorInvalidToken)
 
 	return nil, tidyErrors.ErrorOrNil()
 }

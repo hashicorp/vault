@@ -134,12 +134,14 @@ func (m *ExpirationManager) Tidy() error {
 
 	// Create a cache to keep track of looked up tokens
 	tokenCache := make(map[string]bool)
-	i := 0
+	countLease := 0
+	deletedCountEmptyToken := 0
+	deletedCountInvalidToken := 0
 
 	tidyFunc := func(leaseID string) {
-		i++
-		if i%500 == 0 {
-			m.logger.Debug("expiration: tidying leases", "progress", i)
+		countLease++
+		if countLease%500 == 0 {
+			m.logger.Debug("expiration: tidying leases", "progress", countLease)
 		}
 
 		le, err := m.loadEntry(leaseID)
@@ -158,6 +160,7 @@ func (m *ExpirationManager) Tidy() error {
 		if le.ClientToken == "" {
 			m.logger.Debug("expiration: revoking lease which has an empty token", "lease_id", leaseID)
 			revokeLease = true
+			deletedCountEmptyToken++
 			goto REVOKE_CHECK
 		}
 
@@ -177,6 +180,7 @@ func (m *ExpirationManager) Tidy() error {
 			if te == nil {
 				m.logger.Debug("expiration: revoking lease which holds an invalid token", "lease_id", leaseID)
 				revokeLease = true
+				deletedCountInvalidToken++
 				tokenCache[le.ClientToken] = false
 			} else {
 				tokenCache[le.ClientToken] = true
@@ -186,6 +190,7 @@ func (m *ExpirationManager) Tidy() error {
 				return
 			} else {
 				m.logger.Debug("expiration: revoking lease which contains an invalid token", "lease_id", leaseID)
+				deletedCountInvalidToken++
 				revokeLease = true
 			}
 		}
@@ -207,6 +212,10 @@ func (m *ExpirationManager) Tidy() error {
 	}
 
 	m.logger.Debug("expiration: ending tidy operation on leases")
+
+	m.logger.Debug("expiration: number of leases scanned", "total", countLease)
+	m.logger.Debug("expiration: number of revoked leases which had empty tokens", "deleted_count", deletedCountEmptyToken)
+	m.logger.Debug("expiration: number of revoked leases which had invalid tokens", "deleted_count", deletedCountInvalidToken)
 
 	return tidyErrors.ErrorOrNil()
 }
