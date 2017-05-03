@@ -1114,13 +1114,13 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	var tidyErrors *multierror.Error
 
 	if !atomic.CompareAndSwapInt64(&ts.tidyLock, 0, 1) {
-		ts.logger.Debug("token_store: tidy operation on tokens is already in progress")
+		ts.logger.Debug("token: tidy operation on tokens is already in progress")
 		return nil, fmt.Errorf("tidy operation on tokens is already in progress")
 	}
 
 	defer atomic.CompareAndSwapInt64(&ts.tidyLock, 1, 0)
 
-	ts.logger.Debug("token_store: beginning tidy operation on tokens")
+	ts.logger.Debug("token: beginning tidy operation on tokens")
 	// List out all the accessors
 	saltedAccessorList, err := ts.view.List(accessorPrefix)
 	if err != nil {
@@ -1148,7 +1148,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		for _, child := range children {
 			countParentList++
 			if countParentList%500 == 0 {
-				ts.logger.Debug("token_store: checking validity of tokens in parent list", "progress", countParentList)
+				ts.logger.Debug("token: checking validity of tokens in parent list", "progress", countParentList)
 			}
 
 			// Look up tainted entries so we can be sure that if this isn't
@@ -1156,7 +1156,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			// since appropriate locks cannot be held with salted token IDs.
 			te, _ := ts.lookupSalted(child, true)
 			if te == nil {
-				ts.logger.Debug("token_store: deleting invalid secondary index entry", "salted_token", child)
+				ts.logger.Debug("token: deleting invalid secondary index entry", "salted_token", child)
 				err = ts.view.Delete(parentPrefix + parent + "/" + child)
 				if err != nil {
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
@@ -1177,7 +1177,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	for _, saltedAccessor := range saltedAccessorList {
 		countAccessorList++
 		if countAccessorList%500 == 0 {
-			ts.logger.Debug("token_store: checking if accessors contain valid tokens", "progress", countAccessorList)
+			ts.logger.Debug("token: checking if accessors contain valid tokens", "progress", countAccessorList)
 		}
 
 		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
@@ -1190,7 +1190,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		// in it. If not, it is an invalid accessor entry and needs to
 		// be deleted.
 		if accessorEntry.TokenID == "" {
-			ts.logger.Debug("token_store: deleting accessor index with invalid token ID", "accessor_id", accessorEntry.AccessorID)
+			ts.logger.Debug("token: deleting accessor index with invalid token ID", "accessor_id", accessorEntry.AccessorID)
 
 			// If deletion of accessor fails, move on to the next
 			// item since this is just a best-effort operation
@@ -1215,7 +1215,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		// more and conclude that accessor, leases, and secondary index entries
 		// for this token should not exist as well.
 		if te == nil {
-			ts.logger.Debug("token_store: deleting token with nil entry", "salted_token", saltedId)
+			ts.logger.Debug("token: deleting token with nil entry", "salted_token", saltedId)
 
 			// RevokeByToken expects a '*TokenEntry'. For the
 			// purposes of tidying, it is sufficient if the token
@@ -1233,7 +1233,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			}
 			deletedCountInvalidTokenInAccessor++
 
-			ts.logger.Debug("token_store: deleting accessor index of the token with nil entry", "accessor_id", accessorEntry.AccessorID)
+			ts.logger.Debug("token: deleting accessor index of the token with nil entry", "accessor_id", accessorEntry.AccessorID)
 
 			// If deletion of accessor fails, move on to the next item since
 			// this is just a best-effort operation. We do this last so that on
@@ -1248,14 +1248,14 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 		}
 	}
 
-	ts.logger.Debug("token_store: ending tidy operation on tokens")
+	ts.logger.Debug("token: ending tidy operation on tokens")
 
-	ts.logger.Debug("token_store: number of tokens scanned in parent list", "total", countParentList)
-	ts.logger.Debug("token_store: number of tokens revoked in parent list", "deleted_count", deletedCountParentList)
-	ts.logger.Debug("token_store: number of accessor scanned", "total", countAccessorList)
-	ts.logger.Debug("token_store: number of deleted accessors which had empty tokens", "deleted_count", deletedCountAccessorEmptyToken)
-	ts.logger.Debug("token_store: number of revoked tokens which were invalid but present in accessors", "deleted_count", deletedCountInvalidTokenInAccessor)
-	ts.logger.Debug("token_store: number of deleted accessors which had invalid tokens", "deleted_count", deletedCountAccessorInvalidToken)
+	ts.logger.Debug("token: number of tokens scanned in parent list", "total", countParentList)
+	ts.logger.Debug("token: number of tokens revoked in parent list", "deleted_count", deletedCountParentList)
+	ts.logger.Debug("token: number of accessor scanned", "total", countAccessorList)
+	ts.logger.Debug("token: number of deleted accessors which had empty tokens", "deleted_count", deletedCountAccessorEmptyToken)
+	ts.logger.Debug("token: number of revoked tokens which were invalid but present in accessors", "deleted_count", deletedCountInvalidTokenInAccessor)
+	ts.logger.Debug("token: number of deleted accessors which had invalid tokens", "deleted_count", deletedCountAccessorInvalidToken)
 
 	return nil, tidyErrors.ErrorOrNil()
 }
