@@ -618,7 +618,7 @@ func (ts *TokenStore) tokenStoreAccessorList(
 
 	ret := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		aEntry, err := ts.lookupBySaltedAccessor(entry)
+		aEntry, err := ts.lookupBySaltedAccessor(entry, false)
 		if err != nil {
 			resp.AddWarning("Found an accessor entry that could not be successfully decoded")
 			continue
@@ -1073,10 +1073,10 @@ func (ts *TokenStore) handleCreateAgainstRole(
 }
 
 func (ts *TokenStore) lookupByAccessor(accessor string) (accessorEntry, error) {
-	return ts.lookupBySaltedAccessor(ts.SaltID(accessor))
+	return ts.lookupBySaltedAccessor(ts.SaltID(accessor), false)
 }
 
-func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEntry, error) {
+func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string, tainted bool) (accessorEntry, error) {
 	entry, err := ts.view.Get(accessorPrefix + saltedAccessor)
 	var aEntry accessorEntry
 
@@ -1090,8 +1090,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 	err = jsonutil.DecodeJSON(entry.Value, &aEntry)
 	// If we hit an error, assume it's a pre-struct straight token ID
 	if err != nil {
-		aEntry.TokenID = string(entry.Value)
-		te, err := ts.lookupSalted(ts.SaltID(aEntry.TokenID), false)
+		te, err := ts.lookupSalted(ts.SaltID(string(entry.Value)), tainted)
 		if err != nil {
 			return accessorEntry{}, fmt.Errorf("failed to look up token using accessor index: %s", err)
 		}
@@ -1101,6 +1100,7 @@ func (ts *TokenStore) lookupBySaltedAccessor(saltedAccessor string) (accessorEnt
 		// on lookup is nil, not an error, so we keep that behavior here to be
 		// safe...the token ID is simply not filled in.
 		if te != nil {
+			aEntry.TokenID = te.ID
 			aEntry.AccessorID = te.Accessor
 		}
 	}
@@ -1180,7 +1180,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			ts.logger.Debug("token: checking if accessors contain valid tokens", "progress", countAccessorList)
 		}
 
-		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor)
+		accessorEntry, err := ts.lookupBySaltedAccessor(saltedAccessor, true)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read the accessor entry: %v", err))
 			continue

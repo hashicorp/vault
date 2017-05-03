@@ -619,9 +619,11 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 
 	defer func() {
 		if retErr != nil {
-			err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
+			revResp, err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
 			if err != nil {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", err))
+			} else if revResp != nil && revResp.IsError() {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", revResp.Error()))
 			}
 		}
 	}()
