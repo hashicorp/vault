@@ -93,5 +93,5 @@ username       	v-root-e2978cd0-
 ## API
 
 The Database secret backend has a full HTTP API. Please see the [Database secret
-backend API](/api/secret/database/index.html) for more details.
+backend API](/api/secret/databases/index.html) for more details.
 

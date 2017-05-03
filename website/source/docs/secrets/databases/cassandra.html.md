@@ -14,7 +14,7 @@ The Cassandra Database Plugin is one of the supported plugins for the Database
 backend. This plugin generates database credentials dynamically based on
 configured roles for the Cassandra database.
 
-See the [Database Backend](/docs/secret/database/index.html) docs for more
+See the [Database Backend](/docs/secrets/databases/index.html) docs for more
 information about setting up the Database Backend.
 
 ## Quick Start
@@ -55,8 +55,8 @@ This role can be used to retrieve a new set of credentials by querying the
 ## API
 
 The full list of configurable options can be seen in the [Cassandra database
-plugin API](/api/secret/database/cassandra.html) page.
+plugin API](/api/secret/databases/cassandra.html) page.
 
 Or for more information on the Database secret backend's HTTP API please see the [Database secret
-backend API](/api/secret/database/index.html) page.
+backend API](/api/secret/databases/index.html) page.
 

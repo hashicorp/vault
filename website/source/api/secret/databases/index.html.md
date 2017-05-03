@@ -11,7 +11,7 @@ description: |-
 This is the API documentation for the Vault Database secret backend. For
 general information about the usage and operation of the Database backend,
 please see the
-[Vault Database backend documentation](/docs/secrets/database/index.html).
+[Vault Database backend documentation](/docs/secrets/databases/index.html).
 
 This documentation assumes the Database backend is mounted at the
 `/database` path in Vault. Since it is possible to mount secret backends at

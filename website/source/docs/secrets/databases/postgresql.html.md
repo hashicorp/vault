@@ -14,7 +14,7 @@ The PostgreSQL Database Plugin is one of the supported plugins for the Database
 backend. This plugin generates database credentials dynamically based on
 configured roles for the PostgreSQL database.
 
-See the [Database Backend](/docs/secret/database/index.html) docs for more
+See the [Database Backend](/docs/secrets/databases/index.html) docs for more
 information about setting up the Database Backend.
 
 ## Quick Start
@@ -53,8 +53,8 @@ This role can be used to retrieve a new set of credentials by querying the
 ## API
 
 The full list of configurable options can be seen in the [PostgreSQL database
-plugin API](/api/secret/database/postgresql.html) page.
+plugin API](/api/secret/databases/postgresql.html) page.
 
 Or for more information on the Database secret backend's HTTP API please see the [Database secret
-backend API](/api/secret/database/index.html) page.
+backend API](/api/secret/databases/index.html) page.
 
