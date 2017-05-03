@@ -605,7 +605,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a LeaseID and the management of
 // of lease is assumed by the expiration manager.
-func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (leaseID string, retErr error) {
+func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 	// Ignore if there is no leased secret
 	if resp == nil || resp.Secret == nil {
@@ -617,6 +617,14 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		return "", err
 	}
 
+	// Create a lease entry
+	leaseUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", err
+	}
+
+	leaseID := path.Join(req.Path, leaseUUID)
+
 	defer func() {
 		if retErr != nil {
 			revResp, err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
@@ -625,6 +633,14 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 			} else if revResp != nil && revResp.IsError() {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", revResp.Error()))
 			}
+
+			if err := m.deleteEntry(leaseID); err != nil {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", err))
+			}
+
+			if err := m.removeIndexByToken(req.ClientToken, leaseID); err != nil {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", err))
+			}
 		}
 	}()
 
@@ -632,13 +648,8 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		return "", fmt.Errorf("expiration: cannot register a lease with an empty client token")
 	}
 
-	// Create a lease entry
-	leaseUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		return "", err
-	}
 	le := leaseEntry{
-		LeaseID:     path.Join(req.Path, leaseUUID),
+		LeaseID:     leaseID,
 		ClientToken: req.ClientToken,
 		Path:        req.Path,
 		Data:        resp.Data,
