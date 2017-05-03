@@ -48,7 +48,7 @@ func (c *SQLConnectionProducer) Initialize(conf map[string]interface{}, verifyCo
 	if c.MaxIdleConnections > c.MaxOpenConnections {
 		c.MaxIdleConnections = c.MaxOpenConnections
 	}
-	if c.MaxConnectionLifetimeRaw == "" {
+	if c.MaxConnectionLifetimeRaw == nil {
 		c.MaxConnectionLifetimeRaw = "0s"
 	}
 

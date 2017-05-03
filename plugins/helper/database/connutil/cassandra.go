@@ -48,6 +48,9 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	}
 	c.Initialized = true
 
+	if c.ConnectTimeoutRaw == nil {
+		c.ConnectTimeoutRaw = "0s"
+	}
 	c.connectTimeout, err = parseutil.ParseDurationSecond(c.ConnectTimeoutRaw)
 	if err != nil {
 		return fmt.Errorf("invalid connect_timeout: %s", err)
