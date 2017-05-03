@@ -1156,7 +1156,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			// since appropriate locks cannot be held with salted token IDs.
 			te, _ := ts.lookupSalted(child, true)
 			if te == nil {
-				ts.logger.Debug("token_store: deleting invalid token", "salted_token", child)
+				ts.logger.Debug("token_store: deleting invalid secondary index entry", "salted_token", child)
 				err = ts.view.Delete(parentPrefix + parent + "/" + child)
 				if err != nil {
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index entry: %v", err))
