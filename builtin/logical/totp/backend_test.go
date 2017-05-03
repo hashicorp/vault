@@ -410,6 +410,8 @@ func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 		"account_name": "Test",
 		"generate":     true,
 		"key_size":     20,
+		"exported":     true,
+		"qr_size":      200,
 	}
 
 	expected := map[string]interface{}{
@@ -425,6 +427,31 @@ func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
+		},
+	})
+}
+
+func TestBackend_generatedKeyDefaultValuesNoQR(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "Test",
+		"generate":     true,
+		"key_size":     20,
+		"exported":     true,
+		"qr_size":      0,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, false),
 		},
 	})
 }
@@ -442,6 +469,8 @@ func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 		"account_name": "Test",
 		"generate":     true,
 		"key_size":     10,
+		"exported":     true,
+		"qr_size":      200,
 	}
 
 	expected := map[string]interface{}{
@@ -461,7 +490,55 @@ func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 	})
 }
 
-func TestBackend_urlPassedNonGeneratedKey(t *testing.T) {
+func TestBackend_urlPassedNonGeneratedKeyInvalidPeriod(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=AZ"
+
+	keyData := map[string]interface{}{
+		"url":      urlString,
+		"generate": false,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, true),
+			testAccStepReadKey(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_urlPassedNonGeneratedKeyInvalidDigits(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=Q&period=60"
+
+	keyData := map[string]interface{}{
+		"url":      urlString,
+		"generate": false,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, true),
+			testAccStepReadKey(t, "test", nil),
+		},
+	})
+}
+
+func TestBackend_urlPassedNonGeneratedKeyIssuerInFirstPosition(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(config)
@@ -495,7 +572,7 @@ func TestBackend_urlPassedNonGeneratedKey(t *testing.T) {
 	})
 }
 
-func TestBackend_urlPassedGeneratedKeyDefaultValues(t *testing.T) {
+func TestBackend_urlPassedNonGeneratedKeyIssuerInQueryString(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(config)
@@ -503,19 +580,20 @@ func TestBackend_urlPassedGeneratedKeyDefaultValues(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	urlString := "otpauth://totp/test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60&issuer=Vault"
+
 	keyData := map[string]interface{}{
-		"issuer":       "Vault",
-		"account_name": "test@email.com",
-		"generate":     true,
-		"key_size":     20,
+		"url":      urlString,
+		"generate": false,
 	}
 
 	expected := map[string]interface{}{
 		"issuer":       "Vault",
 		"account_name": "test@email.com",
 		"digits":       otplib.DigitsSix,
-		"period":       30,
-		"algorithm":    otplib.AlgorithmSHA1,
+		"period":       60,
+		"algorithm":    otplib.AlgorithmSHA512,
+		"key":          "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -523,6 +601,109 @@ func TestBackend_urlPassedGeneratedKeyDefaultValues(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_urlPassedNonGeneratedKeyMissingIssuer(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	urlString := "otpauth://totp/test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
+
+	keyData := map[string]interface{}{
+		"url":      urlString,
+		"generate": false,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "",
+		"account_name": "test@email.com",
+		"digits":       otplib.DigitsSix,
+		"period":       60,
+		"algorithm":    otplib.AlgorithmSHA512,
+		"key":          "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, false),
+			testAccStepReadKey(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_urlPassedNonGeneratedKeyMissingAccountName(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	urlString := "otpauth://totp/Vault:?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
+
+	keyData := map[string]interface{}{
+		"url":      urlString,
+		"generate": false,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "",
+		"digits":       otplib.DigitsSix,
+		"period":       60,
+		"algorithm":    otplib.AlgorithmSHA512,
+		"key":          "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, false),
+			testAccStepReadKey(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+		},
+	})
+}
+
+func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	urlString := "otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
+
+	keyData := map[string]interface{}{
+		"url":      urlString,
+		"generate": false,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "",
+		"account_name": "",
+		"digits":       otplib.DigitsSix,
+		"period":       60,
+		"algorithm":    otplib.AlgorithmSHA512,
+		"key":          "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, false),
+			testAccStepReadKey(t, "test", expected),
+			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
 		},
 	})
 }
@@ -709,6 +890,38 @@ func TestBackend_keyAndGenerateTrue(t *testing.T) {
 	})
 }
 
+func TestBackend_generatedKeyExportedFalse(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	keyData := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "test@email.com",
+		"generate":     true,
+		"exported":     false,
+	}
+
+	expected := map[string]interface{}{
+		"issuer":       "Vault",
+		"account_name": "test@email.com",
+		"digits":       otplib.DigitsSix,
+		"period":       30,
+		"algorithm":    otplib.AlgorithmSHA1,
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepCreateKey(t, "test", keyData, false),
+			testAccStepReadKey(t, "test", expected),
+		},
+	})
+}
+
 func testAccStepCreateKey(t *testing.T, name string, keyData map[string]interface{}, expectFail bool) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -718,6 +931,22 @@ func testAccStepCreateKey(t *testing.T, name string, keyData map[string]interfac
 		Check: func(resp *logical.Response) error {
 			//Skip this if the key is not generated by vault or if the test is expected to fail
 			if !keyData["generate"].(bool) || expectFail {
+				return nil
+			}
+
+			// Check to see if barcode and url were returned if exported is false
+			if !keyData["exported"].(bool) {
+				if resp != nil {
+					t.Fatalf("data was returned when exported was set to false")
+				}
+				return nil
+			}
+
+			// Check to see if a barcode was returned when qr_size is zero
+			if keyData["qr_size"].(int) == 0 {
+				if _, exists := resp.Data["barcode"]; exists {
+					t.Fatalf("a barcode was returned when qr_size was set to zero")
+				}
 				return nil
 			}
 
