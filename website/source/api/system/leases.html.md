@@ -85,9 +85,9 @@ $ curl \
 }
 ```
 
-## Renew Secret
+## Renew Lease
 
-This endpoint renews a secret, requesting to extend the lease.
+This endpoint renews a lease, requesting to extend the lease.
 
 | Method   | Path                          | Produces               |
 | :------- | :---------------------------- | :--------------------- |
@@ -130,9 +130,9 @@ $ curl \
 }
 ```
 
-## Revoke Secret
+## Revoke Lease
 
-This endpoint revokes a secret immediately.
+This endpoint revokes a lease immediately.
 
 | Method   | Path                          | Produces               |
 | :------- | :---------------------------- | :--------------------- |
