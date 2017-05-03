@@ -14,11 +14,20 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 )
 
-const defaultMysqlRevocationStmts = `
-	REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
-	DROP USER '{{name}}'@'%'
-`
-const mySQLTypeName = "mysql"
+const (
+	defaultMysqlRevocationStmts = `
+		REVOKE ALL PRIVILEGES, GRANT OPTION FROM '{{name}}'@'%'; 
+		DROP USER '{{name}}'@'%'
+	`
+	mySQLTypeName = "mysql"
+)
+
+var (
+	DisplayNameLen       int = 10
+	LegacyDisplayNameLen int = 4
+	UsernameLen          int = 32
+	LegacyUsernameLen    int = 16
+)
 
 type MySQL struct {
 	connutil.ConnectionProducer
@@ -26,26 +35,29 @@ type MySQL struct {
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New() (interface{}, error) {
-	connProducer := &connutil.SQLConnectionProducer{}
-	connProducer.Type = mySQLTypeName
+func New(displayLen, usernameLen int) func() (interface{}, error) {
+	return func() (interface{}, error) {
+		connProducer := &connutil.SQLConnectionProducer{}
+		connProducer.Type = mySQLTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 4,
-		UsernameLen:    16,
+		credsProducer := &credsutil.SQLCredentialsProducer{
+			DisplayNameLen: displayLen,
+			UsernameLen:    usernameLen,
+		}
+
+		dbType := &MySQL{
+			ConnectionProducer:  connProducer,
+			CredentialsProducer: credsProducer,
+		}
+
+		return dbType, nil
 	}
-
-	dbType := &MySQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
-	}
-
-	return dbType, nil
 }
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
+	f := New(DisplayNameLen, UsernameLen)
+	dbType, err := f()
 	if err != nil {
 		return err
 	}

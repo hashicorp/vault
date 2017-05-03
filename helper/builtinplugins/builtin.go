@@ -10,7 +10,13 @@ import (
 type BuiltinFactory func() (interface{}, error)
 
 var plugins map[string]BuiltinFactory = map[string]BuiltinFactory{
-	"mysql-database-plugin":      mysql.New,
+	// These four plugins all use the same mysql implementation but with
+	// different username settings passed by the constructor.
+	"mysql-database-plugin":        mysql.New(mysql.DisplayNameLen, mysql.UsernameLen),
+	"aurora-database-plugin":       mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
+	"rds-database-plugin":          mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
+	"mysql-legacy-database-plugin": mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
+
 	"postgresql-database-plugin": postgresql.New,
 	"mssql-database-plugin":      mssql.New,
 	"cassandra-database-plugin":  cassandra.New,
