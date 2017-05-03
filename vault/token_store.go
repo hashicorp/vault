@@ -1139,7 +1139,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
-		children, err := ts.view.List(parentPrefix + parent + "/")
+		children, err := ts.view.List(parentPrefix + parent)
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read secondary index: %v", err))
 			continue
@@ -1156,9 +1156,9 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			// since appropriate locks cannot be held with salted token IDs.
 			te, _ := ts.lookupSalted(child, true)
 			if te == nil {
-				index := parentPrefix + parent + "/" + child
+				index := parentPrefix + parent + child
 				ts.logger.Debug("token: deleting invalid secondary index", "index", index)
-				err = ts.view.Delete(parentPrefix + parent + "/" + index)
+				err = ts.view.Delete(index)
 				if err != nil {
 					ts.logger.Debug("token: failed to delete secondary index", "err", err)
 					tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to delete secondary index: %v", err))
