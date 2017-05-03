@@ -12,6 +12,7 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
+	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
@@ -604,7 +605,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a LeaseID and the management of
 // of lease is assumed by the expiration manager.
-func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (string, error) {
+func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (leaseID string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 	// Ignore if there is no leased secret
 	if resp == nil || resp.Secret == nil {
@@ -614,6 +615,19 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	// Validate the secret
 	if err := resp.Secret.Validate(); err != nil {
 		return "", err
+	}
+
+	defer func() {
+		if retErr != nil {
+			err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
+			if err != nil {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", err))
+			}
+		}
+	}()
+
+	if req.ClientToken == "" {
+		return "", fmt.Errorf("expiration: cannot register a lease with an empty client token")
 	}
 
 	// Create a lease entry
@@ -653,6 +667,10 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 // the expiration manager.
 func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
+
+	if auth.ClientToken == "" {
+		return fmt.Errorf("expiration: cannot register an auth lease with an empty token")
+	}
 
 	// Create a lease entry
 	le := leaseEntry{
@@ -774,7 +792,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	// Revocation of login tokens is special since we can by-pass the
 	// backend and directly interact with the token store
 	if le.Auth != nil {
-		if err := m.tokenStore.RevokeTree(le.Auth.ClientToken); err != nil {
+		if err := m.tokenStore.RevokeTree(le.ClientToken); err != nil {
 			return fmt.Errorf("failed to revoke token: %v", err)
 		}
 
