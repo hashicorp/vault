@@ -269,11 +269,11 @@ func (b *backend) pathIssueSignCert(
 
 	if !role.NoStore {
 		err = req.Storage.Put(&logical.StorageEntry{
-			Key:   "certs/" + cb.SerialNumber,
+			Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 			Value: parsedBundle.CertificateBytes,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("Unable to store certificate locally: %v", err)
+			return nil, fmt.Errorf("unable to store certificate locally: %v", err)
 		}
 	}
 
