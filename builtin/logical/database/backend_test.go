@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"log"
 	stdhttp "net/http"
 	"os"
@@ -10,7 +11,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/http"
@@ -109,11 +109,28 @@ func TestBackend_PluginMain(t *testing.T) {
 		return
 	}
 
-	err := postgresql.Run(&api.TLSConfig{Insecure: true})
+	content := []byte(vault.TestClusterCACert)
+	tmpfile, err := ioutil.TempFile("", "example")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Fatal("We shouldn't get here")
+
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	if _, err := tmpfile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{"--ca-cert=" + tmpfile.Name()}
+
+	apiClientMeta := &pluginutil.APIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+
+	postgresql.Run(apiClientMeta.GetTLSConfig())
 }
 
 func TestBackend_config_connection(t *testing.T) {

@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/http"
@@ -107,7 +106,13 @@ func TestPlugin_Main(t *testing.T) {
 		users: make(map[string][]string),
 	}
 
-	plugins.Serve(plugin, &api.TLSConfig{Insecure: true})
+	args := []string{"--tls-skip-verify=true"}
+
+	apiClientMeta := &pluginutil.APIClientMeta{}
+	flags := apiClientMeta.FlagSet()
+	flags.Parse(args)
+
+	plugins.Serve(plugin, apiClientMeta.GetTLSConfig())
 }
 
 func TestPlugin_Initialize(t *testing.T) {
