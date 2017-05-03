@@ -21,18 +21,21 @@ FEATURES:
 
 IMPROVEMENTS:
 
- * auth/cert: Support for constraints on subject common name, DNS names and
-   Email addresses in the certificate [GH-2595]
+ * auth/cert: Support for constraints on subject Common Name and DNS/email
+   Subject Alternate Names in certificates [GH-2595]
  * auth/ldap: Use the binding credentials to search group membership rather
    than the user credentials [GH-2534]
  * cli/revoke: Add `-self` option to allow revoking the currently active token
    [GH-2596]
+ * core: Randomizing x coordinate in Shamir shares [GH-2621]
  * secret/pki: Add `no_store` option that allows certificates to be issued
    without being stored. This removes the ability to look up and/or add to a
    CRL but helps with scaling to very large numbers of certificates. [GH-2565]
  * secret/pki: If used with a role parameter, the `sign-verbatim/<role>`
    endpoint honors the values of `generate_lease`, `no_store`, `ttl` and
    `max_ttl` from the given role [GH-2593]
+ * secret/pki: Add role parameter `allow_glob_domains` that enables defining
+   names in `allowed_domains` containing `*` glob patterns [GH-2517]
  * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
    servers [GH-2521]
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
