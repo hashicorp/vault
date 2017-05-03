@@ -66,7 +66,8 @@ func TestMySQL_Initialize(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
+	f := New(DisplayNameLen, UsernameLen)
+	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 	connProducer := db.ConnectionProducer.(*connutil.SQLConnectionProducer)
 
@@ -93,7 +94,8 @@ func TestMySQL_CreateUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
+	f := New(DisplayNameLen, UsernameLen)
+	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 
 	err := db.Initialize(connectionDetails, true)
@@ -129,7 +131,8 @@ func TestMySQL_RevokeUser(t *testing.T) {
 		"connection_url": connURL,
 	}
 
-	dbRaw, _ := New()
+	f := New(DisplayNameLen, UsernameLen)
+	dbRaw, _ := f()
 	db := dbRaw.(*MySQL)
 
 	err := db.Initialize(connectionDetails, true)
