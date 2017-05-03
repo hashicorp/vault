@@ -36,6 +36,8 @@ IMPROVEMENTS:
    `max_ttl` from the given role [GH-2593]
  * secret/pki: Add role parameter `allow_glob_domains` that enables defining
    names in `allowed_domains` containing `*` glob patterns [GH-2517]
+ * secret/pki: Update certificate storage to not use characters that are not
+   supported on some filesystems [GH-2575]
  * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
    servers [GH-2521]
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
