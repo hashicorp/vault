@@ -70,7 +70,7 @@ path "sys/leases/renew" {
 }
 
 # Allow looking up lease properties. This requires knowing the lease ID ahead
-# of time and does not divulege any sensitive information.
+# of time and does not divulge any sensitive information.
 path "sys/leases/lookup" {
     capabilities = ["update"]
 }
