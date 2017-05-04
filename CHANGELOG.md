@@ -63,6 +63,8 @@ BUG FIXES:
  * auth/ldap: Don't lowercase groups attached to users [GH-2613]
  * cli: Don't panic if `vault write` is used with the `force` flag but no path
    [GH-2674]
+ * core: Help operations should request forward since standbys may not have
+   appropriate info [GH-2677]
  * secret/mssql: Update mssql driver to support queries with colons [GH-2610]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]
