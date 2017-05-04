@@ -55,6 +55,6 @@ This role can now be used to retrieve a new set of credentials by querying the
 The full list of configurable options can be seen in the [MSSQL database
 plugin API](/api/secret/databases/mssql.html) page.
 
-Or for more information on the Database secret backend's HTTP API please see the [Database secret
+For more information on the Database secret backend's HTTP API please see the [Database secret
 backend API](/api/secret/databases/index.html) page.
 
