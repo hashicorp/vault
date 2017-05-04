@@ -49,7 +49,7 @@ type SystemView interface {
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
 	LookupPlugin(string) (*pluginutil.PluginRunner, error)
 
-	// MlockEnabled returns the configuration setting for Enableing mlock on
+	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
 	MlockEnabled() bool
 }

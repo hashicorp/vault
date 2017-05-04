@@ -57,7 +57,7 @@ func pathRoles(b *databaseBackend) *framework.Path {
 			},
 			"rollback_statements": {
 				Type: framework.TypeString,
-				Description: `SQL statements to be executed to revoke a user. Must be a semicolon-separated
+				Description: `Statements to be executed to revoke a user. Must be a semicolon-separated
 							string, a base64-encoded semicolon-separated string, a serialized JSON string
 							array, or a base64-encoded serialized JSON string array. The '{{name}}' value
 							will be substituted.`,

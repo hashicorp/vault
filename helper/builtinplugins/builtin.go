@@ -13,8 +13,8 @@ var plugins map[string]BuiltinFactory = map[string]BuiltinFactory{
 	// These four plugins all use the same mysql implementation but with
 	// different username settings passed by the constructor.
 	"mysql-database-plugin":        mysql.New(mysql.DisplayNameLen, mysql.UsernameLen),
-	"aurora-database-plugin":       mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
-	"rds-database-plugin":          mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
+	"mysql-aurora-database-plugin": mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
+	"mysql-rds-database-plugin":    mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
 	"mysql-legacy-database-plugin": mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
 
 	"postgresql-database-plugin": postgresql.New,
