@@ -55,7 +55,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			Root: []string{
 				"auth/*",
 				"remount",
-				"revoke-prefix/*",
 				"audit",
 				"audit/*",
 				"raw/*",
@@ -63,6 +62,10 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
+				"revoke-prefix/*",
+				"leases/revoke-prefix/*",
+				"leases/revoke-force/*",
+				"leases/lookup/*",
 			},
 
 			Unauthenticated: []string{
@@ -299,7 +302,43 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "renew" + framework.OptionalParamRegex("url_lease_id"),
+				Pattern: "leases/lookup/(?P<prefix>.+?)?",
+
+				Fields: map[string]*framework.FieldSchema{
+					"prefix": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["leases-list-prefix"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handleLeaseLookupList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["leases"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "leases/lookup",
+
+				Fields: map[string]*framework.FieldSchema{
+					"lease_id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleLeaseLookup,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["leases"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "(leases/)?renew" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"url_lease_id": &framework.FieldSchema{
@@ -325,7 +364,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke" + framework.OptionalParamRegex("url_lease_id"),
+				Pattern: "(leases/)?revoke" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"url_lease_id": &framework.FieldSchema{
@@ -347,7 +386,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-force/(?P<prefix>.+)",
+				Pattern: "(leases/)?revoke-force/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -365,7 +404,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-prefix/(?P<prefix>.+)",
+				Pattern: "(leases/)?revoke-prefix/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -686,6 +725,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "config/auditing/request-headers$",
 
@@ -1272,6 +1312,61 @@ func (b *SystemBackend) handleTuneWriteCommon(
 	}
 
 	return nil, nil
+}
+
+// handleLease is use to view the metadata for a given LeaseID
+func (b *SystemBackend) handleLeaseLookup(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
+
+	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
+	if err != nil {
+		b.Backend.Logger().Error("sys: error retrieving lease", "lease_id", leaseID, "error", err)
+		return handleError(err)
+	}
+	if leaseTimes == nil {
+		return logical.ErrorResponse("invalid lease"), logical.ErrInvalidRequest
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"id":           leaseID,
+			"issue_time":   leaseTimes.IssueTime,
+			"expire_time":  nil,
+			"last_renewal": nil,
+			"ttl":          int64(0),
+		},
+	}
+	renewable, _ := leaseTimes.renewable()
+	resp.Data["renewable"] = renewable
+
+	if !leaseTimes.LastRenewalTime.IsZero() {
+		resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
+	}
+	if !leaseTimes.ExpireTime.IsZero() {
+		resp.Data["expire_time"] = leaseTimes.ExpireTime
+		resp.Data["ttl"] = leaseTimes.ttl()
+	}
+	return resp, nil
+}
+
+func (b *SystemBackend) handleLeaseLookupList(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	prefix := data.Get("prefix").(string)
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+
+	keys, err := b.Core.expiration.idView.List(prefix)
+	if err != nil {
+		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
+		return handleError(err)
+	}
+	return logical.ListResponse(keys), nil
 }
 
 // handleRenew is used to renew a lease with a given LeaseID
@@ -2428,5 +2523,23 @@ This path responds to the following HTTP methods.
 	"audited-headers": {
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
+	},
+
+	"leases": {
+		`View or list lease metadata.`,
+		`
+This path responds to the following HTTP methods.
+
+    PUT /
+        Retrieve the metadata for the provided lease id.
+
+    LIST /<prefix>
+        Lists the leases for the named prefix.
+		`,
+	},
+
+	"leases-list-prefix": {
+		`The path to list leases under. Example: "aws/creds/deploy"`,
+		"",
 	},
 }

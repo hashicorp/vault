@@ -1075,7 +1075,8 @@ func TestLeaseEntry(t *testing.T) {
 		},
 		Secret: &logical.Secret{
 			LeaseOptions: logical.LeaseOptions{
-				TTL: time.Minute,
+				TTL:       time.Minute,
+				Renewable: true,
 			},
 		},
 		IssueTime:  time.Now(),
@@ -1094,6 +1095,37 @@ func TestLeaseEntry(t *testing.T) {
 
 	if !reflect.DeepEqual(out.Data, le.Data) {
 		t.Fatalf("got: %#v, expect %#v", out, le)
+	}
+
+	// Test renewability
+	le.ExpireTime = time.Time{}
+	if r, _ := le.renewable(); r {
+		t.Fatal("lease with zero expire time is not renewable")
+	}
+	le.ExpireTime = time.Now().Add(-1 * time.Hour)
+	if r, _ := le.renewable(); r {
+		t.Fatal("lease with expire time in the past is not renewable")
+	}
+	le.ExpireTime = time.Now().Add(1 * time.Hour)
+	if r, err := le.renewable(); !r {
+		t.Fatalf("lease with future expire time is renewable, err: %v", err)
+	}
+	le.Secret.LeaseOptions.Renewable = false
+	if r, _ := le.renewable(); r {
+		t.Fatal("secret is set to not be renewable but returns as renewable")
+	}
+	le.Secret = nil
+	le.Auth = &logical.Auth{
+		LeaseOptions: logical.LeaseOptions{
+			Renewable: true,
+		},
+	}
+	if r, err := le.renewable(); !r {
+		t.Fatalf("auth is renewable but is set to not be, err: %v", err)
+	}
+	le.Auth.LeaseOptions.Renewable = false
+	if r, _ := le.renewable(); r {
+		t.Fatal("auth is set to not be renewable but returns as renewable")
 	}
 }
 
