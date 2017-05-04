@@ -59,6 +59,9 @@ func (c *PluginCatalog) Get(name string) (*pluginutil.PluginRunner, error) {
 				return nil, fmt.Errorf("failed to decode plugin entry: %v", err)
 			}
 
+			// prepend the plugin directory to the command
+			entry.Command = filepath.Join(c.directory, entry.Command)
+
 			return entry, nil
 		}
 	}
@@ -85,14 +88,11 @@ func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
 	defer c.lock.Unlock()
 
 	parts := strings.Split(command, " ")
-	command = parts[0]
-	args := parts[1:]
-
-	command = filepath.Join(c.directory, command)
 
 	// Best effort check to make sure the command isn't breaking out of the
 	// configured plugin directory.
-	sym, err := filepath.EvalSymlinks(command)
+	commandFull := filepath.Join(c.directory, parts[0])
+	sym, err := filepath.EvalSymlinks(commandFull)
 	if err != nil {
 		return fmt.Errorf("error while validating the command path: %v", err)
 	}
@@ -107,8 +107,8 @@ func (c *PluginCatalog) Set(name, command string, sha256 []byte) error {
 
 	entry := &pluginutil.PluginRunner{
 		Name:    name,
-		Command: command,
-		Args:    args,
+		Command: parts[0],
+		Args:    parts[1:],
 		Sha256:  sha256,
 		Builtin: false,
 	}
