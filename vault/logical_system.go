@@ -76,17 +76,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 		Paths: []*framework.Path{
 			&framework.Path{
-				Pattern: "tidy-leases$",
-
-				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.handleTidyLeases,
-				},
-
-				HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
-				HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
-			},
-
-			&framework.Path{
 				Pattern: "capabilities-accessor$",
 
 				Fields: map[string]*framework.FieldSchema{
@@ -430,6 +419,17 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-prefix"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["revoke-prefix"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "leases/tidy$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleTidyLeases,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
 			},
 
 			&framework.Path{
