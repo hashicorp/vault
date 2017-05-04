@@ -18,6 +18,13 @@ FEATURES:
    behavior is also still available. [GH-2441]
  * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
    Vault physical data store [GH-2546]
+ * **Lease Listing and Lookup**: You can now introspect a lease to get its
+   creation and expiration properties via `sys/leases/lookup`; with `sudo`
+   capability you can also list leases for lookup, renewal, or revocation via
+   that endpoint. Various lease functions (renew, revoke, revoke-prefix,
+   revoke-force) have also been relocated to `sys/leases/`, but they also work
+   at the old paths for compatibility. Reading (but not listing) leases via
+   `sys/leases/lookup` is now a part of the current `default` policy. [GH-2650]
 
 IMPROVEMENTS:
 
@@ -36,6 +43,8 @@ IMPROVEMENTS:
    `max_ttl` from the given role [GH-2593]
  * secret/pki: Add role parameter `allow_glob_domains` that enables defining
    names in `allowed_domains` containing `*` glob patterns [GH-2517]
+ * secret/pki: Update certificate storage to not use characters that are not
+   supported on some filesystems [GH-2575]
  * storage/etcd3: Add `discovery_srv` option to query for SRV records to find
    servers [GH-2521]
  * storage/s3: Support `max_parallel` option to limit concurrent outstanding
@@ -48,6 +57,8 @@ BUG FIXES:
  * api: Respect a configured path in Vault's address [GH-2588]
  * auth/aws-ec2: New bounds added as criteria to allow role creation [GH-2600]
  * auth/ldap: Don't lowercase groups attached to users [GH-2613]
+ * cli: Don't panic if `vault write` is used with the `force` flag but no path
+   [GH-2674]
  * secret/mssql: Update mssql driver to support queries with colons [GH-2610]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]

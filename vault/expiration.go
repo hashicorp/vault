@@ -502,7 +502,7 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 	}
 
 	// Check if the lease is renewable
-	if err := le.renewable(); err != nil {
+	if _, err := le.renewable(); err != nil {
 		return nil, err
 	}
 
@@ -557,7 +557,7 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 
 	// Check if the lease is renewable. Note that this also checks for a nil
 	// lease and errors in that case as well.
-	if err := le.renewable(); err != nil {
+	if _, err := le.renewable(); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -978,29 +978,34 @@ type leaseEntry struct {
 }
 
 // encode is used to JSON encode the lease entry
-func (l *leaseEntry) encode() ([]byte, error) {
-	return json.Marshal(l)
+func (le *leaseEntry) encode() ([]byte, error) {
+	return json.Marshal(le)
 }
 
-func (le *leaseEntry) renewable() error {
+func (le *leaseEntry) renewable() (bool, error) {
+	var err error
+	switch {
 	// If there is no entry, cannot review
-	if le == nil || le.ExpireTime.IsZero() {
-		return fmt.Errorf("lease not found or lease is not renewable")
-	}
-
+	case le == nil || le.ExpireTime.IsZero():
+		err = fmt.Errorf("lease not found or lease is not renewable")
 	// Determine if the lease is expired
-	if le.ExpireTime.Before(time.Now()) {
-		return fmt.Errorf("lease expired")
+	case le.ExpireTime.Before(time.Now()):
+		err = fmt.Errorf("lease expired")
+	// Determine if the lease is renewable
+	case le.Secret != nil && !le.Secret.Renewable:
+		err = fmt.Errorf("lease is not renewable")
+	case le.Auth != nil && !le.Auth.Renewable:
+		err = fmt.Errorf("lease is not renewable")
 	}
 
-	// Determine if the lease is renewable
-	if le.Secret != nil && !le.Secret.Renewable {
-		return fmt.Errorf("lease is not renewable")
+	if err != nil {
+		return false, err
 	}
-	if le.Auth != nil && !le.Auth.Renewable {
-		return fmt.Errorf("lease is not renewable")
-	}
-	return nil
+	return true, nil
+}
+
+func (le *leaseEntry) ttl() int64 {
+	return int64(le.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
 }
 
 // decodeLeaseEntry is used to reverse encode and return a new entry
