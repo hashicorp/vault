@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
 
@@ -57,13 +58,11 @@ func (b *backend) pathReadCode(
 	}
 
 	// Return the secret
-	resp, err := &logical.Response{
+	return &logical.Response{
 		Data: map[string]interface{}{
 			"code": totpToken,
 		},
 	}, nil
-
-	return resp, nil
 }
 
 func (b *backend) pathValidateCode(
@@ -91,14 +90,15 @@ func (b *backend) pathValidateCode(
 		Digits:    key.Digits,
 		Algorithm: key.Algorithm,
 	})
+	if err != nil && err != otplib.ErrValidateInputInvalidLength {
+		return logical.ErrorResponse("an error occured while validating the code"), err
+	}
 
-	resp, err := &logical.Response{
+	return &logical.Response{
 		Data: map[string]interface{}{
 			"valid": valid,
 		},
 	}, nil
-
-	return resp, nil
 }
 
 const pathCodeHelpSyn = `
