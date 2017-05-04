@@ -612,6 +612,11 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 // of lease is assumed by the expiration manager.
 func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
+
+	if req.ClientToken == "" {
+		return "", fmt.Errorf("expiration: cannot register a lease with an empty client token")
+	}
+
 	// Ignore if there is no leased secret
 	if resp == nil || resp.Secret == nil {
 		return "", nil
@@ -652,10 +657,6 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 			}
 		}
 	}()
-
-	if req.ClientToken == "" {
-		return "", fmt.Errorf("expiration: cannot register a lease with an empty client token")
-	}
 
 	le := leaseEntry{
 		LeaseID:     leaseID,
