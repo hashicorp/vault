@@ -196,8 +196,8 @@ func (m *ExpirationManager) Tidy() error {
 				return
 			} else {
 				m.logger.Debug("expiration: revoking lease which contains an invalid token", "lease_id", leaseID)
-				deletedCountInvalidToken++
 				revokeLease = true
+				deletedCountInvalidToken++
 			}
 		}
 

@@ -221,6 +221,12 @@ func TestExpiration_Tidy(t *testing.T) {
 		t.Fatalf("error persisting entry: %v", err)
 	}
 
+	// Run the tidy operation
+	err = exp.Tidy()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	count = 0
 	if err = logical.ScanView(exp.idView, countFunc); err != nil {
 		t.Fatal(err)
@@ -344,8 +350,9 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 	for _, path := range paths {
 		req := &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      path,
+			Operation:   logical.ReadOperation,
+			Path:        path,
+			ClientToken: "foobar",
 		}
 		resp := &logical.Response{
 			Secret: &logical.Secret{
@@ -399,8 +406,9 @@ func TestExpiration_Restore(t *testing.T) {
 func TestExpiration_Register(t *testing.T) {
 	exp := mockExpiration(t)
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "prod/aws/foo",
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
@@ -498,8 +506,9 @@ func TestExpiration_Revoke(t *testing.T) {
 	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "prod/aws/foo",
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
@@ -540,8 +549,9 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "prod/aws/foo",
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
@@ -599,8 +609,9 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	}
 	for _, path := range paths {
 		req := &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      path,
+			Operation:   logical.ReadOperation,
+			Path:        path,
+			ClientToken: "foobar",
 		}
 		resp := &logical.Response{
 			Secret: &logical.Secret{
@@ -787,8 +798,9 @@ func TestExpiration_Renew(t *testing.T) {
 	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "prod/aws/foo",
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
@@ -853,8 +865,9 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "prod/aws/foo",
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
@@ -899,8 +912,9 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "prod/aws/foo",
+		Operation:   logical.ReadOperation,
+		Path:        "prod/aws/foo",
+		ClientToken: "foobar",
 	}
 	resp := &logical.Response{
 		Secret: &logical.Secret{
