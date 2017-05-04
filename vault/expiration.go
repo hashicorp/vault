@@ -638,17 +638,17 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 		if retErr != nil {
 			revResp, err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
 			if err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional internal error was encountered revoking the newly-generated secret: {{err}}", err))
 			} else if revResp != nil && revResp.IsError() {
 				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", revResp.Error()))
 			}
 
 			if err := m.deleteEntry(leaseID); err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered deleting any lease associated with the newly-generated secret: {{err}}", err))
 			}
 
 			if err := m.removeIndexByToken(req.ClientToken, leaseID); err != nil {
-				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", err))
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
 			}
 		}
 	}()
