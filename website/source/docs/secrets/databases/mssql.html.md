@@ -39,11 +39,11 @@ Once the MSSQL connection is configured we can add a role:
 $ vault write database/roles/readonly \
     db_name=mssql \
     creation_statements="CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';\
-        USE AdventureWorks; CREATE USER [{{name}}] FOR LOGIN [{{name}}]; \
-        GRANT SELECT ON SCHEMA::dbo TO [{{name}}];" \
+        CREATE USER [{{name}}] FOR LOGIN [{{name}}];\
+        GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{{name}}];" \
     default_ttl="1h" \
     max_ttl="24h"
-
+    
 Success! Data written to: database/roles/readonly
 ```
 
