@@ -10,17 +10,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math/big"
-	mathrand "math/rand"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
 	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/certutil"
 )
 
 var (
@@ -29,15 +27,20 @@ var (
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
 )
 
-// generateSignedCert is used internally to create certificates for the plugin
-// client and server. These certs are signed by the given CA Cert and Key.
-func GenerateCert() ([]byte, *ecdsa.PrivateKey, error) {
+// generateCert is used internally to create certificates for the plugin
+// client and server.
+func generateCert() ([]byte, *ecdsa.PrivateKey, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	host, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sn, err := certutil.GenerateSerialNumber()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,7 +55,7 @@ func GenerateCert() ([]byte, *ecdsa.PrivateKey, error) {
 			x509.ExtKeyUsageServerAuth,
 		},
 		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
-		SerialNumber: big.NewInt(mathrand.Int63()),
+		SerialNumber: sn,
 		NotBefore:    time.Now().Add(-30 * time.Second),
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 		IsCA:         true,
@@ -66,9 +69,9 @@ func GenerateCert() ([]byte, *ecdsa.PrivateKey, error) {
 	return certBytes, key, nil
 }
 
-// CreateClientTLSConfig creates a signed certificate and returns a configured
+// createClientTLSConfig creates a signed certificate and returns a configured
 // TLS config.
-func CreateClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config, error) {
+func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config, error) {
 	clientCert, err := x509.ParseCertificate(certBytes)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing generated plugin certificate: %v", err)
@@ -95,9 +98,9 @@ func CreateClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 	return tlsConfig, nil
 }
 
-// WrapServerConfig is used to create a server certificate and private key, then
+// wrapServerConfig is used to create a server certificate and private key, then
 // wrap them in an unwrap token for later retrieval by the plugin.
-func WrapServerConfig(sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
+func wrapServerConfig(sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (string, error) {
 	rawKey, err := x509.MarshalECPrivateKey(key)
 	if err != nil {
 		return "", err
@@ -119,11 +122,6 @@ func WrapServerConfig(sys RunnerUtil, certBytes []byte, key *ecdsa.PrivateKey) (
 func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, error) {
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
-
-		// Ensure unwrap token is a JWT
-		if strings.Count(unwrapToken, ".") != 2 {
-			return nil, errors.New("Could not parse unwraptoken")
-		}
 
 		// Parse the JWT and retrieve the vault address
 		wt, err := jws.ParseJWT([]byte(unwrapToken))

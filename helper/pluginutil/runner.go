@@ -47,20 +47,20 @@ type PluginRunner struct {
 // plugin.
 func (r *PluginRunner) Run(wrapper RunnerUtil, pluginMap map[string]plugin.Plugin, hs plugin.HandshakeConfig, env []string) (*plugin.Client, error) {
 	// Get a CA TLS Certificate
-	certBytes, key, err := GenerateCert()
+	certBytes, key, err := generateCert()
 	if err != nil {
 		return nil, err
 	}
 
 	// Use CA to sign a client cert and return a configured TLS config
-	clientTLSConfig, err := CreateClientTLSConfig(certBytes, key)
+	clientTLSConfig, err := createClientTLSConfig(certBytes, key)
 	if err != nil {
 		return nil, err
 	}
 
 	// Use CA to sign a server cert and wrap the values in a response wrapped
 	// token.
-	wrapToken, err := WrapServerConfig(wrapper, certBytes, key)
+	wrapToken, err := wrapServerConfig(wrapper, certBytes, key)
 	if err != nil {
 		return nil, err
 	}

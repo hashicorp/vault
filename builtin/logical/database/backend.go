@@ -54,7 +54,7 @@ type databaseBackend struct {
 	sync.RWMutex
 }
 
-// resetAllDBs closes all connections from all database types
+// closeAllDBs closes all connections from all database types
 func (b *databaseBackend) closeAllDBs() {
 	b.Lock()
 	defer b.Unlock()
@@ -120,8 +120,8 @@ func (b *databaseBackend) DatabaseConfig(s logical.Storage, name string) (*Datab
 	return &config, nil
 }
 
-func (b *databaseBackend) Role(s logical.Storage, n string) (*roleEntry, error) {
-	entry, err := s.Get("role/" + n)
+func (b *databaseBackend) Role(s logical.Storage, roleName string) (*roleEntry, error) {
+	entry, err := s.Get("role/" + roleName)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (b *databaseBackend) closeIfShutdown(name string, err error) {
 const backendHelp = `
 The database backend supports using many different databases
 as secret backends, including but not limited to:
-cassandra, msslq, mysql, postgres
+cassandra, mssql, mysql, postgres
 
 After mounting this backend, configure it using the endpoints within
 the "database/config/" path.

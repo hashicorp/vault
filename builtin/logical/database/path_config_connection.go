@@ -115,7 +115,7 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 	}
 }
 
-// pathConnectionRead reads out the connection configuration
+// connectionReadHandler reads out the connection configuration
 func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 	return func(req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		name := data.Get("name").(string)
@@ -248,7 +248,7 @@ database. This path runs the provided plugin name and passes the configured
 connection details to the plugin. See the documentation for the plugin specified
 for a full list of accepted connection details. 
 
-In addition to the database specific connection details, this endpoing also
+In addition to the database specific connection details, this endpoint also
 accepts:
 
 	* "plugin_name" (required) - The name of a builtin or previously registered
