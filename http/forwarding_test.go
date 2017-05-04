@@ -595,3 +595,36 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		}
 	}
 }
+
+func TestHTTP_Forwarding_HelpOperation(t *testing.T) {
+	handler1 := http.NewServeMux()
+	handler2 := http.NewServeMux()
+	handler3 := http.NewServeMux()
+
+	coreConfig := &vault.CoreConfig{}
+
+	cores := vault.TestCluster(t, []http.Handler{handler1, handler2, handler3}, coreConfig, true)
+	for _, core := range cores {
+		defer core.CloseListeners()
+	}
+	handler1.Handle("/", Handler(cores[0].Core))
+	handler2.Handle("/", Handler(cores[1].Core))
+	handler3.Handle("/", Handler(cores[2].Core))
+
+	// make it easy to get access to the active
+	core := cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	testHelp := func(client *api.Client) {
+		help, err := client.Help("auth/token")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if help == nil {
+			t.Fatal("help was nil")
+		}
+	}
+
+	testHelp(cores[0].Client)
+	testHelp(cores[1].Client)
+}
