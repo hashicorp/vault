@@ -120,7 +120,12 @@ func (c *Core) stopExpiration() error {
 	return nil
 }
 
-// Tidy cleans up stale leases which are associated with invalid tokens
+// Tidy cleans up the dangling storage entries for leases. It scans the storage
+// view to find all the available leases, checks if the token embedded in it is
+// either empty or invalid and in both the cases, it revokes them. It also uses
+// a token cache to avoid multiple lookups of the same token ID. It is normally
+// not required to use the API that invokes this. This is only intended to
+// clean up the corrupt storage due to bugs.
 func (m *ExpirationManager) Tidy() error {
 	var tidyErrors *multierror.Error
 
