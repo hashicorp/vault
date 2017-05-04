@@ -626,6 +626,10 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	leaseID := path.Join(req.Path, leaseUUID)
 
 	defer func() {
+		// If there is an error we want to rollback as much as possible (note
+		// that errors here are ignored to do as much cleanup as we can). We
+		// want to revoke a generated secret (since an error means we may not
+		// be successfully tracking it), remove indexes, and delete the entry.
 		if retErr != nil {
 			revResp, err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
 			if err != nil {
