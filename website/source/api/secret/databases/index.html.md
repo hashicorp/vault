@@ -162,11 +162,13 @@ This endpoint creates or updates a role definition.
 - `db_name` `(string: <required>)` - The name of the database connection to use
   for this role. 
 
-- `default_ttl` `(string: <required>)` - Specifies the TTL for the lease
-  associated with this role. 
+- `default_ttl` `(string/int: 0)` - Specifies the TTL for the leases
+  associated with this role. Accepts time suffixed strings ("1h") or an integer
+  number of seconds. Defaults to system/backend default TTL time.
 
-- `max_ttl` `(string: <required>)` - Specifies the maximum TTL for the lease
-  associated with this role. 
+- `max_ttl` `(string/int: 0)` - Specifies the maximum TTL for the leases
+  associated with this role. Accepts time suffixed strings ("1h") or an integer
+  number of seconds. Defaults to system/backend default TTL time.
 
 - `creation_statements` `(string: <required>)` – Specifies the database
   statements executed to create and configure a user. Must be a

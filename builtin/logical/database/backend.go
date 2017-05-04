@@ -106,7 +106,7 @@ func (b *databaseBackend) createDBObj(s logical.Storage, name string) (dbplugin.
 func (b *databaseBackend) DatabaseConfig(s logical.Storage, name string) (*DatabaseConfig, error) {
 	entry, err := s.Get(fmt.Sprintf("config/%s", name))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read connection configuration with name: %s", name)
+		return nil, fmt.Errorf("failed to read connection configuration: %s", err)
 	}
 	if entry == nil {
 		return nil, fmt.Errorf("failed to find entry for connection with name: %s", name)
