@@ -40,7 +40,7 @@ $ vault write database/roles/readonly \
     db_name=mssql \
     creation_statements="CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';\
         CREATE USER [{{name}}] FOR LOGIN [{{name}}];\
-        GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{{name}}];" \
+        GRANT SELECT ON SCHEMA::dbo TO [{{name}}];" \
     default_ttl="1h" \
     max_ttl="24h"
     

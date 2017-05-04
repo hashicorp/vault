@@ -27,7 +27,7 @@ configuration:
 $ vault write database/config/postgresql \
     plugin_name=postgresql-database-plugin \
     allowed_roles="readonly" \
-    connection_url="postgresql://root:root@localhost:5432/postgres"
+    connection_url="postgresql://root:root@localhost:5432/"
 
 The following warnings were returned from the Vault server:
 * Read access to this endpoint should be controlled via ACLs as it will return the connection details as is, including passwords, if any.
