@@ -1165,6 +1165,12 @@
 			"revisionTime": "2017-02-08T17:17:27Z"
 		},
 		{
+			"checksumSHA1": "6JP37UqrI0H80Gpk0Y2P+KXgn5M=",
+			"path": "github.com/ryanuber/go-glob",
+			"revision": "256dc444b735e061061cf46c809487313d5b0065",
+			"revisionTime": "2017-01-28T01:21:29Z"
+		},
+		{
 			"checksumSHA1": "5SYLEhADhdBVZAGPVHWggQl7H8k=",
 			"path": "github.com/samuel/go-zookeeper/zk",
 			"revision": "1d7be4effb13d2d908342d349d71a284a7542693",
@@ -1177,10 +1183,10 @@
 			"revisionTime": "2017-04-08T21:24:09Z"
 		},
 		{
-			"checksumSHA1": "reJ+wO9qzH/7r2vXQE5MiTvg8+w=",
+			"checksumSHA1": "7b7psq20O8IOCr885W2Ld6a3KTc=",
 			"path": "github.com/sstarcher/go-okta",
-			"revision": "388b6aef4eed400621bd3e3a98d831ef1368582d",
-			"revisionTime": "2016-10-03T17:19:47Z"
+			"revision": "64b3cb9e3a7b6d0c4e4432576c873e492d152666",
+			"revisionTime": "2017-04-28T20:44:25Z"
 		},
 		{
 			"checksumSHA1": "MxLnUmfrP+r5HfCZM29+WPKebn8=",

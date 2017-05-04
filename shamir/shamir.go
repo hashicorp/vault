@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"fmt"
+	mathrand "math/rand"
+	"time"
 )
 
 const (
@@ -166,13 +168,17 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 		return nil, fmt.Errorf("cannot split an empty secret")
 	}
 
+	// Generate random list of x coordinates
+	mathrand.Seed(time.Now().UnixNano())
+	xCoordinates := mathrand.Perm(255)
+
 	// Allocate the output array, initialize the final byte
 	// of the output with the offset. The representation of each
 	// output is {y1, y2, .., yN, x}.
 	out := make([][]byte, parts)
 	for idx := range out {
 		out[idx] = make([]byte, len(secret)+1)
-		out[idx][len(secret)] = uint8(idx) + 1
+		out[idx][len(secret)] = uint8(xCoordinates[idx]) + 1
 	}
 
 	// Construct a random polynomial for each byte of the secret.
@@ -189,7 +195,7 @@ func Split(secret []byte, parts, threshold int) ([][]byte, error) {
 		// We cheat by encoding the x value once as the final index,
 		// so that it only needs to be stored once.
 		for i := 0; i < parts; i++ {
-			x := uint8(i) + 1
+			x := uint8(xCoordinates[i]) + 1
 			y := p.evaluate(x)
 			out[i][idx] = y
 		}

@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+
+	"github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -25,7 +27,12 @@ type ParsedCert struct {
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
-		Fields:  map[string]*framework.FieldSchema{},
+		Fields: map[string]*framework.FieldSchema{
+			"name": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: "The name of the certificate role to authenticate against.",
+			},
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathLogin,
 		},
@@ -36,7 +43,7 @@ func (b *backend) pathLogin(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 
 	var matched *ParsedCert
-	if verifyResp, resp, err := b.verifyCredentials(req); err != nil {
+	if verifyResp, resp, err := b.verifyCredentials(req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
 		return resp, nil
@@ -93,7 +100,7 @@ func (b *backend) pathLoginRenew(
 
 	if !config.DisableBinding {
 		var matched *ParsedCert
-		if verifyResp, resp, err := b.verifyCredentials(req); err != nil {
+		if verifyResp, resp, err := b.verifyCredentials(req, d); err != nil {
 			return nil, err
 		} else if resp != nil {
 			return resp, nil
@@ -136,7 +143,7 @@ func (b *backend) pathLoginRenew(
 	return framework.LeaseExtend(cert.TTL, 0, b.System())(req, d)
 }
 
-func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical.Response, error) {
+func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData) (*ParsedCert, *logical.Response, error) {
 	// Get the connection state
 	if req.Connection == nil || req.Connection.ConnState == nil {
 		return nil, logical.ErrorResponse("tls connection required"), nil
@@ -146,20 +153,29 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 	if connState.PeerCertificates == nil || len(connState.PeerCertificates) == 0 {
 		return nil, logical.ErrorResponse("client certificate must be supplied"), nil
 	}
+	clientCert := connState.PeerCertificates[0]
+
+	// Allow constraining the login request to a single CertEntry
+	certName := d.Get("name").(string)
 
 	// Load the trusted certificates
-	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage)
+	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
 
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
-		policy := b.matchNonCAPolicy(connState.PeerCertificates[0], trustedNonCAs)
-		if policy != nil && !b.checkForChainInCRLs(policy.Certificates) {
-			return policy, nil, nil
+		for _, trustedNonCA := range trustedNonCAs {
+			tCert := trustedNonCA.Certificates[0]
+			// Check for client cert being explicitly listed in the config (and matching other constraints)
+			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
+				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
+				b.matchesConstraints(clientCert, trustedNonCA.Certificates, trustedNonCA) {
+				return trustedNonCA, nil, nil
+			}
 		}
 	}
 
-	// Validate the connection state is trusted
+	// Get the list of full chains matching the connection
 	trustedChains, err := validateConnState(roots, connState)
 	if err != nil {
 		return nil, nil, err
@@ -170,49 +186,58 @@ func (b *backend) verifyCredentials(req *logical.Request) (*ParsedCert, *logical
 		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
 	}
 
-	validChain := b.checkForValidChain(trustedChains)
-	if !validChain {
-		return nil, logical.ErrorResponse(
-			"no chain containing non-revoked certificates could be found for this login certificate",
-		), nil
-	}
-
-	// Match the trusted chain with the policy
-	return b.matchPolicy(trustedChains, trusted), nil, nil
-}
-
-// matchNonCAPolicy is used to match the client cert with the registered non-CA
-// policies to establish client identity.
-func (b *backend) matchNonCAPolicy(clientCert *x509.Certificate, trustedNonCAs []*ParsedCert) *ParsedCert {
-	for _, trustedNonCA := range trustedNonCAs {
-		tCert := trustedNonCA.Certificates[0]
-		if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 && bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) {
-			return trustedNonCA
-		}
-	}
-	return nil
-}
-
-// matchPolicy is used to match the associated policy with the certificate that
-// was used to establish the client identity.
-func (b *backend) matchPolicy(chains [][]*x509.Certificate, trusted []*ParsedCert) *ParsedCert {
-	// There is probably a better way to do this...
-	for _, chain := range chains {
-		for _, trust := range trusted {
-			for _, tCert := range trust.Certificates {
-				for _, cCert := range chain {
-					if tCert.Equal(cCert) {
-						return trust
+	// Search for a ParsedCert that intersects with the validated chains and any additional constraints
+	matches := make([]*ParsedCert, 0)
+	for _, trust := range trusted { // For each ParsedCert in the config
+		for _, tCert := range trust.Certificates { // For each certificate in the entry
+			for _, chain := range trustedChains { // For each root chain that we matched
+				for _, cCert := range chain { // For each cert in the matched chain
+					if tCert.Equal(cCert) && // ParsedCert intersects with matched chain
+						b.matchesConstraints(clientCert, chain, trust) { // validate client cert + matched chain against the config
+						// Add the match to the list
+						matches = append(matches, trust)
 					}
 				}
 			}
 		}
 	}
-	return nil
+
+	// Fail on no matches
+	if len(matches) == 0 {
+		return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
+	}
+
+	// Return the first matching entry (for backwards compatibility, we continue to just pick one if multiple match)
+	return matches[0], nil, nil
+}
+
+func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
+	// Default behavior (no names) is to allow all names
+	nameMatched := len(config.Entry.AllowedNames) == 0
+	// At least one pattern must match at least one name if any patterns are specified
+	for _, allowedName := range config.Entry.AllowedNames {
+		if glob.Glob(allowedName, clientCert.Subject.CommonName) {
+			nameMatched = true
+		}
+
+		for _, name := range clientCert.DNSNames {
+			if glob.Glob(allowedName, name) {
+				nameMatched = true
+			}
+		}
+
+		for _, name := range clientCert.EmailAddresses {
+			if glob.Glob(allowedName, name) {
+				nameMatched = true
+			}
+		}
+	}
+
+	return !b.checkForChainInCRLs(trustedChain) && nameMatched
 }
 
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
+func (b *backend) loadTrustedCerts(store logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
 	pool = x509.NewCertPool()
 	trusted = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
@@ -222,6 +247,10 @@ func (b *backend) loadTrustedCerts(store logical.Storage) (pool *x509.CertPool, 
 		return
 	}
 	for _, name := range names {
+		// If we are trying to select a single CertEntry and this isn't it
+		if certName != "" && name != certName {
+			continue
+		}
 		entry, err := b.Cert(store, strings.TrimPrefix(name, "cert/"))
 		if err != nil {
 			b.Logger().Error("cert: failed to load trusted cert", "name", name, "error", err)

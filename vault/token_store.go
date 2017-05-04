@@ -1010,7 +1010,7 @@ func (ts *TokenStore) RevokeTree(id string) error {
 	defer metrics.MeasureSince([]string{"token", "revoke-tree"}, time.Now())
 	// Verify the token is not blank
 	if id == "" {
-		return fmt.Errorf("cannot revoke blank token")
+		return fmt.Errorf("cannot tree-revoke blank token")
 	}
 
 	// Get the salted ID
@@ -1120,7 +1120,7 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 	// Scan through the secondary index entries; if there is an entry
 	// with the token's salt ID at the end, remove it
 	for _, parent := range parentList {
-		children, err := ts.view.List(parentPrefix + parent)
+		children, err := ts.view.List(parentPrefix + parent + "/")
 		if err != nil {
 			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to read child index entry: %v", err))
 			continue
@@ -1858,6 +1858,7 @@ func (ts *TokenStore) handleLookup(
 			"orphan":           false,
 			"creation_time":    int64(out.CreationTime),
 			"creation_ttl":     int64(out.TTL.Seconds()),
+			"expire_time":      nil,
 			"ttl":              int64(0),
 			"explicit_max_ttl": int64(out.ExplicitMaxTTL.Seconds()),
 		},
@@ -1882,15 +1883,15 @@ func (ts *TokenStore) handleLookup(
 	if leaseTimes != nil {
 		if !leaseTimes.LastRenewalTime.IsZero() {
 			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+			resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
 		}
 		if !leaseTimes.ExpireTime.IsZero() {
-			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
+			resp.Data["expire_time"] = leaseTimes.ExpireTime
+			resp.Data["ttl"] = leaseTimes.ttl()
 		}
-		if err := leaseTimes.renewable(); err == nil {
-			resp.Data["renewable"] = true
-		} else {
-			resp.Data["renewable"] = false
-		}
+		renewable, _ := leaseTimes.renewable()
+		resp.Data["renewable"] = renewable
+		resp.Data["issue_time"] = leaseTimes.IssueTime
 	}
 
 	if urltoken {
@@ -2173,7 +2174,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 			}
 			resp.AddWarning(fmt.Sprintf(
 				"Given explicit max TTL of %d is greater than system/mount allowed value of %d seconds; until this is fixed attempting to create tokens against this role will result in an error",
-				entry.ExplicitMaxTTL.Seconds(), sysView.MaxLeaseTTL().Seconds()))
+				int64(entry.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
 		}
 	}
 
