@@ -18,7 +18,7 @@ FEATURES:
    behavior is also still available. [GH-2441]
  * **MSSQL Physical Backend**: You can now use Microsoft SQL Server as your
    Vault physical data store [GH-2546]
- * Lease Listing and Lookup: You can now introspect a lease to get its creation
+ * **Lease Listing and Lookup**: You can now introspect a lease to get its creation
    and expiration properties via `sys/leases/lookup`; with `sudo` capability
    you can also list leases for lookup, renewal, or revocation via that
    endpoint. Various lease functions (renew, revoke, revoke-prefix,
