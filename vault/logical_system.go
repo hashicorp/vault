@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -62,6 +63,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
+				"plugins/catalog/*",
 				"revoke-prefix/*",
 				"leases/revoke-prefix/*",
 				"leases/revoke-force/*",
@@ -736,6 +738,48 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
+			&framework.Path{
+				Pattern: "plugins/catalog/$",
+
+				Fields: map[string]*framework.FieldSchema{},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handlePluginCatalogList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
+			},
+			&framework.Path{
+				Pattern: "plugins/catalog/(?P<name>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The name of the plugin",
+					},
+					"sha_256": &framework.FieldSchema{
+						Type: framework.TypeString,
+						Description: `The SHA256 sum of the executable used in the
+						command field. This should be HEX encoded.`,
+					},
+					"command": &framework.FieldSchema{
+						Type: framework.TypeString,
+						Description: `The command used to start the plugin. The
+						executable defined in this command must exist in vault's
+						plugin directory.`,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handlePluginCatalogUpdate,
+					logical.DeleteOperation: b.handlePluginCatalogDelete,
+					logical.ReadOperation:   b.handlePluginCatalogRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
+			},
 		},
 	}
 
@@ -766,6 +810,77 @@ func (b *SystemBackend) invalidate(key string) {
 			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policySubPath))
 		}
 	}
+}
+
+func (b *SystemBackend) handlePluginCatalogList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	plugins, err := b.Core.pluginCatalog.List()
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(plugins), nil
+}
+
+func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+
+	sha256 := d.Get("sha_256").(string)
+	if sha256 == "" {
+		return logical.ErrorResponse("missing SHA-256 value"), nil
+	}
+
+	command := d.Get("command").(string)
+	if command == "" {
+		return logical.ErrorResponse("missing command value"), nil
+	}
+
+	sha256Bytes, err := hex.DecodeString(sha256)
+	if err != nil {
+		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
+	}
+
+	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	if err != nil {
+		return nil, err
+	}
+	if plugin == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"plugin": plugin,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	err := b.Core.pluginCatalog.Delete(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -2074,7 +2189,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 		Data: map[string]interface{}{
 			"response": response,
 		},
-		WrapInfo: &logical.ResponseWrapInfo{
+		WrapInfo: &wrapping.ResponseWrapInfo{
 			TTL: time.Duration(creationTTL),
 		},
 	}, nil
@@ -2524,7 +2639,23 @@ This path responds to the following HTTP methods.
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
 	},
+	"plugins/catalog": {
+		`Configures the plugins known to vault`,
+		`
+This path responds to the following HTTP methods.
+    LIST /
+        Returns a list of names of configured plugins.
 
+    GET /<name>
+        Retrieve the metadata for the named plugin.
+
+    PUT /<name>
+        Add or update plugin.
+
+    DELETE /<name>
+        Delete the plugin with the given name.
+		`,
+	},
 	"leases": {
 		`View or list lease metadata.`,
 		`

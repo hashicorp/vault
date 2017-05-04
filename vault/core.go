@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -330,6 +331,14 @@ type Core struct {
 
 	// uiEnabled indicates whether Vault Web UI is enabled or not
 	uiEnabled bool
+
+	// pluginDirectory is the location vault will look for plugin binaries
+	pluginDirectory string
+
+	// pluginCatalog is used to manage plugin configurations
+	pluginCatalog *PluginCatalog
+
+	enableMlock bool
 }
 
 // CoreConfig is used to parameterize a core
@@ -373,6 +382,8 @@ type CoreConfig struct {
 	ClusterName string `json:"cluster_name" structs:"cluster_name" mapstructure:"cluster_name"`
 
 	EnableUI bool `json:"ui" structs:"ui" mapstructure:"ui"`
+
+	PluginDirectory string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
 
 	ReloadFuncs     *map[string][]ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
@@ -430,6 +441,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+		enableMlock:                      !conf.DisableMlock,
 	}
 
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped
@@ -453,8 +465,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 
-	// Construct a new AES-GCM barrier
 	var err error
+	if conf.PluginDirectory != "" {
+		c.pluginDirectory, err = filepath.Abs(conf.PluginDirectory)
+		if err != nil {
+			return nil, fmt.Errorf("core setup failed, could not verify plugin directory: %v", err)
+		}
+	}
+
+	// Construct a new AES-GCM barrier
 	c.barrier, err = NewAESGCMBarrier(c.physical)
 	if err != nil {
 		return nil, fmt.Errorf("barrier setup failed: %v", err)
@@ -1280,6 +1299,10 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupAuditedHeadersConfig(); err != nil {
 		return err
 	}
+	if err := c.setupPluginCatalog(); err != nil {
+		return err
+	}
+
 	if c.ha != nil {
 		if err := c.startClusterListener(); err != nil {
 			return err

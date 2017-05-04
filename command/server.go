@@ -238,6 +238,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
+		PluginDirectory:    config.PluginDirectory,
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID

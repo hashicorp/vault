@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 	"github.com/mitchellh/reflectwalk"
@@ -84,7 +85,7 @@ func Hash(salter *salt.Salt, raw interface{}) error {
 
 		s.Data = data.(map[string]interface{})
 
-	case *logical.ResponseWrapInfo:
+	case *wrapping.ResponseWrapInfo:
 		if s == nil {
 			return nil
 		}
