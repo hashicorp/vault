@@ -32,7 +32,7 @@ FEATURES:
  * **Database Secret Backend & Secure Plugins**: This new secret backend 
    combines the functionality of the MySQL, PostgreSQL, MSSQL, and Cassandra 
    backends. It also provides a plugin interface for extendability through 
-   custom databases.
+   custom databases. [GH-2200]
 
 IMPROVEMENTS:
 
