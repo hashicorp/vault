@@ -820,7 +820,7 @@ func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.Fiel
 
 func (b *SystemBackend) invalidate(key string) {
 	if b.Core.logger.IsTrace() {
-		b.Core.logger.Trace("sys: invaliding key", "key", key)
+		b.Core.logger.Trace("sys: invalidating key", "key", key)
 	}
 	switch {
 	case strings.HasPrefix(key, policySubPath):

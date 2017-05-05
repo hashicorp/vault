@@ -513,7 +513,13 @@ func (c *Core) loadMounts() error {
 					break
 				}
 			}
-			if !foundRequired {
+			// In a replication scenario we will let sync invalidation take
+			// care of creating a new required mount that doesn't exist yet.
+			// This should only happen in the upgrade case where a new one is
+			// introduced on the primary; otherwise initial bootstrapping will
+			// ensure this comes over. If we upgrade first, we simply don't
+			// create the mount, so we won't conflict when we sync.
+			if !foundRequired && c.replicationState != consts.ReplicationSecondary {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
