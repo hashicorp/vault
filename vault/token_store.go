@@ -1120,8 +1120,8 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 
 	defer atomic.CompareAndSwapInt64(&ts.tidyLock, 1, 0)
 
-	ts.logger.Debug("token: beginning tidy operation on tokens")
-	defer ts.logger.Debug("token: finished tidy operation on tokens")
+	ts.logger.Info("token: beginning tidy operation on tokens")
+	defer ts.logger.Info("token: finished tidy operation on tokens")
 
 	// List out all the accessors
 	saltedAccessorList, err := ts.view.List(accessorPrefix)
