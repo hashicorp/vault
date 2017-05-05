@@ -42,7 +42,8 @@ type Config struct {
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl"`
 
-	ClusterName string `hcl:"cluster_name"`
+	ClusterName     string `hcl:"cluster_name"`
+	PluginDirectory string `hcl:"plugin_directory"`
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -272,6 +273,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableUI = c2.EnableUI
 	}
 
+	result.PluginDirectory = c.PluginDirectory
+	if c2.PluginDirectory != "" {
+		result.PluginDirectory = c2.PluginDirectory
+	}
+
 	return result
 }
 
@@ -363,6 +369,7 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 		"default_lease_ttl",
 		"max_lease_ttl",
 		"cluster_name",
+		"plugin_directory",
 	}
 	if err := checkHCLKeys(list, valid); err != nil {
 		return nil, err

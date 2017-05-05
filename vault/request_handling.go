@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -216,7 +217,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 
 		if wrapTTL > 0 {
-			resp.WrapInfo = &logical.ResponseWrapInfo{
+			resp.WrapInfo = &wrapping.ResponseWrapInfo{
 				TTL:    wrapTTL,
 				Format: wrapFormat,
 			}
@@ -362,7 +363,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		if wrapTTL > 0 {
-			resp.WrapInfo = &logical.ResponseWrapInfo{
+			resp.WrapInfo = &wrapping.ResponseWrapInfo{
 				TTL:    wrapTTL,
 				Format: wrapFormat,
 			}
