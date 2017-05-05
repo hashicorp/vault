@@ -1870,6 +1870,7 @@ func (ts *TokenStore) handleLookup(
 			"orphan":           false,
 			"creation_time":    int64(out.CreationTime),
 			"creation_ttl":     int64(out.TTL.Seconds()),
+			"expire_time":      nil,
 			"ttl":              int64(0),
 			"explicit_max_ttl": int64(out.ExplicitMaxTTL.Seconds()),
 		},
@@ -1894,15 +1895,15 @@ func (ts *TokenStore) handleLookup(
 	if leaseTimes != nil {
 		if !leaseTimes.LastRenewalTime.IsZero() {
 			resp.Data["last_renewal_time"] = leaseTimes.LastRenewalTime.Unix()
+			resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
 		}
 		if !leaseTimes.ExpireTime.IsZero() {
-			resp.Data["ttl"] = int64(leaseTimes.ExpireTime.Sub(time.Now().Round(time.Second)).Seconds())
+			resp.Data["expire_time"] = leaseTimes.ExpireTime
+			resp.Data["ttl"] = leaseTimes.ttl()
 		}
-		if err := leaseTimes.renewable(); err == nil {
-			resp.Data["renewable"] = true
-		} else {
-			resp.Data["renewable"] = false
-		}
+		renewable, _ := leaseTimes.renewable()
+		resp.Data["renewable"] = renewable
+		resp.Data["issue_time"] = leaseTimes.IssueTime
 	}
 
 	if urltoken {
@@ -2185,7 +2186,7 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 			}
 			resp.AddWarning(fmt.Sprintf(
 				"Given explicit max TTL of %d is greater than system/mount allowed value of %d seconds; until this is fixed attempting to create tokens against this role will result in an error",
-				entry.ExplicitMaxTTL.Seconds(), sysView.MaxLeaseTTL().Seconds()))
+				int64(entry.ExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
 		}
 	}
 

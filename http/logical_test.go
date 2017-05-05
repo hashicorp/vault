@@ -152,6 +152,7 @@ func TestLogical_StandbyRedirect(t *testing.T) {
 			"ttl":              json.Number("0"),
 			"creation_ttl":     json.Number("0"),
 			"explicit_max_ttl": json.Number("0"),
+			"expire_time":      nil,
 		},
 		"warnings":  nilWarnings,
 		"wrap_info": nil,

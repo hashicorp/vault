@@ -2,7 +2,6 @@ package pki
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -46,10 +45,8 @@ func (b *backend) secretCredsRevoke(
 		return nil, fmt.Errorf("could not find serial in internal secret data")
 	}
 
-	serial := strings.Replace(strings.ToLower(serialInt.(string)), "-", ":", -1)
-
 	b.revokeStorageLock.Lock()
 	defer b.revokeStorageLock.Unlock()
 
-	return revokeCert(b, req, serial, true)
+	return revokeCert(b, req, serialInt.(string), true)
 }

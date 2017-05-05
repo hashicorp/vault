@@ -13,6 +13,7 @@ type CLIHandler struct{}
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	var data struct {
 		Mount string `mapstructure:"mount"`
+		Name  string `mapstructure:"name"`
 	}
 	if err := mapstructure.WeakDecode(m, &data); err != nil {
 		return "", err
@@ -22,8 +23,11 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		data.Mount = "cert"
 	}
 
+	options := map[string]interface{}{
+		"name": data.Name,
+	}
 	path := fmt.Sprintf("auth/%s/login", data.Mount)
-	secret, err := c.Logical().Write(path, nil)
+	secret, err := c.Logical().Write(path, options)
 	if err != nil {
 		return "", err
 	}
@@ -38,10 +42,13 @@ func (h *CLIHandler) Help() string {
 	help := `
 The "cert" credential provider allows you to authenticate with a
 client certificate. No other authentication materials are needed.
+Optionally, you may specify the specific certificate role to
+authenticate against with the "name" parameter.
 
     Example: vault auth -method=cert \
                         -client-cert=/path/to/cert.pem \
                         -client-key=/path/to/key.pem
+                        name=cert1
 
 	`
 

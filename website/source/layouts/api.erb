@@ -21,7 +21,7 @@
             <a href="/api/secret/aws/index.html">AWS</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-cassandra") %>>
-            <a href="/api/secret/cassandra/index.html">Cassandra</a>
+            <a href="/api/secret/cassandra/index.html">Cassandra (Deprecated)</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-consul") %>>
             <a href="/api/secret/consul/index.html">Consul</a>
@@ -29,6 +29,25 @@
           <li<%= sidebar_current("docs-http-secret-cubbyhole") %>>
             <a href="/api/secret/cubbyhole/index.html">Cubbyhole</a>
           </li>
+
+          <li<%= sidebar_current("docs-http-secret-databases") %>>
+            <a href="/api/secret/databases/index.html">Databases (Beta)</a>
+            <ul class="nav">
+              <li<%= sidebar_current("docs-http-secret-databases-cassandra") %>>
+                <a href="/api/secret/databases/cassandra.html">Cassandra</a>
+              </li>
+              <li<%= sidebar_current("docs-http-secret-databases-mssql") %>>
+                <a href="/api/secret/databases/mssql.html">MSSQL</a>
+              </li>
+              <li<%= sidebar_current("docs-http-secret-databases-mysql-maria") %>>
+                <a href="/api/secret/databases/mysql-maria.html">MySQL/MariaDB</a>
+              </li>
+              <li<%= sidebar_current("docs-http-secret-databases-postgresql") %>>
+                <a href="/api/secret/databases/postgresql.html">PostgreSQL</a>
+              </li>
+            </ul>
+          </li>
+
           <li<%= sidebar_current("docs-http-secret-generic") %>>
             <a href="/api/secret/generic/index.html">Generic</a>
           </li>
@@ -36,22 +55,25 @@
             <a href="/api/secret/mongodb/index.html">MongoDB</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-mssql") %>>
-            <a href="/api/secret/mssql/index.html">MSSQL</a>
+            <a href="/api/secret/mssql/index.html">MSSQL (Deprecated)</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-mysql") %>>
-            <a href="/api/secret/mysql/index.html">MySQL</a>
+            <a href="/api/secret/mysql/index.html">MySQL (Deprecated)</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-pki") %>>
             <a href="/api/secret/pki/index.html">PKI</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-postgresql") %>>
-            <a href="/api/secret/postgresql/index.html">PostgreSQL</a>
+            <a href="/api/secret/postgresql/index.html">PostgreSQL (Deprecated)</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-rabbitmq") %>>
             <a href="/api/secret/rabbitmq/index.html">RabbitMQ</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-ssh") %>>
             <a href="/api/secret/ssh/index.html">SSH</a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-totp") %>>
+            <a href="/api/secret/totp/index.html">TOTP</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-transit") %>>
             <a href="/api/secret/transit/index.html">Transit</a>
@@ -98,8 +120,14 @@
           <li<%= sidebar_current("docs-http-system-leader") %>>
             <a href="/api/system/leader.html"><tt>/sys/leader</tt></a>
           </li>
+          <li<%= sidebar_current("docs-http-system-leases") %>>
+            <a href="/api/system/leases.html"><tt>/sys/leases</tt></a>
+          </li>
           <li<%= sidebar_current("docs-http-system-mounts") %>>
             <a href="/api/system/mounts.html"><tt>/sys/mounts</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-plugins-catalog") %>>
+            <a href="/api/system/plugins-catalog.html"><tt>/sys/plugins/catalog</tt></a>
           </li>
           <li<%= sidebar_current("docs-http-system-policy") %>>
             <a href="/api/system/policy.html"><tt>/sys/policy</tt></a>
@@ -113,20 +141,8 @@
           <li<%= sidebar_current("docs-http-system-remount") %>>
             <a href="/api/system/remount.html"><tt>/sys/remount</tt></a>
           </li>
-          <li<%= sidebar_current("docs-http-system-renew") %>>
-            <a href="/api/system/renew.html"><tt>/sys/renew</tt></a>
-          </li>
           <li<%= sidebar_current("docs-http-system-replication") %>>
             <a href="/api/system/replication.html"><tt>/sys/replication</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-revoke/") %>>
-            <a href="/api/system/revoke.html"><tt>/sys/revoke</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-revoke-force") %>>
-            <a href="/api/system/revoke-force.html"><tt>/sys/revoke-force</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-revoke-prefix") %>>
-            <a href="/api/system/revoke-prefix.html"><tt>/sys/revoke-prefix</tt></a>
           </li>
           <li<%= sidebar_current("docs-http-system-rotate") %>>
             <a href="/api/system/rotate.html"><tt>/sys/rotate</tt></a>

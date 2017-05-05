@@ -60,8 +60,18 @@ path "sys/capabilities-self" {
     capabilities = ["update"]
 }
 
-# Allow a token to renew a lease via lease_id in the request body
+# Allow a token to renew a lease via lease_id in the request body; old path for
+# old clients, new path for newer
 path "sys/renew" {
+    capabilities = ["update"]
+}
+path "sys/leases/renew" {
+    capabilities = ["update"]
+}
+
+# Allow looking up lease properties. This requires knowing the lease ID ahead
+# of time and does not divulge any sensitive information.
+path "sys/leases/lookup" {
     capabilities = ["update"]
 }
 
