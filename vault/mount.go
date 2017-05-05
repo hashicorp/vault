@@ -60,6 +60,7 @@ var (
 	singletonMounts = []string{
 		"cubbyhole",
 		"system",
+		"token",
 	}
 )
 
