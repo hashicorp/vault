@@ -25,8 +25,8 @@ has a number of parameters to further configure a connection.
 ### Parameters
 - `connection_url` `(string: <required>)` - Specifies the MSSQL DSN.
 
-- `max_open_connections` `(int: 2)` - Speficies the name of the plugin to use
-  for this connection.
+- `max_open_connections` `(int: 2)` - Specifies the maximum number of open
+  connections to the database.
 
 - `max_idle_connections` `(int: 0)` - Specifies the maximum number of idle
   connections to the database. A zero uses the value of `max_open_connections`
