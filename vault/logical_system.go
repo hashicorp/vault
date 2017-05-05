@@ -424,6 +424,17 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
+				Pattern: "leases/tidy$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleTidyLeases,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
+			},
+
+			&framework.Path{
 				Pattern: "auth$",
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -798,6 +809,15 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
+func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := b.Core.expiration.Tidy()
+	if err != nil {
+		b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
+		return handleError(err)
+	}
+	return nil, err
+}
+
 func (b *SystemBackend) invalidate(key string) {
 	if b.Core.logger.IsTrace() {
 		b.Core.logger.Trace("sys: invaliding key", "key", key)
@@ -973,7 +993,7 @@ func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *fram
 		return logical.ErrorResponse("missing accessor"), nil
 	}
 
-	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor)
+	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor, false)
 	if err != nil {
 		return nil, err
 	}
@@ -2591,6 +2611,15 @@ Enable a new audit backend or disable an existing backend.
 		"Fetches the capabilities of the token associated with the given token, on the given path.",
 		`When there is no access to the token, token accessor can be used to fetch the token's capabilities
 		on a given path.`,
+	},
+
+	"tidy_leases": {
+		`This endpoint performs cleanup tasks that can be run if certain error
+conditions have occurred.`,
+		`This endpoint performs cleanup tasks that can be run to clean up the
+lease entries after certain error conditions. Usually running this is not
+necessary, and is only required if upgrade notes or support personnel suggest
+it.`,
 	},
 
 	"wrap": {
