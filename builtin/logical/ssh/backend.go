@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -10,8 +11,9 @@ import (
 
 type backend struct {
 	*framework.Backend
-	view logical.Storage
-	salt *salt.Salt
+	view      logical.Storage
+	salt      *salt.Salt
+	saltMutex sync.RWMutex
 }
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
@@ -57,20 +59,33 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			secretOTP(&b),
 		},
 
-		Init: b.Initialize,
+		Init: b.initialize,
+
+		Invalidate: b.invalidate,
 	}
 	return &b, nil
 }
 
-func (b *backend) Initialize() error {
+func (b *backend) initialize() error {
+	b.saltMutex.Lock()
+	defer b.saltMutex.Unlock()
 	salt, err := salt.NewSalt(b.view, &salt.Config{
 		HashFunc: salt.SHA256Hash,
+		Location: salt.DefaultLocation,
 	})
 	if err != nil {
 		return err
 	}
 	b.salt = salt
 	return nil
+}
+
+func (b *backend) invalidate(key string) {
+	switch key {
+	case salt.DefaultLocation:
+		// reread the salt
+		b.initialize()
+	}
 }
 
 const backendHelp = `
