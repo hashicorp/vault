@@ -49,7 +49,7 @@ func TestCore_Mount(t *testing.T) {
 		Path:  "foo",
 		Type:  "generic",
 	}
-	err := c.mount(me)
+	err := c.mount(me, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 		Path:  "test/",
 		Type:  "noop",
 	}
-	if err := c.mount(me); err != nil {
+	if err := c.mount(me, false); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -346,7 +346,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 		Path:  "test/",
 		Type:  "noop",
 	}
-	if err := c.mount(me); err != nil {
+	if err := c.mount(me, false); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -458,7 +458,7 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err = c.enableCredential(me)
+	err = c.enableCredential(me, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -626,5 +626,31 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 		if entry.UUID == "" {
 			t.Fatalf("bad: %v", entry)
 		}
+	}
+}
+
+func TestSingletonMountTableFunc(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	mounts, auth := c.singletonMountTables()
+
+	if len(mounts.Entries) != 2 {
+		t.Fatal("length of mounts is wrong")
+	}
+	for _, entry := range mounts.Entries {
+		switch entry.Type {
+		case "system":
+		case "cubbyhole":
+		default:
+			t.Fatalf("unknown type %s", entry.Type)
+		}
+	}
+
+	if len(auth.Entries) != 1 {
+		t.Fatal("length of auth is wrong")
+	}
+
+	if auth.Entries[0].Type != "token" {
+		t.Fatal("unexpected entry type for auth")
 	}
 }

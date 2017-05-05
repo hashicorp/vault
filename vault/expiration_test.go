@@ -1352,7 +1352,7 @@ func TestExpiration_RevokeForce(t *testing.T) {
 		Type:  "badrenew",
 	}
 
-	err := core.mount(me)
+	err := core.mount(me, false)
 	if err != nil {
 		t.Fatal(err)
 	}

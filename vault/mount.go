@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -791,4 +792,27 @@ func requiredMountTable() *MountTable {
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
+}
+
+func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
+	mounts = &MountTable{}
+	auth = &MountTable{}
+
+	c.mountsLock.RLock()
+	for _, entry := range c.mounts.Entries {
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			mounts.Entries = append(mounts.Entries, entry)
+		}
+	}
+	c.mountsLock.RUnlock()
+
+	c.authLock.RLock()
+	for _, entry := range c.auth.Entries {
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			auth.Entries = append(auth.Entries, entry)
+		}
+	}
+	c.authLock.RUnlock()
+
+	return
 }
