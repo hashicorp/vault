@@ -1,4 +1,4 @@
-## 0.7.1 (Unreleased)
+## 0.7.1 (May 5th, 2017)
 
 DEPRECATIONS/CHANGES:
 
