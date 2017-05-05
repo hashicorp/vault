@@ -680,7 +680,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 // This was the original function name, and now it just calls
 // the non recursive version for a variety of depths.
 func TestTokenStore_RevokeTree(t *testing.T) {
-  testTokenStore_RevokeTree_NonRecursive(t, 1)
+	testTokenStore_RevokeTree_NonRecursive(t, 1)
 	testTokenStore_RevokeTree_NonRecursive(t, 2)
 	testTokenStore_RevokeTree_NonRecursive(t, 20)
 }

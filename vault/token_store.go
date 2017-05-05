@@ -1057,7 +1057,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 			dfs = append(children, dfs...)
 		}
 	}
-	
+
 	return nil
 }
 
