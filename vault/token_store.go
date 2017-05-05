@@ -1039,7 +1039,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 		if err != nil {
 			return fmt.Errorf("failed to scan for children: %v", err)
 		}
-		// If the length of the children is equal to zero,
+		// If the length of the children array is zero,
 		// then we are at a leaf node.
 		if len(children) == 0 {
 			if err := ts.revokeSalted(id); err != nil {
@@ -1057,6 +1057,7 @@ func (ts *TokenStore) revokeTreeSalted(saltedId string) error {
 			dfs = append(children, dfs...)
 		}
 	}
+	
 	return nil
 }
 
