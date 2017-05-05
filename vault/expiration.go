@@ -191,6 +191,7 @@ func (m *ExpirationManager) Tidy() error {
 			} else {
 				tokenCache[le.ClientToken] = true
 			}
+			goto REVOKE_CHECK
 		} else {
 			if isValid {
 				return
@@ -199,6 +200,7 @@ func (m *ExpirationManager) Tidy() error {
 				revokeLease = true
 				deletedCountInvalidToken++
 			}
+			goto REVOKE_CHECK
 		}
 
 	REVOKE_CHECK:
