@@ -116,7 +116,7 @@ func TestRouter_Mount(t *testing.T) {
 
 	mountEntryFetched := r.MatchingMountByID(mountEntry.UUID)
 	if mountEntryFetched == nil || !reflect.DeepEqual(mountEntry, mountEntryFetched) {
-		t.Fatalf("failed to fetch mount entry using its ID; mountEntry: %#v\n mountEntryFetched: %#v\n", mountEntry, mountEntryFetched)
+		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
 	}
 
 	mount, prefix, ok := r.MatchingStoragePrefix("logical/foo")
