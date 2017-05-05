@@ -169,7 +169,7 @@ func (e *MountEntry) Clone() *MountEntry {
 }
 
 // Mount is used to mount a new backend to the mount table.
-func (c *Core) mount(entry *MountEntry) error {
+func (c *Core) mount(entry *MountEntry, skipInitialization bool) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -219,8 +219,10 @@ func (c *Core) mount(entry *MountEntry) error {
 
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected
-	if err := backend.Initialize(); err != nil {
-		return err
+	if !skipInitialization {
+		if err := backend.Initialize(); err != nil {
+			return err
+		}
 	}
 
 	newTable := c.mounts.shallowClone()

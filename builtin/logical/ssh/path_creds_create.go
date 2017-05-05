@@ -207,6 +207,8 @@ func (b *backend) GenerateSaltedOTP() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
+	b.saltMutex.RLock()
+	defer b.saltMutex.RUnlock()
 	return str, b.salt.SaltID(str), nil
 }
 

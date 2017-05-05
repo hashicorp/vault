@@ -72,6 +72,8 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 		AuthRenew: b.pathLoginRenew,
 
 		Init: b.initialize,
+
+		Invalidate: b.invalidate,
 	}
 
 	b.view = conf.StorageView
@@ -91,6 +93,7 @@ type backend struct {
 func (b *backend) initialize() error {
 	salt, err := salt.NewSalt(b.view, &salt.Config{
 		HashFunc: salt.SHA1Hash,
+		Location: salt.DefaultLocation,
 	})
 	if err != nil {
 		return err
@@ -172,6 +175,14 @@ func (b *backend) upgradeToSalted(view logical.Storage) error {
 		}
 	}
 	return nil
+}
+
+func (b *backend) invalidate(key string) {
+	switch key {
+	case salt.DefaultLocation:
+		// reread the salt
+		b.initialize()
+	}
 }
 
 const backendHelp = `
