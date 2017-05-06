@@ -122,7 +122,7 @@ There are two alternate methods of resolving the user object used to authenticat
 
 #### Binding - Authenticated Search
 
-* `binddn` (string, optional) - Distinguished name of object to bind when performing user search. Example: `cn=vault,ou=Users,dc=example,dc=com`
+* `binddn` (string, optional) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
 * `bindpass` (string, optional) - Password to use along with `binddn` when performing user search.
 * `userdn` (string, optional) - Base DN under which to perform user search. Example: `ou=Users,dc=example,dc=com`
 * `userattr` (string, optional) - Attribute on user attribute object matching the username passed when authenticating. Examples: `sAMAccountName`, `cn`, `uid`
@@ -146,6 +146,7 @@ Once a user has been authenticated, the LDAP auth backend must know how to resol
 * `groupdn` (string, required) - LDAP search base to use for group membership search. This can be the root containing either groups or users. Example: `ou=Groups,dc=example,dc=com`
 * `groupattr` (string, optional) - LDAP attribute to follow on objects returned by `groupfilter` in order to enumerate user group membership. Examples: for groupfilter queries returning _group_ objects, use: `cn`. For queries returning _user_ objects, use: `memberOf`. The default is `cn`.
 
+*Note*: When using _Authenticated Search_ for binding parameters (see above) the distinguished name defined for `binddn` is used for the group search.  Otherwise, the authenticating user is used to perform the group search.
 
 Use `vault path-help` for more details.
 

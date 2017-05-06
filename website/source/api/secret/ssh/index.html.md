@@ -652,7 +652,28 @@ This will return a `200` response if `generate_signing_key` was true:
 }
 ```
 
-## Read Public Key
+## Read Public Key (Unauthenticated)
+
+This endpoint returns the configured/generated public key. This is an unauthenticated
+endpoint.
+
+| Method   | Path                         | Produces         |
+| :------- | :--------------------------- | :--------------- |
+| `GET`    | `/ssh/public_key`            | `200 text/plain` |
+
+### Sample Request
+
+```
+$ curl https://vault.rocks/v1/ssh/public_key
+```
+
+### Sample Response
+
+```text
+    ssh-rsa AAAAHHNzaC1y...
+```
+
+## Read Public Key (Authenticated)
 
 This endpoint reads the configured/generated public key.
 

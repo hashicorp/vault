@@ -744,6 +744,13 @@ func GetsockoptUcred(fd, level, opt int) (*Ucred, error) {
 	return &value, err
 }
 
+func GetsockoptTCPInfo(fd, level, opt int) (*TCPInfo, error) {
+	var value TCPInfo
+	vallen := _Socklen(SizeofTCPInfo)
+	err := getsockopt(fd, level, opt, unsafe.Pointer(&value), &vallen)
+	return &value, err
+}
+
 func SetsockoptIPMreqn(fd, level, opt int, mreq *IPMreqn) (err error) {
 	return setsockopt(fd, level, opt, unsafe.Pointer(mreq), unsafe.Sizeof(*mreq))
 }

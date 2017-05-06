@@ -1478,6 +1478,39 @@ func (c *Client) ExportContainer(opts ExportContainerOptions) error {
 	})
 }
 
+// PruneContainersOptions specify parameters to the PruneContainers function.
+//
+// See https://goo.gl/wnkgDT for more details.
+type PruneContainersOptions struct {
+	Filters map[string][]string
+	Context context.Context
+}
+
+// PruneContainersResults specify results from the PruneContainers function.
+//
+// See https://goo.gl/wnkgDT for more details.
+type PruneContainersResults struct {
+	ContainersDeleted []string
+	SpaceReclaimed    int64
+}
+
+// PruneContainers deletes containers which are stopped.
+//
+// See https://goo.gl/wnkgDT for more details.
+func (c *Client) PruneContainers(opts PruneContainersOptions) (*PruneContainersResults, error) {
+	path := "/containers/prune?" + queryString(opts)
+	resp, err := c.do("POST", path, doOptions{context: opts.Context})
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var results PruneContainersResults
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return nil, err
+	}
+	return &results, nil
+}
+
 // NoSuchContainer is the error returned when a given container does not exist.
 type NoSuchContainer struct {
 	ID  string

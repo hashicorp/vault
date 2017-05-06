@@ -1,6 +1,16 @@
 #docs-sidebar {
   margin-bottom: 30px;
   margin-top: 50px;
+  overflow: hidden;
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-top: 30px;
+  }
 
   ul.nav.docs-sidenav {
     display: block;
@@ -32,6 +42,12 @@
 
           &:before {
             opacity: 1;
+          }
+        }
+
+        &.back {
+          &:before {
+            content: '\2039';
           }
         }
       }
