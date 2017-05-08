@@ -207,21 +207,15 @@ func (w *hashWalker) Struct(v reflect.Value) error {
 		return errors.New("time.Time value in a non map key cannot be hashed for audits")
 	}
 
-	// Override location to be a MapValue. loc is set to None since we
-	// already "entered" the struct. We could do better here by keeping
-	// a stack of locations and checking the last entry.
-	w.loc = reflectwalk.MapValue
-
 	// Create a string value of the time. IMPORTANT: this must never change
 	// across Vault versions or the hash value of equivalent time.Time will
 	// change.
-	strVal := v.Interface().(time.Time).UTC().Format(time.RFC3339Nano)
+	strVal := v.Interface().(time.Time).Format(time.RFC3339Nano)
 
-	// Walk it as if it were a primitive value with the string value.
-	// This will replace the currenty map value (which is a time.Time).
-	if err := w.Primitive(reflect.ValueOf(strVal)); err != nil {
-		return err
-	}
+	// Set the map value to the string instead of the time.Time object
+	m := w.cs[len(w.cs)-1]
+	mk := w.csData.(reflect.Value)
+	m.SetMapIndex(mk, reflect.ValueOf(strVal))
 
 	// Skip this entry so that we don't walk the struct.
 	return reflectwalk.SkipEntry
