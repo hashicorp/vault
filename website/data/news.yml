@@ -1,0 +1,16 @@
+default_link_text: 'Read more'
+posts:
+  -
+    title: 'Vault 0.7.1 released'
+    body: 'We are pleased to announce the release of Vault 0.7.1. This release includes AWS IAM Authentication, TOTP Secret Backend, Database Backend with Secure Plugins (Beta), and more.'
+    link_url: 'https://www.vaultproject.io/?_ga=2.215709783.1593378678.1494025730-869270323.1490634228'
+    # link_url: 'https://www.hashicorp.com/blog/vault-0-7-1/'
+  -
+    title: 'Webinar: How HashiCorp Vault Solves The Top 3 Cloud Security Challenges'
+    body: 'Watch our recent webinar to learn about new Vault product releases and see a demo.'
+    link_url: 'https://youtu.be/3q9_gxqkZA8'
+    link_text: 'Watch Now'
+  -
+    title: 'Distil Networks securely stores and manages all their secrets with Vault and Consul'
+    body: 'Learn how in a guest post by Grant Joy, Senior DevOps Engineer at Distil Networks.'
+    link_url: 'https://www.hashicorp.com/blog/distil-networks-securely-stores-and-manages-all-their-secrets-with-vault-and-consul/'
