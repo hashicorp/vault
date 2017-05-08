@@ -140,6 +140,10 @@ func TestHash(t *testing.T) {
 			&logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
+
+					// Responses can contain time values, so test that with
+					// a known fixed value.
+					"bar": time.Unix(1494264707, 0),
 				},
 				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
@@ -151,6 +155,7 @@ func TestHash(t *testing.T) {
 			&logical.Response{
 				Data: map[string]interface{}{
 					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"bar": "hmac-sha256:b09b815a7d1c3bbcf702f9c9a50ef6408d0935bea0154383a128ca8743eb06fc",
 				},
 				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
