@@ -801,6 +801,11 @@ func requiredMountTable() *MountTable {
 	return table
 }
 
+// This function returns tables that are singletons. The main usage of this is
+// for replication, so we can send over mount info (especially, UUIDs of
+// mounts, which are used for salts) for mounts that may not be able to be
+// handled normally. After saving these values on the secondary, we let normal
+// sync invalidation do its thing.
 func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 	mounts = &MountTable{}
 	auth = &MountTable{}
