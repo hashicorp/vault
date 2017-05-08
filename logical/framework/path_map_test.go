@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/salt"
@@ -139,13 +140,14 @@ func TestPathMap_routes(t *testing.T) {
 
 func TestPathMap_Salted(t *testing.T) {
 	storage := new(logical.InmemStorage)
+	var mut sync.RWMutex
 	salt, err := salt.NewSalt(storage, &salt.Config{
 		HashFunc: salt.SHA1Hash,
 	})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	p := &PathMap{Name: "foo", Salt: salt}
+	p := &PathMap{Name: "foo", Salt: salt, SaltMutex: &mut}
 	var b logical.Backend = &Backend{Paths: p.Paths()}
 
 	// Write via HTTP
@@ -171,7 +173,9 @@ func TestPathMap_Salted(t *testing.T) {
 	}
 
 	// Ensure the path is salted
+	mut.RLock()
 	expect := salt.SaltID("a")
+	mut.RUnlock()
 	out, err = storage.Get("struct/map/foo/" + expect)
 	if err != nil {
 		t.Fatalf("err: %v", err)
