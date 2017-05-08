@@ -102,7 +102,7 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 
 	if verifyConnection {
 		if _, err := c.Connection(); err != nil {
-			return fmt.Errorf("error Initalizing Connection: %s", err)
+			return fmt.Errorf("error initalizing connection: %s", err)
 		}
 	}
 	return nil
