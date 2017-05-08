@@ -3,8 +3,7 @@ posts:
   -
     title: 'Vault 0.7.1 released'
     body: 'We are pleased to announce the release of Vault 0.7.1. This release includes AWS IAM Authentication, TOTP Secret Backend, Database Backend with Secure Plugins (Beta), and more.'
-    link_url: 'https://www.vaultproject.io/?_ga=2.215709783.1593378678.1494025730-869270323.1490634228'
-    # link_url: 'https://www.hashicorp.com/blog/vault-0-7-1/'
+    link_url: 'https://www.hashicorp.com/blog/vault-0-7-1/'
   -
     title: 'Webinar: How HashiCorp Vault Solves The Top 3 Cloud Security Challenges'
     body: 'Watch our recent webinar to learn about new Vault product releases and see a demo.'
