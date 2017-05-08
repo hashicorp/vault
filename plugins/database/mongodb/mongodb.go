@@ -1,7 +1,15 @@
 package mongodb
 
 import (
+	"time"
+
+	"encoding/json"
+
+	"fmt"
+
+	"github.com/hashicorp/vault-plugins/helper/database/dbutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
@@ -54,4 +62,96 @@ func (m *MongoDB) getConnection() (*mgo.Session, error) {
 	}
 
 	return session.(*mgo.Session), nil
+}
+
+// CreateUser generates the username/password on the underlying secret backend as instructed by
+// the CreationStatement provided. The creation statement JSON that has a db value, and an array
+// of roles that accept an optional db value. This array will be normalized the format specified
+// in the mongoDB docs: https://docs.mongodb.com/manual/reference/command/createUser/#dbcmd.createUser
+func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+	// Grab the lock
+	m.Lock()
+	defer m.Unlock()
+
+	session, err := m.getConnection()
+	if err != nil {
+		return "", "", err
+	}
+	if statements.CreationStatements == "" {
+		return "", "", dbutil.ErrEmptyCreationStatement
+	}
+
+	username, err = m.GenerateUsername(usernamePrefix)
+	if err != nil {
+		return "", "", err
+	}
+
+	password, err = m.GeneratePassword()
+	if err != nil {
+		return "", "", err
+	}
+
+	// Unmarshal statements.CreationStatements into mongodbRoles
+	var mongoCS mongoDBStatement
+	err = json.Unmarshal([]byte(statements.CreationStatements), &mongoCS)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Check for db string
+	if mongoCS.DB == "" {
+		return "", "", fmt.Errorf("db value is required in creation statement")
+	}
+
+	if len(mongoCS.Roles) == 0 {
+		return "", "", fmt.Errorf("roles array is required in creation statement")
+	}
+
+	createUserCmd := createUserCommand{
+		Username: username,
+		Password: password,
+		Roles:    mongoCS.Roles.toStandardRolesArray(),
+	}
+
+	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
+	if err != nil {
+		return "", "", err
+	}
+
+	return username, password, nil
+}
+
+// RenewUser is not supported on mongoDB, so this is a no-op.
+func (m *MongoDB) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
+	// NOOP
+	return nil
+}
+
+// RevokeUser drops the specified user from the authentication databse. If none is provided
+// in the revocation statement, the default "admin" authentication database will be assumed.
+func (m *MongoDB) RevokeUser(statements dbplugin.Statements, username string) error {
+	session, err := m.getConnection()
+	if err != nil {
+		return err
+	}
+
+	// Unmarshal statements.RevocationStatements into mongodbRoles
+	var mongoCS mongoDBStatement
+	err = json.Unmarshal([]byte(statements.RevocationStatements), &mongoCS)
+	if err != nil {
+		return err
+	}
+
+	db := mongoCS.DB
+	// If db is not specified, use the default authenticationDatabase "admin"
+	if db == "" {
+		db = "admin"
+	}
+
+	err = session.DB(db).RemoveUser(username)
+	if err != nil && err != mgo.ErrNotFound {
+		return err
+	}
+
+	return nil
 }
