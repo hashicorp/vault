@@ -249,17 +249,18 @@ func TestBackend_pathIam(t *testing.T) {
 
 	// generate a second role, ensure we're able to list both
 	data["bound_ami_id"] = "ami-abcd123"
-	resp, err = b.HandleRequest(&logical.Request{
+	secondRole := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "role/MyOtherRoleName",
 		Data:      data,
 		Storage:   storage,
-	})
+	}
+	resp, err = b.HandleRequest(secondRole)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if resp != nil && resp.IsError() {
-		t.Fatalf("failed to create additional role: %s")
+		t.Fatalf("failed to create additional role: %v", *secondRole)
 	}
 
 	resp, err = b.HandleRequest(&logical.Request{

@@ -8,9 +8,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -291,6 +294,45 @@ func TestKeyCopy(key []byte) []byte {
 	result := make([]byte, len(key))
 	copy(result, key)
 	return result
+}
+
+func TestDynamicSystemView(c *Core) *dynamicSystemView {
+	me := &MountEntry{
+		Config: MountConfig{
+			DefaultLeaseTTL: 24 * time.Hour,
+			MaxLeaseTTL:     2 * 24 * time.Hour,
+		},
+	}
+
+	return &dynamicSystemView{c, me}
+}
+
+func TestAddTestPlugin(t testing.TB, c *Core, name, testFunc string) {
+	file, err := os.Open(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sum := hash.Sum(nil)
+	c.pluginCatalog.directory, err = filepath.EvalSymlinks(os.Args[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.pluginCatalog.directory = filepath.Dir(c.pluginCatalog.directory)
+
+	command := fmt.Sprintf("%s --test.run=%s", filepath.Base(os.Args[0]), testFunc)
+	err = c.pluginCatalog.Set(name, command, sum)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 var testLogicalBackends = map[string]logical.Factory{}

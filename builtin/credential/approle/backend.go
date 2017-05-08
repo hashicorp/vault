@@ -14,7 +14,8 @@ type backend struct {
 
 	// The salt value to be used by the information to be accessed only
 	// by this backend.
-	salt *salt.Salt
+	salt      *salt.Salt
+	saltMutex sync.RWMutex
 
 	// The view to use when creating the salt
 	view logical.Storage
@@ -92,20 +93,32 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Init: b.initialize,
+		Init:       b.initialize,
+		Invalidate: b.invalidate,
 	}
 	return b, nil
 }
 
 func (b *backend) initialize() error {
+	b.saltMutex.Lock()
+	defer b.saltMutex.Unlock()
 	salt, err := salt.NewSalt(b.view, &salt.Config{
 		HashFunc: salt.SHA256Hash,
+		Location: salt.DefaultLocation,
 	})
 	if err != nil {
 		return err
 	}
 	b.salt = salt
 	return nil
+}
+
+func (b *backend) invalidate(key string) {
+	switch key {
+	case salt.DefaultLocation:
+		// reread the salt
+		b.initialize()
+	}
 }
 
 // periodicFunc of the backend will be invoked once a minute by the RollbackManager.
