@@ -100,9 +100,11 @@ func (b *backend) initialize() error {
 		Location: salt.DefaultLocation,
 	})
 	if err != nil {
+		b.SaltMutex.Unlock()
 		return err
 	}
 	b.Salt = salt
+	b.SaltMutex.Unlock()
 
 	b.MapAppId.Salt = salt
 	b.MapAppId.SaltMutex = &b.SaltMutex
