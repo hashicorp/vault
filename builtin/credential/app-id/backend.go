@@ -94,7 +94,6 @@ type backend struct {
 
 func (b *backend) initialize() error {
 	b.SaltMutex.Lock()
-	defer b.SaltMutex.Unlock()
 	salt, err := salt.NewSalt(b.view, &salt.Config{
 		HashFunc: salt.SHA1Hash,
 		Location: salt.DefaultLocation,
