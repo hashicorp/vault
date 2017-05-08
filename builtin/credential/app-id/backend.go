@@ -2,6 +2,7 @@ package appId
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
@@ -85,12 +86,15 @@ type backend struct {
 	*framework.Backend
 
 	Salt      *salt.Salt
+	SaltMutex sync.RWMutex
 	view      logical.Storage
 	MapAppId  *framework.PolicyMap
 	MapUserId *framework.PathMap
 }
 
 func (b *backend) initialize() error {
+	b.SaltMutex.Lock()
+	defer b.SaltMutex.Unlock()
 	salt, err := salt.NewSalt(b.view, &salt.Config{
 		HashFunc: salt.SHA1Hash,
 		Location: salt.DefaultLocation,
@@ -101,7 +105,9 @@ func (b *backend) initialize() error {
 	b.Salt = salt
 
 	b.MapAppId.Salt = salt
+	b.MapAppId.SaltMutex = &b.SaltMutex
 	b.MapUserId.Salt = salt
+	b.MapUserId.SaltMutex = &b.SaltMutex
 
 	// Since the salt is new in 0.2, we need to handle this by migrating
 	// any existing keys to use the salt. We can deprecate this eventually,
