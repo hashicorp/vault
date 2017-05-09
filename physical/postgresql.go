@@ -1,21 +1,38 @@
 package physical
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
-
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-uuid"
 	"github.com/lib/pq"
+	log "github.com/mgutz/logxi/v1"
+)
+
+const (
+	// PostgreSQLLockRetryInterval is the interval of time to wait between new
+	// locking attempts
+	PostgreSQLLockRetryInterval = time.Second
+	// PostgreSQLLockErrorRetryMax is the number of retries to make after an
+	// error fetching the status of a lock
+	PostgreSQLLockErrorRetryMax = 5
+	// PostgreSQLLockTTL is the maximum length of time of a lock, in seconds
+	PostgreSQLLockTTL = 10
+	// PostgreSQLLockRenewInterval is the interval of time locks are renewed
+	PostgreSQLLockRenewInterval = 5 * time.Second
 )
 
 // PostgreSQL Backend is a physical backend that stores data
 // within a PostgreSQL database.
 type PostgreSQLBackend struct {
 	table        string
+	lock_table   string
 	client       *sql.DB
 	put_query    string
 	get_query    string
@@ -38,6 +55,12 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 		unquoted_table = "vault_kv_store"
 	}
 	quoted_table := pq.QuoteIdentifier(unquoted_table)
+
+	unquoted_lock_table, ok := conf["lock_table"]
+	if !ok {
+		unquoted_lock_table = "vault_lock"
+	}
+	quoted_lock_table := pq.QuoteIdentifier(unquoted_lock_table)
 
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
@@ -66,6 +89,7 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 	// Setup the backend.
 	m := &PostgreSQLBackend{
 		table:        quoted_table,
+		lock_table:   quoted_lock_table,
 		client:       db,
 		put_query:    put_query,
 		get_query:    "SELECT value FROM " + quoted_table + " WHERE path = $1 AND key = $2",
@@ -174,4 +198,144 @@ func (m *PostgreSQLBackend) List(prefix string) ([]string, error) {
 	}
 
 	return keys, nil
+}
+
+func (m *PostgreSQLBackend) HAEnabled() bool {
+	return true
+}
+
+// PostgreSQLLock implements the Lock interface for PostgreSQL
+type PostgreSQLLock struct {
+	client *sql.DB
+	table  string
+	leader chan struct{}
+
+	key     string
+	value   string
+	vaultID string
+}
+
+// LockWith initializes a Postgres backend lock
+func (m *PostgreSQLBackend) LockWith(key, value string) (Lock, error) {
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	return &PostgreSQLLock{
+		client:  m.client,
+		table:   m.lock_table,
+		leader:  make(chan struct{}),
+		key:     key,
+		value:   value,
+		vaultID: id,
+	}, nil
+}
+
+// Lock grabs a lock, or waits until it is available
+func (m *PostgreSQLLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		<-stopCh
+		cancel()
+	}()
+	ticker := time.NewTicker(PostgreSQLLockRetryInterval)
+	defer ticker.Stop()
+	for {
+		_, err := m.client.ExecContext(
+			ctx,
+			"DELETE FROM "+m.table+" WHERE expiration < now()",
+		)
+		if err != nil {
+			return nil, err
+		}
+		lockTTL := strconv.Itoa(PostgreSQLLockTTL)
+		_, err = m.client.ExecContext(
+			ctx,
+			`INSERT INTO `+m.table+` (key, value, vault_id, expiration)
+				VALUES ($1, $2, $3, now() + interval '`+lockTTL+` seconds')`,
+			m.key,
+			m.value,
+			m.vaultID,
+		)
+		if err == nil {
+			break
+		}
+
+		select {
+		case <-ticker.C:
+			continue
+		case <-ctx.Done():
+			return nil, nil
+		}
+	}
+	go m.watch()
+	return m.leader, nil
+}
+
+// watch periodically queries the vault_lock table and closes the m.leader
+// channel if the lock is lost
+func (m *PostgreSQLLock) watch() {
+	retries := PostgreSQLLockErrorRetryMax
+	ticker := time.NewTicker(PostgreSQLLockRenewInterval)
+	defer ticker.Stop()
+	defer close(m.leader)
+	for {
+		select {
+		case <-ticker.C:
+			lockTTL := strconv.Itoa(PostgreSQLLockTTL)
+			r, err := m.client.Exec(
+				`UPDATE `+m.table+`
+				SET expiration = now() + interval '`+lockTTL+` seconds'
+				WHERE key = $1 AND vault_id = $2 AND expiration >= now()`,
+				m.key,
+				m.vaultID,
+			)
+			if err != nil || r == nil {
+				retries--
+				if retries == 0 {
+					return
+				}
+				continue
+			}
+			if rows, _ := r.RowsAffected(); rows == 0 {
+				// Lock lost!
+				return
+			}
+			retries = PostgreSQLLockErrorRetryMax
+		}
+	}
+}
+
+// Unlock unlocks a lock. It returns an error if the lock was not in use.
+func (m *PostgreSQLLock) Unlock() error {
+	r, err := m.client.Exec(
+		`DELETE FROM `+m.table+` WHERE key = $1 AND vault_id = $2`,
+		m.key,
+		m.vaultID,
+	)
+	if err != nil {
+		return err
+	}
+	if r == nil {
+		return errors.New("Unknown error reading a query's result")
+	}
+	rows, err := r.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.New("Lock not currently held")
+	}
+	return nil
+}
+
+// Value returns whether the lock is held and the value associated with it
+func (m *PostgreSQLLock) Value() (held bool, value string, err error) {
+	err = m.client.QueryRow(`
+		SELECT expiration > now(), value
+		FROM `+m.table+`
+		WHERE key = $1`,
+		m.key,
+	).Scan(&held, &value)
+	return held, value, err
 }
