@@ -19,7 +19,7 @@ import (
 // MongoDBConnectionProducer implements ConnectionProducer and provides an
 // interface for databases to make connections.
 type MongoDBConnectionProducer struct {
-	URI string `json:"uri" structs:"uri" mapstructure:"uri"`
+	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
 
 	Initialized bool
 	Type        string
@@ -37,8 +37,8 @@ func (c *MongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 		return err
 	}
 
-	if len(c.URI) == 0 {
-		return fmt.Errorf("uri cannot be empty")
+	if len(c.ConnectionURL) == 0 {
+		return fmt.Errorf("connection_url cannot be empty")
 	}
 
 	if verifyConnection {
@@ -54,15 +54,11 @@ func (c *MongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 
 // Connection creates a database connection.
 func (c *MongoDBConnectionProducer) Connection() (interface{}, error) {
-	if !c.Initialized {
-		return nil, errNotInitialized
-	}
-
 	if c.session != nil {
 		return c.session, nil
 	}
 
-	dialInfo, err := ParseMongoURI(c.URI)
+	dialInfo, err := ParseMongoURL(c.ConnectionURL)
 	if err != nil {
 		return nil, err
 	}
@@ -91,24 +87,24 @@ func (c *MongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func ParseMongoURI(rawURI string) (*mgo.DialInfo, error) {
-	uri, err := url.Parse(rawURI)
+func ParseMongoURL(rawURL string) (*mgo.DialInfo, error) {
+	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
 	}
 
 	info := mgo.DialInfo{
-		Addrs:    strings.Split(uri.Host, ","),
-		Database: strings.TrimPrefix(uri.Path, "/"),
+		Addrs:    strings.Split(url.Host, ","),
+		Database: strings.TrimPrefix(url.Path, "/"),
 		Timeout:  10 * time.Second,
 	}
 
-	if uri.User != nil {
-		info.Username = uri.User.Username()
-		info.Password, _ = uri.User.Password()
+	if url.User != nil {
+		info.Username = url.User.Username()
+		info.Password, _ = url.User.Password()
 	}
 
-	query := uri.Query()
+	query := url.Query()
 	for key, values := range query {
 		var value string
 		if len(values) > 0 {

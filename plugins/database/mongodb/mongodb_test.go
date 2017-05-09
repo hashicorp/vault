@@ -17,9 +17,9 @@ import (
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
-func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURI string) {
-	if os.Getenv("MONGODB_URI") != "" {
-		return func() {}, os.Getenv("MONGODB_URI")
+func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
+	if os.Getenv("MONGODB_URL") != "" {
+		return func() {}, os.Getenv("MONGODB_URL")
 	}
 
 	pool, err := dockertest.NewPool("")
@@ -39,12 +39,12 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURI string) {
 		}
 	}
 
-	retURI = fmt.Sprintf("mongodb://localhost:%s", resource.GetPort("27017/tcp"))
+	retURL = fmt.Sprintf("mongodb://localhost:%s", resource.GetPort("27017/tcp"))
 
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
 		var err error
-		dialInfo, err := connutil.ParseMongoURI(retURI)
+		dialInfo, err := connutil.ParseMongoURL(retURL)
 		if err != nil {
 			return err
 		}
@@ -64,11 +64,11 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURI string) {
 }
 
 func TestMongoDB_Initialize(t *testing.T) {
-	cleanup, connURI := prepareMongoDBTestContainer(t)
+	cleanup, connURL := prepareMongoDBTestContainer(t)
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
-		"uri": connURI,
+		"connection_url": connURL,
 	}
 
 	dbRaw, err := New()
@@ -94,11 +94,11 @@ func TestMongoDB_Initialize(t *testing.T) {
 }
 
 func TestMongoDB_CreateUser(t *testing.T) {
-	cleanup, connURI := prepareMongoDBTestContainer(t)
+	cleanup, connURL := prepareMongoDBTestContainer(t)
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
-		"uri": connURI,
+		"connection_url": connURL,
 	}
 
 	dbRaw, err := New()
@@ -120,17 +120,17 @@ func TestMongoDB_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURI, username, password); err != nil {
+	if err := testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 }
 
 func TestMongoDB_RevokeUser(t *testing.T) {
-	cleanup, connURI := prepareMongoDBTestContainer(t)
+	cleanup, connURL := prepareMongoDBTestContainer(t)
 	defer cleanup()
 
 	connectionDetails := map[string]interface{}{
-		"uri": connURI,
+		"connection_url": connURL,
 	}
 
 	dbRaw, err := New()
@@ -152,7 +152,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := testCredsExist(t, connURI, username, password); err != nil {
+	if err := testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
@@ -162,14 +162,14 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err = testCredsExist(t, connURI, username, password); err == nil {
+	if err = testCredsExist(t, connURL, username, password); err == nil {
 		t.Fatal("Credentials were not revoked")
 	}
 }
 
-func testCredsExist(t testing.TB, connURI, username, password string) error {
-	connURI = strings.Replace(connURI, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
-	dialInfo, err := connutil.ParseMongoURI(connURI)
+func testCredsExist(t testing.TB, connURL, username, password string) error {
+	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
+	dialInfo, err := connutil.ParseMongoURL(connURL)
 	if err != nil {
 		return err
 	}

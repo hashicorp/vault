@@ -111,10 +111,6 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 }
 
 func (c *CassandraConnectionProducer) Connection() (interface{}, error) {
-	if !c.Initialized {
-		return nil, errNotInitialized
-	}
-
 	// If we already have a DB, return it
 	if c.session != nil {
 		return c.session, nil
