@@ -95,7 +95,7 @@ func (b *backend) Salt() (*salt.Salt, error) {
 		b.SaltMutex.RUnlock()
 		return b.salt, nil
 	}
-	b.SaltMutex.RLock()
+	b.SaltMutex.RUnlock()
 	b.SaltMutex.Lock()
 	defer b.SaltMutex.Unlock()
 	if b.salt != nil {
