@@ -101,7 +101,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 func (b *backend) Salt() (*salt.Salt, error) {
 	b.saltMutex.RLock()
 	if b.salt != nil {
-		b.saltMutex.RUnlock()
+		defer b.saltMutex.RUnlock()
 		return b.salt, nil
 	}
 	b.saltMutex.RUnlock()

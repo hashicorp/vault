@@ -92,7 +92,7 @@ type backend struct {
 func (b *backend) Salt() (*salt.Salt, error) {
 	b.SaltMutex.RLock()
 	if b.salt != nil {
-		b.SaltMutex.RUnlock()
+		defer b.SaltMutex.RUnlock()
 		return b.salt, nil
 	}
 	b.SaltMutex.RUnlock()
@@ -119,8 +119,8 @@ func (b *backend) invalidate(key string) {
 	switch key {
 	case salt.DefaultLocation:
 		b.SaltMutex.Lock()
+		defer b.SaltMutex.Unlock()
 		b.salt = nil
-		b.SaltMutex.Unlock()
 	}
 }
 
