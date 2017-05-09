@@ -7,12 +7,12 @@ import (
 
 	"fmt"
 
-	"github.com/hashicorp/vault-plugins/helper/database/dbutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
+	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"gopkg.in/mgo.v2"
 )
 
