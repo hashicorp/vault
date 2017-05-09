@@ -26,10 +26,10 @@ type MongoDB struct {
 
 // New returns a new MongoDB instance
 func New() (interface{}, error) {
-	connProducer := &connutil.MongoDBConnectionProducer{}
+	connProducer := &mongoDBConnectionProducer{}
 	connProducer.Type = mongoDBTypeName
 
-	credsProducer := &credsutil.MongoDBCredentialsProducer{}
+	credsProducer := &mongoDBCredentialsProducer{}
 
 	dbType := &MongoDB{
 		ConnectionProducer:  connProducer,

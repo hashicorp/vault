@@ -80,7 +80,7 @@ func (c *SQLConnectionProducer) Initialize(conf map[string]interface{}, verifyCo
 
 func (c *SQLConnectionProducer) Connection() (interface{}, error) {
 	if !c.Initialized {
-		return nil, errNotInitialized
+		return nil, ErrNotInitialized
 	}
 
 	// If we already have a DB, test it and return

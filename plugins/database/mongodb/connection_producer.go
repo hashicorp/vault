@@ -1,4 +1,4 @@
-package connutil
+package mongodb
 
 import (
 	"crypto/tls"
@@ -11,14 +11,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	"github.com/mitchellh/mapstructure"
 
 	"gopkg.in/mgo.v2"
 )
 
-// MongoDBConnectionProducer implements ConnectionProducer and provides an
+// mongoDBConnectionProducer implements ConnectionProducer and provides an
 // interface for databases to make connections.
-type MongoDBConnectionProducer struct {
+type mongoDBConnectionProducer struct {
 	ConnectionURL string `json:"connection_url" structs:"connection_url" mapstructure:"connection_url"`
 
 	Initialized bool
@@ -28,7 +29,7 @@ type MongoDBConnectionProducer struct {
 }
 
 // Initialize parses connection configuration.
-func (c *MongoDBConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -59,9 +60,9 @@ func (c *MongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 }
 
 // Connection creates a database connection.
-func (c *MongoDBConnectionProducer) Connection() (interface{}, error) {
+func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 	if !c.Initialized {
-		return nil, errNotInitialized
+		return nil, connutil.ErrNotInitialized
 	}
 
 	if c.session != nil {
@@ -84,7 +85,7 @@ func (c *MongoDBConnectionProducer) Connection() (interface{}, error) {
 }
 
 // Close terminates the database connection.
-func (c *MongoDBConnectionProducer) Close() error {
+func (c *mongoDBConnectionProducer) Close() error {
 	c.Lock()
 	defer c.Unlock()
 

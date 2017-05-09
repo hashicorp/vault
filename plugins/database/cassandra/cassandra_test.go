@@ -10,7 +10,6 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -82,7 +81,7 @@ func TestCassandra_Initialize(t *testing.T) {
 
 	dbRaw, _ := New()
 	db := dbRaw.(*Cassandra)
-	connProducer := db.ConnectionProducer.(*connutil.CassandraConnectionProducer)
+	connProducer := db.ConnectionProducer.(*cassandraConnectionProducer)
 
 	err := db.Initialize(connectionDetails, true)
 	if err != nil {

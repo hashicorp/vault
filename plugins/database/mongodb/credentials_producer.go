@@ -1,4 +1,4 @@
-package credsutil
+package mongodb
 
 import (
 	"fmt"
@@ -7,11 +7,11 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-// MongoDBCredentialsProducer implements CredentialsProducer and provides an
+// mongoDBCredentialsProducer implements CredentialsProducer and provides an
 // interface for databases to generate user information.
-type MongoDBCredentialsProducer struct{}
+type mongoDBCredentialsProducer struct{}
 
-func (cp *MongoDBCredentialsProducer) GenerateUsername(displayName string) (string, error) {
+func (cp *mongoDBCredentialsProducer) GenerateUsername(displayName string) (string, error) {
 	userUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", err
@@ -22,7 +22,7 @@ func (cp *MongoDBCredentialsProducer) GenerateUsername(displayName string) (stri
 	return username, nil
 }
 
-func (cp *MongoDBCredentialsProducer) GeneratePassword() (string, error) {
+func (cp *mongoDBCredentialsProducer) GeneratePassword() (string, error) {
 	password, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", err
@@ -31,6 +31,6 @@ func (cp *MongoDBCredentialsProducer) GeneratePassword() (string, error) {
 	return password, nil
 }
 
-func (cp *MongoDBCredentialsProducer) GenerateExpiration(ttl time.Time) (string, error) {
+func (cp *mongoDBCredentialsProducer) GenerateExpiration(ttl time.Time) (string, error) {
 	return "", nil
 }

@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
-	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
@@ -44,7 +43,7 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
 		var err error
-		dialInfo, err := connutil.ParseMongoURL(retURL)
+		dialInfo, err := ParseMongoURL(retURL)
 		if err != nil {
 			return err
 		}
@@ -76,7 +75,7 @@ func TestMongoDB_Initialize(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	db := dbRaw.(*MongoDB)
-	connProducer := db.ConnectionProducer.(*connutil.MongoDBConnectionProducer)
+	connProducer := db.ConnectionProducer.(*mongoDBConnectionProducer)
 
 	err = db.Initialize(connectionDetails, true)
 	if err != nil {
@@ -169,7 +168,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
-	dialInfo, err := connutil.ParseMongoURL(connURL)
+	dialInfo, err := ParseMongoURL(connURL)
 	if err != nil {
 		return err
 	}
