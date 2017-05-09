@@ -10,9 +10,9 @@ import (
 
 	"strings"
 
-	"github.com/calvn/dockertest"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
+	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
 const testMongoDBRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
