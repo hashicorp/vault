@@ -12,8 +12,8 @@ description: |-
 The PostgreSQL storage backend is used to persist Vault's data in a
 [PostgreSQL][postgresql] server or cluster.
 
-- **No High Availability** – the PostgreSQL storage backend does not support
-  high availability.
+- **High Availability** – the PostgreSQL storage backend supports high
+  availability.
 
 - **Community Supported** – the PostgreSQL storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
@@ -39,6 +39,13 @@ CREATE TABLE vault_kv_store (
 );
 
 CREATE INDEX parent_path_idx ON vault_kv_store (parent_path);
+
+CREATE TABLE vault_lock (
+  key        TEXT PRIMARY KEY,
+  value      TEXT,
+  vault_id   TEXT NOT NULL,
+  expiration TIMESTAMP NOT NULL
+);
 ```
 
 If you're using a version of PostgreSQL prior to 9.5, create the following function:
@@ -81,6 +88,9 @@ LANGUAGE plpgsql;
 - `table` `(string: "vault_kv_store")` – Specifies the name of the table in
   which to write Vault data. This table must already exist (Vault will not
   attempt to create it).
+
+- `lock_table` `(string: "vault_lock")` – Specifies the name of the table to use
+  for high availability locks. Like `table`, this table must already exist.
 
 ## `postgresql` Examples
 
