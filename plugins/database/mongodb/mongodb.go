@@ -135,9 +135,15 @@ func (m *MongoDB) RevokeUser(statements dbplugin.Statements, username string) er
 		return err
 	}
 
-	// Unmarshal statements.RevocationStatements into mongodbRoles
+	// If no revocation statements provided, pass in empty JSON
+	revocationStatement := statements.RevocationStatements
+	if revocationStatement == "" {
+		revocationStatement = `{}`
+	}
+
+	// Unmarshal revocation statements into mongodbRoles
 	var mongoCS mongoDBStatement
-	err = json.Unmarshal([]byte(statements.RevocationStatements), &mongoCS)
+	err = json.Unmarshal([]byte(revocationStatement), &mongoCS)
 	if err != nil {
 		return err
 	}
