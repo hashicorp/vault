@@ -23,7 +23,7 @@ has a number of parameters to further configure a connection.
 | `POST`   | `/database/config/:name`     | `204 (empty body)` |
 
 ### Parameters
-- `url` `(string: <required>)` – Specifies the MongoDB standard connection string (URI).
+- `connection_url` `(string: <required>)` – Specifies the MongoDB standard connection string (URI).
 
 ### Sample Payload
 
@@ -31,7 +31,7 @@ has a number of parameters to further configure a connection.
 {
   "plugin_name": "mongodb-database-plugin",
   "allowed_roles": "readonly",
-  "uri": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
+  "connection_url": "mongodb://admin:Password!@mongodb.acme.com:27017/admin?ssl=true"
 }
 ```
 
