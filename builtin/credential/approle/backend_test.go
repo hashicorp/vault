@@ -21,9 +21,5 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Initialize()
-	if err != nil {
-		t.Fatal(err)
-	}
 	return b, config.StorageView
 }
