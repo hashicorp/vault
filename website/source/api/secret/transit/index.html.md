@@ -173,7 +173,7 @@ $ curl \
     https://vault.rocks/v1/transit/keys/my-key
 ```
 
-#### Update Key Configuration
+## Update Key Configuration
 
 This endpoint allows tuning configuration values for a given key. (These values
 are returned during a read operation on the named key.)
