@@ -519,8 +519,9 @@ func (c *Core) loadMounts() error {
 			// This should only happen in the upgrade case where a new one is
 			// introduced on the primary; otherwise initial bootstrapping will
 			// ensure this comes over. If we upgrade first, we simply don't
-			// create the mount, so we won't conflict when we sync.
-			if !foundRequired && c.replicationState != consts.ReplicationSecondary {
+			// create the mount, so we won't conflict when we sync. If this is
+			// local (e.g. cubbyhole) we do still add it.
+			if !foundRequired && (c.replicationState != consts.ReplicationSecondary || requiredMount.Local) {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
@@ -805,14 +806,15 @@ func requiredMountTable() *MountTable {
 // for replication, so we can send over mount info (especially, UUIDs of
 // mounts, which are used for salts) for mounts that may not be able to be
 // handled normally. After saving these values on the secondary, we let normal
-// sync invalidation do its thing.
+// sync invalidation do its thing. Because of its use for replication, we
+// exclude local mounts.
 func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 	mounts = &MountTable{}
 	auth = &MountTable{}
 
 	c.mountsLock.RLock()
 	for _, entry := range c.mounts.Entries {
-		if strutil.StrListContains(singletonMounts, entry.Type) {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
 			mounts.Entries = append(mounts.Entries, entry)
 		}
 	}
@@ -820,7 +822,7 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 
 	c.authLock.RLock()
 	for _, entry := range c.auth.Entries {
-		if strutil.StrListContains(singletonMounts, entry.Type) {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
 			auth.Entries = append(auth.Entries, entry)
 		}
 	}
