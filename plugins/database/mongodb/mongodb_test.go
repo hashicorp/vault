@@ -39,7 +39,7 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURI string) {
 		}
 	}
 
-	retURI = fmt.Sprintf("mongodb://127.0.0.1:%s", resource.GetPort("27017/tcp"))
+	retURI = fmt.Sprintf("mongodb://localhost:%s", resource.GetPort("27017/tcp"))
 
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {

@@ -125,7 +125,7 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernamePrefix stri
 	return username, password, nil
 }
 
-// RenewUser is not supported on mongoDB, so this is a no-op.
+// RenewUser is not supported on MongoDB, so this is a no-op.
 func (m *MongoDB) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
 	// NOOP
 	return nil
