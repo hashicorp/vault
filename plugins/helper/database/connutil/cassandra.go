@@ -49,7 +49,6 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	if err != nil {
 		return err
 	}
-	c.Initialized = true
 
 	if c.ConnectTimeoutRaw == nil {
 		c.ConnectTimeoutRaw = "0s"
@@ -105,6 +104,9 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 			return fmt.Errorf("error initalizing connection: %s", err)
 		}
 	}
+
+	c.Initialized = true
+
 	return nil
 }
 

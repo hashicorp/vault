@@ -77,12 +77,13 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernamePrefix stri
 	m.Lock()
 	defer m.Unlock()
 
+	if statements.CreationStatements == "" {
+		return "", "", dbutil.ErrEmptyCreationStatement
+	}
+
 	session, err := m.getConnection()
 	if err != nil {
 		return "", "", err
-	}
-	if statements.CreationStatements == "" {
-		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
 	username, err = m.GenerateUsername(usernamePrefix)

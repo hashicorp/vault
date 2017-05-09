@@ -41,13 +41,14 @@ func (c *MongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 		return fmt.Errorf("uri cannot be empty")
 	}
 
-	c.Initialized = true
-
 	if verifyConnection {
 		if _, err := c.Connection(); err != nil {
 			return fmt.Errorf("error initializing connection: %s", err)
 		}
 	}
+
+	c.Initialized = true
+
 	return nil
 }
 
