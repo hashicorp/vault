@@ -127,12 +127,12 @@ func (b *PassthroughBackend) handleRead(
 
 	// Check if there is a ttl key
 	ttlDuration := b.System().DefaultLeaseTTL()
-	ttlInt, ok := rawData["ttl"]
+	ttlRaw, ok := rawData["ttl"]
 	if !ok {
-		ttlInt, ok = rawData["lease"]
+		ttlRaw, ok = rawData["lease"]
 	}
 	if ok {
-		dur, err := parseutil.ParseDurationSecond(ttlInt)
+		dur, err := parseutil.ParseDurationSecond(ttlRaw)
 		if err == nil {
 			ttlDuration = dur
 		}
