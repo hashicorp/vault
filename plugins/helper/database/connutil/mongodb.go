@@ -41,19 +41,29 @@ func (c *MongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 		return fmt.Errorf("connection_url cannot be empty")
 	}
 
+	// Set initialized to true at this point since all fields are set,
+	// and the connection can be established at a later time.
+	c.Initialized = true
+
 	if verifyConnection {
 		if _, err := c.Connection(); err != nil {
-			return fmt.Errorf("error initializing connection: %s", err)
+			return fmt.Errorf("error verifying connection: %s", err)
+		}
+
+		if err := c.session.Ping(); err != nil {
+			return fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
-
-	c.Initialized = true
 
 	return nil
 }
 
 // Connection creates a database connection.
 func (c *MongoDBConnectionProducer) Connection() (interface{}, error) {
+	if !c.Initialized {
+		return nil, errNotInitialized
+	}
+
 	if c.session != nil {
 		return c.session, nil
 	}

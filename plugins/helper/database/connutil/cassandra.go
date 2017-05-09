@@ -99,18 +99,24 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 		c.TLS = true
 	}
 
+	// Set initialized to true at this point since all fields are set,
+	// and the connection can be established at a later time.
+	c.Initialized = true
+
 	if verifyConnection {
 		if _, err := c.Connection(); err != nil {
-			return fmt.Errorf("error initalizing connection: %s", err)
+			return fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
-
-	c.Initialized = true
 
 	return nil
 }
 
 func (c *CassandraConnectionProducer) Connection() (interface{}, error) {
+	if !c.Initialized {
+		return nil, errNotInitialized
+	}
+
 	// If we already have a DB, return it
 	if c.session != nil {
 		return c.session, nil
