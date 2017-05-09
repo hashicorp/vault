@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 set -e
 
 PROJECT="vault"
@@ -95,7 +95,7 @@ if [ -z "$NO_UPLOAD" ]; then
 fi
 
 # Add redirects if they exist
-if [ -f "./redirects.txt" ]; then
+if [ -z "$NO_REDIRECTS" ] || [ ! test -f "./redirects.txt" ]; then
   echo "Adding redirects..."
   fields=()
   while read -r line; do
