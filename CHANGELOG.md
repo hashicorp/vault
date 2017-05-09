@@ -1,3 +1,20 @@
+## Next (Unreleased)
+
+BUG FIXES:
+
+ * secret/database: Increase wrapping token TTL; in a loaded scenario it could
+   be too short
+ * secret/generic: Allow integers to be set as the value of `ttl` field as the
+   documentation claims is supported [GH-2699]
+ * storage/file: Don't leak file descriptors in some error cases
+
+## 0.7.2 (May 8th, 2017)
+
+BUG FIXES:
+
+ * audit: Fix auditing entries containing certain kinds of time values
+   [GH-2689]
+
 ## 0.7.1 (May 5th, 2017)
 
 DEPRECATIONS/CHANGES:
@@ -71,6 +88,8 @@ BUG FIXES:
    [GH-2674]
  * core: Help operations should request forward since standbys may not have
    appropriate info [GH-2677]
+ * replication: Fix enabling secondaries when certain mounts already existed on
+   the primary
  * secret/mssql: Update mssql driver to support queries with colons [GH-2610]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]

@@ -1,8 +1,10 @@
 package audit
 
 import (
+	"errors"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -141,6 +143,12 @@ type hashWalker struct {
 	unknownKeys []string
 }
 
+// hashTimeType stores a pre-computed reflect.Type for a time.Time so
+// we can quickly compare in hashWalker.Struct. We create an empty/invalid
+// time.Time{} so we don't need to incur any additional startup cost vs.
+// Now() or Unix().
+var hashTimeType = reflect.TypeOf(time.Time{})
+
 func (w *hashWalker) Enter(loc reflectwalk.Location) error {
 	w.loc = loc
 	return nil
@@ -185,6 +193,35 @@ func (w *hashWalker) Slice(s reflect.Value) error {
 func (w *hashWalker) SliceElem(i int, elem reflect.Value) error {
 	w.csKey = append(w.csKey, reflect.ValueOf(i))
 	w.sliceIndex = i
+	return nil
+}
+
+func (w *hashWalker) Struct(v reflect.Value) error {
+	// We are looking for time values. If it isn't one, ignore it.
+	if v.Type() != hashTimeType {
+		return nil
+	}
+
+	// If we aren't in a map value, return an error to prevent a panic
+	if v.Interface() != w.lastValue.Interface() {
+		return errors.New("time.Time value in a non map key cannot be hashed for audits")
+	}
+
+	// Create a string value of the time. IMPORTANT: this must never change
+	// across Vault versions or the hash value of equivalent time.Time will
+	// change.
+	strVal := v.Interface().(time.Time).Format(time.RFC3339Nano)
+
+	// Set the map value to the string instead of the time.Time object
+	m := w.cs[len(w.cs)-1]
+	mk := w.csData.(reflect.Value)
+	m.SetMapIndex(mk, reflect.ValueOf(strVal))
+
+	// Skip this entry so that we don't walk the struct.
+	return reflectwalk.SkipEntry
+}
+
+func (w *hashWalker) StructField(reflect.StructField, reflect.Value) error {
 	return nil
 }
 
