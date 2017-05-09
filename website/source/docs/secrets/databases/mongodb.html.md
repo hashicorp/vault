@@ -6,7 +6,7 @@ description: |-
   The MongoDB plugin for Vault's Database backend generates database credentials to access MongoDB.
 ---
 
-# Cassandra Database Plugin
+# MongoDB Database Plugin
 
 Name: `mongodb-database-plugin`
 

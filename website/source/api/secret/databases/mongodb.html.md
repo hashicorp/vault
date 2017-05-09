@@ -6,7 +6,7 @@ description: |-
   The MongoDB plugin for Vault's Database backend generates database credentials to access MongoDB servers.
 ---
 
-# Cassandra Database Plugin HTTP API
+# MongoDB Database Plugin HTTP API
 
 The MongoDB Database Plugin is one of the supported plugins for the Database
 backend. This plugin generates database credentials dynamically based on
