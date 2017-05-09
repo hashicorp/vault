@@ -181,6 +181,13 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		logger.Debug("physical/consul: config token set")
 	}
 
+	client, err := api.NewClient(consulConf)
+	if err != nil {
+		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
+	}
+
+	/* NewClient will set the Http Client TLS Config, so it must be set
+	after the client is created */
 	if consulConf.Scheme == "https" {
 		tlsClientConfig, err := setupTLSConfig(conf)
 		if err != nil {
@@ -195,11 +202,6 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 		}
 		consulConf.HttpClient.Transport = transport
 		logger.Debug("physical/consul: configured TLS")
-	}
-
-	client, err := api.NewClient(consulConf)
-	if err != nil {
-		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
