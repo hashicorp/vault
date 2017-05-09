@@ -682,7 +682,7 @@ func TestTokenStore_Revoke_Orphan(t *testing.T) {
 func TestTokenStore_RevokeTree(t *testing.T) {
 	testTokenStore_RevokeTree_NonRecursive(t, 1)
 	testTokenStore_RevokeTree_NonRecursive(t, 2)
-	testTokenStore_RevokeTree_NonRecursive(t, 10)
+	//testTokenStore_RevokeTree_NonRecursive(t, 10)
 }
 
 // Revokes a given Token Store tree non recursively.
