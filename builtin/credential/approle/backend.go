@@ -93,31 +93,40 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Init:       b.initialize,
 		Invalidate: b.invalidate,
 	}
 	return b, nil
 }
 
-func (b *backend) initialize() error {
+func (b *backend) Salt() (*salt.Salt, error) {
+	b.saltMutex.RLock()
+	if b.salt != nil {
+		defer b.saltMutex.RUnlock()
+		return b.salt, nil
+	}
+	b.saltMutex.RUnlock()
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
+	if b.salt != nil {
+		return b.salt, nil
+	}
 	salt, err := salt.NewSalt(b.view, &salt.Config{
 		HashFunc: salt.SHA256Hash,
 		Location: salt.DefaultLocation,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	b.salt = salt
-	return nil
+	return salt, nil
 }
 
 func (b *backend) invalidate(key string) {
 	switch key {
 	case salt.DefaultLocation:
-		// reread the salt
-		b.initialize()
+		b.saltMutex.Lock()
+		defer b.saltMutex.Unlock()
+		b.salt = nil
 	}
 }
 
