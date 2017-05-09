@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "PostgreSQL Database Plugin - HTTP API"
-sidebar_current: "docs-http-secret-databases-postgresql-maria"
+sidebar_current: "docs-http-secret-databases-postgresql"
 description: |-
   The PostgreSQL plugin for Vault's Database backend generates database credentials to access PostgreSQL servers.
 ---

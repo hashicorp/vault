@@ -1,7 +1,7 @@
 ---
 layout: "api"
 page_title: "MSSQL Database Plugin - HTTP API"
-sidebar_current: "docs-http-secret-databases-mssql-maria"
+sidebar_current: "docs-http-secret-databases-mssql"
 description: |-
   The MSSQL plugin for Vault's Database backend generates database credentials to access MSSQL servers.
 ---
