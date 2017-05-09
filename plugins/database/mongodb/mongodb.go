@@ -65,9 +65,13 @@ func (m *MongoDB) getConnection() (*mgo.Session, error) {
 }
 
 // CreateUser generates the username/password on the underlying secret backend as instructed by
-// the CreationStatement provided. The creation statement JSON that has a db value, and an array
-// of roles that accept an optional db value. This array will be normalized the format specified
-// in the mongoDB docs: https://docs.mongodb.com/manual/reference/command/createUser/#dbcmd.createUser
+// the CreationStatement provided. The creation statement is a JSON blob that has a db value,
+// and an array of roles that accepts a role, and an optional db value pair. This array will
+// be normalized the format specified in the mongoDB docs:
+// https://docs.mongodb.com/manual/reference/command/createUser/#dbcmd.createUser
+//
+// JSON Example:
+//  { "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }
 func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
