@@ -1,3 +1,11 @@
+## Next (Unreleased)
+
+BUG FIXES:
+
+ * secret/database: Increase wrapping token TTL; in a loaded scenario it could
+   be too short
+ * storage/file: Don't leak file descriptors in some error cases
+
 ## 0.7.2 (May 8th, 2017)
 
 BUG FIXES:
