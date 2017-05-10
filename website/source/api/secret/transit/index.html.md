@@ -234,7 +234,7 @@ $ curl \
     https://vault.rocks/v1/transit/keys/my-key/rotate
 ```
 
-## Read Key
+## Export Key
 
 This endpoint returns the named key. The `keys` object shows the value of the
 key for each version. If `version` is specified, the specific version will be
@@ -259,9 +259,9 @@ be valid.
 - `name` `(string: <required>)` – Specifies the name of the key to read
   information about. This is specified as part of the URL.
 
-- `version` `(int: "")` – Specifies the version of the key to read. If omitted,
+- `version` `(string: "")` – Specifies the version of the key to read. If omitted,
   all versions of the key will be returned. This is specified as part of the
-  URL.
+  URL. If the version is set to `latest`, the current key will be returned.
 
 ### Sample Request
 
