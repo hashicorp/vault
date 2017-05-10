@@ -1,9 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 PROJECT="vault"
 PROJECT_URL="www.vaultproject.io"
 FASTLY_SERVICE_ID="7GrxRJP3PVBuqQbyxYQ0MV"
+FASTLY_DICTIONARY_ID="4uTFhCUtoa1cV9DuXeC1Fo"
 
 # Ensure the proper AWS environment variables are set
 if [ -z "$AWS_ACCESS_KEY_ID" ]; then
@@ -91,6 +92,71 @@ if [ -z "$NO_UPLOAD" ]; then
     --include "*.svg" \
     --recursive \
     modify "s3://hc-sites/$PROJECT/latest/"
+fi
+
+# Add redirects if they exist
+if [ -z "$NO_REDIRECTS" ] || [ ! test -f "./redirects.txt" ]; then
+  echo "Adding redirects..."
+  fields=()
+  while read -r line; do
+    [[ "$line" =~ ^#.* ]] && continue
+    [[ -z "$line" ]] && continue
+
+    # Read fields
+    IFS=" " read -ra parts <<<"$line"
+    fields+=("${parts[@]}")
+  done < "./redirects.txt"
+
+  # Check we have pairs
+  if [ $((${#fields[@]} % 2)) -ne 0 ]; then
+    echo "Bad redirects (not an even number)!"
+    exit 1
+  fi
+
+  # Check we don't have more than 1000 entries (yes, it says 2000 below, but that
+  # is because we've split into multiple lines).
+  if [ "${#fields}" -gt 2000 ]; then
+    echo "More than 1000 entries!"
+    exit 1
+  fi
+
+  # Validations
+  for field in "${fields[@]}"; do
+    if [ "${#field}" -gt 256 ]; then
+      echo "'$field' is > 256 characters!"
+      exit 1
+    fi
+
+    if [ "${field:0:1}" != "/" ]; then
+      echo "'$field' does not start with /!"
+      exit 1
+    fi
+  done
+
+  # Build the payload for single-request updates.
+  jq_args=()
+  jq_query="."
+  for (( i=0; i<${#fields[@]}; i+=2 )); do
+    original="${fields[i]}"
+    redirect="${fields[i+1]}"
+    echo "Redirecting ${original} -> ${redirect}"
+    jq_args+=(--arg "key$((i/2))" "${original}")
+    jq_args+=(--arg "value$((i/2))" "${redirect}")
+    jq_query+="| .items |= (. + [{op: \"upsert\", item_key: \$key$((i/2)), item_value: \$value$((i/2))}])"
+  done
+  json="$(jq "${jq_args[@]}" "${jq_query}" <<<'{"items": []}')"
+
+  # Post the JSON body
+  curl \
+    --fail \
+    --silent \
+    --output /dev/null \
+    --request "PATCH" \
+    --header "Fastly-Key: $FASTLY_API_KEY" \
+    --header "Content-type: application/json" \
+    --header "Accept: application/json" \
+    --data "$json"\
+    "https://api.fastly.com/service/$FASTLY_SERVICE_ID/dictionary/$FASTLY_DICTIONARY_ID/items"
 fi
 
 # Perform a purge of the surrogate key.

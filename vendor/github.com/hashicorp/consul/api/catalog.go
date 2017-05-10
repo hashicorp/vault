@@ -6,6 +6,8 @@ type Node struct {
 	Address         string
 	TaggedAddresses map[string]string
 	Meta            map[string]string
+	CreateIndex     uint64
+	ModifyIndex     uint64
 }
 
 type CatalogService struct {

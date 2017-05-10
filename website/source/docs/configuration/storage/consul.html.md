@@ -193,6 +193,6 @@ storage "consul" {
 ```
 
 [consul]: https://www.consul.io/ "Consul by HashiCorp"
-[consul-acl]: https://www.consul.io/docs/internals/acl.html "Consul ACLs"
-[consul-consistency]: https://www.consul.io/docs/agent/http.html#consistency-modes "Consul Consistency Modes"
+[consul-acl]: https://www.consul.io/docs/guides/acl.html "Consul ACLs"
+[consul-consistency]: https://www.consul.io/api/index.html#consistency-modes "Consul Consistency Modes"
 [consul-encryption]: https://www.consul.io/docs/agent/encryption.html "Consul Encryption"

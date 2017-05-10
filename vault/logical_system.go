@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/mitchellh/mapstructure"
@@ -55,7 +56,6 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			Root: []string{
 				"auth/*",
 				"remount",
-				"revoke-prefix/*",
 				"audit",
 				"audit/*",
 				"raw/*",
@@ -63,6 +63,11 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/reindex",
 				"rotate",
 				"config/auditing/*",
+				"plugins/catalog/*",
+				"revoke-prefix/*",
+				"leases/revoke-prefix/*",
+				"leases/revoke-force/*",
+				"leases/lookup/*",
 			},
 
 			Unauthenticated: []string{
@@ -299,7 +304,43 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "renew" + framework.OptionalParamRegex("url_lease_id"),
+				Pattern: "leases/lookup/(?P<prefix>.+?)?",
+
+				Fields: map[string]*framework.FieldSchema{
+					"prefix": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["leases-list-prefix"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handleLeaseLookupList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["leases"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "leases/lookup",
+
+				Fields: map[string]*framework.FieldSchema{
+					"lease_id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleLeaseLookup,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["leases"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "(leases/)?renew" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
 					"url_lease_id": &framework.FieldSchema{
@@ -325,9 +366,13 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke/(?P<lease_id>.+)",
+				Pattern: "(leases/)?revoke" + framework.OptionalParamRegex("url_lease_id"),
 
 				Fields: map[string]*framework.FieldSchema{
+					"url_lease_id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
+					},
 					"lease_id": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["lease_id"][0]),
@@ -343,7 +388,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-force/(?P<prefix>.+)",
+				Pattern: "(leases/)?revoke-force/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -361,7 +406,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 			},
 
 			&framework.Path{
-				Pattern: "revoke-prefix/(?P<prefix>.+)",
+				Pattern: "(leases/)?revoke-prefix/(?P<prefix>.+)",
 
 				Fields: map[string]*framework.FieldSchema{
 					"prefix": &framework.FieldSchema{
@@ -376,6 +421,17 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["revoke-prefix"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["revoke-prefix"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "leases/tidy$",
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handleTidyLeases,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["tidy_leases"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["tidy_leases"][1]),
 			},
 
 			&framework.Path{
@@ -682,6 +738,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers-name"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers-name"][1]),
 			},
+
 			&framework.Path{
 				Pattern: "config/auditing/request-headers$",
 
@@ -691,6 +748,48 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["audited-headers"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
+			},
+			&framework.Path{
+				Pattern: "plugins/catalog/$",
+
+				Fields: map[string]*framework.FieldSchema{},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ListOperation: b.handlePluginCatalogList,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
+			},
+			&framework.Path{
+				Pattern: "plugins/catalog/(?P<name>.+)",
+
+				Fields: map[string]*framework.FieldSchema{
+					"name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The name of the plugin",
+					},
+					"sha_256": &framework.FieldSchema{
+						Type: framework.TypeString,
+						Description: `The SHA256 sum of the executable used in the
+						command field. This should be HEX encoded.`,
+					},
+					"command": &framework.FieldSchema{
+						Type: framework.TypeString,
+						Description: `The command used to start the plugin. The
+						executable defined in this command must exist in vault's
+						plugin directory.`,
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handlePluginCatalogUpdate,
+					logical.DeleteOperation: b.handlePluginCatalogDelete,
+					logical.ReadOperation:   b.handlePluginCatalogRead,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
 		},
 	}
@@ -710,9 +809,18 @@ type SystemBackend struct {
 	Backend *framework.Backend
 }
 
+func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := b.Core.expiration.Tidy()
+	if err != nil {
+		b.Backend.Logger().Error("sys: failed to tidy leases", "error", err)
+		return handleError(err)
+	}
+	return nil, err
+}
+
 func (b *SystemBackend) invalidate(key string) {
 	if b.Core.logger.IsTrace() {
-		b.Core.logger.Trace("sys: invaliding key", "key", key)
+		b.Core.logger.Trace("sys: invalidating key", "key", key)
 	}
 	switch {
 	case strings.HasPrefix(key, policySubPath):
@@ -722,6 +830,77 @@ func (b *SystemBackend) invalidate(key string) {
 			b.Core.policyStore.invalidate(strings.TrimPrefix(key, policySubPath))
 		}
 	}
+}
+
+func (b *SystemBackend) handlePluginCatalogList(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	plugins, err := b.Core.pluginCatalog.List()
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponse(plugins), nil
+}
+
+func (b *SystemBackend) handlePluginCatalogUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+
+	sha256 := d.Get("sha_256").(string)
+	if sha256 == "" {
+		return logical.ErrorResponse("missing SHA-256 value"), nil
+	}
+
+	command := d.Get("command").(string)
+	if command == "" {
+		return logical.ErrorResponse("missing command value"), nil
+	}
+
+	sha256Bytes, err := hex.DecodeString(sha256)
+	if err != nil {
+		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
+	}
+
+	err = b.Core.pluginCatalog.Set(pluginName, command, sha256Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	plugin, err := b.Core.pluginCatalog.Get(pluginName)
+	if err != nil {
+		return nil, err
+	}
+	if plugin == nil {
+		return nil, nil
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"plugin": plugin,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("name").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	err := b.Core.pluginCatalog.Delete(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -814,7 +993,7 @@ func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *fram
 		return logical.ErrorResponse("missing accessor"), nil
 	}
 
-	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor)
+	aEntry, err := b.Core.tokenStore.lookupByAccessor(accessor, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1270,6 +1449,61 @@ func (b *SystemBackend) handleTuneWriteCommon(
 	return nil, nil
 }
 
+// handleLease is use to view the metadata for a given LeaseID
+func (b *SystemBackend) handleLeaseLookup(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
+
+	leaseTimes, err := b.Core.expiration.FetchLeaseTimes(leaseID)
+	if err != nil {
+		b.Backend.Logger().Error("sys: error retrieving lease", "lease_id", leaseID, "error", err)
+		return handleError(err)
+	}
+	if leaseTimes == nil {
+		return logical.ErrorResponse("invalid lease"), logical.ErrInvalidRequest
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"id":           leaseID,
+			"issue_time":   leaseTimes.IssueTime,
+			"expire_time":  nil,
+			"last_renewal": nil,
+			"ttl":          int64(0),
+		},
+	}
+	renewable, _ := leaseTimes.renewable()
+	resp.Data["renewable"] = renewable
+
+	if !leaseTimes.LastRenewalTime.IsZero() {
+		resp.Data["last_renewal"] = leaseTimes.LastRenewalTime
+	}
+	if !leaseTimes.ExpireTime.IsZero() {
+		resp.Data["expire_time"] = leaseTimes.ExpireTime
+		resp.Data["ttl"] = leaseTimes.ttl()
+	}
+	return resp, nil
+}
+
+func (b *SystemBackend) handleLeaseLookupList(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	prefix := data.Get("prefix").(string)
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+
+	keys, err := b.Core.expiration.idView.List(prefix)
+	if err != nil {
+		b.Backend.Logger().Error("sys: error listing leases", "prefix", prefix, "error", err)
+		return handleError(err)
+	}
+	return logical.ListResponse(keys), nil
+}
+
 // handleRenew is used to renew a lease with a given LeaseID
 func (b *SystemBackend) handleRenew(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -1277,6 +1511,10 @@ func (b *SystemBackend) handleRenew(
 	leaseID := data.Get("lease_id").(string)
 	if leaseID == "" {
 		leaseID = data.Get("url_lease_id").(string)
+	}
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
 	}
 	incrementRaw := data.Get("increment").(int)
 
@@ -1297,6 +1535,13 @@ func (b *SystemBackend) handleRevoke(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get all the options
 	leaseID := data.Get("lease_id").(string)
+	if leaseID == "" {
+		leaseID = data.Get("url_lease_id").(string)
+	}
+	if leaseID == "" {
+		return logical.ErrorResponse("lease_id must be specified"),
+			logical.ErrInvalidRequest
+	}
 
 	// Invoke the expiration manager directly
 	if err := b.Core.expiration.Revoke(leaseID); err != nil {
@@ -1964,7 +2209,7 @@ func (b *SystemBackend) handleWrappingRewrap(
 		Data: map[string]interface{}{
 			"response": response,
 		},
-		WrapInfo: &logical.ResponseWrapInfo{
+		WrapInfo: &wrapping.ResponseWrapInfo{
 			TTL: time.Duration(creationTTL),
 		},
 	}, nil
@@ -2368,6 +2613,15 @@ Enable a new audit backend or disable an existing backend.
 		on a given path.`,
 	},
 
+	"tidy_leases": {
+		`This endpoint performs cleanup tasks that can be run if certain error
+conditions have occurred.`,
+		`This endpoint performs cleanup tasks that can be run to clean up the
+lease entries after certain error conditions. Usually running this is not
+necessary, and is only required if upgrade notes or support personnel suggest
+it.`,
+	},
+
 	"wrap": {
 		"Response-wraps an arbitrary JSON object.",
 		`Round trips the given input data into a response-wrapped token.`,
@@ -2413,5 +2667,39 @@ This path responds to the following HTTP methods.
 	"audited-headers": {
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
+	},
+	"plugins/catalog": {
+		`Configures the plugins known to vault`,
+		`
+This path responds to the following HTTP methods.
+    LIST /
+        Returns a list of names of configured plugins.
+
+    GET /<name>
+        Retrieve the metadata for the named plugin.
+
+    PUT /<name>
+        Add or update plugin.
+
+    DELETE /<name>
+        Delete the plugin with the given name.
+		`,
+	},
+	"leases": {
+		`View or list lease metadata.`,
+		`
+This path responds to the following HTTP methods.
+
+    PUT /
+        Retrieve the metadata for the provided lease id.
+
+    LIST /<prefix>
+        Lists the leases for the named prefix.
+		`,
+	},
+
+	"leases-list-prefix": {
+		`The path to list leases under. Example: "aws/creds/deploy"`,
+		"",
 	},
 }

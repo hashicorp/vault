@@ -39,7 +39,7 @@ values set here cannot be changed after key creation.
   be unique** or it will compromise the security of your key, and the key space
   for nonces is 96 bit -- not as large as the AES key itself.
 
-- `derived` `(bool: false)` – Specifies if key derivation kist be used. If
+- `derived` `(bool: false)` – Specifies if key derivation is to be used. If
   enabled, all encrypt/decrypt requests to this named key must provide a context
   which is used for key derivation.
 
@@ -173,7 +173,7 @@ $ curl \
     https://vault.rocks/v1/transit/keys/my-key
 ```
 
-#### Update Key Configuration
+## Update Key Configuration
 
 This endpoint allows tuning configuration values for a given key. (These values
 are returned during a read operation on the named key.)
@@ -234,7 +234,7 @@ $ curl \
     https://vault.rocks/v1/transit/keys/my-key/rotate
 ```
 
-## Read Key
+## Export Key
 
 This endpoint returns the named key. The `keys` object shows the value of the
 key for each version. If `version` is specified, the specific version will be
@@ -259,9 +259,9 @@ be valid.
 - `name` `(string: <required>)` – Specifies the name of the key to read
   information about. This is specified as part of the URL.
 
-- `version` `(int: "")` – Specifies the version of the key to read. If omitted,
+- `version` `(string: "")` – Specifies the version of the key to read. If omitted,
   all versions of the key will be returned. This is specified as part of the
-  URL.
+  URL. If the version is set to `latest`, the current key will be returned.
 
 ### Sample Request
 
@@ -450,7 +450,7 @@ $ curl \
 
 ## Rewrap Data
 
-This endpoint rewrapw the provided ciphertext using the latest version of the
+This endpoint rewraps the provided ciphertext using the latest version of the
 named key. Because this never returns plaintext, it is possible to delegate this
 functionality to untrusted users or scripts.
 

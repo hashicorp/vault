@@ -145,7 +145,7 @@ func (b *backend) pathCAGenerateRoot(
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
 	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "certs/" + cb.SerialNumber,
+		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {
@@ -277,7 +277,7 @@ func (b *backend) pathCASignIntermediate(
 	}
 
 	err = req.Storage.Put(&logical.StorageEntry{
-		Key:   "certs/" + cb.SerialNumber,
+		Key:   "certs/" + normalizeSerial(cb.SerialNumber),
 		Value: parsedBundle.CertificateBytes,
 	})
 	if err != nil {

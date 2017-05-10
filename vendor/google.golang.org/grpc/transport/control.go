@@ -57,6 +57,7 @@ const (
 	defaultMaxConnectionAgeGrace  = infinity
 	defaultServerKeepaliveTime    = time.Duration(2 * time.Hour)
 	defaultServerKeepaliveTimeout = time.Duration(20 * time.Second)
+	defaultKeepalivePolicyMinTime = time.Duration(5 * time.Minute)
 )
 
 // The following defines various control items which could flow through
@@ -84,6 +85,8 @@ type resetStream struct {
 func (*resetStream) item() {}
 
 type goAway struct {
+	code      http2.ErrCode
+	debugData []byte
 }
 
 func (*goAway) item() {}

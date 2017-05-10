@@ -207,7 +207,12 @@ func (b *backend) GenerateSaltedOTP() (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	return str, b.salt.SaltID(str), nil
+	salt, err := b.Salt()
+	if err != nil {
+		return "", "", err
+	}
+
+	return str, salt.SaltID(str), nil
 }
 
 // Generates an UUID OTP and creates an entry for the same in storage backend with its salted string.

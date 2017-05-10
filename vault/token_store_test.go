@@ -240,7 +240,7 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 		t.Fatalf("bad: %#v", out)
 	}
 
-	aEntry, err := ts.lookupByAccessor(out.Accessor)
+	aEntry, err := ts.lookupByAccessor(out.Accessor, false)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -318,7 +318,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 
 	// Test upgrade from old struct method of accessor storage (of token id)
 	for _, accessor := range keys {
-		aEntry, err := ts.lookupByAccessor(accessor)
+		aEntry, err := ts.lookupByAccessor(accessor, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -352,7 +352,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 
 	for _, accessor := range keys2 {
-		aEntry, err := ts.lookupByAccessor(accessor)
+		aEntry, err := ts.lookupByAccessor(accessor, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -701,7 +701,7 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 	}
 
 	err := ts.RevokeTree("")
-	if err.Error() != "cannot revoke blank token" {
+	if err.Error() != "cannot tree-revoke blank token" {
 		t.Fatalf("err: %v", err)
 	}
 	err = ts.RevokeTree(ent1.ID)
@@ -1358,6 +1358,7 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		"creation_ttl":     int64(0),
 		"ttl":              int64(0),
 		"explicit_max_ttl": int64(0),
+		"expire_time":      nil,
 	}
 
 	if resp.Data["creation_time"].(int64) == 0 {
@@ -1403,6 +1404,14 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+	if resp.Data["issue_time"].(time.Time).IsZero() {
+		t.Fatal("issue time is default time")
+	}
+	delete(resp.Data, "issue_time")
+	if resp.Data["expire_time"].(time.Time).IsZero() {
+		t.Fatal("expire time is default time")
+	}
+	delete(resp.Data, "expire_time")
 
 	// Depending on timing of the test this may have ticked down, so accept 3599
 	if resp.Data["ttl"].(int64) == 3599 {
@@ -1445,6 +1454,14 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+	if resp.Data["issue_time"].(time.Time).IsZero() {
+		t.Fatal("issue time is default time")
+	}
+	delete(resp.Data, "issue_time")
+	if resp.Data["expire_time"].(time.Time).IsZero() {
+		t.Fatal("expire time is default time")
+	}
+	delete(resp.Data, "expire_time")
 
 	// Depending on timing of the test this may have ticked down, so accept 3599
 	if resp.Data["ttl"].(int64) == 3599 {
@@ -1486,9 +1503,11 @@ func TestTokenStore_HandleRequest_Lookup(t *testing.T) {
 }
 
 func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
-	_, ts, _, root := TestCoreWithTokenStore(t)
+	c, ts, _, root := TestCoreWithTokenStore(t)
+	testCoreMakeToken(t, c, root, "client", "3600s", []string{"foo"})
+
 	req := logical.TestRequest(t, logical.ReadOperation, "lookup-self")
-	req.ClientToken = root
+	req.ClientToken = "client"
 	resp, err := ts.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v %v", err, resp)
@@ -1498,16 +1517,17 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 	}
 
 	exp := map[string]interface{}{
-		"id":               root,
+		"id":               "client",
 		"accessor":         resp.Data["accessor"],
-		"policies":         []string{"root"},
-		"path":             "auth/token/root",
+		"policies":         []string{"default", "foo"},
+		"path":             "auth/token/create",
 		"meta":             map[string]string(nil),
-		"display_name":     "root",
-		"orphan":           true,
+		"display_name":     "token",
+		"orphan":           false,
+		"renewable":        true,
 		"num_uses":         0,
-		"creation_ttl":     int64(0),
-		"ttl":              int64(0),
+		"creation_ttl":     int64(3600),
+		"ttl":              int64(3600),
 		"explicit_max_ttl": int64(0),
 	}
 
@@ -1515,6 +1535,19 @@ func TestTokenStore_HandleRequest_LookupSelf(t *testing.T) {
 		t.Fatalf("creation time was zero")
 	}
 	delete(resp.Data, "creation_time")
+	if resp.Data["issue_time"].(time.Time).IsZero() {
+		t.Fatalf("creation time was zero")
+	}
+	delete(resp.Data, "issue_time")
+	if resp.Data["expire_time"].(time.Time).IsZero() {
+		t.Fatalf("expire time was zero")
+	}
+	delete(resp.Data, "expire_time")
+
+	// Depending on timing of the test this may have ticked down, so accept 3599
+	if resp.Data["ttl"].(int64) == 3599 {
+		resp.Data["ttl"] = int64(3600)
+	}
 
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", exp, resp.Data)

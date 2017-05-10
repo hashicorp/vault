@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -69,7 +70,7 @@ func TestCopy_response(t *testing.T) {
 		Data: map[string]interface{}{
 			"foo": "bar",
 		},
-		WrapInfo: &logical.ResponseWrapInfo{
+		WrapInfo: &wrapping.ResponseWrapInfo{
 			TTL:             60,
 			Token:           "foo",
 			CreationTime:    time.Now(),
@@ -139,8 +140,12 @@ func TestHash(t *testing.T) {
 			&logical.Response{
 				Data: map[string]interface{}{
 					"foo": "bar",
+
+					// Responses can contain time values, so test that with
+					// a known fixed value.
+					"bar": now,
 				},
-				WrapInfo: &logical.ResponseWrapInfo{
+				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
 					Token:           "bar",
 					CreationTime:    now,
@@ -150,8 +155,9 @@ func TestHash(t *testing.T) {
 			&logical.Response{
 				Data: map[string]interface{}{
 					"foo": "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
+					"bar": now.Format(time.RFC3339Nano),
 				},
-				WrapInfo: &logical.ResponseWrapInfo{
+				WrapInfo: &wrapping.ResponseWrapInfo{
 					TTL:             60,
 					Token:           "hmac-sha256:f9320baf0249169e73850cd6156ded0106e2bb6ad8cab01b7bbbebe6d1065317",
 					CreationTime:    now,

@@ -1895,7 +1895,7 @@ func (b *backend) handleRoleSecretIDCommon(req *logical.Request, data *framework
 	}
 
 	// Parse the CIDR blocks into a slice
-	secretIDCIDRs := strutil.ParseDedupAndSortStrings(cidrList, ",")
+	secretIDCIDRs := strutil.ParseDedupLowercaseAndSortStrings(cidrList, ",")
 
 	// Ensure that the CIDRs on the secret ID are a subset of that of role's
 	if err := verifyCIDRRoleSecretIDSubset(secretIDCIDRs, role.BoundCIDRList); err != nil {
@@ -1939,7 +1939,11 @@ func (b *backend) setRoleIDEntry(s logical.Storage, roleID string, roleIDEntry *
 	lock.Lock()
 	defer lock.Unlock()
 
-	entryIndex := "role_id/" + b.salt.SaltID(roleID)
+	salt, err := b.Salt()
+	if err != nil {
+		return err
+	}
+	entryIndex := "role_id/" + salt.SaltID(roleID)
 
 	entry, err := logical.StorageEntryJSON(entryIndex, roleIDEntry)
 	if err != nil {
@@ -1963,7 +1967,11 @@ func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageE
 
 	var result roleIDStorageEntry
 
-	entryIndex := "role_id/" + b.salt.SaltID(roleID)
+	salt, err := b.Salt()
+	if err != nil {
+		return nil, err
+	}
+	entryIndex := "role_id/" + salt.SaltID(roleID)
 
 	if entry, err := s.Get(entryIndex); err != nil {
 		return nil, err
@@ -1987,7 +1995,11 @@ func (b *backend) roleIDEntryDelete(s logical.Storage, roleID string) error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	entryIndex := "role_id/" + b.salt.SaltID(roleID)
+	salt, err := b.Salt()
+	if err != nil {
+		return err
+	}
+	entryIndex := "role_id/" + salt.SaltID(roleID)
 
 	return s.Delete(entryIndex)
 }

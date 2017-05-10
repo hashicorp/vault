@@ -28,6 +28,10 @@ type SetPartitioner interface {
 }
 
 func setupTLSConfig(sslOpts *SslOptions) (*tls.Config, error) {
+	if sslOpts.Config == nil {
+		sslOpts.Config = &tls.Config{}
+	}
+
 	// ca cert is optional
 	if sslOpts.CaPath != "" {
 		if sslOpts.RootCAs == nil {
@@ -54,7 +58,7 @@ func setupTLSConfig(sslOpts *SslOptions) (*tls.Config, error) {
 
 	sslOpts.InsecureSkipVerify = !sslOpts.EnableHostVerification
 
-	return &sslOpts.Config, nil
+	return sslOpts.Config, nil
 }
 
 type policyConnPool struct {

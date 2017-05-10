@@ -107,6 +107,8 @@ func newHandshakeTransport(conn keyingTransport, config *Config, clientVersion, 
 
 		config: config,
 	}
+	t.resetReadThresholds()
+	t.resetWriteThresholds()
 
 	// We always start with a mandatory key exchange.
 	t.requestKex <- struct{}{}
@@ -237,6 +239,17 @@ func (t *handshakeTransport) requestKeyExchange() {
 	}
 }
 
+func (t *handshakeTransport) resetWriteThresholds() {
+	t.writePacketsLeft = packetRekeyThreshold
+	if t.config.RekeyThreshold > 0 {
+		t.writeBytesLeft = int64(t.config.RekeyThreshold)
+	} else if t.algorithms != nil {
+		t.writeBytesLeft = t.algorithms.w.rekeyBytes()
+	} else {
+		t.writeBytesLeft = 1 << 30
+	}
+}
+
 func (t *handshakeTransport) kexLoop() {
 
 write:
@@ -285,12 +298,8 @@ write:
 		t.writeError = err
 		t.sentInitPacket = nil
 		t.sentInitMsg = nil
-		t.writePacketsLeft = packetRekeyThreshold
-		if t.config.RekeyThreshold > 0 {
-			t.writeBytesLeft = int64(t.config.RekeyThreshold)
-		} else if t.algorithms != nil {
-			t.writeBytesLeft = t.algorithms.w.rekeyBytes()
-		}
+
+		t.resetWriteThresholds()
 
 		// we have completed the key exchange. Since the
 		// reader is still blocked, it is safe to clear out
@@ -344,6 +353,17 @@ write:
 // key exchange itself.
 const packetRekeyThreshold = (1 << 31)
 
+func (t *handshakeTransport) resetReadThresholds() {
+	t.readPacketsLeft = packetRekeyThreshold
+	if t.config.RekeyThreshold > 0 {
+		t.readBytesLeft = int64(t.config.RekeyThreshold)
+	} else if t.algorithms != nil {
+		t.readBytesLeft = t.algorithms.r.rekeyBytes()
+	} else {
+		t.readBytesLeft = 1 << 30
+	}
+}
+
 func (t *handshakeTransport) readOnePacket(first bool) ([]byte, error) {
 	p, err := t.conn.readPacket()
 	if err != nil {
@@ -391,12 +411,7 @@ func (t *handshakeTransport) readOnePacket(first bool) ([]byte, error) {
 		return nil, err
 	}
 
-	t.readPacketsLeft = packetRekeyThreshold
-	if t.config.RekeyThreshold > 0 {
-		t.readBytesLeft = int64(t.config.RekeyThreshold)
-	} else {
-		t.readBytesLeft = t.algorithms.r.rekeyBytes()
-	}
+	t.resetReadThresholds()
 
 	// By default, a key exchange is hidden from higher layers by
 	// translating it into msgIgnore.

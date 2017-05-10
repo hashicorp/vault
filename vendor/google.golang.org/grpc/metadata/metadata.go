@@ -136,17 +136,41 @@ func Join(mds ...MD) MD {
 	return out
 }
 
-type mdKey struct{}
+type mdIncomingKey struct{}
+type mdOutgoingKey struct{}
 
-// NewContext creates a new context with md attached.
+// NewContext is a wrapper for NewOutgoingContext(ctx, md).  Deprecated.
 func NewContext(ctx context.Context, md MD) context.Context {
-	return context.WithValue(ctx, mdKey{}, md)
+	return NewOutgoingContext(ctx, md)
 }
 
-// FromContext returns the MD in ctx if it exists.
-// The returned md should be immutable, writing to it may cause races.
-// Modification should be made to the copies of the returned md.
+// NewIncomingContext creates a new context with incoming md attached.
+func NewIncomingContext(ctx context.Context, md MD) context.Context {
+	return context.WithValue(ctx, mdIncomingKey{}, md)
+}
+
+// NewOutgoingContext creates a new context with outgoing md attached.
+func NewOutgoingContext(ctx context.Context, md MD) context.Context {
+	return context.WithValue(ctx, mdOutgoingKey{}, md)
+}
+
+// FromContext is a wrapper for FromIncomingContext(ctx).  Deprecated.
 func FromContext(ctx context.Context) (md MD, ok bool) {
-	md, ok = ctx.Value(mdKey{}).(MD)
+	return FromIncomingContext(ctx)
+}
+
+// FromIncomingContext returns the incoming MD in ctx if it exists.  The
+// returned md should be immutable, writing to it may cause races.
+// Modification should be made to the copies of the returned md.
+func FromIncomingContext(ctx context.Context) (md MD, ok bool) {
+	md, ok = ctx.Value(mdIncomingKey{}).(MD)
+	return
+}
+
+// FromOutgoingContext returns the outgoing MD in ctx if it exists.  The
+// returned md should be immutable, writing to it may cause races.
+// Modification should be made to the copies of the returned md.
+func FromOutgoingContext(ctx context.Context) (md MD, ok bool) {
+	md, ok = ctx.Value(mdOutgoingKey{}).(MD)
 	return
 }

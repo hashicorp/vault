@@ -203,8 +203,8 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, defaultPri
 		validPrincipals = defaultPrincipal
 	}
 
-	parsedPrincipals := strutil.ParseDedupAndSortStrings(validPrincipals, ",")
-	allowedPrincipals := strutil.ParseDedupAndSortStrings(principalsAllowedByRole, ",")
+	parsedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(validPrincipals, ","), false)
+	allowedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false)
 	switch {
 	case len(parsedPrincipals) == 0:
 		// There is nothing to process

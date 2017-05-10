@@ -99,6 +99,9 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 
 		dir, err := os.Open(fullPath)
 		if err != nil {
+			if dir != nil {
+				dir.Close()
+			}
 			if os.IsNotExist(err) {
 				return nil
 			} else {
@@ -139,6 +142,9 @@ func (b *FileBackend) GetInternal(k string) (*Entry, error) {
 	path = filepath.Join(path, key)
 
 	f, err := os.Open(path)
+	if f != nil {
+		defer f.Close()
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -146,7 +152,6 @@ func (b *FileBackend) GetInternal(k string) (*Entry, error) {
 
 		return nil, err
 	}
-	defer f.Close()
 
 	var entry Entry
 	if err := jsonutil.DecodeJSONFromReader(f, &entry); err != nil {
@@ -179,10 +184,12 @@ func (b *FileBackend) PutInternal(entry *Entry) error {
 		filepath.Join(path, key),
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600)
+	if f != nil {
+		defer f.Close()
+	}
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	enc := json.NewEncoder(f)
 	return enc.Encode(entry)
 }
@@ -205,6 +212,9 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 
 	// Read the directory contents
 	f, err := os.Open(path)
+	if f != nil {
+		defer f.Close()
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -212,7 +222,6 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 
 		return nil, err
 	}
-	defer f.Close()
 
 	names, err := f.Readdirnames(-1)
 	if err != nil {

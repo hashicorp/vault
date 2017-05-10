@@ -72,6 +72,7 @@ type PointerWalker interface {
 // SkipEntry can be returned from walk functions to skip walking
 // the value of this field. This is only valid in the following functions:
 //
+//   - Struct: skips all fields from being walked
 //   - StructField: skips walking the struct value
 //
 var SkipEntry = errors.New("skip this entry")
@@ -345,42 +346,50 @@ func walkStruct(v reflect.Value, w interface{}) (err error) {
 		ew.Enter(Struct)
 	}
 
+	skip := false
 	if sw, ok := w.(StructWalker); ok {
-		if err = sw.Struct(v); err != nil {
+		err = sw.Struct(v)
+		if err == SkipEntry {
+			skip = true
+			err = nil
+		}
+		if err != nil {
 			return
 		}
 	}
 
-	vt := v.Type()
-	for i := 0; i < vt.NumField(); i++ {
-		sf := vt.Field(i)
-		f := v.FieldByIndex([]int{i})
+	if !skip {
+		vt := v.Type()
+		for i := 0; i < vt.NumField(); i++ {
+			sf := vt.Field(i)
+			f := v.FieldByIndex([]int{i})
 
-		if sw, ok := w.(StructWalker); ok {
-			err = sw.StructField(sf, f)
+			if sw, ok := w.(StructWalker); ok {
+				err = sw.StructField(sf, f)
 
-			// SkipEntry just pretends this field doesn't even exist
-			if err == SkipEntry {
-				continue
+				// SkipEntry just pretends this field doesn't even exist
+				if err == SkipEntry {
+					continue
+				}
+
+				if err != nil {
+					return
+				}
 			}
 
+			ew, ok := w.(EnterExitWalker)
+			if ok {
+				ew.Enter(StructField)
+			}
+
+			err = walk(f, w)
 			if err != nil {
 				return
 			}
-		}
 
-		ew, ok := w.(EnterExitWalker)
-		if ok {
-			ew.Enter(StructField)
-		}
-
-		err = walk(f, w)
-		if err != nil {
-			return
-		}
-
-		if ok {
-			ew.Exit(StructField)
+			if ok {
+				ew.Exit(StructField)
+			}
 		}
 	}
 

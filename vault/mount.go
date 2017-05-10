@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -60,6 +62,7 @@ var (
 	singletonMounts = []string{
 		"cubbyhole",
 		"system",
+		"token",
 	}
 )
 
@@ -509,7 +512,14 @@ func (c *Core) loadMounts() error {
 					break
 				}
 			}
-			if !foundRequired {
+			// In a replication scenario we will let sync invalidation take
+			// care of creating a new required mount that doesn't exist yet.
+			// This should only happen in the upgrade case where a new one is
+			// introduced on the primary; otherwise initial bootstrapping will
+			// ensure this comes over. If we upgrade first, we simply don't
+			// create the mount, so we won't conflict when we sync. If this is
+			// local (e.g. cubbyhole) we do still add it.
+			if !foundRequired && (c.replicationState != consts.ReplicationSecondary || requiredMount.Local) {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
@@ -788,4 +798,33 @@ func requiredMountTable() *MountTable {
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
+}
+
+// This function returns tables that are singletons. The main usage of this is
+// for replication, so we can send over mount info (especially, UUIDs of
+// mounts, which are used for salts) for mounts that may not be able to be
+// handled normally. After saving these values on the secondary, we let normal
+// sync invalidation do its thing. Because of its use for replication, we
+// exclude local mounts.
+func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
+	mounts = &MountTable{}
+	auth = &MountTable{}
+
+	c.mountsLock.RLock()
+	for _, entry := range c.mounts.Entries {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
+			mounts.Entries = append(mounts.Entries, entry)
+		}
+	}
+	c.mountsLock.RUnlock()
+
+	c.authLock.RLock()
+	for _, entry := range c.auth.Entries {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
+			auth.Entries = append(auth.Entries, entry)
+		}
+	}
+	c.authLock.RUnlock()
+
+	return
 }

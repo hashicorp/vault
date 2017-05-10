@@ -35,7 +35,6 @@ package transport
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"math"
 	"net"
@@ -54,6 +53,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 )
 
 // http2Client implements the ClientTransport interface with HTTP2.
@@ -121,6 +121,9 @@ type http2Client struct {
 	goAwayID uint32
 	// prevGoAway ID records the Last-Stream-ID in the previous GOAway frame.
 	prevGoAwayID uint32
+	// goAwayReason records the http2.ErrCode and debug data received with the
+	// GoAway frame.
+	goAwayReason GoAwayReason
 }
 
 func dial(ctx context.Context, fn func(context.Context, string) (net.Conn, error), addr string) (net.Conn, error) {
@@ -311,7 +314,7 @@ func (t *http2Client) newStream(ctx context.Context, callHdr *CallHdr) *Stream {
 	return s
 }
 
-// NewStream creates a stream and register it into the transport as "active"
+// NewStream creates a stream and registers it into the transport as "active"
 // streams.
 func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (_ *Stream, err error) {
 	pr := &peer.Peer{
@@ -432,7 +435,7 @@ func (t *http2Client) NewStream(ctx context.Context, callHdr *CallHdr) (_ *Strea
 		hasMD      bool
 		endHeaders bool
 	)
-	if md, ok := metadata.FromContext(ctx); ok {
+	if md, ok := metadata.FromOutgoingContext(ctx); ok {
 		hasMD = true
 		for k, v := range md {
 			// HTTP doesn't allow you to set pseudoheaders after non pseudoheaders were set.
@@ -802,12 +805,9 @@ func (t *http2Client) handleData(f *http2.DataFrame) {
 			return
 		}
 		if err := s.fc.onData(uint32(size)); err != nil {
-			s.state = streamDone
-			s.statusCode = codes.Internal
-			s.statusDesc = err.Error()
 			s.rstStream = true
 			s.rstError = http2.ErrCodeFlowControl
-			close(s.done)
+			s.finish(status.New(codes.Internal, err.Error()))
 			s.mu.Unlock()
 			s.write(recvMsg{err: io.EOF})
 			return
@@ -835,10 +835,7 @@ func (t *http2Client) handleData(f *http2.DataFrame) {
 			s.mu.Unlock()
 			return
 		}
-		s.state = streamDone
-		s.statusCode = codes.Internal
-		s.statusDesc = "server closed the stream without sending trailers"
-		close(s.done)
+		s.finish(status.New(codes.Internal, "server closed the stream without sending trailers"))
 		s.mu.Unlock()
 		s.write(recvMsg{err: io.EOF})
 	}
@@ -854,18 +851,16 @@ func (t *http2Client) handleRSTStream(f *http2.RSTStreamFrame) {
 		s.mu.Unlock()
 		return
 	}
-	s.state = streamDone
 	if !s.headerDone {
 		close(s.headerChan)
 		s.headerDone = true
 	}
-	s.statusCode, ok = http2ErrConvTab[http2.ErrCode(f.ErrCode)]
+	statusCode, ok := http2ErrConvTab[http2.ErrCode(f.ErrCode)]
 	if !ok {
 		grpclog.Println("transport: http2Client.handleRSTStream found no mapped gRPC status for the received http2 error ", f.ErrCode)
-		s.statusCode = codes.Unknown
+		statusCode = codes.Unknown
 	}
-	s.statusDesc = fmt.Sprintf("stream terminated by RST_STREAM with error code: %d", f.ErrCode)
-	close(s.done)
+	s.finish(status.Newf(statusCode, "stream terminated by RST_STREAM with error code: %d", f.ErrCode))
 	s.mu.Unlock()
 	s.write(recvMsg{err: io.EOF})
 }
@@ -893,6 +888,9 @@ func (t *http2Client) handlePing(f *http2.PingFrame) {
 }
 
 func (t *http2Client) handleGoAway(f *http2.GoAwayFrame) {
+	if f.ErrCode == http2.ErrCodeEnhanceYourCalm {
+		grpclog.Printf("Client received GoAway with http2.ErrCodeEnhanceYourCalm.")
+	}
 	t.mu.Lock()
 	if t.state == reachable || t.state == draining {
 		if f.LastStreamID > 0 && f.LastStreamID%2 != 1 {
@@ -914,11 +912,32 @@ func (t *http2Client) handleGoAway(f *http2.GoAwayFrame) {
 			t.mu.Unlock()
 			return
 		default:
+			t.setGoAwayReason(f)
 		}
 		t.goAwayID = f.LastStreamID
 		close(t.goAway)
 	}
 	t.mu.Unlock()
+}
+
+// setGoAwayReason sets the value of t.goAwayReason based
+// on the GoAway frame received.
+// It expects a lock on transport's mutext to be held by
+// the caller.
+func (t *http2Client) setGoAwayReason(f *http2.GoAwayFrame) {
+	t.goAwayReason = NoReason
+	switch f.ErrCode {
+	case http2.ErrCodeEnhanceYourCalm:
+		if string(f.DebugData()) == "too_many_pings" {
+			t.goAwayReason = TooManyPings
+		}
+	}
+}
+
+func (t *http2Client) GetGoAwayReason() GoAwayReason {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return t.goAwayReason
 }
 
 func (t *http2Client) handleWindowUpdate(f *http2.WindowUpdateFrame) {
@@ -941,18 +960,17 @@ func (t *http2Client) operateHeaders(frame *http2.MetaHeadersFrame) {
 	}
 	var state decodeState
 	for _, hf := range frame.Fields {
-		state.processHeaderField(hf)
-	}
-	if state.err != nil {
-		s.mu.Lock()
-		if !s.headerDone {
-			close(s.headerChan)
-			s.headerDone = true
+		if err := state.processHeaderField(hf); err != nil {
+			s.mu.Lock()
+			if !s.headerDone {
+				close(s.headerChan)
+				s.headerDone = true
+			}
+			s.mu.Unlock()
+			s.write(recvMsg{err: err})
+			// Something wrong. Stops reading even when there is remaining.
+			return
 		}
-		s.mu.Unlock()
-		s.write(recvMsg{err: state.err})
-		// Something wrong. Stops reading even when there is remaining.
-		return
 	}
 
 	endStream := frame.StreamEnded()
@@ -995,10 +1013,7 @@ func (t *http2Client) operateHeaders(frame *http2.MetaHeadersFrame) {
 	if len(state.mdata) > 0 {
 		s.trailer = state.mdata
 	}
-	s.statusCode = state.statusCode
-	s.statusDesc = state.statusDesc
-	close(s.done)
-	s.state = streamDone
+	s.finish(state.status())
 	s.mu.Unlock()
 	s.write(recvMsg{err: io.EOF})
 }

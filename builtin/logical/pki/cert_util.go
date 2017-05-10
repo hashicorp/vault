@@ -18,9 +18,11 @@ import (
 
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/errutil"
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/ryanuber/go-glob"
 )
 
 type certExtKeyUsage int
@@ -184,31 +186,63 @@ func fetchCAInfo(req *logical.Request) (*caInfoBundle, error) {
 // Allows fetching certificates from the backend; it handles the slightly
 // separate pathing for CA, CRL, and revoked certificates.
 func fetchCertBySerial(req *logical.Request, prefix, serial string) (*logical.StorageEntry, error) {
-	var path string
+	var path, legacyPath string
+	var err error
+	var certEntry *logical.StorageEntry
+
+	hyphenSerial := normalizeSerial(serial)
+	colonSerial := strings.Replace(strings.ToLower(serial), "-", ":", -1)
 
 	switch {
 	// Revoked goes first as otherwise ca/crl get hardcoded paths which fail if
 	// we actually want revocation info
 	case strings.HasPrefix(prefix, "revoked/"):
-		path = "revoked/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		legacyPath = "revoked/" + colonSerial
+		path = "revoked/" + hyphenSerial
 	case serial == "ca":
 		path = "ca"
 	case serial == "crl":
 		path = "crl"
 	default:
-		path = "certs/" + strings.Replace(strings.ToLower(serial), "-", ":", -1)
+		legacyPath = "certs/" + colonSerial
+		path = "certs/" + hyphenSerial
 	}
 
-	certEntry, err := req.Storage.Get(path)
+	certEntry, err = req.Storage.Get(path)
+	if err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
+	}
+	if certEntry != nil {
+		if certEntry.Value == nil || len(certEntry.Value) == 0 {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
+		}
+		return certEntry, nil
+	}
+
+	// If legacyPath is unset, it's going to be a CA or CRL; return immediately
+	if legacyPath == "" {
+		return nil, nil
+	}
+
+	// Retrieve the old-style path
+	certEntry, err = req.Storage.Get(legacyPath)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching certificate %s: %s", serial, err)}
 	}
 	if certEntry == nil {
 		return nil, nil
 	}
-
 	if certEntry.Value == nil || len(certEntry.Value) == 0 {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("returned certificate bytes for serial %s were empty", serial)}
+	}
+
+	// Update old-style paths to new-style paths
+	certEntry.Key = path
+	if err = req.Storage.Put(certEntry); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error saving certificate with serial %s to new location", serial)}
+	}
+	if err = req.Storage.Delete(legacyPath); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
 	}
 
 	return certEntry, nil
@@ -361,6 +395,13 @@ func validateNames(req *logical.Request, names []string, role *roleEntry) string
 						break
 					}
 				}
+
+				if role.AllowGlobDomains &&
+					strings.Contains(currDomain, "*") &&
+					glob.Glob(currDomain, name) {
+					valid = true
+					break
+				}
 			}
 			if valid {
 				continue
@@ -465,7 +506,7 @@ func signCert(b *backend,
 	}
 	csr, err := x509.ParseCertificateRequest(pemBlock.Bytes)
 	if err != nil {
-		return nil, errutil.UserError{Err: "certificate request could not be parsed"}
+		return nil, errutil.UserError{Err: fmt.Sprintf("certificate request could not be parsed: %v", err)}
 	}
 
 	switch role.KeyType {
@@ -596,7 +637,7 @@ func generateCreationBundle(b *backend,
 		if csr == nil || !role.UseCSRSANs {
 			cnAltRaw, ok := data.GetOk("alt_names")
 			if ok {
-				cnAlt := strutil.ParseDedupAndSortStrings(cnAltRaw.(string), ",")
+				cnAlt := strutil.ParseDedupLowercaseAndSortStrings(cnAltRaw.(string), ",")
 				for _, v := range cnAlt {
 					if strings.Contains(v, "@") {
 						emailAddresses = append(emailAddresses, v)
@@ -695,7 +736,7 @@ func generateCreationBundle(b *backend,
 		if len(ttlField) == 0 {
 			ttl = b.System().DefaultLeaseTTL()
 		} else {
-			ttl, err = time.ParseDuration(ttlField)
+			ttl, err = parseutil.ParseDurationSecond(ttlField)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid requested ttl: %s", err)}
@@ -705,7 +746,7 @@ func generateCreationBundle(b *backend,
 		if len(role.MaxTTL) == 0 {
 			maxTTL = b.System().MaxLeaseTTL()
 		} else {
-			maxTTL, err = time.ParseDuration(role.MaxTTL)
+			maxTTL, err = parseutil.ParseDurationSecond(role.MaxTTL)
 			if err != nil {
 				return nil, errutil.UserError{Err: fmt.Sprintf(
 					"invalid ttl: %s", err)}
@@ -969,7 +1010,7 @@ func createCSR(creationInfo *creationBundle) (*certutil.ParsedCSRBundle, error) 
 	result.CSRBytes = csr
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
 	}
 
 	return result, nil

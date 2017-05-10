@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/helper/strutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -216,7 +217,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		}
 
 		if wrapTTL > 0 {
-			resp.WrapInfo = &logical.ResponseWrapInfo{
+			resp.WrapInfo = &wrapping.ResponseWrapInfo{
 				TTL:    wrapTTL,
 				Format: wrapFormat,
 			}
@@ -288,10 +289,11 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		if err != nil {
 			c.logger.Error("core: failed to look up token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, nil, retErr
+			return nil, auth, retErr
 		}
 
 		if err := c.expiration.RegisterAuth(te.Path, resp.Auth); err != nil {
+			c.tokenStore.Revoke(te.ID)
 			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
@@ -361,7 +363,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 		}
 
 		if wrapTTL > 0 {
-			resp.WrapInfo = &logical.ResponseWrapInfo{
+			resp.WrapInfo = &wrapping.ResponseWrapInfo{
 				TTL:    wrapTTL,
 				Format: wrapFormat,
 			}
@@ -439,6 +441,7 @@ func (c *Core) handleLoginRequest(req *logical.Request) (*logical.Response, *log
 
 		// Register with the expiration manager
 		if err := c.expiration.RegisterAuth(te.Path, auth); err != nil {
+			c.tokenStore.Revoke(te.ID)
 			c.logger.Error("core: failed to register token lease", "request_path", req.Path, "error", err)
 			return nil, auth, ErrInternalError
 		}

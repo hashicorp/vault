@@ -127,7 +127,7 @@ func (b *backend) pathSetSignedIntermediate(
 	cert := data.Get("certificate").(string)
 
 	if cert == "" {
-		return logical.ErrorResponse("no certificate provided in the \"certficate\" parameter"), nil
+		return logical.ErrorResponse("no certificate provided in the \"certificate\" parameter"), nil
 	}
 
 	inputBundle, err := certutil.ParsePEMBundle(cert)
@@ -196,7 +196,7 @@ func (b *backend) pathSetSignedIntermediate(
 		return nil, err
 	}
 
-	entry.Key = "certs/" + cb.SerialNumber
+	entry.Key = "certs/" + normalizeSerial(cb.SerialNumber)
 	entry.Value = inputBundle.CertificateBytes
 	err = req.Storage.Put(entry)
 	if err != nil {

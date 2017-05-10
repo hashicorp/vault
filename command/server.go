@@ -84,6 +84,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// start logging too early.
 	logGate := &gatedwriter.Writer{Writer: colorable.NewColorable(os.Stderr)}
 	var level int
+	logLevel = strings.ToLower(strings.TrimSpace(logLevel))
 	switch logLevel {
 	case "trace":
 		level = log.LevelTrace
@@ -237,6 +238,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DefaultLeaseTTL:    config.DefaultLeaseTTL,
 		ClusterName:        config.ClusterName,
 		CacheSize:          config.CacheSize,
+		PluginDirectory:    config.PluginDirectory,
 	}
 	if dev {
 		coreConfig.DevToken = devRootTokenID

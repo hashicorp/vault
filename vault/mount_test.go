@@ -628,3 +628,28 @@ func verifyDefaultTable(t *testing.T, table *MountTable) {
 		}
 	}
 }
+
+func TestSingletonMountTableFunc(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	mounts, auth := c.singletonMountTables()
+
+	if len(mounts.Entries) != 1 {
+		t.Fatal("length of mounts is wrong")
+	}
+	for _, entry := range mounts.Entries {
+		switch entry.Type {
+		case "system":
+		default:
+			t.Fatalf("unknown type %s", entry.Type)
+		}
+	}
+
+	if len(auth.Entries) != 1 {
+		t.Fatal("length of auth is wrong")
+	}
+
+	if auth.Entries[0].Type != "token" {
+		t.Fatal("unexpected entry type for auth")
+	}
+}

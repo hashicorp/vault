@@ -29,7 +29,7 @@ listener "tcp" {
   they need to hop through a TCP load balancer or some other scheme in order to
   talk.
 
-- `tls_disable` `(bool: false)` – Specifies if TLS will be disabled. Vault
+- `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
   assumes TLS by default, so you must explicitly disable TLS to opt-in to
   insecure communication.
 
@@ -51,10 +51,10 @@ listener "tcp" {
   ciphersuites as a comma-separated-list. The list of all available ciphersuites
   is available in the [Golang TLS documentation][golang-tls].
 
-- `tls_prefer_server_cipher_suites` `(bool: false)` – Specifies to prefer the
+- `tls_prefer_server_cipher_suites` `(string: "false")` – Specifies to prefer the
   server's ciphersuite over the client ciphersuites.
 
-- `tls_require_and_verify_client_cert` `(bool: false)` – Turns on client
+- `tls_require_and_verify_client_cert` `(string: "false")` – Turns on client
   authentication for this listener; the listener will require a presented
   client cert that successfully validates against system CAs.
 

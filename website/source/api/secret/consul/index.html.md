@@ -145,6 +145,35 @@ $ curl \
 }
 ```
 
+## List Roles
+
+This endpoint lists all existing roles in the backend.
+
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `LIST`    | `/consul/roles`             | `200 application/json` |
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    https://vault.rocks/v1/consul/roles
+```
+
+### Sample Response
+
+```json
+{
+  "data": {
+    "keys": [
+      "example-role"
+    ]
+  }
+}
+```
+
 ## Delete Role
 
 This endpoint deletes a Consul role with the given name. Even if the role does
