@@ -70,6 +70,9 @@ func prepareCassandraTestContainer(t *testing.T) (cleanup func(), retURL string)
 }
 
 func TestCassandra_Initialize(t *testing.T) {
+	if os.Getenv("TRAVIS") != "true" {
+		t.SkipNow()
+	}
 	cleanup, connURL := prepareCassandraTestContainer(t)
 	defer cleanup()
 
@@ -100,6 +103,9 @@ func TestCassandra_Initialize(t *testing.T) {
 }
 
 func TestCassandra_CreateUser(t *testing.T) {
+	if os.Getenv("TRAVIS") != "true" {
+		t.SkipNow()
+	}
 	cleanup, connURL := prepareCassandraTestContainer(t)
 	defer cleanup()
 
@@ -132,6 +138,9 @@ func TestCassandra_CreateUser(t *testing.T) {
 }
 
 func TestMyCassandra_RenewUser(t *testing.T) {
+	if os.Getenv("TRAVIS") != "true" {
+		t.SkipNow()
+	}
 	cleanup, connURL := prepareCassandraTestContainer(t)
 	defer cleanup()
 
@@ -169,6 +178,9 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 }
 
 func TestCassandra_RevokeUser(t *testing.T) {
+	if os.Getenv("TRAVIS") != "true" {
+		t.SkipNow()
+	}
 	cleanup, connURL := prepareCassandraTestContainer(t)
 	defer cleanup()
 

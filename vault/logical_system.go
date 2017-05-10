@@ -1270,7 +1270,7 @@ func (b *SystemBackend) handleMount(
 	}
 
 	// Attempt mount
-	if err := b.Core.mount(me, false); err != nil {
+	if err := b.Core.mount(me); err != nil {
 		b.Backend.Logger().Error("sys: mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
@@ -1702,7 +1702,7 @@ func (b *SystemBackend) handleEnableAuth(
 	}
 
 	// Attempt enabling
-	if err := b.Core.enableCredential(me, false); err != nil {
+	if err := b.Core.enableCredential(me); err != nil {
 		b.Backend.Logger().Error("sys: enable auth mount failed", "path", me.Path, "error", err)
 		return handleError(err)
 	}
