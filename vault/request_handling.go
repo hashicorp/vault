@@ -19,9 +19,6 @@ import (
 func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
-	if !c.versionCompatible {
-		return nil, consts.ErrVerIncompatible
-	}
 	if c.sealed {
 		return nil, consts.ErrSealed
 	}
