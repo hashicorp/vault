@@ -192,7 +192,9 @@ type Core struct {
 
 	// stateLock protects mutable state
 	stateLock sync.RWMutex
-	sealed    bool
+
+	sealed            bool
+	versionCompatible bool
 
 	standby          bool
 	standbyDoneCh    chan struct{}
@@ -928,6 +930,95 @@ func (c *Core) unsealPart(config *SealConfig, key []byte) ([]byte, error) {
 	return masterKey, nil
 }
 
+// Checks local version against data version. If data version doesn't
+// exist, it will attempt to write it. This must be called with the
+// state write lock held.
+func (c *Core) versionCheck() error {
+	// Get data version
+	rawDataVer, err := c.barrier.Get(coreDataVersionPath)
+	if err != nil {
+		c.logger.Error("core: data version check failed", "error", err)
+		c.barrier.Seal()
+		c.logger.Warn("core: vault is sealed")
+		return err
+	}
+	// If data version is empty, skip version comparison
+	if rawDataVer == nil {
+		return c.persistVersion()
+	}
+
+	verStruct := &versionStruct{}
+	err = jsonutil.DecodeJSON(rawDataVer.Value, verStruct)
+	if err != nil {
+		c.logger.Warn("core: could not decode version information", "version_val", string(rawDataVer.Value))
+		return err
+	}
+	dataVer, err := gov.NewVersion(verStruct.Version)
+	if err != nil {
+		c.logger.Warn("core: could not perform data version check", "saved_version", verStruct.Version)
+		return err
+	}
+
+	// Get local version
+	localVer, err := gov.NewVersion(version.GetVersion().VersionNumber())
+	if err != nil {
+		// Don't do anything; this could be an unknown case such as during
+		// tests; we also don't want to persist the local version if we can't
+		// parse it
+		c.logger.Warn("core: could not perform data version check", "local_version", version.GetVersion().VersionNumber())
+		return err
+	}
+
+	// Perform comparison data
+	switch localVer.Compare(dataVer) {
+	case -1:
+		c.logger.Error("core: downgrade detected and not supported, re-sealing")
+		c.barrier.Seal()
+		c.logger.Warn("core: vault is sealed")
+		c.versionCompatible = false
+		return fmt.Errorf("downgrade detected and not supported; to proceed anyways delete %q and unseal Vault again", coreDataVersionPath)
+	case 1:
+		return c.persistVersion()
+	case 0:
+		c.versionCompatible = true
+	}
+
+	return nil
+}
+
+// persistVersion writes the local core version as the data version.
+// Data version is only updated by the primary.
+func (c *Core) persistVersion() error {
+	if c.replicationState == consts.ReplicationSecondary {
+		return fmt.Errorf("cannot update %s by secondary", coreDataVersionPath)
+	}
+
+	ver := &Entry{
+		Key: coreDataVersionPath,
+	}
+	verStruct := &versionStruct{}
+	var err error
+
+	verStruct.Version = version.GetVersion().VersionNumber()
+	ver.Value, err = jsonutil.EncodeJSON(verStruct)
+	if err != nil {
+		c.logger.Error("core: error encoding data version")
+		c.barrier.Seal()
+		c.logger.Warn("core: vault is sealed")
+		return err
+	}
+
+	err = c.barrier.Put(ver)
+	if err != nil {
+		c.logger.Error("core: error saving data version")
+		c.barrier.Seal()
+		c.logger.Warn("core: vault is sealed")
+		return err
+	}
+
+	return nil
+}
+
 // This must be called with the state write lock held
 func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	defer memzero(masterKey)
@@ -941,74 +1032,8 @@ func (c *Core) unsealInternal(masterKey []byte) (bool, error) {
 	}
 
 	// check version to make sure a downgrade hasn't happened
-	ver, err := c.barrier.Get(coreDataVersionPath)
-	if err != nil {
-		c.logger.Error("core: data version check failed", "error", err)
-		c.barrier.Seal()
-		c.logger.Warn("core: vault is sealed")
+	if err := c.versionCheck(); err != nil {
 		return false, err
-	}
-
-	persistVersion := false
-	verStruct := &versionStruct{}
-
-	localVer, err := gov.NewVersion(version.GetVersion().VersionNumber())
-	if err != nil {
-		// Don't do anything; this could be an unknown case such as during
-		// tests; we also don't want to persist the local version if we can't
-		// parse it
-		c.logger.Warn("core: could not perform data version check", "local_version", version.GetVersion().VersionNumber())
-		goto VERSION_DONE
-	}
-
-	if ver == nil {
-		persistVersion = true
-	} else {
-		err = jsonutil.DecodeJSON(ver.Value, verStruct)
-		if err != nil {
-			c.logger.Warn("core: could not decode version information", "version_val", string(ver.Value))
-			goto VERSION_DONE
-		}
-		dataVer, err := gov.NewVersion(verStruct.Version)
-		if err != nil {
-			c.logger.Warn("core: could not perform data version check", "saved_version", verStruct.Version)
-			goto VERSION_DONE
-		}
-		if localVer.LessThan(dataVer) {
-			c.logger.Error("core: downgrade detected and not supported, re-sealing")
-			c.barrier.Seal()
-			c.logger.Warn("core: vault is sealed")
-			return false, fmt.Errorf("downgrade detected and not supported; to proceed anyways delete %q and unseal Vault again", coreDataVersionPath)
-		}
-		if localVer.GreaterThan(dataVer) {
-			persistVersion = true
-		}
-	}
-
-VERSION_DONE:
-	if persistVersion {
-		if ver == nil {
-			ver = &Entry{
-				Key: coreDataVersionPath,
-			}
-		}
-
-		verStruct.Version = version.GetVersion().VersionNumber()
-		ver.Value, err = jsonutil.EncodeJSON(verStruct)
-		if err != nil {
-			c.logger.Error("core: error encoding data version")
-			c.barrier.Seal()
-			c.logger.Warn("core: vault is sealed")
-			return false, err
-		}
-
-		err = c.barrier.Put(ver)
-		if err != nil {
-			c.logger.Error("core: error saving data version")
-			c.barrier.Seal()
-			c.logger.Warn("core: vault is sealed")
-			return false, err
-		}
 	}
 
 	// Do post-unseal setup if HA is not enabled
