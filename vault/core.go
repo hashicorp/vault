@@ -944,6 +944,12 @@ func (c *Core) versionCheck() error {
 	}
 	// If data version is empty, skip version comparison
 	if rawDataVer == nil {
+		// Handle case for secondary
+		if c.replicationState == consts.ReplicationSecondary {
+			c.logger.Warn("core: data version not found, ignoring version check")
+			c.versionCompatible = true
+			return nil
+		}
 		return c.persistVersion()
 	}
 
@@ -990,7 +996,7 @@ func (c *Core) versionCheck() error {
 // Data version is only updated by the primary.
 func (c *Core) persistVersion() error {
 	if c.replicationState == consts.ReplicationSecondary {
-		return fmt.Errorf("cannot update %s by secondary", coreDataVersionPath)
+		return fmt.Errorf("cannot write to %s by secondary", coreDataVersionPath)
 	}
 
 	ver := &Entry{
