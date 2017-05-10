@@ -42,7 +42,7 @@ var (
 )
 
 // enableCredential is used to enable a new credential backend
-func (c *Core) enableCredential(entry *MountEntry, skipInitialization bool) error {
+func (c *Core) enableCredential(entry *MountEntry) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -99,10 +99,8 @@ func (c *Core) enableCredential(entry *MountEntry, skipInitialization bool) erro
 		return fmt.Errorf("nil backend returned from %q factory", entry.Type)
 	}
 
-	if !skipInitialization {
-		if err := backend.Initialize(); err != nil {
-			return err
-		}
+	if err := backend.Initialize(); err != nil {
+		return err
 	}
 
 	// Update the auth table

@@ -469,9 +469,11 @@ func (b *backend) secretIDAccessorEntry(s logical.Storage, secretIDAccessor stri
 	var result secretIDAccessorStorageEntry
 
 	// Create index entry, mapping the accessor to the token ID
-	b.saltMutex.RLock()
-	entryIndex := "accessor/" + b.salt.SaltID(secretIDAccessor)
-	b.saltMutex.RUnlock()
+	salt, err := b.Salt()
+	if err != nil {
+		return nil, err
+	}
+	entryIndex := "accessor/" + salt.SaltID(secretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
 	accessorLock.RLock()
@@ -500,9 +502,11 @@ func (b *backend) createSecretIDAccessorEntry(s logical.Storage, entry *secretID
 	entry.SecretIDAccessor = accessorUUID
 
 	// Create index entry, mapping the accessor to the token ID
-	b.saltMutex.RLock()
-	entryIndex := "accessor/" + b.salt.SaltID(entry.SecretIDAccessor)
-	b.saltMutex.RUnlock()
+	salt, err := b.Salt()
+	if err != nil {
+		return err
+	}
+	entryIndex := "accessor/" + salt.SaltID(entry.SecretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(accessorUUID)
 	accessorLock.Lock()
@@ -521,9 +525,11 @@ func (b *backend) createSecretIDAccessorEntry(s logical.Storage, entry *secretID
 
 // deleteSecretIDAccessorEntry deletes the storage index mapping the accessor to a SecretID.
 func (b *backend) deleteSecretIDAccessorEntry(s logical.Storage, secretIDAccessor string) error {
-	b.saltMutex.RLock()
-	accessorEntryIndex := "accessor/" + b.salt.SaltID(secretIDAccessor)
-	b.saltMutex.RUnlock()
+	salt, err := b.Salt()
+	if err != nil {
+		return err
+	}
+	accessorEntryIndex := "accessor/" + salt.SaltID(secretIDAccessor)
 
 	accessorLock := b.secretIDAccessorLock(secretIDAccessor)
 	accessorLock.Lock()

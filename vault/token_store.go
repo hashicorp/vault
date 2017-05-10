@@ -134,7 +134,7 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 				lookupPrefix,
 				accessorPrefix,
 				parentPrefix,
-				"salt",
+				salt.DefaultLocation,
 			},
 		},
 
@@ -480,6 +480,7 @@ func (ts *TokenStore) Initialize() error {
 	// Setup the salt
 	salt, err := salt.NewSalt(ts.view, &salt.Config{
 		HashFunc: salt.SHA1Hash,
+		Location: salt.DefaultLocation,
 	})
 	if err != nil {
 		return err

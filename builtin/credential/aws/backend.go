@@ -21,9 +21,6 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 type backend struct {
 	*framework.Backend
 
-	// Used during initialization to set the salt
-	view logical.Storage
-
 	// Lock to make changes to any of the backend's configuration endpoints.
 	configMutex sync.RWMutex
 
@@ -64,7 +61,6 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
 		tidyCooldownPeriod: time.Hour,
-		view:               conf.StorageView,
 		EC2ClientsMap:      make(map[string]map[string]*ec2.EC2),
 		IAMClientsMap:      make(map[string]map[string]*iam.IAM),
 	}
