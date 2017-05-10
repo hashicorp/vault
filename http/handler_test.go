@@ -21,7 +21,7 @@ func TestHandler_cors(t *testing.T) {
 
 	// Enable CORS and allow from any origin for testing.
 	corsConfig := core.CORSConfig()
-	err := corsConfig.Enable(addr)
+	err := corsConfig.Enable([]string{addr})
 	if err != nil {
 		t.Fatalf("Error enabling CORS: %s", err)
 	}
