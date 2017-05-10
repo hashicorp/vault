@@ -3,7 +3,6 @@ package vault
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/hashicorp/vault/helper/strutil"
@@ -46,29 +45,26 @@ func (c *Core) loadCORSConfig() error {
 		return nil
 	}
 
-	config := new(CORSConfig)
-	err = out.DecodeJSON(config)
+	err = out.DecodeJSON(c.corsConfig)
 	if err != nil {
 		return err
 	}
-
-	c.corsConfig = config
 
 	return nil
 }
 
 // Enable takes either a '*' or a comma-seprated list of URLs that can make
 // cross-origin requests to Vault.
-func (c *CORSConfig) Enable(urls string) error {
+func (c *CORSConfig) Enable(urls []string) error {
 
-	if strings.Contains("*", urls) && len(urls) > 1 {
+	if strutil.StrListContains(urls, "*") && len(urls) > 1 {
 		return errors.New("wildcard must be the only value")
 	}
 
 	c.Lock()
 	defer c.Unlock()
 
-	c.AllowedOrigins = strings.Split(urls, ",")
+	c.AllowedOrigins = urls
 	c.Enabled = true
 
 	return nil
