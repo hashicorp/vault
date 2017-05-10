@@ -2304,7 +2304,7 @@ This path responds to the following HTTP methods.
         Returns the configuration of the CORS setting.
 
     POST /
-        Sets the space-separate list of origins that can make cross-origin requests.
+        Sets the comma-separated list of origins that can make cross-origin requests.
 
     DELETE /
         Clears the CORS configuration and disables acceptance of CORS requests.
