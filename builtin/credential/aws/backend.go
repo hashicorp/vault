@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -21,7 +20,6 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 
 type backend struct {
 	*framework.Backend
-	Salt *salt.Salt
 
 	// Used during initialization to set the salt
 	view logical.Storage
@@ -105,22 +103,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		},
 
 		Invalidate: b.invalidate,
-
-		Init: b.initialize,
 	}
 
 	return b, nil
-}
-
-func (b *backend) initialize() error {
-	salt, err := salt.NewSalt(b.view, &salt.Config{
-		HashFunc: salt.SHA256Hash,
-	})
-	if err != nil {
-		return err
-	}
-	b.Salt = salt
-	return nil
 }
 
 // periodicFunc performs the tasks that the backend wishes to do periodically.

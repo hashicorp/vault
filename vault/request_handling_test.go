@@ -20,7 +20,7 @@ func TestRequestHandling_Wrapping(t *testing.T) {
 		UUID:  meUUID,
 		Path:  "wraptest",
 		Type:  "generic",
-	})
+	}, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

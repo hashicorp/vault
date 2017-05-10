@@ -240,7 +240,7 @@ func TestTokenStore_AccessorIndex(t *testing.T) {
 		t.Fatalf("bad: %#v", out)
 	}
 
-	aEntry, err := ts.lookupByAccessor(out.Accessor)
+	aEntry, err := ts.lookupByAccessor(out.Accessor, false)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -318,7 +318,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 
 	// Test upgrade from old struct method of accessor storage (of token id)
 	for _, accessor := range keys {
-		aEntry, err := ts.lookupByAccessor(accessor)
+		aEntry, err := ts.lookupByAccessor(accessor, false)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -352,7 +352,7 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 
 	for _, accessor := range keys2 {
-		aEntry, err := ts.lookupByAccessor(accessor)
+		aEntry, err := ts.lookupByAccessor(accessor, false)
 		if err != nil {
 			t.Fatal(err)
 		}

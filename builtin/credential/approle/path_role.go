@@ -1939,7 +1939,9 @@ func (b *backend) setRoleIDEntry(s logical.Storage, roleID string, roleIDEntry *
 	lock.Lock()
 	defer lock.Unlock()
 
+	b.saltMutex.RLock()
 	entryIndex := "role_id/" + b.salt.SaltID(roleID)
+	b.saltMutex.RUnlock()
 
 	entry, err := logical.StorageEntryJSON(entryIndex, roleIDEntry)
 	if err != nil {
@@ -1963,7 +1965,9 @@ func (b *backend) roleIDEntry(s logical.Storage, roleID string) (*roleIDStorageE
 
 	var result roleIDStorageEntry
 
+	b.saltMutex.RLock()
 	entryIndex := "role_id/" + b.salt.SaltID(roleID)
+	b.saltMutex.RUnlock()
 
 	if entry, err := s.Get(entryIndex); err != nil {
 		return nil, err
@@ -1987,7 +1991,9 @@ func (b *backend) roleIDEntryDelete(s logical.Storage, roleID string) error {
 	lock.Lock()
 	defer lock.Unlock()
 
+	b.saltMutex.RLock()
 	entryIndex := "role_id/" + b.salt.SaltID(roleID)
+	b.saltMutex.RUnlock()
 
 	return s.Delete(entryIndex)
 }

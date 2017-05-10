@@ -49,7 +49,7 @@ func TestCore_EnableCredential(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(me, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -179,13 +179,13 @@ func TestCore_EnableCredential_twice_409(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(me, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	// 2nd should be a 409 error
-	err2 := c.enableCredential(me)
+	err2 := c.enableCredential(me, false)
 	switch err2.(type) {
 	case logical.HTTPCodedError:
 		if err2.(logical.HTTPCodedError).Code() != 409 {
@@ -203,7 +203,7 @@ func TestCore_EnableCredential_Token(t *testing.T) {
 		Path:  "foo",
 		Type:  "token",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(me, false)
 	if err.Error() != "token credential backend cannot be instantiated" {
 		t.Fatalf("err: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestCore_DisableCredential(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err = c.enableCredential(me)
+	err = c.enableCredential(me, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -286,7 +286,7 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableCredential(me)
+	err := c.enableCredential(me, false)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

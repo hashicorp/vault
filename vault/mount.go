@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -60,6 +61,7 @@ var (
 	singletonMounts = []string{
 		"cubbyhole",
 		"system",
+		"token",
 	}
 )
 
@@ -169,7 +171,7 @@ func (e *MountEntry) Clone() *MountEntry {
 }
 
 // Mount is used to mount a new backend to the mount table.
-func (c *Core) mount(entry *MountEntry) error {
+func (c *Core) mount(entry *MountEntry, skipInitialization bool) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -219,8 +221,10 @@ func (c *Core) mount(entry *MountEntry) error {
 
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected
-	if err := backend.Initialize(); err != nil {
-		return err
+	if !skipInitialization {
+		if err := backend.Initialize(); err != nil {
+			return err
+		}
 	}
 
 	newTable := c.mounts.shallowClone()
@@ -509,7 +513,13 @@ func (c *Core) loadMounts() error {
 					break
 				}
 			}
-			if !foundRequired {
+			// In a replication scenario we will let sync invalidation take
+			// care of creating a new required mount that doesn't exist yet.
+			// This should only happen in the upgrade case where a new one is
+			// introduced on the primary; otherwise initial bootstrapping will
+			// ensure this comes over. If we upgrade first, we simply don't
+			// create the mount, so we won't conflict when we sync.
+			if !foundRequired && c.replicationState != consts.ReplicationSecondary {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
@@ -788,4 +798,27 @@ func requiredMountTable() *MountTable {
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	return table
+}
+
+func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
+	mounts = &MountTable{}
+	auth = &MountTable{}
+
+	c.mountsLock.RLock()
+	for _, entry := range c.mounts.Entries {
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			mounts.Entries = append(mounts.Entries, entry)
+		}
+	}
+	c.mountsLock.RUnlock()
+
+	c.authLock.RLock()
+	for _, entry := range c.auth.Entries {
+		if strutil.StrListContains(singletonMounts, entry.Type) {
+			auth.Entries = append(auth.Entries, entry)
+		}
+	}
+	c.authLock.RUnlock()
+
+	return
 }

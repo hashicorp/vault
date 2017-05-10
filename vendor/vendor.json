@@ -847,6 +847,12 @@
 			"revisionTime": "2016-12-16T18:43:04Z"
 		},
 		{
+			"checksumSHA1": "FOLPOFo4xuUaErsL99EC8azEUjw=",
+			"path": "github.com/hashicorp/go-plugin",
+			"revision": "b6691c5cfe7f0ec984114b056889cc90e51e38d0",
+			"revisionTime": "2017-04-12T21:16:38Z"
+		},
+		{
 			"checksumSHA1": "ErJHGU6AVPZM9yoY/xV11TwSjQs=",
 			"path": "github.com/hashicorp/go-retryablehttp",
 			"revision": "6e85be8fee1dcaa02c0eaaac2df5a8fbecf94145",

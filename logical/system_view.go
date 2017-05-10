@@ -1,9 +1,12 @@
 package logical
 
 import (
+	"errors"
 	"time"
 
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/helper/wrapping"
 )
 
 // SystemView exposes system configuration information in a safe way
@@ -37,6 +40,18 @@ type SystemView interface {
 
 	// ReplicationState indicates the state of cluster replication
 	ReplicationState() consts.ReplicationState
+
+	// ResponseWrapData wraps the given data in a cubbyhole and returns the
+	// token used to unwrap.
+	ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error)
+
+	// LookupPlugin looks into the plugin catalog for a plugin with the given
+	// name. Returns a PluginRunner or an error if a plugin can not be found.
+	LookupPlugin(string) (*pluginutil.PluginRunner, error)
+
+	// MlockEnabled returns the configuration setting for enabling mlock on
+	// plugins.
+	MlockEnabled() bool
 }
 
 type StaticSystemView struct {
@@ -46,6 +61,7 @@ type StaticSystemView struct {
 	TaintedVal          bool
 	CachingDisabledVal  bool
 	Primary             bool
+	EnableMlock         bool
 	ReplicationStateVal consts.ReplicationState
 }
 
@@ -71,4 +87,16 @@ func (d StaticSystemView) CachingDisabled() bool {
 
 func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
+}
+
+func (d StaticSystemView) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+	return nil, errors.New("ResponseWrapData is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+	return nil, errors.New("LookupPlugin is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) MlockEnabled() bool {
+	return d.EnableMlock
 }
