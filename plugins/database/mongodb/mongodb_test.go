@@ -43,7 +43,7 @@ func prepareMongoDBTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	// exponential backoff-retry
 	if err = pool.Retry(func() error {
 		var err error
-		dialInfo, err := ParseMongoURL(retURL)
+		dialInfo, err := parseMongoURL(retURL)
 		if err != nil {
 			return err
 		}
@@ -168,7 +168,7 @@ func TestMongoDB_RevokeUser(t *testing.T) {
 
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	connURL = strings.Replace(connURL, "mongodb://", fmt.Sprintf("mongodb://%s:%s@", username, password), 1)
-	dialInfo, err := ParseMongoURL(connURL)
+	dialInfo, err := parseMongoURL(connURL)
 	if err != nil {
 		return err
 	}

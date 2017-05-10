@@ -69,7 +69,7 @@ func (c *mongoDBConnectionProducer) Connection() (interface{}, error) {
 		return c.session, nil
 	}
 
-	dialInfo, err := ParseMongoURL(c.ConnectionURL)
+	dialInfo, err := parseMongoURL(c.ConnectionURL)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (c *mongoDBConnectionProducer) Close() error {
 	return nil
 }
 
-func ParseMongoURL(rawURL string) (*mgo.DialInfo, error) {
+func parseMongoURL(rawURL string) (*mgo.DialInfo, error) {
 	url, err := url.Parse(rawURL)
 	if err != nil {
 		return nil, err
