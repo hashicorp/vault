@@ -36,6 +36,10 @@
 # - Items are case-sensitive (please use all lowercase)
 #
 
+/api/system/renew.html                 /api/system/leases.html
+/api/system/revoke.html                /api/system/leases.html
+/api/system/revoke-force.html          /api/system/leases.html
+/api/system/revoke-prefix.html         /api/system/leases.html
 /docs/config/index.html                /docs/configuration/index.html
 /docs/install/install.html             /docs/install/index.html
 /docs/install/upgrade.html             /docs/guides/upgrading/index.html
@@ -53,9 +57,9 @@
 /docs/http/sys-auth.html               /api/system/auth.html
 /docs/http/sys-policy.html             /api/system/policy.html
 /docs/http/sys-audit.html              /api/system/audit.html
-/docs/http/sys-renew.html              /api/system/renew.html
-/docs/http/sys-revoke.html             /api/system/revoke.html
-/docs/http/sys-revoke-prefix.html      /api/system/revoke-prefix.html
+/docs/http/sys-renew.html              /api/system/leases.html
+/docs/http/sys-revoke.html             /api/system/leases.html
+/docs/http/sys-revoke-prefix.html      /api/system/leases.html
 /docs/http/sys-leader.html             /api/system/leader.html
 /docs/http/sys-key-status.html         /api/system/key-status.html
 /docs/http/sys-rekey.html              /api/system/rekey.html
