@@ -17,17 +17,16 @@ type mongoDBStatement struct {
 	Roles mongodbRoles `json:"roles"`
 }
 
+// Convert array of role documents like:
+//
+// [ { "role": "readWrite" }, { "role": "readWrite", "db": "test" } ]
+//
+// into a "standard" MongoDB roles array containing both strings and role documents:
+//
+// [ "readWrite", { "role": "readWrite", "db": "test" } ]
+//
+// MongoDB's createUser command accepts the latter.
 func (roles mongodbRoles) toStandardRolesArray() []interface{} {
-	// Convert array of role documents like:
-	//
-	// [ { "role": "readWrite" }, { "role": "readWrite", "db": "test" } ]
-	//
-	// into a "standard" MongoDB roles array containing both strings and role documents:
-	//
-	// [ "readWrite", { "role": "readWrite", "db": "test" } ]
-	//
-	// MongoDB's createUser command accepts the latter.
-	//
 	var standardRolesArray []interface{}
 	for _, role := range roles {
 		if role.DB == "" {
