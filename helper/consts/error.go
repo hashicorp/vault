@@ -11,7 +11,7 @@ var (
 	// No operation is expected to succeed until active.
 	ErrStandby = errors.New("Vault is in standby mode")
 
-	// ErrVerIncompatible is returned if an operation is performed with a request
-	// coming from a core version is less than one stored in coreDataVersionPath
-	ErrVerIncompatible = errors.New("Vault data version is incompatible with client version")
+	// ErrVerIncompatible is returned if an operation is performed from a server version
+	// that is less than the data version stored in coreDataVersionPath
+	ErrVerIncompatible = errors.New("Vault data version is incompatible with the server version")
 )

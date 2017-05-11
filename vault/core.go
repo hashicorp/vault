@@ -940,17 +940,14 @@ func (c *Core) versionCheck() error {
 		c.logger.Error("core: data version check failed", "error", err)
 		c.barrier.Seal()
 		c.logger.Warn("core: vault is sealed")
+		c.versionCompatible = false
 		return err
 	}
 	// If data version is empty, skip version comparison
 	if rawDataVer == nil {
-		// Handle case for secondary
-		if c.replicationState == consts.ReplicationSecondary {
-			c.logger.Warn("core: data version not found, ignoring version check")
-			c.versionCompatible = true
-			return nil
-		}
-		return c.persistVersion()
+		c.logger.Warn("core: data version not found, ignoring version check")
+		c.persistVersion()
+		return nil
 	}
 
 	verStruct := &versionStruct{}
@@ -961,7 +958,7 @@ func (c *Core) versionCheck() error {
 	}
 	dataVer, err := gov.NewVersion(verStruct.Version)
 	if err != nil {
-		c.logger.Warn("core: could not perform data version check", "saved_version", verStruct.Version)
+		c.logger.Warn("core: could not parse saved data version", "saved_version", verStruct.Version)
 		return err
 	}
 
@@ -975,7 +972,7 @@ func (c *Core) versionCheck() error {
 		return err
 	}
 
-	// Perform comparison data
+	// Perform comparison
 	switch localVer.Compare(dataVer) {
 	case -1:
 		c.logger.Error("core: downgrade detected and not supported, re-sealing")
@@ -984,7 +981,7 @@ func (c *Core) versionCheck() error {
 		c.versionCompatible = false
 		return fmt.Errorf("downgrade detected and not supported; to proceed anyways delete %q and unseal Vault again", coreDataVersionPath)
 	case 1:
-		return c.persistVersion()
+		c.persistVersion()
 	case 0:
 		c.versionCompatible = true
 	}
@@ -994,9 +991,10 @@ func (c *Core) versionCheck() error {
 
 // persistVersion writes the local core version as the data version.
 // Data version is only updated by the primary.
-func (c *Core) persistVersion() error {
+func (c *Core) persistVersion() {
+	// Skip write to data version path on secondaries
 	if c.replicationState == consts.ReplicationSecondary {
-		return fmt.Errorf("cannot write to %s by secondary", coreDataVersionPath)
+		return
 	}
 
 	ver := &Entry{
@@ -1008,21 +1006,18 @@ func (c *Core) persistVersion() error {
 	verStruct.Version = version.GetVersion().VersionNumber()
 	ver.Value, err = jsonutil.EncodeJSON(verStruct)
 	if err != nil {
-		c.logger.Error("core: error encoding data version")
-		c.barrier.Seal()
-		c.logger.Warn("core: vault is sealed")
-		return err
+		c.logger.Warn("core: could not encode data version", "error", err)
+		return
 	}
 
 	err = c.barrier.Put(ver)
 	if err != nil {
-		c.logger.Error("core: error saving data version")
-		c.barrier.Seal()
-		c.logger.Warn("core: vault is sealed")
-		return err
+		c.logger.Error("core: could not save data version", "error", err)
+		return
 	}
 
-	return nil
+	// Set versionCompatible to true on success
+	c.versionCompatible = true
 }
 
 // This must be called with the state write lock held
