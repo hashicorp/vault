@@ -10,19 +10,15 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
-	"github.com/lib/pq"
 )
 
 // CockroachDBBackend Backend is a physical backend that stores data
 // within a CockroachDB database.
 type CockroachDBBackend struct {
-	table        string
-	client       *sql.DB
-	put_query    string
-	get_query    string
-	delete_query string
-	list_query   string
-	logger       log.Logger
+	table      string
+	client     *sql.DB
+	statements map[string]*sql.Stmt
+	logger     log.Logger
 }
 
 // newCockroachDBBackend constructs a CockroachDB backend using the given
@@ -34,11 +30,10 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 		return nil, fmt.Errorf("missing connection_url")
 	}
 
-	unquotedTable, ok := conf["table"]
+	dbTable, ok := conf["table"]
 	if !ok {
-		unquotedTable = "vault_kv_store"
+		dbTable = "vault_kv_store"
 	}
-	quotedTable := pq.QuoteIdentifier(unquotedTable)
 
 	// Create CockroachDB handle for the database.
 	db, err := sql.Open("postgres", connURL)
@@ -47,33 +42,52 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 	}
 
 	// Create the required table if it doesn't exists.
-	create_query := "CREATE TABLE IF NOT EXISTS " + unquotedTable +
+	createQuery := "CREATE TABLE IF NOT EXISTS " + dbTable +
 		" (path STRING, value BYTES, PRIMARY KEY (path))"
-	if _, err := db.Exec(create_query); err != nil {
+	if _, err := db.Exec(createQuery); err != nil {
 		return nil, fmt.Errorf("failed to create mysql table: %v", err)
 	}
 
-	// Setup the backend.
+	// Setup the backend
 	m := &CockroachDBBackend{
-		table:  quotedTable,
-		client: db,
-		put_query: "INSERT INTO " + unquotedTable + " VALUES($1, $2)" +
-			" ON CONFLICT (path) DO " +
-			" UPDATE SET (path, value) = ($1, $2)",
-		get_query:    "SELECT value FROM " + unquotedTable + " WHERE path = $1",
-		delete_query: "DELETE FROM " + unquotedTable + " WHERE path = $1",
-		list_query:   "SELECT path FROM " + unquotedTable + " WHERE path LIKE concat($1, '%')",
-		logger:       logger,
+		table:      dbTable,
+		client:     db,
+		statements: make(map[string]*sql.Stmt),
+		logger:     logger,
 	}
 
+	// Prepare all the statements required
+	statements := map[string]string{
+		"put": "INSERT INTO " + dbTable + " VALUES($1, $2)" +
+			" ON CONFLICT (path) DO " +
+			" UPDATE SET (path, value) = ($1, $2)",
+		"get":    "SELECT value FROM " + dbTable + " WHERE path = $1",
+		"delete": "DELETE FROM " + dbTable + " WHERE path = $1",
+		"list":   "SELECT path FROM " + dbTable + " WHERE path LIKE $1",
+	}
+	for name, query := range statements {
+		if err := m.prepare(name, query); err != nil {
+			return nil, err
+		}
+	}
 	return m, nil
+}
+
+// prepare is a helper to prepare a query for future execution
+func (m *CockroachDBBackend) prepare(name, query string) error {
+	stmt, err := m.client.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare '%s': %v", name, err)
+	}
+	m.statements[name] = stmt
+	return nil
 }
 
 // Put is used to insert or update an entry.
 func (m *CockroachDBBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "put"}, time.Now())
 
-	_, err := m.client.Exec(m.put_query, entry.Key, entry.Value)
+	_, err := m.statements["put"].Exec(entry.Key, entry.Value)
 	if err != nil {
 		return err
 	}
@@ -81,11 +95,11 @@ func (m *CockroachDBBackend) Put(entry *Entry) error {
 }
 
 // Get is used to fetch and entry.
-func (m *CockroachDBBackend) Get(fullPath string) (*Entry, error) {
+func (m *CockroachDBBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "get"}, time.Now())
 
 	var result []byte
-	err := m.client.QueryRow(m.get_query, fullPath).Scan(&result)
+	err := m.statements["get"].QueryRow(key).Scan(&result)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -94,17 +108,17 @@ func (m *CockroachDBBackend) Get(fullPath string) (*Entry, error) {
 	}
 
 	ent := &Entry{
-		Key:   fullPath,
+		Key:   key,
 		Value: result,
 	}
 	return ent, nil
 }
 
 // Delete is used to permanently delete an entry
-func (m *CockroachDBBackend) Delete(fullPath string) error {
+func (m *CockroachDBBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "delete"}, time.Now())
 
-	_, err := m.client.Exec(m.delete_query, fullPath)
+	_, err := m.statements["delete"].Exec(key)
 	if err != nil {
 		return err
 	}
@@ -116,7 +130,8 @@ func (m *CockroachDBBackend) Delete(fullPath string) error {
 func (m *CockroachDBBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "list"}, time.Now())
 
-	rows, err := m.client.Query(m.list_query, prefix)
+	likePrefix := prefix + "%"
+	rows, err := m.statements["list"].Query(likePrefix)
 	if err != nil {
 		return nil, err
 	}

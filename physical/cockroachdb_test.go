@@ -34,8 +34,8 @@ func TestCockroachDBBackend(t *testing.T) {
 	}
 
 	defer func() {
-		pg := b.(*CockroachDBBackend)
-		_, err := pg.client.Exec("TRUNCATE TABLE " + pg.table)
+		crdb := b.(*CockroachDBBackend)
+		_, err := crdb.client.Exec("TRUNCATE TABLE " + crdb.table)
 		if err != nil {
 			t.Fatalf("Failed to drop table: %v", err)
 		}
