@@ -1,5 +1,9 @@
 ## Next (Unreleased)
 
+IMPROVEMENTS:
+
+ * plugins/databases: Add MongoDB as an internal database plugin. [GH-2698]
+
 BUG FIXES:
 
  * secret/database: Increase wrapping token TTL; in a loaded scenario it could
