@@ -151,6 +151,7 @@ var builtinBackends = map[string]Factory{
 	"mssql":              newMsSQLBackend,
 	"mysql":              newMySQLBackend,
 	"postgresql":         newPostgreSQLBackend,
+	"cockroachdb":        newCockroachDBBackend,
 	"swift":              newSwiftBackend,
 	"gcs":                newGCSBackend,
 }
