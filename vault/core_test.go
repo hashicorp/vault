@@ -214,10 +214,10 @@ func TestCore_Unseal_DataVersion(t *testing.T) {
 	version.Version = "0.6.0"
 	c, keys, _ = TestCoreDataVersion(t, "0.7.0")
 
-	for i, key := range keys {
-		_, err := TestCoreUnseal(c, key)
-		if err == nil && i+1 == len(keys) {
-			t.Fatal("expected downgrade error")
+	for _, key := range keys {
+		unsealed, err := TestCoreUnseal(c, key)
+		if err != nil || unsealed {
+			break
 		}
 	}
 
@@ -301,10 +301,10 @@ func TestCore_Unseal_DataVersion_EntTag(t *testing.T) {
 	version.Version = "0.6.0+ent"
 	c, keys, _ = TestCoreDataVersion(t, "0.7.0+ent")
 
-	for i, key := range keys {
-		_, err := TestCoreUnseal(c, key)
-		if err == nil && i+1 == len(keys) {
-			t.Fatal("expected downgrade error")
+	for _, key := range keys {
+		unsealed, err := TestCoreUnseal(c, key)
+		if err != nil || unsealed {
+			break
 		}
 	}
 
