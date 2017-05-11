@@ -19,26 +19,30 @@ import (
 const postgreSQLTypeName string = "postgres"
 
 // New implements builtinplugins.BuiltinFactory
-func New() (interface{}, error) {
-	connProducer := &connutil.SQLConnectionProducer{}
-	connProducer.Type = postgreSQLTypeName
+func New(alphaNumeric bool) func() (interface{}, error) {
+	return func() (interface{}, error) {
+		connProducer := &connutil.SQLConnectionProducer{}
+		connProducer.Type = postgreSQLTypeName
 
-	credsProducer := &credsutil.SQLCredentialsProducer{
-		DisplayNameLen: 10,
-		UsernameLen:    63,
+		credsProducer := &credsutil.SQLCredentialsProducer{
+			DisplayNameLen: 10,
+			UsernameLen:    63,
+			Alphanumeric:   alphaNumeric,
+		}
+
+		dbType := &PostgreSQL{
+			ConnectionProducer:  connProducer,
+			CredentialsProducer: credsProducer,
+		}
+
+		return dbType, nil
 	}
-
-	dbType := &PostgreSQL{
-		ConnectionProducer:  connProducer,
-		CredentialsProducer: credsProducer,
-	}
-
-	return dbType, nil
 }
 
 // Run instantiates a PostgreSQL object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	dbType, err := New()
+	f := New(false)
+	dbType, err := f()
 	if err != nil {
 		return err
 	}

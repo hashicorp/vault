@@ -17,9 +17,10 @@ var plugins map[string]BuiltinFactory = map[string]BuiltinFactory{
 	"mysql-rds-database-plugin":    mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
 	"mysql-legacy-database-plugin": mysql.New(mysql.LegacyDisplayNameLen, mysql.LegacyUsernameLen),
 
-	"postgresql-database-plugin": postgresql.New,
-	"mssql-database-plugin":      mssql.New,
-	"cassandra-database-plugin":  cassandra.New,
+	"postgresql-database-plugin":  postgresql.New(false),
+	"cockroachdb-database-plugin": postgresql.New(true),
+	"mssql-database-plugin":       mssql.New,
+	"cassandra-database-plugin":   cassandra.New,
 }
 
 func Get(name string) (BuiltinFactory, bool) {

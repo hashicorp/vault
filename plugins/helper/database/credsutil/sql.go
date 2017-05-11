@@ -2,6 +2,7 @@ package credsutil
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -11,6 +12,7 @@ import (
 type SQLCredentialsProducer struct {
 	DisplayNameLen int
 	UsernameLen    int
+	Alphanumeric   bool
 }
 
 func (scp *SQLCredentialsProducer) GenerateUsername(displayName string) (string, error) {
@@ -24,6 +26,9 @@ func (scp *SQLCredentialsProducer) GenerateUsername(displayName string) (string,
 	username := fmt.Sprintf("v-%s-%s", displayName, userUUID)
 	if scp.UsernameLen > 0 && len(username) > scp.UsernameLen {
 		username = username[:scp.UsernameLen]
+	}
+	if scp.Alphanumeric {
+		username = strings.Replace(username, "-", "_", -1)
 	}
 
 	return username, nil
