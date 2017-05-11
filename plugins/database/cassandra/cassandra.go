@@ -29,10 +29,10 @@ type Cassandra struct {
 
 // New returns a new Cassandra instance
 func New() (interface{}, error) {
-	connProducer := &connutil.CassandraConnectionProducer{}
+	connProducer := &cassandraConnectionProducer{}
 	connProducer.Type = cassandraTypeName
 
-	credsProducer := &credsutil.CassandraCredentialsProducer{}
+	credsProducer := &cassandraCredentialsProducer{}
 
 	dbType := &Cassandra{
 		ConnectionProducer:  connProducer,

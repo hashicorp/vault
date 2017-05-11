@@ -1,4 +1,4 @@
-package credsutil
+package cassandra
 
 import (
 	"fmt"
@@ -8,11 +8,11 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-// CassandraCredentialsProducer implements CredentialsProducer and provides an
+// cassandraCredentialsProducer implements CredentialsProducer and provides an
 // interface for cassandra databases to generate user information.
-type CassandraCredentialsProducer struct{}
+type cassandraCredentialsProducer struct{}
 
-func (ccp *CassandraCredentialsProducer) GenerateUsername(displayName string) (string, error) {
+func (ccp *cassandraCredentialsProducer) GenerateUsername(displayName string) (string, error) {
 	userUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", err
@@ -23,7 +23,7 @@ func (ccp *CassandraCredentialsProducer) GenerateUsername(displayName string) (s
 	return username, nil
 }
 
-func (ccp *CassandraCredentialsProducer) GeneratePassword() (string, error) {
+func (ccp *cassandraCredentialsProducer) GeneratePassword() (string, error) {
 	password, err := uuid.GenerateUUID()
 	if err != nil {
 		return "", err
@@ -32,6 +32,6 @@ func (ccp *CassandraCredentialsProducer) GeneratePassword() (string, error) {
 	return password, nil
 }
 
-func (ccp *CassandraCredentialsProducer) GenerateExpiration(ttl time.Time) (string, error) {
+func (ccp *cassandraCredentialsProducer) GenerateExpiration(ttl time.Time) (string, error) {
 	return "", nil
 }
