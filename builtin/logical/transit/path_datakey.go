@@ -97,7 +97,7 @@ func (b *backend) pathDatakeyWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	newKey := make([]byte, 32)

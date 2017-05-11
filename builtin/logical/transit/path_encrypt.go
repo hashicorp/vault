@@ -233,7 +233,7 @@ func (b *backend) pathEncryptWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	// Process batch request items. If encryption of any request
