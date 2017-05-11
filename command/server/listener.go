@@ -106,7 +106,13 @@ func listenerWrapTLS(
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 		}
 	}
-
+	if v, ok := config["unauthenticated_paths"]; ok {
+		_, err := strconv.ParseBool(v)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("invalid value for 'unauthenticated_paths': %v", err)
+		}
+		props["unauthenticated_paths"] = v
+	}
 	ln = tls.NewListener(ln, tlsConf)
 	props["tls"] = "enabled"
 	return ln, props, cg.reload, nil

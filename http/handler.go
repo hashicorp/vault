@@ -83,6 +83,7 @@ func wrapGenericHandler(h http.Handler) http.Handler {
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		w.Header().Set("Cache-Control", "no-store")
+		fmt.Printf("Local Addr: %v\n", r.Context().Value(http.LocalAddrContextKey))
 		h.ServeHTTP(w, r)
 		return
 	})

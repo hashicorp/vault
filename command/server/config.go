@@ -671,6 +671,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"tls_prefer_server_cipher_suites",
 			"tls_require_and_verify_client_cert",
 			"token",
+			"unauthenticated_paths",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
