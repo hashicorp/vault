@@ -103,9 +103,9 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernamePrefix stri
 		return "", "", err
 	}
 
-	// Check for db string
+	// Default to "admin" if no db provided
 	if mongoCS.DB == "" {
-		return "", "", fmt.Errorf("db value is required in creation statement")
+		mongoCS.DB = "admin"
 	}
 
 	if len(mongoCS.Roles) == 0 {
