@@ -58,3 +58,41 @@ $ curl \
     https://vault.rocks/v1/database/config/postgresql
 ```
 
+## Statements
+
+Statements are configured during role creation and are used by the plugin to
+determine what is sent to the datatabse on user creation, renewing, and
+revocation. For more information on configuring roles see the [Role
+API](/api/secret/databases/index.html#create-role) in the Database Backend docs.
+
+### Parameters
+
+The following are the statements used by this plugin. If not mentioned in this
+list the plugin does not support that statement type.
+
+- `creation_statements` `(string: <required>)` – Specifies the database
+  statements executed to create and configure a user. Must be a
+  semicolon-separated string, a base64-encoded semicolon-separated string, a
+  serialized JSON string array, or a base64-encoded serialized JSON string
+  array. The '{{name}}', '{{password}}' and '{{expiration}}' values will be
+  substituted.
+
+- `revocation_statements` `(string: "")` – Specifies the database statements to
+  be executed to revoke a user. Must be a semicolon-separated string, a
+  base64-encoded semicolon-separated string, a serialized JSON string array, or
+  a base64-encoded serialized JSON string array. The '{{name}}' value will be
+  substituted. If not provided defaults to a generic drop user statement.
+
+- `rollback_statements` `(string: "")` – Specifies the database statements to be
+  executed rollback a create operation in the event of an error. Not every
+  plugin type will support this functionality. Must be a semicolon-separated
+  string, a base64-encoded semicolon-separated string, a serialized JSON string
+  array, or a base64-encoded serialized JSON string array. The '{{name}}' value
+  will be substituted.
+
+- `renew_statements` `(string: "")` – Specifies the database statements to be
+  executed to renew a user. Not every plugin type will support this
+  functionality. Must be a semicolon-separated string, a base64-encoded
+  semicolon-separated string, a serialized JSON string array, or a
+  base64-encoded serialized JSON string array. The '{{name}}' and
+  '{{expiration}}` values will be substituted.
