@@ -147,10 +147,10 @@ func TestFileBackend_ValidatePath(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	if err := b.validatePath("foo/bar/../zip"); err == nil {
+	if err := b.Delete("foo/bar/../zip"); err == nil {
 		t.Fatal("expected error")
 	}
-	if err := b.validatePath("foo/bar/zip"); err != nil {
+	if err := b.Delete("foo/bar/zip"); err != nil {
 		t.Fatal("did not expect error")
 	}
 }
