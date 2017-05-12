@@ -10,15 +10,19 @@ import (
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
+
+	// CockroachDB uses the Postgres SQL driver
+	_ "github.com/lib/pq"
 )
 
 // CockroachDBBackend Backend is a physical backend that stores data
 // within a CockroachDB database.
 type CockroachDBBackend struct {
-	table      string
-	client     *sql.DB
-	statements map[string]*sql.Stmt
-	logger     log.Logger
+	table         string
+	client        *sql.DB
+	rawStatements map[string]string
+	statements    map[string]*sql.Stmt
+	logger        log.Logger
 }
 
 // newCockroachDBBackend constructs a CockroachDB backend using the given
@@ -50,22 +54,22 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 
 	// Setup the backend
 	m := &CockroachDBBackend{
-		table:      dbTable,
-		client:     db,
+		table:  dbTable,
+		client: db,
+		rawStatements: map[string]string{
+			"put": "INSERT INTO " + dbTable + " VALUES($1, $2)" +
+				" ON CONFLICT (path) DO " +
+				" UPDATE SET (path, value) = ($1, $2)",
+			"get":    "SELECT value FROM " + dbTable + " WHERE path = $1",
+			"delete": "DELETE FROM " + dbTable + " WHERE path = $1",
+			"list":   "SELECT path FROM " + dbTable + " WHERE path LIKE $1",
+		},
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
 	}
 
 	// Prepare all the statements required
-	statements := map[string]string{
-		"put": "INSERT INTO " + dbTable + " VALUES($1, $2)" +
-			" ON CONFLICT (path) DO " +
-			" UPDATE SET (path, value) = ($1, $2)",
-		"get":    "SELECT value FROM " + dbTable + " WHERE path = $1",
-		"delete": "DELETE FROM " + dbTable + " WHERE path = $1",
-		"list":   "SELECT path FROM " + dbTable + " WHERE path LIKE $1",
-	}
-	for name, query := range statements {
+	for name, query := range m.rawStatements {
 		if err := m.prepare(name, query); err != nil {
 			return nil, err
 		}
