@@ -131,6 +131,15 @@ func TestFileBackend_Base64URLEncoding(t *testing.T) {
 	}
 }
 
+func TestFileBackend_ValidatePath(t *testing.T) {
+	if validatePath("foo/bar/../zip") {
+		t.Fatal("expected error")
+	}
+	if !validatePath("foo/bar/zip") {
+		t.Fatal("did not expect error")
+	}
+}
+
 func TestFileBackend(t *testing.T) {
 	dir, err := ioutil.TempDir("", "vault")
 	if err != nil {
