@@ -94,3 +94,36 @@ $ curl \
     --data @payload.json \
     https://vault.rocks/v1/cassandra/config/connection
 ```
+
+## Statements
+
+Statements are configured during role creation and are used by the plugin to
+determine what is sent to the datatabse on user creation, renewing, and
+revocation. For more information on configuring roles see the [Role
+API](/api/secret/databases/index.html#create-role) in the Database Backend docs.
+
+### Parameters
+
+The following are the statements used by this plugin. If not mentioned in this
+list the plugin does not support that statement type.
+
+- `creation_statements` `(string: "")` – Specifies the database
+  statements executed to create and configure a user. Must be a
+  semicolon-separated string, a base64-encoded semicolon-separated string, a
+  serialized JSON string array, or a base64-encoded serialized JSON string
+  array. The '{{name}}' and '{{password}}' values will be substituted. If not
+  provided, defaults to a generic create user statements that creates a
+  non-superuser.
+
+- `revocation_statements` `(string: "")` – Specifies the database statements to
+  be executed to revoke a user. Must be a semicolon-separated string, a
+  base64-encoded semicolon-separated string, a serialized JSON string array, or
+  a base64-encoded serialized JSON string array. The '{{name}}' value will be
+  substituted. If not provided defaults to a generic drop user statement.
+
+- `rollback_statements` `(string: "")` – Specifies the database statements to be
+  executed to rollback a create operation in the event of an error. Must be a
+  semicolon-separated string, a base64-encoded semicolon-separated string, a
+  serialized JSON string array, or a base64-encoded serialized JSON string
+  array. The '{{name}}' value will be substituted. If not provided, defaults to
+  a generic drop user statement 
