@@ -1,5 +1,9 @@
 ## Next (Unreleased)
 
+IMPROVEMENTS:
+
+ * plugins/databases: Add MongoDB as an internal database plugin. [GH-2698]
+
 BUG FIXES:
 
  * secret/database: Increase wrapping token TTL; in a loaded scenario it could
@@ -60,8 +64,10 @@ IMPROVEMENTS:
  * cli/revoke: Add `-self` option to allow revoking the currently active token
    [GH-2596]
  * core: Randomize x coordinate in Shamir shares [GH-2621]
- * tidy: Improvements to `auth/token/tidy` and `sys/leases/tidy` to handle more
-   cleanup cases [GH-2452]
+ * replication: Fix a bug when enabling `approle` on a primary before
+   secondaries were connected
+ * replication: Add heartbeating to ensure firewalls don't kill connections to
+   primaries
  * secret/pki: Add `no_store` option that allows certificates to be issued
    without being stored. This removes the ability to look up and/or add to a
    CRL but helps with scaling to very large numbers of certificates. [GH-2565]
@@ -78,6 +84,8 @@ IMPROVEMENTS:
    requests [GH-2466]
  * storage/s3: Use pooled transport for http client [GH-2481]
  * storage/swift: Allow domain values for V3 authentication [GH-2554]
+ * tidy: Improvements to `auth/token/tidy` and `sys/leases/tidy` to handle more
+   cleanup cases [GH-2452]
 
 BUG FIXES:
 

@@ -507,7 +507,7 @@ $ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5
 #### Configure the policies on the role.
 
 ```
-$ vault write auth/aws/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
+$ vault write auth/aws/role/dev-role auth_type=ec2 bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
 
 $ vault write auth/aws/role/dev-role-iam auth_type=iam \
               bound_iam_principal_arn=arn:aws:iam::123456789012:role/MyRole policies=prod,dev max_ttl=500h

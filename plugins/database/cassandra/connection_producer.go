@@ -1,4 +1,4 @@
-package connutil
+package cassandra
 
 import (
 	"crypto/tls"
@@ -13,11 +13,12 @@ import (
 	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/tlsutil"
+	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 )
 
-// CassandraConnectionProducer implements ConnectionProducer and provides an
+// cassandraConnectionProducer implements ConnectionProducer and provides an
 // interface for cassandra databases to make connections.
-type CassandraConnectionProducer struct {
+type cassandraConnectionProducer struct {
 	Hosts             string      `json:"hosts" structs:"hosts" mapstructure:"hosts"`
 	Username          string      `json:"username" structs:"username" mapstructure:"username"`
 	Password          string      `json:"password" structs:"password" mapstructure:"password"`
@@ -41,7 +42,7 @@ type CassandraConnectionProducer struct {
 	sync.Mutex
 }
 
-func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
+func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}, verifyConnection bool) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -49,7 +50,6 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	if err != nil {
 		return err
 	}
-	c.Initialized = true
 
 	if c.ConnectTimeoutRaw == nil {
 		c.ConnectTimeoutRaw = "0s"
@@ -100,17 +100,22 @@ func (c *CassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 		c.TLS = true
 	}
 
+	// Set initialized to true at this point since all fields are set,
+	// and the connection can be established at a later time.
+	c.Initialized = true
+
 	if verifyConnection {
 		if _, err := c.Connection(); err != nil {
-			return fmt.Errorf("error Initalizing Connection: %s", err)
+			return fmt.Errorf("error verifying connection: %s", err)
 		}
 	}
+
 	return nil
 }
 
-func (c *CassandraConnectionProducer) Connection() (interface{}, error) {
+func (c *cassandraConnectionProducer) Connection() (interface{}, error) {
 	if !c.Initialized {
-		return nil, errNotInitialized
+		return nil, connutil.ErrNotInitialized
 	}
 
 	// If we already have a DB, return it
@@ -129,7 +134,7 @@ func (c *CassandraConnectionProducer) Connection() (interface{}, error) {
 	return session, nil
 }
 
-func (c *CassandraConnectionProducer) Close() error {
+func (c *cassandraConnectionProducer) Close() error {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
@@ -143,7 +148,7 @@ func (c *CassandraConnectionProducer) Close() error {
 	return nil
 }
 
-func (c *CassandraConnectionProducer) createSession() (*gocql.Session, error) {
+func (c *cassandraConnectionProducer) createSession() (*gocql.Session, error) {
 	clusterConfig := gocql.NewCluster(strings.Split(c.Hosts, ",")...)
 	clusterConfig.Authenticator = gocql.PasswordAuthenticator{
 		Username: c.Username,

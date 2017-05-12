@@ -145,7 +145,7 @@ func (b *backend) pathSignWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	if !p.Type.SigningSupported() {
@@ -222,7 +222,7 @@ func (b *backend) pathVerifyWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	valid, err := p.VerifySignature(hashedInput, sig)

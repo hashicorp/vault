@@ -10,4 +10,7 @@ var (
 	// ErrStandby is returned if an operation is performed on a standby Vault.
 	// No operation is expected to succeed until active.
 	ErrStandby = errors.New("Vault is in standby mode")
+
+	// Used when .. is used in a path
+	ErrPathContainsParentReferences = errors.New("path cannot contain parent references")
 )

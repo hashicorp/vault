@@ -11,6 +11,7 @@ import (
 
 	log "github.com/mgutz/logxi/v1"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -77,6 +78,10 @@ func (b *FileBackend) DeleteInternal(path string) error {
 		return nil
 	}
 
+	if err := b.validatePath(path); err != nil {
+		return err
+	}
+
 	basePath, key := b.expandPath(path)
 	fullPath := filepath.Join(basePath, key)
 
@@ -138,6 +143,10 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 }
 
 func (b *FileBackend) GetInternal(k string) (*Entry, error) {
+	if err := b.validatePath(k); err != nil {
+		return nil, err
+	}
+
 	path, key := b.expandPath(k)
 	path = filepath.Join(path, key)
 
@@ -172,6 +181,10 @@ func (b *FileBackend) Put(entry *Entry) error {
 }
 
 func (b *FileBackend) PutInternal(entry *Entry) error {
+	if err := b.validatePath(entry.Key); err != nil {
+		return err
+	}
+
 	path, key := b.expandPath(entry.Key)
 
 	// Make the parent tree
@@ -205,6 +218,10 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 }
 
 func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
+	if err := b.validatePath(prefix); err != nil {
+		return nil, err
+	}
+
 	path := b.path
 	if prefix != "" {
 		path = filepath.Join(path, prefix)
@@ -244,6 +261,15 @@ func (b *FileBackend) expandPath(k string) (string, string) {
 	key := filepath.Base(path)
 	path = filepath.Dir(path)
 	return path, "_" + key
+}
+
+func (b *FileBackend) validatePath(path string) error {
+	switch {
+	case strings.Contains(path, ".."):
+		return consts.ErrPathContainsParentReferences
+	}
+
+	return nil
 }
 
 func (b *TransactionalFileBackend) Transaction(txns []TxnEntry) error {
