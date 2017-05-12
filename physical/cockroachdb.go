@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/mgutz/logxi/v1"
-
 	"github.com/armon/go-metrics"
+	"github.com/cockroachdb/cockroach-go/crdb"
+	log "github.com/mgutz/logxi/v1"
 
 	// CockroachDB uses the Postgres SQL driver
 	_ "github.com/lib/pq"
@@ -53,7 +53,7 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 	}
 
 	// Setup the backend
-	m := &CockroachDBBackend{
+	c := &CockroachDBBackend{
 		table:  dbTable,
 		client: db,
 		rawStatements: map[string]string{
@@ -69,41 +69,38 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 	}
 
 	// Prepare all the statements required
-	for name, query := range m.rawStatements {
-		if err := m.prepare(name, query); err != nil {
+	for name, query := range c.rawStatements {
+		if err := c.prepare(name, query); err != nil {
 			return nil, err
 		}
 	}
-	return m, nil
+	return c, nil
 }
 
 // prepare is a helper to prepare a query for future execution
-func (m *CockroachDBBackend) prepare(name, query string) error {
-	stmt, err := m.client.Prepare(query)
+func (c *CockroachDBBackend) prepare(name, query string) error {
+	stmt, err := c.client.Prepare(query)
 	if err != nil {
 		return fmt.Errorf("failed to prepare '%s': %v", name, err)
 	}
-	m.statements[name] = stmt
+	c.statements[name] = stmt
 	return nil
 }
 
 // Put is used to insert or update an entry.
-func (m *CockroachDBBackend) Put(entry *Entry) error {
+func (c *CockroachDBBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "put"}, time.Now())
 
-	_, err := m.statements["put"].Exec(entry.Key, entry.Value)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := c.statements["put"].Exec(entry.Key, entry.Value)
+	return err
 }
 
 // Get is used to fetch and entry.
-func (m *CockroachDBBackend) Get(key string) (*Entry, error) {
+func (c *CockroachDBBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "get"}, time.Now())
 
 	var result []byte
-	err := m.statements["get"].QueryRow(key).Scan(&result)
+	err := c.statements["get"].QueryRow(key).Scan(&result)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -119,23 +116,20 @@ func (m *CockroachDBBackend) Get(key string) (*Entry, error) {
 }
 
 // Delete is used to permanently delete an entry
-func (m *CockroachDBBackend) Delete(key string) error {
+func (c *CockroachDBBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "delete"}, time.Now())
 
-	_, err := m.statements["delete"].Exec(key)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := c.statements["delete"].Exec(key)
+	return err
 }
 
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
-func (m *CockroachDBBackend) List(prefix string) ([]string, error) {
+func (c *CockroachDBBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "list"}, time.Now())
 
 	likePrefix := prefix + "%"
-	rows, err := m.statements["list"].Query(likePrefix)
+	rows, err := c.statements["list"].Query(likePrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -161,4 +155,42 @@ func (m *CockroachDBBackend) List(prefix string) ([]string, error) {
 
 	sort.Strings(keys)
 	return keys, nil
+}
+
+// Transaction is used to run multiple entries via a transaction
+func (c *CockroachDBBackend) Transaction(txns []TxnEntry) error {
+	if len(txns) == 0 {
+		return nil
+	}
+
+	return crdb.ExecuteTx(c.client, func(tx *sql.Tx) error {
+		return c.transaction(tx, txns)
+	})
+}
+
+func (c *CockroachDBBackend) transaction(tx *sql.Tx, txns []TxnEntry) error {
+	deleteStmt, err := tx.Prepare(c.rawStatements["delete"])
+	if err != nil {
+		return err
+	}
+	putStmt, err := tx.Prepare(c.rawStatements["put"])
+	if err != nil {
+		return err
+	}
+
+	for _, op := range txns {
+		switch op.Operation {
+		case DeleteOperation:
+			_, err := deleteStmt.Exec(op.Entry.Key)
+			if err != nil {
+				return err
+			}
+		case PutOperation:
+			_, err := putStmt.Exec(op.Entry.Key, op.Entry.Value)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

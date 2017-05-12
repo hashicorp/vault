@@ -403,6 +403,12 @@
 			"revisionTime": "2016-11-21T13:51:53Z"
 		},
 		{
+			"checksumSHA1": "yQv3AchZYDl2gdQpHPT+NWc1kh0=",
+			"path": "github.com/cockroachdb/cockroach-go/crdb",
+			"revision": "c8f63e30437f4b80673b631763130d0fef87dd76",
+			"revisionTime": "2017-05-08T22:31:14Z"
+		},
+		{
 			"checksumSHA1": "7BC2/27NId9xaPDB5w3nWN2mn9A=",
 			"path": "github.com/coreos/etcd/auth/authpb",
 			"revision": "6ad9d1609a74978ddbe8617d0ffc460bfeff239e",
@@ -1721,6 +1727,10 @@
 			"path": "gopkg.in/yaml.v2",
 			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
 			"revisionTime": "2017-04-07T17:21:22Z"
+		},
+		{
+			"path": "https://github.com/cockroachdb/cockroach-go/crdb",
+			"revision": ""
 		},
 		{
 			"checksumSHA1": "s7O2cNvVNkPwgHs4+rfyDscl9Xw=",
