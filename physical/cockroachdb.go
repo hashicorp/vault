@@ -181,15 +181,14 @@ func (c *CockroachDBBackend) transaction(tx *sql.Tx, txns []TxnEntry) error {
 	for _, op := range txns {
 		switch op.Operation {
 		case DeleteOperation:
-			_, err := deleteStmt.Exec(op.Entry.Key)
-			if err != nil {
-				return err
-			}
+			_, err = deleteStmt.Exec(op.Entry.Key)
 		case PutOperation:
-			_, err := putStmt.Exec(op.Entry.Key, op.Entry.Value)
-			if err != nil {
-				return err
-			}
+			_, err = putStmt.Exec(op.Entry.Key, op.Entry.Value)
+		default:
+			return fmt.Errorf("%q is not a supported transaction operation", op.Operation)
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil
