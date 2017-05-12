@@ -83,13 +83,20 @@ func TestCockroachDBBackend(t *testing.T) {
 	}
 
 	defer func() {
-		crdb := b.(*CockroachDBBackend)
-		_, err := crdb.client.Exec("TRUNCATE TABLE " + crdb.table)
-		if err != nil {
-			t.Fatalf("Failed to drop table: %v", err)
-		}
+		truncate(t, b)
 	}()
 
 	testBackend(t, b)
+	truncate(t, b)
 	testBackend_ListPrefix(t, b)
+	truncate(t, b)
+	testTransactionalBackend(t, b)
+}
+
+func truncate(t *testing.T, b Backend) {
+	crdb := b.(*CockroachDBBackend)
+	_, err := crdb.client.Exec("TRUNCATE TABLE " + crdb.table)
+	if err != nil {
+		t.Fatalf("Failed to drop table: %v", err)
+	}
 }

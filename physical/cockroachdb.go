@@ -92,7 +92,10 @@ func (c *CockroachDBBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "put"}, time.Now())
 
 	_, err := c.statements["put"].Exec(entry.Key, entry.Value)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // Get is used to fetch and entry.
@@ -120,7 +123,10 @@ func (c *CockroachDBBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "delete"}, time.Now())
 
 	_, err := c.statements["delete"].Exec(key)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // List is used to list all the keys under a given
@@ -159,6 +165,7 @@ func (c *CockroachDBBackend) List(prefix string) ([]string, error) {
 
 // Transaction is used to run multiple entries via a transaction
 func (c *CockroachDBBackend) Transaction(txns []TxnEntry) error {
+	defer metrics.MeasureSince([]string{"cockroachdb", "transaction"}, time.Now())
 	if len(txns) == 0 {
 		return nil
 	}
