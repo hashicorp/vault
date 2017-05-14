@@ -379,8 +379,8 @@ func (d *DynamoDBBackend) List(prefix string) ([]string, error) {
 }
 
 // hasChildren returns true if there exist items below a certain path prefix.
-// To do so, the method fetches such items from DynamoDB. If there are more than one item (which is the "directory"
-// item), there are children.
+// To do so, the method fetches such items from DynamoDB. If there are more
+// than one item (which is the "directory" item), there are children.
 func (d *DynamoDBBackend) hasChildren(prefix string) (bool, error) {
 	prefix = strings.TrimSuffix(prefix, "/")
 	prefix = escapeEmptyPath(prefix)
@@ -397,7 +397,8 @@ func (d *DynamoDBBackend) hasChildren(prefix string) (bool, error) {
 			},
 		},
 		// Avoid fetching too many items from DynamoDB for performance reasons.
-		// We need at least two because one is the directory item, all others are children.
+		// We need at least two because one is the directory item, all others
+		// are children.
 		Limit: aws.Int64(2),
 	}
 
