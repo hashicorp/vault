@@ -24,6 +24,10 @@ operations on tokens such as renewal and revocation.
 Please see the [token concepts](/docs/concepts/tokens.html) page dedicated
 to tokens.
 
+-> **NOTE:** Non-root Auth Backend tokens have a maximum TTL of 30 days, this cannot
+be changed.  Non-root Auth tokens can exist longer than 30 days, regardless
+of renewal attempts.
+
 ## Authentication
 
 #### Via the CLI
