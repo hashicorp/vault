@@ -41,6 +41,7 @@ func pathUsers(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Comma-separated list of policies",
 			},
+
 			"ttl": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Default:     "",
@@ -50,6 +51,16 @@ func pathUsers(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Default:     "",
 				Description: "Maximum duration after which login should expire",
+			},
+
+			"meta_key": &framework.FieldSchema{
+				Type:				 framework.TypeString,
+				Description: "Metadata key for this user.",
+			},
+
+			"meta_value": &framework.FieldSchema{
+				Type:				 framework.TypeString,
+				Description: "Metadata value for this user.",
 			},
 		},
 
@@ -184,6 +195,13 @@ func (b *backend) userCreateUpdate(req *logical.Request, d *framework.FieldData)
 		return logical.ErrorResponse(fmt.Sprintf("err: %s", err)), nil
 	}
 
+	meta_map := userEntry.Metadata
+	if meta_key_raw, ok := d.GetOk("meta_key"); ok {
+		if meta_value_raw, ok := d.GetOk("meta_value"); ok {
+			meta_map[meta_key_raw.(string)] = meta_value_raw.(string)
+		}
+	}
+
 	return nil, b.setUser(req.Storage, username, userEntry)
 }
 
@@ -212,6 +230,8 @@ type UserEntry struct {
 
 	// Maximum duration for which user can be valid
 	MaxTTL time.Duration
+
+	Metadata map[string]string
 }
 
 const pathUserHelpSyn = `
