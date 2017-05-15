@@ -516,7 +516,7 @@ $ vault write auth/aws/role/dev-role-iam auth_type=iam \
 #### Configure a required X-Vault-AWS-IAM-Server-ID Header (recommended)
 
 ```
-$ vault write auth/aws/client/config iam_server_id_header_value=vault.example.com
+$ vault write auth/aws/config/client iam_server_id_header_value=vault.example.com
 ```
 
 
