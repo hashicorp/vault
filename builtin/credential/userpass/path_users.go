@@ -230,7 +230,8 @@ type UserEntry struct {
 
 	// Maximum duration for which user can be valid
 	MaxTTL time.Duration
-
+	
+	// Metadata for users
 	Metadata map[string]string
 }
 
