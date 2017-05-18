@@ -231,7 +231,7 @@ $ curl -X POST \
   <dd>LIST/GET</dd>
 
   <dt>URL</dt>
-  <dd>`/auth/approle/role` (LIST) or `/auth/approle/role?list=true` (GET)</dd>
+  <dd>`/auth/approle/role` (GET) or `/auth/approle/role?list=true` (LIST)</dd>
 
   <dt>Parameters</dt>
   <dd>
