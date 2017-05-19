@@ -61,14 +61,14 @@ func (b *backend) pathCredsCreateRead(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Set consistency
 	if role.Consistency != "" {
 		consistencyValue, err := gocql.ParseConsistencyWrapper(role.Consistency)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		session.SetConsistency(consistencyValue)
 	}
 
