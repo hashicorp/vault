@@ -64,7 +64,7 @@ When a backend wants to run a plugin, it first looks up the plugin, by name, in
 the catalog. It then checks the executable's SHA256 sum against the one
 configured in the plugin catalog. Finally vault runs the command configured in
 the catalog, sending along the JWT formatted response wrapping token and mlock
-settings (like Vault, plugins support the use of mlock when availible).
+settings (like Vault, plugins support the use of mlock when available).
 
 # Plugin Development
 Because Vault communicates to plugins over a RPC interface, you can build and
@@ -85,7 +85,7 @@ Developing a plugin is simple. The only knowledge necessary to write
 a plugin is basic command-line skills and basic knowledge of the
 [Go programming language](http://golang.org).
 
-You're plugin implementation just needs to satisfy the interface for the plugin
+Your plugin implementation needs to satisfy the interface for the plugin
 type you want to build. You can find these definitions in the docs for the
 backend running the plugin.
 

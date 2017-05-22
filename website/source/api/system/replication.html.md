@@ -241,7 +241,7 @@ connect again unless given a new activation token.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `POST`   | `/sys/replication/secondary/revoke-secondary` | `204 (empty body)` |
+| `POST`   | `/sys/replication/primary/revoke-secondary` | `204 (empty body)` |
 
 ### Parameters
 
@@ -262,7 +262,7 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    https://vault.rocks/v1/sys/replication/secondary/revoke-secondary
+    https://vault.rocks/v1/sys/replication/primary/revoke-secondary
 ```
 
 ## Enable Secondary
@@ -280,10 +280,10 @@ token.
 
 - `token` `(string: <required>)` – Specifies the secondary activation token fetched from the primary.
 
-- `primary_api_addr` `(string: "")` – Specifies  Set this to the API address
-  (normal Vault address) to override the value embedded in the token. This can
-  be useful if the primary's redirect address is not accessible directly from
-  this cluster (e.g. through a load balancer).
+- `primary_api_addr` `(string: "")` – Set this to the API address (normal Vault
+  address) to override the value embedded in the token. This can be useful if
+  the primary's redirect address is not accessible directly from this cluster
+  (e.g. through a load balancer).
 
 - `ca_file` `(string: "")` – Specifies the path to a CA root file (PEM format)
   that the secondary can use when unwrapping the token from the primary. If this

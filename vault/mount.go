@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
@@ -171,7 +172,7 @@ func (e *MountEntry) Clone() *MountEntry {
 }
 
 // Mount is used to mount a new backend to the mount table.
-func (c *Core) mount(entry *MountEntry, skipInitialization bool) error {
+func (c *Core) mount(entry *MountEntry) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(entry.Path, "/") {
 		entry.Path += "/"
@@ -221,10 +222,8 @@ func (c *Core) mount(entry *MountEntry, skipInitialization bool) error {
 
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected
-	if !skipInitialization {
-		if err := backend.Initialize(); err != nil {
-			return err
-		}
+	if err := backend.Initialize(); err != nil {
+		return err
 	}
 
 	newTable := c.mounts.shallowClone()
@@ -518,8 +517,9 @@ func (c *Core) loadMounts() error {
 			// This should only happen in the upgrade case where a new one is
 			// introduced on the primary; otherwise initial bootstrapping will
 			// ensure this comes over. If we upgrade first, we simply don't
-			// create the mount, so we won't conflict when we sync.
-			if !foundRequired && c.replicationState != consts.ReplicationSecondary {
+			// create the mount, so we won't conflict when we sync. If this is
+			// local (e.g. cubbyhole) we do still add it.
+			if !foundRequired && (c.replicationState != consts.ReplicationSecondary || requiredMount.Local) {
 				c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 				needPersist = true
 			}
@@ -800,13 +800,19 @@ func requiredMountTable() *MountTable {
 	return table
 }
 
+// This function returns tables that are singletons. The main usage of this is
+// for replication, so we can send over mount info (especially, UUIDs of
+// mounts, which are used for salts) for mounts that may not be able to be
+// handled normally. After saving these values on the secondary, we let normal
+// sync invalidation do its thing. Because of its use for replication, we
+// exclude local mounts.
 func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 	mounts = &MountTable{}
 	auth = &MountTable{}
 
 	c.mountsLock.RLock()
 	for _, entry := range c.mounts.Entries {
-		if strutil.StrListContains(singletonMounts, entry.Type) {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
 			mounts.Entries = append(mounts.Entries, entry)
 		}
 	}
@@ -814,7 +820,7 @@ func (c *Core) singletonMountTables() (mounts, auth *MountTable) {
 
 	c.authLock.RLock()
 	for _, entry := range c.auth.Entries {
-		if strutil.StrListContains(singletonMounts, entry.Type) {
+		if strutil.StrListContains(singletonMounts, entry.Type) && !entry.Local {
 			auth.Entries = append(auth.Entries, entry)
 		}
 	}

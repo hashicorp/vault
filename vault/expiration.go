@@ -696,6 +696,10 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 		return fmt.Errorf("expiration: cannot register an auth lease with an empty token")
 	}
 
+	if strings.Contains(source, "..") {
+		return fmt.Errorf("expiration: %s", consts.ErrPathContainsParentReferences)
+	}
+
 	// Create a lease entry
 	le := leaseEntry{
 		LeaseID:     path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),

@@ -1,3 +1,27 @@
+## Next (Unreleased)
+
+IMPROVEMENTS:
+
+ * plugins/databases: Add MongoDB as an internal database plugin. [GH-2698]
+ * storage/dynamodb: Add a method for checking the existence of children, 
+   speeding up deletion operations in the DynamoDB storage backend. [GH-2722]
+
+BUG FIXES:
+
+ * secret/database: Increase wrapping token TTL; in a loaded scenario it could
+   be too short
+ * secret/generic: Allow integers to be set as the value of `ttl` field as the
+   documentation claims is supported [GH-2699]
+ * secret/ssh: Added host key callback to ssh client config [GH-2752]
+ * storage/file: Don't leak file descriptors in some error cases
+
+## 0.7.2 (May 8th, 2017)
+
+BUG FIXES:
+
+ * audit: Fix auditing entries containing certain kinds of time values
+   [GH-2689]
+
 ## 0.7.1 (May 5th, 2017)
 
 DEPRECATIONS/CHANGES:
@@ -43,8 +67,10 @@ IMPROVEMENTS:
  * cli/revoke: Add `-self` option to allow revoking the currently active token
    [GH-2596]
  * core: Randomize x coordinate in Shamir shares [GH-2621]
- * tidy: Improvements to `auth/token/tidy` and `sys/leases/tidy` to handle more
-   cleanup cases [GH-2452]
+ * replication: Fix a bug when enabling `approle` on a primary before
+   secondaries were connected
+ * replication: Add heartbeating to ensure firewalls don't kill connections to
+   primaries
  * secret/pki: Add `no_store` option that allows certificates to be issued
    without being stored. This removes the ability to look up and/or add to a
    CRL but helps with scaling to very large numbers of certificates. [GH-2565]
@@ -61,6 +87,8 @@ IMPROVEMENTS:
    requests [GH-2466]
  * storage/s3: Use pooled transport for http client [GH-2481]
  * storage/swift: Allow domain values for V3 authentication [GH-2554]
+ * tidy: Improvements to `auth/token/tidy` and `sys/leases/tidy` to handle more
+   cleanup cases [GH-2452]
 
 BUG FIXES:
 
@@ -71,6 +99,8 @@ BUG FIXES:
    [GH-2674]
  * core: Help operations should request forward since standbys may not have
    appropriate info [GH-2677]
+ * replication: Fix enabling secondaries when certain mounts already existed on
+   the primary
  * secret/mssql: Update mssql driver to support queries with colons [GH-2610]
  * secret/pki: Don't lowercase O/OU values in certs [GH-2555]
  * secret/pki: Don't attempt to validate IP SANs if none are provided [GH-2574]

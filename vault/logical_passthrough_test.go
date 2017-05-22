@@ -1,10 +1,12 @@
 package vault
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -49,10 +51,19 @@ func TestPassthroughBackend_Write(t *testing.T) {
 }
 
 func TestPassthroughBackend_Read(t *testing.T) {
-	test := func(b logical.Backend, ttlType string, leased bool) {
+	test := func(b logical.Backend, ttlType string, ttl interface{}, leased bool) {
 		req := logical.TestRequest(t, logical.UpdateOperation, "foo")
 		req.Data["raw"] = "test"
-		req.Data[ttlType] = "1h"
+		var reqTTL interface{}
+		switch ttl.(type) {
+		case int64:
+			reqTTL = ttl.(int64)
+		case string:
+			reqTTL = ttl.(string)
+		default:
+			t.Fatal("unknown ttl type")
+		}
+		req.Data[ttlType] = reqTTL
 		storage := req.Storage
 
 		if _, err := b.HandleRequest(req); err != nil {
@@ -67,16 +78,34 @@ func TestPassthroughBackend_Read(t *testing.T) {
 			t.Fatalf("err: %v", err)
 		}
 
+		expectedTTL, err := parseutil.ParseDurationSecond(ttl)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// What comes back if an int is passed in is a json.Number which is
+		// actually aliased as a string so to make the deep equal happy if it's
+		// actually a number we set it to an int64
+		var respTTL interface{} = resp.Data[ttlType]
+		_, ok := respTTL.(json.Number)
+		if ok {
+			respTTL, err = respTTL.(json.Number).Int64()
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp.Data[ttlType] = respTTL
+		}
+
 		expected := &logical.Response{
 			Secret: &logical.Secret{
 				LeaseOptions: logical.LeaseOptions{
 					Renewable: true,
-					TTL:       time.Hour,
+					TTL:       expectedTTL,
 				},
 			},
 			Data: map[string]interface{}{
 				"raw":   "test",
-				ttlType: "1h",
+				ttlType: reqTTL,
 			},
 		}
 
@@ -86,15 +115,15 @@ func TestPassthroughBackend_Read(t *testing.T) {
 		resp.Secret.InternalData = nil
 		resp.Secret.LeaseID = ""
 		if !reflect.DeepEqual(resp, expected) {
-			t.Fatalf("bad response.\n\nexpected: %#v\n\nGot: %#v", expected, resp)
+			t.Fatalf("bad response.\n\nexpected:\n%#v\n\nGot:\n%#v", expected, resp)
 		}
 	}
 	b := testPassthroughLeasedBackend()
-	test(b, "lease", true)
-	test(b, "ttl", true)
+	test(b, "lease", "1h", true)
+	test(b, "ttl", "5", true)
 	b = testPassthroughBackend()
-	test(b, "lease", false)
-	test(b, "ttl", false)
+	test(b, "lease", int64(10), false)
+	test(b, "ttl", "40s", false)
 }
 
 func TestPassthroughBackend_Delete(t *testing.T) {

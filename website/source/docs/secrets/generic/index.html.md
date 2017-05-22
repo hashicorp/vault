@@ -42,6 +42,8 @@ normal `lease_duration`. However, the given value will also still be returned
 exactly as specified, so you are free to use that key in any way that you like
 if it fits your input data.
 
+The backend _never_ removes data on its own; the `ttl` key is merely advisory.
+
 As an example, we can write a new key "foo" to the generic backend mounted at
 "secret/" by default:
 
