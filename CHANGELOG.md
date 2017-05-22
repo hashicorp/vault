@@ -12,6 +12,7 @@ BUG FIXES:
    be too short
  * secret/generic: Allow integers to be set as the value of `ttl` field as the
    documentation claims is supported [GH-2699]
+ * secret/ssh: Added host key callback to ssh client config [GH-2752]
  * storage/file: Don't leak file descriptors in some error cases
 
 ## 0.7.2 (May 8th, 2017)
