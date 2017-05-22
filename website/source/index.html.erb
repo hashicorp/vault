@@ -109,6 +109,7 @@ description: |-
     <div class="col-sm-12">
       <% data.news.posts.each do |post| %>
         <div class="latest-item">
+          <%= post.media_html %>
           <h3><%= post.title %></h3>
           <%= simple_format post.body %>
           <% if post.link_url %>
