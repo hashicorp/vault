@@ -286,7 +286,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 }
 
 // Verify checks if the parsed bundle is valid.  It validates the public
-// key of the certificate to the private key and checks the certficate trust
+// key of the certificate to the private key and checks the certificate trust
 // chain for path issues.
 func (p *ParsedCertBundle) Verify() error {
 	// If private key exists, check if it matches the public key of cert

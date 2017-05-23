@@ -79,7 +79,7 @@ func (b *backend) pathHMACWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	key, err := p.HMACKey(p.LatestVersion)
@@ -162,7 +162,7 @@ func (b *backend) pathHMACVerify(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	if ver > p.LatestVersion {

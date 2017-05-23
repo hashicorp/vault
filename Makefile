@@ -3,11 +3,12 @@ VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf 
 EXTERNAL_TOOLS=\
 	github.com/mitchellh/gox
 BUILD_TAGS?=vault
+GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
 default: dev
 
 # bin generates the releaseable binaries for Vault
-bin: generate
+bin: fmtcheck generate
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # dev creates binaries for testing Vault locally. These are put
@@ -15,22 +16,22 @@ bin: generate
 # is only put into /bin/
 quickdev: generate
 	@CGO_ENABLED=0 go build -i -tags='$(BUILD_TAGS)' -o bin/vault
-dev: generate
+dev: fmtcheck generate
 	@CGO_ENABLED=0 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 dev-dynamic: generate
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # test runs the unit tests and vets the code
-test: generate
+test: fmtcheck generate
 	CGO_ENABLED=0 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=20m -parallel=4
 
-testcompile: generate
+testcompile: fmtcheck generate
 	@for pkg in $(TEST) ; do \
 		go test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
 	done
 
 # testacc runs acceptance tests
-testacc: generate
+testacc: fmtcheck generate
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
@@ -38,7 +39,7 @@ testacc: generate
 	VAULT_ACC=1 go test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout 45m
 
 # testrace runs the race checker
-testrace: generate
+testrace: fmtcheck generate
 	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=20m -parallel=4
 
 cover:
@@ -71,4 +72,11 @@ proto:
 	protoc -I helper/forwarding -I vault -I ../../.. vault/*.proto --go_out=plugins=grpc:vault
 	protoc -I helper/forwarding -I vault -I ../../.. helper/forwarding/types.proto --go_out=plugins=grpc:helper/forwarding
 
-.PHONY: bin default generate test vet bootstrap
+fmtcheck:
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+
+fmt:
+	gofmt -w $(GOFMT_FILES)
+	
+
+.PHONY: bin default generate test vet bootstrap fmt fmtcheck

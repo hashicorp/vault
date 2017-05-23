@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -21,10 +20,6 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 
 type backend struct {
 	*framework.Backend
-	Salt *salt.Salt
-
-	// Used during initialization to set the salt
-	view logical.Storage
 
 	// Lock to make changes to any of the backend's configuration endpoints.
 	configMutex sync.RWMutex
@@ -66,7 +61,6 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
 		tidyCooldownPeriod: time.Hour,
-		view:               conf.StorageView,
 		EC2ClientsMap:      make(map[string]map[string]*ec2.EC2),
 		IAMClientsMap:      make(map[string]map[string]*iam.IAM),
 	}
@@ -105,22 +99,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		},
 
 		Invalidate: b.invalidate,
-
-		Init: b.initialize,
 	}
 
 	return b, nil
-}
-
-func (b *backend) initialize() error {
-	salt, err := salt.NewSalt(b.view, &salt.Config{
-		HashFunc: salt.SHA256Hash,
-	})
-	if err != nil {
-		return err
-	}
-	b.Salt = salt
-	return nil
 }
 
 // periodicFunc performs the tasks that the backend wishes to do periodically.

@@ -6,14 +6,18 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
 	log "github.com/mgutz/logxi/v1"
 
+	"github.com/hashicorp/errwrap"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -57,6 +61,8 @@ type ExpirationManager struct {
 
 	pending     map[string]*time.Timer
 	pendingLock sync.Mutex
+
+	tidyLock int64
 }
 
 // NewExpirationManager creates a new ExpirationManager that is backed
@@ -112,6 +118,113 @@ func (c *Core) stopExpiration() error {
 		c.expiration = nil
 	}
 	return nil
+}
+
+// Tidy cleans up the dangling storage entries for leases. It scans the storage
+// view to find all the available leases, checks if the token embedded in it is
+// either empty or invalid and in both the cases, it revokes them. It also uses
+// a token cache to avoid multiple lookups of the same token ID. It is normally
+// not required to use the API that invokes this. This is only intended to
+// clean up the corrupt storage due to bugs.
+func (m *ExpirationManager) Tidy() error {
+	var tidyErrors *multierror.Error
+
+	if !atomic.CompareAndSwapInt64(&m.tidyLock, 0, 1) {
+		m.logger.Warn("expiration: tidy operation on leases is already in progress")
+		return fmt.Errorf("tidy operation on leases is already in progress")
+	}
+
+	defer atomic.CompareAndSwapInt64(&m.tidyLock, 1, 0)
+
+	m.logger.Info("expiration: beginning tidy operation on leases")
+	defer m.logger.Info("expiration: finished tidy operation on leases")
+
+	// Create a cache to keep track of looked up tokens
+	tokenCache := make(map[string]bool)
+	var countLease, revokedCount, deletedCountInvalidToken, deletedCountEmptyToken int64
+
+	tidyFunc := func(leaseID string) {
+		countLease++
+		if countLease%500 == 0 {
+			m.logger.Info("expiration: tidying leases", "progress", countLease)
+		}
+
+		le, err := m.loadEntry(leaseID)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to load the lease ID %q: %v", leaseID, err))
+			return
+		}
+
+		if le == nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("nil entry for lease ID %q: %v", leaseID, err))
+			return
+		}
+
+		var isValid, ok bool
+		revokeLease := false
+		if le.ClientToken == "" {
+			m.logger.Trace("expiration: revoking lease which has an empty token", "lease_id", leaseID)
+			revokeLease = true
+			deletedCountEmptyToken++
+			goto REVOKE_CHECK
+		}
+
+		isValid, ok = tokenCache[le.ClientToken]
+		if !ok {
+			saltedID := m.tokenStore.SaltID(le.ClientToken)
+			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
+			lock.RLock()
+			te, err := m.tokenStore.lookupSalted(saltedID, true)
+			lock.RUnlock()
+
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup token: %v", err))
+				return
+			}
+
+			if te == nil {
+				m.logger.Trace("expiration: revoking lease which holds an invalid token", "lease_id", leaseID)
+				revokeLease = true
+				deletedCountInvalidToken++
+				tokenCache[le.ClientToken] = false
+			} else {
+				tokenCache[le.ClientToken] = true
+			}
+			goto REVOKE_CHECK
+		} else {
+			if isValid {
+				return
+			} else {
+				m.logger.Trace("expiration: revoking lease which contains an invalid token", "lease_id", leaseID)
+				revokeLease = true
+				deletedCountInvalidToken++
+			}
+			goto REVOKE_CHECK
+		}
+
+	REVOKE_CHECK:
+		if revokeLease {
+			// Force the revocation and skip going through the token store
+			// again
+			err = m.revokeCommon(leaseID, true, true)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to revoke an invalid lease with ID %q: %v", leaseID, err))
+				return
+			}
+			revokedCount++
+		}
+	}
+
+	if err := logical.ScanView(m.idView, tidyFunc); err != nil {
+		return err
+	}
+
+	m.logger.Debug("expiration: number of leases scanned", "count", countLease)
+	m.logger.Debug("expiration: number of leases which had empty tokens", "count", deletedCountEmptyToken)
+	m.logger.Debug("expiration: number of leases which had invalid tokens", "count", deletedCountInvalidToken)
+	m.logger.Debug("expiration: number of leases successfully revoked", "count", revokedCount)
+
+	return tidyErrors.ErrorOrNil()
 }
 
 // Restore is used to recover the lease states when starting.
@@ -498,8 +611,13 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a LeaseID and the management of
 // of lease is assumed by the expiration manager.
-func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (string, error) {
+func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Response) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
+
+	if req.ClientToken == "" {
+		return "", fmt.Errorf("expiration: cannot register a lease with an empty client token")
+	}
+
 	// Ignore if there is no leased secret
 	if resp == nil || resp.Secret == nil {
 		return "", nil
@@ -515,8 +633,34 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 	if err != nil {
 		return "", err
 	}
+
+	leaseID := path.Join(req.Path, leaseUUID)
+
+	defer func() {
+		// If there is an error we want to rollback as much as possible (note
+		// that errors here are ignored to do as much cleanup as we can). We
+		// want to revoke a generated secret (since an error means we may not
+		// be successfully tracking it), remove indexes, and delete the entry.
+		if retErr != nil {
+			revResp, err := m.router.Route(logical.RevokeRequest(req.Path, resp.Secret, resp.Data))
+			if err != nil {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional internal error was encountered revoking the newly-generated secret: {{err}}", err))
+			} else if revResp != nil && revResp.IsError() {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered revoking the newly-generated secret: {{err}}", revResp.Error()))
+			}
+
+			if err := m.deleteEntry(leaseID); err != nil {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered deleting any lease associated with the newly-generated secret: {{err}}", err))
+			}
+
+			if err := m.removeIndexByToken(req.ClientToken, leaseID); err != nil {
+				retErr = multierror.Append(retErr, errwrap.Wrapf("an additional error was encountered removing lease indexes associated with the newly-generated secret: {{err}}", err))
+			}
+		}
+	}()
+
 	le := leaseEntry{
-		LeaseID:     path.Join(req.Path, leaseUUID),
+		LeaseID:     leaseID,
 		ClientToken: req.ClientToken,
 		Path:        req.Path,
 		Data:        resp.Data,
@@ -547,6 +691,14 @@ func (m *ExpirationManager) Register(req *logical.Request, resp *logical.Respons
 // the expiration manager.
 func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) error {
 	defer metrics.MeasureSince([]string{"expire", "register-auth"}, time.Now())
+
+	if auth.ClientToken == "" {
+		return fmt.Errorf("expiration: cannot register an auth lease with an empty token")
+	}
+
+	if strings.Contains(source, "..") {
+		return fmt.Errorf("expiration: %s", consts.ErrPathContainsParentReferences)
+	}
 
 	// Create a lease entry
 	le := leaseEntry{
@@ -668,7 +820,7 @@ func (m *ExpirationManager) revokeEntry(le *leaseEntry) error {
 	// Revocation of login tokens is special since we can by-pass the
 	// backend and directly interact with the token store
 	if le.Auth != nil {
-		if err := m.tokenStore.RevokeTree(le.Auth.ClientToken); err != nil {
+		if err := m.tokenStore.RevokeTree(le.ClientToken); err != nil {
 			return fmt.Errorf("failed to revoke token: %v", err)
 		}
 

@@ -72,7 +72,7 @@ func (c *AuditEnableCommand) Run(args []string) int {
 	}
 
 	err = client.Sys().EnableAuditWithOptions(path, &api.EnableAuditOptions{
-		Type:   auditType,
+		Type:        auditType,
 		Description: desc,
 		Options:     opts,
 		Local:       local,

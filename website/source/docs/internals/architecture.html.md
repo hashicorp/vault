@@ -45,10 +45,10 @@ clarify what is being discussed:
   and response from Vault goes through the configured audit backends. This provides a simple
   way to integrate Vault with multiple audit logging destinations of different types.
 
-* **Credential Backend** - A credential backend is used to authenticate users or applications which
+* **Auth Backend** - An auth backend is used to authenticate users or applications which
   are connecting to Vault. Once authenticated, the backend returns the list of applicable policies
   which should be applied. Vault takes an authenticated user and returns a client token that can
-  be used for future requests. As an example, the `user-password` backend uses a username and password
+  be used for future requests. As an example, the `userpass` backend uses a username and password
   to authenticate the user. Alternatively, the `github` backend allows users to authenticate
   via GitHub.
 

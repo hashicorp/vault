@@ -11,6 +11,7 @@ import (
 
 	log "github.com/mgutz/logxi/v1"
 
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 )
 
@@ -77,6 +78,10 @@ func (b *FileBackend) DeleteInternal(path string) error {
 		return nil
 	}
 
+	if err := b.validatePath(path); err != nil {
+		return err
+	}
+
 	basePath, key := b.expandPath(path)
 	fullPath := filepath.Join(basePath, key)
 
@@ -99,6 +104,9 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 
 		dir, err := os.Open(fullPath)
 		if err != nil {
+			if dir != nil {
+				dir.Close()
+			}
 			if os.IsNotExist(err) {
 				return nil
 			} else {
@@ -135,10 +143,17 @@ func (b *FileBackend) Get(k string) (*Entry, error) {
 }
 
 func (b *FileBackend) GetInternal(k string) (*Entry, error) {
+	if err := b.validatePath(k); err != nil {
+		return nil, err
+	}
+
 	path, key := b.expandPath(k)
 	path = filepath.Join(path, key)
 
 	f, err := os.Open(path)
+	if f != nil {
+		defer f.Close()
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -146,7 +161,6 @@ func (b *FileBackend) GetInternal(k string) (*Entry, error) {
 
 		return nil, err
 	}
-	defer f.Close()
 
 	var entry Entry
 	if err := jsonutil.DecodeJSONFromReader(f, &entry); err != nil {
@@ -167,6 +181,10 @@ func (b *FileBackend) Put(entry *Entry) error {
 }
 
 func (b *FileBackend) PutInternal(entry *Entry) error {
+	if err := b.validatePath(entry.Key); err != nil {
+		return err
+	}
+
 	path, key := b.expandPath(entry.Key)
 
 	// Make the parent tree
@@ -179,10 +197,12 @@ func (b *FileBackend) PutInternal(entry *Entry) error {
 		filepath.Join(path, key),
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600)
+	if f != nil {
+		defer f.Close()
+	}
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	enc := json.NewEncoder(f)
 	return enc.Encode(entry)
 }
@@ -198,6 +218,10 @@ func (b *FileBackend) List(prefix string) ([]string, error) {
 }
 
 func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
+	if err := b.validatePath(prefix); err != nil {
+		return nil, err
+	}
+
 	path := b.path
 	if prefix != "" {
 		path = filepath.Join(path, prefix)
@@ -205,6 +229,9 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 
 	// Read the directory contents
 	f, err := os.Open(path)
+	if f != nil {
+		defer f.Close()
+	}
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil
@@ -212,7 +239,6 @@ func (b *FileBackend) ListInternal(prefix string) ([]string, error) {
 
 		return nil, err
 	}
-	defer f.Close()
 
 	names, err := f.Readdirnames(-1)
 	if err != nil {
@@ -235,6 +261,15 @@ func (b *FileBackend) expandPath(k string) (string, string) {
 	key := filepath.Base(path)
 	path = filepath.Dir(path)
 	return path, "_" + key
+}
+
+func (b *FileBackend) validatePath(path string) error {
+	switch {
+	case strings.Contains(path, ".."):
+		return consts.ErrPathContainsParentReferences
+	}
+
+	return nil
 }
 
 func (b *TransactionalFileBackend) Transaction(txns []TxnEntry) error {

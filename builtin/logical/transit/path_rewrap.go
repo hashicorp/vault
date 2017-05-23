@@ -113,7 +113,7 @@ func (b *backend) pathRewrapWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	for i, item := range batchInputItems {
