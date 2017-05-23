@@ -122,7 +122,7 @@ func TestSysUnseal(t *testing.T) {
 		}
 		if i == len(keys)-1 {
 			expected["sealed"] = false
-			expected["progress"] = json.Number("0")
+			expected["progress"] = json.Number("3")
 		}
 		testResponseStatus(t, resp, 200)
 		testResponseBody(t, resp, &actual)
