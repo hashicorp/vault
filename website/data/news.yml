@@ -1,0 +1,17 @@
+default_link_text: 'Read more'
+posts:
+  -
+    media_html: '<a href="http://hashi.co/2qdccPe" target="_blank"><img src="/assets/images/news/webinar-register-now.png" alt="Vault Webinar: Register Now"></a>'
+    title: 'Build a Secure Cloud with AWS and HashiCorp Vault'
+    body: 'Register for our upcoming webinar with AWS on June 1st.'
+    link_url: 'http://hashi.co/2qdccPe'
+    link_text: 'Register Now'
+  -
+    title: 'Vault 0.7.1 and 0.7.2 released'
+    body: 'We are pleased to announce the release of Vault 0.7.1 and 0.7.2. These releases include AWS IAM Authentication, TOTP Secret Backend, Database Backend with Secure Plugins (Beta), as well as additional bug fixes within Vault 0.7.2.'
+    link_url: 'https://www.hashicorp.com/blog/vault-0-7-1/'
+  -
+    title: 'Webinar: How HashiCorp Vault Solves The Top 3 Cloud Security Challenges'
+    body: 'Watch our recent webinar to learn about new Vault product releases and see a demo.'
+    link_url: 'https://youtu.be/3q9_gxqkZA8'
+    link_text: 'Watch Now'
