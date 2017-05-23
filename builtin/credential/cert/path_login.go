@@ -156,7 +156,12 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	clientCert := connState.PeerCertificates[0]
 
 	// Allow constraining the login request to a single CertEntry
-	certName := d.Get("name").(string)
+	var string certName
+	if req.Auth != nil { // It's a renewal, use the saved certName
+		certName = req.Auth.Metadata["cert_name"]
+	} else {
+		certName = d.Get("name").(string)
+	}
 
 	// Load the trusted certificates
 	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
