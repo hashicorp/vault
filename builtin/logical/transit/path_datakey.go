@@ -32,7 +32,7 @@ ciphertext; "wrapped" will return the ciphertext only.`,
 
 			"nonce": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Nonce for when convergent encryption is used",
+				Description: "Nonce for when convergent encryption v1 is used (only in Vault 0.6.1)",
 			},
 
 			"bits": &framework.FieldSchema{
