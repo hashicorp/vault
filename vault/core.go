@@ -664,16 +664,6 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 		}
 	}
 
-	// Check the standard non-root ACLs. Return the token entry if it's not
-	// allowed so we can decrement the use count.
-	allowed, rootPrivs := acl.AllowOperation(req)
-	if !allowed {
-		return nil, te, logical.ErrPermissionDenied
-	}
-	if rootPath && !rootPrivs {
-		return nil, te, logical.ErrPermissionDenied
-	}
-
 	// Create the auth response
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
@@ -681,6 +671,17 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
 	}
+
+	// Check the standard non-root ACLs. Return the token entry if it's not
+	// allowed so we can decrement the use count.
+	allowed, rootPrivs := acl.AllowOperation(req)
+	if !allowed {
+		return auth, te, logical.ErrPermissionDenied
+	}
+	if rootPath && !rootPrivs {
+		return auth, te, logical.ErrPermissionDenied
+	}
+
 	return auth, te, nil
 }
 

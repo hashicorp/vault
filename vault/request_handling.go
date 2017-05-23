@@ -171,7 +171,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		if errType != nil {
 			retErr = multierror.Append(retErr, errType)
 		}
-		return logical.ErrorResponse(ctErr.Error()), nil, retErr
+		return logical.ErrorResponse(ctErr.Error()), auth, retErr
 	}
 
 	// Attach the display name
