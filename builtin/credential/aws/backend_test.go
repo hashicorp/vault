@@ -1346,7 +1346,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Received error retrieving identity: %s", err)
 	}
-	testIdentityArn, _, _, err := parseIamArn(*testIdentity.Arn)
+	entity, err := parseIamArn(*testIdentity.Arn)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1385,7 +1385,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 	// configuring the valid role we'll be able to login to
 	roleData := map[string]interface{}{
-		"bound_iam_principal_arn": testIdentityArn,
+		"bound_iam_principal_arn": entity.canonicalArn(),
 		"policies":                "root",
 		"auth_type":               iamAuthType,
 	}
@@ -1417,8 +1417,17 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
 	}
 
+	fakeArn := "arn:aws:iam::123456789012:role/FakeRole"
+	fakeArnResolver := func(s logical.Storage, arn string) (string, error) {
+		if arn == fakeArn {
+			return fmt.Sprintf("FakeUniqueIdFor%s", fakeArn), nil
+		}
+		return b.resolveArnToRealUniqueId(s, arn)
+	}
+	b.resolveArnToUniqueId = fakeArnResolver
+
 	// now we're creating the invalid role we won't be able to login to
-	roleData["bound_iam_principal_arn"] = "arn:aws:iam::123456789012:role/FakeRole"
+	roleData["bound_iam_principal_arn"] = fakeArn
 	roleRequest.Path = "role/" + testInvalidRoleName
 	resp, err = b.HandleRequest(roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
@@ -1491,7 +1500,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Errorf("bad: expected failed login due to bad auth type: resp:%#v\nerr:%v", resp, err)
 	}
 
-	// finally, the happy path tests :)
+	// finally, the happy path test :)
 
 	loginData["role"] = testValidRoleName
 	resp, err = b.HandleRequest(loginRequest)
@@ -1500,5 +1509,21 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	if resp == nil || resp.Auth == nil || resp.IsError() {
 		t.Errorf("bad: expected valid login: resp:%#v", resp)
+	}
+
+	// Now, fake out the unique ID resolver to ensure we fail login if the unique ID
+	// changes from under us
+	b.resolveArnToUniqueId = resolveArnToFakeUniqueId
+	// First, we need to update the role to force Vault to use our fake resolver to
+	// pick up the fake user ID
+	roleData["bound_iam_principal_arn"] = entity.canonicalArn()
+	roleRequest.Path = "role/" + testValidRoleName
+	resp, err = b.HandleRequest(roleRequest)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("bad: failed to recreate role: resp:%#v\nerr:%v", resp, err)
+	}
+	resp, err = b.HandleRequest(loginRequest)
+	if err != nil || resp == nil || !resp.IsError() {
+		t.Errorf("bad: expected failed login due to changed AWS role ID: resp: %#v\nerr:%v", resp, err)
 	}
 }

@@ -129,6 +129,9 @@ func (b *backend) pathConfigClientDelete(
 	// Remove all the cached EC2 client objects in the backend.
 	b.flushCachedIAMClients()
 
+	// unset the cached default AWS account ID
+	b.defaultAWSAccountID = ""
+
 	return nil, nil
 }
 
@@ -234,6 +237,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 	if changedCreds {
 		b.flushCachedEC2Clients()
 		b.flushCachedIAMClients()
+		b.defaultAWSAccountID = ""
 	}
 
 	return nil, nil

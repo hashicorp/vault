@@ -1426,6 +1426,33 @@ The response will be in JSON. For example:
       </li>
     </ul>
     <ul>
+    <li>
+        <span class="param">resolve_aws_unique_ids</span>
+        <span class="param-flags">optional</span>
+        When set, resolves the `bound_iam_principal_arn` to the [AWS Unique
+        ID](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids).
+        This requires Vault to be able to call `iam:GetUser` or `iam:GetRole` on
+        the `bound_iam_principal_arn` that is being bound. Resolving to internal
+        AWS IDs more closely mimics the behavior of AWS services in that if an
+        IAM user or role is deleted and a new one is recreated with the same
+        name, those new users or roles won't get access to roles in Vault that
+        were permissioned to the prior principals of the same name. The default
+        value for new roles is true, while the default value for roles that
+        existed prior to this option existing is false. Any authentication
+        tokens created prior to this being supported won't verify the unique ID
+        upon token renewal. When this is changed from false to true on an
+        existing role, Vault will attempt to resolve the role's bound IAM ARN to
+        the unique ID and, if unable to do so, will fail to enable this option.
+        If this option is set to false, then you MUST leave out the path
+        component in bound_iam_principal_arn for **roles** only, but not IAM
+        users. That is, if your IAM role ARN is of the form
+        `arn:aws:iam::123456789012:role/some/path/to/MyRoleName`, you **must**
+        specify a bound_iam_principal_arn of
+        `arn:aws:iam::123456789012:role/MyRoleName` for authentication to work.
+      </li>
+    </ul>
+
+    <ul>
       <li>
         <span class="param">ttl</span>
         <span class="param-flags">optional</span>
