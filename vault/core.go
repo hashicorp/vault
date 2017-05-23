@@ -663,10 +663,10 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 			panic("unreachable code")
 		}
 	}
-
 	// Create the auth response
 	auth := &logical.Auth{
 		ClientToken: req.ClientToken,
+		Accessor:    req.ClientTokenAccessor,
 		Policies:    te.Policies,
 		Metadata:    te.Meta,
 		DisplayName: te.DisplayName,
@@ -676,9 +676,11 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 	// allowed so we can decrement the use count.
 	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
+		// Return auth for audit logging even if not allowed
 		return auth, te, logical.ErrPermissionDenied
 	}
 	if rootPath && !rootPrivs {
+		// Return auth for audit logging even if not allowed
 		return auth, te, logical.ErrPermissionDenied
 	}
 
