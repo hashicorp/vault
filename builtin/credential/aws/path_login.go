@@ -465,11 +465,10 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 
 		// Extract out the instance profile name from the instance
 		// profile ARN
-		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, ":instance-profile/")
-		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
+		iamInstanceProfileEntity, err := parseIamArn(iamInstanceProfileARN)
 
-		if iamInstanceProfileName == "" {
-			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN; error: %v", err)
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
@@ -479,7 +478,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 		} else if iamClient == nil {
 			return nil, fmt.Errorf("received a nil iamClient")
 		}
-		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileName)
+		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileEntity.FriendlyName)
 		if err != nil {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
 		}
@@ -1293,6 +1292,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 		entity.SessionInfo = parts[2]
 	case "user":
 	case "role":
+	case "instance-profile":
 	default:
 		return &iamEntity{}, fmt.Errorf("unrecognized principal type: %q", entity.Type)
 	}
@@ -1475,11 +1475,11 @@ func (e *iamEntity) canonicalArn() string {
 	if entityType == "assumed-role" {
 		entityType = "role"
 	}
-  // Annoyingly, the assumed-role entity type doesn't have the Path of the role which was assumed
-  // So, we "canonicalize" it by just completely dropping the path. The other option would be to
-  // make an AWS API call to look up the role by FriendlyName, which introduces more complexity to
-  // code and test, and it also breaks backwards compatibility in an area where we would really want
-  // it
+	// Annoyingly, the assumed-role entity type doesn't have the Path of the role which was assumed
+	// So, we "canonicalize" it by just completely dropping the path. The other option would be to
+	// make an AWS API call to look up the role by FriendlyName, which introduces more complexity to
+	// code and test, and it also breaks backwards compatibility in an area where we would really want
+	// it
 	return fmt.Sprintf("arn:%s:iam::%s:%s/%s", e.Partition, e.AccountNumber, entityType, e.FriendlyName)
 }
 
