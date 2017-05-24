@@ -88,7 +88,7 @@ func (a *AuditedHeadersConfig) remove(header string) error {
 
 // ApplyConfig returns a map of approved headers and their values, either
 // hmac'ed or plaintext
-func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc func(string) string) (result map[string][]string) {
+func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc func(string) (string, error)) (result map[string][]string, retErr error) {
 	// Grab a read lock
 	a.RLock()
 	defer a.RUnlock()
@@ -110,7 +110,11 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc
 			// Optionally hmac the values
 			if settings.HMAC {
 				for i, el := range hVals {
-					hVals[i] = hashFunc(el)
+					hVal, err := hashFunc(el)
+					if err != nil {
+						return nil, err
+					}
+					hVals[i] = hVal
 				}
 			}
 
@@ -118,7 +122,7 @@ func (a *AuditedHeadersConfig) ApplyConfig(headers map[string][]string, hashFunc
 		}
 	}
 
-	return
+	return result, nil
 }
 
 // Initalize the headers config by loading from the barrier view

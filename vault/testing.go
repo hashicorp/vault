@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -111,14 +112,11 @@ func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.L
 				Key:   "salt",
 				Value: []byte("foo"),
 			})
-			var err error
-			config.Salt, err = salt.NewSalt(view, &salt.Config{
+			config.SaltConfig = &salt.Config{
 				HMAC:     sha256.New,
 				HMACType: "hmac-sha256",
-			})
-			if err != nil {
-				t.Fatalf("error getting new salt: %v", err)
 			}
+			config.SaltView = view
 			return &noopAudit{
 				Config: config,
 			}, nil
@@ -442,11 +440,17 @@ func AddTestLogicalBackend(name string, factory logical.Factory) error {
 }
 
 type noopAudit struct {
-	Config *audit.BackendConfig
+	Config    *audit.BackendConfig
+	salt      *salt.Salt
+	saltMutex sync.RWMutex
 }
 
-func (n *noopAudit) GetHash(data string) string {
-	return n.Config.Salt.GetIdentifiedHMAC(data)
+func (n *noopAudit) GetHash(data string) (string, error) {
+	salt, err := n.Salt()
+	if err != nil {
+		return "", err
+	}
+	return salt.GetIdentifiedHMAC(data), nil
 }
 
 func (n *noopAudit) LogRequest(a *logical.Auth, r *logical.Request, e error) error {
@@ -459,6 +463,32 @@ func (n *noopAudit) LogResponse(a *logical.Auth, r *logical.Request, re *logical
 
 func (n *noopAudit) Reload() error {
 	return nil
+}
+
+func (n *noopAudit) Invalidate() {
+	n.saltMutex.Lock()
+	defer n.saltMutex.Unlock()
+	n.salt = nil
+}
+
+func (n *noopAudit) Salt() (*salt.Salt, error) {
+	n.saltMutex.RLock()
+	if n.salt != nil {
+		defer n.saltMutex.RUnlock()
+		return n.salt, nil
+	}
+	n.saltMutex.RUnlock()
+	n.saltMutex.Lock()
+	defer n.saltMutex.Unlock()
+	if n.salt != nil {
+		return n.salt, nil
+	}
+	salt, err := salt.NewSalt(n.Config.SaltView, n.Config.SaltConfig)
+	if err != nil {
+		return nil, err
+	}
+	n.salt = salt
+	return salt, nil
 }
 
 type rawHTTP struct{}

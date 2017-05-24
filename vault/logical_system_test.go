@@ -1254,13 +1254,11 @@ func TestSystemBackend_auditHash(t *testing.T) {
 			Key:   "salt",
 			Value: []byte("foo"),
 		})
-		var err error
-		config.Salt, err = salt.NewSalt(view, &salt.Config{
+		config.SaltView = view
+		config.SaltConfig = &salt.Config{
 			HMAC:     sha256.New,
 			HMACType: "hmac-sha256",
-		})
-		if err != nil {
-			t.Fatalf("error getting new salt: %v", err)
+			Location: salt.DefaultLocation,
 		}
 		return &NoopAudit{
 			Config: config,
