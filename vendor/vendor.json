@@ -55,10 +55,10 @@
 			"revisionTime": "2017-05-23T20:16:04Z"
 		},
 		{
-			"checksumSHA1": "upfBL0B4wGsgM+xg1QhZvFgO7PU=",
+			"checksumSHA1": "24EW3PGLGVSy/5joAOZdHzN/S2E=",
 			"path": "github.com/Azure/azure-storage-go",
-			"revision": "32cfbe17a139c17f84be16bdf8f9c45c840a046b",
-			"revisionTime": "2017-05-08T19:00:56Z"
+			"revision": "12ccaadb081cdd217702067d28da9a7ff4305239",
+			"revisionTime": "2017-03-02T22:15:08Z"
 		},
 		{
 			"checksumSHA1": "23FJUX+AInYeEM2hoUMvYZtXZd4=",

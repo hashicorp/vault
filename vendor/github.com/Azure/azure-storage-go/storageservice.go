@@ -1,9 +1,9 @@
 package storage
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 )
 
 // ServiceProperties represents the storage account service properties
@@ -106,12 +106,13 @@ func (c Client) setServiceProperties(props ServiceProperties, service string, au
 	}
 
 	headers := c.getStandardHeaders()
-	headers["Content-Length"] = strconv.Itoa(length)
+	headers["Content-Length"] = fmt.Sprintf("%v", length)
 
 	resp, err := c.exec(http.MethodPut, uri, headers, body, auth)
 	if err != nil {
 		return err
 	}
-	readAndCloseBody(resp.body)
+	defer readAndCloseBody(resp.body)
+
 	return checkRespCode(resp.statusCode, []int{http.StatusAccepted})
 }

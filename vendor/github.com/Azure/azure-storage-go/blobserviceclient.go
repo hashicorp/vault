@@ -1,9 +1,9 @@
 package storage
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 )
 
 // BlobStorageClient contains operations for Microsoft Azure Blob Storage
@@ -61,9 +61,6 @@ func (b BlobStorageClient) ListContainers(params ListContainersParameters) (*Con
 	}
 	defer resp.body.Close()
 	err = xmlUnmarshal(resp.body, &out)
-	if err != nil {
-		return nil, err
-	}
 
 	// assign our client to the newly created Container objects
 	for i := range out.Containers {
@@ -85,10 +82,10 @@ func (p ListContainersParameters) getParameters() url.Values {
 		out.Set("include", p.Include)
 	}
 	if p.MaxResults != 0 {
-		out.Set("maxresults", strconv.FormatUint(uint64(p.MaxResults), 10))
+		out.Set("maxresults", fmt.Sprintf("%v", p.MaxResults))
 	}
 	if p.Timeout != 0 {
-		out.Set("timeout", strconv.FormatUint(uint64(p.Timeout), 10))
+		out.Set("timeout", fmt.Sprintf("%v", p.Timeout))
 	}
 
 	return out

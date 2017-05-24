@@ -32,7 +32,7 @@ type FileProperties struct {
 	Etag         string
 	Language     string `header:"x-ms-content-language"`
 	LastModified string
-	Length       uint64 `xml:"Content-Length" header:"x-ms-content-length"`
+	Length       uint64 `xml:"Content-Length"`
 	MD5          string `header:"x-ms-content-md5"`
 	Type         string `header:"x-ms-content-type"`
 }
@@ -54,22 +54,26 @@ type FileStream struct {
 }
 
 // FileRequestOptions will be passed to misc file operations.
-// Currently just Timeout (in seconds) but could expand.
+// Currently just Timeout (in seconds) but will expand.
 type FileRequestOptions struct {
 	Timeout uint // timeout duration in seconds.
 }
 
-func prepareOptions(options *FileRequestOptions) url.Values {
-	params := url.Values{}
-	if options != nil {
-		params = addTimeout(params, options.Timeout)
+// getParameters, construct parameters for FileRequestOptions.
+// currently only timeout, but expecting to grow as functionality fills out.
+func (p FileRequestOptions) getParameters() url.Values {
+	out := url.Values{}
+
+	if p.Timeout != 0 {
+		out.Set("timeout", fmt.Sprintf("%v", p.Timeout))
 	}
-	return params
+
+	return out
 }
 
 // FileRanges contains a list of file range information for a file.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/List-Ranges
+// See https://msdn.microsoft.com/en-us/library/azure/dn166984.aspx
 type FileRanges struct {
 	ContentLength uint64
 	LastModified  string
@@ -79,7 +83,7 @@ type FileRanges struct {
 
 // FileRange contains range information for a file.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/List-Ranges
+// See https://msdn.microsoft.com/en-us/library/azure/dn166984.aspx
 type FileRange struct {
 	Start uint64 `xml:"Start"`
 	End   uint64 `xml:"End"`
@@ -96,13 +100,9 @@ func (f *File) buildPath() string {
 
 // ClearRange releases the specified range of space in a file.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Put-Range
-func (f *File) ClearRange(fileRange FileRange, options *FileRequestOptions) error {
-	var timeout *uint
-	if options != nil {
-		timeout = &options.Timeout
-	}
-	headers, err := f.modifyRange(nil, fileRange, timeout, nil)
+// See https://msdn.microsoft.com/en-us/library/azure/dn194276.aspx
+func (f *File) ClearRange(fileRange FileRange) error {
+	headers, err := f.modifyRange(nil, fileRange, nil)
 	if err != nil {
 		return err
 	}
@@ -113,23 +113,24 @@ func (f *File) ClearRange(fileRange FileRange, options *FileRequestOptions) erro
 
 // Create creates a new file or replaces an existing one.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Create-File
-func (f *File) Create(maxSize uint64, options *FileRequestOptions) error {
+// See https://msdn.microsoft.com/en-us/library/azure/dn194271.aspx
+func (f *File) Create(maxSize uint64) error {
 	if maxSize > oneTB {
 		return fmt.Errorf("max file size is 1TB")
 	}
-	params := prepareOptions(options)
-	headers := headersFromStruct(f.Properties)
-	headers["x-ms-content-length"] = strconv.FormatUint(maxSize, 10)
-	headers["x-ms-type"] = "file"
 
-	outputHeaders, err := f.fsc.createResource(f.buildPath(), resourceFile, params, mergeMDIntoExtraHeaders(f.Metadata, headers), []int{http.StatusCreated})
+	extraHeaders := map[string]string{
+		"x-ms-content-length": strconv.FormatUint(maxSize, 10),
+		"x-ms-type":           "file",
+	}
+
+	headers, err := f.fsc.createResource(f.buildPath(), resourceFile, nil, mergeMDIntoExtraHeaders(f.Metadata, extraHeaders), []int{http.StatusCreated})
 	if err != nil {
 		return err
 	}
 
 	f.Properties.Length = maxSize
-	f.updateEtagAndLastModified(outputHeaders)
+	f.updateEtagAndLastModified(headers)
 	return nil
 }
 
@@ -141,9 +142,13 @@ func (f *File) CopyFile(sourceURL string, options *FileRequestOptions) error {
 		"x-ms-type":        "file",
 		"x-ms-copy-source": sourceURL,
 	}
-	params := prepareOptions(options)
 
-	headers, err := f.fsc.createResource(f.buildPath(), resourceFile, params, mergeMDIntoExtraHeaders(f.Metadata, extraHeaders), []int{http.StatusAccepted})
+	var parameters url.Values
+	if options != nil {
+		parameters = options.getParameters()
+	}
+
+	headers, err := f.fsc.createResource(f.buildPath(), resourceFile, parameters, mergeMDIntoExtraHeaders(f.Metadata, extraHeaders), []int{http.StatusAccepted})
 	if err != nil {
 		return err
 	}
@@ -154,16 +159,16 @@ func (f *File) CopyFile(sourceURL string, options *FileRequestOptions) error {
 
 // Delete immediately removes this file from the storage account.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Delete-File2
-func (f *File) Delete(options *FileRequestOptions) error {
-	return f.fsc.deleteResource(f.buildPath(), resourceFile, options)
+// See https://msdn.microsoft.com/en-us/library/azure/dn689085.aspx
+func (f *File) Delete() error {
+	return f.fsc.deleteResource(f.buildPath(), resourceFile)
 }
 
 // DeleteIfExists removes this file if it exists.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Delete-File2
-func (f *File) DeleteIfExists(options *FileRequestOptions) (bool, error) {
-	resp, err := f.fsc.deleteResourceNoClose(f.buildPath(), resourceFile, options)
+// See https://msdn.microsoft.com/en-us/library/azure/dn689085.aspx
+func (f *File) DeleteIfExists() (bool, error) {
+	resp, err := f.fsc.deleteResourceNoClose(f.buildPath(), resourceFile)
 	if resp != nil {
 		defer readAndCloseBody(resp.body)
 		if resp.statusCode == http.StatusAccepted || resp.statusCode == http.StatusNotFound {
@@ -173,59 +178,33 @@ func (f *File) DeleteIfExists(options *FileRequestOptions) (bool, error) {
 	return false, err
 }
 
-// GetFileOptions includes options for a get file operation
-type GetFileOptions struct {
-	Timeout       uint
-	GetContentMD5 bool
-}
-
-// DownloadToStream operation downloads the file.
-//
-// See: https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-file
-func (f *File) DownloadToStream(options *FileRequestOptions) (io.ReadCloser, error) {
-	params := prepareOptions(options)
-	resp, err := f.fsc.getResourceNoClose(f.buildPath(), compNone, resourceFile, params, http.MethodGet, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = checkRespCode(resp.statusCode, []int{http.StatusOK}); err != nil {
-		readAndCloseBody(resp.body)
-		return nil, err
-	}
-	return resp.body, nil
-}
-
 // DownloadRangeToStream operation downloads the specified range of this file with optional MD5 hash.
 //
 // See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-file
-func (f *File) DownloadRangeToStream(fileRange FileRange, options *GetFileOptions) (fs FileStream, err error) {
+func (f *File) DownloadRangeToStream(fileRange FileRange, getContentMD5 bool) (fs FileStream, err error) {
+	if getContentMD5 && isRangeTooBig(fileRange) {
+		return fs, fmt.Errorf("must specify a range less than or equal to 4MB when getContentMD5 is true")
+	}
+
 	extraHeaders := map[string]string{
 		"Range": fileRange.String(),
 	}
-	params := url.Values{}
-	if options != nil {
-		if options.GetContentMD5 {
-			if isRangeTooBig(fileRange) {
-				return fs, fmt.Errorf("must specify a range less than or equal to 4MB when getContentMD5 is true")
-			}
-			extraHeaders["x-ms-range-get-content-md5"] = "true"
-		}
-		params = addTimeout(params, options.Timeout)
+	if getContentMD5 == true {
+		extraHeaders["x-ms-range-get-content-md5"] = "true"
 	}
 
-	resp, err := f.fsc.getResourceNoClose(f.buildPath(), compNone, resourceFile, params, http.MethodGet, extraHeaders)
+	resp, err := f.fsc.getResourceNoClose(f.buildPath(), compNone, resourceFile, http.MethodGet, extraHeaders)
 	if err != nil {
 		return fs, err
 	}
 
 	if err = checkRespCode(resp.statusCode, []int{http.StatusOK, http.StatusPartialContent}); err != nil {
-		readAndCloseBody(resp.body)
+		resp.body.Close()
 		return fs, err
 	}
 
 	fs.Body = resp.body
-	if options != nil && options.GetContentMD5 {
+	if getContentMD5 {
 		fs.ContentMD5 = resp.headers.Get("Content-MD5")
 	}
 	return fs, nil
@@ -242,10 +221,8 @@ func (f *File) Exists() (bool, error) {
 }
 
 // FetchAttributes updates metadata and properties for this file.
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/get-file-properties
-func (f *File) FetchAttributes(options *FileRequestOptions) error {
-	params := prepareOptions(options)
-	headers, err := f.fsc.getResourceHeaders(f.buildPath(), compNone, resourceFile, params, http.MethodHead)
+func (f *File) FetchAttributes() error {
+	headers, err := f.fsc.getResourceHeaders(f.buildPath(), compNone, resourceFile, http.MethodHead)
 	if err != nil {
 		return err
 	}
@@ -265,26 +242,17 @@ func isRangeTooBig(fileRange FileRange) bool {
 	return false
 }
 
-// ListRangesOptions includes options for a list file ranges operation
-type ListRangesOptions struct {
-	Timeout   uint
-	ListRange *FileRange
-}
-
 // ListRanges returns the list of valid ranges for this file.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/List-Ranges
-func (f *File) ListRanges(options *ListRangesOptions) (*FileRanges, error) {
+// See https://msdn.microsoft.com/en-us/library/azure/dn166984.aspx
+func (f *File) ListRanges(listRange *FileRange) (*FileRanges, error) {
 	params := url.Values{"comp": {"rangelist"}}
 
 	// add optional range to list
 	var headers map[string]string
-	if options != nil {
-		params = addTimeout(params, options.Timeout)
-		if options.ListRange != nil {
-			headers = make(map[string]string)
-			headers["Range"] = options.ListRange.String()
-		}
+	if listRange != nil {
+		headers = make(map[string]string)
+		headers["Range"] = listRange.String()
 	}
 
 	resp, err := f.fsc.listContent(f.buildPath(), params, headers)
@@ -310,7 +278,7 @@ func (f *File) ListRanges(options *ListRangesOptions) (*FileRanges, error) {
 }
 
 // modifies a range of bytes in this file
-func (f *File) modifyRange(bytes io.Reader, fileRange FileRange, timeout *uint, contentMD5 *string) (http.Header, error) {
+func (f *File) modifyRange(bytes io.Reader, fileRange FileRange, contentMD5 *string) (http.Header, error) {
 	if err := f.fsc.checkForStorageEmulator(); err != nil {
 		return nil, err
 	}
@@ -321,12 +289,7 @@ func (f *File) modifyRange(bytes io.Reader, fileRange FileRange, timeout *uint, 
 		return nil, errors.New("range cannot exceed 4MB in size")
 	}
 
-	params := url.Values{"comp": {"range"}}
-	if timeout != nil {
-		params = addTimeout(params, *timeout)
-	}
-
-	uri := f.fsc.client.getEndpoint(fileServiceName, f.buildPath(), params)
+	uri := f.fsc.client.getEndpoint(fileServiceName, f.buildPath(), url.Values{"comp": {"range"}})
 
 	// default to clear
 	write := "clear"
@@ -364,9 +327,9 @@ func (f *File) modifyRange(bytes io.Reader, fileRange FileRange, timeout *uint, 
 // are case-insensitive so case munging should not matter to other
 // applications either.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Set-File-Metadata
-func (f *File) SetMetadata(options *FileRequestOptions) error {
-	headers, err := f.fsc.setResourceHeaders(f.buildPath(), compMetadata, resourceFile, mergeMDIntoExtraHeaders(f.Metadata, nil), options)
+// See https://msdn.microsoft.com/en-us/library/azure/dn689097.aspx
+func (f *File) SetMetadata() error {
+	headers, err := f.fsc.setResourceHeaders(f.buildPath(), compMetadata, resourceFile, mergeMDIntoExtraHeaders(f.Metadata, nil))
 	if err != nil {
 		return err
 	}
@@ -382,9 +345,9 @@ func (f *File) SetMetadata(options *FileRequestOptions) error {
 // are case-insensitive so case munging should not matter to other
 // applications either.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Set-File-Properties
-func (f *File) SetProperties(options *FileRequestOptions) error {
-	headers, err := f.fsc.setResourceHeaders(f.buildPath(), compProperties, resourceFile, headersFromStruct(f.Properties), options)
+// See https://msdn.microsoft.com/en-us/library/azure/dn166975.aspx
+func (f *File) SetProperties() error {
+	headers, err := f.fsc.setResourceHeaders(f.buildPath(), compProperties, resourceFile, headersFromStruct(f.Properties))
 	if err != nil {
 		return err
 	}
@@ -427,32 +390,19 @@ func (f *File) updateProperties(header http.Header) {
 // This method does not create a publicly accessible URL if the file
 // is private and this method does not check if the file exists.
 func (f *File) URL() string {
-	return f.fsc.client.getEndpoint(fileServiceName, f.buildPath(), nil)
+	return f.fsc.client.getEndpoint(fileServiceName, f.buildPath(), url.Values{})
 }
 
-// WriteRangeOptions includes opptions for a write file range operation
-type WriteRangeOptions struct {
-	Timeout    uint
-	ContentMD5 string
-}
-
-// WriteRange writes a range of bytes to this file with an optional MD5 hash of the content (inside
-// options parameter). Note that the length of bytes must match (rangeEnd - rangeStart) + 1 with
-// a maximum size of 4MB.
+// WriteRange writes a range of bytes to this file with an optional MD5 hash of the content.
+// Note that the length of bytes must match (rangeEnd - rangeStart) + 1 with a maximum size of 4MB.
 //
-// See https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/Put-Range
-func (f *File) WriteRange(bytes io.Reader, fileRange FileRange, options *WriteRangeOptions) error {
+// See https://msdn.microsoft.com/en-us/library/azure/dn194276.aspx
+func (f *File) WriteRange(bytes io.Reader, fileRange FileRange, contentMD5 *string) error {
 	if bytes == nil {
 		return errors.New("bytes cannot be nil")
 	}
-	var timeout *uint
-	var md5 *string
-	if options != nil {
-		timeout = &options.Timeout
-		md5 = &options.ContentMD5
-	}
 
-	headers, err := f.modifyRange(bytes, fileRange, timeout, md5)
+	headers, err := f.modifyRange(bytes, fileRange, contentMD5)
 	if err != nil {
 		return err
 	}

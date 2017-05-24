@@ -1,8 +1,4 @@
-package: github.com/Azure/azure-storage-go
-import:
-- package: github.com/Azure/go-autorest
-  subpackages:
-  - autorest/azure
-- package: github.com/satori/uuid
+package: github.com/Azure/azure-sdk-for-go-storage
+import: []
 testImport:
 - package: gopkg.in/check.v1
