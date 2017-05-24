@@ -1579,10 +1579,10 @@
 			"revisionTime": "2017-04-04T13:20:09Z"
 		},
 		{
-			"checksumSHA1": "0hmkKgzN2Efaa/45M+eK+RMAh20=",
+			"checksumSHA1": "/rSFejOYzXTDxhpcW/vN7EFU2Qs=",
 			"path": "google.golang.org/grpc",
-			"revision": "8a6eb0f6e96a246c7c655b0207b62255042f6fbd",
-			"revisionTime": "2017-04-13T20:41:35Z"
+			"revision": "6dff7c5f333b5331089ccc6451fc842664f3be6a",
+			"revisionTime": "2017-05-23T18:39:15Z"
 		},
 		{
 			"checksumSHA1": "08icuA15HRkdYCt6H+Cs90RPQsY=",

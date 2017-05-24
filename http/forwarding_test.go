@@ -8,7 +8,6 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -143,22 +142,13 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 // This function recreates the fuzzy testing from transit to pipe a large
 // number of requests from the standbys to the active node.
 func TestHTTP_Forwarding_Stress(t *testing.T) {
-	testHTTP_Forwarding_Stress_Common(t, false, false, 50)
-	testHTTP_Forwarding_Stress_Common(t, false, true, 50)
-	testHTTP_Forwarding_Stress_Common(t, true, false, 50)
-	testHTTP_Forwarding_Stress_Common(t, true, true, 50)
-	os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
+	testHTTP_Forwarding_Stress_Common(t, false, 50)
+	testHTTP_Forwarding_Stress_Common(t, true, 50)
 }
 
-func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uint64) {
+func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) {
 	testPlaintext := "the quick brown fox"
 	testPlaintextB64 := "dGhlIHF1aWNrIGJyb3duIGZveA=="
-
-	if rpc {
-		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "1")
-	} else {
-		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
-	}
 
 	handler1 := http.NewServeMux()
 	handler2 := http.NewServeMux()
@@ -465,9 +455,9 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, rpc, parallel bool, num uin
 	wg.Wait()
 
 	if totalOps == 0 || totalOps != successfulOps {
-		t.Fatalf("total/successful ops zero or mismatch: %d/%d; rpc: %t, parallel: %t, num %d", totalOps, successfulOps, rpc, parallel, num)
+		t.Fatalf("total/successful ops zero or mismatch: %d/%d; parallel: %t, num %d", totalOps, successfulOps, parallel, num)
 	}
-	t.Logf("total operations tried: %d, total successful: %d; rpc: %t, parallel: %t, num %d", totalOps, successfulOps, rpc, parallel, num)
+	t.Logf("total operations tried: %d, total successful: %d; parallel: %t, num %d", totalOps, successfulOps, parallel, num)
 }
 
 // This tests TLS connection state forwarding by ensuring that we can use a

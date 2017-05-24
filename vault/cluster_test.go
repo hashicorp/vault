@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -176,18 +175,10 @@ func TestCluster_ForwardRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	testCluster_ForwardRequestsCommon(t, false)
-	testCluster_ForwardRequestsCommon(t, true)
-	os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
+	testCluster_ForwardRequestsCommon(t)
 }
 
-func testCluster_ForwardRequestsCommon(t *testing.T, rpc bool) {
-	if rpc {
-		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "1")
-	} else {
-		os.Setenv("VAULT_USE_GRPC_REQUEST_FORWARDING", "")
-	}
-
+func testCluster_ForwardRequestsCommon(t *testing.T) {
 	handler1 := http.NewServeMux()
 	handler1.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")

@@ -19,8 +19,6 @@ import (
 
 	log "github.com/mgutz/logxi/v1"
 
-	"golang.org/x/net/http2"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/forwarding"
@@ -48,11 +46,6 @@ type clusterKeyParams struct {
 	X    *big.Int `json:"x" structs:"x" mapstructure:"x"`
 	Y    *big.Int `json:"y" structs:"y" mapstructure:"y"`
 	D    *big.Int `json:"d" structs:"d" mapstructure:"d"`
-}
-
-type activeConnection struct {
-	transport   *http2.Transport
-	clusterAddr string
 }
 
 // Structure representing the storage entry that holds cluster information

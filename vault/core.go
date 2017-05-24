@@ -304,8 +304,6 @@ type Core struct {
 	// Shutdown success channel. We need this to be done serially to ensure
 	// that binds are removed before they might be reinstated.
 	clusterListenerShutdownSuccessCh chan struct{}
-	// Connection info containing a client and a current active address
-	requestForwardingConnection *activeConnection
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
