@@ -51,6 +51,9 @@ const (
 	// HA lock if an error is encountered
 	lockRetryInterval = 10 * time.Second
 
+	// leaderCheckInterval is how often a standby checks for a new leader
+	leaderCheckInterval = 2500 * time.Millisecond
+
 	// keyRotateCheckInterval is how often a standby checks for a key
 	// rotation taking place.
 	keyRotateCheckInterval = 30 * time.Second
@@ -316,12 +319,14 @@ type Core struct {
 	clusterLeaderParamsLock sync.RWMutex
 	// The grpc Server that handles server RPC calls
 	rpcServer *grpc.Server
+	// The context for the client
+	rpcClientConnContext context.Context
 	// The function for canceling the client connection
 	rpcClientConnCancelFunc context.CancelFunc
 	// The grpc ClientConn for RPC calls
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
-	rpcForwardingClient RequestForwardingClient
+	rpcForwardingClient *forwardingClient
 
 	// replicationState keeps the current replication state cached for quick
 	// lookup
@@ -1390,9 +1395,15 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	keyRotateDone := make(chan struct{})
 	keyRotateStop := make(chan struct{})
 	go c.periodicCheckKeyUpgrade(keyRotateDone, keyRotateStop)
+	// Monitor for new leadership
+	checkLeaderDone := make(chan struct{})
+	checkLeaderStop := make(chan struct{})
+	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
 	defer func() {
 		close(keyRotateStop)
 		<-keyRotateDone
+		close(checkLeaderStop)
+		<-checkLeaderDone
 	}()
 
 	for {
@@ -1537,6 +1548,22 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// again. Give the other nodes a chance.
 		if manualStepDown {
 			time.Sleep(manualStepDownSleepPeriod)
+		}
+	}
+}
+
+// This checks the leader periodically to ensure that we switch RPC to a new
+// leader pretty quickly. There is logic in Leader() already to not make this
+// onerous and avoid more traffic than needed, so we just call that and ignore
+// the result.
+func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
+	defer close(doneCh)
+	for {
+		select {
+		case <-time.After(leaderCheckInterval):
+			c.Leader()
+		case <-stopCh:
+			return
 		}
 	}
 }

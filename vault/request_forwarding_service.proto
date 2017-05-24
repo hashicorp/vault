@@ -4,6 +4,17 @@ import "github.com/hashicorp/vault/helper/forwarding/types.proto";
 
 package vault;
 
+message EchoRequest {
+	string message = 1;
+	string cluster_addr = 2;
+}
+
+message EchoReply {
+	string message = 1;
+	repeated string cluster_addrs = 2;
+}
+
 service RequestForwarding {
 	rpc ForwardRequest(forwarding.Request) returns (forwarding.Response) {}
+	rpc Echo(EchoRequest) returns (EchoReply) {}
 }

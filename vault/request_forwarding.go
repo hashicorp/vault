@@ -19,6 +19,7 @@ import (
 
 const (
 	clusterListenerAcceptDeadline = 500 * time.Millisecond
+	heartbeatInterval             = 30 * time.Second
 )
 
 // Starts the listeners and servers necessary to handle forwarded requests
@@ -219,13 +220,21 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	// ALPN header right. It's just "insecure" because GRPC isn't managing
 	// the TLS state.
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	c.rpcClientConnCancelFunc = cancelFunc
 	c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)), grpc.WithInsecure())
 	if err != nil {
+		cancelFunc()
 		c.logger.Error("core: err setting up forwarding rpc client", "error", err)
 		return err
 	}
-	c.rpcForwardingClient = NewRequestForwardingClient(c.rpcClientConn)
+	c.rpcClientConnContext = ctx
+	c.rpcClientConnCancelFunc = cancelFunc
+	c.rpcForwardingClient = &forwardingClient{
+		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
+		core:        c,
+		echoTicker:  time.NewTicker(heartbeatInterval),
+		echoContext: ctx,
+	}
+	c.rpcForwardingClient.startTicking()
 
 	return nil
 }
@@ -242,6 +251,8 @@ func (c *Core) clearForwardingClients() {
 		c.rpcClientConn.Close()
 		c.rpcClientConn = nil
 	}
+
+	c.rpcClientConnContext = nil
 	c.rpcForwardingClient = nil
 }
 
@@ -264,7 +275,7 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 		c.logger.Error("core: got nil forwarding RPC request")
 		return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
 	}
-	resp, err := c.rpcForwardingClient.ForwardRequest(context.Background(), freq, grpc.FailFast(true))
+	resp, err := c.rpcForwardingClient.ForwardRequest(c.rpcClientConnContext, freq)
 	if err != nil {
 		c.logger.Error("core: error during forwarded RPC request", "error", err)
 		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
@@ -349,4 +360,55 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	}
 
 	return resp, nil
+}
+
+func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
+	return &EchoReply{
+		Message: "pong",
+	}, nil
+}
+
+type forwardingClient struct {
+	RequestForwardingClient
+
+	core *Core
+
+	echoTicker  *time.Ticker
+	echoContext context.Context
+}
+
+func (c *forwardingClient) startTicking() {
+	go func() {
+		for {
+			select {
+			case <-c.echoContext.Done():
+				c.echoTicker.Stop()
+				return
+			case <-c.echoTicker.C:
+				c.core.stateLock.RLock()
+				clusterAddr := c.core.clusterAddr
+				c.core.stateLock.RUnlock()
+
+				ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
+				resp, err := c.RequestForwardingClient.Echo(ctx, &EchoRequest{
+					Message:     "ping",
+					ClusterAddr: clusterAddr,
+				})
+				cancel()
+				if err != nil {
+					c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
+					continue
+				}
+				if resp == nil {
+					c.core.logger.Debug("forwarding: empty echo response from active node")
+					continue
+				}
+				if resp.Message != "pong" {
+					c.core.logger.Debug("forwarding: unexpected echo response from active node", "message", resp.Message)
+					continue
+				}
+				c.core.logger.Trace("forwarding: successful heartbeat")
+			}
+		}
+	}()
 }
