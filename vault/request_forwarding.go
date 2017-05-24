@@ -34,10 +34,6 @@ func (c *Core) startForwarding() error {
 	// Resolve locally to avoid races
 	ha := c.ha != nil
 
-	// Get our base handler (for our RPC server) and our wrapped handler (for
-	// straight HTTP/2 forwarding)
-	baseHandler, wrappedHandler := c.clusterHandlerSetupFunc()
-
 	// Get our TLS config
 	tlsConfig, err := c.ClusterTLSConfig()
 	if err != nil {
@@ -58,10 +54,10 @@ func (c *Core) startForwarding() error {
 
 	c.rpcServer = grpc.NewServer()
 
-	if ha {
+	if ha && c.clusterHandler != nil {
 		RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
 			core:    c,
-			handler: baseHandler,
+			handler: c.clusterHandler,
 		})
 	}
 	c.clusterParamsLock.Unlock()

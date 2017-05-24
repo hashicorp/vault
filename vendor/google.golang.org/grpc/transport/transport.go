@@ -185,17 +185,14 @@ type Stream struct {
 	recvCompress string
 	sendCompress string
 	buf          *recvBuffer
-	trReader     io.Reader
+	dec          io.Reader
 	fc           *inFlow
 	recvQuota    uint32
-
-	// TODO: Remote this unused variable.
 	// The accumulated inbound quota pending for window update.
 	updateQuota uint32
-
-	// Callback to state application's intentions to read data. This
-	// is used to adjust flow control, if need be.
-	requestRead func(int)
+	// The handler to control the window update procedure for both this
+	// particular stream and the associated transport.
+	windowHandler func(int)
 
 	sendQuotaPool *quotaPool
 	// Close headerChan to indicate the end of reception of header metadata.
@@ -323,35 +320,16 @@ func (s *Stream) write(m recvMsg) {
 	s.buf.put(&m)
 }
 
-// Read reads all p bytes from the wire for this stream.
-func (s *Stream) Read(p []byte) (n int, err error) {
-	// Don't request a read if there was an error earlier
-	if er := s.trReader.(*transportReader).er; er != nil {
-		return 0, er
-	}
-	s.requestRead(len(p))
-	return io.ReadFull(s.trReader, p)
-}
-
-// tranportReader reads all the data available for this Stream from the transport and
+// Read reads all the data available for this Stream from the transport and
 // passes them into the decoder, which converts them into a gRPC message stream.
 // The error is io.EOF when the stream is done or another non-nil error if
 // the stream broke.
-type transportReader struct {
-	reader io.Reader
-	// The handler to control the window update procedure for both this
-	// particular stream and the associated transport.
-	windowHandler func(int)
-	er            error
-}
-
-func (t *transportReader) Read(p []byte) (n int, err error) {
-	n, err = t.reader.Read(p)
+func (s *Stream) Read(p []byte) (n int, err error) {
+	n, err = s.dec.Read(p)
 	if err != nil {
-		t.er = err
 		return
 	}
-	t.windowHandler(n)
+	s.windowHandler(n)
 	return
 }
 

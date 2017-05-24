@@ -155,12 +155,12 @@ func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.L
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
 func TestCoreInit(t testing.TB, core *Core) ([][]byte, string) {
-	return TestCoreInitClusterWrapperSetup(t, core, nil, func() (http.Handler, http.Handler) { return nil, nil })
+	return TestCoreInitClusterWrapperSetup(t, core, nil, nil)
 }
 
-func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, clusterAddrs []*net.TCPAddr, handlerSetupFunc func() (http.Handler, http.Handler)) ([][]byte, string) {
+func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, clusterAddrs []*net.TCPAddr, handler http.Handler) ([][]byte, string) {
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterSetupFuncs(handlerSetupFunc)
+	core.SetClusterHandler(handler)
 	result, err := core.Initialize(&InitParams{
 		BarrierConfig: &SealConfig{
 			SecretShares:    3,
@@ -178,7 +178,6 @@ func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, clusterAddrs []*n
 }
 
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
-	core.SetClusterSetupFuncs(func() (http.Handler, http.Handler) { return nil, nil })
 	return core.Unseal(key)
 }
 
@@ -842,10 +841,10 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	}
 
 	c2.SetClusterListenerAddrs(clusterAddrGen(c2lns))
-	c2.SetClusterSetupFuncs(WrapHandlerForClustering(handlers[1], logger))
+	c2.SetClusterHandler(handlers[1])
 	c3.SetClusterListenerAddrs(clusterAddrGen(c3lns))
-	c3.SetClusterSetupFuncs(WrapHandlerForClustering(handlers[2], logger))
-	keys, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), WrapHandlerForClustering(handlers[0], logger))
+	c3.SetClusterHandler(handlers[2])
+	keys, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), handlers[0])
 	for _, key := range keys {
 		if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)

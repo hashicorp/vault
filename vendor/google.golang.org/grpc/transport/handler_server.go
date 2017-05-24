@@ -316,12 +316,13 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 	req := ht.req
 
 	s := &Stream{
-		id:           0, // irrelevant
-		cancel:       cancel,
-		buf:          newRecvBuffer(),
-		st:           ht,
-		method:       req.URL.Path,
-		recvCompress: req.Header.Get("grpc-encoding"),
+		id:            0,            // irrelevant
+		windowHandler: func(int) {}, // nothing
+		cancel:        cancel,
+		buf:           newRecvBuffer(),
+		st:            ht,
+		method:        req.URL.Path,
+		recvCompress:  req.Header.Get("grpc-encoding"),
 	}
 	pr := &peer.Peer{
 		Addr: ht.RemoteAddr(),
@@ -332,7 +333,7 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 	ctx = metadata.NewIncomingContext(ctx, ht.headerMD)
 	ctx = peer.NewContext(ctx, pr)
 	s.ctx = newContextWithStream(ctx, s)
-	s.trReader = &recvBufferReader{ctx: s.ctx, recv: s.buf}
+	s.dec = &recvBufferReader{ctx: s.ctx, recv: s.buf}
 
 	// readerDone is closed when the Body.Read-ing goroutine exits.
 	readerDone := make(chan struct{})

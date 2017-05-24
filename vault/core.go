@@ -294,8 +294,8 @@ type Core struct {
 	localClusterParsedCert *x509.Certificate
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
-	// The setup function that gives us the handler to use
-	clusterHandlerSetupFunc func() (http.Handler, http.Handler)
+	// The handler to use for request forwarding
+	clusterHandler http.Handler
 	// Tracks whether cluster listeners are running, e.g. it's safe to send a
 	// shutdown down the channel
 	clusterListenersRunning bool
