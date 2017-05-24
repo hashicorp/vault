@@ -3,6 +3,7 @@ package physical
 import (
 	"errors"
 	"fmt"
+	"os"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -168,6 +169,15 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 			logger.Debug("physical/consul: config address set", "address", addr)
 		}
 	}
+
+	addressEnv := os.Getenv("CONSUL_ADDR")
+	if addressEnv != "" {
+		consulConf.Address = addressEnv
+		if logger.IsDebug() {
+			logger.Debug("physical/consul: config address set via ENV", "address", addressEnv)
+		}
+	}
+
 	if scheme, ok := conf["scheme"]; ok {
 		consulConf.Scheme = scheme
 		if logger.IsDebug() {
@@ -177,6 +187,14 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 	if token, ok := conf["token"]; ok {
 		consulConf.Token = token
 		logger.Debug("physical/consul: config token set")
+	}
+
+	tokenEnv := os.Getenv("CONSUL_TOKEN")
+	if tokenEnv != "" {
+		consulConf.Token = tokenEnv
+		if logger.IsDebug() {
+			logger.Debug("physical/consul: config token set via ENV")
+		}
 	}
 
 	if consulConf.Scheme == "https" {
