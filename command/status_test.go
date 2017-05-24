@@ -18,11 +18,19 @@ func TestStatus(t *testing.T) {
 	}
 
 	core := vault.TestCore(t)
-	keys, _ := vault.TestCoreInit(t, core)
+	keys, root := vault.TestCoreInit(t, core)
 	ln, addr := http.TestServer(t, core)
 	defer ln.Close()
 
 	args := []string{"-address", addr}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	if err := core.Seal(root); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
 	if code := c.Run(args); code != 2 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}

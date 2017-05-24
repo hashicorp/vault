@@ -172,6 +172,7 @@ type RekeyInitRequest struct {
 	SecretShares    int      `json:"secret_shares"`
 	SecretThreshold int      `json:"secret_threshold"`
 	PGPKeys         []string `json:"pgp_keys"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool
 }
 
@@ -183,6 +184,7 @@ type RekeyStatusResponse struct {
 	Progress        int
 	Required        int
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool
 }
 
@@ -192,6 +194,7 @@ type RekeyUpdateResponse struct {
 	Keys            []string
 	KeysB64         []string `json:"keys_base64"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool
 }
 

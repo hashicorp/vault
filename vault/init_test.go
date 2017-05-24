@@ -1,7 +1,9 @@
 package vault
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	log "github.com/mgutz/logxi/v1"
@@ -19,6 +21,12 @@ func TestCore_Init(t *testing.T) {
 	bc, rc := TestSealDefConfigs()
 	rc.SecretShares = 4
 	rc.SecretThreshold = 2
+	testCore_Init_Common(t, c, conf, bc, rc)
+
+	c, conf = testCore_NewTestCore(t, newTestSeal(t))
+	bc, rc = TestSealDefConfigs()
+	bc.WrapShares = true
+	rc.WrapShares = true
 	testCore_Init_Common(t, c, conf, bc, rc)
 }
 
@@ -84,10 +92,22 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		if len(res.RecoveryShares) != recoveryConf.SecretShares {
 			t.Fatalf("Bad: got\n%#v\nexpected conf matching\n%#v\n", *res, *recoveryConf)
 		}
+
+		if recoveryConf.WrapShares {
+			testValidateWrappedShare(t, c, string(res.RecoveryShares[0][:]), recoveryConf, "init")
+		}
 	}
 
-	if res.RootToken == "" {
-		t.Fatalf("Bad: %#v", res)
+	if barrierConf.WrapShares {
+		if res.RootToken != "" {
+			t.Fatalf("Bad: %#v", res)
+		}
+
+		testValidateWrappedShare(t, c, string(res.SecretShares[0][:]), barrierConf, "init")
+	} else {
+		if res.RootToken == "" {
+			t.Fatalf("Bad: %#v", res)
+		}
 	}
 
 	_, err = c.Initialize(&InitParams{
@@ -165,4 +185,64 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 			t.Fatalf("bad: %v expect: %v", outConf, recoveryConf)
 		}
 	}
+}
+
+func testValidateWrappedShare(t testing.TB, c *Core, token string, barrierConf *SealConfig, expectedMethod string) string {
+	// Make sure tokens are JWT formatted
+	if strings.Count(token, ".") != 2 {
+		t.Fatalf("Bad: %#v", token)
+	}
+
+	req := &logical.Request{
+		ClientToken: token,
+		Operation:   logical.ReadOperation,
+		Path:        "cubbyhole/response",
+	}
+
+	ok, err := c.ValidateWrappingToken(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !ok {
+		t.Fatalf("bad: %#v", req)
+	}
+
+	cubbyResp, err := c.router.Route(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if cubbyResp == nil {
+		t.Fatalf("Nothing in cubbyhole")
+	}
+	if cubbyResp.IsError() {
+		t.Fatalf("err: %#v", cubbyResp)
+	}
+	if cubbyResp.Data == nil {
+		t.Fatalf("wrapping information was nil")
+	}
+
+	m := make(map[string]interface{})
+	err = json.Unmarshal([]byte(cubbyResp.Data["response"].(string)), &m)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	mData := m["data"].(map[string]interface{})
+
+	keyShares := mData["key-shares"].(float64)
+	keyThres := mData["key-threshold"].(float64)
+	method := mData["method"].(string)
+	share := mData["share"].(string)
+
+	if int(keyShares) != barrierConf.SecretShares {
+		t.Fatalf("Unexpected number of key shares: got %d, expected %d", keyShares, barrierConf.SecretShares)
+	}
+	if int(keyThres) != barrierConf.SecretThreshold {
+		t.Fatalf("Unexpected threshold: got %d, expected %d", keyShares, barrierConf.SecretThreshold)
+	}
+	if method != expectedMethod {
+		t.Fatalf("Unexpected method: got %d, expected init", expectedMethod)
+	}
+
+	return share
 }

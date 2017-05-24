@@ -87,6 +87,7 @@ func handleSysRekeyInitGet(core *vault.Core, recovery bool, w http.ResponseWrite
 		status.Started = true
 		status.T = rekeyConf.SecretThreshold
 		status.N = rekeyConf.SecretShares
+		status.WrapShares = rekeyConf.WrapShares
 		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
 			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
 			if err != nil {
@@ -133,6 +134,7 @@ func handleSysRekeyInitPut(core *vault.Core, recovery bool, w http.ResponseWrite
 		StoredShares:    req.StoredShares,
 		PGPKeys:         req.PGPKeys,
 		Backup:          req.Backup,
+		WrapShares:      req.WrapShares,
 	}, recovery)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, err)
@@ -202,12 +204,17 @@ func handleSysRekeyUpdate(core *vault.Core, recovery bool) http.Handler {
 			resp.Nonce = req.Nonce
 			resp.Backup = result.Backup
 			resp.PGPFingerprints = result.PGPFingerprints
+			resp.WrapShares = result.WrapShares
 
 			// Encode the keys
 			keys := make([]string, 0, len(result.SecretShares))
 			keysB64 := make([]string, 0, len(result.SecretShares))
 			for _, k := range result.SecretShares {
-				keys = append(keys, hex.EncodeToString(k))
+				if result.WrapShares {
+					keys = append(keys, string(k[:]))
+				} else {
+					keys = append(keys, hex.EncodeToString(k))
+				}
 				keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
 			}
 			resp.Keys = keys
@@ -224,6 +231,7 @@ type RekeyRequest struct {
 	SecretThreshold int      `json:"secret_threshold"`
 	StoredShares    int      `json:"stored_shares"`
 	PGPKeys         []string `json:"pgp_keys"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool     `json:"backup"`
 }
 
@@ -235,6 +243,7 @@ type RekeyStatusResponse struct {
 	Progress        int      `json:"progress"`
 	Required        int      `json:"required"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool     `json:"backup"`
 }
 
@@ -249,5 +258,6 @@ type RekeyUpdateResponse struct {
 	Keys            []string `json:"keys"`
 	KeysB64         []string `json:"keys_base64"`
 	PGPFingerprints []string `json:"pgp_fingerprints"`
+	WrapShares      bool     `json:"wrap_shares"`
 	Backup          bool     `json:"backup"`
 }

@@ -1,7 +1,6 @@
 package command
 
 import (
-	"bytes"
 	"encoding/base64"
 	"os"
 	"reflect"
@@ -13,8 +12,6 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/meta"
 	"github.com/hashicorp/vault/vault"
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/packet"
 	"github.com/mitchellh/cli"
 )
 
@@ -237,7 +234,6 @@ func TestInit_PGP(t *testing.T) {
 		"-key-shares", "2",
 		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2],
 		"-key-threshold", "2",
-		"-root-token-pgp-key", pubFiles[0],
 	}
 
 	// This should fail, as key-shares does not match pgp-keys size
@@ -250,7 +246,6 @@ func TestInit_PGP(t *testing.T) {
 		"-key-shares", "4",
 		"-pgp-keys", pubFiles[0] + ",@" + pubFiles[1] + "," + pubFiles[2] + "," + pubFiles[3],
 		"-key-threshold", "2",
-		"-root-token-pgp-key", pubFiles[0],
 	}
 
 	ui.OutputWriter.Reset()
@@ -290,54 +285,90 @@ func TestInit_PGP(t *testing.T) {
 	if !reflect.DeepEqual(expected, sealConf) {
 		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
 	}
+}
 
-	re, err := regexp.Compile("\\s+Initial Root Token:\\s+(.*)")
+func TestInit_Wrap(t *testing.T) {
+	ui := new(cli.MockUi)
+	c := &InitCommand{
+		Meta: meta.Meta{
+			Ui: ui,
+		},
+	}
+
+	core := vault.TestCore(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	init, err := core.Initialized()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if init {
+		t.Fatal("should not be initialized")
+	}
+
+	args := []string{
+		"-address", addr,
+		"-key-shares", "4",
+		"-key-threshold", "2",
+		"-wrap-shares",
+	}
+
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	init, err = core.Initialized()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if !init {
+		t.Fatal("should be initialized")
+	}
+
+	sealConf, err := core.SealAccess().BarrierConfig()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &vault.SealConfig{
+		Type:            "shamir",
+		SecretShares:    4,
+		SecretThreshold: 2,
+		WrapShares:      true,
+	}
+	if !reflect.DeepEqual(expected, sealConf) {
+		t.Fatalf("expected:\n%#v\ngot:\n%#v\n", expected, sealConf)
+	}
+
+	re, err := regexp.Compile("\\s*Unseal Key \\d+: (.*)")
 	if err != nil {
 		t.Fatalf("Error compiling regex: %s", err)
 	}
 	matches := re.FindAllStringSubmatch(ui.OutputWriter.String(), -1)
-	if len(matches) != 1 {
-		t.Fatalf("Unexpected number of tokens found, got %d", len(matches))
+	if len(matches) != 4 {
+		t.Fatalf("Unexpected number of keys returned, got %d, matches was \n\n%#v\n\n, input was \n\n%s\n\n", len(matches), matches, ui.OutputWriter.String())
 	}
 
-	encRootToken := matches[0][1]
-	privKeyBytes, err := base64.StdEncoding.DecodeString(pgpkeys.TestPrivKey1)
-	if err != nil {
-		t.Fatalf("error decoding private key: %v", err)
+	args = []string{
+		"-address", addr,
 	}
-	ptBuf := bytes.NewBuffer(nil)
-	entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(privKeyBytes)))
-	if err != nil {
-		t.Fatalf("Error parsing private key: %s", err)
-	}
-	var rootBytes []byte
-	rootBytes, err = base64.StdEncoding.DecodeString(encRootToken)
-	if err != nil {
-		t.Fatalf("Error decoding root token: %s", err)
-	}
-	entityList := &openpgp.EntityList{entity}
-	md, err := openpgp.ReadMessage(bytes.NewBuffer(rootBytes), entityList, nil, nil)
-	if err != nil {
-		t.Fatalf("Error decrypting root token: %s", err)
-	}
-	ptBuf.ReadFrom(md.UnverifiedBody)
-	rootToken := ptBuf.String()
+	for i := 0; i < 3; i++ {
+		jwt := strings.TrimSpace(matches[i][1])
+		if strings.Count(jwt, ".") != 2 {
+			t.Fatalf("Invalid JWT token: %s", jwt)
+		}
 
-	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), rootToken, false, nil, nil, core)
+		ui.OutputWriter.Reset()
+		unwrapCommand := &UnwrapCommand{
+			Meta: meta.Meta{
+				ClientToken: jwt,
+				Ui:          ui,
+			},
+		}
 
-	client, err := c.Client()
-	if err != nil {
-		t.Fatalf("Error fetching client: %v", err)
-	}
-
-	client.SetToken(rootToken)
-
-	tokenInfo, err := client.Auth().Token().LookupSelf()
-	if err != nil {
-		t.Fatalf("Error looking up root token info: %v", err)
-	}
-
-	if tokenInfo.Data["policies"].([]interface{})[0].(string) != "root" {
-		t.Fatalf("expected root policy")
+		if code := unwrapCommand.Run(args); code != 0 {
+			t.Fatalf("Bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
 	}
 }

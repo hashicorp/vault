@@ -3,6 +3,7 @@ package command
 import (
 	"encoding/hex"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -308,4 +309,89 @@ func TestRekey_init_pgp(t *testing.T) {
 	}
 
 	parseDecryptAndTestUnsealKeys(t, ui.OutputWriter.String(), token, true, backupVals.Keys, backupVals.KeysB64, core)
+}
+
+func TestRekey_init_wrap(t *testing.T) {
+	core, keys, _ := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	ui := new(cli.MockUi)
+	c := &RekeyCommand{
+		Meta: meta.Meta{
+			Ui: ui,
+		},
+	}
+
+	args := []string{
+		"-address", addr,
+		"-init",
+		"-key-shares", "4",
+		"-key-threshold", "2",
+		"-wrap-shares",
+	}
+
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	config, err := core.RekeyConfig(false)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	if config.SecretShares != 4 {
+		t.Fatal("should rekey")
+	}
+	if config.SecretThreshold != 2 {
+		t.Fatal("should rekey")
+	}
+
+	for _, key := range keys {
+		c = &RekeyCommand{
+			Key: hex.EncodeToString(key),
+			Meta: meta.Meta{
+				Ui: ui,
+			},
+		}
+
+		c.Nonce = config.Nonce
+
+		args = []string{
+			"-address", addr,
+		}
+		if code := c.Run(args); code != 0 {
+			t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
+	}
+
+	re, err := regexp.Compile("\\s*Key \\d+: (.*)")
+	if err != nil {
+		t.Fatalf("Error compiling regex: %s", err)
+	}
+	matches := re.FindAllStringSubmatch(ui.OutputWriter.String(), -1)
+	if len(matches) != 4 {
+		t.Fatalf("Unexpected number of keys returned, got %d, matches was \n\n%#v\n\n, input was \n\n%s\n\n", len(matches), matches, ui.OutputWriter.String())
+	}
+
+	args = []string{
+		"-address", addr,
+	}
+	for i := 0; i < 4; i++ {
+		jwt := strings.TrimSpace(matches[i][1])
+		if strings.Count(jwt, ".") != 2 {
+			t.Fatalf("Invalid JWT token: %s", jwt)
+		}
+
+		ui.OutputWriter.Reset()
+		unwrapCommand := &UnwrapCommand{
+			Meta: meta.Meta{
+				ClientToken: jwt,
+				Ui:          ui,
+			},
+		}
+
+		if code := unwrapCommand.Run(args); code != 0 {
+			t.Fatalf("Bad: %d\n\n%s", code, ui.ErrorWriter.String())
+		}
+	}
 }

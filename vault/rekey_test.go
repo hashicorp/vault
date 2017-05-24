@@ -1,6 +1,7 @@
 package vault
 
 import (
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"testing"
@@ -141,16 +142,22 @@ func TestCore_Rekey_Update(t *testing.T) {
 	bc.SecretThreshold = 1
 	bc.StoredShares = 0
 	c, masterKeys, _, root := TestCoreUnsealedWithConfigs(t, bc, rc)
-	testCore_Rekey_Update_Common(t, c, masterKeys, root, false)
+	testCore_Rekey_Update_Common(t, c, masterKeys, root, false, false)
 
 	bc, rc = TestSealDefConfigs()
 	bc.StoredShares = 0
 	c, masterKeys, recoveryKeys, root := TestCoreUnsealedWithConfigs(t, bc, rc)
-	testCore_Rekey_Update_Common(t, c, masterKeys, root, false)
-	testCore_Rekey_Update_Common(t, c, recoveryKeys, root, true)
+	testCore_Rekey_Update_Common(t, c, masterKeys, root, false, false)
+	testCore_Rekey_Update_Common(t, c, recoveryKeys, root, true, false)
+
+	bc, rc = TestSealDefConfigs()
+	bc.StoredShares = 0
+	c, masterKeys, recoveryKeys, root = TestCoreUnsealedWithConfigs(t, bc, rc)
+	testCore_Rekey_Update_Common(t, c, masterKeys, root, false, true)
+	testCore_Rekey_Update_Common(t, c, recoveryKeys, root, true, true)
 }
 
-func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root string, recovery bool) {
+func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root string, recovery, wrap bool) {
 	// Start a rekey
 	var expType string
 	if recovery {
@@ -163,7 +170,9 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		Type:            expType,
 		SecretThreshold: 3,
 		SecretShares:    5,
+		WrapShares:      wrap,
 	}
+
 	err := c.RekeyInit(newConf, recovery)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -230,6 +239,12 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		t.Fatalf("\nexpected: %#v\nactual: %#v\nexpType: %s\nrecovery: %t", newConf, sealConf, expType, recovery)
 	}
 
+	if wrap {
+		for i := 0; i < newConf.SecretShares; i++ {
+			result.SecretShares[i], _ = base64.StdEncoding.DecodeString(testValidateWrappedShare(t, c, string(result.SecretShares[i][:]), newConf, "rekey"))
+		}
+	}
+
 	// Attempt unseal if this was not recovery mode
 	if !recovery {
 		err = c.Seal(root)
@@ -252,6 +267,7 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 		Type:            expType,
 		SecretThreshold: 1,
 		SecretShares:    1,
+		WrapShares:      wrap,
 	}
 	err = c.RekeyInit(newConf, recovery)
 	if err != nil {
@@ -286,6 +302,12 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	}
 	if result == nil || len(result.SecretShares) != 1 {
 		t.Fatalf("Bad: %#v", result)
+	}
+
+	if wrap {
+		for i := 0; i < newConf.SecretShares; i++ {
+			result.SecretShares[i], _ = base64.StdEncoding.DecodeString(testValidateWrappedShare(t, c, string(result.SecretShares[i][:]), newConf, "rekey"))
+		}
 	}
 
 	// Attempt unseal if this was not recovery mode

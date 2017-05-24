@@ -33,6 +33,7 @@ type RekeyResult struct {
 	PGPFingerprints []string
 	Backup          bool
 	RecoveryKey     bool
+	WrapShares      bool
 }
 
 // RekeyBackup stores the backup copy of PGP-encrypted keys
@@ -325,7 +326,8 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 
 	// Return the master key if only a single key part is used
 	results := &RekeyResult{
-		Backup: c.barrierRekeyConfig.Backup,
+		Backup:     c.barrierRekeyConfig.Backup,
+		WrapShares: c.barrierRekeyConfig.WrapShares,
 	}
 
 	if c.barrierRekeyConfig.SecretShares == 1 {
@@ -389,6 +391,19 @@ func (c *Core) BarrierRekeyUpdate(key []byte, nonce string) (*RekeyResult, error
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
+	}
+
+	if c.barrierRekeyConfig.WrapShares {
+		// wrap tokens
+		wrappedKeys := make([][]byte, len(results.SecretShares))
+		for i, _ := range results.SecretShares {
+			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i], true, c.barrierRekeyConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to wrap share: %s", err)
+			}
+			wrappedKeys[i] = []byte(token)
+		}
+		results.SecretShares = wrappedKeys
 	}
 
 	if keysToStore != nil {
@@ -523,7 +538,8 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 
 	// Return the master key if only a single key part is used
 	results := &RekeyResult{
-		Backup: c.recoveryRekeyConfig.Backup,
+		Backup:     c.recoveryRekeyConfig.Backup,
+		WrapShares: c.recoveryRekeyConfig.WrapShares,
 	}
 
 	if c.recoveryRekeyConfig.SecretShares == 1 {
@@ -577,6 +593,19 @@ func (c *Core) RecoveryRekeyUpdate(key []byte, nonce string) (*RekeyResult, erro
 				return nil, fmt.Errorf("failed to save unseal key backup: %v", err)
 			}
 		}
+	}
+
+	if c.recoveryRekeyConfig.WrapShares {
+		// wrap tokens
+		wrappedKeys := make([][]byte, len(results.SecretShares))
+		for i, _ := range results.SecretShares {
+			token, err := c.wrapKeyInCubbyhole(results.SecretShares[i], true, c.recoveryRekeyConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to wrap share: %s", err)
+			}
+			wrappedKeys[i] = []byte(token)
+		}
+		results.SecretShares = wrappedKeys
 	}
 
 	if err := c.seal.SetRecoveryKey(newMasterKey); err != nil {

@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -70,6 +71,37 @@ func (c *Core) ensureWrappingKey() error {
 	c.logger.Info("core: loaded wrapping token key")
 
 	return nil
+}
+
+func (c *Core) wrapKeyInCubbyhole(key []byte, rekey bool, sc *SealConfig) (string, error) {
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "sys/init",
+	}
+
+	method := "init"
+	if rekey {
+		method = "rekey"
+	}
+	resp := &logical.Response{
+		WrapInfo: &logical.ResponseWrapInfo{
+			TTL:    24 * time.Hour,
+			Format: "jwt",
+		},
+		Data: map[string]interface{}{
+			"share":         base64.StdEncoding.EncodeToString(key),
+			"method":        method,
+			"key-shares":    sc.SecretShares,
+			"key-threshold": sc.SecretThreshold,
+		},
+	}
+
+	_, err := c.wrapInCubbyhole(req, resp)
+	if err != nil {
+		return "", err
+	}
+
+	return resp.WrapInfo.Token, nil
 }
 
 func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*logical.Response, error) {

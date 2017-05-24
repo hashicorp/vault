@@ -60,7 +60,10 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 	// Return the master key if only a single key part is used
 	var unsealKeys [][]byte
 	if sc.SecretShares == 1 {
-		unsealKeys = append(unsealKeys, masterKey)
+		// The unseal process zeros out masterKey, so copy here to return
+		masterKeyCopy := make([]byte, len(masterKey))
+		copy(masterKeyCopy, masterKey)
+		unsealKeys = append(unsealKeys, masterKeyCopy)
 	} else {
 		// Split the master key using the Shamir algorithm
 		shares, err := shamir.Split(masterKey, sc.SecretShares, sc.SecretThreshold)
@@ -154,16 +157,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		return nil, fmt.Errorf("failed to unseal barrier: %v", err)
 	}
 
-	// Ensure the barrier is re-sealed
-	defer func() {
-		// Defers are LIFO so we need to run this here too to ensure the stop
-		// happens before sealing. preSeal also stops, so we just make the
-		// stopping safe against multiple calls.
-		if err := c.barrier.Seal(); err != nil {
-			c.logger.Error("core: failed to seal barrier", "error", err)
-		}
-	}()
-
 	err = c.seal.SetBarrierConfig(barrierConfig)
 	if err != nil {
 		c.logger.Error("core: failed to save barrier configuration", "error", err)
@@ -184,10 +177,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 		}
 	}
 
-	results := &InitResult{
-		SecretShares: barrierUnsealKeys,
-	}
-
 	// Perform initial setup
 	if err := c.setupCluster(); err != nil {
 		c.logger.Error("core: cluster setup failed during init", "error", err)
@@ -196,6 +185,39 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 	if err := c.postUnseal(); err != nil {
 		c.logger.Error("core: post-unseal setup failed during init", "error", err)
 		return nil, err
+	}
+
+	defer func() {
+		err = c.preSeal()
+		if err != nil {
+			c.logger.Error("core: pre-seal teardown failed", "error", err)
+		}
+
+		// Fully unseal vault, this zeros out barrierKey
+		sealed, err := c.unsealInternal(barrierKey)
+		if err != nil {
+			c.logger.Error("core: failed to seal barrier", "error", err)
+		}
+		if !sealed {
+			c.logger.Error("core: failed to seal barrier", "error", err)
+		}
+	}()
+
+	if barrierConfig.WrapShares {
+		// wrap tokens
+		wrappedKeys := make([][]byte, len(barrierUnsealKeys))
+		for i, _ := range barrierUnsealKeys {
+			token, err := c.wrapKeyInCubbyhole(barrierUnsealKeys[i], false, barrierConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to wrap share: %s", err)
+			}
+			wrappedKeys[i] = []byte(token)
+		}
+		barrierUnsealKeys = wrappedKeys
+	}
+
+	results := &InitResult{
+		SecretShares: barrierUnsealKeys,
 	}
 
 	// Save the configuration regardless, but only generate a key if it's not
@@ -220,8 +242,27 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 				return nil, err
 			}
 
+			if recoveryConfig.WrapShares {
+				// wrap tokens
+				wrappedKeys := make([][]byte, len(recoveryUnsealKeys))
+				for i, _ := range recoveryUnsealKeys {
+					token, err := c.wrapKeyInCubbyhole(recoveryUnsealKeys[i], false, recoveryConfig)
+					if err != nil {
+						return nil, fmt.Errorf("failed to wrap share: %s", err)
+					}
+					wrappedKeys[i] = []byte(token)
+				}
+				recoveryUnsealKeys = wrappedKeys
+			}
+
 			results.RecoveryShares = recoveryUnsealKeys
 		}
+	}
+
+	// If the shares are getting wrapped, don't create a root token.
+	if barrierConfig.WrapShares || len(barrierConfig.PGPKeys) > 0 {
+		results.RootToken = ""
+		return results, nil
 	}
 
 	// Generate a new root token
@@ -240,12 +281,6 @@ func (c *Core) Initialize(initParams *InitParams) (*InitResult, error) {
 			return nil, err
 		}
 		results.RootToken = base64.StdEncoding.EncodeToString(encryptedVals[0])
-	}
-
-	// Prepare to re-seal
-	if err := c.preSeal(); err != nil {
-		c.logger.Error("core: pre-seal teardown failed", "error", err)
-		return nil, err
 	}
 
 	return results, nil
