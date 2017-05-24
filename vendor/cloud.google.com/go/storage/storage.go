@@ -518,6 +518,7 @@ func (o *ObjectHandle) NewRangeReader(ctx context.Context, offset, length int64)
 	if err != nil {
 		return nil, err
 	}
+	req = withContext(req, ctx)
 	if length < 0 && offset > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
 	} else if length > 0 {

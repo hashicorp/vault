@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	libraryVersion = "6"
+	libraryVersion = "7"
 	defaultBaseURL = "https://api.github.com/"
 	uploadBaseURL  = "https://uploads.github.com/"
 	userAgent      = "go-github/" + libraryVersion
@@ -92,11 +92,11 @@ const (
 	// https://developer.github.com/changes/2017-01-05-commit-search-api/
 	mediaTypeCommitSearchPreview = "application/vnd.github.cloak-preview+json"
 
-	// https://developer.github.com/changes/2016-12-14-reviews-api/
-	mediaTypePullRequestReviewsPreview = "application/vnd.github.black-cat-preview+json"
-
 	// https://developer.github.com/changes/2017-02-28-user-blocking-apis-and-webhook/
 	mediaTypeBlockUsersPreview = "application/vnd.github.giant-sentry-fist-preview+json"
+
+	// https://developer.github.com/changes/2017-02-09-community-health/
+	mediaTypeRepositoryCommunityHealthMetricsPreview = "application/vnd.github.black-panther-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -396,7 +396,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 
 	// If we've hit rate limit, don't make further requests before Reset time.
 	if err := c.checkRateLimitBeforeDo(req, rateLimitCategory); err != nil {
-		return nil, err
+		return &Response{
+			Response: err.Response,
+			Rate:     err.Rate,
+		}, err
 	}
 
 	resp, err := c.client.Do(req)
@@ -457,7 +460,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 // current client state in order to quickly check if *RateLimitError can be immediately returned
 // from Client.Do, and if so, returns it so that Client.Do can skip making a network API call unnecessarily.
 // Otherwise it returns nil, and Client.Do should proceed normally.
-func (c *Client) checkRateLimitBeforeDo(req *http.Request, rateLimitCategory rateLimitCategory) error {
+func (c *Client) checkRateLimitBeforeDo(req *http.Request, rateLimitCategory rateLimitCategory) *RateLimitError {
 	c.rateMu.Lock()
 	rate := c.rateLimits[rateLimitCategory]
 	c.rateMu.Unlock()

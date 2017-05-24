@@ -511,6 +511,7 @@ type Branch struct {
 type Protection struct {
 	RequiredStatusChecks       *RequiredStatusChecks       `json:"required_status_checks"`
 	RequiredPullRequestReviews *RequiredPullRequestReviews `json:"required_pull_request_reviews"`
+	EnforceAdmins              *AdminEnforcement           `json:"enforce_admins"`
 	Restrictions               *BranchRestrictions         `json:"restrictions"`
 }
 
@@ -518,12 +519,14 @@ type Protection struct {
 type ProtectionRequest struct {
 	RequiredStatusChecks       *RequiredStatusChecks       `json:"required_status_checks"`
 	RequiredPullRequestReviews *RequiredPullRequestReviews `json:"required_pull_request_reviews"`
+	EnforceAdmins              bool                        `json:"enforce_admins"`
 	Restrictions               *BranchRestrictionsRequest  `json:"restrictions"`
 }
 
 // RequiredStatusChecks represents the protection status of a individual branch.
 type RequiredStatusChecks struct {
 	// Enforce required status checks for repository administrators. (Required.)
+	// Deprecated: Use EnforceAdmins instead.
 	IncludeAdmins bool `json:"include_admins"`
 	// Require branches to be up to date before merging. (Required.)
 	Strict bool `json:"strict"`
@@ -535,7 +538,14 @@ type RequiredStatusChecks struct {
 // RequiredPullRequestReviews represents the protection configuration for pull requests.
 type RequiredPullRequestReviews struct {
 	// Enforce pull request reviews for repository administrators. (Required.)
+	// Deprecated: Use EnforceAdmins instead.
 	IncludeAdmins bool `json:"include_admins"`
+}
+
+// AdminEnforcement represents the configuration to enforce required status checks for repository administrators.
+type AdminEnforcement struct {
+	URL     *string `json:"url,omitempty"`
+	Enabled bool    `json:"enabled"`
 }
 
 // BranchRestrictions represents the restriction that only certain users or

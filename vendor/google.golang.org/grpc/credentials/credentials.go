@@ -196,14 +196,14 @@ func NewTLS(c *tls.Config) TransportCredentials {
 	return tc
 }
 
-// NewClientTLSFromCert constructs a TLS from the input certificate for client.
+// NewClientTLSFromCert constructs TLS credentials from the input certificate for client.
 // serverNameOverride is for testing only. If set to a non empty string,
 // it will override the virtual host name of authority (e.g. :authority header field) in requests.
 func NewClientTLSFromCert(cp *x509.CertPool, serverNameOverride string) TransportCredentials {
 	return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp})
 }
 
-// NewClientTLSFromFile constructs a TLS from the input certificate file for client.
+// NewClientTLSFromFile constructs TLS credentials from the input certificate file for client.
 // serverNameOverride is for testing only. If set to a non empty string,
 // it will override the virtual host name of authority (e.g. :authority header field) in requests.
 func NewClientTLSFromFile(certFile, serverNameOverride string) (TransportCredentials, error) {
@@ -218,12 +218,12 @@ func NewClientTLSFromFile(certFile, serverNameOverride string) (TransportCredent
 	return NewTLS(&tls.Config{ServerName: serverNameOverride, RootCAs: cp}), nil
 }
 
-// NewServerTLSFromCert constructs a TLS from the input certificate for server.
+// NewServerTLSFromCert constructs TLS credentials from the input certificate for server.
 func NewServerTLSFromCert(cert *tls.Certificate) TransportCredentials {
 	return NewTLS(&tls.Config{Certificates: []tls.Certificate{*cert}})
 }
 
-// NewServerTLSFromFile constructs a TLS from the input certificate file and key
+// NewServerTLSFromFile constructs TLS credentials from the input certificate file and key
 // file for server.
 func NewServerTLSFromFile(certFile, keyFile string) (TransportCredentials, error) {
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)

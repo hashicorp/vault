@@ -306,14 +306,18 @@ func (c *Client) dial(endpoint string, dopts ...grpc.DialOption) (*grpc.ClientCo
 			defer cancel()
 			ctx = cctx
 		}
-		if err := c.getToken(ctx); err != nil {
-			if err == ctx.Err() && ctx.Err() != c.ctx.Err() {
-				err = grpc.ErrClientConnTimeout
-			}
-			return nil, err
-		}
 
-		opts = append(opts, grpc.WithPerRPCCredentials(c.tokenCred))
+		err := c.getToken(ctx)
+		if err != nil {
+			if toErr(ctx, err) != rpctypes.ErrAuthNotEnabled {
+				if err == ctx.Err() && ctx.Err() != c.ctx.Err() {
+					err = grpc.ErrClientConnTimeout
+				}
+				return nil, err
+			}
+		} else {
+			opts = append(opts, grpc.WithPerRPCCredentials(c.tokenCred))
+		}
 	}
 
 	opts = append(opts, c.cfg.DialOptions...)
@@ -498,4 +502,12 @@ func toErr(ctx context.Context, err error) error {
 		err = grpc.ErrClientConnClosing
 	}
 	return err
+}
+
+func canceledByCaller(stopCtx context.Context, err error) bool {
+	if stopCtx.Err() == nil || err == nil {
+		return false
+	}
+
+	return err == context.Canceled || err == context.DeadlineExceeded
 }

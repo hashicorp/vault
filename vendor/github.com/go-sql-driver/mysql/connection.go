@@ -272,7 +272,6 @@ func (mc *mysqlConn) Exec(query string, args []driver.Value) (driver.Result, err
 			return nil, err
 		}
 		query = prepared
-		args = nil
 	}
 	mc.affectedRows = 0
 	mc.insertId = 0
@@ -330,7 +329,6 @@ func (mc *mysqlConn) Query(query string, args []driver.Value) (driver.Rows, erro
 			return nil, err
 		}
 		query = prepared
-		args = nil
 	}
 	// Send command
 	err := mc.writeCommandPacketStr(comQuery, query)

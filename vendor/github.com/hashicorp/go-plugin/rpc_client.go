@@ -121,3 +121,13 @@ func (c *RPCClient) Dispense(name string) (interface{}, error) {
 
 	return p.Client(c.broker, rpc.NewClient(conn))
 }
+
+// Ping pings the connection to ensure it is still alive.
+//
+// The error from the RPC call is returned exactly if you want to inspect
+// it for further error analysis. Any error returned from here would indicate
+// that the connection to the plugin is not healthy.
+func (c *RPCClient) Ping() error {
+	var empty struct{}
+	return c.control.Call("Control.Ping", true, &empty)
+}

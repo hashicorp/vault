@@ -1,4 +1,4 @@
-# Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:"/>&nbsp;[![Build Status](https://travis-ci.org/Sirupsen/logrus.svg?branch=master)](https://travis-ci.org/Sirupsen/logrus)&nbsp;[![GoDoc](https://godoc.org/github.com/Sirupsen/logrus?status.svg)](https://godoc.org/github.com/Sirupsen/logrus)
+# Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:"/>&nbsp;[![Build Status](https://travis-ci.org/sirupsen/logrus.svg?branch=master)](https://travis-ci.org/sirupsen/logrus)&nbsp;[![GoDoc](https://godoc.org/github.com/sirupsen/logrus?status.svg)](https://godoc.org/github.com/sirupsen/logrus)
 
 **Seeing weird case-sensitive problems?** See [this
 issue](https://github.com/sirupsen/logrus/issues/451#issuecomment-264332021).
@@ -52,6 +52,12 @@ time="2015-03-26T01:27:38-04:00" level=fatal msg="The ice breaks!" err=&{0x20822
 exit status 1
 ```
 
+#### Case-sensitivity
+
+The organization's name was changed to lower-case--and this will not be changed
+back. If you are getting import conflicts due to case sensitivity, please use
+the lower-case import: `github.com/sirupsen/logrus`.
+
 #### Example
 
 The simplest way to use Logrus is simply the package-level exported logger:
@@ -60,7 +66,7 @@ The simplest way to use Logrus is simply the package-level exported logger:
 package main
 
 import (
-  log "github.com/Sirupsen/logrus"
+  log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -71,7 +77,7 @@ func main() {
 ```
 
 Note that it's completely api-compatible with the stdlib logger, so you can
-replace your `log` imports everywhere with `log "github.com/Sirupsen/logrus"`
+replace your `log` imports everywhere with `log "github.com/sirupsen/logrus"`
 and you'll now have the flexibility of Logrus. You can customize it all you
 want:
 
@@ -80,7 +86,7 @@ package main
 
 import (
   "os"
-  log "github.com/Sirupsen/logrus"
+  log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -131,7 +137,7 @@ package main
 
 import (
   "os"
-  "github.com/Sirupsen/logrus"
+  "github.com/sirupsen/logrus"
 )
 
 // Create a new instance of the logger. You can have any number of instances.
@@ -159,7 +165,7 @@ func main() {
 
 #### Fields
 
-Logrus encourages careful, structured logging though logging fields instead of
+Logrus encourages careful, structured logging through logging fields instead of
 long, unparseable error messages. For example, instead of: `log.Fatalf("Failed
 to send event %s to topic %s with key %d")`, you should log the much more
 discoverable:
@@ -206,9 +212,9 @@ Logrus comes with [built-in hooks](hooks/). Add those, or your custom hook, in
 
 ```go
 import (
-  log "github.com/Sirupsen/logrus"
+  log "github.com/sirupsen/logrus"
   "gopkg.in/gemnasium/logrus-airbrake-hook.v2" // the package is named "aibrake"
-  logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
+  logrus_syslog "github.com/sirupsen/logrus/hooks/syslog"
   "log/syslog"
 )
 
@@ -238,14 +244,14 @@ Note: Syslog hook also support connecting to local syslog (Ex. "/dev/log" or "/v
 | [DeferPanic](https://github.com/deferpanic/dp-logrus) | Hook for logging to DeferPanic |
 | [Discordrus](https://github.com/kz/discordrus) | Hook for logging to [Discord](https://discordapp.com/) |
 | [ElasticSearch](https://github.com/sohlich/elogrus) | Hook for logging to ElasticSearch|
-| [Firehose](https://github.com/beaubrewer/firehose) | Hook for logging to [Amazon Firehose](https://aws.amazon.com/kinesis/firehose/)
+| [Firehose](https://github.com/beaubrewer/logrus_firehose) | Hook for logging to [Amazon Firehose](https://aws.amazon.com/kinesis/firehose/)
 | [Fluentd](https://github.com/evalphobia/logrus_fluent) | Hook for logging to fluentd |
 | [Go-Slack](https://github.com/multiplay/go-slack) | Hook for logging to [Slack](https://slack.com) |
 | [Graylog](https://github.com/gemnasium/logrus-graylog-hook) | Hook for logging to [Graylog](http://graylog2.org/) |
 | [Hiprus](https://github.com/nubo/hiprus) | Send errors to a channel in hipchat. |
 | [Honeybadger](https://github.com/agonzalezro/logrus_honeybadger) | Hook for sending exceptions to Honeybadger |
 | [InfluxDB](https://github.com/Abramovic/logrus_influxdb) | Hook for logging to influxdb |
-| [Influxus] (http://github.com/vlad-doru/influxus) | Hook for concurrently logging to [InfluxDB] (http://influxdata.com/) |
+| [Influxus](http://github.com/vlad-doru/influxus) | Hook for concurrently logging to [InfluxDB](http://influxdata.com/) |
 | [Journalhook](https://github.com/wercker/journalhook) | Hook for logging to `systemd-journald` |
 | [KafkaLogrus](https://github.com/goibibo/KafkaLogrus) | Hook for logging to kafka |
 | [LFShook](https://github.com/rifflock/lfshook) | Hook for logging to the local filesystem |
@@ -273,6 +279,7 @@ Note: Syslog hook also support connecting to local syslog (Ex. "/dev/log" or "/v
 | [TraceView](https://github.com/evalphobia/logrus_appneta) | Hook for logging to [AppNeta TraceView](https://www.appneta.com/products/traceview/) |
 | [Typetalk](https://github.com/dragon3/logrus-typetalk-hook) | Hook for logging to [Typetalk](https://www.typetalk.in/) |
 | [logz.io](https://github.com/ripcurld00d/logrus-logzio-hook) | Hook for logging to [logz.io](https://logz.io), a Log as a Service using Logstash |
+| [SQS-Hook](https://github.com/tsarpaul/logrus_sqs) | Hook for logging to [Amazon Simple Queue Service (SQS)](https://aws.amazon.com/sqs/) |
 
 #### Level logging
 
@@ -321,7 +328,7 @@ could do:
 
 ```go
 import (
-  log "github.com/Sirupsen/logrus"
+  log "github.com/sirupsen/logrus"
 )
 
 init() {
@@ -434,15 +441,24 @@ Logrus has a built in facility for asserting the presence of log messages. This 
 * a test logger (`test.NewNullLogger`) that just records log messages (and does not output any):
 
 ```go
-logger, hook := NewNullLogger()
-logger.Error("Hello error")
+import(
+  "github.com/sirupsen/logrus"
+  "github.com/sirupsen/logrus/hooks/null"
+  "github.com/stretchr/testify/assert"
+  "testing"
+)
 
-assert.Equal(1, len(hook.Entries))
-assert.Equal(logrus.ErrorLevel, hook.LastEntry().Level)
-assert.Equal("Hello error", hook.LastEntry().Message)
+func TestSomething(t*testing.T){
+  logger, hook := null.NewNullLogger()
+  logger.Error("Helloerror")
 
-hook.Reset()
-assert.Nil(hook.LastEntry())
+  assert.Equal(t, 1, len(hook.Entries))
+  assert.Equal(t, logrus.ErrorLevel, hook.LastEntry().Level)
+  assert.Equal(t, "Helloerror", hook.LastEntry().Message)
+
+  hook.Reset()
+  assert.Nil(t, hook.LastEntry())
+}
 ```
 
 #### Fatal handlers

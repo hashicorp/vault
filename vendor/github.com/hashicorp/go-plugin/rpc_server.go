@@ -122,6 +122,14 @@ type controlServer struct {
 	server *RPCServer
 }
 
+// Ping can be called to verify the connection (and likely the binary)
+// is still alive to a plugin.
+func (c *controlServer) Ping(
+	null bool, response *struct{}) error {
+	*response = struct{}{}
+	return nil
+}
+
 func (c *controlServer) Quit(
 	null bool, response *struct{}) error {
 	// End the server

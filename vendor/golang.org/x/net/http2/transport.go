@@ -1655,6 +1655,7 @@ func (b transportResponseBody) Close() error {
 		cc.wmu.Lock()
 		if !serverSentStreamEnd {
 			cc.fr.WriteRSTStream(cs.ID, ErrCodeCancel)
+			cs.didReset = true
 		}
 		// Return connection-level flow control.
 		if unread > 0 {
@@ -1702,12 +1703,6 @@ func (rl *clientConnReadLoop) processData(f *DataFrame) error {
 		return nil
 	}
 	if f.Length > 0 {
-		if len(data) > 0 && cs.bufPipe.b == nil {
-			// Data frame after it's already closed?
-			cc.logf("http2: Transport received DATA frame for closed stream; closing connection")
-			return ConnectionError(ErrCodeProtocol)
-		}
-
 		// Check connection-level flow control.
 		cc.mu.Lock()
 		if cs.inflow.available() >= int32(f.Length) {

@@ -36,6 +36,14 @@ type Signer interface {
 	PublicKeyAlgo() PublicKeyAlgorithm
 }
 
+// RevocationKey represents designated revoker packet. See RFC 4880
+// section 5.2.3.15 for details.
+type RevocationKey struct {
+	Class         byte
+	PublicKeyAlgo PublicKeyAlgorithm
+	Fingerprint   []byte
+}
+
 // Signature represents a signature. See RFC 4880, section 5.2.
 type Signature struct {
 	SigType    SignatureType
@@ -96,6 +104,11 @@ type Signature struct {
 	// when appearing in WoT-style cross signatures. But it should prevent a signature
 	// from being applied to a primary or subkey.
 	StubbedOutCriticalError error
+
+	// DesignaterRevoker will be present if this signature certifies a
+	// designated revoking key id (3rd party key that can sign
+	// revocation for this key).
+	DesignatedRevoker *RevocationKey
 
 	outSubpackets []outputSubpacket
 }
@@ -224,6 +237,7 @@ const (
 	regularExpressionSubpacket   signatureSubpacketType = 6
 	keyExpirationSubpacket       signatureSubpacketType = 9
 	prefSymmetricAlgosSubpacket  signatureSubpacketType = 11
+	revocationKey                signatureSubpacketType = 12
 	issuerSubpacket              signatureSubpacketType = 16
 	prefHashAlgosSubpacket       signatureSubpacketType = 21
 	prefCompressionSubpacket     signatureSubpacketType = 22
@@ -426,6 +440,18 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 		// The first byte is how many bytes the fingerprint is, but we'll just
 		// read until the end of the subpacket, so we'll ignore it.
 		sig.IssuerFingerprint = append([]byte{}, subpacket[1:]...)
+	case revocationKey:
+		// Authorizes the specified key to issue revocation signatures
+		// for a key.
+
+		// TODO: Class octet must have bit 0x80 set. If the bit 0x40
+		// is set, then this means that the revocation information is
+		// sensitive.
+		sig.DesignatedRevoker = &RevocationKey{
+			Class:         subpacket[0],
+			PublicKeyAlgo: PublicKeyAlgorithm(subpacket[1]),
+			Fingerprint:   append([]byte{}, subpacket[2:]...),
+		}
 	default:
 		if isCritical {
 			err = errors.UnsupportedError("unknown critical signature subpacket type " + strconv.Itoa(int(packetType)))

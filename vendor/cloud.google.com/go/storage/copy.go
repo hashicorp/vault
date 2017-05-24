@@ -84,7 +84,6 @@ func (c *Copier) Run(ctx context.Context) (*ObjectAttrs, error) {
 			return newObject(res.Resource), nil
 		}
 	}
-	return nil, nil
 }
 
 func (c *Copier) callRewrite(ctx context.Context, src *ObjectHandle, rawObj *raw.Object) (*raw.RewriteResponse, error) {

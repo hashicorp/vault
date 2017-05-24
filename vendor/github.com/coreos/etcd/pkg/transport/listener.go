@@ -65,7 +65,7 @@ type TLSInfo struct {
 	// ServerName ensures the cert matches the given host in case of discovery / virtual hosting
 	ServerName string
 
-	// HandshakeFailure is optinally called when a connection fails to handshake. The
+	// HandshakeFailure is optionally called when a connection fails to handshake. The
 	// connection will be closed immediately afterwards.
 	HandshakeFailure func(*tls.Conn, error)
 
@@ -172,6 +172,14 @@ func (info TLSInfo) baseConfig() (*tls.Config, error) {
 		MinVersion:   tls.VersionTLS12,
 		ServerName:   info.ServerName,
 	}
+	// this only reloads certs when there's a client request
+	// TODO: support server-side refresh (e.g. inotify, SIGHUP), caching
+	cfg.GetCertificate = func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		return tlsutil.NewCert(info.CertFile, info.KeyFile, info.parseFunc)
+	}
+	cfg.GetClientCertificate = func(unused *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+		return tlsutil.NewCert(info.CertFile, info.KeyFile, info.parseFunc)
+	}
 	return cfg, nil
 }
 
@@ -240,35 +248,6 @@ func (info TLSInfo) ClientConfig() (*tls.Config, error) {
 		cfg.InsecureSkipVerify = true
 	}
 	return cfg, nil
-}
-
-// ShallowCopyTLSConfig copies *tls.Config. This is only
-// work-around for go-vet tests, which complains
-//
-//   assignment copies lock value to p: crypto/tls.Config contains sync.Once contains sync.Mutex
-//
-// Keep up-to-date with 'go/src/crypto/tls/common.go'
-func ShallowCopyTLSConfig(cfg *tls.Config) *tls.Config {
-	ncfg := tls.Config{
-		Time:                     cfg.Time,
-		Certificates:             cfg.Certificates,
-		NameToCertificate:        cfg.NameToCertificate,
-		GetCertificate:           cfg.GetCertificate,
-		RootCAs:                  cfg.RootCAs,
-		NextProtos:               cfg.NextProtos,
-		ServerName:               cfg.ServerName,
-		ClientAuth:               cfg.ClientAuth,
-		ClientCAs:                cfg.ClientCAs,
-		InsecureSkipVerify:       cfg.InsecureSkipVerify,
-		CipherSuites:             cfg.CipherSuites,
-		PreferServerCipherSuites: cfg.PreferServerCipherSuites,
-		SessionTicketKey:         cfg.SessionTicketKey,
-		ClientSessionCache:       cfg.ClientSessionCache,
-		MinVersion:               cfg.MinVersion,
-		MaxVersion:               cfg.MaxVersion,
-		CurvePreferences:         cfg.CurvePreferences,
-	}
-	return &ncfg
 }
 
 // IsClosedConnError returns true if the error is from closing listener, cmux.

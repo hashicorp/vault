@@ -31,7 +31,7 @@ func DurationMinusBufferDomain(intv time.Duration, buffer time.Duration, jitter 
 	return min, max
 }
 
-// Returns a random stagger interval between 0 and the duration
+// RandomStagger returns an interval between 0 and the duration
 func RandomStagger(intv time.Duration) time.Duration {
 	if intv == 0 {
 		return 0

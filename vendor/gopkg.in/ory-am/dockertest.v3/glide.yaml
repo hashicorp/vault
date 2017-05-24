@@ -1,19 +1,20 @@
 package: github.com/ory-am/dockertest
 import:
 - package: github.com/cenk/backoff
-  version: v1.0.0
+  version: ~1.0.0
 - package: github.com/fsouza/go-dockerclient
 - package: github.com/docker/docker
-  version: ~v1.13.0-rc2
+  version: v17.04.0-ce
 - package: github.com/pkg/errors
-  version: v0.8.0
-- package: github.com/opencontainers/runc
+  version: ~0.8.0
+- package: github.com/moby/moby
+  version: v17.04.0-ce
 testImport:
 - package: github.com/go-sql-driver/mysql
-  version: v1.3
+  version: ~1.3.0
 - package: github.com/lib/pq
 - package: github.com/stretchr/testify
-  version: v1.1.4
+  version: ~1.1.4
   subpackages:
   - assert
   - require

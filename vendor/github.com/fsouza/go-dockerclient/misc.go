@@ -79,6 +79,10 @@ type DockerInfo struct {
 	ServerVersion      string
 	ClusterStore       string
 	ClusterAdvertise   string
+	Isolation          string
+	InitBinary         string
+	DefaultRuntime     string
+	LiveRestoreEnabled bool
 	Swarm              swarm.Info
 }
 
