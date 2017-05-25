@@ -42,7 +42,7 @@ storage "mysql" {
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate to
   connect using TLS.
 
-- `max_parallel` `(string: "128")` – Specifies The maximum number of concurrent
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to MySQL.
 
 Additionally, Vault requires the following authentication information.
