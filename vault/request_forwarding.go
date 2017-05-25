@@ -364,7 +364,7 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
 	if in.ClusterAddr != "" {
-		s.core.peerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
 	}
 	return &EchoReply{
 		Message: "pong",
