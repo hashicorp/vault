@@ -9,6 +9,7 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * auth/cert: Fix panic on renewal [GH-2749]
+ * auth/cert: Certificate verification for non-CA certs [GH-2761]
  * secret/database: Increase wrapping token TTL; in a loaded scenario it could
    be too short
  * secret/generic: Allow integers to be set as the value of `ttl` field as the
