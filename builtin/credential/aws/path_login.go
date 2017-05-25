@@ -170,13 +170,8 @@ func (b *backend) validateInstance(s logical.Storage, instanceID, region, accoun
 	}
 
 	status, err := ec2Client.DescribeInstances(&ec2.DescribeInstancesInput{
-		Filters: []*ec2.Filter{
-			&ec2.Filter{
-				Name: aws.String("instance-id"),
-				Values: []*string{
-					aws.String(instanceID),
-				},
-			},
+		InstanceIds: []*string{
+			aws.String(instanceID),
 		},
 	})
 	if err != nil {
