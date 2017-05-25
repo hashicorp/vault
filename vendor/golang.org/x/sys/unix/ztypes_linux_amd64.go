@@ -678,6 +678,8 @@ type Sigset_t struct {
 	X__val [16]uint64
 }
 
+const RNDGETENTCNT = 0x80045200
+
 const _SC_PAGESIZE = 0x1e
 
 type Termios struct {
