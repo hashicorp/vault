@@ -166,6 +166,12 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 	// Load the trusted certificates
 	roots, trusted, trustedNonCAs := b.loadTrustedCerts(req.Storage, certName)
 
+	// Get the list of full chains matching the connection
+	trustedChains, err := validateConnState(roots, connState)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
 	if len(trustedNonCAs) != 0 {
@@ -175,24 +181,9 @@ func (b *backend) verifyCredentials(req *logical.Request, d *framework.FieldData
 			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
 				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
 				b.matchesConstraints(clientCert, trustedNonCA.Certificates, trustedNonCA) {
-
-				// We are not looking for trusted chains here since this is a
-				// non-CA cert. But validating the connection state detects
-				// expired certificates.
-				_, err := validateConnState(roots, connState)
-				if err != nil {
-					return nil, nil, err
-				}
-
 				return trustedNonCA, nil, nil
 			}
 		}
-	}
-
-	// Get the list of full chains matching the connection
-	trustedChains, err := validateConnState(roots, connState)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	// If no trusted chain was found, client is not authenticated
