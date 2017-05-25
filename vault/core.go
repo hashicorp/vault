@@ -1418,11 +1418,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		default:
 		}
 
-		// Clear forwarding clients
-		c.requestForwardingConnectionLock.Lock()
-		c.clearForwardingClients()
-		c.requestForwardingConnectionLock.Unlock()
-
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
 		if err != nil {
