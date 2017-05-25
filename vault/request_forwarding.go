@@ -382,35 +382,41 @@ type forwardingClient struct {
 
 func (c *forwardingClient) startTicking() {
 	go func() {
+		tick := func() {
+			c.core.stateLock.RLock()
+			clusterAddr := c.core.clusterAddr
+			c.core.stateLock.RUnlock()
+
+			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
+			resp, err := c.RequestForwardingClient.Echo(ctx, &EchoRequest{
+				Message:     "ping",
+				ClusterAddr: clusterAddr,
+			})
+			cancel()
+			if err != nil {
+				c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
+				return
+			}
+			if resp == nil {
+				c.core.logger.Debug("forwarding: empty echo response from active node")
+				return
+			}
+			if resp.Message != "pong" {
+				c.core.logger.Debug("forwarding: unexpected echo response from active node", "message", resp.Message)
+				return
+			}
+			c.core.logger.Trace("forwarding: successful heartbeat")
+		}
+
+		tick()
+
 		for {
 			select {
 			case <-c.echoContext.Done():
 				c.echoTicker.Stop()
 				return
 			case <-c.echoTicker.C:
-				c.core.stateLock.RLock()
-				clusterAddr := c.core.clusterAddr
-				c.core.stateLock.RUnlock()
-
-				ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
-				resp, err := c.RequestForwardingClient.Echo(ctx, &EchoRequest{
-					Message:     "ping",
-					ClusterAddr: clusterAddr,
-				})
-				cancel()
-				if err != nil {
-					c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
-					continue
-				}
-				if resp == nil {
-					c.core.logger.Debug("forwarding: empty echo response from active node")
-					continue
-				}
-				if resp.Message != "pong" {
-					c.core.logger.Debug("forwarding: unexpected echo response from active node", "message", resp.Message)
-					continue
-				}
-				c.core.logger.Trace("forwarding: successful heartbeat")
+				tick()
 			}
 		}
 	}()
