@@ -40,7 +40,6 @@ import (
 	"io"
 	"io/ioutil"
 	"math"
-	"os"
 	"sync"
 	"time"
 
@@ -278,7 +277,7 @@ type parser struct {
 // that the underlying io.Reader must not return an incompatible
 // error.
 func (p *parser) recvMsg(maxReceiveMessageSize int) (pf payloadFormat, msg []byte, err error) {
-	if _, err := io.ReadFull(p.r, p.header[:]); err != nil {
+	if _, err := p.r.Read(p.header[:]); err != nil {
 		return 0, nil, err
 	}
 
@@ -294,7 +293,7 @@ func (p *parser) recvMsg(maxReceiveMessageSize int) (pf payloadFormat, msg []byt
 	// TODO(bradfitz,zhaoq): garbage. reuse buffer after proto decoding instead
 	// of making it for each message:
 	msg = make([]byte, int(length))
-	if _, err := io.ReadFull(p.r, msg); err != nil {
+	if _, err := p.r.Read(msg); err != nil {
 		if err == io.EOF {
 			err = io.ErrUnexpectedEOF
 		}
@@ -459,57 +458,6 @@ func ErrorDesc(err error) string {
 // Deprecated; use status.Errorf instead.
 func Errorf(c codes.Code, format string, a ...interface{}) error {
 	return status.Errorf(c, format, a...)
-}
-
-// toRPCErr converts an error into an error from the status package.
-func toRPCErr(err error) error {
-	if _, ok := status.FromError(err); ok {
-		return err
-	}
-	switch e := err.(type) {
-	case transport.StreamError:
-		return status.Error(e.Code, e.Desc)
-	case transport.ConnectionError:
-		return status.Error(codes.Internal, e.Desc)
-	default:
-		switch err {
-		case context.DeadlineExceeded:
-			return status.Error(codes.DeadlineExceeded, err.Error())
-		case context.Canceled:
-			return status.Error(codes.Canceled, err.Error())
-		case ErrClientConnClosing:
-			return status.Error(codes.FailedPrecondition, err.Error())
-		}
-	}
-	return status.Error(codes.Unknown, err.Error())
-}
-
-// convertCode converts a standard Go error into its canonical code. Note that
-// this is only used to translate the error returned by the server applications.
-func convertCode(err error) codes.Code {
-	switch err {
-	case nil:
-		return codes.OK
-	case io.EOF:
-		return codes.OutOfRange
-	case io.ErrClosedPipe, io.ErrNoProgress, io.ErrShortBuffer, io.ErrShortWrite, io.ErrUnexpectedEOF:
-		return codes.FailedPrecondition
-	case os.ErrInvalid:
-		return codes.InvalidArgument
-	case context.Canceled:
-		return codes.Canceled
-	case context.DeadlineExceeded:
-		return codes.DeadlineExceeded
-	}
-	switch {
-	case os.IsExist(err):
-		return codes.AlreadyExists
-	case os.IsNotExist(err):
-		return codes.NotFound
-	case os.IsPermission(err):
-		return codes.PermissionDenied
-	}
-	return codes.Unknown
 }
 
 // MethodConfig defines the configuration recommended by the service providers for a
