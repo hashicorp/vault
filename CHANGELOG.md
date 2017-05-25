@@ -1,5 +1,10 @@
 ## Next (Unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Step-Down is Forwarded: When a step-down is issued against a non-active node
+   in an HA cluster, it will now forward the request to the active node.
+
 IMPROVEMENTS:
 
  * plugins/databases: Add MongoDB as an internal database plugin. [GH-2698]
