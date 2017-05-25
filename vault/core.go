@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -317,6 +318,8 @@ type Core struct {
 	clusterLeaderRedirectAddr string
 	// Lock for the cluster leader values
 	clusterLeaderParamsLock sync.RWMutex
+	// Info on cluster members
+	peerClusterAddrsCache *cache.Cache
 	// The grpc Server that handles server RPC calls
 	rpcServer *grpc.Server
 	// The context for the client
@@ -444,6 +447,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+		peerClusterAddrsCache:            cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 	}
 

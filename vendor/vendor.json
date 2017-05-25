@@ -1177,6 +1177,12 @@
 			"revisionTime": "2017-04-13T22:17:16Z"
 		},
 		{
+			"checksumSHA1": "SQi5yeNb9HnAMRpEhQgcv9x9yKc=",
+			"path": "github.com/patrickmn/go-cache",
+			"revision": "7ac151875ffb48b9f3ccce9ea20f020b0c1596c8",
+			"revisionTime": "2017-04-18T23:29:47Z"
+		},
+		{
 			"checksumSHA1": "Se195FlZ160eaEk/uVx4KdTPSxU=",
 			"path": "github.com/pborman/uuid",
 			"revision": "1b00554d822231195d1babd97ff4a781231955c9",
