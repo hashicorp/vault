@@ -1712,12 +1712,12 @@ func (b *SystemBackend) handlePolicySet(
 
 	rulesRaw, ok := data.GetOk("rules")
 	if !ok {
-		return logical.ErrorResponse("missing rules input"), nil
+		return logical.ErrorResponse("'rules' parameter not supplied"), nil
 	}
 
 	rules := rulesRaw.(string)
 	if rules == "" {
-		return logical.ErrorResponse("empty rules input"), nil
+		return logical.ErrorResponse("'rules' parameter empty"), nil
 	}
 
 	// Validate the rules parse
