@@ -52,7 +52,7 @@ object from stdin. The example below is equivalent to the first example
 above.
 
 ```
-$ echo -n '{"value":"itsasecret"}' | vault write secret/password -
+$ echo -n '{"value":"itsasecret"}' | vault write secret/password value=-
 ...
 ```
 
