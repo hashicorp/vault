@@ -40,10 +40,10 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 		t.Fatal("expected an upsert")
 	}
 
-	testBytes := make([]byte, len(p.Keys[1].AESKey))
-	copy(testBytes, p.Keys[1].AESKey)
+	testBytes := make([]byte, len(p.Keys[1].Key))
+	copy(testBytes, p.Keys[1].Key)
 
-	p.Key = p.Keys[1].AESKey
+	p.Key = p.Keys[1].Key
 	p.Keys = nil
 	p.MigrateKeyToKeysMap()
 	if p.Key != nil {
@@ -52,7 +52,7 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	if len(p.Keys) != 1 {
 		t.Fatal("policy.Keys is the wrong size")
 	}
-	if !reflect.DeepEqual(testBytes, p.Keys[1].AESKey) {
+	if !reflect.DeepEqual(testBytes, p.Keys[1].Key) {
 		t.Fatal("key mismatch")
 	}
 }
@@ -336,7 +336,7 @@ func checkKeys(t *testing.T,
 	}
 
 	for i := 1; i < len(archive.Keys); i++ {
-		if !reflect.DeepEqual(archive.Keys[i].AESKey, keysArchive[i].AESKey) {
+		if !reflect.DeepEqual(archive.Keys[i].Key, keysArchive[i].Key) {
 			t.Fatalf("key %d not equivalent between policy archive and test keys archive", i)
 		}
 	}

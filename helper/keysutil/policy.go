@@ -2,6 +2,7 @@ package keysutil
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
@@ -21,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/hkdf"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -41,6 +43,7 @@ const (
 const (
 	KeyType_AES256_GCM96 = iota
 	KeyType_ECDSA_P256
+	KeyType_ED25519
 )
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
@@ -69,6 +72,14 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
+	case KeyType_ECDSA_P256, KeyType_ED25519:
+		return true
+	}
+	return false
+}
+
+func (kt KeyType) HashSignatureInput() bool {
+	switch kt {
 	case KeyType_ECDSA_P256:
 		return true
 	}
@@ -89,6 +100,8 @@ func (kt KeyType) String() string {
 		return "aes256-gcm96"
 	case KeyType_ECDSA_P256:
 		return "ecdsa-p256"
+	case KeyType_ED25519:
+		return "ed25519"
 	}
 
 	return "[unknown]"
@@ -96,13 +109,25 @@ func (kt KeyType) String() string {
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
-	AESKey             []byte   `json:"key"`
-	HMACKey            []byte   `json:"hmac_key"`
-	CreationTime       int64    `json:"creation_time"`
-	EC_X               *big.Int `json:"ec_x"`
-	EC_Y               *big.Int `json:"ec_y"`
-	EC_D               *big.Int `json:"ec_d"`
-	FormattedPublicKey string   `json:"public_key"`
+	// AES or some other kind that is a pure byte slice like ED25519
+	Key []byte `json:"key"`
+
+	// Key used for HMAC functions
+	HMACKey []byte `json:"hmac_key"`
+
+	// Time of creation
+	CreationTime time.Time `json:"time"`
+
+	EC_X *big.Int `json:"ec_x"`
+	EC_Y *big.Int `json:"ec_y"`
+	EC_D *big.Int `json:"ec_d"`
+
+	// The public key in an appropriate format for the type of key
+	FormattedPublicKey string `json:"public_key"`
+
+	// This is deprecated (but still filled) in favor of the value above which
+	// is more precise
+	DeprecatedCreationTime int64 `json:"creation_time"`
 }
 
 // keyEntryMap is used to allow JSON marshal/unmarshal
@@ -427,7 +452,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 
 	// Fast-path non-derived keys
 	if !p.Derived {
-		return p.Keys[ver].AESKey, nil
+		return p.Keys[ver].Key, nil
 	}
 
 	// Ensure a context is provided
@@ -439,9 +464,9 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	case Kdf_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
-		return kdf.CounterMode(prf, prfLen, p.Keys[ver].AESKey, context, 256)
+		return kdf.CounterMode(prf, prfLen, p.Keys[ver].Key, context, 256)
 	case Kdf_hkdf_sha256:
-		reader := hkdf.New(sha256.New, p.Keys[ver].AESKey, nil, context)
+		reader := hkdf.New(sha256.New, p.Keys[ver].Key, nil, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(32)
 		limReader := &io.LimitedReader{
@@ -645,12 +670,13 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *Policy) Sign(hashedInput []byte) (string, error) {
+func (p *Policy) Sign(input []byte) (string, error) {
 	if !p.Type.SigningSupported() {
 		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
 
 	var sig []byte
+	var err error
 	switch p.Type {
 	case KeyType_ECDSA_P256:
 		keyParams := p.Keys[p.LatestVersion]
@@ -662,7 +688,7 @@ func (p *Policy) Sign(hashedInput []byte) (string, error) {
 			},
 			D: keyParams.EC_D,
 		}
-		r, s, err := ecdsa.Sign(rand.Reader, key, hashedInput)
+		r, s, err := ecdsa.Sign(rand.Reader, key, input)
 		if err != nil {
 			return "", err
 		}
@@ -674,6 +700,15 @@ func (p *Policy) Sign(hashedInput []byte) (string, error) {
 			return "", err
 		}
 		sig = marshaledSig
+
+	case KeyType_ED25519:
+		key := ed25519.PrivateKey(p.Keys[p.LatestVersion].Key)
+		// Per docs, do not pre-hash ed25519; it does two passes and performs
+		// its own hashing
+		sig, err = key.Sign(rand.Reader, input, crypto.Hash(0))
+		if err != nil {
+			return "", err
+		}
 
 	default:
 		return "", fmt.Errorf("unsupported key type %v", p.Type)
@@ -688,7 +723,7 @@ func (p *Policy) Sign(hashedInput []byte) (string, error) {
 	return encoded, nil
 }
 
-func (p *Policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
+func (p *Policy) VerifySignature(input []byte, sig string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -739,7 +774,17 @@ func (p *Policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
 			Y:     keyParams.EC_Y,
 		}
 
-		return ecdsa.Verify(key, hashedInput, ecdsaSig.R, ecdsaSig.S), nil
+		return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
+
+	case KeyType_ED25519:
+		sigBytes, err := base64.StdEncoding.DecodeString(splitVerSig[1])
+		if err != nil {
+			return false, errutil.UserError{Err: "invalid base64 signature value"}
+		}
+
+		var priv ed25519.PrivateKey = p.Keys[ver].Key
+		return ed25519.Verify(priv.Public().(ed25519.PublicKey), input, sigBytes), nil
+
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -756,8 +801,10 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 	}
 
 	p.LatestVersion += 1
+	now := time.Now()
 	entry := KeyEntry{
-		CreationTime: time.Now().Unix(),
+		CreationTime:           now,
+		DeprecatedCreationTime: now.Unix(),
 	}
 
 	hmacKey, err := uuid.GenerateRandomBytes(32)
@@ -773,7 +820,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 		if err != nil {
 			return err
 		}
-		entry.AESKey = newKey
+		entry.Key = newKey
 
 	case KeyType_ECDSA_P256:
 		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -796,6 +843,14 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 			return fmt.Errorf("error PEM-encoding public key")
 		}
 		entry.FormattedPublicKey = string(pemBytes)
+
+	case KeyType_ED25519:
+		pub, pri, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return err
+		}
+		entry.Key = pri
+		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
 	}
 
 	p.Keys[p.LatestVersion] = entry
@@ -811,10 +866,12 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 }
 
 func (p *Policy) MigrateKeyToKeysMap() {
+	now := time.Now()
 	p.Keys = keyEntryMap{
 		1: KeyEntry{
-			AESKey:       p.Key,
-			CreationTime: time.Now().Unix(),
+			Key:                    p.Key,
+			CreationTime:           now,
+			DeprecatedCreationTime: now.Unix(),
 		},
 	}
 	p.Key = nil

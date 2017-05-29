@@ -4,6 +4,7 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -36,8 +37,8 @@ func (b *backend) pathKeys() *framework.Path {
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `The type of key to create. Currently,
-"aes256-gcm96" (symmetric) and "ecdsa-p256" (asymmetric) are
-supported. Defaults to "aes256-gcm96".`,
+"aes256-gcm96" (symmetric) and "ecdsa-p256" (asymmetric), and
+'ed25519' (asymmetric) are supported. Defaults to "aes256-gcm96".`,
 			},
 
 			"derived": &framework.FieldSchema{
@@ -116,6 +117,8 @@ func (b *backend) pathPolicyWrite(
 		polReq.KeyType = keysutil.KeyType_AES256_GCM96
 	case "ecdsa-p256":
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
+	case "ed25519":
+		polReq.KeyType = keysutil.KeyType_ED25519
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -189,21 +192,34 @@ func (b *backend) pathPolicyRead(
 	case keysutil.KeyType_AES256_GCM96:
 		retKeys := map[string]int64{}
 		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = v.CreationTime
+			retKeys[strconv.Itoa(k)] = v.DeprecatedCreationTime
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256:
-		type ecdsaKey struct {
-			Name      string `json:"name"`
-			PublicKey string `json:"public_key"`
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519:
+		type asymKey struct {
+			Name         string    `json:"name"`
+			PublicKey    string    `json:"public_key"`
+			CreationTime time.Time `json:"creation_time"`
 		}
-		retKeys := map[string]ecdsaKey{}
+		retKeys := map[string]asymKey{}
 		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = ecdsaKey{
-				Name:      elliptic.P256().Params().Name,
-				PublicKey: v.FormattedPublicKey,
+			key := asymKey{
+				PublicKey:    v.FormattedPublicKey,
+				CreationTime: v.CreationTime,
 			}
+			if key.CreationTime.IsZero() {
+				key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
+			}
+
+			switch p.Type {
+			case keysutil.KeyType_ECDSA_P256:
+				key.Name = elliptic.P256().Params().Name
+			case keysutil.KeyType_ED25519:
+				key.Name = "ed25519"
+			}
+
+			retKeys[strconv.Itoa(k)] = key
 		}
 		resp.Data["keys"] = retKeys
 	}

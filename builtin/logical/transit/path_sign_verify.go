@@ -36,7 +36,7 @@ func (b *backend) pathSign() *framework.Path {
 * sha2-384
 * sha2-512
 
-Defaults to "sha2-256".`,
+Defaults to "sha2-256". Not valid for all key types.`,
 			},
 
 			"urlalgorithm": &framework.FieldSchema{
@@ -88,12 +88,11 @@ func (b *backend) pathVerify() *framework.Path {
 				Default: "sha2-256",
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
-* sha2-224
-* sha2-256
+* sha2-224 sha2-256
 * sha2-384
 * sha2-512
 
-Defaults to "sha2-256".`,
+Defaults to "sha2-256". Not valid for all key types.`,
 			},
 		},
 
@@ -120,22 +119,6 @@ func (b *backend) pathSignWrite(
 		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
 	}
 
-	var hf hash.Hash
-	switch algorithm {
-	case "sha2-224":
-		hf = sha256.New224()
-	case "sha2-256":
-		hf = sha256.New()
-	case "sha2-384":
-		hf = sha512.New384()
-	case "sha2-512":
-		hf = sha512.New()
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
-	}
-	hf.Write(input)
-	hashedInput := hf.Sum(nil)
-
 	// Get the policy
 	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
 	if lock != nil {
@@ -152,7 +135,25 @@ func (b *backend) pathSignWrite(
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
-	sig, err := p.Sign(hashedInput)
+	if p.Type.HashSignatureInput() {
+		var hf hash.Hash
+		switch algorithm {
+		case "sha2-224":
+			hf = sha256.New224()
+		case "sha2-256":
+			hf = sha256.New()
+		case "sha2-384":
+			hf = sha512.New384()
+		case "sha2-512":
+			hf = sha512.New()
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+		}
+		hf.Write(input)
+		input = hf.Sum(nil)
+	}
+
+	sig, err := p.Sign(input)
 	if err != nil {
 		return nil, err
 	}
@@ -197,22 +198,6 @@ func (b *backend) pathVerifyWrite(
 		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
 	}
 
-	var hf hash.Hash
-	switch algorithm {
-	case "sha2-224":
-		hf = sha256.New224()
-	case "sha2-256":
-		hf = sha256.New()
-	case "sha2-384":
-		hf = sha512.New384()
-	case "sha2-512":
-		hf = sha512.New()
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
-	}
-	hf.Write(input)
-	hashedInput := hf.Sum(nil)
-
 	// Get the policy
 	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
 	if lock != nil {
@@ -225,7 +210,29 @@ func (b *backend) pathVerifyWrite(
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
-	valid, err := p.VerifySignature(hashedInput, sig)
+	if !p.Type.SigningSupported() {
+		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
+	}
+
+	if p.Type.HashSignatureInput() {
+		var hf hash.Hash
+		switch algorithm {
+		case "sha2-224":
+			hf = sha256.New224()
+		case "sha2-256":
+			hf = sha256.New()
+		case "sha2-384":
+			hf = sha512.New384()
+		case "sha2-512":
+			hf = sha512.New()
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+		}
+		hf.Write(input)
+		input = hf.Sum(nil)
+	}
+
+	valid, err := p.VerifySignature(input, sig)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
