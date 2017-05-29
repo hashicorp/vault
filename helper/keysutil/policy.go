@@ -670,7 +670,7 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *Policy) Sign(input []byte) (string, error) {
+func (p *Policy) Sign(context, input []byte) (string, error) {
 	if !p.Type.SigningSupported() {
 		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -702,7 +702,19 @@ func (p *Policy) Sign(input []byte) (string, error) {
 		sig = marshaledSig
 
 	case KeyType_ED25519:
-		key := ed25519.PrivateKey(p.Keys[p.LatestVersion].Key)
+		var key ed25519.PrivateKey
+
+		if p.Derived {
+			// Derive the key that should be used
+			var err error
+			key, err = p.DeriveKey(context, p.LatestVersion)
+			if err != nil {
+				return "", errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+			}
+		} else {
+			key = ed25519.PrivateKey(p.Keys[p.LatestVersion].Key)
+		}
+
 		// Per docs, do not pre-hash ed25519; it does two passes and performs
 		// its own hashing
 		sig, err = key.Sign(rand.Reader, input, crypto.Hash(0))
@@ -723,7 +735,7 @@ func (p *Policy) Sign(input []byte) (string, error) {
 	return encoded, nil
 }
 
-func (p *Policy) VerifySignature(input []byte, sig string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -782,8 +794,20 @@ func (p *Policy) VerifySignature(input []byte, sig string) (bool, error) {
 			return false, errutil.UserError{Err: "invalid base64 signature value"}
 		}
 
-		var priv ed25519.PrivateKey = p.Keys[ver].Key
-		return ed25519.Verify(priv.Public().(ed25519.PublicKey), input, sigBytes), nil
+		var key ed25519.PrivateKey
+
+		if p.Derived {
+			// Derive the key that should be used
+			var err error
+			key, err = p.DeriveKey(context, ver)
+			if err != nil {
+				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+			}
+		} else {
+			key = ed25519.PrivateKey(p.Keys[ver].Key)
+		}
+
+		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
 
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
