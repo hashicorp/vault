@@ -205,24 +205,24 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 	defer s.permitPool.Release()
 
 	params := &s3.ListObjectsV2Input{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(prefix),
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(prefix),
+		Delimiter: aws.String("/"),
 	}
 
 	keys := []string{}
 
 	err := s.client.ListObjectsV2Pages(params,
 		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
+			// Add truncated 'folder' paths
+			for _, commonPrefix := range page.CommonPrefixes {
+				commonPrefix := strings.TrimPrefix(*commonPrefix.Prefix, prefix)
+				keys = append(keys, commonPrefix)
+			}
+			// Add objects only from the current 'folder'
 			for _, key := range page.Contents {
 				key := strings.TrimPrefix(*key.Key, prefix)
-
-				if i := strings.Index(key, "/"); i == -1 {
-					// Add objects only from the current 'folder'
-					keys = append(keys, key)
-				} else if i != -1 {
-					// Add truncated 'folder' paths
-					keys = appendIfMissing(keys, key[:i+1])
-				}
+				keys = append(keys, key)
 			}
 			return true
 		})
