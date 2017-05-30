@@ -26,6 +26,12 @@ func (b *backend) pathSign() *framework.Path {
 				Description: "The base64-encoded input data",
 			},
 
+			"context": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation. Required if key
+derivation is enabled; currently only available with ed25519 keys.`,
+			},
+
 			"algorithm": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "sha2-256",
@@ -61,6 +67,12 @@ func (b *backend) pathVerify() *framework.Path {
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The key to use",
+			},
+
+			"context": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation. Required if key
+derivation is enabled; currently only available with ed25519 keys.`,
 			},
 
 			"signature": &framework.FieldSchema{
@@ -135,6 +147,15 @@ func (b *backend) pathSignWrite(
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
 	if p.Type.HashSignatureInput() {
 		var hf hash.Hash
 		switch algorithm {
@@ -153,7 +174,7 @@ func (b *backend) pathSignWrite(
 		input = hf.Sum(nil)
 	}
 
-	sig, err := p.Sign(input)
+	sig, err := p.Sign(context, input)
 	if err != nil {
 		return nil, err
 	}
@@ -214,6 +235,15 @@ func (b *backend) pathVerifyWrite(
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
 	}
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
 	if p.Type.HashSignatureInput() {
 		var hf hash.Hash
 		switch algorithm {
@@ -232,7 +262,7 @@ func (b *backend) pathVerifyWrite(
 		input = hf.Sum(nil)
 	}
 
-	valid, err := p.VerifySignature(input, sig)
+	valid, err := p.VerifySignature(context, input, sig)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

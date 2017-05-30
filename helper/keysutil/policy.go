@@ -88,7 +88,7 @@ func (kt KeyType) HashSignatureInput() bool {
 
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96:
+	case KeyType_AES256_GCM96, KeyType_ED25519:
 		return true
 	}
 	return false
@@ -457,7 +457,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 
 	// Ensure a context is provided
 	if len(context) == 0 {
-		return nil, errutil.UserError{Err: "missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to encrypt or decrypt information"}
+		return nil, errutil.UserError{Err: "Missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to perform operations with the key."}
 	}
 
 	switch p.KDF {
@@ -465,6 +465,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
 		return kdf.CounterMode(prf, prfLen, p.Keys[ver].Key, context, 256)
+
 	case Kdf_hkdf_sha256:
 		reader := hkdf.New(sha256.New, p.Keys[ver].Key, nil, context)
 		derBytes := bytes.NewBuffer(nil)
@@ -473,14 +474,31 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 			R: reader,
 			N: 32,
 		}
-		n, err := derBytes.ReadFrom(limReader)
-		if err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
+
+		switch p.Type {
+		case KeyType_AES256_GCM96:
+			n, err := derBytes.ReadFrom(limReader)
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
+			}
+			if n != 32 {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to read enough derived bytes, needed 32, got %d", n)}
+			}
+			return derBytes.Bytes(), nil
+
+		case KeyType_ED25519:
+			// We use the limited reader containing the derived bytes as the
+			// "random" input to the generation function
+			_, pri, err := ed25519.GenerateKey(limReader)
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error generating derived key: %v", err)}
+			}
+			return pri, nil
+
+		default:
+			return nil, errutil.InternalError{Err: "unsupported key type for derivation"}
 		}
-		if n != 32 {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to read enough derived bytes, needed 32, got %d", n)}
-		}
-		return derBytes.Bytes(), nil
+
 	default:
 		return nil, errutil.InternalError{Err: "unsupported key derivation mode"}
 	}

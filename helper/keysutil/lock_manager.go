@@ -253,7 +253,7 @@ func (lm *LockManager) getPolicyCommon(req PolicyRequest, lockType bool) (*Polic
 
 		case KeyType_ED25519:
 			if req.Convergent {
-				return nil, nil, false, fmt.Errorf("key derivation not supported for keys of type %v", KeyType_ECDSA_P256)
+				return nil, nil, false, fmt.Errorf("convergent encryption not not supported for keys of type %v", KeyType_ED25519)
 			}
 
 		default:
