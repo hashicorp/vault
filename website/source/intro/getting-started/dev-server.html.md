@@ -28,7 +28,7 @@ we'll configure and start a real server.
 To start the Vault dev server, run:
 
 ```
-$ vault server -dev
+$ vault server -dev &
 WARNING: Dev mode is enabled!
 
 In this mode, Vault is completely in-memory and unsealed.
