@@ -235,12 +235,3 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 
 	return keys, nil
 }
-
-func appendIfMissing(slice []string, i string) []string {
-	for _, ele := range slice {
-		if ele == i {
-			return slice
-		}
-	}
-	return append(slice, i)
-}
