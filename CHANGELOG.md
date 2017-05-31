@@ -10,6 +10,7 @@ IMPROVEMENTS:
  * plugins/databases: Add MongoDB as an internal database plugin. [GH-2698]
  * storage/dynamodb: Add a method for checking the existence of children, 
    speeding up deletion operations in the DynamoDB storage backend. [GH-2722]
+ * ui (Enterprise): Transit key and secret browsing UI handle large lists better.
 
 BUG FIXES:
 
