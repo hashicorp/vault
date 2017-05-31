@@ -1,0 +1,80 @@
+package audit
+
+import (
+	"bytes"
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
+	"errors"
+
+	"github.com/hashicorp/vault/helper/jsonutil"
+	"github.com/hashicorp/vault/helper/salt"
+	"github.com/hashicorp/vault/logical"
+)
+
+func TestFormatCEE_formatRequest(t *testing.T) {
+	cases := map[string]struct {
+		Auth   *logical.Auth
+		Req    *logical.Request
+		Err    error
+		Result string
+	}{
+		"auth, request": {
+			&logical.Auth{ClientToken: "foo", Policies: []string{"root"}},
+			&logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "/foo",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapTTL: 60 * time.Second,
+			},
+			errors.New("this is an error"),
+			testFormatCEEReqBasicStr,
+		},
+	}
+
+	for name, tc := range cases {
+		var buf bytes.Buffer
+		formatter := AuditFormatter{
+			AuditFormatWriter: &CEEFormatWriter{},
+		}
+		salter, _ := salt.NewSalt(nil, nil)
+		config := FormatterConfig{
+			Salt: salter,
+		}
+		if err := formatter.FormatRequest(&buf, config, tc.Auth, tc.Req, tc.Err); err != nil {
+			t.Fatalf("bad: %s\nerr: %s", name, err)
+		}
+
+		var expectedjson = new(AuditRequestEntry)
+		if err := jsonutil.DecodeJSON([]byte(tc.Result)[5:], &expectedjson); err != nil {
+			t.Fatalf("bad json: %s", err)
+		}
+
+		var actualjson = new(AuditRequestEntry)
+		if err := jsonutil.DecodeJSON([]byte(buf.String()[5:]), &actualjson); err != nil {
+			t.Fatalf("bad json: %s", err)
+		}
+
+		expectedjson.Time = actualjson.Time
+
+		expectedBytes, err := json.Marshal(expectedjson)
+		if err != nil {
+			t.Fatalf("unable to marshal json: %s", err)
+		}
+
+		expectedBytes = append([]byte("@cee:"), expectedBytes...)
+
+		if strings.TrimSpace(buf.String()) != string(expectedBytes) {
+			t.Fatalf(
+				"bad: %s\nResult:\n\n'%s'\n\nExpected:\n\n'%s'",
+				name, buf.String(), string(tc.Result))
+		}
+	}
+}
+
+const testFormatCEEReqBasicStr = `@cee:{"time":"2015-08-05T13:45:46Z","type":"request","auth":{"display_name":"","policies":["root"],"metadata":null},"request":{"operation":"update","path":"/foo","data":null,"wrap_ttl":60,"remote_address":"127.0.0.1"},"error":"this is an error"}
+`
