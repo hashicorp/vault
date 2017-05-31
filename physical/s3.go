@@ -214,6 +214,11 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 	err := s.client.ListObjectsV2Pages(params,
 		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
 			for _, key := range page.Contents {
+				// Avoid panic
+				if key == nil {
+					continue
+				}
+
 				key := strings.TrimPrefix(*key.Key, prefix)
 
 				if i := strings.Index(key, "/"); i == -1 {
