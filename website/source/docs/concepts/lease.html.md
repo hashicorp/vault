@@ -39,7 +39,7 @@ arbitrary secrets does not issue leases.
 
 ## Lease IDs
 
-When reading a secret, such as via `vault read`, Vault always returns a
+When reading a dynamic secret, such as via `vault read`, Vault always returns a
 `lease_id`. This is the ID used with commands such as `vault renew` and `vault
 revoke` to manage the lease of the secret.
 
