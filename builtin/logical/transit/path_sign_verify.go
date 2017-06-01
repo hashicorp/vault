@@ -178,16 +178,21 @@ func (b *backend) pathSignWrite(
 	if err != nil {
 		return nil, err
 	}
-	if sig == "" {
+	if sig == nil {
 		return nil, fmt.Errorf("signature could not be computed")
 	}
 
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"signature": sig,
+			"signature": sig.Signature,
 		},
 	}
+
+	if len(sig.PublicKey) > 0 {
+		resp.Data["public_key"] = sig.PublicKey
+	}
+
 	return resp, nil
 }
 

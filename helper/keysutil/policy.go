@@ -48,6 +48,11 @@ const (
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
 
+type SigningResult struct {
+	Signature string
+	PublicKey []byte
+}
+
 type ecdsaSignature struct {
 	R, S *big.Int
 }
@@ -688,12 +693,13 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *Policy) Sign(context, input []byte) (string, error) {
+func (p *Policy) Sign(context, input []byte) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
-		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
+		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
 
 	var sig []byte
+	var pubKey []byte
 	var err error
 	switch p.Type {
 	case KeyType_ECDSA_P256:
@@ -708,14 +714,14 @@ func (p *Policy) Sign(context, input []byte) (string, error) {
 		}
 		r, s, err := ecdsa.Sign(rand.Reader, key, input)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		marshaledSig, err := asn1.Marshal(ecdsaSignature{
 			R: r,
 			S: s,
 		})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		sig = marshaledSig
 
@@ -727,8 +733,9 @@ func (p *Policy) Sign(context, input []byte) (string, error) {
 			var err error
 			key, err = p.DeriveKey(context, p.LatestVersion)
 			if err != nil {
-				return "", errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
+			pubKey = key.Public().(ed25519.PublicKey)
 		} else {
 			key = ed25519.PrivateKey(p.Keys[p.LatestVersion].Key)
 		}
@@ -737,20 +744,22 @@ func (p *Policy) Sign(context, input []byte) (string, error) {
 		// its own hashing
 		sig, err = key.Sign(rand.Reader, input, crypto.Hash(0))
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 	default:
-		return "", fmt.Errorf("unsupported key type %v", p.Type)
+		return nil, fmt.Errorf("unsupported key type %v", p.Type)
 	}
 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(sig)
 
-	// Prepend some information
-	encoded = "vault:v" + strconv.Itoa(p.LatestVersion) + ":" + encoded
+	res := &SigningResult{
+		Signature: "vault:v" + strconv.Itoa(p.LatestVersion) + ":" + encoded,
+		PublicKey: pubKey,
+	}
 
-	return encoded, nil
+	return res, nil
 }
 
 func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error) {
