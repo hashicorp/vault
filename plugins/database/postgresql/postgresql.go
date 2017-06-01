@@ -141,9 +141,62 @@ func (p *PostgreSQL) CreateUser(statements dbplugin.Statements, usernamePrefix s
 }
 
 func (p *PostgreSQL) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
-	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
+
+	if statements.RenewStatements == "" {
+		return p.defaultRenewUser(username, expiration)
+	}
+
+	return p.customRenewUser(username, expiration, statements.RenewStatements)
+}
+
+func (p *PostgreSQL) customRenewUser(username string, expiration time.Time, renewStmts string) error {
+	db, err := p.getConnection()
+	if err != nil {
+		return err
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
+
+	expirationStr, err := p.GenerateExpiration(expiration)
+	if err != nil {
+		return err
+	}
+
+	for _, query := range strutil.ParseArbitraryStringSlice(renewStmts, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+			"name":       username,
+			"expiration": expirationStr,
+		}))
+		if err != nil {
+			return err
+		}
+
+		defer stmt.Close()
+		if _, err := stmt.Exec(); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *PostgreSQL) defaultRenewUser(username string, expiration time.Time) error {
 
 	db, err := p.getConnection()
 	if err != nil {
