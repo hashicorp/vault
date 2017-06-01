@@ -23,11 +23,15 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	saltFunc := func() (*salt.Salt, error) {
 		return salter, nil
 	}
+
+	expectedResultStr := fmt.Sprintf(testFormatJSONReqBasicStrFmt, salter.GetIdentifiedHMAC("foo"))
+
 	cases := map[string]struct {
-		Auth   *logical.Auth
-		Req    *logical.Request
-		Err    error
-		Prefix string
+		Auth        *logical.Auth
+		Req         *logical.Request
+		Err         error
+		Prefix      string
+		ExpectedStr string
 	}{
 		"auth, request": {
 			&logical.Auth{ClientToken: "foo", Accessor: "bar", DisplayName: "testtoken", Policies: []string{"root"}},
@@ -46,6 +50,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			},
 			errors.New("this is an error"),
 			"",
+			expectedResultStr,
 		},
 		"auth, request with prefix": {
 			&logical.Auth{ClientToken: "foo", Accessor: "bar", DisplayName: "testtoken", Policies: []string{"root"}},
@@ -64,6 +69,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			},
 			errors.New("this is an error"),
 			"@cee: ",
+			expectedResultStr,
 		},
 	}
 
@@ -81,9 +87,6 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		if err := formatter.FormatRequest(&buf, config, tc.Auth, tc.Req, tc.Err); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
-
-		// must regenerate each run since we use a different salter each time
-		var expectedResultStr = fmt.Sprintf(testFormatJSONReqBasicStrFmt, salter.GetIdentifiedHMAC("foo"))
 
 		if !strings.HasPrefix(buf.String(), tc.Prefix) {
 			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
