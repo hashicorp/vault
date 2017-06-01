@@ -77,7 +77,7 @@ func TestSysWritePolicy(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]interface{}{
-		"rules": ``,
+		"rules": `path "*" { capabilities = ["read"] }`,
 	})
 	testResponseStatus(t, resp, 204)
 
@@ -118,7 +118,7 @@ func TestSysDeletePolicy(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	resp := testHttpPost(t, token, addr+"/v1/sys/policy/foo", map[string]interface{}{
-		"rules": ``,
+		"rules": `path "*" { capabilities = ["read"] }`,
 	})
 	testResponseStatus(t, resp, 204)
 
