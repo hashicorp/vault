@@ -170,6 +170,28 @@ func TestPostgreSQL_RenewUser(t *testing.T) {
 	if err = testCredsExist(t, connURL, username, password); err != nil {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
+	statements.RenewStatements = defaultPostgresRenewSQL
+	username, password, err = db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err = testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
+	err = db.RenewUser(statements, username, time.Now().Add(time.Minute))
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Sleep longer than the inital expiration time
+	time.Sleep(2 * time.Second)
+
+	if err = testCredsExist(t, connURL, username, password); err != nil {
+		t.Fatalf("Could not connect with new credentials: %s", err)
+	}
+
 }
 
 func TestPostgreSQL_RevokeUser(t *testing.T) {
