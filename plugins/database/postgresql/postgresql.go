@@ -16,7 +16,12 @@ import (
 	"github.com/lib/pq"
 )
 
-const postgreSQLTypeName string = "postgres"
+const (
+	postgreSQLTypeName      string = "postgres"
+	defaultPostgresRenewSQL        = `
+ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
+`
+)
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -144,14 +149,11 @@ func (p *PostgreSQL) RenewUser(statements dbplugin.Statements, username string, 
 	p.Lock()
 	defer p.Unlock()
 
-	if statements.RenewStatements == "" {
-		return p.defaultRenewUser(username, expiration)
+	renewStmts := statements.RenewStatements
+	if renewStmts == "" {
+		renewStmts = defaultPostgresRenewSQL
 	}
 
-	return p.customRenewUser(username, expiration, statements.RenewStatements)
-}
-
-func (p *PostgreSQL) customRenewUser(username string, expiration time.Time, renewStmts string) error {
 	db, err := p.getConnection()
 	if err != nil {
 		return err
@@ -190,35 +192,6 @@ func (p *PostgreSQL) customRenewUser(username string, expiration time.Time, rene
 	}
 
 	if err := tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (p *PostgreSQL) defaultRenewUser(username string, expiration time.Time) error {
-
-	db, err := p.getConnection()
-	if err != nil {
-		return err
-	}
-
-	expirationStr, err := p.GenerateExpiration(expiration)
-	if err != nil {
-		return err
-	}
-
-	query := fmt.Sprintf(
-		"ALTER ROLE %s VALID UNTIL '%s';",
-		pq.QuoteIdentifier(username),
-		expirationStr)
-
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
 		return err
 	}
 

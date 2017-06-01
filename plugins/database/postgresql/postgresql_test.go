@@ -333,7 +333,3 @@ REVOKE USAGE ON SCHEMA public FROM "{{name}}";
 
 DROP ROLE IF EXISTS "{{name}}";
 `
-
-const defaultPostgresRenewSQL = `
-ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
-`
