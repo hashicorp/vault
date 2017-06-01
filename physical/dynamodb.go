@@ -724,7 +724,8 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 // its last component.
 func recordPathForVaultKey(key string) string {
 	if strings.Contains(key, "/") {
-		return filepath.Dir(key)
+		newPath := filepath.ToSlash(filepath.Dir(key))
+		return newPath
 	}
 	return DynamoDBEmptyPath
 }
