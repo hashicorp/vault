@@ -200,6 +200,10 @@ type Core struct {
 	generateRootProgress [][]byte
 	generateRootLock     sync.Mutex
 
+	generateShareConfig   *GenerateShareConfig
+	generateShareProgress [][]byte
+	generateShareLock     sync.Mutex
+
 	// These variables holds the config and shares we have until we reach
 	// enough to verify the appropriate master key. Note that the same lock is
 	// used; this isn't time-critical so this shouldn't be a problem.

@@ -115,6 +115,43 @@ func TestCombine(t *testing.T) {
 	}
 }
 
+func TestGetShareAt(t *testing.T) {
+	secret := []byte("test")
+
+	out, err := Split(secret, 5, 3)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Let's get some new shares
+	parts := [][]byte{out[2], out[3], out[4]}
+	newShare6, err := GetShareAt(parts, 6)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	newShare7, err := GetShareAt(parts, 7)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	newShare8, err := GetShareAt(parts, 8)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Reconstruct the secret using only the new shares
+	parts = [][]byte{newShare6, newShare7, newShare8}
+	recomb, err := Combine(parts)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !bytes.Equal(recomb, secret) {
+		t.Fatalf("bad: %v %v", recomb, secret)
+	}
+}
+
 func TestField_Add(t *testing.T) {
 	if out := add(16, 16); out != 0 {
 		t.Fatalf("Bad: %v 16", out)
