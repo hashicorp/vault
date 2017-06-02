@@ -16,11 +16,13 @@ type ListCommand struct {
 
 func (c *ListCommand) Run(args []string) int {
 	var format string
+	var recursive bool
 	var err error
 	var secret *api.Secret
 	var flags *flag.FlagSet
 	flags = c.Meta.FlagSet("list", meta.FlagSetDefault)
 	flags.StringVar(&format, "format", "table", "")
+	flags.BoolVar(&recursive, "recursive", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
 		return 1
@@ -69,7 +71,36 @@ func (c *ListCommand) Run(args []string) int {
 		return 0
 	}
 
-	return OutputList(c.Ui, format, secret)
+	if recursive {
+		flattenedSecret := c.FlattenSecret(client, path, secret)
+		return OutputList(c.Ui, format, flattenedSecret)
+	} else {
+		return OutputList(c.Ui, format, secret)
+	}
+}
+
+func (c *ListCommand) FlattenSecret(client *api.Client, path string, secret *api.Secret) *api.Secret {
+	var result *api.Secret = new(api.Secret)
+	result.Data = make(map[string]interface{})
+	result.Data["keys"] = make([]interface{}, 0)
+
+	if keys, ok := secret.Data["keys"].([]interface{}); ok {
+		for _, k := range keys {
+			key := k.(string)
+			secret, err := client.Logical().List(path + key)
+			if err == nil && secret != nil {
+				flat := c.FlattenSecret(client, path+key, secret)
+				if keys, ok := flat.Data["keys"].([]interface{}); ok {
+					for _, k := range keys {
+						result.Data["keys"] = append(result.Data["keys"].([]interface{}), k)
+					}
+				}
+			}
+			result.Data["keys"] = append(result.Data["keys"].([]interface{}), path+key)
+		}
+	}
+
+	return result
 }
 
 func (c *ListCommand) Synopsis() string {
