@@ -63,7 +63,7 @@ func (b *backend) secretCredsRenew(
 
 	// Request server's current time plus lease duration
 	var validUntil string
-	timeQuery := fmt.Sprintf("SELECT TO_NVARCHAR(add_seconds(CURRENT_TIMESTAMP," +
+	timeQuery := fmt.Sprintf("SELECT TO_NVARCHAR(add_seconds(CURRENT_TIMESTAMP,"+
 		"%f), 'YYYY-MM-DD HH24:MI:SS') FROM DUMMY", (leaseConfig.TTL).Seconds())
 	err = db.QueryRow(timeQuery).Scan(&validUntil)
 	if err != nil {

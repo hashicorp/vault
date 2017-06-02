@@ -95,7 +95,7 @@ func (b *backend) pathCredsCreateRead(
 	// Request HANA server time plus lease duration.
 	// This ensures the created account is deactivated server-side upon lease revocation
 	var validUntil string
-	timeQuery := fmt.Sprintf("SELECT TO_NVARCHAR(add_seconds(CURRENT_TIMESTAMP," +
+	timeQuery := fmt.Sprintf("SELECT TO_NVARCHAR(add_seconds(CURRENT_TIMESTAMP,"+
 		"%f), 'YYYY-MM-DD HH24:MI:SS') FROM DUMMY", (leaseConfig.TTL).Seconds())
 	err = db.QueryRow(timeQuery).Scan(&validUntil)
 	if err != nil {
@@ -110,8 +110,8 @@ func (b *backend) pathCredsCreateRead(
 		}
 
 		stmt, err := tx.Prepare(Query(query, map[string]string{
-			"name":     username,
-			"password": password,
+			"name":        username,
+			"password":    password,
 			"valid_until": validUntil,
 		}))
 		if err != nil {
@@ -130,8 +130,8 @@ func (b *backend) pathCredsCreateRead(
 
 	// Return the secret
 	resp := b.Secret(SecretCredsType).Response(map[string]interface{}{
-		"username": username,
-		"password": password,
+		"username":    username,
+		"password":    password,
 		"valid_until": validUntil,
 	}, map[string]interface{}{
 		"username": username,

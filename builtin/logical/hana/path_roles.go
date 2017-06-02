@@ -107,7 +107,7 @@ func (b *backend) pathRoleCreate(
 	// SQL will be prepared before each actual account creation
 
 	// Store SQL
-	entry, err := logical.StorageEntryJSON("role/" + name, &roleEntry{
+	entry, err := logical.StorageEntryJSON("role/"+name, &roleEntry{
 		SQL: sql,
 	})
 	if err != nil {

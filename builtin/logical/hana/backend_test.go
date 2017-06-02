@@ -139,8 +139,8 @@ func testAccStepReadCreds(t *testing.T, name string) logicaltest.TestStep {
 		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
 			var d struct {
-				Username string `mapstructure:"username"`
-				Password string `mapstructure:"password"`
+				Username    string `mapstructure:"username"`
+				Password    string `mapstructure:"password"`
 				Valid_Until string `mapstructure:"valid_until"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
