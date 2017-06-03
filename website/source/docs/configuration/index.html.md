@@ -86,6 +86,10 @@ to specify where the configuration is.
     sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
     ```
 
+- `plugin_directory` `(string: "")` – A directory from which plugins are
+  allowed to be loaded. Vault must have permission to read files in this
+  directory to successfully load plugins.
+
 - `telemetry` <tt>([Telemetry][telemetry]: nil)</tt> – Specifies the telemetry
   reporting system.
 
