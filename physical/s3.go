@@ -126,9 +126,10 @@ func (s *S3Backend) Put(entry *Entry) error {
 	defer s.permitPool.Release()
 
 	_, err := s.client.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(entry.Key),
-		Body:   bytes.NewReader(entry.Value),
+		Bucket:               aws.String(s.bucket),
+		Key:                  aws.String(entry.Key),
+		Body:                 bytes.NewReader(entry.Value),
+		ServerSideEncryption: aws.String("AES256"),
 	})
 
 	if err != nil {
