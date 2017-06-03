@@ -14,7 +14,7 @@ IMPROVEMENTS:
  * storage/mysql: Add max_parallel parameter to MySQL backend. [GH-2760]
  * secret/databases: Support custom renewal statements in Postgres database 
    plugin. [GH-2788]
-   
+ 
 BUG FIXES:
 
  * auth/cert: Fix panic on renewal [GH-2749]
@@ -25,6 +25,7 @@ BUG FIXES:
  * secret/generic: Allow integers to be set as the value of `ttl` field as the
    documentation claims is supported [GH-2699]
  * secret/ssh: Added host key callback to ssh client config [GH-2752]
+ * storage/dynamodb: Fix list functions working improperly on Windows [GH-2789]
  * storage/file: Don't leak file descriptors in some error cases
 
 ## 0.7.2 (May 8th, 2017)
