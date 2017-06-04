@@ -472,7 +472,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 
 		// Extract out the instance profile name from the instance
 		// profile ARN
-		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, ":instance-profile/")
+		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, "/")
 		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
 
 		if iamInstanceProfileName == "" {
