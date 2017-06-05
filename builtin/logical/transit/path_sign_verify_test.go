@@ -322,6 +322,30 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 			if !ed25519.Verify(ed25519.PublicKey(pubKeyRaw.([]byte)), input, signature) && !errExpected {
 				t.Fatal("invalid signature")
 			}
+
+			keyReadReq := &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "keys/" + postpath,
+			}
+			keyReadResp, err := b.HandleRequest(keyReadReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+			val := keyReadResp.Data["keys"].(map[string]asymKey)[strings.TrimPrefix(splitSig[1], "v")]
+			if val.PublicKey != "" {
+				t.Fatal("got non-empty public key")
+			}
+			keyReadReq.Data = map[string]interface{}{
+				"context": "abcd",
+			}
+			keyReadResp, err = b.HandleRequest(keyReadReq)
+			if err != nil {
+				t.Fatal(err)
+			}
+			val = keyReadResp.Data["keys"].(map[string]asymKey)[strings.TrimPrefix(splitSig[1], "v")]
+			if val.PublicKey != base64.StdEncoding.EncodeToString(pubKeyRaw.([]byte)) {
+				t.Fatalf("got incorrect public key; got %q, expected %q", val.PublicKey, pubKeyRaw)
+			}
 		}
 	}
 

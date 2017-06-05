@@ -2,9 +2,12 @@ package transit
 
 import (
 	"crypto/elliptic"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -69,6 +72,14 @@ impact the ciphertext's security.`,
 				Description: `Enables keys to be exportable.
 This allows for all the valid keys
 in the key ring to be exported.`,
+			},
+
+			"context": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation.
+When reading a key with key derivation enabled,
+if the key type supports public keys, this will
+return the public key for the given context.`,
 			},
 		},
 
@@ -142,6 +153,13 @@ func (b *backend) pathPolicyWrite(
 	return nil, nil
 }
 
+// Built-in helper type for returning asymmetric keys
+type asymKey struct {
+	Name         string    `json:"name"`
+	PublicKey    string    `json:"public_key"`
+	CreationTime time.Time `json:"creation_time"`
+}
+
 func (b *backend) pathPolicyRead(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
@@ -188,6 +206,15 @@ func (b *backend) pathPolicyRead(
 		}
 	}
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
 	switch p.Type {
 	case keysutil.KeyType_AES256_GCM96:
 		retKeys := map[string]int64{}
@@ -197,11 +224,6 @@ func (b *backend) pathPolicyRead(
 		resp.Data["keys"] = retKeys
 
 	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519:
-		type asymKey struct {
-			Name         string    `json:"name"`
-			PublicKey    string    `json:"public_key"`
-			CreationTime time.Time `json:"creation_time"`
-		}
 		retKeys := map[string]asymKey{}
 		for k, v := range p.Keys {
 			key := asymKey{
@@ -216,6 +238,18 @@ func (b *backend) pathPolicyRead(
 			case keysutil.KeyType_ECDSA_P256:
 				key.Name = elliptic.P256().Params().Name
 			case keysutil.KeyType_ED25519:
+				if p.Derived {
+					if len(context) == 0 {
+						key.PublicKey = ""
+					} else {
+						derived, err := p.DeriveKey(context, k)
+						if err != nil {
+							return nil, fmt.Errorf("failed to derive key to return public component")
+						}
+						pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
+						key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
+					}
+				}
 				key.Name = "ed25519"
 			}
 
