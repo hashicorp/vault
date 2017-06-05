@@ -29,7 +29,9 @@ func New() (interface{}, error) {
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen: 20,
+		RoleNameLen:    20,
 		UsernameLen:    128,
+		Separator:      "-",
 	}
 
 	dbType := &MSSQL{
@@ -68,7 +70,7 @@ func (m *MSSQL) getConnection() (*sql.DB, error) {
 
 // CreateUser generates the username/password on the underlying MSSQL secret backend as instructed by
 // the CreationStatement provided.
-func (m *MSSQL) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (m *MSSQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -83,7 +85,7 @@ func (m *MSSQL) CreateUser(statements dbplugin.Statements, usernamePrefix string
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
-	username, err = m.GenerateUsername(usernamePrefix)
+	username, err = m.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
 	}
