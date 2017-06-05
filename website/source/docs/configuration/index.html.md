@@ -59,9 +59,8 @@ to specify where the configuration is.
   Vault is listening for API requests.
 
 - `cache_size` `(string: "32000")` – Specifies the size of the read cache used
-  by the physical storage subsystem will be set to this value. The value is in
-  number of entries so the total cache size is dependent on the entries being
-  stored.
+  by the physical storage subsystem. The value is in number of entries, so the
+  total cache size depends on the size of stored entries.
 
 - `disable_cache` `(bool: false)` – Disables all caches within Vault, including
   the read cache used by the physical storage subsystem. This will very
