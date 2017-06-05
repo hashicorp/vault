@@ -790,15 +790,15 @@ func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error
 		return false, errutil.UserError{Err: ErrTooOld}
 	}
 
+	sigBytes, err := base64.StdEncoding.DecodeString(splitVerSig[1])
+	if err != nil {
+		return false, errutil.UserError{Err: "invalid base64 signature value"}
+	}
+
 	switch p.Type {
 	case KeyType_ECDSA_P256:
-		asn1Sig, err := base64.StdEncoding.DecodeString(splitVerSig[1])
-		if err != nil {
-			return false, errutil.UserError{Err: "invalid base64 signature value"}
-		}
-
 		var ecdsaSig ecdsaSignature
-		rest, err := asn1.Unmarshal(asn1Sig, &ecdsaSig)
+		rest, err := asn1.Unmarshal(sigBytes, &ecdsaSig)
 		if err != nil {
 			return false, errutil.UserError{Err: "supplied signature is invalid"}
 		}
@@ -816,11 +816,6 @@ func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error
 		return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
 
 	case KeyType_ED25519:
-		sigBytes, err := base64.StdEncoding.DecodeString(splitVerSig[1])
-		if err != nil {
-			return false, errutil.UserError{Err: "invalid base64 signature value"}
-		}
-
 		var key ed25519.PrivateKey
 
 		if p.Derived {
