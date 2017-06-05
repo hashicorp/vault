@@ -12,6 +12,7 @@ IMPROVEMENTS:
  * storage/dynamodb: Add a method for checking the existence of children, 
    speeding up deletion operations in the DynamoDB storage backend [GH-2722]
  * ui (Enterprise): Transit key and secret browsing UI handle large lists better
+ * ui (Enterprise): root tokens are no longer persisted
  * storage/mysql: Add max_parallel parameter to MySQL backend [GH-2760]
  * secret/databases: Support custom renewal statements in Postgres database 
    plugin [GH-2788]
