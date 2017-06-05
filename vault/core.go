@@ -663,24 +663,27 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 			panic("unreachable code")
 		}
 	}
+	// Create the auth response
+	auth := &logical.Auth{
+		ClientToken: req.ClientToken,
+		Accessor:    req.ClientTokenAccessor,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+		DisplayName: te.DisplayName,
+	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
 	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
-		return nil, te, logical.ErrPermissionDenied
+		// Return auth for audit logging even if not allowed
+		return auth, te, logical.ErrPermissionDenied
 	}
 	if rootPath && !rootPrivs {
-		return nil, te, logical.ErrPermissionDenied
+		// Return auth for audit logging even if not allowed
+		return auth, te, logical.ErrPermissionDenied
 	}
 
-	// Create the auth response
-	auth := &logical.Auth{
-		ClientToken: req.ClientToken,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
-	}
 	return auth, te, nil
 }
 
