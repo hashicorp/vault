@@ -44,7 +44,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 		return "", err
 	}
 	if creds == nil {
-		return "", fmt.Errorf("could not compile valid credential providers from static config, environemnt, shared, or instance metadata")
+		return "", fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 	}
 
 	// Use the credentials we've found to construct an STS session
@@ -59,7 +59,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	svc := sts.New(stsSession)
 	stsRequest, _ := svc.GetCallerIdentityRequest(params)
 
-	// Inject the required auth header value, if suplied, and then sign the request including that header
+	// Inject the required auth header value, if supplied, and then sign the request including that header
 	if headerValue != "" {
 		stsRequest.HTTPRequest.Header.Add(iamServerIdHeader, headerValue)
 	}

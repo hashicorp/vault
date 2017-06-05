@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	libraryVersion = "7"
+	libraryVersion = "8"
 	defaultBaseURL = "https://api.github.com/"
 	uploadBaseURL  = "https://uploads.github.com/"
 	userAgent      = "go-github/" + libraryVersion
@@ -97,6 +97,9 @@ const (
 
 	// https://developer.github.com/changes/2017-02-09-community-health/
 	mediaTypeRepositoryCommunityHealthMetricsPreview = "application/vnd.github.black-panther-preview+json"
+
+	// https://developer.github.com/changes/2017-05-23-coc-api/
+	mediaTypeCodesOfConductPreview = "application/vnd.github.scarlet-witch-preview+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -123,11 +126,11 @@ type Client struct {
 	// Services used for talking to different parts of the GitHub API.
 	Activity       *ActivityService
 	Admin          *AdminService
+	Apps           *AppsService
 	Authorizations *AuthorizationsService
 	Gists          *GistsService
 	Git            *GitService
 	Gitignores     *GitignoresService
-	Integrations   *IntegrationsService
 	Issues         *IssuesService
 	Organizations  *OrganizationsService
 	Projects       *ProjectsService
@@ -212,11 +215,11 @@ func NewClient(httpClient *http.Client) *Client {
 	c.common.client = c
 	c.Activity = (*ActivityService)(&c.common)
 	c.Admin = (*AdminService)(&c.common)
+	c.Apps = (*AppsService)(&c.common)
 	c.Authorizations = (*AuthorizationsService)(&c.common)
 	c.Gists = (*GistsService)(&c.common)
 	c.Git = (*GitService)(&c.common)
 	c.Gitignores = (*GitignoresService)(&c.common)
-	c.Integrations = (*IntegrationsService)(&c.common)
 	c.Issues = (*IssuesService)(&c.common)
 	c.Licenses = (*LicensesService)(&c.common)
 	c.Migrations = (*MigrationService)(&c.common)

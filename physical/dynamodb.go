@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
+	pkgPath "path"
 	"sort"
 	"strconv"
 	"strings"
@@ -420,7 +420,7 @@ func (d *DynamoDBBackend) LockWith(key, value string) (Lock, error) {
 	}
 	return &DynamoDBLock{
 		backend:            d,
-		key:                filepath.Join(filepath.Dir(key), DynamoDBLockPrefix+filepath.Base(key)),
+		key:                pkgPath.Join(pkgPath.Dir(key), DynamoDBLockPrefix+pkgPath.Base(key)),
 		value:              value,
 		identity:           identity,
 		recovery:           d.recovery,
@@ -724,7 +724,7 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 // its last component.
 func recordPathForVaultKey(key string) string {
 	if strings.Contains(key, "/") {
-		return filepath.Dir(key)
+		return pkgPath.Dir(key)
 	}
 	return DynamoDBEmptyPath
 }
@@ -734,7 +734,7 @@ func recordPathForVaultKey(key string) string {
 // property. This path equals the the vault key's
 // last component.
 func recordKeyForVaultKey(key string) string {
-	return filepath.Base(key)
+	return pkgPath.Base(key)
 }
 
 // vaultKey returns the vault key for a given record
@@ -745,7 +745,7 @@ func vaultKey(record *DynamoDBRecord) string {
 	if path == "" {
 		return record.Key
 	}
-	return filepath.Join(record.Path, record.Key)
+	return pkgPath.Join(record.Path, record.Key)
 }
 
 // escapeEmptyPath is used to escape the root key's path
