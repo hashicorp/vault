@@ -26,8 +26,10 @@ BUG FIXES:
  * secret/generic: Allow integers to be set as the value of `ttl` field as the
    documentation claims is supported [GH-2699]
  * secret/ssh: Added host key callback to ssh client config [GH-2752]
+ * storage/s3: Avoid a panic when some bad data is returned [GH-2785]
  * storage/dynamodb: Fix list functions working improperly on Windows [GH-2789]
  * storage/file: Don't leak file descriptors in some error cases
+ * storage/swift: Fix pre-v3 project/tenant name reading [GH-2803]
 
 ## 0.7.2 (May 8th, 2017)
 
