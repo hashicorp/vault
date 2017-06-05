@@ -90,6 +90,12 @@ password       	8cab931c-d62e-a73d-60d3-5ee85139cd66
 username       	v-root-e2978cd0-
 ```
 
+## Custom Plugins
+
+This backend allows custom database types to be run through the exposed plugin
+interface. Please see the [Custom database
+plugin](/docs/secrets/databases/custom.html) for more information.
+
 ## API
 
 The Database secret backend has a full HTTP API. Please see the [Database secret
