@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -369,10 +370,6 @@ func NewClient(config *Config) (*Client, error) {
 		config.Transport = defConfig.Transport
 	}
 
-	if config.HttpClient == nil {
-		config.HttpClient = defConfig.HttpClient
-	}
-
 	if config.TLSConfig.Address == "" {
 		config.TLSConfig.Address = defConfig.TLSConfig.Address
 	}
@@ -434,15 +431,18 @@ func NewClient(config *Config) (*Client, error) {
 // NewHttpClient returns an http client configured with the given Transport and TLS
 // config.
 func NewHttpClient(transport *http.Transport, tlsConf TLSConfig) (*http.Client, error) {
-	tlsClientConfig, err := SetupTLSConfig(&tlsConf)
-
-	if err != nil {
-		return nil, err
-	}
-
-	transport.TLSClientConfig = tlsClientConfig
 	client := &http.Client{
 		Transport: transport,
+	}
+
+	if transport.TLSClientConfig == nil {
+		tlsClientConfig, err := SetupTLSConfig(&tlsConf)
+
+		if err != nil {
+			return nil, err
+		}
+
+		transport.TLSClientConfig = tlsClientConfig
 	}
 
 	return client, nil
@@ -649,6 +649,8 @@ func (c *Client) write(endpoint string, in, out interface{}, q *WriteOptions) (*
 		if err := decodeBody(resp, &out); err != nil {
 			return nil, err
 		}
+	} else if _, err := ioutil.ReadAll(resp.Body); err != nil {
+		return nil, err
 	}
 	return wm, nil
 }

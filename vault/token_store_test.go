@@ -312,8 +312,8 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	if len(keys) != len(testKeys) {
 		t.Fatalf("wrong number of accessors found")
 	}
-	if len(resp.Warnings()) != 0 {
-		t.Fatalf("got warnings:\n%#v", resp.Warnings())
+	if len(resp.Warnings) != 0 {
+		t.Fatalf("got warnings:\n%#v", resp.Warnings)
 	}
 
 	// Test upgrade from old struct method of accessor storage (of token id)
@@ -347,8 +347,8 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	if len(keys) != len(testKeys) {
 		t.Fatalf("wrong number of accessors found")
 	}
-	if len(resp.Warnings()) != 0 {
-		t.Fatalf("got warnings:\n%#v", resp.Warnings())
+	if len(resp.Warnings) != 0 {
+		t.Fatalf("got warnings:\n%#v", resp.Warnings)
 	}
 
 	for _, accessor := range keys2 {
@@ -2347,7 +2347,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected an error")
 	}
-	if len(resp.Warnings()) == 0 {
+	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected a warning")
 	}
 

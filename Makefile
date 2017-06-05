@@ -1,7 +1,8 @@
 TEST?=$$(go list ./... | grep -v /vendor/)
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS=\
-	github.com/mitchellh/gox
+	github.com/mitchellh/gox \
+	github.com/kardianos/govendor
 BUILD_TAGS?=vault
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v vendor)
 
@@ -64,7 +65,7 @@ generate:
 # bootstrap the build by downloading additional tools
 bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS) ; do \
-		echo "Installing $$tool" ; \
+		echo "Installing/Updating $$tool" ; \
 		go get -u $$tool; \
 	done
 

@@ -267,6 +267,31 @@ Default:        0
 
 I/O read timeout. The value must be a decimal number with a unit suffix (*"ms"*, *"s"*, *"m"*, *"h"*), such as *"30s"*, *"0.5m"* or *"1m30s"*.
 
+##### `rejectReadOnly`
+
+```
+Type:           bool
+Valid Values:   true, false
+Default:        false
+```
+
+
+`rejectreadOnly=true` causes the driver to reject read-only connections. This
+is for a possible race condition during an automatic failover, where the mysql
+client gets connected to a read-only replica after the failover. 
+
+Note that this should be a fairly rare case, as an automatic failover normally
+happens when the primary is down, and the race condition shouldn't happen
+unless it comes back up online as soon as the failover is kicked off. On the
+other hand, when this happens, a MySQL application can get stuck on a
+read-only connection until restarted. It is however fairly easy to reproduce,
+for example, using a manual failover on AWS Aurora's MySQL-compatible cluster.
+
+If you are not relying on read-only transactions to reject writes that aren't
+supposed to happen, setting this on some MySQL providers (such as AWS Aurora)
+is safer for failovers.
+
+
 ##### `strict`
 
 ```

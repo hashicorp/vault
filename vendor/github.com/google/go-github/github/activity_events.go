@@ -46,10 +46,10 @@ func (e *Event) ParsePayload() (payload interface{}, err error) {
 		payload = &ForkEvent{}
 	case "GollumEvent":
 		payload = &GollumEvent{}
-	case "IntegrationInstallationEvent":
-		payload = &IntegrationInstallationEvent{}
-	case "IntegrationInstallationRepositoriesEvent":
-		payload = &IntegrationInstallationRepositoriesEvent{}
+	case "InstallationEvent":
+		payload = &InstallationEvent{}
+	case "InstallationRepositoriesEvent":
+		payload = &InstallationRepositoriesEvent{}
 	case "IssueCommentEvent":
 		payload = &IssueCommentEvent{}
 	case "IssuesEvent":
@@ -92,6 +92,8 @@ func (e *Event) ParsePayload() (payload interface{}, err error) {
 		payload = &RepositoryEvent{}
 	case "StatusEvent":
 		payload = &StatusEvent{}
+	case "TeamEvent":
+		payload = &TeamEvent{}
 	case "TeamAddEvent":
 		payload = &TeamAddEvent{}
 	case "WatchEvent":

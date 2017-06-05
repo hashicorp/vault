@@ -102,15 +102,6 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 			continue
 		}
 		for _, v := range vv {
-			if k == "user-agent" {
-				// user-agent is special. Copying logic of http_util.go.
-				if i := strings.LastIndex(v, " "); i == -1 {
-					// There is no application user agent string being set
-					continue
-				} else {
-					v = v[:i]
-				}
-			}
 			v, err := decodeMetadataHeader(k, v)
 			if err != nil {
 				return nil, streamErrorf(codes.InvalidArgument, "malformed binary metadata: %v", err)

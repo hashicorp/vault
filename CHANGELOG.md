@@ -5,23 +5,49 @@ DEPRECATIONS/CHANGES:
  * Step-Down is Forwarded: When a step-down is issued against a non-active node
    in an HA cluster, it will now forward the request to the active node.
 
+FEATURES:
+ * **ed25519 Signing/Verification in Transit with Key Derivation**: The
+   `transit` backend now supports generating
+   [ed25519](https://ed25519.cr.yp.to/) keys for signing and verification
+   functionality. These keys support derivation, allowing you to modify the
+   actual encryption key used by supplying a `context` value.
+ * **Replication Primary Discovery (Enterprise)**: Replication primaries will now advertise
+   the addresses of their local HA cluster members to replication secondaries.
+   This helps recovery if the primary active node goes down and neither service
+   discovery nor load balancers are in use to steer clients.
+
 IMPROVEMENTS:
 
- * plugins/databases: Add MongoDB as an internal database plugin. [GH-2698]
+ * api/health: Add Sys().Health() [GH-2805]
+ * command/auth: Add `-no-store` option that prevents the auth command from
+   storing the returned token into the configured token helper [GH-2809]
+ * core/forwarding: Request forwarding now heartbeats to prevent unused
+   connections from being terminated by firewalls or proxies
+ * plugins/databases: Add MongoDB as an internal database plugin [GH-2698]
  * storage/dynamodb: Add a method for checking the existence of children, 
-   speeding up deletion operations in the DynamoDB storage backend. [GH-2722]
-
+   speeding up deletion operations in the DynamoDB storage backend [GH-2722]
+ * storage/mysql: Add max_parallel parameter to MySQL backend [GH-2760]
+ * secret/databases: Support custom renewal statements in Postgres database 
+   plugin [GH-2788]
+ * ui (Enterprise): Transit key and secret browsing UI handle large lists better
+ * ui (Enterprise): root tokens are no longer persisted
+ 
 BUG FIXES:
 
+ * auth/app-id: Fix regression causing loading of salts to be skipped
+ * auth/aws: Improve EC2 describe instances performance [GH-2766]
+ * auth/aws: Fix lookup of some instance profile ARNs [GH-2802]
  * auth/cert: Fix panic on renewal [GH-2749]
  * auth/cert: Certificate verification for non-CA certs [GH-2761]
- * auth/aws-ec2: Improve EC2 describe instances performance [GH-2766]
  * secret/database: Increase wrapping token TTL; in a loaded scenario it could
    be too short
  * secret/generic: Allow integers to be set as the value of `ttl` field as the
    documentation claims is supported [GH-2699]
  * secret/ssh: Added host key callback to ssh client config [GH-2752]
+ * storage/s3: Avoid a panic when some bad data is returned [GH-2785]
+ * storage/dynamodb: Fix list functions working improperly on Windows [GH-2789]
  * storage/file: Don't leak file descriptors in some error cases
+ * storage/swift: Fix pre-v3 project/tenant name reading [GH-2803]
 
 ## 0.7.2 (May 8th, 2017)
 

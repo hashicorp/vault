@@ -6,9 +6,12 @@ package gocql
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/hailocab/go-hostpool"
 )
@@ -157,6 +160,34 @@ type SimpleRetryPolicy struct {
 // than the NumRetries defined in the policy.
 func (s *SimpleRetryPolicy) Attempt(q RetryableQuery) bool {
 	return q.Attempts() <= s.NumRetries
+}
+
+// ExponentialBackoffRetryPolicy sleeps between attempts
+type ExponentialBackoffRetryPolicy struct {
+	NumRetries int
+	Min, Max   time.Duration
+}
+
+func (e *ExponentialBackoffRetryPolicy) Attempt(q RetryableQuery) bool {
+	if q.Attempts() > e.NumRetries {
+		return false
+	}
+	time.Sleep(e.napTime(q.Attempts()))
+	return true
+}
+
+func (e *ExponentialBackoffRetryPolicy) napTime(attempts int) time.Duration {
+	if e.Min <= 0 {
+		e.Min = 100 * time.Millisecond
+	}
+	if e.Max <= 0 {
+		e.Max = 10 * time.Second
+	}
+	minFloat := float64(e.Min)
+	napDuration := minFloat * math.Pow(2, float64(attempts-1))
+	// add some jitter
+	napDuration += rand.Float64()*minFloat - (minFloat / 2)
+	return time.Duration(napDuration)
 }
 
 type HostStateNotifier interface {

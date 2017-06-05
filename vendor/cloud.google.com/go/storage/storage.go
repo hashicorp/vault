@@ -114,39 +114,6 @@ func (c *Client) Close() error {
 	return nil
 }
 
-// BucketHandle provides operations on a Google Cloud Storage bucket.
-// Use Client.Bucket to get a handle.
-type BucketHandle struct {
-	acl              ACLHandle
-	defaultObjectACL ACLHandle
-
-	c    *Client
-	name string
-}
-
-// Bucket returns a BucketHandle, which provides operations on the named bucket.
-// This call does not perform any network operations.
-//
-// The supplied name must contain only lowercase letters, numbers, dashes,
-// underscores, and dots. The full specification for valid bucket names can be
-// found at:
-//   https://cloud.google.com/storage/docs/bucket-naming
-func (c *Client) Bucket(name string) *BucketHandle {
-	return &BucketHandle{
-		c:    c,
-		name: name,
-		acl: ACLHandle{
-			c:      c,
-			bucket: name,
-		},
-		defaultObjectACL: ACLHandle{
-			c:         c,
-			bucket:    name,
-			isDefault: true,
-		},
-	}
-}
-
 // SignedURLOptions allows you to restrict the access to the signed URL.
 type SignedURLOptions struct {
 	// GoogleAccessID represents the authorizer of the signed URL generation.
@@ -905,7 +872,7 @@ func (c *contentTyper) ContentType() string {
 }
 
 // Conditions constrain methods to act on specific generations of
-// resources.
+// objects.
 //
 // The zero value is an empty set of constraints. Not all conditions or
 // combinations of conditions are applicable to all methods.

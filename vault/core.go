@@ -1637,6 +1637,15 @@ func (c *Core) scheduleUpgradeCleanup() error {
 
 	// Schedule cleanup for all of them
 	time.AfterFunc(keyRotateGracePeriod, func() {
+		sealed, err := c.barrier.Sealed()
+		if err != nil {
+			c.logger.Warn("core: failed to check barrier status at upgrade cleanup time")
+			return
+		}
+		if sealed {
+			c.logger.Warn("core: barrier sealed at upgrade cleanup time")
+			return
+		}
 		for _, upgrade := range upgrades {
 			path := fmt.Sprintf("%s%s", keyringUpgradePrefix, upgrade)
 			if err := c.barrier.Delete(path); err != nil {
