@@ -99,6 +99,8 @@ func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernameConfig db
 	if err != nil {
 		return "", "", err
 	}
+	// Cassandra doesn't like the uppercase usernames
+	username = strings.ToLower(username)
 
 	password, err = c.GeneratePassword()
 	if err != nil {
