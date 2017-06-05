@@ -19,6 +19,7 @@ FEATURES:
 IMPROVEMENTS:
 
  * api/health: Add Sys().Health() [GH-2805]
+ * audit: Add auth information to requests that error out [GH-2754]
  * command/auth: Add `-no-store` option that prevents the auth command from
    storing the returned token into the configured token helper [GH-2809]
  * core/forwarding: Request forwarding now heartbeats to prevent unused
