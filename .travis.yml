@@ -20,4 +20,4 @@ branches:
 
 script:
   - make bootstrap
-  - make test testrace
+  - TEST="github.com/hashicorp/vault/helper/keysutil" make test testrace
