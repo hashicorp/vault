@@ -180,9 +180,11 @@ type Policy struct {
 	// Whether the key is exportable
 	Exportable bool `json:"exportable"`
 
-	// The minimum version of the key allowed to be used
-	// for decryption
+	// The minimum version of the key allowed to be used for decryption
 	MinDecryptionVersion int `json:"min_decryption_version"`
+
+	// The minimum version of the key allowed to be used for encryption
+	MinEncryptionVersion int `json:"min_encryption_version"`
 
 	// The latest key version in this policy
 	LatestVersion int `json:"latest_version"`
@@ -269,6 +271,9 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	case p.ArchiveVersion > p.LatestVersion:
 		return fmt.Errorf("archive version of %d is greater than the latest version %d",
 			p.ArchiveVersion, p.LatestVersion)
+	case p.MinEncryptionVersion > 0 && p.MinEncryptionVersion < p.MinDecryptionVersion:
+		return fmt.Errorf("minimum decryption version of %d is greater than minimum encryption version %d",
+			p.MinDecryptionVersion, p.MinEncryptionVersion)
 	case p.MinDecryptionVersion > p.LatestVersion:
 		return fmt.Errorf("minimum decryption version of %d is greater than the latest version %d",
 			p.MinDecryptionVersion, p.LatestVersion)
