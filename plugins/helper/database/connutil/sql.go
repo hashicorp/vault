@@ -8,6 +8,7 @@ import (
 	"time"
 
 	// Import sql drivers
+	_ "github.com/SAP/go-hdb/driver"
 	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/helper/parseutil"
