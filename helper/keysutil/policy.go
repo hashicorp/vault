@@ -847,7 +847,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 	}
 
 	p.LatestVersion += 1
-	now := time.Now().Local()
+	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
 		DeprecatedCreationTime: now.Unix(),
@@ -912,7 +912,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 }
 
 func (p *Policy) MigrateKeyToKeysMap() {
-	now := time.Now().Local()
+	now := time.Now()
 	p.Keys = keyEntryMap{
 		1: KeyEntry{
 			Key:                    p.Key,
