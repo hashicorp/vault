@@ -198,7 +198,8 @@ func Test_Archiving(t *testing.T) {
 func testArchivingCommon(t *testing.T, lm *LockManager) {
 	resetKeysArchive()
 
-	// First, we generate a policy and rotate it a number of times. Each time // we'll ensure that we have the expected number of keys in the archive and
+	// First, we generate a policy and rotate it a number of times. Each time
+	// we'll ensure that we have the expected number of keys in the archive and
 	// the main keys object, which without changing the min version should be
 	// zero and latest, respectively
 
