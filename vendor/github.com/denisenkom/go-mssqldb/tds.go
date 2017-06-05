@@ -908,7 +908,7 @@ func splitConnectionStringURL(dsn string) (map[string]string, error) {
 		if len(v) > 1 {
 			return res, fmt.Errorf("key %s provided more than once", k)
 		}
-		res[k] = v[0]
+		res[strings.ToLower(k)] = v[0]
 	}
 
 	return res, nil

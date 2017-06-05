@@ -63,6 +63,24 @@ See the oauth2 docs for complete instructions on using that library.
 For API methods that require HTTP Basic Authentication, use the
 BasicAuthTransport.
 
+GitHub Apps authentication can be provided by the
+https://github.com/bradleyfalzon/ghinstallation package.
+
+	import "github.com/bradleyfalzon/ghinstallation"
+
+	func main() {
+		// Wrap the shared transport for use with the integration ID 1 authenticating with installation ID 99.
+		itr, err := ghinstallation.NewKeyFromFile(http.DefaultTransport, 1, 99, "2016-10-19.private-key.pem")
+		if err != nil {
+			// Handle error.
+		}
+
+		// Use installation transport with client
+		client := github.NewClient(&http.Client{Transport: itr})
+
+		// Use client...
+	}
+
 Rate Limiting
 
 GitHub imposes a rate limit on all API clients. Unauthenticated clients are
