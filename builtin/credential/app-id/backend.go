@@ -76,6 +76,9 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 
 	b.view = conf.StorageView
 
+	b.MapAppId.SaltFunc = b.Salt
+	b.MapUserId.SaltFunc = b.Salt
+
 	return b.Backend, nil
 }
 
@@ -109,9 +112,6 @@ func (b *backend) Salt() (*salt.Salt, error) {
 		return nil, err
 	}
 	b.salt = salt
-	b.MapAppId.SaltFunc = b.Salt
-	b.MapUserId.SaltFunc = b.Salt
-
 	return salt, nil
 }
 
