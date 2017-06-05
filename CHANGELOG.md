@@ -7,13 +7,14 @@ DEPRECATIONS/CHANGES:
 
 IMPROVEMENTS:
 
- * plugins/databases: Add MongoDB as an internal database plugin. [GH-2698]
+ * api/health: Add Sys().Health() [GH-2805]
+ * plugins/databases: Add MongoDB as an internal database plugin [GH-2698]
  * storage/dynamodb: Add a method for checking the existence of children, 
-   speeding up deletion operations in the DynamoDB storage backend. [GH-2722]
- * ui (Enterprise): Transit key and secret browsing UI handle large lists better.
- * storage/mysql: Add max_parallel parameter to MySQL backend. [GH-2760]
+   speeding up deletion operations in the DynamoDB storage backend [GH-2722]
+ * ui (Enterprise): Transit key and secret browsing UI handle large lists better
+ * storage/mysql: Add max_parallel parameter to MySQL backend [GH-2760]
  * secret/databases: Support custom renewal statements in Postgres database 
-   plugin. [GH-2788]
+   plugin [GH-2788]
  
 BUG FIXES:
 
