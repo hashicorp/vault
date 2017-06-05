@@ -17,9 +17,10 @@ IMPROVEMENTS:
  
 BUG FIXES:
 
+ * auth/app-id: Fix regression causing loading of salts to be skipped
+ * auth/aws-ec2: Improve EC2 describe instances performance [GH-2766]
  * auth/cert: Fix panic on renewal [GH-2749]
  * auth/cert: Certificate verification for non-CA certs [GH-2761]
- * auth/aws-ec2: Improve EC2 describe instances performance [GH-2766]
  * secret/database: Increase wrapping token TTL; in a loaded scenario it could
    be too short
  * secret/generic: Allow integers to be set as the value of `ttl` field as the
