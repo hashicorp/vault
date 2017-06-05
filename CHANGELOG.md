@@ -15,6 +15,8 @@ FEATURES:
 IMPROVEMENTS:
 
  * api/health: Add Sys().Health() [GH-2805]
+ * command/auth: Add `-no-store` option that prevents the auth command from
+   storing the returned token into the configured token helper [GH-2809]
  * core/forwarding: Request forwarding now heartbeats to prevent unused
    connections from being terminated by firewalls or proxies
  * plugins/databases: Add MongoDB as an internal database plugin [GH-2698]
