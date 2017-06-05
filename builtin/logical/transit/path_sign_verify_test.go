@@ -95,7 +95,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 		}
 		if errExpected {
 			if !resp.IsError() {
-				t.Fatalf("bad: got error response: %#v", *resp)
+				t.Fatalf("bad: should have gotten error response: %#v", *resp)
 			}
 			return ""
 		}
@@ -118,7 +118,7 @@ func TestTransit_SignVerify_P256(t *testing.T) {
 		}
 		if errExpected {
 			if resp != nil && !resp.IsError() {
-				t.Fatalf("bad: got error response: %#v", *resp)
+				t.Fatalf("bad: should have gotten error response: %#v", *resp)
 			}
 			return
 		}
