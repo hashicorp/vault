@@ -2,11 +2,8 @@ package logical
 
 import (
 	"errors"
-	"fmt"
-	"reflect"
 
 	"github.com/hashicorp/vault/helper/wrapping"
-	"github.com/mitchellh/copystructure"
 )
 
 const (
@@ -52,85 +49,18 @@ type Response struct {
 
 	// Warnings allow operations or backends to return warnings in response
 	// to user actions without failing the action outright.
-	// Making it private helps ensure that it is easy for various parts of
-	// Vault (backend, core, etc.) to add warnings without accidentally
-	// replacing what exists.
-	warnings []string `json:"warnings" structs:"warnings" mapstructure:"warnings"`
+	Warnings []string `json:"warnings" structs:"warnings" mapstructure:"warnings"`
 
 	// Information for wrapping the response in a cubbyhole
 	WrapInfo *wrapping.ResponseWrapInfo `json:"wrap_info" structs:"wrap_info" mapstructure:"wrap_info"`
 }
 
-func init() {
-	copystructure.Copiers[reflect.TypeOf(Response{})] = func(v interface{}) (interface{}, error) {
-		input := v.(Response)
-		ret := Response{
-			Redirect: input.Redirect,
-		}
-
-		if input.Secret != nil {
-			retSec, err := copystructure.Copy(input.Secret)
-			if err != nil {
-				return nil, fmt.Errorf("error copying Secret: %v", err)
-			}
-			ret.Secret = retSec.(*Secret)
-		}
-
-		if input.Auth != nil {
-			retAuth, err := copystructure.Copy(input.Auth)
-			if err != nil {
-				return nil, fmt.Errorf("error copying Auth: %v", err)
-			}
-			ret.Auth = retAuth.(*Auth)
-		}
-
-		if input.Data != nil {
-			retData, err := copystructure.Copy(&input.Data)
-			if err != nil {
-				return nil, fmt.Errorf("error copying Data: %v", err)
-			}
-			ret.Data = *(retData.(*map[string]interface{}))
-		}
-
-		if input.Warnings() != nil {
-			for _, warning := range input.Warnings() {
-				ret.AddWarning(warning)
-			}
-		}
-
-		if input.WrapInfo != nil {
-			retWrapInfo, err := copystructure.Copy(input.WrapInfo)
-			if err != nil {
-				return nil, fmt.Errorf("error copying WrapInfo: %v", err)
-			}
-			ret.WrapInfo = retWrapInfo.(*wrapping.ResponseWrapInfo)
-		}
-
-		return &ret, nil
-	}
-}
-
 // AddWarning adds a warning into the response's warning list
 func (r *Response) AddWarning(warning string) {
-	if r.warnings == nil {
-		r.warnings = make([]string, 0, 1)
+	if r.Warnings == nil {
+		r.Warnings = make([]string, 0, 1)
 	}
-	r.warnings = append(r.warnings, warning)
-}
-
-// Warnings returns the list of warnings set on the response
-func (r *Response) Warnings() []string {
-	return r.warnings
-}
-
-// ClearWarnings clears the response's warning list
-func (r *Response) ClearWarnings() {
-	r.warnings = make([]string, 0, 1)
-}
-
-// Copies the warnings from the other response to this one
-func (r *Response) CloneWarnings(other *Response) {
-	r.warnings = other.warnings
+	r.Warnings = append(r.Warnings, warning)
 }
 
 // IsError returns true if this response seems to indicate an error.
