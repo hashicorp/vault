@@ -1,6 +1,7 @@
 package credsutil
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -31,7 +32,7 @@ func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConf
 		return "", err
 	}
 
-	username := strings.Join([]string{"v", displayName, roleName, string(userUUID), string(time.Now().UTC().Unix())}, scp.Separator)
+	username := strings.Join([]string{"v", displayName, roleName, string(userUUID), fmt.Sprint(time.Now().UTC().Unix())}, scp.Separator)
 	if scp.UsernameLen > 0 && len(username) > scp.UsernameLen {
 		username = username[:scp.UsernameLen]
 	}
