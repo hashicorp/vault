@@ -332,7 +332,7 @@ func checkKeys(t *testing.T,
 
 	for i := p.MinDecryptionVersion; i <= p.LatestVersion; i++ {
 		if !reflect.DeepEqual(p.Keys[i], keysArchive[i]) {
-			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[i].Key, keysArchive[i].Key)
+			t.Fatalf("key %d not equivalent between policy keys and test keys archive; policy keys:\n%#v\ntest keys archive:\n%#v\n", i, p.Keys[i], keysArchive[i])
 		}
 	}
 
