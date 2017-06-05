@@ -5,17 +5,26 @@ DEPRECATIONS/CHANGES:
  * Step-Down is Forwarded: When a step-down is issued against a non-active node
    in an HA cluster, it will now forward the request to the active node.
 
+FEATURES:
+ * **ed25519 Signing/Verification in Transit with Key Derivation**: The
+   `transit` backend now supports generating
+   [ed25519](https://ed25519.cr.yp.to/) keys for signing and verification
+   functionality. These keys support derivation, allowing you to modify the
+   actual encryption key used by supplying a `context` value.
+
 IMPROVEMENTS:
 
  * api/health: Add Sys().Health() [GH-2805]
+ * core/forwarding: Request forwarding now heartbeats to prevent unused
+   connections from being terminated by firewalls or proxies
  * plugins/databases: Add MongoDB as an internal database plugin [GH-2698]
  * storage/dynamodb: Add a method for checking the existence of children, 
    speeding up deletion operations in the DynamoDB storage backend [GH-2722]
- * ui (Enterprise): Transit key and secret browsing UI handle large lists better
- * ui (Enterprise): root tokens are no longer persisted
  * storage/mysql: Add max_parallel parameter to MySQL backend [GH-2760]
  * secret/databases: Support custom renewal statements in Postgres database 
    plugin [GH-2788]
+ * ui (Enterprise): Transit key and secret browsing UI handle large lists better
+ * ui (Enterprise): root tokens are no longer persisted
  
 BUG FIXES:
 
