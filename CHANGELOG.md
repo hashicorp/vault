@@ -11,6 +11,10 @@ FEATURES:
    [ed25519](https://ed25519.cr.yp.to/) keys for signing and verification
    functionality. These keys support derivation, allowing you to modify the
    actual encryption key used by supplying a `context` value.
+ * **Replication Primary Discovery (Enterprise)**: Replication primaries will now advertise
+   the addresses of their local HA cluster members to replication secondaries.
+   This helps recovery if the primary active node goes down and neither service
+   discovery nor load balancers are in use to steer clients.
 
 IMPROVEMENTS:
 
