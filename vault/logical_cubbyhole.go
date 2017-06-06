@@ -3,6 +3,7 @@ package vault
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/jsonutil"
@@ -100,6 +101,22 @@ func (b *CubbyholeBackend) handleRead(
 		return nil, fmt.Errorf("json decoding failed: %v", err)
 	}
 
+	if raw, ok := rawData["cidr_block"]; ok {
+		_, cidr, err := net.ParseCIDR(raw.(string))
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse cidr_block on read: %s", err)
+		}
+
+		var addr string
+		if req.Connection != nil {
+			addr = req.Connection.RemoteAddr
+		}
+
+		if addr == "" || !cidr.Contains(net.ParseIP(addr)) {
+			return logical.ErrorResponse("your source address is not allowed to read this key"), nil
+		}
+	}
+
 	// Generate the response
 	resp := &logical.Response{
 		Data: rawData,
@@ -110,12 +127,26 @@ func (b *CubbyholeBackend) handleRead(
 
 func (b *CubbyholeBackend) handleWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	var resp *logical.Response = nil
+
 	if req.ClientToken == "" {
 		return nil, fmt.Errorf("cubbyhole write: client token empty")
 	}
 	// Check that some fields are given
 	if len(req.Data) == 0 {
 		return nil, fmt.Errorf("missing data fields")
+	}
+
+	if raw_cidr, ok := req.Data["cidr_block"]; ok {
+		_, cidr, err := net.ParseCIDR(raw_cidr.(string))
+		if err != nil {
+			return nil, fmt.Errorf("invalid cidr_block specified: %s", err)
+		}
+
+		req.Data["cidr_block"] = cidr.String()
+
+		resp = &logical.Response{}
+		resp.AddWarning("cidr_block is specified, but may be unreliable. See warning in cubbyhole docs")
 	}
 
 	// JSON encode the data
@@ -133,7 +164,7 @@ func (b *CubbyholeBackend) handleWrite(
 		return nil, fmt.Errorf("failed to write: %v", err)
 	}
 
-	return nil, nil
+	return resp, nil
 }
 
 func (b *CubbyholeBackend) handleDelete(
