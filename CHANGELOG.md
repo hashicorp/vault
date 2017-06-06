@@ -4,6 +4,12 @@ DEPRECATIONS/CHANGES:
 
  * Step-Down is Forwarded: When a step-down is issued against a non-active node
    in an HA cluster, it will now forward the request to the active node.
+ * HMAC Keys in Transit Use Min Encryption Version: In prior releases, the
+   `min_decryption_version` property of keys in `transit` controlled which
+   versions of the HMAC key were allowed to be used for generating and
+   verifying HMACs. Now, the `min_decryption_version` property controls which
+   versions can be used for verification; the new `min_encryption_version`
+   property controls which versions can be used to generate HMACs.
 
 FEATURES:
  * **ed25519 Signing/Verification in Transit with Key Derivation**: The

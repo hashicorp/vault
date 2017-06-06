@@ -29,6 +29,9 @@ type BatchRequestItem struct {
 	// Nonce to be used when v1 convergent encryption is used
 	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 
+	// The key version to be used for encryption
+	Version int `json:"version" structs:"version" mapstructure:"version"`
+
 	// DecodedNonce is the base64 decoded version of Nonce
 	DecodedNonce []byte
 }
@@ -100,6 +103,13 @@ same ciphertext is generated. It is *very important* when using this mode that
 you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
+
+			"version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `The version of the key to use for encryption.
+Must be 0 (for latest) or a value greater than or equal
+to the min_encryption_version configured on the key.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -154,6 +164,7 @@ func (b *backend) pathEncryptWrite(
 			Plaintext: valueRaw.(string),
 			Context:   d.Get("context").(string),
 			Nonce:     d.Get("nonce").(string),
+			Version:   d.Get("version").(int),
 		}
 	}
 
@@ -244,7 +255,7 @@ func (b *backend) pathEncryptWrite(
 			continue
 		}
 
-		ciphertext, err := p.Encrypt(item.DecodedContext, item.DecodedNonce, item.Plaintext)
+		ciphertext, err := p.Encrypt(item.Version, item.DecodedContext, item.DecodedNonce, item.Plaintext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

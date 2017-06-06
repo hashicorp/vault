@@ -19,13 +19,15 @@ func (b *backend) pathConfig() *framework.Path {
 			"min_decryption_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `If set, the minimum version of the key allowed
-to be decrypted.`,
+to be decrypted. For signing keys, the minimum
+version allowed to be used for verification.`,
 			},
 
 			"min_encryption_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `If set, the minimum version of the key allowed
-to be used for encryption. If set to zero, only
+to be used for encryption; or for signing keys,
+to be used for signing. If set to zero, only
 the latest version of the key is allowed.`,
 			},
 

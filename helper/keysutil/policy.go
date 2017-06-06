@@ -514,7 +514,7 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 	}
 }
 
-func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
+func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -532,8 +532,19 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: "failed to base64-decode plaintext"}
 	}
 
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return "", errutil.UserError{Err: "requested version for encryption is negative"}
+	case ver > p.LatestVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
+	case ver < p.MinEncryptionVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
+	}
+
 	// Derive the key that should be used
-	key, err := p.DeriveKey(context, p.LatestVersion)
+	key, err := p.DeriveKey(context, ver)
 	if err != nil {
 		return "", err
 	}
@@ -590,7 +601,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString(full)
 
 	// Prepend some information
-	encoded = "vault:v" + strconv.Itoa(p.LatestVersion) + ":" + encoded
+	encoded = "vault:v" + strconv.Itoa(ver) + ":" + encoded
 
 	return encoded, nil
 }
@@ -683,11 +694,10 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 }
 
 func (p *Policy) HMACKey(version int) ([]byte, error) {
-	if version < p.MinDecryptionVersion {
-		return nil, fmt.Errorf("key version disallowed by policy (minimum is %d)", p.MinDecryptionVersion)
-	}
-
-	if version > p.LatestVersion {
+	switch {
+	case version < 0:
+		return nil, fmt.Errorf("key version does not exist (cannot be negative)")
+	case version > p.LatestVersion:
 		return nil, fmt.Errorf("key version does not exist; latest key version is %d", p.LatestVersion)
 	}
 
@@ -698,9 +708,20 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *Policy) Sign(context, input []byte) (*SigningResult, error) {
+func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return nil, errutil.UserError{Err: "requested version for signing is negative"}
+	case ver > p.LatestVersion:
+		return nil, errutil.UserError{Err: "requested version for signing is higher than the latest key version"}
+	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
+		return nil, errutil.UserError{Err: "requested version for signing is less than the minimum encryption key version"}
 	}
 
 	var sig []byte
@@ -708,7 +729,7 @@ func (p *Policy) Sign(context, input []byte) (*SigningResult, error) {
 	var err error
 	switch p.Type {
 	case KeyType_ECDSA_P256:
-		keyParams := p.Keys[p.LatestVersion]
+		keyParams := p.Keys[ver]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
 				Curve: elliptic.P256(),
@@ -736,13 +757,13 @@ func (p *Policy) Sign(context, input []byte) (*SigningResult, error) {
 		if p.Derived {
 			// Derive the key that should be used
 			var err error
-			key, err = p.DeriveKey(context, p.LatestVersion)
+			key, err = p.DeriveKey(context, ver)
 			if err != nil {
 				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
 			pubKey = key.Public().(ed25519.PublicKey)
 		} else {
-			key = ed25519.PrivateKey(p.Keys[p.LatestVersion].Key)
+			key = ed25519.PrivateKey(p.Keys[ver].Key)
 		}
 
 		// Per docs, do not pre-hash ed25519; it does two passes and performs
@@ -760,7 +781,7 @@ func (p *Policy) Sign(context, input []byte) (*SigningResult, error) {
 	encoded := base64.StdEncoding.EncodeToString(sig)
 
 	res := &SigningResult{
-		Signature: "vault:v" + strconv.Itoa(p.LatestVersion) + ":" + encoded,
+		Signature: "vault:v" + strconv.Itoa(ver) + ":" + encoded,
 		PublicKey: pubKey,
 	}
 
