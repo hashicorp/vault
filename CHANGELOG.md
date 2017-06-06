@@ -11,6 +11,10 @@ FEATURES:
    [ed25519](https://ed25519.cr.yp.to/) keys for signing and verification
    functionality. These keys support derivation, allowing you to modify the
    actual encryption key used by supplying a `context` value.
+ * **Key Version Specification for Encryption in Transit**: You can now specify
+   the version of a key you use to wish to generate a signature, ciphertext, or
+   HMAC. This can be controlled by the `min_encryption_version` key
+   configuration property.
  * **Replication Primary Discovery (Enterprise)**: Replication primaries will now advertise
    the addresses of their local HA cluster members to replication secondaries.
    This helps recovery if the primary active node goes down and neither service
