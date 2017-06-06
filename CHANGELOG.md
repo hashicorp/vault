@@ -1248,7 +1248,6 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * api: Correct the HTTP verb used in the LookupSelf method [GH-887]
  * api: Fix the output of `Sys().MountConfig(...)` to return proper values
    [GH-1017]
  * command/read: Fix panic when an empty argument was given [GH-923]
@@ -1296,8 +1295,12 @@ SECURITY:
     Go 1.5. For more information, please see
     https://groups.google.com/forum/#!topic/golang-dev/MEATuOi_ei4
 
-This is a security-only release; other than the version number and building
-against Go 1.5.3, there are no changes from 0.4.0.
+This is majorly a security-only release; other than the version number and building
+against Go 1.5.3 and a bug fix given below, there are no changes from 0.4.0.
+
+BUG FIXES:
+
+ * api: Correct the HTTP verb used in the LookupSelf method [GH-887]
 
 ## 0.4.0 (December 10, 2015)
 
