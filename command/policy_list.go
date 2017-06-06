@@ -79,12 +79,13 @@ func (c *PolicyListCommand) Synopsis() string {
 
 func (c *PolicyListCommand) Help() string {
 	helpText := `
-Usage: vault policies [options] [name]
+Usage: vault policy-list [options] [name]
 
-  List the policies that are available or read a single policy.
+  List the policies that are registered with Vault server.
 
-  This command lists the policies that are written to the Vault server.
-  If a name of a policy is specified, that policy is outputted.
+  If the 'name' argument is specified, if a policy exists by
+  that name with Vault server, rules of the same is returned.
+  Note: 'name' option will be deprecated, use 'policy-read' instead.
 
 General Options:
 ` + meta.GeneralOptionsUsage()
