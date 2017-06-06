@@ -24,9 +24,9 @@ func TestS3Backend(t *testing.T) {
 		t.SkipNow()
 	}
 
-	credsValue, err := credsChain.Get()
+	_, err = credsChain.Get()
 	if err != nil {
-		t.skipNow()
+		t.SkipNow()
 	}
 
 	// If the variable is empty or doesn't exist, the default
