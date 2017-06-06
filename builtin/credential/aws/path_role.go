@@ -496,7 +496,7 @@ func (b *backend) pathRoleCreateUpdate(
 		if roleEntry.ResolveAWSUniqueIDs {
 			principalID, err := b.resolveArnToUniqueId(req.Storage, principalARN)
 			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("error resolving ARN %#v to internal ID: %#v", principalARN, err)), nil
+				return logical.ErrorResponse(fmt.Sprintf("failed updating the unique ID of ARN %#v: %#v", principalARN, err)), nil
 			}
 			roleEntry.BoundIamPrincipalID = principalID
 		}
@@ -504,7 +504,7 @@ func (b *backend) pathRoleCreateUpdate(
 		// we're turning on resolution on this role, so ensure we update it
 		principalID, err := b.resolveArnToUniqueId(req.Storage, roleEntry.BoundIamPrincipalARN)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("error resolving ARN %#v to internal ID: %#v", roleEntry.BoundIamPrincipalARN, err)), nil
+			return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %#v", roleEntry.BoundIamPrincipalARN, err)), nil
 		}
 		roleEntry.BoundIamPrincipalID = principalID
 	}

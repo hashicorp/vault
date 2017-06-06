@@ -1143,9 +1143,6 @@ func (b *backend) pathLoginUpdateIam(
 		// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
 		// (in the case of an IAM user).
 		uniqueId := strings.Split(callerID.UserId, ":")[0]
-		if err != nil {
-			return nil, err
-		}
 		if uniqueId != roleEntry.BoundIamPrincipalID {
 			return logical.ErrorResponse(fmt.Sprintf("expected IAM %s %s to resolve to unique AWS ID %q but got %q instead", entity.Type, entity.FriendlyName, roleEntry.BoundIamPrincipalID, uniqueId)), nil
 		}
