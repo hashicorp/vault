@@ -17,6 +17,7 @@ import (
 	"github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 // Unreserved tls key
@@ -222,7 +223,7 @@ func (m *MySQLBackend) List(prefix string) ([]string, error) {
 			keys = append(keys, key)
 		} else if i != -1 {
 			// Add truncated 'folder' paths
-			keys = appendIfMissing(keys, string(key[:i+1]))
+			keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 		}
 	}
 

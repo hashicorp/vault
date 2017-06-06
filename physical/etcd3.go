@@ -15,6 +15,7 @@ import (
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/coreos/etcd/pkg/transport"
+	"github.com/hashicorp/vault/helper/strutil"
 	log "github.com/mgutz/logxi/v1"
 	"golang.org/x/net/context"
 )
@@ -204,7 +205,7 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 		if i := strings.Index(key, "/"); i == -1 {
 			keys = append(keys, key)
 		} else if i != -1 {
-			keys = appendIfMissing(keys, key[:i+1])
+			keys = strutil.AppendIfMissing(keys, key[:i+1])
 		}
 	}
 	return keys, nil

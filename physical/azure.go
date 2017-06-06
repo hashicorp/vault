@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/azure-storage-go"
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 // MaxBlobSize at this time
@@ -181,7 +182,7 @@ func (a *AzureBackend) List(prefix string) ([]string, error) {
 		if i := strings.Index(key, "/"); i == -1 {
 			keys = append(keys, key)
 		} else {
-			keys = appendIfMissing(keys, key[:i+1])
+			keys = strutil.AppendIfMissing(keys, key[:i+1])
 		}
 	}
 
