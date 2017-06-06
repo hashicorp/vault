@@ -22,13 +22,13 @@ func (mw *databaseTracingMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 
-func (mw *databaseTracingMiddleware) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (mw *databaseTracingMiddleware) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(then time.Time) {
 		mw.logger.Trace("database", "operation", "CreateUser", "status", "finished", "type", mw.typeStr, "err", err, "took", time.Since(then))
 	}(time.Now())
 
 	mw.logger.Trace("database", "operation", "CreateUser", "status", "started", "type", mw.typeStr)
-	return mw.next.CreateUser(statements, usernamePrefix, expiration)
+	return mw.next.CreateUser(statements, usernameConfig, expiration)
 }
 
 func (mw *databaseTracingMiddleware) RenewUser(statements Statements, username string, expiration time.Time) (err error) {
@@ -81,7 +81,7 @@ func (mw *databaseMetricsMiddleware) Type() (string, error) {
 	return mw.next.Type()
 }
 
-func (mw *databaseMetricsMiddleware) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (mw *databaseMetricsMiddleware) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"database", "CreateUser"}, now)
 		metrics.MeasureSince([]string{"database", mw.typeStr, "CreateUser"}, now)
@@ -94,7 +94,7 @@ func (mw *databaseMetricsMiddleware) CreateUser(statements Statements, usernameP
 
 	metrics.IncrCounter([]string{"database", "CreateUser"}, 1)
 	metrics.IncrCounter([]string{"database", mw.typeStr, "CreateUser"}, 1)
-	return mw.next.CreateUser(statements, usernamePrefix, expiration)
+	return mw.next.CreateUser(statements, usernameConfig, expiration)
 }
 
 func (mw *databaseMetricsMiddleware) RenewUser(statements Statements, username string, expiration time.Time) (err error) {

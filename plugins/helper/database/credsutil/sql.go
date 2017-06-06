@@ -2,26 +2,37 @@ package credsutil
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 )
 
 // SQLCredentialsProducer implements CredentialsProducer and provides a generic credentials producer for most sql database types.
 type SQLCredentialsProducer struct {
 	DisplayNameLen int
+	RoleNameLen    int
 	UsernameLen    int
+	Separator      string
 }
 
-func (scp *SQLCredentialsProducer) GenerateUsername(displayName string) (string, error) {
+func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConfig) (string, error) {
+	displayName := config.DisplayName
 	if scp.DisplayNameLen > 0 && len(displayName) > scp.DisplayNameLen {
 		displayName = displayName[:scp.DisplayNameLen]
 	}
-	userUUID, err := uuid.GenerateUUID()
+	roleName := config.RoleName
+	if scp.RoleNameLen > 0 && len(roleName) > scp.RoleNameLen {
+		roleName = roleName[:scp.RoleNameLen]
+	}
+
+	userUUID, err := RandomAlphaNumericOfLen(20)
 	if err != nil {
 		return "", err
 	}
-	username := fmt.Sprintf("v-%s-%s", displayName, userUUID)
+
+	username := strings.Join([]string{"v", displayName, roleName, string(userUUID), fmt.Sprint(time.Now().UTC().Unix())}, scp.Separator)
 	if scp.UsernameLen > 0 && len(username) > scp.UsernameLen {
 		username = username[:scp.UsernameLen]
 	}

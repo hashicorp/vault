@@ -23,10 +23,10 @@ const (
 )
 
 var (
-	DisplayNameLen       int = 10
-	LegacyDisplayNameLen int = 4
-	UsernameLen          int = 32
-	LegacyUsernameLen    int = 16
+	MetadataLen       int = 10
+	LegacyMetadataLen int = 4
+	UsernameLen       int = 32
+	LegacyUsernameLen int = 16
 )
 
 type MySQL struct {
@@ -35,14 +35,16 @@ type MySQL struct {
 }
 
 // New implements builtinplugins.BuiltinFactory
-func New(displayLen, usernameLen int) func() (interface{}, error) {
+func New(metadataLen, usernameLen int) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		connProducer := &connutil.SQLConnectionProducer{}
 		connProducer.Type = mySQLTypeName
 
 		credsProducer := &credsutil.SQLCredentialsProducer{
-			DisplayNameLen: displayLen,
+			DisplayNameLen: metadataLen,
+			RoleNameLen:    metadataLen,
 			UsernameLen:    usernameLen,
+			Separator:      "-",
 		}
 
 		dbType := &MySQL{
@@ -56,7 +58,7 @@ func New(displayLen, usernameLen int) func() (interface{}, error) {
 
 // Run instantiates a MySQL object, and runs the RPC server for the plugin
 func Run(apiTLSConfig *api.TLSConfig) error {
-	f := New(DisplayNameLen, UsernameLen)
+	f := New(MetadataLen, UsernameLen)
 	dbType, err := f()
 	if err != nil {
 		return err
@@ -80,7 +82,7 @@ func (m *MySQL) getConnection() (*sql.DB, error) {
 	return db.(*sql.DB), nil
 }
 
-func (m *MySQL) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (m *MySQL) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -95,7 +97,7 @@ func (m *MySQL) CreateUser(statements dbplugin.Statements, usernamePrefix string
 		return "", "", dbutil.ErrEmptyCreationStatement
 	}
 
-	username, err = m.GenerateUsername(usernamePrefix)
+	username, err = m.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
 	}
