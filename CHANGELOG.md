@@ -30,6 +30,8 @@ IMPROVEMENTS:
  * storage/mysql: Add max_parallel parameter to MySQL backend [GH-2760]
  * secret/databases: Support custom renewal statements in Postgres database 
    plugin [GH-2788]
+ * secret/databases: Use the role name as part of generated credentials
+   [GH-2812]
  * ui (Enterprise): Transit key and secret browsing UI handle large lists better
  * ui (Enterprise): root tokens are no longer persisted
  
