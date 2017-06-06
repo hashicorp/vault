@@ -24,6 +24,11 @@ func TestS3Backend(t *testing.T) {
 		t.SkipNow()
 	}
 
+	credsValue, err := credsChain.Get()
+	if err != nil {
+		t.skipNow()
+	}
+
 	// If the variable is empty or doesn't exist, the default
 	// AWS endpoints will be used
 	endpoint := os.Getenv("AWS_S3_ENDPOINT")
