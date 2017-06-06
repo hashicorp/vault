@@ -7,23 +7,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/awsutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 func TestS3Backend(t *testing.T) {
-	creds := credentials.NewChainCredentials(
-		[]credentials.Provider{
-			&credentials.EnvProvider{},
-			&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
-		})
+	credsConfig := &awsutil.CredentialsConfig{}
 
-	credValue, err := creds.Get()
+	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
 		t.SkipNow()
 	}
@@ -38,7 +34,7 @@ func TestS3Backend(t *testing.T) {
 	}
 
 	s3conn := s3.New(session.New(&aws.Config{
-		Credentials: creds,
+		Credentials: credsChain,
 		Endpoint:    aws.String(endpoint),
 		Region:      aws.String(region),
 	}))
@@ -79,11 +75,9 @@ func TestS3Backend(t *testing.T) {
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
+	// This uses the same logic to find the AWS credentials as we did at the beginning of the test
 	b, err := NewBackend("s3", logger, map[string]string{
-		"access_key":    credValue.AccessKeyID,
-		"secret_key":    credValue.SecretAccessKey,
-		"session_token": credValue.SessionToken,
-		"bucket":        bucket,
+		"bucket": bucket,
 	})
 	if err != nil {
 		t.Fatalf("err: %s", err)
