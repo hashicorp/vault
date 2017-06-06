@@ -26,6 +26,8 @@ var (
 // RegisterTLSConfig registers a custom tls.Config to be used with sql.Open.
 // Use the key as a value in the DSN where tls=value.
 //
+// Note: The tls.Config provided to needs to be exclusively owned by the driver after registering.
+//
 //  rootCertPool := x509.NewCertPool()
 //  pem, err := ioutil.ReadFile("/path/ca-cert.pem")
 //  if err != nil {

@@ -15,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 const (
@@ -53,7 +54,11 @@ func (c *Core) startForwarding() error {
 		return nil
 	}
 
-	c.rpcServer = grpc.NewServer()
+	c.rpcServer = grpc.NewServer(
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time: 2 * heartbeatInterval,
+		}),
+	)
 
 	if ha && c.clusterHandler != nil {
 		RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
@@ -220,7 +225,12 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 	// ALPN header right. It's just "insecure" because GRPC isn't managing
 	// the TLS state.
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)), grpc.WithInsecure())
+	c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host,
+		grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)),
+		grpc.WithInsecure(), // it's not, we handle it in the dialer
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time: 2 * heartbeatInterval,
+		}))
 	if err != nil {
 		cancelFunc()
 		c.logger.Error("core: err setting up forwarding rpc client", "error", err)
@@ -234,7 +244,7 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		echoTicker:  time.NewTicker(heartbeatInterval),
 		echoContext: ctx,
 	}
-	c.rpcForwardingClient.startTicking()
+	c.rpcForwardingClient.startHeartbeat()
 
 	return nil
 }
@@ -380,7 +390,9 @@ type forwardingClient struct {
 	echoContext context.Context
 }
 
-func (c *forwardingClient) startTicking() {
+// NOTE: we also take advantage of gRPC's keepalive bits, but as we send data
+// with these requests it's useful to keep this as well
+func (c *forwardingClient) startHeartbeat() {
 	go func() {
 		tick := func() {
 			c.core.stateLock.RLock()
@@ -414,6 +426,7 @@ func (c *forwardingClient) startTicking() {
 			select {
 			case <-c.echoContext.Done():
 				c.echoTicker.Stop()
+				c.core.logger.Trace("forwarding: stopping heartbeating")
 				return
 			case <-c.echoTicker.C:
 				tick()

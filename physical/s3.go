@@ -213,15 +213,22 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 
 	err := s.client.ListObjectsV2Pages(params,
 		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
-			for _, key := range page.Contents {
-				key := strings.TrimPrefix(*key.Key, prefix)
+			if page != nil {
+				for _, key := range page.Contents {
+					// Avoid panic
+					if key == nil {
+						continue
+					}
 
-				if i := strings.Index(key, "/"); i == -1 {
-					// Add objects only from the current 'folder'
-					keys = append(keys, key)
-				} else if i != -1 {
-					// Add truncated 'folder' paths
-					keys = appendIfMissing(keys, key[:i+1])
+					key := strings.TrimPrefix(*key.Key, prefix)
+
+					if i := strings.Index(key, "/"); i == -1 {
+						// Add objects only from the current 'folder'
+						keys = append(keys, key)
+					} else if i != -1 {
+						// Add truncated 'folder' paths
+						keys = appendIfMissing(keys, key[:i+1])
+					}
 				}
 			}
 			return true

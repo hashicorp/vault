@@ -364,7 +364,7 @@ func (cs *clientStream) SendMsg(m interface{}) (err error) {
 		}
 	}()
 	if err != nil {
-		return Errorf(codes.Internal, "grpc: %v", err)
+		return err
 	}
 	if cs.c.maxSendMessageSize == nil {
 		return Errorf(codes.Internal, "callInfo maxSendMessageSize field uninitialized(nil)")
@@ -606,7 +606,6 @@ func (ss *serverStream) SendMsg(m interface{}) (err error) {
 		}
 	}()
 	if err != nil {
-		err = Errorf(codes.Internal, "grpc: %v", err)
 		return err
 	}
 	if len(out) > ss.maxSendMessageSize {

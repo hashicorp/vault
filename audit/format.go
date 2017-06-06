@@ -78,8 +78,16 @@ func (f *AuditFormatter) FormatRequest(
 
 		// Hash any sensitive information
 		if auth != nil {
+			// Cache and restore accessor in the auth
+			var authAccessor string
+			if !config.HMACAccessor && auth.Accessor != "" {
+				authAccessor = auth.Accessor
+			}
 			if err := Hash(salt, auth); err != nil {
 				return err
+			}
+			if authAccessor != "" {
+				auth.Accessor = authAccessor
 			}
 		}
 
@@ -110,6 +118,8 @@ func (f *AuditFormatter) FormatRequest(
 		Error: errString,
 
 		Auth: AuditAuth{
+			ClientToken:   auth.ClientToken,
+			Accessor:      auth.Accessor,
 			DisplayName:   auth.DisplayName,
 			Policies:      auth.Policies,
 			Metadata:      auth.Metadata,
@@ -297,11 +307,13 @@ func (f *AuditFormatter) FormatResponse(
 	respEntry := &AuditResponseEntry{
 		Type:  "response",
 		Error: errString,
-
 		Auth: AuditAuth{
-			DisplayName: auth.DisplayName,
-			Policies:    auth.Policies,
-			Metadata:    auth.Metadata,
+			ClientToken:   auth.ClientToken,
+			Accessor:      auth.Accessor,
+			DisplayName:   auth.DisplayName,
+			Policies:      auth.Policies,
+			Metadata:      auth.Metadata,
+			RemainingUses: req.ClientTokenRemainingUses,
 		},
 
 		Request: AuditRequest{

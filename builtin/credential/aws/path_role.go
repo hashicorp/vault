@@ -721,7 +721,7 @@ func (b *backend) pathRoleCreateUpdate(
 		return nil, err
 	}
 
-	if len(resp.Warnings()) == 0 {
+	if len(resp.Warnings) == 0 {
 		return nil, nil
 	}
 

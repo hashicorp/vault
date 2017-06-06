@@ -30,6 +30,8 @@ type SwiftBackend struct {
 // from the environment.
 func newSwiftBackend(conf map[string]string, logger log.Logger) (Backend, error) {
 
+	var ok bool
+
 	username := os.Getenv("OS_USERNAME")
 	if username == "" {
 		username = conf["username"]
@@ -60,11 +62,9 @@ func newSwiftBackend(conf map[string]string, logger log.Logger) (Backend, error)
 	}
 	project := os.Getenv("OS_PROJECT_NAME")
 	if project == "" {
-		project = conf["project"]
-
-		if project == "" {
+		if project, ok = conf["project"]; !ok {
 			// Check for KeyStone naming prior to V3
-			project := os.Getenv("OS_TENANT_NAME")
+			project = os.Getenv("OS_TENANT_NAME")
 			if project == "" {
 				project = conf["tenant"]
 			}

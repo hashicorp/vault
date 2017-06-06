@@ -16,7 +16,12 @@ import (
 	"github.com/lib/pq"
 )
 
-const postgreSQLTypeName string = "postgres"
+const (
+	postgreSQLTypeName      string = "postgres"
+	defaultPostgresRenewSQL        = `
+ALTER ROLE "{{name}}" VALID UNTIL '{{expiration}}';
+`
+)
 
 // New implements builtinplugins.BuiltinFactory
 func New() (interface{}, error) {
@@ -141,31 +146,52 @@ func (p *PostgreSQL) CreateUser(statements dbplugin.Statements, usernamePrefix s
 }
 
 func (p *PostgreSQL) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
-	// Grab the lock
 	p.Lock()
 	defer p.Unlock()
+
+	renewStmts := statements.RenewStatements
+	if renewStmts == "" {
+		renewStmts = defaultPostgresRenewSQL
+	}
 
 	db, err := p.getConnection()
 	if err != nil {
 		return err
 	}
 
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		tx.Rollback()
+	}()
+
 	expirationStr, err := p.GenerateExpiration(expiration)
 	if err != nil {
 		return err
 	}
 
-	query := fmt.Sprintf(
-		"ALTER ROLE %s VALID UNTIL '%s';",
-		pq.QuoteIdentifier(username),
-		expirationStr)
+	for _, query := range strutil.ParseArbitraryStringSlice(renewStmts, ";") {
+		query = strings.TrimSpace(query)
+		if len(query) == 0 {
+			continue
+		}
+		stmt, err := tx.Prepare(dbutil.QueryHelper(query, map[string]string{
+			"name":       username,
+			"expiration": expirationStr,
+		}))
+		if err != nil {
+			return err
+		}
 
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return err
+		defer stmt.Close()
+		if _, err := stmt.Exec(); err != nil {
+			return err
+		}
 	}
-	defer stmt.Close()
-	if _, err := stmt.Exec(); err != nil {
+
+	if err := tx.Commit(); err != nil {
 		return err
 	}
 

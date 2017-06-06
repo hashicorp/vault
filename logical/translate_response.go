@@ -14,7 +14,7 @@ import (
 func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 	httpResp := &HTTPResponse{
 		Data:     input.Data,
-		Warnings: input.Warnings(),
+		Warnings: input.Warnings,
 	}
 
 	if input.Secret != nil {
@@ -42,7 +42,7 @@ func LogicalResponseToHTTPResponse(input *Response) *HTTPResponse {
 func HTTPResponseToLogicalResponse(input *HTTPResponse) *Response {
 	logicalResp := &Response{
 		Data:     input.Data,
-		warnings: input.Warnings,
+		Warnings: input.Warnings,
 	}
 
 	if input.LeaseID != "" {
