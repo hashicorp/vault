@@ -42,7 +42,7 @@ and 512 bits are supported. Defaults to 256.`,
 				Default: 256,
 			},
 
-			"version": &framework.FieldSchema{
+			"key_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `The version of the Vault key to use for
 encryption of the data key. Must be 0 (for latest)
@@ -63,7 +63,7 @@ min_encryption_version configured on the key.`,
 func (b *backend) pathDatakeyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	ver := d.Get("version").(int)
+	ver := d.Get("key_version").(int)
 
 	plaintext := d.Get("plaintext").(string)
 	plaintextAllowed := false

@@ -34,7 +34,7 @@ func (b *backend) pathRewrap() *framework.Path {
 				Description: "Nonce for when convergent encryption is used",
 			},
 
-			"version": &framework.FieldSchema{
+			"key_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal
@@ -76,7 +76,7 @@ func (b *backend) pathRewrapWrite(
 			Ciphertext: ciphertext,
 			Context:    d.Get("context").(string),
 			Nonce:      d.Get("nonce").(string),
-			Version:    d.Get("version").(int),
+			KeyVersion: d.Get("key_version").(int),
 		}
 	}
 
@@ -140,7 +140,7 @@ func (b *backend) pathRewrapWrite(
 			}
 		}
 
-		ciphertext, err := p.Encrypt(item.Version, item.DecodedContext, item.DecodedNonce, plaintext)
+		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

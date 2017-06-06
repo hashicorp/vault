@@ -46,7 +46,7 @@ Defaults to "sha2-256".`,
 				Description: `Algorithm to use (POST URL parameter)`,
 			},
 
-			"version": &framework.FieldSchema{
+			"key_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for generating the HMAC.
 Must be 0 (for latest) or a value greater than or equal
@@ -66,7 +66,7 @@ to the min_encryption_version configured on the key.`,
 func (b *backend) pathHMACWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	ver := d.Get("version").(int)
+	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {

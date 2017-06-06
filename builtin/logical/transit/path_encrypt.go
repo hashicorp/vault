@@ -30,7 +30,7 @@ type BatchRequestItem struct {
 	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 
 	// The key version to be used for encryption
-	Version int `json:"version" structs:"version" mapstructure:"version"`
+	KeyVersion int `json:"key_version" structs:"key_version" mapstructure:"key_version"`
 
 	// DecodedNonce is the base64 decoded version of Nonce
 	DecodedNonce []byte
@@ -104,7 +104,7 @@ you ensure that all nonces are unique for a given context.  Failing to do so
 will severely impact the ciphertext's security.`,
 			},
 
-			"version": &framework.FieldSchema{
+			"key_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for encryption.
 Must be 0 (for latest) or a value greater than or equal
@@ -161,10 +161,10 @@ func (b *backend) pathEncryptWrite(
 
 		batchInputItems = make([]BatchRequestItem, 1)
 		batchInputItems[0] = BatchRequestItem{
-			Plaintext: valueRaw.(string),
-			Context:   d.Get("context").(string),
-			Nonce:     d.Get("nonce").(string),
-			Version:   d.Get("version").(int),
+			Plaintext:  valueRaw.(string),
+			Context:    d.Get("context").(string),
+			Nonce:      d.Get("nonce").(string),
+			KeyVersion: d.Get("key_version").(int),
 		}
 	}
 
@@ -255,7 +255,7 @@ func (b *backend) pathEncryptWrite(
 			continue
 		}
 
-		ciphertext, err := p.Encrypt(item.Version, item.DecodedContext, item.DecodedNonce, item.Plaintext)
+		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

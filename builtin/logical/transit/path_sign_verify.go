@@ -50,7 +50,7 @@ Defaults to "sha2-256". Not valid for all key types.`,
 				Description: `Hash algorithm to use (POST URL parameter)`,
 			},
 
-			"version": &framework.FieldSchema{
+			"key_version": &framework.FieldSchema{
 				Type: framework.TypeInt,
 				Description: `The version of the key to use for signing.
 Must be 0 (for latest) or a value greater than or equal
@@ -128,7 +128,7 @@ Defaults to "sha2-256". Not valid for all key types.`,
 func (b *backend) pathSignWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
-	ver := d.Get("version").(int)
+	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {
