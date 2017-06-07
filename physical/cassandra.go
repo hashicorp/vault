@@ -164,7 +164,6 @@ func (c *CassandraBackend) List(prefix string) ([]string, error) {
 
 	stmt := fmt.Sprintf(`SELECT key FROM "%s" WHERE bucket = ?`, c.table)
 	q := c.sess.Query(stmt, c.bucketName(prefix))
-	q = q.Consistency(gocql.One) // List does not need such strong consistency guarantees
 	iter := q.Iter()
 	k, keys := "", []string{}
 	for iter.Scan(&k) {
