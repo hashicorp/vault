@@ -274,6 +274,9 @@ func TestPathMap_Salted(t *testing.T) {
 		t.Fatal(err)
 	}
 	list, _ := storage.List("struct/map/foo/")
+	if len(list) != 1 {
+		t.Fatalf("unexpected number of entries left after upgrade; expected 1, got %d", len(list))
+	}
 	found := false
 	for _, v := range list {
 		if v == salt.SaltID("b") {
@@ -426,6 +429,9 @@ func TestPathMap_SaltFunc(t *testing.T) {
 		t.Fatal(err)
 	}
 	list, _ := storage.List("struct/map/foo/")
+	if len(list) != 1 {
+		t.Fatalf("unexpected number of entries left after upgrade; expected 1, got %d", len(list))
+	}
 	found := false
 	for _, v := range list {
 		if v == locSalt.SaltID("b") {
