@@ -94,7 +94,7 @@ Additionally, the following options are only supported on Vault Pro/Enterprise:
 ```
 $ curl \
     --request PUT \
-    --data payload.json \
+    --data @payload.json \
     https://vault.rocks/v1/sys/init
 ```
 
