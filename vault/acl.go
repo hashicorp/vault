@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/armon/go-radix"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
@@ -51,7 +52,11 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// Check for an existing policy
 			raw, ok := tree.Get(pc.Prefix)
 			if !ok {
-				tree.Insert(pc.Prefix, pc.Permissions)
+				clonedPerms, err := pc.Permissions.Clone()
+				if err != nil {
+					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
+				}
+				tree.Insert(pc.Prefix, clonedPerms)
 				continue
 			}
 
@@ -66,15 +71,15 @@ func NewACL(policies []*Policy) (*ACL, error) {
 
 			case pc.Permissions.CapabilitiesBitmap&DenyCapabilityInt > 0:
 				// If this new policy explicitly denies, only save the deny value
-				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
-				pc.Permissions.AllowedParameters = nil
-				pc.Permissions.DeniedParameters = nil
+				existingPerms.CapabilitiesBitmap = DenyCapabilityInt
+				existingPerms.AllowedParameters = nil
+				existingPerms.DeniedParameters = nil
 				goto INSERT
 
 			default:
 				// Insert the capabilities in this new policy into the existing
 				// value
-				pc.Permissions.CapabilitiesBitmap = existingPerms.CapabilitiesBitmap | pc.Permissions.CapabilitiesBitmap
+				existingPerms.CapabilitiesBitmap = existingPerms.CapabilitiesBitmap | pc.Permissions.CapabilitiesBitmap
 			}
 
 			// Note: In these stanzas, we're preferring minimum lifetimes. So
@@ -85,59 +90,58 @@ func NewACL(policies []*Policy) (*ACL, error) {
 			// If we have an existing max, and we either don't have a current
 			// max, or the current is greater than the previous, use the
 			// existing.
-			if existingPerms.MaxWrappingTTL > 0 &&
-				(pc.Permissions.MaxWrappingTTL == 0 ||
-					existingPerms.MaxWrappingTTL < pc.Permissions.MaxWrappingTTL) {
-				pc.Permissions.MaxWrappingTTL = existingPerms.MaxWrappingTTL
+			if pc.Permissions.MaxWrappingTTL > 0 &&
+				(existingPerms.MaxWrappingTTL == 0 ||
+					pc.Permissions.MaxWrappingTTL < existingPerms.MaxWrappingTTL) {
+				existingPerms.MaxWrappingTTL = pc.Permissions.MaxWrappingTTL
 			}
 			// If we have an existing min, and we either don't have a current
 			// min, or the current is greater than the previous, use the
 			// existing
-			if existingPerms.MinWrappingTTL > 0 &&
-				(pc.Permissions.MinWrappingTTL == 0 ||
-					existingPerms.MinWrappingTTL < pc.Permissions.MinWrappingTTL) {
-				pc.Permissions.MinWrappingTTL = existingPerms.MinWrappingTTL
+			if pc.Permissions.MinWrappingTTL > 0 &&
+				(existingPerms.MinWrappingTTL == 0 ||
+					pc.Permissions.MinWrappingTTL < existingPerms.MinWrappingTTL) {
+				existingPerms.MinWrappingTTL = pc.Permissions.MinWrappingTTL
 			}
 
-			if len(existingPerms.AllowedParameters) > 0 {
-				if pc.Permissions.AllowedParameters == nil {
-					pc.Permissions.AllowedParameters = existingPerms.AllowedParameters
+			if len(pc.Permissions.AllowedParameters) > 0 {
+				if existingPerms.AllowedParameters == nil {
+					existingPerms.AllowedParameters = pc.Permissions.AllowedParameters
 				} else {
-					for key, value := range existingPerms.AllowedParameters {
-						pcValue, ok := pc.Permissions.AllowedParameters[key]
+					for key, value := range pc.Permissions.AllowedParameters {
+						pcValue, ok := existingPerms.AllowedParameters[key]
 						// If an empty array exist it should overwrite any other
 						// value.
 						if len(value) == 0 || (ok && len(pcValue) == 0) {
-							pc.Permissions.AllowedParameters[key] = []interface{}{}
+							existingPerms.AllowedParameters[key] = []interface{}{}
 						} else {
 							// Merge the two maps, appending values on key conflict.
-							pc.Permissions.AllowedParameters[key] = append(value, pc.Permissions.AllowedParameters[key]...)
+							existingPerms.AllowedParameters[key] = append(value, existingPerms.AllowedParameters[key]...)
 						}
 					}
 				}
 			}
 
-			if len(existingPerms.DeniedParameters) > 0 {
-				if pc.Permissions.DeniedParameters == nil {
-					pc.Permissions.DeniedParameters = existingPerms.DeniedParameters
+			if len(pc.Permissions.DeniedParameters) > 0 {
+				if existingPerms.DeniedParameters == nil {
+					existingPerms.DeniedParameters = pc.Permissions.DeniedParameters
 				} else {
-					for key, value := range existingPerms.DeniedParameters {
-						pcValue, ok := pc.Permissions.DeniedParameters[key]
+					for key, value := range pc.Permissions.DeniedParameters {
+						pcValue, ok := existingPerms.DeniedParameters[key]
 						// If an empty array exist it should overwrite any other
 						// value.
 						if len(value) == 0 || (ok && len(pcValue) == 0) {
-							pc.Permissions.DeniedParameters[key] = []interface{}{}
+							existingPerms.DeniedParameters[key] = []interface{}{}
 						} else {
 							// Merge the two maps, appending values on key conflict.
-							pc.Permissions.DeniedParameters[key] = append(value, pc.Permissions.DeniedParameters[key]...)
+							existingPerms.DeniedParameters[key] = append(value, existingPerms.DeniedParameters[key]...)
 						}
 					}
 				}
 			}
 
 		INSERT:
-
-			tree.Insert(pc.Prefix, pc.Permissions)
+			tree.Insert(pc.Prefix, existingPerms)
 
 		}
 	}
