@@ -45,6 +45,8 @@ BUG FIXES:
  * auth/app-id: Fix regression causing loading of salts to be skipped
  * auth/aws: Improve EC2 describe instances performance [GH-2766]
  * auth/aws: Fix lookup of some instance profile ARNs [GH-2802]
+ * auth/aws: Resolve ARNs to internal AWS IDs which makes lookup at various
+   points (e.g. renewal time) more robust [GH-2814]
  * auth/aws: Properly honor configured period when using IAM authentication
    [GH-2825]
  * auth/aws: Check that a bound IAM principal is not empty (in the current
