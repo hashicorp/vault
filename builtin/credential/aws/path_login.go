@@ -463,7 +463,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 		iamInstanceProfileEntity, err := parseIamArn(iamInstanceProfileARN)
 
 		if err != nil {
-			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN; error: %v", err)
+			return nil, fmt.Errorf("failed to parse IAM instance profile ARN %q; error: %v", iamInstanceProfileARN, err)
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
@@ -1112,6 +1112,9 @@ func (b *backend) pathLoginUpdateIam(
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
+	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
+	// (in the case of an IAM user).
+	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
 	entity, err := parseIamArn(callerID.Arn)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error parsing arn: %v", err)), nil
@@ -1140,11 +1143,8 @@ func (b *backend) pathLoginUpdateIam(
 	// resolving to internal IDs was turned on, which can't be turned off. So, there should be no
 	// way for this to be set and not match BoundIamPrincipalARN
 	if roleEntry.BoundIamPrincipalID != "" {
-		// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
-		// (in the case of an IAM user).
-		uniqueId := strings.Split(callerID.UserId, ":")[0]
-		if uniqueId != roleEntry.BoundIamPrincipalID {
-			return logical.ErrorResponse(fmt.Sprintf("expected IAM %s %s to resolve to unique AWS ID %q but got %q instead", entity.Type, entity.FriendlyName, roleEntry.BoundIamPrincipalID, uniqueId)), nil
+		if callerUniqueId != roleEntry.BoundIamPrincipalID {
+			return logical.ErrorResponse(fmt.Sprintf("expected IAM %s %s to resolve to unique AWS ID %q but got %q instead", entity.Type, entity.FriendlyName, roleEntry.BoundIamPrincipalID, callerUniqueId)), nil
 		}
 	} else if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != entity.canonicalArn() {
 		return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
@@ -1188,7 +1188,7 @@ func (b *backend) pathLoginUpdateIam(
 			Metadata: map[string]string{
 				"client_arn":           callerID.Arn,
 				"canonical_arn":        entity.canonicalArn(),
-				"client_user_id":       callerID.UserId,
+				"client_user_id":       callerUniqueId,
 				"auth_type":            iamAuthType,
 				"inferred_entity_type": inferredEntityType,
 				"inferred_entity_id":   inferredEntityId,

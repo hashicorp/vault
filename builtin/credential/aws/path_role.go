@@ -319,7 +319,7 @@ func (b *backend) upgradeRoleEntry(s logical.Storage, roleEntry *awsRoleEntry) (
 		roleEntry.ResolveAWSUniqueIDs &&
 		roleEntry.BoundIamPrincipalARN != "" &&
 		roleEntry.BoundIamPrincipalID == "" {
-		principalId, err := b.resolveArnToUniqueId(s, roleEntry.BoundIamPrincipalARN)
+		principalId, err := b.resolveArnToUniqueIDFunc(s, roleEntry.BoundIamPrincipalARN)
 		if err != nil {
 			return false, err
 		}
@@ -494,7 +494,7 @@ func (b *backend) pathRoleCreateUpdate(
 		// to re-resolve the ARN to the unique ID, in case an entity was deleted and
 		// recreated
 		if roleEntry.ResolveAWSUniqueIDs {
-			principalID, err := b.resolveArnToUniqueId(req.Storage, principalARN)
+			principalID, err := b.resolveArnToUniqueIDFunc(req.Storage, principalARN)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("failed updating the unique ID of ARN %#v: %#v", principalARN, err)), nil
 			}
@@ -502,7 +502,7 @@ func (b *backend) pathRoleCreateUpdate(
 		}
 	} else if roleEntry.ResolveAWSUniqueIDs && roleEntry.BoundIamPrincipalARN != "" {
 		// we're turning on resolution on this role, so ensure we update it
-		principalID, err := b.resolveArnToUniqueId(req.Storage, roleEntry.BoundIamPrincipalARN)
+		principalID, err := b.resolveArnToUniqueIDFunc(req.Storage, roleEntry.BoundIamPrincipalARN)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %#v", roleEntry.BoundIamPrincipalARN, err)), nil
 		}

@@ -152,7 +152,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 	}
 	roleName := "upgradable_role"
 
-	b.resolveArnToUniqueId = resolveArnToFakeUniqueId
+	b.resolveArnToUniqueIDFunc = resolveArnToFakeUniqueId
 
 	data := map[string]interface{}{
 		"auth_type":               iamAuthType,
@@ -453,7 +453,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 		t.Fatalf("didn't allow creation of roles with only inferred bindings")
 	}
 
-	b.resolveArnToUniqueId = resolveArnToFakeUniqueId
+	b.resolveArnToUniqueIDFunc = resolveArnToFakeUniqueId
 	data["resolve_aws_unique_ids"] = true
 	resp, err = submitRequest("withInternalIdResolution", logical.CreateOperation)
 	if err != nil {

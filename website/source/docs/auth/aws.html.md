@@ -1451,7 +1451,7 @@ The response will be in JSON. For example:
         role creation (or upgrading to use this) succeed, then Vault has
         already been able to resolve internal IDs, and it doesn't need any
         further IAM permissions to authenticate users. If a role has been
-        deleted and recreated, and Vault has cached the old unique ID, the you
+        deleted and recreated, and Vault has cached the old unique ID, you
         should just call this endpoint specifying the same
         `bound_iam_principal_arn` and, as long as Vault still has the necessary
         IAM permissions to resolve the unique ID, Vault will update the unique

@@ -64,7 +64,7 @@ type backend struct {
 	// accounts using their IAM instance profile to get their credentials.
 	defaultAWSAccountID string
 
-	resolveArnToUniqueId func(logical.Storage, string) (string, error)
+	resolveArnToUniqueIDFunc func(logical.Storage, string) (string, error)
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
@@ -76,7 +76,7 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 		IAMClientsMap:      make(map[string]map[string]*iam.IAM),
 	}
 
-	b.resolveArnToUniqueId = b.resolveArnToRealUniqueId
+	b.resolveArnToUniqueIDFunc = b.resolveArnToRealUniqueId
 
 	b.Backend = &framework.Backend{
 		PeriodicFunc: b.periodicFunc,
@@ -221,17 +221,26 @@ func (b *backend) resolveArnToRealUniqueId(s logical.Storage, arn string) (strin
 		if err != nil {
 			return "", err
 		}
+		if userInfo == nil {
+			return "", fmt.Errorf("got nil result from GetUser")
+		}
 		return *userInfo.User.UserId, nil
 	case "role":
 		roleInfo, err := iamClient.GetRole(&iam.GetRoleInput{RoleName: &entity.FriendlyName})
 		if err != nil {
 			return "", err
 		}
+		if roleInfo == nil {
+			return "", fmt.Errorf("got nil result from GetRole")
+		}
 		return *roleInfo.Role.RoleId, nil
 	case "instance-profile":
 		profileInfo, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
 		if err != nil {
 			return "", err
+		}
+		if profileInfo == nil {
+			return "", fmt.Errorf("got nil result from GetInstanceProfile")
 		}
 		return *profileInfo.InstanceProfile.InstanceProfileId, nil
 	default:

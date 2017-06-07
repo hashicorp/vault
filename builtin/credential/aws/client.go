@@ -106,6 +106,9 @@ func (b *backend) getClientConfig(s logical.Storage, region, stsRole, accountID,
 			if err != nil {
 				return nil, fmt.Errorf("unable to fetch current caller: %v", err)
 			}
+			if identity == nil {
+				return nil, fmt.Errorf("got nil result from GetCallerIdentity")
+			}
 			b.defaultAWSAccountID = *identity.Account
 		}
 		if b.defaultAWSAccountID != accountID {
