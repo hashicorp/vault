@@ -2,6 +2,7 @@ package physical
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -72,6 +73,35 @@ func newCassandraBackend(conf map[string]string, logger log.Logger) (Backend, er
 	connectStart := time.Now()
 	cluster := gocql.NewCluster(hosts...)
 	cluster.Keyspace = keyspace
+
+	cluster.ProtoVersion = 2
+	if protoVersionStr, ok := conf["protocol_version"]; ok {
+		protoVersion, err := strconv.Atoi(protoVersionStr)
+		if err != nil {
+			return nil, fmt.Errorf("'protocol_version' must be an integer")
+		}
+		cluster.ProtoVersion = protoVersion
+	}
+
+	if username, ok := conf["username"]; ok {
+		if cluster.ProtoVersion < 2 {
+			return nil, fmt.Errorf("Authentication is not supported with protocol version < 2")
+		}
+		authenticator := gocql.PasswordAuthenticator{Username: username}
+		if password, ok := conf["password"]; ok {
+			authenticator.Password = password
+		}
+		cluster.Authenticator = authenticator
+	}
+
+	if connTimeoutStr, ok := conf["connection_timeout"]; ok {
+		connectionTimeout, err := strconv.Atoi(connTimeoutStr)
+		if err != nil {
+			return nil, fmt.Errorf("'connection_timeout' must be an integer")
+		}
+		cluster.Timeout = time.Duration(connectionTimeout) * time.Millisecond
+	}
+
 	sess, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err
