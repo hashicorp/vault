@@ -1200,6 +1200,7 @@ func (b *backend) pathLoginUpdateIam(
 
 	resp := &logical.Response{
 		Auth: &logical.Auth{
+			Period:   roleEntry.Period,
 			Policies: policies,
 			Metadata: map[string]string{
 				"client_arn":           clientArn,
