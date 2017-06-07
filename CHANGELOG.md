@@ -2,12 +2,31 @@
 
 SECURITY:
 
+ * Cert auth backend now checks validity of individual certificates: In
+   previous versions of Vault, validity (e.g. expiration) of individual leaf
+   certificates added for authentication was not checked. This was done to make
+   it easier for administrators to control lifecycles of individual
+   certificates added to the backend, e.g. the authentication material being
+   checked was access to that specific certificate's private key rather than
+   all private keys signed by a CA. However, this behavior is often unexpected
+   and as a result can lead to insecure deployments, so we are now validating
+   these certificates as well.
+ * App-ID path salting was skipped in 0.7.1/0.7.2: A regression in 0.7.1/0.7.2
+   caused the HMACing of any App-ID information stored in paths (including
+   actual app-IDs and user-IDs) to be unsalted and written as-is from the API.
+   In 0.7.3 any such paths will be automatically changed to salted versions on
+   access (e.g. login or read); however, if you created new app-IDs or user-IDs
+   in 0.7.1/0.7.2, you may want to consider whether any users with access to
+   Vault's underlying data store may have intercepted these values, and
+   revoke/roll them.
+
 DEPRECATIONS/CHANGES:
 
  * Step-Down is Forwarded: When a step-down is issued against a non-active node
    in an HA cluster, it will now forward the request to the active node.
 
 FEATURES:
+
  * **ed25519 Signing/Verification in Transit with Key Derivation**: The
    `transit` backend now supports generating
    [ed25519](https://ed25519.cr.yp.to/) keys for signing and verification
@@ -17,10 +36,10 @@ FEATURES:
    the version of a key you use to wish to generate a signature, ciphertext, or
    HMAC. This can be controlled by the `min_encryption_version` key
    configuration property.
- * **Replication Primary Discovery (Enterprise)**: Replication primaries will now advertise
-   the addresses of their local HA cluster members to replication secondaries.
-   This helps recovery if the primary active node goes down and neither service
-   discovery nor load balancers are in use to steer clients.
+ * **Replication Primary Discovery (Enterprise)**: Replication primaries will
+   now advertise the addresses of their local HA cluster members to replication
+   secondaries. This helps recovery if the primary active node goes down and
+   neither service discovery nor load balancers are in use to steer clients.
 
 IMPROVEMENTS:
 
