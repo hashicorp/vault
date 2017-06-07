@@ -922,8 +922,18 @@ func (b *backend) pathLoginRenewIam(
 		return nil, fmt.Errorf("role entry not found")
 	}
 
-	if entityType, ok := req.Auth.Metadata["inferred_entity_type"]; !ok {
-		if entityType == ec2EntityType {
+	// we don't really care what the inferred entity type was when the role was initially created. We
+	// care about what the role currently requires. However, the metadata's inferred_entity_id is only
+	// set when inferencing is turned on at initial login time. So, if inferencing is turned on, any
+	// existing roles will NOT be able to renew tokens.
+	// This might change later, but authenticating the actual inferred entity ID is NOT done if there
+	// is no inferencing requested in the role. The reason is that authenticating the inferred entity
+	// ID requires additional AWS IAM permissions that might not be present (e.g.,
+	// ec2:DescribeInstances) as well as additional inferencing configuration (the inferred region).
+	// So, for now, if you want to turn on inferencing, all clients must re-authenticate and cannot
+	// renew existing tokens.
+	if roleEntry.InferredEntityType != "" {
+		if roleEntry.InferredEntityType == ec2EntityType {
 			instanceID, ok := req.Auth.Metadata["inferred_entity_id"]
 			if !ok {
 				return nil, fmt.Errorf("no inferred entity ID in auth metadata")
@@ -937,11 +947,16 @@ func (b *backend) pathLoginRenewIam(
 				return nil, fmt.Errorf("failed to verify instance ID %q: %v", instanceID, err)
 			}
 		} else {
-			return nil, fmt.Errorf("unrecognized entity_type in metadata: %q", entityType)
+			return nil, fmt.Errorf("unrecognized entity_type in metadata: %q", roleEntry.InferredEntityType)
 		}
 	}
 
-	if roleEntry.BoundIamPrincipalARN != canonicalArn {
+	// The role may have been specified with only bindings on the inferred entity. The
+	// creation/modification of roles ensures that there is always at least one valid binding, and
+	// those bindings are either with a bound_iam_principal_arn or bindings on the inferred enttity.
+	// If the bound_iam_principal_arn is set to "", then that means all the bindings were set on the
+	// inferred entity type and already checked, so we don't need to check bound_iam_principal_arn.
+	if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != canonicalArn {
 		return nil, fmt.Errorf("role no longer bound to arn %q", canonicalArn)
 	}
 

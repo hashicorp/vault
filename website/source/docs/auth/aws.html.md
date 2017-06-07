@@ -1413,7 +1413,9 @@ The response will be in JSON. For example:
         When set, instructs Vault to turn on inferencing. The only current valid
         value is "ec2_instance" instructing Vault to infer that the role comes
         from an EC2 instance in an IAM instance profile. This only applies to
-        the iam auth method.
+        the iam auth method. If you set this on an existing role where it had
+        not previously been set, tokens that had been created prior will not be
+        renewable; clients will need to get a new token.
       </li>
     </ul>
     <ul>
