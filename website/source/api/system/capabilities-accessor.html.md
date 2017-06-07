@@ -44,7 +44,7 @@ for the given path.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data payload.json \
+    --data @payload.json \
     https://vault.rocks/v1/sys/capabilities-accessor
 ```
 
