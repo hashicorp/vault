@@ -44,6 +44,9 @@ BUG FIXES:
  * auth/app-id: Fix regression causing loading of salts to be skipped
  * auth/aws: Improve EC2 describe instances performance [GH-2766]
  * auth/aws: Fix lookup of some instance profile ARNs [GH-2802]
+ * auth/aws: Check that a bound IAM principal is not empty (in the current
+   state of the role) before requiring it match the previously authenticated
+   client [GH-2781]
  * auth/cert: Fix panic on renewal [GH-2749]
  * auth/cert: Certificate verification for non-CA certs [GH-2761]
  * secret/database: Increase wrapping token TTL; in a loaded scenario it could
