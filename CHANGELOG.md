@@ -39,6 +39,7 @@ IMPROVEMENTS:
    [GH-2812]
  * ui (Enterprise): Transit key and secret browsing UI handle large lists better
  * ui (Enterprise): root tokens are no longer persisted
+ * ui (Enterprise): support for mounting Database and TOTP secret backends
  
 BUG FIXES:
 
