@@ -1,6 +1,7 @@
 package physical
 
 import (
+	"crypto/tls"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/gocql/gocql"
+	"github.com/hashicorp/vault/helper/certutil"
 )
 
 // CassandraBackend is a physical backend that stores data in Cassandra.
@@ -102,6 +104,10 @@ func newCassandraBackend(conf map[string]string, logger log.Logger) (Backend, er
 		cluster.Timeout = time.Duration(connectionTimeout) * time.Millisecond
 	}
 
+	if err := setupCassandraTLS(conf, cluster); err != nil {
+		return nil, err
+	}
+
 	sess, err := cluster.CreateSession()
 	if err != nil {
 		return nil, err
@@ -114,6 +120,71 @@ func newCassandraBackend(conf map[string]string, logger log.Logger) (Backend, er
 		table:  table,
 		logger: logger}
 	return impl, nil
+}
+
+func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) error {
+	tlsOnStr, ok := conf["tls"]
+	if !ok {
+		return nil
+	}
+
+	tlsOn, err := strconv.Atoi(tlsOnStr)
+	if err != nil {
+		return fmt.Errorf("'tls' must be an integer (0 or 1)")
+	}
+
+	if tlsOn == 0 {
+		return nil
+	}
+
+	var tlsConfig = &tls.Config{}
+	if pemBundleStr, ok := conf["pem_bundle"]; ok {
+		pemBundle, err := certutil.ParsePEMBundle(pemBundleStr)
+		if err != nil {
+			return fmt.Errorf("Error parsing 'pem_bundle': %v", err)
+		}
+		tlsConfig, err = pemBundle.GetTLSConfig(certutil.TLSClient)
+		if err != nil {
+			return err
+		}
+	} else {
+		if pemJSONStr, ok := conf["pem_json"]; ok {
+			pemJSON, err := certutil.ParsePKIJSON([]byte(pemJSONStr))
+			if err != nil {
+				return err
+			}
+			tlsConfig, err = pemJSON.GetTLSConfig(certutil.TLSClient)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	if insecureSkipVerifyStr, ok := conf["insecure_skip_verify"]; ok {
+		insecureSkipVerify, err := strconv.Atoi(insecureSkipVerifyStr)
+		if err != nil {
+			return fmt.Errorf("'insecure_tls_verify' must be an integer (0 or 1)")
+		}
+		if insecureSkipVerify == 0 {
+			tlsConfig.InsecureSkipVerify = false
+		} else {
+			tlsConfig.InsecureSkipVerify = true
+		}
+	}
+
+	if tlsMinVersionStr, ok := conf["tls_min_version"]; ok {
+		tlsMinVersion, err := strconv.Atoi(tlsMinVersionStr)
+		if err != nil {
+			return fmt.Errorf("'tls_min_version' must be an integer")
+		}
+		tlsConfig.MinVersion = uint16(tlsMinVersion)
+	}
+
+	cluster.SslOpts = &gocql.SslOptions{
+		Config: *tlsConfig.Clone(),
+	}
+
+	return nil
 }
 
 // bucketName sanitises a bucket name for Cassandra
