@@ -1,4 +1,6 @@
-## Next (Unreleased)
+## 0.7.3 (June 7th, 2017)
+
+SECURITY:
 
 DEPRECATIONS/CHANGES:
 
