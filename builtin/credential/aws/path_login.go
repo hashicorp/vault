@@ -151,20 +151,8 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 // validateInstance queries the status of the EC2 instance using AWS EC2 API
 // and checks if the instance is running and is healthy
 func (b *backend) validateInstance(s logical.Storage, instanceID, region, accountID string) (*ec2.Instance, error) {
-
-	// Check if an STS configuration exists for the AWS account
-	sts, err := b.lockedAwsStsEntry(s, accountID)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching STS config for account ID %q: %q\n", accountID, err)
-	}
-	// An empty STS role signifies the master account
-	stsRole := ""
-	if sts != nil {
-		stsRole = sts.StsRole
-	}
-
 	// Create an EC2 client to pull the instance information
-	ec2Client, err := b.clientEC2(s, region, stsRole)
+	ec2Client, err := b.clientEC2(s, region, accountID)
 	if err != nil {
 		return nil, err
 	}
@@ -472,32 +460,20 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(
 
 		// Extract out the instance profile name from the instance
 		// profile ARN
-		iamInstanceProfileARNSlice := strings.SplitAfter(iamInstanceProfileARN, "/")
-		iamInstanceProfileName := iamInstanceProfileARNSlice[len(iamInstanceProfileARNSlice)-1]
+		iamInstanceProfileEntity, err := parseIamArn(iamInstanceProfileARN)
 
-		if iamInstanceProfileName == "" {
-			return nil, fmt.Errorf("failed to extract out IAM instance profile name from IAM instance profile ARN")
-		}
-
-		// Check if an STS configuration exists for the AWS account
-		sts, err := b.lockedAwsStsEntry(s, identityDoc.AccountID)
 		if err != nil {
-			return fmt.Errorf("error fetching STS config for account ID %q: %q\n", identityDoc.AccountID, err), nil
-		}
-		// An empty STS role signifies the master account
-		stsRole := ""
-		if sts != nil {
-			stsRole = sts.StsRole
+			return nil, fmt.Errorf("failed to parse IAM instance profile ARN %q; error: %v", iamInstanceProfileARN, err)
 		}
 
 		// Use instance profile ARN to fetch the associated role ARN
-		iamClient, err := b.clientIAM(s, identityDoc.Region, stsRole)
+		iamClient, err := b.clientIAM(s, identityDoc.Region, identityDoc.AccountID)
 		if err != nil {
 			return nil, fmt.Errorf("could not fetch IAM client: %v", err)
 		} else if iamClient == nil {
 			return nil, fmt.Errorf("received a nil iamClient")
 		}
-		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileName)
+		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileEntity.FriendlyName)
 		if err != nil {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched: %v", err)
 		}
@@ -959,6 +935,19 @@ func (b *backend) pathLoginRenewIam(
 	if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != canonicalArn {
 		return nil, fmt.Errorf("role no longer bound to arn %q", canonicalArn)
 	}
+	// Need to hanndle the case where an auth token was generated before we put client_user_id in the metadata
+	// Basic goal here is:
+	//  1. If no client_user_id metadata exists, then skip the check (it might be nice to fill it in later, but
+	//     could be complicated)
+	//  2. If role is not bound to an ID, that means that checking the unique ID has been disabled, so skip the
+	//     check
+	//  3. Otherwise, ensure that the stored client_user_id matches the bound IAM principal ID. If an IAM user
+	//     or role is deleted and recreated, then existing clients will NOT be able to renew and they'll need
+	//     to reauthenticate to Vault with updated IAM credentials
+	originalUserId, ok := req.Auth.Metadata["client_user_id"]
+	if ok && roleEntry.BoundIamPrincipalID != "" && roleEntry.BoundIamPrincipalID != req.Auth.Metadata["client_user_id"] {
+		return nil, fmt.Errorf("role no longer bound to ID %q", originalUserId)
+	}
 
 	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
 
@@ -1134,18 +1123,21 @@ func (b *backend) pathLoginUpdateIam(
 		}
 	}
 
-	clientArn, accountID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
+	callerID, err := submitCallerIdentityRequest(method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
 	}
-	canonicalArn, principalName, sessionName, err := parseIamArn(clientArn)
+	// This could either be a "userID:SessionID" (in the case of an assumed role) or just a "userID"
+	// (in the case of an IAM user).
+	callerUniqueId := strings.Split(callerID.UserId, ":")[0]
+	entity, err := parseIamArn(callerID.Arn)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("Error parsing arn: %v", err)), nil
 	}
 
 	roleName := data.Get("role").(string)
 	if roleName == "" {
-		roleName = principalName
+		roleName = entity.FriendlyName
 	}
 
 	roleEntry, err := b.lockedAWSRole(req.Storage, roleName)
@@ -1162,8 +1154,15 @@ func (b *backend) pathLoginUpdateIam(
 
 	// The role creation should ensure that either we're inferring this is an EC2 instance
 	// or that we're binding an ARN
-	if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != canonicalArn {
-		return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", clientArn, roleName)), nil
+	// The only way BoundIamPrincipalID could get set is if BoundIamPrincipalARN was also set and
+	// resolving to internal IDs was turned on, which can't be turned off. So, there should be no
+	// way for this to be set and not match BoundIamPrincipalARN
+	if roleEntry.BoundIamPrincipalID != "" {
+		if callerUniqueId != roleEntry.BoundIamPrincipalID {
+			return logical.ErrorResponse(fmt.Sprintf("expected IAM %s %s to resolve to unique AWS ID %q but got %q instead", entity.Type, entity.FriendlyName, roleEntry.BoundIamPrincipalID, callerUniqueId)), nil
+		}
+	} else if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != entity.canonicalArn() {
+		return logical.ErrorResponse(fmt.Sprintf("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName)), nil
 	}
 
 	policies := roleEntry.Policies
@@ -1171,9 +1170,9 @@ func (b *backend) pathLoginUpdateIam(
 	inferredEntityType := ""
 	inferredEntityId := ""
 	if roleEntry.InferredEntityType == ec2EntityType {
-		instance, err := b.validateInstance(req.Storage, sessionName, roleEntry.InferredAWSRegion, accountID)
+		instance, err := b.validateInstance(req.Storage, entity.SessionInfo, roleEntry.InferredAWSRegion, callerID.Account)
 		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", sessionName, roleEntry.InferredAWSRegion)), nil
+			return logical.ErrorResponse(fmt.Sprintf("failed to verify %s as a valid EC2 instance in region %s", entity.SessionInfo, roleEntry.InferredAWSRegion)), nil
 		}
 
 		// build a fake identity doc to pass on metadata about the instance to verifyInstanceMeetsRoleRequirements
@@ -1181,7 +1180,7 @@ func (b *backend) pathLoginUpdateIam(
 			Tags:        nil, // Don't really need the tags, so not doing the work of converting them from Instance.Tags to identityDocument.Tags
 			InstanceID:  *instance.InstanceId,
 			AmiID:       *instance.ImageId,
-			AccountID:   accountID,
+			AccountID:   callerID.Account,
 			Region:      roleEntry.InferredAWSRegion,
 			PendingTime: instance.LaunchTime.Format(time.RFC3339),
 		}
@@ -1191,11 +1190,11 @@ func (b *backend) pathLoginUpdateIam(
 			return nil, err
 		}
 		if validationError != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Error validating instance: %s", validationError)), nil
+			return logical.ErrorResponse(fmt.Sprintf("error validating instance: %s", validationError)), nil
 		}
 
 		inferredEntityType = ec2EntityType
-		inferredEntityId = sessionName
+		inferredEntityId = entity.SessionInfo
 	}
 
 	resp := &logical.Response{
@@ -1203,18 +1202,19 @@ func (b *backend) pathLoginUpdateIam(
 			Period:   roleEntry.Period,
 			Policies: policies,
 			Metadata: map[string]string{
-				"client_arn":           clientArn,
-				"canonical_arn":        canonicalArn,
+				"client_arn":           callerID.Arn,
+				"canonical_arn":        entity.canonicalArn(),
+				"client_user_id":       callerUniqueId,
 				"auth_type":            iamAuthType,
 				"inferred_entity_type": inferredEntityType,
 				"inferred_entity_id":   inferredEntityId,
 				"inferred_aws_region":  roleEntry.InferredAWSRegion,
-				"account_id":           accountID,
+				"account_id":           entity.AccountNumber,
 			},
 			InternalData: map[string]interface{}{
 				"role_name": roleName,
 			},
-			DisplayName: principalName,
+			DisplayName: entity.FriendlyName,
 			LeaseOptions: logical.LeaseOptions{
 				Renewable: true,
 				TTL:       roleEntry.TTL,
@@ -1267,29 +1267,44 @@ func hasValuesForIamAuth(data *framework.FieldData) (bool, bool) {
 		(hasRequestMethod || hasRequestUrl || hasRequestBody || hasRequestHeaders)
 }
 
-func parseIamArn(iamArn string) (string, string, string, error) {
+func parseIamArn(iamArn string) (*iamEntity, error) {
 	// iamArn should look like one of the following:
-	// 1. arn:aws:iam::<account_id>:user/<UserName>
+	// 1. arn:aws:iam::<account_id>:<entity_type>/<UserName>
 	// 2. arn:aws:sts::<account_id>:assumed-role/<RoleName>/<RoleSessionName>
 	// if we get something like 2, then we want to transform that back to what
 	// most people would expect, which is arn:aws:iam::<account_id>:role/<RoleName>
+	var entity iamEntity
 	fullParts := strings.Split(iamArn, ":")
-	principalFullName := fullParts[5]
-	// principalFullName would now be something like user/<UserName> or assumed-role/<RoleName>/<RoleSessionName>
-	parts := strings.Split(principalFullName, "/")
-	principalName := parts[1]
-	// now, principalName should either be <UserName> or <RoleName>
-	transformedArn := iamArn
-	sessionName := ""
-	if parts[0] == "assumed-role" {
-		transformedArn = fmt.Sprintf("arn:aws:iam::%s:role/%s", fullParts[4], principalName)
-		// fullParts[4] is the <account_id>
-		sessionName = parts[2]
-		// sessionName is <RoleSessionName>
-	} else if parts[0] != "user" {
-		return "", "", "", fmt.Errorf("unrecognized principal type: %q", parts[0])
+	if fullParts[0] != "arn" {
+		return nil, fmt.Errorf("unrecognized arn: does not begin with arn:")
 	}
-	return transformedArn, principalName, sessionName, nil
+	// normally aws, but could be aws-cn or aws-us-gov
+	entity.Partition = fullParts[1]
+	if fullParts[2] != "iam" && fullParts[2] != "sts" {
+		return nil, fmt.Errorf("unrecognized service: %v, not one of iam or sts", fullParts[2])
+	}
+	// fullParts[3] is the region, which doesn't matter for AWS IAM entities
+	entity.AccountNumber = fullParts[4]
+	// fullParts[5] would now be something like user/<UserName> or assumed-role/<RoleName>/<RoleSessionName>
+	parts := strings.Split(fullParts[5], "/")
+	entity.Type = parts[0]
+	entity.Path = strings.Join(parts[1:len(parts)-1], "/")
+	entity.FriendlyName = parts[len(parts)-1]
+	// now, entity.FriendlyName should either be <UserName> or <RoleName>
+	switch entity.Type {
+	case "assumed-role":
+		// Assumed roles don't have paths and have a slightly different format
+		// parts[2] is <RoleSessionName>
+		entity.Path = ""
+		entity.FriendlyName = parts[1]
+		entity.SessionInfo = parts[2]
+	case "user":
+	case "role":
+	case "instance-profile":
+	default:
+		return &iamEntity{}, fmt.Errorf("unrecognized principal type: %q", entity.Type)
+	}
+	return &entity, nil
 }
 
 func validateVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) error {
@@ -1392,7 +1407,7 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	return result, err
 }
 
-func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (string, string, error) {
+func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (*GetCallerIdentityResult, error) {
 	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
 	// The protection against this is that this method will only call the endpoint specified in the
 	// client config (defaulting to sts.amazonaws.com), so it would require a Vault admin to override
@@ -1401,7 +1416,7 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	client := cleanhttp.DefaultClient()
 	response, err := client.Do(request)
 	if err != nil {
-		return "", "", fmt.Errorf("error making request: %v", err)
+		return nil, fmt.Errorf("error making request: %v", err)
 	}
 	if response != nil {
 		defer response.Body.Close()
@@ -1409,17 +1424,13 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	// we check for status code afterwards to also print out response body
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if response.StatusCode != 200 {
-		return "", "", fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
+		return nil, fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
 	}
 	callerIdentityResponse, err := parseGetCallerIdentityResponse(string(responseBody))
 	if err != nil {
-		return "", "", fmt.Errorf("error parsing STS response")
+		return nil, fmt.Errorf("error parsing STS response")
 	}
-	clientArn := callerIdentityResponse.GetCallerIdentityResult[0].Arn
-	if clientArn == "" {
-		return "", "", fmt.Errorf("no ARN validated")
-	}
-	return clientArn, callerIdentityResponse.GetCallerIdentityResult[0].Account, nil
+	return &callerIdentityResponse.GetCallerIdentityResult[0], nil
 }
 
 type GetCallerIdentityResponse struct {
@@ -1455,6 +1466,29 @@ type roleTagLoginResponse struct {
 	Policies                 []string      `json:"policies" structs:"policies" mapstructure:"policies"`
 	MaxTTL                   time.Duration `json:"max_ttl" structs:"max_ttl" mapstructure:"max_ttl"`
 	DisallowReauthentication bool          `json:"disallow_reauthentication" structs:"disallow_reauthentication" mapstructure:"disallow_reauthentication"`
+}
+
+type iamEntity struct {
+	Partition     string
+	AccountNumber string
+	Type          string
+	Path          string
+	FriendlyName  string
+	SessionInfo   string
+}
+
+func (e *iamEntity) canonicalArn() string {
+	entityType := e.Type
+	// canonicalize "assumed-role" into "role"
+	if entityType == "assumed-role" {
+		entityType = "role"
+	}
+	// Annoyingly, the assumed-role entity type doesn't have the Path of the role which was assumed
+	// So, we "canonicalize" it by just completely dropping the path. The other option would be to
+	// make an AWS API call to look up the role by FriendlyName, which introduces more complexity to
+	// code and test, and it also breaks backwards compatibility in an area where we would really want
+	// it
+	return fmt.Sprintf("arn:%s:iam::%s:%s/%s", e.Partition, e.AccountNumber, entityType, e.FriendlyName)
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"

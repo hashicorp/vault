@@ -64,6 +64,14 @@ the value specified by this parameter. The value is prefix-matched
 (as though it were a glob ending in '*'). This is only checked when
 auth_type is ec2.`,
 			},
+			"resolve_aws_unique_ids": {
+				Type:    framework.TypeBool,
+				Default: true,
+				Description: `If set, resolve all AWS IAM ARNs into AWS's internal unique IDs.
+When an IAM entity (e.g., user, role, or instance profile) is deleted, then all references
+to it within the role will be invalidated, which prevents a new IAM entity from being created
+with the same name and matching the role's IAM binds. Once set, this cannot be unset.`,
+			},
 			"inferred_entity_type": {
 				Type: framework.TypeString,
 				Description: `When auth_type is iam, the
@@ -210,7 +218,7 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 	if roleEntry == nil {
 		return nil, nil
 	}
-	needUpgrade, err := upgradeRoleEntry(roleEntry)
+	needUpgrade, err := b.upgradeRoleEntry(s, roleEntry)
 	if err != nil {
 		return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
 	}
@@ -228,7 +236,7 @@ func (b *backend) lockedAWSRole(s logical.Storage, roleName string) (*awsRoleEnt
 			return nil, nil
 		}
 		// now re-check to see if we need to upgrade
-		if needUpgrade, err = upgradeRoleEntry(roleEntry); err != nil {
+		if needUpgrade, err = b.upgradeRoleEntry(s, roleEntry); err != nil {
 			return nil, fmt.Errorf("error upgrading roleEntry: %v", err)
 		}
 		if needUpgrade {
@@ -284,7 +292,7 @@ func (b *backend) nonLockedSetAWSRole(s logical.Storage, roleName string,
 
 // If needed, updates the role entry and returns a bool indicating if it was updated
 // (and thus needs to be persisted)
-func upgradeRoleEntry(roleEntry *awsRoleEntry) (bool, error) {
+func (b *backend) upgradeRoleEntry(s logical.Storage, roleEntry *awsRoleEntry) (bool, error) {
 	if roleEntry == nil {
 		return false, fmt.Errorf("received nil roleEntry")
 	}
@@ -304,6 +312,18 @@ func upgradeRoleEntry(roleEntry *awsRoleEntry) (bool, error) {
 	if roleEntry.AuthType == "" {
 		// then default to the original behavior of ec2
 		roleEntry.AuthType = ec2AuthType
+		upgraded = true
+	}
+
+	if roleEntry.AuthType == iamAuthType &&
+		roleEntry.ResolveAWSUniqueIDs &&
+		roleEntry.BoundIamPrincipalARN != "" &&
+		roleEntry.BoundIamPrincipalID == "" {
+		principalId, err := b.resolveArnToUniqueIDFunc(s, roleEntry.BoundIamPrincipalARN)
+		if err != nil {
+			return false, err
+		}
+		roleEntry.BoundIamPrincipalID = principalId
 		upgraded = true
 	}
 
@@ -411,7 +431,7 @@ func (b *backend) pathRoleCreateUpdate(
 	if roleEntry == nil {
 		roleEntry = &awsRoleEntry{}
 	} else {
-		needUpdate, err := upgradeRoleEntry(roleEntry)
+		needUpdate, err := b.upgradeRoleEntry(req.Storage, roleEntry)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("failed to update roleEntry: %v", err)), nil
 		}
@@ -445,6 +465,19 @@ func (b *backend) pathRoleCreateUpdate(
 		roleEntry.BoundSubnetID = boundSubnetIDRaw.(string)
 	}
 
+	if resolveAWSUniqueIDsRaw, ok := data.GetOk("resolve_aws_unique_ids"); ok {
+		switch {
+		case req.Operation == logical.CreateOperation:
+			roleEntry.ResolveAWSUniqueIDs = resolveAWSUniqueIDsRaw.(bool)
+		case roleEntry.ResolveAWSUniqueIDs && !resolveAWSUniqueIDsRaw.(bool):
+			return logical.ErrorResponse("changing resolve_aws_unique_ids from true to false is not allowed"), nil
+		default:
+			roleEntry.ResolveAWSUniqueIDs = resolveAWSUniqueIDsRaw.(bool)
+		}
+	} else if req.Operation == logical.CreateOperation {
+		roleEntry.ResolveAWSUniqueIDs = data.Get("resolve_aws_unique_ids").(bool)
+	}
+
 	if boundIamRoleARNRaw, ok := data.GetOk("bound_iam_role_arn"); ok {
 		roleEntry.BoundIamRoleARN = boundIamRoleARNRaw.(string)
 	}
@@ -454,7 +487,26 @@ func (b *backend) pathRoleCreateUpdate(
 	}
 
 	if boundIamPrincipalARNRaw, ok := data.GetOk("bound_iam_principal_arn"); ok {
-		roleEntry.BoundIamPrincipalARN = boundIamPrincipalARNRaw.(string)
+		principalARN := boundIamPrincipalARNRaw.(string)
+		roleEntry.BoundIamPrincipalARN = principalARN
+		// Explicitly not checking to see if the user has changed the ARN under us
+		// This allows the user to sumbit an update with the same ARN to force Vault
+		// to re-resolve the ARN to the unique ID, in case an entity was deleted and
+		// recreated
+		if roleEntry.ResolveAWSUniqueIDs {
+			principalID, err := b.resolveArnToUniqueIDFunc(req.Storage, principalARN)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("failed updating the unique ID of ARN %#v: %#v", principalARN, err)), nil
+			}
+			roleEntry.BoundIamPrincipalID = principalID
+		}
+	} else if roleEntry.ResolveAWSUniqueIDs && roleEntry.BoundIamPrincipalARN != "" {
+		// we're turning on resolution on this role, so ensure we update it
+		principalID, err := b.resolveArnToUniqueIDFunc(req.Storage, roleEntry.BoundIamPrincipalARN)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("unable to resolve ARN %#v to internal ID: %#v", roleEntry.BoundIamPrincipalARN, err)), nil
+		}
+		roleEntry.BoundIamPrincipalID = principalID
 	}
 
 	if inferRoleTypeRaw, ok := data.GetOk("inferred_entity_type"); ok {
@@ -682,6 +734,7 @@ type awsRoleEntry struct {
 	BoundAmiID                 string        `json:"bound_ami_id" structs:"bound_ami_id" mapstructure:"bound_ami_id"`
 	BoundAccountID             string        `json:"bound_account_id" structs:"bound_account_id" mapstructure:"bound_account_id"`
 	BoundIamPrincipalARN       string        `json:"bound_iam_principal_arn" structs:"bound_iam_principal_arn" mapstructure:"bound_iam_principal_arn"`
+	BoundIamPrincipalID        string        `json:"bound_iam_principal_id" structs:"bound_iam_principal_id" mapstructure:"bound_iam_principal_id"`
 	BoundIamRoleARN            string        `json:"bound_iam_role_arn" structs:"bound_iam_role_arn" mapstructure:"bound_iam_role_arn"`
 	BoundIamInstanceProfileARN string        `json:"bound_iam_instance_profile_arn" structs:"bound_iam_instance_profile_arn" mapstructure:"bound_iam_instance_profile_arn"`
 	BoundRegion                string        `json:"bound_region" structs:"bound_region" mapstructure:"bound_region"`
@@ -689,6 +742,7 @@ type awsRoleEntry struct {
 	BoundVpcID                 string        `json:"bound_vpc_id" structs:"bound_vpc_id" mapstructure:"bound_vpc_id"`
 	InferredEntityType         string        `json:"inferred_entity_type" structs:"inferred_entity_type" mapstructure:"inferred_entity_type"`
 	InferredAWSRegion          string        `json:"inferred_aws_region" structs:"inferred_aws_region" mapstructure:"inferred_aws_region"`
+	ResolveAWSUniqueIDs        bool          `json:"resolve_aws_unique_ids" structs:"resolve_aws_unique_ids" mapstructure:"resolve_aws_unique_ids"`
 	RoleTag                    string        `json:"role_tag" structs:"role_tag" mapstructure:"role_tag"`
 	AllowInstanceMigration     bool          `json:"allow_instance_migration" structs:"allow_instance_migration" mapstructure:"allow_instance_migration"`
 	TTL                        time.Duration `json:"ttl" structs:"ttl" mapstructure:"ttl"`

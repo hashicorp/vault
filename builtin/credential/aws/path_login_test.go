@@ -48,37 +48,36 @@ func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 }
 
 func TestBackend_pathLogin_parseIamArn(t *testing.T) {
-	userArn := "arn:aws:iam::123456789012:user/MyUserName"
-	assumedRoleArn := "arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName"
-	baseRoleArn := "arn:aws:iam::123456789012:role/RoleName"
-
-	xformedUser, principalFriendlyName, sessionName, err := parseIamArn(userArn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if xformedUser != userArn {
-		t.Fatalf("expected to transform ARN %#v into %#v but got %#v instead", userArn, userArn, xformedUser)
-	}
-	if principalFriendlyName != "MyUserName" {
-		t.Fatalf("expected to extract MyUserName from ARN %#v but got %#v instead", userArn, principalFriendlyName)
-	}
-	if sessionName != "" {
-		t.Fatalf("expected to extract no session name from ARN %#v but got %#v instead", userArn, sessionName)
+	testParser := func(inputArn, expectedCanonicalArn string, expectedEntity iamEntity) {
+		entity, err := parseIamArn(inputArn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if expectedCanonicalArn != "" && entity.canonicalArn() != expectedCanonicalArn {
+			t.Fatalf("expected to canonicalize ARN %q into %q but got %q instead", inputArn, expectedCanonicalArn, entity.canonicalArn())
+		}
+		if *entity != expectedEntity {
+			t.Fatalf("expected to get iamEntity %#v from input ARN %q but instead got %#v", expectedEntity, inputArn, *entity)
+		}
 	}
 
-	xformedRole, principalFriendlyName, sessionName, err := parseIamArn(assumedRoleArn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if xformedRole != baseRoleArn {
-		t.Fatalf("expected to transform ARN %#v into %#v but got %#v instead", assumedRoleArn, baseRoleArn, xformedRole)
-	}
-	if principalFriendlyName != "RoleName" {
-		t.Fatalf("expected to extract principal name of RoleName from ARN %#v but got %#v instead", assumedRoleArn, sessionName)
-	}
-	if sessionName != "RoleSessionName" {
-		t.Fatalf("expected to extract role session name of RoleSessionName from ARN %#v but got %#v instead", assumedRoleArn, sessionName)
-	}
+	testParser("arn:aws:iam::123456789012:user/UserPath/MyUserName",
+		"arn:aws:iam::123456789012:user/MyUserName",
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "user", Path: "UserPath", FriendlyName: "MyUserName"},
+	)
+	canonicalRoleArn := "arn:aws:iam::123456789012:role/RoleName"
+	testParser("arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName",
+		canonicalRoleArn,
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "assumed-role", FriendlyName: "RoleName", SessionInfo: "RoleSessionName"},
+	)
+	testParser("arn:aws:iam::123456789012:role/RolePath/RoleName",
+		canonicalRoleArn,
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "role", Path: "RolePath", FriendlyName: "RoleName"},
+	)
+	testParser("arn:aws:iam::123456789012:instance-profile/profilePath/InstanceProfileName",
+		"",
+		iamEntity{Partition: "aws", AccountNumber: "123456789012", Type: "instance-profile", Path: "profilePath", FriendlyName: "InstanceProfileName"},
+	)
 }
 
 func TestBackend_validateVaultHeaderValue(t *testing.T) {

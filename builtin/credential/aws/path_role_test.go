@@ -135,7 +135,81 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	if resp != nil {
 		t.Fatalf("bad: response: expected:nil actual:%#v\n", resp)
 	}
+}
 
+func Test_enableIamIDResolution(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = b.Setup(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roleName := "upgradable_role"
+
+	b.resolveArnToUniqueIDFunc = resolveArnToFakeUniqueId
+
+	data := map[string]interface{}{
+		"auth_type":               iamAuthType,
+		"policies":                "p,q",
+		"bound_iam_principal_arn": "arn:aws:iam::123456789012:role/MyRole",
+		"resolve_aws_unique_ids":  false,
+	}
+
+	submitRequest := func(roleName string, op logical.Operation) (*logical.Response, error) {
+		return b.HandleRequest(&logical.Request{
+			Operation: op,
+			Path:      "role/" + roleName,
+			Data:      data,
+			Storage:   storage,
+		})
+	}
+
+	resp, err := submitRequest(roleName, logical.CreateOperation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to create role: %#v", resp)
+	}
+
+	resp, err = submitRequest(roleName, logical.ReadOperation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to read role: resp:%#v,\nerr:%#v", resp, err)
+	}
+	if resp.Data["bound_iam_principal_id"] != "" {
+		t.Fatalf("expected to get no unique ID in role, but got %q", resp.Data["bound_iam_principal_id"])
+	}
+
+	data = map[string]interface{}{
+		"resolve_aws_unique_ids": true,
+	}
+	resp, err = submitRequest(roleName, logical.UpdateOperation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatalf("unable to upgrade role to resolve internal IDs: resp:%#v", resp)
+	}
+
+	resp, err = submitRequest(roleName, logical.ReadOperation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("failed to read role: resp:%#v,\nerr:%#v", resp, err)
+	}
+	if resp.Data["bound_iam_principal_id"] != "FakeUniqueId1" {
+		t.Fatalf("bad: expected upgrade of role resolve principal ID to %q, but got %q instead", "FakeUniqueId1", resp.Data["bound_iam_principal_id"])
+	}
 }
 
 func TestBackend_pathIam(t *testing.T) {
@@ -174,6 +248,7 @@ func TestBackend_pathIam(t *testing.T) {
 		"policies":                "p,q,r,s",
 		"max_ttl":                 "2h",
 		"bound_iam_principal_arn": "n:aws:iam::123456789012:user/MyUserName",
+		"resolve_aws_unique_ids":  false,
 	}
 	resp, err = b.HandleRequest(&logical.Request{
 		Operation: logical.CreateOperation,
@@ -369,6 +444,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 
 	data["inferred_entity_type"] = ec2EntityType
 	data["inferred_aws_region"] = "us-east-1"
+	data["resolve_aws_unique_ids"] = false
 	resp, err = submitRequest("multipleTypesInferred", logical.CreateOperation)
 	if err != nil {
 		t.Fatal(err)
@@ -376,6 +452,29 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if resp.IsError() {
 		t.Fatalf("didn't allow creation of roles with only inferred bindings")
 	}
+
+	b.resolveArnToUniqueIDFunc = resolveArnToFakeUniqueId
+	data["resolve_aws_unique_ids"] = true
+	resp, err = submitRequest("withInternalIdResolution", logical.CreateOperation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.IsError() {
+		t.Fatalf("didn't allow creation of role resolving unique IDs")
+	}
+	resp, err = submitRequest("withInternalIdResolution", logical.ReadOperation)
+	if resp.Data["bound_iam_principal_id"] != "FakeUniqueId1" {
+		t.Fatalf("expected fake unique ID of FakeUniqueId1, got %q", resp.Data["bound_iam_principal_id"])
+	}
+	data["resolve_aws_unique_ids"] = false
+	resp, err = submitRequest("withInternalIdResolution", logical.UpdateOperation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.IsError() {
+		t.Fatalf("allowed changing resolve_aws_unique_ids from true to false")
+	}
+
 }
 
 func TestAwsEc2_RoleCrud(t *testing.T) {
@@ -417,11 +516,12 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"bound_ami_id":                   "testamiid",
 		"bound_account_id":               "testaccountid",
 		"bound_region":                   "testregion",
-		"bound_iam_role_arn":             "testiamrolearn",
-		"bound_iam_instance_profile_arn": "testiaminstanceprofilearn",
+		"bound_iam_role_arn":             "arn:aws:iam::123456789012:role/MyRole",
+		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/MyInstanceProfile",
 		"bound_subnet_id":                "testsubnetid",
 		"bound_vpc_id":                   "testvpcid",
 		"role_tag":                       "testtag",
+		"resolve_aws_unique_ids":         false,
 		"allow_instance_migration":       true,
 		"ttl":                       "10m",
 		"max_ttl":                   "20m",
@@ -451,12 +551,14 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"bound_account_id":               "testaccountid",
 		"bound_region":                   "testregion",
 		"bound_iam_principal_arn":        "",
-		"bound_iam_role_arn":             "testiamrolearn",
-		"bound_iam_instance_profile_arn": "testiaminstanceprofilearn",
+		"bound_iam_principal_id":         "",
+		"bound_iam_role_arn":             "arn:aws:iam::123456789012:role/MyRole",
+		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/MyInstanceProfile",
 		"bound_subnet_id":                "testsubnetid",
 		"bound_vpc_id":                   "testvpcid",
 		"inferred_entity_type":           "",
 		"inferred_aws_region":            "",
+		"resolve_aws_unique_ids":         false,
 		"role_tag":                       "testtag",
 		"allow_instance_migration":       true,
 		"ttl":                       time.Duration(600),
@@ -519,7 +621,8 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 
 	roleData := map[string]interface{}{
 		"auth_type":                      "ec2",
-		"bound_iam_instance_profile_arn": "testarn",
+		"bound_iam_instance_profile_arn": "arn:aws:iam::123456789012:instance-profile/test-profile-name",
+		"resolve_aws_unique_ids":         false,
 		"ttl":     "10s",
 		"max_ttl": "20s",
 		"period":  "30s",
@@ -553,4 +656,8 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	if int64(resp.Data["period"].(time.Duration)) != 30 {
 		t.Fatalf("bad: period; expected: 30, actual: %d", resp.Data["period"])
 	}
+}
+
+func resolveArnToFakeUniqueId(s logical.Storage, arn string) (string, error) {
+	return "FakeUniqueId1", nil
 }
