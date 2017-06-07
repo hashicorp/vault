@@ -48,8 +48,10 @@ values set here cannot be changed after key creation.
 - `type` `(string: "aes256-gcm96")` – Specifies the type of key to create. The
   currently-supported types are:
 
-    - `aes256-gcm96` – AES-256 wrapped with GCM using a 12-byte nonce size (symmetric)
+    - `aes256-gcm96` – AES-256 wrapped with GCM using a 12-byte nonce size
+      (symmetric, supports derivation)
     - `ecdsa-p256` – ECDSA using the P-256 elliptic curve (asymmetric)
+    - `ed25519` – ED25519 (asymmetric, supports derivation)
 
 ### Sample Payload
 
@@ -107,7 +109,8 @@ $ curl \
     "keys": {
       "1": 1442851412
     },
-    "min_decryption_version": 0,
+    "min_decryption_version": 1,
+    "min_encryption_version": 0,
     "name": "foo",
     "supports_encryption": true,
     "supports_decryption": true,
@@ -189,8 +192,12 @@ are returned during a read operation on the named key.)
   policy can prevent old copies of ciphertext from being decrypted, should they
   fall into the wrong hands. For signatures, this value controls the minimum
   version of signature that can be verified against. For HMACs, this controls
-  the minimum version of a key allowed to be used as the key for the HMAC
-  function.
+  the minimum version of a key allowed to be used as the key for verification.
+
+- `min_encryption_version` `(int: 0)` – Specifies the minimum version of the
+  key that can be used to encrypt plaintext, sign payloads, or generate HMACs.
+  Must be `0` (which will use the latest version) or a value greater or equal
+  to `min_decryption_version`.
 
 - `deletion_allowed` `(bool: false)`- Specifies if the key is allowed to be
   deleted.
@@ -310,6 +317,10 @@ the key does not exist, an error will be returned.
 - `context` `(string: "")` – Specifies the **base64 encoded** context for key
   derivation. This is required if key derivation is enabled for this key.
 
+- `key_version` `(int: 0)` – Specifies the version of the key to use for
+  encryption. If not set, uses the latest version. Must be greater than or
+  equal to the key's `min_encryption_version`, if set.
+
 - `nonce` `(string: "")` – Specifies the **base64 encoded** nonce value. This
   must be provided if convergent encryption is enabled for this key and the key
   was generated with Vault 0.6.1. Not required for keys created in 0.6.2+. The
@@ -338,7 +349,7 @@ the key does not exist, an error will be returned.
 - `type` `(string: "aes256-gcm96")` –This parameter is required when encryption
   key is expected to be created. When performing an upsert operation, the type
   of key to create. Currently, "aes256-gcm96" (symmetric) is the only type
- supported.
+  supported.
 
 - `convergent_encryption` `(string: "")` – This parameter will only be used when
   a key is expected to be created.  Whether to support convergent encryption.
@@ -467,6 +478,10 @@ functionality to untrusted users or scripts.
 
 - `context` `(string: "")` – Specifies the **base64 encoded** context for key
   derivation. This is required if key derivation is enabled.
+
+- `key_version` `(int: 0)` – Specifies the version of the key to use for the
+  operation. If not set, uses the latest version. Must be greater than or equal
+  to the key's `min_encryption_version`, if set.
 
 - `nonce` `(string: "")` – Specifies a base64 encoded nonce value used during
   encryption. Must be provided if convergent encryption is enabled for this key
@@ -680,7 +695,7 @@ $ curl \
 }
 ```
 
-## Generate HMAC with Key
+## Generate HMAC
 
 This endpoint returns the digest of given data using the specified hash
 algorithm and the named key. The key can be of any type supported by `transit`;
@@ -696,6 +711,10 @@ be used.
 
 - `name` `(string: <required>)` – Specifies the name of the encryption key to
   generate hmac against. This is specified as part of the URL.
+
+- `key_version` `(int: 0)` – Specifies the version of the key to use for the
+  operation. If not set, uses the latest version. Must be greater than or equal
+  to the key's `min_encryption_version`, if set.
 
 - `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
@@ -738,7 +757,7 @@ $ curl \
 }
 ```
 
-## Sign Data with Key
+## Sign Data
 
 This endpoint returns the cryptographic signature of the given data using the
 named key and the specified hash algorithm. The key must be of a type that
@@ -752,6 +771,10 @@ supports signing.
 
 - `name` `(string: <required>)` – Specifies the name of the encryption key to
   generate hmac against. This is specified as part of the URL.
+
+- `key_version` `(int: 0)` – Specifies the version of the key to use for
+  signing. If not set, uses the latest version. Must be greater than or equal
+  to the key's `min_encryption_version`, if set.
 
 - `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
@@ -794,7 +817,7 @@ $ curl \
 }
 ```
 
-## Verify Data with Key
+## Verify Signed Data
 
 This endpoint returns whether the provided signature is valid for the given
 data.
@@ -805,8 +828,8 @@ data.
 
 ### Parameters
 
-- `name` `(string: <required>)` – Specifies the name of the encryption key to
-  generate hmac against. This is specified as part of the URL.
+- `name` `(string: <required>)` – Specifies the name of the encryption key that
+  was used to generate the signature or HMAC.
 
 - `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
   can also be specified as part of the URL. Currently-supported algorithms are:
