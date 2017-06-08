@@ -51,6 +51,7 @@ func TestParseSecret(t *testing.T) {
 			WrappedAccessor: "abcd1234",
 		},
 	}
+	expected.RawSecret = secret.RawSecret
 	if !reflect.DeepEqual(secret, expected) {
 		t.Fatalf("bad:\ngot\n%#v\nexpected\n%#v\n", secret, expected)
 	}
