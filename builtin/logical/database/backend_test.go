@@ -185,6 +185,19 @@ func TestBackend_config_connection(t *testing.T) {
 	if !reflect.DeepEqual(expected, resp.Data) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 	}
+
+	configReq.Operation = logical.ListOperation
+	configReq.Data = nil
+	configReq.Path = "config/"
+	resp, err = b.HandleRequest(configReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := resp.Data["keys"].([]string)
+	key := keys[0]
+	if key != "plugin-test" {
+		t.Fatalf("bad key: %q", key)
+	}
 }
 
 func TestBackend_basic(t *testing.T) {

@@ -119,7 +119,7 @@ func sendRequest(ctx context.Context, dopts dialOptions, compressor Compressor, 
 	}
 	outBuf, err := encode(dopts.codec, args, compressor, cbuf, outPayload)
 	if err != nil {
-		return Errorf(codes.Internal, "grpc: %v", err)
+		return err
 	}
 	if c.maxSendMessageSize == nil {
 		return Errorf(codes.Internal, "callInfo maxSendMessageSize field uninitialized(nil)")

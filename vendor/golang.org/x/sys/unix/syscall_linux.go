@@ -1203,7 +1203,11 @@ func Getpgrp() (pid int) {
 //sysnb	InotifyRmWatch(fd int, watchdesc uint32) (success int, err error)
 //sysnb	Kill(pid int, sig syscall.Signal) (err error)
 //sys	Klogctl(typ int, buf []byte) (n int, err error) = SYS_SYSLOG
+//sys	Lgetxattr(path string, attr string, dest []byte) (sz int, err error)
 //sys	Listxattr(path string, dest []byte) (sz int, err error)
+//sys	Llistxattr(path string, dest []byte) (sz int, err error)
+//sys	Lremovexattr(path string, attr string) (err error)
+//sys	Lsetxattr(path string, attr string, data []byte, flags int) (err error)
 //sys	Mkdirat(dirfd int, path string, mode uint32) (err error)
 //sys	Mknodat(dirfd int, path string, mode uint32, dev int) (err error)
 //sys	Nanosleep(time *Timespec, leftover *Timespec) (err error)
@@ -1334,11 +1338,7 @@ func Vmsplice(fd int, iovs []Iovec, flags int) (int, error) {
 // IoprioGet
 // IoprioSet
 // KexecLoad
-// Lgetxattr
-// Llistxattr
 // LookupDcookie
-// Lremovexattr
-// Lsetxattr
 // Mbind
 // MigratePages
 // Mincore

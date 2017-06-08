@@ -77,8 +77,8 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		} else {
 			wrappingResp := &logical.Response{
 				WrapInfo: resp.WrapInfo,
+				Warnings: resp.Warnings,
 			}
-			wrappingResp.CloneWarnings(resp)
 			resp = wrappingResp
 		}
 	}
@@ -171,7 +171,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		if errType != nil {
 			retErr = multierror.Append(retErr, errType)
 		}
-		return logical.ErrorResponse(ctErr.Error()), nil, retErr
+		return logical.ErrorResponse(ctErr.Error()), auth, retErr
 	}
 
 	// Attach the display name

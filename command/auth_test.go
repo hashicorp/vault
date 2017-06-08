@@ -84,6 +84,45 @@ func TestAuth_token(t *testing.T) {
 	}
 }
 
+func TestAuth_token_nostore(t *testing.T) {
+	core, _, token := vault.TestCoreUnsealed(t)
+	ln, addr := http.TestServer(t, core)
+	defer ln.Close()
+
+	testAuthInit(t)
+
+	ui := new(cli.MockUi)
+	c := &AuthCommand{
+		Meta: meta.Meta{
+			Ui:          ui,
+			TokenHelper: DefaultTokenHelper,
+		},
+	}
+
+	args := []string{
+		"-address", addr,
+		"-no-store",
+		token,
+	}
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
+	}
+
+	helper, err := c.TokenHelper()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	actual, err := helper.Get()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if actual != "" {
+		t.Fatalf("bad: %s", actual)
+	}
+}
+
 func TestAuth_stdin(t *testing.T) {
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := http.TestServer(t, core)

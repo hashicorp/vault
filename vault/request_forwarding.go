@@ -426,6 +426,7 @@ func (c *forwardingClient) startHeartbeat() {
 			select {
 			case <-c.echoContext.Done():
 				c.echoTicker.Stop()
+				c.core.logger.Trace("forwarding: stopping heartbeating")
 				return
 			case <-c.echoTicker.C:
 				tick()

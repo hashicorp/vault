@@ -184,8 +184,8 @@ func (b *backend) Login(req *logical.Request, username string, password string) 
 
 	if len(policies) == 0 {
 		errStr := "user is not a member of any authorized group"
-		if len(ldapResponse.Warnings()) > 0 {
-			errStr = fmt.Sprintf("%s; additionally, %s", errStr, ldapResponse.Warnings()[0])
+		if len(ldapResponse.Warnings) > 0 {
+			errStr = fmt.Sprintf("%s; additionally, %s", errStr, ldapResponse.Warnings[0])
 		}
 
 		ldapResponse.Data["error"] = errStr

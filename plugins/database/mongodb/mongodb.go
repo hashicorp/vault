@@ -29,7 +29,12 @@ func New() (interface{}, error) {
 	connProducer := &mongoDBConnectionProducer{}
 	connProducer.Type = mongoDBTypeName
 
-	credsProducer := &mongoDBCredentialsProducer{}
+	credsProducer := &credsutil.SQLCredentialsProducer{
+		DisplayNameLen: 15,
+		RoleNameLen:    15,
+		UsernameLen:    100,
+		Separator:      "-",
+	}
 
 	dbType := &MongoDB{
 		ConnectionProducer:  connProducer,
@@ -72,7 +77,7 @@ func (m *MongoDB) getConnection() (*mgo.Session, error) {
 //
 // JSON Example:
 //  { "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }
-func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	m.Lock()
 	defer m.Unlock()
@@ -86,7 +91,7 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernamePrefix stri
 		return "", "", err
 	}
 
-	username, err = m.GenerateUsername(usernamePrefix)
+	username, err = m.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
 	}

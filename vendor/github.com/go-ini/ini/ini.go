@@ -37,7 +37,7 @@ const (
 
 	// Maximum allowed depth when recursively substituing variable names.
 	_DEPTH_VALUES = 99
-	_VERSION      = "1.27.2"
+	_VERSION      = "1.28.0"
 )
 
 // Version returns current package version literal.
@@ -60,7 +60,7 @@ var (
 
 	// Explicitly write DEFAULT section header
 	DefaultHeader = false
-	
+
 	// Indicate whether to put a line between sections
 	PrettySection = true
 )

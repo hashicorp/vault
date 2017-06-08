@@ -30,7 +30,7 @@ All plugins for the Database backend must implement the same simple interface.
 ```go
 type Database interface {
 	Type() (string, error)
-	CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error)
+	CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
 	RenewUser(statements Statements, username string, expiration time.Time) error
 	RevokeUser(statements Statements, username string) error
 

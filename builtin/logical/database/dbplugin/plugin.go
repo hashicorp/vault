@@ -13,7 +13,7 @@ import (
 // Database is the interface that all database objects must implement.
 type Database interface {
 	Type() (string, error)
-	CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error)
+	CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error)
 	RenewUser(statements Statements, username string, expiration time.Time) error
 	RevokeUser(statements Statements, username string) error
 
@@ -27,6 +27,13 @@ type Statements struct {
 	RevocationStatements string `json:"revocation_statements" mapstructure:"revocation_statements" structs:"revocation_statements"`
 	RollbackStatements   string `json:"rollback_statements" mapstructure:"rollback_statements" structs:"rollback_statements"`
 	RenewStatements      string `json:"renew_statements" mapstructure:"renew_statements" structs:"renew_statements"`
+}
+
+// UsernameConfig is used to configure prefixes for the username to be
+// generated.
+type UsernameConfig struct {
+	DisplayName string
+	RoleName    string
 }
 
 // PluginFactory is used to build plugin database types. It wraps the database
@@ -89,7 +96,7 @@ func PluginFactory(pluginName string, sys pluginutil.LookRunnerUtil, logger log.
 // This prevents users from executing bad plugins or executing a plugin
 // directory. It is a UX feature, not a security feature.
 var handshakeConfig = plugin.HandshakeConfig{
-	ProtocolVersion:  1,
+	ProtocolVersion:  2,
 	MagicCookieKey:   "VAULT_DATABASE_PLUGIN",
 	MagicCookieValue: "926a0820-aea2-be28-51d6-83cdf00e8edb",
 }
@@ -117,7 +124,7 @@ type InitializeRequest struct {
 
 type CreateUserRequest struct {
 	Statements     Statements
-	UsernamePrefix string
+	UsernameConfig UsernameConfig
 	Expiration     time.Time
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/mitchellh/copystructure"
 )
 
 const (
@@ -82,6 +83,40 @@ type Permissions struct {
 	MaxWrappingTTL     time.Duration
 	AllowedParameters  map[string][]interface{}
 	DeniedParameters   map[string][]interface{}
+}
+
+func (p *Permissions) Clone() (*Permissions, error) {
+	ret := &Permissions{
+		CapabilitiesBitmap: p.CapabilitiesBitmap,
+		MinWrappingTTL:     p.MinWrappingTTL,
+		MaxWrappingTTL:     p.MaxWrappingTTL,
+	}
+
+	switch {
+	case p.AllowedParameters == nil:
+	case len(p.AllowedParameters) == 0:
+		ret.AllowedParameters = make(map[string][]interface{})
+	default:
+		clonedAllowed, err := copystructure.Copy(p.AllowedParameters)
+		if err != nil {
+			return nil, err
+		}
+		ret.AllowedParameters = clonedAllowed.(map[string][]interface{})
+	}
+
+	switch {
+	case p.DeniedParameters == nil:
+	case len(p.DeniedParameters) == 0:
+		ret.DeniedParameters = make(map[string][]interface{})
+	default:
+		clonedDenied, err := copystructure.Copy(p.DeniedParameters)
+		if err != nil {
+			return nil, err
+		}
+		ret.DeniedParameters = clonedDenied.(map[string][]interface{})
+	}
+
+	return ret, nil
 }
 
 // Parse is used to parse the specified ACL rules into an

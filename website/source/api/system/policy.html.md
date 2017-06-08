@@ -93,7 +93,7 @@ updated, it takes effect immediately to all associated users.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request PUT \
-    --data payload.json \
+    --data @payload.json \
     https://vault.rocks/v1/sys/policy/my-policy
 ```
 

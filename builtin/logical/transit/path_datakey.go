@@ -41,6 +41,14 @@ ciphertext; "wrapped" will return the ciphertext only.`,
 and 512 bits are supported. Defaults to 256.`,
 				Default: 256,
 			},
+
+			"key_version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `The version of the Vault key to use for
+encryption of the data key. Must be 0 (for latest)
+or a value greater than or equal to the
+min_encryption_version configured on the key.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -55,6 +63,7 @@ and 512 bits are supported. Defaults to 256.`,
 func (b *backend) pathDatakeyWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	ver := d.Get("key_version").(int)
 
 	plaintext := d.Get("plaintext").(string)
 	plaintextAllowed := false
@@ -116,7 +125,7 @@ func (b *backend) pathDatakeyWrite(
 		return nil, err
 	}
 
-	ciphertext, err := p.Encrypt(context, nonce, base64.StdEncoding.EncodeToString(newKey))
+	ciphertext, err := p.Encrypt(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey))
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
