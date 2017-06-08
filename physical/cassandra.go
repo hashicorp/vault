@@ -160,24 +160,29 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 		}
 	}
 
-	if insecureSkipVerifyStr, ok := conf["insecure_skip_verify"]; ok {
-		insecureSkipVerify, err := strconv.Atoi(insecureSkipVerifyStr)
+	if tlsSkipVerifyStr, ok := conf["tls_skip_verify"]; ok {
+		tlsSkipVerify, err := strconv.Atoi(tlsSkipVerifyStr)
 		if err != nil {
-			return fmt.Errorf("'insecure_tls_verify' must be an integer (0 or 1)")
+			return fmt.Errorf("'tls_skip_verify' must be an integer (0 or 1)")
 		}
-		if insecureSkipVerify == 0 {
+		if tlsSkipVerify == 0 {
 			tlsConfig.InsecureSkipVerify = false
 		} else {
 			tlsConfig.InsecureSkipVerify = true
 		}
 	}
 
-	if tlsMinVersionStr, ok := conf["tls_min_version"]; ok {
-		tlsMinVersion, err := strconv.Atoi(tlsMinVersionStr)
-		if err != nil {
-			return fmt.Errorf("'tls_min_version' must be an integer")
+	if tlsMinVersion, ok := conf["tls_min_version"]; ok {
+		switch tlsMinVersion {
+		case "tls10":
+			tlsConfig.MinVersion = tls.VersionTLS10
+		case "tls11":
+			tlsConfig.MinVersion = tls.VersionTLS11
+		case "tls12":
+			tlsConfig.MinVersion = tls.VersionTLS12
+		default:
+			return fmt.Errorf("'tls_min_version' must be one of `tls10`, `tls11` or `tls12`")
 		}
-		tlsConfig.MinVersion = uint16(tlsMinVersion)
 	}
 
 	cluster.SslOpts = &gocql.SslOptions{
