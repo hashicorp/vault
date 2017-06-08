@@ -758,6 +758,34 @@ The Cassandra backend has the following options:
     in Cassandra. If set, must be one of `"ANY"`, `"ONE"`, `"TWO"`, `"THREE"`, `"QUORUM"`,
     `"ALL"`, `"LOCAL_QUORUM"`, `"EACH_QUORUM"`, or `"LOCAL_ONE"`. Defaults to `"LOCAL_QUORUM"`.
 
+  * `protocol_version` (optional) - Cassandra protocol version to use. Defaults
+    to `2`.
+
+  * `username` (optional) - Username to use when authenticating with the
+    Cassandra hosts.
+
+  * `password` (optional) - Password to use when authenticating with the
+    Cassandra hosts.
+
+  * `connection_timeout` (optional) - A timeout in seconds to wait until a
+    connection is established with the Cassandra hosts.
+
+  * `tls` (optional) - Indicates the connection with the Cassandra hosts should
+    use TLS.
+
+  * `pem_bundle` (optional) - Specifies concatenated PEM blocks containing a
+    certificate and private key; a certificate, private key, and issuing CA
+    certificate; or just a CA certificate.
+
+  * `pem_json` (optional) - Specifies JSON containing a certificate and private key;
+    a certificate, private key, and issuing CA certificate; or just a CA certificate.
+
+  * `tls_skip_verify` (optional) - If set, then TLS host verification
+    will be disabled for Cassandra.  Defaults to `0`.
+
+  * `tls_min_version` (optional) - Minimum TLS version to use. Accepted values
+    are `tls10`, `tls11` or `tls12`. Defaults to `tls12`.
+
 You need to ensure the keyspace and table exist in Cassandra:
 
 ```cql
