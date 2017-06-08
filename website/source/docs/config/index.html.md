@@ -773,12 +773,13 @@ The Cassandra backend has the following options:
   * `tls` (optional) - Indicates the connection with the Cassandra hosts should
     use TLS.
 
-  * `pem_bundle` (optional) - Specifies concatenated PEM blocks containing a
+  * `pem_bundle_file` (optional) - Specifies a file containing a
     certificate and private key; a certificate, private key, and issuing CA
     certificate; or just a CA certificate.
 
-  * `pem_json` (optional) - Specifies JSON containing a certificate and private key;
-    a certificate, private key, and issuing CA certificate; or just a CA certificate.
+  * `pem_json_file` (optional) - Specifies a JSON file containing a certificate
+    and private key; a certificate, private key, and issuing CA certificate;
+    or just a CA certificate.
 
   * `tls_skip_verify` (optional) - If set, then TLS host verification
     will be disabled for Cassandra.  Defaults to `0`.

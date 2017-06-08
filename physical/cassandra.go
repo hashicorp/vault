@@ -139,7 +139,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	}
 
 	var tlsConfig = &tls.Config{}
-	if pemBundlePath, ok := conf["pem_bundle"]; ok {
+	if pemBundlePath, ok := conf["pem_bundle_file"]; ok {
 		pemBundleData, err := ioutil.ReadFile(pemBundlePath)
 		if err != nil {
 			return fmt.Errorf("Error reading pem bundle from %s: %v", pemBundlePath, err)
@@ -153,7 +153,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 			return err
 		}
 	} else {
-		if pemJSONPath, ok := conf["pem_json"]; ok {
+		if pemJSONPath, ok := conf["pem_json_file"]; ok {
 			pemJSONData, err := ioutil.ReadFile(pemJSONPath)
 			if err != nil {
 				return fmt.Errorf("Error reading json bundle from %s: %v", pemJSONPath, err)
