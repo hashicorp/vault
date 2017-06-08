@@ -3,6 +3,7 @@ package physical
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
@@ -138,8 +139,12 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	}
 
 	var tlsConfig = &tls.Config{}
-	if pemBundleStr, ok := conf["pem_bundle"]; ok {
-		pemBundle, err := certutil.ParsePEMBundle(pemBundleStr)
+	if pemBundlePath, ok := conf["pem_bundle"]; ok {
+		pemBundleData, err := ioutil.ReadFile(pemBundlePath)
+		if err != nil {
+			return fmt.Errorf("Error reading pem bundle from %s: %v", pemBundlePath, err)
+		}
+		pemBundle, err := certutil.ParsePEMBundle(string(pemBundleData))
 		if err != nil {
 			return fmt.Errorf("Error parsing 'pem_bundle': %v", err)
 		}
