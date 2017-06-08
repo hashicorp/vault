@@ -25,8 +25,8 @@ func (c *Sys) ResetUnsealProcess() (*SealStatusResponse, error) {
 	return sealStatusRequest(c, r)
 }
 
-func (c *Sys) Unseal(shard string) (*SealStatusResponse, error) {
-	body := map[string]interface{}{"key": shard}
+func (c *Sys) Unseal(shard string, polyhash bool) (*SealStatusResponse, error) {
+	body := map[string]interface{}{"key": shard, "polyhash": polyhash}
 
 	r := c.c.NewRequest("PUT", "/v1/sys/unseal")
 	if err := r.SetJSONBody(body); err != nil {

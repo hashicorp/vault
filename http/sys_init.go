@@ -38,6 +38,7 @@ func handleSysInitGet(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// Parse the request
 	var req InitRequest
+
 	if err := parseRequest(r, w, &req); err != nil {
 		respondError(w, http.StatusBadRequest, err)
 		return
@@ -94,9 +95,10 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 	}
 
 	initParams := &vault.InitParams{
-		BarrierConfig:   barrierConfig,
-		RecoveryConfig:  recoveryConfig,
-		RootTokenPGPKey: req.RootTokenPGPKey,
+		BarrierConfig:     barrierConfig,
+		RecoveryConfig:    recoveryConfig,
+		RootTokenPGPKey:   req.RootTokenPGPKey,
+		PolyhashPasswords: req.PolyhashPasswords,
 	}
 
 	result, initErr := core.Initialize(initParams)
@@ -110,12 +112,23 @@ func handleSysInitPut(core *vault.Core, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	// Encode the keys
 	keys := make([]string, 0, len(result.SecretShares))
 	keysB64 := make([]string, 0, len(result.SecretShares))
-	for _, k := range result.SecretShares {
-		keys = append(keys, hex.EncodeToString(k))
-		keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
+	// If the polyhash is set, set each key as "share number,password"
+	if initParams.PolyhashPasswords != nil {
+		var shareno int = 1
+		for _, k := range initParams.PolyhashPasswords {
+			var ret string
+			ret = fmt.Sprintf("%d,%s", shareno, k)
+			keys = append(keys, ret)
+			shareno++
+		}
+		// Otherwise, encode the keys
+	} else {
+		for _, k := range result.SecretShares {
+			keys = append(keys, hex.EncodeToString(k))
+			keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
+		}
 	}
 
 	resp := &InitResponse{
@@ -147,6 +160,7 @@ type InitRequest struct {
 	RecoveryThreshold int      `json:"recovery_threshold"`
 	RecoveryPGPKeys   []string `json:"recovery_pgp_keys"`
 	RootTokenPGPKey   string   `json:"root_token_pgp_key"`
+	PolyhashPasswords []string `json:"polyhash"`
 }
 
 type InitResponse struct {
