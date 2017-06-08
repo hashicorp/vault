@@ -183,6 +183,7 @@ func (b *backend) pathPolicyRead(
 			"derived":                p.Derived,
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
+			"min_encryption_version": p.MinEncryptionVersion,
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
 			"supports_encryption":    p.Type.EncryptionSupported(),
