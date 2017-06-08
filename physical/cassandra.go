@@ -101,7 +101,7 @@ func newCassandraBackend(conf map[string]string, logger log.Logger) (Backend, er
 		if err != nil {
 			return nil, fmt.Errorf("'connection_timeout' must be an integer")
 		}
-		cluster.Timeout = time.Duration(connectionTimeout) * time.Millisecond
+		cluster.Timeout = time.Duration(connectionTimeout) * time.Second
 	}
 
 	if err := setupCassandraTLS(conf, cluster); err != nil {
