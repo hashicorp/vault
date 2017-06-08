@@ -10,6 +10,11 @@ description: |-
 
 Name: `mongodb`
 
+~> **Deprecation Note:** This backend is deprecated in favor of the
+combined databases backend added in v0.7.1. See the documentation for
+the new implementation of this backend at
+[MongoDB Database Plugin](/docs/secrets/databases/mongodb.html).
+
 The `mongodb` secret backend for Vault generates MongoDB database credentials
 dynamically based on configured roles. This means that services that need
 to access a MongoDB database no longer need to hard-code credentials: they
