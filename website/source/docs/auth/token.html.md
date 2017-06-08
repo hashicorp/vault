@@ -102,87 +102,118 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">id</span>
-        <span class="param-flags">optional</span>
-        The ID of the client token. Can only be specified by a root token.
-        Otherwise, the token ID is a randomly generated UUID.
-      </li>
-      <li>
-        <span class="param">policies</span>
-        <span class="param-flags">optional</span>
-        A list of policies for the token. This must be a subset of the
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">id</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td>random UUID</td>
+        <td>The ID of the client token. Can only be specified by a root token.
+        Otherwise, the token ID is a randomly generated UUID.</td>
+      </tr>
+      <tr>
+        <td class="param">policies</td>
+        <td class="param-flags">optional</td>
+        <td>list</td>
+        <td>all policies of calling token</td>
+        <td>A list of policies for the token. This must be a subset of the
         policies belonging to the token making the request, unless root.
-        If not specified, defaults to all the policies of the calling token.
-      </li>
-      <li>
-        <span class="param">meta</span>
-        <span class="param-flags">optional</span>
-        A map of string to string valued metadata. This is passed through
-        to the audit backends.
-      </li>
-      <li>
-        <span class="param">no_parent</span>
-        <span class="param-flags">optional</span>
-        If true and set by a root caller, the token will not have the
-        parent token of the caller. This creates a token with no parent.
-      </li>
-      <li>
-        <span class="param">no_default_policy</span>
-        <span class="param-flags">optional</span>
-        If true the `default` policy will not be contained in this token's
-        policy set.
-      </li>
-      <li>
-        <span class="param">renewable</span>
-        <span class="param-flags">optional</span>
-        Set to `false` to disable the ability of the token to be renewed past
+        If not specified, defaults to all the policies of the calling token.</td>
+      </tr>
+      <tr>
+        <td class="param">meta</td>
+        <td class="param-flags">optional</td>
+        <td>map</td>
+        <td></td>
+        <td>A map of string to string valued metadata. This is passed through
+        to the audit backends.</td>
+      </tr>
+      <tr>
+        <td class="param">no_parent</td>
+        <td class="param-flags">optional</td>
+        <td>bool</td>
+        <td>false</td>
+        <td>If true and set by a root caller, the token will not have the
+        parent token of the caller. This creates a token with no parent.</td>
+      </tr>
+      <tr>
+        <td class="param">no_default_policy</td>
+        <td class="param-flags">optional</td>
+        <td>bool</td>
+        <td>false</td>
+        <td>If true the `default` policy will not be contained in this token's
+        policy set.</td>
+      </tr>
+      <tr>
+        <td class="param">renewable</td>
+        <td class="param-flags">optional</td>
+        <td>bool</td>
+        <td>true</td>
+        <td>Set to `false` to disable the ability of the token to be renewed past
         its initial TTL. Specifying `true`, or omitting this option, will allow
-        the token to be renewable up to the system/mount maximum TTL.
-      </li>
-      <li>
-        <span class="param">lease</span>
-        <span class="param-flags">optional</span>
-        DEPRECATED; use "ttl" instead.
-      </li>
-      <li>
-        <span class="param">ttl</span>
-        <span class="param-flags">optional</span>
-        The TTL period of the token, provided as "1h", where hour is
+        the token to be renewable up to the system/mount maximum TTL.</td>
+      </tr>
+      <tr>
+        <td class="param">lease</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td></td>
+        <td>DEPRECATED; use "ttl" instead.</td>
+      </tr>
+      <tr>
+        <td class="param">ttl</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td>(indefinite)</td>
+        <td>The TTL period of the token, provided as "1h", where hour is
         the largest suffix. If not provided, the token is valid for the
         [default lease TTL](/docs/configuration/index.html), or
-        indefinitely if the root policy is used.
-      </li>
-      <li>
-        <span class="param">explicit_max_ttl</span>
-        <span class="param-flags">optional</span>
-        If set, the token will have an explicit max TTL set upon it. This
+        indefinitely if the root policy is used.</td>
+      </tr>
+      <tr>
+        <td class="param">explicit_max_ttl</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td></td>
+        <td>If set, the token will have an explicit max TTL set upon it. This
         maximum token TTL *cannot* be changed later, and unlike with normal
         tokens, updates to the system/mount max TTL value will have no effect
         at renewal time -- the token will never be able to be renewed or used
-        past the value set at issue time. 
-      </li>
-      <li>
-        <span class="param">display_name</span>
-        <span class="param-flags">optional</span>
-        The display name of the token. Defaults to "token".
-      </li>
-      <li>
-        <span class="param">num_uses</span>
-        <span class="param-flags">optional</span>
-        The maximum uses for the given token. This can be used to create
+        past the value set at issue time.</td>
+      </tr>
+      <tr>
+        <td class="param">display_name</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td>token</td>
+        <td>The display name of the token. Defaults to "token".</td>
+      </tr>
+      <tr>
+        <td class="param">num_uses</td>
+        <td class="param-flags">optional</td>
+        <td>int</td>
+        <td>0</td>
+        <td>The maximum uses for the given token. This can be used to create
         a one-time-token or limited use token. Defaults to 0, which has
-        no limit to the number of uses.
-      </li>
-      <li>
-        <span class="param">period</span>
-        <span class="param-flags">optional</span>
-        If specified, the token will be periodic; it will have no maximum TTL
+        no limit to the number of uses.</td>
+      </tr>
+      <tr>
+        <td class="param">period</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td></td>
+        <td>If specified, the token will be periodic; it will have no maximum TTL
         (unless an "explicit-max-ttl" is also set) but every renewal will use
-        the given period. Requires a root/sudo token to use.
-      </li>
-    </ul>
+        the given period. Requires a root/sudo token to use.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
