@@ -1,0 +1,4 @@
+dev:
+  build: .
+  volumes:
+    - .:/go/src/github.com/hashicorp/vault
