@@ -32,7 +32,9 @@ func New() (interface{}, error) {
 
 	credsProducer := &credsutil.SQLCredentialsProducer{
 		DisplayNameLen: 32,
+		RoleNameLen:    20,
 		UsernameLen:    128,
+		Separator:      "_",
 	}
 
 	dbType := &HANA{
@@ -71,7 +73,7 @@ func (h *HANA) getConnection() (*sql.DB, error) {
 
 // CreateUser generates the username/password on the underlying HANA secret backend
 // as instructed by the CreationStatement provided.
-func (h *HANA) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (h *HANA) CreateUser(statements dbplugin.Statements, usernameConfig dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	// Grab the lock
 	h.Lock()
 	defer h.Unlock()
@@ -87,7 +89,7 @@ func (h *HANA) CreateUser(statements dbplugin.Statements, usernamePrefix string,
 	}
 
 	// Generate username
-	username, err = h.GenerateUsername(usernamePrefix)
+	username, err = h.GenerateUsername(usernameConfig)
 	if err != nil {
 		return "", "", err
 	}
@@ -101,18 +103,15 @@ func (h *HANA) CreateUser(statements dbplugin.Statements, usernamePrefix string,
 	if err != nil {
 		return "", "", err
 	}
-
-	// Most HANA configurations have password constraints.
-	// Prefix with A1a (user must change password upon login anyway)
+	// Most HANA configurations have password constraints
+	// Prefix with A1a to satisfy these constraints. User will be forced to change upon login
 	password = strings.Replace(password, "-", "_", -1)
 	password = "A1a" + password
 
-	// expirationStr = (expiration - time.Now).Seconds() + HANA server side time
-	// This ensures hana will deactivate the user when time is up, regardless of vault's actions
-	var expirationStr string
-	timeQuery := fmt.Sprintf("SELECT TO_NVARCHAR(add_seconds(CURRENT_TIMESTAMP,"+
-		"%f), 'YYYY-MM-DD HH24:MI:SS') FROM DUMMY", (expiration.Sub(time.Now())).Seconds())
-	if err := db.QueryRow(timeQuery).Scan(&expirationStr); err != nil {
+	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
+	// regardless of whether vault is alive to revoke lease
+	expirationStr, err := h.GenerateExpiration(expiration)
+	if err != nil {
 		return "", "", err
 	}
 
@@ -167,11 +166,10 @@ func (h *HANA) RenewUser(statements dbplugin.Statements, username string, expira
 	}
 	defer tx.Rollback()
 
-	// Request server's current time plus lease duration
-	var expirationStr string
-	timeQuery := fmt.Sprintf("SELECT TO_NVARCHAR(add_seconds(CURRENT_TIMESTAMP,"+
-		"%f), 'YYYY-MM-DD HH24:MI:SS') FROM DUMMY", (expiration.Sub(time.Now())).Seconds())
-	if err := db.QueryRow(timeQuery).Scan(&expirationStr); err != nil {
+	// If expiration is in the role SQL, HANA will deactivate the user when time is up,
+	// regardless of whether vault is alive to revoke lease
+	expirationStr, err := h.GenerateExpiration(expiration)
+	if err != nil {
 		return err
 	}
 

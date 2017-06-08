@@ -65,8 +65,13 @@ func TestHANA_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test-test",
+		RoleName:    "test-test",
+	}
+
 	// Test with no configured Creation Statememt
-	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	_, _, err = db.CreateUser(dbplugin.Statements{}, usernameConfig, time.Now().Add(time.Hour))
 	if err == nil {
 		t.Fatal("Expected error when no creation statement is provided")
 	}
@@ -75,7 +80,7 @@ func TestHANA_CreateUser(t *testing.T) {
 		CreationStatements: testHANARole,
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Hour))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -107,8 +112,13 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		CreationStatements: testHANARole,
 	}
 
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test-test",
+		RoleName:    "test-test",
+	}
+
 	// Test default revoke statememts
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Hour))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -125,7 +135,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 	}
 
 	// Test custom revoke statememt
-	username, password, err = db.CreateUser(statements, "test", time.Now().Add(2*time.Second))
+	username, password, err = db.CreateUser(statements, usernameConfig, time.Now().Add(time.Hour))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
