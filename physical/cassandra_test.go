@@ -11,7 +11,7 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
-	"github.com/ory-am/dockertest"
+	dockertest "gopkg.in/ory-am/dockertest.v2"
 )
 
 func TestCassandraBackend(t *testing.T) {
@@ -25,8 +25,8 @@ func TestCassandraBackend(t *testing.T) {
 	// Run vault tests
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	b, err := NewBackend("cassandra", logger, map[string]string{
-		"hosts": hosts,
-	})
+		"hosts":            hosts,
+		"protocol_version": "3"})
 
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)

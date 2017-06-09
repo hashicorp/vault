@@ -195,9 +195,7 @@ func setupCassandraTLS(conf map[string]string, cluster *gocql.ClusterConfig) err
 	}
 
 	cluster.SslOpts = &gocql.SslOptions{
-		Config: *tlsConfig.Clone(),
-	}
-
+		Config: tlsConfig.Clone()}
 	return nil
 }
 
