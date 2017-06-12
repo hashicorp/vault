@@ -27,7 +27,7 @@ func (r *Response) DecodeJSON(out interface{}) error {
 func (r *Response) Error() error {
 	// 200 to 399 are okay status codes. 429 is the code for health status of
 	// standby nodes.
-	if r.StatusCode >= 200 && r.StatusCode < 400 || r.StatusCode == 429 {
+	if (r.StatusCode >= 200 && r.StatusCode < 400) || r.StatusCode == 429 {
 		return nil
 	}
 
