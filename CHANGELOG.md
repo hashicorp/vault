@@ -1,3 +1,9 @@
+## Next (unreleased)
+
+BUG FIXES:
+
+ * api/health: Consider the response code from standby nodes [GH-2850]
+
 ## 0.7.3 (June 7th, 2017)
 
 SECURITY:
