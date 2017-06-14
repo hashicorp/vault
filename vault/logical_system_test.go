@@ -34,6 +34,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"config/auditing/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
+		"revoke-force/*",
 		"leases/revoke-prefix/*",
 		"leases/revoke-force/*",
 		"leases/lookup/*",
