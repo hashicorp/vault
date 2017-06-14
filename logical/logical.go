@@ -27,6 +27,11 @@ type Backend interface {
 	// information, such as globally configured default and max lease TTLs.
 	System() SystemView
 
+	// Logger provides an interface to access the underlying logger. This
+	// is useful when a struct embeds a Backend-implemented struct that
+	// contains a private instance of logger.
+	Logger() log.Logger
+
 	// HandleExistenceCheck is used to handle a request and generate a response
 	// indicating whether the given path exists or not; this is used to
 	// understand whether the request must have a Create or Update capability
@@ -47,6 +52,13 @@ type Backend interface {
 	// to the backend. The backend can use this to clear any caches or reset
 	// internal state as needed.
 	InvalidateKey(key string)
+
+	// Configure is used to set up the backend based on the provided backend
+	// configuration. This is primarily used in the the context of backend
+	// plugins, where the RPC server has no context of the core's config,
+	// thus calling setup from the client to configure components such as the
+	// logger, storage, sys view, etc.
+	Configure(*BackendConfig) error
 }
 
 // BackendConfig is provided to the factory to initialize the backend

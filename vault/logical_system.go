@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/wrapping"
@@ -750,7 +751,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				HelpDescription: strings.TrimSpace(sysHelp["audited-headers"][1]),
 			},
 			&framework.Path{
-				Pattern: "plugins/catalog/$",
+				Pattern: "plugins/catalog/?$",
 
 				Fields: map[string]*framework.FieldSchema{},
 
@@ -767,18 +768,15 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				Fields: map[string]*framework.FieldSchema{
 					"name": &framework.FieldSchema{
 						Type:        framework.TypeString,
-						Description: "The name of the plugin",
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_name"][0]),
 					},
 					"sha_256": &framework.FieldSchema{
-						Type: framework.TypeString,
-						Description: `The SHA256 sum of the executable used in the
-						command field. This should be HEX encoded.`,
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 					},
 					"command": &framework.FieldSchema{
-						Type: framework.TypeString,
-						Description: `The command used to start the plugin. The
-						executable defined in this command must exist in vault's
-						plugin directory.`,
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 					},
 				},
 
@@ -883,10 +881,11 @@ func (b *SystemBackend) handlePluginCatalogRead(req *logical.Request, d *framewo
 		return nil, nil
 	}
 
+	// Create a map of data to be returned and remove sensitive information from it
+	data := structs.New(plugin).Map()
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"plugin": plugin,
-		},
+		Data: data,
 	}, nil
 }
 
@@ -1104,6 +1103,7 @@ func (b *SystemBackend) handleMountTable(
 				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
 				"force_no_cache":    entry.Config.ForceNoCache,
+				"plugin_name":       entry.Config.PluginName,
 			},
 			"local": entry.Local,
 		}
@@ -1134,12 +1134,8 @@ func (b *SystemBackend) handleMount(
 	path = sanitizeMountPath(path)
 
 	var config MountConfig
+	var apiConfig APIMountConfig
 
-	var apiConfig struct {
-		DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-		MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-		ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
-	}
 	configMap := data.Get("config").(map[string]interface{})
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
@@ -1186,6 +1182,11 @@ func (b *SystemBackend) handleMount(
 		return logical.ErrorResponse(fmt.Sprintf(
 				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
 			logical.ErrInvalidRequest
+	}
+
+	// Only set plugin-name if mount is of type plugin
+	if logicalType == "plugin" && apiConfig.PluginName != "" {
+		config.PluginName = apiConfig.PluginName
 	}
 
 	// Copy over the force no cache if set
@@ -2677,22 +2678,37 @@ This path responds to the following HTTP methods.
 		"Lists the headers configured to be audited.",
 		`Returns a list of headers that have been configured to be audited.`,
 	},
-	"plugins/catalog": {
-		`Configures the plugins known to vault`,
+	"plugin-catalog": {
+		"Configures the plugins known to vault",
 		`
 This path responds to the following HTTP methods.
-    LIST /
-        Returns a list of names of configured plugins.
+		LIST /
+			Returns a list of names of configured plugins.
 
-    GET /<name>
-        Retrieve the metadata for the named plugin.
+		GET /<name>
+			Retrieve the metadata for the named plugin.
 
-    PUT /<name>
-        Add or update plugin.
+		PUT /<name>
+			Add or update plugin.
 
-    DELETE /<name>
-        Delete the plugin with the given name.
+		DELETE /<name>
+			Delete the plugin with the given name.
 		`,
+	},
+	"plugin-catalog_name": {
+		"The name of the plugin",
+		"",
+	},
+	"plugin-catalog_sha-256": {
+		`The SHA256 sum of the executable used in the 
+command field. This should be HEX encoded.`,
+		"",
+	},
+	"plugin-catalog_command": {
+		`The command used to start the plugin. The
+executable defined in this command must exist in vault's
+plugin directory.`,
+		"",
 	},
 	"leases": {
 		`View or list lease metadata.`,

@@ -1,0 +1,75 @@
+package plugin
+
+import (
+	"fmt"
+
+	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/logical"
+)
+
+// PluginMap should be used by clients for map of plugins
+var PluginMap = map[string]plugin.Plugin{
+	"backend": &BackendPlugin{},
+}
+
+// NewBackend will return an instance of an RPC-based client implementation of the backend for
+// external plugins, or a concrete implementation of the backend if it is a builtin backend.
+// The backend is returned as a logical.Backend interface.
+func NewBackend(pluginName string, sys pluginutil.LookRunnerUtil) (logical.Backend, error) {
+	// Look for plugin in the plugin catalog
+	pluginRunner, err := sys.LookupPlugin(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	var backend logical.Backend
+	if pluginRunner.Builtin {
+		// Plugin is builtin so we can retrieve an instance of the interface
+		// from the pluginRunner. Then cast it to a Database.
+		backendRaw, err := pluginRunner.BuiltinFactory()
+		if err != nil {
+			return nil, fmt.Errorf("error getting plugin type: %s", err)
+		}
+
+		var ok bool
+		backend, ok = backendRaw.(logical.Backend)
+		if !ok {
+			return nil, fmt.Errorf("unsuported backend type: %s", pluginName)
+		}
+
+	} else {
+		// create a DatabasePluginClient instance
+		backend, err = newPluginClient(sys, pluginRunner)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return backend, nil
+}
+
+func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner) (logical.Backend, error) {
+	client, err := pluginRunner.Run(sys, PluginMap, handshakeConfig, []string{})
+	if err != nil {
+		return nil, err
+	}
+
+	// Connect via RPC
+	rpcClient, err := client.Client()
+	if err != nil {
+		return nil, err
+	}
+
+	// Request the plugin
+	raw, err := rpcClient.Dispense("backend")
+	if err != nil {
+		return nil, err
+	}
+
+	// We should have a logical backend type now. This feels like a normal interface
+	// implementation but is in fact over an RPC connection.
+	backendRPC := raw.(*backendPluginClient)
+
+	return backendRPC, nil
+}
