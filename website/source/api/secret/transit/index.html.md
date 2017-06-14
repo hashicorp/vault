@@ -770,7 +770,7 @@ supports signing.
 ### Parameters
 
 - `name` `(string: <required>)` – Specifies the name of the encryption key to
-  generate hmac against. This is specified as part of the URL.
+  use for signing. This is specified as part of the URL.
 
 - `key_version` `(int: 0)` – Specifies the version of the key to use for
   signing. If not set, uses the latest version. Must be greater than or equal
