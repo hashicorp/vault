@@ -2,13 +2,16 @@ package vault
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
+	log "github.com/mgutz/logxi/v1"
 )
 
 type NoopBackend struct {
@@ -60,6 +63,14 @@ func (n *NoopBackend) Cleanup() {
 
 func (n *NoopBackend) InvalidateKey(k string) {
 	n.Invalidations = append(n.Invalidations, k)
+}
+
+func (n *NoopBackend) Configure(config *logical.BackendConfig) error {
+	return nil
+}
+
+func (n *NoopBackend) Logger() log.Logger {
+	return logformat.NewVaultLoggerWithWriter(ioutil.Discard, log.LevelOff)
 }
 
 func (n *NoopBackend) Initialize() error {
