@@ -118,8 +118,8 @@ func TestBackendPlugin_InvalidateKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.Data["value"] == "bar" {
-		t.Fatalf("bad: %#v", resp)
+	if resp.Data["value"] == "" {
+		t.Fatalf("bad: %#v, expected non-empty value", resp)
 	}
 
 	b.InvalidateKey("internal")
