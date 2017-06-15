@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"log"
-
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
@@ -1583,17 +1581,7 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 		Builtin: true,
 	}
 	expectedRespData := structs.New(expectedBuiltin).Map()
-	// expectedBuiltin.BuiltinFactory, _ = builtinplugins.Get("mysql-database-plugin")
 
-	log.Printf("==== %#v", resp.Data)
-
-	// p := resp.Data["plugin"].(*pluginutil.PluginRunner)
-	// if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {
-	// 	t.Fatal("expected BuiltinFactory did not match actual")
-	// }
-
-	// expectedBuiltin.BuiltinFactory = nil
-	// p.BuiltinFactory = nil
 	if !reflect.DeepEqual(actualRespData, expectedRespData) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
 	}
