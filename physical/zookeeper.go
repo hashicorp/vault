@@ -289,8 +289,14 @@ func (c *ZookeeperBackend) List(prefix string) ([]string, error) {
 		// and append the slash which is what Vault depends on
 		// for iteration
 		if stat.DataLength > 0 && stat.NumChildren > 0 {
-			msgFmt := "Node %q is both of data and leaf type ??"
-			panic(fmt.Sprintf(msgFmt, childPath))
+			if childPath == c.nodePath("core/lock") {
+				// go-zookeeper Lock() breaks Vault semantics and creates a directory
+				// under the lock file; just treat it like the file Vault expects
+				children = append(children, key[1:])
+			} else {
+				msgFmt := "Node %q is both of data and leaf type ??"
+				panic(fmt.Sprintf(msgFmt, childPath))
+			}
 		} else if stat.DataLength == 0 {
 			// No, we cannot differentiate here on number of children as node
 			// can have all it leafs remoed, and it still is a node.

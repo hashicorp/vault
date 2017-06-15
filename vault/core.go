@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -50,6 +51,9 @@ const (
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
 	lockRetryInterval = 10 * time.Second
+
+	// leaderCheckInterval is how often a standby checks for a new leader
+	leaderCheckInterval = 2500 * time.Millisecond
 
 	// keyRotateCheckInterval is how often a standby checks for a key
 	// rotation taking place.
@@ -294,8 +298,8 @@ type Core struct {
 	localClusterParsedCert *x509.Certificate
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
-	// The setup function that gives us the handler to use
-	clusterHandlerSetupFunc func() (http.Handler, http.Handler)
+	// The handler to use for request forwarding
+	clusterHandler http.Handler
 	// Tracks whether cluster listeners are running, e.g. it's safe to send a
 	// shutdown down the channel
 	clusterListenersRunning bool
@@ -304,8 +308,6 @@ type Core struct {
 	// Shutdown success channel. We need this to be done serially to ensure
 	// that binds are removed before they might be reinstated.
 	clusterListenerShutdownSuccessCh chan struct{}
-	// Connection info containing a client and a current active address
-	requestForwardingConnection *activeConnection
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
@@ -316,14 +318,18 @@ type Core struct {
 	clusterLeaderRedirectAddr string
 	// Lock for the cluster leader values
 	clusterLeaderParamsLock sync.RWMutex
+	// Info on cluster members
+	clusterPeerClusterAddrsCache *cache.Cache
 	// The grpc Server that handles server RPC calls
 	rpcServer *grpc.Server
+	// The context for the client
+	rpcClientConnContext context.Context
 	// The function for canceling the client connection
 	rpcClientConnCancelFunc context.CancelFunc
 	// The grpc ClientConn for RPC calls
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
-	rpcForwardingClient RequestForwardingClient
+	rpcForwardingClient *forwardingClient
 
 	// CORS Information
 	corsConfig *CORSConfig
@@ -445,6 +451,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
 		corsConfig:                       &CORSConfig{},
+		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 	}
 
@@ -1407,9 +1414,15 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	keyRotateDone := make(chan struct{})
 	keyRotateStop := make(chan struct{})
 	go c.periodicCheckKeyUpgrade(keyRotateDone, keyRotateStop)
+	// Monitor for new leadership
+	checkLeaderDone := make(chan struct{})
+	checkLeaderStop := make(chan struct{})
+	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
 	defer func() {
 		close(keyRotateStop)
 		<-keyRotateDone
+		close(checkLeaderStop)
+		<-checkLeaderDone
 	}()
 
 	for {
@@ -1419,11 +1432,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 			return
 		default:
 		}
-
-		// Clear forwarding clients
-		c.requestForwardingConnectionLock.Lock()
-		c.clearForwardingClients()
-		c.requestForwardingConnectionLock.Unlock()
 
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
@@ -1554,6 +1562,22 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 		// again. Give the other nodes a chance.
 		if manualStepDown {
 			time.Sleep(manualStepDownSleepPeriod)
+		}
+	}
+}
+
+// This checks the leader periodically to ensure that we switch RPC to a new
+// leader pretty quickly. There is logic in Leader() already to not make this
+// onerous and avoid more traffic than needed, so we just call that and ignore
+// the result.
+func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
+	defer close(doneCh)
+	for {
+		select {
+		case <-time.After(leaderCheckInterval):
+			c.Leader()
+		case <-stopCh:
+			return
 		}
 	}
 }

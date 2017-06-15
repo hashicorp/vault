@@ -243,8 +243,8 @@ func TestWrite_Output(t *testing.T) {
 	if code := c.Run(args); code != 0 {
 		t.Fatalf("bad: %d\n\n%s", code, ui.ErrorWriter.String())
 	}
-	if !strings.Contains(string(ui.OutputWriter.Bytes()), "Key") {
-		t.Fatalf("bad: %s", string(ui.OutputWriter.Bytes()))
+	if !strings.Contains(ui.OutputWriter.String(), "Key") {
+		t.Fatalf("bad: %s", ui.OutputWriter.String())
 	}
 }
 

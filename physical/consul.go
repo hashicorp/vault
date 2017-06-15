@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -23,7 +24,6 @@ import (
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/lib"
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/go-cleanhttp"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -160,9 +160,7 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 	// Configure the client
 	consulConf := api.DefaultConfig()
 	// Set MaxIdleConnsPerHost to the number of processes used in expiration.Restore
-	tr := cleanhttp.DefaultPooledTransport()
-	tr.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
-	consulConf.HttpClient.Transport = tr
+	consulConf.Transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
 	if addr, ok := conf["address"]; ok {
 		consulConf.Address = addr
@@ -187,16 +185,14 @@ func newConsulBackend(conf map[string]string, logger log.Logger) (Backend, error
 			return nil, err
 		}
 
-		transport := cleanhttp.DefaultPooledTransport()
-		transport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
-		transport.TLSClientConfig = tlsClientConfig
-		if err := http2.ConfigureTransport(transport); err != nil {
+		consulConf.Transport.TLSClientConfig = tlsClientConfig
+		if err := http2.ConfigureTransport(consulConf.Transport); err != nil {
 			return nil, err
 		}
-		consulConf.HttpClient.Transport = transport
 		logger.Debug("physical/consul: configured TLS")
 	}
 
+	consulConf.HttpClient = &http.Client{Transport: consulConf.Transport}
 	client, err := api.NewClient(consulConf)
 	if err != nil {
 		return nil, errwrap.Wrapf("client setup failed: {{err}}", err)

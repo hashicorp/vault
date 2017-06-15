@@ -154,8 +154,7 @@ The following HTTP status codes are used throughout the API.
 
 - `200` - Success with data.
 - `204` - Success, no data returned.
-- `400` - Invalid request, missing or invalid data. See the
-   "validation" section for more details on the error response.
+- `400` - Invalid request, missing or invalid data.
 - `403` - Forbidden, your authentication details are either
    incorrect, you don't have access to this feature, or - if CORS is
    enabled - you made a cross-origin request from an origin that is

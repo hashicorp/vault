@@ -454,6 +454,11 @@ func TestExpiration_RegisterAuth(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	err = exp.RegisterAuth("auth/github/../login", auth)
+	if err == nil {
+		t.Fatal("expected error")
+	}
 }
 
 func TestExpiration_RegisterAuth_NoLease(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/locksutil"
 	"github.com/hashicorp/vault/helper/parseutil"
@@ -2244,6 +2245,10 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(
 		}
 	} else if req.Operation == logical.CreateOperation {
 		entry.PathSuffix = data.Get("path_suffix").(string)
+	}
+
+	if strings.Contains(entry.PathSuffix, "..") {
+		return logical.ErrorResponse(fmt.Sprintf("error registering path suffix: %s", consts.ErrPathContainsParentReferences)), nil
 	}
 
 	allowedPoliciesStr, ok := data.GetOk("allowed_policies")

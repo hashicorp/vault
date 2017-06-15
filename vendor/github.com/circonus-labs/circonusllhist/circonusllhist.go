@@ -132,8 +132,22 @@ func (hb *Bin) PowerOfTen() float64 {
 }
 
 func (hb *Bin) IsNaN() bool {
-	if hb.val > 99 || hb.val < -99 {
+	// aval := abs(hb.val)
+	aval := hb.val
+	if aval < 0 {
+		aval = -aval
+	}
+	if 99 < aval { // in [100... ]: nan
 		return true
+	}
+	if 9 < aval { // in [10 - 99]: valid range
+		return false
+	}
+	if 0 < aval { // in [1  - 9 ]: nan
+		return true
+	}
+	if 0 == aval { // in [0]      : zero bucket
+		return false
 	}
 	return false
 }

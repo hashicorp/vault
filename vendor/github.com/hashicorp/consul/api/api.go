@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -168,6 +169,9 @@ type Config struct {
 	// Datacenter to use. If not provided, the default agent datacenter is used.
 	Datacenter string
 
+	// Transport is the Transport to use for the http client.
+	Transport *http.Transport
+
 	// HttpClient is the client to use. Default will be
 	// used if not provided.
 	HttpClient *http.Client
@@ -237,11 +241,9 @@ func DefaultNonPooledConfig() *Config {
 // given function to make the transport.
 func defaultConfig(transportFn func() *http.Transport) *Config {
 	config := &Config{
-		Address: "127.0.0.1:8500",
-		Scheme:  "http",
-		HttpClient: &http.Client{
-			Transport: transportFn(),
-		},
+		Address:   "127.0.0.1:8500",
+		Scheme:    "http",
+		Transport: transportFn(),
 	}
 
 	if addr := os.Getenv(HTTPAddrEnvName); addr != "" {
@@ -364,8 +366,8 @@ func NewClient(config *Config) (*Client, error) {
 		config.Scheme = defConfig.Scheme
 	}
 
-	if config.HttpClient == nil {
-		config.HttpClient = defConfig.HttpClient
+	if config.Transport == nil {
+		config.Transport = defConfig.Transport
 	}
 
 	if config.TLSConfig.Address == "" {
@@ -392,16 +394,13 @@ func NewClient(config *Config) (*Client, error) {
 		config.TLSConfig.InsecureSkipVerify = defConfig.TLSConfig.InsecureSkipVerify
 	}
 
-	tlsClientConfig, err := SetupTLSConfig(&config.TLSConfig)
-
-	// We don't expect this to fail given that we aren't
-	// parsing any of the input, but we panic just in case
-	// since this doesn't have an error return.
-	if err != nil {
-		return nil, err
+	if config.HttpClient == nil {
+		var err error
+		config.HttpClient, err = NewHttpClient(config.Transport, config.TLSConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	config.HttpClient.Transport.(*http.Transport).TLSClientConfig = tlsClientConfig
 
 	parts := strings.SplitN(config.Address, "://", 2)
 	if len(parts) == 2 {
@@ -426,6 +425,26 @@ func NewClient(config *Config) (*Client, error) {
 	client := &Client{
 		config: *config,
 	}
+	return client, nil
+}
+
+// NewHttpClient returns an http client configured with the given Transport and TLS
+// config.
+func NewHttpClient(transport *http.Transport, tlsConf TLSConfig) (*http.Client, error) {
+	client := &http.Client{
+		Transport: transport,
+	}
+
+	if transport.TLSClientConfig == nil {
+		tlsClientConfig, err := SetupTLSConfig(&tlsConf)
+
+		if err != nil {
+			return nil, err
+		}
+
+		transport.TLSClientConfig = tlsClientConfig
+	}
+
 	return client, nil
 }
 
@@ -528,11 +547,11 @@ func (r *request) toHTTP() (*http.Request, error) {
 
 	// Check if we should encode the body
 	if r.body == nil && r.obj != nil {
-		if b, err := encodeBody(r.obj); err != nil {
+		b, err := encodeBody(r.obj)
+		if err != nil {
 			return nil, err
-		} else {
-			r.body = b
 		}
+		r.body = b
 	}
 
 	// Create the HTTP request
@@ -630,6 +649,8 @@ func (c *Client) write(endpoint string, in, out interface{}, q *WriteOptions) (*
 		if err := decodeBody(resp, &out); err != nil {
 			return nil, err
 		}
+	} else if _, err := ioutil.ReadAll(resp.Body); err != nil {
+		return nil, err
 	}
 	return wm, nil
 }

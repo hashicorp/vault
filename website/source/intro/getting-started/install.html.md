@@ -48,6 +48,7 @@ Common commands:
     revoke           Revoke a secret.
     server           Start a Vault server
     status           Outputs status of whether Vault is sealed and if HA mode is enabled
+    unwrap           Unwrap a wrapped secret
     write            Write secrets or configuration into Vault
 
 All other commands:
@@ -57,8 +58,11 @@ All other commands:
     auth             Prints information about how to authenticate with Vault
     auth-disable     Disable an auth provider
     auth-enable      Enable a new auth provider
+    capabilities     Fetch the capabilities of a token on a given path
+    generate-root    Generates a new root token
     init             Initialize a new Vault server
     key-status       Provides information about the active encryption key
+    list             List data or secrets in Vault
     mount            Mount a logical backend
     mount-tune       Tune mount configuration parameters
     mounts           Lists mounted backends in Vault
@@ -70,7 +74,9 @@ All other commands:
     rotate           Rotates the backend encryption key used to persist data
     seal             Seals the vault server
     ssh              Initiate a SSH session
+    step-down        Force the Vault node to give up active duty
     token-create     Create a new auth token
+    token-lookup     Display information about the specified token
     token-renew      Renew an auth token if there is an associated lease
     token-revoke     Revoke one or more auth tokens
     unmount          Unmount a secret backend

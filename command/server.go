@@ -564,7 +564,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// This needs to happen before we first unseal, so before we trigger dev
 	// mode if it's set
 	core.SetClusterListenerAddrs(clusterAddrs)
-	core.SetClusterSetupFuncs(vault.WrapHandlerForClustering(handler, c.logger))
+	core.SetClusterHandler(handler)
 
 	// If we're in Dev mode, then initialize the core
 	if dev {

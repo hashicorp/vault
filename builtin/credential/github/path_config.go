@@ -5,9 +5,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/fatih/structs"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -37,7 +37,7 @@ API-compatible authentication server.`,
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathConfigWrite,
-			logical.ReadOperation: b.pathConfigRead,
+			logical.ReadOperation:   b.pathConfigRead,
 		},
 	}
 }
@@ -77,10 +77,10 @@ func (b *backend) pathConfigWrite(
 	}
 
 	entry, err := logical.StorageEntryJSON("config", config{
-		Organization:	organization,
-		BaseURL: 	baseURL,
-		TTL:     	ttl,
-		MaxTTL:  	maxTTL,
+		Organization: organization,
+		BaseURL:      baseURL,
+		TTL:          ttl,
+		MaxTTL:       maxTTL,
 	})
 
 	if err != nil {

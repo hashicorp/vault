@@ -15,6 +15,13 @@ import (
 )
 
 func TestFormatJSON_formatRequest(t *testing.T) {
+	salter, err := salt.NewSalt(nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	saltFunc := func() (*salt.Salt, error) {
+		return salter, nil
+	}
 	cases := map[string]struct {
 		Auth   *logical.Auth
 		Req    *logical.Request
@@ -66,13 +73,11 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		var buf bytes.Buffer
 		formatter := AuditFormatter{
 			AuditFormatWriter: &JSONFormatWriter{
-				Prefix: tc.Prefix,
+				Prefix:   tc.Prefix,
+				SaltFunc: saltFunc,
 			},
 		}
-		salter, _ := salt.NewSalt(nil, nil)
-		config := FormatterConfig{
-			Salt: salter,
-		}
+		config := FormatterConfig{}
 		if err := formatter.FormatRequest(&buf, config, tc.Auth, tc.Req, tc.Err); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}

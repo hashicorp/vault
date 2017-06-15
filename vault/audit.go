@@ -368,17 +368,16 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 	if !ok {
 		return nil, fmt.Errorf("unknown backend type: %s", entry.Type)
 	}
-	salter, err := salt.NewSalt(view, &salt.Config{
+	saltConfig := &salt.Config{
 		HMAC:     sha256.New,
 		HMACType: "hmac-sha256",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("core: unable to generate salt: %v", err)
+		Location: salt.DefaultLocation,
 	}
 
 	be, err := f(&audit.BackendConfig{
-		Salt:   salter,
-		Config: conf,
+		SaltView:   view,
+		SaltConfig: saltConfig,
+		Config:     conf,
 	})
 	if err != nil {
 		return nil, err
@@ -474,20 +473,25 @@ func (a *AuditBroker) GetHash(name string, input string) (string, error) {
 		return "", fmt.Errorf("unknown audit backend %s", name)
 	}
 
-	return be.backend.GetHash(input), nil
+	return be.backend.GetHash(input)
 }
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
-func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, headersConfig *AuditedHeadersConfig, outerErr error) (retErr error) {
+func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, headersConfig *AuditedHeadersConfig, outerErr error) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+
+	var retErr *multierror.Error
+
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.Error("audit: panic during logging", "request_path", req.Path, "error", r)
 			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
+
+		ret = retErr.ErrorOrNil()
 	}()
 
 	// All logged requests must have an identifier
@@ -506,36 +510,46 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, heade
 	anyLogged := false
 	for name, be := range a.backends {
 		req.Headers = nil
-		req.Headers = headersConfig.ApplyConfig(headers, be.backend.GetHash)
+		transHeaders, thErr := headersConfig.ApplyConfig(headers, be.backend.GetHash)
+		if thErr != nil {
+			a.logger.Error("audit: backend failed to include headers", "backend", name, "error", thErr)
+			continue
+		}
+		req.Headers = transHeaders
 
 		start := time.Now()
-		err := be.backend.LogRequest(auth, req, outerErr)
+		lrErr := be.backend.LogRequest(auth, req, outerErr)
 		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
-		if err != nil {
-			a.logger.Error("audit: backend failed to log request", "backend", name, "error", err)
+		if lrErr != nil {
+			a.logger.Error("audit: backend failed to log request", "backend", name, "error", lrErr)
 		} else {
 			anyLogged = true
 		}
 	}
 	if !anyLogged && len(a.backends) > 0 {
 		retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the request"))
-		return
 	}
-	return nil
+
+	return retErr.ErrorOrNil()
 }
 
 // LogResponse is used to ensure all the audit backends have an opportunity to
 // log the given response and that *at least one* succeeds.
 func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
-	resp *logical.Response, headersConfig *AuditedHeadersConfig, err error) (reterr error) {
+	resp *logical.Response, headersConfig *AuditedHeadersConfig, err error) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_response"}, time.Now())
 	a.RLock()
 	defer a.RUnlock()
+
+	var retErr *multierror.Error
+
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.Error("audit: panic during logging", "request_path", req.Path, "error", r)
-			reterr = fmt.Errorf("panic generating audit log")
+			retErr = multierror.Append(retErr, fmt.Errorf("panic generating audit log"))
 		}
+
+		ret = retErr.ErrorOrNil()
 	}()
 
 	headers := req.Headers
@@ -547,19 +561,35 @@ func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 	anyLogged := false
 	for name, be := range a.backends {
 		req.Headers = nil
-		req.Headers = headersConfig.ApplyConfig(headers, be.backend.GetHash)
+		transHeaders, thErr := headersConfig.ApplyConfig(headers, be.backend.GetHash)
+		if thErr != nil {
+			a.logger.Error("audit: backend failed to include headers", "backend", name, "error", thErr)
+			continue
+		}
+		req.Headers = transHeaders
 
 		start := time.Now()
-		err := be.backend.LogResponse(auth, req, resp, err)
+		lrErr := be.backend.LogResponse(auth, req, resp, err)
 		metrics.MeasureSince([]string{"audit", name, "log_response"}, start)
-		if err != nil {
-			a.logger.Error("audit: backend failed to log response", "backend", name, "error", err)
+		if lrErr != nil {
+			a.logger.Error("audit: backend failed to log response", "backend", name, "error", lrErr)
 		} else {
 			anyLogged = true
 		}
 	}
 	if !anyLogged && len(a.backends) > 0 {
-		return fmt.Errorf("no audit backend succeeded in logging the response")
+		retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the response"))
 	}
-	return nil
+
+	return retErr.ErrorOrNil()
+}
+
+func (a *AuditBroker) Invalidate(key string) {
+	// For now we ignore the key as this would only apply to salts. We just
+	// sort of brute force it on each one.
+	a.Lock()
+	defer a.Unlock()
+	for _, be := range a.backends {
+		be.backend.Invalidate()
+	}
 }

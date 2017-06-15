@@ -102,14 +102,9 @@ func NewServerHandlerTransport(w http.ResponseWriter, r *http.Request) (ServerTr
 			continue
 		}
 		for _, v := range vv {
-			if k == "user-agent" {
-				// user-agent is special. Copying logic of http_util.go.
-				if i := strings.LastIndex(v, " "); i == -1 {
-					// There is no application user agent string being set
-					continue
-				} else {
-					v = v[:i]
-				}
+			v, err := decodeMetadataHeader(k, v)
+			if err != nil {
+				return nil, streamErrorf(codes.InvalidArgument, "malformed binary metadata: %v", err)
 			}
 			metakv = append(metakv, k, v)
 		}
@@ -175,11 +170,18 @@ func (a strAddr) String() string { return string(a) }
 
 // do runs fn in the ServeHTTP goroutine.
 func (ht *serverHandlerTransport) do(fn func()) error {
+	// Avoid a panic writing to closed channel. Imperfect but maybe good enough.
 	select {
-	case ht.writes <- fn:
-		return nil
 	case <-ht.closedCh:
 		return ErrConnClosing
+	default:
+		select {
+		case ht.writes <- fn:
+			return nil
+		case <-ht.closedCh:
+			return ErrConnClosing
+		}
+
 	}
 }
 
@@ -207,10 +209,9 @@ func (ht *serverHandlerTransport) WriteStatus(s *Stream, st *status.Status) erro
 					continue
 				}
 				for _, v := range vv {
-					// http2 ResponseWriter mechanism to
-					// send undeclared Trailers after the
-					// headers have possibly been written.
-					h.Add(http2.TrailerPrefix+k, v)
+					// http2 ResponseWriter mechanism to send undeclared Trailers after
+					// the headers have possibly been written.
+					h.Add(http2.TrailerPrefix+k, encodeMetadataHeader(k, v))
 				}
 			}
 		}
@@ -265,6 +266,7 @@ func (ht *serverHandlerTransport) WriteHeader(s *Stream, md metadata.MD) error {
 				continue
 			}
 			for _, v := range vv {
+				v = encodeMetadataHeader(k, v)
 				h.Add(k, v)
 			}
 		}
@@ -305,13 +307,13 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 	req := ht.req
 
 	s := &Stream{
-		id:            0,            // irrelevant
-		windowHandler: func(int) {}, // nothing
-		cancel:        cancel,
-		buf:           newRecvBuffer(),
-		st:            ht,
-		method:        req.URL.Path,
-		recvCompress:  req.Header.Get("grpc-encoding"),
+		id:           0, // irrelevant
+		requestRead:  func(int) {},
+		cancel:       cancel,
+		buf:          newRecvBuffer(),
+		st:           ht,
+		method:       req.URL.Path,
+		recvCompress: req.Header.Get("grpc-encoding"),
 	}
 	pr := &peer.Peer{
 		Addr: ht.RemoteAddr(),
@@ -322,7 +324,10 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 	ctx = metadata.NewIncomingContext(ctx, ht.headerMD)
 	ctx = peer.NewContext(ctx, pr)
 	s.ctx = newContextWithStream(ctx, s)
-	s.dec = &recvBufferReader{ctx: s.ctx, recv: s.buf}
+	s.trReader = &transportReader{
+		reader:        &recvBufferReader{ctx: s.ctx, recv: s.buf},
+		windowHandler: func(int) {},
+	}
 
 	// readerDone is closed when the Body.Read-ing goroutine exits.
 	readerDone := make(chan struct{})

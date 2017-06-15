@@ -16,6 +16,34 @@ This documentation assumes the PKI backend is mounted at the `/pki` path in
 Vault. Since it is possible to mount secret backends at any location, please
 update your API calls accordingly.
 
+## Table of Contents
+
+* [Read CA Certificate](#read-ca-certificate)
+* [Read CA Certificate Chain](#read-ca-certificate-chain)
+* [Read Certificate](#read-certificate)
+* [List Certificates](#list-certificates)
+* [Submit CA Information](#submit-ca-information)
+* [Read CRL Configuration](#read-crl-configuration)
+* [Set CRL Configuration](#set-crl-configuration)
+* [Read URLs](#read-urls)
+* [Set URLs](#set-urls)
+* [Read CRL](#read-crl)
+* [Rotate CRLs](#rotate-crls)
+* [Generate Intermediate](#generate-intermediate)
+* [Set Signed Intermediate](#set-signed-intermediate)
+* [Read Certificate](#read-certificate)
+* [Generate Certificate](#generate-certificate)
+* [Revoke Certificate](#revoke-certificate)
+* [Create/Update Role](#create-update-role)
+* [Read Role](#read-role)
+* [List Roles](#list-roles)
+* [Delete Role](#delete-role)
+* [Generate Root](#generate-root)
+* [Sign Intermediate](#sign-intermediate)
+* [Sign Certificate](#sign-certificate)
+* [Sign Verbatim](#sign-verbatim)
+* [Tidy](#tidy)
+
 ## Read CA Certificate
 
 This endpoint retrieves the CA certificate *in raw DER-encoded form*. This is a

@@ -486,22 +486,23 @@ func (mc *mysqlConn) readResultOK() ([]byte, error) {
 				plugin := string(data[1:pluginEndIndex])
 				cipher := data[pluginEndIndex+1 : len(data)-1]
 
-				if plugin == "mysql_old_password" {
+				switch plugin {
+				case "mysql_old_password":
 					// using old_passwords
 					return cipher, ErrOldPassword
-				} else if plugin == "mysql_clear_password" {
+				case "mysql_clear_password":
 					// using clear text password
 					return cipher, ErrCleartextPassword
-				} else if plugin == "mysql_native_password" {
+				case "mysql_native_password":
 					// using mysql default authentication method
 					return cipher, ErrNativePassword
-				} else {
+				default:
 					return cipher, ErrUnknownPlugin
 				}
-			} else {
-				// https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::OldAuthSwitchRequest
-				return nil, ErrOldPassword
 			}
+
+			// https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::OldAuthSwitchRequest
+			return nil, ErrOldPassword
 
 		default: // Error otherwise
 			return nil, mc.handleErrorPacket(data)
@@ -549,6 +550,21 @@ func (mc *mysqlConn) handleErrorPacket(data []byte) error {
 
 	// Error Number [16 bit uint]
 	errno := binary.LittleEndian.Uint16(data[1:3])
+
+	// 1792: ER_CANT_EXECUTE_IN_READ_ONLY_TRANSACTION
+	if errno == 1792 && mc.cfg.RejectReadOnly {
+		// Oops; we are connected to a read-only connection, and won't be able
+		// to issue any write statements. Since RejectReadOnly is configured,
+		// we throw away this connection hoping this one would have write
+		// permission. This is specifically for a possible race condition
+		// during failover (e.g. on AWS Aurora). See README.md for more.
+		//
+		// We explicitly close the connection before returning
+		// driver.ErrBadConn to ensure that `database/sql` purges this
+		// connection and initiates a new one for next statement next time.
+		mc.Close()
+		return driver.ErrBadConn
+	}
 
 	pos := 3
 
@@ -1187,7 +1203,7 @@ func (rows *binaryRows) readRow(dest []driver.Value) error {
 			continue
 
 		case fieldTypeFloat:
-			dest[i] = float32(math.Float32frombits(binary.LittleEndian.Uint32(data[pos : pos+4])))
+			dest[i] = math.Float32frombits(binary.LittleEndian.Uint32(data[pos : pos+4]))
 			pos += 4
 			continue
 

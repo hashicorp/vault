@@ -98,7 +98,6 @@ func (v *BarrierView) Delete(key string) error {
 		return logical.ErrReadOnly
 	}
 
-
 	return v.barrier.Delete(expandedKey)
 }
 

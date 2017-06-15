@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"path"
 
 	"golang.org/x/net/http2"
 

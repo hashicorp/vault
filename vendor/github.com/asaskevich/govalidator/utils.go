@@ -27,27 +27,21 @@ func Matches(str, pattern string) bool {
 // LeftTrim trim characters from the left-side of the input.
 // If second argument is empty, it's will be remove leading spaces.
 func LeftTrim(str, chars string) string {
-	pattern := ""
 	if chars == "" {
-		pattern = "^\\s+"
-	} else {
-		pattern = "^[" + chars + "]+"
+		return strings.TrimLeftFunc(str, unicode.IsSpace)
 	}
-	r, _ := regexp.Compile(pattern)
-	return string(r.ReplaceAll([]byte(str), []byte("")))
+	r, _ := regexp.Compile("^[" + chars + "]+")
+	return r.ReplaceAllString(str, "")
 }
 
 // RightTrim trim characters from the right-side of the input.
 // If second argument is empty, it's will be remove spaces.
 func RightTrim(str, chars string) string {
-	pattern := ""
 	if chars == "" {
-		pattern = "\\s+$"
-	} else {
-		pattern = "[" + chars + "]+$"
+		return strings.TrimRightFunc(str, unicode.IsSpace)
 	}
-	r, _ := regexp.Compile(pattern)
-	return string(r.ReplaceAll([]byte(str), []byte("")))
+	r, _ := regexp.Compile("[" + chars + "]+$")
+	return r.ReplaceAllString(str, "")
 }
 
 // Trim trim characters from both sides of the input.
@@ -60,14 +54,14 @@ func Trim(str, chars string) string {
 func WhiteList(str, chars string) string {
 	pattern := "[^" + chars + "]+"
 	r, _ := regexp.Compile(pattern)
-	return string(r.ReplaceAll([]byte(str), []byte("")))
+	return r.ReplaceAllString(str, "")
 }
 
 // BlackList remove characters that appear in the blacklist.
 func BlackList(str, chars string) string {
 	pattern := "[" + chars + "]+"
 	r, _ := regexp.Compile(pattern)
-	return string(r.ReplaceAll([]byte(str), []byte("")))
+	return r.ReplaceAllString(str, "")
 }
 
 // StripLow remove characters with a numerical value < 32 and 127, mostly control characters.
@@ -85,7 +79,7 @@ func StripLow(str string, keepNewLines bool) string {
 // ReplacePattern replace regular expression pattern in string
 func ReplacePattern(str, pattern, replace string) string {
 	r, _ := regexp.Compile(pattern)
-	return string(r.ReplaceAll([]byte(str), []byte(replace)))
+	return r.ReplaceAllString(str, replace)
 }
 
 // Escape replace <, >, & and " with HTML entities.
@@ -214,22 +208,22 @@ func Truncate(str string, length int, ending string) string {
 	return str
 }
 
-// Pad left side of string if size of string is less then indicated pad length
+// PadLeft pad left side of string if size of string is less then indicated pad length
 func PadLeft(str string, padStr string, padLen int) string {
 	return buildPadStr(str, padStr, padLen, true, false)
 }
 
-// Pad right side of string if size of string is less then indicated pad length
+// PadRight pad right side of string if size of string is less then indicated pad length
 func PadRight(str string, padStr string, padLen int) string {
 	return buildPadStr(str, padStr, padLen, false, true)
 }
 
-// Pad both sides of string if size of string is less then indicated pad length
+// PadBoth pad sides of string if size of string is less then indicated pad length
 func PadBoth(str string, padStr string, padLen int) string {
 	return buildPadStr(str, padStr, padLen, true, true)
 }
 
-// Pad string either left, right or both sides, not the padding string can be unicode and more then one
+// PadString either left, right or both sides, not the padding string can be unicode and more then one
 // character
 func buildPadStr(str string, padStr string, padLen int, padLeft bool, padRight bool) string {
 

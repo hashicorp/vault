@@ -20,7 +20,6 @@ type mysqlStmt struct {
 	mc         *mysqlConn
 	id         uint32
 	paramCount int
-	columns    [][]mysqlField // cached from the first query
 }
 
 func (stmt *mysqlStmt) Close() error {
@@ -109,20 +108,10 @@ func (stmt *mysqlStmt) Query(args []driver.Value) (driver.Rows, error) {
 	}
 
 	rows := new(binaryRows)
-	rows.stmtCols = &stmt.columns
 
 	if resLen > 0 {
 		rows.mc = mc
-		rows.i++
-		// Columns
-		// If not cached, read them and cache them
-		if len(stmt.columns) == 0 {
-			rows.rs.columns, err = mc.readColumns(resLen)
-			stmt.columns = append(stmt.columns, rows.rs.columns)
-		} else {
-			rows.rs.columns = stmt.columns[0]
-			err = mc.readUntilEOF()
-		}
+		rows.rs.columns, err = mc.readColumns(resLen)
 	} else {
 		rows.rs.done = true
 

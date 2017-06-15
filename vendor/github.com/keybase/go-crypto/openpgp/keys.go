@@ -6,12 +6,14 @@ package openpgp
 
 import (
 	"crypto/hmac"
+	"encoding/binary"
+	"io"
+	"time"
+
 	"github.com/keybase/go-crypto/openpgp/armor"
 	"github.com/keybase/go-crypto/openpgp/errors"
 	"github.com/keybase/go-crypto/openpgp/packet"
 	"github.com/keybase/go-crypto/rsa"
-	"io"
-	"time"
 )
 
 // PublicKeyType is the armor type for a PGP public key.
@@ -28,8 +30,13 @@ type Entity struct {
 	PrivateKey  *packet.PrivateKey
 	Identities  map[string]*Identity // indexed by Identity.Name
 	Revocations []*packet.Signature
-	Subkeys     []Subkey
-	BadSubkeys  []BadSubkey
+	// Revocations that are signed by designated revokers. Reading keys
+	// will not verify these revocations, because it won't have access to
+	// issuers' public keys, API consumers should do this instead (or
+	// not, and just assume that the key is probably revoked).
+	UnverifiedRevocations []*packet.Signature
+	Subkeys               []Subkey
+	BadSubkeys            []BadSubkey
 }
 
 // An Identity represents an identity claimed by an Entity and zero or more
@@ -39,6 +46,7 @@ type Identity struct {
 	UserId        *packet.UserId
 	SelfSignature *packet.Signature
 	Signatures    []*packet.Signature
+	Revocation    *packet.Signature
 }
 
 // A Subkey is an additional public key in an Entity. Subkeys can be used for
@@ -424,6 +432,8 @@ func ReadEntity(packets *packet.Reader) (*Entity, error) {
 
 	var current *Identity
 	var revocations []*packet.Signature
+
+	designatedRevokers := make(map[uint64]bool)
 EachPacket:
 	for {
 		p, err := packets.Next()
@@ -442,6 +452,14 @@ EachPacket:
 			current.Name = pkt.Id
 			current.UserId = pkt
 		case *packet.Signature:
+			if pkt.SigType == packet.SigTypeKeyRevocation {
+				// These revocations won't revoke UIDs (see
+				// SigTypeIdentityRevocation). Handle these first,
+				// because key might have revocation coming from
+				// another key (designated revoke).
+				revocations = append(revocations, pkt)
+				continue
+			}
 
 			// These are signatures by other people on this key. Let's just ignore them
 			// from the beginning, since they shouldn't affect our key decoding one way
@@ -500,13 +518,24 @@ EachPacket:
 					// We really should warn that there was a failure here. Not raise an error
 					// since this really shouldn't be a fail-stop error.
 				}
-			} else if pkt.SigType == packet.SigTypeKeyRevocation {
-				// These revocations won't revoke UIDs as handled above, so lookout!
-				revocations = append(revocations, pkt)
+			} else if current != nil && pkt.SigType == packet.SigTypeIdentityRevocation {
+				if err = e.PrimaryKey.VerifyUserIdSignature(current.Name, e.PrimaryKey, pkt); err == nil {
+					// Note: we are not removing the identity from
+					// e.Identities. Caller can always filter by Revocation
+					// field to ignore revoked identities.
+					current.Revocation = pkt
+				}
 			} else if pkt.SigType == packet.SigTypeDirectSignature {
-				// TODO: RFC4880 5.2.1 permits signatures
-				// directly on keys (eg. to bind additional
-				// revocation keys).
+				if err = e.PrimaryKey.VerifyRevocationSignature(e.PrimaryKey, pkt); err == nil {
+					if desig := pkt.DesignatedRevoker; desig != nil {
+						// If it's a designated revoker signature, take last 8 octects
+						// of fingerprint as Key ID and save it to designatedRevokers
+						// map. We consult this map later to see if a foreign
+						// revocation should be added to UnverifiedRevocations.
+						keyID := binary.BigEndian.Uint64(desig.Fingerprint[len(desig.Fingerprint)-8:])
+						designatedRevokers[keyID] = true
+					}
+				}
 			} else if current == nil {
 				// NOTE(maxtaco)
 				//
@@ -550,12 +579,20 @@ EachPacket:
 	}
 
 	for _, revocation := range revocations {
-		err = e.PrimaryKey.VerifyRevocationSignature(revocation)
-		if err == nil {
-			e.Revocations = append(e.Revocations, revocation)
-		} else {
-			// TODO: RFC 4880 5.2.3.15 defines revocation keys.
-			return nil, errors.StructuralError("revocation signature signed by alternate key")
+		if revocation.IssuerKeyId == nil || *revocation.IssuerKeyId == e.PrimaryKey.KeyId {
+			// Key revokes itself, something that we can verify.
+			err = e.PrimaryKey.VerifyRevocationSignature(e.PrimaryKey, revocation)
+			if err == nil {
+				e.Revocations = append(e.Revocations, revocation)
+			} else {
+				return nil, errors.StructuralError("revocation signature signed by alternate key")
+			}
+		} else if revocation.IssuerKeyId != nil {
+			if _, ok := designatedRevokers[*revocation.IssuerKeyId]; ok {
+				// Revocation is done by certified designated revoker,
+				// but we can't verify the revocation.
+				e.UnverifiedRevocations = append(e.UnverifiedRevocations, revocation)
+			}
 		}
 	}
 
@@ -838,4 +875,32 @@ func (e *Entity) CopySubkeyRevocations(src *Entity) {
 			e.Subkeys[i].Revocation = r
 		}
 	}
+}
+
+// CheckDesignatedRevokers will try to confirm any of designated
+// revocation of entity. For this function to work, revocation
+// issuer's key should be found in keyring. First successfully
+// verified designated revocation is returned along with the key that
+// verified it.
+func FindVerifiedDesignatedRevoke(keyring KeyRing, entity *Entity) (*packet.Signature, *Key) {
+	for _, sig := range entity.UnverifiedRevocations {
+		if sig.IssuerKeyId == nil {
+			continue
+		}
+
+		issuerKeyId := *sig.IssuerKeyId
+		issuerFingerprint := sig.IssuerFingerprint
+		keys := keyring.KeysByIdUsage(issuerKeyId, issuerFingerprint, packet.KeyFlagSign)
+		if len(keys) == 0 {
+			continue
+		}
+		for _, key := range keys {
+			err := key.PublicKey.VerifyRevocationSignature(entity.PrimaryKey, sig)
+			if err == nil {
+				return sig, &key
+			}
+		}
+	}
+
+	return nil, nil
 }

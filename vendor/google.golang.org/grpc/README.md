@@ -26,9 +26,13 @@ Documentation
 -------------
 See [API documentation](https://godoc.org/google.golang.org/grpc) for package and API descriptions and find examples in the [examples directory](examples/).
 
+Performance
+-----------
+See the current benchmarks for some of the languages supported in [this dashboard](https://performance-dot-grpc-testing.appspot.com/explore?dashboard=5652536396611584&widget=490377658&container=1286539696).
+
 Status
 ------
-GA
+General Availability [Google Cloud Platform Launch Stages](https://cloud.google.com/terms/launch-stages).
 
 FAQ
 ---

@@ -39,8 +39,8 @@ import (
 )
 
 // ClientParameters is used to set keepalive parameters on the client-side.
-// These configure how the client will actively probe to notice when a connection broken
-// and to cause activity so intermediaries are aware the connection is still in use.
+// These configure how the client will actively probe to notice when a connection is broken
+// and send pings so intermediaries will be aware of the liveness of the connection.
 // Make sure these parameters are set in coordination with the keepalive policy on the server,
 // as incompatible settings can result in closing of connection.
 type ClientParameters struct {

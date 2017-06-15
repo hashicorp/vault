@@ -32,7 +32,7 @@ ciphertext; "wrapped" will return the ciphertext only.`,
 
 			"nonce": &framework.FieldSchema{
 				Type:        framework.TypeString,
-				Description: "Nonce for when convergent encryption is used",
+				Description: "Nonce for when convergent encryption v1 is used (only in Vault 0.6.1)",
 			},
 
 			"bits": &framework.FieldSchema{
@@ -97,7 +97,7 @@ func (b *backend) pathDatakeyWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	newKey := make([]byte, 32)

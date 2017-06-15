@@ -1769,7 +1769,16 @@ func (b *SystemBackend) handlePolicyRead(
 func (b *SystemBackend) handlePolicySet(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	rules := data.Get("rules").(string)
+
+	rulesRaw, ok := data.GetOk("rules")
+	if !ok {
+		return logical.ErrorResponse("'rules' parameter not supplied"), nil
+	}
+
+	rules := rulesRaw.(string)
+	if rules == "" {
+		return logical.ErrorResponse("'rules' parameter empty"), nil
+	}
 
 	// Validate the rules parse
 	parse, err := Parse(rules)
