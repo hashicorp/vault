@@ -15,15 +15,18 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-func createKey() (string, error) {
-	keyUrl, err := totplib.Generate(totplib.GenerateOpts{
+func createKey(t *testing.T) string {
+	keyURL, err := totplib.Generate(totplib.GenerateOpts{
 		Issuer:      "Vault",
 		AccountName: "Test",
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	key := keyUrl.Secret()
+	key := keyURL.Secret()
 
-	return key, err
+	return key
 }
 
 func generateCode(key string, period uint, digits otplib.Digits, algorithm otplib.Algorithm) (string, error) {
@@ -37,16 +40,28 @@ func generateCode(key string, period uint, digits otplib.Digits, algorithm otpli
 	return totpToken, err
 }
 
-func TestBackend_readCredentialsDefaultValues(t *testing.T) {
+func newBackend(t *testing.T) logical.Backend {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
+	b, err := Factory()
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	err = b.Configure(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return b
+}
+
+func TestBackend_readCredentialsDefaultValues(t *testing.T) {
+	// Create new backend
+	b := newBackend(t)
+
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"key":      key,
@@ -67,21 +82,17 @@ func TestBackend_readCredentialsDefaultValues(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -105,21 +116,17 @@ func TestBackend_readCredentialsEightDigitsThirtySecondPeriod(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -143,21 +150,17 @@ func TestBackend_readCredentialsSixDigitsNinetySecondPeriod(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_readCredentialsSHA256(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -181,21 +184,17 @@ func TestBackend_readCredentialsSHA256(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_readCredentialsSHA512(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -219,20 +218,17 @@ func TestBackend_readCredentialsSHA512(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_keyCrudDefaultValues(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
-	key, _ := createKey()
+	// Generate a new shared key
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -267,12 +263,8 @@ func TestBackend_keyCrudDefaultValues(t *testing.T) {
 }
 
 func TestBackend_createKeyMissingKeyValue(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -290,12 +282,8 @@ func TestBackend_createKeyMissingKeyValue(t *testing.T) {
 }
 
 func TestBackend_createKeyInvalidKeyValue(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -314,15 +302,11 @@ func TestBackend_createKeyInvalidKeyValue(t *testing.T) {
 }
 
 func TestBackend_createKeyInvalidAlgorithm(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -342,15 +326,11 @@ func TestBackend_createKeyInvalidAlgorithm(t *testing.T) {
 }
 
 func TestBackend_createKeyInvalidPeriod(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -370,15 +350,11 @@ func TestBackend_createKeyInvalidPeriod(t *testing.T) {
 }
 
 func TestBackend_createKeyInvalidDigits(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	// Generate a new shared key
-	key, _ := createKey()
+	key := createKey(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -398,12 +374,8 @@ func TestBackend_createKeyInvalidDigits(t *testing.T) {
 }
 
 func TestBackend_generatedKeyDefaultValues(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -432,12 +404,8 @@ func TestBackend_generatedKeyDefaultValues(t *testing.T) {
 }
 
 func TestBackend_generatedKeyDefaultValuesNoQR(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -457,12 +425,8 @@ func TestBackend_generatedKeyDefaultValuesNoQR(t *testing.T) {
 }
 
 func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -491,12 +455,8 @@ func TestBackend_generatedKeyNonDefaultKeySize(t *testing.T) {
 }
 
 func TestBackend_urlPassedNonGeneratedKeyInvalidPeriod(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=AZ"
 
@@ -515,12 +475,8 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidPeriod(t *testing.T) {
 }
 
 func TestBackend_urlPassedNonGeneratedKeyInvalidDigits(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=Q&period=60"
 
@@ -539,12 +495,8 @@ func TestBackend_urlPassedNonGeneratedKeyInvalidDigits(t *testing.T) {
 }
 
 func TestBackend_urlPassedNonGeneratedKeyIssuerInFirstPosition(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	urlString := "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
@@ -567,18 +519,14 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInFirstPosition(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_urlPassedNonGeneratedKeyIssuerInQueryString(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	urlString := "otpauth://totp/test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60&issuer=Vault"
 
@@ -601,18 +549,14 @@ func TestBackend_urlPassedNonGeneratedKeyIssuerInQueryString(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_urlPassedNonGeneratedKeyMissingIssuer(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	urlString := "otpauth://totp/test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
@@ -635,18 +579,14 @@ func TestBackend_urlPassedNonGeneratedKeyMissingIssuer(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_urlPassedNonGeneratedKeyMissingAccountName(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	urlString := "otpauth://totp/Vault:?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
@@ -669,18 +609,14 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountName(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	urlString := "otpauth://totp/?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60"
 
@@ -703,18 +639,14 @@ func TestBackend_urlPassedNonGeneratedKeyMissingAccountNameandIssuer(t *testing.
 		Steps: []logicaltest.TestStep{
 			testAccStepCreateKey(t, "test", keyData, false),
 			testAccStepReadKey(t, "test", expected),
-			testAccStepReadCreds(t, b, config.StorageView, "test", expected),
+			testAccStepReadCreds(t, "test", expected),
 		},
 	})
 }
 
 func TestBackend_generatedKeyInvalidSkew(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -733,12 +665,8 @@ func TestBackend_generatedKeyInvalidSkew(t *testing.T) {
 }
 
 func TestBackend_generatedKeyInvalidQRSize(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -757,12 +685,8 @@ func TestBackend_generatedKeyInvalidQRSize(t *testing.T) {
 }
 
 func TestBackend_generatedKeyInvalidKeySize(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -781,12 +705,8 @@ func TestBackend_generatedKeyInvalidKeySize(t *testing.T) {
 }
 
 func TestBackend_generatedKeyMissingAccountName(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":   "Vault",
@@ -803,12 +723,8 @@ func TestBackend_generatedKeyMissingAccountName(t *testing.T) {
 }
 
 func TestBackend_generatedKeyMissingIssuer(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"account_name": "test@email.com",
@@ -825,12 +741,8 @@ func TestBackend_generatedKeyMissingIssuer(t *testing.T) {
 }
 
 func TestBackend_invalidURLValue(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"url":      "notaurl",
@@ -847,12 +759,8 @@ func TestBackend_invalidURLValue(t *testing.T) {
 }
 
 func TestBackend_urlAndGenerateTrue(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"url":      "otpauth://totp/Vault:test@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&algorithm=SHA512&digits=6&period=60",
@@ -869,12 +777,8 @@ func TestBackend_urlAndGenerateTrue(t *testing.T) {
 }
 
 func TestBackend_keyAndGenerateTrue(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"key":      "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
@@ -891,12 +795,8 @@ func TestBackend_keyAndGenerateTrue(t *testing.T) {
 }
 
 func TestBackend_generatedKeyExportedFalse(t *testing.T) {
-	config := logical.TestBackendConfig()
-	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory(config)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Create new backend
+	b := newBackend(t)
 
 	keyData := map[string]interface{}{
 		"issuer":       "Vault",
@@ -1002,7 +902,7 @@ func testAccStepDeleteKey(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepReadCreds(t *testing.T, b logical.Backend, s logical.Storage, name string, validation map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadCreds(t *testing.T, name string, validation map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      path.Join("code", name),
