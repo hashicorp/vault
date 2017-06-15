@@ -21,19 +21,19 @@ type mockPlugin struct {
 }
 
 func (m *mockPlugin) Type() (string, error) { return "mock", nil }
-func (m *mockPlugin) CreateUser(statements dbplugin.Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (m *mockPlugin) CreateUser(statements dbplugin.Statements, usernameConf dbplugin.UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	err = errors.New("err")
-	if usernamePrefix == "" || expiration.IsZero() {
+	if usernameConf.DisplayName == "" || expiration.IsZero() {
 		return "", "", err
 	}
 
-	if _, ok := m.users[usernamePrefix]; ok {
+	if _, ok := m.users[usernameConf.DisplayName]; ok {
 		return "", "", err
 	}
 
-	m.users[usernamePrefix] = []string{password}
+	m.users[usernameConf.DisplayName] = []string{password}
 
-	return usernamePrefix, "test", nil
+	return usernameConf.DisplayName, "test", nil
 }
 func (m *mockPlugin) RenewUser(statements dbplugin.Statements, username string, expiration time.Time) error {
 	err := errors.New("err")
@@ -162,7 +162,12 @@ func TestPlugin_CreateUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	us, pw, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	usernameConf := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	us, pw, err := db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -172,7 +177,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 
 	// try and save the same user again to verify it saved the first time, this
 	// should return an error
-	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	_, _, err = db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err == nil {
 		t.Fatal("expected an error, user wasn't created correctly")
 	}
@@ -198,7 +203,12 @@ func TestPlugin_RenewUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	us, _, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	usernameConf := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	us, _, err := db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -229,7 +239,12 @@ func TestPlugin_RevokeUser(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 
-	us, _, err := db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	usernameConf := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	us, _, err := db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -241,7 +256,7 @@ func TestPlugin_RevokeUser(t *testing.T) {
 	}
 
 	// Try adding the same username back so we can verify it was removed
-	_, _, err = db.CreateUser(dbplugin.Statements{}, "test", time.Now().Add(time.Minute))
+	_, _, err = db.CreateUser(dbplugin.Statements{}, usernameConf, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}

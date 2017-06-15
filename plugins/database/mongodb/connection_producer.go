@@ -33,7 +33,7 @@ func (c *mongoDBConnectionProducer) Initialize(conf map[string]interface{}, veri
 	c.Lock()
 	defer c.Unlock()
 
-	err := mapstructure.Decode(conf, c)
+	err := mapstructure.WeakDecode(conf, c)
 	if err != nil {
 		return err
 	}

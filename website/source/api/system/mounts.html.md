@@ -108,7 +108,7 @@ relevant functionality is only supported in Vault Enterprise:
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data payload.json \
+    --data @payload.json \
     https://vault.rocks/v1/sys/mounts/my-mount
 ```
 
@@ -190,6 +190,6 @@ This endpoint tunes configuration parameters for a given mount point.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data payload.json \
+    --data @payload.json \
     https://vault.rocks/v1/sys/mounts/my-mount/tune
 ```

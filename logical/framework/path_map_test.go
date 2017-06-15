@@ -254,6 +254,39 @@ func TestPathMap_Salted(t *testing.T) {
 	if v != nil {
 		t.Fatalf("bad: %#v", v)
 	}
+
+	// Put in a non-salted version and make sure that after reading it's been
+	// upgraded
+	err = storage.Put(&logical.StorageEntry{
+		Key:   "struct/map/foo/b",
+		Value: []byte(`{"foo": "bar"}`),
+	})
+	if err != nil {
+		t.Fatal("err: %v", err)
+	}
+	// A read should transparently upgrade
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "map/foo/b",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, _ := storage.List("struct/map/foo/")
+	if len(list) != 1 {
+		t.Fatalf("unexpected number of entries left after upgrade; expected 1, got %d", len(list))
+	}
+	found := false
+	for _, v := range list {
+		if v == salt.SaltID("b") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("did not find upgraded value")
+	}
 }
 
 func TestPathMap_SaltFunc(t *testing.T) {
@@ -375,5 +408,38 @@ func TestPathMap_SaltFunc(t *testing.T) {
 	}
 	if v != nil {
 		t.Fatalf("bad: %#v", v)
+	}
+
+	// Put in a non-salted version and make sure that after reading it's been
+	// upgraded
+	err = storage.Put(&logical.StorageEntry{
+		Key:   "struct/map/foo/b",
+		Value: []byte(`{"foo": "bar"}`),
+	})
+	if err != nil {
+		t.Fatal("err: %v", err)
+	}
+	// A read should transparently upgrade
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "map/foo/b",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, _ := storage.List("struct/map/foo/")
+	if len(list) != 1 {
+		t.Fatalf("unexpected number of entries left after upgrade; expected 1, got %d", len(list))
+	}
+	found := false
+	for _, v := range list {
+		if v == locSalt.SaltID("b") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("did not find upgraded value")
 	}
 }

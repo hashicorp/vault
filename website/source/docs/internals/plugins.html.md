@@ -57,7 +57,19 @@ Upon adding a new plugin, the plugin name, SHA256 sum of the executable, and the
 command that should be used to run the plugin must be provided. The catalog will
 make sure the executable referenced in the command exists in the plugin
 directory. When added to the catalog the plugin is not automatically executed,
-it instead becomes visible to backends and can be executed by them. 
+it instead becomes visible to backends and can be executed by them. For more
+information on the plugin catalog please see the [Plugin Catalog API
+docs](/api/system/plugins-catalog.html).
+
+An example plugin submission looks like:
+
+```
+$ vault write sys/plugins/catalog/myplugin-database-plugin \ 
+    sha_256=<expected SHA256 Hex value of the plugin binary> \
+    command="myplugin"
+Success! Data written to: sys/plugins/catalog/myplugin-database-plugin
+```
+
 
 ### Plugin Execution
 When a backend wants to run a plugin, it first looks up the plugin, by name, in

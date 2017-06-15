@@ -2,6 +2,7 @@ package keysutil
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/ecdsa"
@@ -21,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/hkdf"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -41,9 +43,15 @@ const (
 const (
 	KeyType_AES256_GCM96 = iota
 	KeyType_ECDSA_P256
+	KeyType_ED25519
 )
 
 const ErrTooOld = "ciphertext or signature version is disallowed by policy (too old)"
+
+type SigningResult struct {
+	Signature string
+	PublicKey []byte
+}
 
 type ecdsaSignature struct {
 	R, S *big.Int
@@ -69,6 +77,14 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
+	case KeyType_ECDSA_P256, KeyType_ED25519:
+		return true
+	}
+	return false
+}
+
+func (kt KeyType) HashSignatureInput() bool {
+	switch kt {
 	case KeyType_ECDSA_P256:
 		return true
 	}
@@ -77,7 +93,7 @@ func (kt KeyType) SigningSupported() bool {
 
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
-	case KeyType_AES256_GCM96:
+	case KeyType_AES256_GCM96, KeyType_ED25519:
 		return true
 	}
 	return false
@@ -89,6 +105,8 @@ func (kt KeyType) String() string {
 		return "aes256-gcm96"
 	case KeyType_ECDSA_P256:
 		return "ecdsa-p256"
+	case KeyType_ED25519:
+		return "ed25519"
 	}
 
 	return "[unknown]"
@@ -96,13 +114,25 @@ func (kt KeyType) String() string {
 
 // KeyEntry stores the key and metadata
 type KeyEntry struct {
-	AESKey             []byte   `json:"key"`
-	HMACKey            []byte   `json:"hmac_key"`
-	CreationTime       int64    `json:"creation_time"`
-	EC_X               *big.Int `json:"ec_x"`
-	EC_Y               *big.Int `json:"ec_y"`
-	EC_D               *big.Int `json:"ec_d"`
-	FormattedPublicKey string   `json:"public_key"`
+	// AES or some other kind that is a pure byte slice like ED25519
+	Key []byte `json:"key"`
+
+	// Key used for HMAC functions
+	HMACKey []byte `json:"hmac_key"`
+
+	// Time of creation
+	CreationTime time.Time `json:"time"`
+
+	EC_X *big.Int `json:"ec_x"`
+	EC_Y *big.Int `json:"ec_y"`
+	EC_D *big.Int `json:"ec_d"`
+
+	// The public key in an appropriate format for the type of key
+	FormattedPublicKey string `json:"public_key"`
+
+	// This is deprecated (but still filled) in favor of the value above which
+	// is more precise
+	DeprecatedCreationTime int64 `json:"creation_time"`
 }
 
 // keyEntryMap is used to allow JSON marshal/unmarshal
@@ -150,9 +180,11 @@ type Policy struct {
 	// Whether the key is exportable
 	Exportable bool `json:"exportable"`
 
-	// The minimum version of the key allowed to be used
-	// for decryption
+	// The minimum version of the key allowed to be used for decryption
 	MinDecryptionVersion int `json:"min_decryption_version"`
+
+	// The minimum version of the key allowed to be used for encryption
+	MinEncryptionVersion int `json:"min_encryption_version"`
 
 	// The latest key version in this policy
 	LatestVersion int `json:"latest_version"`
@@ -239,6 +271,9 @@ func (p *Policy) handleArchiving(storage logical.Storage) error {
 	case p.ArchiveVersion > p.LatestVersion:
 		return fmt.Errorf("archive version of %d is greater than the latest version %d",
 			p.ArchiveVersion, p.LatestVersion)
+	case p.MinEncryptionVersion > 0 && p.MinEncryptionVersion < p.MinDecryptionVersion:
+		return fmt.Errorf("minimum decryption version of %d is greater than minimum encryption version %d",
+			p.MinDecryptionVersion, p.MinEncryptionVersion)
 	case p.MinDecryptionVersion > p.LatestVersion:
 		return fmt.Errorf("minimum decryption version of %d is greater than the latest version %d",
 			p.MinDecryptionVersion, p.LatestVersion)
@@ -427,41 +462,59 @@ func (p *Policy) DeriveKey(context []byte, ver int) ([]byte, error) {
 
 	// Fast-path non-derived keys
 	if !p.Derived {
-		return p.Keys[ver].AESKey, nil
+		return p.Keys[ver].Key, nil
 	}
 
 	// Ensure a context is provided
 	if len(context) == 0 {
-		return nil, errutil.UserError{Err: "missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to encrypt or decrypt information"}
+		return nil, errutil.UserError{Err: "Missing 'context' for key deriviation. The key was created using a derived key, which means additional, per-request information must be included in order to perform operations with the key."}
 	}
 
 	switch p.KDF {
 	case Kdf_hmac_sha256_counter:
 		prf := kdf.HMACSHA256PRF
 		prfLen := kdf.HMACSHA256PRFLen
-		return kdf.CounterMode(prf, prfLen, p.Keys[ver].AESKey, context, 256)
+		return kdf.CounterMode(prf, prfLen, p.Keys[ver].Key, context, 256)
+
 	case Kdf_hkdf_sha256:
-		reader := hkdf.New(sha256.New, p.Keys[ver].AESKey, nil, context)
+		reader := hkdf.New(sha256.New, p.Keys[ver].Key, nil, context)
 		derBytes := bytes.NewBuffer(nil)
 		derBytes.Grow(32)
 		limReader := &io.LimitedReader{
 			R: reader,
 			N: 32,
 		}
-		n, err := derBytes.ReadFrom(limReader)
-		if err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
+
+		switch p.Type {
+		case KeyType_AES256_GCM96:
+			n, err := derBytes.ReadFrom(limReader)
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error reading returned derived bytes: %v", err)}
+			}
+			if n != 32 {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to read enough derived bytes, needed 32, got %d", n)}
+			}
+			return derBytes.Bytes(), nil
+
+		case KeyType_ED25519:
+			// We use the limited reader containing the derived bytes as the
+			// "random" input to the generation function
+			_, pri, err := ed25519.GenerateKey(limReader)
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error generating derived key: %v", err)}
+			}
+			return pri, nil
+
+		default:
+			return nil, errutil.InternalError{Err: "unsupported key type for derivation"}
 		}
-		if n != 32 {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to read enough derived bytes, needed 32, got %d", n)}
-		}
-		return derBytes.Bytes(), nil
+
 	default:
 		return nil, errutil.InternalError{Err: "unsupported key derivation mode"}
 	}
 }
 
-func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
+func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -479,8 +532,19 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 		return "", errutil.UserError{Err: "failed to base64-decode plaintext"}
 	}
 
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return "", errutil.UserError{Err: "requested version for encryption is negative"}
+	case ver > p.LatestVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
+	case ver < p.MinEncryptionVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
+	}
+
 	// Derive the key that should be used
-	key, err := p.DeriveKey(context, p.LatestVersion)
+	key, err := p.DeriveKey(context, ver)
 	if err != nil {
 		return "", err
 	}
@@ -537,7 +601,7 @@ func (p *Policy) Encrypt(context, nonce []byte, value string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString(full)
 
 	// Prepend some information
-	encoded = "vault:v" + strconv.Itoa(p.LatestVersion) + ":" + encoded
+	encoded = "vault:v" + strconv.Itoa(ver) + ":" + encoded
 
 	return encoded, nil
 }
@@ -630,11 +694,10 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 }
 
 func (p *Policy) HMACKey(version int) ([]byte, error) {
-	if version < p.MinDecryptionVersion {
-		return nil, fmt.Errorf("key version disallowed by policy (minimum is %d)", p.MinDecryptionVersion)
-	}
-
-	if version > p.LatestVersion {
+	switch {
+	case version < 0:
+		return nil, fmt.Errorf("key version does not exist (cannot be negative)")
+	case version > p.LatestVersion:
 		return nil, fmt.Errorf("key version does not exist; latest key version is %d", p.LatestVersion)
 	}
 
@@ -645,15 +708,28 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	return p.Keys[version].HMACKey, nil
 }
 
-func (p *Policy) Sign(hashedInput []byte) (string, error) {
+func (p *Policy) Sign(ver int, context, input []byte) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
-		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
+		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return nil, errutil.UserError{Err: "requested version for signing is negative"}
+	case ver > p.LatestVersion:
+		return nil, errutil.UserError{Err: "requested version for signing is higher than the latest key version"}
+	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
+		return nil, errutil.UserError{Err: "requested version for signing is less than the minimum encryption key version"}
 	}
 
 	var sig []byte
+	var pubKey []byte
+	var err error
 	switch p.Type {
 	case KeyType_ECDSA_P256:
-		keyParams := p.Keys[p.LatestVersion]
+		keyParams := p.Keys[ver]
 		key := &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
 				Curve: elliptic.P256(),
@@ -662,33 +738,57 @@ func (p *Policy) Sign(hashedInput []byte) (string, error) {
 			},
 			D: keyParams.EC_D,
 		}
-		r, s, err := ecdsa.Sign(rand.Reader, key, hashedInput)
+		r, s, err := ecdsa.Sign(rand.Reader, key, input)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		marshaledSig, err := asn1.Marshal(ecdsaSignature{
 			R: r,
 			S: s,
 		})
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		sig = marshaledSig
 
+	case KeyType_ED25519:
+		var key ed25519.PrivateKey
+
+		if p.Derived {
+			// Derive the key that should be used
+			var err error
+			key, err = p.DeriveKey(context, ver)
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+			}
+			pubKey = key.Public().(ed25519.PublicKey)
+		} else {
+			key = ed25519.PrivateKey(p.Keys[ver].Key)
+		}
+
+		// Per docs, do not pre-hash ed25519; it does two passes and performs
+		// its own hashing
+		sig, err = key.Sign(rand.Reader, input, crypto.Hash(0))
+		if err != nil {
+			return nil, err
+		}
+
 	default:
-		return "", fmt.Errorf("unsupported key type %v", p.Type)
+		return nil, fmt.Errorf("unsupported key type %v", p.Type)
 	}
 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(sig)
 
-	// Prepend some information
-	encoded = "vault:v" + strconv.Itoa(p.LatestVersion) + ":" + encoded
+	res := &SigningResult{
+		Signature: "vault:v" + strconv.Itoa(ver) + ":" + encoded,
+		PublicKey: pubKey,
+	}
 
-	return encoded, nil
+	return res, nil
 }
 
-func (p *Policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
+func (p *Policy) VerifySignature(context, input []byte, sig string) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -716,15 +816,15 @@ func (p *Policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
 		return false, errutil.UserError{Err: ErrTooOld}
 	}
 
+	sigBytes, err := base64.StdEncoding.DecodeString(splitVerSig[1])
+	if err != nil {
+		return false, errutil.UserError{Err: "invalid base64 signature value"}
+	}
+
 	switch p.Type {
 	case KeyType_ECDSA_P256:
-		asn1Sig, err := base64.StdEncoding.DecodeString(splitVerSig[1])
-		if err != nil {
-			return false, errutil.UserError{Err: "invalid base64 signature value"}
-		}
-
 		var ecdsaSig ecdsaSignature
-		rest, err := asn1.Unmarshal(asn1Sig, &ecdsaSig)
+		rest, err := asn1.Unmarshal(sigBytes, &ecdsaSig)
 		if err != nil {
 			return false, errutil.UserError{Err: "supplied signature is invalid"}
 		}
@@ -739,7 +839,24 @@ func (p *Policy) VerifySignature(hashedInput []byte, sig string) (bool, error) {
 			Y:     keyParams.EC_Y,
 		}
 
-		return ecdsa.Verify(key, hashedInput, ecdsaSig.R, ecdsaSig.S), nil
+		return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
+
+	case KeyType_ED25519:
+		var key ed25519.PrivateKey
+
+		if p.Derived {
+			// Derive the key that should be used
+			var err error
+			key, err = p.DeriveKey(context, ver)
+			if err != nil {
+				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
+			}
+		} else {
+			key = ed25519.PrivateKey(p.Keys[ver].Key)
+		}
+
+		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
+
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
@@ -756,8 +873,10 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 	}
 
 	p.LatestVersion += 1
+	now := time.Now()
 	entry := KeyEntry{
-		CreationTime: time.Now().Unix(),
+		CreationTime:           now,
+		DeprecatedCreationTime: now.Unix(),
 	}
 
 	hmacKey, err := uuid.GenerateRandomBytes(32)
@@ -773,7 +892,7 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 		if err != nil {
 			return err
 		}
-		entry.AESKey = newKey
+		entry.Key = newKey
 
 	case KeyType_ECDSA_P256:
 		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -796,6 +915,14 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 			return fmt.Errorf("error PEM-encoding public key")
 		}
 		entry.FormattedPublicKey = string(pemBytes)
+
+	case KeyType_ED25519:
+		pub, pri, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return err
+		}
+		entry.Key = pri
+		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
 	}
 
 	p.Keys[p.LatestVersion] = entry
@@ -811,10 +938,12 @@ func (p *Policy) Rotate(storage logical.Storage) error {
 }
 
 func (p *Policy) MigrateKeyToKeysMap() {
+	now := time.Now()
 	p.Keys = keyEntryMap{
 		1: KeyEntry{
-			AESKey:       p.Key,
-			CreationTime: time.Now().Unix(),
+			Key:                    p.Key,
+			CreationTime:           now,
+			DeprecatedCreationTime: now.Unix(),
 		},
 	}
 	p.Key = nil

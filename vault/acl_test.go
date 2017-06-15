@@ -2,6 +2,7 @@ package vault
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -245,7 +246,7 @@ func TestACL_PolicyMerge(t *testing.T) {
 		{"allow/all1", nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}, "test1": []interface{}{"foo"}}, nil},
 		{"deny/all", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
 		{"deny/all1", nil, nil, nil, map[string][]interface{}{"*": []interface{}{}, "test": []interface{}{}}},
-		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}, map[string][]interface{}{"test": []interface{}{1, 2, 3, 4}}},
+		{"value/merge", nil, nil, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}, map[string][]interface{}{"test": []interface{}{3, 4, 1, 2}}},
 		{"value/empty", nil, nil, map[string][]interface{}{"empty": []interface{}{}}, map[string][]interface{}{"empty": []interface{}{}}},
 	}
 
@@ -413,6 +414,35 @@ func TestACL_ValuePermissions(t *testing.T) {
 			}
 		}
 	}
+}
+
+// NOTE: this test doesn't catch any races ATM
+func TestACL_CreationRace(t *testing.T) {
+	policy, err := Parse(valuePermissionsPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	var wg sync.WaitGroup
+	stopTime := time.Now().Add(20 * time.Second)
+
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				if time.Now().After(stopTime) {
+					return
+				}
+				_, err := NewACL([]*Policy{policy})
+				if err != nil {
+					t.Fatalf("err: %v", err)
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 var tokenCreationPolicy = `

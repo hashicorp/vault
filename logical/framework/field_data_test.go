@@ -180,6 +180,17 @@ func TestFieldDataGet(t *testing.T) {
 			[]string{"123", "abc"},
 		},
 
+		"string slice type, single value": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeStringSlice},
+			},
+			map[string]interface{}{
+				"foo": "abc",
+			},
+			"foo",
+			[]string{"abc"},
+		},
+
 		"comma string slice type, comma string with one value": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeCommaStringSlice},

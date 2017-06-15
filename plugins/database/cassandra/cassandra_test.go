@@ -99,6 +99,19 @@ func TestCassandra_Initialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	// test a string protocol
+	connectionDetails = map[string]interface{}{
+		"hosts":            connURL,
+		"username":         "cassandra",
+		"password":         "cassandra",
+		"protocol_version": "4",
+	}
+
+	err = db.Initialize(connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 }
 
 func TestCassandra_CreateUser(t *testing.T) {
@@ -126,7 +139,12 @@ func TestCassandra_CreateUser(t *testing.T) {
 		CreationStatements: testCassandraRole,
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -161,7 +179,12 @@ func TestMyCassandra_RenewUser(t *testing.T) {
 		CreationStatements: testCassandraRole,
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
@@ -201,7 +224,12 @@ func TestCassandra_RevokeUser(t *testing.T) {
 		CreationStatements: testCassandraRole,
 	}
 
-	username, password, err := db.CreateUser(statements, "test", time.Now().Add(time.Minute))
+	usernameConfig := dbplugin.UsernameConfig{
+		DisplayName: "test",
+		RoleName:    "test",
+	}
+
+	username, password, err := db.CreateUser(statements, usernameConfig, time.Now().Add(time.Minute))
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
