@@ -46,7 +46,7 @@ func (c *cassandraConnectionProducer) Initialize(conf map[string]interface{}, ve
 	c.Lock()
 	defer c.Unlock()
 
-	err := mapstructure.Decode(conf, c)
+	err := mapstructure.WeakDecode(conf, c)
 	if err != nil {
 		return err
 	}
