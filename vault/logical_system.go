@@ -1096,16 +1096,16 @@ func (b *SystemBackend) handleMountTable(
 	}
 
 	for _, entry := range b.Core.mounts.Entries {
+		// Transform entry.Config into map[string]interface{}
+		structConfig := structs.New(entry.Config).Map()
+		structConfig["default_lease_ttl"] = int64(structConfig["default_lease_ttl"].(time.Duration).Seconds())
+		structConfig["max_lease_ttl"] = int64(structConfig["max_lease_ttl"].(time.Duration).Seconds())
+		// Populate mount info
 		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
-			"config": map[string]interface{}{
-				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
-				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
-				"force_no_cache":    entry.Config.ForceNoCache,
-				"plugin_name":       entry.Config.PluginName,
-			},
-			"local": entry.Local,
+			"config":      structConfig,
+			"local":       entry.Local,
 		}
 
 		resp.Data[entry.Path] = info
