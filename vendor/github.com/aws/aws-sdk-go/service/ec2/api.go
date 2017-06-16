@@ -2367,7 +2367,8 @@ func (c *EC2) CopyImageRequest(input *CopyImageInput) (req *request.Request, out
 // region. You specify the destination region by using its endpoint when making
 // the request.
 //
-// For more information, see Copying AMIs (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html)
+// For more information about the prerequisites and limits when copying an AMI,
+// see Copying an AMI (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html)
 // in the Amazon Elastic Compute Cloud User Guide.
 //
 // Returns awserr.Error for service API and SDK errors. Use runtime type assertions
@@ -7973,6 +7974,83 @@ func (c *EC2) DescribeFlowLogs(input *DescribeFlowLogsInput) (*DescribeFlowLogsO
 // for more information on using Contexts.
 func (c *EC2) DescribeFlowLogsWithContext(ctx aws.Context, input *DescribeFlowLogsInput, opts ...request.Option) (*DescribeFlowLogsOutput, error) {
 	req, out := c.DescribeFlowLogsRequest(input)
+	req.SetContext(ctx)
+	req.ApplyOptions(opts...)
+	return out, req.Send()
+}
+
+const opDescribeFpgaImages = "DescribeFpgaImages"
+
+// DescribeFpgaImagesRequest generates a "aws/request.Request" representing the
+// client's request for the DescribeFpgaImages operation. The "output" return
+// value can be used to capture response data after the request's "Send" method
+// is called.
+//
+// See DescribeFpgaImages for usage and error information.
+//
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the DescribeFpgaImages method directly
+// instead.
+//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
+//
+//    // Example sending a request using the DescribeFpgaImagesRequest method.
+//    req, resp := client.DescribeFpgaImagesRequest(params)
+//
+//    err := req.Send()
+//    if err == nil { // resp is now filled
+//        fmt.Println(resp)
+//    }
+//
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeFpgaImages
+func (c *EC2) DescribeFpgaImagesRequest(input *DescribeFpgaImagesInput) (req *request.Request, output *DescribeFpgaImagesOutput) {
+	op := &request.Operation{
+		Name:       opDescribeFpgaImages,
+		HTTPMethod: "POST",
+		HTTPPath:   "/",
+	}
+
+	if input == nil {
+		input = &DescribeFpgaImagesInput{}
+	}
+
+	output = &DescribeFpgaImagesOutput{}
+	req = c.newRequest(op, input, output)
+	return
+}
+
+// DescribeFpgaImages API operation for Amazon Elastic Compute Cloud.
+//
+// Describes one or more available Amazon FPGA Images (AFIs). These include
+// public AFIs, private AFIs that you own, and AFIs owned by other AWS accounts
+// for which you have load permissions.
+//
+// Returns awserr.Error for service API and SDK errors. Use runtime type assertions
+// with awserr.Error's Code and Message methods to get detailed information about
+// the error.
+//
+// See the AWS API reference guide for Amazon Elastic Compute Cloud's
+// API operation DescribeFpgaImages for usage and error information.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeFpgaImages
+func (c *EC2) DescribeFpgaImages(input *DescribeFpgaImagesInput) (*DescribeFpgaImagesOutput, error) {
+	req, out := c.DescribeFpgaImagesRequest(input)
+	return out, req.Send()
+}
+
+// DescribeFpgaImagesWithContext is the same as DescribeFpgaImages with the addition of
+// the ability to pass a context and additional request options.
+//
+// See DescribeFpgaImages for details on how to use this API operation.
+//
+// The context must be non-nil and will be used for request cancellation. If
+// the context is nil a panic will occur. In the future the SDK may create
+// sub-contexts for http.Requests. See https://golang.org/pkg/context/
+// for more information on using Contexts.
+func (c *EC2) DescribeFpgaImagesWithContext(ctx aws.Context, input *DescribeFpgaImagesInput, opts ...request.Option) (*DescribeFpgaImagesOutput, error) {
+	req, out := c.DescribeFpgaImagesRequest(input)
 	req.SetContext(ctx)
 	req.ApplyOptions(opts...)
 	return out, req.Send()
@@ -29313,6 +29391,164 @@ func (s *DescribeFlowLogsOutput) SetNextToken(v string) *DescribeFlowLogsOutput 
 	return s
 }
 
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeFpgaImagesRequest
+type DescribeFpgaImagesInput struct {
+	_ struct{} `type:"structure"`
+
+	// Checks whether you have the required permissions for the action, without
+	// actually making the request, and provides an error response. If you have
+	// the required permissions, the error response is DryRunOperation. Otherwise,
+	// it is UnauthorizedOperation.
+	DryRun *bool `type:"boolean"`
+
+	// One or more filters.
+	//
+	//    * create-time - The creation time of the AFI.
+	//
+	//    * fpga-image-id - The FPGA image identifier (AFI ID).
+	//
+	//    * fpga-image-global-id - The global FPGA image identifier (AGFI ID).
+	//
+	//    * name - The name of the AFI.
+	//
+	//    * owner-id - The AWS account ID of the AFI owner.
+	//
+	//    * product-code - The product code.
+	//
+	//    * shell-version - The version of the AWS Shell that was used to create
+	//    the bitstream.
+	//
+	//    * state - The state of the AFI (pending | failed | available | unavailable).
+	//
+	//    * tag:key=value - The key/value combination of a tag assigned to the resource.
+	//    Specify the key of the tag in the filter name and the value of the tag
+	//    in the filter value. For example, for the tag Purpose=X, specify tag:Purpose
+	//    for the filter name and X for the filter value.
+	//
+	//    * tag-key - The key of a tag assigned to the resource. This filter is
+	//    independent of the tag-value filter. For example, if you use both the
+	//    filter "tag-key=Purpose" and the filter "tag-value=X", you get any resources
+	//    assigned both the tag key Purpose (regardless of what the tag's value
+	//    is), and the tag value X (regardless of what the tag's key is). If you
+	//    want to list only resources where Purpose is X, see the tag:key=value
+	//    filter.
+	//
+	//    * tag-value - The value of a tag assigned to the resource. This filter
+	//    is independent of the tag-key filter.
+	//
+	//    * update-time - The time of the most recent update.
+	Filters []*Filter `locationName:"Filter" locationNameList:"Filter" type:"list"`
+
+	// One or more AFI IDs.
+	FpgaImageIds []*string `locationName:"FpgaImageId" locationNameList:"item" type:"list"`
+
+	// The maximum number of results to return in a single call.
+	MaxResults *int64 `min:"5" type:"integer"`
+
+	// The token to retrieve the next page of results.
+	NextToken *string `min:"1" type:"string"`
+
+	// Filters the AFI by owner. Specify an AWS account ID, self (owner is the sender
+	// of the request), or an AWS owner alias (valid values are amazon | aws-marketplace).
+	Owners []*string `locationName:"Owner" locationNameList:"Owner" type:"list"`
+}
+
+// String returns the string representation
+func (s DescribeFpgaImagesInput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeFpgaImagesInput) GoString() string {
+	return s.String()
+}
+
+// Validate inspects the fields of the type to determine if they are valid.
+func (s *DescribeFpgaImagesInput) Validate() error {
+	invalidParams := request.ErrInvalidParams{Context: "DescribeFpgaImagesInput"}
+	if s.MaxResults != nil && *s.MaxResults < 5 {
+		invalidParams.Add(request.NewErrParamMinValue("MaxResults", 5))
+	}
+	if s.NextToken != nil && len(*s.NextToken) < 1 {
+		invalidParams.Add(request.NewErrParamMinLen("NextToken", 1))
+	}
+
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	}
+	return nil
+}
+
+// SetDryRun sets the DryRun field's value.
+func (s *DescribeFpgaImagesInput) SetDryRun(v bool) *DescribeFpgaImagesInput {
+	s.DryRun = &v
+	return s
+}
+
+// SetFilters sets the Filters field's value.
+func (s *DescribeFpgaImagesInput) SetFilters(v []*Filter) *DescribeFpgaImagesInput {
+	s.Filters = v
+	return s
+}
+
+// SetFpgaImageIds sets the FpgaImageIds field's value.
+func (s *DescribeFpgaImagesInput) SetFpgaImageIds(v []*string) *DescribeFpgaImagesInput {
+	s.FpgaImageIds = v
+	return s
+}
+
+// SetMaxResults sets the MaxResults field's value.
+func (s *DescribeFpgaImagesInput) SetMaxResults(v int64) *DescribeFpgaImagesInput {
+	s.MaxResults = &v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeFpgaImagesInput) SetNextToken(v string) *DescribeFpgaImagesInput {
+	s.NextToken = &v
+	return s
+}
+
+// SetOwners sets the Owners field's value.
+func (s *DescribeFpgaImagesInput) SetOwners(v []*string) *DescribeFpgaImagesInput {
+	s.Owners = v
+	return s
+}
+
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeFpgaImagesResult
+type DescribeFpgaImagesOutput struct {
+	_ struct{} `type:"structure"`
+
+	// Information about one or more FPGA images.
+	FpgaImages []*FpgaImage `locationName:"fpgaImageSet" locationNameList:"item" type:"list"`
+
+	// The token to use to retrieve the next page of results. This value is null
+	// when there are no more results to return.
+	NextToken *string `locationName:"nextToken" min:"1" type:"string"`
+}
+
+// String returns the string representation
+func (s DescribeFpgaImagesOutput) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s DescribeFpgaImagesOutput) GoString() string {
+	return s.String()
+}
+
+// SetFpgaImages sets the FpgaImages field's value.
+func (s *DescribeFpgaImagesOutput) SetFpgaImages(v []*FpgaImage) *DescribeFpgaImagesOutput {
+	s.FpgaImages = v
+	return s
+}
+
+// SetNextToken sets the NextToken field's value.
+func (s *DescribeFpgaImagesOutput) SetNextToken(v string) *DescribeFpgaImagesOutput {
+	s.NextToken = &v
+	return s
+}
+
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/DescribeHostReservationOfferingsRequest
 type DescribeHostReservationOfferingsInput struct {
 	_ struct{} `type:"structure"`
@@ -38390,6 +38626,182 @@ func (s *FlowLog) SetTrafficType(v string) *FlowLog {
 	return s
 }
 
+// Describes an Amazon FPGA image (AFI).
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/FpgaImage
+type FpgaImage struct {
+	_ struct{} `type:"structure"`
+
+	// The date and time the AFI was created.
+	CreateTime *time.Time `locationName:"createTime" type:"timestamp" timestampFormat:"iso8601"`
+
+	// The description of the AFI.
+	Description *string `locationName:"description" type:"string"`
+
+	// The global FPGA image identifier (AGFI ID).
+	FpgaImageGlobalId *string `locationName:"fpgaImageGlobalId" type:"string"`
+
+	// The FPGA image identifier (AFI ID).
+	FpgaImageId *string `locationName:"fpgaImageId" type:"string"`
+
+	// The name of the AFI.
+	Name *string `locationName:"name" type:"string"`
+
+	// The alias of the AFI owner. Possible values include self, amazon, and aws-marketplace.
+	OwnerAlias *string `locationName:"ownerAlias" type:"string"`
+
+	// The AWS account ID of the AFI owner.
+	OwnerId *string `locationName:"ownerId" type:"string"`
+
+	// Information about the PCI bus.
+	PciId *PciId `locationName:"pciId" type:"structure"`
+
+	// The product codes for the AFI.
+	ProductCodes []*ProductCode `locationName:"productCodes" locationNameList:"item" type:"list"`
+
+	// The version of the AWS Shell that was used to create the bitstream.
+	ShellVersion *string `locationName:"shellVersion" type:"string"`
+
+	// Information about the state of the AFI.
+	State *FpgaImageState `locationName:"state" type:"structure"`
+
+	// Any tags assigned to the AFI.
+	Tags []*Tag `locationName:"tags" locationNameList:"item" type:"list"`
+
+	// The time of the most recent update to the AFI.
+	UpdateTime *time.Time `locationName:"updateTime" type:"timestamp" timestampFormat:"iso8601"`
+}
+
+// String returns the string representation
+func (s FpgaImage) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s FpgaImage) GoString() string {
+	return s.String()
+}
+
+// SetCreateTime sets the CreateTime field's value.
+func (s *FpgaImage) SetCreateTime(v time.Time) *FpgaImage {
+	s.CreateTime = &v
+	return s
+}
+
+// SetDescription sets the Description field's value.
+func (s *FpgaImage) SetDescription(v string) *FpgaImage {
+	s.Description = &v
+	return s
+}
+
+// SetFpgaImageGlobalId sets the FpgaImageGlobalId field's value.
+func (s *FpgaImage) SetFpgaImageGlobalId(v string) *FpgaImage {
+	s.FpgaImageGlobalId = &v
+	return s
+}
+
+// SetFpgaImageId sets the FpgaImageId field's value.
+func (s *FpgaImage) SetFpgaImageId(v string) *FpgaImage {
+	s.FpgaImageId = &v
+	return s
+}
+
+// SetName sets the Name field's value.
+func (s *FpgaImage) SetName(v string) *FpgaImage {
+	s.Name = &v
+	return s
+}
+
+// SetOwnerAlias sets the OwnerAlias field's value.
+func (s *FpgaImage) SetOwnerAlias(v string) *FpgaImage {
+	s.OwnerAlias = &v
+	return s
+}
+
+// SetOwnerId sets the OwnerId field's value.
+func (s *FpgaImage) SetOwnerId(v string) *FpgaImage {
+	s.OwnerId = &v
+	return s
+}
+
+// SetPciId sets the PciId field's value.
+func (s *FpgaImage) SetPciId(v *PciId) *FpgaImage {
+	s.PciId = v
+	return s
+}
+
+// SetProductCodes sets the ProductCodes field's value.
+func (s *FpgaImage) SetProductCodes(v []*ProductCode) *FpgaImage {
+	s.ProductCodes = v
+	return s
+}
+
+// SetShellVersion sets the ShellVersion field's value.
+func (s *FpgaImage) SetShellVersion(v string) *FpgaImage {
+	s.ShellVersion = &v
+	return s
+}
+
+// SetState sets the State field's value.
+func (s *FpgaImage) SetState(v *FpgaImageState) *FpgaImage {
+	s.State = v
+	return s
+}
+
+// SetTags sets the Tags field's value.
+func (s *FpgaImage) SetTags(v []*Tag) *FpgaImage {
+	s.Tags = v
+	return s
+}
+
+// SetUpdateTime sets the UpdateTime field's value.
+func (s *FpgaImage) SetUpdateTime(v time.Time) *FpgaImage {
+	s.UpdateTime = &v
+	return s
+}
+
+// Describes the state of the bitstream generation process for an Amazon FPGA
+// image (AFI).
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/FpgaImageState
+type FpgaImageState struct {
+	_ struct{} `type:"structure"`
+
+	// The state. The following are the possible values:
+	//
+	//    * pending - AFI bitstream generation is in progress.
+	//
+	//    * available - The AFI is available for use.
+	//
+	//    * failed - AFI bitstream generation failed.
+	//
+	//    * unavailable - The AFI is no longer available for use.
+	Code *string `locationName:"code" type:"string" enum:"FpgaImageStateCode"`
+
+	// If the state is failed, this is the error message.
+	Message *string `locationName:"message" type:"string"`
+}
+
+// String returns the string representation
+func (s FpgaImageState) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s FpgaImageState) GoString() string {
+	return s.String()
+}
+
+// SetCode sets the Code field's value.
+func (s *FpgaImageState) SetCode(v string) *FpgaImageState {
+	s.Code = &v
+	return s
+}
+
+// SetMessage sets the Message field's value.
+func (s *FpgaImageState) SetMessage(v string) *FpgaImageState {
+	s.Message = &v
+	return s
+}
+
 // Contains the parameters for GetConsoleOutput.
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/GetConsoleOutputRequest
 type GetConsoleOutputInput struct {
@@ -45881,6 +46293,59 @@ func (s *NewDhcpConfiguration) SetValues(v []*string) *NewDhcpConfiguration {
 	return s
 }
 
+// Describes the data that identifies an Amazon FPGA image (AFI) on the PCI
+// bus.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/PciId
+type PciId struct {
+	_ struct{} `type:"structure"`
+
+	// The ID of the device.
+	DeviceId *string `type:"string"`
+
+	// The ID of the subsystem.
+	SubsystemId *string `type:"string"`
+
+	// The ID of the vendor for the subsystem.
+	SubsystemVendorId *string `type:"string"`
+
+	// The ID of the vendor.
+	VendorId *string `type:"string"`
+}
+
+// String returns the string representation
+func (s PciId) String() string {
+	return awsutil.Prettify(s)
+}
+
+// GoString returns the string representation
+func (s PciId) GoString() string {
+	return s.String()
+}
+
+// SetDeviceId sets the DeviceId field's value.
+func (s *PciId) SetDeviceId(v string) *PciId {
+	s.DeviceId = &v
+	return s
+}
+
+// SetSubsystemId sets the SubsystemId field's value.
+func (s *PciId) SetSubsystemId(v string) *PciId {
+	s.SubsystemId = &v
+	return s
+}
+
+// SetSubsystemVendorId sets the SubsystemVendorId field's value.
+func (s *PciId) SetSubsystemVendorId(v string) *PciId {
+	s.SubsystemVendorId = &v
+	return s
+}
+
+// SetVendorId sets the VendorId field's value.
+func (s *PciId) SetVendorId(v string) *PciId {
+	s.VendorId = &v
+	return s
+}
+
 // Describes the VPC peering connection options.
 // Please also see https://docs.aws.amazon.com/goto/WebAPI/ec2-2016-11-15/PeeringConnectionOptions
 type PeeringConnectionOptions struct {
@@ -45992,6 +46457,9 @@ type Placement struct {
 	// is not supported for the ImportInstance command.
 	HostId *string `locationName:"hostId" type:"string"`
 
+	// Reserved for future use.
+	SpreadDomain *string `locationName:"spreadDomain" type:"string"`
+
 	// The tenancy of the instance (if the instance is running in a VPC). An instance
 	// with a tenancy of dedicated runs on single-tenant hardware. The host tenancy
 	// is not supported for the ImportInstance command.
@@ -46029,6 +46497,12 @@ func (s *Placement) SetGroupName(v string) *Placement {
 // SetHostId sets the HostId field's value.
 func (s *Placement) SetHostId(v string) *Placement {
 	s.HostId = &v
+	return s
+}
+
+// SetSpreadDomain sets the SpreadDomain field's value.
+func (s *Placement) SetSpreadDomain(v string) *Placement {
+	s.SpreadDomain = &v
 	return s
 }
 
@@ -48411,7 +48885,7 @@ type RequestSpotInstancesInput struct {
 	// Default: Instances are launched and terminated individually
 	LaunchGroup *string `locationName:"launchGroup" type:"string"`
 
-	// Describes the launch specification for an instance.
+	// The launch specification.
 	LaunchSpecification *RequestSpotLaunchSpecification `type:"structure"`
 
 	// The maximum hourly price (bid) for any Spot instance launched to fulfill
@@ -48600,7 +49074,9 @@ type RequestSpotLaunchSpecification struct {
 	// The name of the key pair.
 	KeyName *string `locationName:"keyName" type:"string"`
 
-	// Describes the monitoring of an instance.
+	// Indicates whether basic or detailed monitoring is enabled for the instance.
+	//
+	// Default: Disabled
 	Monitoring *RunInstancesMonitoringEnabled `locationName:"monitoring" type:"structure"`
 
 	// One or more network interfaces. If you specify a network interface, you must
@@ -48613,8 +49089,12 @@ type RequestSpotLaunchSpecification struct {
 	// The ID of the RAM disk.
 	RamdiskId *string `locationName:"ramdiskId" type:"string"`
 
+	// One or more security group IDs.
 	SecurityGroupIds []*string `locationName:"SecurityGroupId" locationNameList:"item" type:"list"`
 
+	// One or more security groups. When requesting instances in a VPC, you must
+	// specify the IDs of the security groups. When requesting instances in EC2-Classic,
+	// you can specify the names or the IDs of the security groups.
 	SecurityGroups []*string `locationName:"SecurityGroup" locationNameList:"item" type:"list"`
 
 	// The ID of the subnet in which to launch the instance.
@@ -56209,15 +56689,15 @@ func (s *VpcIpv6CidrBlockAssociation) SetIpv6CidrBlockState(v *VpcCidrBlockState
 type VpcPeeringConnection struct {
 	_ struct{} `type:"structure"`
 
-	// Information about the accepter VPC. CIDR block information is not returned
-	// when creating a VPC peering connection, or when describing a VPC peering
-	// connection that's in the initiating-request or pending-acceptance state.
+	// Information about the accepter VPC. CIDR block information is only returned
+	// when describing an active VPC peering connection.
 	AccepterVpcInfo *VpcPeeringConnectionVpcInfo `locationName:"accepterVpcInfo" type:"structure"`
 
 	// The time that an unaccepted VPC peering connection will expire.
 	ExpirationTime *time.Time `locationName:"expirationTime" type:"timestamp" timestampFormat:"iso8601"`
 
-	// Information about the requester VPC.
+	// Information about the requester VPC. CIDR block information is only returned
+	// when describing an active VPC peering connection.
 	RequesterVpcInfo *VpcPeeringConnectionVpcInfo `locationName:"requesterVpcInfo" type:"structure"`
 
 	// The status of the VPC peering connection.
@@ -57006,6 +57486,20 @@ const (
 
 	// FlowLogsResourceTypeNetworkInterface is a FlowLogsResourceType enum value
 	FlowLogsResourceTypeNetworkInterface = "NetworkInterface"
+)
+
+const (
+	// FpgaImageStateCodePending is a FpgaImageStateCode enum value
+	FpgaImageStateCodePending = "pending"
+
+	// FpgaImageStateCodeFailed is a FpgaImageStateCode enum value
+	FpgaImageStateCodeFailed = "failed"
+
+	// FpgaImageStateCodeAvailable is a FpgaImageStateCode enum value
+	FpgaImageStateCodeAvailable = "available"
+
+	// FpgaImageStateCodeUnavailable is a FpgaImageStateCode enum value
+	FpgaImageStateCodeUnavailable = "unavailable"
 )
 
 const (

@@ -1,9 +1,11 @@
 package mssql
 
 import (
+	"database/sql/driver"
 	"encoding/binary"
 	"errors"
 	"io"
+	"net"
 )
 
 type packetType uint8
@@ -49,6 +51,19 @@ func newTdsBuffer(bufsize uint16, transport io.ReadWriteCloser) *tdsBuffer {
 	w.rpos = 8
 	w.transport = transport
 	return w
+}
+
+func checkBadConn(err error) error {
+	if err == io.EOF {
+		return driver.ErrBadConn
+	}
+
+	switch err.(type) {
+	case net.Error:
+		return driver.ErrBadConn
+	default:
+		return err
+	}
 }
 
 func (rw *tdsBuffer) ResizeBuffer(packetsizei int) {
@@ -137,7 +152,7 @@ func (r *tdsBuffer) readNextPacket() error {
 	var err error
 	err = binary.Read(r.transport, binary.BigEndian, &header)
 	if err != nil {
-		return err
+		return checkBadConn(err)
 	}
 	offset := uint16(binary.Size(header))
 	if int(header.Size) > len(r.rbuf) {
@@ -148,7 +163,7 @@ func (r *tdsBuffer) readNextPacket() error {
 	}
 	_, err = io.ReadFull(r.transport, r.rbuf[offset:header.Size])
 	if err != nil {
-		return err
+		return checkBadConn(err)
 	}
 	r.rpos = offset
 	r.rsize = header.Size
@@ -191,7 +206,7 @@ func (r *tdsBuffer) byte() byte {
 func (r *tdsBuffer) ReadFull(buf []byte) {
 	_, err := io.ReadFull(r, buf[:])
 	if err != nil {
-		badStreamPanic(err)
+		badStreamPanic(checkBadConn(err))
 	}
 }
 

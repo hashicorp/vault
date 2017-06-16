@@ -28,8 +28,9 @@ type resultSet struct {
 }
 
 type mysqlRows struct {
-	mc *mysqlConn
-	rs resultSet
+	mc     *mysqlConn
+	rs     resultSet
+	finish func()
 }
 
 type binaryRows struct {
@@ -65,12 +66,17 @@ func (rows *mysqlRows) Columns() []string {
 }
 
 func (rows *mysqlRows) Close() (err error) {
+	if f := rows.finish; f != nil {
+		f()
+		rows.finish = nil
+	}
+
 	mc := rows.mc
 	if mc == nil {
 		return nil
 	}
-	if mc.netConn == nil {
-		return ErrInvalidConn
+	if err := mc.error(); err != nil {
+		return err
 	}
 
 	// Remove unread packets from stream
@@ -98,8 +104,8 @@ func (rows *mysqlRows) nextResultSet() (int, error) {
 	if rows.mc == nil {
 		return 0, io.EOF
 	}
-	if rows.mc.netConn == nil {
-		return 0, ErrInvalidConn
+	if err := rows.mc.error(); err != nil {
+		return 0, err
 	}
 
 	// Remove unread packets from stream
@@ -145,8 +151,8 @@ func (rows *binaryRows) NextResultSet() error {
 
 func (rows *binaryRows) Next(dest []driver.Value) error {
 	if mc := rows.mc; mc != nil {
-		if mc.netConn == nil {
-			return ErrInvalidConn
+		if err := mc.error(); err != nil {
+			return err
 		}
 
 		// Fetch next row from stream
@@ -167,8 +173,8 @@ func (rows *textRows) NextResultSet() (err error) {
 
 func (rows *textRows) Next(dest []driver.Value) error {
 	if mc := rows.mc; mc != nil {
-		if mc.netConn == nil {
-			return ErrInvalidConn
+		if err := mc.error(); err != nil {
+			return err
 		}
 
 		// Fetch next row from stream
