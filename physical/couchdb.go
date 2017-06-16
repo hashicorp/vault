@@ -187,15 +187,7 @@ func (m *CouchDBBackend) Put(entry *Entry) error {
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	defer metrics.MeasureSince([]string{"couchdb", "put"}, time.Now())
-
-	revision, _ := m.client.rev(url.PathEscape(entry.Key))
-
-	return m.client.put(couchDBEntry{
-		Entry: entry,
-		Rev:   revision,
-		ID:    url.PathEscape(entry.Key),
-	})
+	return m.PutInternal(entry)
 }
 
 // Get is used to fetch an entry
@@ -203,9 +195,7 @@ func (m *CouchDBBackend) Get(key string) (*Entry, error) {
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	defer metrics.MeasureSince([]string{"couchdb", "get"}, time.Now())
-
-	return m.client.get(key)
+	return m.GetInternal(key)
 }
 
 // Delete is used to permanently delete an entry
@@ -213,15 +203,7 @@ func (m *CouchDBBackend) Delete(key string) error {
 	m.permitPool.Acquire()
 	defer m.permitPool.Release()
 
-	defer metrics.MeasureSince([]string{"couchdb", "delete"}, time.Now())
-
-	revision, _ := m.client.rev(url.PathEscape(key))
-	deleted := true
-	return m.client.put(couchDBEntry{
-		ID:      url.PathEscape(key),
-		Rev:     revision,
-		Deleted: &deleted,
-	})
+	return m.DeleteInternal(key)
 }
 
 // List is used to list all the keys under a given prefix
@@ -270,16 +252,34 @@ func newTransactionalCouchDBBackend(conf map[string]string, logger log.Logger) (
 }
 
 // GetInternal is used to fetch an entry
-func (m *TransactionalCouchDBBackend) GetInternal(key string) (*Entry, error) {
-	return m.Get(key)
+func (m *CouchDBBackend) GetInternal(key string) (*Entry, error) {
+	defer metrics.MeasureSince([]string{"couchdb", "get"}, time.Now())
+
+	return m.client.get(key)
 }
 
 // PutInternal is used to insert or update an entry
-func (m *TransactionalCouchDBBackend) PutInternal(entry *Entry) error {
-	return m.Put(entry)
+func (m *CouchDBBackend) PutInternal(entry *Entry) error {
+	defer metrics.MeasureSince([]string{"couchdb", "put"}, time.Now())
+
+	revision, _ := m.client.rev(url.PathEscape(entry.Key))
+
+	return m.client.put(couchDBEntry{
+		Entry: entry,
+		Rev:   revision,
+		ID:    url.PathEscape(entry.Key),
+	})
 }
 
 // DeleteInternal is used to permanently delete an entry
-func (m *TransactionalCouchDBBackend) DeleteInternal(key string) error {
-	return m.Delete(key)
+func (m *CouchDBBackend) DeleteInternal(key string) error {
+	defer metrics.MeasureSince([]string{"couchdb", "delete"}, time.Now())
+
+	revision, _ := m.client.rev(url.PathEscape(key))
+	deleted := true
+	return m.client.put(couchDBEntry{
+		ID:      url.PathEscape(key),
+		Rev:     revision,
+		Deleted: &deleted,
+	})
 }
