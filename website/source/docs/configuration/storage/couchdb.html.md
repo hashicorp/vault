@@ -12,6 +12,9 @@ description: |-
 The CouchDB storage backend is used to persist Vault's data in
 [CouchDB][couchdb] table.
 
+- **No High Availability** – the CouchDB backend does not support high
+  availability.
+
 - **Community Supported** – the CouchDB storage backend is supported by the
   community. While it has undergone review by HashiCorp employees, they may not
   be as knowledgeable about the technology. If you encounter problems with them,

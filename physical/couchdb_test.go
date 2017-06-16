@@ -33,6 +33,25 @@ func TestCouchDBBackend(t *testing.T) {
 	testBackend_ListPrefix(t, b)
 }
 
+func TestTransactionalCouchDBBackend(t *testing.T) {
+	cleanup, endpoint, username, password := prepareCouchdbDBTestContainer(t)
+	defer cleanup()
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	b, err := NewBackend("couchdb_transactional", logger, map[string]string{
+		"endpoint": endpoint,
+		"username": username,
+		"password": password,
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	testBackend(t, b)
+	testBackend_ListPrefix(t, b)
+}
+
 func prepareCouchdbDBTestContainer(t *testing.T) (cleanup func(), retAddress, username, password string) {
 	// If environment variable is set, assume caller wants to target a real
 	// DynamoDB.

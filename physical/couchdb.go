@@ -17,8 +17,9 @@ import (
 
 // CouchDBBackend allows the management of couchdb users
 type CouchDBBackend struct {
-	logger log.Logger
-	client *couchDBClient
+	logger     log.Logger
+	client     *couchDBClient
+	permitPool *PermitPool
 }
 
 type couchDBClient struct {
@@ -139,7 +140,7 @@ func (m *couchDBClient) list(prefix string) ([]couchDBListItem, error) {
 	return results.Rows, nil
 }
 
-func newCouchDBBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBackend, error) {
 	endpoint := os.Getenv("COUCHDB_ENDPOINT")
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
@@ -165,8 +166,13 @@ func newCouchDBBackend(conf map[string]string, logger log.Logger) (Backend, erro
 			password: password,
 			Client:   &http.Client{},
 		},
-		logger: logger,
+		logger:     logger,
+		permitPool: NewPermitPool(DefaultParallelOperations),
 	}, nil
+}
+
+func newCouchDBBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+	return buildCouchDBBackend(conf, logger)
 }
 
 type couchDBEntry struct {
@@ -178,6 +184,9 @@ type couchDBEntry struct {
 
 // Put is used to insert or update an entry
 func (m *CouchDBBackend) Put(entry *Entry) error {
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
+
 	defer metrics.MeasureSince([]string{"couchdb", "put"}, time.Now())
 
 	revision, _ := m.client.rev(url.PathEscape(entry.Key))
@@ -191,6 +200,9 @@ func (m *CouchDBBackend) Put(entry *Entry) error {
 
 // Get is used to fetch an entry
 func (m *CouchDBBackend) Get(key string) (*Entry, error) {
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
+
 	defer metrics.MeasureSince([]string{"couchdb", "get"}, time.Now())
 
 	return m.client.get(key)
@@ -198,6 +210,9 @@ func (m *CouchDBBackend) Get(key string) (*Entry, error) {
 
 // Delete is used to permanently delete an entry
 func (m *CouchDBBackend) Delete(key string) error {
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
+
 	defer metrics.MeasureSince([]string{"couchdb", "delete"}, time.Now())
 
 	revision, _ := m.client.rev(url.PathEscape(key))
@@ -234,4 +249,37 @@ func (m *CouchDBBackend) List(prefix string) ([]string, error) {
 		}
 	}
 	return out, nil
+}
+
+// TransactionalCouchDBBackend creates a couchdb backend that forces all operations to happen
+// in serial
+type TransactionalCouchDBBackend struct {
+	CouchDBBackend
+}
+
+func newTransactionalCouchDBBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+	backend, err := buildCouchDBBackend(conf, logger)
+	if err != nil {
+		return nil, err
+	}
+	backend.permitPool = NewPermitPool(1)
+
+	return &TransactionalCouchDBBackend{
+		CouchDBBackend: *backend,
+	}, nil
+}
+
+// GetInternal is used to fetch an entry
+func (m *TransactionalCouchDBBackend) GetInternal(key string) (*Entry, error) {
+	return m.Get(key)
+}
+
+// PutInternal is used to insert or update an entry
+func (m *TransactionalCouchDBBackend) PutInternal(entry *Entry) error {
+	return m.Put(entry)
+}
+
+// DeleteInternal is used to permanently delete an entry
+func (m *TransactionalCouchDBBackend) DeleteInternal(key string) error {
+	return m.Delete(key)
 }
