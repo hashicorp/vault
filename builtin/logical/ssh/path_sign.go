@@ -388,6 +388,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
 			if ok {
+				retCert = nil
 				retErr = err
 			}
 		}
