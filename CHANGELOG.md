@@ -1,5 +1,10 @@
 ## Next (unreleased)
 
+IMPROVEMENTS:
+
+ * storage/s3: More efficient paging when an object has a lot of subobjects
+   [GH-2780]
+
 BUG FIXES:
 
  * api/health: Consider the response code from standby nodes [GH-2850]
