@@ -13,6 +13,11 @@ These are general upgrade instructions for Vault for both non-HA and HA setups.
 Please ensure that you also read the version-specific upgrade notes which can be
 found in the sidebar.
 
+**Always** back up your data before upgrading! Vault does not make
+backwards-compatibility guarantees for its data store. If you need to roll back
+to a previous version of Vault, it is always a good idea to roll back your data
+store as well.
+
 ## Non-HA Installations
 
 Upgrading non-HA installations of Vault is as simple as replacing the Vault
@@ -31,6 +36,10 @@ at HashiCorp. However, you should consider how to apply these steps to your
 particular setup since HA setups can differ on whether a load balancer is in
 use, what addresses clients are being given to connect to Vault (standby +
 leader, leader-only, or discovered via service discovery), etc.
+
+Whatever method you use, you should ensure that you never fail over from a
+newer version of Vault to an older version. Our suggested procedure is designed
+to prevent this.
 
 Please note that Vault does not support true zero-downtime upgrades, but with
 proper upgrade procedure the downtime should be very short (a few hundred
@@ -58,7 +67,8 @@ active duty. To do this:
 3. Start the node
 4. Unseal the node (it will now be a standby)
 
-Internal upgrade tasks will happen after one of the upgraded standby nodes takes over active duty.
+Internal upgrade tasks will happen after one of the upgraded standby nodes
+takes over active duty.
 
 Be sure to also read and follow any instructions in the version-specific
 upgrade notes.
