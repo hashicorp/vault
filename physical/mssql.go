@@ -9,6 +9,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
+	"github.com/hashicorp/vault/helper/strutil"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -206,7 +207,7 @@ func (m *MsSQLBackend) List(prefix string) ([]string, error) {
 		if i := strings.Index(key, "/"); i == -1 {
 			keys = append(keys, key)
 		} else if i != -1 {
-			keys = appendIfMissing(keys, string(key[:i+1]))
+			keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 		}
 	}
 
