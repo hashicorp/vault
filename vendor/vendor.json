@@ -97,6 +97,12 @@
 			"revisionTime": "2017-06-12T23:04:11Z"
 		},
 		{
+			"checksumSHA1": "/dCCNf9gMfGkEs5SMmFHtSNpBrg=",
+			"path": "github.com/DataDog/datadog-go/statsd",
+			"revision": "fb3be1a38fdd8038de6b45aee442d9930fd584d0",
+			"revisionTime": "2017-06-15T18:43:10Z"
+		},
+		{
 			"checksumSHA1": "8G3MdcWpgaVSwl1Yh/n6yJo3w5o=",
 			"path": "github.com/Jeffail/gabs",
 			"revision": "9cef256b595a9e616eb6aec1da446529b7705613",
