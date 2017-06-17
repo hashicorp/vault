@@ -14,10 +14,10 @@ import (
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
-	l               sync.RWMutex
-	root            *radix.Tree
-	mountEntryCache *radix.Tree
-	tokenStoreSalt  *salt.Salt
+	l              sync.RWMutex
+	root           *radix.Tree
+	mountUUIDCache *radix.Tree
+	tokenStoreSalt *salt.Salt
 
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
@@ -28,9 +28,9 @@ type Router struct {
 // NewRouter returns a new router
 func NewRouter() *Router {
 	r := &Router{
-		root:            radix.New(),
-		storagePrefix:   radix.New(),
-		mountEntryCache: radix.New(),
+		root:           radix.New(),
+		storagePrefix:  radix.New(),
+		mountUUIDCache: radix.New(),
 	}
 	return r
 }
@@ -79,7 +79,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	r.root.Insert(prefix, re)
 	r.storagePrefix.Insert(storageView.prefix, re)
-	r.mountEntryCache.Insert(re.mountEntry.UUID, re.mountEntry)
+	r.mountUUIDCache.Insert(re.mountEntry.UUID, re.mountEntry)
 
 	return nil
 }
@@ -102,7 +102,7 @@ func (r *Router) Unmount(prefix string) error {
 	// Purge from the radix trees
 	r.root.Delete(prefix)
 	r.storagePrefix.Delete(re.storageView.prefix)
-	r.mountEntryCache.Delete(re.mountEntry.UUID)
+	r.mountUUIDCache.Delete(re.mountEntry.UUID)
 
 	return nil
 }
@@ -147,7 +147,7 @@ func (r *Router) Untaint(path string) error {
 	return nil
 }
 
-func (r *Router) MatchingMountByID(mountID string) *MountEntry {
+func (r *Router) MatchingMountByUUID(mountID string) *MountEntry {
 	if mountID == "" {
 		return nil
 	}
@@ -155,7 +155,7 @@ func (r *Router) MatchingMountByID(mountID string) *MountEntry {
 	r.l.RLock()
 	defer r.l.RUnlock()
 
-	_, raw, ok := r.mountEntryCache.LongestPrefix(mountID)
+	_, raw, ok := r.mountUUIDCache.LongestPrefix(mountID)
 	if !ok {
 		return nil
 	}

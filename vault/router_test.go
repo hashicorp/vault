@@ -114,7 +114,7 @@ func TestRouter_Mount(t *testing.T) {
 		t.Fatalf("bad: %v", v)
 	}
 
-	mountEntryFetched := r.MatchingMountByID(mountEntry.UUID)
+	mountEntryFetched := r.MatchingMountByUUID(mountEntry.UUID)
 	if mountEntryFetched == nil || !reflect.DeepEqual(mountEntry, mountEntryFetched) {
 		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
 	}
