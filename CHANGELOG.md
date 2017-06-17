@@ -2,6 +2,7 @@
 
 IMPROVEMENTS:
 
+ * core: CORS allowed origins can now be configured [GH-2021]
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
  * telemetry: Add support for DogStatsD [GH-2490]
