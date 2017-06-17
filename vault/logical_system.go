@@ -44,7 +44,7 @@ var (
 	}
 )
 
-func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backend, error) {
+func NewSystemBackend(core *Core) *SystemBackend {
 	b := &SystemBackend{
 		Core: core,
 	}
@@ -62,7 +62,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/primary/secondary-token",
 				"replication/reindex",
 				"rotate",
-				"config/*",
+				"config/cors",
 				"config/auditing/*",
 				"plugins/catalog/*",
 				"revoke-prefix/*",
@@ -110,7 +110,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 					},
 					"allowed_origins": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
-						Description: "A comma-separated list of origins that may make cross-origin requests.",
+						Description: "A comma-separated string or array of strings indicating origins that may make cross-origin requests.",
 					},
 				},
 
@@ -823,50 +823,50 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 	b.Backend.Invalidate = b.invalidate
 
-	return b.Backend.Setup(config)
+	return b
 }
 
 // SystemBackend implements logical.Backend and is used to interact with
 // the core of the system. This backend is hardcoded to exist at the "sys"
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
-	Core    *Core
-	Backend *framework.Backend
+	*framework.Backend
+	Core *Core
 }
 
 // handleCORSRead returns the current CORS configuration
 func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	corsConf := b.Core.corsConfig
-	if corsConf == nil {
-		return nil, errCORSNotConfigured
+
+	enabled := corsConf.IsEnabled()
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"enabled": enabled,
+		},
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"enabled":         corsConf.Enabled,
-			"allowed_origins": strings.Join(corsConf.AllowedOrigins, ","),
-		},
-	}, nil
+	if enabled {
+		corsConf.RLock()
+		resp.Data["allowed_origins"] = corsConf.AllowedOrigins
+		corsConf.RUnlock()
+	}
+
+	return resp, nil
 }
 
-// handleCORSUpdate sets the list of origins that are allowed
-// to make cross-origin requests and sets the CORS enabled flag to true
+// handleCORSUpdate sets the list of origins that are allowed to make
+// cross-origin requests and sets the CORS enabled flag to true
 func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	origins := d.Get("allowed_origins").([]string)
 
-	err := b.Core.corsConfig.Enable(origins)
-	if err != nil {
-		return nil, err
-	}
-
-	return nil, nil
+	return nil, b.Core.corsConfig.Enable(origins)
 }
 
-// handleCORSDelete clears the allowed origins and sets the CORS enabled flag to false
+// handleCORSDelete clears the allowed origins and sets the CORS enabled flag
+// to false
 func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.Core.CORSConfig().Disable()
-
-	return nil, nil
+	return nil, b.Core.corsConfig.Disable()
 }
 
 func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

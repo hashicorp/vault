@@ -49,6 +49,9 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 
 func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "")
+	b.(*SystemBackend).Core.systemBarrierView = view
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
 	req.Data["allowed_origins"] = "http://www.example.com"
@@ -60,7 +63,7 @@ func TestSystemConfigCORS(t *testing.T) {
 	expected := &logical.Response{
 		Data: map[string]interface{}{
 			"enabled":         true,
-			"allowed_origins": "http://www.example.com",
+			"allowed_origins": []string{"http://www.example.com"},
 		},
 	}
 
@@ -71,7 +74,7 @@ func TestSystemConfigCORS(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("UPDATE FAILED -- bad: %#v", actual)
+		t.Fatalf("bad: %#v", actual)
 	}
 
 	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
@@ -88,8 +91,7 @@ func TestSystemConfigCORS(t *testing.T) {
 
 	expected = &logical.Response{
 		Data: map[string]interface{}{
-			"enabled":         false,
-			"allowed_origins": "",
+			"enabled": false,
 		},
 	}
 
@@ -980,7 +982,8 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b, err := NewSystemBackend(core, bc)
+	be := NewSystemBackend(core)
+	b, err := be.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1043,7 +1046,8 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b, err := NewSystemBackend(core, bc)
+	be := NewSystemBackend(core)
+	b, err := be.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1578,7 +1582,8 @@ func testSystemBackend(t *testing.T) logical.Backend {
 		},
 	}
 
-	b, err := NewSystemBackend(c, bc)
+	b := NewSystemBackend(c)
+	_, err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1596,7 +1601,8 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 		},
 	}
 
-	b, err := NewSystemBackend(c, bc)
+	b := NewSystemBackend(c)
+	_, err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -4,24 +4,36 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/logical"
 )
 
-var errCORSNotConfigured = errors.New("CORS is not configured")
+const (
+	CORSDisabled uint32 = iota
+	CORSEnabled
+)
 
 // CORSConfig stores the state of the CORS configuration.
 type CORSConfig struct {
-	sync.RWMutex
-	Enabled        bool     `json:"enabled"`
-	AllowedOrigins []string `json:"allowed_origins"`
+	sync.RWMutex   `json:"-"`
+	core           *Core
+	Enabled        uint32   `json:"enabled"`
+	AllowedOrigins []string `json:"allowed_origins,omitempty"`
 }
 
 func (c *Core) saveCORSConfig() error {
 	view := c.systemBarrierView.SubView("config/")
 
-	entry, err := logical.StorageEntryJSON("cors", c.corsConfig)
+	localConfig := &CORSConfig{
+		Enabled: atomic.LoadUint32(&c.corsConfig.Enabled),
+	}
+	c.corsConfig.RLock()
+	localConfig.AllowedOrigins = c.corsConfig.AllowedOrigins
+	c.corsConfig.RUnlock()
+
+	entry, err := logical.StorageEntryJSON("cors", localConfig)
 	if err != nil {
 		return fmt.Errorf("failed to create CORS config entry: %v", err)
 	}
@@ -33,6 +45,7 @@ func (c *Core) saveCORSConfig() error {
 	return nil
 }
 
+// This should only be called with the core state lock held for writing
 func (c *Core) loadCORSConfig() error {
 	view := c.systemBarrierView.SubView("config/")
 
@@ -45,10 +58,14 @@ func (c *Core) loadCORSConfig() error {
 		return nil
 	}
 
-	err = out.DecodeJSON(c.corsConfig)
+	newConfig := new(CORSConfig)
+	err = out.DecodeJSON(newConfig)
 	if err != nil {
 		return err
 	}
+	newConfig.core = c
+
+	c.corsConfig = newConfig
 
 	return nil
 }
@@ -65,38 +82,40 @@ func (c *CORSConfig) Enable(urls []string) error {
 	}
 
 	c.Lock()
-	defer c.Unlock()
-
 	c.AllowedOrigins = urls
-	c.Enabled = true
+	c.Unlock()
 
-	return nil
+	atomic.StoreUint32(&c.Enabled, CORSEnabled)
+
+	return c.core.saveCORSConfig()
 }
 
 // IsEnabled returns the value of CORSConfig.isEnabled
 func (c *CORSConfig) IsEnabled() bool {
-	c.RLock()
-	defer c.RUnlock()
-
-	return c.Enabled
+	return atomic.LoadUint32(&c.Enabled) == CORSEnabled
 }
 
 // Disable sets CORS to disabled and clears the allowed origins
-func (c *CORSConfig) Disable() {
+func (c *CORSConfig) Disable() error {
+	atomic.StoreUint32(&c.Enabled, CORSDisabled)
 	c.Lock()
-	defer c.Unlock()
-
-	c.Enabled = false
-	c.AllowedOrigins = []string{}
+	c.AllowedOrigins = []string(nil)
+	c.Unlock()
+	return c.core.saveCORSConfig()
 }
 
 // IsValidOrigin determines if the origin of the request is allowed to make
 // cross-origin requests based on the CORSConfig.
 func (c *CORSConfig) IsValidOrigin(origin string) bool {
+	// If we aren't enabling CORS then all origins are valid
+	if !c.IsEnabled() {
+		return true
+	}
+
 	c.RLock()
 	defer c.RUnlock()
 
-	if c.AllowedOrigins == nil {
+	if len(c.AllowedOrigins) == 0 {
 		return false
 	}
 

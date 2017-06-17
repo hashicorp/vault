@@ -450,10 +450,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
-		corsConfig:                       &CORSConfig{},
 		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 	}
+
+	// Load CORS config and provide core
+	c.corsConfig = &CORSConfig{core: c}
 
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped
 	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
@@ -513,7 +515,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
-		return NewSystemBackend(c, config)
+		b := NewSystemBackend(c)
+		return b.Backend.Setup(config)
 	}
 	c.logicalBackends = logicalBackends
 
@@ -1367,9 +1370,6 @@ func (c *Core) preSeal() error {
 	}
 	if err := c.teardownPolicyStore(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down policy store: {{err}}", err))
-	}
-	if err := c.saveCORSConfig(); err != nil {
-		result = multierror.Append(result, errwrap.Wrapf("error tearing down CORS config: {{err}}", err))
 	}
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))
