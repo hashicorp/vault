@@ -31,6 +31,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/primary/secondary-token",
 		"replication/reindex",
 		"rotate",
+		"config/*",
 		"config/auditing/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
@@ -44,6 +45,58 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
+}
+
+func TestSystemConfigCORS(t *testing.T) {
+	b := testSystemBackend(t)
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
+	req.Data["allowed_origins"] = "http://www.example.com"
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":         true,
+			"allowed_origins": "http://www.example.com",
+		},
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("UPDATE FAILED -- bad: %#v", actual)
+	}
+
+	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
+	_, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected = &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":         false,
+			"allowed_origins": "",
+		},
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("DELETE FAILED -- bad: %#v", actual)
+	}
+
 }
 
 func TestSystemBackend_mounts(t *testing.T) {

@@ -49,6 +49,7 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 		op = logical.UpdateOperation
 	case "LIST":
 		op = logical.ListOperation
+	case "OPTIONS":
 	default:
 		return nil, http.StatusMethodNotAllowed, nil
 	}

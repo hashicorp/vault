@@ -331,6 +331,9 @@ type Core struct {
 	// The grpc forwarding client
 	rpcForwardingClient *forwardingClient
 
+	// CORS Information
+	corsConfig *CORSConfig
+
 	// replicationState keeps the current replication state cached for quick
 	// lookup
 	replicationState consts.ReplicationState
@@ -447,6 +450,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+		corsConfig:                       &CORSConfig{},
 		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 	}
@@ -553,6 +557,11 @@ func (c *Core) Shutdown() error {
 
 	// Seal the Vault, causes a leader stepdown
 	return c.sealInternal()
+}
+
+// CORSConfig returns the current CORS configuration
+func (c *Core) CORSConfig() *CORSConfig {
+	return c.corsConfig
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -1291,6 +1300,9 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupPolicyStore(); err != nil {
 		return err
 	}
+	if err := c.loadCORSConfig(); err != nil {
+		return err
+	}
 	if err := c.loadCredentials(); err != nil {
 		return err
 	}
@@ -1355,6 +1367,9 @@ func (c *Core) preSeal() error {
 	}
 	if err := c.teardownPolicyStore(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error tearing down policy store: {{err}}", err))
+	}
+	if err := c.saveCORSConfig(); err != nil {
+		result = multierror.Append(result, errwrap.Wrapf("error tearing down CORS config: {{err}}", err))
 	}
 	if err := c.stopRollback(); err != nil {
 		result = multierror.Append(result, errwrap.Wrapf("error stopping rollback: {{err}}", err))

@@ -67,10 +67,11 @@ func Handler(core *vault.Core) http.Handler {
 
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
+	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 
 	// Wrap the help wrapped handler with another layer with a generic
 	// handler
-	genericWrappedHandler := wrapGenericHandler(helpWrappedHandler)
+	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
 
 	return genericWrappedHandler
 }
