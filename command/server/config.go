@@ -196,6 +196,15 @@ type Telemetry struct {
 	// (e.g. a specific geo location or datacenter, dc:sfo)
 	// Default: none
 	CirconusBrokerSelectTag string `hcl:"circonus_broker_select_tag"`
+
+	// Dogstats:
+	// DogStatsdAddr is the address of a dogstatsd instance. If provided,
+	// metrics will be sent to that instance
+	DogStatsDAddr string `hcl:"dogstatsd_addr"`
+
+	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
+	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
+	DogStatsDTags []string `hcl:"dogstatsd_tags"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -734,6 +743,8 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"circonus_broker_id",
 		"circonus_broker_select_tag",
 		"disable_hostname",
+		"dogstatsd_addr",
+		"dogstatsd_tags",
 		"statsd_address",
 		"statsite_address",
 	}

@@ -58,6 +58,8 @@ func TestLoadConfigFile(t *testing.T) {
 			StatsdAddr:      "bar",
 			StatsiteAddr:    "foo",
 			DisableHostname: false,
+			DogStatsDAddr:   "127.0.0.1:7254",
+			DogStatsDTags:   []string{"tag_1:val_1", "tag_2:val_2"},
 		},
 
 		DisableCache:    true,
