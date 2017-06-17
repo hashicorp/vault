@@ -31,7 +31,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/primary/secondary-token",
 		"replication/reindex",
 		"rotate",
-		"config/*",
+		"config/cors",
 		"config/auditing/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
