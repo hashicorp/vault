@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -164,7 +165,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			endpoint: endpoint,
 			username: username,
 			password: password,
-			Client:   &http.Client{},
+			Client:   cleanhttp.DefaultPooledClient(),
 		},
 		logger:     logger,
 		permitPool: NewPermitPool(DefaultParallelOperations),
