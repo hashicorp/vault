@@ -1,5 +1,9 @@
 ## Next (unreleased)
 
+FEATURES:
+
+ * **CouchDB Storage**: CouchDB can now be used for Vault storage
+
 IMPROVEMENTS:
 
  * core: CORS allowed origins can now be configured [GH-2021]
