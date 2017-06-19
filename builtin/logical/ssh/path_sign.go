@@ -275,6 +275,11 @@ func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request
 		return reqId, nil
 	}
 
+	if role.KeyIDFormat != "" {
+		keyId := fmt.Sprintf(role.KeyIDFormat, req.DisplayName)
+		return keyId, nil
+	}
+
 	keyHash := sha256.Sum256(pubKey.Marshal())
 	keyId := hex.EncodeToString(keyHash[:])
 

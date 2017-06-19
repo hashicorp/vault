@@ -45,6 +45,7 @@ type sshRole struct {
 	AllowBareDomains       bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
 	AllowSubdomains        bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
 	AllowUserKeyIDs        bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
+	KeyIDFormat            string            `mapstructure:"key_id_format" json:"key_id_format"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -213,7 +214,7 @@ func pathRoles(b *backend) *framework.Path {
 				have if none are provided when signing. This field takes in key
 				value pairs in JSON format.  Note that these are not restricted
 				by "allowed_critical_options". Defaults to none.
-`,
+				`,
 			},
 			"default_extensions": &framework.FieldSchema{
 				Type: framework.TypeMap,
@@ -264,6 +265,15 @@ func pathRoles(b *backend) *framework.Path {
 				If true, users can override the key ID for a signed certificate with the "key_id" field.
 				When false, the key ID will always be the token display name.
 				The key ID is logged by the SSH server and can be useful for auditing.
+				`,
+			},
+			"key_id_format": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				When supplied, this value specifies a custom format for the key id of a signed certificate.
+				You must supply a format string containing "%s", which determines the placement of the display
+				name. For example, "custom-key-%s", would produce a "custom-key-<display_name>"
 				`,
 			},
 		},
@@ -435,11 +445,18 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		AllowBareDomains:       data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:        data.Get("allow_subdomains").(bool),
 		AllowUserKeyIDs:        data.Get("allow_user_key_ids").(bool),
+		KeyIDFormat:            data.Get("key_id_format").(string),
 		KeyType:                KeyTypeCA,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
 		return nil, logical.ErrorResponse("Either 'allow_user_certificates' or 'allow_host_certificates' must be set to 'true'")
+	}
+
+	if role.KeyIDFormat != "" {
+		if !strings.Contains(role.KeyIDFormat, "%s") {
+			return nil, logical.ErrorResponse("key_id_format must include '%%s'")
+		}
 	}
 
 	defaultCriticalOptions := convertMapToStringValue(data.Get("default_critical_options").(map[string]interface{}))
@@ -553,6 +570,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 				"allow_bare_domains":       role.AllowBareDomains,
 				"allow_subdomains":         role.AllowSubdomains,
 				"allow_user_key_ids":       role.AllowUserKeyIDs,
+				"key_id_format":            role.KeyIDFormat,
 				"key_type":                 role.KeyType,
 				"default_critical_options": role.DefaultCriticalOptions,
 				"default_extensions":       role.DefaultExtensions,

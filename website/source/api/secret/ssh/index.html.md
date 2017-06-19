@@ -144,7 +144,7 @@ This endpoint creates or updates a named role.
   `allow_subdomains`.
 
 - `key_option_specs` `(string: "")` – Specifies a aomma separated option
-  specification which will be prefixed to RSA keys in	the remote host's
+  specification which will be prefixed to RSA keys in the remote host's
   authorized_keys file. N.B.: Vault does not check this string for validity.
 
 - `ttl` `(string: "")` – Specifies the Time To Live value provided as a string
@@ -194,6 +194,11 @@ This endpoint creates or updates a named role.
   ID for a signed certificate with the "key_id" field. When false, the key ID
   will always be the token display name. The key ID is logged by the SSH server
   and can be useful for auditing.
+
+- `key_id_format` `(string: "")` – When supplied, this value specifies a custom
+  format for the key id of a signed certificate. You must supply a format string
+  containing "%s", which determines the placement of the display name. For example,
+  "custom-key-%s", would produce a "custom-key-<display_name>"
 
 ### Sample Payload
 
