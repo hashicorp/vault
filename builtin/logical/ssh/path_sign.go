@@ -275,12 +275,12 @@ func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request
 	}
 
 	keyIdFormat := "vault-{{token_display_name}}-{{public_key_hash}}"
+	if req.DisplayName == "" {
+		keyIdFormat = "vault-{{public_key_hash}}"
+	}
+
 	if role.KeyIDFormat != "" {
 		keyIdFormat = role.KeyIDFormat
-	} else {
-		if req.DisplayName == "" {
-			keyIdFormat = "vault-{{public_key_hash}}"
-		}
 	}
 
 	keyId := substQuery(keyIdFormat, map[string]string{
