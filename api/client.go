@@ -328,10 +328,8 @@ func (c *Client) ClearToken() {
 }
 
 // Clone creates a copy of this client.
-func (c *Client) Clone() *Client {
-	// This should never fail if we already have a client
-	cp, _ := NewClient(c.config)
-	return cp
+func (c *Client) Clone() (*Client, error) {
+	return NewClient(c.config)
 }
 
 // NewRequest creates a new raw request object to query the Vault server
