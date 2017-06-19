@@ -327,8 +327,8 @@ func (c *Client) ClearToken() {
 	c.token = ""
 }
 
-// Copy creates a copy of this client.
-func (c *Client) Copy() *Client {
+// Clone creates a copy of this client.
+func (c *Client) Clone() *Client {
 	// This should never fail if we already have a client
 	cp, _ := NewClient(c.config)
 	return cp
