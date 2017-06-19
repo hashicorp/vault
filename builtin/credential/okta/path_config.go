@@ -32,6 +32,7 @@ are using Okta development accounts.`,
 			logical.ReadOperation:   b.pathConfigRead,
 			logical.CreateOperation: b.pathConfigWrite,
 			logical.UpdateOperation: b.pathConfigWrite,
+			logical.DeleteOperation: b.pathConfigDelete,
 		},
 
 		ExistenceCheck: b.pathConfigExistenceCheck,
@@ -127,6 +128,12 @@ func (b *backend) pathConfigWrite(
 	}
 
 	return nil, nil
+}
+
+func (b *backend) pathConfigDelete(
+	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	err := req.Storage.Delete("config")
+	return nil, err
 }
 
 func (b *backend) pathConfigExistenceCheck(
