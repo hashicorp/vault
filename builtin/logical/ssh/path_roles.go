@@ -272,8 +272,9 @@ func pathRoles(b *backend) *framework.Path {
 				Description: `
 				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
 				When supplied, this value specifies a custom format for the key id of a signed certificate.
-				You must supply a format string containing "%s", which determines the placement of the display
-				name. For example, "custom-key-%s", would produce a "custom-key-<display_name>"
+				The following variables are availble for use: '{{token_display_name}}' - The display name of
+				the token used to make the request. '{{role_name}}' - The name of the role signing the request.
+				'{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
 				`,
 			},
 		},
@@ -451,12 +452,6 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
 		return nil, logical.ErrorResponse("Either 'allow_user_certificates' or 'allow_host_certificates' must be set to 'true'")
-	}
-
-	if role.KeyIDFormat != "" {
-		if !strings.Contains(role.KeyIDFormat, "%s") {
-			return nil, logical.ErrorResponse("key_id_format must include '%%s'")
-		}
 	}
 
 	defaultCriticalOptions := convertMapToStringValue(data.Get("default_critical_options").(map[string]interface{}))

@@ -3,7 +3,6 @@ package ssh
 import (
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -275,19 +274,20 @@ func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request
 		return reqId, nil
 	}
 
+	keyIdFormat := "vault-{{token_display_name}}-{{public_key_hash}}"
 	if role.KeyIDFormat != "" {
-		keyId := fmt.Sprintf(role.KeyIDFormat, req.DisplayName)
-		return keyId, nil
+		keyIdFormat = role.KeyIDFormat
+	} else {
+		if req.DisplayName == "" {
+			keyIdFormat = "vault-{{public_key_hash}}"
+		}
 	}
 
-	keyHash := sha256.Sum256(pubKey.Marshal())
-	keyId := hex.EncodeToString(keyHash[:])
-
-	if req.DisplayName != "" {
-		keyId = fmt.Sprintf("%s-%s", req.DisplayName, keyId)
-	}
-
-	keyId = fmt.Sprintf("vault-%s", keyId)
+	keyId := substQuery(keyIdFormat, map[string]string{
+		"token_display_name": req.DisplayName,
+		"role_name":          data.Get("role").(string),
+		"public_key_hash":    fmt.Sprintf("%x", sha256.Sum256(pubKey.Marshal())),
+	})
 
 	return keyId, nil
 }
