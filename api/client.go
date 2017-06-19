@@ -327,6 +327,13 @@ func (c *Client) ClearToken() {
 	c.token = ""
 }
 
+// Copy creates a copy of this client.
+func (c *Client) Copy() *Client {
+	// This should never fail if we already have a client
+	cp, _ := NewClient(c.config)
+	return cp
+}
+
 // NewRequest creates a new raw request object to query the Vault server
 // configured for this client. This is an advanced method and generally
 // doesn't need to be called externally.
