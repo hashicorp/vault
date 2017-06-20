@@ -7,9 +7,15 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
+// backendPluginServer is the RPC server that backendPluginClient talks to,
+// it methods conforming to requirements by net/rpc
 type backendPluginServer struct {
 	broker  *plugin.MuxBroker
 	backend logical.Backend
+
+	loggerClient  *rpc.Client
+	sysViewClient *rpc.Client
+	storageClient *rpc.Client
 }
 
 func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *HandleRequestReply) error {
@@ -75,6 +81,11 @@ func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArg
 
 func (b *backendPluginServer) Cleanup(_ interface{}, _ *struct{}) error {
 	b.backend.Cleanup()
+
+	// Close rpc clients
+	b.loggerClient.Close()
+	b.sysViewClient.Close()
+	b.storageClient.Close()
 	return nil
 }
 
@@ -98,7 +109,7 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 		return nil
 	}
 	rawStorageClient := rpc.NewClient(storageConn)
-	defer rawStorageClient.Close()
+	b.storageClient = rawStorageClient
 
 	storage := &StorageClient{client: rawStorageClient}
 
@@ -111,7 +122,7 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 		return nil
 	}
 	rawLoggerClient := rpc.NewClient(loggerConn)
-	defer rawLoggerClient.Close()
+	b.loggerClient = rawLoggerClient
 
 	logger := &LoggerClient{client: rawLoggerClient}
 
@@ -124,7 +135,7 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 		return nil
 	}
 	rawSysViewClient := rpc.NewClient(sysViewConn)
-	defer rawSysViewClient.Close()
+	b.sysViewClient = rawSysViewClient
 
 	sysView := &SystemViewClient{client: rawSysViewClient}
 

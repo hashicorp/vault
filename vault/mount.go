@@ -235,12 +235,9 @@ func (c *Core) mount(entry *MountEntry) error {
 	}
 
 	// Call initialize; this takes care of init tasks that must be run after
-	// the ignore paths are collected. Skip this for plugins, since the Factory
-	// func will call Configure() instead.
-	if entry.Type != "plugin" {
-		if err := backend.Initialize(); err != nil {
-			return err
-		}
+	// the ignore paths are collected.
+	if err := backend.Initialize(); err != nil {
+		return err
 	}
 
 	newTable := c.mounts.shallowClone()

@@ -55,9 +55,10 @@ type Backend interface {
 
 	// Configure is used to set up the backend based on the provided backend
 	// configuration. This is primarily used in the the context of backend
-	// plugins, where the RPC server has no context of the core's config,
-	// thus calling setup from the client to configure components such as the
-	// logger, storage, sys view, etc.
+	// plugins, where the RPC server has no context of the core's config.
+	// This is the equivalent of calling framework.Backend.Setup(conf), but
+	// from the RPC client to configure components such as the logger, storage,
+	// system view, etc.
 	Configure(*BackendConfig) error
 }
 

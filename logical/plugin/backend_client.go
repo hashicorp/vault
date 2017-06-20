@@ -8,6 +8,8 @@ import (
 	log "github.com/mgutz/logxi/v1"
 )
 
+// backendPluginClient implements logical.Backend and is the
+// go-plugin client.
 type backendPluginClient struct {
 	broker *plugin.MuxBroker
 	client *rpc.Client
@@ -16,40 +18,48 @@ type backendPluginClient struct {
 	logger log.Logger
 }
 
+// HandleRequestArgs is the args for HandleRequest method.
 type HandleRequestArgs struct {
 	StorageID uint32
 	Request   *logical.Request
 }
 
+// HandleRequestReply is the reply for HandleRequest method.
 type HandleRequestReply struct {
 	Response *logical.Response
 	Error    *plugin.BasicError
 }
 
+// SpecialPathsReply is the reply for SpecialPaths method.
 type SpecialPathsReply struct {
 	Paths *logical.Paths
 }
 
+// SystemReply is the reply for System method.
 type SystemReply struct {
 	SystemView logical.SystemView
 	Error      *plugin.BasicError
 }
 
+// HandleExistenceCheckArgs is the args for HandleExistenceCheck method.
 type HandleExistenceCheckArgs struct {
 	StorageID uint32
 	Request   *logical.Request
 }
 
+// BackendLoggerReply is the reply for Logger method.
 type BackendLoggerReply struct {
 	Logger log.Logger
 }
 
+// HandleExistenceCheckReply is the reply for HandleExistenceCheck method.
 type HandleExistenceCheckReply struct {
 	CheckFound bool
 	Exists     bool
 	Error      *plugin.BasicError
 }
 
+// ConfigureArgs is the args for Configure method.
 type ConfigureArgs struct {
 	StorageID uint32
 	LoggerID  uint32
@@ -57,6 +67,7 @@ type ConfigureArgs struct {
 	Config    map[string]string
 }
 
+// ConfigureReply is the reply for Configure method.
 type ConfigureReply struct {
 	Error *plugin.BasicError
 }
@@ -103,10 +114,14 @@ func (b *backendPluginClient) SpecialPaths() *logical.Paths {
 	return reply.Paths
 }
 
+// System returns vault's system view. The backend client stores the view during
+// Configure, so there is no need to shim the system just to get it back.
 func (b *backendPluginClient) System() logical.SystemView {
 	return b.system
 }
 
+// Logger returns vault's logger. The backend client stores the logger during
+// Configure, so there is no need to shim the logger just to get it back.
 func (b *backendPluginClient) Logger() log.Logger {
 	return b.logger
 }
@@ -145,10 +160,10 @@ func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, 
 
 func (b *backendPluginClient) Cleanup() {
 	b.client.Call("Plugin.Cleanup", new(interface{}), &struct{}{})
+	b.client.Close()
 }
 
 func (b *backendPluginClient) Initialize() error {
-	// This should no-op for plugins, since Configure() gets called instead of Initialize()
 	err := b.client.Call("Plugin.Initialize", new(interface{}), &struct{}{})
 	return err
 }

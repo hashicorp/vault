@@ -24,9 +24,6 @@ var plugins = map[string]BuiltinFactory{
 	"mssql-database-plugin":      mssql.New,
 	"cassandra-database-plugin":  cassandra.New,
 	"mongodb-database-plugin":    mongodb.New,
-
-	// Non-database plugin backends
-	// "totp-plugin": totp.New,
 }
 
 // Get returns the BuiltinFactory func for a particular backend plugin
