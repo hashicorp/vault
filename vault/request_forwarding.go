@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -352,11 +353,27 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	// meets the interface requirements.
 	w := forwarding.NewRPCResponseWriter()
 
-	s.handler.ServeHTTP(w, req)
+	resp := &forwarding.Response{}
+	var respSet bool
 
-	resp := &forwarding.Response{
-		StatusCode: uint32(w.StatusCode()),
-		Body:       w.Body().Bytes(),
+	runRequest := func() {
+		defer func() {
+			// Logic here comes mostly from the Go source code
+			if err := recover(); err != nil {
+				const size = 64 << 10
+				buf := make([]byte, size)
+				buf = buf[:runtime.Stack(buf, false)]
+				resp.StatusCode = 500
+				s.core.logger.Error("forwarding: panic serving request for %v: %v\n%s", req.URL.Path, err, buf)
+				respSet = true
+			}
+		}()
+		s.handler.ServeHTTP(w, req)
+	}
+	runRequest()
+	if !respSet {
+		resp.StatusCode = uint32(w.StatusCode())
+		resp.Body = w.Body().Bytes()
 	}
 
 	header := w.Header()

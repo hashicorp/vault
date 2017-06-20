@@ -389,16 +389,6 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 }
 
 func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err, ok := r.(error)
-			if ok {
-				retCert = nil
-				retErr = err
-			}
-		}
-	}()
-
 	serialNumber, err := certutil.GenerateSerialNumber()
 	if err != nil {
 		return nil, err
