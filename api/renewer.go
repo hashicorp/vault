@@ -6,16 +6,15 @@ import (
 	"time"
 )
 
-// RenewerInput is used as input to the renew function.
-type RenewerInput struct {
-	// Secret is the secret to renew
-	Secret *Secret
+var (
+	ErrRenewerMissingInput  = errors.New("missing input to renewer")
+	ErrRenewerMissingSecret = errors.New("missing secret to renew")
+	ErrRenewerNotRenewable  = errors.New("secret is not renewable")
+	ErrRenewerNoSecretData  = errors.New("returned empty secret data")
 
-	// Grace is a minimum renewal (in seconds) before returring so the upstream
-	// client can do a re-read. This can be used to prevent clients from waiting
-	// too long to read a new credential and incur downtime.
-	Grace time.Duration
-}
+	// DefaultRenewerGrace is the default grace period
+	DefaultRenewerGrace = 15 * time.Second
+)
 
 // Renewer is a process for renewing a secret.
 //
@@ -57,15 +56,16 @@ type Renewer struct {
 	stopCh  chan struct{}
 }
 
-var (
-	ErrRenewerMissingInput  = errors.New("missing input to renewer")
-	ErrRenewerMissingSecret = errors.New("missing secret to renew")
-	ErrRenewerNotRenewable  = errors.New("secret is not renewable")
-	ErrRenewerNoSecretData  = errors.New("returned empty secret data")
+// RenewerInput is used as input to the renew function.
+type RenewerInput struct {
+	// Secret is the secret to renew
+	Secret *Secret
 
-	// DefaultRenewerGrace is the default grace period
-	DefaultRenewerGrace = 15 * time.Second
-)
+	// Grace is a minimum renewal (in seconds) before returring so the upstream
+	// client can do a re-read. This can be used to prevent clients from waiting
+	// too long to read a new credential and incur downtime.
+	Grace time.Duration
+}
 
 // NewRenewer creates a new renewer from the given input.
 func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
