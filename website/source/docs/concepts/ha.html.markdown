@@ -74,8 +74,8 @@ there is an error performing the forwarding. As such, a redirect address is
 always required for all HA setups.
 
 Some HA data store drivers can autodetect the redirect address, but it is often
-necessary to configure it manually via setting a value in the `backend`
-configuration block (or `ha_backend` if using split data/HA mode). The key for
+necessary to configure it manually via setting a value in the `storage`
+configuration block (or `ha_storage` if using split data/HA mode). The key for
 this value is `redirect_addr` and the value can also be specified by the
 `VAULT_REDIRECT_ADDR` environment variable, which takes precedence.
 
@@ -129,7 +129,7 @@ it will start cluster listeners, and when it becomes standby it will stop them.
 
 Similar to the `redirect_addr`, `cluster_addr` is the value that each node, if
 active, should advertise to the standbys to use for server-to-server
-communications, and lives in the `backend` (or `ha_backend`) block. On each
+communications, and lives in the `storage` (or `ha_storage`) block. On each
 node, this should be set to a host name or IP address that a standby can use to
 reach one of that node's `cluster_address` values set in the `listener` blocks,
 including port. (Note that this will always be forced to `https` since only TLS
@@ -138,10 +138,10 @@ connections are used between servers.)
 This value can also be specified by the `VAULT_CLUSTER_ADDR` environment
 variable, which takes precedence.
 
-## Backend Support
+## Storage Support
 
-Currently there are several backends that support high availability mode,
-including Consul, ZooKeeper and etcd. These may change over time, and the
+Currently there are several storage backends that support high availability
+mode, including Consul, ZooKeeper and etcd. These may change over time, and the
 [configuration page](/docs/configuration/index.html) should be referenced.
 
 The Consul backend is the recommended HA backend, as it is used in production
