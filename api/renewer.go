@@ -32,8 +32,8 @@ var (
 // 			}
 //
 // 			// Renewal is now over
-// 		case <-TickCh():
-// 			log.Println("Successfully renewed")
+// 		case renewal := <-RenewCh():
+// 			log.Printf("Successfully renewed: %#v", renewal)
 // 		default:
 // 		}
 // 	}
@@ -46,11 +46,11 @@ var (
 type Renewer struct {
 	sync.Mutex
 
-	client *Client
-	secret *Secret
-	grace  time.Duration
-	doneCh chan error
-	tickCh chan struct{}
+	client  *Client
+	secret  *Secret
+	grace   time.Duration
+	doneCh  chan error
+	renewCh chan *RenewOutput
 
 	stopped bool
 	stopCh  chan struct{}
@@ -65,6 +65,18 @@ type RenewerInput struct {
 	// client can do a re-read. This can be used to prevent clients from waiting
 	// too long to read a new credential and incur downtime.
 	Grace time.Duration
+}
+
+// RenewOutput is the metadata returned to the client (if it's listening) to
+// renew messages.
+type RenewOutput struct {
+	// RenewedAt is the timestamp when the renewal took place (UTC).
+	RenewedAt time.Time
+
+	// Secret is the underlying renewal data. It's the same struct as all data
+	// that is returned from Vault, but since this is renewal data, it will not
+	// usually include the secret itself.
+	Secret *Secret
 }
 
 // NewRenewer creates a new renewer from the given input.
@@ -84,11 +96,11 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 	}
 
 	return &Renewer{
-		client: c,
-		secret: secret,
-		grace:  grace,
-		doneCh: make(chan error),
-		tickCh: make(chan struct{}, 5),
+		client:  c,
+		secret:  secret,
+		grace:   grace,
+		doneCh:  make(chan error),
+		renewCh: make(chan *RenewOutput, 5),
 
 		stopped: false,
 		stopCh:  make(chan struct{}),
@@ -101,10 +113,10 @@ func (r *Renewer) DoneCh() <-chan error {
 	return r.doneCh
 }
 
-// TickCh is a channel that receives a message when a successful renewal takes
-// place.
-func (r *Renewer) TickCh() <-chan struct{} {
-	return r.tickCh
+// RenewCh is a channel that receives a message when a successful renewal takes
+// place and includes metadata about the renewal.
+func (r *Renewer) RenewCh() <-chan *RenewOutput {
+	return r.renewCh
 }
 
 // Stop stops the renewer.
@@ -155,7 +167,7 @@ func (r *Renewer) renewAuth() error {
 
 		// Push a message that a renewal took place.
 		select {
-		case r.tickCh <- struct{}{}:
+		case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
 		default:
 		}
 
@@ -211,7 +223,7 @@ func (r *Renewer) renewLease() error {
 
 		// Push a message that a renewal took place.
 		select {
-		case r.tickCh <- struct{}{}:
+		case r.renewCh <- &RenewOutput{time.Now().UTC(), renewal}:
 		default:
 		}
 
