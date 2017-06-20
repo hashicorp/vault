@@ -148,7 +148,7 @@ func (r *Renewer) renewAuth() error {
 		}
 
 		// Renew the auth.
-		renewal, err := client.Auth().Token().RenewSelfAsToken(token, 0)
+		renewal, err := client.Auth().Token().RenewTokenAsSelf(token, 0)
 		if err != nil {
 			return err
 		}

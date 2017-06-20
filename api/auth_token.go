@@ -135,9 +135,9 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
-// RenewSelfAsToken behaves like renew-self, but authenticates using a provided
+// RenewTokenAsSelf behaves like renew-self, but authenticates using a provided
 // token instead of the token attached to the client.
-func (c *TokenAuth) RenewSelfAsToken(token string, increment int) (*Secret, error) {
+func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
 	r.ClientToken = token
 
