@@ -89,14 +89,14 @@ to specify where the configuration is.
   allowed to be loaded. Vault must have permission to read files in this
   directory to successfully load plugins.
 
-- `telemetry` <tt>([Telemetry][telemetry]: nil)</tt> – Specifies the telemetry
+- `telemetry` <tt>([Telemetry][telemetry]: <none>)</tt> – Specifies the telemetry
   reporting system.
 
-- `default_lease_ttl` `(string: "32d")` – Specifies the default lease duration
+- `default_lease_ttl` `(string: "768h")` – Specifies the default lease duration
   for tokens and secrets. This is specified using a label suffix like `"30s"` or
   `"1h"`. This value cannot be larger than `max_lease_ttl`.
 
-- `max_lease_ttl` `(string: "32d")` – Specifies the maximum possible lease
+- `max_lease_ttl` `(string: "768h")` – Specifies the maximum possible lease
   duration for tokens and secrets. This is specified using a label
   suffix like `"30s"` or `"1h"`.
 
