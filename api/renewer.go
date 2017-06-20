@@ -14,7 +14,7 @@ type RenewerInput struct {
 	// Grace is a minimum renewal (in seconds) before returring so the upstream
 	// client can do a re-read. This can be used to prevent clients from waiting
 	// too long to read a new credential and incur downtime.
-	Grace int
+	Grace time.Duration
 }
 
 // Renewer is a process for renewing a secret.
@@ -49,7 +49,7 @@ type Renewer struct {
 
 	client *Client
 	secret *Secret
-	grace  int
+	grace  time.Duration
 	doneCh chan error
 	tickCh chan struct{}
 
@@ -64,7 +64,7 @@ var (
 	ErrRenewerNoSecretData  = errors.New("returned empty secret data")
 
 	// DefaultRenewerGrace is the default grace period
-	DefaultRenewerGrace = 15
+	DefaultRenewerGrace = 15 * time.Second
 )
 
 // NewRenewer creates a new renewer from the given input.
@@ -171,7 +171,7 @@ func (r *Renewer) renewAuth() error {
 
 		// Grab the lease duration - note that we grab the auth lease duration, not
 		// the secret lease duration.
-		leaseDuration := renewal.Auth.LeaseDuration
+		leaseDuration := time.Duration(renewal.Auth.LeaseDuration) * time.Second
 
 		// If we are within grace, return now.
 		if leaseDuration <= r.grace {
@@ -226,7 +226,7 @@ func (r *Renewer) renewLease() error {
 		}
 
 		// Grab the lease duration
-		leaseDuration := renewal.LeaseDuration
+		leaseDuration := time.Duration(renewal.LeaseDuration) * time.Second
 
 		// If we are within grace, return now.
 		if leaseDuration <= r.grace {
