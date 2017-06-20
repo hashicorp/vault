@@ -4,6 +4,8 @@ import (
 	"net/rpc"
 	"time"
 
+	"fmt"
+
 	plugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/consts"
 	"github.com/hashicorp/vault/helper/pluginutil"
@@ -103,17 +105,7 @@ func (s SystemViewClient) ResponseWrapData(data map[string]interface{}, ttl time
 }
 
 func (s SystemViewClient) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
-	var reply LookupPluginReply
-
-	err := s.client.Call("Plugin.LookupPlugin", name, &reply)
-	if err != nil {
-		return nil, err
-	}
-	if reply.Error != nil {
-		return nil, reply.Error
-	}
-
-	return reply.PluginRunner, nil
+	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
 }
 
 func (s SystemViewClient) MlockEnabled() bool {
@@ -199,21 +191,6 @@ func (s SystemViewServer) ResponseWrapData(args *ResponseWrapDataArgs, reply *Re
 	return nil
 }
 
-func (s SystemViewServer) LookupPlugin(args string, reply *LookupPluginReply) error {
-	runner, err := s.impl.LookupPlugin(args)
-	if err != nil {
-		*reply = LookupPluginReply{
-			Error: plugin.NewBasicError(err),
-		}
-		return nil
-	}
-	*reply = LookupPluginReply{
-		PluginRunner: runner,
-	}
-
-	return nil
-}
-
 func (s SystemViewServer) MlockEnabled(_ interface{}, reply *MlockEnabledReply) error {
 	enabled := s.impl.MlockEnabled()
 	*reply = MlockEnabledReply{
@@ -261,11 +238,6 @@ type ResponseWrapDataArgs struct {
 type ResponseWrapDataReply struct {
 	ResponseWrapInfo *wrapping.ResponseWrapInfo
 	Error            *plugin.BasicError
-}
-
-type LookupPluginReply struct {
-	PluginRunner *pluginutil.PluginRunner
-	Error        *plugin.BasicError
 }
 
 type MlockEnabledReply struct {

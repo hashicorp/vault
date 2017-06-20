@@ -48,13 +48,6 @@ func (b *backendPluginServer) SpecialPaths(_ interface{}, reply *SpecialPathsRep
 	return nil
 }
 
-func (b *backendPluginServer) Logger(_ interface{}, reply *BackendLoggerReply) error {
-	*reply = BackendLoggerReply{
-		Logger: b.backend.Logger(),
-	}
-	return nil
-}
-
 func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArgs, reply *HandleExistenceCheckReply) error {
 	conn, err := b.broker.Dial(args.StorageID)
 	if err != nil {

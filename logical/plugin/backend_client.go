@@ -11,8 +11,9 @@ import (
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendPluginClient struct {
-	broker *plugin.MuxBroker
-	client *rpc.Client
+	broker       *plugin.MuxBroker
+	client       *rpc.Client
+	pluginClient *plugin.Client
 
 	system logical.SystemView
 	logger log.Logger
@@ -45,11 +46,6 @@ type SystemReply struct {
 type HandleExistenceCheckArgs struct {
 	StorageID uint32
 	Request   *logical.Request
-}
-
-// BackendLoggerReply is the reply for Logger method.
-type BackendLoggerReply struct {
-	Logger log.Logger
 }
 
 // HandleExistenceCheckReply is the reply for HandleExistenceCheck method.
@@ -160,7 +156,9 @@ func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, 
 
 func (b *backendPluginClient) Cleanup() {
 	b.client.Call("Plugin.Cleanup", new(interface{}), &struct{}{})
-	b.client.Close()
+	if b.pluginClient != nil {
+		b.pluginClient.Kill()
+	}
 }
 
 func (b *backendPluginClient) Initialize() error {

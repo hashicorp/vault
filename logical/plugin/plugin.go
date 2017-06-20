@@ -39,7 +39,7 @@ func NewBackend(pluginName string, sys pluginutil.LookRunnerUtil) (logical.Backe
 		}
 
 	} else {
-		// create a DatabasePluginClient instance
+		// create a backendPluginClient instance
 		backend, err = newPluginClient(sys, pluginRunner)
 		if err != nil {
 			return nil, err
@@ -70,6 +70,7 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	backendRPC := raw.(*backendPluginClient)
+	backendRPC.pluginClient = client
 
 	return backendRPC, nil
 }
