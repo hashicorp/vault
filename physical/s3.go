@@ -92,9 +92,9 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 		Region:   aws.String(region),
 	}))
 
-	_, err = s3conn.HeadBucket(&s3.HeadBucketInput{Bucket: &bucket})
+	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	if err != nil {
-		return nil, fmt.Errorf("unable to access bucket '%s': %v", bucket, err)
+		return nil, fmt.Errorf("unable to access bucket '%s' in region %s: %v", bucket, region, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
