@@ -14,6 +14,8 @@ IMPROVEMENTS:
 BUG FIXES:
 
  * api/health: Consider the response code from standby nodes [GH-2850]
+ * core: Relocated `sys/leases/renew` returns same payload as original 
+   `sys/leases` endpoint [GH-2891]
 
 ## 0.7.3 (June 7th, 2017)
 
