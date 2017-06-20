@@ -87,11 +87,11 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 		client: c,
 		secret: secret,
 		grace:  grace,
-		doneCh: make(chan error, 1),
+		doneCh: make(chan error),
 		tickCh: make(chan struct{}, 5),
 
 		stopped: false,
-		stopCh:  make(chan struct{}, 1),
+		stopCh:  make(chan struct{}),
 	}, nil
 }
 
