@@ -354,7 +354,6 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	w := forwarding.NewRPCResponseWriter()
 
 	resp := &forwarding.Response{}
-	var respSet bool
 
 	runRequest := func() {
 		defer func() {
@@ -363,18 +362,14 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 				const size = 64 << 10
 				buf := make([]byte, size)
 				buf = buf[:runtime.Stack(buf, false)]
-				resp.StatusCode = 500
-				s.core.logger.Error("forwarding: panic serving request for %v: %v\n%s", req.URL.Path, err, buf)
-				respSet = true
+				s.core.logger.Error("forwarding: panic serving request", "path", req.URL.Path, "error", err, "stacktrace", buf)
 			}
 		}()
 		s.handler.ServeHTTP(w, req)
 	}
 	runRequest()
-	if !respSet {
-		resp.StatusCode = uint32(w.StatusCode())
-		resp.Body = w.Body().Bytes()
-	}
+	resp.StatusCode = uint32(w.StatusCode())
+	resp.Body = w.Body().Bytes()
 
 	header := w.Header()
 	if header != nil {
