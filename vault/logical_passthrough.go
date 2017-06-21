@@ -14,26 +14,20 @@ import (
 // PassthroughBackendFactory returns a PassthroughBackend
 // with leases switched off
 func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, false, false)
+	return LeaseSwitchedPassthroughBackend(conf, false)
 }
 
 // PassthroughBackendWithLeasesFactory returns a PassthroughBackend
 // with leases switched on
 func LeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, true, false)
-}
-
-// Same as above but renewable
-func RenewableLeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, true, true)
+	return LeaseSwitchedPassthroughBackend(conf, true)
 }
 
 // LeaseSwitchedPassthroughBackendFactory returns a PassthroughBackend
 // with leases switched on or off
-func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases, renewable bool) (logical.Backend, error) {
+func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
 	var b PassthroughBackend
 	b.generateLeases = leases
-	b.renewableLeases = renewable
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
 
@@ -80,8 +74,7 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases, renewa
 // fancy.
 type PassthroughBackend struct {
 	*framework.Backend
-	generateLeases  bool
-	renewableLeases bool
+	generateLeases bool
 }
 
 func (b *PassthroughBackend) handleRevoke(
@@ -124,7 +117,7 @@ func (b *PassthroughBackend) handleRead(
 	if b.generateLeases {
 		// Generate the response
 		resp = b.Secret("generic").Response(rawData, nil)
-		resp.Secret.Renewable = b.renewableLeases
+		resp.Secret.Renewable = false
 	} else {
 		resp = &logical.Response{
 			Secret: &logical.Secret{},
@@ -145,7 +138,7 @@ func (b *PassthroughBackend) handleRead(
 		}
 
 		if b.generateLeases {
-			resp.Secret.Renewable = b.renewableLeases
+			resp.Secret.Renewable = true
 		}
 	}
 

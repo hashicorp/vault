@@ -245,7 +245,7 @@ func (c *ServerCommand) Run(args []string) int {
 	if dev {
 		coreConfig.DevToken = devRootTokenID
 		if devLeasedGeneric {
-			coreConfig.LogicalBackends["generic"] = vault.RenewableLeasedPassthroughBackendFactory
+			coreConfig.LogicalBackends["generic"] = vault.LeasedPassthroughBackendFactory
 		}
 	}
 
