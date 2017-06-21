@@ -331,6 +331,9 @@ type Core struct {
 	// The grpc forwarding client
 	rpcForwardingClient *forwardingClient
 
+	// CORS Information
+	corsConfig *CORSConfig
+
 	// replicationState keeps the current replication state cached for quick
 	// lookup
 	replicationState consts.ReplicationState
@@ -451,6 +454,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		enableMlock:                      !conf.DisableMlock,
 	}
 
+	// Load CORS config and provide core
+	c.corsConfig = &CORSConfig{core: c}
+
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped
 	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
 		c.physical = physical.NewCache(conf.Physical, conf.CacheSize, conf.Logger)
@@ -509,7 +515,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
-		return NewSystemBackend(c, config)
+		b := NewSystemBackend(c)
+		return b.Backend.Setup(config)
 	}
 	c.logicalBackends = logicalBackends
 
@@ -553,6 +560,11 @@ func (c *Core) Shutdown() error {
 
 	// Seal the Vault, causes a leader stepdown
 	return c.sealInternal()
+}
+
+// CORSConfig returns the current CORS configuration
+func (c *Core) CORSConfig() *CORSConfig {
+	return c.corsConfig
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -1289,6 +1301,9 @@ func (c *Core) postUnseal() (retErr error) {
 		return err
 	}
 	if err := c.setupPolicyStore(); err != nil {
+		return err
+	}
+	if err := c.loadCORSConfig(); err != nil {
 		return err
 	}
 	if err := c.loadCredentials(); err != nil {

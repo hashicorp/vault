@@ -6,6 +6,8 @@ package colorable
 import (
 	"io"
 	"os"
+
+	_ "github.com/mattn/go-isatty"
 )
 
 // NewColorable return new instance of Writer which handle escape sequence.

@@ -72,6 +72,9 @@ type Container struct {
 
 // Data - Return the contained data as an interface{}.
 func (g *Container) Data() interface{} {
+	if g == nil {
+		return nil
+	}
 	return g.object
 }
 
@@ -89,25 +92,28 @@ func (g *Container) Path(path string) *Container {
 func (g *Container) Search(hierarchy ...string) *Container {
 	var object interface{}
 
-	object = g.object
+	object = g.Data()
 	for target := 0; target < len(hierarchy); target++ {
 		if mmap, ok := object.(map[string]interface{}); ok {
-			object = mmap[hierarchy[target]]
+			object, ok = mmap[hierarchy[target]]
+			if !ok {
+				return nil
+			}
 		} else if marray, ok := object.([]interface{}); ok {
 			tmpArray := []interface{}{}
 			for _, val := range marray {
 				tmpGabs := &Container{val}
-				res := tmpGabs.Search(hierarchy[target:]...).Data()
+				res := tmpGabs.Search(hierarchy[target:]...)
 				if res != nil {
-					tmpArray = append(tmpArray, res)
+					tmpArray = append(tmpArray, res.Data())
 				}
 			}
 			if len(tmpArray) == 0 {
-				return &Container{nil}
+				return nil
 			}
 			return &Container{tmpArray}
 		} else {
-			return &Container{nil}
+			return nil
 		}
 	}
 	return &Container{object}
@@ -120,7 +126,7 @@ func (g *Container) S(hierarchy ...string) *Container {
 
 // Exists - Checks whether a path exists.
 func (g *Container) Exists(hierarchy ...string) bool {
-	return g.Search(hierarchy...).Data() != nil
+	return g.Search(hierarchy...) != nil
 }
 
 // ExistsP - Checks whether a dot notation path exists.
@@ -385,7 +391,7 @@ func (g *Container) ArrayCountP(path string) (int, error) {
 
 // Bytes - Converts the contained object back to a JSON []byte blob.
 func (g *Container) Bytes() []byte {
-	if g.object != nil {
+	if g.Data() != nil {
 		if bytes, err := json.Marshal(g.object); err == nil {
 			return bytes
 		}

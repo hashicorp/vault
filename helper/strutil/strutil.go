@@ -303,3 +303,11 @@ func GlobbedStringsMatch(item, val string) bool {
 
 	return val == item
 }
+
+// AppendIfMissing adds a string to a slice if the given string is not present
+func AppendIfMissing(slice []string, i string) []string {
+	if StrListContains(slice, i) {
+		return slice
+	}
+	return append(slice, i)
+}

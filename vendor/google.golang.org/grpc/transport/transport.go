@@ -1,40 +1,23 @@
 /*
  *
- * Copyright 2014, Google Inc.
- * All rights reserved.
+ * Copyright 2014 gRPC authors.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  */
 
-/*
-Package transport defines and implements message oriented communication channel
-to complete various transactions (e.g., an RPC).
-*/
+// Package transport defines and implements message oriented communication
+// channel to complete various transactions (e.g., an RPC).
 package transport // import "google.golang.org/grpc/transport"
 
 import (
@@ -252,14 +235,22 @@ func (s *Stream) GoAway() <-chan struct{} {
 // is available. It blocks until i) the metadata is ready or ii) there is no
 // header metadata or iii) the stream is canceled/expired.
 func (s *Stream) Header() (metadata.MD, error) {
+	var err error
 	select {
 	case <-s.ctx.Done():
-		return nil, ContextErr(s.ctx.Err())
+		err = ContextErr(s.ctx.Err())
 	case <-s.goAway:
-		return nil, ErrStreamDrain
+		err = ErrStreamDrain
 	case <-s.headerChan:
 		return s.header.Copy(), nil
 	}
+	// Even if the stream is closed, header is returned if available.
+	select {
+	case <-s.headerChan:
+		return s.header.Copy(), nil
+	default:
+	}
+	return nil, err
 }
 
 // Trailer returns the cached trailer metedata. Note that if it is not called
@@ -534,7 +525,7 @@ type ClientTransport interface {
 	// once the transport is initiated.
 	Error() <-chan struct{}
 
-	// GoAway returns a channel that is closed when ClientTranspor
+	// GoAway returns a channel that is closed when ClientTransport
 	// receives the draining signal from the server (e.g., GOAWAY frame in
 	// HTTP/2).
 	GoAway() <-chan struct{}

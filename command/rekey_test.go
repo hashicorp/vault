@@ -199,7 +199,8 @@ func TestRekey_init_pgp(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	sysBackend, err := vault.NewSystemBackend(core, bc)
+	sysBE := vault.NewSystemBackend(core)
+	sysBackend, err := sysBE.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}

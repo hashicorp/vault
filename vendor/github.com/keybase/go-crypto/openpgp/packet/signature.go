@@ -44,6 +44,13 @@ type RevocationKey struct {
 	Fingerprint   []byte
 }
 
+// KeyFlagBits holds boolean whether any usage flags were provided in
+// the signature and BitField with KeyFlag* flags.
+type KeyFlagBits struct {
+	Valid    bool
+	BitField byte
+}
+
 // Signature represents a signature. See RFC 4880, section 5.2.
 type Signature struct {
 	SigType    SignatureType
@@ -798,20 +805,7 @@ func (sig *Signature) buildSubpackets() (subpackets []outputSubpacket) {
 	// Key flags may only appear in self-signatures or certification signatures.
 
 	if sig.FlagsValid {
-		var flags byte
-		if sig.FlagCertify {
-			flags |= KeyFlagCertify
-		}
-		if sig.FlagSign {
-			flags |= KeyFlagSign
-		}
-		if sig.FlagEncryptCommunications {
-			flags |= KeyFlagEncryptCommunications
-		}
-		if sig.FlagEncryptStorage {
-			flags |= KeyFlagEncryptStorage
-		}
-		subpackets = append(subpackets, outputSubpacket{true, keyFlagsSubpacket, false, []byte{flags}})
+		subpackets = append(subpackets, outputSubpacket{true, keyFlagsSubpacket, false, []byte{sig.GetKeyFlags().BitField}})
 	}
 
 	// The following subpackets may only appear in self-signatures
@@ -839,4 +833,48 @@ func (sig *Signature) buildSubpackets() (subpackets []outputSubpacket) {
 	}
 
 	return
+}
+
+func (sig *Signature) GetKeyFlags() (ret KeyFlagBits) {
+	if !sig.FlagsValid {
+		return ret
+	}
+
+	ret.Valid = true
+	if sig.FlagCertify {
+		ret.BitField |= KeyFlagCertify
+	}
+	if sig.FlagSign {
+		ret.BitField |= KeyFlagSign
+	}
+	if sig.FlagEncryptCommunications {
+		ret.BitField |= KeyFlagEncryptCommunications
+	}
+	if sig.FlagEncryptStorage {
+		ret.BitField |= KeyFlagEncryptStorage
+	}
+	return ret
+}
+
+func (f *KeyFlagBits) HasFlagCertify() bool {
+	return f.BitField&KeyFlagCertify != 0
+}
+
+func (f *KeyFlagBits) HasFlagSign() bool {
+	return f.BitField&KeyFlagSign != 0
+}
+
+func (f *KeyFlagBits) HasFlagEncryptCommunications() bool {
+	return f.BitField&KeyFlagEncryptCommunications != 0
+}
+
+func (f *KeyFlagBits) HasFlagEncryptStorage() bool {
+	return f.BitField&KeyFlagEncryptStorage != 0
+}
+
+func (f *KeyFlagBits) Merge(other KeyFlagBits) {
+	if other.Valid {
+		f.Valid = true
+		f.BitField |= other.BitField
+	}
 }

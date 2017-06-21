@@ -99,6 +99,19 @@ func TestCassandra_Initialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	// test a string protocol
+	connectionDetails = map[string]interface{}{
+		"hosts":            connURL,
+		"username":         "cassandra",
+		"password":         "cassandra",
+		"protocol_version": "4",
+	}
+
+	err = db.Initialize(connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 }
 
 func TestCassandra_CreateUser(t *testing.T) {

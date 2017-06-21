@@ -25,6 +25,7 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
+	"github.com/armon/go-metrics/datadog"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
@@ -890,6 +891,21 @@ func (c *ServerCommand) setupTelemetry(config *server.Config) error {
 			return err
 		}
 		sink.Start()
+		fanout = append(fanout, sink)
+	}
+
+	if telConfig.DogStatsDAddr != "" {
+		var tags []string
+
+		if telConfig.DogStatsDTags != nil {
+			tags = telConfig.DogStatsDTags
+		}
+
+		sink, err := datadog.NewDogStatsdSink(telConfig.DogStatsDAddr, metricsConf.HostName)
+		if err != nil {
+			return fmt.Errorf("failed to start DogStatsD sink. Got: %s", err)
+		}
+		sink.SetTags(tags)
 		fanout = append(fanout, sink)
 	}
 

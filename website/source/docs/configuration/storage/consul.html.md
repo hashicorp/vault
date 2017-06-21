@@ -88,7 +88,7 @@ at Consul's service discovery layer.
 
 - `token` `(string: "")` – Specifies the [Consul ACL token][consul-acl] with
   permission to read and write from the `path` in Consul's key-value store.
-  This is **not** a Vault token.
+  This is **not** a Vault token. See the ACL section below for help.
 
 The following settings apply when communicating with Consul via an encrypted
 connection. You can read more about encrypting Consul connections on the
@@ -132,6 +132,43 @@ discussed in more detail in the [HA concepts page](/docs/concepts/ha.html).
 - `redirect_addr` `(string: <required>)` – Specifies the address (full URL) to
   advertise to other Vault servers in the cluster for client redirection. This
   can also be provided via the environment variable `VAULT_REDIRECT_ADDR`.
+
+## ACLs
+
+If using ACLs in Consul, you'll need appropriate permissions. For Consul 0.8,
+the following will work for most use-cases, assuming that your service name is
+`vault` and the prefix being used is `vault/`:
+
+```json
+{
+  "key": {
+    "vault/": {
+      "policy": "write"
+    }
+  },
+  "node": {
+    "": {
+      "policy": "write"
+    }
+  },
+  "service": {
+    "vault": {
+      "policy": "write"
+    }
+  },
+  "agent": {
+    "": {
+      "policy": "write"
+    }
+
+  },
+  "session": {
+    "": {
+      "policy": "write"
+    }
+  }
+}
+```
 
 ## `consul` Examples
 

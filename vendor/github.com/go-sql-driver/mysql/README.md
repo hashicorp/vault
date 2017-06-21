@@ -19,6 +19,7 @@ A MySQL-Driver for Go's [database/sql](https://golang.org/pkg/database/sql/) pac
     * [LOAD DATA LOCAL INFILE support](#load-data-local-infile-support)
     * [time.Time support](#timetime-support)
     * [Unicode support](#unicode-support)
+    * [context.Context Support](#contextcontext-support)
   * [Testing / Development](#testing--development)
   * [License](#license)
 
@@ -38,7 +39,7 @@ A MySQL-Driver for Go's [database/sql](https://golang.org/pkg/database/sql/) pac
   * Optional placeholder interpolation
 
 ## Requirements
-  * Go 1.2 or higher
+  * Go 1.5 or higher
   * MySQL (4.1+), MariaDB, Percona Server, Google CloudSQL or Sphinx (2.2.3+)
 
 ---------------------------------------
@@ -278,7 +279,7 @@ Default:        false
 
 `rejectreadOnly=true` causes the driver to reject read-only connections. This
 is for a possible race condition during an automatic failover, where the mysql
-client gets connected to a read-only replica after the failover. 
+client gets connected to a read-only replica after the failover.
 
 Note that this should be a fairly rare case, as an automatic failover normally
 happens when the primary is down, and the race condition shouldn't happen
@@ -443,6 +444,9 @@ Version 1.0 of the driver recommended adding `&charset=utf8` (alias for `SET NAM
 
 See http://dev.mysql.com/doc/refman/5.7/en/charset-unicode.html for more details on MySQL's Unicode support.
 
+## `context.Context` Support
+Go 1.8 added `database/sql` support for `context.Context`. This driver supports query timeouts and cancellation via contexts.
+See [context support in the database/sql package](https://golang.org/doc/go1.8#database_sql) for more details.
 
 ## Testing / Development
 To run the driver tests you may need to adjust the configuration. See the [Testing Wiki-Page](https://github.com/go-sql-driver/mysql/wiki/Testing "Testing") for details.
