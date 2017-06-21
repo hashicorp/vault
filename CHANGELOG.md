@@ -13,7 +13,8 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
- * api/health: Consider the response code from standby nodes [GH-2850]
+ * api/health: Don't treat standby `429` codes as an error [GH-2850]
+ * api/leases: Fix lease lookup returning lease properties at the top level
  * core: Relocated `sys/leases/renew` returns same payload as original 
    `sys/leases` endpoint [GH-2891]
 
