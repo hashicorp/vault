@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/cockroachdb/cockroach-go/crdb"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/strutil"
 	log "github.com/mgutz/logxi/v1"
 
 	// CockroachDB uses the Postgres SQL driver
@@ -23,6 +26,7 @@ type CockroachDBBackend struct {
 	rawStatements map[string]string
 	statements    map[string]*sql.Stmt
 	logger        log.Logger
+	permitPool    *PermitPool
 }
 
 // newCockroachDBBackend constructs a CockroachDB backend using the given
@@ -37,6 +41,19 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 	dbTable, ok := conf["table"]
 	if !ok {
 		dbTable = "vault_kv_store"
+	}
+
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	var err error
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("mysql: max_parallel set", "max_parallel", maxParInt)
+		}
 	}
 
 	// Create CockroachDB handle for the database.
@@ -66,6 +83,7 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 		},
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
+		permitPool: NewPermitPool(maxParInt),
 	}
 
 	// Prepare all the statements required
@@ -91,6 +109,9 @@ func (c *CockroachDBBackend) prepare(name, query string) error {
 func (c *CockroachDBBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "put"}, time.Now())
 
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
+
 	_, err := c.statements["put"].Exec(entry.Key, entry.Value)
 	if err != nil {
 		return err
@@ -101,6 +122,9 @@ func (c *CockroachDBBackend) Put(entry *Entry) error {
 // Get is used to fetch and entry.
 func (c *CockroachDBBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "get"}, time.Now())
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
 
 	var result []byte
 	err := c.statements["get"].QueryRow(key).Scan(&result)
@@ -122,6 +146,9 @@ func (c *CockroachDBBackend) Get(key string) (*Entry, error) {
 func (c *CockroachDBBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "delete"}, time.Now())
 
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
+
 	_, err := c.statements["delete"].Exec(key)
 	if err != nil {
 		return err
@@ -133,6 +160,9 @@ func (c *CockroachDBBackend) Delete(key string) error {
 // prefix, up to the next prefix.
 func (c *CockroachDBBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "list"}, time.Now())
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
 
 	likePrefix := prefix + "%"
 	rows, err := c.statements["list"].Query(likePrefix)
@@ -155,7 +185,7 @@ func (c *CockroachDBBackend) List(prefix string) ([]string, error) {
 			keys = append(keys, key)
 		} else if i != -1 {
 			// Add truncated 'folder' paths
-			keys = appendIfMissing(keys, string(key[:i+1]))
+			keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 		}
 	}
 
@@ -169,6 +199,9 @@ func (c *CockroachDBBackend) Transaction(txns []TxnEntry) error {
 	if len(txns) == 0 {
 		return nil
 	}
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
 
 	return crdb.ExecuteTx(c.client, func(tx *sql.Tx) error {
 		return c.transaction(tx, txns)

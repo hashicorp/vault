@@ -31,7 +31,7 @@ func prepareCockroachDBTestContainer(t *testing.T) (cleanup func(), retURL, tabl
 
 	dockerOptions := &dockertest.RunOptions{
 		Repository: "cockroachdb/cockroach",
-		Tag:        "latest",
+		Tag:        "release-1.0",
 		Cmd:        []string{"start", "--insecure"},
 	}
 	resource, err := pool.RunWithOptions(dockerOptions)
