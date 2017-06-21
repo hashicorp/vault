@@ -433,10 +433,10 @@
 			"revisionTime": "2017-05-25T20:16:49Z"
 		},
 		{
-			"checksumSHA1": "yQv3AchZYDl2gdQpHPT+NWc1kh0=",
+			"checksumSHA1": "3sQ0WnR+0+5mmFv1J8y84ONOX8M=",
 			"path": "github.com/cockroachdb/cockroach-go/crdb",
-			"revision": "c8f63e30437f4b80673b631763130d0fef87dd76",
-			"revisionTime": "2017-05-08T22:31:14Z"
+			"revision": "41e9ceadabbc9fdff3017bc6b3d320ae74bd0129",
+			"revisionTime": "2017-06-14T20:07:24Z"
 		},
 		{
 			"checksumSHA1": "7BC2/27NId9xaPDB5w3nWN2mn9A=",
