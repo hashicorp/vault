@@ -3,6 +3,8 @@ package plugin
 import (
 	"fmt"
 
+	"sync"
+
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
@@ -11,6 +13,23 @@ import (
 // PluginMap should be used by clients for map of plugins
 var PluginMap = map[string]plugin.Plugin{
 	"backend": &BackendPlugin{},
+}
+
+// BackendPluginClient is a wrapper around backendPluginClient
+// that also contains its plugin.Client instance. It's primarily
+// used to cleanly kill the client on Cleanup()
+type BackendPluginClient struct {
+	client *plugin.Client
+	sync.Mutex
+
+	*backendPluginClient
+}
+
+// Cleanup calls the RPC client's Cleanup() func and also calls
+// the go-plugin's client Kill() func
+func (b *BackendPluginClient) Cleanup() {
+	b.backendPluginClient.Cleanup()
+	b.client.Kill()
 }
 
 // NewBackend will return an instance of an RPC-based client implementation of the backend for
@@ -70,7 +89,9 @@ func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginR
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
 	backendRPC := raw.(*backendPluginClient)
-	backendRPC.pluginClient = client
 
-	return backendRPC, nil
+	return &BackendPluginClient{
+		client:              client,
+		backendPluginClient: backendRPC,
+	}, nil
 }

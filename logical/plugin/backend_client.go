@@ -156,9 +156,6 @@ func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, 
 
 func (b *backendPluginClient) Cleanup() {
 	b.client.Call("Plugin.Cleanup", new(interface{}), &struct{}{})
-	if b.pluginClient != nil {
-		b.pluginClient.Kill()
-	}
 }
 
 func (b *backendPluginClient) Initialize() error {
