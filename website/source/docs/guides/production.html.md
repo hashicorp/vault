@@ -19,15 +19,17 @@ The recommendations are based on the [security model](/docs/internals/security.h
 
 * **Disable SSH / Remote Desktop**. When running a Vault as a single tenant application, there should be no reason users needs access to the machine. Users and Applications should interact with Vault entirely over the network. Logs and telemetry should be shipped out for debugging.
 
-* **Disable Swap**. Vault encrypts data in transit and at rest, however it must still have sensitive data in memory to function. Risk of exposure should be minimized by disabling swap to prevent the operating system from paging sensitive data to disk. Vault attempts to "memory lock" to physical memory automatically, but disabling swap adds another layer of defense.
+* **Disable Swap**. Vault encrypts data in transit and at rest, however it must still have sensitive data in memory to function. Risk of exposure should be minimized by disabling swap to prevent the operating system from paging sensitive data to disk. Vault attempts to ["memory lock" to physical memory automatically](/docs/configuration/index.html#disable_mlock), but disabling swap adds another layer of defense.
 
-* **Don't run as root**. Vault is designed to run as an unpriviledged user, and there is no reason to run Vault with root or Administrator priviledges. Running Vault as a regular user reduces its priviledge. Configuration files for Vault should have permissions set ot restrict access to only the Vault user.
+* **Don't run as root**. Vault is designed to run as an unprivileged user, and there is no reason to run Vault with root or Administrator privileges. Running Vault as a regular user reduces its privilege. Configuration files for Vault should have permissions set to restrict access to only the Vault user.
 
-* **Immutable Upgrades**. Vault is stateless and relies on an external storage backend for persistance. Decoupling the storage allows the servers running Vault to be managed immutably. When upgrading to new versions, new servers should be started with the appropriate version and the old servers destroyed. This reduces the need for remote access and upgrade orchestration which may introduce security gaps.
+* **Immutable Upgrades**. Vault relies on an external storage backend for persistance, and this decoupling allows the servers running Vault to be managed immutably. When upgrading to new versions, new servers should be started with the appropriate version and the old servers destroyed. This reduces the need for remote access and upgrade orchestration which may introduce security gaps.
 
-* **Avoid root tokens**. Vault provides a root token when it is first initialized. This token should be used to setup the system initially, particularly setting up authentication backends so that users may authenticate. Once setup, the root token should be revoked to eliminate the risk of exposure.
+* **Avoid root tokens**. Vault provides a root token when it is first initialized. This token should be used to setup the system initially, particularly setting up authentication backends so that users may authenticate. Once setup, the root token should be revoked to eliminate the risk of exposure. Root tokens can be [generated when needed](/docs/guides/generate-root.html), and should be revoked as soon as possible.
 
-* **Enable Auditing**. Vault supports several auditing backends. Enabling auditing provides a history of all operations performed by Vault and provides a forensics trail in the case of misuse or compromise.
+* **Enable Auditing**. Vault supports several auditing backends. Enabling auditing provides a history of all operations performed by Vault and provides a forensics trail in the case of misuse or compromise. Audit logs [securely hash](/docs/audit/index.html) any sensitive data, but access should still be restricted to prevent any unintended disclosures.
 
 * **Upgrade Frequently**. Vault is actively developed, and updating frequently is important to incorporate security fixes and any changes in default settings such as key lengths or cipher suites.
+
+* **Configure SELinux / AppArmor**. Using additional mechanisms like SELinux and AppArmor can help provide additional layers of security when using Vault. While Vault can run on many operating systems, we recommend Linux due to the various security primitives mentioned here.
 
