@@ -1,0 +1,33 @@
+---
+layout: "docs"
+page_title: "Production Hardening"
+sidebar_current: "docs-guides-prod"
+description: |-
+  Production hardening of a Vault setup.
+---
+
+# Production Hardening
+
+This guide provides guidance on best practices for a production hardened deployment of Vault.
+The recommendations are based on the [security model](/docs/internals/security.html) and focus on defense in depth.
+
+* **End-to-End TLS**. Vault should always be used with TLS in production. If intermediate load balancers or reverse proxies are used to front Vault, they should _not_ terminate TLS. This way traffic is always encrypted in transit to Vault and minimizes risks introduced by intermediate layers.
+
+* **Single Tenancy**. Vault should be run as a single tenant application on a machine. This reduces the risk that another machine running on the same machine is compromised and can interact with Vault. Similarly, running on bare metal should be preferred to a VM, and a VM preferred to a container. This reduces the surface area introduced by additional layers of abstraction and other tenants of the hardware.
+
+* **Firewall traffic**. Vault listens on well known ports, so a local firewall should be used to restrict all incoming and outgoing traffic to Vault and essential system services like NTP.
+
+* **Disable SSH / Remote Desktop**. When running a Vault as a single tenant application, there should be no reason users needs access to the machine. Users and Applications should interact with Vault entirely over the network. Logs and telemetry should be shipped out for debugging.
+
+* **Disable Swap**. Vault encrypts data in transit and at rest, however it must still have sensitive data in memory to function. Risk of exposure should be minimized by disabling swap to prevent the operating system from paging sensitive data to disk. Vault attempts to "memory lock" to physical memory automatically, but disabling swap adds another layer of defense.
+
+* **Don't run as root**. Vault is designed to run as an unpriviledged user, and there is no reason to run Vault with root or Administrator priviledges. Running Vault as a regular user reduces its priviledge. Configuration files for Vault should have permissions set ot restrict access to only the Vault user.
+
+* **Immutable Upgrades**. Vault is stateless and relies on an external storage backend for persistance. Decoupling the storage allows the servers running Vault to be managed immutably. When upgrading to new versions, new servers should be started with the appropriate version and the old servers destroyed. This reduces the need for remote access and upgrade orchestration which may introduce security gaps.
+
+* **Avoid root tokens**. Vault provides a root token when it is first initialized. This token should be used to setup the system initially, particularly setting up authentication backends so that users may authenticate. Once setup, the root token should be revoked to eliminate the risk of exposure.
+
+* **Enable Auditing**. Vault supports several auditing backends. Enabling auditing provides a history of all operations performed by Vault and provides a forensics trail in the case of misuse or compromise.
+
+* **Upgrade Frequently**. Vault is actively developed, and updating frequently is important to incorporate security fixes and any changes in default settings such as key lengths or cipher suites.
+
