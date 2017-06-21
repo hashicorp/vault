@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 
 	"github.com/armon/go-metrics"
 	mysql "github.com/go-sql-driver/mysql"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 // Unreserved tls key
@@ -28,11 +31,14 @@ type MySQLBackend struct {
 	client     *sql.DB
 	statements map[string]*sql.Stmt
 	logger     log.Logger
+	permitPool *PermitPool
 }
 
 // newMySQLBackend constructs a MySQL backend using the given API client and
 // server address and credential for accessing mysql database.
 func newMySQLBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+	var err error
+
 	// Get the MySQL credentials to perform read/write operations.
 	username, ok := conf["username"]
 	if !ok || username == "" {
@@ -59,6 +65,18 @@ func newMySQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		table = "vault"
 	}
 	dbTable := database + "." + table
+
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("mysql: max_parallel set", "max_parallel", maxParInt)
+		}
+	}
 
 	dsnParams := url.Values{}
 	tlsCaFile, ok := conf["tls_ca_file"]
@@ -95,6 +113,7 @@ func newMySQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
+		permitPool: NewPermitPool(maxParInt),
 	}
 
 	// Prepare all the statements required
@@ -110,6 +129,7 @@ func newMySQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 			return nil, err
 		}
 	}
+
 	return m, nil
 }
 
@@ -127,6 +147,9 @@ func (m *MySQLBackend) prepare(name, query string) error {
 func (m *MySQLBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"mysql", "put"}, time.Now())
 
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
+
 	_, err := m.statements["put"].Exec(entry.Key, entry.Value)
 	if err != nil {
 		return err
@@ -137,6 +160,9 @@ func (m *MySQLBackend) Put(entry *Entry) error {
 // Get is used to fetch and entry.
 func (m *MySQLBackend) Get(key string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"mysql", "get"}, time.Now())
+
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
 
 	var result []byte
 	err := m.statements["get"].QueryRow(key).Scan(&result)
@@ -158,6 +184,9 @@ func (m *MySQLBackend) Get(key string) (*Entry, error) {
 func (m *MySQLBackend) Delete(key string) error {
 	defer metrics.MeasureSince([]string{"mysql", "delete"}, time.Now())
 
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
+
 	_, err := m.statements["delete"].Exec(key)
 	if err != nil {
 		return err
@@ -169,6 +198,9 @@ func (m *MySQLBackend) Delete(key string) error {
 // prefix, up to the next prefix.
 func (m *MySQLBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"mysql", "list"}, time.Now())
+
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
 
 	// Add the % wildcard to the prefix to do the prefix search
 	likePrefix := prefix + "%"
@@ -191,7 +223,7 @@ func (m *MySQLBackend) List(prefix string) ([]string, error) {
 			keys = append(keys, key)
 		} else if i != -1 {
 			// Add truncated 'folder' paths
-			keys = appendIfMissing(keys, string(key[:i+1]))
+			keys = strutil.AppendIfMissing(keys, string(key[:i+1]))
 		}
 	}
 

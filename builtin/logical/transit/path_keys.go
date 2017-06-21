@@ -2,8 +2,12 @@ package transit
 
 import (
 	"crypto/elliptic"
+	"encoding/base64"
 	"fmt"
 	"strconv"
+	"time"
+
+	"golang.org/x/crypto/ed25519"
 
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
@@ -36,8 +40,8 @@ func (b *backend) pathKeys() *framework.Path {
 				Type:    framework.TypeString,
 				Default: "aes256-gcm96",
 				Description: `The type of key to create. Currently,
-"aes256-gcm96" (symmetric) and "ecdsa-p256" (asymmetric) are
-supported. Defaults to "aes256-gcm96".`,
+"aes256-gcm96" (symmetric) and "ecdsa-p256" (asymmetric), and
+'ed25519' (asymmetric) are supported. Defaults to "aes256-gcm96".`,
 			},
 
 			"derived": &framework.FieldSchema{
@@ -68,6 +72,14 @@ impact the ciphertext's security.`,
 				Description: `Enables keys to be exportable.
 This allows for all the valid keys
 in the key ring to be exported.`,
+			},
+
+			"context": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation.
+When reading a key with key derivation enabled,
+if the key type supports public keys, this will
+return the public key for the given context.`,
 			},
 		},
 
@@ -116,6 +128,8 @@ func (b *backend) pathPolicyWrite(
 		polReq.KeyType = keysutil.KeyType_AES256_GCM96
 	case "ecdsa-p256":
 		polReq.KeyType = keysutil.KeyType_ECDSA_P256
+	case "ed25519":
+		polReq.KeyType = keysutil.KeyType_ED25519
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -137,6 +151,13 @@ func (b *backend) pathPolicyWrite(
 	}
 
 	return nil, nil
+}
+
+// Built-in helper type for returning asymmetric keys
+type asymKey struct {
+	Name         string    `json:"name"`
+	PublicKey    string    `json:"public_key"`
+	CreationTime time.Time `json:"creation_time"`
 }
 
 func (b *backend) pathPolicyRead(
@@ -162,6 +183,7 @@ func (b *backend) pathPolicyRead(
 			"derived":                p.Derived,
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
+			"min_encryption_version": p.MinEncryptionVersion,
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
 			"supports_encryption":    p.Type.EncryptionSupported(),
@@ -185,25 +207,54 @@ func (b *backend) pathPolicyRead(
 		}
 	}
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
 	switch p.Type {
 	case keysutil.KeyType_AES256_GCM96:
 		retKeys := map[string]int64{}
 		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = v.CreationTime
+			retKeys[strconv.Itoa(k)] = v.DeprecatedCreationTime
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256:
-		type ecdsaKey struct {
-			Name      string `json:"name"`
-			PublicKey string `json:"public_key"`
-		}
-		retKeys := map[string]ecdsaKey{}
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519:
+		retKeys := map[string]asymKey{}
 		for k, v := range p.Keys {
-			retKeys[strconv.Itoa(k)] = ecdsaKey{
-				Name:      elliptic.P256().Params().Name,
-				PublicKey: v.FormattedPublicKey,
+			key := asymKey{
+				PublicKey:    v.FormattedPublicKey,
+				CreationTime: v.CreationTime,
 			}
+			if key.CreationTime.IsZero() {
+				key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
+			}
+
+			switch p.Type {
+			case keysutil.KeyType_ECDSA_P256:
+				key.Name = elliptic.P256().Params().Name
+			case keysutil.KeyType_ED25519:
+				if p.Derived {
+					if len(context) == 0 {
+						key.PublicKey = ""
+					} else {
+						derived, err := p.DeriveKey(context, k)
+						if err != nil {
+							return nil, fmt.Errorf("failed to derive key to return public component")
+						}
+						pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
+						key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
+					}
+				}
+				key.Name = "ed25519"
+			}
+
+			retKeys[strconv.Itoa(k)] = key
 		}
 		resp.Data["keys"] = retKeys
 	}

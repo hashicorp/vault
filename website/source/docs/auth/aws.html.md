@@ -507,7 +507,7 @@ $ vault write auth/aws/config/client secret_key=vCtSM8ZUEQ3mOFVlYPBQkf2sO6F/W7a5
 #### Configure the policies on the role.
 
 ```
-$ vault write auth/aws/role/dev-role bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
+$ vault write auth/aws/role/dev-role auth_type=ec2 bound_ami_id=ami-fce3c696 policies=prod,dev max_ttl=500h
 
 $ vault write auth/aws/role/dev-role-iam auth_type=iam \
               bound_iam_principal_arn=arn:aws:iam::123456789012:role/MyRole policies=prod,dev max_ttl=500h
@@ -516,7 +516,7 @@ $ vault write auth/aws/role/dev-role-iam auth_type=iam \
 #### Configure a required X-Vault-AWS-IAM-Server-ID Header (recommended)
 
 ```
-$ vault write auth/aws/client/config iam_auth_header_vaule=vault.example.xom
+$ vault write auth/aws/config/client iam_server_id_header_value=vault.example.com
 ```
 
 
@@ -1413,7 +1413,9 @@ The response will be in JSON. For example:
         When set, instructs Vault to turn on inferencing. The only current valid
         value is "ec2_instance" instructing Vault to infer that the role comes
         from an EC2 instance in an IAM instance profile. This only applies to
-        the iam auth method.
+        the iam auth method. If you set this on an existing role where it had
+        not previously been set, tokens that had been created prior will not be
+        renewable; clients will need to get a new token.
       </li>
     </ul>
     <ul>
@@ -1425,6 +1427,48 @@ The response will be in JSON. For example:
         activated. This only applies to the iam auth method.
       </li>
     </ul>
+    <ul>
+    <li>
+        <span class="param">resolve_aws_unique_ids</span>
+        <span class="param-flags">optional</span>
+        When set, resolves the `bound_iam_principal_arn` to the [AWS Unique
+        ID](http://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-unique-ids).
+        This requires Vault to be able to call `iam:GetUser` or `iam:GetRole` on
+        the `bound_iam_principal_arn` that is being bound. Resolving to
+        internal AWS IDs more closely mimics the behavior of AWS services in
+        that if an IAM user or role is deleted and a new one is recreated with
+        the same name, those new users or roles won't get access to roles in
+        Vault that were permissioned to the prior principals of the same name.
+        The default value for new roles is true, while the default value for
+        roles that existed prior to this option existing is false (you can
+        check the value for a given role using the GET method on the role). Any
+        authentication tokens created prior to this being supported won't
+        verify the unique ID upon token renewal.  When this is changed from
+        false to true on an existing role, Vault will attempt to resolve the
+        role's bound IAM ARN to the unique ID and, if unable to do so, will
+        fail to enable this option.  Changing this from `true` to `false` is
+        not supported; if absolutely necessary, you would need to delete the
+        role and recreate it explicitly setting it to `false`. However; the
+        instances in which you would want to do this should be rare. If the
+        role creation (or upgrading to use this) succeed, then Vault has
+        already been able to resolve internal IDs, and it doesn't need any
+        further IAM permissions to authenticate users. If a role has been
+        deleted and recreated, and Vault has cached the old unique ID, you
+        should just call this endpoint specifying the same
+        `bound_iam_principal_arn` and, as long as Vault still has the necessary
+        IAM permissions to resolve the unique ID, Vault will update the unique
+        ID. (If it does not have the necessary permissions to resolve the
+        unique ID, then it will fail to update.) If this option is set to
+        false, then you MUST leave out the path component in
+        bound_iam_principal_arn for **roles** only, but not IAM users. That is,
+        if your IAM role ARN is of the form
+        `arn:aws:iam::123456789012:role/some/path/to/MyRoleName`, you **must**
+        specify a bound_iam_principal_arn of
+        `arn:aws:iam::123456789012:role/MyRoleName` for authentication to
+        work.
+      </li>
+    </ul>
+
     <ul>
       <li>
         <span class="param">ttl</span>

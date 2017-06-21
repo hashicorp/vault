@@ -22,23 +22,19 @@ type mysqlField struct {
 }
 
 type resultSet struct {
-	columns []mysqlField
-	done    bool
+	columns     []mysqlField
+	columnNames []string
+	done        bool
 }
 
 type mysqlRows struct {
-	mc *mysqlConn
-	rs resultSet
+	mc     *mysqlConn
+	rs     resultSet
+	finish func()
 }
 
 type binaryRows struct {
 	mysqlRows
-	// stmtCols is a pointer to the statement's cached columns for different
-	// result sets.
-	stmtCols *[][]mysqlField
-	// i is a number of the current result set. It is used to fetch proper
-	// columns from stmtCols.
-	i int
 }
 
 type textRows struct {
@@ -46,6 +42,10 @@ type textRows struct {
 }
 
 func (rows *mysqlRows) Columns() []string {
+	if rows.rs.columnNames != nil {
+		return rows.rs.columnNames
+	}
+
 	columns := make([]string, len(rows.rs.columns))
 	if rows.mc != nil && rows.mc.cfg.ColumnsWithAlias {
 		for i := range columns {
@@ -60,16 +60,23 @@ func (rows *mysqlRows) Columns() []string {
 			columns[i] = rows.rs.columns[i].name
 		}
 	}
+
+	rows.rs.columnNames = columns
 	return columns
 }
 
 func (rows *mysqlRows) Close() (err error) {
+	if f := rows.finish; f != nil {
+		f()
+		rows.finish = nil
+	}
+
 	mc := rows.mc
 	if mc == nil {
 		return nil
 	}
-	if mc.netConn == nil {
-		return ErrInvalidConn
+	if err := mc.error(); err != nil {
+		return err
 	}
 
 	// Remove unread packets from stream
@@ -97,8 +104,8 @@ func (rows *mysqlRows) nextResultSet() (int, error) {
 	if rows.mc == nil {
 		return 0, io.EOF
 	}
-	if rows.mc.netConn == nil {
-		return 0, ErrInvalidConn
+	if err := rows.mc.error(); err != nil {
+		return 0, err
 	}
 
 	// Remove unread packets from stream
@@ -132,31 +139,20 @@ func (rows *mysqlRows) nextNotEmptyResultSet() (int, error) {
 	}
 }
 
-func (rows *binaryRows) NextResultSet() (err error) {
+func (rows *binaryRows) NextResultSet() error {
 	resLen, err := rows.nextNotEmptyResultSet()
 	if err != nil {
 		return err
 	}
 
-	// get columns, if not cached, read them and cache them.
-	if rows.i >= len(*rows.stmtCols) {
-		rows.rs.columns, err = rows.mc.readColumns(resLen)
-		*rows.stmtCols = append(*rows.stmtCols, rows.rs.columns)
-	} else {
-		rows.rs.columns = (*rows.stmtCols)[rows.i]
-		if err := rows.mc.readUntilEOF(); err != nil {
-			return err
-		}
-	}
-
-	rows.i++
-	return nil
+	rows.rs.columns, err = rows.mc.readColumns(resLen)
+	return err
 }
 
 func (rows *binaryRows) Next(dest []driver.Value) error {
 	if mc := rows.mc; mc != nil {
-		if mc.netConn == nil {
-			return ErrInvalidConn
+		if err := mc.error(); err != nil {
+			return err
 		}
 
 		// Fetch next row from stream
@@ -177,8 +173,8 @@ func (rows *textRows) NextResultSet() (err error) {
 
 func (rows *textRows) Next(dest []driver.Value) error {
 	if mc := rows.mc; mc != nil {
-		if mc.netConn == nil {
-			return ErrInvalidConn
+		if err := mc.error(); err != nil {
+			return err
 		}
 
 		// Fetch next row from stream

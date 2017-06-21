@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/SermoDigital/jose/jws"
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -14,6 +16,7 @@ import (
 type AuditFormatWriter interface {
 	WriteRequest(io.Writer, *AuditRequestEntry) error
 	WriteResponse(io.Writer, *AuditResponseEntry) error
+	Salt() (*salt.Salt, error)
 }
 
 // AuditFormatter implements the Formatter interface, and allows the underlying
@@ -39,6 +42,11 @@ func (f *AuditFormatter) FormatRequest(
 
 	if f.AuditFormatWriter == nil {
 		return fmt.Errorf("no format writer specified")
+	}
+
+	salt, err := f.Salt()
+	if err != nil {
+		return errwrap.Wrapf("error fetching salt: {{err}}", err)
 	}
 
 	if !config.Raw {
@@ -70,8 +78,16 @@ func (f *AuditFormatter) FormatRequest(
 
 		// Hash any sensitive information
 		if auth != nil {
-			if err := Hash(config.Salt, auth); err != nil {
+			// Cache and restore accessor in the auth
+			var authAccessor string
+			if !config.HMACAccessor && auth.Accessor != "" {
+				authAccessor = auth.Accessor
+			}
+			if err := Hash(salt, auth); err != nil {
 				return err
+			}
+			if authAccessor != "" {
+				auth.Accessor = authAccessor
 			}
 		}
 
@@ -80,7 +96,7 @@ func (f *AuditFormatter) FormatRequest(
 		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
 			clientTokenAccessor = req.ClientTokenAccessor
 		}
-		if err := Hash(config.Salt, req); err != nil {
+		if err := Hash(salt, req); err != nil {
 			return err
 		}
 		if clientTokenAccessor != "" {
@@ -102,6 +118,8 @@ func (f *AuditFormatter) FormatRequest(
 		Error: errString,
 
 		Auth: AuditAuth{
+			ClientToken:   auth.ClientToken,
+			Accessor:      auth.Accessor,
 			DisplayName:   auth.DisplayName,
 			Policies:      auth.Policies,
 			Metadata:      auth.Metadata,
@@ -152,6 +170,11 @@ func (f *AuditFormatter) FormatResponse(
 		return fmt.Errorf("no format writer specified")
 	}
 
+	salt, err := f.Salt()
+	if err != nil {
+		return errwrap.Wrapf("error fetching salt: {{err}}", err)
+	}
+
 	if !config.Raw {
 		// Before we copy the structure we must nil out some data
 		// otherwise we will cause reflection to panic and die
@@ -195,7 +218,7 @@ func (f *AuditFormatter) FormatResponse(
 			if !config.HMACAccessor && auth.Accessor != "" {
 				accessor = auth.Accessor
 			}
-			if err := Hash(config.Salt, auth); err != nil {
+			if err := Hash(salt, auth); err != nil {
 				return err
 			}
 			if accessor != "" {
@@ -208,7 +231,7 @@ func (f *AuditFormatter) FormatResponse(
 		if !config.HMACAccessor && req != nil && req.ClientTokenAccessor != "" {
 			clientTokenAccessor = req.ClientTokenAccessor
 		}
-		if err := Hash(config.Salt, req); err != nil {
+		if err := Hash(salt, req); err != nil {
 			return err
 		}
 		if clientTokenAccessor != "" {
@@ -224,7 +247,7 @@ func (f *AuditFormatter) FormatResponse(
 			if !config.HMACAccessor && resp != nil && resp.WrapInfo != nil && resp.WrapInfo.WrappedAccessor != "" {
 				wrappedAccessor = resp.WrapInfo.WrappedAccessor
 			}
-			if err := Hash(config.Salt, resp); err != nil {
+			if err := Hash(salt, resp); err != nil {
 				return err
 			}
 			if accessor != "" {
@@ -284,11 +307,13 @@ func (f *AuditFormatter) FormatResponse(
 	respEntry := &AuditResponseEntry{
 		Type:  "response",
 		Error: errString,
-
 		Auth: AuditAuth{
-			DisplayName: auth.DisplayName,
-			Policies:    auth.Policies,
-			Metadata:    auth.Metadata,
+			ClientToken:   auth.ClientToken,
+			Accessor:      auth.Accessor,
+			DisplayName:   auth.DisplayName,
+			Policies:      auth.Policies,
+			Metadata:      auth.Metadata,
+			RemainingUses: req.ClientTokenRemainingUses,
 		},
 
 		Request: AuditRequest{

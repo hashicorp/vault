@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
-	"path/filepath"
+	pkgPath "path"
 	"sort"
 	"strconv"
 	"strings"
@@ -317,11 +317,11 @@ func (d *DynamoDBBackend) Delete(key string) error {
 	prefixes := prefixes(key)
 	sort.Sort(sort.Reverse(sort.StringSlice(prefixes)))
 	for _, prefix := range prefixes {
-		items, err := d.List(prefix)
+		hasChildren, err := d.hasChildren(prefix)
 		if err != nil {
 			return err
 		}
-		if len(items) == 1 {
+		if !hasChildren {
 			requests = append(requests, &dynamodb.WriteRequest{
 				DeleteRequest: &dynamodb.DeleteRequest{
 					Key: map[string]*dynamodb.AttributeValue{
@@ -378,6 +378,40 @@ func (d *DynamoDBBackend) List(prefix string) ([]string, error) {
 	return keys, nil
 }
 
+// hasChildren returns true if there exist items below a certain path prefix.
+// To do so, the method fetches such items from DynamoDB. If there are more
+// than one item (which is the "directory" item), there are children.
+func (d *DynamoDBBackend) hasChildren(prefix string) (bool, error) {
+	prefix = strings.TrimSuffix(prefix, "/")
+	prefix = escapeEmptyPath(prefix)
+
+	queryInput := &dynamodb.QueryInput{
+		TableName:      aws.String(d.table),
+		ConsistentRead: aws.Bool(true),
+		KeyConditions: map[string]*dynamodb.Condition{
+			"Path": {
+				ComparisonOperator: aws.String("EQ"),
+				AttributeValueList: []*dynamodb.AttributeValue{{
+					S: aws.String(prefix),
+				}},
+			},
+		},
+		// Avoid fetching too many items from DynamoDB for performance reasons.
+		// We need at least two because one is the directory item, all others
+		// are children.
+		Limit: aws.Int64(2),
+	}
+
+	d.permitPool.Acquire()
+	defer d.permitPool.Release()
+
+	out, err := d.client.Query(queryInput)
+	if err != nil {
+		return false, err
+	}
+	return len(out.Items) > 1, nil
+}
+
 // LockWith is used for mutual exclusion based on the given key.
 func (d *DynamoDBBackend) LockWith(key, value string) (Lock, error) {
 	identity, err := uuid.GenerateUUID()
@@ -386,7 +420,7 @@ func (d *DynamoDBBackend) LockWith(key, value string) (Lock, error) {
 	}
 	return &DynamoDBLock{
 		backend:            d,
-		key:                filepath.Join(filepath.Dir(key), DynamoDBLockPrefix+filepath.Base(key)),
+		key:                pkgPath.Join(pkgPath.Dir(key), DynamoDBLockPrefix+pkgPath.Base(key)),
 		value:              value,
 		identity:           identity,
 		recovery:           d.recovery,
@@ -690,7 +724,7 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 // its last component.
 func recordPathForVaultKey(key string) string {
 	if strings.Contains(key, "/") {
-		return filepath.Dir(key)
+		return pkgPath.Dir(key)
 	}
 	return DynamoDBEmptyPath
 }
@@ -700,7 +734,7 @@ func recordPathForVaultKey(key string) string {
 // property. This path equals the the vault key's
 // last component.
 func recordKeyForVaultKey(key string) string {
-	return filepath.Base(key)
+	return pkgPath.Base(key)
 }
 
 // vaultKey returns the vault key for a given record
@@ -711,7 +745,7 @@ func vaultKey(record *DynamoDBRecord) string {
 	if path == "" {
 		return record.Key
 	}
-	return filepath.Join(record.Path, record.Key)
+	return pkgPath.Join(record.Path, record.Key)
 }
 
 // escapeEmptyPath is used to escape the root key's path

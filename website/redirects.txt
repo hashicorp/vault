@@ -41,6 +41,7 @@
 /api/system/revoke-force.html          /api/system/leases.html
 /api/system/revoke-prefix.html         /api/system/leases.html
 /docs/config/index.html                /docs/configuration/index.html
+/docs/auth/aws-ec2.html                /docs/auth/aws.html
 /docs/install/install.html             /docs/install/index.html
 /docs/install/upgrade.html             /docs/guides/upgrading/index.html
 /docs/install/upgrade-to-0.5.html      /docs/guides/upgrading/upgrade-to-0.5.0.html

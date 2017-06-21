@@ -33,6 +33,13 @@ func (b *backend) pathRewrap() *framework.Path {
 				Type:        framework.TypeString,
 				Description: "Nonce for when convergent encryption is used",
 			},
+
+			"key_version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `The version of the key to use for encryption.
+Must be 0 (for latest) or a value greater than or equal
+to the min_encryption_version configured on the key.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -69,6 +76,7 @@ func (b *backend) pathRewrapWrite(
 			Ciphertext: ciphertext,
 			Context:    d.Get("context").(string),
 			Nonce:      d.Get("nonce").(string),
+			KeyVersion: d.Get("key_version").(int),
 		}
 	}
 
@@ -113,7 +121,7 @@ func (b *backend) pathRewrapWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	for i, item := range batchInputItems {
@@ -132,7 +140,7 @@ func (b *backend) pathRewrapWrite(
 			}
 		}
 
-		ciphertext, err := p.Encrypt(item.DecodedContext, item.DecodedNonce, plaintext)
+		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

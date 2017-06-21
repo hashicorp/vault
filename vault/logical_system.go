@@ -44,7 +44,7 @@ var (
 	}
 )
 
-func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backend, error) {
+func NewSystemBackend(core *Core) *SystemBackend {
 	b := &SystemBackend{
 		Core: core,
 	}
@@ -62,6 +62,7 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 				"replication/primary/secondary-token",
 				"replication/reindex",
 				"rotate",
+				"config/cors",
 				"config/auditing/*",
 				"plugins/catalog/*",
 				"revoke-prefix/*",
@@ -97,6 +98,30 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["capabilities_accessor"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["capabilities_accessor"][1]),
+			},
+
+			&framework.Path{
+				Pattern: "config/cors$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"enable": &framework.FieldSchema{
+						Type:        framework.TypeBool,
+						Description: "Enables or disables CORS headers on requests.",
+					},
+					"allowed_origins": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "A comma-separated string or array of strings indicating origins that may make cross-origin requests.",
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation:   b.handleCORSRead,
+					logical.UpdateOperation: b.handleCORSUpdate,
+					logical.DeleteOperation: b.handleCORSDelete,
+				},
+
+				HelpDescription: strings.TrimSpace(sysHelp["config/cors"][0]),
+				HelpSynopsis:    strings.TrimSpace(sysHelp["config/cors"][1]),
 			},
 
 			&framework.Path{
@@ -798,15 +823,50 @@ func NewSystemBackend(core *Core, config *logical.BackendConfig) (logical.Backen
 
 	b.Backend.Invalidate = b.invalidate
 
-	return b.Backend.Setup(config)
+	return b
 }
 
 // SystemBackend implements logical.Backend and is used to interact with
 // the core of the system. This backend is hardcoded to exist at the "sys"
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
-	Core    *Core
-	Backend *framework.Backend
+	*framework.Backend
+	Core *Core
+}
+
+// handleCORSRead returns the current CORS configuration
+func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	corsConf := b.Core.corsConfig
+
+	enabled := corsConf.IsEnabled()
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"enabled": enabled,
+		},
+	}
+
+	if enabled {
+		corsConf.RLock()
+		resp.Data["allowed_origins"] = corsConf.AllowedOrigins
+		corsConf.RUnlock()
+	}
+
+	return resp, nil
+}
+
+// handleCORSUpdate sets the list of origins that are allowed to make
+// cross-origin requests and sets the CORS enabled flag to true
+func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	origins := d.Get("allowed_origins").([]string)
+
+	return nil, b.Core.corsConfig.Enable(origins)
+}
+
+// handleCORSDelete clears the allowed origins and sets the CORS enabled flag
+// to false
+func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return nil, b.Core.corsConfig.Disable()
 }
 
 func (b *SystemBackend) handleTidyLeases(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -967,7 +1027,7 @@ func (b *SystemBackend) handleAuditedHeadersRead(req *logical.Request, d *framew
 	}, nil
 }
 
-// handleCapabilitiesreturns the ACL capabilities of the token for a given path
+// handleCapabilities returns the ACL capabilities of the token for a given path
 func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	token := d.Get("token").(string)
 	if token == "" {
@@ -985,8 +1045,8 @@ func (b *SystemBackend) handleCapabilities(req *logical.Request, d *framework.Fi
 	}, nil
 }
 
-// handleCapabilitiesAccessor returns the ACL capabilities of the token associted
-// with the given accessor for a given path.
+// handleCapabilitiesAccessor returns the ACL capabilities of the
+// token associted with the given accessor for a given path.
 func (b *SystemBackend) handleCapabilitiesAccessor(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	accessor := d.Get("accessor").(string)
 	if accessor == "" {
@@ -1709,7 +1769,16 @@ func (b *SystemBackend) handlePolicyRead(
 func (b *SystemBackend) handlePolicySet(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	rules := data.Get("rules").(string)
+
+	rulesRaw, ok := data.GetOk("rules")
+	if !ok {
+		return logical.ErrorResponse("'rules' parameter not supplied"), nil
+	}
+
+	rules := rulesRaw.(string)
+	if rules == "" {
+		return logical.ErrorResponse("'rules' parameter empty"), nil
+	}
 
 	// Validate the rules parse
 	parse, err := Parse(rules)
@@ -2235,6 +2304,21 @@ as well as perform core operations.
 
 // sysHelp is all the help text for the sys backend.
 var sysHelp = map[string][2]string{
+	"config/cors": {
+		"Configures or returns the current configuration of CORS settings.",
+		`
+This path responds to the following HTTP methods.
+
+    GET /
+        Returns the configuration of the CORS setting.
+
+    POST /
+        Sets the comma-separated list of origins that can make cross-origin requests.
+
+    DELETE /
+        Clears the CORS configuration and disables acceptance of CORS requests.
+		`,
+	},
 	"init": {
 		"Initializes or returns the initialization status of the Vault.",
 		`

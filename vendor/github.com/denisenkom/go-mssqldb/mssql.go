@@ -6,13 +6,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 	"io"
 	"math"
 	"net"
 	"reflect"
 	"strings"
 	"time"
-	"golang.org/x/net/context" // use the "x/net/context" for backwards compatibility.
 )
 
 var driverInstance = &MssqlDriver{processQueryText: true}

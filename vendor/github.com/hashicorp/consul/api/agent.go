@@ -67,17 +67,19 @@ type AgentCheckRegistration struct {
 
 // AgentServiceCheck is used to define a node or service level check
 type AgentServiceCheck struct {
-	Script            string `json:",omitempty"`
-	DockerContainerID string `json:",omitempty"`
-	Shell             string `json:",omitempty"` // Only supported for Docker.
-	Interval          string `json:",omitempty"`
-	Timeout           string `json:",omitempty"`
-	TTL               string `json:",omitempty"`
-	HTTP              string `json:",omitempty"`
-	TCP               string `json:",omitempty"`
-	Status            string `json:",omitempty"`
-	Notes             string `json:",omitempty"`
-	TLSSkipVerify     bool   `json:",omitempty"`
+	Script            string              `json:",omitempty"`
+	DockerContainerID string              `json:",omitempty"`
+	Shell             string              `json:",omitempty"` // Only supported for Docker.
+	Interval          string              `json:",omitempty"`
+	Timeout           string              `json:",omitempty"`
+	TTL               string              `json:",omitempty"`
+	HTTP              string              `json:",omitempty"`
+	Header            map[string][]string `json:",omitempty"`
+	Method            string              `json:",omitempty"`
+	TCP               string              `json:",omitempty"`
+	Status            string              `json:",omitempty"`
+	Notes             string              `json:",omitempty"`
+	TLSSkipVerify     bool                `json:",omitempty"`
 
 	// In Consul 0.7 and later, checks that are associated with a service
 	// may also contain this optional DeregisterCriticalServiceAfter field,

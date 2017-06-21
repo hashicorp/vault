@@ -69,7 +69,7 @@ const (
 	// NoLease is a lease ID for the absence of a lease.
 	NoLease LeaseID = 0
 
-	// retryConnWait is how long to wait before retrying on a lost leader
+	// retryConnWait is how long to wait before retrying request due to an error
 	retryConnWait = 500 * time.Millisecond
 )
 
@@ -323,7 +323,7 @@ func (l *lessor) closeRequireLeader() {
 		reqIdxs := 0
 		// find all required leader channels, close, mark as nil
 		for i, ctx := range ka.ctxs {
-			md, ok := metadata.FromContext(ctx)
+			md, ok := metadata.FromOutgoingContext(ctx)
 			if !ok {
 				continue
 			}
@@ -386,40 +386,51 @@ func (l *lessor) recvKeepAliveLoop() (gerr error) {
 		close(l.donec)
 		l.loopErr = gerr
 		for _, ka := range l.keepAlives {
-			ka.Close()
+			ka.close()
 		}
 		l.keepAlives = make(map[LeaseID]*keepAlive)
 		l.mu.Unlock()
 	}()
 
-	stream, serr := l.resetRecv()
-	for serr == nil {
-		resp, err := stream.Recv()
-		if err == nil {
-			l.recvKeepAlive(resp)
-			continue
-		}
-		err = toErr(l.stopCtx, err)
-		if err == rpctypes.ErrNoLeader {
-			l.closeRequireLeader()
-			select {
-			case <-time.After(retryConnWait):
-			case <-l.stopCtx.Done():
+	for {
+		stream, err := l.resetRecv()
+		if err != nil {
+			if canceledByCaller(l.stopCtx, err) {
 				return err
 			}
-		} else if isHaltErr(l.stopCtx, err) {
-			return err
+		} else {
+			for {
+				resp, err := stream.Recv()
+
+				if err != nil {
+					if canceledByCaller(l.stopCtx, err) {
+						return err
+					}
+
+					if toErr(l.stopCtx, err) == rpctypes.ErrNoLeader {
+						l.closeRequireLeader()
+					}
+					break
+				}
+
+				l.recvKeepAlive(resp)
+			}
 		}
-		stream, serr = l.resetRecv()
+
+		select {
+		case <-time.After(retryConnWait):
+			continue
+		case <-l.stopCtx.Done():
+			return l.stopCtx.Err()
+		}
 	}
-	return serr
 }
 
 // resetRecv opens a new lease stream and starts sending LeaseKeepAliveRequests
 func (l *lessor) resetRecv() (pb.Lease_LeaseKeepAliveClient, error) {
 	sctx, cancel := context.WithCancel(l.stopCtx)
 	stream, err := l.remote.LeaseKeepAlive(sctx, grpc.FailFast(false))
-	if err = toErr(sctx, err); err != nil {
+	if err != nil {
 		cancel()
 		return nil, err
 	}
@@ -456,7 +467,7 @@ func (l *lessor) recvKeepAlive(resp *pb.LeaseKeepAliveResponse) {
 	if karesp.TTL <= 0 {
 		// lease expired; close all keep alive channels
 		delete(l.keepAlives, karesp.ID)
-		ka.Close()
+		ka.close()
 		return
 	}
 
@@ -486,7 +497,7 @@ func (l *lessor) deadlineLoop() {
 		for id, ka := range l.keepAlives {
 			if ka.deadline.Before(now) {
 				// waited too long for response; lease may be expired
-				ka.Close()
+				ka.close()
 				delete(l.keepAlives, id)
 			}
 		}
@@ -528,7 +539,7 @@ func (l *lessor) sendKeepAliveLoop(stream pb.Lease_LeaseKeepAliveClient) {
 	}
 }
 
-func (ka *keepAlive) Close() {
+func (ka *keepAlive) close() {
 	close(ka.donec)
 	for _, ch := range ka.chs {
 		close(ch)

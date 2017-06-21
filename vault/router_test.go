@@ -2,6 +2,7 @@ package vault
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -75,8 +76,14 @@ func TestRouter_Mount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	mountEntry := &MountEntry{
+		Path: "prod/aws/",
+		UUID: meUUID,
+	}
+
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{Path: "prod/aws/", UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", mountEntry, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -85,6 +92,7 @@ func TestRouter_Mount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
 	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
 		t.Fatalf("err: %v", err)
@@ -104,6 +112,11 @@ func TestRouter_Mount(t *testing.T) {
 
 	if v := r.MatchingStorageView("stage/aws/foo"); v != nil {
 		t.Fatalf("bad: %v", v)
+	}
+
+	mountEntryFetched := r.MatchingMountByUUID(mountEntry.UUID)
+	if mountEntryFetched == nil || !reflect.DeepEqual(mountEntry, mountEntryFetched) {
+		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
 	}
 
 	mount, prefix, ok := r.MatchingStoragePrefix("logical/foo")

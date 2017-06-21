@@ -6,10 +6,11 @@ import (
 	"testing"
 	"time"
 
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
 
-	"github.com/Azure/azure-storage-go"
+	storage "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 func TestAzureBackend(t *testing.T) {
@@ -22,21 +23,23 @@ func TestAzureBackend(t *testing.T) {
 	accountKey := os.Getenv("AZURE_ACCOUNT_KEY")
 
 	ts := time.Now().UnixNano()
-	container := fmt.Sprintf("vault-test-%d", ts)
+	name := fmt.Sprintf("vault-test-%d", ts)
 
 	cleanupClient, _ := storage.NewBasicClient(accountName, accountKey)
+	cleanupClient.HTTPClient = cleanhttp.DefaultPooledClient()
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
 	backend, err := NewBackend("azure", logger, map[string]string{
-		"container":   container,
+		"container":   name,
 		"accountName": accountName,
 		"accountKey":  accountKey,
 	})
 
 	defer func() {
-		contObj := cleanupClient.GetBlobService().GetContainerReference(container)
-		contObj.DeleteIfExists()
+		blobService := cleanupClient.GetBlobService()
+		container := blobService.GetContainerReference(name)
+		container.DeleteIfExists(nil)
 	}()
 
 	if err != nil {

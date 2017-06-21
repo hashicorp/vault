@@ -69,6 +69,10 @@ func ParseKeyValues(input string, out map[string]string, sep string) error {
 
 	for _, keyValue := range keyValues {
 		shards := strings.Split(keyValue, "=")
+		if len(shards) != 2 {
+			return fmt.Errorf("invalid <key,value> format")
+		}
+
 		key := strings.TrimSpace(shards[0])
 		value := strings.TrimSpace(shards[1])
 		if key == "" || value == "" {
@@ -298,4 +302,12 @@ func GlobbedStringsMatch(item, val string) bool {
 	}
 
 	return val == item
+}
+
+// AppendIfMissing adds a string to a slice if the given string is not present
+func AppendIfMissing(slice []string, i string) []string {
+	if StrListContains(slice, i) {
+		return slice
+	}
+	return append(slice, i)
 }

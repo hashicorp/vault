@@ -32,6 +32,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
+	cache "github.com/patrickmn/go-cache"
 )
 
 const (
@@ -50,6 +51,9 @@ const (
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
 	lockRetryInterval = 10 * time.Second
+
+	// leaderCheckInterval is how often a standby checks for a new leader
+	leaderCheckInterval = 2500 * time.Millisecond
 
 	// keyRotateCheckInterval is how often a standby checks for a key
 	// rotation taking place.
@@ -294,8 +298,8 @@ type Core struct {
 	localClusterParsedCert *x509.Certificate
 	// The TCP addresses we should use for clustering
 	clusterListenerAddrs []*net.TCPAddr
-	// The setup function that gives us the handler to use
-	clusterHandlerSetupFunc func() (http.Handler, http.Handler)
+	// The handler to use for request forwarding
+	clusterHandler http.Handler
 	// Tracks whether cluster listeners are running, e.g. it's safe to send a
 	// shutdown down the channel
 	clusterListenersRunning bool
@@ -304,8 +308,6 @@ type Core struct {
 	// Shutdown success channel. We need this to be done serially to ensure
 	// that binds are removed before they might be reinstated.
 	clusterListenerShutdownSuccessCh chan struct{}
-	// Connection info containing a client and a current active address
-	requestForwardingConnection *activeConnection
 	// Write lock used to ensure that we don't have multiple connections adjust
 	// this value at the same time
 	requestForwardingConnectionLock sync.RWMutex
@@ -316,14 +318,21 @@ type Core struct {
 	clusterLeaderRedirectAddr string
 	// Lock for the cluster leader values
 	clusterLeaderParamsLock sync.RWMutex
+	// Info on cluster members
+	clusterPeerClusterAddrsCache *cache.Cache
 	// The grpc Server that handles server RPC calls
 	rpcServer *grpc.Server
+	// The context for the client
+	rpcClientConnContext context.Context
 	// The function for canceling the client connection
 	rpcClientConnCancelFunc context.CancelFunc
 	// The grpc ClientConn for RPC calls
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
-	rpcForwardingClient RequestForwardingClient
+	rpcForwardingClient *forwardingClient
+
+	// CORS Information
+	corsConfig *CORSConfig
 
 	// replicationState keeps the current replication state cached for quick
 	// lookup
@@ -441,8 +450,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		clusterName:                      conf.ClusterName,
 		clusterListenerShutdownCh:        make(chan struct{}),
 		clusterListenerShutdownSuccessCh: make(chan struct{}),
+		clusterPeerClusterAddrsCache:     cache.New(3*heartbeatInterval, time.Second),
 		enableMlock:                      !conf.DisableMlock,
 	}
+
+	// Load CORS config and provide core
+	c.corsConfig = &CORSConfig{core: c}
 
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped
 	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
@@ -502,7 +515,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
-		return NewSystemBackend(c, config)
+		b := NewSystemBackend(c)
+		return b.Backend.Setup(config)
 	}
 	c.logicalBackends = logicalBackends
 
@@ -546,6 +560,11 @@ func (c *Core) Shutdown() error {
 
 	// Seal the Vault, causes a leader stepdown
 	return c.sealInternal()
+}
+
+// CORSConfig returns the current CORS configuration
+func (c *Core) CORSConfig() *CORSConfig {
+	return c.corsConfig
 }
 
 // LookupToken returns the properties of the token from the token store. This
@@ -656,24 +675,27 @@ func (c *Core) checkToken(req *logical.Request) (*logical.Auth, *TokenEntry, err
 			panic("unreachable code")
 		}
 	}
+	// Create the auth response
+	auth := &logical.Auth{
+		ClientToken: req.ClientToken,
+		Accessor:    req.ClientTokenAccessor,
+		Policies:    te.Policies,
+		Metadata:    te.Meta,
+		DisplayName: te.DisplayName,
+	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
 	// allowed so we can decrement the use count.
 	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
-		return nil, te, logical.ErrPermissionDenied
+		// Return auth for audit logging even if not allowed
+		return auth, te, logical.ErrPermissionDenied
 	}
 	if rootPath && !rootPrivs {
-		return nil, te, logical.ErrPermissionDenied
+		// Return auth for audit logging even if not allowed
+		return auth, te, logical.ErrPermissionDenied
 	}
 
-	// Create the auth response
-	auth := &logical.Auth{
-		ClientToken: req.ClientToken,
-		Policies:    te.Policies,
-		Metadata:    te.Meta,
-		DisplayName: te.DisplayName,
-	}
 	return auth, te, nil
 }
 
@@ -1281,6 +1303,9 @@ func (c *Core) postUnseal() (retErr error) {
 	if err := c.setupPolicyStore(); err != nil {
 		return err
 	}
+	if err := c.loadCORSConfig(); err != nil {
+		return err
+	}
 	if err := c.loadCredentials(); err != nil {
 		return err
 	}
@@ -1392,9 +1417,15 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	keyRotateDone := make(chan struct{})
 	keyRotateStop := make(chan struct{})
 	go c.periodicCheckKeyUpgrade(keyRotateDone, keyRotateStop)
+	// Monitor for new leadership
+	checkLeaderDone := make(chan struct{})
+	checkLeaderStop := make(chan struct{})
+	go c.periodicLeaderRefresh(checkLeaderDone, checkLeaderStop)
 	defer func() {
 		close(keyRotateStop)
 		<-keyRotateDone
+		close(checkLeaderStop)
+		<-checkLeaderDone
 	}()
 
 	for {
@@ -1404,11 +1435,6 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 			return
 		default:
 		}
-
-		// Clear forwarding clients
-		c.requestForwardingConnectionLock.Lock()
-		c.clearForwardingClients()
-		c.requestForwardingConnectionLock.Unlock()
 
 		// Create a lock
 		uuid, err := uuid.GenerateUUID()
@@ -1543,6 +1569,22 @@ func (c *Core) runStandby(doneCh, stopCh, manualStepDownCh chan struct{}) {
 	}
 }
 
+// This checks the leader periodically to ensure that we switch RPC to a new
+// leader pretty quickly. There is logic in Leader() already to not make this
+// onerous and avoid more traffic than needed, so we just call that and ignore
+// the result.
+func (c *Core) periodicLeaderRefresh(doneCh, stopCh chan struct{}) {
+	defer close(doneCh)
+	for {
+		select {
+		case <-time.After(leaderCheckInterval):
+			c.Leader()
+		case <-stopCh:
+			return
+		}
+	}
+}
+
 // periodicCheckKeyUpgrade is used to watch for key rotation events as a standby
 func (c *Core) periodicCheckKeyUpgrade(doneCh, stopCh chan struct{}) {
 	defer close(doneCh)
@@ -1613,6 +1655,15 @@ func (c *Core) scheduleUpgradeCleanup() error {
 
 	// Schedule cleanup for all of them
 	time.AfterFunc(keyRotateGracePeriod, func() {
+		sealed, err := c.barrier.Sealed()
+		if err != nil {
+			c.logger.Warn("core: failed to check barrier status at upgrade cleanup time")
+			return
+		}
+		if sealed {
+			c.logger.Warn("core: barrier sealed at upgrade cleanup time")
+			return
+		}
 		for _, upgrade := range upgrades {
 			path := fmt.Sprintf("%s%s", keyringUpgradePrefix, upgrade)
 			if err := c.barrier.Delete(path); err != nil {

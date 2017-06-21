@@ -35,3 +35,21 @@
 
 // Demo
 @import '_demo';
+
+
+// Docs - visual separation for parameter names and flags
+span.param {
+    font-weight: 800;
+}
+span.param:after {
+    content: ":";
+}
+span.param-flags {
+    font-style: italic;
+}
+span.param-flags:before {
+    content: "(";
+}
+span.param-flags:after {
+    content: ")";
+}

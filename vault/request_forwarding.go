@@ -1,14 +1,12 @@
 package vault
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,10 +15,12 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 const (
 	clusterListenerAcceptDeadline = 500 * time.Millisecond
+	heartbeatInterval             = 30 * time.Second
 )
 
 // Starts the listeners and servers necessary to handle forwarded requests
@@ -35,10 +35,6 @@ func (c *Core) startForwarding() error {
 
 	// Resolve locally to avoid races
 	ha := c.ha != nil
-
-	// Get our base handler (for our RPC server) and our wrapped handler (for
-	// straight HTTP/2 forwarding)
-	baseHandler, wrappedHandler := c.clusterHandlerSetupFunc()
 
 	// Get our TLS config
 	tlsConfig, err := c.ClusterTLSConfig()
@@ -58,12 +54,16 @@ func (c *Core) startForwarding() error {
 		return nil
 	}
 
-	c.rpcServer = grpc.NewServer()
+	c.rpcServer = grpc.NewServer(
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Time: 2 * heartbeatInterval,
+		}),
+	)
 
-	if ha {
+	if ha && c.clusterHandler != nil {
 		RegisterRequestForwardingServer(c.rpcServer, &forwardedRequestRPCServer{
 			core:    c,
-			handler: baseHandler,
+			handler: c.clusterHandler,
 		})
 	}
 	c.clusterParamsLock.Unlock()
@@ -143,17 +143,6 @@ func (c *Core) startForwarding() error {
 				}
 
 				switch tlsConn.ConnectionState().NegotiatedProtocol {
-				case "h2":
-					if !ha {
-						conn.Close()
-						continue
-					}
-
-					c.logger.Trace("core: got h2 connection")
-					go fws.ServeConn(conn, &http2.ServeConnOpts{
-						Handler: wrappedHandler,
-					})
-
 				case "req_fw_sb-act_v1":
 					if !ha {
 						conn.Close()
@@ -231,37 +220,31 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 		return err
 	}
 
-	switch os.Getenv("VAULT_USE_GRPC_REQUEST_FORWARDING") {
-	case "":
-		// Set up normal HTTP forwarding handling
-		tlsConfig, err := c.ClusterTLSConfig()
-		if err != nil {
-			c.logger.Error("core: error fetching cluster tls configuration when trying to create connection", "error", err)
-			return err
-		}
-		tp := &http2.Transport{
-			TLSClientConfig: tlsConfig,
-		}
-		c.requestForwardingConnection = &activeConnection{
-			transport:   tp,
-			clusterAddr: clusterAddr,
-		}
-
-	default:
-		// Set up grpc forwarding handling
-		// It's not really insecure, but we have to dial manually to get the
-		// ALPN header right. It's just "insecure" because GRPC isn't managing
-		// the TLS state.
-
-		ctx, cancelFunc := context.WithCancel(context.Background())
-		c.rpcClientConnCancelFunc = cancelFunc
-		c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host, grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)), grpc.WithInsecure())
-		if err != nil {
-			c.logger.Error("core: err setting up forwarding rpc client", "error", err)
-			return err
-		}
-		c.rpcForwardingClient = NewRequestForwardingClient(c.rpcClientConn)
+	// Set up grpc forwarding handling
+	// It's not really insecure, but we have to dial manually to get the
+	// ALPN header right. It's just "insecure" because GRPC isn't managing
+	// the TLS state.
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	c.rpcClientConn, err = grpc.DialContext(ctx, clusterURL.Host,
+		grpc.WithDialer(c.getGRPCDialer("req_fw_sb-act_v1", "", nil)),
+		grpc.WithInsecure(), // it's not, we handle it in the dialer
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time: 2 * heartbeatInterval,
+		}))
+	if err != nil {
+		cancelFunc()
+		c.logger.Error("core: err setting up forwarding rpc client", "error", err)
+		return err
 	}
+	c.rpcClientConnContext = ctx
+	c.rpcClientConnCancelFunc = cancelFunc
+	c.rpcForwardingClient = &forwardingClient{
+		RequestForwardingClient: NewRequestForwardingClient(c.rpcClientConn),
+		core:        c,
+		echoTicker:  time.NewTicker(heartbeatInterval),
+		echoContext: ctx,
+	}
+	c.rpcForwardingClient.startHeartbeat()
 
 	return nil
 }
@@ -269,11 +252,6 @@ func (c *Core) refreshRequestForwardingConnection(clusterAddr string) error {
 func (c *Core) clearForwardingClients() {
 	c.logger.Trace("core: clearing forwarding clients")
 	defer c.logger.Trace("core: done clearing forwarding clients")
-
-	if c.requestForwardingConnection != nil {
-		c.requestForwardingConnection.transport.CloseIdleConnections()
-		c.requestForwardingConnection = nil
-	}
 
 	if c.rpcClientConnCancelFunc != nil {
 		c.rpcClientConnCancelFunc()
@@ -283,6 +261,8 @@ func (c *Core) clearForwardingClients() {
 		c.rpcClientConn.Close()
 		c.rpcClientConn = nil
 	}
+
+	c.rpcClientConnContext = nil
 	c.rpcForwardingClient = nil
 }
 
@@ -292,70 +272,36 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	c.requestForwardingConnectionLock.RLock()
 	defer c.requestForwardingConnectionLock.RUnlock()
 
-	switch os.Getenv("VAULT_USE_GRPC_REQUEST_FORWARDING") {
-	case "":
-		if c.requestForwardingConnection == nil {
-			return 0, nil, nil, ErrCannotForward
-		}
+	if c.rpcForwardingClient == nil {
+		return 0, nil, nil, ErrCannotForward
+	}
 
-		if c.requestForwardingConnection.clusterAddr == "" {
-			return 0, nil, nil, ErrCannotForward
-		}
+	freq, err := forwarding.GenerateForwardedRequest(req)
+	if err != nil {
+		c.logger.Error("core: error creating forwarding RPC request", "error", err)
+		return 0, nil, nil, fmt.Errorf("error creating forwarding RPC request")
+	}
+	if freq == nil {
+		c.logger.Error("core: got nil forwarding RPC request")
+		return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
+	}
+	resp, err := c.rpcForwardingClient.ForwardRequest(c.rpcClientConnContext, freq)
+	if err != nil {
+		c.logger.Error("core: error during forwarded RPC request", "error", err)
+		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
+	}
 
-		freq, err := forwarding.GenerateForwardedHTTPRequest(req, c.requestForwardingConnection.clusterAddr+"/cluster/local/forwarded-request")
-		if err != nil {
-			c.logger.Error("core/ForwardRequest: error creating forwarded request", "error", err)
-			return 0, nil, nil, fmt.Errorf("error creating forwarding request")
-		}
-
-		//resp, err := c.requestForwardingConnection.Do(freq)
-		resp, err := c.requestForwardingConnection.transport.RoundTrip(freq)
-		if err != nil {
-			return 0, nil, nil, err
-		}
-		defer resp.Body.Close()
-
-		// Read the body into a buffer so we can write it back out to the
-		// original requestor
-		buf := bytes.NewBuffer(nil)
-		_, err = buf.ReadFrom(resp.Body)
-		if err != nil {
-			return 0, nil, nil, err
-		}
-		return resp.StatusCode, resp.Header, buf.Bytes(), nil
-
-	default:
-		if c.rpcForwardingClient == nil {
-			return 0, nil, nil, ErrCannotForward
-		}
-
-		freq, err := forwarding.GenerateForwardedRequest(req)
-		if err != nil {
-			c.logger.Error("core/ForwardRequest: error creating forwarding RPC request", "error", err)
-			return 0, nil, nil, fmt.Errorf("error creating forwarding RPC request")
-		}
-		if freq == nil {
-			c.logger.Error("core/ForwardRequest: got nil forwarding RPC request")
-			return 0, nil, nil, fmt.Errorf("got nil forwarding RPC request")
-		}
-		resp, err := c.rpcForwardingClient.ForwardRequest(context.Background(), freq, grpc.FailFast(true))
-		if err != nil {
-			c.logger.Error("core/ForwardRequest: error during forwarded RPC request", "error", err)
-			return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
-		}
-
-		var header http.Header
-		if resp.HeaderEntries != nil {
-			header = make(http.Header)
-			for k, v := range resp.HeaderEntries {
-				for _, j := range v.Values {
-					header.Add(k, j)
-				}
+	var header http.Header
+	if resp.HeaderEntries != nil {
+		header = make(http.Header)
+		for k, v := range resp.HeaderEntries {
+			for _, j := range v.Values {
+				header.Add(k, j)
 			}
 		}
-
-		return int(resp.StatusCode), header, resp.Body, nil
 	}
+
+	return int(resp.StatusCode), header, resp.Body, nil
 }
 
 // getGRPCDialer is used to return a dialer that has the correct TLS
@@ -424,4 +370,67 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	}
 
 	return resp, nil
+}
+
+func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
+	if in.ClusterAddr != "" {
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
+	}
+	return &EchoReply{
+		Message: "pong",
+	}, nil
+}
+
+type forwardingClient struct {
+	RequestForwardingClient
+
+	core *Core
+
+	echoTicker  *time.Ticker
+	echoContext context.Context
+}
+
+// NOTE: we also take advantage of gRPC's keepalive bits, but as we send data
+// with these requests it's useful to keep this as well
+func (c *forwardingClient) startHeartbeat() {
+	go func() {
+		tick := func() {
+			c.core.stateLock.RLock()
+			clusterAddr := c.core.clusterAddr
+			c.core.stateLock.RUnlock()
+
+			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
+			resp, err := c.RequestForwardingClient.Echo(ctx, &EchoRequest{
+				Message:     "ping",
+				ClusterAddr: clusterAddr,
+			})
+			cancel()
+			if err != nil {
+				c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
+				return
+			}
+			if resp == nil {
+				c.core.logger.Debug("forwarding: empty echo response from active node")
+				return
+			}
+			if resp.Message != "pong" {
+				c.core.logger.Debug("forwarding: unexpected echo response from active node", "message", resp.Message)
+				return
+			}
+			c.core.logger.Trace("forwarding: successful heartbeat")
+		}
+
+		tick()
+
+		for {
+			select {
+			case <-c.echoContext.Done():
+				c.echoTicker.Stop()
+				c.core.logger.Trace("forwarding: stopping heartbeating")
+				return
+			case <-c.echoTicker.C:
+				tick()
+			}
+		}
+	}()
 }

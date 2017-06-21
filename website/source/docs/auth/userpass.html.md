@@ -17,6 +17,9 @@ The username/password combinations are configured directly to the auth
 backend using the `users/` path. This backend cannot read usernames and
 passwords from an external source.
 
+The backend lowercases all submitted usernames, e.g. `Mary` and `mary` are the
+same entry.
+
 ## Authentication
 
 #### Via the CLI

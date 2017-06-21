@@ -129,7 +129,9 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
-			testAccStepAdjustPolicy(t, "test", 3),
+			testAccStepAdjustPolicyMinDecryption(t, "test", 3),
+			testAccStepAdjustPolicyMinEncryption(t, "test", 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecryptExpectFailure(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -140,7 +142,8 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
-			testAccStepAdjustPolicy(t, "test", 1),
+			testAccStepAdjustPolicyMinDecryption(t, "test", 1),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -221,12 +224,21 @@ func testAccStepListPolicy(t *testing.T, name string, expectNone bool) logicalte
 	}
 }
 
-func testAccStepAdjustPolicy(t *testing.T, name string, minVer int) logicaltest.TestStep {
+func testAccStepAdjustPolicyMinDecryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
 		Data: map[string]interface{}{
 			"min_decryption_version": minVer,
+		},
+	}
+}
+func testAccStepAdjustPolicyMinEncryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/" + name + "/config",
+		Data: map[string]interface{}{
+			"min_encryption_version": minVer,
 		},
 	}
 }
@@ -276,6 +288,10 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 }
 
 func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
+	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
+}
+
+func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -297,6 +313,8 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				KDF                  string           `mapstructure:"kdf"`
 				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
 				ConvergentEncryption bool             `mapstructure:"convergent_encryption"`
+				MinDecryptionVersion int              `mapstructure:"min_decryption_version"`
+				MinEncryptionVersion int              `mapstructure:"min_encryption_version"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -313,6 +331,12 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Keys == nil {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinDecryptionVersion != minDecryptionVersion {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.DeletionAllowed == true {
@@ -610,7 +634,7 @@ func TestKeyUpgrade(t *testing.T) {
 	if p.Key != nil ||
 		p.Keys == nil ||
 		len(p.Keys) != 1 ||
-		!reflect.DeepEqual(p.Keys[1].AESKey, key) {
+		!reflect.DeepEqual(p.Keys[1].Key, key) {
 		t.Errorf("bad key migration, result is %#v", p.Keys)
 	}
 }

@@ -1,12 +1,111 @@
-## Next (Unreleased)
+## Next (unreleased)
+
+FEATURES:
+
+ * **CouchDB Storage**: CouchDB can now be used for Vault storage
+
+IMPROVEMENTS:
+
+ * core: CORS allowed origins can now be configured [GH-2021]
+ * storage/s3: More efficient paging when an object has a lot of subobjects
+   [GH-2780]
+ * telemetry: Add support for DogStatsD [GH-2490]
 
 BUG FIXES:
 
+ * api/health: Consider the response code from standby nodes [GH-2850]
+ * core: Relocated `sys/leases/renew` returns same payload as original 
+   `sys/leases` endpoint [GH-2891]
+
+## 0.7.3 (June 7th, 2017)
+
+SECURITY:
+
+ * Cert auth backend now checks validity of individual certificates: In
+   previous versions of Vault, validity (e.g. expiration) of individual leaf
+   certificates added for authentication was not checked. This was done to make
+   it easier for administrators to control lifecycles of individual
+   certificates added to the backend, e.g. the authentication material being
+   checked was access to that specific certificate's private key rather than
+   all private keys signed by a CA. However, this behavior is often unexpected
+   and as a result can lead to insecure deployments, so we are now validating
+   these certificates as well.
+ * App-ID path salting was skipped in 0.7.1/0.7.2: A regression in 0.7.1/0.7.2
+   caused the HMACing of any App-ID information stored in paths (including
+   actual app-IDs and user-IDs) to be unsalted and written as-is from the API.
+   In 0.7.3 any such paths will be automatically changed to salted versions on
+   access (e.g. login or read); however, if you created new app-IDs or user-IDs
+   in 0.7.1/0.7.2, you may want to consider whether any users with access to
+   Vault's underlying data store may have intercepted these values, and
+   revoke/roll them.
+
+DEPRECATIONS/CHANGES:
+
+ * Step-Down is Forwarded: When a step-down is issued against a non-active node
+   in an HA cluster, it will now forward the request to the active node.
+
+FEATURES:
+
+ * **ed25519 Signing/Verification in Transit with Key Derivation**: The
+   `transit` backend now supports generating
+   [ed25519](https://ed25519.cr.yp.to/) keys for signing and verification
+   functionality. These keys support derivation, allowing you to modify the
+   actual encryption key used by supplying a `context` value.
+ * **Key Version Specification for Encryption in Transit**: You can now specify
+   the version of a key you use to wish to generate a signature, ciphertext, or
+   HMAC. This can be controlled by the `min_encryption_version` key
+   configuration property.
+ * **Replication Primary Discovery (Enterprise)**: Replication primaries will
+   now advertise the addresses of their local HA cluster members to replication
+   secondaries. This helps recovery if the primary active node goes down and
+   neither service discovery nor load balancers are in use to steer clients.
+
+IMPROVEMENTS:
+
+ * api/health: Add Sys().Health() [GH-2805]
+ * audit: Add auth information to requests that error out [GH-2754]
+ * command/auth: Add `-no-store` option that prevents the auth command from
+   storing the returned token into the configured token helper [GH-2809]
+ * core/forwarding: Request forwarding now heartbeats to prevent unused
+   connections from being terminated by firewalls or proxies
+ * plugins/databases: Add MongoDB as an internal database plugin [GH-2698]
+ * storage/dynamodb: Add a method for checking the existence of children, 
+   speeding up deletion operations in the DynamoDB storage backend [GH-2722]
+ * storage/mysql: Add max_parallel parameter to MySQL backend [GH-2760]
+ * secret/databases: Support listing connections [GH-2823]
+ * secret/databases: Support custom renewal statements in Postgres database 
+   plugin [GH-2788]
+ * secret/databases: Use the role name as part of generated credentials
+   [GH-2812]
+ * ui (Enterprise): Transit key and secret browsing UI handle large lists better
+ * ui (Enterprise): root tokens are no longer persisted
+ * ui (Enterprise): support for mounting Database and TOTP secret backends
+ 
+BUG FIXES:
+
+ * auth/app-id: Fix regression causing loading of salts to be skipped
+ * auth/aws: Improve EC2 describe instances performance [GH-2766]
+ * auth/aws: Fix lookup of some instance profile ARNs [GH-2802]
+ * auth/aws: Resolve ARNs to internal AWS IDs which makes lookup at various
+   points (e.g. renewal time) more robust [GH-2814]
+ * auth/aws: Properly honor configured period when using IAM authentication
+   [GH-2825]
+ * auth/aws: Check that a bound IAM principal is not empty (in the current
+   state of the role) before requiring it match the previously authenticated
+   client [GH-2781]
+ * auth/cert: Fix panic on renewal [GH-2749]
+ * auth/cert: Certificate verification for non-CA certs [GH-2761]
+ * core/acl: Prevent race condition when compiling ACLs in some scenarios
+   [GH-2826]
  * secret/database: Increase wrapping token TTL; in a loaded scenario it could
    be too short
  * secret/generic: Allow integers to be set as the value of `ttl` field as the
    documentation claims is supported [GH-2699]
+ * secret/ssh: Added host key callback to ssh client config [GH-2752]
+ * storage/s3: Avoid a panic when some bad data is returned [GH-2785]
+ * storage/dynamodb: Fix list functions working improperly on Windows [GH-2789]
  * storage/file: Don't leak file descriptors in some error cases
+ * storage/swift: Fix pre-v3 project/tenant name reading [GH-2803]
 
 ## 0.7.2 (May 8th, 2017)
 
@@ -60,8 +159,10 @@ IMPROVEMENTS:
  * cli/revoke: Add `-self` option to allow revoking the currently active token
    [GH-2596]
  * core: Randomize x coordinate in Shamir shares [GH-2621]
- * tidy: Improvements to `auth/token/tidy` and `sys/leases/tidy` to handle more
-   cleanup cases [GH-2452]
+ * replication: Fix a bug when enabling `approle` on a primary before
+   secondaries were connected
+ * replication: Add heartbeating to ensure firewalls don't kill connections to
+   primaries
  * secret/pki: Add `no_store` option that allows certificates to be issued
    without being stored. This removes the ability to look up and/or add to a
    CRL but helps with scaling to very large numbers of certificates. [GH-2565]
@@ -78,6 +179,8 @@ IMPROVEMENTS:
    requests [GH-2466]
  * storage/s3: Use pooled transport for http client [GH-2481]
  * storage/swift: Allow domain values for V3 authentication [GH-2554]
+ * tidy: Improvements to `auth/token/tidy` and `sys/leases/tidy` to handle more
+   cleanup cases [GH-2452]
 
 BUG FIXES:
 

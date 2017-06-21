@@ -1,14 +1,22 @@
 package cert
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"io/ioutil"
+	"math/big"
+	"net"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/vault/helper/certutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
@@ -99,6 +107,222 @@ func connectionState(t *testing.T, serverCAPath, serverCertPath, serverKeyPath, 
 	// Grab the current state
 	connState := serverConn.(*tls.Conn).ConnectionState()
 	return connState
+}
+
+func TestBackend_NonCAExpiry(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	// Create a self-signed certificate and issue a leaf certificate using the
+	// CA cert
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1234),
+		Subject: pkix.Name{
+			CommonName:         "localhost",
+			Organization:       []string{"hashicorp"},
+			OrganizationalUnit: []string{"vault"},
+		},
+		BasicConstraintsValid: true,
+		NotBefore:             time.Now().Add(-30 * time.Second),
+		NotAfter:              time.Now().Add(50 * time.Second),
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
+	}
+
+	// Set IP SAN
+	parsedIP := net.ParseIP("127.0.0.1")
+	if parsedIP == nil {
+		t.Fatalf("failed to create parsed IP")
+	}
+	template.IPAddresses = []net.IP{parsedIP}
+
+	// Private key for CA cert
+	caPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Marshalling to be able to create PEM file
+	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(caPrivateKey)
+
+	caPublicKey := &caPrivateKey.PublicKey
+
+	template.IsCA = true
+
+	caCertBytes, err := x509.CreateCertificate(rand.Reader, template, template, caPublicKey, caPrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	caCert, err := x509.ParseCertificate(caCertBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parsedCaBundle := &certutil.ParsedCertBundle{
+		Certificate:      caCert,
+		CertificateBytes: caCertBytes,
+		PrivateKeyBytes:  caPrivateKeyBytes,
+		PrivateKeyType:   certutil.RSAPrivateKey,
+	}
+
+	caCertBundle, err := parsedCaBundle.ToCertBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	caCertFile, err := ioutil.TempFile("", "caCert")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(caCertFile.Name())
+
+	if _, err := caCertFile.Write([]byte(caCertBundle.Certificate)); err != nil {
+		t.Fatal(err)
+	}
+	if err := caCertFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	caKeyFile, err := ioutil.TempFile("", "caKey")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(caKeyFile.Name())
+
+	if _, err := caKeyFile.Write([]byte(caCertBundle.PrivateKey)); err != nil {
+		t.Fatal(err)
+	}
+	if err := caKeyFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Prepare template for non-CA cert
+
+	template.IsCA = false
+	template.SerialNumber = big.NewInt(5678)
+
+	template.KeyUsage = x509.KeyUsage(x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign)
+	issuedPrivateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	issuedPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(issuedPrivateKey)
+
+	issuedPublicKey := &issuedPrivateKey.PublicKey
+
+	// Keep a short certificate lifetime so logins can be tested both when
+	// cert is valid and when it gets expired
+	template.NotBefore = time.Now().Add(-2 * time.Second)
+	template.NotAfter = time.Now().Add(3 * time.Second)
+
+	issuedCertBytes, err := x509.CreateCertificate(rand.Reader, template, caCert, issuedPublicKey, caPrivateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	issuedCert, err := x509.ParseCertificate(issuedCertBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	parsedIssuedBundle := &certutil.ParsedCertBundle{
+		Certificate:      issuedCert,
+		CertificateBytes: issuedCertBytes,
+		PrivateKeyBytes:  issuedPrivateKeyBytes,
+		PrivateKeyType:   certutil.RSAPrivateKey,
+	}
+
+	issuedCertBundle, err := parsedIssuedBundle.ToCertBundle()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	issuedCertFile, err := ioutil.TempFile("", "issuedCert")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(issuedCertFile.Name())
+
+	if _, err := issuedCertFile.Write([]byte(issuedCertBundle.Certificate)); err != nil {
+		t.Fatal(err)
+	}
+	if err := issuedCertFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	issuedKeyFile, err := ioutil.TempFile("", "issuedKey")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(issuedKeyFile.Name())
+
+	if _, err := issuedKeyFile.Write([]byte(issuedCertBundle.PrivateKey)); err != nil {
+		t.Fatal(err)
+	}
+	if err := issuedKeyFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Register the Non-CA certificate of the client key pair
+	certData := map[string]interface{}{
+		"certificate":  issuedCertBundle.Certificate,
+		"policies":     "abc",
+		"display_name": "cert1",
+		"ttl":          10000,
+	}
+	certReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/cert1",
+		Storage:   storage,
+		Data:      certData,
+	}
+
+	resp, err = b.HandleRequest(certReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Create connection state using the certificates generated
+	connState := connectionState(t, caCertFile.Name(), caCertFile.Name(), caKeyFile.Name(), issuedCertFile.Name(), issuedKeyFile.Name())
+
+	loginReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "login",
+		Connection: &logical.Connection{
+			ConnState: &connState,
+		},
+	}
+
+	// Login when the certificate is still valid. Login should succeed.
+	resp, err = b.HandleRequest(loginReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	// Wait until the certificate expires
+	time.Sleep(5 * time.Second)
+
+	// Login attempt after certificate expiry should fail
+	resp, err = b.HandleRequest(loginReq)
+	if err == nil {
+		t.Fatalf("expected error due to expired certificate")
+	}
 }
 
 func TestBackend_RegisteredNonCA_CRL(t *testing.T) {

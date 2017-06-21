@@ -1,10 +1,9 @@
 # Go Plugin System over RPC
 
 `go-plugin` is a Go (golang) plugin system over RPC. It is the plugin system
-that has been in use by HashiCorp tooling for over 3 years. While initially
-created for [Packer](https://www.packer.io), it has since been used by
-[Terraform](https://www.terraform.io) and [Otto](https://www.ottoproject.io),
-with plans to also use it for [Nomad](https://www.nomadproject.io) and
+that has been in use by HashiCorp tooling for over 4 years. While initially
+created for [Packer](https://www.packer.io), it is additionally in use by
+[Terraform](https://www.terraform.io), [Nomad](https://www.nomadproject.io), and
 [Vault](https://www.vaultproject.io).
 
 While the plugin system is over RPC, it is currently only designed to work
@@ -61,6 +60,10 @@ so that the host process can be upgraded while the plugin is still running.
 This requires the host/plugin to know this is possible and daemonize
 properly. `NewClient` takes a `ReattachConfig` to determine if and how to
 reattach.
+
+**Cryptographically Secure Plugins.** Plugins can be verified with an expected
+checksum and RPC communications can be configured to use TLS. The host process
+must be properly secured to protect this configuration.
 
 ## Architecture
 
@@ -124,10 +127,6 @@ new projects or for new features in existing projects, we constantly find
 improvements we can make.
 
 At this point in time, the roadmap for the plugin system is:
-
-**Cryptographically Secure Plugins.** We'll implement signing plugins
-and loading signed plugins in order to allow Vault to make use of multi-process
-in a secure way.
 
 **Semantic Versioning.** Plugins will be able to implement a semantic version.
 This plugin system will give host processes a system for constraining

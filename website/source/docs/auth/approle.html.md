@@ -20,7 +20,7 @@ An AppRole represents a set of Vault policies and login constraints that must
 be met to receive a token with those policies. The scope can be as narrow or
 broad as desired -- an AppRole can be created for a particular machine, or even
 a particular user on that machine, or a service spread across machines. The
-credentials required for successful login depend upon on the constraints set on
+credentials required for successful login depend upon the constraints set on
 the AppRole associated with the credentials.
 
 ## Credentials/Constraints

@@ -1,5 +1,5 @@
-hash: 86229aa6b7bac444bf1d4a2ec45efc8286725dfaf81240d0a8e38606690c9199
-updated: 2016-12-04T17:37:18.7368222+01:00
+hash: 70c4f5123980f7dbf81db1fc167ea1a38d47d7ebd6f3064f4a80bc9bfe014c8a
+updated: 2017-04-27T18:20:00.1261141+02:00
 imports:
 - name: github.com/Azure/go-ansiterm
   version: fa152c58bc15761d0200cb75fe958b89a9d4888e
@@ -8,7 +8,7 @@ imports:
 - name: github.com/cenk/backoff
   version: 32cd0c5b3aef12c76ed64aaf678f6c79736be7dc
 - name: github.com/docker/docker
-  version: 1f9b3ef9e9c74c2905780ac5347d018646a20022
+  version: 4845c567eb35d68f35b0b1713a09b0c8d47fe67e
   subpackages:
   - api/types
   - api/types/blkiodev
@@ -20,49 +20,56 @@ imports:
   - api/types/strslice
   - api/types/swarm
   - api/types/versions
-  - opts
-  - pkg/archive
   - pkg/fileutils
-  - pkg/homedir
   - pkg/idtools
   - pkg/ioutils
   - pkg/jsonlog
-  - pkg/jsonmessage
   - pkg/longpath
   - pkg/pools
   - pkg/promise
-  - pkg/stdcopy
   - pkg/system
   - pkg/term
   - pkg/term/windows
 - name: github.com/docker/go-connections
-  version: 4ccf312bf1d35e5dbda654e57a9be4c3f3cd0366
+  version: e15c02316c12de00874640cd76311849de2aeed5
   subpackages:
   - nat
 - name: github.com/docker/go-units
-  version: e30f1e79f3cd72542f2026ceec18d3bd67ab859c
+  version: 0dadbb0345b35ec7ef35e228dabb8de89a65bf52
 - name: github.com/fsouza/go-dockerclient
-  version: 0d9f8ca94548b03557f0eba59b4289c7e8512c4a
+  version: c64a7161ef25818ebc0c21cf75243f61fe005bac
 - name: github.com/hashicorp/go-cleanhttp
-  version: ad28ea4487f05916463e2423a55166280e8254b5
+  version: 3573b8b52aa7b37b9358d966a898feb387f62437
 - name: github.com/Microsoft/go-winio
-  version: 24a3e3d3fc7451805e09d11e11e95d9a0a4f205e
+  version: f3b1913901892ada21d52d0cffe1d4c7080d36b7
+- name: github.com/moby/moby
+  version: 4845c567eb35d68f35b0b1713a09b0c8d47fe67e
+  subpackages:
+  - api/types/swarm
+  - opts
+  - pkg/archive
+  - pkg/fileutils
+  - pkg/homedir
+  - pkg/jsonmessage
+  - pkg/stdcopy
+- name: github.com/Nvveen/Gotty
+  version: cd527374f1e5bff4938207604a14f2e38a9cf512
 - name: github.com/opencontainers/runc
-  version: 4271a8b5aec07d69f128df5474dea064d4694832
+  version: b6b70e53451794e8333e9b602cc096b47a20bd0f
   subpackages:
   - libcontainer/system
   - libcontainer/user
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/Sirupsen/logrus
-  version: 4b6ea7319e214d98c938f12692336f7ca9348d6b
+  version: ba1b36c82c5e05c4f912a88eab0dcd91a171688f
 - name: golang.org/x/net
-  version: 4971afdc2f162e82d185353533d3cf16188a9f4e
+  version: da118f7b8e5954f39d0d2130ab35d4bf0e3cb344
   subpackages:
   - context
   - context/ctxhttp
 - name: golang.org/x/sys
-  version: 30237cf4eefd639b184d1f2cb77a581ea0be8947
+  version: 9ccfe848b9db8435a24c424abbc07a921adf1df5
   subpackages:
   - unix
   - windows
@@ -74,7 +81,7 @@ testImports:
 - name: github.com/go-sql-driver/mysql
   version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/lib/pq
-  version: d8eeeb8bae8896dd8e1b7e514ab0d396c4f12a1b
+  version: 2704adc878c21e1329f46f6e56a1c387d788ff94
   subpackages:
   - oid
 - name: github.com/pmezard/go-difflib

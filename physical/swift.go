@@ -13,6 +13,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/ncw/swift"
 )
 
@@ -29,6 +30,8 @@ type SwiftBackend struct {
 // container. Credentials can be provided to the backend, sourced
 // from the environment.
 func newSwiftBackend(conf map[string]string, logger log.Logger) (Backend, error) {
+
+	var ok bool
 
 	username := os.Getenv("OS_USERNAME")
 	if username == "" {
@@ -60,11 +63,9 @@ func newSwiftBackend(conf map[string]string, logger log.Logger) (Backend, error)
 	}
 	project := os.Getenv("OS_PROJECT_NAME")
 	if project == "" {
-		project = conf["project"]
-
-		if project == "" {
+		if project, ok = conf["project"]; !ok {
 			// Check for KeyStone naming prior to V3
-			project := os.Getenv("OS_TENANT_NAME")
+			project = os.Getenv("OS_TENANT_NAME")
 			if project == "" {
 				project = conf["tenant"]
 			}
@@ -207,7 +208,7 @@ func (s *SwiftBackend) List(prefix string) ([]string, error) {
 			keys = append(keys, key)
 		} else if i != -1 {
 			// Add truncated 'folder' paths
-			keys = appendIfMissing(keys, key[:i+1])
+			keys = strutil.AppendIfMissing(keys, key[:i+1])
 		}
 	}
 

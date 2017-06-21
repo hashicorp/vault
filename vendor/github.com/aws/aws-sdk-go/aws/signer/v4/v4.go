@@ -402,7 +402,7 @@ var SignRequestHandler = request.NamedHandler{
 }
 
 // SignSDKRequest signs an AWS request with the V4 signature. This
-// request handler is bested used only with the SDK's built in service client's
+// request handler should only be used with the SDK's built in service client's
 // API operation requests.
 //
 // This function should not be used on its on its own, but in conjunction with

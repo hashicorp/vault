@@ -1,11 +1,11 @@
 {
  "kind": "discovery#restDescription",
- "etag": "\"tbys6C40o18GZwyMen5GMkdK-3s/z5yry82uiiVbT8ZegvP6VogRacg\"",
+ "etag": "\"YWOzh2SDasdU84ArJnpYek-OMdg/GRtDpiDRivRW7hDEFVrFuoXBCxk\"",
  "discoveryVersion": "v1",
  "id": "storage:v1",
  "name": "storage",
  "version": "v1",
- "revision": "20170224",
+ "revision": "20170510",
  "title": "Cloud Storage JSON API",
  "description": "Stores and retrieves potentially large, immutable data objects.",
  "ownerDomain": "google.com",
@@ -108,6 +108,16 @@
       ]
      }
     },
+    "billing": {
+     "type": "object",
+     "description": "The bucket's billing configuration.",
+     "properties": {
+      "requesterPays": {
+       "type": "boolean",
+       "description": "When set to true, bucket is requester pays."
+      }
+     }
+    },
     "cors": {
      "type": "array",
      "description": "The bucket's Cross-Origin Resource Sharing (CORS) configuration.",
@@ -162,6 +172,14 @@
      "type": "string",
      "description": "The kind of item this is. For buckets, this is always storage#bucket.",
      "default": "storage#bucket"
+    },
+    "labels": {
+     "type": "object",
+     "description": "User-provided labels, in key/value pairs.",
+     "additionalProperties": {
+      "type": "string",
+      "description": "An individual label entry."
+     }
     },
     "lifecycle": {
      "type": "object",
@@ -541,6 +559,81 @@
     }
    }
   },
+  "Notification": {
+   "id": "Notification",
+   "type": "object",
+   "description": "A subscription to receive Google PubSub notifications.",
+   "properties": {
+    "custom_attributes": {
+     "type": "object",
+     "description": "An optional list of additional attributes to attach to each Cloud PubSub message published for this notification subscription.",
+     "additionalProperties": {
+      "type": "string"
+     }
+    },
+    "etag": {
+     "type": "string",
+     "description": "HTTP 1.1 Entity tag for this subscription notification."
+    },
+    "event_types": {
+     "type": "array",
+     "description": "If present, only send notifications about listed event types. If empty, sent notifications for all event types.",
+     "items": {
+      "type": "string"
+     }
+    },
+    "id": {
+     "type": "string",
+     "description": "The ID of the notification."
+    },
+    "kind": {
+     "type": "string",
+     "description": "The kind of item this is. For notifications, this is always storage#notification.",
+     "default": "storage#notification"
+    },
+    "object_name_prefix": {
+     "type": "string",
+     "description": "If present, only apply this notification configuration to object names that begin with this prefix."
+    },
+    "payload_format": {
+     "type": "string",
+     "description": "The desired content of the Payload.",
+     "default": "JSON_API_V1"
+    },
+    "selfLink": {
+     "type": "string",
+     "description": "The canonical URL of this notification."
+    },
+    "topic": {
+     "type": "string",
+     "description": "The Cloud PubSub topic to which this subscription publishes. Formatted as: '//pubsub.googleapis.com/projects/{project-identifier}/topics/{my-topic}'",
+     "annotations": {
+      "required": [
+       "storage.notifications.insert"
+      ]
+     }
+    }
+   }
+  },
+  "Notifications": {
+   "id": "Notifications",
+   "type": "object",
+   "description": "A list of notification subscriptions.",
+   "properties": {
+    "items": {
+     "type": "array",
+     "description": "The list of items.",
+     "items": {
+      "$ref": "Notification"
+     }
+    },
+    "kind": {
+     "type": "string",
+     "description": "The kind of item this is. For lists of notifications, this is always storage#notifications.",
+     "default": "storage#notifications"
+    }
+   }
+  },
   "Object": {
    "id": "Object",
    "type": "object",
@@ -905,7 +998,7 @@
     "objectSize": {
      "type": "string",
      "description": "The total size of the object being copied in bytes. This property is always present in the response.",
-     "format": "uint64"
+     "format": "int64"
     },
     "resource": {
      "$ref": "Object",
@@ -918,7 +1011,23 @@
     "totalBytesRewritten": {
      "type": "string",
      "description": "The total bytes written so far, which can be used to provide a waiting user with a progress indicator. This property is always present in the response.",
-     "format": "uint64"
+     "format": "int64"
+    }
+   }
+  },
+  "ServiceAccount": {
+   "id": "ServiceAccount",
+   "type": "object",
+   "description": "A subscription to receive Google PubSub notifications.",
+   "properties": {
+    "email_address": {
+     "type": "string",
+     "description": "The ID of the notification."
+    },
+    "kind": {
+     "type": "string",
+     "description": "The kind of item this is. For notifications, this is always storage#notification.",
+     "default": "storage#serviceAccount"
     }
    }
   },
@@ -962,6 +1071,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -990,6 +1104,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1015,6 +1134,11 @@
        "description": "Name of a bucket.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1042,6 +1166,11 @@
        "description": "Name of a bucket.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1072,6 +1201,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1106,6 +1240,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1149,6 +1288,11 @@
        "type": "string",
        "description": "If set, only deletes the bucket if its metageneration does not match this value.",
        "format": "int64",
+       "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
        "location": "query"
       }
      },
@@ -1197,6 +1341,11 @@
         "Omit owner, acl and defaultObjectAcl properties."
        ],
        "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1224,6 +1373,11 @@
        "description": "Name of a bucket.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1455,6 +1609,11 @@
         "Omit owner, acl and defaultObjectAcl properties."
        ],
        "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1482,6 +1641,11 @@
        "description": "Name of a bucket.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1516,6 +1680,11 @@
        "description": "Permissions to test.",
        "required": true,
        "repeated": true,
+       "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
        "location": "query"
       }
      },
@@ -1610,6 +1779,11 @@
         "Omit owner, acl and defaultObjectAcl properties."
        ],
        "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1668,6 +1842,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1696,6 +1875,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1721,6 +1905,11 @@
        "description": "Name of a bucket.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1760,6 +1949,11 @@
        "description": "If present, only return default ACL listing if the bucket's current metageneration does not match the given value.",
        "format": "int64",
        "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1790,6 +1984,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1824,6 +2023,11 @@
        "description": "The entity holding the permission. Can be user-userId, user-emailAddress, group-groupId, group-emailAddress, allUsers, or allAuthenticatedUsers.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1839,6 +2043,148 @@
      "scopes": [
       "https://www.googleapis.com/auth/cloud-platform",
       "https://www.googleapis.com/auth/devstorage.full_control"
+     ]
+    }
+   }
+  },
+  "notifications": {
+   "methods": {
+    "delete": {
+     "id": "storage.notifications.delete",
+     "path": "b/{bucket}/notificationConfigs/{notification}",
+     "httpMethod": "DELETE",
+     "description": "Permanently deletes a notification subscription.",
+     "parameters": {
+      "bucket": {
+       "type": "string",
+       "description": "The parent bucket of the notification.",
+       "required": true,
+       "location": "path"
+      },
+      "notification": {
+       "type": "string",
+       "description": "ID of the notification to delete.",
+       "required": true,
+       "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
+      }
+     },
+     "parameterOrder": [
+      "bucket",
+      "notification"
+     ],
+     "scopes": [
+      "https://www.googleapis.com/auth/cloud-platform",
+      "https://www.googleapis.com/auth/devstorage.full_control",
+      "https://www.googleapis.com/auth/devstorage.read_write"
+     ]
+    },
+    "get": {
+     "id": "storage.notifications.get",
+     "path": "b/{bucket}/notificationConfigs/{notification}",
+     "httpMethod": "GET",
+     "description": "View a notification configuration.",
+     "parameters": {
+      "bucket": {
+       "type": "string",
+       "description": "The parent bucket of the notification.",
+       "required": true,
+       "location": "path"
+      },
+      "notification": {
+       "type": "string",
+       "description": "Notification ID",
+       "required": true,
+       "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
+      }
+     },
+     "parameterOrder": [
+      "bucket",
+      "notification"
+     ],
+     "response": {
+      "$ref": "Notification"
+     },
+     "scopes": [
+      "https://www.googleapis.com/auth/cloud-platform",
+      "https://www.googleapis.com/auth/cloud-platform.read-only",
+      "https://www.googleapis.com/auth/devstorage.full_control",
+      "https://www.googleapis.com/auth/devstorage.read_only",
+      "https://www.googleapis.com/auth/devstorage.read_write"
+     ]
+    },
+    "insert": {
+     "id": "storage.notifications.insert",
+     "path": "b/{bucket}/notificationConfigs",
+     "httpMethod": "POST",
+     "description": "Creates a notification subscription for a given bucket.",
+     "parameters": {
+      "bucket": {
+       "type": "string",
+       "description": "The parent bucket of the notification.",
+       "required": true,
+       "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
+      }
+     },
+     "parameterOrder": [
+      "bucket"
+     ],
+     "request": {
+      "$ref": "Notification"
+     },
+     "response": {
+      "$ref": "Notification"
+     },
+     "scopes": [
+      "https://www.googleapis.com/auth/cloud-platform",
+      "https://www.googleapis.com/auth/devstorage.full_control",
+      "https://www.googleapis.com/auth/devstorage.read_write"
+     ]
+    },
+    "list": {
+     "id": "storage.notifications.list",
+     "path": "b/{bucket}/notificationConfigs",
+     "httpMethod": "GET",
+     "description": "Retrieves a list of notification subscriptions for a given bucket.",
+     "parameters": {
+      "bucket": {
+       "type": "string",
+       "description": "Name of a GCS bucket.",
+       "required": true,
+       "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
+      }
+     },
+     "parameterOrder": [
+      "bucket"
+     ],
+     "response": {
+      "$ref": "Notifications"
+     },
+     "scopes": [
+      "https://www.googleapis.com/auth/cloud-platform",
+      "https://www.googleapis.com/auth/cloud-platform.read-only",
+      "https://www.googleapis.com/auth/devstorage.full_control",
+      "https://www.googleapis.com/auth/devstorage.read_only",
+      "https://www.googleapis.com/auth/devstorage.read_write"
      ]
     }
    }
@@ -1874,6 +2220,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1915,6 +2266,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1953,6 +2309,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -1993,6 +2354,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2036,6 +2402,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2083,6 +2454,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2154,6 +2530,11 @@
        "type": "string",
        "description": "Makes the operation conditional on whether the object's current metageneration matches the given value.",
        "format": "int64",
+       "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
        "location": "query"
       }
      },
@@ -2292,6 +2673,11 @@
        "description": "Name of the source object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2361,6 +2747,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2433,6 +2824,11 @@
         "Omit the owner, acl property."
        ],
        "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2475,6 +2871,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2571,6 +2972,11 @@
         "Omit the owner, acl property."
        ],
        "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2652,6 +3058,11 @@
         "Include all properties.",
         "Omit the owner, acl property."
        ],
+       "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
        "location": "query"
       },
       "versions": {
@@ -2755,6 +3166,11 @@
         "Include all properties.",
         "Omit the owner, acl property."
        ],
+       "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
        "location": "query"
       }
      },
@@ -2901,6 +3317,11 @@
        "description": "Name of the source object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2944,6 +3365,11 @@
        "description": "Name of the object. For information about how to URL encode object names to be path safe, see Encoding URI Path Parts.",
        "required": true,
        "location": "path"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -2991,6 +3417,11 @@
        "description": "Permissions to test.",
        "required": true,
        "repeated": true,
+       "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
        "location": "query"
       }
      },
@@ -3091,6 +3522,11 @@
         "Omit the owner, acl property."
        ],
        "location": "query"
+      },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
       }
      },
      "parameterOrder": [
@@ -3158,6 +3594,11 @@
        ],
        "location": "query"
       },
+      "userProject": {
+       "type": "string",
+       "description": "The project number to be billed for this request, for Requester Pays buckets.",
+       "location": "query"
+      },
       "versions": {
        "type": "boolean",
        "description": "If true, lists all versions of an object as distinct results. The default is false. For more information, see Object Versioning.",
@@ -3182,6 +3623,41 @@
       "https://www.googleapis.com/auth/devstorage.read_write"
      ],
      "supportsSubscription": true
+    }
+   }
+  },
+  "projects": {
+   "resources": {
+    "serviceAccount": {
+     "methods": {
+      "get": {
+       "id": "storage.projects.serviceAccount.get",
+       "path": "projects/{projectId}/serviceAccount",
+       "httpMethod": "GET",
+       "description": "Get the email address of this project's GCS service account.",
+       "parameters": {
+        "projectId": {
+         "type": "string",
+         "description": "Project ID",
+         "required": true,
+         "location": "path"
+        }
+       },
+       "parameterOrder": [
+        "projectId"
+       ],
+       "response": {
+        "$ref": "ServiceAccount"
+       },
+       "scopes": [
+        "https://www.googleapis.com/auth/cloud-platform",
+        "https://www.googleapis.com/auth/cloud-platform.read-only",
+        "https://www.googleapis.com/auth/devstorage.full_control",
+        "https://www.googleapis.com/auth/devstorage.read_only",
+        "https://www.googleapis.com/auth/devstorage.read_write"
+       ]
+      }
+     }
     }
    }
   }

@@ -77,8 +77,8 @@ func (c *Core) HandleRequest(req *logical.Request) (resp *logical.Response, err 
 		} else {
 			wrappingResp := &logical.Response{
 				WrapInfo: resp.WrapInfo,
+				Warnings: resp.Warnings,
 			}
-			wrappingResp.CloneWarnings(resp)
 			resp = wrappingResp
 		}
 	}
@@ -171,7 +171,7 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 		if errType != nil {
 			retErr = multierror.Append(retErr, errType)
 		}
-		return logical.ErrorResponse(ctErr.Error()), nil, retErr
+		return logical.ErrorResponse(ctErr.Error()), auth, retErr
 	}
 
 	// Attach the display name
@@ -226,7 +226,8 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 
 	// If there is a secret, we must register it with the expiration manager.
 	// We exclude renewal of a lease, since it does not need to be re-registered
-	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew") {
+	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew") &&
+		!strings.HasPrefix(req.Path, "sys/leases/renew") {
 		// Get the SystemView for the mount
 		sysView := c.router.MatchingSystemView(req.Path)
 		if sysView == nil {

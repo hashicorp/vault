@@ -120,11 +120,13 @@ var brokenAuthHeaderProviders = []string{
 	"https://www.wunderlist.com/oauth/",
 	"https://api.patreon.com/",
 	"https://sandbox.codeswholesale.com/oauth/token",
+	"https://api.sipgate.com/v1/authorization/oauth",
 }
 
 // brokenAuthHeaderDomains lists broken providers that issue dynamic endpoints.
 var brokenAuthHeaderDomains = []string{
 	".force.com",
+	".myshopify.com",
 	".okta.com",
 	".oktapreview.com",
 }

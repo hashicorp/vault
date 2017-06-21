@@ -41,7 +41,7 @@ client token is the Vault token with which this API call is made.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
-    --data payload.json \
+    --data @payload.json \
     https://vault.rocks/v1/sys/capabilities-self
 ```
 

@@ -13,10 +13,10 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b.Setup(conf)
+	return b.Backend.Setup(conf)
 }
 
-func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
+func Backend(conf *logical.BackendConfig) (backend, error) {
 	var b backend
 	b.MapAppId = &framework.PolicyMap{
 		PathMap: framework.PathMap{
@@ -75,8 +75,10 @@ func Backend(conf *logical.BackendConfig) (*framework.Backend, error) {
 	}
 
 	b.view = conf.StorageView
+	b.MapAppId.SaltFunc = b.Salt
+	b.MapUserId.SaltFunc = b.Salt
 
-	return b.Backend, nil
+	return b, nil
 }
 
 type backend struct {
@@ -109,9 +111,6 @@ func (b *backend) Salt() (*salt.Salt, error) {
 		return nil, err
 	}
 	b.salt = salt
-	b.MapAppId.SaltFunc = b.Salt
-	b.MapUserId.SaltFunc = b.Salt
-
 	return salt, nil
 }
 

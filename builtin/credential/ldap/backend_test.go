@@ -463,8 +463,8 @@ func testAccStepLoginNoGroupDN(t *testing.T, user string, pass string) logicalte
 
 		// Verifies a search without defined GroupDN returns a warnting rather than failing
 		Check: func(resp *logical.Response) error {
-			if len(resp.Warnings()) != 1 {
-				return fmt.Errorf("expected a warning due to no group dn, got: %#v", resp.Warnings())
+			if len(resp.Warnings) != 1 {
+				return fmt.Errorf("expected a warning due to no group dn, got: %#v", resp.Warnings)
 			}
 
 			return logicaltest.TestCheckAuth([]string{"bar", "default"})(resp)

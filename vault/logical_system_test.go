@@ -31,6 +31,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/primary/secondary-token",
 		"replication/reindex",
 		"rotate",
+		"config/cors",
 		"config/auditing/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
@@ -44,6 +45,60 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
+}
+
+func TestSystemConfigCORS(t *testing.T) {
+	b := testSystemBackend(t)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "")
+	b.(*SystemBackend).Core.systemBarrierView = view
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
+	req.Data["allowed_origins"] = "http://www.example.com"
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":         true,
+			"allowed_origins": []string{"http://www.example.com"},
+		},
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
+	}
+
+	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
+	_, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected = &logical.Response{
+		Data: map[string]interface{}{
+			"enabled": false,
+		},
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("DELETE FAILED -- bad: %#v", actual)
+	}
+
 }
 
 func TestSystemBackend_mounts(t *testing.T) {
@@ -927,7 +982,8 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b, err := NewSystemBackend(core, bc)
+	be := NewSystemBackend(core)
+	b, err := be.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -990,7 +1046,8 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b, err := NewSystemBackend(core, bc)
+	be := NewSystemBackend(core)
+	b, err := be.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1254,13 +1311,11 @@ func TestSystemBackend_auditHash(t *testing.T) {
 			Key:   "salt",
 			Value: []byte("foo"),
 		})
-		var err error
-		config.Salt, err = salt.NewSalt(view, &salt.Config{
+		config.SaltView = view
+		config.SaltConfig = &salt.Config{
 			HMAC:     sha256.New,
 			HMACType: "hmac-sha256",
-		})
-		if err != nil {
-			t.Fatalf("error getting new salt: %v", err)
+			Location: salt.DefaultLocation,
 		}
 		return &NoopAudit{
 			Config: config,
@@ -1527,7 +1582,8 @@ func testSystemBackend(t *testing.T) logical.Backend {
 		},
 	}
 
-	b, err := NewSystemBackend(c, bc)
+	b := NewSystemBackend(c)
+	_, err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1545,7 +1601,8 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 		},
 	}
 
-	b, err := NewSystemBackend(c, bc)
+	b := NewSystemBackend(c)
+	_, err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}

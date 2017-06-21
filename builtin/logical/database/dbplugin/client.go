@@ -78,10 +78,10 @@ func (dr *databasePluginRPCClient) Type() (string, error) {
 	return fmt.Sprintf("plugin-%s", dbType), err
 }
 
-func (dr *databasePluginRPCClient) CreateUser(statements Statements, usernamePrefix string, expiration time.Time) (username string, password string, err error) {
+func (dr *databasePluginRPCClient) CreateUser(statements Statements, usernameConfig UsernameConfig, expiration time.Time) (username string, password string, err error) {
 	req := CreateUserRequest{
 		Statements:     statements,
-		UsernamePrefix: usernamePrefix,
+		UsernameConfig: usernameConfig,
 		Expiration:     expiration,
 	}
 

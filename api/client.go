@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"path"
 
 	"golang.org/x/net/http2"
 
@@ -325,6 +325,11 @@ func (c *Client) SetToken(v string) {
 // ClearToken deletes the token if it is set or does nothing otherwise.
 func (c *Client) ClearToken() {
 	c.token = ""
+}
+
+// Clone creates a copy of this client.
+func (c *Client) Clone() (*Client, error) {
+	return NewClient(c.config)
 }
 
 // NewRequest creates a new raw request object to query the Vault server

@@ -131,6 +131,30 @@ func TestFileBackend_Base64URLEncoding(t *testing.T) {
 	}
 }
 
+func TestFileBackend_ValidatePath(t *testing.T) {
+	dir, err := ioutil.TempDir("", "vault")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	defer os.RemoveAll(dir)
+
+	logger := logformat.NewVaultLogger(log.LevelTrace)
+
+	b, err := NewBackend("file", logger, map[string]string{
+		"path": dir,
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	if err := b.Delete("foo/bar/../zip"); err == nil {
+		t.Fatal("expected error")
+	}
+	if err := b.Delete("foo/bar/zip"); err != nil {
+		t.Fatal("did not expect error")
+	}
+}
+
 func TestFileBackend(t *testing.T) {
 	dir, err := ioutil.TempDir("", "vault")
 	if err != nil {

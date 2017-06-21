@@ -26,6 +26,12 @@ func (b *backend) pathSign() *framework.Path {
 				Description: "The base64-encoded input data",
 			},
 
+			"context": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation. Required if key
+derivation is enabled; currently only available with ed25519 keys.`,
+			},
+
 			"algorithm": &framework.FieldSchema{
 				Type:    framework.TypeString,
 				Default: "sha2-256",
@@ -36,12 +42,19 @@ func (b *backend) pathSign() *framework.Path {
 * sha2-384
 * sha2-512
 
-Defaults to "sha2-256".`,
+Defaults to "sha2-256". Not valid for all key types.`,
 			},
 
 			"urlalgorithm": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: `Hash algorithm to use (POST URL parameter)`,
+			},
+
+			"key_version": &framework.FieldSchema{
+				Type: framework.TypeInt,
+				Description: `The version of the key to use for signing.
+Must be 0 (for latest) or a value greater than or equal
+to the min_encryption_version configured on the key.`,
 			},
 		},
 
@@ -61,6 +74,12 @@ func (b *backend) pathVerify() *framework.Path {
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
 				Description: "The key to use",
+			},
+
+			"context": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `Base64 encoded context for key derivation. Required if key
+derivation is enabled; currently only available with ed25519 keys.`,
 			},
 
 			"signature": &framework.FieldSchema{
@@ -93,7 +112,7 @@ func (b *backend) pathVerify() *framework.Path {
 * sha2-384
 * sha2-512
 
-Defaults to "sha2-256".`,
+Defaults to "sha2-256". Not valid for all key types.`,
 			},
 		},
 
@@ -109,6 +128,7 @@ Defaults to "sha2-256".`,
 func (b *backend) pathSignWrite(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	name := d.Get("name").(string)
+	ver := d.Get("key_version").(int)
 	inputB64 := d.Get("input").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {
@@ -120,22 +140,6 @@ func (b *backend) pathSignWrite(
 		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
 	}
 
-	var hf hash.Hash
-	switch algorithm {
-	case "sha2-224":
-		hf = sha256.New224()
-	case "sha2-256":
-		hf = sha256.New()
-	case "sha2-384":
-		hf = sha512.New384()
-	case "sha2-512":
-		hf = sha512.New()
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
-	}
-	hf.Write(input)
-	hashedInput := hf.Sum(nil)
-
 	// Get the policy
 	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
 	if lock != nil {
@@ -145,27 +149,59 @@ func (b *backend) pathSignWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
 	if !p.Type.SigningSupported() {
 		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
 
-	sig, err := p.Sign(hashedInput)
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
+	if p.Type.HashSignatureInput() {
+		var hf hash.Hash
+		switch algorithm {
+		case "sha2-224":
+			hf = sha256.New224()
+		case "sha2-256":
+			hf = sha256.New()
+		case "sha2-384":
+			hf = sha512.New384()
+		case "sha2-512":
+			hf = sha512.New()
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+		}
+		hf.Write(input)
+		input = hf.Sum(nil)
+	}
+
+	sig, err := p.Sign(ver, context, input)
 	if err != nil {
 		return nil, err
 	}
-	if sig == "" {
+	if sig == nil {
 		return nil, fmt.Errorf("signature could not be computed")
 	}
 
 	// Generate the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"signature": sig,
+			"signature": sig.Signature,
 		},
 	}
+
+	if len(sig.PublicKey) > 0 {
+		resp.Data["public_key"] = sig.PublicKey
+	}
+
 	return resp, nil
 }
 
@@ -197,22 +233,6 @@ func (b *backend) pathVerifyWrite(
 		return logical.ErrorResponse(fmt.Sprintf("unable to decode input as base64: %s", err)), logical.ErrInvalidRequest
 	}
 
-	var hf hash.Hash
-	switch algorithm {
-	case "sha2-224":
-		hf = sha256.New224()
-	case "sha2-256":
-		hf = sha256.New()
-	case "sha2-384":
-		hf = sha512.New384()
-	case "sha2-512":
-		hf = sha512.New()
-	default:
-		return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
-	}
-	hf.Write(input)
-	hashedInput := hf.Sum(nil)
-
 	// Get the policy
 	p, lock, err := b.lm.GetPolicyShared(req.Storage, name)
 	if lock != nil {
@@ -222,10 +242,41 @@ func (b *backend) pathVerifyWrite(
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("policy not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
 
-	valid, err := p.VerifySignature(hashedInput, sig)
+	if !p.Type.SigningSupported() {
+		return logical.ErrorResponse(fmt.Sprintf("key type %v does not support verification", p.Type)), logical.ErrInvalidRequest
+	}
+
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
+	if p.Type.HashSignatureInput() {
+		var hf hash.Hash
+		switch algorithm {
+		case "sha2-224":
+			hf = sha256.New224()
+		case "sha2-256":
+			hf = sha256.New()
+		case "sha2-384":
+			hf = sha512.New384()
+		case "sha2-512":
+			hf = sha512.New()
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("unsupported algorithm %s", algorithm)), nil
+		}
+		hf.Write(input)
+		input = hf.Sum(nil)
+	}
+
+	valid, err := p.VerifySignature(context, input, sig)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

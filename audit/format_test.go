@@ -10,6 +10,8 @@ import (
 )
 
 type noopFormatWriter struct {
+	salt     *salt.Salt
+	SaltFunc func() (*salt.Salt, error)
 }
 
 func (n *noopFormatWriter) WriteRequest(_ io.Writer, _ *AuditRequestEntry) error {
@@ -20,11 +22,20 @@ func (n *noopFormatWriter) WriteResponse(_ io.Writer, _ *AuditResponseEntry) err
 	return nil
 }
 
-func TestFormatRequestErrors(t *testing.T) {
-	salter, _ := salt.NewSalt(nil, nil)
-	config := FormatterConfig{
-		Salt: salter,
+func (n *noopFormatWriter) Salt() (*salt.Salt, error) {
+	if n.salt != nil {
+		return n.salt, nil
 	}
+	var err error
+	n.salt, err = salt.NewSalt(nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return n.salt, nil
+}
+
+func TestFormatRequestErrors(t *testing.T) {
+	config := FormatterConfig{}
 	formatter := AuditFormatter{
 		AuditFormatWriter: &noopFormatWriter{},
 	}
@@ -38,10 +49,7 @@ func TestFormatRequestErrors(t *testing.T) {
 }
 
 func TestFormatResponseErrors(t *testing.T) {
-	salter, _ := salt.NewSalt(nil, nil)
-	config := FormatterConfig{
-		Salt: salter,
-	}
+	config := FormatterConfig{}
 	formatter := AuditFormatter{
 		AuditFormatWriter: &noopFormatWriter{},
 	}
