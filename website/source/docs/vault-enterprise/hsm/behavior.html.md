@@ -43,6 +43,9 @@ encryption key that the master key protects via the
 [`/sys/rotate`](/api/system/rotate.html) API
 endpoint.
 
+Note that in high availability configurations the HSM automatically unseals
+the barrier for only the active instance.
+
 ## Recovery Key
 
 When Vault is initialized while using an HSM, rather than unseal keys being
