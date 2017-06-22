@@ -9,7 +9,12 @@ description: |-
 # Production Hardening
 
 This guide provides guidance on best practices for a production hardened deployment of Vault.
-The recommendations are based on the [security model](/docs/internals/security.html) and focus on defense in depth, meant for an _ideal_ deployment of Vault. For many use cases and environments, this level of hardening may not be necessary to benefit from using Vault.
+The recommendations are based on the [security model](/docs/internals/security.html) and focus on defense in depth.
+
+~> **Apply When Possible!** This guide is meant to provide guidance for an _ideal_ deployment of Vault, not to document requirements.
+It is entirely possible to use Vault without applying any of the following recommendations. These are best practice recommendations that should be applied when possible and practical.
+
+# Recommendations
 
 * **End-to-End TLS**. Vault should always be used with TLS in production. If intermediate load balancers or reverse proxies are used to front Vault, they should _not_ terminate TLS. This way traffic is always encrypted in transit to Vault and minimizes risks introduced by intermediate layers.
 
