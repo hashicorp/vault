@@ -27,7 +27,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		Secrets: []*framework.Secret{},
 	}
 
-	b.usedCodes = cache.New(0, 1*time.Second)
+	b.usedCodes = cache.New(0, 30*time.Second)
 
 	return &b
 }
