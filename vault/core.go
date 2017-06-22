@@ -104,7 +104,7 @@ var (
 )
 
 // ReloadFunc are functions that are called when a reload is requested.
-type ReloadFunc func(map[string]string) error
+type ReloadFunc func(map[string]interface{}) error
 
 // NonFatalError is an error that can be returned during NewCore that should be
 // displayed but not cause a program exit

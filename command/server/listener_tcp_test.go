@@ -13,7 +13,7 @@ import (
 )
 
 func TestTCPListener(t *testing.T) {
-	ln, _, _, err := tcpListenerFactory(map[string]string{
+	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
 		"address":     "127.0.0.1:0",
 		"tls_disable": "1",
 	}, nil)
@@ -48,7 +48,7 @@ func TestTCPListener_tls(t *testing.T) {
 		t.Fatal("not ok when appending CA cert")
 	}
 
-	ln, _, _, err := tcpListenerFactory(map[string]string{
+	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
 		"address":       "127.0.0.1:0",
 		"tls_cert_file": wd + "reload_foo.pem",
 		"tls_key_file":  wd + "reload_foo.key",

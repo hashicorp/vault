@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/vault/helper/gated-writer"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/parseutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/meta"
@@ -421,15 +422,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	c.reloadFuncsLock.Lock()
 	lns := make([]net.Listener, 0, len(config.Listeners))
 	for i, lnConfig := range config.Listeners {
-		if lnConfig.Type == "atlas" {
-			if config.ClusterName == "" {
-				c.Ui.Output("cluster_name is not set in the config and is a required value")
-				return 1
-			}
-
-			lnConfig.Config["cluster_name"] = config.ClusterName
-		}
-
 		ln, props, reloadFunc, err := server.NewListener(lnConfig.Type, lnConfig.Config, logGate)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
@@ -447,9 +439,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		if !disableClustering && lnConfig.Type == "tcp" {
+			var addrRaw interface{}
 			var addr string
 			var ok bool
-			if addr, ok = lnConfig.Config["cluster_address"]; ok {
+			if addrRaw, ok = lnConfig.Config["cluster_address"]; ok {
+				addr = addrRaw.(string)
 				tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 				if err != nil {
 					c.Ui.Output(fmt.Sprintf(
@@ -595,7 +589,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				"immediately begin using the Vault CLI.\n\n"+
 				"The only step you need to take is to set the following\n"+
 				"environment variables:\n\n"+
-				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"]+quote+"\n\n"+
+				"    "+export+" VAULT_ADDR="+quote+"http://"+config.Listeners[0].Config["address"].(string)+quote+"\n\n"+
 				"The unseal key and root token are reproduced below in case you\n"+
 				"want to seal/unseal the Vault or play with authentication.\n\n"+
 				"Unseal Key: %s\nRoot Token: %s\n",
@@ -780,7 +774,7 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 
 		// Check if TLS is disabled
 		if val, ok := list.Config["tls_disable"]; ok {
-			disable, err := strconv.ParseBool(val)
+			disable, err := parseutil.ParseBool(val)
 			if err != nil {
 				return "", fmt.Errorf("tls_disable: %s", err)
 			}
@@ -791,9 +785,12 @@ func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
 		}
 
 		// Check for address override
-		addr, ok := list.Config["address"]
+		var addr string
+		addrRaw, ok := list.Config["address"]
 		if !ok {
 			addr = "127.0.0.1:8200"
+		} else {
+			addr = addrRaw.(string)
 		}
 
 		// Check for localhost
