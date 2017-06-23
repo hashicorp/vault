@@ -33,7 +33,7 @@ for your use cases.
 
 ### EC2 Authentication Method
 
-[![Vault AWS Ec2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)](/assets/images/vault-aws-ec2-auth-flow.png)
+[![Vault AWS EC2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)](/assets/images/vault-aws-ec2-auth-flow.png)
 
 EC2 instances have access to metadata describing the instance. (For those not
 familiar with instance metadata, details can be found
