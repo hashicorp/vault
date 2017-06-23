@@ -24,7 +24,7 @@ func TestSystem_defaultLeaseTTL(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	expected := sys.DefaultLeaseTTL()
 	actual := testSystemView.DefaultLeaseTTL()
@@ -43,7 +43,7 @@ func TestSystem_maxLeaseTTL(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	expected := sys.MaxLeaseTTL()
 	actual := testSystemView.MaxLeaseTTL()
@@ -63,7 +63,7 @@ func TestSystem_sudoPrivilege(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	expected := sys.SudoPrivilege("foo", "bar")
 	actual := testSystemView.SudoPrivilege("foo", "bar")
@@ -83,7 +83,7 @@ func TestSystem_tainted(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	expected := sys.Tainted()
 	actual := testSystemView.Tainted()
@@ -103,7 +103,7 @@ func TestSystem_cachingDisabled(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	expected := sys.CachingDisabled()
 	actual := testSystemView.CachingDisabled()
@@ -123,7 +123,7 @@ func TestSystem_replicationState(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	expected := sys.ReplicationState()
 	actual := testSystemView.ReplicationState()
@@ -146,7 +146,7 @@ func TestSystem_lookupPlugin(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	if _, err := testSystemView.LookupPlugin("foo"); err == nil {
 		t.Fatal("LookPlugin(): expected error on due to unsupported call from plugin")
@@ -164,7 +164,7 @@ func TestSystem_mlockEnabled(t *testing.T) {
 		impl: sys,
 	})
 
-	testSystemView := SystemViewClient{client: client}
+	testSystemView := &SystemViewClient{client: client}
 
 	expected := sys.MlockEnabled()
 	actual := testSystemView.MlockEnabled()

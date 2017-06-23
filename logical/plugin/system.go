@@ -17,7 +17,7 @@ type SystemViewClient struct {
 	client *rpc.Client
 }
 
-func (s SystemViewClient) DefaultLeaseTTL() time.Duration {
+func (s *SystemViewClient) DefaultLeaseTTL() time.Duration {
 	var reply DefaultLeaseTTLReply
 	err := s.client.Call("Plugin.DefaultLeaseTTL", new(interface{}), &reply)
 	if err != nil {
@@ -27,7 +27,7 @@ func (s SystemViewClient) DefaultLeaseTTL() time.Duration {
 	return reply.DefaultLeaseTTL
 }
 
-func (s SystemViewClient) MaxLeaseTTL() time.Duration {
+func (s *SystemViewClient) MaxLeaseTTL() time.Duration {
 	var reply MaxLeaseTTLReply
 	err := s.client.Call("Plugin.MaxLeaseTTL", new(interface{}), &reply)
 	if err != nil {
@@ -37,7 +37,7 @@ func (s SystemViewClient) MaxLeaseTTL() time.Duration {
 	return reply.MaxLeaseTTL
 }
 
-func (s SystemViewClient) SudoPrivilege(path string, token string) bool {
+func (s *SystemViewClient) SudoPrivilege(path string, token string) bool {
 	var reply SudoPrivilegeReply
 	args := &SudoPrivilegeArgs{
 		Path:  path,
@@ -52,7 +52,7 @@ func (s SystemViewClient) SudoPrivilege(path string, token string) bool {
 	return reply.Sudo
 }
 
-func (s SystemViewClient) Tainted() bool {
+func (s *SystemViewClient) Tainted() bool {
 	var reply TaintedReply
 
 	err := s.client.Call("Plugin.Tainted", new(interface{}), &reply)
@@ -63,7 +63,7 @@ func (s SystemViewClient) Tainted() bool {
 	return reply.Tainted
 }
 
-func (s SystemViewClient) CachingDisabled() bool {
+func (s *SystemViewClient) CachingDisabled() bool {
 	var reply CachingDisabledReply
 
 	err := s.client.Call("Plugin.CachingDisabled", new(interface{}), &reply)
@@ -74,7 +74,7 @@ func (s SystemViewClient) CachingDisabled() bool {
 	return reply.CachingDisabled
 }
 
-func (s SystemViewClient) ReplicationState() consts.ReplicationState {
+func (s *SystemViewClient) ReplicationState() consts.ReplicationState {
 	var reply ReplicationStateReply
 
 	err := s.client.Call("Plugin.ReplicationState", new(interface{}), &reply)
@@ -85,7 +85,7 @@ func (s SystemViewClient) ReplicationState() consts.ReplicationState {
 	return reply.ReplicationState
 }
 
-func (s SystemViewClient) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
+func (s *SystemViewClient) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	var reply ResponseWrapDataReply
 	args := &ResponseWrapDataArgs{
 		Data: data,
@@ -104,11 +104,11 @@ func (s SystemViewClient) ResponseWrapData(data map[string]interface{}, ttl time
 	return reply.ResponseWrapInfo, nil
 }
 
-func (s SystemViewClient) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
+func (s *SystemViewClient) LookupPlugin(name string) (*pluginutil.PluginRunner, error) {
 	return nil, fmt.Errorf("cannot call LookupPlugin from a plugin backend")
 }
 
-func (s SystemViewClient) MlockEnabled() bool {
+func (s *SystemViewClient) MlockEnabled() bool {
 	var reply MlockEnabledReply
 	err := s.client.Call("Plugin.MlockEnabled", new(interface{}), &reply)
 	if err != nil {
@@ -122,7 +122,7 @@ type SystemViewServer struct {
 	impl logical.SystemView
 }
 
-func (s SystemViewServer) DefaultLeaseTTL(_ interface{}, reply *DefaultLeaseTTLReply) error {
+func (s *SystemViewServer) DefaultLeaseTTL(_ interface{}, reply *DefaultLeaseTTLReply) error {
 	ttl := s.impl.DefaultLeaseTTL()
 	*reply = DefaultLeaseTTLReply{
 		DefaultLeaseTTL: ttl,
@@ -131,7 +131,7 @@ func (s SystemViewServer) DefaultLeaseTTL(_ interface{}, reply *DefaultLeaseTTLR
 	return nil
 }
 
-func (s SystemViewServer) MaxLeaseTTL(_ interface{}, reply *MaxLeaseTTLReply) error {
+func (s *SystemViewServer) MaxLeaseTTL(_ interface{}, reply *MaxLeaseTTLReply) error {
 	ttl := s.impl.MaxLeaseTTL()
 	*reply = MaxLeaseTTLReply{
 		MaxLeaseTTL: ttl,
@@ -140,7 +140,7 @@ func (s SystemViewServer) MaxLeaseTTL(_ interface{}, reply *MaxLeaseTTLReply) er
 	return nil
 }
 
-func (s SystemViewServer) SudoPrivilege(args *SudoPrivilegeArgs, reply *SudoPrivilegeReply) error {
+func (s *SystemViewServer) SudoPrivilege(args *SudoPrivilegeArgs, reply *SudoPrivilegeReply) error {
 	sudo := s.impl.SudoPrivilege(args.Path, args.Token)
 	*reply = SudoPrivilegeReply{
 		Sudo: sudo,
@@ -149,7 +149,7 @@ func (s SystemViewServer) SudoPrivilege(args *SudoPrivilegeArgs, reply *SudoPriv
 	return nil
 }
 
-func (s SystemViewServer) Tainted(_ interface{}, reply *TaintedReply) error {
+func (s *SystemViewServer) Tainted(_ interface{}, reply *TaintedReply) error {
 	tainted := s.impl.Tainted()
 	*reply = TaintedReply{
 		Tainted: tainted,
@@ -158,7 +158,7 @@ func (s SystemViewServer) Tainted(_ interface{}, reply *TaintedReply) error {
 	return nil
 }
 
-func (s SystemViewServer) CachingDisabled(_ interface{}, reply *CachingDisabledReply) error {
+func (s *SystemViewServer) CachingDisabled(_ interface{}, reply *CachingDisabledReply) error {
 	cachingDisabled := s.impl.CachingDisabled()
 	*reply = CachingDisabledReply{
 		CachingDisabled: cachingDisabled,
@@ -167,7 +167,7 @@ func (s SystemViewServer) CachingDisabled(_ interface{}, reply *CachingDisabledR
 	return nil
 }
 
-func (s SystemViewServer) ReplicationState(_ interface{}, reply *ReplicationStateReply) error {
+func (s *SystemViewServer) ReplicationState(_ interface{}, reply *ReplicationStateReply) error {
 	replicationState := s.impl.ReplicationState()
 	*reply = ReplicationStateReply{
 		ReplicationState: replicationState,
@@ -176,7 +176,7 @@ func (s SystemViewServer) ReplicationState(_ interface{}, reply *ReplicationStat
 	return nil
 }
 
-func (s SystemViewServer) ResponseWrapData(args *ResponseWrapDataArgs, reply *ResponseWrapDataReply) error {
+func (s *SystemViewServer) ResponseWrapData(args *ResponseWrapDataArgs, reply *ResponseWrapDataReply) error {
 	info, err := s.impl.ResponseWrapData(args.Data, args.TTL, args.JWT)
 	if err != nil {
 		*reply = ResponseWrapDataReply{
@@ -191,7 +191,7 @@ func (s SystemViewServer) ResponseWrapData(args *ResponseWrapDataArgs, reply *Re
 	return nil
 }
 
-func (s SystemViewServer) MlockEnabled(_ interface{}, reply *MlockEnabledReply) error {
+func (s *SystemViewServer) MlockEnabled(_ interface{}, reply *MlockEnabledReply) error {
 	enabled := s.impl.MlockEnabled()
 	*reply = MlockEnabledReply{
 		MlockEnabled: enabled,
