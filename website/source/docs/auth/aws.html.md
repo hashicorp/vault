@@ -33,6 +33,8 @@ for your use cases.
 
 ### EC2 Authentication Method
 
+[![Vault AWS Ec2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)](/assets/images/vault-aws-ec2-auth-flow.png)
+
 EC2 instances have access to metadata describing the instance. (For those not
 familiar with instance metadata, details can be found
 [here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html).)
@@ -962,7 +964,7 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Returns the previously configured STS role. 
+    Returns the previously configured STS role.
   </dd>
 
   <dt>Method</dt>
@@ -999,7 +1001,7 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Lists all the AWS Account IDs for which an STS role is registered 
+    Lists all the AWS Account IDs for which an STS role is registered
   </dd>
 
   <dt>Method</dt>
