@@ -17,6 +17,8 @@ BUG FIXES:
  * api/leases: Fix lease lookup returning lease properties at the top level
  * core: Relocated `sys/leases/renew` returns same payload as original 
    `sys/leases` endpoint [GH-2891]
+ * secret/totp: Ensure codes can only be used once. This makes some automated
+   workflows harder but complies with the RFC. [GH-2908]
 
 ## 0.7.3 (June 7th, 2017)
 
