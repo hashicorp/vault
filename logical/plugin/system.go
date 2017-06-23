@@ -77,7 +77,7 @@ func (s SystemViewClient) CachingDisabled() bool {
 func (s SystemViewClient) ReplicationState() consts.ReplicationState {
 	var reply ReplicationStateReply
 
-	err := s.client.Call("Plugin.ReplicationState", struct{}{}, &reply)
+	err := s.client.Call("Plugin.ReplicationState", new(interface{}), &reply)
 	if err != nil {
 		return consts.ReplicationDisabled
 	}
@@ -110,7 +110,7 @@ func (s SystemViewClient) LookupPlugin(name string) (*pluginutil.PluginRunner, e
 
 func (s SystemViewClient) MlockEnabled() bool {
 	var reply MlockEnabledReply
-	err := s.client.Call("Plugin.MlockEnabledReply", new(interface{}), &reply)
+	err := s.client.Call("Plugin.MlockEnabled", new(interface{}), &reply)
 	if err != nil {
 		return false
 	}

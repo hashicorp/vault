@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"fmt"
 	"net/rpc"
 
 	plugin "github.com/hashicorp/go-plugin"
@@ -68,11 +69,20 @@ func (l *LoggerClient) Error(msg string, args ...interface{}) error {
 }
 
 func (l *LoggerClient) Fatal(msg string, args ...interface{}) {
+	var reply LoggerReply
 	cArgs := &LoggerArgs{
 		Msg:  msg,
 		Args: args,
 	}
-	l.client.Call("Plugin.Fatal", cArgs, &struct{}{})
+	l.client.Call("Plugin.Fatal", cArgs, &reply)
+
+	// Panic on the client side. In this case the panic would be on the
+	// backend plugin which could be restarted, as opposed to panicking
+	// from vault client.
+	if reply.Error != nil {
+		panicMsg := fmt.Sprintf("Exit due to fatal error: %s", reply.Error)
+		panic(panicMsg)
+	}
 }
 
 func (l *LoggerClient) Log(level int, msg string, args []interface{}) {
@@ -152,8 +162,23 @@ func (l *LoggerServer) Error(args *LoggerArgs, reply *LoggerReply) error {
 	return nil
 }
 
-func (l *LoggerServer) Fatal(args *LoggerArgs, _ *struct{}) error {
+func (l *LoggerServer) Fatal(args *LoggerArgs, reply *LoggerReply) error {
+	var retErr error
+	// Recover from panic and send error back to client
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); !ok {
+				retErr = fmt.Errorf("%v", r)
+			} else {
+				retErr = err
+			}
+		}
+	}()
+
 	l.logger.Fatal(args.Msg, args.Args)
+	*reply = LoggerReply{
+		Error: plugin.NewBasicError(retErr),
+	}
 	return nil
 }
 
