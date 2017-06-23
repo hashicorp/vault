@@ -40,8 +40,13 @@ func (c *MountCommand) Run(args []string) int {
 	mountType := args[0]
 
 	// If no path is specified, we default the path to the backend type
+	// or use the plugin name it's a plugin backend
 	if path == "" {
-		path = mountType
+		if mountType == "plugin" {
+			path = pluginName
+		} else {
+			path = mountType
+		}
 	}
 
 	client, err := c.Client()
