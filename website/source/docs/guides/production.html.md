@@ -18,7 +18,7 @@ It is entirely possible to use Vault without applying any of the following recom
 
 * **End-to-End TLS**. Vault should always be used with TLS in production. If intermediate load balancers or reverse proxies are used to front Vault, they should _not_ terminate TLS. This way traffic is always encrypted in transit to Vault and minimizes risks introduced by intermediate layers.
 
-* **Single Tenancy**. Vault should be the only main process running on a machine. This reduces the risk that another machine running on the same machine is compromised and can interact with Vault. Similarly, running on bare metal should be preferred to a VM, and a VM preferred to a container. This reduces the surface area introduced by additional layers of abstraction and other tenants of the hardware. Both VM and container based deployments work, but should be avoided when possible to minimize risk.
+* **Single Tenancy**. Vault should be the only main process running on a machine. This reduces the risk that another process running on the same machine is compromised and can interact with Vault. Similarly, running on bare metal should be preferred to a VM, and a VM preferred to a container. This reduces the surface area introduced by additional layers of abstraction and other tenants of the hardware. Both VM and container based deployments work, but should be avoided when possible to minimize risk.
 
 * **Firewall traffic**. Vault listens on well known ports, use a local firewall to restrict all incoming and outgoing traffic to Vault and essential system services like NTP. This includes restricting incoming traffic to permitted subnets and outgoing traffic to services Vault needs to connect to, such as databases.
 
