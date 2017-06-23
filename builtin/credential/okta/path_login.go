@@ -5,9 +5,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-errors/errors"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"time"
 )
 
 func pathLogin(b *backend) *framework.Path {
@@ -55,6 +57,11 @@ func (b *backend) pathLogin(
 
 	sort.Strings(policies)
 
+	ttl, _, err := b.getTTLs(req)
+	if err != nil {
+		return nil, err
+	}
+
 	resp.Auth = &logical.Auth{
 		Policies: policies,
 		Metadata: map[string]string{
@@ -66,6 +73,7 @@ func (b *backend) pathLogin(
 		},
 		DisplayName: username,
 		LeaseOptions: logical.LeaseOptions{
+			TTL:       ttl,
 			Renewable: true,
 		},
 	}
@@ -87,7 +95,27 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	return framework.LeaseExtend(0, 0, b.System())(req, d)
+	ttl, maxTTL, err := b.getTTLs(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return framework.LeaseExtend(ttl, maxTTL, b.System())(req, d)
+}
+
+func (b *backend) getTTLs(req *logical.Request) (ttl, maxTTL time.Duration, err error) {
+
+	cfg, err := b.Config(req.Storage)
+	if err != nil {
+		return 0, 0, err
+	}
+	if cfg == nil {
+		return 0, 0, errors.New("Okta backend not configured")
+	}
+
+	ttl, maxTTL, err = b.SanitizeTTLStr(cfg.TTL.String(), cfg.MaxTTL.String())
+
+	return ttl, maxTTL, err
 }
 
 const pathLoginSyn = `

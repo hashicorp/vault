@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/sstarcher/go-okta"
+	"time"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -25,6 +26,14 @@ func pathConfig(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `The API endpoint to use. Useful if you
 are using Okta development accounts.`,
+			},
+			"ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Duration after which authentication will be expired`,
+			},
+			"max_ttl": &framework.FieldSchema{
+				Type:        framework.TypeString,
+				Description: `Maximum duration after which authentication will be expired`,
 			},
 		},
 
@@ -75,6 +84,8 @@ func (b *backend) pathConfigRead(
 		Data: map[string]interface{}{
 			"Org":     cfg.Org,
 			"BaseURL": cfg.BaseURL,
+			"TTL":     cfg.TTL,
+			"MaxTTL":  cfg.MaxTTL,
 		},
 	}
 
@@ -118,6 +129,31 @@ func (b *backend) pathConfigWrite(
 		cfg.BaseURL = d.Get("base_url").(string)
 	}
 
+	var ttl time.Duration
+	ttlRaw, ok := d.GetOk("ttl")
+	if !ok || len(ttlRaw.(string)) == 0 {
+		ttl = 0
+	} else {
+		ttl, err = time.ParseDuration(ttlRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid 'ttl':%s", err)), nil
+		}
+	}
+
+	var maxTTL time.Duration
+	maxTTLRaw, ok := d.GetOk("max_ttl")
+	if !ok || len(maxTTLRaw.(string)) == 0 {
+		maxTTL = 0
+	} else {
+		maxTTL, err = time.ParseDuration(maxTTLRaw.(string))
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("Invalid 'max_ttl':%s", err)), nil
+		}
+	}
+
+	cfg.TTL = ttl
+	cfg.MaxTTL = maxTTL
+
 	jsonCfg, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
 		return nil, err
@@ -155,9 +191,11 @@ func (c *ConfigEntry) OktaClient() *okta.Client {
 
 // ConfigEntry for Okta
 type ConfigEntry struct {
-	Org     string `json:"organization"`
-	Token   string `json:"token"`
-	BaseURL string `json:"base_url"`
+	Org     string        `json:"organization"`
+	Token   string        `json:"token"`
+	BaseURL string        `json:"base_url"`
+	TTL     time.Duration `json:"ttl"`
+	MaxTTL  time.Duration `json:"max_ttl"`
 }
 
 const pathConfigHelp = `

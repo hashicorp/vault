@@ -12,12 +12,18 @@ import (
 
 	"github.com/hashicorp/vault/logical"
 	logicaltest "github.com/hashicorp/vault/logical/testing"
+	"time"
 )
 
 func TestBackend_Config(t *testing.T) {
+	defaultLeaseTTLVal := time.Hour * 12
+	maxLeaseTTLVal := time.Hour * 24
 	b, err := Factory(&logical.BackendConfig{
 		Logger: logformat.NewVaultLogger(log.LevelTrace),
-		System: &logical.StaticSystemView{},
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: defaultLeaseTTLVal,
+			MaxLeaseTTLVal:     maxLeaseTTLVal,
+		},
 	})
 	if err != nil {
 		t.Fatalf("Unable to create backend: %s", err)
@@ -31,8 +37,10 @@ func TestBackend_Config(t *testing.T) {
 		"base_url":     "oktapreview.com",
 	}
 
+	updatedDuration := time.Hour * 1
 	configDataToken := map[string]interface{}{
 		"token": os.Getenv("OKTA_API_TOKEN"),
+		"ttl":   "1h",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -41,23 +49,23 @@ func TestBackend_Config(t *testing.T) {
 		Backend:        b,
 		Steps: []logicaltest.TestStep{
 			testConfigCreate(t, configData),
-			testLoginWrite(t, username, "wrong", "E0000004", nil),
-			testLoginWrite(t, username, password, "user is not a member of any authorized policy", nil),
+			testLoginWrite(t, username, "wrong", "E0000004", 0, nil),
+			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0, nil),
 			testAccUserGroups(t, username, "local_group,local_group2"),
 			testAccGroups(t, "local_group", "local_group_policy"),
-			testLoginWrite(t, username, password, "", []string{"local_group_policy"}),
+			testLoginWrite(t, username, password, "", defaultLeaseTTLVal.Nanoseconds(), []string{"local_group_policy"}),
 			testAccGroups(t, "Everyone", "everyone_group_policy,every_group_policy2"),
-			testLoginWrite(t, username, password, "", []string{"local_group_policy"}),
+			testLoginWrite(t, username, password, "", defaultLeaseTTLVal.Nanoseconds(), []string{"local_group_policy"}),
 			testConfigUpdate(t, configDataToken),
 			testConfigRead(t, configData),
-			testLoginWrite(t, username, password, "", []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
+			testLoginWrite(t, username, password, "", updatedDuration.Nanoseconds(), []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
 			testAccGroups(t, "local_group2", "testgroup_group_policy"),
-			testLoginWrite(t, username, password, "", []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
+			testLoginWrite(t, username, password, "", updatedDuration.Nanoseconds(), []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
 		},
 	})
 }
 
-func testLoginWrite(t *testing.T, username, password, reason string, policies []string) logicaltest.TestStep {
+func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL int64, policies []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login/" + username,
@@ -75,6 +83,11 @@ func testLoginWrite(t *testing.T, username, password, reason string, policies []
 			if resp.Auth != nil {
 				if !policyutil.EquivalentPolicies(resp.Auth.Policies, policies) {
 					return fmt.Errorf("policy mismatch expected %v but got %v", policies, resp.Auth.Policies)
+				}
+
+				actualTTL := resp.Auth.LeaseOptions.TTL.Nanoseconds()
+				if actualTTL != expectedTTL {
+					return fmt.Errorf("TTL mismatch expected %v but got %v", expectedTTL, actualTTL)
 				}
 			}
 
