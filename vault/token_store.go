@@ -1843,33 +1843,16 @@ func (ts *TokenStore) handleRevokeTree(
 		urltoken = true
 	}
 
-	errs := make([]error, len(tokens))
-	for idx, token := range tokens {
-		entry, err := ts.Lookup(token)
-		if err != nil {
-			errs[idx] = err
-			continue
-		}
-
-		if entry == nil {
-			errs[idx] = fmt.Errorf("invalid token")
-		}
-	}
-
 	revokeErrors := ts.RevokeTrees(tokens)
 
 	response := &logical.Response{}
 	failedRevokes := make([]map[string]string, 0, len(revokeErrors))
 
 	for idx, revokeError := range revokeErrors {
-		if errs[idx] == nil {
-			errs[idx] = revokeError
-		}
-
-		if errs[idx] != nil {
+		if revokeError != nil {
 			failedRevokes = append(failedRevokes, map[string]string{
 				"token": tokens[idx],
-				"error": errs[idx].Error(),
+				"error": revokeError.Error(),
 			})
 		}
 	}

@@ -1334,7 +1334,10 @@ func TestTokenStore_HandleRequest_Revoke_Multiple(t *testing.T) {
 		testMakeToken(t, ts, tokenStr, tokenChilds[idx], "", []string{"foo"})
 	}
 
-	tokenListStr := strings.Join(tokens, ",")
+	tokensToRevoke := make([]string, 0, len(tokens)+1)
+	tokensToRevoke = append(tokens, tokenChilds[0])
+
+	tokenListStr := strings.Join(tokensToRevoke, ",")
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "revoke")
 	req.Data = map[string]interface{}{
@@ -1348,7 +1351,8 @@ func TestTokenStore_HandleRequest_Revoke_Multiple(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 
-	for idx, tokenStr := range tokens {
+	// exclude last token, because it doesn't have a child token
+	for idx, tokenStr := range tokensToRevoke[:len(tokens)] {
 		out, err := ts.Lookup(tokenStr)
 		if err != nil {
 			t.Fatalf("err: %v", err)
@@ -1364,23 +1368,6 @@ func TestTokenStore_HandleRequest_Revoke_Multiple(t *testing.T) {
 		}
 		if out != nil {
 			t.Fatalf("bad: %v", out)
-		}
-	}
-
-	// revoke again
-	resp, err = ts.HandleRequest(req)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	if !resp.IsError() {
-		t.Fatalf("response should have an error, but no error found")
-	}
-
-	errorData := resp.ErrorData().([]map[string]string)
-	for _, errorInfo := range errorData {
-		if !strutil.StrListContains(tokens, errorInfo["token"]) {
-			t.Fatalf("expected: token fail when revoking (%s)", errorInfo["token"])
 		}
 	}
 }

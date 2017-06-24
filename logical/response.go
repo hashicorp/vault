@@ -91,15 +91,15 @@ func (r *Response) SetError(err error, errorData interface{}) {
 		for idx, errItem := range m {
 			errItemFields := make([]string, 0, len(errItem))
 			for k, v := range errItem {
-				errItemFields = append(errItemFields, fmt.Sprintf("%s::%s", k, v))
+				errItemFields = append(errItemFields, fmt.Sprintf("%s=%s", k, v))
 			}
 			items[idx] = fmt.Sprintf("(%s)", strings.Join(errItemFields, ","))
 		}
-		additionalErrorText = strings.Join(items, ";")
+		additionalErrorText = strings.Join(items, "\n")
 	}
 
 	if len(additionalErrorText) != 0 {
-		errText = fmt.Sprintf("%s:%s", err.Error(), additionalErrorText)
+		errText = fmt.Sprintf("%s\n%s", err.Error(), additionalErrorText)
 	} else {
 		errText = err.Error()
 	}
