@@ -332,7 +332,7 @@ func (c *AuthCommand) listMethods() int {
 			replicatedBehavior = "local"
 		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s | %s", path, auth.Type, defTTL, maxTTL, replicatedBehavior, auth.Description))
+			"%s | %s | %s | %s | %s | %s | %s", path, auth.Type, auth.Accessor, defTTL, maxTTL, replicatedBehavior, auth.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))

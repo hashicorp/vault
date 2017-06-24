@@ -90,6 +90,7 @@ type EnableAuthOptions struct {
 type AuthMount struct {
 	Type        string           `json:"type" structs:"type" mapstructure:"type"`
 	Description string           `json:"description" structs:"description" mapstructure:"description"`
+	Accessor    string           `json:"accessor" structs:"accessor" mapstructure:"accessor"`
 	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
 	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
 }
