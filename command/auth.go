@@ -316,7 +316,7 @@ func (c *AuthCommand) listMethods() int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Default TTL | Max TTL | Replication Behavior | Description"}
+	columns := []string{"Path | Type | Accessor | Default TTL | Max TTL | Replication Behavior | Description"}
 	for _, path := range paths {
 		auth := auth[path]
 		defTTL := "system"
