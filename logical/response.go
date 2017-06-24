@@ -2,6 +2,8 @@ package logical
 
 import (
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/wrapping"
 )
@@ -82,14 +84,34 @@ func (r *Response) Error() error {
 }
 
 func (r *Response) SetError(err error, errorData interface{}) {
+	var additionalErrorText, errText string = "", ""
+	switch m := errorData.(type) {
+	case []map[string]string:
+		items := make([]string, len(m))
+		for idx, errItem := range m {
+			errItemFields := make([]string, 0, len(errItem))
+			for k, v := range errItem {
+				errItemFields = append(errItemFields, fmt.Sprintf("%s::%s", k, v))
+			}
+			items[idx] = fmt.Sprintf("(%s)", strings.Join(errItemFields, ","))
+		}
+		additionalErrorText = strings.Join(items, ";")
+	}
+
+	if len(additionalErrorText) != 0 {
+		errText = fmt.Sprintf("%s:%s", err.Error(), additionalErrorText)
+	} else {
+		errText = err.Error()
+	}
+
 	if r.Data == nil {
 		r.Data = map[string]interface{}{
 			"error_data": errorData,
-			"error":      "contains failed revokes",
+			"error":      errText,
 		}
 	} else {
 		r.Data["error_data"] = errorData
-		r.Data["error"] = err
+		r.Data["error"] = errText
 	}
 }
 
