@@ -512,6 +512,13 @@ func (m *ExpirationManager) Renew(leaseID string, increment time.Duration) (*log
 		return nil, err
 	}
 
+	if le.Secret == nil {
+		if le.Auth != nil {
+			return logical.ErrorResponse("tokens cannot be renewed through this endpoint"), logical.ErrPermissionDenied
+		}
+		return logical.ErrorResponse("lease does not correspond to a secret"), nil
+	}
+
 	// Attempt to renew the entry
 	resp, err := m.renewEntry(le, increment)
 	if err != nil {

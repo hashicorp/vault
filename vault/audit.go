@@ -396,7 +396,7 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 			c.logger.Debug("audit: adding reload function", "path", entry.Path)
 		}
 
-		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]string) error {
+		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]interface{}) error {
 			if c.logger.IsInfo() {
 				c.logger.Info("audit: reloading file audit backend", "path", entry.Path)
 			}

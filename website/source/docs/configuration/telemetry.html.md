@@ -128,7 +128,7 @@ These `telemetry` parameters apply to
 - `dogstatsd_addr` `(string: "")` - This provides the address of a DogStatsD
   instance. DogStatsD is a protocol-compatible flavor of statsd, with the added
   ability to decorate metrics with tags and event information. If provided,
-  Consul will send various telemetry information to that instance for
+  Vault will send various telemetry information to that instance for
   aggregation. This can be used to capture runtime information.
 
 
