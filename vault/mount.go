@@ -2,6 +2,7 @@ package vault
 
 import (
 	"crypto/sha1"
+	"encoding/base32"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -65,6 +66,14 @@ var (
 		"token",
 	}
 )
+
+func generateMountAccessor(entryType string) (string, error) {
+	randBytes, err := uuid.GenerateRandomBytes(5)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s-%s", entryType, base32.StdEncoding.EncodeToString(randBytes)), nil
+}
 
 // MountTable is used to represent the internal mount table
 type MountTable struct {
@@ -139,6 +148,7 @@ type MountEntry struct {
 	Type        string            `json:"type"`              // Logical backend Type
 	Description string            `json:"description"`       // User-provided description
 	UUID        string            `json:"uuid"`              // Barrier view UUID
+	Accessor    string            `json:"accessor"`          // Unique but more human-friendly ID. Does not change, not used for any sensitive things (like as a salt, which the UUID sometimes is).
 	Config      MountConfig       `json:"config"`            // Configuration related to this mount (but not backend-derived)
 	Options     map[string]string `json:"options"`           // Backend options
 	Local       bool              `json:"local"`             // Local mounts are not replicated or affected by replication
@@ -164,6 +174,7 @@ func (e *MountEntry) Clone() *MountEntry {
 		Type:        e.Type,
 		Description: e.Description,
 		UUID:        e.UUID,
+		Accessor:    e.Accessor,
 		Config:      e.Config,
 		Options:     optClone,
 		Local:       e.Local,
@@ -207,6 +218,13 @@ func (c *Core) mount(entry *MountEntry) error {
 			return err
 		}
 		entry.UUID = entryUUID
+	}
+	if entry.Accessor == "" {
+		accessor, err := generateMountAccessor(entry.Type)
+		if err != nil {
+			return err
+		}
+		entry.Accessor = accessor
 	}
 	viewPath := backendBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
@@ -535,6 +553,14 @@ func (c *Core) loadMounts() error {
 				entry.Table = c.mounts.Type
 				needPersist = true
 			}
+			if entry.Accessor == "" {
+				accessor, err := generateMountAccessor(entry.Type)
+				if err != nil {
+					return err
+				}
+				entry.Accessor = accessor
+				needPersist = true
+			}
 		}
 
 		// Done if we have restored the mount table and we don't need
@@ -751,7 +777,11 @@ func defaultMountTable() *MountTable {
 	}
 	mountUUID, err := uuid.GenerateUUID()
 	if err != nil {
-		panic(fmt.Sprintf("could not create default mount table UUID: %v", err))
+		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
+	}
+	mountAccessor, err := generateMountAccessor("generic")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
 	genericMount := &MountEntry{
 		Table:       mountTableType,
@@ -759,6 +789,7 @@ func defaultMountTable() *MountTable {
 		Type:        "generic",
 		Description: "generic secret storage",
 		UUID:        mountUUID,
+		Accessor:    mountAccessor,
 	}
 	table.Entries = append(table.Entries, genericMount)
 	table.Entries = append(table.Entries, requiredMountTable().Entries...)
@@ -775,12 +806,17 @@ func requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create cubbyhole UUID: %v", err))
 	}
+	cubbyholeAccessor, err := generateMountAccessor("cubbyhole")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate cubbyhole accessor: %v", err))
+	}
 	cubbyholeMount := &MountEntry{
 		Table:       mountTableType,
 		Path:        "cubbyhole/",
 		Type:        "cubbyhole",
 		Description: "per-token private secret storage",
 		UUID:        cubbyholeUUID,
+		Accessor:    cubbyholeAccessor,
 		Local:       true,
 	}
 
@@ -788,12 +824,17 @@ func requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create sys UUID: %v", err))
 	}
+	sysAccessor, err := generateMountAccessor("system")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate sys accessor: %v", err))
+	}
 	sysMount := &MountEntry{
 		Table:       mountTableType,
 		Path:        "sys/",
 		Type:        "system",
 		Description: "system endpoints used for control, policy and debugging",
 		UUID:        sysUUID,
+		Accessor:    sysAccessor,
 	}
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
