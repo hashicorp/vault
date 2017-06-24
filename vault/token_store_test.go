@@ -465,6 +465,9 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	if ent.ID != "foobarbaz" {
 		t.Fatalf("bad: ent.ID: expected:\"foobarbaz\"\n actual:%s", ent.ID)
 	}
+	if err := ts.create(ent); err == nil {
+		t.Fatal("expected error creating token with the same ID")
+	}
 
 	out, err := ts.Lookup(ent.ID)
 	if err != nil {
