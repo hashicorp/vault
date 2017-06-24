@@ -15,6 +15,8 @@ BUG FIXES:
 
  * api/health: Don't treat standby `429` codes as an error [GH-2850]
  * api/leases: Fix lease lookup returning lease properties at the top level
+ * auth/token: Don't allow using the same token ID twice when manually
+   specifying [GH-2916]
  * core: Relocated `sys/leases/renew` returns same payload as original 
    `sys/leases` endpoint [GH-2891]
  * secret/totp: Ensure codes can only be used once. This makes some automated
