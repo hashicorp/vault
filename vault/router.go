@@ -60,6 +60,22 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	if existing, _, ok := r.root.LongestPrefix(prefix); ok && existing != "" {
 		return fmt.Errorf("cannot mount under existing mount '%s'", existing)
 	}
+	// If this is a secret backend, check to see if the prefix conflicts
+	// with an existing mountpoint
+	if prefix != "" {
+		var existing string = ""
+		fn := func(existing_path string, _v interface{}) bool {
+			if strings.HasPrefix(existing_path, prefix) {
+				existing = existing_path
+				return true
+			}
+			return false
+		}
+		r.root.WalkPrefix(prefix, fn)
+		if existing != "" {
+			return fmt.Errorf("cannot mount under existing mount '%s'", existing)
+		}
+	}
 
 	// Build the paths
 	paths := backend.SpecialPaths()
