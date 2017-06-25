@@ -26,8 +26,10 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
+	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
+	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
@@ -62,6 +64,8 @@ type ServerCommand struct {
 
 	reloadFuncsLock *sync.RWMutex
 	reloadFuncs     *map[string][]vault.ReloadFunc
+
+	proxyProtoConfig *vault.ProxyProtoConfig
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -384,6 +388,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Copy the reload funcs pointers back
 	c.reloadFuncs = coreConfig.ReloadFuncs
 	c.reloadFuncsLock = coreConfig.ReloadFuncsLock
+	c.proxyProtoConfig = coreConfig.ProxyProtoConfig
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
@@ -428,6 +433,54 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				"Error initializing listener of type %s: %s",
 				lnConfig.Type, err))
 			return 1
+		}
+
+		if val, ok := lnConfig.Config["proxy_protocol"]; ok {
+			strval, ok := val.(string)
+			if !ok {
+				c.Ui.Output(fmt.Sprintf(
+					"Error parsing proxy_protocol value for listener of type %s: not a string",
+					lnConfig.Type))
+				return 1
+			}
+
+			switch strval {
+			case "use_always", "use_if_authorized", "deny_if_unauthorized":
+			default:
+				c.Ui.Output(fmt.Sprintf(
+					"Unknown proxy_protocol value %s for listener of type %s",
+					strval, lnConfig.Type))
+				return 1
+			}
+
+			newLn := &proxyproto.Listener{
+				Listener: ln,
+			}
+
+			if strval == "use_if_authorized" || strval == "deny_if_unauthorized" {
+				newLn.SourceCheck = func(addr net.Addr) (bool, error) {
+					c.proxyProtoConfig.RLock()
+					defer c.proxyProtoConfig.RUnlock()
+
+					sa, err := sockaddr.NewSockAddr(addr.String())
+					if err != nil {
+						return false, errwrap.Wrapf("error parsing remote address: {{err}}", err)
+					}
+
+					for _, allowedAddr := range c.proxyProtoConfig.AllowedAddrs {
+						if allowedAddr.Contains(sa) {
+							return true, nil
+						}
+					}
+
+					if strval == "use_if_authorized" {
+						return false, nil
+					}
+
+					return false, proxyproto.ErrInvalidUpstream
+				}
+			}
+			ln = newLn
 		}
 
 		lns = append(lns, ln)

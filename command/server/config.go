@@ -60,8 +60,9 @@ func DevConfig(ha, transactional bool) *Config {
 			&Listener{
 				Type: "tcp",
 				Config: map[string]interface{}{
-					"address":     "127.0.0.1:8200",
-					"tls_disable": "1",
+					"address":        "127.0.0.1:8200",
+					"tls_disable":    true,
+					"proxy_protocol": "use_if_authorized",
 				},
 			},
 		},
@@ -669,6 +670,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"endpoint",
 			"infrastructure",
 			"node_id",
+			"proxy_protocol",
 			"tls_disable",
 			"tls_cert_file",
 			"tls_key_file",
