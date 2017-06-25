@@ -63,8 +63,8 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	// If this is a secret backend, check to see if the prefix conflicts
 	// with an existing mountpoint
 	if prefix != "" {
-		if conflict := r.MatchingPrefix(prefix); conflict != "" {
-			return fmt.Errorf("cannot mount over existing mount '%s'", conflict)
+		if match := r.MatchingPrefix(prefix); match != "" {
+			return fmt.Errorf("cannot mount over existing mount '%s'", match)
 		}
 	}
 
