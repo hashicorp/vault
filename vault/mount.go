@@ -195,8 +195,8 @@ func (c *Core) mount(entry *MountEntry) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	// Verify there is no conflicting mount
-	if match := c.router.MatchingMount(entry.Path); match != "" {
+	// Verify there are no conflicting mounts
+	if match := c.router.MountConflict(entry.Path); match != "" {
 		return logical.CodedError(409, fmt.Sprintf("existing mount at %s", match))
 	}
 

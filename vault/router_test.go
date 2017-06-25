@@ -108,6 +108,13 @@ func TestRouter_Mount(t *testing.T) {
 		UUID: meUUID,
 	}
 
+	if r.MountConflict("prod/aws/") == "" {
+		t.Fatalf("bad: prod/aws/")
+	}
+	if r.MountConflict("prod/") == "" {
+		t.Fatalf("bad: prod/")
+	}
+
 	err = r.Mount(n, "prod/", subMountEntry, view)
 	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
 		t.Fatalf("err: %v", err)
