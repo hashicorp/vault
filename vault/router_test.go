@@ -116,7 +116,7 @@ func TestRouter_Mount(t *testing.T) {
 	}
 
 	err = r.Mount(n, "prod/", subMountEntry, view)
-	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
+	if !strings.Contains(err.Error(), "cannot mount over existing mount") {
 		t.Fatalf("err: %v", err)
 	}
 

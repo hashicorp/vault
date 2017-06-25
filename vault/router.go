@@ -63,8 +63,8 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	// If this is a secret backend, check to see if the prefix conflicts
 	// with an existing mountpoint
 	if prefix != "" {
-		if match := r.MatchingPrefix(prefix); match != "" {
-			return fmt.Errorf("cannot mount under existing mount '%s'", match)
+		if conflict := r.MatchingPrefix(prefix); conflict != "" {
+			return fmt.Errorf("cannot mount over existing mount '%s'", conflict)
 		}
 	}
 
@@ -185,7 +185,6 @@ func (r *Router) MatchingMount(path string) string {
 func (r *Router) MatchingPrefix(path string) string {
 	var existing string = ""
 	fn := func(existing_path string, _v interface{}) bool {
-		fmt.Println(fmt.Sprintf("comparing %v %v", path, existing_path))
 		if strings.HasPrefix(existing_path, path) {
 			existing = existing_path
 			return true
