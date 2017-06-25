@@ -23,9 +23,7 @@ type certList struct {
 type CertLister interface {
 	Count() int
 	Next() (*x509.Certificate, error)
-	All() ([]*x509.Certificate, error)
-	AllParallel(threads int) ([]*x509.Certificate, error)
-	Channel() (chan *x509.Certificate, error)
+	All(threads int) ([]*x509.Certificate, error)
 	SerialNumbers() []SerialNumber
 }
 
@@ -109,6 +107,7 @@ func (pki *Pki) List() (CertLister, error) {
 func (cl *certList) Count() int {
 	return len(cl.serialNumbers)
 }
+
 func (cl *certList) SerialNumbers() []SerialNumber {
 	return cl.serialNumbers
 }
