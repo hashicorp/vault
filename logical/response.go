@@ -93,7 +93,7 @@ func (r *Response) SetError(err error, errorData interface{}) {
 			for k, v := range errItem {
 				errItemFields = append(errItemFields, fmt.Sprintf("%s=%s", k, v))
 			}
-			items[idx] = fmt.Sprintf("(%s)", strings.Join(errItemFields, ","))
+			items[idx] = strings.Join(errItemFields, ",")
 		}
 		additionalErrorText = strings.Join(items, "\n")
 	}
@@ -111,18 +111,6 @@ func (r *Response) SetError(err error, errorData interface{}) {
 	} else {
 		r.Data["error"] = errText
 	}
-}
-
-func (r *Response) ErrorData() interface{} {
-	if r.Data == nil {
-		return nil
-	}
-
-	if data, ok := r.Data["error_data"]; ok {
-		return data
-	}
-
-	return nil
 }
 
 // HelpResponse is used to format a help response

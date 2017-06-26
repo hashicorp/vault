@@ -442,10 +442,18 @@ func TestTokenStore_HandleRequest_RevokeAccessors_Multiple(t *testing.T) {
 		t.Fatalf("response should have an error, but no error found")
 	}
 
-	errorData := resp.ErrorData().([]map[string]string)
-	for _, errorInfo := range errorData {
-		if !strutil.StrListContains(accessors, errorInfo["accessor"]) {
-			t.Fatalf("expected: accessor fail when revoking (%s)", errorInfo["accessor"])
+	errorLines := strings.Split(resp.Error().Error(), "\n")
+	if len(errorLines) < 2 {
+		t.Fatalf("expected list of failed revokes")
+	}
+
+	for _, line := range errorLines[1:] {
+		fields := strings.Split(line, ",")
+		for _, value := range fields {
+			pair := strings.Split(value, "=")
+			if pair[0] == "accessor" && !strutil.StrListContains(accessors, pair[1]) {
+				t.Fatalf("expected: accessor fail when revoking (%s)", pair[1])
+			}
 		}
 	}
 }
