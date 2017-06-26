@@ -274,22 +274,22 @@ func (b *backend) calculateKeyId(data *framework.FieldData, req *logical.Request
 		return reqId, nil
 	}
 
-	keyIdFormat := "vault-{{token_display_name}}-{{public_key_hash}}"
+	keyIDFormat := "vault-{{token_display_name}}-{{public_key_hash}}"
 	if req.DisplayName == "" {
-		keyIdFormat = "vault-{{public_key_hash}}"
+		keyIDFormat = "vault-{{public_key_hash}}"
 	}
 
 	if role.KeyIDFormat != "" {
-		keyIdFormat = role.KeyIDFormat
+		keyIDFormat = role.KeyIDFormat
 	}
 
-	keyId := substQuery(keyIdFormat, map[string]string{
+	keyID := substQuery(keyIDFormat, map[string]string{
 		"token_display_name": req.DisplayName,
 		"role_name":          data.Get("role").(string),
 		"public_key_hash":    fmt.Sprintf("%x", sha256.Sum256(pubKey.Marshal())),
 	})
 
-	return keyId, nil
+	return keyID, nil
 }
 
 func (b *backend) calculateCriticalOptions(data *framework.FieldData, role *sshRole) (map[string]string, error) {
