@@ -80,7 +80,7 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
-		accessor, err := generateMountAccessor(entry.Type)
+		accessor, err := c.generateMountAccessor("audit_" + entry.Type)
 		if err != nil {
 			return err
 		}
@@ -209,7 +209,7 @@ func (c *Core) loadAudits() error {
 				needPersist = true
 			}
 			if entry.Accessor == "" {
-				accessor, err := generateMountAccessor(entry.Type)
+				accessor, err := c.generateMountAccessor("audit_" + entry.Type)
 				if err != nil {
 					return err
 				}

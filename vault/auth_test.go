@@ -349,7 +349,8 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 }
 
 func TestDefaultAuthTable(t *testing.T) {
-	table := defaultAuthTable()
+	c, _, _ := TestCoreUnsealed(t)
+	table := c.defaultAuthTable()
 	verifyDefaultAuthTable(t, table)
 }
 

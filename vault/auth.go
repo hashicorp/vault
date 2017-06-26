@@ -86,7 +86,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
-		accessor, err := generateMountAccessor(entry.Type)
+		accessor, err := c.generateMountAccessor("auth_" + entry.Type)
 		if err != nil {
 			return err
 		}
@@ -290,7 +290,7 @@ func (c *Core) loadCredentials() error {
 				needPersist = true
 			}
 			if entry.Accessor == "" {
-				accessor, err := generateMountAccessor(entry.Type)
+				accessor, err := c.generateMountAccessor("auth_" + entry.Type)
 				if err != nil {
 					return err
 				}
@@ -303,7 +303,7 @@ func (c *Core) loadCredentials() error {
 			return nil
 		}
 	} else {
-		c.auth = defaultAuthTable()
+		c.auth = c.defaultAuthTable()
 	}
 
 	if err := c.persistAuth(c.auth, false); err != nil {
@@ -499,7 +499,7 @@ func (c *Core) newCredentialBackend(
 }
 
 // defaultAuthTable creates a default auth table
-func defaultAuthTable() *MountTable {
+func (c *Core) defaultAuthTable() *MountTable {
 	table := &MountTable{
 		Type: credentialTableType,
 	}
@@ -507,7 +507,7 @@ func defaultAuthTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate UUID for default auth table token entry: %v", err))
 	}
-	tokenAccessor, err := generateMountAccessor("token")
+	tokenAccessor, err := c.generateMountAccessor("auth_token")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate accessor for default auth table token entry: %v", err))
 	}

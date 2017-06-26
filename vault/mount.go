@@ -2,7 +2,6 @@ package vault
 
 import (
 	"crypto/sha1"
-	"encoding/base32"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -67,12 +66,20 @@ var (
 	}
 )
 
-func generateMountAccessor(entryType string) (string, error) {
-	randBytes, err := uuid.GenerateRandomBytes(5)
-	if err != nil {
-		return "", err
+func (c *Core) generateMountAccessor(entryType string) (string, error) {
+	var accessor string
+	for {
+		randBytes, err := uuid.GenerateRandomBytes(4)
+		if err != nil {
+			return "", err
+		}
+		accessor = fmt.Sprintf("%s_%s", entryType, fmt.Sprintf("%08x", randBytes[0:4]))
+		if entry := c.router.MatchingMountByAccessor(accessor); entry == nil {
+			break
+		}
 	}
-	return fmt.Sprintf("%s-%s", entryType, base32.StdEncoding.EncodeToString(randBytes)), nil
+
+	return accessor, nil
 }
 
 // MountTable is used to represent the internal mount table
@@ -220,7 +227,7 @@ func (c *Core) mount(entry *MountEntry) error {
 		entry.UUID = entryUUID
 	}
 	if entry.Accessor == "" {
-		accessor, err := generateMountAccessor(entry.Type)
+		accessor, err := c.generateMountAccessor(entry.Type)
 		if err != nil {
 			return err
 		}
@@ -522,7 +529,7 @@ func (c *Core) loadMounts() error {
 			needPersist = true
 		}
 
-		for _, requiredMount := range requiredMountTable().Entries {
+		for _, requiredMount := range c.requiredMountTable().Entries {
 			foundRequired := false
 			for _, coreMount := range c.mounts.Entries {
 				if coreMount.Type == requiredMount.Type {
@@ -554,7 +561,7 @@ func (c *Core) loadMounts() error {
 				needPersist = true
 			}
 			if entry.Accessor == "" {
-				accessor, err := generateMountAccessor(entry.Type)
+				accessor, err := c.generateMountAccessor(entry.Type)
 				if err != nil {
 					return err
 				}
@@ -570,7 +577,7 @@ func (c *Core) loadMounts() error {
 		}
 	} else {
 		// Create and persist the default mount table
-		c.mounts = defaultMountTable()
+		c.mounts = c.defaultMountTable()
 	}
 
 	if err := c.persistMounts(c.mounts, false); err != nil {
@@ -771,7 +778,7 @@ func (c *Core) mountEntrySysView(entry *MountEntry) logical.SystemView {
 }
 
 // defaultMountTable creates a default mount table
-func defaultMountTable() *MountTable {
+func (c *Core) defaultMountTable() *MountTable {
 	table := &MountTable{
 		Type: mountTableType,
 	}
@@ -779,7 +786,7 @@ func defaultMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create default secret mount UUID: %v", err))
 	}
-	mountAccessor, err := generateMountAccessor("generic")
+	mountAccessor, err := c.generateMountAccessor("generic")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate default secret mount accessor: %v", err))
 	}
@@ -792,13 +799,13 @@ func defaultMountTable() *MountTable {
 		Accessor:    mountAccessor,
 	}
 	table.Entries = append(table.Entries, genericMount)
-	table.Entries = append(table.Entries, requiredMountTable().Entries...)
+	table.Entries = append(table.Entries, c.requiredMountTable().Entries...)
 	return table
 }
 
 // requiredMountTable() creates a mount table with entries required
 // to be available
-func requiredMountTable() *MountTable {
+func (c *Core) requiredMountTable() *MountTable {
 	table := &MountTable{
 		Type: mountTableType,
 	}
@@ -806,7 +813,7 @@ func requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create cubbyhole UUID: %v", err))
 	}
-	cubbyholeAccessor, err := generateMountAccessor("cubbyhole")
+	cubbyholeAccessor, err := c.generateMountAccessor("cubbyhole")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate cubbyhole accessor: %v", err))
 	}
@@ -824,7 +831,7 @@ func requiredMountTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not create sys UUID: %v", err))
 	}
-	sysAccessor, err := generateMountAccessor("system")
+	sysAccessor, err := c.generateMountAccessor("system")
 	if err != nil {
 		panic(fmt.Sprintf("could not generate sys accessor: %v", err))
 	}
