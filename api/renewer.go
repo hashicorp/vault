@@ -187,19 +187,20 @@ func (r *Renewer) renewAuth() error {
 			return ErrRenewerNotRenewable
 		}
 
-		// Grab the lease duration - note that we grab the auth lease duration, not
-		// the secret lease duration.
+		// Grab the lease duration and sleep duration - note that we grab the auth
+		// lease duration, not the secret lease duration.
 		leaseDuration := time.Duration(renewal.Auth.LeaseDuration) * time.Second
+		sleepDuration := sleepDuration(leaseDuration)
 
 		// If we are within grace, return now.
-		if leaseDuration <= r.grace {
+		if leaseDuration <= r.grace || sleepDuration <= r.grace {
 			return nil
 		}
 
 		select {
 		case <-r.stopCh:
 			return nil
-		case <-time.After(time.Duration(leaseDuration/2.0) * time.Second):
+		case <-time.After(sleepDuration):
 			continue
 		}
 	}
@@ -243,19 +244,37 @@ func (r *Renewer) renewLease() error {
 			return ErrRenewerNotRenewable
 		}
 
-		// Grab the lease duration
+		// Grab the lease duration and sleep duration
 		leaseDuration := time.Duration(renewal.LeaseDuration) * time.Second
+		sleepDuration := sleepDuration(leaseDuration)
 
 		// If we are within grace, return now.
-		if leaseDuration <= r.grace {
+		if leaseDuration <= r.grace || sleepDuration <= r.grace {
 			return nil
 		}
 
 		select {
 		case <-r.stopCh:
 			return nil
-		case <-time.After(time.Duration(leaseDuration/2.0) * time.Second):
+		case <-time.After(sleepDuration):
 			continue
 		}
 	}
+}
+
+// sleepDuration calculates the time to sleep given the base lease duration. The
+// base is the resulting lease duration. It will be reduced to 1/3 and
+// multiplied by a random float between 0.0 and 1.0. This extra randomness
+// prevents multiple clients from all trying to renew simultaneously.
+func sleepDuration(base time.Duration) time.Duration {
+	sleep := float64(base)
+
+	// Renew at 1/3 the remaining lease. This will give us an opportunity to retry
+	// at least one more time should the first renewal fail.
+	sleep = sleep / 3.0
+
+	// Use a randomness so many clients do not hit Vault simultaneously.
+	sleep = sleep * rand.Float64()
+
+	return time.Duration(sleep) * time.Second
 }
