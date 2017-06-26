@@ -67,7 +67,7 @@ func (r *Response) AddWarning(warning string) {
 
 // IsError returns true if this response seems to indicate an error.
 func (r *Response) IsError() bool {
-	return r != nil && r.Data != nil && len(r.Data) > 0 && r.Data["error"] != nil
+	return r != nil && r.Data != nil && len(r.Data) == 1 && r.Data["error"] != nil
 }
 
 func (r *Response) Error() error {
@@ -106,11 +106,9 @@ func (r *Response) SetError(err error, errorData interface{}) {
 
 	if r.Data == nil {
 		r.Data = map[string]interface{}{
-			"error_data": errorData,
-			"error":      errText,
+			"error": errText,
 		}
 	} else {
-		r.Data["error_data"] = errorData
 		r.Data["error"] = errText
 	}
 }
