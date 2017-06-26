@@ -89,9 +89,13 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	viewPath := credentialBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 	sysView := c.mountEntrySysView(entry)
+	conf := make(map[string]string)
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
 
 	// Create the new backend
-	backend, err := c.newCredentialBackend(entry.Type, sysView, view, nil)
+	backend, err := c.newCredentialBackend(entry.Type, sysView, view, conf)
 	if err != nil {
 		return err
 	}

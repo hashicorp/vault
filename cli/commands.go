@@ -80,6 +80,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"ldap":     credLdap.Factory,
 					"okta":     credOkta.Factory,
 					"radius":   credRadius.Factory,
+					"plugin":   plugin.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,

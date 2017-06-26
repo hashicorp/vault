@@ -487,6 +487,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["auth_desc"][0]),
 					},
+					"plugin_name": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["auth_plugin"][0]),
+					},
 					"local": &framework.FieldSchema{
 						Type:        framework.TypeBool,
 						Default:     false,
@@ -1684,6 +1688,14 @@ func (b *SystemBackend) handleEnableAuth(
 	path := data.Get("path").(string)
 	logicalType := data.Get("type").(string)
 	description := data.Get("description").(string)
+	pluginName := data.Get("plugin_name").(string)
+
+	var config MountConfig
+
+	// Only set plugin name if mount is of type plugin
+	if logicalType == "plugin" && pluginName != "" {
+		config.PluginName = pluginName
+	}
 
 	if logicalType == "" {
 		return logical.ErrorResponse(
@@ -1699,6 +1711,7 @@ func (b *SystemBackend) handleEnableAuth(
 		Path:        path,
 		Type:        logicalType,
 		Description: description,
+		Config:      config,
 		Local:       local,
 	}
 
@@ -2571,6 +2584,11 @@ Example: you might have an OAuth backend for GitHub, and one for Google Apps.
 
 	"auth_desc": {
 		`User-friendly description for this crential backend.`,
+		"",
+	},
+
+	"auth_plugin": {
+		`Name of the auth plugin to use based from the name in the plugin catalog.`,
 		"",
 	},
 

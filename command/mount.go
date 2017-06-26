@@ -40,7 +40,7 @@ func (c *MountCommand) Run(args []string) int {
 	mountType := args[0]
 
 	// If no path is specified, we default the path to the backend type
-	// or use the plugin name it's a plugin backend
+	// or use the plugin name if it's a plugin backend
 	if path == "" {
 		if mountType == "plugin" {
 			path = pluginName
@@ -124,13 +124,12 @@ Mount Options:
                                  not affect caching of the underlying encrypted
                                  data storage.
 
-  -local                         Mark the mount as a local mount. Local mounts
-                                 are not replicated nor (if a secondary)
-                                 removed by replication.
-
   -plugin-name                   Name of the plugin to mount based from the name 
                                  in the plugin catalog.
 
+  -local                         Mark the mount as a local mount. Local mounts
+                                 are not replicated nor (if a secondary)
+                                 removed by replication.
 `
 	return strings.TrimSpace(helpText)
 }
