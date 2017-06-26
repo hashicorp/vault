@@ -682,6 +682,12 @@ func (ts *TokenStore) create(entry *TokenEntry) error {
 		entry.ID = entryUUID
 	}
 
+	saltedId := ts.SaltID(entry.ID)
+	exist, _ := ts.lookupSalted(saltedId, true)
+	if exist != nil {
+		return fmt.Errorf("cannot create a token with a duplicate ID")
+	}
+
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
 
 	err := ts.createAccessor(entry)

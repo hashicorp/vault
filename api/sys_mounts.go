@@ -135,6 +135,7 @@ type MountConfigInput struct {
 type MountOutput struct {
 	Type        string            `json:"type" structs:"type"`
 	Description string            `json:"description" structs:"description"`
+	Accessor    string            `json:"accessor" structs:"accessor"`
 	Config      MountConfigOutput `json:"config" structs:"config"`
 	Local       bool              `json:"local" structs:"local"`
 }

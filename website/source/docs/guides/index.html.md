@@ -14,6 +14,9 @@ guidance to do them safely.
 
 The following guides are available:
 
+* [Production Hardening](/docs/guides/production.html) - This guide covers best practices
+  for deploying a production hardened setup for Vault.
+
 * [Root Token Generation](/docs/guides/generate-root.html) - This guide covers
   how to generate new root tokens using unseal keys.
 
@@ -21,5 +24,5 @@ The following guides are available:
   guide covers how to set up and manage Vault Replication, a part of Vault
   Enterprise.
 
-* [Upgrading](/docs/guides/upgrading/index.html) - This guide provides general 
+* [Upgrading](/docs/guides/upgrading/index.html) - This guide provides general
   upgrade instructions for Vault with version-specific upgrade notes.

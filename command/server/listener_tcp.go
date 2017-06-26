@@ -9,11 +9,14 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func tcpListenerFactory(config map[string]string, _ io.Writer) (net.Listener, map[string]string, vault.ReloadFunc, error) {
+func tcpListenerFactory(config map[string]interface{}, _ io.Writer) (net.Listener, map[string]string, vault.ReloadFunc, error) {
 	bind_proto := "tcp"
-	addr, ok := config["address"]
+	var addr string
+	addrRaw, ok := config["address"]
 	if !ok {
 		addr = "127.0.0.1:8200"
+	} else {
+		addr = addrRaw.(string)
 	}
 
 	// If they've passed 0.0.0.0, we only want to bind on IPv4
