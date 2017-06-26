@@ -2,9 +2,15 @@ package api
 
 import (
 	"errors"
+	"math/rand"
 	"sync"
 	"time"
 )
+
+func init() {
+	// Seed the random generator
+	rand.Seed(time.Now().Unix())
+}
 
 var (
 	ErrRenewerMissingInput  = errors.New("missing input to renewer")
