@@ -82,6 +82,9 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
+	// Type is the logical.BackendType for the backend implementation
+	BackendType logical.BackendType
+
 	logger  log.Logger
 	system  logical.SystemView
 	once    sync.Once
@@ -278,6 +281,11 @@ func (b *Backend) Logger() log.Logger {
 // System returns the backend's system view.
 func (b *Backend) System() logical.SystemView {
 	return b.system
+}
+
+// Type returns the backend type
+func (b *Backend) Type() logical.BackendType {
+	return b.BackendType
 }
 
 // SanitizeTTLStr takes in the TTL and MaxTTL values provided by the user,

@@ -1143,6 +1143,59 @@ func TestSystemBackend_enableAuth(t *testing.T) {
 	}
 }
 
+func TestSystemBackend_enableAuth_plugin(t *testing.T) {
+	t.Skip()
+	// c, b, _ := testCoreSystemBackend(t)
+	// c.credentialBackends["plugin"] = plugin.Factory
+
+	// TestAddTestPlugin(t, c, "mock-plugin", "TestBackend_PluginMain")
+
+	// req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")
+	// req.Data["type"] = "plugin"
+	// req.Data["plugin_name"] = "mock-plugin"
+
+	// resp, err := b.HandleRequest(req)
+	// if err != nil {
+	// 	t.Fatalf("err: %v", err)
+	// }
+	// if resp != nil {
+	// 	t.Fatalf("bad: %v", resp)
+	// }
+}
+
+// func TestBackend_PluginMain(t *testing.T) {
+// 	if os.Getenv(pluginutil.PluginUnwrapTokenEnv) == "" {
+// 		return
+// 	}
+
+// 	content := []byte(TestClusterCACert)
+// 	tmpfile, err := ioutil.TempFile("", "test-cacert")
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+
+// 	defer os.Remove(tmpfile.Name()) // clean up
+
+// 	if _, err := tmpfile.Write(content); err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	if err := tmpfile.Close(); err != nil {
+// 		t.Fatal(err)
+// 	}
+
+// 	args := []string{"--ca-cert=" + tmpfile.Name()}
+
+// 	apiClientMeta := &pluginutil.APIClientMeta{}
+// 	flags := apiClientMeta.FlagSet()
+// 	flags.Parse(args)
+// 	tlsConfig := apiClientMeta.GetTLSConfig()
+// 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+// 	lplugin.Serve(&lplugin.ServeOpts{
+// 		BackendFactoryFunc: mock.Factory,
+// 		TLSProviderFunc:    tlsProviderFunc,
+// 	})
+// }
+
 func TestSystemBackend_enableAuth_invalid(t *testing.T) {
 	b := testSystemBackend(t)
 	req := logical.TestRequest(t, logical.UpdateOperation, "auth/foo")

@@ -2,6 +2,17 @@ package logical
 
 import log "github.com/mgutz/logxi/v1"
 
+// BackendType is the type of backend that is being implemented
+type BackendType string
+
+// The these are the types of backends that can be derived from
+// logical.Backend
+const (
+	TypeUnknown    BackendType = "unknown"
+	TypeLogical    BackendType = "logical"
+	TypeCredential BackendType = "credential"
+)
+
 // Backend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount
 // points that flow to a logical backend. The logic of each backend is flexible,
@@ -60,6 +71,9 @@ type Backend interface {
 	// from the RPC client to configure components such as the logger, storage,
 	// system view, etc.
 	Configure(*BackendConfig) error
+
+	// Type returns the BackendType for the particular backend
+	Type() BackendType
 }
 
 // BackendConfig is provided to the factory to initialize the backend

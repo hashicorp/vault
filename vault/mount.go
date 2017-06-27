@@ -234,6 +234,12 @@ func (c *Core) mount(entry *MountEntry) error {
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
 	}
 
+	// Check for the correct backend type
+	backendType := backend.Type()
+	if entry.Type == "plugin" && backendType != logical.TypeLogical {
+		return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+	}
+
 	// Call initialize; this takes care of init tasks that must be run after
 	// the ignore paths are collected.
 	if err := backend.Initialize(); err != nil {
@@ -672,6 +678,12 @@ func (c *Core) setupMounts() error {
 		}
 		if backend == nil {
 			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
+		}
+
+		// Check for the correct backend type
+		backendType := backend.Type()
+		if entry.Type == "plugin" && backendType != logical.TypeLogical {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}
 
 		if err := backend.Initialize(); err != nil {

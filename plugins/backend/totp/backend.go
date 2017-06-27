@@ -30,7 +30,8 @@ func Backend() *backend {
 			pathCode(&b),
 		},
 
-		Secrets: []*framework.Secret{},
+		Secrets:     []*framework.Secret{},
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b

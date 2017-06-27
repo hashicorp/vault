@@ -103,6 +103,12 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		return fmt.Errorf("nil backend returned from %q factory", entry.Type)
 	}
 
+	// Check for the correct backend type
+	backendType := backend.Type()
+	if entry.Type == "plugin" && backendType != logical.TypeCredential {
+		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
+	}
+
 	if err := backend.Initialize(); err != nil {
 		return err
 	}
@@ -396,15 +402,25 @@ func (c *Core) setupCredentials() error {
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
 		view = NewBarrierView(c.barrier, viewPath)
 		sysView := c.mountEntrySysView(entry)
+		conf := make(map[string]string)
+		if entry.Config.PluginName != "" {
+			conf["plugin_name"] = entry.Config.PluginName
+		}
 
 		// Initialize the backend
-		backend, err = c.newCredentialBackend(entry.Type, sysView, view, nil)
+		backend, err = c.newCredentialBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
 			return errLoadAuthFailed
 		}
 		if backend == nil {
 			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+		}
+
+		// Check for the correct backend type
+		backendType := backend.Type()
+		if entry.Type == "plugin" && backendType != logical.TypeCredential {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}
 
 		if err := backend.Initialize(); err != nil {

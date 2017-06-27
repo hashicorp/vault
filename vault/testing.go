@@ -539,6 +539,10 @@ func (n *rawHTTP) Configure(config *logical.BackendConfig) error {
 	return nil
 }
 
+func (n *rawHTTP) Type() logical.BackendType {
+	return logical.TypeUnknown
+}
+
 func GenerateRandBytes(length int) ([]byte, error) {
 	if length < 0 {
 		return nil, fmt.Errorf("length must be >= 0")

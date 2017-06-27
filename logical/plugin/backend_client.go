@@ -68,6 +68,11 @@ type ConfigureReply struct {
 	Error *plugin.BasicError
 }
 
+// TypeReply is the reply for the Type method.
+type TypeReply struct {
+	Type logical.BackendType
+}
+
 func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Response, error) {
 	// Shim logical.Storage
 	id := b.broker.NextId()
@@ -207,4 +212,15 @@ func (b *backendPluginClient) Configure(config *logical.BackendConfig) error {
 	b.logger = config.Logger
 
 	return nil
+}
+
+func (b *backendPluginClient) Type() logical.BackendType {
+	var reply TypeReply
+	// var paths logical.Paths
+	err := b.client.Call("Plugin.Type", new(interface{}), &reply)
+	if err != nil {
+		return logical.TypeUnknown
+	}
+
+	return logical.BackendType(reply.Type)
 }

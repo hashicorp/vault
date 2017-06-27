@@ -148,3 +148,11 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 
 	return nil
 }
+
+func (b *backendPluginServer) Type(_ interface{}, reply *TypeReply) error {
+	*reply = TypeReply{
+		Type: b.backend.Type(),
+	}
+
+	return nil
+}
