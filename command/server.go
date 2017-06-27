@@ -26,10 +26,8 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/circonus"
 	"github.com/armon/go-metrics/datadog"
-	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/flag-slice"
@@ -445,42 +443,13 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				return 1
 			}
 
-			switch strval {
-			case "use_always", "use_if_authorized", "deny_if_unauthorized":
-			default:
+			newLn, err := proxyutil.WrapInProxyProto(ln, c.proxyProtoConfig, strval)
+			if err != nil {
 				c.Ui.Output(fmt.Sprintf(
-					"Unknown proxy_protocol value %s for listener of type %s",
-					strval, lnConfig.Type))
+					"Error configuring PROXY protocol wrapper: %s", err))
 				return 1
 			}
 
-			newLn := &proxyproto.Listener{
-				Listener: ln,
-			}
-
-			if strval == "use_if_authorized" || strval == "deny_if_unauthorized" {
-				newLn.SourceCheck = func(addr net.Addr) (bool, error) {
-					c.proxyProtoConfig.RLock()
-					defer c.proxyProtoConfig.RUnlock()
-
-					sa, err := sockaddr.NewSockAddr(addr.String())
-					if err != nil {
-						return false, errwrap.Wrapf("error parsing remote address: {{err}}", err)
-					}
-
-					for _, allowedAddr := range c.proxyProtoConfig.AllowedAddrs {
-						if allowedAddr.Contains(sa) {
-							return true, nil
-						}
-					}
-
-					if strval == "use_if_authorized" {
-						return false, nil
-					}
-
-					return false, proxyproto.ErrInvalidUpstream
-				}
-			}
 			ln = newLn
 		}
 

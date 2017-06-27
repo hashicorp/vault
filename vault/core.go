@@ -50,6 +50,10 @@ const (
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
 
+	// coreProxyProtoConfigPath is the path used to store allowed addresses
+	// when using the PROXY protocol
+	coreProxyProtoConfigPath = "core/proxyproto-config"
+
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
 	lockRetryInterval = 10 * time.Second
@@ -512,7 +516,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	conf.ReloadFuncs = &c.reloadFuncs
 
 	c.proxyProtoConfig = &proxyutil.ProxyProtoConfig{
-		AllowedAddrs: make([]sockaddr.SockAddr, 0),
+		AllowedAddrs: make([]*sockaddr.SockAddrMarshaler, 0),
 	}
 	conf.ProxyProtoConfig = c.proxyProtoConfig
 
@@ -1289,6 +1293,20 @@ func (c *Core) postUnseal() (retErr error) {
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
 		purgable.Purge()
+	}
+
+	proxyConfigEntry, err := c.barrier.Get(coreProxyProtoConfigPath)
+	if err != nil {
+		return errwrap.Wrapf("error loading proxy proto configuration: {{err}}", err)
+	}
+	if proxyConfigEntry != nil {
+		var proxyProtoConfig proxyutil.ProxyProtoConfig
+		if err := jsonutil.DecodeJSON(proxyConfigEntry.Value, &proxyProtoConfig); err != nil {
+			return errwrap.Wrapf("error decoding proxy proto configuration: {{err}}", err)
+		}
+		c.proxyProtoConfig.Lock()
+		c.proxyProtoConfig.AllowedAddrs = proxyProtoConfig.AllowedAddrs
+		c.proxyProtoConfig.Unlock()
 	}
 
 	// Purge these for safety in case of a rekey
