@@ -42,7 +42,7 @@ func (c *MountsCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Accessor |Plugin | Default TTL | Max TTL | Force No Cache | Replication Behavior | Description"}
+	columns := []string{"Path | Type | Accessor | Plugin | Default TTL | Max TTL | Force No Cache | Replication Behavior | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
 		pluginName := "n/a"
