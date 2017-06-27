@@ -85,7 +85,13 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 		}
 		entry.UUID = entryUUID
 	}
-
+	if entry.Accessor == "" {
+		accessor, err := c.generateMountAccessor("auth_" + entry.Type)
+		if err != nil {
+			return err
+		}
+		entry.Accessor = accessor
+	}
 	viewPath := credentialBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 	sysView := c.mountEntrySysView(entry)
@@ -293,13 +299,21 @@ func (c *Core) loadCredentials() error {
 				entry.Table = c.auth.Type
 				needPersist = true
 			}
+			if entry.Accessor == "" {
+				accessor, err := c.generateMountAccessor("auth_" + entry.Type)
+				if err != nil {
+					return err
+				}
+				entry.Accessor = accessor
+				needPersist = true
+			}
 		}
 
 		if !needPersist {
 			return nil
 		}
 	} else {
-		c.auth = defaultAuthTable()
+		c.auth = c.defaultAuthTable()
 	}
 
 	if err := c.persistAuth(c.auth, false); err != nil {
@@ -505,7 +519,7 @@ func (c *Core) newCredentialBackend(
 }
 
 // defaultAuthTable creates a default auth table
-func defaultAuthTable() *MountTable {
+func (c *Core) defaultAuthTable() *MountTable {
 	table := &MountTable{
 		Type: credentialTableType,
 	}
@@ -513,12 +527,17 @@ func defaultAuthTable() *MountTable {
 	if err != nil {
 		panic(fmt.Sprintf("could not generate UUID for default auth table token entry: %v", err))
 	}
+	tokenAccessor, err := c.generateMountAccessor("auth_token")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate accessor for default auth table token entry: %v", err))
+	}
 	tokenAuth := &MountEntry{
 		Table:       credentialTableType,
 		Path:        "token/",
 		Type:        "token",
 		Description: "token based credentials",
 		UUID:        tokenUUID,
+		Accessor:    tokenAccessor,
 	}
 	table.Entries = append(table.Entries, tokenAuth)
 	return table

@@ -42,7 +42,7 @@ func (c *MountsCommand) Run(args []string) int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Plugin | Default TTL | Max TTL | Force No Cache | Replication Behavior | Description"}
+	columns := []string{"Path | Type | Accessor |Plugin | Default TTL | Max TTL | Force No Cache | Replication Behavior | Description"}
 	for _, path := range paths {
 		mount := mounts[path]
 		pluginName := "n/a"
@@ -72,7 +72,7 @@ func (c *MountsCommand) Run(args []string) int {
 			replicatedBehavior = "local"
 		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s | %v | %s | %s", path, mount.Type, pluginName, defTTL, maxTTL,
+			"%s | %s | %s | %s | %s | %s | %v | %s | %s", path, mount.Type, mount.Accessor, pluginName, defTTL, maxTTL,
 			mount.Config.ForceNoCache, replicatedBehavior, mount.Description))
 	}
 

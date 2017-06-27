@@ -1168,8 +1168,18 @@ func (b *SystemBackend) handleMountTable(
 		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
+<<<<<<< HEAD
 			"config":      structConfig,
 			"local":       entry.Local,
+=======
+			"accessor":    entry.Accessor,
+			"config": map[string]interface{}{
+				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
+				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
+				"force_no_cache":    entry.Config.ForceNoCache,
+			},
+			"local": entry.Local,
+>>>>>>> master-oss
 		}
 
 		resp.Data[entry.Path] = info
@@ -1661,6 +1671,7 @@ func (b *SystemBackend) handleAuthTable(
 		info := map[string]interface{}{
 			"type":        entry.Type,
 			"description": entry.Description,
+			"accessor":    entry.Accessor,
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(entry.Config.DefaultLeaseTTL.Seconds()),
 				"max_lease_ttl":     int64(entry.Config.MaxLeaseTTL.Seconds()),
