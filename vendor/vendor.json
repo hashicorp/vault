@@ -883,6 +883,12 @@
 			"revisionTime": "2016-05-03T14:34:40Z"
 		},
 		{
+			"checksumSHA1": "NaOL+Voo17F9a2dd6/VU7NAI5EM=",
+			"path": "github.com/hashicorp/go-sockaddr",
+			"revision": "41949a141473f6340abc6ba0fcd0f89da6f6f837",
+			"revisionTime": "2017-06-27T02:34:41Z"
+		},
+		{
 			"checksumSHA1": "pUPzsy2MLooiC5+5Bsjl9j3/qcs=",
 			"path": "github.com/hashicorp/go-syslog",
 			"revision": "b609c7d9de4658cded34a7336b90886c56f9dbdb",

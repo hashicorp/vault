@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -106,12 +107,6 @@ var (
 
 // ReloadFunc are functions that are called when a reload is requested.
 type ReloadFunc func(map[string]interface{}) error
-
-// ProxyProtoConfig contains configuration for the PROXY protocol
-type ProxyProtoConfig struct {
-	sync.RWMutex
-	AllowedAddrs []sockaddr.SockAddr
-}
 
 // NonFatalError is an error that can be returned during NewCore that should be
 // displayed but not cause a program exit
@@ -286,7 +281,7 @@ type Core struct {
 	reloadFuncsLock sync.RWMutex
 
 	// proxyProtoConfig contains configuration for the PROXY protocol
-	proxyProtoConfig *ProxyProtoConfig
+	proxyProtoConfig *proxyutil.ProxyProtoConfig
 
 	// wrappingJWTKey is the key used for generating JWTs containing response
 	// wrapping information
@@ -407,7 +402,7 @@ type CoreConfig struct {
 	ReloadFuncs     *map[string][]ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
 
-	ProxyProtoConfig *ProxyProtoConfig
+	ProxyProtoConfig *proxyutil.ProxyProtoConfig
 }
 
 // NewCore is used to construct a new core
@@ -516,7 +511,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
 
-	c.proxyProtoConfig = &ProxyProtoConfig{
+	c.proxyProtoConfig = &proxyutil.ProxyProtoConfig{
 		AllowedAddrs: make([]sockaddr.SockAddr, 0),
 	}
 	conf.ProxyProtoConfig = c.proxyProtoConfig

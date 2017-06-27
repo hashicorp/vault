@@ -37,6 +37,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/proxyutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/meta"
@@ -65,7 +66,7 @@ type ServerCommand struct {
 	reloadFuncsLock *sync.RWMutex
 	reloadFuncs     *map[string][]vault.ReloadFunc
 
-	proxyProtoConfig *vault.ProxyProtoConfig
+	proxyProtoConfig *proxyutil.ProxyProtoConfig
 }
 
 func (c *ServerCommand) Run(args []string) int {
