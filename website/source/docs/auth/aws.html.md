@@ -33,22 +33,32 @@ for your use cases.
 
 ### EC2 Authentication Method
 
-EC2 instances have access to metadata describing the instance. (For those not
-familiar with instance metadata, details can be found
-[here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html).)
+Amazon EC2 instances have access to metadata which describes the instance. The
+Vault EC2 authentication method leverages this components of this metadata to
+authenticate and distribute an initial Vault token to an EC2 instance. The data
+flow (which is also represented in the graphic below) is as follows:
 
-One piece of "dynamic metadata" available to the EC2 instance, is the instance
-identity document, a JSON representation of a collection of instance metadata.
-AWS also provides PKCS#7 signature of the instance metadata document, and
-publishes the public keys (grouped by region) which can be used to verify the
-signature. Details on the instance identity document and the signature can be
-found
-[here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html).
+[![Vault AWS EC2 Authentication Flow](/assets/images/vault-aws-ec2-auth-flow.png)](/assets/images/vault-aws-ec2-auth-flow.png)
 
-During login, the backend verifies the signature on the PKCS#7 document,
-ensuring that the information contained within, is certified accurate by AWS.
-Before succeeding the login attempt and returning a Vault token, the backend
-verifies the current running status of the instance via the EC2 API.
+1. An AWS EC2 instance fetches its [AWS Instance Identity Document][aws-iid]
+from the [EC2 Metadata Service][aws-ec2-mds]. In addition to data itself, AWS
+also provides the PKCS#7 signature of the data, and publishes the public keys
+(by region) which can be used to verify the signature.
+
+1. The AWS EC2 instance makes a request to Vault with the Instance Identity
+Document and the PKCS#7 signature of the document.
+
+1. Vault verifies the signature on the PKCS#7 document, ensuring the information
+is certified accurate by AWS. This process validates both the validity and
+integrity of the document data. As an added security measure, Vault verifies
+that the instance is currently running using the public EC2 API endpoint.
+
+1. Provided all steps are successful, Vault returns the initial Vault token to
+the EC2 instance. This token is mapped to any configured policies based on the
+instance metadata.
+
+[aws-iid]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
+[aws-ec2-mds]: http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
 
 There are various modifications to this workflow that provide more or less
 security, as detailed later in this documentation.
@@ -962,7 +972,7 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Returns the previously configured STS role. 
+    Returns the previously configured STS role.
   </dd>
 
   <dt>Method</dt>
@@ -999,7 +1009,7 @@ The response will be in JSON. For example:
 <dl class="api">
   <dt>Description</dt>
   <dd>
-    Lists all the AWS Account IDs for which an STS role is registered 
+    Lists all the AWS Account IDs for which an STS role is registered
   </dd>
 
   <dt>Method</dt>
