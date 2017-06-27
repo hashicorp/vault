@@ -55,6 +55,7 @@ type Renewer struct {
 	client  *Client
 	secret  *Secret
 	grace   time.Duration
+	random  *rand.Rand
 	doneCh  chan error
 	renewCh chan *RenewOutput
 
@@ -71,6 +72,11 @@ type RenewerInput struct {
 	// client can do a re-read. This can be used to prevent clients from waiting
 	// too long to read a new credential and incur downtime.
 	Grace time.Duration
+
+	// Rand is the randomizer to use for underlying randomization. If not
+	// provided, one will be generated and seeded automatically. If provided, it
+	// is assumed to have already been seeded.
+	Rand *rand.Rand
 }
 
 // RenewOutput is the metadata returned to the client (if it's listening) to
@@ -101,10 +107,16 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 		grace = DefaultRenewerGrace
 	}
 
+	random := i.Rand
+	if random == nil {
+		random = rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
+	}
+
 	return &Renewer{
 		client:  c,
 		secret:  secret,
 		grace:   grace,
+		random:  random,
 		doneCh:  make(chan error),
 		renewCh: make(chan *RenewOutput, 5),
 
@@ -190,7 +202,7 @@ func (r *Renewer) renewAuth() error {
 		// Grab the lease duration and sleep duration - note that we grab the auth
 		// lease duration, not the secret lease duration.
 		leaseDuration := time.Duration(renewal.Auth.LeaseDuration) * time.Second
-		sleepDuration := sleepDuration(leaseDuration)
+		sleepDuration := r.sleepDuration(leaseDuration)
 
 		// If we are within grace, return now.
 		if leaseDuration <= r.grace || sleepDuration <= r.grace {
@@ -246,7 +258,7 @@ func (r *Renewer) renewLease() error {
 
 		// Grab the lease duration and sleep duration
 		leaseDuration := time.Duration(renewal.LeaseDuration) * time.Second
-		sleepDuration := sleepDuration(leaseDuration)
+		sleepDuration := r.sleepDuration(leaseDuration)
 
 		// If we are within grace, return now.
 		if leaseDuration <= r.grace || sleepDuration <= r.grace {
@@ -266,7 +278,7 @@ func (r *Renewer) renewLease() error {
 // base is the resulting lease duration. It will be reduced to 1/3 and
 // multiplied by a random float between 0.0 and 1.0. This extra randomness
 // prevents multiple clients from all trying to renew simultaneously.
-func sleepDuration(base time.Duration) time.Duration {
+func (r *Renewer) sleepDuration(base time.Duration) time.Duration {
 	sleep := float64(base)
 
 	// Renew at 1/3 the remaining lease. This will give us an opportunity to retry
@@ -274,7 +286,7 @@ func sleepDuration(base time.Duration) time.Duration {
 	sleep = sleep / 3.0
 
 	// Use a randomness so many clients do not hit Vault simultaneously.
-	sleep = sleep * rand.Float64()
+	sleep = sleep * r.random.Float64()
 
 	return time.Duration(sleep) * time.Second
 }
