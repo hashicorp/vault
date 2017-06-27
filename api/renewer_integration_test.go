@@ -54,7 +54,7 @@ func TestRenewer_Renew(t *testing.T) {
 					t.Fatal(err)
 				}
 			case renew := <-v.RenewCh():
-				t.Error("received renew, but should have been nil: %#v", renew)
+				t.Errorf("received renew, but should have been nil: %#v", renew)
 			case <-time.After(500 * time.Millisecond):
 				t.Error("should have been non-renewable")
 			}
@@ -91,7 +91,7 @@ func TestRenewer_Renew(t *testing.T) {
 					t.Fatal(err)
 				}
 			case renew := <-v.RenewCh():
-				t.Error("received renew, but should have been nil: %#v", renew)
+				t.Errorf("received renew, but should have been nil: %#v", renew)
 			case <-time.After(500 * time.Millisecond):
 				t.Error("should have been non-renewable")
 			}

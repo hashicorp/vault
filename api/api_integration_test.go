@@ -71,7 +71,7 @@ func testVaultServerBackends(t testing.TB, backends map[string]logical.Factory) 
 		t.Fatal(err)
 	}
 	if secret == nil || secret.Data["id"].(string) != rootToken {
-		t.Fatalf("token mismatch: %q vs %q", secret, rootToken)
+		t.Fatalf("token mismatch: %#v vs %q", secret, rootToken)
 	}
 
 	return client, func() {
