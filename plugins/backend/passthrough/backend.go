@@ -9,7 +9,6 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/vault"
 )
 
 func New() (interface{}, error) {
@@ -58,7 +57,9 @@ func Backend() *backend {
 	return &b
 }
 
-type backend vault.PassthroughBackend
+type backend struct {
+	*framework.Backend
+}
 
 func (b *backend) handleRevoke(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
