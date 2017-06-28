@@ -22,7 +22,6 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
-	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/consts"
@@ -30,7 +29,6 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
-	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -49,10 +47,6 @@ const (
 	// coreLeaderPrefix is the prefix used for the UUID that contains
 	// the currently elected leader.
 	coreLeaderPrefix = "core/leader/"
-
-	// coreProxyProtoConfigPath is the path used to store allowed addresses
-	// when using the PROXY protocol
-	coreProxyProtoConfigPath = "core/proxyproto-config"
 
 	// lockRetryInterval is the interval we re-attempt to acquire the
 	// HA lock if an error is encountered
@@ -284,9 +278,6 @@ type Core struct {
 	// reloadFuncsLock controls access to the funcs
 	reloadFuncsLock sync.RWMutex
 
-	// proxyProtoConfig contains configuration for the PROXY protocol
-	proxyProtoConfig *proxyutil.ProxyProtoConfig
-
 	// wrappingJWTKey is the key used for generating JWTs containing response
 	// wrapping information
 	wrappingJWTKey *ecdsa.PrivateKey
@@ -405,8 +396,6 @@ type CoreConfig struct {
 
 	ReloadFuncs     *map[string][]ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
-
-	ProxyProtoConfig *proxyutil.ProxyProtoConfig
 }
 
 // NewCore is used to construct a new core
@@ -514,11 +503,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.reloadFuncs = make(map[string][]ReloadFunc)
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
-
-	c.proxyProtoConfig = &proxyutil.ProxyProtoConfig{
-		AllowedAddrs: make([]*sockaddr.SockAddrMarshaler, 0),
-	}
-	conf.ProxyProtoConfig = c.proxyProtoConfig
 
 	// Setup the backends
 	logicalBackends := make(map[string]logical.Factory)
@@ -1293,20 +1277,6 @@ func (c *Core) postUnseal() (retErr error) {
 	// Purge the backend if supported
 	if purgable, ok := c.physical.(physical.Purgable); ok {
 		purgable.Purge()
-	}
-
-	proxyConfigEntry, err := c.barrier.Get(coreProxyProtoConfigPath)
-	if err != nil {
-		return errwrap.Wrapf("error loading proxy proto configuration: {{err}}", err)
-	}
-	if proxyConfigEntry != nil {
-		var proxyProtoConfig proxyutil.ProxyProtoConfig
-		if err := jsonutil.DecodeJSON(proxyConfigEntry.Value, &proxyProtoConfig); err != nil {
-			return errwrap.Wrapf("error decoding proxy proto configuration: {{err}}", err)
-		}
-		c.proxyProtoConfig.Lock()
-		c.proxyProtoConfig.AllowedAddrs = proxyProtoConfig.AllowedAddrs
-		c.proxyProtoConfig.Unlock()
 	}
 
 	// Purge these for safety in case of a rekey

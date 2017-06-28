@@ -63,8 +63,6 @@ type ServerCommand struct {
 
 	reloadFuncsLock *sync.RWMutex
 	reloadFuncs     *map[string][]vault.ReloadFunc
-
-	proxyProtoConfig *proxyutil.ProxyProtoConfig
 }
 
 func (c *ServerCommand) Run(args []string) int {
@@ -387,7 +385,6 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	// Copy the reload funcs pointers back
 	c.reloadFuncs = coreConfig.ReloadFuncs
 	c.reloadFuncsLock = coreConfig.ReloadFuncsLock
-	c.proxyProtoConfig = coreConfig.ProxyProtoConfig
 
 	// Compile server information for output later
 	info["storage"] = config.Storage.Type
@@ -435,7 +432,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		}
 
 		if val, ok := lnConfig.Config["proxy_protocol"]; ok {
-			strval, ok := val.(string)
+			behavior, ok := val.(string)
 			if !ok {
 				c.Ui.Output(fmt.Sprintf(
 					"Error parsing proxy_protocol value for listener of type %s: not a string",
@@ -443,7 +440,25 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				return 1
 			}
 
-			newLn, err := proxyutil.WrapInProxyProto(ln, c.proxyProtoConfig, strval)
+			allowedAddrsRaw, ok := lnConfig.Config["proxy_protocol_allowed_addrs"]
+			if !ok {
+				c.Ui.Output(fmt.Sprintf(
+					"proxy_protocol set but no proxy_protocol_allowed_addrs value for listener of type %s",
+					lnConfig.Type))
+				return 1
+			}
+
+			allowedAddrs, ok := allowedAddrsRaw.(string)
+			if !ok {
+				c.Ui.Output(fmt.Sprintf(
+					"Error parsing proxy_allowed_addrs value for listener of type %s: not a string",
+					lnConfig.Type))
+				return 1
+			}
+
+			proxyProtoConfig := &proxyutil.ProxyProtoConfig{}
+
+			newLn, err := proxyutil.WrapInProxyProto(ln, proxyProtoConfig, behavior, allowedAddrs)
 			if err != nil {
 				c.Ui.Output(fmt.Sprintf(
 					"Error configuring PROXY protocol wrapper: %s", err))

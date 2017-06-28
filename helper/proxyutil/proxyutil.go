@@ -8,6 +8,7 @@ import (
 	proxyproto "github.com/armon/go-proxyproto"
 	"github.com/hashicorp/errwrap"
 	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/helper/strutil"
 )
 
 // ProxyProtoConfig contains configuration for the PROXY protocol
@@ -20,11 +21,30 @@ type ProxyProtoConfig struct {
 // is "use_if_authorized" or "deny_if_unauthorized" it also configures a
 // SourceCheck based on the given ProxyProtoConfig. In an error case it returns
 // the original listener and the error.
-func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig, behavior string) (net.Listener, error) {
+func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig, behavior, allowedAddrs string) (net.Listener, error) {
+	config.Lock()
+	defer config.Unlock()
+
 	switch behavior {
 	case "use_always", "use_if_authorized", "deny_if_unauthorized":
 	default:
 		return listener, fmt.Errorf("unknown behavior type for proxy proto config")
+	}
+
+	addrSlice := strutil.ParseArbitraryStringSlice(allowedAddrs, ",")
+	if len(addrSlice) == 0 {
+		return listener, fmt.Errorf("unable to parse addresses from %q", allowedAddrs)
+	}
+
+	config.AllowedAddrs = make([]*sockaddr.SockAddrMarshaler, 0, len(addrSlice))
+	for _, addr := range addrSlice {
+		sa, err := sockaddr.NewSockAddr(addr)
+		if err != nil {
+			return listener, errwrap.Wrapf("error parsing allowed address: {{err}}", err)
+		}
+		config.AllowedAddrs = append(config.AllowedAddrs, &sockaddr.SockAddrMarshaler{
+			SockAddr: sa,
+		})
 	}
 
 	newLn := &proxyproto.Listener{
