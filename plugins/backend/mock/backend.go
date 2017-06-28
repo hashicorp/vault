@@ -3,7 +3,6 @@ package mock
 import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
-	"github.com/hashicorp/vault/logical/plugin"
 )
 
 // New returns a new backend as an interface. This func
@@ -19,7 +18,7 @@ func Factory() (logical.Backend, error) {
 
 // FactoryType is a wrapper func that allows the Factory func to specify
 // the backend type for the mock backend plugin instance.
-func FactoryType(backendType logical.BackendType) plugin.BackendFactoryFunc {
+func FactoryType(backendType logical.BackendType) func() (logical.Backend, error) {
 	b := Backend()
 	b.BackendType = backendType
 
