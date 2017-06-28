@@ -72,13 +72,7 @@ func Factory(conf *audit.BackendConfig) (audit.Backend, error) {
 		logRaw = b
 	}
 
-	conn, err := net.Dial(socketType, address)
-	if err != nil {
-		return nil, err
-	}
-
 	b := &Backend{
-		connection: conn,
 		saltConfig: conf.SaltConfig,
 		saltView:   conf.SaltView,
 		formatConfig: audit.FormatterConfig{
@@ -182,6 +176,12 @@ func (b *Backend) LogResponse(auth *logical.Auth, req *logical.Request,
 }
 
 func (b *Backend) write(buf []byte) error {
+	if b.connection == nil {
+		if err := b.reconnect(); err != nil {
+			return err
+		}
+	}
+
 	err := b.connection.SetWriteDeadline(time.Now().Add(b.writeDuration))
 	if err != nil {
 		return err
@@ -196,12 +196,16 @@ func (b *Backend) write(buf []byte) error {
 }
 
 func (b *Backend) reconnect() error {
+	if b.connection != nil {
+		b.connection.Close()
+		b.connection = nil
+	}
+
 	conn, err := net.Dial(b.socketType, b.address)
 	if err != nil {
 		return err
 	}
 
-	b.connection.Close()
 	b.connection = conn
 
 	return nil
