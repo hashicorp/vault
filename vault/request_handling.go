@@ -256,11 +256,9 @@ func (c *Core) handleRequest(req *logical.Request) (retResp *logical.Response, r
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
-		if ptbe, ok := matchingBackend.(*PassthroughBackend); ok {
-			if !ptbe.GeneratesLeases() {
-				registerLease = false
-				resp.Secret.Renewable = false
-			}
+		if matchingBackend.Type() == logical.TypePassthrough {
+			registerLease = false
+			resp.Secret.Renewable = false
 		}
 
 		if registerLease {

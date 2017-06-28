@@ -1,4 +1,4 @@
-package vault
+package passthrough
 
 import (
 	"encoding/json"
@@ -9,24 +9,19 @@ import (
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
+	"github.com/hashicorp/vault/vault"
 )
 
-// PassthroughBackendFactory returns a PassthroughBackend
-// with leases switched off
-func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, logical.TypePassthrough)
+func New() (interface{}, error) {
+	return Backend(), nil
 }
 
-// LeasedPassthroughBackendFactory returns a PassthroughBackend
-// with leases switched on
-func LeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, logical.TypeLogical)
+func Factory() (logical.Backend, error) {
+	return Backend(), nil
 }
 
-// LeaseSwitchedPassthroughBackend returns a PassthroughBackend
-// with leases switched on or off
-func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, backendType logical.BackendType) (logical.Backend, error) {
-	var b PassthroughBackend
+func Backend() *backend {
+	var b backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
 
@@ -48,7 +43,7 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, backendType lo
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
 			},
 		},
-		BackendType: backendType,
+		BackendType: logical.TypePassthrough,
 	}
 
 	b.Backend.Secrets = []*framework.Secret{
@@ -60,29 +55,18 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, backendType lo
 		},
 	}
 
-	if conf == nil {
-		return nil, fmt.Errorf("Configuation passed into backend is nil")
-	}
-	b.Backend.Setup(conf)
-
-	return &b, nil
+	return &b
 }
 
-// PassthroughBackend is used storing secrets directly into the physical
-// backend. The secrets are encrypted in the durable storage and custom TTL
-// information can be specified, but otherwise this backend doesn't do anything
-// fancy.
-type PassthroughBackend struct {
-	*framework.Backend
-}
+type backend vault.PassthroughBackend
 
-func (b *PassthroughBackend) handleRevoke(
+func (b *backend) handleRevoke(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// This is a no-op
 	return nil, nil
 }
 
-func (b *PassthroughBackend) handleExistenceCheck(
+func (b *backend) handleExistenceCheck(
 	req *logical.Request, data *framework.FieldData) (bool, error) {
 	out, err := req.Storage.Get(req.Path)
 	if err != nil {
@@ -92,7 +76,7 @@ func (b *PassthroughBackend) handleExistenceCheck(
 	return out != nil, nil
 }
 
-func (b *PassthroughBackend) handleRead(
+func (b *backend) handleRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Read the path
 	out, err := req.Storage.Get(req.Path)
@@ -113,15 +97,9 @@ func (b *PassthroughBackend) handleRead(
 	}
 
 	var resp *logical.Response
-	if b.BackendType == logical.TypeLogical {
-		// Generate the response
-		resp = b.Secret("generic").Response(rawData, nil)
-		resp.Secret.Renewable = false
-	} else {
-		resp = &logical.Response{
-			Secret: &logical.Secret{},
-			Data:   rawData,
-		}
+	resp = &logical.Response{
+		Secret: &logical.Secret{},
+		Data:   rawData,
 	}
 
 	// Check if there is a ttl key
@@ -135,10 +113,6 @@ func (b *PassthroughBackend) handleRead(
 		if err == nil {
 			ttlDuration = dur
 		}
-
-		if b.BackendType == logical.TypeLogical {
-			resp.Secret.Renewable = true
-		}
 	}
 
 	resp.Secret.TTL = ttlDuration
@@ -146,7 +120,7 @@ func (b *PassthroughBackend) handleRead(
 	return resp, nil
 }
 
-func (b *PassthroughBackend) handleWrite(
+func (b *backend) handleWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check that some fields are given
 	if len(req.Data) == 0 {
@@ -171,7 +145,7 @@ func (b *PassthroughBackend) handleWrite(
 	return nil, nil
 }
 
-func (b *PassthroughBackend) handleDelete(
+func (b *backend) handleDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Delete the key at the request path
 	if err := req.Storage.Delete(req.Path); err != nil {
@@ -181,7 +155,7 @@ func (b *PassthroughBackend) handleDelete(
 	return nil, nil
 }
 
-func (b *PassthroughBackend) handleList(
+func (b *backend) handleList(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Right now we only handle directories, so ensure it ends with /; however,
 	// some physical backends may not handle the "/" case properly, so only add

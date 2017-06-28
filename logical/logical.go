@@ -8,9 +8,10 @@ type BackendType string
 // The these are the types of backends that can be derived from
 // logical.Backend
 const (
-	TypeUnknown    BackendType = "unknown"
-	TypeLogical    BackendType = "logical"
-	TypeCredential BackendType = "credential"
+	TypeUnknown     BackendType = "unknown"
+	TypeLogical     BackendType = "logical"
+	TypeCredential  BackendType = "credential"
+	TypePassthrough BackendType = "passthrough"
 )
 
 // Backend interface must be implemented to be "mountable" at
