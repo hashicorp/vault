@@ -15,6 +15,10 @@ var (
 
 	// DefaultRenewerGrace is the default grace period
 	DefaultRenewerGrace = 15 * time.Second
+
+	// DefaultRenewerRenewBuffer is the default size of the buffer for renew
+	// messages on the channel.
+	DefaultRenewerRenewBuffer = 5
 )
 
 // Renewer is a process for renewing a secret.
@@ -72,6 +76,10 @@ type RenewerInput struct {
 	// provided, one will be generated and seeded automatically. If provided, it
 	// is assumed to have already been seeded.
 	Rand *rand.Rand
+
+	// RenewBuffer is the size of the buffered channel where renew messages are
+	// dispatched.
+	RenewBuffer int
 }
 
 // RenewOutput is the metadata returned to the client (if it's listening) to
@@ -107,13 +115,18 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 		random = rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
 	}
 
+	renewBuffer := i.RenewBuffer
+	if renewBuffer == 0 {
+		renewBuffer = DefaultRenewerRenewBuffer
+	}
+
 	return &Renewer{
 		client:  c,
 		secret:  secret,
 		grace:   grace,
 		random:  random,
 		doneCh:  make(chan error),
-		renewCh: make(chan *RenewOutput, 5),
+		renewCh: make(chan *RenewOutput, renewBuffer),
 
 		stopped: false,
 		stopCh:  make(chan struct{}),
