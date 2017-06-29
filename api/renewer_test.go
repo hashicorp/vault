@@ -72,6 +72,7 @@ func TestRenewer_NewRenewer(t *testing.T) {
 
 			// Zero-out channels because reflect
 			v.client = nil
+			v.random = nil
 			v.doneCh = nil
 			v.renewCh = nil
 			v.stopCh = nil
