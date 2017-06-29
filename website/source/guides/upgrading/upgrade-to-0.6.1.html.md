@@ -1,7 +1,7 @@
 ---
-layout: "docs"
+layout: "guides"
 page_title: "Upgrading to Vault 0.6.1 - Guides"
-sidebar_current: "docs-guides-upgrading-to-0.6.1"
+sidebar_current: "guides-upgrading-to-0.6.1"
 description: |-
   This page contains the list of breaking changes for Vault 0.6.1. Please read
   it carefully.
@@ -16,7 +16,7 @@ carefully.
 
 Once an active node is running 0.6.1, only standby nodes running 0.6.1+ will be
 able to form an HA cluster. If following our [general upgrade
-instructions](/docs/guides/upgrading/index.html) this will
+instructions](/guides/upgrading/index.html) this will
 not be an issue.
 
 ## Health Endpoint Status Code Changes

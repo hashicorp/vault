@@ -95,7 +95,7 @@ as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Se
 to split the master key into 5 shares, any 3 of which are required to reconstruct the master
 key.
 
-![Keys](/assets/images/keys.png)
+[![Vault Shamir Secret Sharing Algorithm](/assets/images/vault-shamir-secret-sharing.svg)](/assets/images/vault-shamir-secret-sharing.svg)
 
 The number of shares and the minimum threshold required can both be specified. Shamir's
 technique can be disabled, and the master key used directly for unsealing. Once Vault
