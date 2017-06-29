@@ -754,7 +754,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
 		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port),
-		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port+10),
+		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port+100),
 		DisableMlock:       true,
 	}
 
@@ -810,7 +810,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 
 	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
-		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port+10)
+		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port+100)
 	}
 	c2, err := NewCore(coreConfig)
 	if err != nil {
@@ -819,7 +819,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 
 	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
-		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port+10)
+		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port+100)
 	}
 	c3, err := NewCore(coreConfig)
 	if err != nil {
