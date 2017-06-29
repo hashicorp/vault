@@ -1,7 +1,7 @@
 ---
-layout: "docs"
+layout: "guides"
 page_title: "Upgrading to Vault 0.6.0 - Guides"
-sidebar_current: "docs-guides-upgrading-to-0.6.0"
+sidebar_current: "guides-upgrading-to-0.6.0"
 description: |-
   This page contains the list of breaking changes for Vault 0.6. Please read it
   carefully.

@@ -1,7 +1,7 @@
 ---
-layout: "docs"
+layout: "guides"
 page_title: "Upgrading to Vault 0.6.4 - Guides"
-sidebar_current: "docs-guides-upgrading-to-0.6.4"
+sidebar_current: "guides-upgrading-to-0.6.4"
 description: |-
   This page contains the list of deprecations and important or breaking changes
   for Vault 0.6.4. Please read it carefully.
