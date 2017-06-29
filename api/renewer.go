@@ -149,10 +149,16 @@ func (r *Renewer) Stop() {
 // This function will not return if nothing is reading from doneCh (it blocks)
 // on a write to the channel.
 func (r *Renewer) Renew() {
+	var result error
 	if r.secret.Auth != nil {
-		r.doneCh <- r.renewAuth()
+		result = r.renewAuth()
 	} else {
-		r.doneCh <- r.renewLease()
+		result = r.renewLease()
+	}
+
+	select {
+	case r.doneCh <- result:
+	case <-r.stopCh:
 	}
 }
 
