@@ -834,7 +834,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		for i, ln := range lns {
 			ret[i] = &net.TCPAddr{
 				IP:   ln.Address.IP,
-				Port: ln.Address.Port + 10,
+				Port: ln.Address.Port + 100,
 			}
 		}
 		return ret
