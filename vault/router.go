@@ -81,13 +81,13 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	switch {
 	case prefix == "":
-		return fmt.Errorf("missing prefix to be used for router entry")
+		return fmt.Errorf("missing prefix to be used for router entry; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
 	case storageView.prefix == "":
-		return fmt.Errorf("missing storage view prefix")
+		return fmt.Errorf("missing storage view prefix; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
 	case re.mountEntry.UUID == "":
-		return fmt.Errorf("missing mount identifier")
+		return fmt.Errorf("missing mount identifier; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
 	case re.mountEntry.Accessor == "":
-		return fmt.Errorf("missing mount accessor")
+		return fmt.Errorf("missing mount accessor; mount_path: %q, mount_type: %q", re.mountEntry.Path, re.mountEntry.Type)
 	}
 
 	r.root.Insert(prefix, re)
