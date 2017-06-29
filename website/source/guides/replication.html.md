@@ -1,12 +1,12 @@
 ---
-layout: "docs"
-page_title: "Setting up Vault Enterprise Replication"
-sidebar_current: "docs-guides-replication"
+layout: "guides"
+page_title: "Setting up Vault Enterprise Replication - Guides"
+sidebar_current: "guides-replication"
 description: |-
   Learn how to set up and manage Vault Enterprise Replication.
 ---
 
-# Replication Setup and Guidance
+# Replication Setup &amp; Guidance
 
 If you're unfamiliar with Vault Replication concepts, please first look at the
 [general information page](/docs/vault-enterprise/replication/index.html). More

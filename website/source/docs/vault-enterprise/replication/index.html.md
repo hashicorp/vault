@@ -131,7 +131,7 @@ its encrypted barrier.
 
 ## Setup and Best Practices
 
-A [setup guide](/docs/guides/replication.html) is
+A [setup guide](/guides/replication.html) is
 available to help you get started; this guide also contains best practices
 around operationalizing the replication feature.
 

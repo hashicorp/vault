@@ -1,7 +1,7 @@
 ---
-layout: "docs"
-page_title: "Generate Root Tokens Using Unseal Keys"
-sidebar_current: "docs-guides-generate-root"
+layout: "guides"
+page_title: "Generate Root Tokens using Unseal Keys - Guides"
+sidebar_current: "guides-generate-root"
 description: |-
   Generate a new root token using a threshold of unseal keys.
 ---
