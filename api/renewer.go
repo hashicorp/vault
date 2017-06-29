@@ -45,7 +45,7 @@ var (
 // both cases, the caller should attempt a re-read of the secret. Clients should
 // check the return value of the channel to see if renewal was successful.
 type Renewer struct {
-	sync.Mutex
+	l sync.Mutex
 
 	client  *Client
 	secret  *Secret
@@ -134,12 +134,12 @@ func (r *Renewer) RenewCh() <-chan *RenewOutput {
 
 // Stop stops the renewer.
 func (r *Renewer) Stop() {
-	r.Lock()
+	r.l.Lock()
 	if !r.stopped {
 		close(r.stopCh)
 		r.stopped = true
 	}
-	r.Unlock()
+	r.l.Unlock()
 }
 
 // Renew starts a background process for renewing this secret. When the secret
