@@ -125,7 +125,7 @@ func (c *Client) NewRenewer(i *RenewerInput) (*Renewer, error) {
 		secret:  secret,
 		grace:   grace,
 		random:  random,
-		doneCh:  make(chan error),
+		doneCh:  make(chan error, 1),
 		renewCh: make(chan *RenewOutput, renewBuffer),
 
 		stopped: false,
@@ -158,9 +158,6 @@ func (r *Renewer) Stop() {
 // Renew starts a background process for renewing this secret. When the secret
 // is has auth data, this attempts to renew the auth (token). When the secret
 // has a lease, this attempts to renew the lease.
-//
-// This function will not return if nothing is reading from doneCh (it blocks)
-// on a write to the channel.
 func (r *Renewer) Renew() {
 	var result error
 	if r.secret.Auth != nil {
