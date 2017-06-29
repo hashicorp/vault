@@ -31,7 +31,7 @@ centers.
 
 Multiple Vault clusters communicate in a one-to-many near real-time flow.
 
-The primary cluster acts as the system or record and asynchronously replicates
+The primary cluster acts as the system of record and asynchronously replicates
 most Vault data to a series of remote clusters, known as secondary clusters or
 secondaries.
 
