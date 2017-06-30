@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -31,6 +32,9 @@ var (
 
 		return ""
 	}
+
+	// Err404 is the error returned when the server receives a 404 response
+	Err404 = errors.New("status code 404 received from server")
 )
 
 // Logical is used to perform logical backend operations on Vault.
@@ -50,7 +54,7 @@ func (c *Logical) Read(path string) (*Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
-		return nil, nil
+		return nil, Err404
 	}
 	if err != nil {
 		return nil, err
@@ -70,7 +74,7 @@ func (c *Logical) List(path string) (*Secret, error) {
 		defer resp.Body.Close()
 	}
 	if resp != nil && resp.StatusCode == 404 {
-		return nil, nil
+		return nil, Err404
 	}
 	if err != nil {
 		return nil, err
