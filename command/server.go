@@ -448,17 +448,17 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				return 1
 			}
 
-			allowedAddrs, ok := allowedAddrsRaw.(string)
-			if !ok {
+			proxyProtoConfig := &proxyutil.ProxyProtoConfig{
+				Behavior: behavior,
+			}
+			if err := proxyProtoConfig.SetAllowedAddrs(allowedAddrsRaw); err != nil {
 				c.Ui.Output(fmt.Sprintf(
-					"Error parsing proxy_allowed_addrs value for listener of type %s: not a string",
-					lnConfig.Type))
+					"Error parsing proxy_allowed_addrs for listener of type %s: %v",
+					lnConfig.Type, err))
 				return 1
 			}
 
-			proxyProtoConfig := &proxyutil.ProxyProtoConfig{}
-
-			newLn, err := proxyutil.WrapInProxyProto(ln, proxyProtoConfig, behavior, allowedAddrs)
+			newLn, err := proxyutil.WrapInProxyProto(ln, proxyProtoConfig)
 			if err != nil {
 				c.Ui.Output(fmt.Sprintf(
 					"Error configuring PROXY protocol wrapper: %s", err))
