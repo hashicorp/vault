@@ -12,18 +12,18 @@ func New() (interface{}, error) {
 }
 
 // Factory returns a new backend as logical.Backend.
-func Factory() (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 // FactoryType is a wrapper func that allows the Factory func to specify
 // the backend type for the mock backend plugin instance.
-func FactoryType(backendType logical.BackendType) func() (logical.Backend, error) {
+func FactoryType(backendType logical.BackendType) func(*logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	b.BackendType = backendType
 
-	return func() (logical.Backend, error) {
-		return b, nil
+	return func(conf *logical.BackendConfig) (logical.Backend, error) {
+		return b.Setup(conf)
 	}
 }
 

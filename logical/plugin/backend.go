@@ -9,16 +9,12 @@ import (
 
 // BackendPlugin is the plugin.Plugin implementation
 type BackendPlugin struct {
-	Factory func() (logical.Backend, error)
+	Factory func(*logical.BackendConfig) (logical.Backend, error)
 }
 
 // Server gets called when on plugin.Serve()
 func (b *BackendPlugin) Server(broker *plugin.MuxBroker) (interface{}, error) {
-	backend, err := b.Factory()
-	if err != nil {
-		return nil, err
-	}
-	return &backendPluginServer{backend: backend, broker: broker}, nil
+	return &backendPluginServer{factory: b.Factory, broker: broker}, nil
 }
 
 // Client gets called on plugin.NewClient()

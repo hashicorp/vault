@@ -15,8 +15,8 @@ func New() (interface{}, error) {
 	return Backend(), nil
 }
 
-func Factory() (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 func Backend() *backend {

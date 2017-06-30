@@ -14,8 +14,8 @@ func New() (interface{}, error) {
 }
 
 // Factory returns a new backend a logical.Backend.
-func Factory() (logical.Backend, error) {
-	return Backend(), nil
+func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
+	return Backend().Setup(conf)
 }
 
 // Backend returns a private embedded struct of framework.Backend.

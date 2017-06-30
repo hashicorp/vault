@@ -12,6 +12,7 @@ import (
 type backendPluginServer struct {
 	broker  *plugin.MuxBroker
 	backend logical.Backend
+	factory func(*logical.BackendConfig) (logical.Backend, error)
 
 	loggerClient  *rpc.Client
 	sysViewClient *rpc.Client
@@ -139,12 +140,15 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 		Config:      args.Config,
 	}
 
-	err = b.backend.Configure(config)
+	// Call the underlying backend factory after shims have been created
+	// to set b.backend
+	backend, err := b.factory(config)
 	if err != nil {
 		*reply = ConfigureReply{
 			Error: plugin.NewBasicError(err),
 		}
 	}
+	b.backend = backend
 
 	return nil
 }
