@@ -1,7 +1,7 @@
 ---
-layout: "docs"
-page_title: "Production Hardening"
-sidebar_current: "docs-guides-prod"
+layout: "guides"
+page_title: "Production Hardening - Guides"
+sidebar_current: "guides-production-hardening"
 description: |-
   This guide provides guidance on best practices for a production hardened deployment of HashiCorp Vault.
 ---
@@ -38,3 +38,4 @@ It is entirely possible to use Vault without applying any of the following recom
 
 * **Configure SELinux / AppArmor**. Using additional mechanisms like SELinux and AppArmor can help provide additional layers of security when using Vault. While Vault can run on many operating systems, we recommend Linux due to the various security primitives mentioned here.
 
+* **Restrict Storage Access**. Vault encrypts all data at rest, regardless of which storage backend is used. Although the data is encrypted, an [attacker with arbitrary control](/docs/internals/security.html) can cause data corruption or loss by modifying or deleting keys. Access to the storage backend should be restricted to only Vault to avoid unauthorized access or operations.

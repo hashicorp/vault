@@ -1,7 +1,7 @@
 ---
-layout: "docs"
+layout: "guides"
 page_title: "Upgrading to Vault 0.7.0 - Guides"
-sidebar_current: "docs-guides-upgrading-to-0.7.0"
+sidebar_current: "guides-upgrading-to-0.7.0"
 description: |-
   This page contains the list of deprecations and important or breaking changes
   for Vault 0.7.0. Please read it carefully.
