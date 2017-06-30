@@ -43,7 +43,7 @@ func generateCode(key string, period uint, digits otplib.Digits, algorithm otpli
 func newBackend(t *testing.T) logical.Backend {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
-	b, err := Factory()
+	b, err := Factory(config)
 	if err != nil {
 		t.Fatal(err)
 	}
