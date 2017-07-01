@@ -78,8 +78,9 @@ func TestRouter_Mount(t *testing.T) {
 	}
 
 	mountEntry := &MountEntry{
-		Path: "prod/aws/",
-		UUID: meUUID,
+		Path:     "prod/aws/",
+		UUID:     meUUID,
+		Accessor: "awsaccessor",
 	}
 
 	n := &NoopBackend{}
@@ -154,7 +155,7 @@ func TestRouter_Unmount(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{Path: "prod/aws/", UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{Path: "prod/aws/", UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -187,7 +188,7 @@ func TestRouter_Remount(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	me := &MountEntry{Path: "prod/aws/", UUID: meUUID}
+	me := &MountEntry{Path: "prod/aws/", UUID: meUUID, Accessor: "awsaccessor"}
 	err = r.Mount(n, "prod/aws/", me, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -250,7 +251,7 @@ func TestRouter_RootPath(t *testing.T) {
 			"policy/*",
 		},
 	}
-	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -292,7 +293,7 @@ func TestRouter_LoginPath(t *testing.T) {
 			"oauth/*",
 		},
 	}
-	err = r.Mount(n, "auth/foo/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "auth/foo/", &MountEntry{UUID: meUUID, Accessor: "authfooaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -327,7 +328,7 @@ func TestRouter_Taint(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -370,7 +371,7 @@ func TestRouter_Untaint(t *testing.T) {
 		t.Fatal(err)
 	}
 	n := &NoopBackend{}
-	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
