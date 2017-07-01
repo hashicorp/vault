@@ -255,7 +255,10 @@ func testTokenStore(t testing.TB, c *Core) *TokenStore {
 	ts := tokenstore.(*TokenStore)
 
 	router := NewRouter()
-	router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: ""}, ts.view)
+	err = router.Mount(ts, "auth/token/", &MountEntry{Table: credentialTableType, UUID: "authtokenuuid", Path: "auth/token", Accessor: "authtokenaccessor"}, ts.view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	subview := c.systemBarrierView.SubView(expirationSubPath)
 	logger := logformat.NewVaultLogger(log.LevelTrace)
