@@ -91,9 +91,9 @@ Configuration is written to `auth/okta/config`.
 * `token` (string, optional) - The Okta API token.  This is required to query Okta for user group membership. If this is not supplied only locally configured groups will be enabled. This can be generated from http://developer.okta.com/docs/api/getting_started/getting_a_token.html
 * `base_url` (string, optional) - The Okta url. Examples: `oktapreview.com`, The default is `okta.com`
 * `max_ttl` (string, optional) - Maximum duration after which authentication will be expired.
- This must be a string in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
+ Either number of seconds or in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
 * `ttl` (string, optional) - Duration after which authentication will be expired.
- This must be a string in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
+ Either number of seconds or in a format parsable by Go's [time.ParseDuration](https://golang.org/pkg/time/#ParseDuration)
 
 Use `vault path-help` for more details.
 

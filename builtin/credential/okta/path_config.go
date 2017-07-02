@@ -28,11 +28,11 @@ func pathConfig(b *backend) *framework.Path {
 are using Okta development accounts.`,
 			},
 			"ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: `Duration after which authentication will be expired`,
 			},
 			"max_ttl": &framework.FieldSchema{
-				Type:        framework.TypeString,
+				Type:        framework.TypeDurationSecond,
 				Description: `Maximum duration after which authentication will be expired`,
 			},
 		},
@@ -82,10 +82,10 @@ func (b *backend) pathConfigRead(
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"Org":     cfg.Org,
-			"BaseURL": cfg.BaseURL,
-			"TTL":     cfg.TTL,
-			"MaxTTL":  cfg.MaxTTL,
+			"organization": cfg.Org,
+			"base_url":     cfg.BaseURL,
+			"ttl":          cfg.TTL,
+			"max_ttl":      cfg.MaxTTL,
 		},
 	}
 
@@ -129,30 +129,11 @@ func (b *backend) pathConfigWrite(
 		cfg.BaseURL = d.Get("base_url").(string)
 	}
 
-	var ttl time.Duration
-	ttlRaw, ok := d.GetOk("ttl")
-	if !ok || len(ttlRaw.(string)) == 0 {
-		ttl = 0
-	} else {
-		ttl, err = time.ParseDuration(ttlRaw.(string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid 'ttl':%s", err)), nil
-		}
-	}
+	ttl := d.Get("ttl").(int)
+	cfg.TTL = time.Duration(ttl) * time.Second
 
-	var maxTTL time.Duration
-	maxTTLRaw, ok := d.GetOk("max_ttl")
-	if !ok || len(maxTTLRaw.(string)) == 0 {
-		maxTTL = 0
-	} else {
-		maxTTL, err = time.ParseDuration(maxTTLRaw.(string))
-		if err != nil {
-			return logical.ErrorResponse(fmt.Sprintf("Invalid 'max_ttl':%s", err)), nil
-		}
-	}
-
-	cfg.TTL = ttl
-	cfg.MaxTTL = maxTTL
+	maxTTL := d.Get("max_ttl").(int)
+	cfg.MaxTTL = time.Duration(maxTTL) * time.Second
 
 	jsonCfg, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {

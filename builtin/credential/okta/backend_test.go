@@ -31,6 +31,7 @@ func TestBackend_Config(t *testing.T) {
 
 	username := os.Getenv("OKTA_USERNAME")
 	password := os.Getenv("OKTA_PASSWORD")
+	token := os.Getenv("OKTA_API_TOKEN")
 
 	configData := map[string]interface{}{
 		"organization": os.Getenv("OKTA_ORG"),
@@ -39,7 +40,7 @@ func TestBackend_Config(t *testing.T) {
 
 	updatedDuration := time.Hour * 1
 	configDataToken := map[string]interface{}{
-		"token": os.Getenv("OKTA_API_TOKEN"),
+		"token": token,
 		"ttl":   "1h",
 	}
 
@@ -57,7 +58,7 @@ func TestBackend_Config(t *testing.T) {
 			testAccGroups(t, "Everyone", "everyone_group_policy,every_group_policy2"),
 			testLoginWrite(t, username, password, "", defaultLeaseTTLVal.Nanoseconds(), []string{"local_group_policy"}),
 			testConfigUpdate(t, configDataToken),
-			testConfigRead(t, configData),
+			testConfigRead(t, token, configData),
 			testLoginWrite(t, username, password, "", updatedDuration.Nanoseconds(), []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
 			testAccGroups(t, "local_group2", "testgroup_group_policy"),
 			testLoginWrite(t, username, password, "", updatedDuration.Nanoseconds(), []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
@@ -112,7 +113,7 @@ func testConfigUpdate(t *testing.T, d map[string]interface{}) logicaltest.TestSt
 	}
 }
 
-func testConfigRead(t *testing.T, d map[string]interface{}) logicaltest.TestStep {
+func testConfigRead(t *testing.T, token string, d map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "config",
@@ -121,16 +122,18 @@ func testConfigRead(t *testing.T, d map[string]interface{}) logicaltest.TestStep
 				return resp.Error()
 			}
 
-			if resp.Data["Org"] != d["organization"] {
+			if resp.Data["organization"] != d["organization"] {
 				return fmt.Errorf("Org mismatch expected %s but got %s", d["organization"], resp.Data["Org"])
 			}
 
-			if resp.Data["BaseURL"] != d["base_url"] {
+			if resp.Data["base_url"] != d["base_url"] {
 				return fmt.Errorf("BaseURL mismatch expected %s but got %s", d["base_url"], resp.Data["BaseURL"])
 			}
 
-			if _, exists := resp.Data["Token"]; exists {
-				return fmt.Errorf("token should not be returned on a read request")
+			for _, value := range resp.Data {
+				if value == token {
+					return fmt.Errorf("token should not be returned on a read request")
+				}
 			}
 
 			return nil
