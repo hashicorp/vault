@@ -203,9 +203,9 @@ If you are not able to successfully make a client connection, looking at SSH ser
 * If on an SELinux-enforcing system, you may need to adjust related types so
   that the SSH daemon is able to read it, for instance by adjusting the signed
   host certificate to be an `sshd_key_t` type.
-* If you can an error on the client indicating `"no separate private key for
-  certificate"` you may be hitting a bug introduced into OpenSSH version 7.2
-  and fixed in 7.5. See [OpenSSH bug
+* If you encounter an error on the client indicating `"no separate private key
+  for certificate"` you may be hitting a bug introduced into OpenSSH version
+  7.2 and fixed in 7.5. See [OpenSSH bug
   2617](https://bugzilla.mindrot.org/show_bug.cgi?id=2617) for details. If you
   are able to find a workaround without patching OpenSSH, please submit a PR to
   update this documentation!
