@@ -2,7 +2,6 @@ package vault_test
 
 import (
 	"io/ioutil"
-	stdhttp "net/http"
 	"os"
 	"testing"
 	"time"
@@ -25,16 +24,14 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 		},
 	}
 
-	handler1 := stdhttp.NewServeMux()
-	handler2 := stdhttp.NewServeMux()
-	handler3 := stdhttp.NewServeMux()
+	cluster := vault.NewTestCluster(t, coreConfig, true)
+	cluster.StartListeners()
+	defer cluster.CloseListeners()
+	cores := cluster.Cores
 
-	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
-	// add routes chained to a Handler-created handler.
-	cores := vault.TestCluster(t, []stdhttp.Handler{handler1, handler2, handler3}, coreConfig, false)
-	handler1.Handle("/", http.Handler(cores[0].Core))
-	handler2.Handle("/", http.Handler(cores[1].Core))
-	handler3.Handle("/", http.Handler(cores[2].Core))
+	cores[0].Handler.Handle("/", http.Handler(cores[0].Core))
+	cores[1].Handler.Handle("/", http.Handler(cores[1].Core))
+	cores[2].Handler.Handle("/", http.Handler(cores[2].Core))
 
 	core := cores[0]
 
