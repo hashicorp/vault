@@ -54,19 +54,19 @@ func TestBackend_Config(t *testing.T) {
 			testLoginWrite(t, username, password, "user is not a member of any authorized policy", 0, nil),
 			testAccUserGroups(t, username, "local_group,local_group2"),
 			testAccGroups(t, "local_group", "local_group_policy"),
-			testLoginWrite(t, username, password, "", defaultLeaseTTLVal.Nanoseconds(), []string{"local_group_policy"}),
+			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy"}),
 			testAccGroups(t, "Everyone", "everyone_group_policy,every_group_policy2"),
-			testLoginWrite(t, username, password, "", defaultLeaseTTLVal.Nanoseconds(), []string{"local_group_policy"}),
+			testLoginWrite(t, username, password, "", defaultLeaseTTLVal, []string{"local_group_policy"}),
 			testConfigUpdate(t, configDataToken),
 			testConfigRead(t, token, configData),
-			testLoginWrite(t, username, password, "", updatedDuration.Nanoseconds(), []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
+			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy"}),
 			testAccGroups(t, "local_group2", "testgroup_group_policy"),
-			testLoginWrite(t, username, password, "", updatedDuration.Nanoseconds(), []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
+			testLoginWrite(t, username, password, "", updatedDuration, []string{"everyone_group_policy", "every_group_policy2", "local_group_policy", "testgroup_group_policy"}),
 		},
 	})
 }
 
-func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL int64, policies []string) logicaltest.TestStep {
+func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL time.Duration, policies []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "login/" + username,
@@ -86,7 +86,7 @@ func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL
 					return fmt.Errorf("policy mismatch expected %v but got %v", policies, resp.Auth.Policies)
 				}
 
-				actualTTL := resp.Auth.LeaseOptions.TTL.Nanoseconds()
+				actualTTL := resp.Auth.LeaseOptions.TTL
 				if actualTTL != expectedTTL {
 					return fmt.Errorf("TTL mismatch expected %v but got %v", expectedTTL, actualTTL)
 				}
