@@ -275,7 +275,7 @@ type Core struct {
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]ReloadFunc
 
-	// reloadFuncsLock controlls access to the funcs
+	// reloadFuncsLock controls access to the funcs
 	reloadFuncsLock sync.RWMutex
 
 	// wrappingJWTKey is the key used for generating JWTs containing response

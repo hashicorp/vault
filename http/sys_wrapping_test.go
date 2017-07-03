@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -14,21 +13,17 @@ import (
 
 // Test wrapping functionality
 func TestHTTP_Wrapping(t *testing.T) {
-	handler1 := http.NewServeMux()
-	handler2 := http.NewServeMux()
-	handler3 := http.NewServeMux()
-
 	coreConfig := &vault.CoreConfig{}
 
 	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
 	// add routes chained to a Handler-created handler.
-	cores := vault.TestCluster(t, []http.Handler{handler1, handler2, handler3}, coreConfig, true)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
-	handler1.Handle("/", Handler(cores[0].Core))
-	handler2.Handle("/", Handler(cores[1].Core))
-	handler3.Handle("/", Handler(cores[2].Core))
+	cluster := vault.NewTestCluster(t, coreConfig, true)
+	defer cluster.CloseListeners()
+	cluster.StartListeners()
+	cores := cluster.Cores
+	cores[0].Handler.Handle("/", Handler(cores[0].Core))
+	cores[1].Handler.Handle("/", Handler(cores[1].Core))
+	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	// make it easy to get access to the active
 	core := cores[0].Core

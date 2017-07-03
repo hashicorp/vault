@@ -85,10 +85,10 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	cores := TestCluster(t, []http.Handler{nil, nil, nil}, nil, false)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster := NewTestCluster(t, nil, false)
+	cluster.StartListeners()
+	defer cluster.CloseListeners()
+	cores := cluster.Cores
 
 	root := cores[0].Root
 
@@ -198,10 +198,25 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 		w.Write([]byte("core3"))
 	})
 
-	cores := TestCluster(t, []http.Handler{handler1, handler2, handler3}, nil, true)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster := NewTestCluster(t, nil, true)
+	cluster.StartListeners()
+	defer cluster.CloseListeners()
+	cores := cluster.Cores
+	cores[0].Handler.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(201)
+		w.Write([]byte("core1"))
+	})
+	cores[1].Handler.HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(202)
+		w.Write([]byte("core2"))
+	})
+	cores[2].Handler.HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(203)
+		w.Write([]byte("core3"))
+	})
 
 	root := cores[0].Root
 

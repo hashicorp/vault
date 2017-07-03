@@ -585,6 +585,32 @@ func TestWaitActive(t testing.TB, core *Core) {
 	}
 }
 
+type TestCluster struct {
+	Cores []*TestClusterCore
+}
+
+func (t *TestCluster) StartListeners() {
+	for _, core := range t.Cores {
+		if core.Server != nil {
+			for _, ln := range core.Listeners {
+				go core.Server.Serve(ln)
+			}
+		}
+	}
+}
+
+func (t *TestCluster) CloseListeners() {
+	for _, core := range t.Cores {
+		if core.Listeners != nil {
+			for _, ln := range core.Listeners {
+				ln.Close()
+			}
+		}
+	}
+	// Give time to actually shut down/clean up before the next test
+	time.Sleep(time.Second)
+}
+
 type TestListener struct {
 	net.Listener
 	Address *net.TCPAddr
@@ -593,6 +619,8 @@ type TestListener struct {
 type TestClusterCore struct {
 	*Core
 	Listeners   []*TestListener
+	Handler     *http.ServeMux
+	Server      *http.Server
 	Root        string
 	BarrierKeys [][]byte
 	CACertBytes []byte
@@ -602,21 +630,7 @@ type TestClusterCore struct {
 	Client      *api.Client
 }
 
-func (t *TestClusterCore) CloseListeners() {
-	if t.Listeners != nil {
-		for _, ln := range t.Listeners {
-			ln.Close()
-		}
-	}
-	// Give time to actually shut down/clean up before the next test
-	time.Sleep(time.Second)
-}
-
-func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unsealStandbys bool) []*TestClusterCore {
-	if handlers == nil || len(handlers) != 3 {
-		t.Fatal("handlers must be size 3")
-	}
-
+func NewTestCluster(t testing.TB, base *CoreConfig, unsealStandbys bool) *TestCluster {
 	//
 	// TLS setup
 	//
@@ -705,14 +719,12 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		Listener: tls.NewListener(ln, tlsConfig),
 		Address:  ln.Addr().(*net.TCPAddr),
 	})
+	handler1 := http.NewServeMux()
 	server1 := &http.Server{
-		Handler: handlers[0],
+		Handler: handler1,
 	}
 	if err := http2.ConfigureServer(server1, nil); err != nil {
 		t.Fatal(err)
-	}
-	for _, ln := range c1lns {
-		go server1.Serve(ln)
 	}
 
 	ln, err = net.ListenTCP("tcp", &net.TCPAddr{
@@ -727,14 +739,12 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		Address:  ln.Addr().(*net.TCPAddr),
 	},
 	}
+	handler2 := http.NewServeMux()
 	server2 := &http.Server{
-		Handler: handlers[1],
+		Handler: handler2,
 	}
 	if err := http2.ConfigureServer(server2, nil); err != nil {
 		t.Fatal(err)
-	}
-	for _, ln := range c2lns {
-		go server2.Serve(ln)
 	}
 
 	ln, err = net.ListenTCP("tcp", &net.TCPAddr{
@@ -749,14 +759,12 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		Address:  ln.Addr().(*net.TCPAddr),
 	},
 	}
+	handler3 := http.NewServeMux()
 	server3 := &http.Server{
-		Handler: handlers[2],
+		Handler: handler3,
 	}
 	if err := http2.ConfigureServer(server3, nil); err != nil {
 		t.Fatal(err)
-	}
-	for _, ln := range c3lns {
-		go server3.Serve(ln)
 	}
 
 	// Create three cores with the same physical and different redirect/cluster addrs
@@ -857,10 +865,10 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	}
 
 	c2.SetClusterListenerAddrs(clusterAddrGen(c2lns))
-	c2.SetClusterHandler(handlers[1])
+	c2.SetClusterHandler(handler2)
 	c3.SetClusterListenerAddrs(clusterAddrGen(c3lns))
-	c3.SetClusterHandler(handlers[2])
-	keys, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), handlers[0])
+	c3.SetClusterHandler(handler3)
+	keys, root := TestCoreInitClusterWrapperSetup(t, c1, clusterAddrGen(c1lns), handler1)
 	for _, key := range keys {
 		if _, err := c1.Unseal(TestKeyCopy(key)); err != nil {
 			t.Fatalf("unseal err: %s", err)
@@ -941,6 +949,8 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	ret = append(ret, &TestClusterCore{
 		Core:        c1,
 		Listeners:   c1lns,
+		Handler:     handler1,
+		Server:      server1,
 		Root:        root,
 		BarrierKeys: keyCopies.([][]byte),
 		CACertBytes: caBytes,
@@ -954,6 +964,8 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	ret = append(ret, &TestClusterCore{
 		Core:        c2,
 		Listeners:   c2lns,
+		Handler:     handler2,
+		Server:      server2,
 		Root:        root,
 		BarrierKeys: keyCopies.([][]byte),
 		CACertBytes: caBytes,
@@ -967,6 +979,8 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 	ret = append(ret, &TestClusterCore{
 		Core:        c3,
 		Listeners:   c3lns,
+		Handler:     handler3,
+		Server:      server3,
 		Root:        root,
 		BarrierKeys: keyCopies.([][]byte),
 		CACertBytes: caBytes,
@@ -976,7 +990,7 @@ func TestCluster(t testing.TB, handlers []http.Handler, base *CoreConfig, unseal
 		Client:      getAPIClient(c3lns[0].Address.Port),
 	})
 
-	return ret
+	return &TestCluster{Cores: ret}
 }
 
 const (
