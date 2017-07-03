@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/vault"
 
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	vaulthttp "github.com/hashicorp/vault/http"
 	logxi "github.com/mgutz/logxi/v1"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
@@ -52,17 +51,10 @@ func testVaultServerBackends(t testing.TB, backends map[string]logical.Factory) 
 	core := cores[0].Core
 	vault.TestWaitActive(t, core)
 
+	// Grab the root token
 	rootToken := cores[0].Root
-	address := fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port)
 
-	config := api.DefaultConfig()
-	config.Address = address
-	config.HttpClient = cleanhttp.DefaultClient()
-	config.HttpClient.Transport.(*http.Transport).TLSClientConfig = cores[0].TLSConfig
-	client, err := api.NewClient(config)
-	if err != nil {
-		t.Fatalf("error creating vault cluster: %s", err)
-	}
+	client := cores[0].Client
 	client.SetToken(rootToken)
 
 	// Sanity check
