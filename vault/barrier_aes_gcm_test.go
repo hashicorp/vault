@@ -317,6 +317,9 @@ func TestAESGCMBarrier_MoveIntegrityV2(t *testing.T) {
 	pe, _ := inm.Get("test")
 	pe.Key = "moved"
 	err = inm.Put(pe)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
 
 	// Read from the barrier
 	_, err = b.Get("moved")
