@@ -263,6 +263,12 @@ func (r *Router) MatchingStoragePrefix(path string) (string, string, bool) {
 	re := raw.(*routeEntry)
 	mountPath := re.mountEntry.Path
 	prefix := re.storageView.prefix
+
+	// Add back the prefix for credential backends
+	if strings.HasPrefix(path, credentialBarrierPrefix) {
+		mountPath = credentialRoutePrefix + mountPath
+	}
+
 	return mountPath, prefix, true
 }
 
