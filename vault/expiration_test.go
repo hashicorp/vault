@@ -214,6 +214,9 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	root, err := exp.tokenStore.rootToken()
+	if err != nil {
+		t.Fatal(err)
+	}
 	le.ClientToken = root.ID
 
 	// Attach a valid token with the leases
