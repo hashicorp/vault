@@ -14,7 +14,8 @@ import (
 )
 
 func TestBackend(t *testing.T) {
-	config := testConfig(t)
+	config, cleanup := testConfig(t)
+	defer cleanup()
 
 	_, err := Backend(config)
 	if err != nil {
@@ -23,7 +24,8 @@ func TestBackend(t *testing.T) {
 }
 
 func TestBackend_Factory(t *testing.T) {
-	config := testConfig(t)
+	config, cleanup := testConfig(t)
+	defer cleanup()
 
 	_, err := Factory(config)
 	if err != nil {
@@ -58,18 +60,23 @@ func TestBackend_PluginMain(t *testing.T) {
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
+
+	err = pluginutil.OptionallyEnableMlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: mock.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
 }
 
-func testConfig(t *testing.T) *logical.BackendConfig {
+func testConfig(t *testing.T) (*logical.BackendConfig, func()) {
 	coreConfig := &vault.CoreConfig{}
 
 	cluster := vault.NewTestCluster(t, coreConfig, true)
 	cluster.StartListeners()
-	defer cluster.CloseListeners()
 	cores := cluster.Cores
 
 	cores[0].Handler.Handle("/", http.Handler(cores[0].Core))
@@ -90,5 +97,7 @@ func testConfig(t *testing.T) *logical.BackendConfig {
 
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMain")
 
-	return config
+	return config, func() {
+		cluster.CloseListeners()
+	}
 }
