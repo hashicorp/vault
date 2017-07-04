@@ -151,7 +151,7 @@ func pathRoles(b *backend) *framework.Path {
 				this list enforces it. If this field is set, then credentials
 				can only be created for default_user and usernames present in
 				this list. Setting this option will enable all the users with
-				access this role to fetch credentials for all other usernames
+				access to this role to fetch credentials for all other usernames
 				in this list. Use with caution. N.B.: with the CA type, an empty
 				list means that no users are allowed; explicitly specify '*' to
 				allow any user.
