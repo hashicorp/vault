@@ -10,7 +10,7 @@ import (
 )
 
 var preflightHeaders = map[string]string{
-	"Access-Control-Allow-Headers": "*",
+	"Access-Control-Allow-Headers": "X-Vault-Token",
 	"Access-Control-Max-Age":       "300",
 }
 
