@@ -78,7 +78,7 @@ func TestHandler_cors(t *testing.T) {
 	//
 	expHeaders := map[string]string{
 		"Access-Control-Allow-Origin":  addr,
-		"Access-Control-Allow-Headers": "X-Vault-Token",
+		"Access-Control-Allow-Headers": "Content-Type, X-Requested-With, X-Vault-Token",
 		"Access-Control-Max-Age":       "300",
 		"Vary": "Origin",
 	}
