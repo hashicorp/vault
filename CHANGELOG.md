@@ -9,6 +9,7 @@ IMPROVEMENTS:
  * core: CORS allowed origins can now be configured [GH-2021]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
+ * auth/okta: Allow specifying `ttl`/`max_ttl` inside the mount [GH-2915]
  * storage/postgresql: Improve listing speed [GH-2945]
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
