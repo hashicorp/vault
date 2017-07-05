@@ -27,6 +27,8 @@ BUG FIXES:
    `sys/leases` endpoint [GH-2891]
  * secret/totp: Ensure codes can only be used once. This makes some automated
    workflows harder but complies with the RFC. [GH-2908]
+ * secret/transit: Fix locking when creating a key with unsupported options
+   [GH-2974]
 
 ## 0.7.3 (June 7th, 2017)
 
