@@ -7,7 +7,7 @@ import (
 	gplugin "github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/plugins/backend/mock"
+	"github.com/hashicorp/vault/logical/plugin/mock"
 	log "github.com/mgutz/logxi/v1"
 )
 

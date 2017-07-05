@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
-	"github.com/hashicorp/vault/plugins/backend/mock"
+	"github.com/hashicorp/vault/logical/plugin/mock"
 )
 
 func main() {

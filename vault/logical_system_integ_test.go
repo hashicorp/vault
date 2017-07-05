@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	lplugin "github.com/hashicorp/vault/logical/plugin"
-	"github.com/hashicorp/vault/plugins/backend/mock"
+	"github.com/hashicorp/vault/logical/plugin/mock"
 	"github.com/hashicorp/vault/vault"
 	log "github.com/mgutz/logxi/v1"
 )
