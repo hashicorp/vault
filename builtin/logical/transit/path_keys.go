@@ -156,9 +156,9 @@ func (b *backend) pathPolicyWrite(
 
 // Built-in helper type for returning asymmetric keys
 type asymKey struct {
-	Name         string    `json:"name" structs:"name"`
-	PublicKey    string    `json:"public_key" structs:"public_key"`
-	CreationTime time.Time `json:"creation_time" structs:"creation_time"`
+	Name         string    `json:"name" structs:"name" mapstructure:"name"`
+	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
 func (b *backend) pathPolicyRead(
