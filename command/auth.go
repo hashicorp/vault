@@ -179,6 +179,11 @@ func (c *AuthCommand) Run(args []string) int {
 		return 1
 	}
 
+	if tokenOnly {
+		c.Ui.Output(token)
+		return 0
+	}
+
 	// Store the token!
 	if !noStore {
 		if err := tokenHelper.Store(token); err != nil {
@@ -189,11 +194,6 @@ func (c *AuthCommand) Run(args []string) int {
 				err))
 			return 1
 		}
-	}
-
-	if tokenOnly {
-		c.Ui.Output(token)
-		return 0
 	}
 
 	if noVerify {
@@ -399,7 +399,8 @@ Auth Options:
   -no-store         Do not store the token after creation; it will only be
                     displayed in the command output.
 
-  -token-only       Output only the token to stdout. This implies -no-verify.
+  -token-only       Output only the token to stdout. This implies -no-verify
+                    and -no-store.
 
   -path             The path at which the auth backend is enabled. If an auth
                     backend is mounted at multiple paths, this option can be
