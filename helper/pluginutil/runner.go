@@ -37,8 +37,8 @@ type LookRunnerUtil interface {
 type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Command        string                      `json:"command" structs:"command"`
-	Args           []string                    `json:"args" structs:"args,flatten"`
-	Sha256         []byte                      `json:"sha256" structs:"sha256,flatten"`
+	Args           []string                    `json:"args" structs:"args"`
+	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }

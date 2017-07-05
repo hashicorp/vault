@@ -45,7 +45,7 @@ func NewBackend(pluginName string, sys pluginutil.LookRunnerUtil) (logical.Backe
 	var backend logical.Backend
 	if pluginRunner.Builtin {
 		// Plugin is builtin so we can retrieve an instance of the interface
-		// from the pluginRunner. Then cast it to a Database.
+		// from the pluginRunner. Then cast it to logical.Backend.
 		backendRaw, err := pluginRunner.BuiltinFactory()
 		if err != nil {
 			return nil, fmt.Errorf("error getting plugin type: %s", err)
