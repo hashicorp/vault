@@ -702,8 +702,6 @@ func TestConvergentEncryption(t *testing.T) {
 }
 
 func testConvergentEncryptionCommon(t *testing.T, ver int) {
-	// Fixing swallowed errors broke this test.
-	t.Skip()
 	var b *backend
 	sysView := logical.TestSystemView()
 	storage := &logical.InmemStorage{}
@@ -756,8 +754,8 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 		}
 		resp, err = b.HandleRequest(req)
-		if err != nil {
-			t.Fatal(err)
+		if err == nil {
+			t.Fatal("expected error, got nil")
 		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
@@ -901,8 +899,8 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
-	if err != nil {
-		t.Fatal(err)
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
