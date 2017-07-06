@@ -32,11 +32,17 @@ func TestBackend_pathLogin_getCallerIdentityResponse(t *testing.T) {
 	expectedRoleArn := "arn:aws:sts::123456789012:assumed-role/RoleName/RoleSessionName"
 
 	parsedUserResponse, err := parseGetCallerIdentityResponse(responseFromUser)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if parsed_arn := parsedUserResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedUserArn {
 		t.Errorf("expected to parse arn %#v, got %#v", expectedUserArn, parsed_arn)
 	}
 
 	parsedRoleResponse, err := parseGetCallerIdentityResponse(responseFromAssumedRole)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if parsed_arn := parsedRoleResponse.GetCallerIdentityResult[0].Arn; parsed_arn != expectedRoleArn {
 		t.Errorf("expected to parn arn %#v; got %#v", expectedRoleArn, parsed_arn)
 	}
