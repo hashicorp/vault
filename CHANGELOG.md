@@ -6,6 +6,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * audit/socket: Enhance reconnection logic and don't require the connection to
+   be established at unseal time [GH-2934]
  * core: CORS allowed origins can now be configured [GH-2021]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
