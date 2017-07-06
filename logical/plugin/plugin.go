@@ -10,11 +10,6 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// PluginMap should be used by clients for map of plugins
-var PluginMap = map[string]plugin.Plugin{
-	"backend": &BackendPlugin{},
-}
-
 // BackendPluginClient is a wrapper around backendPluginClient
 // that also contains its plugin.Client instance. It's primarily
 // used to cleanly kill the client on Cleanup()
@@ -69,7 +64,11 @@ func NewBackend(pluginName string, sys pluginutil.LookRunnerUtil) (logical.Backe
 }
 
 func newPluginClient(sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner) (logical.Backend, error) {
-	client, err := pluginRunner.Run(sys, PluginMap, handshakeConfig, []string{})
+	// pluginMap is the map of plugins we can dispense.
+	pluginMap := map[string]plugin.Plugin{
+		"backend": &BackendPlugin{},
+	}
+	client, err := pluginRunner.Run(sys, pluginMap, handshakeConfig, []string{})
 	if err != nil {
 		return nil, err
 	}
