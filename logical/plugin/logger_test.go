@@ -3,7 +3,6 @@ package plugin
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -39,6 +38,7 @@ func TestLogger_levels(t *testing.T) {
 		t.Fatal(err)
 	}
 	result := buf.String()
+	buf.Reset()
 	if !strings.Contains(result, expected) {
 		t.Fatalf("expected log to contain %s, got %s", expected, result)
 	}
@@ -49,6 +49,7 @@ func TestLogger_levels(t *testing.T) {
 		t.Fatal(err)
 	}
 	result = buf.String()
+	buf.Reset()
 	if !strings.Contains(result, expected) {
 		t.Fatalf("expected log to contain %s, got %s", expected, result)
 	}
@@ -59,6 +60,7 @@ func TestLogger_levels(t *testing.T) {
 		t.Fatal(err)
 	}
 	result = buf.String()
+	buf.Reset()
 	if !strings.Contains(result, expected) {
 		t.Fatalf("expected log to contain %s, got %s", expected, result)
 	}
@@ -69,6 +71,7 @@ func TestLogger_levels(t *testing.T) {
 		t.Fatal(err)
 	}
 	result = buf.String()
+	buf.Reset()
 	if !strings.Contains(result, expected) {
 		t.Fatalf("expected log to contain %s, got %s", expected, result)
 	}
@@ -79,38 +82,21 @@ func TestLogger_levels(t *testing.T) {
 		t.Fatal(err)
 	}
 	result = buf.String()
+	buf.Reset()
 	if !strings.Contains(result, expected) {
 		t.Fatalf("expected log to contain %s, got %s", expected, result)
 	}
 
 	// Test fatal
-	testFatal(testLogger, expected)
+	testLogger.Fatal(expected)
 	if err := writer.Flush(); err != nil {
 		t.Fatal(err)
 	}
 	result = buf.String()
-	if !strings.Contains(result, expected) {
-		t.Fatalf("expected log to contain %s, got %s", expected, result)
+	buf.Reset()
+	if result != "" {
+		t.Fatalf("expected log Fatal() to be no-op, got %s", result)
 	}
-}
-
-// testFatal is used to test log.Fatal() separately since we have
-// to recover from the panic to make sure actual test passes.
-func testFatal(testLogger *LoggerClient, expected string) error {
-	var retErr error
-	defer func() {
-		if r := recover(); r != nil {
-			if err, ok := r.(error); !ok {
-				retErr = fmt.Errorf("%v", r)
-			} else {
-				retErr = err
-			}
-		}
-	}()
-
-	testLogger.Fatal(expected)
-
-	return retErr
 }
 
 func TestLogger_isLevels(t *testing.T) {
