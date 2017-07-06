@@ -285,10 +285,6 @@ func (b *Backend) System() logical.SystemView {
 
 // Type returns the backend type
 func (b *Backend) Type() logical.BackendType {
-	if b.BackendType == "" {
-		return logical.TypeUnknown
-	}
-
 	return b.BackendType
 }
 

@@ -3,16 +3,30 @@ package logical
 import log "github.com/mgutz/logxi/v1"
 
 // BackendType is the type of backend that is being implemented
-type BackendType string
+type BackendType uint32
 
 // The these are the types of backends that can be derived from
 // logical.Backend
 const (
-	TypeUnknown     BackendType = "unknown"
-	TypeLogical     BackendType = "logical"
-	TypeCredential  BackendType = "credential"
-	TypePassthrough BackendType = "passthrough"
+	TypeUnknown     BackendType = 0 // This is also the zero-value for BackendType
+	TypeLogical     BackendType = 1
+	TypeCredential  BackendType = 2
+	TypePassthrough BackendType = 3
 )
+
+// Stringer implementation
+func (b BackendType) String() string {
+	switch b {
+	case TypeLogical:
+		return "secret"
+	case TypeCredential:
+		return "auth"
+	case TypePassthrough:
+		return "secret"
+	}
+
+	return "unknown"
+}
 
 // Backend interface must be implemented to be "mountable" at
 // a given path. Requests flow through a router which has various mount
