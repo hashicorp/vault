@@ -13,13 +13,9 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 )
 
-var (
-	testHANAImagePull sync.Once
-)
-
 func TestHANA_Initialize(t *testing.T) {
 	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		return
+		t.SkipNow()
 	}
 	connURL := os.Getenv("HANA_URL")
 
@@ -49,7 +45,7 @@ func TestHANA_Initialize(t *testing.T) {
 // this test will leave a lingering user on the system
 func TestHANA_CreateUser(t *testing.T) {
 	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		return
+		t.SkipNow()
 	}
 	connURL := os.Getenv("HANA_URL")
 
@@ -90,9 +86,9 @@ func TestHANA_CreateUser(t *testing.T) {
 	}
 }
 
-func TestMSSQL_RevokeUser(t *testing.T) {
+func TestHANA_RevokeUser(t *testing.T) {
 	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
-		return
+		t.SkipNow()
 	}
 	connURL := os.Getenv("HANA_URL")
 
@@ -143,7 +139,7 @@ func TestMSSQL_RevokeUser(t *testing.T) {
 		t.Fatalf("Could not connect with new credentials: %s", err)
 	}
 
-	statements.RevocationStatements = testMSSQLDrop
+	statements.RevocationStatements = testHANADrop
 	err = db.RevokeUser(statements, username)
 	if err != nil {
 		t.Fatalf("err: %s", err)
@@ -168,5 +164,5 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 const testHANARole = `
 CREATE USER {{name}} PASSWORD {{password}} VALID UNTIL '{{expiration}}';`
 
-const testMSSQLDrop = `
+const testHANADrop = `
 DROP USER {{name}} CASCADE;`
