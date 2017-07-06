@@ -74,19 +74,8 @@ type TypeReply struct {
 }
 
 func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Response, error) {
-	// Shim logical.Storage
-	id := b.broker.NextId()
-	go b.broker.AcceptAndServe(id, &StorageServer{
-		impl: req.Storage,
-	})
-
-	argReq := new(logical.Request)
-	*argReq = *req
-	argReq.Storage = nil
-
 	args := &HandleRequestArgs{
-		StorageID: id,
-		Request:   argReq,
+		Request: req,
 	}
 	var reply HandleRequestReply
 
@@ -128,19 +117,8 @@ func (b *backendPluginClient) Logger() log.Logger {
 }
 
 func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
-	// Shim logical.Storage
-	id := b.broker.NextId()
-	go b.broker.AcceptAndServe(id, &StorageServer{
-		impl: req.Storage,
-	})
-
-	argReq := new(logical.Request)
-	*argReq = *req
-	argReq.Storage = nil
-
 	args := &HandleExistenceCheckArgs{
-		StorageID: id,
-		Request:   argReq,
+		Request: req,
 	}
 	var reply HandleExistenceCheckReply
 

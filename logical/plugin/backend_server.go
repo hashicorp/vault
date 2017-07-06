@@ -20,17 +20,7 @@ type backendPluginServer struct {
 }
 
 func (b *backendPluginServer) HandleRequest(args *HandleRequestArgs, reply *HandleRequestReply) error {
-	conn, err := b.broker.Dial(args.StorageID)
-	if err != nil {
-		*reply = HandleRequestReply{
-			Error: plugin.NewBasicError(err),
-		}
-		return nil
-	}
-	c := rpc.NewClient(conn)
-	defer c.Close()
-
-	storage := &StorageClient{client: c}
+	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 
 	resp, err := b.backend.HandleRequest(args.Request)
@@ -50,17 +40,7 @@ func (b *backendPluginServer) SpecialPaths(_ interface{}, reply *SpecialPathsRep
 }
 
 func (b *backendPluginServer) HandleExistenceCheck(args *HandleExistenceCheckArgs, reply *HandleExistenceCheckReply) error {
-	conn, err := b.broker.Dial(args.StorageID)
-	if err != nil {
-		*reply = HandleExistenceCheckReply{
-			Error: plugin.NewBasicError(err),
-		}
-		return nil
-	}
-	c := rpc.NewClient(conn)
-	defer c.Close()
-
-	storage := &StorageClient{client: c}
+	storage := &StorageClient{client: b.storageClient}
 	args.Request.Storage = storage
 
 	checkFound, exists, err := b.backend.HandleExistenceCheck(args.Request)
