@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
 )
