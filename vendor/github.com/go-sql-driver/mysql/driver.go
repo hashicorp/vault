@@ -22,6 +22,11 @@ import (
 	"net"
 )
 
+// watcher interface is used for context support (From Go 1.8)
+type watcher interface {
+	startWatcher()
+}
+
 // MySQLDriver is exported to make the driver directly accessible.
 // In general the driver is used via the database/sql package.
 type MySQLDriver struct{}
@@ -52,6 +57,7 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	mc := &mysqlConn{
 		maxAllowedPacket: maxPacketSize,
 		maxWriteSize:     maxPacketSize - 1,
+		closech:          make(chan struct{}),
 	}
 	mc.cfg, err = ParseDSN(dsn)
 	if err != nil {
@@ -59,6 +65,11 @@ func (d MySQLDriver) Open(dsn string) (driver.Conn, error) {
 	}
 	mc.parseTime = mc.cfg.ParseTime
 	mc.strict = mc.cfg.Strict
+
+	// Call startWatcher for context support (From Go 1.8)
+	if s, ok := interface{}(mc).(watcher); ok {
+		s.startWatcher()
+	}
 
 	// Connect to Server
 	if dial, ok := dials[mc.cfg.Net]; ok {

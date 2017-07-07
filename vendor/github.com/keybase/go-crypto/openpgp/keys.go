@@ -72,6 +72,7 @@ type Key struct {
 	PublicKey     *packet.PublicKey
 	PrivateKey    *packet.PrivateKey
 	SelfSignature *packet.Signature
+	KeyFlags      packet.KeyFlagBits
 }
 
 // A KeyRing provides access to public and private keys.
@@ -145,7 +146,7 @@ func (e *Entity) encryptionKey(now time.Time) (Key, bool) {
 
 	if candidateSubkey != -1 {
 		subkey := e.Subkeys[candidateSubkey]
-		return Key{e, subkey.PublicKey, subkey.PrivateKey, subkey.Sig}, true
+		return Key{e, subkey.PublicKey, subkey.PrivateKey, subkey.Sig, subkey.Sig.GetKeyFlags()}, true
 	}
 
 	// If we don't have any candidate subkeys for encryption and
@@ -159,7 +160,7 @@ func (e *Entity) encryptionKey(now time.Time) (Key, bool) {
 	if (!i.SelfSignature.FlagsValid || i.SelfSignature.FlagEncryptCommunications) &&
 		e.PrimaryKey.PubKeyAlgo.CanEncrypt() &&
 		!i.SelfSignature.KeyExpired(now) {
-		return Key{e, e.PrimaryKey, e.PrivateKey, i.SelfSignature}, true
+		return Key{e, e.PrimaryKey, e.PrivateKey, i.SelfSignature, i.SelfSignature.GetKeyFlags()}, true
 	}
 
 	// This Entity appears to be signing only.
@@ -184,7 +185,7 @@ func (e *Entity) signingKey(now time.Time) (Key, bool) {
 
 	if candidateSubkey != -1 {
 		subkey := e.Subkeys[candidateSubkey]
-		return Key{e, subkey.PublicKey, subkey.PrivateKey, subkey.Sig}, true
+		return Key{e, subkey.PublicKey, subkey.PrivateKey, subkey.Sig, subkey.Sig.GetKeyFlags()}, true
 	}
 
 	// If we have no candidate subkey then we assume that it's ok to sign
@@ -194,7 +195,7 @@ func (e *Entity) signingKey(now time.Time) (Key, bool) {
 		e.PrimaryKey.PubKeyAlgo.CanSign() &&
 		!i.SelfSignature.KeyExpired(now) &&
 		e.PrivateKey.PrivateKey != nil {
-		return Key{e, e.PrimaryKey, e.PrivateKey, i.SelfSignature}, true
+		return Key{e, e.PrimaryKey, e.PrivateKey, i.SelfSignature, i.SelfSignature.GetKeyFlags()}, true
 	}
 
 	return Key{}, false
@@ -229,7 +230,13 @@ func (el EntityList) KeysById(id uint64, fp []byte) (keys []Key) {
 					break
 				}
 			}
-			keys = append(keys, Key{e, e.PrimaryKey, e.PrivateKey, selfSig})
+
+			var keyFlags packet.KeyFlagBits
+			for _, ident := range e.Identities {
+				keyFlags.Merge(ident.SelfSignature.GetKeyFlags())
+			}
+
+			keys = append(keys, Key{e, e.PrimaryKey, e.PrivateKey, selfSig, keyFlags})
 		}
 
 		for _, subKey := range e.Subkeys {
@@ -242,7 +249,7 @@ func (el EntityList) KeysById(id uint64, fp []byte) (keys []Key) {
 					sig = subKey.Sig
 				}
 
-				keys = append(keys, Key{e, subKey.PublicKey, subKey.PrivateKey, sig})
+				keys = append(keys, Key{e, subKey.PublicKey, subKey.PrivateKey, sig, sig.GetKeyFlags()})
 			}
 		}
 	}
@@ -269,19 +276,8 @@ func (el EntityList) KeysByIdUsage(id uint64, fp []byte, requiredUsage byte) (ke
 			var usage byte
 
 			switch {
-			case key.SelfSignature.FlagsValid:
-				if key.SelfSignature.FlagCertify {
-					usage |= packet.KeyFlagCertify
-				}
-				if key.SelfSignature.FlagSign {
-					usage |= packet.KeyFlagSign
-				}
-				if key.SelfSignature.FlagEncryptCommunications {
-					usage |= packet.KeyFlagEncryptCommunications
-				}
-				if key.SelfSignature.FlagEncryptStorage {
-					usage |= packet.KeyFlagEncryptStorage
-				}
+			case key.KeyFlags.Valid:
+				usage = key.KeyFlags.BitField
 
 			case key.PublicKey.PubKeyAlgo == packet.PubKeyAlgoElGamal:
 				// We also need to handle the case where, although the sig's
@@ -319,7 +315,7 @@ func (el EntityList) DecryptionKeys() (keys []Key) {
 	for _, e := range el {
 		for _, subKey := range e.Subkeys {
 			if subKey.PrivateKey != nil && subKey.PrivateKey.PrivateKey != nil && (!subKey.Sig.FlagsValid || subKey.Sig.FlagEncryptStorage || subKey.Sig.FlagEncryptCommunications) {
-				keys = append(keys, Key{e, subKey.PublicKey, subKey.PrivateKey, subKey.Sig})
+				keys = append(keys, Key{e, subKey.PublicKey, subKey.PrivateKey, subKey.Sig, subKey.Sig.GetKeyFlags()})
 			}
 		}
 	}

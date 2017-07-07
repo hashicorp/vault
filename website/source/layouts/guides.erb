@@ -1,0 +1,55 @@
+<% wrap_layout :inner do %>
+  <% content_for :sidebar do %>
+    <ul class="nav docs-sidenav">
+      <li<%= sidebar_current("guides-production-hardening") %>>
+        <a href="/guides/production.html">Production Hardening</a>
+      </li>
+
+      <li<%= sidebar_current("guides-generate-root") %>>
+        <a href="/guides/generate-root.html">Root Token Generation</a>
+      </li>
+
+      <li<%= sidebar_current("guides-rekeying-and-rotate") %>>
+        <a href="/guides/rekeying-and-rotating.html">Rekeying &amp; Rotating</a>
+      </li>
+
+      <li<%= sidebar_current("guides-replication") %>>
+        <a href="/guides/replication.html">Replication Setup &amp; Guidance</a>
+      </li>
+
+      <hr>
+
+      <li<%= sidebar_current("guides-upgrading")%>>
+        <a href="/guides/upgrading/index.html">Upgrade Guides</a>
+        <ul class="nav">
+          <li<%= sidebar_current("guides-upgrading-to-0.5.0") %>>
+            <a href="/guides/upgrading/upgrade-to-0.5.0.html">Upgrade to 0.5.0</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.5.1") %>>
+            <a href="/guides/upgrading/upgrade-to-0.5.1.html">Upgrade to 0.5.1</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.6.0") %>>
+            <a href="/guides/upgrading/upgrade-to-0.6.0.html">Upgrade to 0.6.0</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.6.1") %>>
+            <a href="/guides/upgrading/upgrade-to-0.6.1.html">Upgrade to 0.6.1</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.6.2") %>>
+            <a href="/guides/upgrading/upgrade-to-0.6.2.html">Upgrade to 0.6.2</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.6.3") %>>
+            <a href="/guides/upgrading/upgrade-to-0.6.3.html">Upgrade to 0.6.3</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.6.4") %>>
+            <a href="/guides/upgrading/upgrade-to-0.6.4.html">Upgrade to 0.6.4</a>
+          </li>
+          <li<%= sidebar_current("guides-upgrading-to-0.7.0") %>>
+            <a href="/guides/upgrading/upgrade-to-0.7.0.html">Upgrade to 0.7.0</a>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  <% end %>
+
+  <%= yield %>
+<% end %>

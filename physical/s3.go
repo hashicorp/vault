@@ -92,9 +92,9 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 		Region:   aws.String(region),
 	}))
 
-	_, err = s3conn.HeadBucket(&s3.HeadBucketInput{Bucket: &bucket})
+	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
 	if err != nil {
-		return nil, fmt.Errorf("unable to access bucket '%s': %v", bucket, err)
+		return nil, fmt.Errorf("unable to access bucket '%s' in region %s: %v", bucket, region, err)
 	}
 
 	maxParStr, ok := conf["max_parallel"]
@@ -205,8 +205,9 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 	defer s.permitPool.Release()
 
 	params := &s3.ListObjectsV2Input{
-		Bucket: aws.String(s.bucket),
-		Prefix: aws.String(prefix),
+		Bucket:    aws.String(s.bucket),
+		Prefix:    aws.String(prefix),
+		Delimiter: aws.String("/"),
 	}
 
 	keys := []string{}
@@ -214,6 +215,17 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 	err := s.client.ListObjectsV2Pages(params,
 		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
 			if page != nil {
+				// Add truncated 'folder' paths
+				for _, commonPrefix := range page.CommonPrefixes {
+					// Avoid panic
+					if commonPrefix == nil {
+						continue
+					}
+
+					commonPrefix := strings.TrimPrefix(*commonPrefix.Prefix, prefix)
+					keys = append(keys, commonPrefix)
+				}
+				// Add objects only from the current 'folder'
 				for _, key := range page.Contents {
 					// Avoid panic
 					if key == nil {
@@ -221,14 +233,7 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 					}
 
 					key := strings.TrimPrefix(*key.Key, prefix)
-
-					if i := strings.Index(key, "/"); i == -1 {
-						// Add objects only from the current 'folder'
-						keys = append(keys, key)
-					} else if i != -1 {
-						// Add truncated 'folder' paths
-						keys = appendIfMissing(keys, key[:i+1])
-					}
+					keys = append(keys, key)
 				}
 			}
 			return true
@@ -241,13 +246,4 @@ func (s *S3Backend) List(prefix string) ([]string, error) {
 	sort.Strings(keys)
 
 	return keys, nil
-}
-
-func appendIfMissing(slice []string, i string) []string {
-	for _, ele := range slice {
-		if ele == i {
-			return slice
-		}
-	}
-	return append(slice, i)
 }

@@ -31,6 +31,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"replication/primary/secondary-token",
 		"replication/reindex",
 		"rotate",
+		"config/cors",
 		"config/auditing/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
@@ -44,6 +45,60 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
+}
+
+func TestSystemConfigCORS(t *testing.T) {
+	b := testSystemBackend(t)
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "")
+	b.(*SystemBackend).Core.systemBarrierView = view
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
+	req.Data["allowed_origins"] = "http://www.example.com"
+	_, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := &logical.Response{
+		Data: map[string]interface{}{
+			"enabled":         true,
+			"allowed_origins": []string{"http://www.example.com"},
+		},
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err := b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
+	}
+
+	req = logical.TestRequest(t, logical.DeleteOperation, "config/cors")
+	_, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ReadOperation, "config/cors")
+	actual, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expected = &logical.Response{
+		Data: map[string]interface{}{
+			"enabled": false,
+		},
+	}
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("DELETE FAILED -- bad: %#v", actual)
+	}
+
 }
 
 func TestSystemBackend_mounts(t *testing.T) {
@@ -60,6 +115,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 		"secret/": map[string]interface{}{
 			"type":        "generic",
 			"description": "generic secret storage",
+			"accessor":    resp.Data["secret/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["secret/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -70,6 +126,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 		"sys/": map[string]interface{}{
 			"type":        "system",
 			"description": "system endpoints used for control, policy and debugging",
+			"accessor":    resp.Data["sys/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["sys/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -80,6 +137,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 		"cubbyhole/": map[string]interface{}{
 			"description": "per-token private secret storage",
 			"type":        "cubbyhole",
+			"accessor":    resp.Data["cubbyhole/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["default_lease_ttl"].(int64),
 				"max_lease_ttl":     resp.Data["cubbyhole/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
@@ -927,7 +985,8 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b, err := NewSystemBackend(core, bc)
+	be := NewSystemBackend(core)
+	b, err := be.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -990,7 +1049,8 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	b, err := NewSystemBackend(core, bc)
+	be := NewSystemBackend(core)
+	b, err := be.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1056,6 +1116,7 @@ func TestSystemBackend_authTable(t *testing.T) {
 		"token/": map[string]interface{}{
 			"type":        "token",
 			"description": "token based credentials",
+			"accessor":    resp.Data["token/"].(map[string]interface{})["accessor"],
 			"config": map[string]interface{}{
 				"default_lease_ttl": int64(0),
 				"max_lease_ttl":     int64(0),
@@ -1171,6 +1232,10 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	// Read, and make sure that case has been normalized
 	req = logical.TestRequest(t, logical.ReadOperation, "policy/Foo")
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	if resp != nil {
 		t.Fatalf("err: expected nil response, got %#v", *resp)
 	}
@@ -1525,7 +1590,8 @@ func testSystemBackend(t *testing.T) logical.Backend {
 		},
 	}
 
-	b, err := NewSystemBackend(c, bc)
+	b := NewSystemBackend(c)
+	_, err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1543,7 +1609,8 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 		},
 	}
 
-	b, err := NewSystemBackend(c, bc)
+	b := NewSystemBackend(c)
+	_, err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -91,6 +91,14 @@ func TestSysMounts(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
+	for k, v := range actual["data"].(map[string]interface{}) {
+		if v.(map[string]interface{})["accessor"] == "" {
+			t.Fatalf("no accessor from %s", k)
+		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+	}
+
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -204,6 +212,14 @@ func TestSysMount(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
+	for k, v := range actual["data"].(map[string]interface{}) {
+		if v.(map[string]interface{})["accessor"] == "" {
+			t.Fatalf("no accessor from %s", k)
+		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+	}
+
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -339,6 +355,14 @@ func TestSysRemount(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
+	for k, v := range actual["data"].(map[string]interface{}) {
+		if v.(map[string]interface{})["accessor"] == "" {
+			t.Fatalf("no accessor from %s", k)
+		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+	}
+
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -435,6 +459,14 @@ func TestSysUnmount(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
+	for k, v := range actual["data"].(map[string]interface{}) {
+		if v.(map[string]interface{})["accessor"] == "" {
+			t.Fatalf("no accessor from %s", k)
+		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+	}
+
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -548,6 +580,14 @@ func TestSysTuneMount(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
+	for k, v := range actual["data"].(map[string]interface{}) {
+		if v.(map[string]interface{})["accessor"] == "" {
+			t.Fatalf("no accessor from %s", k)
+		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+	}
+
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: %#v", actual)
 	}
@@ -683,6 +723,14 @@ func TestSysTuneMount(t *testing.T) {
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	expected["request_id"] = actual["request_id"]
+	for k, v := range actual["data"].(map[string]interface{}) {
+		if v.(map[string]interface{})["accessor"] == "" {
+			t.Fatalf("no accessor from %s", k)
+		}
+		expected[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+		expected["data"].(map[string]interface{})[k].(map[string]interface{})["accessor"] = v.(map[string]interface{})["accessor"]
+	}
+
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}

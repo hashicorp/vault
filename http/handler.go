@@ -50,6 +50,7 @@ func Handler(core *vault.Core) http.Handler {
 	mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
 	mux.Handle("/v1/sys/renew", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/sys/renew/", handleRequestForwarding(core, handleLogical(core, false, nil)))
+	mux.Handle("/v1/sys/leases/", handleRequestForwarding(core, handleLogical(core, false, nil)))
 	mux.Handle("/v1/sys/leader", handleSysLeader(core))
 	mux.Handle("/v1/sys/health", handleSysHealth(core))
 	mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core, handleSysGenerateRootAttempt(core)))
@@ -67,10 +68,11 @@ func Handler(core *vault.Core) http.Handler {
 
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
+	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
 
 	// Wrap the help wrapped handler with another layer with a generic
 	// handler
-	genericWrappedHandler := wrapGenericHandler(helpWrappedHandler)
+	genericWrappedHandler := wrapGenericHandler(corsWrappedHandler)
 
 	return genericWrappedHandler
 }

@@ -465,6 +465,9 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	if ent.ID != "foobarbaz" {
 		t.Fatalf("bad: ent.ID: expected:\"foobarbaz\"\n actual:%s", ent.ID)
 	}
+	if err := ts.create(ent); err == nil {
+		t.Fatal("expected error creating token with the same ID")
+	}
 
 	out, err := ts.Lookup(ent.ID)
 	if err != nil {
@@ -605,7 +608,10 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 
 	// Mount a noop backend
 	noop := &NoopBackend{}
-	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, view)
+	err := ts.expiration.router.Mount(noop, "noop/", &MountEntry{UUID: "noopuuid", Accessor: "noopaccessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.create(ent); err != nil {
@@ -615,7 +621,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	// Register a lease
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
-		Path:        "secret/foo",
+		Path:        "noop/foo",
 		ClientToken: ent.ID,
 	}
 	resp := &logical.Response{
@@ -3363,7 +3369,10 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create new token
 	root, err := ts.rootToken()

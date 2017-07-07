@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -14,21 +13,17 @@ import (
 
 // Test wrapping functionality
 func TestHTTP_Wrapping(t *testing.T) {
-	handler1 := http.NewServeMux()
-	handler2 := http.NewServeMux()
-	handler3 := http.NewServeMux()
-
 	coreConfig := &vault.CoreConfig{}
 
 	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
 	// add routes chained to a Handler-created handler.
-	cores := vault.TestCluster(t, []http.Handler{handler1, handler2, handler3}, coreConfig, true)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
-	handler1.Handle("/", Handler(cores[0].Core))
-	handler2.Handle("/", Handler(cores[1].Core))
-	handler3.Handle("/", Handler(cores[2].Core))
+	cluster := vault.NewTestCluster(t, coreConfig, true)
+	defer cluster.CloseListeners()
+	cluster.StartListeners()
+	cores := cluster.Cores
+	cores[0].Handler.Handle("/", Handler(cores[0].Core))
+	cores[1].Handler.Handle("/", Handler(cores[1].Core))
+	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	// make it easy to get access to the active
 	core := cores[0].Core
@@ -121,6 +116,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 		secret, err = client.Logical().Write("sys/wrapping/lookup", map[string]interface{}{
 			"token": wrapInfo.Token,
 		})
+		if err != nil {
+			t.Fatal(err)
+		}
 		if secret == nil || secret.Data == nil {
 			t.Fatal("secret or secret data is nil")
 		}
@@ -150,6 +148,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	// Test unwrap via the client token
 	client.SetToken(wrapInfo.Token)
 	secret, err = client.Logical().Write("sys/wrapping/unwrap", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if secret == nil || secret.Data == nil {
 		t.Fatal("secret or secret data is nil")
 	}
@@ -175,6 +176,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	secret, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ret2 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
@@ -197,6 +201,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	// Read response directly
 	client.SetToken(wrapInfo.Token)
 	secret, err = client.Logical().Read("cubbyhole/response")
+	if err != nil {
+		t.Fatal(err)
+	}
 	ret3 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Write("cubbyhole/response", nil)
@@ -217,6 +224,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Read via Unwrap method
 	secret, err = client.Logical().Unwrap(wrapInfo.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
 	ret4 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Unwrap(wrapInfo.Token)
@@ -307,6 +317,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	secret, err = client.Logical().Write("sys/wrapping/rewrap", map[string]interface{}{
 		"token": wrapInfo.Token,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Should be expired and fail
 	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,

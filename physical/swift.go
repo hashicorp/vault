@@ -13,6 +13,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/ncw/swift"
 )
 
@@ -207,7 +208,7 @@ func (s *SwiftBackend) List(prefix string) ([]string, error) {
 			keys = append(keys, key)
 		} else if i != -1 {
 			// Add truncated 'folder' paths
-			keys = appendIfMissing(keys, key[:i+1])
+			keys = strutil.AppendIfMissing(keys, key[:i+1])
 		}
 	}
 

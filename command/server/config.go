@@ -59,7 +59,7 @@ func DevConfig(ha, transactional bool) *Config {
 		Listeners: []*Listener{
 			&Listener{
 				Type: "tcp",
-				Config: map[string]string{
+				Config: map[string]interface{}{
 					"address":     "127.0.0.1:8200",
 					"tls_disable": "1",
 				},
@@ -89,7 +89,7 @@ func DevConfig(ha, transactional bool) *Config {
 // Listener is the listener configuration for the server.
 type Listener struct {
 	Type   string
-	Config map[string]string
+	Config map[string]interface{}
 }
 
 func (l *Listener) GoString() string {
@@ -196,6 +196,15 @@ type Telemetry struct {
 	// (e.g. a specific geo location or datacenter, dc:sfo)
 	// Default: none
 	CirconusBrokerSelectTag string `hcl:"circonus_broker_select_tag"`
+
+	// Dogstats:
+	// DogStatsdAddr is the address of a dogstatsd instance. If provided,
+	// metrics will be sent to that instance
+	DogStatsDAddr string `hcl:"dogstatsd_addr"`
+
+	// DogStatsdTags are the global tags that should be sent with each packet to dogstatsd
+	// It is a list of strings, where each string looks like "my_tag_name:my_tag_value"
+	DogStatsDTags []string `hcl:"dogstatsd_tags"`
 }
 
 func (s *Telemetry) GoString() string {
@@ -354,7 +363,6 @@ func ParseConfig(d string, logger log.Logger) (*Config, error) {
 	}
 
 	valid := []string{
-		"atlas",
 		"storage",
 		"ha_storage",
 		"backend",
@@ -648,8 +656,6 @@ func parseHSMs(result *Config, list *ast.ObjectList) error {
 }
 
 func parseListeners(result *Config, list *ast.ObjectList) error {
-	var foundAtlas bool
-
 	listeners := make([]*Listener, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "listener"
@@ -676,29 +682,12 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
 
-		var m map[string]string
+		var m map[string]interface{}
 		if err := hcl.DecodeObject(&m, item.Val); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("listeners.%s:", key))
 		}
 
 		lnType := strings.ToLower(key)
-
-		if lnType == "atlas" {
-			if foundAtlas {
-				return multierror.Prefix(fmt.Errorf("only one listener of type 'atlas' is permitted"), fmt.Sprintf("listeners.%s", key))
-			}
-
-			foundAtlas = true
-			if m["token"] == "" {
-				return multierror.Prefix(fmt.Errorf("'token' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-			}
-			if m["infrastructure"] == "" {
-				return multierror.Prefix(fmt.Errorf("'infrastructure' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-			}
-			if m["node_id"] == "" {
-				return multierror.Prefix(fmt.Errorf("'node_id' must be specified for an Atlas listener"), fmt.Sprintf("listeners.%s", key))
-			}
-		}
 
 		listeners = append(listeners, &Listener{
 			Type:   lnType,
@@ -734,6 +723,8 @@ func parseTelemetry(result *Config, list *ast.ObjectList) error {
 		"circonus_broker_id",
 		"circonus_broker_select_tag",
 		"disable_hostname",
+		"dogstatsd_addr",
+		"dogstatsd_tags",
 		"statsd_address",
 		"statsite_address",
 	}

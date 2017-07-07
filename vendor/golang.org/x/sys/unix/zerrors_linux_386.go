@@ -325,6 +325,9 @@ const (
 	ECHOKE                               = 0x800
 	ECHONL                               = 0x40
 	ECHOPRT                              = 0x400
+	EFD_CLOEXEC                          = 0x80000
+	EFD_NONBLOCK                         = 0x800
+	EFD_SEMAPHORE                        = 0x1
 	ENCODING_DEFAULT                     = 0x0
 	ENCODING_FM_MARK                     = 0x3
 	ENCODING_FM_SPACE                    = 0x4
@@ -1219,7 +1222,16 @@ const (
 	RLIMIT_CPU                           = 0x0
 	RLIMIT_DATA                          = 0x2
 	RLIMIT_FSIZE                         = 0x1
+	RLIMIT_LOCKS                         = 0xa
+	RLIMIT_MEMLOCK                       = 0x8
+	RLIMIT_MSGQUEUE                      = 0xc
+	RLIMIT_NICE                          = 0xd
 	RLIMIT_NOFILE                        = 0x7
+	RLIMIT_NPROC                         = 0x6
+	RLIMIT_RSS                           = 0x5
+	RLIMIT_RTPRIO                        = 0xe
+	RLIMIT_RTTIME                        = 0xf
+	RLIMIT_SIGPENDING                    = 0xb
 	RLIMIT_STACK                         = 0x3
 	RLIM_INFINITY                        = -0x1
 	RTAX_ADVMSS                          = 0x8

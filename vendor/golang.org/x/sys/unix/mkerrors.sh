@@ -143,6 +143,7 @@ struct ltchars {
 
 #include <bits/sockaddr.h>
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
@@ -375,7 +376,7 @@ ccflags="$@"
 		$2 ~ /^SYSCTL_VERS/ ||
 		$2 ~ /^(MS|MNT)_/ ||
 		$2 ~ /^TUN(SET|GET|ATTACH|DETACH)/ ||
-		$2 ~ /^(O|F|FD|NAME|S|PTRACE|PT)_/ ||
+		$2 ~ /^(O|F|E?FD|NAME|S|PTRACE|PT)_/ ||
 		$2 ~ /^LINUX_REBOOT_CMD_/ ||
 		$2 ~ /^LINUX_REBOOT_MAGIC[12]$/ ||
 		$2 !~ "NLA_TYPE_MASK" &&
@@ -389,7 +390,7 @@ ccflags="$@"
 		$2 ~ /^(IFF|IFT|NET_RT|RTM|RTF|RTV|RTA|RTAX)_/ ||
 		$2 ~ /^BIOC/ ||
 		$2 ~ /^RUSAGE_(SELF|CHILDREN|THREAD)/ ||
-		$2 ~ /^RLIMIT_(AS|CORE|CPU|DATA|FSIZE|NOFILE|STACK)|RLIM_INFINITY/ ||
+		$2 ~ /^RLIMIT_(AS|CORE|CPU|DATA|FSIZE|LOCKS|MEMLOCK|MSGQUEUE|NICE|NOFILE|NPROC|RSS|RTPRIO|RTTIME|SIGPENDING|STACK)|RLIM_INFINITY/ ||
 		$2 ~ /^PRIO_(PROCESS|PGRP|USER)/ ||
 		$2 ~ /^CLONE_[A-Z_]+/ ||
 		$2 !~ /^(BPF_TIMEVAL)$/ &&

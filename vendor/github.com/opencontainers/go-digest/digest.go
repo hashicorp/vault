@@ -101,26 +101,18 @@ func FromString(s string) Digest {
 // error if not.
 func (d Digest) Validate() error {
 	s := string(d)
-
 	i := strings.Index(s, ":")
-
-	// validate i then run through regexp
-	if i < 0 || i+1 == len(s) || !DigestRegexpAnchored.MatchString(s) {
+	if i <= 0 || i+1 == len(s) {
 		return ErrDigestInvalidFormat
 	}
-
-	algorithm := Algorithm(s[:i])
+	algorithm, encoded := Algorithm(s[:i]), s[i+1:]
 	if !algorithm.Available() {
+		if !DigestRegexpAnchored.MatchString(s) {
+			return ErrDigestInvalidFormat
+		}
 		return ErrDigestUnsupported
 	}
-
-	// Digests much always be hex-encoded, ensuring that their hex portion will
-	// always be size*2
-	if algorithm.Size()*2 != len(s[i+1:]) {
-		return ErrDigestInvalidLength
-	}
-
-	return nil
+	return algorithm.Validate(encoded)
 }
 
 // Algorithm returns the algorithm portion of the digest. This will panic if

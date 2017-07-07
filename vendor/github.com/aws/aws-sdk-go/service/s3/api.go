@@ -6870,7 +6870,7 @@ type CompleteMultipartUploadInput struct {
 	// Key is a required field
 	Key *string `location:"uri" locationName:"Key" min:"1" type:"string" required:"true"`
 
-	MultipartUpload *CompletedMultipartUpload `locationName:"CompleteMultipartUpload" type:"structure"`
+	MultipartUpload *CompletedMultipartUpload `locationName:"CompleteMultipartUpload" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// Confirms that the requester knows that she or he will be charged for the
 	// request. Bucket owners need not specify this parameter in their requests.
@@ -7704,7 +7704,7 @@ type CreateBucketInput struct {
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
-	CreateBucketConfiguration *CreateBucketConfiguration `locationName:"CreateBucketConfiguration" type:"structure"`
+	CreateBucketConfiguration *CreateBucketConfiguration `locationName:"CreateBucketConfiguration" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// Allows grantee the read, write, read ACP, and write ACP permissions on the
 	// bucket.
@@ -9085,7 +9085,7 @@ type DeleteObjectsInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// Delete is a required field
-	Delete *Delete `locationName:"Delete" type:"structure" required:"true"`
+	Delete *Delete `locationName:"Delete" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// The concatenation of the authentication device's serial number, a space,
 	// and the value that is displayed on your authentication device.
@@ -11370,7 +11370,7 @@ func (s *GlacierJobParameters) SetTier(v string) *GlacierJobParameters {
 type Grant struct {
 	_ struct{} `type:"structure"`
 
-	Grantee *Grantee `type:"structure"`
+	Grantee *Grantee `type:"structure" xmlPrefix:"xsi" xmlURI:"http://www.w3.org/2001/XMLSchema-instance"`
 
 	// Specifies the permission given to the grantee.
 	Permission *string `type:"string" enum:"Permission"`
@@ -15133,7 +15133,7 @@ type PutBucketAccelerateConfigurationInput struct {
 	// Specifies the Accelerate Configuration you want to set for the bucket.
 	//
 	// AccelerateConfiguration is a required field
-	AccelerateConfiguration *AccelerateConfiguration `locationName:"AccelerateConfiguration" type:"structure" required:"true"`
+	AccelerateConfiguration *AccelerateConfiguration `locationName:"AccelerateConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// Name of the bucket for which the accelerate configuration is set.
 	//
@@ -15201,7 +15201,7 @@ type PutBucketAclInput struct {
 	// The canned ACL to apply to the bucket.
 	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"BucketCannedACL"`
 
-	AccessControlPolicy *AccessControlPolicy `locationName:"AccessControlPolicy" type:"structure"`
+	AccessControlPolicy *AccessControlPolicy `locationName:"AccessControlPolicy" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
@@ -15321,7 +15321,7 @@ type PutBucketAnalyticsConfigurationInput struct {
 	// The configuration and any analyses for the analytics filter.
 	//
 	// AnalyticsConfiguration is a required field
-	AnalyticsConfiguration *AnalyticsConfiguration `locationName:"AnalyticsConfiguration" type:"structure" required:"true"`
+	AnalyticsConfiguration *AnalyticsConfiguration `locationName:"AnalyticsConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// The name of the bucket to which an analytics configuration is stored.
 	//
@@ -15409,7 +15409,7 @@ type PutBucketCorsInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// CORSConfiguration is a required field
-	CORSConfiguration *CORSConfiguration `locationName:"CORSConfiguration" type:"structure" required:"true"`
+	CORSConfiguration *CORSConfiguration `locationName:"CORSConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -15487,7 +15487,7 @@ type PutBucketInventoryConfigurationInput struct {
 	// Specifies the inventory configuration.
 	//
 	// InventoryConfiguration is a required field
-	InventoryConfiguration *InventoryConfiguration `locationName:"InventoryConfiguration" type:"structure" required:"true"`
+	InventoryConfiguration *InventoryConfiguration `locationName:"InventoryConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -15564,7 +15564,7 @@ type PutBucketLifecycleConfigurationInput struct {
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
-	LifecycleConfiguration *BucketLifecycleConfiguration `locationName:"LifecycleConfiguration" type:"structure"`
+	LifecycleConfiguration *BucketLifecycleConfiguration `locationName:"LifecycleConfiguration" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -15629,7 +15629,7 @@ type PutBucketLifecycleInput struct {
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
-	LifecycleConfiguration *LifecycleConfiguration `locationName:"LifecycleConfiguration" type:"structure"`
+	LifecycleConfiguration *LifecycleConfiguration `locationName:"LifecycleConfiguration" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -15695,7 +15695,7 @@ type PutBucketLoggingInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// BucketLoggingStatus is a required field
-	BucketLoggingStatus *BucketLoggingStatus `locationName:"BucketLoggingStatus" type:"structure" required:"true"`
+	BucketLoggingStatus *BucketLoggingStatus `locationName:"BucketLoggingStatus" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -15773,7 +15773,7 @@ type PutBucketMetricsConfigurationInput struct {
 	// Specifies the metrics configuration.
 	//
 	// MetricsConfiguration is a required field
-	MetricsConfiguration *MetricsConfiguration `locationName:"MetricsConfiguration" type:"structure" required:"true"`
+	MetricsConfiguration *MetricsConfiguration `locationName:"MetricsConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -15854,7 +15854,7 @@ type PutBucketNotificationConfigurationInput struct {
 	// this element is empty, notifications are turned off on the bucket.
 	//
 	// NotificationConfiguration is a required field
-	NotificationConfiguration *NotificationConfiguration `locationName:"NotificationConfiguration" type:"structure" required:"true"`
+	NotificationConfiguration *NotificationConfiguration `locationName:"NotificationConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -15923,7 +15923,7 @@ type PutBucketNotificationInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// NotificationConfiguration is a required field
-	NotificationConfiguration *NotificationConfigurationDeprecated `locationName:"NotificationConfiguration" type:"structure" required:"true"`
+	NotificationConfiguration *NotificationConfigurationDeprecated `locationName:"NotificationConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -16056,7 +16056,7 @@ type PutBucketReplicationInput struct {
 	// replication configuration size can be up to 2 MB.
 	//
 	// ReplicationConfiguration is a required field
-	ReplicationConfiguration *ReplicationConfiguration `locationName:"ReplicationConfiguration" type:"structure" required:"true"`
+	ReplicationConfiguration *ReplicationConfiguration `locationName:"ReplicationConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -16125,7 +16125,7 @@ type PutBucketRequestPaymentInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// RequestPaymentConfiguration is a required field
-	RequestPaymentConfiguration *RequestPaymentConfiguration `locationName:"RequestPaymentConfiguration" type:"structure" required:"true"`
+	RequestPaymentConfiguration *RequestPaymentConfiguration `locationName:"RequestPaymentConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -16194,7 +16194,7 @@ type PutBucketTaggingInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// Tagging is a required field
-	Tagging *Tagging `locationName:"Tagging" type:"structure" required:"true"`
+	Tagging *Tagging `locationName:"Tagging" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -16267,7 +16267,7 @@ type PutBucketVersioningInput struct {
 	MFA *string `location:"header" locationName:"x-amz-mfa" type:"string"`
 
 	// VersioningConfiguration is a required field
-	VersioningConfiguration *VersioningConfiguration `locationName:"VersioningConfiguration" type:"structure" required:"true"`
+	VersioningConfiguration *VersioningConfiguration `locationName:"VersioningConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -16337,7 +16337,7 @@ type PutBucketWebsiteInput struct {
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
 
 	// WebsiteConfiguration is a required field
-	WebsiteConfiguration *WebsiteConfiguration `locationName:"WebsiteConfiguration" type:"structure" required:"true"`
+	WebsiteConfiguration *WebsiteConfiguration `locationName:"WebsiteConfiguration" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 }
 
 // String returns the string representation
@@ -16405,7 +16405,7 @@ type PutObjectAclInput struct {
 	// The canned ACL to apply to the object.
 	ACL *string `location:"header" locationName:"x-amz-acl" type:"string" enum:"ObjectCannedACL"`
 
-	AccessControlPolicy *AccessControlPolicy `locationName:"AccessControlPolicy" type:"structure"`
+	AccessControlPolicy *AccessControlPolicy `locationName:"AccessControlPolicy" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	// Bucket is a required field
 	Bucket *string `location:"uri" locationName:"Bucket" type:"string" required:"true"`
@@ -16951,7 +16951,7 @@ type PutObjectTaggingInput struct {
 	Key *string `location:"uri" locationName:"Key" min:"1" type:"string" required:"true"`
 
 	// Tagging is a required field
-	Tagging *Tagging `locationName:"Tagging" type:"structure" required:"true"`
+	Tagging *Tagging `locationName:"Tagging" type:"structure" required:"true" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	VersionId *string `location:"querystring" locationName:"versionId" type:"string"`
 }
@@ -17485,7 +17485,7 @@ type RestoreObjectInput struct {
 	// at http://docs.aws.amazon.com/AmazonS3/latest/dev/ObjectsinRequesterPaysBuckets.html
 	RequestPayer *string `location:"header" locationName:"x-amz-request-payer" type:"string" enum:"RequestPayer"`
 
-	RestoreRequest *RestoreRequest `locationName:"RestoreRequest" type:"structure"`
+	RestoreRequest *RestoreRequest `locationName:"RestoreRequest" type:"structure" xmlURI:"http://s3.amazonaws.com/doc/2006-03-01/"`
 
 	VersionId *string `location:"querystring" locationName:"versionId" type:"string"`
 }
@@ -18005,7 +18005,7 @@ func (s *Tagging) SetTagSet(v []*Tag) *Tagging {
 type TargetGrant struct {
 	_ struct{} `type:"structure"`
 
-	Grantee *Grantee `type:"structure"`
+	Grantee *Grantee `type:"structure" xmlPrefix:"xsi" xmlURI:"http://www.w3.org/2001/XMLSchema-instance"`
 
 	// Logging permissions assigned to the Grantee for the bucket.
 	Permission *string `type:"string" enum:"BucketLogsPermission"`

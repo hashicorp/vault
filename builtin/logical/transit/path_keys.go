@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/crypto/ed25519"
 
+	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/helper/keysutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -155,9 +156,9 @@ func (b *backend) pathPolicyWrite(
 
 // Built-in helper type for returning asymmetric keys
 type asymKey struct {
-	Name         string    `json:"name"`
-	PublicKey    string    `json:"public_key"`
-	CreationTime time.Time `json:"creation_time"`
+	Name         string    `json:"name" structs:"name" mapstructure:"name"`
+	PublicKey    string    `json:"public_key" structs:"public_key" mapstructure:"public_key"`
+	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 }
 
 func (b *backend) pathPolicyRead(
@@ -183,6 +184,7 @@ func (b *backend) pathPolicyRead(
 			"derived":                p.Derived,
 			"deletion_allowed":       p.DeletionAllowed,
 			"min_decryption_version": p.MinDecryptionVersion,
+			"min_encryption_version": p.MinEncryptionVersion,
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
 			"supports_encryption":    p.Type.EncryptionSupported(),
@@ -224,7 +226,7 @@ func (b *backend) pathPolicyRead(
 		resp.Data["keys"] = retKeys
 
 	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ED25519:
-		retKeys := map[string]asymKey{}
+		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
 				PublicKey:    v.FormattedPublicKey,
@@ -253,7 +255,7 @@ func (b *backend) pathPolicyRead(
 				key.Name = "ed25519"
 			}
 
-			retKeys[strconv.Itoa(k)] = key
+			retKeys[strconv.Itoa(k)] = structs.New(key).Map()
 		}
 		resp.Data["keys"] = retKeys
 	}

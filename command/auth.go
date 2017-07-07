@@ -316,7 +316,7 @@ func (c *AuthCommand) listMethods() int {
 	}
 	sort.Strings(paths)
 
-	columns := []string{"Path | Type | Default TTL | Max TTL | Replication Behavior | Description"}
+	columns := []string{"Path | Type | Accessor | Default TTL | Max TTL | Replication Behavior | Description"}
 	for _, path := range paths {
 		auth := auth[path]
 		defTTL := "system"
@@ -332,7 +332,7 @@ func (c *AuthCommand) listMethods() int {
 			replicatedBehavior = "local"
 		}
 		columns = append(columns, fmt.Sprintf(
-			"%s | %s | %s | %s | %s | %s", path, auth.Type, defTTL, maxTTL, replicatedBehavior, auth.Description))
+			"%s | %s | %s | %s | %s | %s | %s", path, auth.Type, auth.Accessor, defTTL, maxTTL, replicatedBehavior, auth.Description))
 	}
 
 	c.Ui.Output(columnize.SimpleFormat(columns))

@@ -78,7 +78,7 @@ func (c *Copier) Run(ctx context.Context) (*ObjectAttrs, error) {
 			return nil, err
 		}
 		if c.ProgressFunc != nil {
-			c.ProgressFunc(res.TotalBytesRewritten, res.ObjectSize)
+			c.ProgressFunc(uint64(res.TotalBytesRewritten), uint64(res.ObjectSize))
 		}
 		if res.Done { // Finished successfully.
 			return newObject(res.Resource), nil

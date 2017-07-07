@@ -60,8 +60,7 @@ telemetry {
 
 ### `circonus`
 
-These `telemetry` parameters apply to
-[Circonus](http://circonus.com/).
+These `telemetry` parameters apply to [Circonus](http://circonus.com/).
 
 - `circonus_api_token` `(string: "")` - Specifies a valid Circonus API Token
   used to create/manage check. If provided, metric management is enabled.
@@ -120,3 +119,19 @@ These `telemetry` parameters apply to
   best use of this is to as a hint for which broker should be used based on
   *where* this particular instance is running (e.g. a specific geo location or
   datacenter, dc:sfo).
+
+### `dogstatsd`
+
+These `telemetry` parameters apply to
+[DogStatsD](http://docs.datadoghq.com/guides/dogstatsd/).
+
+- `dogstatsd_addr` `(string: "")` - This provides the address of a DogStatsD
+  instance. DogStatsD is a protocol-compatible flavor of statsd, with the added
+  ability to decorate metrics with tags and event information. If provided,
+  Vault will send various telemetry information to that instance for
+  aggregation. This can be used to capture runtime information.
+
+
+- `dogstatsd_tags` `(string array: [])` - This provides a list of global tags
+  that will be added to all telemetry packets sent to DogStatsD. It is a list
+  of strings, where each string looks like "my_tag_name:my_tag_value".

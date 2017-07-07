@@ -85,10 +85,10 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	cores := TestCluster(t, []http.Handler{nil, nil, nil}, nil, false)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster := NewTestCluster(t, nil, false)
+	cluster.StartListeners()
+	defer cluster.CloseListeners()
+	cores := cluster.Cores
 
 	root := cores[0].Root
 
@@ -115,16 +115,16 @@ func TestCluster_ListenForRequests(t *testing.T) {
 				t.Fatalf("%s not a TCP port", tcpAddr.String())
 			}
 
-			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+10), tlsConfig)
+			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+100), tlsConfig)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+10)
+					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+100)
 					continue
 				}
 				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
 			}
 			if expectFail {
-				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+10)
+				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+100)
 			}
 			err = conn.Handshake()
 			if err != nil {
@@ -137,7 +137,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			case connState.NegotiatedProtocol != "h2" || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+10)
+			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+100)
 		}
 	}
 
@@ -198,10 +198,25 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 		w.Write([]byte("core3"))
 	})
 
-	cores := TestCluster(t, []http.Handler{handler1, handler2, handler3}, nil, true)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster := NewTestCluster(t, nil, true)
+	cluster.StartListeners()
+	defer cluster.CloseListeners()
+	cores := cluster.Cores
+	cores[0].Handler.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(201)
+		w.Write([]byte("core1"))
+	})
+	cores[1].Handler.HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(202)
+		w.Write([]byte("core2"))
+	})
+	cores[2].Handler.HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(203)
+		w.Write([]byte("core3"))
+	})
 
 	root := cores[0].Root
 
