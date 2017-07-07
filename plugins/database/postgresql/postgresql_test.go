@@ -11,7 +11,6 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins/helper/database/connutil"
-	_ "github.com/lib/pq"
 	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
