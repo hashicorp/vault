@@ -34,7 +34,10 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 	if credsConfig.Region == "" {
 		credsConfig.Region = os.Getenv("AWS_REGION")
 		if credsConfig.Region == "" {
-			credsConfig.Region = "us-east-1"
+			credsConfig.Region = os.Getenv("AWS_DEFAULT_REGION")
+			if credsConfig.Region == "" {
+				credsConfig.Region = "us-east-1"
+			}
 		}
 	}
 
