@@ -79,13 +79,9 @@ type Backend interface {
 	// internal state as needed.
 	InvalidateKey(key string)
 
-	// Configure is used to set up the backend based on the provided backend
-	// configuration. This is primarily used in the the context of backend
-	// plugins, where the RPC server has no context of the core's config.
-	// This is the equivalent of calling framework.Backend.Setup(conf), but
-	// from the RPC client to configure components such as the logger, storage,
-	// system view, etc.
-	Configure(*BackendConfig) error
+	// Setup is used to set up the backend based on the provided backend
+	// configuration.
+	Setup(*BackendConfig) error
 
 	// Type returns the BackendType for the particular backend
 	Type() BackendType

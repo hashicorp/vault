@@ -66,7 +66,7 @@ func (n *NoopBackend) InvalidateKey(k string) {
 	n.Invalidations = append(n.Invalidations, k)
 }
 
-func (n *NoopBackend) Configure(config *logical.BackendConfig) error {
+func (n *NoopBackend) Setup(config *logical.BackendConfig) error {
 	return nil
 }
 

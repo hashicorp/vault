@@ -537,7 +537,7 @@ func (n *rawHTTP) InvalidateKey(string) {
 	// noop
 }
 
-func (n *rawHTTP) Configure(config *logical.BackendConfig) error {
+func (n *rawHTTP) Setup(config *logical.BackendConfig) error {
 	// noop
 	return nil
 }

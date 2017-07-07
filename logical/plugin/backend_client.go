@@ -55,16 +55,16 @@ type HandleExistenceCheckReply struct {
 	Error      *plugin.BasicError
 }
 
-// ConfigureArgs is the args for Configure method.
-type ConfigureArgs struct {
+// SetupArgs is the args for Setup method.
+type SetupArgs struct {
 	StorageID uint32
 	LoggerID  uint32
 	SysViewID uint32
 	Config    map[string]string
 }
 
-// ConfigureReply is the reply for Configure method.
-type ConfigureReply struct {
+// SetupReply is the reply for Setup method.
+type SetupReply struct {
 	Error *plugin.BasicError
 }
 
@@ -105,13 +105,13 @@ func (b *backendPluginClient) SpecialPaths() *logical.Paths {
 }
 
 // System returns vault's system view. The backend client stores the view during
-// Configure, so there is no need to shim the system just to get it back.
+// Setup, so there is no need to shim the system just to get it back.
 func (b *backendPluginClient) System() logical.SystemView {
 	return b.system
 }
 
 // Logger returns vault's logger. The backend client stores the logger during
-// Configure, so there is no need to shim the logger just to get it back.
+// Setup, so there is no need to shim the logger just to get it back.
 func (b *backendPluginClient) Logger() log.Logger {
 	return b.logger
 }
@@ -150,7 +150,7 @@ func (b *backendPluginClient) InvalidateKey(key string) {
 	b.client.Call("Plugin.InvalidateKey", key, &struct{}{})
 }
 
-func (b *backendPluginClient) Configure(config *logical.BackendConfig) error {
+func (b *backendPluginClient) Setup(config *logical.BackendConfig) error {
 	// Shim logical.Storage
 	storageID := b.broker.NextId()
 	go b.broker.AcceptAndServe(storageID, &StorageServer{
@@ -169,15 +169,15 @@ func (b *backendPluginClient) Configure(config *logical.BackendConfig) error {
 		impl: config.System,
 	})
 
-	args := &ConfigureArgs{
+	args := &SetupArgs{
 		StorageID: storageID,
 		LoggerID:  loggerID,
 		SysViewID: sysViewID,
 		Config:    config.Config,
 	}
-	var reply ConfigureReply
+	var reply SetupReply
 
-	err := b.client.Call("Plugin.Configure", args, &reply)
+	err := b.client.Call("Plugin.Setup", args, &reply)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 		return nil, err
 	}
 
-	if err := b.Configure(conf); err != nil {
+	if err := b.Setup(conf); err != nil {
 		return nil, err
 	}
 	return b, nil

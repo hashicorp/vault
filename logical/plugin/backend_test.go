@@ -136,7 +136,7 @@ func TestBackendPlugin_InvalidateKey(t *testing.T) {
 	}
 }
 
-func TestBackendPlugin_Configure(t *testing.T) {
+func TestBackendPlugin_Setup(t *testing.T) {
 	_, cleanup := testBackend(t)
 	defer cleanup()
 }
@@ -160,7 +160,7 @@ func testBackend(t *testing.T) (logical.Backend, func()) {
 	}
 	b := raw.(logical.Backend)
 
-	err = b.Configure(&logical.BackendConfig{
+	err = b.Setup(&logical.BackendConfig{
 		Logger: logformat.NewVaultLogger(log.LevelTrace),
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 300 * time.Second,

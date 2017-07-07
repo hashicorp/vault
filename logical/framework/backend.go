@@ -230,13 +230,6 @@ func (b *Backend) SpecialPaths() *logical.Paths {
 	return b.PathsSpecial
 }
 
-// Setup is used to initialize the backend with the initial backend configuration
-func (b *Backend) Setup(config *logical.BackendConfig) error {
-	b.logger = config.Logger
-	b.system = config.System
-	return nil
-}
-
 // Cleanup is used to release resources and prepare to stop the backend
 func (b *Backend) Cleanup() {
 	if b.Clean != nil {
@@ -260,9 +253,8 @@ func (b *Backend) InvalidateKey(key string) {
 	}
 }
 
-// Configure sets the logger and system view based on the provided
-// logical.BackendConfig
-func (b *Backend) Configure(config *logical.BackendConfig) error {
+// Setup is used to initialize the backend with the initial backend configuration
+func (b *Backend) Setup(config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
 	return nil

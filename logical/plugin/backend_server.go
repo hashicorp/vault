@@ -73,11 +73,11 @@ func (b *backendPluginServer) InvalidateKey(args string, _ *struct{}) error {
 	return nil
 }
 
-func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureReply) error {
+func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 	// Dial for storage
 	storageConn, err := b.broker.Dial(args.StorageID)
 	if err != nil {
-		*reply = ConfigureReply{
+		*reply = SetupReply{
 			Error: plugin.NewBasicError(err),
 		}
 		return nil
@@ -90,7 +90,7 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 	// Dial for logger
 	loggerConn, err := b.broker.Dial(args.LoggerID)
 	if err != nil {
-		*reply = ConfigureReply{
+		*reply = SetupReply{
 			Error: plugin.NewBasicError(err),
 		}
 		return nil
@@ -103,7 +103,7 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 	// Dial for sys view
 	sysViewConn, err := b.broker.Dial(args.SysViewID)
 	if err != nil {
-		*reply = ConfigureReply{
+		*reply = SetupReply{
 			Error: plugin.NewBasicError(err),
 		}
 		return nil
@@ -124,7 +124,7 @@ func (b *backendPluginServer) Configure(args *ConfigureArgs, reply *ConfigureRep
 	// to set b.backend
 	backend, err := b.factory(config)
 	if err != nil {
-		*reply = ConfigureReply{
+		*reply = SetupReply{
 			Error: plugin.NewBasicError(err),
 		}
 	}
