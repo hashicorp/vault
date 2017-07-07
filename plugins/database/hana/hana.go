@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/SAP/go-hdb/driver"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/strutil"
