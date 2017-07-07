@@ -31,15 +31,14 @@ var (
 //
 // 	for {
 // 		select {
-// 		case err := <-DoneCh():
+// 		case err := <-renewer.DoneCh():
 // 			if err != nil {
 // 				log.Fatal(err)
 // 			}
 //
 // 			// Renewal is now over
-// 		case renewal := <-RenewCh():
+// 		case renewal := <-renewer.RenewCh():
 // 			log.Printf("Successfully renewed: %#v", renewal)
-// 		default:
 // 		}
 // 	}
 //
