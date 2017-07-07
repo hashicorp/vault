@@ -1,12 +1,14 @@
 package mongodb
 
 import (
+	"io"
 	"time"
 
 	"encoding/json"
 
 	"fmt"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/plugins"
@@ -124,7 +126,21 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernameConfig dbpl
 	}
 
 	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
-	if err != nil {
+	switch err {
+	case nil:
+	case io.EOF:
+		if err := m.ConnectionProducer.Close(); err != nil {
+			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
+		}
+		session, err := m.getConnection()
+		if err != nil {
+			return "", "", err
+		}
+		err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
+		if err != nil {
+			return "", "", err
+		}
+	default:
 		return "", "", err
 	}
 
@@ -165,7 +181,22 @@ func (m *MongoDB) RevokeUser(statements dbplugin.Statements, username string) er
 	}
 
 	err = session.DB(db).RemoveUser(username)
-	if err != nil && err != mgo.ErrNotFound {
+	switch err {
+	case nil:
+	case mgo.ErrNotFound:
+	case io.EOF:
+		if err := m.ConnectionProducer.Close(); err != nil {
+			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
+		}
+		session, err := m.getConnection()
+		if err != nil {
+			return err
+		}
+		err = session.DB(db).RemoveUser(username)
+		if err != nil {
+			return err
+		}
+	default:
 		return err
 	}
 
