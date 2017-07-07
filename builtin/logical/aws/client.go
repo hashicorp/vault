@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -31,7 +32,10 @@ func getRootConfig(s logical.Storage) (*aws.Config, error) {
 	}
 
 	if credsConfig.Region == "" {
-		credsConfig.Region = "us-east-1"
+		credsConfig.Region = os.Getenv("AWS_REGION")
+		if credsConfig.Region == "" {
+			credsConfig.Region = "us-east-1"
+		}
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
