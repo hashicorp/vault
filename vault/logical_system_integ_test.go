@@ -45,7 +45,7 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 		},
 	}
 
-	_, err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}

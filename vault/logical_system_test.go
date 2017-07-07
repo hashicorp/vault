@@ -985,8 +985,8 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	be := NewSystemBackend(core)
-	b, err := be.Backend.Setup(bc)
+	b := NewSystemBackend(core)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1049,8 +1049,8 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	be := NewSystemBackend(core)
-	b, err := be.Backend.Setup(bc)
+	b := NewSystemBackend(core)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1587,7 +1587,7 @@ func testSystemBackend(t *testing.T) logical.Backend {
 	}
 
 	b := NewSystemBackend(c)
-	_, err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1606,7 +1606,7 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 	}
 
 	b := NewSystemBackend(c)
-	_, err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}

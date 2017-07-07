@@ -6,7 +6,11 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b := Backend()
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend() *backend {

@@ -231,10 +231,10 @@ func (b *Backend) SpecialPaths() *logical.Paths {
 }
 
 // Setup is used to initialize the backend with the initial backend configuration
-func (b *Backend) Setup(config *logical.BackendConfig) (logical.Backend, error) {
+func (b *Backend) Setup(config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
-	return b, nil
+	return nil
 }
 
 // Cleanup is used to release resources and prepare to stop the backend

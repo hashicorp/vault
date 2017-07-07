@@ -29,7 +29,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +361,7 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +386,7 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +411,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -548,7 +548,7 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -700,7 +700,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -778,7 +778,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -843,7 +843,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -991,7 +991,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1171,7 +1171,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1316,7 +1316,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
