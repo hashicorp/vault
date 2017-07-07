@@ -139,7 +139,7 @@ nonce must be provided with each call.
 ```json
 {
   "key": "acbd1234",
-  "nonce": "ad235",
+  "nonce": "ad235"
 }
 ```
 
