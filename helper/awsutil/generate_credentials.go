@@ -70,7 +70,7 @@ func (c *CredentialsConfig) GenerateCredentialChain() (*credentials.Credentials,
 	}
 	def.Config.HTTPClient = c.HTTPClient
 
-	providers = append(providers, defaults.RemoteCredProvider(def.Config, def.Handlers))
+	providers = append(providers, defaults.RemoteCredProvider(*def.Config, def.Handlers))
 
 	// Create the credentials required to access the API.
 	creds := credentials.NewChainCredentials(providers)
