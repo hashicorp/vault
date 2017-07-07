@@ -121,6 +121,42 @@
 			"revisionTime": "2012-06-04T00:48:16Z"
 		},
 		{
+			"checksumSHA1": "VQ/yxZt22x+e32AhKLT4ba/5j2g=",
+			"path": "github.com/SAP/go-hdb/driver",
+			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
+			"revisionTime": "2017-04-01T11:06:20Z"
+		},
+		{
+			"checksumSHA1": "FxJ2ZP3uh+OKcGDKNAm3KpI7jbc=",
+			"path": "github.com/SAP/go-hdb/driver/sqltrace",
+			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
+			"revisionTime": "2017-04-01T11:06:20Z"
+		},
+		{
+			"checksumSHA1": "/b9eSD6x+iph+U5+Y7Cs8t1rlrc=",
+			"path": "github.com/SAP/go-hdb/internal/bufio",
+			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
+			"revisionTime": "2017-04-01T11:06:20Z"
+		},
+		{
+			"checksumSHA1": "Q72M8MwjGlPXLtSXJCgTiSzbb3Q=",
+			"path": "github.com/SAP/go-hdb/internal/protocol",
+			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
+			"revisionTime": "2017-04-01T11:06:20Z"
+		},
+		{
+			"checksumSHA1": "qtZgybyWJwL1qR/afnMaxY5vkCk=",
+			"path": "github.com/SAP/go-hdb/internal/unicode",
+			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
+			"revisionTime": "2017-04-01T11:06:20Z"
+		},
+		{
+			"checksumSHA1": "eHummM7nkyVQIc3GZ9U8qFI6Sj4=",
+			"path": "github.com/SAP/go-hdb/internal/unicode/cesu8",
+			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
+			"revisionTime": "2017-04-01T11:06:20Z"
+		},
+		{
 			"checksumSHA1": "t+uej2kiyqRyQYguygI8t9nJH2w=",
 			"path": "github.com/SermoDigital/jose",
 			"revision": "2bd9b81ac51d6d6134fcd4fd846bd2e7347a15f9",
@@ -1423,6 +1459,18 @@
 			"revisionTime": "2017-06-14T06:48:48Z"
 		},
 		{
+			"checksumSHA1": "5Pu4kIIFrYb1oJWIvsdzr2pM38s=",
+			"path": "golang.org/x/text",
+			"revision": "4ee4af566555f5fbe026368b75596286a312663a",
+			"revisionTime": "2017-05-30T10:19:54Z"
+		},
+		{
+			"checksumSHA1": "ZQdHbB9VYCXwQ+9/CmZPhJv0+SM=",
+			"path": "golang.org/x/text/internal/gen",
+			"revision": "4ee4af566555f5fbe026368b75596286a312663a",
+			"revisionTime": "2017-05-30T10:19:54Z"
+		},
+		{
 			"checksumSHA1": "faFDXp++cLjLBlvsr+izZ+go1WU=",
 			"path": "golang.org/x/text/secure/bidirule",
 			"revision": "9e2f80a6ba7ed4ba13e0cd4b1f094bf916875735",
@@ -1439,6 +1487,12 @@
 			"path": "golang.org/x/text/unicode/bidi",
 			"revision": "9e2f80a6ba7ed4ba13e0cd4b1f094bf916875735",
 			"revisionTime": "2017-06-09T15:53:19Z"
+		},
+		{
+			"checksumSHA1": "ZbYsJjfj1rPbHN+0baD1rg09PXQ=",
+			"path": "golang.org/x/text/unicode/cldr",
+			"revision": "4ee4af566555f5fbe026368b75596286a312663a",
+			"revisionTime": "2017-05-30T10:19:54Z"
 		},
 		{
 			"checksumSHA1": "kKylzIrLEnH8NKyeVAL0dq5gjVQ=",
