@@ -3,6 +3,8 @@
 FEATURES:
 
  * **CouchDB Storage**: CouchDB can now be used for Vault storage
+ * **SAP HANA Database Plugin**: The `databases` backend can now manage users
+   for SAP HANA databases
 
 IMPROVEMENTS:
 
