@@ -7,11 +7,7 @@ import (
 	"sync"
 	"time"
 
-	// Import sql drivers
-	_ "github.com/denisenkom/go-mssqldb"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/vault/helper/parseutil"
-	_ "github.com/lib/pq"
 	"github.com/mitchellh/mapstructure"
 )
 
