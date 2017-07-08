@@ -3,8 +3,10 @@ package awsauth
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"testing"
 )
 
@@ -147,22 +149,41 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 }
 
 func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
-	headers := &http.Header{
+	testIamParser := func(headers interface{}, expectedHeaders *http.Header) error {
+		headersJson, err := json.Marshal(headers)
+		if err != nil {
+			return fmt.Errorf("unable to JSON encode headers: %v", err)
+		}
+		headersB64 := base64.StdEncoding.EncodeToString(headersJson)
+
+		parsedHeaders, err := parseIamRequestHeaders(headersB64)
+		if err != nil {
+			return fmt.Errorf("error parsing encoded headers: %v", err)
+		}
+		if parsedHeaders == nil {
+			return fmt.Errorf("nil result from parsing headers")
+		}
+		if !reflect.DeepEqual(*parsedHeaders, *expectedHeaders) {
+			return fmt.Errorf("parsed headers not equal to input headers")
+		}
+		return nil
+	}
+
+	headersGoStyle := http.Header{
 		"Header1": []string{"Value1"},
 		"Header2": []string{"Value2"},
 	}
-
-	headersJson, err := json.Marshal(*headers)
-	if err != nil {
-		t.Fatalf("unable to JSON encode headers: %v", err)
+	headersMixedType := map[string]interface{}{
+		"Header1": "Value1",
+		"Header2": []string{"Value2"},
 	}
-	headersB64 := base64.StdEncoding.EncodeToString(headersJson)
 
-	parsedHeaders, err := parseIamRequestHeaders(headersB64)
+	err := testIamParser(headersGoStyle, &headersGoStyle)
 	if err != nil {
-		t.Fatalf("error parsing encoded headers: %v", err)
+		t.Errorf("error parsing go-style headers: %v", err)
 	}
-	if parsedHeaders == nil {
-		t.Fatalf("nil result from parsing headers")
+	err = testIamParser(headersMixedType, &headersGoStyle)
+	if err != nil {
+		t.Errorf("error parsing mixed-style headers: %v", err)
 	}
 }

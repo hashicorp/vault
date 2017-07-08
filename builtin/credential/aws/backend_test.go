@@ -1519,7 +1519,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Errorf("bad: expected valid login: resp:%#v", resp)
+		t.Fatalf("bad: expected valid login: resp:%#v", resp)
 	}
 
 	renewReq := &logical.Request{

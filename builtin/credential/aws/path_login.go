@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -1402,10 +1403,28 @@ func parseIamRequestHeaders(headersB64 string) (*http.Header, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64 decode iam_request_headers")
 	}
-	var headers http.Header
-	err = jsonutil.DecodeJSON(headersJson, &headers)
+	var headersDecoded map[string]interface{}
+	err = jsonutil.DecodeJSON(headersJson, &headersDecoded)
 	if err != nil {
 		return nil, fmt.Errorf("failed to JSON decode iam_request_headers %q: %v", headersJson, err)
+	}
+	headers := make(http.Header)
+	for k, v := range headersDecoded {
+		switch typedValue := v.(type) {
+		case string:
+			headers.Add(k, typedValue)
+		case []interface{}:
+			for _, individualVal := range typedValue {
+				switch possibleStrVal := individualVal.(type) {
+				case string:
+					headers.Add(k, possibleStrVal)
+				default:
+					return nil, fmt.Errorf("Header %q contains value %q that has type %s, not string", k, individualVal, reflect.TypeOf(individualVal))
+				}
+			}
+		default:
+			return nil, fmt.Errorf("Header %q value %q has type %s, not string or []interface", k, typedValue, reflect.TypeOf(v))
+		}
 	}
 	return &headers, nil
 }
