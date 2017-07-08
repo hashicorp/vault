@@ -1086,14 +1086,12 @@ func (b *backend) pathLoginUpdateIam(
 	if headersB64 == "" {
 		return logical.ErrorResponse("missing iam_request_headers"), nil
 	}
-	headersJson, err := base64.StdEncoding.DecodeString(headersB64)
+	headers, err := parseIamRequestHeaders(headersB64)
 	if err != nil {
-		return logical.ErrorResponse("failed to base64 decode iam_request_headers"), nil
+		return logical.ErrorResponse(fmt.Sprintf("Error parsing iam_request_headers: %v", err)), nil
 	}
-	var headers http.Header
-	err = jsonutil.DecodeJSON(headersJson, &headers)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to JSON decode iam_request_headers %q: %v", headersJson, err)), nil
+	if headers == nil {
+		return logical.ErrorResponse("nil response when parsing iam_request_headers"), nil
 	}
 
 	config, err := b.lockedClientConfigEntry(req.Storage)
@@ -1299,9 +1297,9 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	return &entity, nil
 }
 
-func validateVaultHeaderValue(headers http.Header, requestUrl *url.URL, requiredHeaderValue string) error {
+func validateVaultHeaderValue(headers *http.Header, requestUrl *url.URL, requiredHeaderValue string) error {
 	providedValue := ""
-	for k, v := range headers {
+	for k, v := range *headers {
 		if strings.ToLower(iamServerIdHeader) == strings.ToLower(k) {
 			providedValue = strings.Join(v, ",")
 			break
@@ -1316,7 +1314,7 @@ func validateVaultHeaderValue(headers http.Header, requestUrl *url.URL, required
 		return fmt.Errorf("expected %s but got %s", requiredHeaderValue, providedValue)
 	}
 
-	if authzHeaders, ok := headers["Authorization"]; ok {
+	if authzHeaders, ok := (*headers)["Authorization"]; ok {
 		// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
 		// We need to extract out the SignedHeaders
 		re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
@@ -1336,7 +1334,7 @@ func validateVaultHeaderValue(headers http.Header, requestUrl *url.URL, required
 	return fmt.Errorf("missing Authorization header")
 }
 
-func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) *http.Request {
+func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers *http.Header) *http.Request {
 	// This is all a bit complicated because the AWS signature algorithm requires that
 	// the Host header be included in the signed headers. See
 	// http://docs.aws.amazon.com/general/latest/gr/sigv4-create-canonical-request.html
@@ -1374,7 +1372,7 @@ func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, 
 		return nil
 	}
 	request.Host = parsedUrl.Host
-	for k, vals := range headers {
+	for k, vals := range *headers {
 		for _, val := range vals {
 			request.Header.Add(k, val)
 		}
@@ -1399,7 +1397,20 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	return result, err
 }
 
-func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (*GetCallerIdentityResult, error) {
+func parseIamRequestHeaders(headersB64 string) (*http.Header, error) {
+	headersJson, err := base64.StdEncoding.DecodeString(headersB64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to base64 decode iam_request_headers")
+	}
+	var headers http.Header
+	err = jsonutil.DecodeJSON(headersJson, &headers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to JSON decode iam_request_headers %q: %v", headersJson, err)
+	}
+	return &headers, nil
+}
+
+func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers *http.Header) (*GetCallerIdentityResult, error) {
 	// NOTE: We need to ensure we're calling STS, instead of acting as an unintended network proxy
 	// The protection against this is that this method will only call the endpoint specified in the
 	// client config (defaulting to sts.amazonaws.com), so it would require a Vault admin to override

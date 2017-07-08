@@ -1,6 +1,8 @@
 package awsauth
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"testing"
@@ -92,27 +94,27 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error parsing test URL: %v", err)
 	}
-	postHeadersMissing := http.Header{
+	postHeadersMissing := &http.Header{
 		"Host":          []string{"Foo"},
 		"Authorization": []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
-	postHeadersInvalid := http.Header{
+	postHeadersInvalid := &http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{"InvalidValue"},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
-	postHeadersUnsigned := http.Header{
+	postHeadersUnsigned := &http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
-	postHeadersValid := http.Header{
+	postHeadersValid := &http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
-	postHeadersSplit := http.Header{
+	postHeadersSplit := &http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
@@ -141,5 +143,26 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	err = validateVaultHeaderValue(postHeadersSplit, requestUrl, canaryHeaderValue)
 	if err != nil {
 		t.Errorf("did NOT validate valid POST request with split Authorization header: %v", err)
+	}
+}
+
+func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
+	headers := &http.Header{
+		"Header1": []string{"Value1"},
+		"Header2": []string{"Value2"},
+	}
+
+	headersJson, err := json.Marshal(*headers)
+	if err != nil {
+		t.Fatalf("unable to JSON encode headers: %v", err)
+	}
+	headersB64 := base64.StdEncoding.EncodeToString(headersJson)
+
+	parsedHeaders, err := parseIamRequestHeaders(headersB64)
+	if err != nil {
+		t.Fatalf("error parsing encoded headers: %v", err)
+	}
+	if parsedHeaders == nil {
+		t.Fatalf("nil result from parsing headers")
 	}
 }
