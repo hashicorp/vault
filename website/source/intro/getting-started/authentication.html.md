@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Authentication"
+page_title: "Authentication - Getting Started"
 sidebar_current: "gettingstarted-auth"
 description: |-
   Authentication to Vault gives a user access to use Vault. Vault can authenticate using multiple methods.
