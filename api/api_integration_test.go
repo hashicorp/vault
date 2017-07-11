@@ -3,7 +3,6 @@ package api_test
 import (
 	"database/sql"
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/hashicorp/vault/api"
@@ -27,12 +26,6 @@ func testVaultServer(t testing.TB) (*api.Client, func()) {
 }
 
 func testVaultServerBackends(t testing.TB, backends map[string]logical.Factory) (*api.Client, func()) {
-	handlers := []http.Handler{
-		http.NewServeMux(),
-		http.NewServeMux(),
-		http.NewServeMux(),
-	}
-
 	coreConfig := &vault.CoreConfig{
 		DisableMlock:    true,
 		DisableCache:    true,
@@ -40,21 +33,20 @@ func testVaultServerBackends(t testing.TB, backends map[string]logical.Factory) 
 		LogicalBackends: backends,
 	}
 
-	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
-	// add routes chained to a Handler-created handler.
-	cores := vault.TestCluster(t, handlers, coreConfig, true)
-	for i, core := range cores {
-		handlers[i].(*http.ServeMux).Handle("/", vaulthttp.Handler(core.Core))
+	cluster := vault.NewTestCluster(t, coreConfig, true)
+	cluster.StartListeners()
+	for _, core := range cluster.Cores {
+		core.Handler.Handle("/", vaulthttp.Handler(core.Core))
 	}
 
 	// make it easy to get access to the active
-	core := cores[0].Core
+	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
 
 	// Grab the root token
-	rootToken := cores[0].Root
+	rootToken := cluster.Cores[0].Root
 
-	client := cores[0].Client
+	client := cluster.Cores[0].Client
 	client.SetToken(rootToken)
 
 	// Sanity check
@@ -65,12 +57,7 @@ func testVaultServerBackends(t testing.TB, backends map[string]logical.Factory) 
 	if secret == nil || secret.Data["id"].(string) != rootToken {
 		t.Fatalf("token mismatch: %#v vs %q", secret, rootToken)
 	}
-
-	return client, func() {
-		for _, core := range cores {
-			defer core.CloseListeners()
-		}
-	}
+	return client, func() { defer cluster.CloseListeners() }
 }
 
 // testPostgresDB creates a testing postgres database in a Docker container,
