@@ -66,8 +66,8 @@ type RenewerInput struct {
 	// Secret is the secret to renew
 	Secret *Secret
 
-	// Grace is a minimum renewal (in seconds) before returring so the upstream
-	// client can do a re-read. This can be used to prevent clients from waiting
+	// Grace is a minimum renewal before returning so the upstream client
+	// can do a re-read. This can be used to prevent clients from waiting
 	// too long to read a new credential and incur downtime.
 	Grace time.Duration
 
