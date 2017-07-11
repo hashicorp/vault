@@ -8,6 +8,8 @@ FEATURES:
 
 IMPROVEMENTS:
 
+ * api: Add client method for a secret renewer background process [GH-2886]
+ * api: Add `RenewTokenAsSelf` [GH-2886]
  * audit/socket: Enhance reconnection logic and don't require the connection to
    be established at unseal time [GH-2934]
  * core: CORS allowed origins can now be configured [GH-2021]
