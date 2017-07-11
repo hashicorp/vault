@@ -65,7 +65,7 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 	// If this is a secret backend, check to see if the prefix conflicts
 	// with an existing mountpoint
 	if prefix != "" {
-		if match := r.MatchingPrefix(prefix); match != "" {
+		if match := r.matchingPrefixInternal(prefix); match != "" {
 			return fmt.Errorf("cannot mount over existing mount '%s'", match)
 		}
 	}
@@ -212,8 +212,8 @@ func (r *Router) MatchingMount(path string) string {
 	return mount
 }
 
-//MatchingPrefix returns a mount prefix that a path may be a part of
-func (r *Router) MatchingPrefix(path string) string {
+// matchingPrefixInternal returns a mount prefix that a path may be a part of
+func (r *Router) matchingPrefixInternal(path string) string {
 	var existing string = ""
 	fn := func(existing_path string, _v interface{}) bool {
 		if strings.HasPrefix(existing_path, path) {
@@ -224,6 +224,14 @@ func (r *Router) MatchingPrefix(path string) string {
 	}
 	r.root.WalkPrefix(path, fn)
 	return existing
+}
+
+// MatchingPrefix is like matchingPrefixInternal but locks the router
+func (r *Router) MatchingPrefix(path string) string {
+	r.l.RLock()
+	match := r.matchingPrefixInternal(path)
+	r.l.RUnlock()
+	return match
 }
 
 // MountConflict determines if there are potential path conflicts
