@@ -296,7 +296,7 @@ func (r *Renewer) sleepDuration(base time.Duration) time.Duration {
 	sleep = sleep / 3.0
 
 	// Use a randomness so many clients do not hit Vault simultaneously.
-	sleep = sleep * r.random.Float64()
+	sleep = sleep * (r.random.Float64() + 1) / 2.0
 
-	return time.Duration(sleep) * time.Second
+	return time.Duration(sleep)
 }
