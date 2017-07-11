@@ -99,16 +99,18 @@ func TestCore_EnableCredential_Local(t *testing.T) {
 		Type: credentialTableType,
 		Entries: []*MountEntry{
 			&MountEntry{
-				Table: credentialTableType,
-				Path:  "noop/",
-				Type:  "noop",
-				UUID:  "abcd",
+				Table:    credentialTableType,
+				Path:     "noop/",
+				Type:     "noop",
+				UUID:     "abcd",
+				Accessor: "noop-abcd",
 			},
 			&MountEntry{
-				Table: credentialTableType,
-				Path:  "noop2/",
-				Type:  "noop",
-				UUID:  "bcde",
+				Table:    credentialTableType,
+				Path:     "noop2/",
+				Type:     "noop",
+				UUID:     "bcde",
+				Accessor: "noop-bcde",
 			},
 		},
 	}
@@ -347,7 +349,8 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 }
 
 func TestDefaultAuthTable(t *testing.T) {
-	table := defaultAuthTable()
+	c, _, _ := TestCoreUnsealed(t)
+	table := c.defaultAuthTable()
 	verifyDefaultAuthTable(t, table)
 }
 

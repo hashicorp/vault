@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/plugins/helper/database/credsutil"
 	"github.com/hashicorp/vault/plugins/helper/database/dbutil"
 	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
 
 const (

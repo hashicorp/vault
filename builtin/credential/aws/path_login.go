@@ -1423,6 +1423,9 @@ func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, bo
 	}
 	// we check for status code afterwards to also print out response body
 	responseBody, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
 	if response.StatusCode != 200 {
 		return nil, fmt.Errorf("received error code %s from STS: %s", response.StatusCode, string(responseBody))
 	}

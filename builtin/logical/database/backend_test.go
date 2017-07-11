@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	stdhttp "net/http"
 	"os"
 	"reflect"
 	"sync"
@@ -78,30 +77,24 @@ func preparePostgresTestContainer(t *testing.T, s logical.Storage, b logical.Bac
 	return
 }
 
-func getCore(t *testing.T) ([]*vault.TestClusterCore, logical.SystemView) {
+func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
 	}
 
-	handler1 := stdhttp.NewServeMux()
-	handler2 := stdhttp.NewServeMux()
-	handler3 := stdhttp.NewServeMux()
+	cluster := vault.NewTestCluster(t, coreConfig, false)
+	cluster.StartListeners()
+	cores := cluster.Cores
+	cores[0].Handler.Handle("/", http.Handler(cores[0].Core))
+	cores[1].Handler.Handle("/", http.Handler(cores[1].Core))
+	cores[2].Handler.Handle("/", http.Handler(cores[2].Core))
 
-	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
-	// add routes chained to a Handler-created handler.
-	cores := vault.TestCluster(t, []stdhttp.Handler{handler1, handler2, handler3}, coreConfig, false)
-	handler1.Handle("/", http.Handler(cores[0].Core))
-	handler2.Handle("/", http.Handler(cores[1].Core))
-	handler3.Handle("/", http.Handler(cores[2].Core))
+	sys := vault.TestDynamicSystemView(cores[0].Core)
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", "TestBackend_PluginMain")
 
-	core := cores[0]
-
-	sys := vault.TestDynamicSystemView(core.Core)
-	vault.TestAddTestPlugin(t, core.Core, "postgresql-database-plugin", "TestBackend_PluginMain")
-
-	return cores, sys
+	return cluster, sys
 }
 
 func TestBackend_PluginMain(t *testing.T) {
@@ -136,10 +129,9 @@ func TestBackend_PluginMain(t *testing.T) {
 func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+
+	cluster, sys := getCluster(t)
+	defer cluster.CloseListeners()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -201,10 +193,8 @@ func TestBackend_config_connection(t *testing.T) {
 }
 
 func TestBackend_basic(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.CloseListeners()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -294,10 +284,8 @@ func TestBackend_basic(t *testing.T) {
 }
 
 func TestBackend_connectionCrud(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.CloseListeners()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -441,10 +429,8 @@ func TestBackend_connectionCrud(t *testing.T) {
 }
 
 func TestBackend_roleCrud(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.CloseListeners()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -553,10 +539,8 @@ func TestBackend_roleCrud(t *testing.T) {
 	}
 }
 func TestBackend_allowedRoles(t *testing.T) {
-	cores, sys := getCore(t)
-	for _, core := range cores {
-		defer core.CloseListeners()
-	}
+	cluster, sys := getCluster(t)
+	defer cluster.CloseListeners()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}

@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-errors/errors"
 	"github.com/hashicorp/vault/helper/policyutil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -55,6 +56,11 @@ func (b *backend) pathLogin(
 
 	sort.Strings(policies)
 
+	cfg, err := b.getConfig(req)
+	if err != nil {
+		return nil, err
+	}
+
 	resp.Auth = &logical.Auth{
 		Policies: policies,
 		Metadata: map[string]string{
@@ -66,6 +72,7 @@ func (b *backend) pathLogin(
 		},
 		DisplayName: username,
 		LeaseOptions: logical.LeaseOptions{
+			TTL:       cfg.TTL,
 			Renewable: true,
 		},
 	}
@@ -87,7 +94,25 @@ func (b *backend) pathLoginRenew(
 		return nil, fmt.Errorf("policies have changed, not renewing")
 	}
 
-	return framework.LeaseExtend(0, 0, b.System())(req, d)
+	cfg, err := b.getConfig(req)
+	if err != nil {
+		return nil, err
+	}
+
+	return framework.LeaseExtend(cfg.TTL, cfg.MaxTTL, b.System())(req, d)
+}
+
+func (b *backend) getConfig(req *logical.Request) (*ConfigEntry, error) {
+
+	cfg, err := b.Config(req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, errors.New("Okta backend not configured")
+	}
+
+	return cfg, nil
 }
 
 const pathLoginSyn = `
