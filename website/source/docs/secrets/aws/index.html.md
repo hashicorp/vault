@@ -43,10 +43,16 @@ The following parameters are required:
   credentials.
 - `secret_key` - the AWS secret key that has permission to manage IAM
   credentials.
-- `region` the AWS region for API calls.
 
-Note: the client uses the official AWS SDK and will use environment variable or IAM
-role-provided credentials if available.
+The following parameter is optional:
+
+- `region` the AWS region for API calls. If not provided, the `AWS_REGION` and
+  `AWS_DEFAULT_REGION` env vars will be used, in that order. If there is still
+  no region, `us-east-1` will be used as a fallback.
+
+Note: the client uses the official AWS SDK and will use the specified
+credentials, environment credentials, shared file credentials, or IAM role/ECS
+task credentials in that order.
 
 The next step is to configure a role. A role is a logical name that maps
 to a policy used to generated those credentials.
