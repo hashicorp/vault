@@ -118,3 +118,22 @@ func TestBuilder_sameKeyMultipleTimes(t *testing.T) {
 		t.Fatalf("bad: %#v", actual)
 	}
 }
+
+func TestBuilder_specialCharacteresInKey(t *testing.T) {
+	var b Builder
+	b.Stdin = bytes.NewBufferString("{\"foo\": \"bay\"}")
+	err := b.Add("@foo=bar", "-foo=baz", "-")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := map[string]interface{}{
+		"@foo": "bar",
+		"-foo": "baz",
+		"foo":  "bay",
+	}
+	actual := b.Map()
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("bad: %#v", actual)
+	}
+}
