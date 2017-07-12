@@ -12,6 +12,8 @@ IMPROVEMENTS:
  * api: Add `RenewTokenAsSelf` [GH-2886]
  * audit/socket: Enhance reconnection logic and don't require the connection to
    be established at unseal time [GH-2934]
+ * command/auth: Add `-token-only` flag to `vault auth` that returns only the
+   token on stdout and does not store it via the token helper [GH-2855]
  * core: CORS allowed origins can now be configured [GH-2021]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
