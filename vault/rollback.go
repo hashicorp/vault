@@ -113,8 +113,15 @@ func (m *RollbackManager) triggerRollbacks() {
 	for _, e := range backends {
 		path := e.Path
 		if e.Table == credentialTableType {
-			path = "auth/" + path
+			path = credentialRoutePrefix + path
 		}
+
+		// When the mount is filtered, the backend will be nil
+		backend := m.router.MatchingBackend(path)
+		if backend == nil {
+			continue
+		}
+
 		m.inflightLock.RLock()
 		_, ok := m.inflight[path]
 		m.inflightLock.RUnlock()
