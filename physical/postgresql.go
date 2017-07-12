@@ -316,7 +316,7 @@ func (m *PostgreSQLLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		<-stopCh
 		cancel()
 	}()
-	ticker := time.NewTicker(PostgreSQLLockRetryInterval)
+	ticker := time.NewTicker(m.pollInterval)
 	defer ticker.Stop()
 	for {
 		cleanupSQL := fmt.Sprintf(
@@ -361,10 +361,16 @@ func (m *PostgreSQLLock) relationName() string {
 // watch periodically queries the lock table and closes the m.leader channel if
 // the lock is lost
 func (m *PostgreSQLLock) watch() {
-	retries := PostgreSQLLockErrorRetryMax
-	ticker := time.NewTicker(PostgreSQLLockRenewInterval)
-	defer ticker.Stop()
+	// refresh the lock halfway through its expiration
+	refreshTicker := time.NewTicker(m.lockTTL / 2)
+	defer refreshTicker.Stop()
+	pollTicker := time.NewTicker(m.pollInterval)
+	defer pollTicker.Stop()
+	ticker := refreshTicker
+
 	defer close(m.leader)
+
+	var lastRefresh time.Time
 	for {
 		select {
 		case <-ticker.C:
@@ -376,17 +382,21 @@ func (m *PostgreSQLLock) watch() {
 			r, err := m.client.Exec(refreshLockSQL, m.lockTTL.String(), m.key,
 				m.vaultID)
 			if err != nil || r == nil {
-				retries--
-				if retries == 0 {
+				if lastRefresh.Add(m.lockTTL).Before(time.Now()) {
+					// Lock is definitely expired by now
 					return
 				}
+				// Refresh faster
+				ticker = pollTicker
 				continue
 			}
+			ticker = refreshTicker
+
 			if rows, _ := r.RowsAffected(); rows == 0 {
 				// Lock lost!
 				return
 			}
-			retries = PostgreSQLLockErrorRetryMax
+			lastRefresh = time.Now()
 		}
 	}
 }
