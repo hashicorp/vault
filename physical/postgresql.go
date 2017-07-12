@@ -5,40 +5,48 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/lib/pq"
-	log "github.com/mgutz/logxi/v1"
+	"github.com/mgutz/logxi/v1"
 )
 
 const (
-	// PostgreSQLLockRetryInterval is the interval of time to wait between new
+	// DefaultPostgreSQLPollInterval is the interval of time to wait between new
 	// locking attempts
-	PostgreSQLLockRetryInterval = time.Second
-	// PostgreSQLLockErrorRetryMax is the number of retries to make after an
-	// error fetching the status of a lock
-	PostgreSQLLockErrorRetryMax = 5
-	// PostgreSQLLockTTL is the maximum length of time of a lock, in seconds
-	PostgreSQLLockTTL = 10
-	// PostgreSQLLockRenewInterval is the interval of time locks are renewed
-	PostgreSQLLockRenewInterval = 5 * time.Second
+	DefaultPostgreSQLPollInterval = 1 * time.Second
+	// DefaultPostgreSQLLockTTL is the default TTL for a HA lock
+	DefaultPostgreSQLLockTTL        = 10 * time.Second
+	DefaultPostgreSQLLockSchemaName = ""
+	DefaultPostgreSQLLockTableName  = "vault_lock"
+
+	PostgreSQLLockTTLConf            = "lock_ttl"
+	PostgreSQLPollIntervalConf       = "poll_interval"
+	PostgreSQLLockTableNameConf      = "lock_table"
+	PostgreSQLLockSchemaNameConf     = "lock_schema"
+	MinimumPostgreSQLPollInterval    = 1 * time.Second
+	MinimumPostgreSQLLockGracePeriod = 1 * time.Second
 )
 
 // PostgreSQL Backend is a physical backend that stores data
 // within a PostgreSQL database.
 type PostgreSQLBackend struct {
 	table        string
-	lock_table   string
 	client       *sql.DB
 	put_query    string
 	get_query    string
 	delete_query string
 	list_query   string
 	logger       log.Logger
+
+	lockSchemaName string
+	lockTableName  string
+	pollInterval   time.Duration
+	lockTTL        time.Duration
 }
 
 // newPostgreSQLBackend constructs a PostgreSQL backend using the given
@@ -50,17 +58,68 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 		return nil, fmt.Errorf("missing connection_url")
 	}
 
-	unquoted_table, ok := conf["table"]
+	unquoted_table, ok := conf["lockTableName"]
 	if !ok {
 		unquoted_table = "vault_kv_store"
 	}
 	quoted_table := pq.QuoteIdentifier(unquoted_table)
 
-	unquoted_lock_table, ok := conf["lock_table"]
-	if !ok {
-		unquoted_lock_table = "vault_lock"
+	var err error
+
+	lockTTL := DefaultPostgreSQLLockTTL
+	if rawLockTTL, found := conf[PostgreSQLLockTTLConf]; found {
+		if lockTTL, err = time.ParseDuration(rawLockTTL); err != nil {
+			return nil, fmt.Errorf("%s error: %v", PostgreSQLLockTTLConf, err)
+		}
 	}
-	quoted_lock_table := pq.QuoteIdentifier(unquoted_lock_table)
+
+	pollInterval := DefaultPostgreSQLPollInterval
+	if rawPollInterval, found := conf[PostgreSQLPollIntervalConf]; found {
+		if pollInterval, err = time.ParseDuration(rawPollInterval); err != nil {
+			return nil, fmt.Errorf("%s error: %v", err, PostgreSQLPollIntervalConf)
+		}
+	}
+
+	lockTableName := DefaultPostgreSQLLockTableName
+	if rawLockTableName, found := conf[PostgreSQLLockTableNameConf]; found {
+		lockTableName = strings.TrimSpace(rawLockTableName)
+	}
+
+	lockSchemaName := DefaultPostgreSQLLockSchemaName
+	if rawLockSchemaName, found := conf[PostgreSQLLockSchemaNameConf]; found {
+		lockSchemaName = strings.TrimSpace(rawLockSchemaName)
+	}
+
+	// Sanity check inputs
+
+	if pollInterval < 0 {
+		return nil, fmt.Errorf("%s (%q) must be a positive time duration",
+			PostgreSQLPollIntervalConf, pollInterval)
+	}
+
+	if !(pollInterval < lockTTL) {
+		return nil, fmt.Errorf("%s (%q) must be smaller than the %s (%q)",
+			PostgreSQLPollIntervalConf, PostgreSQLLockTTLConf, pollInterval,
+			lockTTL)
+	}
+
+	if pollInterval < MinimumPostgreSQLPollInterval {
+		return nil, fmt.Errorf("%s (%q) can not be less than %q",
+			PostgreSQLPollIntervalConf, pollInterval,
+			MinimumPostgreSQLPollInterval)
+	}
+
+	if lockTTL-pollInterval < MinimumPostgreSQLLockGracePeriod {
+		return nil, fmt.Errorf(
+			"There must be at least %s between the %s (%q) and %s (%q)",
+			MinimumPostgreSQLLockGracePeriod, PostgreSQLPollIntervalConf,
+			pollInterval, PostgreSQLLockTTLConf, lockTTL)
+	}
+
+	if lockTableName == "" {
+		return nil, fmt.Errorf("%s error: can not be an empty string",
+			PostgreSQLLockTableNameConf)
+	}
 
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
@@ -89,7 +148,6 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 	// Setup the backend.
 	m := &PostgreSQLBackend{
 		table:        quoted_table,
-		lock_table:   quoted_lock_table,
 		client:       db,
 		put_query:    put_query,
 		get_query:    "SELECT value FROM " + quoted_table + " WHERE path = $1 AND key = $2",
@@ -98,6 +156,11 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 			"UNION SELECT DISTINCT substring(substr(path, length($1)+1) from '^.*?/') FROM " +
 			quoted_table + " WHERE parent_path LIKE concat($1, '%')",
 		logger: logger,
+
+		lockSchemaName: lockSchemaName,
+		lockTableName:  lockTableName,
+		pollInterval:   pollInterval,
+		lockTTL:        lockTTL,
 	}
 
 	return m, nil
@@ -206,8 +269,13 @@ func (m *PostgreSQLBackend) HAEnabled() bool {
 
 // PostgreSQLLock implements the Lock interface for PostgreSQL
 type PostgreSQLLock struct {
-	client *sql.DB
-	table  string
+	client         *sql.DB
+	hostname       string
+	lockSchemaName string
+	lockTableName  string
+	pollInterval   time.Duration
+	lockTTL        time.Duration
+
 	leader chan struct{}
 
 	key     string
@@ -221,13 +289,23 @@ func (m *PostgreSQLBackend) LockWith(key, value string) (Lock, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Record the hostname to give DBAs a chance to figure out which Vault
+	// service has the lock
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "vault"
+	}
 	return &PostgreSQLLock{
-		client:  m.client,
-		table:   m.lock_table,
-		leader:  make(chan struct{}),
-		key:     key,
-		value:   value,
-		vaultID: id,
+		client:         m.client,
+		hostname:       hostname,
+		lockSchemaName: m.lockSchemaName,
+		lockTableName:  m.lockTableName,
+		pollInterval:   m.pollInterval,
+		lockTTL:        m.lockTTL,
+		leader:         make(chan struct{}),
+		key:            key,
+		value:          value,
+		vaultID:        fmt.Sprintf("%s-%s", hostname, id),
 	}, nil
 }
 
@@ -241,22 +319,18 @@ func (m *PostgreSQLLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	ticker := time.NewTicker(PostgreSQLLockRetryInterval)
 	defer ticker.Stop()
 	for {
-		_, err := m.client.ExecContext(
-			ctx,
-			"DELETE FROM "+m.table+" WHERE expiration < now()",
+		cleanupSQL := fmt.Sprintf(
+			"DELETE FROM %s WHERE expiration < now()", m.relationName(),
 		)
+		_, err := m.client.ExecContext(ctx, cleanupSQL)
 		if err != nil {
 			return nil, err
 		}
-		lockTTL := strconv.Itoa(PostgreSQLLockTTL)
-		_, err = m.client.ExecContext(
-			ctx,
-			`INSERT INTO `+m.table+` (key, value, vault_id, expiration)
-				VALUES ($1, $2, $3, now() + interval '`+lockTTL+` seconds')`,
-			m.key,
-			m.value,
-			m.vaultID,
-		)
+		lockSQL := fmt.Sprintf(`INSERT INTO %s (key, value, vault_id,
+			expiration) VALUES ($1, $2, $3, now() + $4::INTERVAL)`,
+			m.relationName())
+		_, err = m.client.ExecContext(ctx, lockSQL, m.key, m.value, m.vaultID,
+			m.lockTTL.String())
 		if err == nil {
 			break
 		}
@@ -272,8 +346,20 @@ func (m *PostgreSQLLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 	return m.leader, nil
 }
 
-// watch periodically queries the vault_lock table and closes the m.leader
-// channel if the lock is lost
+func (m *PostgreSQLLock) relationName() string {
+	relationName := pq.QuoteIdentifier(m.lockTableName)
+	if m.lockSchemaName != "" {
+		relationName = fmt.Sprintf(
+			"%s.%s",
+			pq.QuoteIdentifier(m.lockSchemaName),
+			pq.QuoteIdentifier(m.lockTableName),
+		)
+	}
+	return relationName
+}
+
+// watch periodically queries the lock table and closes the m.leader channel if
+// the lock is lost
 func (m *PostgreSQLLock) watch() {
 	retries := PostgreSQLLockErrorRetryMax
 	ticker := time.NewTicker(PostgreSQLLockRenewInterval)
@@ -282,14 +368,13 @@ func (m *PostgreSQLLock) watch() {
 	for {
 		select {
 		case <-ticker.C:
-			lockTTL := strconv.Itoa(PostgreSQLLockTTL)
-			r, err := m.client.Exec(
-				`UPDATE `+m.table+`
-				SET expiration = now() + interval '`+lockTTL+` seconds'
-				WHERE key = $1 AND vault_id = $2 AND expiration >= now()`,
-				m.key,
-				m.vaultID,
+			refreshLockSQL := fmt.Sprintf(
+				`UPDATE %s SET expiration = now() + $1::INTERVAL WHERE key = $2
+				AND vault_id = $3 AND expiration >= now()`,
+				m.relationName(),
 			)
+			r, err := m.client.Exec(refreshLockSQL, m.lockTTL.String(), m.key,
+				m.vaultID)
 			if err != nil || r == nil {
 				retries--
 				if retries == 0 {
@@ -308,11 +393,10 @@ func (m *PostgreSQLLock) watch() {
 
 // Unlock unlocks a lock. It returns an error if the lock was not in use.
 func (m *PostgreSQLLock) Unlock() error {
-	r, err := m.client.Exec(
-		`DELETE FROM `+m.table+` WHERE key = $1 AND vault_id = $2`,
-		m.key,
-		m.vaultID,
+	unlockSQL := fmt.Sprintf(
+		"DELETE FROM %s WHERE key = $1 AND vault_id = $2", m.relationName(),
 	)
+	r, err := m.client.Exec(unlockSQL, m.key, m.vaultID)
 	if err != nil {
 		return err
 	}
@@ -331,11 +415,10 @@ func (m *PostgreSQLLock) Unlock() error {
 
 // Value returns whether the lock is held and the value associated with it
 func (m *PostgreSQLLock) Value() (held bool, value string, err error) {
-	err = m.client.QueryRow(`
-		SELECT expiration > now(), value
-		FROM `+m.table+`
-		WHERE key = $1`,
-		m.key,
-	).Scan(&held, &value)
+	valueSQL := fmt.Sprintf(
+		"SELECT expiration > now(), value FROM %s WHERE key = $1",
+		m.lockTableName,
+	)
+	err = m.client.QueryRow(valueSQL, m.key).Scan(&held, &value)
 	return held, value, err
 }
