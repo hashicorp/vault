@@ -41,10 +41,10 @@ CREATE TABLE vault_kv_store (
 CREATE INDEX parent_path_idx ON vault_kv_store (parent_path);
 
 CREATE TABLE vault_lock (
-  key        TEXT PRIMARY KEY,
-  value      TEXT,
-  vault_id   TEXT NOT NULL,
-  expiration TIMESTAMP NOT NULL
+  key        TEXT COLLATE "C" PRIMARY KEY,
+  value      TEXT COLLATE "C",
+  vault_id   TEXT COLLATE "C" NOT NULL,
+  expiration TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 ```
 
@@ -91,6 +91,19 @@ LANGUAGE plpgsql;
 
 - `lock_table` `(string: "vault_lock")` – Specifies the name of the table to use
   for high availability locks. Like `table`, this table must already exist.
+
+- `lock_ttl (string: "10s")` - Specify the duration of the leader's lease. Once
+   the leader has acquired the lock, it will refresh its lock halfway through
+   its lease. The first time the leader fails to renew its lease it will attempt
+   every `poll_interval` until either successful or it loses its lease.
+
+- `poll_interval (string: "1s")` - Specify how often clients should poll for the
+   lock.
+
+- `lock_schema (string: "")` - Specify the schema name to use. If specified the
+  `lock_schema` is used to provide the fully-qualified name of the `lock_table`
+   and bypass looking for the table using the connection's [`search_path`](https://www.postgresql.org/docs/current/static/ddl-schemas.html#DDL-SCHEMAS-PATH).
+
 
 ## `postgresql` Examples
 
