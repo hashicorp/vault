@@ -12,12 +12,7 @@ description: |-
 The `/sys/wrapping/wrap` endpoint wraps the given values in a response-wrapped
 token.
 
-**Note**: Users with access to this endpoint can unwrap data and re-wrap it
-into a new response-wrapped token. Such a user could potentially misrepresent
-the source of the response-wrapped token, and as a result claim to have not
-seen the wrapped data when they have in fact accessed it.
-
-## Wrapping
+## Wrapping Wrap
 
 This endpoint wraps the given user-supplied data inside a response-wrapped
 token.
