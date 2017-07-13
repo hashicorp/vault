@@ -1293,25 +1293,25 @@ func handleError(
 // handleUnmount is used to unmount a path
 func (b *SystemBackend) handleUnmount(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	b.Core.clusterParamsLock.RLock()
-	repState := b.Core.replicationState
-	b.Core.clusterParamsLock.RUnlock()
+	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
 
-	suffix := strings.TrimPrefix(req.Path, "mounts/")
-	if len(suffix) == 0 {
-		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
-	}
-
-	suffix = sanitizeMountPath(suffix)
-
-	entry := b.Core.router.MatchingMountEntry(suffix)
+	repState := b.Core.ReplicationState()
+	entry := b.Core.router.MatchingMountEntry(path)
 	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
 		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
 	}
 
+	// We return success when the mount does not exists to not expose if the
+	// mount existed or not
+	match := b.Core.router.MatchingMount(path)
+	if match == "" || path != match {
+		return nil, nil
+	}
+
 	// Attempt unmount
-	if existed, err := b.Core.unmount(suffix); existed && err != nil {
-		b.Backend.Logger().Error("sys: unmount failed", "path", suffix, "error", err)
+	if err := b.Core.unmount(path); err != nil {
+		b.Backend.Logger().Error("sys: unmount failed", "path", path, "error", err)
 		return handleError(err)
 	}
 
@@ -1714,16 +1714,26 @@ func (b *SystemBackend) handleEnableAuth(
 // handleDisableAuth is used to disable a credential backend
 func (b *SystemBackend) handleDisableAuth(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	suffix := strings.TrimPrefix(req.Path, "auth/")
-	if len(suffix) == 0 {
-		return logical.ErrorResponse("path cannot be blank"), logical.ErrInvalidRequest
+	path := data.Get("path").(string)
+	path = sanitizeMountPath(path)
+	fullPath := credentialRoutePrefix + path
+
+	repState := b.Core.ReplicationState()
+	entry := b.Core.router.MatchingMountEntry(fullPath)
+	if entry != nil && !entry.Local && repState == consts.ReplicationSecondary {
+		return logical.ErrorResponse("cannot unmount a non-local mount on a replication secondary"), nil
 	}
 
-	suffix = sanitizeMountPath(suffix)
+	// We return success when the mount does not exists to not expose if the
+	// mount existed or not
+	match := b.Core.router.MatchingMount(fullPath)
+	if match == "" || fullPath != match {
+		return nil, nil
+	}
 
 	// Attempt disable
-	if existed, err := b.Core.disableCredential(suffix); existed && err != nil {
-		b.Backend.Logger().Error("sys: disable auth mount failed", "path", suffix, "error", err)
+	if err := b.Core.disableCredential(path); err != nil {
+		b.Backend.Logger().Error("sys: disable auth mount failed", "path", path, "error", err)
 		return handleError(err)
 	}
 	return nil, nil

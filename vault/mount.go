@@ -169,26 +169,6 @@ type MountConfig struct {
 	ForceNoCache    bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
 }
 
-// Returns a deep copy of the mount entry
-func (e *MountEntry) Clone() *MountEntry {
-	optClone := make(map[string]string)
-	for k, v := range e.Options {
-		optClone[k] = v
-	}
-	return &MountEntry{
-		Table:       e.Table,
-		Path:        e.Path,
-		Type:        e.Type,
-		Description: e.Description,
-		UUID:        e.UUID,
-		Accessor:    e.Accessor,
-		Config:      e.Config,
-		Options:     optClone,
-		Local:       e.Local,
-		Tainted:     e.Tainted,
-	}
-}
-
 // Mount is used to mount a new backend to the mount table.
 func (c *Core) mount(entry *MountEntry) error {
 	// Ensure we end the path in a slash
@@ -271,7 +251,7 @@ func (c *Core) mount(entry *MountEntry) error {
 
 // Unmount is used to unmount a path. The boolean indicates whether the mount
 // was found.
-func (c *Core) unmount(path string) (bool, error) {
+func (c *Core) unmount(path string) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -280,14 +260,14 @@ func (c *Core) unmount(path string) (bool, error) {
 	// Prevent protected paths from being unmounted
 	for _, p := range protectedMounts {
 		if strings.HasPrefix(path, p) {
-			return true, fmt.Errorf("cannot unmount '%s'", path)
+			return fmt.Errorf("cannot unmount '%s'", path)
 		}
 	}
 
 	// Verify exact match of the route
 	match := c.router.MatchingMount(path)
 	if match == "" || path != match {
-		return false, fmt.Errorf("no matching mount")
+		return fmt.Errorf("no matching mount")
 	}
 
 	// Get the view for this backend
@@ -295,23 +275,23 @@ func (c *Core) unmount(path string) (bool, error) {
 
 	// Mark the entry as tainted
 	if err := c.taintMountEntry(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Taint the router path to prevent routing. Note that in-flight requests
 	// are uncertain, right now.
 	if err := c.router.Taint(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Invoke the rollback manager a final time
 	if err := c.rollback.Rollback(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Revoke all the dynamic keys
 	if err := c.expiration.RevokePrefix(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Call cleanup function if it exists
@@ -322,22 +302,22 @@ func (c *Core) unmount(path string) (bool, error) {
 
 	// Unmount the backend entirely
 	if err := c.router.Unmount(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Clear the data in the view
 	if err := logical.ClearView(view); err != nil {
-		return true, err
+		return err
 	}
 
 	// Remove the mount table entry
 	if err := c.removeMountEntry(path); err != nil {
-		return true, err
+		return err
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: successfully unmounted", "path", path)
 	}
-	return true, nil
+	return nil
 }
 
 // removeMountEntry is used to remove an entry from the mount table
