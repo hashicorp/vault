@@ -80,11 +80,6 @@ path "cubbyhole/*" {
     capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-# Allow a token to wrap arbitrary values in a response-wrapping token
-path "sys/wrapping/wrap" {
-    capabilities = ["update"]
-}
-
 # Allow a token to look up the creation time and TTL of a given
 # response-wrapping token
 path "sys/wrapping/lookup" {
