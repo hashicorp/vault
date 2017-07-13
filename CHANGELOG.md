@@ -31,6 +31,7 @@ BUG FIXES:
    `transit` key [GH-2958]
  * auth/token: Don't allow using the same token ID twice when manually
    specifying [GH-2916]
+* cli: Fix issue with parsing keys that start with special characters [GH-2998]
  * core: Relocated `sys/leases/renew` returns same payload as original 
    `sys/leases` endpoint [GH-2891]
  * secret/totp: Ensure codes can only be used once. This makes some automated
