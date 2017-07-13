@@ -38,6 +38,9 @@ func (b *backend) pathLoginUpdate(req *logical.Request, data *framework.FieldDat
 		return logical.ErrorResponse(fmt.Sprintf("failed to validate SecretID: %s", err)), nil
 	}
 
+	// Always include the role name, for later filtering
+	metadata["role_name"] = roleName
+
 	auth := &logical.Auth{
 		NumUses: role.TokenNumUses,
 		Period:  role.Period,
