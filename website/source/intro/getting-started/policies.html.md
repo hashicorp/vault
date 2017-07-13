@@ -1,19 +1,19 @@
 ---
 layout: "intro"
-page_title: "Access Control Policies"
-sidebar_current: "gettingstarted-acl"
+page_title: "Policies - Getting Started"
+sidebar_current: "gettingstarted-policies"
 description: |-
-  Access control policies in Vault control what a user can access.
+  Policies in Vault control what a user can access.
 ---
 
-# Access Control Policies (ACLs)
+# Policies
 
-Access control policies in Vault control what a user can access. In
+Policies in Vault control what a user can access. In
 the last section, we learned about _authentication_. This section is
 about _authorization_.
 
 For authentication Vault has multiple options or backends that
-can be enabled and used. For authorization and access control policies Vault always
+can be enabled and used. For authorization and policies Vault always
 uses the same format. All authentication backends must map identities back to
 the core policies that are configured with Vault.
 
