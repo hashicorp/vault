@@ -223,6 +223,26 @@ func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) 
 		}
 	}
 
+	// get any returned headers
+	headersRaw, ok := resp.Data[logical.HTTPHeaders]
+	if !ok {
+		retErr(w, "no headers given")
+		return
+	} else {
+		headers, ok := headersRaw.(map[string]string)
+		if !ok {
+			retErr(w, "returned headers are not a map")
+			return
+		} else {
+			for header, value := range headers {
+				w.Header().Set(header, value)
+			}
+
+			// some headers set now, so response is no longer empty
+			nonEmpty = false
+		}
+	}
+
 	if nonEmpty {
 		// Get the body
 		bodyRaw, ok := resp.Data[logical.HTTPRawBody]

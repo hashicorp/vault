@@ -23,6 +23,11 @@ const (
 	// This can only be specified for non-secrets, and should should be similarly
 	// avoided like the HTTPContentType. The value must be an integer.
 	HTTPStatusCode = "http_status_code"
+
+	// HTTPHeaders is a mechanism to support returning HTTP headers with the response.
+	// This can only be specified for non-secrets, and should should be similarly
+	// avoided like the HTTPContentType. The value must be a map of string to string.
+	HTTPHeaders = "http_headers"
 )
 
 // Response is a struct that stores the response of a request.

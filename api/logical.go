@@ -79,25 +79,27 @@ func (c *Logical) List(path string) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
-func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
+func (c *Logical) WriteRaw(path string, data map[string]interface{}) (*Response, *Secret, error) {
 	r := c.c.NewRequest("PUT", "/v1/"+path)
 	if err := r.SetJSONBody(data); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
+	var secret *Secret = nil
 	resp, err := c.c.RawRequest(r)
 	if resp != nil {
 		defer resp.Body.Close()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode == 200 {
-		return ParseSecret(resp.Body)
+		if err == nil && resp.StatusCode == 200 {
+			secret, err = ParseSecret(resp.Body)
+		}
 	}
 
-	return nil, nil
+	return resp, secret, err
+}
+
+func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
+	_, secret, err := c.WriteRaw(path, data)
+	return secret, err
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {

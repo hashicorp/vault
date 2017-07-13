@@ -187,6 +187,12 @@
 			"revisionTime": "2017-06-08T22:14:41Z"
 		},
 		{
+			"checksumSHA1": "m1aIIVtZXprQLTHexJ7e0fBZ/fc=",
+			"path": "github.com/apcera/gssapi",
+			"revision": "5fb4217df13b8e6878046fe1e5c10e560e1b86dc",
+			"revisionTime": "2016-10-10T21:59:02Z"
+		},
+		{
 			"checksumSHA1": "M+ZeYktTT2wak9ZvQ0OZBbIHAGo=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "f036747b9d0e8590f175a5d654a2194a7d9df4b5",

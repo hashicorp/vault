@@ -347,9 +347,15 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	originalClientTokenRemainingUses := req.ClientTokenRemainingUses
 	req.ClientTokenRemainingUses = 0
 
-	// Cache the headers and hide them from backends
+	// Cache the headers and hide all but a small, standard set of them from backends
 	headers := req.Headers
-	req.Headers = nil
+	for header := range headers {
+		switch header {
+		case "Authorization":
+		default:
+			delete(req.Headers, header)
+		}
+	}
 
 	// Cache the wrap info of the request
 	var wrapInfo *logical.RequestWrapInfo
