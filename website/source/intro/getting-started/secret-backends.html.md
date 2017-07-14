@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Secret Backends"
+page_title: "Secret Backends - Getting Started"
 sidebar_current: "gettingstarted-secretbackends"
 description: |-
   Secret backends are what create, read, update, and delete secrets.
@@ -34,7 +34,7 @@ for the next page, where we'll create dynamic secrets.
 
 To start, let's mount another _generic_ backend. Just like a normal
 filesystem, Vault can mount a backend multiple times at different
-mount points. This is useful if you want different access control policies
+mount points. This is useful if you want different policies
 (covered later) or configurations for different paths.
 
 To mount the backend:
