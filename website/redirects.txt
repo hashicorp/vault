@@ -80,3 +80,4 @@
 /docs/guides/upgrading/upgrade-to-0.6.3.html /guides/upgrading/upgrade-to-0.6.3.html
 /docs/guides/upgrading/upgrade-to-0.6.4.html /guides/upgrading/upgrade-to-0.6.4.html
 /docs/guides/upgrading/upgrade-to-0.7.0.html /guides/upgrading/upgrade-to-0.7.0.html
+/intro/getting-started/acl.html        /intro/getting-started/policies.html
