@@ -22,10 +22,6 @@ func TestRandomAlphaNumeric(t *testing.T) {
 		t.Fatalf("Unexpected length of string, expected 20, got string: %s", s)
 	}
 
-	if len(s) == 0 {
-		t.Fatal("Returned string is empty")
-	}
-
 	if !strings.Contains(s, reqStr) {
 		t.Fatalf("Expected %s to contain %s", s, reqStr)
 	}

@@ -24,7 +24,9 @@ const (
 )
 
 // RandomAlphaNumeric returns a random string of characters [A-Za-z0-9]
-// of the provided length.
+// of the provided length. The string generated takes up to 3 characters
+// of space that are predefined and prepended to ensure password
+// character requirements. It also requires a min length of 10 characters.
 func RandomAlphaNumeric(length int) (string, error) {
 	if length < minStrLen {
 		return "", fmt.Errorf("minimum length of %d is required", minStrLen)
