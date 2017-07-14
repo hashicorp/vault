@@ -17,6 +17,7 @@ IMPROVEMENTS:
  * command/auth: Add `-token-only` flag to `vault auth` that returns only the
    token on stdout and does not store it via the token helper [GH-2855]
  * core: CORS allowed origins can now be configured [GH-2021]
+ * core: Add metrics counters for audit log failures [GH-2863]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
  * auth/okta: Allow specifying `ttl`/`max_ttl` inside the mount [GH-2915]
