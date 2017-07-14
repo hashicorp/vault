@@ -507,6 +507,10 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, heade
 		}
 
 		ret = retErr.ErrorOrNil()
+
+		if ret != nil {
+			metrics.IncrCounter([]string{"audit", "log_request_failure"}, 1.0)
+		}
 	}()
 
 	// All logged requests must have an identifier
@@ -565,6 +569,10 @@ func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 		}
 
 		ret = retErr.ErrorOrNil()
+
+		if ret != nil {
+			metrics.IncrCounter([]string{"audit", "log_response_failure"}, 1.0)
+		}
 	}()
 
 	headers := req.Headers
