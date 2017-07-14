@@ -12,6 +12,7 @@ IMPROVEMENTS:
  * api: Add `RenewTokenAsSelf` [GH-2886]
  * audit/socket: Enhance reconnection logic and don't require the connection to
    be established at unseal time [GH-2934]
+ * audit/file: Opportunistically try re-opening the file on error [GH-2999]
  * auth/approle: Add role name to token metadata [GH-2985]
  * command/auth: Add `-token-only` flag to `vault auth` that returns only the
    token on stdout and does not store it via the token helper [GH-2855]
