@@ -82,6 +82,10 @@ func (n *NoopBackend) Type() logical.BackendType {
 	return logical.TypeLogical
 }
 
+func (n *NoopBackend) RegisterLicense(interface{}) error {
+	return nil
+}
+
 func TestRouter_Mount(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)

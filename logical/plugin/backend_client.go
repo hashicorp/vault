@@ -202,3 +202,7 @@ func (b *backendPluginClient) Type() logical.BackendType {
 
 	return logical.BackendType(reply.Type)
 }
+
+func (b *backendPluginClient) RegisterLicense(interface{}) error {
+	return nil
+}
