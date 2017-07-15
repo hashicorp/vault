@@ -335,8 +335,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				Fields: map[string]*framework.FieldSchema{
 					"urlaccessor": &framework.FieldSchema{
-						Type:        framework.TypeCommaStringSlice,
-						Description: "Accessor(s) of the token (URL parameter)",
+						Type:        framework.TypeString,
+						Description: "Accessor of the token (URL parameter)",
 					},
 					"accessor": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
@@ -368,8 +368,8 @@ func NewTokenStore(c *Core, config *logical.BackendConfig) (*TokenStore, error) 
 
 				Fields: map[string]*framework.FieldSchema{
 					"urltoken": &framework.FieldSchema{
-						Type:        framework.TypeCommaStringSlice,
-						Description: "Token(s) to revoke (URL parameter)",
+						Type:        framework.TypeString,
+						Description: "Token to revoke (URL parameter)",
 					},
 					"token": &framework.FieldSchema{
 						Type:        framework.TypeCommaStringSlice,
@@ -1342,7 +1342,7 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 	accessors := data.Get("accessor").([]string)
 
 	if len(accessors) == 0 {
-		accessors = data.Get("urlaccessor").([]string)
+		accessors = []string{data.Get("urlaccessor").(string)}
 		if len(accessors) == 0 {
 			return nil, &logical.StatusBadRequest{Err: "missing accessor"}
 		}
@@ -1355,6 +1355,10 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 	for idx, accessor := range accessors {
 		aEntry, err := ts.lookupByAccessor(accessor, true)
 		if err != nil {
+			if len(accessors) == 1 {
+				// backward compatibility with 0.7.3
+				return nil, err
+			}
 			errs[idx] = err
 			tokens[idx] = ""
 		}
@@ -1380,17 +1384,27 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(req *logical.Request, data *fra
 		}
 	}
 
-	if len(failedRevokes) > 0 {
-		response.SetError(fmt.Errorf("contains failed revokes"), failedRevokes)
-	}
-
 	if urlaccessor {
 		response.AddWarning(`Using an accessor in the path is unsafe as the accessor can be logged in many places. Please use POST or PUT with the accessor passed in via the "accessor" parameter.`)
-	} else if len(failedRevokes) == 0 {
-		return nil, nil
 	}
 
-	return response, nil
+	if len(accessors) == 1 {
+		// backward compatibility with 0.7.3
+		if len(failedRevokes) == 1 {
+			return logical.ErrorResponse(errs[0].Error()), logical.ErrInvalidRequest
+		} else if urlaccessor {
+			return response, nil
+		} else {
+			return nil, nil
+		}
+	}
+
+	if len(failedRevokes) > 0 {
+		response.SetError(fmt.Errorf("contains failed revokes"), failedRevokes)
+		return response, nil
+	}
+
+	return nil, nil
 }
 
 // handleCreate handles the auth/token/create path for creation of new orphan
@@ -1836,7 +1850,7 @@ func (ts *TokenStore) handleRevokeTree(
 	tokens := data.Get("token").([]string)
 
 	if len(tokens) == 0 {
-		tokens = data.Get("urltoken").([]string)
+		tokens = []string{data.Get("urltoken").(string)}
 		if len(tokens) == 0 {
 			return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 		}
@@ -1857,17 +1871,27 @@ func (ts *TokenStore) handleRevokeTree(
 		}
 	}
 
-	if len(failedRevokes) > 0 {
-		response.SetError(fmt.Errorf("contains failed revokes"), failedRevokes)
-	}
-
 	if urltoken {
 		response.AddWarning(`Using a token in the path is unsafe as the token can be logged in many places. Please use POST or PUT with the token passed in via the "token" parameter.`)
-	} else if len(failedRevokes) == 0 {
-		return nil, nil
 	}
 
-	return response, nil
+	if len(tokens) == 1 {
+		// backward compatibility with 0.7.3
+		if len(failedRevokes) == 1 {
+			return logical.ErrorResponse(revokeErrors[0].Error()), logical.ErrInvalidRequest
+		} else if urltoken {
+			return response, nil
+		} else {
+			return nil, nil
+		}
+	}
+
+	if len(failedRevokes) > 0 {
+		response.SetError(fmt.Errorf("contains failed revokes"), failedRevokes)
+		return response, nil
+	}
+
+	return nil, nil
 }
 
 // handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
