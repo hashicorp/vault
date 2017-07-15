@@ -21,6 +21,7 @@ type CORSConfig struct {
 	core           *Core
 	Enabled        uint32   `json:"enabled"`
 	AllowedOrigins []string `json:"allowed_origins,omitempty"`
+	AllowedHeaders []string `json:"allowed_headers,omitempty"`
 }
 
 func (c *Core) saveCORSConfig() error {
@@ -72,7 +73,7 @@ func (c *Core) loadCORSConfig() error {
 
 // Enable takes either a '*' or a comma-seprated list of URLs that can make
 // cross-origin requests to Vault.
-func (c *CORSConfig) Enable(urls []string) error {
+func (c *CORSConfig) Enable(urls []string, headers []string) error {
 	if len(urls) == 0 {
 		return errors.New("the list of allowed origins cannot be empty")
 	}
@@ -84,6 +85,14 @@ func (c *CORSConfig) Enable(urls []string) error {
 	c.Lock()
 	c.AllowedOrigins = urls
 	c.Unlock()
+
+	// Allow the user to add additional headers to the list of
+	// headers allowed on cross-origin requests.
+	if len(headers) > 0 {
+		c.Lock()
+		c.AllowedHeaders = append(c.AllowedHeaders, headers...)
+		c.Unlock()
+	}
 
 	atomic.StoreUint32(&c.Enabled, CORSEnabled)
 
