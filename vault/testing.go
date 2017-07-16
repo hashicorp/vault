@@ -546,7 +546,7 @@ func (n *rawHTTP) Type() logical.BackendType {
 	return logical.TypeUnknown
 }
 
-func (n *rawHTTP) RegisterLicense(interface{}) error {
+func (n *rawHTTP) RegisterLicense(license interface{}) error {
 	return nil
 }
 

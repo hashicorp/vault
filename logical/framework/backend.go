@@ -82,6 +82,9 @@ type Backend struct {
 	// See the built-in AuthRenew helpers in lease.go for common callbacks.
 	AuthRenew OperationFunc
 
+	// LicenseRegistration is called to register the license for a backend.
+	LicenseRegistration LicenseRegistrationFunc
+
 	// Type is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
@@ -109,6 +112,9 @@ type InitializeFunc func() error
 
 // InvalidateFunc is the callback for backend key invalidation.
 type InvalidateFunc func(string)
+
+// LicenseRegistrationFunc is the callback for backend license registration.
+type LicenseRegistrationFunc func(interface{}) error
 
 // HandleExistenceCheck is the logical.Backend implementation.
 func (b *Backend) HandleExistenceCheck(req *logical.Request) (checkFound bool, exists bool, err error) {
@@ -280,8 +286,13 @@ func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
 }
 
-// RegisterLicense performs backend license registration
-func (b *Backend) RegisterLicense(interface{}) error {
+// RegisterLicense performs backend license registration.
+func (b *Backend) RegisterLicense(license interface{}) error {
+	if b.LicenseRegistration != nil {
+		if err := b.LicenseRegistration(license); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

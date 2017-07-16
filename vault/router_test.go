@@ -82,7 +82,7 @@ func (n *NoopBackend) Type() logical.BackendType {
 	return logical.TypeLogical
 }
 
-func (n *NoopBackend) RegisterLicense(interface{}) error {
+func (n *NoopBackend) RegisterLicense(license interface{}) error {
 	return nil
 }
 
