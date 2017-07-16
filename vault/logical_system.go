@@ -112,6 +112,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: "A comma-separated string or array of strings indicating origins that may make cross-origin requests.",
 					},
+					"allowed_headers": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "A comma-separated string or array of strings indicating headers that are allowed on cross-origin requests.",
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
