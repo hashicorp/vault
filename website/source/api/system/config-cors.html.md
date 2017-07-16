@@ -34,7 +34,7 @@ $ curl \
 ```json
 {
   "enabled": true,
-  "allowed_origins": "http://www.example.com"
+  "allowed_origins": ["http://www.example.com"],
 }
 ```
 
