@@ -85,10 +85,8 @@ func (c *Core) loadCORSConfig() error {
 // cross-origin requests to Vault.
 func (c *CORSConfig) Enable(urls []string, headers []string) error {
 	if len(urls) == 0 {
-		return errors.New("the list of allowed origins cannot be empty")
-	}
-
-	if strutil.StrListContains(urls, "*") && len(urls) > 1 {
+		urls = append(urls, "*")
+	} else if strutil.StrListContains(urls, "*") {
 		return errors.New("to allow all origins the '*' must be the only value for allowed_origins")
 	}
 
