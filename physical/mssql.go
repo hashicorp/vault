@@ -194,7 +194,9 @@ func (m *MsSQLBackend) List(prefix string) ([]string, error) {
 
 	likePrefix := prefix + "%"
 	rows, err := m.statements["list"].Query(likePrefix)
-
+	if err != nil {
+		return nil, err
+	}
 	var keys []string
 	for rows.Next() {
 		var key string

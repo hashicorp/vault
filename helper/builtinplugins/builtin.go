@@ -2,6 +2,7 @@ package builtinplugins
 
 import (
 	"github.com/hashicorp/vault/plugins/database/cassandra"
+	"github.com/hashicorp/vault/plugins/database/hana"
 	"github.com/hashicorp/vault/plugins/database/mongodb"
 	"github.com/hashicorp/vault/plugins/database/mssql"
 	"github.com/hashicorp/vault/plugins/database/mysql"
@@ -24,6 +25,7 @@ var plugins = map[string]BuiltinFactory{
 	"mssql-database-plugin":      mssql.New,
 	"cassandra-database-plugin":  cassandra.New,
 	"mongodb-database-plugin":    mongodb.New,
+	"hana-database-plugin":       hana.New,
 }
 
 // Get returns the BuiltinFactory func for a particular backend plugin

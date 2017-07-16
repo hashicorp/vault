@@ -37,12 +37,13 @@ type AuthCommand struct {
 
 func (c *AuthCommand) Run(args []string) int {
 	var method, authPath string
-	var methods, methodHelp, noVerify, noStore bool
+	var methods, methodHelp, noVerify, noStore, tokenOnly bool
 	flags := c.Meta.FlagSet("auth", meta.FlagSetDefault)
 	flags.BoolVar(&methods, "methods", false, "")
 	flags.BoolVar(&methodHelp, "method-help", false, "")
 	flags.BoolVar(&noVerify, "no-verify", false, "")
 	flags.BoolVar(&noStore, "no-store", false, "")
+	flags.BoolVar(&tokenOnly, "token-only", false, "")
 	flags.StringVar(&method, "method", "", "method")
 	flags.StringVar(&authPath, "path", "", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -128,8 +129,8 @@ func (c *AuthCommand) Run(args []string) int {
 	}
 
 	// Warn if the VAULT_TOKEN environment variable is set, as that will take
-	// precedence
-	if os.Getenv("VAULT_TOKEN") != "" {
+	// precedence. Don't output on token-only since we're likely piping output.
+	if os.Getenv("VAULT_TOKEN") != "" && !tokenOnly {
 		c.Ui.Output("==> WARNING: VAULT_TOKEN environment variable set!\n")
 		c.Ui.Output("  The environment variable takes precedence over the value")
 		c.Ui.Output("  set by the auth command. Either update the value of the")
@@ -176,6 +177,11 @@ func (c *AuthCommand) Run(args []string) int {
 	if previousToken, err = tokenHelper.Get(); err != nil {
 		c.Ui.Error(fmt.Sprintf("Error caching the previous token: %s\n\n", err))
 		return 1
+	}
+
+	if tokenOnly {
+		c.Ui.Output(token)
+		return 0
 	}
 
 	// Store the token!
@@ -392,6 +398,9 @@ Auth Options:
 
   -no-store         Do not store the token after creation; it will only be
                     displayed in the command output.
+
+  -token-only       Output only the token to stdout. This implies -no-verify
+                    and -no-store.
 
   -path             The path at which the auth backend is enabled. If an auth
                     backend is mounted at multiple paths, this option can be

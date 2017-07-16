@@ -160,6 +160,84 @@ func TestRouter_Mount(t *testing.T) {
 	}
 }
 
+func TestRouter_MountCredential(t *testing.T) {
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, credentialBarrierPrefix)
+
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mountEntry := &MountEntry{
+		Path:     "aws",
+		UUID:     meUUID,
+		Accessor: "awsaccessor",
+	}
+
+	n := &NoopBackend{}
+	err = r.Mount(n, "auth/aws/", mountEntry, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	meUUID, err = uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = r.Mount(n, "auth/aws/", &MountEntry{UUID: meUUID}, view)
+	if !strings.Contains(err.Error(), "cannot mount under existing mount") {
+		t.Fatalf("err: %v", err)
+	}
+
+	if path := r.MatchingMount("auth/aws/foo"); path != "auth/aws/" {
+		t.Fatalf("bad: %s", path)
+	}
+
+	if v := r.MatchingStorageView("auth/aws/foo"); v != view {
+		t.Fatalf("bad: %v", v)
+	}
+
+	if path := r.MatchingMount("auth/stage/aws/foo"); path != "" {
+		t.Fatalf("bad: %s", path)
+	}
+
+	if v := r.MatchingStorageView("auth/stage/aws/foo"); v != nil {
+		t.Fatalf("bad: %v", v)
+	}
+
+	mountEntryFetched := r.MatchingMountByUUID(mountEntry.UUID)
+	if mountEntryFetched == nil || !reflect.DeepEqual(mountEntry, mountEntryFetched) {
+		t.Fatalf("failed to fetch mount entry using its ID; expected: %#v\n actual: %#v\n", mountEntry, mountEntryFetched)
+	}
+
+	mount, prefix, ok := r.MatchingStoragePrefix("auth/foo")
+	if !ok {
+		t.Fatalf("missing storage prefix")
+	}
+	if mount != "auth/aws" || prefix != credentialBarrierPrefix {
+		t.Fatalf("Bad: %v - %v", mount, prefix)
+	}
+
+	req := &logical.Request{
+		Path: "auth/aws/foo",
+	}
+	resp, err := r.Route(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Verify the path
+	if len(n.Paths) != 1 || n.Paths[0] != "foo" {
+		t.Fatalf("bad: %v", n.Paths)
+	}
+}
+
 func TestRouter_Unmount(t *testing.T) {
 	r := NewRouter()
 	_, barrier, _ := mockBarrier(t)

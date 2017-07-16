@@ -616,6 +616,9 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 	certReq.Operation = logical.ReadOperation
 	// test read operation
 	resp, err = b.HandleRequest(certReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedCert := `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
@@ -732,6 +735,9 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 		Path:      "role/abcd-123",
 		Storage:   storage,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatalf("expected an role entry for abcd-123")
 	}
@@ -1218,6 +1224,9 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	stsReq.Operation = logical.ReadOperation
 	// test read operation
 	resp, err = b.HandleRequest(stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedStsRole := "arn:aws:iam:account1:role/myRole"
 	if resp.Data["sts_role"].(string) != expectedStsRole {
 		t.Fatalf("bad: expected:%s\n got:%s\n", expectedStsRole, resp.Data["sts_role"].(string))

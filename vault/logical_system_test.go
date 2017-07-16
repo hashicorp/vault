@@ -1232,6 +1232,10 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	// Read, and make sure that case has been normalized
 	req = logical.TestRequest(t, logical.ReadOperation, "policy/Foo")
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	if resp != nil {
 		t.Fatalf("err: expected nil response, got %#v", *resp)
 	}

@@ -754,6 +754,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 		}
 		resp, err = b.HandleRequest(req)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
@@ -779,6 +782,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -788,6 +794,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext1 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -813,6 +822,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -822,6 +834,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext3 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -844,6 +859,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "qV4h9iQyvn+raODOer4JNAsOhkXBwdT4HZ677Ql4KLqXSU+Jk4C/fXBWbv6xkSYT",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -853,6 +871,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext5 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -878,6 +899,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -892,6 +916,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -901,6 +928,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext7 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}

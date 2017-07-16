@@ -141,7 +141,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 // disableCredential is used to disable an existing credential backend; the
 // boolean indicates if it existed
-func (c *Core) disableCredential(path string) (bool, error) {
+func (c *Core) disableCredential(path string) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -149,29 +149,29 @@ func (c *Core) disableCredential(path string) (bool, error) {
 
 	// Ensure the token backend is not affected
 	if path == "token/" {
-		return true, fmt.Errorf("token credential backend cannot be disabled")
+		return fmt.Errorf("token credential backend cannot be disabled")
 	}
 
 	// Store the view for this backend
 	fullPath := credentialRoutePrefix + path
 	view := c.router.MatchingStorageView(fullPath)
 	if view == nil {
-		return false, fmt.Errorf("no matching backend %s", fullPath)
+		return fmt.Errorf("no matching backend %s", fullPath)
 	}
 
 	// Mark the entry as tainted
 	if err := c.taintCredEntry(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Taint the router path to prevent routing
 	if err := c.router.Taint(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
 	// Revoke credentials from this path
 	if err := c.expiration.RevokePrefix(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
 	// Call cleanup function if it exists
@@ -182,24 +182,24 @@ func (c *Core) disableCredential(path string) (bool, error) {
 
 	// Unmount the backend
 	if err := c.router.Unmount(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
 	// Clear the data in the view
 	if view != nil {
 		if err := logical.ClearView(view); err != nil {
-			return true, err
+			return err
 		}
 	}
 
 	// Remove the mount table entry
 	if err := c.removeCredEntry(path); err != nil {
-		return true, err
+		return err
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: disabled credential backend", "path", path)
 	}
-	return true, nil
+	return nil
 }
 
 // removeCredEntry is used to remove an entry in the auth table
