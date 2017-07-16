@@ -9,11 +9,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-var preflightHeaders = map[string]string{
-	"Access-Control-Allow-Headers": "*",
-	"Access-Control-Max-Age":       "300",
-}
-
 var allowedMethods = []string{
 	http.MethodDelete,
 	http.MethodGet,
@@ -55,10 +50,9 @@ func wrapCORSHandler(h http.Handler, core *vault.Core) http.Handler {
 		// apply headers for preflight requests
 		if req.Method == http.MethodOptions {
 			w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
+			w.Header().Set("Access-Control-Allow-Headers", strings.Join(corsConf.AllowedHeaders, ","))
+			w.Header().Set("Access-Control-Max-Age", "300")
 
-			for k, v := range preflightHeaders {
-				w.Header().Set(k, v)
-			}
 			return
 		}
 
