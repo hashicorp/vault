@@ -95,7 +95,6 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 
 func (b *backendPluginClient) SpecialPaths() *logical.Paths {
 	var reply SpecialPathsReply
-	// var paths logical.Paths
 	err := b.client.Call("Plugin.SpecialPaths", new(interface{}), &reply)
 	if err != nil {
 		return nil
@@ -194,7 +193,6 @@ func (b *backendPluginClient) Setup(config *logical.BackendConfig) error {
 
 func (b *backendPluginClient) Type() logical.BackendType {
 	var reply TypeReply
-	// var paths logical.Paths
 	err := b.client.Call("Plugin.Type", new(interface{}), &reply)
 	if err != nil {
 		return logical.TypeUnknown
