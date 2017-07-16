@@ -849,6 +849,7 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 	if enabled {
 		corsConf.RLock()
 		resp.Data["allowed_origins"] = corsConf.AllowedOrigins
+		resp.Data["allowed_headers"] = corsConf.AllowedHeaders
 		corsConf.RUnlock()
 	}
 
