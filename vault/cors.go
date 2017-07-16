@@ -96,16 +96,16 @@ func (c *CORSConfig) Enable(urls []string, headers []string) error {
 	c.Unlock()
 
 	c.Lock()
-	c.AllowedHeaders = stdAllowedHeaders
-	c.Unlock()
+	if len(c.AllowedHeaders) == 0 {
+		c.AllowedHeaders = append(c.AllowedHeaders, stdAllowedHeaders...)
+	}
 
 	// Allow the user to add additional headers to the list of
 	// headers allowed on cross-origin requests.
 	if len(headers) > 0 {
-		c.Lock()
 		c.AllowedHeaders = append(c.AllowedHeaders, headers...)
-		c.Unlock()
 	}
+	c.Unlock()
 
 	atomic.StoreUint32(&c.Enabled, CORSEnabled)
 
