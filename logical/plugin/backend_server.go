@@ -73,6 +73,9 @@ func (b *backendPluginServer) InvalidateKey(args string, _ *struct{}) error {
 	return nil
 }
 
+// Setup dials into the plugin's broker to get a shimmed storage, logger, and
+// system view of the backend. This method also instantiates the underlying
+// backend through its factory func for the server side of the plugin.
 func (b *backendPluginServer) Setup(args *SetupArgs, reply *SetupReply) error {
 	// Dial for storage
 	storageConn, err := b.broker.Dial(args.StorageID)

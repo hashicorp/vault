@@ -94,8 +94,11 @@ func TestBackend_PluginMain(t *testing.T) {
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
-	lplugin.Serve(&lplugin.ServeOpts{
+	err = lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }

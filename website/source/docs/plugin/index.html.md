@@ -12,12 +12,12 @@ Plugin backends are the components in Vault that can be implemented separately f
 builtin backends. These backends be be either authentication or secret backends.
 
 Detailed information regarding the plugin system can be found in the 
-[internals documentation](http://localhost:4567/docs/internals/plugins.html).
+[internals documentation](https://www.vaultproject.io/docs/internals/plugins.html).
 
 # Mounting/unmounting Plugin Backends
 
 Before a plugin backend can be mounted, it needs to be registered via the 
-[plugin catalog](http://localhost:4567/docs/internals/plugins.html#plugin-catalog). After
+[plugin catalog](https://www.vaultproject.io/docs/internals/plugins.html#plugin-catalog). After
 the plugin is registered, it can be mounted by specifying the registered plugin name:
 
 ```

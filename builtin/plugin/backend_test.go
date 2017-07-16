@@ -61,15 +61,13 @@ func TestBackend_PluginMain(t *testing.T) {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
 
-	err = pluginutil.OptionallyEnableMlock()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	plugin.Serve(&plugin.ServeOpts{
+	err = plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: mock.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testConfig(t *testing.T) (*logical.BackendConfig, func()) {

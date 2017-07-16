@@ -17,14 +17,12 @@ func main() {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
 
-	err := pluginutil.OptionallyEnableMlock()
+	err := plugin.Serve(&plugin.ServeOpts{
+		BackendFactoryFunc: mock.Factory,
+		TLSProviderFunc:    tlsProviderFunc,
+	})
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
-
-	plugin.Serve(&plugin.ServeOpts{
-		BackendFactoryFunc: mock.Factory,
-		TLSProviderFunc:    tlsProviderFunc,
-	})
 }

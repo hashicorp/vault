@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -20,7 +21,7 @@ type ServeOpts struct {
 }
 
 // Serve is used to serve a backend plugin
-func Serve(opts *ServeOpts) {
+func Serve(opts *ServeOpts) error {
 	// pluginMap is the map of plugins we can dispense.
 	var pluginMap = map[string]plugin.Plugin{
 		"backend": &BackendPlugin{
@@ -28,11 +29,18 @@ func Serve(opts *ServeOpts) {
 		},
 	}
 
+	err := pluginutil.OptionallyEnableMlock()
+	if err != nil {
+		return err
+	}
+
 	plugin.Serve(&plugin.ServeConfig{
 		HandshakeConfig: handshakeConfig,
 		Plugins:         pluginMap,
 		TLSProvider:     opts.TLSProviderFunc,
 	})
+
+	return nil
 }
 
 // handshakeConfigs are used to just do a basic handshake between
