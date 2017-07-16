@@ -864,8 +864,8 @@ func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.Fiel
 	return nil, b.Core.corsConfig.Enable(origins, headers)
 }
 
-// handleCORSDelete clears the allowed origins and sets the CORS enabled flag
-// to false
+// handleCORSDelete sets the CORS enabled flag to false and clears the list of
+// allowed origins & headers.
 func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	return nil, b.Core.corsConfig.Disable()
 }
