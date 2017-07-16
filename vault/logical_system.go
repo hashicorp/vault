@@ -859,8 +859,9 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 // cross-origin requests and sets the CORS enabled flag to true
 func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	origins := d.Get("allowed_origins").([]string)
+	headers := d.Get("allowed_headers").([]string)
 
-	return nil, b.Core.corsConfig.Enable(origins)
+	return nil, b.Core.corsConfig.Enable(origins, headers)
 }
 
 // handleCORSDelete clears the allowed origins and sets the CORS enabled flag
