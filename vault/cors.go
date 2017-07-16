@@ -15,6 +15,16 @@ const (
 	CORSEnabled
 )
 
+var stdAllowedHeaders = []string{
+	"Content-Type",
+	"X-Requested-With",
+	"X-Vault-AWS-IAM-Server-ID",
+	"X-Vault-No-Request-Forwarding",
+	"X-Vault-Token",
+	"X-Vault-Wrap-Format",
+	"X-Vault-Wrap-TTL",
+}
+
 // CORSConfig stores the state of the CORS configuration.
 type CORSConfig struct {
 	sync.RWMutex   `json:"-"`
