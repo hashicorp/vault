@@ -42,6 +42,7 @@ func (c *Core) saveCORSConfig() error {
 	}
 	c.corsConfig.RLock()
 	localConfig.AllowedOrigins = c.corsConfig.AllowedOrigins
+	localConfig.AllowedHeaders = c.corsConfig.AllowedHeaders
 	c.corsConfig.RUnlock()
 
 	entry, err := logical.StorageEntryJSON("cors", localConfig)
