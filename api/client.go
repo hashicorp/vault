@@ -24,6 +24,7 @@ const EnvVaultCACert = "VAULT_CACERT"
 const EnvVaultCAPath = "VAULT_CAPATH"
 const EnvVaultClientCert = "VAULT_CLIENT_CERT"
 const EnvVaultClientKey = "VAULT_CLIENT_KEY"
+const EnvVaultClientTimeout = "VAULT_CLIENT_TIMEOUT"
 const EnvVaultInsecure = "VAULT_SKIP_VERIFY"
 const EnvVaultTLSServerName = "VAULT_TLS_SERVER_NAME"
 const EnvVaultWrapTTL = "VAULT_WRAP_TTL"
@@ -183,6 +184,13 @@ func (c *Config) ReadEnvironment() error {
 	if v := os.Getenv(EnvVaultClientKey); v != "" {
 		envClientKey = v
 	}
+	if t := os.Getenv(EnvVaultClientTimeout); t != "" {
+		clientTimeout, err := strconv.ParseUint(t, 10, 32)
+		if err != nil {
+			return err
+		}
+		c.HttpClient.Timeout = time.Second * time.Duration(clientTimeout)
+	}
 	if v := os.Getenv(EnvVaultInsecure); v != "" {
 		var err error
 		envInsecure, err = strconv.ParseBool(v)
@@ -302,6 +310,11 @@ func (c *Client) Address() string {
 // SetMaxRetries sets the number of retries that will be used in the case of certain errors
 func (c *Client) SetMaxRetries(retries int) {
 	c.config.MaxRetries = retries
+}
+
+// SetClientTimeout sets the client request timeout
+func (c *Client) SetClientTimeout(timeout time.Duration) {
+	c.config.HttpClient.Timeout = timeout
 }
 
 // SetWrappingLookupFunc sets a lookup function that returns desired wrap TTLs
