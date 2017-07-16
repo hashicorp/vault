@@ -116,12 +116,17 @@ func (c *CORSConfig) IsEnabled() bool {
 	return atomic.LoadUint32(&c.Enabled) == CORSEnabled
 }
 
-// Disable sets CORS to disabled and clears the allowed origins
+// Disable sets CORS to disabled and clears the allowed origins & headers.
 func (c *CORSConfig) Disable() error {
 	atomic.StoreUint32(&c.Enabled, CORSDisabled)
 	c.Lock()
 	c.AllowedOrigins = []string(nil)
 	c.Unlock()
+
+	c.Lock()
+	c.AllowedHeaders = []string(nil)
+	c.Unlock()
+
 	return c.core.saveCORSConfig()
 }
 
