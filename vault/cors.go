@@ -94,6 +94,10 @@ func (c *CORSConfig) Enable(urls []string, headers []string) error {
 	c.AllowedOrigins = urls
 	c.Unlock()
 
+	c.Lock()
+	c.AllowedHeaders = stdAllowedHeaders
+	c.Unlock()
+
 	// Allow the user to add additional headers to the list of
 	// headers allowed on cross-origin requests.
 	if len(headers) > 0 {
