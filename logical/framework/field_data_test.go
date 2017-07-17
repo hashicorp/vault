@@ -286,6 +286,10 @@ func TestFieldDataGet(t *testing.T) {
 			Schema: tc.Schema,
 		}
 
+		if err := data.Validate(); err != nil {
+			t.Fatalf("bad: %#v", err)
+		}
+
 		actual := data.Get(tc.Key)
 		if !reflect.DeepEqual(actual, tc.Value) {
 			t.Fatalf(
