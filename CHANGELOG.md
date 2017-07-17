@@ -21,6 +21,8 @@ IMPROVEMENTS:
  * core: Add metrics counters for audit log failures [GH-2863]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
+ * storage/mssql: Add `max_parallel` [GH-3026]
+ * storage/postgresql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Improve listing speed [GH-2945]
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
