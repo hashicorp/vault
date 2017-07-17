@@ -288,12 +288,10 @@ func (b *Backend) Type() logical.BackendType {
 
 // RegisterLicense performs backend license registration.
 func (b *Backend) RegisterLicense(license interface{}) error {
-	if b.LicenseRegistration != nil {
-		if err := b.LicenseRegistration(license); err != nil {
-			return err
-		}
+	if b.LicenseRegistration == nil {
+		return nil
 	}
-	return nil
+	return b.LicenseRegistration(license)
 }
 
 // SanitizeTTLStr takes in the TTL and MaxTTL values provided by the user,
