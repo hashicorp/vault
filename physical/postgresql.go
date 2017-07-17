@@ -3,9 +3,11 @@ package physical
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	log "github.com/mgutz/logxi/v1"
 
 	"github.com/armon/go-metrics"
@@ -22,6 +24,7 @@ type PostgreSQLBackend struct {
 	delete_query string
 	list_query   string
 	logger       log.Logger
+	permitPool   *PermitPool
 }
 
 // newPostgreSQLBackend constructs a PostgreSQL backend using the given
@@ -39,11 +42,27 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 	}
 	quoted_table := pq.QuoteIdentifier(unquoted_table)
 
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	var err error
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("postgres: max_parallel set", "max_parallel", maxParInt)
+		}
+	} else {
+		maxParInt = DefaultParallelOperations
+	}
+
 	// Create PostgreSQL handle for the database.
 	db, err := sql.Open("postgres", connURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %v", err)
 	}
+	db.SetMaxOpenConns(maxParInt)
 
 	// Determine if we should use an upsert function (versions < 9.5)
 	var upsert_required bool
@@ -73,7 +92,8 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 		list_query: "SELECT key FROM " + quoted_table + " WHERE path = $1" +
 			"UNION SELECT DISTINCT substring(substr(path, length($1)+1) from '^.*?/') FROM " +
 			quoted_table + " WHERE parent_path LIKE $1 || '%'",
-		logger: logger,
+		logger:     logger,
+		permitPool: NewPermitPool(maxParInt),
 	}
 
 	return m, nil
@@ -107,6 +127,9 @@ func (m *PostgreSQLBackend) splitKey(fullPath string) (string, string, string) {
 func (m *PostgreSQLBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"postgres", "put"}, time.Now())
 
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
+
 	parentPath, path, key := m.splitKey(entry.Key)
 
 	_, err := m.client.Exec(m.put_query, parentPath, path, key, entry.Value)
@@ -119,6 +142,9 @@ func (m *PostgreSQLBackend) Put(entry *Entry) error {
 // Get is used to fetch and entry.
 func (m *PostgreSQLBackend) Get(fullPath string) (*Entry, error) {
 	defer metrics.MeasureSince([]string{"postgres", "get"}, time.Now())
+
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
 
 	_, path, key := m.splitKey(fullPath)
 
@@ -142,6 +168,9 @@ func (m *PostgreSQLBackend) Get(fullPath string) (*Entry, error) {
 func (m *PostgreSQLBackend) Delete(fullPath string) error {
 	defer metrics.MeasureSince([]string{"postgres", "delete"}, time.Now())
 
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
+
 	_, path, key := m.splitKey(fullPath)
 
 	_, err := m.client.Exec(m.delete_query, path, key)
@@ -155,6 +184,9 @@ func (m *PostgreSQLBackend) Delete(fullPath string) error {
 // prefix, up to the next prefix.
 func (m *PostgreSQLBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"postgres", "list"}, time.Now())
+
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
 
 	rows, err := m.client.Query(m.list_query, "/"+prefix)
 	if err != nil {

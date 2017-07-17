@@ -76,6 +76,8 @@ func newMySQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 		if logger.IsDebug() {
 			logger.Debug("mysql: max_parallel set", "max_parallel", maxParInt)
 		}
+	} else {
+		maxParInt = DefaultParallelOperations
 	}
 
 	dsnParams := url.Values{}
@@ -94,6 +96,8 @@ func newMySQLBackend(conf map[string]string, logger log.Logger) (Backend, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to mysql: %v", err)
 	}
+
+	db.SetMaxOpenConns(maxParInt)
 
 	// Create the required database if it doesn't exists.
 	if _, err := db.Exec("CREATE DATABASE IF NOT EXISTS " + database); err != nil {

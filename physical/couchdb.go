@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/mgutz/logxi/v1"
 )
@@ -160,6 +162,19 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 		password = conf["password"]
 	}
 
+	maxParStr, ok := conf["max_parallel"]
+	var maxParInt int
+	var err error
+	if ok {
+		maxParInt, err = strconv.Atoi(maxParStr)
+		if err != nil {
+			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
+		}
+		if logger.IsDebug() {
+			logger.Debug("couchdb: max_parallel set", "max_parallel", maxParInt)
+		}
+	}
+
 	return &CouchDBBackend{
 		client: &couchDBClient{
 			endpoint: endpoint,
@@ -168,7 +183,7 @@ func buildCouchDBBackend(conf map[string]string, logger log.Logger) (*CouchDBBac
 			Client:   cleanhttp.DefaultPooledClient(),
 		},
 		logger:     logger,
-		permitPool: NewPermitPool(DefaultParallelOperations),
+		permitPool: NewPermitPool(maxParInt),
 	}, nil
 }
 
@@ -210,6 +225,9 @@ func (m *CouchDBBackend) Delete(key string) error {
 // List is used to list all the keys under a given prefix
 func (m *CouchDBBackend) List(prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"couchdb", "list"}, time.Now())
+
+	m.permitPool.Acquire()
+	defer m.permitPool.Release()
 
 	items, err := m.client.list(prefix)
 	if err != nil {
