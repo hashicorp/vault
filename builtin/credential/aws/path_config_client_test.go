@@ -73,4 +73,37 @@ func TestBackend_pathConfigClient(t *testing.T) {
 		t.Fatalf("expected iam_server_id_header_value: '%#v'; returned iam_server_id_header_value: '%#v'",
 			data["iam_server_id_header_value"], resp.Data["iam_server_id_header_value"])
 	}
+
+	data = map[string]interface{}{
+		"iam_server_id_header_value": "vault_server_identification_2718281",
+	}
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/client",
+		Data:      data,
+		Storage:   storage,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatal("failed to update the client config entry")
+	}
+
+	resp, err = b.HandleRequest(&logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/client",
+		Storage:   storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatal("failed to read the client config entry")
+	}
+	if resp.Data["iam_server_id_header_value"] != data["iam_server_id_header_value"] {
+		t.Fatalf("expected iam_server_id_header_value: '%#v'; returned iam_server_id_header_value: '%#v'",
+			data["iam_server_id_header_value"], resp.Data["iam_server_id_header_value"])
+	}
 }

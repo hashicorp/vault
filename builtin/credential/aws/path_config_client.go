@@ -150,7 +150,11 @@ func (b *backend) pathConfigClientCreateUpdate(
 		configEntry = &clientConfig{}
 	}
 
+	// changedCreds is whether we need to flush the cached AWS clients and store in the backend
 	changedCreds := false
+	// changedOtherConfig is whether other config has changed that requires storing in the backend
+	// but does not require flushing the cached clients
+	changedOtherConfig := false
 
 	accessKeyStr, ok := data.GetOk("access_key")
 	if ok {
@@ -213,6 +217,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 		if configEntry.IAMServerIdHeaderValue != headerValStr.(string) {
 			// NOT setting changedCreds here, since this isn't really cached
 			configEntry.IAMServerIdHeaderValue = headerValStr.(string)
+			changedOtherConfig = true
 		}
 	} else if req.Operation == logical.CreateOperation {
 		configEntry.IAMServerIdHeaderValue = data.Get("iam_server_id_header_value").(string)
@@ -228,7 +233,7 @@ func (b *backend) pathConfigClientCreateUpdate(
 		return nil, err
 	}
 
-	if changedCreds || req.Operation == logical.CreateOperation {
+	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
 		if err := req.Storage.Put(entry); err != nil {
 			return nil, err
 		}
