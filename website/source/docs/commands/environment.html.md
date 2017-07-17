@@ -44,6 +44,10 @@ The following table describes them:
     <td>Path to an unencrypted PEM-encoded private key matching the client certificate.</td>
   </tr>
   <tr>
+    <td><tt>VAULT_CLIENT_TIMEOUT</tt></td>
+    <td>Timeout variable for the vault client. Default value is 60 seconds.</td>
+  </tr>
+  <tr>
     <td><tt>VAULT_CLUSTER_ADDR</tt></td>
     <td>The address that should be used for other cluster members to connect to this node when in High Availability mode.</td>
   </tr>
