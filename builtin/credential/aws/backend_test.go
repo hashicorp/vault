@@ -1428,7 +1428,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
 	}
 
-	fakeArn := "arn:aws:iam::123456789012:role/FakeRole"
+	fakeArn := "arn:aws:iam::123456789012:role/somePath/FakeRole"
 	fakeArnResolver := func(s logical.Storage, arn string) (string, error) {
 		if arn == fakeArn {
 			return fmt.Sprintf("FakeUniqueIdFor%s", fakeArn), nil
@@ -1535,6 +1535,9 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	renewReq.Auth.LeaseOptions = resp.Auth.LeaseOptions
 	renewReq.Auth.Policies = resp.Auth.Policies
 	renewReq.Auth.IssueTime = time.Now()
+	// dump a fake ARN into the metadata to ensure that we ONLY look
+	// at the unique ID that has been generated
+	renewReq.Auth.Metadata["canonical_arn"] = "fake_arn"
 	// ensure we can renew
 	resp, err = b.pathLoginRenew(renewReq, empty_login_fd)
 	if err != nil {

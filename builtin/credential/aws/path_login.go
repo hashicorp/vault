@@ -918,7 +918,7 @@ func (b *backend) pathLoginRenewIam(
 			if !ok {
 				return nil, fmt.Errorf("no inferred AWS region in auth metadata")
 			}
-			_, err := b.validateInstance(req.Storage, instanceID, instanceRegion, req.Auth.Metadata["accountID"])
+			_, err := b.validateInstance(req.Storage, instanceID, instanceRegion, req.Auth.Metadata["account_id"])
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify instance ID %q: %v", instanceID, err)
 			}
@@ -927,30 +927,22 @@ func (b *backend) pathLoginRenewIam(
 		}
 	}
 
-	// The role may have been specified with only bindings on the inferred entity. The
-	// creation/modification of roles ensures that there is always at least one valid binding, and
-	// those bindings are either with a bound_iam_principal_arn or bindings on the inferred enttity.
-	// If the bound_iam_principal_arn is set to "", then that means all the bindings were set on the
-	// inferred entity type and already checked, so we don't need to check bound_iam_principal_arn.
-	if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != canonicalArn {
-		return nil, fmt.Errorf("role no longer bound to arn %q", canonicalArn)
-	}
-	// Need to hanndle the case where an auth token was generated before we put client_user_id in the metadata
-	// Basic goal here is:
-	//  1. If no client_user_id metadata exists, then skip the check (it might be nice to fill it in later, but
-	//     could be complicated)
-	//  2. If role is not bound to an ID, that means that checking the unique ID has been disabled, so skip the
-	//     check
-	//  3. Otherwise, ensure that the stored client_user_id matches the bound IAM principal ID. If an IAM user
-	//     or role is deleted and recreated, then existing clients will NOT be able to renew and they'll need
-	//     to reauthenticate to Vault with updated IAM credentials
-	originalUserId, ok := req.Auth.Metadata["client_user_id"]
-	if ok && roleEntry.BoundIamPrincipalID != "" && roleEntry.BoundIamPrincipalID != req.Auth.Metadata["client_user_id"] {
-		return nil, fmt.Errorf("role no longer bound to ID %q", originalUserId)
+	if roleEntry.BoundIamPrincipalARN != "" {
+		// We might not get here if all bindings were on the inferred entity, which we've already validated
+		// above
+		clientUserId, ok := req.Auth.Metadata["client_user_id"]
+		if ok && roleEntry.BoundIamPrincipalID != "" {
+			// Resolving unique IDs is enabled and the auth metadata contains the unique ID, so checking the
+			// unique ID is authoritative at this stage
+			if roleEntry.BoundIamPrincipalID != clientUserId {
+				return nil, fmt.Errorf("role no longer bound to ID %q", clientUserId)
+			}
+		} else if roleEntry.BoundIamPrincipalARN != canonicalArn {
+			return nil, fmt.Errorf("role no longer bound to arn %q", canonicalArn)
+		}
 	}
 
 	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
-
 }
 
 func (b *backend) pathLoginRenewEc2(
