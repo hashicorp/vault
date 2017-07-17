@@ -20,7 +20,7 @@ type FieldData struct {
 	Schema map[string]*FieldSchema
 }
 
-// Cycle through raw data and validate conversions in
+// Validate cycles through raw data and validate conversions in
 // the schema, so we don't get an error/panic later when
 // trying to get data out.  Data not in the schema is not
 // an error at this point, so we don't worry about it.
@@ -33,8 +33,8 @@ func (d *FieldData) Validate() error {
 		}
 
 		switch schema.Type {
-		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString, TypeSlice,
-			TypeStringSlice, TypeCommaStringSlice:
+		case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString,
+			TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice:
 			_, _, err := d.getPrimitive(field, schema)
 			if err != nil {
 				return fmt.Errorf("Error converting input %v for field %s: %s", value, field, err)
