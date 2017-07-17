@@ -301,7 +301,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 		Raw    map[string]interface{}
 		Key    string
 	}{
-		"name string type, valid value with invalid characters": {
+		"name string type, invalid value with invalid characters": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeNameString},
 			},
@@ -310,7 +310,7 @@ func TestFieldDataGet_Error(t *testing.T) {
 			},
 			"foo",
 		},
-		"name string type, valid value with special characters at beginning": {
+		"name string type, invalid value with special characters at beginning": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeNameString},
 			},
@@ -319,12 +319,21 @@ func TestFieldDataGet_Error(t *testing.T) {
 			},
 			"foo",
 		},
-		"name string type, valid value with special characters at end": {
+		"name string type, invalid value with special characters at end": {
 			map[string]*FieldSchema{
 				"foo": &FieldSchema{Type: TypeNameString},
 			},
 			map[string]interface{}{
 				"foo": "barbaz-",
+			},
+			"foo",
+		},
+		"name string type, empty string": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{
+				"foo": "",
 			},
 			"foo",
 		},
