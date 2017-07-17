@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 )
 
@@ -27,12 +26,12 @@ func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConf
 		roleName = roleName[:scp.RoleNameLen]
 	}
 
-	userUUID, err := RandomAlphaNumericOfLen(20)
+	userUUID, err := RandomAlphaNumeric(20)
 	if err != nil {
 		return "", err
 	}
 
-	username := strings.Join([]string{"v", displayName, roleName, string(userUUID), fmt.Sprint(time.Now().UTC().Unix())}, scp.Separator)
+	username := strings.Join([]string{"v", displayName, roleName, userUUID, fmt.Sprint(time.Now().UTC().Unix())}, scp.Separator)
 	if scp.UsernameLen > 0 && len(username) > scp.UsernameLen {
 		username = username[:scp.UsernameLen]
 	}
@@ -41,7 +40,7 @@ func (scp *SQLCredentialsProducer) GenerateUsername(config dbplugin.UsernameConf
 }
 
 func (scp *SQLCredentialsProducer) GeneratePassword() (string, error) {
-	password, err := uuid.GenerateUUID()
+	password, err := RandomAlphaNumeric(20)
 	if err != nil {
 		return "", err
 	}
