@@ -33,6 +33,7 @@ BUG FIXES:
  * audit: Fix panic when audit logging a read operation on an asymmetric
    `transit` key [GH-2958]
  * auth/aws: Look up proper account ID on token renew [GH-3012]
+ * auth/aws: Store IAM header in all cases when it changes [GH-3004]
  * auth/ldap: Verify given certificate is PEM encoded instead of failing
    silently [GH-3016]
  * auth/token: Don't allow using the same token ID twice when manually
