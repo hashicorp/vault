@@ -1,5 +1,13 @@
 ## Next (unreleased)
 
+DEPRECATIONS/CHANGES:
+
+ * Database Plugin Backends: Passwords generated for these backends now
+   enforce stricter password requirements, as opposed to the previous behavior 
+   of returning a randomized UUID. Passwords are of length 20, and have a `A1a` 
+   characters prepended to ensure stricter requirements. No regressions are 
+   expected from this change.
+
 FEATURES:
 
  * **CouchDB Storage**: CouchDB can now be used for Vault storage
