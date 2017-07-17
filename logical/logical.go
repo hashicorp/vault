@@ -8,10 +8,9 @@ type BackendType uint32
 // The these are the types of backends that can be derived from
 // logical.Backend
 const (
-	TypeUnknown     BackendType = 0 // This is also the zero-value for BackendType
-	TypeLogical     BackendType = 1
-	TypeCredential  BackendType = 2
-	TypePassthrough BackendType = 3
+	TypeUnknown    BackendType = 0 // This is also the zero-value for BackendType
+	TypeLogical    BackendType = 1
+	TypeCredential BackendType = 2
 )
 
 // Stringer implementation
@@ -21,8 +20,6 @@ func (b BackendType) String() string {
 		return "secret"
 	case TypeCredential:
 		return "auth"
-	case TypePassthrough:
-		return "secret"
 	}
 
 	return "unknown"

@@ -241,7 +241,7 @@ func (c *Core) mount(entry *MountEntry) error {
 
 	// Check for the correct backend type
 	backendType := backend.Type()
-	if entry.Type == "plugin" && backendType != logical.TypePassthrough && backendType != logical.TypeLogical {
+	if entry.Type == "plugin" && backendType != logical.TypeLogical {
 		return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 	}
 
@@ -695,7 +695,7 @@ func (c *Core) setupMounts() error {
 
 		// Check for the correct backend type
 		backendType := backend.Type()
-		if entry.Type == "plugin" && backendType == logical.TypePassthrough && backendType != logical.TypeLogical {
+		if entry.Type == "plugin" && backendType != logical.TypeLogical {
 			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}
 

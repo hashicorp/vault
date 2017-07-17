@@ -14,19 +14,20 @@ import (
 // PassthroughBackendFactory returns a PassthroughBackend
 // with leases switched off
 func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, logical.TypePassthrough)
+	return LeaseSwitchedPassthroughBackend(conf, false)
 }
 
 // LeasedPassthroughBackendFactory returns a PassthroughBackend
 // with leases switched on
 func LeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return LeaseSwitchedPassthroughBackend(conf, logical.TypeLogical)
+	return LeaseSwitchedPassthroughBackend(conf, true)
 }
 
 // LeaseSwitchedPassthroughBackend returns a PassthroughBackend
 // with leases switched on or off
-func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, backendType logical.BackendType) (logical.Backend, error) {
+func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
 	var b PassthroughBackend
+	b.generateLeases = leases
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(passthroughHelp),
 
@@ -48,7 +49,6 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, backendType lo
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
 			},
 		},
-		BackendType: backendType,
 	}
 
 	b.Backend.Secrets = []*framework.Secret{
@@ -74,6 +74,7 @@ func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, backendType lo
 // fancy.
 type PassthroughBackend struct {
 	*framework.Backend
+	generateLeases bool
 }
 
 func (b *PassthroughBackend) handleRevoke(
@@ -113,7 +114,7 @@ func (b *PassthroughBackend) handleRead(
 	}
 
 	var resp *logical.Response
-	if b.BackendType == logical.TypeLogical {
+	if b.generateLeases {
 		// Generate the response
 		resp = b.Secret("generic").Response(rawData, nil)
 		resp.Secret.Renewable = false
@@ -136,7 +137,7 @@ func (b *PassthroughBackend) handleRead(
 			ttlDuration = dur
 		}
 
-		if b.BackendType == logical.TypeLogical {
+		if b.generateLeases {
 			resp.Secret.Renewable = true
 		}
 	}
@@ -144,6 +145,10 @@ func (b *PassthroughBackend) handleRead(
 	resp.Secret.TTL = ttlDuration
 
 	return resp, nil
+}
+
+func (b *PassthroughBackend) GeneratesLeases() bool {
+	return b.generateLeases
 }
 
 func (b *PassthroughBackend) handleWrite(
