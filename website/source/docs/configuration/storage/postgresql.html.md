@@ -82,6 +82,9 @@ LANGUAGE plpgsql;
   which to write Vault data. This table must already exist (Vault will not
   attempt to create it).
 
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
+  requests to PostgreSQL.
+
 ## `postgresql` Examples
 
 ### Custom SSL Verification
