@@ -14,13 +14,13 @@ IMPROVEMENTS:
    be established at unseal time [GH-2934]
  * audit/file: Opportunistically try re-opening the file on error [GH-2999]
  * auth/approle: Add role name to token metadata [GH-2985]
+ * auth/okta: Allow specifying `ttl`/`max_ttl` inside the mount [GH-2915]
  * command/auth: Add `-token-only` flag to `vault auth` that returns only the
    token on stdout and does not store it via the token helper [GH-2855]
  * core: CORS allowed origins can now be configured [GH-2021]
  * core: Add metrics counters for audit log failures [GH-2863]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
- * auth/okta: Allow specifying `ttl`/`max_ttl` inside the mount [GH-2915]
  * storage/postgresql: Improve listing speed [GH-2945]
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
@@ -32,6 +32,8 @@ BUG FIXES:
  * api/leases: Fix lease lookup returning lease properties at the top level
  * audit: Fix panic when audit logging a read operation on an asymmetric
    `transit` key [GH-2958]
+ * auth/ldap: Verify given certificate is PEM encoded instead of failing
+   silently [GH-3016]
  * auth/token: Don't allow using the same token ID twice when manually
    specifying [GH-2916]
 * cli: Fix issue with parsing keys that start with special characters [GH-2998]
