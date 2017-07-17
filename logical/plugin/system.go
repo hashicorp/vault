@@ -87,10 +87,11 @@ func (s *SystemViewClient) ReplicationState() consts.ReplicationState {
 
 func (s *SystemViewClient) ResponseWrapData(data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {
 	var reply ResponseWrapDataReply
+	// Do not allow JWTs to be returned
 	args := &ResponseWrapDataArgs{
 		Data: data,
 		TTL:  ttl,
-		JWT:  jwt,
+		JWT:  false,
 	}
 
 	err := s.client.Call("Plugin.ResponseWrapData", args, &reply)
@@ -177,7 +178,8 @@ func (s *SystemViewServer) ReplicationState(_ interface{}, reply *ReplicationSta
 }
 
 func (s *SystemViewServer) ResponseWrapData(args *ResponseWrapDataArgs, reply *ResponseWrapDataReply) error {
-	info, err := s.impl.ResponseWrapData(args.Data, args.TTL, args.JWT)
+	// Do not allow JWTs to be returned
+	info, err := s.impl.ResponseWrapData(args.Data, args.TTL, false)
 	if err != nil {
 		*reply = ResponseWrapDataReply{
 			Error: plugin.NewBasicError(err),
