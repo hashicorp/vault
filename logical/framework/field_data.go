@@ -2,7 +2,9 @@ package framework
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/hashicorp/vault/helper/parseutil"
 	"github.com/hashicorp/vault/helper/strutil"
@@ -108,7 +110,7 @@ func (d *FieldData) GetOkErr(k string) (interface{}, bool, error) {
 
 	switch schema.Type {
 	case TypeBool, TypeInt, TypeMap, TypeDurationSecond, TypeString,
-		TypeSlice, TypeStringSlice, TypeCommaStringSlice:
+		TypeNameString, TypeSlice, TypeStringSlice, TypeCommaStringSlice:
 		return d.getPrimitive(k, schema)
 	default:
 		return nil, false,
@@ -142,6 +144,20 @@ func (d *FieldData) getPrimitive(
 		var result string
 		if err := mapstructure.WeakDecode(raw, &result); err != nil {
 			return nil, true, err
+		}
+		return result, true, nil
+
+	case TypeNameString:
+		var result string
+		if err := mapstructure.WeakDecode(raw, &result); err != nil {
+			return nil, true, err
+		}
+		matched, err := regexp.MatchString("^\\w(([\\w-.]+)?\\w)?$", result)
+		if err != nil {
+			return nil, true, err
+		}
+		if !matched {
+			return nil, true, errors.New("field does not match the formatting rules")
 		}
 		return result, true, nil
 
