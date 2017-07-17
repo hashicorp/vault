@@ -228,7 +228,7 @@ func (c *Config) ReadEnvironment() error {
 		c.MaxRetries = int(*envMaxRetries) + 1
 	}
 
-	if envClientTimeout != time.Second*0 {
+	if envClientTimeout != 0 {
 		c.Timeout = envClientTimeout
 	}
 
@@ -384,7 +384,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	} else {
 		req.WrapTTL = DefaultWrappingLookupFunc(method, lookupPath)
 	}
-	if c.config.Timeout != time.Second*0 {
+	if c.config.Timeout != 0 {
 		c.config.HttpClient.Timeout = c.config.Timeout
 	}
 
