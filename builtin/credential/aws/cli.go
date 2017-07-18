@@ -18,7 +18,7 @@ type CLIHandler struct{}
 
 // Generates the necessary data to send to the Vault server for generating a token
 // This is useful for other API clients to use
-func GenerateLoginData(accessKey, secretKey, sessionToken, headerValue string) (*map[string]interface{}, error) {
+func GenerateLoginData(accessKey, secretKey, sessionToken, headerValue string) (map[string]interface{}, error) {
 	loginData := make(map[string]interface{})
 
 	credConfig := &awsutil.CredentialsConfig{
@@ -66,7 +66,7 @@ func GenerateLoginData(accessKey, secretKey, sessionToken, headerValue string) (
 	loginData["iam_request_headers"] = base64.StdEncoding.EncodeToString(headersJson)
 	loginData["iam_request_body"] = base64.StdEncoding.EncodeToString(requestBody)
 
-	return &loginData, nil
+	return loginData, nil
 }
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
@@ -92,9 +92,9 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (string, error) {
 	if loginData == nil {
 		return "", fmt.Errorf("got nil response from GenerateLoginData")
 	}
-	(*loginData)["role"] = role
+	loginData["role"] = role
 	path := fmt.Sprintf("auth/%s/login", mount)
-	secret, err := c.Logical().Write(path, *loginData)
+	secret, err := c.Logical().Write(path, loginData)
 
 	if err != nil {
 		return "", err
