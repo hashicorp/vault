@@ -590,9 +590,9 @@ FEATURES:
    response wrapped token parameters; wrap arbitrary values; rotate wrapping
    tokens; and unwrap with enhanced validation. In addition, list operations
    can now be response-wrapped. [GH-1927]
- * Transit features: The `transit` backend now supports generating random bytes
-   and SHA sums; HMACs; and signing and verification functionality using EC
-   keys (P-256 curve)
+ * **Transit Features**: The `transit` backend now supports generating random
+   bytes and SHA sums; HMACs; and signing and verification functionality using
+   EC keys (P-256 curve)
 
 IMPROVEMENTS:
 
