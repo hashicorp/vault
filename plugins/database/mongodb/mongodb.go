@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"io"
+	"strings"
 	"time"
 
 	"encoding/json"
@@ -128,7 +129,7 @@ func (m *MongoDB) CreateUser(statements dbplugin.Statements, usernameConfig dbpl
 	err = session.DB(mongoCS.DB).Run(createUserCmd, nil)
 	switch err {
 	case nil:
-	case io.EOF:
+	case io.EOF || strings.Contains(err.Error(), "EOF"):
 		if err := m.ConnectionProducer.Close(); err != nil {
 			return "", "", errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
@@ -184,7 +185,7 @@ func (m *MongoDB) RevokeUser(statements dbplugin.Statements, username string) er
 	switch err {
 	case nil:
 	case mgo.ErrNotFound:
-	case io.EOF:
+	case io.EOF || strings.Contains(err.Error(), "EOF"):
 		if err := m.ConnectionProducer.Close(); err != nil {
 			return errwrap.Wrapf("error closing EOF'd mongo connection: {{err}}", err)
 		}
