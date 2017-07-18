@@ -18,11 +18,15 @@ IMPROVEMENTS:
 
  * api: Add client method for a secret renewer background process [GH-2886]
  * api: Add `RenewTokenAsSelf` [GH-2886]
+ * api: Client timeout can now be adjusted with the `VAULT_CLIENT_TIMEOUT` env
+   var or with a new API function [GH-2956]
  * audit/socket: Enhance reconnection logic and don't require the connection to
    be established at unseal time [GH-2934]
  * audit/file: Opportunistically try re-opening the file on error [GH-2999]
  * auth/approle: Add role name to token metadata [GH-2985]
  * auth/okta: Allow specifying `ttl`/`max_ttl` inside the mount [GH-2915]
+ * cli: Client timeout can now be adjusted with the `VAULT_CLIENT_TIMEOUT` env
+   var [GH-2956]
  * command/auth: Add `-token-only` flag to `vault auth` that returns only the
    token on stdout and does not store it via the token helper [GH-2855]
  * core: CORS allowed origins can now be configured [GH-2021]
