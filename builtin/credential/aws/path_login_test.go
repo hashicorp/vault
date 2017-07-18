@@ -96,27 +96,27 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error parsing test URL: %v", err)
 	}
-	postHeadersMissing := &http.Header{
+	postHeadersMissing := http.Header{
 		"Host":          []string{"Foo"},
 		"Authorization": []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
-	postHeadersInvalid := &http.Header{
+	postHeadersInvalid := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{"InvalidValue"},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
-	postHeadersUnsigned := &http.Header{
+	postHeadersUnsigned := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
-	postHeadersValid := &http.Header{
+	postHeadersValid := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
 	}
 
-	postHeadersSplit := &http.Header{
+	postHeadersSplit := http.Header{
 		"Host":            []string{"Foo"},
 		iamServerIdHeader: []string{canaryHeaderValue},
 		"Authorization":   []string{"AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/iam/aws4_request", "SignedHeaders=content-type;host;x-amz-date;x-vault-aws-iam-server-id, Signature=5d672d79c15b13162d9279b0855cfba6789a8edb4c82c400e06b5924a6f2b5d7"},
@@ -149,7 +149,7 @@ func TestBackend_validateVaultHeaderValue(t *testing.T) {
 }
 
 func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
-	testIamParser := func(headers interface{}, expectedHeaders *http.Header) error {
+	testIamParser := func(headers interface{}, expectedHeaders http.Header) error {
 		headersJson, err := json.Marshal(headers)
 		if err != nil {
 			return fmt.Errorf("unable to JSON encode headers: %v", err)
@@ -163,7 +163,7 @@ func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
 		if parsedHeaders == nil {
 			return fmt.Errorf("nil result from parsing headers")
 		}
-		if !reflect.DeepEqual(*parsedHeaders, *expectedHeaders) {
+		if !reflect.DeepEqual(parsedHeaders, expectedHeaders) {
 			return fmt.Errorf("parsed headers not equal to input headers")
 		}
 		return nil
@@ -178,11 +178,11 @@ func TestBackend_pathLogin_parseIamRequestHeaders(t *testing.T) {
 		"Header2": []string{"Value2"},
 	}
 
-	err := testIamParser(headersGoStyle, &headersGoStyle)
+	err := testIamParser(headersGoStyle, headersGoStyle)
 	if err != nil {
 		t.Errorf("error parsing go-style headers: %v", err)
 	}
-	err = testIamParser(headersMixedType, &headersGoStyle)
+	err = testIamParser(headersMixedType, headersGoStyle)
 	if err != nil {
 		t.Errorf("error parsing mixed-style headers: %v", err)
 	}
