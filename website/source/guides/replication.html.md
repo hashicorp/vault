@@ -85,10 +85,10 @@ consistent `~/.vault-token` file or `VAULT_TOKEN` environment variable when
 working with both clusters.
 
 On a production system, after a secondary is activated, the enabled
-authentication backends should be used to get tokens with appropriate policies
+authentication backends should be used to get tokens with appropriate policies,
 as policies and auth backend configuration are replicated.
 
-The generate-root command can be also be used to generate a root token local to
+The generate-root command can also be used to generate a root token local to
 the secondary cluster.
 
 ## Managing Vault Replication
