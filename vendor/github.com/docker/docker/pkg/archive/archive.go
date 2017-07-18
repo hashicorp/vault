@@ -93,6 +93,16 @@ const (
 	OverlayWhiteoutFormat
 )
 
+const (
+	modeISDIR  = 040000  // Directory
+	modeISFIFO = 010000  // FIFO
+	modeISREG  = 0100000 // Regular file
+	modeISLNK  = 0120000 // Symbolic link
+	modeISBLK  = 060000  // Block special file
+	modeISCHR  = 020000  // Character special file
+	modeISSOCK = 0140000 // Socket
+)
+
 // IsArchivePath checks if the (possibly compressed) file at the given path
 // starts with a tar file header.
 func IsArchivePath(path string) bool {
@@ -180,7 +190,7 @@ func DecompressStream(archive io.Reader) (io.ReadCloser, error) {
 	}
 }
 
-// CompressStream compresseses the dest with specified compression algorithm.
+// CompressStream compresses the dest with specified compression algorithm.
 func CompressStream(dest io.Writer, compression Compression) (io.WriteCloser, error) {
 	p := pools.BufioWriter32KPool
 	buf := p.Get(dest)
@@ -305,20 +315,14 @@ func (compression *Compression) Extension() string {
 
 // FileInfoHeader creates a populated Header from fi.
 // Compared to archive pkg this function fills in more information.
-func FileInfoHeader(path, name string, fi os.FileInfo) (*tar.Header, error) {
-	var link string
-	if fi.Mode()&os.ModeSymlink != 0 {
-		var err error
-		link, err = os.Readlink(path)
-		if err != nil {
-			return nil, err
-		}
-	}
+// Also, regardless of Go version, this function fills file type bits (e.g. hdr.Mode |= modeISDIR),
+// which have been deleted since Go 1.9 archive/tar.
+func FileInfoHeader(name string, fi os.FileInfo, link string) (*tar.Header, error) {
 	hdr, err := tar.FileInfoHeader(fi, link)
 	if err != nil {
 		return nil, err
 	}
-	hdr.Mode = int64(chmodTarEntry(os.FileMode(hdr.Mode)))
+	hdr.Mode = fillGo18FileTypeBits(int64(chmodTarEntry(os.FileMode(hdr.Mode))), fi)
 	name, err = canonicalTarName(name, fi.IsDir())
 	if err != nil {
 		return nil, fmt.Errorf("tar: cannot canonicalize path: %v", err)
@@ -327,12 +331,43 @@ func FileInfoHeader(path, name string, fi os.FileInfo) (*tar.Header, error) {
 	if err := setHeaderForSpecialDevice(hdr, name, fi.Sys()); err != nil {
 		return nil, err
 	}
+	return hdr, nil
+}
+
+// fillGo18FileTypeBits fills type bits which have been removed on Go 1.9 archive/tar
+// https://github.com/golang/go/commit/66b5a2f
+func fillGo18FileTypeBits(mode int64, fi os.FileInfo) int64 {
+	fm := fi.Mode()
+	switch {
+	case fm.IsRegular():
+		mode |= modeISREG
+	case fi.IsDir():
+		mode |= modeISDIR
+	case fm&os.ModeSymlink != 0:
+		mode |= modeISLNK
+	case fm&os.ModeDevice != 0:
+		if fm&os.ModeCharDevice != 0 {
+			mode |= modeISCHR
+		} else {
+			mode |= modeISBLK
+		}
+	case fm&os.ModeNamedPipe != 0:
+		mode |= modeISFIFO
+	case fm&os.ModeSocket != 0:
+		mode |= modeISSOCK
+	}
+	return mode
+}
+
+// ReadSecurityXattrToTarHeader reads security.capability xattr from filesystem
+// to a tar header
+func ReadSecurityXattrToTarHeader(path string, hdr *tar.Header) error {
 	capability, _ := system.Lgetxattr(path, "security.capability")
 	if capability != nil {
 		hdr.Xattrs = make(map[string]string)
 		hdr.Xattrs["security.capability"] = string(capability)
 	}
-	return hdr, nil
+	return nil
 }
 
 type tarWhiteoutConverter interface {
@@ -386,8 +421,20 @@ func (ta *tarAppender) addTarFile(path, name string) error {
 		return err
 	}
 
-	hdr, err := FileInfoHeader(path, name, fi)
+	var link string
+	if fi.Mode()&os.ModeSymlink != 0 {
+		var err error
+		link, err = os.Readlink(path)
+		if err != nil {
+			return err
+		}
+	}
+
+	hdr, err := FileInfoHeader(name, fi, link)
 	if err != nil {
+		return err
+	}
+	if err := ReadSecurityXattrToTarHeader(path, hdr); err != nil {
 		return err
 	}
 
@@ -1035,7 +1082,7 @@ func (archiver *Archiver) CopyFileWithTar(src, dst string) (err error) {
 		dst = filepath.Join(dst, filepath.Base(src))
 	}
 	// Create the holding directory if necessary
-	if err := system.MkdirAll(filepath.Dir(dst), 0700); err != nil {
+	if err := system.MkdirAll(filepath.Dir(dst), 0700, ""); err != nil {
 		return err
 	}
 

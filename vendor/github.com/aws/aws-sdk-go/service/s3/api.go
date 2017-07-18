@@ -7899,6 +7899,9 @@ type CreateMultipartUploadInput struct {
 	// The type of storage to use for the object. Defaults to 'STANDARD'.
 	StorageClass *string `location:"header" locationName:"x-amz-storage-class" type:"string" enum:"StorageClass"`
 
+	// The tag-set for the object. The tag-set must be encoded as URL Query parameters
+	Tagging *string `location:"header" locationName:"x-amz-tagging" type:"string"`
+
 	// If the bucket is configured as a website, redirects requests for this object
 	// to another object in the same bucket or to an external URL. Amazon S3 stores
 	// the value of this header in the object metadata.
@@ -8057,6 +8060,12 @@ func (s *CreateMultipartUploadInput) SetServerSideEncryption(v string) *CreateMu
 // SetStorageClass sets the StorageClass field's value.
 func (s *CreateMultipartUploadInput) SetStorageClass(v string) *CreateMultipartUploadInput {
 	s.StorageClass = &v
+	return s
+}
+
+// SetTagging sets the Tagging field's value.
+func (s *CreateMultipartUploadInput) SetTagging(v string) *CreateMultipartUploadInput {
+	s.Tagging = &v
 	return s
 }
 

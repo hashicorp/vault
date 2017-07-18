@@ -174,6 +174,9 @@ func (d *simpleDecDriver) uncacheRead() {
 }
 
 func (d *simpleDecDriver) ContainerType() (vt valueType) {
+	if !d.bdRead {
+		d.readNextBd()
+	}
 	if d.bd == simpleVdNil {
 		return valueTypeNil
 	} else if d.bd == simpleVdByteArray || d.bd == simpleVdByteArray+1 ||
@@ -315,11 +318,17 @@ func (d *simpleDecDriver) DecodeBool() (b bool) {
 }
 
 func (d *simpleDecDriver) ReadMapStart() (length int) {
+	if !d.bdRead {
+		d.readNextBd()
+	}
 	d.bdRead = false
 	return d.decLen()
 }
 
 func (d *simpleDecDriver) ReadArrayStart() (length int) {
+	if !d.bdRead {
+		d.readNextBd()
+	}
 	d.bdRead = false
 	return d.decLen()
 }

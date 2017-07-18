@@ -325,11 +325,11 @@ func (ht *serverHandlerTransport) HandleStreams(startStream func(*Stream), trace
 		for buf := make([]byte, readSize); ; {
 			n, err := req.Body.Read(buf)
 			if n > 0 {
-				s.buf.put(&recvMsg{data: buf[:n:n]})
+				s.buf.put(recvMsg{data: buf[:n:n]})
 				buf = buf[n:]
 			}
 			if err != nil {
-				s.buf.put(&recvMsg{err: mapRecvMsgError(err)})
+				s.buf.put(recvMsg{err: mapRecvMsgError(err)})
 				return
 			}
 			if len(buf) == 0 {

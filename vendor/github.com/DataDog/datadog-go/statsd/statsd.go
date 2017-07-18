@@ -59,14 +59,13 @@ const MaxUDPPayloadSize = 65467
 Stat suffixes
 */
 var (
-	gaugeSuffix        = []byte("|g")
-	countSuffix        = []byte("|c")
-	histogramSuffix    = []byte("|h")
-	distributionSuffix = []byte("|d")
-	decrSuffix         = []byte("-1|c")
-	incrSuffix         = []byte("1|c")
-	setSuffix          = []byte("|s")
-	timingSuffix       = []byte("|ms")
+	gaugeSuffix     = []byte("|g")
+	countSuffix     = []byte("|c")
+	histogramSuffix = []byte("|h")
+	decrSuffix      = []byte("-1|c")
+	incrSuffix      = []byte("1|c")
+	setSuffix       = []byte("|s")
+	timingSuffix    = []byte("|ms")
 )
 
 // A Client is a handle for sending udp messages to dogstatsd.  It is safe to
@@ -288,11 +287,6 @@ func (c *Client) Count(name string, value int64, tags []string, rate float64) er
 // Histogram tracks the statistical distribution of a set of values.
 func (c *Client) Histogram(name string, value float64, tags []string, rate float64) error {
 	return c.send(name, value, histogramSuffix, tags, rate)
-}
-
-// Distribution tracks accurate global percentiles of a set of values.
-func (c *Client) Distribution(name string, value float64, tags []string, rate float64) error {
-	return c.send(name, value, distributionSuffix, tags, rate)
 }
 
 // Decr is just Count of -1

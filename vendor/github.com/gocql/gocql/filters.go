@@ -48,10 +48,10 @@ func WhiteListHostFilter(hosts ...string) HostFilter {
 
 	m := make(map[string]bool, len(hostInfos))
 	for _, host := range hostInfos {
-		m[string(host.peer)] = true
+		m[host.ConnectAddress().String()] = true
 	}
 
 	return HostFilterFunc(func(host *HostInfo) bool {
-		return m[string(host.Peer())]
+		return m[host.ConnectAddress().String()]
 	})
 }

@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net"
@@ -17,6 +18,42 @@ type RPCClient struct {
 
 	// These are the streams used for the various stdout/err overrides
 	stdout, stderr net.Conn
+}
+
+// newRPCClient creates a new RPCClient. The Client argument is expected
+// to be successfully started already with a lock held.
+func newRPCClient(c *Client) (*RPCClient, error) {
+	// Connect to the client
+	conn, err := net.Dial(c.address.Network(), c.address.String())
+	if err != nil {
+		return nil, err
+	}
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		// Make sure to set keep alive so that the connection doesn't die
+		tcpConn.SetKeepAlive(true)
+	}
+
+	if c.config.TLSConfig != nil {
+		conn = tls.Client(conn, c.config.TLSConfig)
+	}
+
+	// Create the actual RPC client
+	result, err := NewRPCClient(conn, c.config.Plugins)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	// Begin the stream syncing so that stdin, out, err work properly
+	err = result.SyncStreams(
+		c.config.SyncStdout,
+		c.config.SyncStderr)
+	if err != nil {
+		result.Close()
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // NewRPCClient creates a client from an already-open connection-like value.

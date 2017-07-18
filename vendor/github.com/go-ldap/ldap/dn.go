@@ -143,6 +143,9 @@ func ParseDN(str string) (*DN, error) {
 			}
 		} else if char == ',' || char == '+' {
 			// We're done with this RDN or value, push it
+			if len(attribute.Type) == 0 {
+				return nil, errors.New("incomplete type, value pair")
+			}
 			attribute.Value = stringFromBuffer()
 			rdn.Attributes = append(rdn.Attributes, attribute)
 			attribute = new(AttributeTypeAndValue)

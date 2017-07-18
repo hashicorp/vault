@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 type Client struct {
@@ -17,6 +18,7 @@ type Client struct {
 	Password  string
 	host      string
 	transport *http.Transport
+	timeout   time.Duration
 }
 
 func NewClient(uri string, username string, password string) (me *Client, err error) {
@@ -58,6 +60,12 @@ func (c *Client) SetTransport(transport *http.Transport) {
 	c.transport = transport
 }
 
+// SetTimeout changes the HTTP timeout that the Client will use.
+// By default there is no timeout.
+func (c *Client) SetTimeout(timeout time.Duration) {
+	c.timeout = timeout
+}
+
 func newGETRequest(client *Client, path string) (*http.Request, error) {
 	s := client.Endpoint + "/api/" + path
 	req, err := http.NewRequest("GET", s, nil)
@@ -97,29 +105,17 @@ func newRequestWithBody(client *Client, method string, path string, body []byte)
 }
 
 func executeRequest(client *Client, req *http.Request) (res *http.Response, err error) {
-	var httpc *http.Client
+	httpc := &http.Client{
+		Timeout: client.timeout,
+	}
 	if client.transport != nil {
-		httpc = &http.Client{Transport: client.transport}
-	} else {
-		httpc = &http.Client{}
+		httpc.Transport = client.transport
 	}
-	res, err = httpc.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return httpc.Do(req)
 }
 
 func executeAndParseRequest(client *Client, req *http.Request, rec interface{}) (err error) {
-	var httpc *http.Client
-	if client.transport != nil {
-		httpc = &http.Client{Transport: client.transport}
-	} else {
-		httpc = &http.Client{}
-	}
-	res, err := httpc.Do(req)
+	res, err := executeRequest(client, req)
 	if err != nil {
 		return err
 	}

@@ -35,6 +35,7 @@ type BucketHandle struct {
 	acl              ACLHandle
 	defaultObjectACL ACLHandle
 	conds            *BucketConditions
+	userProject      string // project for requester-pays buckets
 }
 
 // Bucket returns a BucketHandle, which provides operations on the named bucket.
@@ -90,6 +91,9 @@ func (b *BucketHandle) newDeleteCall() (*raw.BucketsDeleteCall, error) {
 	if err := applyBucketConds("BucketHandle.Delete", b.conds, req); err != nil {
 		return nil, err
 	}
+	if b.userProject != "" {
+		req.UserProject(b.userProject)
+	}
 	return req, nil
 }
 
@@ -119,11 +123,13 @@ func (b *BucketHandle) Object(name string) *ObjectHandle {
 		bucket: b.name,
 		object: name,
 		acl: ACLHandle{
-			c:      b.c,
-			bucket: b.name,
-			object: name,
+			c:           b.c,
+			bucket:      b.name,
+			object:      name,
+			userProject: b.userProject,
 		},
-		gen: -1,
+		gen:         -1,
+		userProject: b.userProject,
 	}
 }
 
@@ -153,6 +159,9 @@ func (b *BucketHandle) newGetCall() (*raw.BucketsGetCall, error) {
 	if err := applyBucketConds("BucketHandle.Attrs", b.conds, req); err != nil {
 		return nil, err
 	}
+	if b.userProject != "" {
+		req.UserProject(b.userProject)
+	}
 	return req, nil
 }
 
@@ -175,6 +184,9 @@ func (b *BucketHandle) newPatchCall(uattrs *BucketAttrsToUpdate) (*raw.BucketsPa
 	setClientHeader(req.Header())
 	if err := applyBucketConds("BucketHandle.Update", b.conds, req); err != nil {
 		return nil, err
+	}
+	if b.userProject != "" {
+		req.UserProject(b.userProject)
 	}
 	return req, nil
 }
@@ -215,6 +227,9 @@ type BucketAttrs struct {
 
 	// Labels are the bucket's labels.
 	Labels map[string]string
+
+	// RequesterPays reports whether the bucket is a Requester Pays bucket.
+	RequesterPays bool
 }
 
 func newBucket(b *raw.Bucket) *BucketAttrs {
@@ -229,6 +244,7 @@ func newBucket(b *raw.Bucket) *BucketAttrs {
 		Created:           convertTime(b.TimeCreated),
 		VersioningEnabled: b.Versioning != nil && b.Versioning.Enabled,
 		Labels:            b.Labels,
+		RequesterPays:     b.Billing != nil && b.Billing.RequesterPays,
 	}
 	acl := make([]ACLRule, len(b.Acl))
 	for i, rule := range b.Acl {
@@ -277,6 +293,10 @@ func (b *BucketAttrs) toRawBucket() *raw.Bucket {
 	if b.VersioningEnabled {
 		v = &raw.BucketVersioning{Enabled: true}
 	}
+	var bb *raw.BucketBilling
+	if b.RequesterPays {
+		bb = &raw.BucketBilling{RequesterPays: true}
+	}
 	return &raw.Bucket{
 		Name:             b.Name,
 		DefaultObjectAcl: dACL,
@@ -285,12 +305,16 @@ func (b *BucketAttrs) toRawBucket() *raw.Bucket {
 		Acl:              acl,
 		Versioning:       v,
 		Labels:           labels,
+		Billing:          bb,
 	}
 }
 
 type BucketAttrsToUpdate struct {
 	// VersioningEnabled, if set, updates whether the bucket uses versioning.
 	VersioningEnabled optional.Bool
+
+	// RequesterPays, if set, updates whether the bucket is a Requester Pays bucket.
+	RequesterPays optional.Bool
 
 	setLabels    map[string]string
 	deleteLabels map[string]bool
@@ -320,6 +344,12 @@ func (ua *BucketAttrsToUpdate) toRawBucket() *raw.Bucket {
 		rb.Versioning = &raw.BucketVersioning{
 			Enabled:         optional.ToBool(ua.VersioningEnabled),
 			ForceSendFields: []string{"Enabled"},
+		}
+	}
+	if ua.RequesterPays != nil {
+		rb.Billing = &raw.BucketBilling{
+			RequesterPays:   optional.ToBool(ua.RequesterPays),
+			ForceSendFields: []string{"RequesterPays"},
 		}
 	}
 	if ua.setLabels != nil || ua.deleteLabels != nil {
@@ -371,6 +401,17 @@ func (c *BucketConditions) validate(method string) error {
 		return fmt.Errorf("storage: %s: multiple conditions specified for metageneration", method)
 	}
 	return nil
+}
+
+// UserProject returns a new BucketHandle that passes the project ID as the user
+// project for all subsequent calls. A user project is required for all operations
+// on requester-pays buckets.
+func (b *BucketHandle) UserProject(projectID string) *BucketHandle {
+	b2 := *b
+	b2.userProject = projectID
+	b2.acl.userProject = projectID
+	b2.defaultObjectACL.userProject = projectID
+	return &b2
 }
 
 // applyBucketConds modifies the provided call using the conditions in conds.
@@ -450,6 +491,9 @@ func (it *ObjectIterator) fetch(pageSize int, pageToken string) (string, error) 
 	req.Prefix(it.query.Prefix)
 	req.Versions(it.query.Versions)
 	req.PageToken(pageToken)
+	if it.bucket.userProject != "" {
+		req.UserProject(it.bucket.userProject)
+	}
 	if pageSize > 0 {
 		req.MaxResults(int64(pageSize))
 	}

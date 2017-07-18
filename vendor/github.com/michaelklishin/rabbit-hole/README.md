@@ -140,6 +140,10 @@ x, err := rmqc.GetUser("my.user")
 resp, err := rmqc.PutUser("my.user", UserSettings{Password: "s3krE7", Tags: "management,policymaker"})
 // => *http.Response, err
 
+// creates or updates individual user with no password
+resp, err := rmqc.PutUserWithoutPassword("my.user", UserSettings{Tags: "management,policymaker"})
+// => *http.Response, err
+
 // deletes individual user
 resp, err := rmqc.DeleteUser("my.user")
 // => *http.Response, err
