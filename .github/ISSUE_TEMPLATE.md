@@ -1,6 +1,6 @@
-<!-- This form is for bug reports and feature requests ONLY! 
+<!-- Please reserve GitHub for bug reports, feature requests, and pull request reviews.
 
-If you're looking for help check [Vault's Google Group](https://groups.google.com/forum/#!forum/vault-tool).
+For questions, the best place to get answers is on our [mailing list](https://groups.google.com/forum/#!forum/vault-tool), as they will get more visibility from experienced users than the issue tracker.
 -->
 
 **Type of report:**
@@ -9,9 +9,14 @@ If you're looking for help check [Vault's Google Group](https://groups.google.co
 [ ] Feature request
 
 **Environment:**
+<!-- The version can be retrieved with `vault version` -->
 
-* **Version**:
-* **Platform**:
-* **Subsystem**:
+* **Version:**
+* **Operating System/Architecture:**
+* **Subsystem:**
 
+**Startup Log Output (if available):**
+<!-- Logs from vault's output on startup -->
+
+**Report:**
 <!-- Enter your issue/feature request details below this comment. -->
