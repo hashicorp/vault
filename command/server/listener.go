@@ -5,8 +5,10 @@ import (
 	// certificates that use it can be parsed.
 	_ "crypto/sha512"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"sync"
 
@@ -111,6 +113,18 @@ func listenerWrapTLS(
 		}
 		if requireClient {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+		if tlsCaFile, ok := config["tls_ca_file"]; ok {
+			caPool := x509.NewCertPool()
+			data, err := ioutil.ReadFile(tlsCaFile.(string))
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("failed to read tls_ca_file: %v", err)
+			}
+
+			if !caPool.AppendCertsFromPEM(data) {
+				return nil, nil, nil, fmt.Errorf("failed to parse CA certificate")
+			}
+			tlsConf.ClientCAs = caPool
 		}
 	}
 

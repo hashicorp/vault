@@ -676,6 +676,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"tls_cipher_suites",
 			"tls_prefer_server_cipher_suites",
 			"tls_require_and_verify_client_cert",
+			"tls_ca_file",
 			"token",
 		}
 		if err := checkHCLKeys(item.Val, valid); err != nil {
