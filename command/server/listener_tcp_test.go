@@ -58,11 +58,18 @@ func TestTCPListener_tls(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	cwd, _ := os.Getwd()
+
+	clientCert, _ := tls.LoadX509KeyPair(
+		cwd+"/test-fixtures/reload/reload_foo.pem",
+		cwd+"/test-fixtures/reload/reload_foo.key")
 
 	connFn := func(lnReal net.Listener) (net.Conn, error) {
 		conn, err := tls.Dial("tcp", ln.Addr().String(), &tls.Config{
-			RootCAs: certPool,
+			RootCAs:      certPool,
+			Certificates: []tls.Certificate{clientCert},
 		})
+
 		if err != nil {
 			return nil, err
 		}
