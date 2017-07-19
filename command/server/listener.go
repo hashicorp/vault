@@ -122,7 +122,7 @@ func listenerWrapTLS(
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {
-				return nil, nil, nil, fmt.Errorf("failed to parse CA certificate")
+				return nil, nil, nil, fmt.Errorf("failed to parse CA certificate in tls_ca_file")
 			}
 			tlsConf.ClientCAs = caPool
 		}
