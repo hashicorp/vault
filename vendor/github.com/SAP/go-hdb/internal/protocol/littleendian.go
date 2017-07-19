@@ -1,4 +1,4 @@
-// +build amd64 386 arm arm64
+// +build amd64 386 arm arm64 ppc64le
 
 /*
 Copyright 2014 SAP SE
