@@ -13,7 +13,11 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend(conf).Setup(conf)
+	b := Backend(conf)
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend(conf *logical.BackendConfig) *backend {

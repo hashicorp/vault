@@ -167,6 +167,15 @@ type MountConfig struct {
 	DefaultLeaseTTL time.Duration `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"` // Override for global default
 	MaxLeaseTTL     time.Duration `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`             // Override for global default
 	ForceNoCache    bool          `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`          // Override for global default
+	PluginName      string        `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+// APIMountConfig is an embedded struct of api.MountConfigInput
+type APIMountConfig struct {
+	DefaultLeaseTTL string `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     string `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache    bool   `json:"force_no_cache" structs:"force_no_cache" mapstructure:"force_no_cache"`
+	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 // Mount is used to mount a new backend to the mount table.
@@ -216,8 +225,13 @@ func (c *Core) mount(entry *MountEntry) error {
 	viewPath := backendBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 	sysView := c.mountEntrySysView(entry)
+	conf := make(map[string]string)
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
 
-	backend, err := c.newLogicalBackend(entry.Type, sysView, view, nil)
+	// Consider having plugin name under entry.Options
+	backend, err := c.newLogicalBackend(entry.Type, sysView, view, conf)
 	if err != nil {
 		return err
 	}
@@ -225,8 +239,14 @@ func (c *Core) mount(entry *MountEntry) error {
 		return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
 	}
 
+	// Check for the correct backend type
+	backendType := backend.Type()
+	if entry.Type == "plugin" && backendType != logical.TypeLogical {
+		return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+	}
+
 	// Call initialize; this takes care of init tasks that must be run after
-	// the ignore paths are collected
+	// the ignore paths are collected.
 	if err := backend.Initialize(); err != nil {
 		return err
 	}
@@ -658,15 +678,25 @@ func (c *Core) setupMounts() error {
 		// Create a barrier view using the UUID
 		view = NewBarrierView(c.barrier, barrierPath)
 		sysView := c.mountEntrySysView(entry)
-		// Initialize the backend
+		// Set up conf to pass in plugin_name
+		conf := make(map[string]string)
+		if entry.Config.PluginName != "" {
+			conf["plugin_name"] = entry.Config.PluginName
+		}
 		// Create the new backend
-		backend, err = c.newLogicalBackend(entry.Type, sysView, view, nil)
+		backend, err = c.newLogicalBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
 		}
 		if backend == nil {
 			return fmt.Errorf("created mount entry of type %q is nil", entry.Type)
+		}
+
+		// Check for the correct backend type
+		backendType := backend.Type()
+		if entry.Type == "plugin" && backendType != logical.TypeLogical {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}
 
 		if err := backend.Initialize(); err != nil {
@@ -687,10 +717,9 @@ func (c *Core) setupMounts() error {
 		if err != nil {
 			c.logger.Error("core: failed to mount entry", "path", entry.Path, "error", err)
 			return errLoadMountsFailed
-		} else {
-			if c.logger.IsInfo() {
-				c.logger.Info("core: successfully mounted backend", "type", entry.Type, "path", entry.Path)
-			}
+		}
+		if c.logger.IsInfo() {
+			c.logger.Info("core: successfully mounted backend", "type", entry.Type, "path", entry.Path)
 		}
 
 		// Ensure the path is tainted if set in the mount table

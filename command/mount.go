@@ -14,13 +14,14 @@ type MountCommand struct {
 }
 
 func (c *MountCommand) Run(args []string) int {
-	var description, path, defaultLeaseTTL, maxLeaseTTL string
+	var description, path, defaultLeaseTTL, maxLeaseTTL, pluginName string
 	var local, forceNoCache bool
 	flags := c.Meta.FlagSet("mount", meta.FlagSetDefault)
 	flags.StringVar(&description, "description", "", "")
 	flags.StringVar(&path, "path", "", "")
 	flags.StringVar(&defaultLeaseTTL, "default-lease-ttl", "", "")
 	flags.StringVar(&maxLeaseTTL, "max-lease-ttl", "", "")
+	flags.StringVar(&pluginName, "plugin-name", "", "")
 	flags.BoolVar(&forceNoCache, "force-no-cache", false, "")
 	flags.BoolVar(&local, "local", false, "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
@@ -39,8 +40,13 @@ func (c *MountCommand) Run(args []string) int {
 	mountType := args[0]
 
 	// If no path is specified, we default the path to the backend type
+	// or use the plugin name if it's a plugin backend
 	if path == "" {
-		path = mountType
+		if mountType == "plugin" {
+			path = pluginName
+		} else {
+			path = mountType
+		}
 	}
 
 	client, err := c.Client()
@@ -57,6 +63,7 @@ func (c *MountCommand) Run(args []string) int {
 			DefaultLeaseTTL: defaultLeaseTTL,
 			MaxLeaseTTL:     maxLeaseTTL,
 			ForceNoCache:    forceNoCache,
+			PluginName:      pluginName,
 		},
 		Local: local,
 	}
@@ -67,9 +74,14 @@ func (c *MountCommand) Run(args []string) int {
 		return 2
 	}
 
+	mountPart := fmt.Sprintf("'%s'", mountType)
+	if mountType == "plugin" {
+		mountPart = fmt.Sprintf("plugin '%s'", pluginName)
+	}
+
 	c.Ui.Output(fmt.Sprintf(
-		"Successfully mounted '%s' at '%s'!",
-		mountType, path))
+		"Successfully mounted %s at '%s'!",
+		mountPart, path))
 
 	return 0
 }
@@ -112,10 +124,12 @@ Mount Options:
                                  not affect caching of the underlying encrypted
                                  data storage.
 
+  -plugin-name                   Name of the plugin to mount based from the name 
+                                 in the plugin catalog.
+
   -local                         Mark the mount as a local mount. Local mounts
                                  are not replicated nor (if a secondary)
                                  removed by replication.
-
 `
 	return strings.TrimSpace(helpText)
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/totp"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/builtin/plugin"
 
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command"
@@ -79,6 +80,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"ldap":     credLdap.Factory,
 					"okta":     credOkta.Factory,
 					"radius":   credRadius.Factory,
+					"plugin":   plugin.Factory,
 				},
 				LogicalBackends: map[string]logical.Factory{
 					"aws":        aws.Factory,
@@ -94,6 +96,7 @@ func Commands(metaPtr *meta.Meta) map[string]cli.CommandFactory {
 					"rabbitmq":   rabbitmq.Factory,
 					"database":   database.Factory,
 					"totp":       totp.Factory,
+					"plugin":     plugin.Factory,
 				},
 				ShutdownCh: command.MakeShutdownCh(),
 				SighupCh:   command.MakeSighupCh(),

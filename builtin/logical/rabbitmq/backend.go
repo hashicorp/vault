@@ -13,7 +13,11 @@ import (
 
 // Factory creates and configures the backend
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	return Backend().Setup(conf)
+	b := Backend()
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // Creates a new backend with all the paths and secrets belonging to it
