@@ -13,9 +13,9 @@ FEATURES:
  * **CouchDB Storage**: CouchDB can now be used for Vault storage
  * **SAP HANA Database Plugin**: The `databases` backend can now manage users
    for SAP HANA databases
- * **Plugin backends**: Vault now supports running secret and auth backends as
+ * **Plugin Backends**: Vault now supports running secret and auth backends as
    plugins. Plugins can be mounted like normal backends and can be developed
-   independently from vault.
+   independently from Vault.
 
 IMPROVEMENTS:
 
@@ -55,7 +55,7 @@ BUG FIXES:
    silently [GH-3016]
  * auth/token: Don't allow using the same token ID twice when manually
    specifying [GH-2916]
-* cli: Fix issue with parsing keys that start with special characters [GH-2998]
+ * cli: Fix issue with parsing keys that start with special characters [GH-2998]
  * core: Relocated `sys/leases/renew` returns same payload as original 
    `sys/leases` endpoint [GH-2891]
  * secret/totp: Ensure codes can only be used once. This makes some automated
