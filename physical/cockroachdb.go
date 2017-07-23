@@ -52,7 +52,7 @@ func newCockroachDBBackend(conf map[string]string, logger log.Logger) (Backend, 
 			return nil, errwrap.Wrapf("failed parsing max_parallel parameter: {{err}}", err)
 		}
 		if logger.IsDebug() {
-			logger.Debug("mysql: max_parallel set", "max_parallel", maxParInt)
+			logger.Debug("cockroachdb: max_parallel set", "max_parallel", maxParInt)
 		}
 	}
 
