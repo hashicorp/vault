@@ -10,6 +10,7 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * **CockroachDB Storage**: CockroachDB can now be used for Vault storage
  * **CouchDB Storage**: CouchDB can now be used for Vault storage
  * **SAP HANA Database Plugin**: The `databases` backend can now manage users
    for SAP HANA databases
@@ -36,6 +37,8 @@ IMPROVEMENTS:
  * core: Add metrics counters for audit log failures [GH-2863]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
+ * storage/cockroachdb: Add CockroachDB storage backend [GH-2713]
+ * storage/couchdb: Add CouchhDB storage backend [GH-2880]
  * storage/mssql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Improve listing speed [GH-2945]
