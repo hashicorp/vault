@@ -84,6 +84,9 @@ type RegisterLicenseReply struct {
 }
 
 func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Response, error) {
+	// Do not send the storage, since go-plugin cannot serialize
+	// interfaces. The server will pick up the storage from the shim.
+	req.Storage = nil
 	args := &HandleRequestArgs{
 		Request: req,
 	}
@@ -126,6 +129,9 @@ func (b *backendPluginClient) Logger() log.Logger {
 }
 
 func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, bool, error) {
+	// Do not send the storage, since go-plugin cannot serialize
+	// interfaces. The server will pick up the storage from the shim.
+	req.Storage = nil
 	args := &HandleExistenceCheckArgs{
 		Request: req,
 	}
