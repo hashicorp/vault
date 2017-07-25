@@ -181,12 +181,6 @@
 			"revisionTime": "2016-12-05T22:51:55Z"
 		},
 		{
-			"checksumSHA1": "Cag+3Y9IpGeyM+7Li1AkHdcaTyg=",
-			"path": "github.com/Sirupsen/logrus",
-			"revision": "e49c59d69b89746796d48156991108c80faf1d7d",
-			"revisionTime": "2017-07-18T14:06:42Z"
-		},
-		{
 			"checksumSHA1": "M+ZeYktTT2wak9ZvQ0OZBbIHAGo=",
 			"path": "github.com/armon/go-metrics",
 			"revision": "f036747b9d0e8590f175a5d654a2194a7d9df4b5",
