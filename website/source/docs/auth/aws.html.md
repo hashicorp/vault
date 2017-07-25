@@ -671,7 +671,7 @@ The response will be in JSON. For example:
         the `ec2` auth method or using the `iam` auth method with inferencing,
         then these credentials need access to `ec2:DescribeInstances`. If
         additionally a `bound_iam_role` is specified, then these credentials
-        also need access to `iam:GetInstanceProfile`. If, however, an alterate
+        also need access to `iam:GetInstanceProfile`. If, however, an alternate
         sts configuration is set for the target account, then the credentials
         must be permissioned to call `sts:AssumeRole` on the configured role,
         and that role must have the permissions described here.
