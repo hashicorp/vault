@@ -1,4 +1,4 @@
-## Next (unreleased)
+## 0.8.0 (unreleased)
 
 DEPRECATIONS/CHANGES:
 
