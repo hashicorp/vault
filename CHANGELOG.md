@@ -7,6 +7,10 @@ DEPRECATIONS/CHANGES:
    of returning a randomized UUID. Passwords are of length 20, and have a `A1a` 
    characters prepended to ensure stricter requirements. No regressions are 
    expected from this change.
+ * Lease Endpoints: The endpoints `sys/renew`, `sys/revoke`, `sys/revoke-prefix`,
+   `sys/revoke-force` have been deprecated and relocated under `sys/leases`.
+   Additionally, the deprecated path `sys/revoke-force` now requires the `sudo`
+   capability.
 
 FEATURES:
 
