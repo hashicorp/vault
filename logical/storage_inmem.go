@@ -24,7 +24,11 @@ func (s *InmemStorage) Get(key string) (*StorageEntry, error) {
 	defer s.RUnlock()
 
 	if raw, ok := s.root.Get(key); ok {
-		return raw.(*StorageEntry), nil
+		se := raw.(*StorageEntry)
+		return &StorageEntry{
+			Key:   se.Key,
+			Value: se.Value,
+		}, nil
 	}
 
 	return nil, nil
@@ -36,7 +40,10 @@ func (s *InmemStorage) Put(entry *StorageEntry) error {
 	s.Lock()
 	defer s.Unlock()
 
-	s.root.Insert(entry.Key, entry)
+	s.root.Insert(entry.Key, &StorageEntry{
+		Key:   entry.Key,
+		Value: entry.Value,
+	})
 	return nil
 }
 
