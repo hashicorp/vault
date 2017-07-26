@@ -154,7 +154,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 		// Note: in an HA setup, this call will also ensure that connections to
 		// the leader are set up, as that happens once the advertised cluster
 		// values are read during this function
-		isLeader, leaderAddr, err := core.Leader()
+		isLeader, leaderAddr, _, err := core.Leader()
 		if err != nil {
 			if err == vault.ErrHANotEnabled {
 				// Standalone node, serve request normally
@@ -171,7 +171,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 		if leaderAddr == "" {
-			respondError(w, http.StatusInternalServerError, fmt.Errorf("node not active but active node not found"))
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("local node not active but active cluster node not found"))
 			return
 		}
 
@@ -223,7 +223,7 @@ func request(core *vault.Core, w http.ResponseWriter, rawReq *http.Request, r *l
 // respondStandby is used to trigger a redirect in the case that this Vault is currently a hot standby
 func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 	// Request the leader address
-	_, redirectAddr, err := core.Leader()
+	_, redirectAddr, _, err := core.Leader()
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return

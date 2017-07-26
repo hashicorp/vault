@@ -538,7 +538,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 		sd, ok := coreConfig.HAPhysical.(physical.ServiceDiscovery)
 		if ok {
 			activeFunc := func() bool {
-				if isLeader, _, err := core.Leader(); err == nil {
+				if isLeader, _, _, err := core.Leader(); err == nil {
 					return isLeader
 				}
 				return false
@@ -679,7 +679,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 		return nil, fmt.Errorf("failed to unseal Vault for dev mode")
 	}
 
-	isLeader, _, err := core.Leader()
+	isLeader, _, _, err := core.Leader()
 	if err != nil && err != vault.ErrHANotEnabled {
 		return nil, fmt.Errorf("failed to check active status: %v", err)
 	}
@@ -692,7 +692,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, rootTokenID string) (*vault.
 				return nil, fmt.Errorf("failed to get active status after five seconds; call stack is\n%s\n", buf)
 			}
 			time.Sleep(1 * time.Second)
-			isLeader, _, err = core.Leader()
+			isLeader, _, _, err = core.Leader()
 			if err != nil {
 				return nil, fmt.Errorf("failed to check active status: %v", err)
 			}

@@ -906,14 +906,14 @@ func NewTestCluster(t testing.TB, base *CoreConfig, unsealStandbys bool) *TestCl
 		time.Sleep(2 * time.Second)
 
 		// Ensure cluster connection info is populated
-		isLeader, _, err := c2.Leader()
+		isLeader, _, _, err := c2.Leader()
 		if err != nil {
 			t.Fatal(err)
 		}
 		if isLeader {
 			t.Fatal("c2 should not be leader")
 		}
-		isLeader, _, err = c3.Leader()
+		isLeader, _, _, err = c3.Leader()
 		if err != nil {
 			t.Fatal(err)
 		}

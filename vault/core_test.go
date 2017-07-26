@@ -1006,7 +1006,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	TestWaitActive(t, core)
 
 	// Check the leader is local
-	isLeader, advertise, err := core.Leader()
+	isLeader, advertise, _, err := core.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1053,7 +1053,7 @@ func TestCore_Standby_Seal(t *testing.T) {
 	}
 
 	// Check the leader is not local
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1117,7 +1117,7 @@ func TestCore_StepDown(t *testing.T) {
 	TestWaitActive(t, core)
 
 	// Check the leader is local
-	isLeader, advertise, err := core.Leader()
+	isLeader, advertise, _, err := core.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1164,7 +1164,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Check the leader is not local
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1205,7 +1205,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Check the leader is core2
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1217,7 +1217,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Check the leader is not local
-	isLeader, advertise, err = core.Leader()
+	isLeader, advertise, _, err = core.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1248,7 +1248,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Check the leader is core1
-	isLeader, advertise, err = core.Leader()
+	isLeader, advertise, _, err = core.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1260,7 +1260,7 @@ func TestCore_StepDown(t *testing.T) {
 	}
 
 	// Check the leader is not local
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1335,7 +1335,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	}
 
 	// Check the leader is local
-	isLeader, advertise, err := core.Leader()
+	isLeader, advertise, _, err := core.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1382,7 +1382,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	}
 
 	// Check the leader is not local
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1412,7 +1412,7 @@ func TestCore_CleanLeaderPrefix(t *testing.T) {
 	TestWaitActive(t, core2)
 
 	// Check the leader is local
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1494,7 +1494,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Check the leader is local
-	isLeader, advertise, err := core.Leader()
+	isLeader, advertise, _, err := core.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1547,7 +1547,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Check the leader is not local
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1593,7 +1593,7 @@ func testCore_Standby_Common(t *testing.T, inm physical.Backend, inmha physical.
 	}
 
 	// Check the leader is local
-	isLeader, advertise, err = core2.Leader()
+	isLeader, advertise, _, err = core2.Leader()
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
