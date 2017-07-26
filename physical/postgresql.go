@@ -58,7 +58,7 @@ func newPostgreSQLBackend(conf map[string]string, logger log.Logger) (Backend, e
 		return nil, fmt.Errorf("missing connection_url")
 	}
 
-	unquoted_table, ok := conf["lockTableName"]
+	unquoted_table, ok := conf[PostgreSQLLockTableNameConf]
 	if !ok {
 		unquoted_table = "vault_kv_store"
 	}
