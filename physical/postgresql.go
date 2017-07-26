@@ -269,6 +269,7 @@ func (m *PostgreSQLBackend) HAEnabled() bool {
 
 // PostgreSQLLock implements the Lock interface for PostgreSQL
 type PostgreSQLLock struct {
+	logger         log.Logger
 	client         *sql.DB
 	hostname       string
 	lockSchemaName string
@@ -296,6 +297,7 @@ func (m *PostgreSQLBackend) LockWith(key, value string) (Lock, error) {
 		hostname = "vault"
 	}
 	return &PostgreSQLLock{
+		logger:         m.logger,
 		client:         m.client,
 		hostname:       hostname,
 		lockSchemaName: m.lockSchemaName,
@@ -381,7 +383,16 @@ func (m *PostgreSQLLock) watch() {
 			)
 			r, err := m.client.Exec(refreshLockSQL, m.lockTTL.String(), m.key,
 				m.vaultID)
-			if err != nil || r == nil {
+			if err != nil {
+				if m.logger.IsWarn() {
+					m.logger.Warn(
+						"physical/postgresql: unable to update HA lock: %s",
+						err.Error(),
+					)
+				}
+				continue
+			}
+			if r == nil {
 				if lastRefresh.Add(m.lockTTL).Before(time.Now()) {
 					// Lock is definitely expired by now
 					return
