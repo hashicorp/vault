@@ -291,7 +291,8 @@ func (m *PostgreSQLBackend) LockWith(key, value string) (Lock, error) {
 		return nil, err
 	}
 	// Record the hostname to give DBAs a chance to figure out which Vault
-	// service has the lock
+	// service has the lock. Default to "vault" in the case the hostname is not
+	// available.
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "vault"
