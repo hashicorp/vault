@@ -41,7 +41,7 @@ testacc: fmtcheck generate
 
 # testrace runs the race checker
 testrace: fmtcheck generate
-	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=20m -parallel=4
+	CGO_ENABLED=1 VAULT_TOKEN= VAULT_ACC= go test -tags='$(BUILD_TAGS)' -race $(TEST) $(TESTARGS) -timeout=45m -parallel=4
 
 cover:
 	./scripts/coverage.sh --html
