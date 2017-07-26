@@ -12,7 +12,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-uuid"
 	"github.com/lib/pq"
-	"github.com/mgutz/logxi/v1"
+	log "github.com/mgutz/logxi/v1"
 )
 
 const (
