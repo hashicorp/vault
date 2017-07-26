@@ -41,7 +41,9 @@ func (b *backend) secretCredsRenew(
 		return nil, fmt.Errorf("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
-
+	if !ok {
+		return nil, fmt.Errorf("usernameRaw is not a string")
+	}
 	// Get our connection
 	db, err := b.DB(req.Storage)
 	if err != nil {
@@ -92,7 +94,9 @@ func (b *backend) secretCredsRevoke(
 		return nil, fmt.Errorf("secret is missing username internal data")
 	}
 	username, ok := usernameRaw.(string)
-
+	if !ok {
+		return nil, fmt.Errorf("usernameRaw is not a string")
+	}
 	var revocationSQL string
 	var resp *logical.Response
 
