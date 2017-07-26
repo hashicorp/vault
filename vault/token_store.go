@@ -1313,6 +1313,12 @@ func (ts *TokenStore) handleTidy(req *logical.Request, data *framework.FieldData
 			continue
 		}
 		te, err := ts.lookupSalted(saltedId, true)
+		if err != nil {
+			tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup tainted ID: %v", err))
+			lock.RUnlock()
+			continue
+		}
+
 		lock.RUnlock()
 
 		// If token entry is not found assume that the token is not valid any
