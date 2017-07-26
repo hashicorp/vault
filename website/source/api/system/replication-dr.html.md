@@ -3,7 +3,7 @@ layout: "api"
 page_title: "/sys/replication - HTTP API"
 sidebar_current: "docs-http-system-replication-dr"
 description: |-
-  The '/sys/replication/dr' endpoint focuses on managing general operations in Vault Enterprise replication sets
+  The '/sys/replication/dr' endpoint focuses on managing general operations in Vault Enterprise Disaster Recovery replication
 ---
 
 # `/sys/replication/dr`
@@ -12,7 +12,7 @@ description: |-
 
 ## Check DR Status
 
-This endpoint print information about the status of replication (mode,
+This endpoint prints information about the status of replication (mode,
 sync progress, etc).
 
 This is an authenticated endpoint.
@@ -59,7 +59,7 @@ primary, it will look something like:
 
 ## Enable DR Primary Replication
 
-This endpoint enables dr replication in primary mode. This is used when dr replication
+This endpoint enables DR replication in primary mode. This is used when DR replication
 is currently disabled on the cluster (if the cluster is already a secondary, it
 must be promoted).
 
@@ -92,10 +92,10 @@ $ curl \
 
 ## Demote DR Primary
 
-This endpoint demotes a dr primary cluster to a secondary. This dr secondary cluster
+This endpoint demotes a DR primary cluster to a secondary. This DR secondary cluster
 will not attempt to connect to a primary (see the update-primary call), but will
 maintain knowledge of its cluster ID and can be reconnected to the same
-dr replication set without wiping local storage.
+DR replication set without wiping local storage.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -112,7 +112,7 @@ $ curl \
 
 ## Disable DR Primary
 
-This endptoin disables dr replication entirely on the cluster. Any secondaries will
+This endpoint disables DR replication entirely on the cluster. Any secondaries will
 no longer be able to connect. Caution: re-enabling this node as a primary or
 secondary will change its cluster ID; in the secondary case this means a wipe of
 the underlying storage when connected to a primary, and in the primary case,
@@ -134,9 +134,9 @@ $ curl \
 
 ## Generate DR Secondary Token
 
-This endpoint generates a dr secondary activation token for the
+This endpoint generates a DR secondary activation token for the
 cluster with the given opaque identifier, which must be unique. This
-identifier can later be used to revoke a dr secondary's access.
+identifier can later be used to revoke a DR secondary's access.
 
 **This endpoint requires 'sudo' capability.**
 
@@ -180,8 +180,8 @@ $ curl \
 
 ## Revoke DR Secondary Token
 
-This endpoint revokes a dr secondary's ability to connect to the dr primary cluster;
-the dr secondary will immediately be disconnected and will not be allowed to
+This endpoint revokes a DR secondary's ability to connect to the DR primary cluster;
+the DR secondary will immediately be disconnected and will not be allowed to
 connect again unless given a new activation token.
 
 | Method   | Path                         | Produces               |
@@ -212,7 +212,7 @@ $ curl \
 
 ## Enable DR Secondary
 
-This endpoint enables replication on a dr secondary using a dr secondary activation
+This endpoint enables replication on a DR secondary using a DR secondary activation
 token.
 
 !> This will immediately clear all data in the secondary cluster!
@@ -259,14 +259,14 @@ $ curl \
 
 ## Promote DR Secondary
 
-This endpoint promotes the dr secondary cluster to dr primary. For data safety and
+This endpoint promotes the DR secondary cluster to DR primary. For data safety and
 security reasons, new secondary tokens will need to be issued to other
 secondaries, and there should never be more than one primary at a time.
 
 If the DR secondary's primary cluster is also in a performace replication set,
 the DR secondary will be promoted into that replication set. Care should be
 taken when promoting to ensure multiple performance primary clusters are not
-activate. 
+activate at the same time. 
 
 If the DR secondary's primary cluster is a performance secondary, the promoted
 cluster will attempt to connect to the performance primary cluster using the

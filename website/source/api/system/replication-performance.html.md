@@ -3,7 +3,7 @@ layout: "api"
 page_title: "/sys/replication - HTTP API"
 sidebar_current: "docs-http-system-replication-performance"
 description: |-
-  The '/sys/replication/performance' endpoint focuses on managing general operations in Vault Enterprise replication sets
+  The '/sys/replication/performance' endpoint focuses on managing general operations in Vault Enterprise Performance Replication
 ---
 
 # `/sys/replication/performance`
@@ -12,7 +12,7 @@ description: |-
 
 ## Check Performance Status
 
-This endpoint print information about the status of replication (mode,
+This endpoint prints information about the status of replication (mode,
 sync progress, etc).
 
 This is an authenticated endpoint.
@@ -66,17 +66,17 @@ must be promoted).
 !> Only one primary should be active at a given time. Multiple primaries may
 result in data loss!
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/primary/enable` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/primary/enable` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/enable` | `204 (empty body)` |
 
 ### Parameters
 
 - `primary_cluster_addr` `(string: "")` – Specifies the cluster address that the
   primary gives to secondary nodes. Useful if the primary's cluster address is
   not directly accessible and must be accessed via an alternate path/address,
-  such as through a TCP-based load balancer.
+  such as through a TCP-based load balancer. If not set, uses vault's configured
+  cluster address.
 
 ### Sample Payload
 
@@ -101,10 +101,9 @@ This secondary cluster will not attempt to connect to a primary (see the update-
 but will maintain knowledge of its cluster ID and can be reconnected to the same
 replication set without wiping local storage.
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/primary/demote` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/primary/demote` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/demote` | `204 (empty body)` |
 
 ### Sample Request
 
@@ -117,17 +116,16 @@ $ curl \
 
 ## Disable Performance Primary
 
-This endptoin disables performance replication entirely on the cluster. Any
+This endpoint disables performance replication entirely on the cluster. Any
 performance secondaries will no longer be able to connect. Caution: re-enabling
 this node as a primary or secondary will change its cluster ID; in the secondary
 case this means a wipe of the underlying storage when connected to a primary,
 and in the primary case, secondaries connecting back to the cluster (even if
 they have connected before) will require a wipe of the underlying storage.
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/primary/disable` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/primary/disable` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/disable` | `204 (empty body)` |
 
 
 ### Sample Request
@@ -147,10 +145,9 @@ identifier can later be used to revoke a secondary's access.
 
 **This endpoint requires 'sudo' capability.**
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `GET`    | `/sys/replication/performance/primary/secondary-token` | `200 application/json` | |
-| `GET`    | `/sys/replication/primary/secondary-token` | `200 application/json` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/performance/primary/secondary-token` | `200 application/json` |
 
 ### Parameters
 
@@ -192,10 +189,9 @@ This endpoint revokes a performance secondary's ability to connect to the
 performance primary cluster; the secondary will immediately be disconnected and
 will not be allowed to connect again unless given a new activation token.
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/primary/revoke-secondary` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/primary/revoke-secondary` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/revoke-secondary` | `204 (empty body)` |
 
 ### Parameters
 
@@ -226,10 +222,9 @@ token.
 
 !> This will immediately clear all data in the secondary cluster!
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/secondary/enable` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/secondary/enable` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/enable` | `204 (empty body)` |
 
 ### Parameters
 
@@ -274,10 +269,9 @@ For data safety and security reasons, new secondary tokens will need to be
 issued to other secondaries, and there should never be more than one performance 
 primary at a time.
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/secondary/promote` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/secondary/promote` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/promote` | `204 (empty body)` |
 
 ### Parameters
 
@@ -313,10 +307,9 @@ to a primary, and in the primary case, secondaries connecting back to the
 cluster (even if they have connected before) will require a wipe of the
 underlying storage.
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/secondary/disable` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/secondary/disable` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/disable` | `204 (empty body)` |
 
 
 ### Sample Request
@@ -333,10 +326,9 @@ $ curl \
 This endpoint changes a performance secondary cluster's assigned primary cluster using a
 secondary activation token. This does not wipe all data in the cluster.
 
-| Method   | Path                         | Produces               |         |
-| :------- | :--------------------------- | :--------------------- | :------ |
-| `POST`   | `/sys/replication/performance/secondary/update-primary` | `204 (empty body)` | |
-| `POST`   | `/sys/replication/secondary/update-primary` | `204 (empty body)` | deprecated |
+| Method   | Path                         | Produces               |
+| :------- | :--------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/secondary/update-primary` | `204 (empty body)` |
 
 ### Parameters
 
