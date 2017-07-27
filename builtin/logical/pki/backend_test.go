@@ -1870,7 +1870,7 @@ func TestBackend_PathFetchCertList(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	_, err := b.Setup(config)
+	err := b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1997,7 +1997,7 @@ func TestBackend_SignVerbatim(t *testing.T) {
 	config.StorageView = storage
 
 	b := Backend()
-	_, err := b.Setup(config)
+	err := b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}

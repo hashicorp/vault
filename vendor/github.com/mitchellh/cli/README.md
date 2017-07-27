@@ -18,6 +18,9 @@ cli is the library that powers the CLI for
 * Optional support for default subcommands so `cli` does something
   other than error.
 
+* Support for shell autocompletion of subcommands, flags, and arguments
+  with callbacks in Go. You don't need to write any shell code.
+
 * Automatic help generation for listing subcommands
 
 * Automatic help flag recognition of `-h`, `--help`, etc.

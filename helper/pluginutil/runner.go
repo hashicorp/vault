@@ -35,12 +35,12 @@ type LookRunnerUtil interface {
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
-	Name           string                      `json:"name"`
-	Command        string                      `json:"command"`
-	Args           []string                    `json:"args"`
-	Sha256         []byte                      `json:"sha256"`
-	Builtin        bool                        `json:"builtin"`
-	BuiltinFactory func() (interface{}, error) `json:"-"`
+	Name           string                      `json:"name" structs:"name"`
+	Command        string                      `json:"command" structs:"command"`
+	Args           []string                    `json:"args" structs:"args"`
+	Sha256         []byte                      `json:"sha256" structs:"sha256"`
+	Builtin        bool                        `json:"builtin" structs:"builtin"`
+	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 }
 
 // Run takes a wrapper instance, and the go-plugin paramaters and executes a

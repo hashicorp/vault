@@ -13,7 +13,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 
 	var err error
 	b := Backend()
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}

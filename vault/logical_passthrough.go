@@ -17,13 +17,13 @@ func PassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, er
 	return LeaseSwitchedPassthroughBackend(conf, false)
 }
 
-// PassthroughBackendWithLeasesFactory returns a PassthroughBackend
+// LeasedPassthroughBackendFactory returns a PassthroughBackend
 // with leases switched on
 func LeasedPassthroughBackendFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return LeaseSwitchedPassthroughBackend(conf, true)
 }
 
-// LeaseSwitchedPassthroughBackendFactory returns a PassthroughBackend
+// LeaseSwitchedPassthroughBackend returns a PassthroughBackend
 // with leases switched on or off
 func LeaseSwitchedPassthroughBackend(conf *logical.BackendConfig, leases bool) (logical.Backend, error) {
 	var b PassthroughBackend
@@ -147,6 +147,10 @@ func (b *PassthroughBackend) handleRead(
 	return resp, nil
 }
 
+func (b *PassthroughBackend) GeneratesLeases() bool {
+	return b.generateLeases
+}
+
 func (b *PassthroughBackend) handleWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Check that some fields are given
@@ -200,10 +204,6 @@ func (b *PassthroughBackend) handleList(
 
 	// Generate the response
 	return logical.ListResponse(keys), nil
-}
-
-func (b *PassthroughBackend) GeneratesLeases() bool {
-	return b.generateLeases
 }
 
 const passthroughHelp = `

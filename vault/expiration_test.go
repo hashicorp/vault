@@ -1459,5 +1459,10 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 		},
 	}
 
-	return be.Setup(conf)
+	err := be.Setup(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return be, nil
 }

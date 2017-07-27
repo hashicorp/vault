@@ -520,6 +520,10 @@ func (n *rawHTTP) System() logical.SystemView {
 	}
 }
 
+func (n *rawHTTP) Logger() log.Logger {
+	return logformat.NewVaultLogger(log.LevelTrace)
+}
+
 func (n *rawHTTP) Cleanup() {
 	// noop
 }
@@ -531,6 +535,19 @@ func (n *rawHTTP) Initialize() error {
 
 func (n *rawHTTP) InvalidateKey(string) {
 	// noop
+}
+
+func (n *rawHTTP) Setup(config *logical.BackendConfig) error {
+	// noop
+	return nil
+}
+
+func (n *rawHTTP) Type() logical.BackendType {
+	return logical.TypeUnknown
+}
+
+func (n *rawHTTP) RegisterLicense(license interface{}) error {
+	return nil
 }
 
 func GenerateRandBytes(length int) ([]byte, error) {

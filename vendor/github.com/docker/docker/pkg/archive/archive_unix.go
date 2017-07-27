@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/pkg/idtools"
 	"github.com/docker/docker/pkg/system"
 	rsystem "github.com/opencontainers/runc/libcontainer/system"
+	"golang.org/x/sys/unix"
 )
 
 // fixVolumePathPrefix does platform specific processing to ensure that if
@@ -45,16 +46,13 @@ func chmodTarEntry(perm os.FileMode) os.FileMode {
 func setHeaderForSpecialDevice(hdr *tar.Header, name string, stat interface{}) (err error) {
 	s, ok := stat.(*syscall.Stat_t)
 
-	if !ok {
-		err = errors.New("cannot convert stat value to syscall.Stat_t")
-		return
-	}
-
-	// Currently go does not fill in the major/minors
-	if s.Mode&syscall.S_IFBLK != 0 ||
-		s.Mode&syscall.S_IFCHR != 0 {
-		hdr.Devmajor = int64(major(uint64(s.Rdev)))
-		hdr.Devminor = int64(minor(uint64(s.Rdev)))
+	if ok {
+		// Currently go does not fill in the major/minors
+		if s.Mode&unix.S_IFBLK != 0 ||
+			s.Mode&unix.S_IFCHR != 0 {
+			hdr.Devmajor = int64(major(uint64(s.Rdev)))
+			hdr.Devminor = int64(minor(uint64(s.Rdev)))
+		}
 	}
 
 	return
@@ -63,12 +61,9 @@ func setHeaderForSpecialDevice(hdr *tar.Header, name string, stat interface{}) (
 func getInodeFromStat(stat interface{}) (inode uint64, err error) {
 	s, ok := stat.(*syscall.Stat_t)
 
-	if !ok {
-		err = errors.New("cannot convert stat value to syscall.Stat_t")
-		return
+	if ok {
+		inode = uint64(s.Ino)
 	}
-
-	inode = uint64(s.Ino)
 
 	return
 }
@@ -101,11 +96,11 @@ func handleTarTypeBlockCharFifo(hdr *tar.Header, path string) error {
 	mode := uint32(hdr.Mode & 07777)
 	switch hdr.Typeflag {
 	case tar.TypeBlock:
-		mode |= syscall.S_IFBLK
+		mode |= unix.S_IFBLK
 	case tar.TypeChar:
-		mode |= syscall.S_IFCHR
+		mode |= unix.S_IFCHR
 	case tar.TypeFifo:
-		mode |= syscall.S_IFIFO
+		mode |= unix.S_IFIFO
 	}
 
 	return system.Mknod(path, mode, int(system.Mkdev(hdr.Devmajor, hdr.Devminor)))

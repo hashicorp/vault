@@ -137,7 +137,7 @@ type balancer struct {
 func (b *balancer) watchAddrUpdates(w naming.Watcher, ch chan []remoteBalancerInfo) error {
 	updates, err := w.Next()
 	if err != nil {
-		grpclog.Printf("grpclb: failed to get next addr update from watcher: %v", err)
+		grpclog.Warningf("grpclb: failed to get next addr update from watcher: %v", err)
 		return err
 	}
 	b.mu.Lock()
@@ -162,13 +162,13 @@ func (b *balancer) watchAddrUpdates(w naming.Watcher, ch chan []remoteBalancerIn
 			md, ok := update.Metadata.(*AddrMetadataGRPCLB)
 			if !ok {
 				// TODO: Revisit the handling here and may introduce some fallback mechanism.
-				grpclog.Printf("The name resolution contains unexpected metadata %v", update.Metadata)
+				grpclog.Errorf("The name resolution contains unexpected metadata %v", update.Metadata)
 				continue
 			}
 			switch md.AddrType {
 			case Backend:
 				// TODO: Revisit the handling here and may introduce some fallback mechanism.
-				grpclog.Printf("The name resolution does not give grpclb addresses")
+				grpclog.Errorf("The name resolution does not give grpclb addresses")
 				continue
 			case GRPCLB:
 				b.rbs = append(b.rbs, remoteBalancerInfo{
@@ -176,7 +176,7 @@ func (b *balancer) watchAddrUpdates(w naming.Watcher, ch chan []remoteBalancerIn
 					name: md.ServerName,
 				})
 			default:
-				grpclog.Printf("Received unknow address type %d", md.AddrType)
+				grpclog.Errorf("Received unknow address type %d", md.AddrType)
 				continue
 			}
 		case naming.Delete:
@@ -188,7 +188,7 @@ func (b *balancer) watchAddrUpdates(w naming.Watcher, ch chan []remoteBalancerIn
 				}
 			}
 		default:
-			grpclog.Println("Unknown update.Op ", update.Op)
+			grpclog.Errorf("Unknown update.Op %v", update.Op)
 		}
 	}
 	// TODO: Fall back to the basic round-robin load balancing if the resulting address is
@@ -299,7 +299,7 @@ func (b *balancer) sendLoadReport(s *balanceLoadClientStream, interval time.Dura
 				ClientStats: &stats,
 			},
 		}); err != nil {
-			grpclog.Printf("grpclb: failed to send load report: %v", err)
+			grpclog.Errorf("grpclb: failed to send load report: %v", err)
 			return
 		}
 	}
@@ -310,7 +310,7 @@ func (b *balancer) callRemoteBalancer(lbc *loadBalancerClient, seq int) (retry b
 	defer cancel()
 	stream, err := lbc.BalanceLoad(ctx)
 	if err != nil {
-		grpclog.Printf("grpclb: failed to perform RPC to the remote balancer %v", err)
+		grpclog.Errorf("grpclb: failed to perform RPC to the remote balancer %v", err)
 		return
 	}
 	b.mu.Lock()
@@ -327,25 +327,25 @@ func (b *balancer) callRemoteBalancer(lbc *loadBalancerClient, seq int) (retry b
 		},
 	}
 	if err := stream.Send(initReq); err != nil {
-		grpclog.Printf("grpclb: failed to send init request: %v", err)
+		grpclog.Errorf("grpclb: failed to send init request: %v", err)
 		// TODO: backoff on retry?
 		return true
 	}
 	reply, err := stream.Recv()
 	if err != nil {
-		grpclog.Printf("grpclb: failed to recv init response: %v", err)
+		grpclog.Errorf("grpclb: failed to recv init response: %v", err)
 		// TODO: backoff on retry?
 		return true
 	}
 	initResp := reply.GetInitialResponse()
 	if initResp == nil {
-		grpclog.Println("grpclb: reply from remote balancer did not include initial response.")
+		grpclog.Errorf("grpclb: reply from remote balancer did not include initial response.")
 		return
 	}
 	// TODO: Support delegation.
 	if initResp.LoadBalancerDelegate != "" {
 		// delegation
-		grpclog.Println("TODO: Delegation is not supported yet.")
+		grpclog.Errorf("TODO: Delegation is not supported yet.")
 		return
 	}
 	streamDone := make(chan struct{})
@@ -360,7 +360,7 @@ func (b *balancer) callRemoteBalancer(lbc *loadBalancerClient, seq int) (retry b
 	for {
 		reply, err := stream.Recv()
 		if err != nil {
-			grpclog.Printf("grpclb: failed to recv server list: %v", err)
+			grpclog.Errorf("grpclb: failed to recv server list: %v", err)
 			break
 		}
 		b.mu.Lock()
@@ -394,7 +394,7 @@ func (b *balancer) Start(target string, config BalancerConfig) error {
 	w, err := b.r.Resolve(target)
 	if err != nil {
 		b.mu.Unlock()
-		grpclog.Printf("grpclb: failed to resolve address: %v, err: %v", target, err)
+		grpclog.Errorf("grpclb: failed to resolve address: %v, err: %v", target, err)
 		return err
 	}
 	b.w = w
@@ -404,7 +404,7 @@ func (b *balancer) Start(target string, config BalancerConfig) error {
 	go func() {
 		for {
 			if err := b.watchAddrUpdates(w, balancerAddrsCh); err != nil {
-				grpclog.Printf("grpclb: the naming watcher stops working due to %v.\n", err)
+				grpclog.Warningf("grpclb: the naming watcher stops working due to %v.\n", err)
 				close(balancerAddrsCh)
 				return
 			}
@@ -495,7 +495,7 @@ func (b *balancer) Start(target string, config BalancerConfig) error {
 			if creds := config.DialCreds; creds != nil {
 				if rb.name != "" {
 					if err := creds.OverrideServerName(rb.name); err != nil {
-						grpclog.Printf("grpclb: failed to override the server name in the credentials: %v", err)
+						grpclog.Warningf("grpclb: failed to override the server name in the credentials: %v", err)
 						continue
 					}
 				}
@@ -510,7 +510,7 @@ func (b *balancer) Start(target string, config BalancerConfig) error {
 			ccError = make(chan struct{})
 			cc, err = Dial(rb.addr, dopts...)
 			if err != nil {
-				grpclog.Printf("grpclb: failed to setup a connection to the remote balancer %v: %v", rb.addr, err)
+				grpclog.Warningf("grpclb: failed to setup a connection to the remote balancer %v: %v", rb.addr, err)
 				close(ccError)
 				continue
 			}

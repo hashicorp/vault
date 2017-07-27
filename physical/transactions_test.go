@@ -89,60 +89,14 @@ func TestPseudo_SuccessfulTransaction(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	p := newFaultyPseudo(logger, nil)
 
-	txns := setupPseudo(p, t)
-
-	if err := p.Transaction(txns); err != nil {
-		t.Fatal(err)
-	}
-
-	keys, err := p.List("")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected := []string{"foo", "zip"}
-
-	sort.Strings(keys)
-	sort.Strings(expected)
-	if !reflect.DeepEqual(keys, expected) {
-		t.Fatalf("mismatch: expected\n%#v\ngot\n%#v\n", expected, keys)
-	}
-
-	entry, err := p.Get("foo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry == nil {
-		t.Fatal("got nil entry")
-	}
-	if entry.Value == nil {
-		t.Fatal("got nil value")
-	}
-	if string(entry.Value) != "bar3" {
-		t.Fatal("updates did not apply correctly")
-	}
-
-	entry, err = p.Get("zip")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if entry == nil {
-		t.Fatal("got nil entry")
-	}
-	if entry.Value == nil {
-		t.Fatal("got nil value")
-	}
-	if string(entry.Value) != "zap3" {
-		t.Fatal("updates did not apply correctly")
-	}
+	testTransactionalBackend(t, p)
 }
 
 func TestPseudo_FailedTransaction(t *testing.T) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	p := newFaultyPseudo(logger, []string{"zip"})
 
-	txns := setupPseudo(p, t)
-
+	txns := setupTransactions(t, p)
 	if err := p.Transaction(txns); err == nil {
 		t.Fatal("expected error during transaction")
 	}
@@ -189,26 +143,26 @@ func TestPseudo_FailedTransaction(t *testing.T) {
 	}
 }
 
-func setupPseudo(p *faultyPseudo, t *testing.T) []TxnEntry {
+func setupTransactions(t *testing.T, b Backend) []TxnEntry {
 	// Add a few keys so that we test rollback with deletion
-	if err := p.Put(&Entry{
+	if err := b.Put(&Entry{
 		Key:   "foo",
 		Value: []byte("bar"),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Put(&Entry{
+	if err := b.Put(&Entry{
 		Key:   "zip",
 		Value: []byte("zap"),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Put(&Entry{
+	if err := b.Put(&Entry{
 		Key: "deleteme",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := p.Put(&Entry{
+	if err := b.Put(&Entry{
 		Key: "deleteme2",
 	}); err != nil {
 		t.Fatal(err)

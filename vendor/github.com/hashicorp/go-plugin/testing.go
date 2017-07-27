@@ -5,6 +5,8 @@ import (
 	"net"
 	"net/rpc"
 	"testing"
+
+	"google.golang.org/grpc"
 )
 
 // The testing file contains test helpers that you can use outside of
@@ -70,6 +72,48 @@ func TestPluginRPCConn(t *testing.T, ps map[string]Plugin) (*RPCClient, *RPCServ
 	client, err := NewRPCClient(clientConn, ps)
 	if err != nil {
 		t.Fatalf("err: %s", err)
+	}
+
+	return client, server
+}
+
+// TestPluginGRPCConn returns a plugin gRPC client and server that are connected
+// together and configured. This is used to test gRPC connections.
+func TestPluginGRPCConn(t *testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCServer) {
+	// Create a listener
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Start up the server
+	server := &GRPCServer{
+		Plugins: ps,
+		Server:  DefaultGRPCServer,
+		Stdout:  new(bytes.Buffer),
+		Stderr:  new(bytes.Buffer),
+	}
+	if err := server.Init(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	go server.Serve(l)
+
+	// Connect to the server
+	conn, err := grpc.Dial(
+		l.Addr().String(),
+		grpc.WithBlock(),
+		grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Connection successful, close the listener
+	l.Close()
+
+	// Create the client
+	client := &GRPCClient{
+		Conn:    conn,
+		Plugins: ps,
 	}
 
 	return client, server

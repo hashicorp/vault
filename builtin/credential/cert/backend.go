@@ -10,9 +10,8 @@ import (
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
-	_, err := b.Setup(conf)
-	if err != nil {
-		return b, err
+	if err := b.Setup(conf); err != nil {
+		return nil, err
 	}
 	return b, nil
 }

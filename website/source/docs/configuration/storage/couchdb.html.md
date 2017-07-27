@@ -30,13 +30,16 @@ storage "couchdb" {
 
 ## `couchdb` Parameters
 
-- `endpoint` `(string: "")` – Specifies your CouchDB endpoint. This can also be provided via the
-  environment variable `COUCHDB_ENDPOINT`.
+- `endpoint` `(string: "")` – Specifies your CouchDB endpoint. This can also be
+  provided via the environment variable `COUCHDB_ENDPOINT`.
 
-- `username` `(string: "")` – Specifies the user to authenticate as. This can also be provided via the
-  environment variable `COUCHDB_USERNAME`.
+- `username` `(string: "")` – Specifies the user to authenticate as. This can
+  also be provided via the environment variable `COUCHDB_USERNAME`.
 
-- `password` `(string: "")` – Specifies the user to authenticate as. This can also be provided via the
-  environment variable `COUCHDB_PASSWORD`.
+- `password` `(string: "")` – Specifies the user to authenticate as. This can
+  also be provided via the environment variable `COUCHDB_PASSWORD`.
+
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
+  requests to CouchDB.
 
 [couchdb]: http://couchdb.apache.org/

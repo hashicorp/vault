@@ -671,7 +671,7 @@ The response will be in JSON. For example:
         the `ec2` auth method or using the `iam` auth method with inferencing,
         then these credentials need access to `ec2:DescribeInstances`. If
         additionally a `bound_iam_role` is specified, then these credentials
-        also need access to `iam:GetInstanceProfile`. If, however, an alterate
+        also need access to `iam:GetInstanceProfile`. If, however, an alternate
         sts configuration is set for the target account, then the credentials
         must be permissioned to call `sts:AssumeRole` on the configured role,
         and that role must have the permissions described here.
@@ -1872,8 +1872,10 @@ The response will be in JSON. For example:
       <li>
         <span class="param">iam_request_headers</span>
         <span class="param-flags">required</span>
-        Base64-encoded, JSON-serialized representation of the HTTP request
-        headers. The JSON serialization assumes that each header key maps to an
+        Base64-encoded, JSON-serialized representation of the
+        sts:GetCallerIdentity HTTP request
+        headers. The JSON serialization assumes that each header key maps to
+        either a string value or an
         array of string values (though the length of that array will probably
         only be one). If the `iam_server_id_header_value` is configured in Vault
         for the aws auth mount, then the headers must include the

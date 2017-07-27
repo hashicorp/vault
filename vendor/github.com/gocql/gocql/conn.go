@@ -156,10 +156,10 @@ func Connect(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler, ses
 	// TODO(zariel): remove these
 	if host == nil {
 		panic("host is nil")
-	} else if len(host.Peer()) == 0 {
-		panic("host missing peer ip address")
+	} else if len(host.ConnectAddress()) == 0 {
+		panic(fmt.Sprintf("host missing connect ip address: %v", host))
 	} else if host.Port() == 0 {
-		panic("host missing port")
+		panic(fmt.Sprintf("host missing port: %v", host))
 	}
 
 	var (
@@ -172,7 +172,7 @@ func Connect(host *HostInfo, cfg *ConnConfig, errorHandler ConnErrorHandler, ses
 	}
 
 	// TODO(zariel): handle ipv6 zone
-	translatedPeer, translatedPort := session.cfg.translateAddressPort(host.Peer(), host.Port())
+	translatedPeer, translatedPort := session.cfg.translateAddressPort(host.ConnectAddress(), host.Port())
 	addr := (&net.TCPAddr{IP: translatedPeer, Port: translatedPort}).String()
 	//addr := (&net.TCPAddr{IP: host.Peer(), Port: host.Port()}).String()
 
@@ -845,7 +845,7 @@ func (c *Conn) executeQuery(qry *Query) *Iter {
 		return &Iter{err: err}
 	}
 
-	if len(framer.traceID) > 0 {
+	if len(framer.traceID) > 0 && qry.trace != nil {
 		qry.trace.Trace(framer.traceID)
 	}
 

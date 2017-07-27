@@ -126,7 +126,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 		// Parse the JWT and retrieve the vault address
 		wt, err := jws.ParseJWT([]byte(unwrapToken))
 		if err != nil {
-			return nil, errors.New(fmt.Sprintf("error decoding token: %s", err))
+			return nil, fmt.Errorf("error decoding token: %s", err)
 		}
 		if wt == nil {
 			return nil, errors.New("nil decoded token")
@@ -146,7 +146,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 
 		// Sanity check the value
 		if _, err := url.Parse(vaultAddr); err != nil {
-			return nil, errors.New(fmt.Sprintf("error parsing the vault address: %s", err))
+			return nil, fmt.Errorf("error parsing the vault address: %s", err)
 		}
 
 		// Unwrap the token
@@ -165,7 +165,7 @@ func VaultPluginTLSProvider(apiTLSConfig *api.TLSConfig) func() (*tls.Config, er
 			return nil, errwrap.Wrapf("error during token unwrap request: {{err}}", err)
 		}
 		if secret == nil {
-			return nil, errors.New("error during token unwrap request secret is nil")
+			return nil, errors.New("error during token unwrap request: secret is nil")
 		}
 
 		// Retrieve and parse the server's certificate

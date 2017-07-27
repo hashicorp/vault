@@ -36,7 +36,6 @@ import (
 	"golang.org/x/net/http2/hpack"
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 )
 
@@ -283,7 +282,7 @@ func (d *decodeState) processHeaderField(f hpack.HeaderField) error {
 			}
 			v, err := decodeMetadataHeader(f.Name, f.Value)
 			if err != nil {
-				grpclog.Printf("Failed to decode (%q, %q): %v", f.Name, f.Value, err)
+				errorf("Failed to decode metadata header (%q, %q): %v", f.Name, f.Value, err)
 				return nil
 			}
 			d.mdata[f.Name] = append(d.mdata[f.Name], v)

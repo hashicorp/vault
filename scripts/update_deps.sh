@@ -32,4 +32,8 @@ govendor init
 echo "Fetching deps, will take some time..."
 govendor fetch +missing
 
+govendor remove github.com/Sirupsen/logrus
+cd vendor
+find -type f | grep '.go' | xargs sed -i -e 's/Sirupsen/sirupsen/'
+
 echo "Done; to commit run \n\ncd ${GOPATH}/src/github.com/hashicorp/${TOOL}\n"

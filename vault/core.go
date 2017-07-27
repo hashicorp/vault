@@ -516,7 +516,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends["system"] = func(config *logical.BackendConfig) (logical.Backend, error) {
 		b := NewSystemBackend(c)
-		return b.Backend.Setup(config)
+		if err := b.Setup(config); err != nil {
+			return nil, err
+		}
+		return b, nil
 	}
 	c.logicalBackends = logicalBackends
 
