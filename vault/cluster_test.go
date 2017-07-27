@@ -85,12 +85,12 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Make this nicer for tests
 	manualStepDownSleepPeriod = 5 * time.Second
 
-	cluster := NewTestCluster(t, nil, false)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := NewTestCluster(t, nil, &TestClusterOptions{
+		KeepStandbysSealed: true,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	root := cores[0].Root
 
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
@@ -147,7 +147,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	err := cores[0].StepDown(&logical.Request{
 		Operation:   logical.UpdateOperation,
 		Path:        "sys/step-down",
-		ClientToken: root,
+		ClientToken: cluster.RootToken,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -162,7 +162,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	time.Sleep(manualStepDownSleepPeriod)
 	checkListenersFunc(false)
 
-	err = cores[0].Seal(root)
+	err = cores[0].Seal(cluster.RootToken)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,54 +179,35 @@ func TestCluster_ForwardRequests(t *testing.T) {
 }
 
 func testCluster_ForwardRequestsCommon(t *testing.T) {
-	handler1 := http.NewServeMux()
-	handler1.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(201)
-		w.Write([]byte("core1"))
-	})
-	handler2 := http.NewServeMux()
-	handler2.HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(202)
-		w.Write([]byte("core2"))
-	})
-	handler3 := http.NewServeMux()
-	handler3.HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(203)
-		w.Write([]byte("core3"))
-	})
-
-	cluster := NewTestCluster(t, nil, true)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := NewTestCluster(t, nil, nil)
 	cores := cluster.Cores
-	cores[0].Handler.HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
+	cores[0].Handler.(*http.ServeMux).HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(201)
 		w.Write([]byte("core1"))
 	})
-	cores[1].Handler.HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
+	cores[1].Handler.(*http.ServeMux).HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(202)
 		w.Write([]byte("core2"))
 	})
-	cores[2].Handler.HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
+	cores[2].Handler.(*http.ServeMux).HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(203)
 		w.Write([]byte("core3"))
 	})
+	cluster.Start()
+	defer cluster.Cleanup()
 
-	root := cores[0].Root
+	root := cluster.RootToken
 
 	// Wait for core to become active
 	TestWaitActive(t, cores[0].Core)
 
 	// Test forwarding a request. Since we're going directly from core to core
 	// with no fallback we know that if it worked, request handling is working
-	testCluster_ForwardRequests(t, cores[1], "core1")
-	testCluster_ForwardRequests(t, cores[2], "core1")
+	testCluster_ForwardRequests(t, cores[1], root, "core1")
+	testCluster_ForwardRequests(t, cores[2], root, "core1")
 
 	//
 	// Now we do a bunch of round-robining. The point is to make sure that as
@@ -251,8 +232,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], "core2")
-	testCluster_ForwardRequests(t, cores[2], "core2")
+	testCluster_ForwardRequests(t, cores[0], root, "core2")
+	testCluster_ForwardRequests(t, cores[2], root, "core2")
 
 	// Ensure active core is cores[2] and test
 	err = cores[1].StepDown(&logical.Request{
@@ -271,8 +252,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], "core3")
-	testCluster_ForwardRequests(t, cores[1], "core3")
+	testCluster_ForwardRequests(t, cores[0], root, "core3")
+	testCluster_ForwardRequests(t, cores[1], root, "core3")
 
 	// Ensure active core is cores[0] and test
 	err = cores[2].StepDown(&logical.Request{
@@ -291,8 +272,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[0].Core)
-	testCluster_ForwardRequests(t, cores[1], "core1")
-	testCluster_ForwardRequests(t, cores[2], "core1")
+	testCluster_ForwardRequests(t, cores[1], root, "core1")
+	testCluster_ForwardRequests(t, cores[2], root, "core1")
 
 	// Ensure active core is cores[1] and test
 	err = cores[0].StepDown(&logical.Request{
@@ -311,8 +292,8 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[1].Core)
-	testCluster_ForwardRequests(t, cores[0], "core2")
-	testCluster_ForwardRequests(t, cores[2], "core2")
+	testCluster_ForwardRequests(t, cores[0], root, "core2")
+	testCluster_ForwardRequests(t, cores[2], root, "core2")
 
 	// Ensure active core is cores[2] and test
 	err = cores[1].StepDown(&logical.Request{
@@ -331,11 +312,11 @@ func testCluster_ForwardRequestsCommon(t *testing.T) {
 	})
 	time.Sleep(clusterTestPausePeriod)
 	TestWaitActive(t, cores[2].Core)
-	testCluster_ForwardRequests(t, cores[0], "core3")
-	testCluster_ForwardRequests(t, cores[1], "core3")
+	testCluster_ForwardRequests(t, cores[0], root, "core3")
+	testCluster_ForwardRequests(t, cores[1], root, "core3")
 }
 
-func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID string) {
+func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, remoteCoreID string) {
 	standby, err := c.Standby()
 	if err != nil {
 		t.Fatal(err)
@@ -347,6 +328,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 	// We need to call Leader as that refreshes the connection info
 	isLeader, _, err := c.Leader()
 	if err != nil {
+		panic(err.Error())
 		t.Fatal(err)
 	}
 	if isLeader {
@@ -358,7 +340,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, remoteCoreID 
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Add("X-Vault-Token", c.Root)
+	req.Header.Add("X-Vault-Token", rootToken)
 
 	statusCode, header, respBytes, err := c.ForwardRequest(req)
 	if err != nil {

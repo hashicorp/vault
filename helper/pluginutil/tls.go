@@ -25,6 +25,10 @@ var (
 	// PluginUnwrapTokenEnv is the ENV name used to pass unwrap tokens to the
 	// plugin.
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
+
+	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
+	// string. Used for testing.
+	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
 )
 
 // generateCert is used internally to create certificates for the plugin

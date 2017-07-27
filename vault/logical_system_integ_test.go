@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/http"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	lplugin "github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"
@@ -24,14 +24,12 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 		},
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	cores[0].Handler.Handle("/", http.Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", http.Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", http.Handler(cores[2].Core))
 
 	core := cores[0]
 
@@ -49,6 +47,8 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	os.Setenv(pluginutil.PluginCACertPEMEnv, string(cluster.CACertPEM))
 
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMain")
 
@@ -70,7 +70,12 @@ func TestBackend_PluginMain(t *testing.T) {
 		return
 	}
 
-	content := []byte(vault.TestClusterCACert)
+	caPem := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPem == "" {
+		t.Fatal("CA cert not passed in")
+	}
+
+	content := []byte(caPem)
 	tmpfile, err := ioutil.TempFile("", "test-cacert")
 	if err != nil {
 		t.Fatal(err)
