@@ -147,7 +147,7 @@ identifier can later be used to revoke a secondary's access.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
-| `GET`    | `/sys/replication/performance/primary/secondary-token` | `200 application/json` |
+| `POST`    | `/sys/replication/performance/primary/secondary-token` | `200 application/json` |
 
 ### Parameters
 
@@ -156,12 +156,22 @@ identifier can later be used to revoke a secondary's access.
 - `ttl` `(string: "30m")` – Specifies the TTL for the secondary activation
   token.
 
+### Sample Payload
+
+```json
+{
+  "id": "us-east-1"
+}
+```
+
 ### Sample Request
 
 ```
 $ curl \
     --header "X-Vault-Token: ..." \
-    https://vault.rocks/v1/sys/replication/performance/primary/secondary-token?id=us-east-1
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/sys/replication/performance/primary/secondary-token
 ```
 
 ### Sample Response
@@ -213,6 +223,96 @@ $ curl \
     --request POST \
     --data @payload.json \
     https://vault.rocks/v1/sys/replication/performance/primary/revoke-secondary
+```
+
+## Create Mounts Filter
+
+This endpoint is used to modify the mounts that are filtered to a secondary.
+Filtering can be specified in whitelist mode or blacklist mode.  In whitelist 
+mode the secret and auth mounts that are specified are included to the 
+selected secondary.  In blacklist mode, the mouunt paths are excluded.
+
+| Method   | Path                                                     | Produces               |
+| :------- | :------------------------------------------------------- | :--------------------- |
+| `POST`   | `/sys/replication/performance/primary/mount-filter/:id` | `204 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
+
+- `mode` `(string: "whitelist")` – Specifies the filtering mode.  Available values
+  are "whitelist" and blacklist".
+
+- `paths` `(array: [])` – The list of mount paths that are filtered.
+
+### Sample Payload
+
+```json
+{
+  "mode": "whitelist",
+  "paths": ["secret/"]
+}
+```
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    https://vault.rocks/v1/sys/replication/performance/primary/mount-filter/us-east-1
+```
+
+## Read Mounts Filter
+
+This endpoint is used to read the mode and the mount paths that are filtered
+for a secondary.
+
+| Method   | Path                                                     | Produces               |
+| :------- | :------------------------------------------------------- | :--------------------- |
+| `GET`    | `/sys/replication/performance/primary/mount-filter/:id`  | `200 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://vault.rocks/v1/sys/replication/performance/primary/mount-filter/us-east-1
+```
+
+### Sample Response
+
+```json
+{
+  "mode": "whitelist",
+  "paths": ["secret/"]
+}
+```
+
+## Delete Mounts Filter
+
+This endpoint is used to delete the mount filters for a secondary.
+
+| Method   | Path                                                     | Produces               |
+| :------- | :------------------------------------------------------- | :--------------------- |
+| `DELETE` | `/sys/replication/performance/primary/mount-filter/:id`  | `204 (empty body)` |
+
+### Parameters
+
+- `id` `(string: <required>)` – Specifies an opaque identifier, e.g. 'us-east'
+
+### Sample Request
+
+```
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    https://vault.rocks/v1/sys/replication/performance/primary/mount-filter/us-east-1
 ```
 
 ## Enable Performance Secondary
