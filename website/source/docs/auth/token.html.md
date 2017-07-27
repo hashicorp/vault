@@ -59,7 +59,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -99,6 +114,7 @@ of the header should be "X-Vault-Token" and the value should be the token.
   <dd>`/auth/token/create`</dd>
   <dd>`/auth/token/create-orphan`</dd>
   <dd>`/auth/token/create/<role_name>`</dd>
+
 
   <dt>Parameters</dt>
   <dd>
@@ -251,7 +267,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -289,13 +320,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">token</span>
-        <span class="param-flags">required</span>
-            Token to lookup.
-      </li>
-    </ul>
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">token</td>
+        <td class="param-flags">required</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>Token to lookup.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -336,13 +376,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">accessor</span>
-        <span class="param-flags">required</span>
-            Accessor of the token to lookup. This can be part of the URL or the body.
-      </li>
-    </ul>
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">accessor</td>
+        <td class="param-flags">required</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>Accessor of the token to lookup. This can be part of the URL or the body.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -387,7 +436,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -434,23 +498,30 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">token</span>
-        <span class="param-flags">required</span>
-            Token to renew. This can be part of the URL or the body.
-      </li>
-    </ul>
-  </dd>
-  <dd>
-    <ul>
-      <li>
-        <span class="param">increment</span>
-        <span class="param-flags">optional</span>
-            An optional requested lease increment can be provided. This
-            increment may be ignored.
-      </li>
-    </ul>
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">token</td>
+        <td class="param-flags">required</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>Token to renew. This can be part of the URL or the body.</td>
+      </tr>
+      <tr>
+        <td class="param">increment</td>
+        <td class="param-flags">optional</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>An optional requested lease increment can be provided. This
+            increment may be ignored.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -490,14 +561,23 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">increment</span>
-        <span class="param-flags">optional</span>
-            An optional requested lease increment can be provided. This
-            increment may be ignored.
-      </li>
-    </ul>
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">increment</td>
+        <td class="param-flags">optional</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>An optional requested lease increment can be provided. This
+            increment may be ignored.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -536,13 +616,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">token</span>
-        <span class="param-flags">required</span>
-            Token to revoke.
-      </li>
-    </ul>
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">token</td>
+        <td class="param-flags">required</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>Token to revoke.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -569,13 +658,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">accessor</span>
-        <span class="param-flags">required</span>
-            Accessor of the token.
-      </li>
-    </ul>
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">accessor</td>
+        <td class="param-flags">required</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>Accessor of the token.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -604,13 +702,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">token</span>
-        <span class="param-flags">required</span>
-            Token to revoke. This can be part of the URL or the body.
-      </li>
-    </ul>
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">token</td>
+        <td class="param-flags">required</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>Token to revoke. This can be part of the URL or the body.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -637,7 +744,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -663,7 +785,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -688,7 +825,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -735,7 +887,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -774,72 +941,93 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    <ul>
-      <li>
-        <span class="param">allowed_policies</span>
-        <span class="param-flags">optional</span>
-        If set, tokens can be created with any subset of the policies in this
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">allowed_policies</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>If set, tokens can be created with any subset of the policies in this
         list, rather than the normal semantics of tokens being a subset of the
         calling token's policies. The parameter is a comma-delimited string of
         policy names. If at creation time `no_default_policy` is not set and
         `"default"` is not contained in `disallowed_policies`, the `"default"`
-        policy will be added to the created token automatically.
-      </li>
-      <li>
-        <span class="param">disallowed_policies</span>
-        <span class="param-flags">optional</span>
-        If set, successful token creation via this role will require that no
+        policy will be added to the created token automatically.</td>
+      </tr>
+      <tr>
+        <td class="param">disallowed_policies</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>If set, successful token creation via this role will require that no
         policies in the given list are requested. The parameter is a
         comma-delimited string of policy names. Adding `"default"` to this list
         will prevent `"default"` from being added automatically to created
-        tokens.
-      </li>
-      <li>
-        <span class="param">orphan</span>
-        <span class="param-flags">optional</span>
-        If `true`, tokens created against this policy will be orphan tokens
+        tokens.</td>
+      </tr>
+      <tr>
+        <td class="param">orphan</td>
+        <td class="param-flags">optional</td>
+        <td>bool</td>
+        <td>false</td>
+        <td>If `true`, tokens created against this policy will be orphan tokens
         (they will have no parent). As such, they will not be automatically
-        revoked by the revocation of any other token.
-      </li>
-      <li>
-        <span class="param">period</span>
-        <span class="param-flags">optional</span>
-        If set, tokens created against this role will <i>not</i> have a maximum
+        revoked by the revocation of any other token.</td>
+      </tr>
+      <tr>
+        <td class="param">period</td>
+        <td class="param-flags">optional</td>
+        <td>int</td>
+        <td>&nbsp;</td>
+        <td>If set, tokens created against this role will <i>not</i> have a maximum
         lifetime. Instead, they will have a fixed TTL that is refreshed with
         each renewal. So long as they continue to be renewed, they will never
         expire. The parameter is an integer duration of seconds. Tokens issued
         track updates to the role value; the new period takes effect upon next
-        renew. This cannot be used in conjunction with `explicit_max_ttl`.
-      </li>
-      <li>
-        <span class="param">renewable</span>
-        <span class="param-flags">optional</span>
-        Set to `false` to disable the ability of token created against this
+        renew. This cannot be used in conjunction with `explicit_max_ttl`.</td>
+      </tr>
+      <tr>
+        <td class="param">renewable</td>
+        <td class="param-flags">optional</td>
+        <td>bool</td>
+        <td>true</td>
+        <td>Set to `false` to disable the ability of token created against this
         role to be renewed past their initial TTL. Defaults to `true`, which
-        allows tokens to be renewed up to the system/mount maximum TTL.
-      </li>
-      <li>
-        <span class="param">path_suffix</span>
-        <span class="param-flags">optional</span>
-        If set, tokens created against this role will have the given suffix as
+        allows tokens to be renewed up to the system/mount maximum TTL.</td>
+      </tr>
+      <tr>
+        <td class="param">path_suffix</td>
+        <td class="param-flags">optional</td>
+        <td>string</td>
+        <td>&nbsp;</td>
+        <td>If set, tokens created against this role will have the given suffix as
         part of their path in addition to the role name. This can be useful in
         certain scenarios, such as keeping the same role name in the future but
         revoking all tokens created against it before some point in time. The
         suffix can be changed, allowing new callers to have the new suffix as
         part of their path, and then tokens with the old suffix can be revoked
-        via `sys/revoke-prefix`.
-      </li>
-      <li>
-        <span class="param">explicit_max_ttl</span>
-        <span class="param-flags">optional</span>
-        If set, tokens created with this role have an explicit max TTL set upon
+        via `sys/revoke-prefix`.</td>
+      </tr>
+      <tr>
+        <td class="param">explicit_max_ttl</td>
+        <td class="param-flags">optional</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>If set, tokens created with this role have an explicit max TTL set upon
         them. This maximum token TTL *cannot* be changed later, and unlike with
         normal tokens, updates to the role or the system/mount max TTL value
         will have no effect at renewal time -- the token will never be able to
         be renewed or used past the value set at issue time. This cannot be
-        used in conjunction with `period`.
-      </li>
-    </ul>
+        used in conjunction with `period`.</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
@@ -868,7 +1056,22 @@ of the header should be "X-Vault-Token" and the value should be the token.
 
   <dt>Parameters</dt>
   <dd>
-    None
+    <table>
+      <tr>
+        <th>name</th>
+        <th>required</th>
+        <th>type</th>
+        <th>default</th>
+        <th>description</th>
+      </tr>
+      <tr>
+        <td class="param">None</td>
+        <td class="param-flags">&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+    </table>
   </dd>
 
   <dt>Returns</dt>
