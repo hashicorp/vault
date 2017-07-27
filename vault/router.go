@@ -204,8 +204,13 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(path string) string {
 	r.l.RLock()
-	mount, _, ok := r.root.LongestPrefix(path)
+	var mount = r.matchingMountInternal(path)
 	r.l.RUnlock()
+	return mount
+}
+
+func (r *Router) matchingMountInternal(path string) string {
+	mount, _, ok := r.root.LongestPrefix(path)
 	if !ok {
 		return ""
 	}
@@ -226,22 +231,18 @@ func (r *Router) matchingPrefixInternal(path string) string {
 	return existing
 }
 
-// MatchingPrefix is like matchingPrefixInternal but locks the router
-func (r *Router) MatchingPrefix(path string) string {
-	r.l.RLock()
-	match := r.matchingPrefixInternal(path)
-	r.l.RUnlock()
-	return match
-}
-
 // MountConflict determines if there are potential path conflicts
 func (r *Router) MountConflict(path string) string {
-	if exact_match := r.MatchingMount(path); exact_match != "" {
+	r.l.RLock()
+	if exact_match := r.matchingMountInternal(path); exact_match != "" {
+		r.l.RUnlock()
 		return exact_match
 	}
-	if prefix_match := r.MatchingPrefix(path); prefix_match != "" {
+	if prefix_match := r.matchingPrefixInternal(path); prefix_match != "" {
+		r.l.RUnlock()
 		return prefix_match
 	}
+	r.l.RUnlock()
 	return ""
 }
 
