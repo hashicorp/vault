@@ -31,15 +31,15 @@ policy is shown below:
 
 ```javascript
 path "secret/*" {
-  policy = "write"
+  capabilities = ["write"]
 }
 
 path "secret/foo" {
-  policy = "read"
+  capabilities = ["read"]
 }
 
 path "auth/token/lookup-self" {
-  policy = "read"
+  capabilities = ["read"]
 }
 ```
 

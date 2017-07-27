@@ -48,7 +48,7 @@ All directives take string arguments unless explicitly specified otherwise.
 
 ## Top-Level Directives
 
- * `environment`: A block with information about he environment under which the
+ * `environment`: A block with information about the environment under which the
    client is running. If not specified, the client will attempt to
    automatically discover its environment. The type may also be specified by
    the `VAULT_SI_ENVIRONMENT` environment variable and the `environment` CLI

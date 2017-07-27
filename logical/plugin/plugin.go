@@ -1,6 +1,9 @@
 package plugin
 
 import (
+	"crypto/ecdsa"
+	"crypto/rsa"
+	"encoding/gob"
 	"fmt"
 
 	"sync"
@@ -9,6 +12,13 @@ import (
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical"
 )
+
+// Register these types since we have to serialize and de-serialize tls.ConnectionState
+// over the wire as part of logical.Request.Connection.
+func init() {
+	gob.Register(rsa.PublicKey{})
+	gob.Register(ecdsa.PublicKey{})
+}
 
 // BackendPluginClient is a wrapper around backendPluginClient
 // that also contains its plugin.Client instance. It's primarily
