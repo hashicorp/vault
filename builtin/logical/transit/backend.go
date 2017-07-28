@@ -38,9 +38,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 			b.pathVerify(),
 		},
 
-		Secrets: []*framework.Secret{},
-
-		Invalidate: b.invalidate,
+		Secrets:     []*framework.Secret{},
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	b.lm = keysutil.NewLockManager(conf.System.CachingDisabled())

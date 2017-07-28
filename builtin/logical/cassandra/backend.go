@@ -40,6 +40,7 @@ func Backend() *backend {
 		Clean: func() {
 			b.ResetDB(nil)
 		},
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b

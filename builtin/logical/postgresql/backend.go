@@ -37,9 +37,9 @@ func Backend(conf *logical.BackendConfig) *backend {
 			secretCreds(&b),
 		},
 
-		Clean: b.ResetDB,
-
-		Invalidate: b.invalidate,
+		Clean:       b.ResetDB,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	b.logger = conf.Logger

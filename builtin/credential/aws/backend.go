@@ -113,8 +113,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathIdentityWhitelist(b),
 			pathTidyIdentityWhitelist(b),
 		},
-
-		Invalidate: b.invalidate,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 
 	return b, nil

@@ -50,7 +50,8 @@ func Backend() *backend {
 			pathLogin(&b),
 		}, allPaths...),
 
-		AuthRenew: b.pathLoginRenew,
+		AuthRenew:   b.pathLoginRenew,
+		BackendType: logical.TypeCredential,
 	}
 
 	return &b

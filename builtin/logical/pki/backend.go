@@ -68,6 +68,8 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{
 			secretCerts(&b),
 		},
+
+		BackendType: logical.TypeLogical,
 	}
 
 	b.crlLifetime = time.Hour * 72
