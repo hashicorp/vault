@@ -56,6 +56,8 @@ BUG FIXES:
  * api/leases: Fix lease lookup returning lease properties at the top level
  * audit: Fix panic when audit logging a read operation on an asymmetric
    `transit` key [GH-2958]
+ * auth/approle: Fix panic when secret and cidr list not provided in role
+   [GH-3075]
  * auth/aws: Look up proper account ID on token renew [GH-3012]
  * auth/aws: Store IAM header in all cases when it changes [GH-3004]
  * auth/ldap: Verify given certificate is PEM encoded instead of failing
