@@ -91,7 +91,7 @@ func (b *backend) validateRoleID(s logical.Storage, roleID string) (*roleStorage
 
 // Validates the supplied RoleID and SecretID
 func (b *backend) validateCredentials(req *logical.Request, data *framework.FieldData) (*roleStorageEntry, string, map[string]string, error) {
-	var metadata map[string]string
+	metadata := make(map[string]string)
 	// RoleID must be supplied during every login
 	roleID := strings.TrimSpace(data.Get("role_id").(string))
 	if roleID == "" {
