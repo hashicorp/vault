@@ -761,7 +761,8 @@ $ curl \
 
 This endpoint returns the cryptographic signature of the given data using the
 named key and the specified hash algorithm. The key must be of a type that
-supports signing.
+supports signing. If the key is `ed25519`, the algorithm parameter is not
+relevant.
 
 | Method   | Path                         | Produces               |
 | :------- | :--------------------------- | :--------------------- |
@@ -776,13 +777,17 @@ supports signing.
   signing. If not set, uses the latest version. Must be greater than or equal
   to the key's `min_encryption_version`, if set.
 
-- `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
-  can also be specified as part of the URL. Currently-supported algorithms are:
+- `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to
+use for non-ed25519 keys. This can also be specified as part of the URL.
+Currently-supported algorithms are:
 
     - `sha2-224`
     - `sha2-256`
     - `sha2-384`
     - `sha2-512`
+
+  If the key is of type `ed25519` the Edwards25519 signing algorithm is used and
+  the algorithm parameter is discarded.
 
 - `input` `(string: <required>)` – Specifies the **base64 encoded** input data.
 
