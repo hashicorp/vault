@@ -7,7 +7,9 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/consts"
+	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/helper/salt"
 	"github.com/hashicorp/vault/helper/xor"
 	"github.com/hashicorp/vault/shamir"
 )
@@ -216,27 +218,68 @@ func (c *Core) GenerateRootUpdate(key []byte, nonce string) (*GenerateRootResult
 	var masterKey []byte
 	if config.SecretThreshold == 1 {
 		masterKey = c.generateRootProgress[0]
-		c.generateRootProgress = nil
 	} else {
 		masterKey, err = shamir.Combine(c.generateRootProgress)
-		c.generateRootProgress = nil
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute master key: %v", err)
 		}
 	}
 
 	// Verify the master key
+	var keySharesMetadataPath string
 	if c.seal.RecoveryKeySupported() {
 		if err := c.seal.VerifyRecoveryKey(masterKey); err != nil {
 			c.logger.Error("core: root generation aborted, recovery key verification failed", "error", err)
 			return nil, err
 		}
+		keySharesMetadataPath = coreRecoverySharesMetadataPath
 	} else {
 		if err := c.barrier.VerifyMaster(masterKey); err != nil {
 			c.logger.Error("core: root generation aborted, master key verification failed", "error", err)
 			return nil, err
 		}
+		keySharesMetadataPath = coreSecretSharesMetadataPath
 	}
+
+	// Fetch the unseal keys metadata and log which of the unseal key holders
+	// generated the root token
+	keySharesMetadataEntry, err := c.barrier.Get(keySharesMetadataPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch key shares metadata entry: %v", err)
+	}
+
+	// For BC compatibility, log the metadata information only if it is
+	// available
+	var keySharesMetadataValue keySharesMetadataStorageValue
+	if keySharesMetadataEntry != nil {
+		if err = jsonutil.DecodeJSON(keySharesMetadataEntry.Value, &keySharesMetadataValue); err != nil {
+			return nil, fmt.Errorf("failed to decode key shares metadata entry: %v", err)
+		}
+
+		for _, unlockPart := range c.generateRootProgress {
+			// Fetch the metadata associated with the key share
+			secretShareMetadata, ok := keySharesMetadataValue.Data[base64.StdEncoding.EncodeToString(salt.SHA256Hash(unlockPart))]
+
+			// If the storage entry is successfully read, metadata associated
+			// with all the key shares must be available.
+			if !ok || secretShareMetadata == nil {
+				c.logger.Error("core: failed to fetch key share metadata")
+				return nil, fmt.Errorf("failed to fetch key share metadata")
+			}
+
+			switch {
+			case secretShareMetadata.ID != "" && secretShareMetadata.Name != "":
+				c.logger.Info(fmt.Sprintf("core: key share with identifier %q and name %q supplied for generating root token", secretShareMetadata.ID, secretShareMetadata.Name))
+			case secretShareMetadata.ID != "":
+				c.logger.Info(fmt.Sprintf("core: key share with identifier %q supplied for generating root token", secretShareMetadata.ID))
+			default:
+				c.logger.Error("core: missing key share metadata while generating root token")
+				return nil, fmt.Errorf("missing key share metadata while generating root token")
+			}
+		}
+	}
+
+	c.generateRootProgress = nil
 
 	te, err := c.tokenStore.rootToken()
 	if err != nil {

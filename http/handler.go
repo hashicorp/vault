@@ -44,6 +44,8 @@ func Handler(core *vault.Core) http.Handler {
 	// Create the muxer to handle the actual endpoints
 	mux := http.NewServeMux()
 	mux.Handle("/v1/sys/init", handleSysInit(core))
+	mux.Handle("/v1/sys/init/unseal-shares-identifiers", handleSysInitKeySharesIdentifiers(core, false))
+	mux.Handle("/v1/sys/init/recovery-shares-identifiers", handleSysInitKeySharesIdentifiers(core, true))
 	mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
 	mux.Handle("/v1/sys/seal", handleSysSeal(core))
 	mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))

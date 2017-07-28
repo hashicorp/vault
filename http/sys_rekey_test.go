@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/strutil"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -164,6 +165,104 @@ func TestSysRekey_badKey(t *testing.T) {
 	testResponseStatus(t, resp, 400)
 }
 
+func TestSysRekey_SecretSharesMetadata(t *testing.T) {
+	core, keys, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		"secret_shares":    5,
+		"secret_threshold": 3,
+	})
+	var rekeyStatus map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &rekeyStatus)
+
+	var actual map[string]interface{}
+	for i, key := range keys {
+		resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
+			"nonce": rekeyStatus["nonce"].(string),
+			"key":   hex.EncodeToString(key),
+		})
+
+		testResponseStatus(t, resp, 200)
+		if i+1 == len(keys) {
+			testResponseBody(t, resp, &actual)
+		}
+	}
+
+	if actual == nil {
+		t.Fatalf("failed to rekey")
+	}
+
+	keySharesMetadata := actual["key_shares_metadata"].([]interface{})
+	if len(keySharesMetadata) != 5 {
+		t.Fatalf("bad: length of key_shares_metadata: expected: 5, actual: %d", len(keySharesMetadata))
+	}
+
+	for key, item := range keySharesMetadata {
+		metadata := item.(map[string]interface{})
+		if metadata["id"].(string) == "" {
+			t.Fatalf("bad: missing identifier in key shares metadata for key %q: %#v", key, keySharesMetadata)
+		}
+	}
+}
+
+func TestSysRekey_SecretSharesMetadataKeyIdentifierNames(t *testing.T) {
+	core, keys, token := vault.TestCoreUnsealed(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	resp := testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		"secret_shares":               5,
+		"secret_threshold":            3,
+		"key_shares_identifier_names": "first,second,third,forth,fifth",
+	})
+	var rekeyStatus map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &rekeyStatus)
+
+	var actual map[string]interface{}
+	for i, key := range keys {
+		resp = testHttpPut(t, token, addr+"/v1/sys/rekey/update", map[string]interface{}{
+			"nonce": rekeyStatus["nonce"].(string),
+			"key":   hex.EncodeToString(key),
+		})
+
+		testResponseStatus(t, resp, 200)
+		if i+1 == len(keys) {
+			testResponseBody(t, resp, &actual)
+		}
+	}
+
+	if actual == nil {
+		t.Fatalf("failed to rekey")
+	}
+	nameList := []string{"first", "second", "third", "forth", "fifth"}
+
+	keySharesMetadata := actual["key_shares_metadata"].([]interface{})
+	if len(keySharesMetadata) != 5 {
+		t.Fatalf("bad: length of key_shares_metadata: expected: 5, actual: %d", len(keySharesMetadata))
+	}
+
+	for key, item := range keySharesMetadata {
+		metadata := item.(map[string]interface{})
+		if metadata["id"].(string) == "" {
+			t.Fatalf("bad: missing identifier in key shares metadata for key %q: %#v", key, keySharesMetadata)
+		}
+		if metadata["name"].(string) == "" {
+			t.Fatalf("invalid key identifier name")
+		}
+		nameList = strutil.StrListDelete(nameList, metadata["name"].(string))
+	}
+
+	if len(nameList) != 0 {
+		t.Fatalf("bad: length of key identifier names list: expected 0, actual: %d", len(nameList))
+	}
+}
+
 func TestSysRekey_Update(t *testing.T) {
 	core, keys, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
@@ -210,6 +309,7 @@ func TestSysRekey_Update(t *testing.T) {
 			expected["complete"] = true
 			expected["keys"] = actual["keys"]
 			expected["keys_base64"] = actual["keys_base64"]
+			expected["secret_shares_metadata"] = actual["secret_shares_metadata"]
 		}
 
 		if i+1 < len(keys) && (actual["nonce"] == nil || actual["nonce"].(string) == "") {

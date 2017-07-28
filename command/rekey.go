@@ -30,7 +30,7 @@ type RekeyCommand struct {
 func (c *RekeyCommand) Run(args []string) int {
 	var init, cancel, status, delete, retrieve, backup, recoveryKey bool
 	var shares, threshold int
-	var nonce string
+	var nonce, keySharesIdentifierNames string
 	var pgpKeys pgpkeys.PubKeyFilesFlag
 	flags := c.Meta.FlagSet("rekey", meta.FlagSetDefault)
 	flags.BoolVar(&init, "init", false, "")
@@ -43,6 +43,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	flags.IntVar(&shares, "key-shares", 5, "")
 	flags.IntVar(&threshold, "key-threshold", 3, "")
 	flags.StringVar(&nonce, "nonce", "", "")
+	flags.StringVar(&keySharesIdentifierNames, "key-shares-identifier-names", "", "")
 	flags.Var(&pgpKeys, "pgp-keys", "")
 	flags.Usage = func() { c.Ui.Error(c.Help()) }
 	if err := flags.Parse(args); err != nil {
@@ -63,7 +64,7 @@ func (c *RekeyCommand) Run(args []string) int {
 	// Check if we are running doing any restricted variants
 	switch {
 	case init:
-		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey)
+		return c.initRekey(client, shares, threshold, pgpKeys, backup, recoveryKey, keySharesIdentifierNames)
 	case cancel:
 		return c.cancelRekey(client, recoveryKey)
 	case status:
@@ -88,20 +89,18 @@ func (c *RekeyCommand) Run(args []string) int {
 
 	// Start the rekey process if not started
 	if !rekeyStatus.Started {
+		rekeyInitRequest := &api.RekeyInitRequest{
+			SecretShares:             shares,
+			SecretThreshold:          threshold,
+			KeySharesIdentifierNames: keySharesIdentifierNames,
+			PGPKeys:                  pgpKeys,
+			Backup:                   backup,
+		}
+
 		if recoveryKey {
-			rekeyStatus, err = client.Sys().RekeyRecoveryKeyInit(&api.RekeyInitRequest{
-				SecretShares:    shares,
-				SecretThreshold: threshold,
-				PGPKeys:         pgpKeys,
-				Backup:          backup,
-			})
+			rekeyStatus, err = client.Sys().RekeyRecoveryKeyInit(rekeyInitRequest)
 		} else {
-			rekeyStatus, err = client.Sys().RekeyInit(&api.RekeyInitRequest{
-				SecretShares:    shares,
-				SecretThreshold: threshold,
-				PGPKeys:         pgpKeys,
-				Backup:          backup,
-			})
+			rekeyStatus, err = client.Sys().RekeyInit(rekeyInitRequest)
 		}
 		if err != nil {
 			c.Ui.Error(fmt.Sprintf("Error initializing rekey: %s", err))
@@ -180,6 +179,25 @@ func (c *RekeyCommand) Run(args []string) int {
 		}
 	}
 
+	if len(result.KeySharesMetadata) > 0 {
+		if len(result.Keys) != len(result.KeySharesMetadata) {
+			c.Ui.Error("Number of key shares returned is not matching the number of key shares metadata")
+			return 1
+		}
+
+		for i, keyShareMetadata := range result.KeySharesMetadata {
+			switch {
+			case keyShareMetadata.ID != "" && keyShareMetadata.Name != "":
+				c.Ui.Output(fmt.Sprintf("Key share identifier %d with name %q: %s", i+1, keyShareMetadata.Name, keyShareMetadata.ID))
+			case keyShareMetadata.ID != "":
+				c.Ui.Output(fmt.Sprintf("Key share identifier %d: %s", i+1, keyShareMetadata.ID))
+			default:
+				c.Ui.Error("Invalid key shares metadata")
+				return 1
+			}
+		}
+	}
+
 	c.Ui.Output(fmt.Sprintf("\nOperation nonce: %s", result.Nonce))
 
 	if len(result.PGPFingerprints) > 0 && result.Backup {
@@ -212,13 +230,14 @@ func (c *RekeyCommand) Run(args []string) int {
 func (c *RekeyCommand) initRekey(client *api.Client,
 	shares, threshold int,
 	pgpKeys pgpkeys.PubKeyFilesFlag,
-	backup, recoveryKey bool) int {
+	backup, recoveryKey bool, keySharesIdentifierNames string) int {
 	// Start the rekey
 	request := &api.RekeyInitRequest{
 		SecretShares:    shares,
 		SecretThreshold: threshold,
 		PGPKeys:         pgpKeys,
 		Backup:          backup,
+		KeySharesIdentifierNames: keySharesIdentifierNames,
 	}
 	var status *api.RekeyStatusResponse
 	var err error
@@ -390,6 +409,13 @@ Rekey Options:
 
   -key-threshold=3        The number of key shares required to reconstruct
                           the master key.
+
+  -key-shares-identifier-names
+                          If provided, must be a comma-separated list of names
+                          to be associated with the key shares identifiers. The
+                          number of unique names supplied should match the value
+                          of 'key-threshold'.
+
 
   -nonce=abcd             The nonce provided at rekey initialization time. This
                           same nonce value must be provided with each unseal
