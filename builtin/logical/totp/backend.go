@@ -28,7 +28,8 @@ func Backend() *backend {
 			pathCode(&b),
 		},
 
-		Secrets: []*framework.Secret{},
+		Secrets:     []*framework.Secret{},
+		BackendType: logical.TypeLogical,
 	}
 
 	b.usedCodes = cache.New(0, 30*time.Second)

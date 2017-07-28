@@ -43,7 +43,8 @@ func Backend() *backend {
 			mfa.MFAPaths(b.Backend, pathLogin(&b))...,
 		),
 
-		AuthRenew: b.pathLoginRenew,
+		AuthRenew:   b.pathLoginRenew,
+		BackendType: logical.TypeCredential,
 	}
 
 	return &b

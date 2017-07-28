@@ -63,7 +63,6 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				"login/*",
 			},
 		},
-
 		Paths: framework.PathAppend([]*framework.Path{
 			pathLogin(&b),
 			pathLoginWithAppIDPath(&b),
@@ -71,10 +70,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			b.MapAppId.Paths(),
 			b.MapUserId.Paths(),
 		),
-
-		AuthRenew: b.pathLoginRenew,
-
-		Invalidate: b.invalidate,
+		AuthRenew:   b.pathLoginRenew,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 
 	b.view = conf.StorageView

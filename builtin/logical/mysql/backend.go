@@ -36,9 +36,9 @@ func Backend() *backend {
 			secretCreds(&b),
 		},
 
-		Invalidate: b.invalidate,
-
-		Clean: b.ResetDB,
+		Invalidate:  b.invalidate,
+		Clean:       b.ResetDB,
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b

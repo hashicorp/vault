@@ -62,7 +62,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			secretOTP(&b),
 		},
 
-		Invalidate: b.invalidate,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 	return &b, nil
 }

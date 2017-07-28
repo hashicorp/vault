@@ -20,13 +20,11 @@ func Backend() *backend {
 	var b backend
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
-
 		PathsSpecial: &logical.Paths{
 			Unauthenticated: []string{
 				"login",
 			},
 		},
-
 		Paths: append([]*framework.Path{
 			pathConfig(&b),
 			pathLogin(&b),
@@ -34,10 +32,9 @@ func Backend() *backend {
 			pathCerts(&b),
 			pathCRLs(&b),
 		}),
-
-		AuthRenew: b.pathLoginRenew,
-
-		Invalidate: b.invalidate,
+		AuthRenew:   b.pathLoginRenew,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 
 	b.crlUpdateMutex = &sync.RWMutex{}
