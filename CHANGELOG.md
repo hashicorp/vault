@@ -67,6 +67,7 @@ BUG FIXES:
  * cli: Fix issue with parsing keys that start with special characters [GH-2998]
  * core: Relocated `sys/leases/renew` returns same payload as original 
    `sys/leases` endpoint [GH-2891]
+ * secret/ssh: Fix panic when signing with incorrect key type [GH-3072]
  * secret/totp: Ensure codes can only be used once. This makes some automated
    workflows harder but complies with the RFC. [GH-2908]
  * secret/transit: Fix locking when creating a key with unsupported options
