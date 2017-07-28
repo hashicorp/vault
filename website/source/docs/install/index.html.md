@@ -71,3 +71,6 @@ on your PATH or you may get an error about Vault not being found.
 ```shell
 $ vault -v
 ```
+## Upgrading from a previous version
+
+Unless the release notes give specific instructions on upgrading, the recommended upgrade procedure is to take down and upgrade any follower nodes one at a time, bring them back up and unseal them. Then seal the leader node, which will force re-election and one of your follower nodes should now become the leader.  You can then stop the old leader, upgrade it, bring it up and unseal it, where it will now become a follower node. If you are not using HA mode with a multi-node deployment, then obviously upgrading causes outages, just seal it, bring it down, upgrade the binary and then bring it up.
