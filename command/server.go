@@ -862,12 +862,20 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	}
 
 	c.Ui.Output(fmt.Sprintf(
-		"==> Three node dev mode is enabled\n\n"+
-			"The unseal key and root token are reproduced below in case you\n"+
-			"want to seal/unseal the Vault or play with authentication.\n\n"+
-			"Unseal Key: %s\nRoot Token: %s\n",
-		base64.StdEncoding.EncodeToString(testCluster.BarrierKeys[0]),
-		testCluster.RootToken,
+		"==> Three node dev mode is enabled\n\n" +
+			"The unseal key and root token are reproduced below in case you\n" +
+			"want to seal/unseal the Vault or play with authentication.\n",
+	))
+
+	for i, key := range testCluster.BarrierKeys {
+		c.Ui.Output(fmt.Sprintf(
+			"Unseal Key %d: %s",
+			i, base64.StdEncoding.EncodeToString(key),
+		))
+	}
+
+	c.Ui.Output(fmt.Sprintf(
+		"\nRoot Token: %s\n", testCluster.RootToken,
 	))
 
 	// Output the header that the server has started
