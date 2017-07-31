@@ -115,16 +115,16 @@ func TestCluster_ListenForRequests(t *testing.T) {
 				t.Fatalf("%s not a TCP port", tcpAddr.String())
 			}
 
-			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+100), tlsConfig)
+			conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", tcpAddr.IP.String(), tcpAddr.Port+105), tlsConfig)
 			if err != nil {
 				if expectFail {
-					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+100)
+					t.Logf("testing %s:%d unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
 					continue
 				}
 				t.Fatalf("error: %v\nlisteners are\n%#v\n%#v\n", err, cores[0].Listeners[0], cores[0].Listeners[1])
 			}
 			if expectFail {
-				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+100)
+				t.Fatalf("testing %s:%d not unsuccessful as expected", tcpAddr.IP.String(), tcpAddr.Port+105)
 			}
 			err = conn.Handshake()
 			if err != nil {
@@ -137,7 +137,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 			case connState.NegotiatedProtocol != "h2" || !connState.NegotiatedProtocolIsMutual:
 				t.Fatal("bad protocol negotiation")
 			}
-			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+100)
+			t.Logf("testing %s:%d successful", tcpAddr.IP.String(), tcpAddr.Port+105)
 		}
 	}
 

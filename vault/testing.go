@@ -662,11 +662,25 @@ type TestClusterCore struct {
 type TestClusterOptions struct {
 	KeepStandbysSealed bool
 	HandlerFunc        func(*Core) http.Handler
+	BaseListenAddress  string
 }
 
 func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
-	var testCluster TestCluster
+	certIPs := []net.IP{
+		net.IPv6loopback,
+		net.ParseIP("127.0.0.1"),
+	}
+	var baseAddr *net.TCPAddr
+	if opts.BaseListenAddress != "" {
+		var err error
+		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
+		if err != nil {
+			t.Fatal("could not parse given base IP")
+		}
+		certIPs = append(certIPs, baseAddr.IP)
+	}
 
+	var testCluster TestCluster
 	tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
 	if err != nil {
 		t.Fatal(err)
@@ -682,11 +696,8 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		Subject: pkix.Name{
 			CommonName: "localhost",
 		},
-		DNSNames: []string{"localhost"},
-		IPAddresses: []net.IP{
-			net.IPv6loopback,
-			net.ParseIP("127.0.0.1"),
-		},
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           certIPs,
 		KeyUsage:              x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign),
 		SerialNumber:          big.NewInt(mathrand.Int63()),
 		NotBefore:             time.Now().Add(-30 * time.Second),
@@ -869,10 +880,17 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	//
 	// Listener setup
 	//
-	ln, err := net.ListenTCP("tcp", &net.TCPAddr{
-		IP:   net.ParseIP("127.0.0.1"),
-		Port: 0,
-	})
+	ports := []int{0, 0, 0}
+	if baseAddr != nil {
+		ports = []int{baseAddr.Port, baseAddr.Port + 1, baseAddr.Port + 2}
+	} else {
+		baseAddr = &net.TCPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: 0,
+		}
+	}
+	baseAddr.Port = ports[0]
+	ln, err := net.ListenTCP("tcp", baseAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -913,10 +931,8 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		t.Fatal(err)
 	}
 
-	ln, err = net.ListenTCP("tcp", &net.TCPAddr{
-		IP:   net.ParseIP("127.0.0.1"),
-		Port: 0,
-	})
+	baseAddr.Port = ports[1]
+	ln, err = net.ListenTCP("tcp", baseAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -957,10 +973,8 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		t.Fatal(err)
 	}
 
-	ln, err = net.ListenTCP("tcp", &net.TCPAddr{
-		IP:   net.ParseIP("127.0.0.1"),
-		Port: 0,
-	})
+	baseAddr.Port = ports[2]
+	ln, err = net.ListenTCP("tcp", baseAddr)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1001,18 +1015,21 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		t.Fatal(err)
 	}
 
-	// Create three cores with the same physical and different redirect/cluster addrs
+	// Create three cores with the same physical and different redirect/cluster
+	// addrs.
 	// N.B.: On OSX, instead of random ports, it assigns new ports to new
 	// listeners sequentially. Aside from being a bad idea in a security sense,
 	// it also broke tests that assumed it was OK to just use the port above
-	// the redirect addr. This has now been changed to 100 ports above, but if
+	// the redirect addr. This has now been changed to 105 ports above, but if
 	// we ever do more than three nodes in a cluster it may need to be bumped.
+	// Note: it's 105 so that we don't conflict with a running Consul by
+	// default.
 	coreConfig := &CoreConfig{
 		LogicalBackends:    make(map[string]logical.Factory),
 		CredentialBackends: make(map[string]logical.Factory),
 		AuditBackends:      make(map[string]audit.Factory),
 		RedirectAddr:       fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port),
-		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port+100),
+		ClusterAddr:        fmt.Sprintf("https://127.0.0.1:%d", c1lns[0].Address.Port+105),
 		DisableMlock:       true,
 		EnableUI:           true,
 	}
@@ -1086,7 +1103,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 
 	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
-		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port+100)
+		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c2lns[0].Address.Port+105)
 	}
 	c2, err := NewCore(coreConfig)
 	if err != nil {
@@ -1099,7 +1116,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 
 	coreConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port)
 	if coreConfig.ClusterAddr != "" {
-		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port+100)
+		coreConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", c3lns[0].Address.Port+105)
 	}
 	c3, err := NewCore(coreConfig)
 	if err != nil {
@@ -1118,7 +1135,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		for i, ln := range lns {
 			ret[i] = &net.TCPAddr{
 				IP:   ln.Address.IP,
-				Port: ln.Address.Port + 100,
+				Port: ln.Address.Port + 105,
 			}
 		}
 		return ret
