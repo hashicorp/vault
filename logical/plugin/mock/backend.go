@@ -47,8 +47,9 @@ func Backend() *backend {
 				"special",
 			},
 		},
-		Secrets:    []*framework.Secret{},
-		Invalidate: b.invalidate,
+		Secrets:     []*framework.Secret{},
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 	b.internal = "bar"
 	return &b
