@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -34,7 +35,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/helper/salt"
@@ -1155,11 +1155,14 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	if err != nil {
 		t.Fatal(err)
 	}
-	marshaledKeys, err := jsonutil.EncodeJSON(barrierKeys)
-	if err != nil {
-		t.Fatal(err)
+	var buf bytes.Buffer
+	for i, key := range testCluster.BarrierKeys {
+		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		if i < len(testCluster.BarrierKeys)-1 {
+			buf.WriteRune('\n')
+		}
 	}
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "barrier_keys.json"), marshaledKeys, 0755)
+	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "barrier_keys"), buf.Bytes(), 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
