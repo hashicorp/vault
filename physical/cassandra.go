@@ -226,14 +226,21 @@ func (c *CassandraBackend) bucket(key string) string {
 func (c *CassandraBackend) Put(entry *Entry) error {
 	defer metrics.MeasureSince([]string{"cassandra", "put"}, time.Now())
 
+	// Execute inserts to each key prefix simultaneously
 	stmt := fmt.Sprintf(`INSERT INTO "%s" (bucket, key, value) VALUES (?, ?, ?)`, c.table)
-	batch := gocql.NewBatch(gocql.LoggedBatch)
-	for _, bucket := range c.buckets(entry.Key) {
-		batch.Entries = append(batch.Entries, gocql.BatchEntry{
-			Stmt: stmt,
-			Args: []interface{}{bucket, entry.Key, entry.Value}})
+	results := make(chan error)
+	buckets := c.buckets(entry.Key)
+	for _, _bucket := range buckets {
+		go func(bucket string) {
+			results <- c.sess.Query(stmt, bucket, entry.Key, entry.Value).Exec()
+		}(_bucket)
 	}
-	return c.sess.ExecuteBatch(batch)
+	for i := 0; i < len(buckets); i++ {
+		if err := <-results; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Get is used to fetch an entry
