@@ -25,9 +25,7 @@ const (
 	responseWrappingPolicyName = "response-wrapping"
 
 	// responseWrappingPolicy is the policy that ensures cubbyhole response
-	// wrapping can always succeed. Note that sys/wrapping/lookup isn't
-	// contained here because using it would revoke the token anyways, so there
-	// isn't much point.
+	// wrapping can always succeed.
 	responseWrappingPolicy = `
 path "cubbyhole/response" {
     capabilities = ["create", "read"]
