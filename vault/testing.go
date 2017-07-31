@@ -598,17 +598,18 @@ func TestWaitActive(t testing.TB, core *Core) {
 }
 
 type TestCluster struct {
-	BarrierKeys [][]byte
-	CACert      *x509.Certificate
-	CACertBytes []byte
-	CACertPEM   []byte
-	CAKey       *ecdsa.PrivateKey
-	CAKeyPEM    []byte
-	Cores       []*TestClusterCore
-	ID          string
-	RootToken   string
-	RootCAs     *x509.CertPool
-	TempDir     string
+	BarrierKeys   [][]byte
+	CACert        *x509.Certificate
+	CACertBytes   []byte
+	CACertPEM     []byte
+	CACertPEMFile string
+	CAKey         *ecdsa.PrivateKey
+	CAKeyPEM      []byte
+	Cores         []*TestClusterCore
+	ID            string
+	RootToken     string
+	RootCAs       *x509.CertPool
+	TempDir       string
 }
 
 func (t *TestCluster) Start() {
@@ -722,7 +723,8 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		Bytes: caBytes,
 	}
 	testCluster.CACertPEM = pem.EncodeToMemory(caCertPEMBlock)
-	err = ioutil.WriteFile(filepath.Join(testCluster.TempDir, "ca_cert.pem"), testCluster.CACertPEM, 0755)
+	testCluster.CACertPEMFile = filepath.Join(testCluster.TempDir, "ca_cert.pem")
+	err = ioutil.WriteFile(testCluster.CACertPEMFile, testCluster.CACertPEM, 0755)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1083,6 +1085,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		if base.Logger != nil {
 			coreConfig.Logger = base.Logger
 		}
+
+		coreConfig.DisableCache = base.DisableCache
+
+		coreConfig.DevToken = base.DevToken
 	}
 
 	if coreConfig.Physical == nil {

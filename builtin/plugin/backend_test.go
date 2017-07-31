@@ -50,7 +50,7 @@ func TestBackend_PluginMain(t *testing.T) {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
 
-	err = plugin.Serve(&plugin.ServeOpts{
+	err := plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: mock.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
