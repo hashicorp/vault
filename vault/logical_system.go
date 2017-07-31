@@ -74,6 +74,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			Unauthenticated: []string{
+				"wrapping/lookup",
 				"wrapping/pubkey",
 				"replication/status",
 			},
@@ -725,6 +726,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.handleWrappingLookup,
+					logical.ReadOperation:   b.handleWrappingLookup,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["wraplookup"][0]),
@@ -2171,10 +2173,14 @@ func (b *SystemBackend) handleWrappingUnwrap(
 
 func (b *SystemBackend) handleWrappingLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// This ordering of lookups has been validated already in the wrapping
+	// validation func, we're just doing this for a safety check
 	token := data.Get("token").(string)
-
 	if token == "" {
-		return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
+		token = req.ClientToken
+		if token == "" {
+			return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
+		}
 	}
 
 	cubbyReq := &logical.Request{
