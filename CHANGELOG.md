@@ -11,6 +11,10 @@ DEPRECATIONS/CHANGES:
    `sys/revoke-force` have been deprecated and relocated under `sys/leases`.
    Additionally, the deprecated path `sys/revoke-force` now requires the `sudo`
    capability.
+ * Response Wrapping Lookup Unauthenticated: The `sys/wrapping/lookup` endpoint
+   is now unauthenticated. This allows introspection of the wrapping info by
+   clients that only have the wrapping token without then invalidating the
+   token. Validation functions/checks are still performed on the token.
 
 FEATURES:
 
@@ -48,6 +52,7 @@ IMPROVEMENTS:
  * storage/postgresql: Improve listing speed [GH-2945]
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
+ * sys/wrapping: Make `sys/wrapping/lookup` unauthenticated [GH-3084]
  * telemetry: Add support for DogStatsD [GH-2490]
 
 BUG FIXES:
