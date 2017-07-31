@@ -3,7 +3,7 @@ package api
 func (c *Sys) Health() (*HealthResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/health")
 	resp, err := c.c.RawRequest(r)
-	if err != nil {
+	if resp == nil || resp.Body == nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
