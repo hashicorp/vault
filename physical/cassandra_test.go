@@ -1,7 +1,7 @@
 package physical
 
 import (
-	"net"
+	"fmt"
 	"os"
 	"reflect"
 	"strconv"
@@ -11,7 +11,7 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
-	dockertest "gopkg.in/ory-am/dockertest.v2"
+	dockertest "gopkg.in/ory-am/dockertest.v3"
 )
 
 func TestCassandraBackend(t *testing.T) {
@@ -19,8 +19,8 @@ func TestCassandraBackend(t *testing.T) {
 		t.Skipf("skipping in short mode")
 	}
 
-	cid, hosts := prepareCassandraTestContainer(t)
-	defer cleanupCassandraTestContainer(t, cid)
+	cleanup, hosts := prepareCassandraTestContainer(t)
+	defer cleanup()
 
 	// Run vault tests
 	logger := logformat.NewVaultLogger(log.LevelTrace)
@@ -52,23 +52,29 @@ func TestCassandraBackendBuckets(t *testing.T) {
 	}
 }
 
-func prepareCassandraTestContainer(t *testing.T) (dockertest.ContainerID, string) {
+func prepareCassandraTestContainer(t *testing.T) (func(), string) {
 	if os.Getenv("CASSANDRA_HOSTS") != "" {
-		return "", os.Getenv("CASSANDRA_HOSTS")
+		return func() {}, os.Getenv("CASSANDRA_HOSTS")
 	}
 
-	dockertest.Pull(dockertest.CassandraImageName)
-	hosts := ""
-	cid, connErr := dockertest.ConnectToCassandra("3.9", 90, time.Second, func(connAddress string) bool {
-		host, _port, _ := net.SplitHostPort(connAddress)
-		port, _ := strconv.Atoi(_port)
+	pool, err := dockertest.NewPool("")
+	if err != nil {
+		t.Fatalf("cassandra: failed to connect to docker: %s", err)
+	}
 
-		cluster := gocql.NewCluster(host)
-		cluster.Port = port
+	resource, err := pool.Run("cassandra", "3.11", nil)
+	if err != nil {
+		t.Fatalf("cassandra: could not start container: %s", err)
+	}
+
+	setup := func() error {
+		cluster := gocql.NewCluster("127.0.0.1")
+		p, _ := strconv.Atoi(resource.GetPort("9042/tcp"))
+		cluster.Port = p
 		cluster.Timeout = 5 * time.Second
 		sess, err := cluster.CreateSession()
 		if err != nil {
-			return false
+			return err
 		}
 
 		// Create keyspace
@@ -88,22 +94,14 @@ func prepareCassandraTestContainer(t *testing.T) (dockertest.ContainerID, string
 			t.Fatalf("could not create cassandra table: %v", err)
 		}
 
-		hosts = connAddress
-		return true
-	})
-
-	if connErr != nil {
-		t.Fatalf("could not connect to cassandra: %v", connErr)
+		return nil
+	}
+	if pool.Retry(setup); err != nil {
+		t.Fatalf("cassandra: could not setup container: %s", err)
 	}
 
-	return cid, hosts
-}
-
-func cleanupCassandraTestContainer(t *testing.T, cid dockertest.ContainerID) {
-	if cid == "" {
-		return
+	cleanup := func() {
+		pool.Purge(resource)
 	}
-	if err := cid.KillRemove(); err != nil {
-		t.Fatal(err)
-	}
+	return cleanup, fmt.Sprintf("127.0.0.1:%s", resource.GetPort("9042/tcp"))
 }

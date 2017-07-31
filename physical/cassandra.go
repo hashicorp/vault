@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -33,15 +34,34 @@ func newCassandraBackend(conf map[string]string, logger log.Logger) (Backend, er
 	}
 
 	var (
-		hosts       = splitArray(conf["hosts"])
-		keyspace    = conf["keyspace"]
-		table       = conf["table"]
-		consistency = gocql.LocalQuorum
+		hosts        = splitArray(conf["hosts"])
+		port         = 9042
+		explicitPort = false
+		keyspace     = conf["keyspace"]
+		table        = conf["table"]
+		consistency  = gocql.LocalQuorum
 	)
 
 	if len(hosts) == 0 {
 		hosts = []string{"localhost"}
 	}
+	for i, hp := range hosts {
+		h, ps, err := net.SplitHostPort(hp)
+		if err != nil {
+			continue
+		}
+		p, err := strconv.Atoi(ps)
+		if err != nil {
+			return nil, err
+		}
+
+		if explicitPort && p != port {
+			return nil, fmt.Errorf("all hosts must have the same port")
+		}
+		hosts[i], port = h, p
+		explicitPort = true
+	}
+
 	if keyspace == "" {
 		keyspace = "vault"
 	}
@@ -75,6 +95,7 @@ func newCassandraBackend(conf map[string]string, logger log.Logger) (Backend, er
 
 	connectStart := time.Now()
 	cluster := gocql.NewCluster(hosts...)
+	cluster.Port = port
 	cluster.Keyspace = keyspace
 
 	cluster.ProtoVersion = 2
