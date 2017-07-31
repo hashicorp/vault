@@ -1,7 +1,6 @@
 package vault_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -48,7 +47,7 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv(pluginutil.PluginCACertPEMEnv, string(cluster.CACertPEM))
+	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMain")
 
@@ -70,29 +69,14 @@ func TestBackend_PluginMain(t *testing.T) {
 		return
 	}
 
-	caPem := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPem == "" {
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
 		t.Fatal("CA cert not passed in")
-	}
-
-	content := []byte(caPem)
-	tmpfile, err := ioutil.TempFile("", "test-cacert")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name()) // clean up
-
-	if _, err := tmpfile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
 	}
 
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
 
-	args := []string{"--ca-cert=" + tmpfile.Name()}
+	args := []string{"--ca-cert=" + caPEM}
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()

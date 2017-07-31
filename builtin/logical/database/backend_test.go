@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -90,7 +89,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	cluster.Start()
 	cores := cluster.Cores
 
-	os.Setenv(pluginutil.PluginCACertPEMEnv, string(cluster.CACertPEM))
+	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
 	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", "TestBackend_PluginMain")
@@ -103,27 +102,12 @@ func TestBackend_PluginMain(t *testing.T) {
 		return
 	}
 
-	caPem := os.Getenv(pluginutil.PluginCACertPEMEnv)
-	if caPem == "" {
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
 		t.Fatal("CA cert not passed in")
 	}
 
-	content := []byte(caPem)
-	tmpfile, err := ioutil.TempFile("", "example")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name()) // clean up
-
-	if _, err := tmpfile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	args := []string{"--ca-cert=" + tmpfile.Name()}
+	args := []string{"--ca-cert=" + caPEM}
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
