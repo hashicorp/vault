@@ -671,7 +671,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		net.ParseIP("127.0.0.1"),
 	}
 	var baseAddr *net.TCPAddr
-	if opts.BaseListenAddress != "" {
+	if opts != nil && opts.BaseListenAddress != "" {
 		var err error
 		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
 		if err != nil {
