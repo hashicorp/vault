@@ -34,6 +34,7 @@ $ curl \
 {
   "ha_enabled": true,
   "is_self": false,
-  "leader_address": "https://127.0.0.1:8200/"
+  "leader_address": "https://127.0.0.1:8200/",
+  "leader_cluster_address": "https://127.0.0.1:8201/"
 }
 ```
