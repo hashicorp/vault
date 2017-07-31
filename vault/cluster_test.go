@@ -326,7 +326,7 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 	}
 
 	// We need to call Leader as that refreshes the connection info
-	isLeader, _, err := c.Leader()
+	isLeader, _, _, err := c.Leader()
 	if err != nil {
 		panic(err.Error())
 		t.Fatal(err)
