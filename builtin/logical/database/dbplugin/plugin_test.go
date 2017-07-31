@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/http"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/plugins"
 	"github.com/hashicorp/vault/vault"
@@ -73,14 +73,11 @@ func (m *mockPlugin) Close() error {
 }
 
 func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
-	coreConfig := &vault.CoreConfig{}
-
-	cluster := vault.NewTestCluster(t, coreConfig, false)
-	cluster.StartListeners()
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
 	cores := cluster.Cores
-	cores[0].Handler.Handle("/", http.Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", http.Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", http.Handler(cores[2].Core))
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
 	vault.TestAddTestPlugin(t, cores[0].Core, "test-plugin", "TestPlugin_Main")
@@ -110,7 +107,7 @@ func TestPlugin_Main(t *testing.T) {
 
 func TestPlugin_Initialize(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	dbRaw, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
@@ -134,7 +131,7 @@ func TestPlugin_Initialize(t *testing.T) {
 
 func TestPlugin_CreateUser(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
@@ -174,7 +171,7 @@ func TestPlugin_CreateUser(t *testing.T) {
 
 func TestPlugin_RenewUser(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {
@@ -208,7 +205,7 @@ func TestPlugin_RenewUser(t *testing.T) {
 
 func TestPlugin_RevokeUser(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	db, err := dbplugin.PluginFactory("test-plugin", sys, &log.NullLogger{})
 	if err != nil {

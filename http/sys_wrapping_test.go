@@ -13,25 +13,20 @@ import (
 
 // Test wrapping functionality
 func TestHTTP_Wrapping(t *testing.T) {
-	coreConfig := &vault.CoreConfig{}
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 
-	// Chicken-and-egg: Handler needs a core. So we create handlers first, then
-	// add routes chained to a Handler-created handler.
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	defer cluster.CloseListeners()
-	cluster.StartListeners()
 	cores := cluster.Cores
-	cores[0].Handler.Handle("/", Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	// make it easy to get access to the active
 	core := cores[0].Core
 	vault.TestWaitActive(t, core)
 
-	root := cores[0].Root
 	client := cores[0].Client
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 
 	// Write a value that we will use with wrapping for lookup
 	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
@@ -73,7 +68,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 
 	// Second: basic things that should fail, unwrap edition
 	// Root token isn't a wrapping token
-	_, err = client.Logical().Unwrap(root)
+	_, err = client.Logical().Unwrap(cluster.RootToken)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -162,7 +157,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 
 	// Create a wrapping token
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
@@ -212,7 +207,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 
 	// Create a wrapping token
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 	secret, err = client.Logical().Read("secret/foo")
 	if err != nil {
 		t.Fatal(err)
@@ -264,7 +259,7 @@ func TestHTTP_Wrapping(t *testing.T) {
 	// Custom wrapping
 	//
 
-	client.SetToken(root)
+	client.SetToken(cluster.RootToken)
 	data := map[string]interface{}{
 		"zip":   "zap",
 		"three": json.Number("2"),

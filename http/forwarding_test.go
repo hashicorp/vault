@@ -33,20 +33,16 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 		ClusterAddr: "https://127.3.4.1:8382",
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	cores[0].Handler.Handle("/", Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	// make it easy to get access to the active
 	core := cores[0].Core
 	vault.TestWaitActive(t, core)
-
-	root := cores[0].Root
 
 	addrs := []string{
 		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
@@ -62,7 +58,7 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		client.SetToken(root)
+		client.SetToken(cluster.RootToken)
 
 		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
@@ -71,7 +67,7 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 		if secret == nil {
 			t.Fatal("secret is nil")
 		}
-		if secret.Data["id"].(string) != root {
+		if secret.Data["id"].(string) != cluster.RootToken {
 			t.Fatal("token mismatch")
 		}
 	}
@@ -85,20 +81,16 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 		ClusterAddr: "empty",
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	cores[0].Handler.Handle("/", Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	// make it easy to get access to the active
 	core := cores[0].Core
 	vault.TestWaitActive(t, core)
-
-	root := cores[0].Root
 
 	addrs := []string{
 		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
@@ -114,7 +106,7 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		client.SetToken(root)
+		client.SetToken(cluster.RootToken)
 
 		secret, err := client.Auth().Token().LookupSelf()
 		if err != nil {
@@ -123,7 +115,7 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 		if secret == nil {
 			t.Fatal("secret is nil")
 		}
-		if secret.Data["id"].(string) != root {
+		if secret.Data["id"].(string) != cluster.RootToken {
 			t.Fatal("token mismatch")
 		}
 	}
@@ -146,20 +138,16 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 		},
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	cores[0].Handler.Handle("/", Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	// make it easy to get access to the active
 	core := cores[0].Core
 	vault.TestWaitActive(t, core)
-
-	root := cores[0].Root
 
 	wg := sync.WaitGroup{}
 
@@ -191,7 +179,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set(AuthHeaderName, root)
+	req.Header.Set(AuthHeaderName, cluster.RootToken)
 	_, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -240,7 +228,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint64) 
 			if err != nil {
 				return nil, err
 			}
-			req.Header.Set(AuthHeaderName, root)
+			req.Header.Set(AuthHeaderName, cluster.RootToken)
 			resp, err := client.Do(req)
 			if err != nil {
 				return nil, err
@@ -454,20 +442,16 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		},
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	cores[0].Handler.Handle("/", Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	// make it easy to get access to the active
 	core := cores[0].Core
 	vault.TestWaitActive(t, core)
-
-	root := cores[0].Root
 
 	transport := cleanhttp.DefaultTransport()
 	transport.TLSClientConfig = cores[0].TLSConfig
@@ -484,7 +468,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set(AuthHeaderName, root)
+	req.Header.Set(AuthHeaderName, cluster.RootToken)
 	_, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -495,7 +479,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		Policies    string `json:"policies"`
 	}
 	encodedCertConfig, err := json.Marshal(&certConfig{
-		Certificate: vault.TestClusterCACert,
+		Certificate: string(cluster.CACertPEM),
 		Policies:    "default",
 	})
 	if err != nil {
@@ -506,7 +490,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set(AuthHeaderName, root)
+	req.Header.Set(AuthHeaderName, cluster.RootToken)
 	_, err = client.Do(req)
 	if err != nil {
 		t.Fatal(err)
@@ -529,7 +513,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		},
 	}
 
-	//cores[0].Logger().Printf("root token is %s", root)
+	//cores[0].Logger().Printf("cluster.RootToken token is %s", cluster.RootToken)
 	//time.Sleep(4 * time.Hour)
 
 	for _, addr := range addrs {
@@ -567,14 +551,12 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 }
 
 func TestHTTP_Forwarding_HelpOperation(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, true)
-	defer cluster.CloseListeners()
-	cluster.StartListeners()
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	cores[0].Handler.Handle("/", Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", Handler(cores[2].Core))
 
 	vault.TestWaitActive(t, cores[0].Core)
 
