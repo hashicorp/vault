@@ -16,13 +16,13 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"testing"
 	"time"
 
 	"golang.org/x/net/http2"
 
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
+	testing "github.com/mitchellh/go-testing-interface"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -758,7 +758,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress string) int {
-	testCluster := vault.NewTestCluster(&testing.T{}, base, &vault.TestClusterOptions{
+	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: devListenAddress,
 	})
