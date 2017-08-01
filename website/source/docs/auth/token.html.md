@@ -33,6 +33,11 @@ $ vault auth <token>
 ...
 ```
 
+### Via the API
+
+The token is set directly as a header for the HTTP API. The name
+of the header should be "X-Vault-Token" and the value should be the token.
+
 ## API
 
 The Token authentication backend has a full HTTP API. Please see the
