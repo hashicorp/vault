@@ -2,8 +2,10 @@ package api
 
 func (c *Sys) Health() (*HealthResponse, error) {
 	r := c.c.NewRequest("GET", "/v1/sys/health")
+	r.Params.Add("sealedcode", "299")
+	r.Params.Add("uninitcode", "299")
 	resp, err := c.c.RawRequest(r)
-	if resp == nil || resp.Body == nil {
+	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
