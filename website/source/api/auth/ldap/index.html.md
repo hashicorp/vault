@@ -13,7 +13,7 @@ general information about the usage and operation of the LDAP backend, please
 see the [Vault LDAP backend documentation](/docs/auth/ldap.html).
 
 This documentation assumes the LDAP backend is mounted at the `/auth/ldap`
-path in Vault. Since it is possible to mount secret backends at any location,
+path in Vault. Since it is possible to mount auth backends at any location,
 please update your API calls accordingly.
 
 ## Configure LDAP Backend
