@@ -878,6 +878,16 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		"\nRoot Token: %s\n", testCluster.RootToken,
 	))
 
+	c.Ui.Output(fmt.Sprintf(
+		"\nUseful env vars:\n"+
+			"VAULT_TOKEN=%s\n"+
+			"VAULT_ADDR=%s\n"+
+			"VAULT_CACERT=%s/ca_cert.pem\n",
+		testCluster.RootToken,
+		testCluster.Cores[0].Client.Address(),
+		testCluster.TempDir,
+	))
+
 	// Output the header that the server has started
 	c.Ui.Output("==> Vault server started! Log data will stream in below:\n")
 
