@@ -870,7 +870,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	for i, key := range testCluster.BarrierKeys {
 		c.Ui.Output(fmt.Sprintf(
 			"Unseal Key %d: %s",
-			i, base64.StdEncoding.EncodeToString(key),
+			i+1, base64.StdEncoding.EncodeToString(key),
 		))
 	}
 
