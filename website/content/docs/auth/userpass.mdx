@@ -13,7 +13,8 @@ a username and password combination.
 
 The username/password combinations are configured directly to the auth
 method using the `users/` path. This method cannot read usernames and
-passwords from an external source.
+passwords from an external source but it can accept pre-hashed passwords
+as inputs.
 
 The method lowercases all submitted usernames, e.g. `Mary` and `mary` are the
 same entry.
