@@ -15,7 +15,8 @@ a username and password combination.
 
 The username/password combinations are configured directly to the auth
 backend using the `users/` path. This backend cannot read usernames and
-passwords from an external source.
+passwords from an external source but it can accept pre-hashed passwords
+as input.
 
 The backend lowercases all submitted usernames, e.g. `Mary` and `mary` are the
 same entry.
@@ -101,4 +102,3 @@ necessary.
 The Username & Password authentication backend has a full HTTP API. Please see the
 [Userpass auth backend API](/api/auth/userpass/index.html) for more
 details.
-

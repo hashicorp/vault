@@ -28,8 +28,11 @@ Create a new user or update an existing user. This path honors the distinction b
 ### Parameters
 
 - `username` `(string: <required>)` – The username for the user.
-- `password` `(string: <required>)` - The password for the user. Only required 
-  when creating the user.
+- `password` `(string: <required if password_hash is not given>)` - The password
+  for the user. Only required when creating the user.
+- `password_hash` `(string: <required if password is not given>)` - Pre-hashed
+  version of this user's password in bcrypt format. Mutually exclusive with
+  `password`.
 - `policies` `(string: "")` – Comma-separated list of policies. If set to empty
   string, only the `default` policy will be applicable to the user.
 - `ttl` `(string: "")` - The lease duration which decides login expiration.
@@ -119,7 +122,11 @@ Update password for an existing user.
 ### Parameters
 
 - `username` `(string: <required>)` – The username for the user.
-- `password` `(string: <required>)` - The password for the user.
+- `password` `(string: <required if "password_hash" is not given>)` - The
+  password for the user.
+- `password_hash` `(string: <required if "password" is not given>)` - The
+  pre-hashed password for the user in bcrypt format. Mutually exclusive with
+  `password`.
 
 ### Sample Payload
 
