@@ -12,7 +12,7 @@ This is the API documentation for the Vault LDAP authentication backend. For
 general information about the usage and operation of the LDAP backend, please
 see the [Vault LDAP backend documentation](/docs/auth/ldap.html).
 
-This documentation assumes the Generic backend is mounted at the `/auth/ldap`
+This documentation assumes the LDAP backend is mounted at the `/auth/ldap`
 path in Vault. Since it is possible to mount secret backends at any location,
 please update your API calls accordingly.
 
