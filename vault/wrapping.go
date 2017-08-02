@@ -115,6 +115,10 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 
 	resp.WrapInfo.Token = te.ID
 	resp.WrapInfo.CreationTime = creationTime
+	// If this is not a rewrap, store the request path as creation_path
+	if req.Path != "sys/wrapping/rewrap" {
+		resp.WrapInfo.CreationPath = req.Path
+	}
 
 	// This will only be non-nil if this response contains a token, so in that
 	// case put the accessor in the wrap info.
@@ -199,6 +203,10 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	cubbyReq.Data = map[string]interface{}{
 		"creation_ttl":  resp.WrapInfo.TTL,
 		"creation_time": creationTime,
+	}
+	// Store creation_path if not a rewrap
+	if req.Path != "sys/wrapping/rewrap" {
+		cubbyReq.Data["creation_path"] = req.Path
 	}
 	cubbyResp, err = c.router.Route(cubbyReq)
 	if err != nil {

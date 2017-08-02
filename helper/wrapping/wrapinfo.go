@@ -20,4 +20,8 @@ type ResponseWrapInfo struct {
 
 	// The format to use. This doesn't get returned, it's only internal.
 	Format string `json:"format" structs:"format" mapstructure:"format"`
+
+	// CreationPath is the original request path that was used to create
+	// the wrapped response.
+	CreationPath string `json:"creation_path" structs:"creation_path" mapstructure:"creation_path"`
 }
