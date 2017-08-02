@@ -191,9 +191,6 @@ as soon as they are generated.
 
 Vault also supports an STS credentials instead of creating a new IAM user.
 
-The `aws/sts` endpoint will always fetch credentials with a 1hr ttl.
-Unlike the `aws/creds` endpoint, the ttl is enforced by STS.
-
 Vault supports two of the [STS APIs](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html),
 [STS federation tokens](http://docs.aws.amazon.com/STS/latest/APIReference/API_GetFederationToken.html) and
 [STS AssumeRole](http://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html).
@@ -252,11 +249,11 @@ but STS would attach an implicit deny on `sts` that overrides the allow.)
 }
 ```
 
-To generate a new set of STS federation token credentials, we simply read from
+To generate a new set of STS federation token credentials, we simply write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault read aws/sts/deploy
+$vault write aws/sts/deploy -ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
 lease_duration 	3600
@@ -321,11 +318,11 @@ $ vault write aws/roles/deploy \
     arn=arn:aws:iam::ACCOUNT-ID-WITHOUT-HYPHENS:role/RoleNameToAssume
 ```
 
-To generate a new set of STS assumed role credentials, we again read from
+To generate a new set of STS assumed role credentials, we again write to
 the role using the aws/sts endpoint:
 
 ```text
-$vault read aws/sts/deploy
+$vault write aws/sts/deploy -ttl=60m
 Key            	Value
 lease_id       	aws/sts/deploy/31d771a6-fb39-f46b-fdc5-945109106422
 lease_duration 	3600
