@@ -121,40 +121,48 @@
 			"revisionTime": "2012-06-04T00:48:16Z"
 		},
 		{
-			"checksumSHA1": "bZSSR3ayh4F8gSqiZCN7KogiSdY=",
+			"checksumSHA1": "bEUmAb/9VJN8I55NCXaSwDkBBZQ=",
+			"path": "github.com/SAP/go-hdb",
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
+		},
+		{
+			"checksumSHA1": "g8C6yI8XhyDLnCFwvfYe8CT96ZU=",
 			"path": "github.com/SAP/go-hdb/driver",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z",
+			"version": "v0.9.1",
+			"versionExact": "v0.9.1"
 		},
 		{
 			"checksumSHA1": "NMOfkY6oRCxCXzM1LVgCyGCLp0Y=",
 			"path": "github.com/SAP/go-hdb/driver/sqltrace",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "977xfUN5PjvUvvJl5aTIyu+pILg=",
 			"path": "github.com/SAP/go-hdb/internal/bufio",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
-			"checksumSHA1": "5o0Xa0DIExeje/gUH3Pywog8gQ0=",
+			"checksumSHA1": "xL3ef789fS4+MSxb59Apj0D1BlA=",
 			"path": "github.com/SAP/go-hdb/internal/protocol",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "KK2U+DbcpWBexg9ZMEKGRIaqFtU=",
 			"path": "github.com/SAP/go-hdb/internal/unicode",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "fb432MWzL2ONS0e6HyGv3P2oG1I=",
 			"path": "github.com/SAP/go-hdb/internal/unicode/cesu8",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "t+uej2kiyqRyQYguygI8t9nJH2w=",
