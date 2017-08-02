@@ -66,38 +66,41 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 	config.Lock()
 	defer config.Unlock()
 
+	var newLn *proxyproto.Listener
+
 	switch config.Behavior {
-	case "use_always", "use_if_authorized", "deny_if_unauthorized":
+	case "use_always":
+		newLn = &proxyproto.Listener{
+			Listener: listener,
+		}
+
+	case "use_if_authorized", "deny_if_unauthorized":
+		newLn = &proxyproto.Listener{
+			Listener: listener,
+			SourceCheck: func(addr net.Addr) (bool, error) {
+				config.RLock()
+				defer config.RUnlock()
+
+				sa, err := sockaddr.NewSockAddr(addr.String())
+				if err != nil {
+					return false, errwrap.Wrapf("error parsing remote address: {{err}}", err)
+				}
+
+				for _, allowedAddr := range config.AllowedAddrs {
+					if allowedAddr.Contains(sa) {
+						return true, nil
+					}
+				}
+
+				if config.Behavior == "use_if_authorized" {
+					return false, nil
+				}
+
+				return false, proxyproto.ErrInvalidUpstream
+			},
+		}
 	default:
 		return listener, fmt.Errorf("unknown behavior type for proxy proto config")
-	}
-
-	newLn := &proxyproto.Listener{
-		Listener: listener,
-	}
-
-	if config.Behavior == "use_if_authorized" || config.Behavior == "deny_if_unauthorized" {
-		newLn.SourceCheck = func(addr net.Addr) (bool, error) {
-			config.RLock()
-			defer config.RUnlock()
-
-			sa, err := sockaddr.NewSockAddr(addr.String())
-			if err != nil {
-				return false, errwrap.Wrapf("error parsing remote address: {{err}}", err)
-			}
-
-			for _, allowedAddr := range config.AllowedAddrs {
-				if allowedAddr.Contains(sa) {
-					return true, nil
-				}
-			}
-
-			if config.Behavior == "use_if_authorized" {
-				return false, nil
-			}
-
-			return false, proxyproto.ErrInvalidUpstream
-		}
 	}
 
 	return newLn, nil
