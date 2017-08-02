@@ -25,6 +25,10 @@ FEATURES:
  * **Plugin Backends**: Vault now supports running secret and auth backends as
    plugins. Plugins can be mounted like normal backends and can be developed
    independently from Vault.
+ * **PROXY Protocol Support** Vault listeners can now be configured to honor
+   PROXY protocol v1 information to allow passing real client IPs into Vault. A
+   list of authorized addresses (IPs or subnets) can be defined and
+   accept/reject behavior controlled.
 
 IMPROVEMENTS:
 
