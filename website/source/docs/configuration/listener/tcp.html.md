@@ -36,7 +36,7 @@ listener "tcp" {
   - *allow_authorized* - If the source IP address is in the 
   `proxy_protocol_authorized_addrs` list, the client's IP address will be used.
   If the source IP is not in the list, the source IP address will be used.  
-  - *deny_if_unauthorized* - The traffic will be rejected if the source IP
+  - *deny_unauthorized* - The traffic will be rejected if the source IP
   address is not in the `proxy_protocol_authorized_addrs` list.
 
 - `proxy_protocol_authorized_addrs` `(string: <required-if-enabled>)` – Specifies
