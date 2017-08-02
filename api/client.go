@@ -366,7 +366,7 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 		// Internet Draft specifies that the SRV record is ignored if a port is given
 		_, addrs, err := net.LookupSRV("http", "tcp", c.addr.Hostname())
 		if err == nil && len(addrs) > 0 {
-			  host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
+			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 		}
 	}
 
