@@ -207,6 +207,12 @@
 			"revisionTime": "2017-06-01T21:44:32Z"
 		},
 		{
+			"checksumSHA1": "MzSim/5A5kPO2q0n3aKq8H5qJvU=",
+			"path": "github.com/armon/go-proxyproto",
+			"revision": "48572f11356f1843b694f21a290d4f1006bc5e47",
+			"revisionTime": "2017-06-20T22:09:30Z"
+		},
+		{
 			"checksumSHA1": "gNO0JNpLzYOdInGeq7HqMZUzx9M=",
 			"path": "github.com/armon/go-radix",
 			"revision": "4239b77079c7b5d1243b7b4736304ce8ddb6f0f2",
