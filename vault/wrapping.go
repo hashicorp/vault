@@ -243,6 +243,7 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	return nil, nil
 }
 
+// ValidateWrappingToken checks whether a token is a wrapping token.
 func (c *Core) ValidateWrappingToken(req *logical.Request) (bool, error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")

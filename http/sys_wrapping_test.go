@@ -308,6 +308,11 @@ func TestHTTP_Wrapping(t *testing.T) {
 	}
 	wrapInfo = secret.WrapInfo
 
+	// Check for correct CreationPath before rewrap
+	if wrapInfo.CreationPath != "secret/foo" {
+		t.Fatal("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
+	}
+
 	// Test rewrapping
 	secret, err = client.Logical().Write("sys/wrapping/rewrap", map[string]interface{}{
 		"token": wrapInfo.Token,
@@ -315,6 +320,12 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Check for correct Creation path after rewrap
+	if wrapInfo.CreationPath != "secret/foo" {
+		t.Fatal("error on wrapInfo.CreationPath: expected: secret/foo, got: %s", wrapInfo.CreationPath)
+	}
+
 	// Should be expired and fail
 	_, err = client.Logical().Write("sys/wrapping/unwrap", map[string]interface{}{
 		"token": wrapInfo.Token,

@@ -284,7 +284,7 @@ func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
 
 	actualCreationPath, ok := actual["wrap_info"].(map[string]interface{})["creation_path"]
 	if !ok || actualCreationPath == "" {
-		t.Fatal("creation_time missing in wrap info")
+		t.Fatal("creation_path missing in wrap info")
 	}
 	expected["wrap_info"].(map[string]interface{})["creation_path"] = actualCreationPath
 
