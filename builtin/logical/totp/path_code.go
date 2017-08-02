@@ -11,9 +11,9 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-func pathCode(b *backend) *framework.Path {
+func PrefixedPathCode(prefix string, b *Backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "code/" + framework.GenericNameRegex("name"),
+		Pattern: prefix + "code/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -35,7 +35,11 @@ func pathCode(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathReadCode(
+func pathCode(b *Backend) *framework.Path {
+	return PrefixedPathCode("", b)
+}
+
+func (b *Backend) pathReadCode(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 
@@ -66,11 +70,8 @@ func (b *backend) pathReadCode(
 	}, nil
 }
 
-func (b *backend) pathValidateCode(
-	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := data.Get("name").(string)
-	code := data.Get("code").(string)
-
+func (b *Backend) ValidateCode(
+	req *logical.Request, name string, code string) (*logical.Response, error) {
 	// Enforce input value requirements
 	if code == "" {
 		return logical.ErrorResponse("the code value is required"), nil
@@ -87,7 +88,7 @@ func (b *backend) pathValidateCode(
 
 	usedName := fmt.Sprintf("%s_%s", name, code)
 
-	_, ok := b.usedCodes.Get(usedName)
+	_, ok := b.UsedCodes.Get(usedName)
 	if ok {
 		return logical.ErrorResponse("code already used; wait until the next time period"), nil
 	}
@@ -104,7 +105,7 @@ func (b *backend) pathValidateCode(
 
 	// Take the key skew, add two for behind and in front, and multiple that by
 	// the period to cover the full possibility of the validity of the key
-	err = b.usedCodes.Add(usedName, nil, time.Duration(
+	err = b.UsedCodes.Add(usedName, nil, time.Duration(
 		int64(time.Second)*
 			int64(key.Period)*
 			int64((2+key.Skew))))
@@ -117,6 +118,13 @@ func (b *backend) pathValidateCode(
 			"valid": valid,
 		},
 	}, nil
+}
+
+func (b *Backend) pathValidateCode(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	name := data.Get("name").(string)
+	code := data.Get("code").(string)
+	return b.ValidateCode(req, name, code)
 }
 
 const pathCodeHelpSyn = `

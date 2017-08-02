@@ -10,15 +10,15 @@ import (
 )
 
 func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
-	b := Backend()
+	b := NewBackend()
 	if err := b.Setup(conf); err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func Backend() *backend {
-	var b backend
+func NewBackend() *Backend {
+	var b Backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
@@ -32,15 +32,15 @@ func Backend() *backend {
 		BackendType: logical.TypeLogical,
 	}
 
-	b.usedCodes = cache.New(0, 30*time.Second)
+	b.UsedCodes = cache.New(0, 30*time.Second)
 
 	return &b
 }
 
-type backend struct {
+type Backend struct {
 	*framework.Backend
 
-	usedCodes *cache.Cache
+	UsedCodes *cache.Cache
 }
 
 const backendHelp = `

@@ -16,9 +16,9 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-func pathListKeys(b *backend) *framework.Path {
+func PrefixedPathListKeys(prefix string, b *Backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/?$",
+		Pattern: prefix + "keys/?$",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathKeyList,
@@ -29,9 +29,13 @@ func pathListKeys(b *backend) *framework.Path {
 	}
 }
 
-func pathKeys(b *backend) *framework.Path {
+func pathListKeys(b *Backend) *framework.Path {
+	return PrefixedPathListKeys("", b)
+}
+
+func PrefixedPathKeys(prefix string, b *Backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "keys/" + framework.GenericNameRegex("name"),
+		Pattern: prefix + "keys/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -118,7 +122,11 @@ func pathKeys(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
+func pathKeys(b *Backend) *framework.Path {
+	return PrefixedPathKeys("", b)
+}
+
+func (b *Backend) Key(s logical.Storage, n string) (*keyEntry, error) {
 	entry, err := s.Get("key/" + n)
 	if err != nil {
 		return nil, err
@@ -135,7 +143,7 @@ func (b *backend) Key(s logical.Storage, n string) (*keyEntry, error) {
 	return &result, nil
 }
 
-func (b *backend) pathKeyDelete(
+func (b *Backend) pathKeyDelete(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	err := req.Storage.Delete("key/" + data.Get("name").(string))
 	if err != nil {
@@ -145,7 +153,7 @@ func (b *backend) pathKeyDelete(
 	return nil, nil
 }
 
-func (b *backend) pathKeyRead(
+func (b *Backend) pathKeyRead(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	key, err := b.Key(req.Storage, data.Get("name").(string))
 	if err != nil {
@@ -170,7 +178,7 @@ func (b *backend) pathKeyRead(
 	}, nil
 }
 
-func (b *backend) pathKeyList(
+func (b *Backend) pathKeyList(
 	req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	entries, err := req.Storage.List("key/")
 	if err != nil {
@@ -180,7 +188,7 @@ func (b *backend) pathKeyList(
 	return logical.ListResponse(entries), nil
 }
 
-func (b *backend) pathKeyCreate(
+func (b *Backend) pathKeyCreate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
 	generate := data.Get("generate").(bool)
