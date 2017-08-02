@@ -450,10 +450,10 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				return 1
 			}
 
-			allowedAddrsRaw, ok := lnConfig.Config["proxy_protocol_allowed_addrs"]
+			authorizedAddrsRaw, ok := lnConfig.Config["proxy_protocol_authorized_addrs"]
 			if !ok {
 				c.Ui.Output(fmt.Sprintf(
-					"proxy_protocol_behavior set but no proxy_protocol_allowed_addrs value for listener of type %s",
+					"proxy_protocol_behavior set but no proxy_protocol_authorized_addrs value for listener of type %s",
 					lnConfig.Type))
 				return 1
 			}
@@ -461,9 +461,9 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			proxyProtoConfig := &proxyutil.ProxyProtoConfig{
 				Behavior: behavior,
 			}
-			if err := proxyProtoConfig.SetAllowedAddrs(allowedAddrsRaw); err != nil {
+			if err := proxyProtoConfig.SetAuthorizedAddrs(authorizedAddrsRaw); err != nil {
 				c.Ui.Output(fmt.Sprintf(
-					"Error parsing proxy_allowed_addrs for listener of type %s: %v",
+					"Error parsing proxy_protocol_authorized_addrs for listener of type %s: %v",
 					lnConfig.Type, err))
 				return 1
 			}

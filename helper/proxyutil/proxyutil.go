@@ -14,12 +14,12 @@ import (
 // ProxyProtoConfig contains configuration for the PROXY protocol
 type ProxyProtoConfig struct {
 	sync.RWMutex
-	Behavior     string
-	AllowedAddrs []*sockaddr.SockAddrMarshaler `json:"allowed_addrs"`
+	Behavior        string
+	AuthorizedAddrs []*sockaddr.SockAddrMarshaler `json:"authorized_addrs"`
 }
 
-func (p *ProxyProtoConfig) SetAllowedAddrs(addrs interface{}) error {
-	p.AllowedAddrs = make([]*sockaddr.SockAddrMarshaler, 0)
+func (p *ProxyProtoConfig) SetAuthorizedAddrs(addrs interface{}) error {
+	p.AuthorizedAddrs = make([]*sockaddr.SockAddrMarshaler, 0)
 	stringAddrs := make([]string, 0)
 
 	switch addrs.(type) {
@@ -48,9 +48,9 @@ func (p *ProxyProtoConfig) SetAllowedAddrs(addrs interface{}) error {
 	for _, addr := range stringAddrs {
 		sa, err := sockaddr.NewSockAddr(addr)
 		if err != nil {
-			return errwrap.Wrapf("error parsing allowed address: {{err}}", err)
+			return errwrap.Wrapf("error parsing authorized address: {{err}}", err)
 		}
-		p.AllowedAddrs = append(p.AllowedAddrs, &sockaddr.SockAddrMarshaler{
+		p.AuthorizedAddrs = append(p.AuthorizedAddrs, &sockaddr.SockAddrMarshaler{
 			SockAddr: sa,
 		})
 	}
@@ -74,7 +74,7 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 			Listener: listener,
 		}
 
-	case "use_if_authorized", "deny_if_unauthorized":
+	case "allow_authorized", "deny_unauthorized":
 		newLn = &proxyproto.Listener{
 			Listener: listener,
 			SourceCheck: func(addr net.Addr) (bool, error) {
@@ -86,13 +86,13 @@ func WrapInProxyProto(listener net.Listener, config *ProxyProtoConfig) (net.List
 					return false, errwrap.Wrapf("error parsing remote address: {{err}}", err)
 				}
 
-				for _, allowedAddr := range config.AllowedAddrs {
-					if allowedAddr.Contains(sa) {
+				for _, authorizedAddr := range config.AuthorizedAddrs {
+					if authorizedAddr.Contains(sa) {
 						return true, nil
 					}
 				}
 
-				if config.Behavior == "use_if_authorized" {
+				if config.Behavior == "allow_authorized" {
 					return false, nil
 				}
 

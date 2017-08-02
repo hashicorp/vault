@@ -33,13 +33,13 @@ listener "tcp" {
   protocol for the listener.  
   Accepted Values:
   - *use_always* - The client's IP address will always be used.  
-  - *use_if_authorized* - If the source IP address is in the 
+  - *allow_authorized* - If the source IP address is in the 
   `proxy_protocol_authorized_addrs` list, the client's IP address will be used.
   If the source IP is not in the list, the source IP address will be used.  
   - *deny_if_unauthorized* - The traffic will be rejected if the source IP
   address is not in the `proxy_protocol_authorized_addrs` list.
 
-- `proxy_protocol_allowed_addrs` `(string: <required-if-enabled>)` – Specifies
+- `proxy_protocol_authorized_addrs` `(string: <required-if-enabled>)` – Specifies
   the list of allowed source IP addresses to be used with the PROXY protocol.
 
 - `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
