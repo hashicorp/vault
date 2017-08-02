@@ -207,6 +207,8 @@ func (c *Core) wrapInCubbyhole(req *logical.Request, resp *logical.Response) (*l
 	// Store creation_path if not a rewrap
 	if req.Path != "sys/wrapping/rewrap" {
 		cubbyReq.Data["creation_path"] = req.Path
+	} else {
+		cubbyReq.Data["creation_path"] = resp.WrapInfo.CreationPath
 	}
 	cubbyResp, err = c.router.Route(cubbyReq)
 	if err != nil {

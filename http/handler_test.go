@@ -282,6 +282,12 @@ func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
 	}
 	expected["wrap_info"].(map[string]interface{})["creation_time"] = actualCreationTime
 
+	actualCreationPath, ok := actual["wrap_info"].(map[string]interface{})["creation_path"]
+	if !ok || actualCreationPath == "" {
+		t.Fatal("creation_time missing in wrap info")
+	}
+	expected["wrap_info"].(map[string]interface{})["creation_path"] = actualCreationPath
+
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n%T %T", expected, actual, actual["warnings"], actual["data"])
 	}
