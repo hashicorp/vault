@@ -3,6 +3,7 @@ package ldap
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"net/url"
@@ -225,6 +226,15 @@ func (b *backend) newConfigEntry(d *framework.FieldData) (*ConfigEntry, error) {
 	}
 	certificate := d.Get("certificate").(string)
 	if certificate != "" {
+		block, _ := pem.Decode([]byte(certificate))
+
+		if block == nil || block.Type != "CERTIFICATE" {
+			return nil, fmt.Errorf("failed to decode PEM block in the certificate")
+		}
+		_, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse certificate %s", err.Error())
+		}
 		cfg.Certificate = certificate
 	}
 	insecureTLS := d.Get("insecure_tls").(bool)

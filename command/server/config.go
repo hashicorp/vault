@@ -71,9 +71,6 @@ func DevConfig(ha, transactional bool) *Config {
 		EnableUI: true,
 
 		Telemetry: &Telemetry{},
-
-		MaxLeaseTTL:     32 * 24 * time.Hour,
-		DefaultLeaseTTL: 32 * 24 * time.Hour,
 	}
 
 	switch {

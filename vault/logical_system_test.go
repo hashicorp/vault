@@ -35,6 +35,7 @@ func TestSystemBackend_RootPaths(t *testing.T) {
 		"config/auditing/*",
 		"plugins/catalog/*",
 		"revoke-prefix/*",
+		"revoke-force/*",
 		"leases/revoke-prefix/*",
 		"leases/revoke-force/*",
 		"leases/lookup/*",
@@ -985,8 +986,8 @@ func TestSystemBackend_revokePrefixAuth(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	be := NewSystemBackend(core)
-	b, err := be.Backend.Setup(bc)
+	b := NewSystemBackend(core)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1049,8 +1050,8 @@ func TestSystemBackend_revokePrefixAuth_origUrl(t *testing.T) {
 			MaxLeaseTTLVal:     time.Hour * 24 * 32,
 		},
 	}
-	be := NewSystemBackend(core)
-	b, err := be.Backend.Setup(bc)
+	b := NewSystemBackend(core)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1232,6 +1233,10 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	// Read, and make sure that case has been normalized
 	req = logical.TestRequest(t, logical.ReadOperation, "policy/Foo")
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
 	if resp != nil {
 		t.Fatalf("err: expected nil response, got %#v", *resp)
 	}
@@ -1587,7 +1592,7 @@ func testSystemBackend(t *testing.T) logical.Backend {
 	}
 
 	b := NewSystemBackend(c)
-	_, err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1606,7 +1611,7 @@ func testCoreSystemBackend(t *testing.T) (*Core, logical.Backend, string) {
 	}
 
 	b := NewSystemBackend(c)
-	_, err := b.Backend.Setup(bc)
+	err := b.Backend.Setup(bc)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1637,22 +1642,16 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	actualRespData := resp.Data
 
 	expectedBuiltin := &pluginutil.PluginRunner{
 		Name:    "mysql-database-plugin",
 		Builtin: true,
 	}
-	expectedBuiltin.BuiltinFactory, _ = builtinplugins.Get("mysql-database-plugin")
+	expectedRespData := structs.New(expectedBuiltin).Map()
 
-	p := resp.Data["plugin"].(*pluginutil.PluginRunner)
-	if &(p.BuiltinFactory) == &(expectedBuiltin.BuiltinFactory) {
-		t.Fatal("expected BuiltinFactory did not match actual")
-	}
-
-	expectedBuiltin.BuiltinFactory = nil
-	p.BuiltinFactory = nil
-	if !reflect.DeepEqual(p, expectedBuiltin) {
-		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", resp.Data["plugin"].(*pluginutil.PluginRunner), expectedBuiltin)
+	if !reflect.DeepEqual(actualRespData, expectedRespData) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actualRespData, expectedRespData)
 	}
 
 	// Set a plugin
@@ -1676,16 +1675,19 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	actual := resp.Data
 
-	expected := &pluginutil.PluginRunner{
+	expectedRunner := &pluginutil.PluginRunner{
 		Name:    "test-plugin",
 		Command: filepath.Join(sym, filepath.Base(file.Name())),
 		Args:    []string{"--test"},
 		Sha256:  []byte{'1'},
 		Builtin: false,
 	}
-	if !reflect.DeepEqual(resp.Data["plugin"].(*pluginutil.PluginRunner), expected) {
-		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", resp.Data["plugin"].(*pluginutil.PluginRunner), expected)
+	expected := structs.New(expectedRunner).Map()
+
+	if !reflect.DeepEqual(actual, expected) {
+		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", actual, expected)
 	}
 
 	// Delete plugin

@@ -223,6 +223,7 @@ func WithPerRPCCredentials(creds credentials.PerRPCCredentials) DialOption {
 
 // WithTimeout returns a DialOption that configures a timeout for dialing a ClientConn
 // initially. This is valid if and only if WithBlock() is present.
+// Deprecated: use DialContext and context.WithTimeout instead.
 func WithTimeout(d time.Duration) DialOption {
 	return func(o *dialOptions) {
 		o.timeout = d
@@ -487,7 +488,7 @@ type ClientConn struct {
 	mu    sync.RWMutex
 	sc    ServiceConfig
 	conns map[Address]*addrConn
-	// Keepalive parameter can be udated if a GoAway is received.
+	// Keepalive parameter can be updated if a GoAway is received.
 	mkp keepalive.ClientParameters
 }
 
@@ -631,7 +632,7 @@ func (cc *ClientConn) resetAddrConn(addr Address, block bool, tearDownErr error)
 		// Start a goroutine connecting to the server asynchronously.
 		go func() {
 			if err := ac.resetTransport(false); err != nil {
-				grpclog.Printf("Failed to dial %s: %v; please retry.", ac.addr.Addr, err)
+				grpclog.Warningln("Failed to dial %s: %v; please retry.", ac.addr.Addr, err)
 				if err != errConnClosing {
 					// Keep this ac in cc.conns, to get the reason it's torn down.
 					ac.tearDown(err)
@@ -867,7 +868,7 @@ func (ac *addrConn) resetTransport(closeTransport bool) error {
 			if e, ok := err.(transport.ConnectionError); ok && !e.Temporary() {
 				return err
 			}
-			grpclog.Printf("grpc: addrConn.resetTransport failed to create client transport: %v; Reconnecting to %v", err, ac.addr)
+			grpclog.Warningf("grpc: addrConn.resetTransport failed to create client transport: %v; Reconnecting to %v", err, ac.addr)
 			ac.mu.Lock()
 			if ac.state == Shutdown {
 				// ac.tearDown(...) has been invoked.
@@ -972,7 +973,7 @@ func (ac *addrConn) transportMonitor() {
 				ac.mu.Lock()
 				ac.printf("transport exiting: %v", err)
 				ac.mu.Unlock()
-				grpclog.Printf("grpc: addrConn.transportMonitor exits due to: %v", err)
+				grpclog.Warningf("grpc: addrConn.transportMonitor exits due to: %v", err)
 				if err != errConnClosing {
 					// Keep this ac in cc.conns, to get the reason it's torn down.
 					ac.tearDown(err)

@@ -256,6 +256,28 @@ func TestFieldDataGet(t *testing.T) {
 			"foo",
 			[]string{},
 		},
+
+		"name string type, valid string": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{
+				"foo": "bar",
+			},
+			"foo",
+			"bar",
+		},
+
+		"name string type, valid value with special characters": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{
+				"foo": "bar.baz-bay123",
+			},
+			"foo",
+			"bar.baz-bay123",
+		},
 	}
 
 	for name, tc := range cases {
@@ -264,11 +286,72 @@ func TestFieldDataGet(t *testing.T) {
 			Schema: tc.Schema,
 		}
 
+		if err := data.Validate(); err != nil {
+			t.Fatalf("bad: %#v", err)
+		}
+
 		actual := data.Get(tc.Key)
 		if !reflect.DeepEqual(actual, tc.Value) {
 			t.Fatalf(
 				"bad: %s\n\nExpected: %#v\nGot: %#v",
 				name, tc.Value, actual)
+		}
+	}
+}
+
+func TestFieldDataGet_Error(t *testing.T) {
+	cases := map[string]struct {
+		Schema map[string]*FieldSchema
+		Raw    map[string]interface{}
+		Key    string
+	}{
+		"name string type, invalid value with invalid characters": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{
+				"foo": "bar baz",
+			},
+			"foo",
+		},
+		"name string type, invalid value with special characters at beginning": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{
+				"foo": ".barbaz",
+			},
+			"foo",
+		},
+		"name string type, invalid value with special characters at end": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{
+				"foo": "barbaz-",
+			},
+			"foo",
+		},
+		"name string type, empty string": {
+			map[string]*FieldSchema{
+				"foo": &FieldSchema{Type: TypeNameString},
+			},
+			map[string]interface{}{
+				"foo": "",
+			},
+			"foo",
+		},
+	}
+
+	for _, tc := range cases {
+		data := &FieldData{
+			Raw:    tc.Raw,
+			Schema: tc.Schema,
+		}
+
+		_, _, err := data.GetOkErr(tc.Key)
+		if err == nil {
+			t.Fatalf("error expected, none received")
 		}
 	}
 }

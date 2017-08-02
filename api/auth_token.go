@@ -135,6 +135,26 @@ func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// RenewTokenAsSelf behaves like renew-self, but authenticates using a provided
+// token instead of the token attached to the client.
+func (c *TokenAuth) RenewTokenAsSelf(token string, increment int) (*Secret, error) {
+	r := c.c.NewRequest("PUT", "/v1/auth/token/renew-self")
+	r.ClientToken = token
+
+	body := map[string]interface{}{"increment": increment}
+	if err := r.SetJSONBody(body); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.RawRequest(r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
 // RevokeAccessor revokes a token associated with the given accessor
 // along with all the child tokens.
 func (c *TokenAuth) RevokeAccessor(accessor string) error {

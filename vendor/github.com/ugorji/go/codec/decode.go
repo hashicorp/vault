@@ -161,7 +161,9 @@ type DecodeOptions struct {
 	// look them up from a map (than to allocate them afresh).
 	//
 	// Note: Handles will be smart when using the intern functionality.
-	// So everything will not be interned.
+	// Every string should not be interned.
+	// An excellent use-case for interning is struct field names,
+	// or map keys where key type is string.
 	InternString bool
 
 	// PreferArrayOverSlice controls whether to decode to an array or a slice.
@@ -740,7 +742,8 @@ func (f *decFnInfo) kStruct(rv reflect.Value) {
 				if cr != nil {
 					cr.sendContainerState(containerMapKey)
 				}
-				rvkencname := stringView(dd.DecodeBytes(f.d.b[:], true, true))
+				rvkencnameB := dd.DecodeBytes(f.d.b[:], true, true)
+				rvkencname := stringView(rvkencnameB)
 				// rvksi := ti.getForEncName(rvkencname)
 				if cr != nil {
 					cr.sendContainerState(containerMapValue)
@@ -755,6 +758,7 @@ func (f *decFnInfo) kStruct(rv reflect.Value) {
 				} else {
 					d.structFieldNotFound(-1, rvkencname)
 				}
+				keepAlive4StringView(rvkencnameB) // maintain ref 4 stringView
 			}
 		} else {
 			for j := 0; !dd.CheckBreak(); j++ {
@@ -762,7 +766,8 @@ func (f *decFnInfo) kStruct(rv reflect.Value) {
 				if cr != nil {
 					cr.sendContainerState(containerMapKey)
 				}
-				rvkencname := stringView(dd.DecodeBytes(f.d.b[:], true, true))
+				rvkencnameB := dd.DecodeBytes(f.d.b[:], true, true)
+				rvkencname := stringView(rvkencnameB)
 				// rvksi := ti.getForEncName(rvkencname)
 				if cr != nil {
 					cr.sendContainerState(containerMapValue)
@@ -777,6 +782,7 @@ func (f *decFnInfo) kStruct(rv reflect.Value) {
 				} else {
 					d.structFieldNotFound(-1, rvkencname)
 				}
+				keepAlive4StringView(rvkencnameB) // maintain ref 4 stringView
 			}
 		}
 		if cr != nil {
@@ -1873,11 +1879,14 @@ func (d *Decoder) errorf(format string, params ...interface{}) {
 	panic(err)
 }
 
+// Possibly get an interned version of a string
+//
+// This should mostly be used for map keys, where the key type is string
 func (d *Decoder) string(v []byte) (s string) {
 	if d.is != nil {
-		s, ok := d.is[string(v)] // no allocation here.
+		s, ok := d.is[string(v)] // no allocation here, per go implementation
 		if !ok {
-			s = string(v)
+			s = string(v) // new allocation here
 			d.is[s] = s
 		}
 		return s
@@ -1885,11 +1894,11 @@ func (d *Decoder) string(v []byte) (s string) {
 	return string(v) // don't return stringView, as we need a real string here.
 }
 
-func (d *Decoder) intern(s string) {
-	if d.is != nil {
-		d.is[s] = s
-	}
-}
+// func (d *Decoder) intern(s string) {
+// 	if d.is != nil {
+// 		d.is[s] = s
+// 	}
+// }
 
 // nextValueBytes returns the next value in the stream as a set of bytes.
 func (d *Decoder) nextValueBytes() []byte {

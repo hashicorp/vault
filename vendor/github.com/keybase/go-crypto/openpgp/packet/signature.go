@@ -384,18 +384,20 @@ func parseSignatureSubpacket(sig *Signature, subpacket []byte, isHashed bool) (r
 			err = errors.StructuralError("empty key flags subpacket")
 			return
 		}
-		sig.FlagsValid = true
-		if subpacket[0]&KeyFlagCertify != 0 {
-			sig.FlagCertify = true
-		}
-		if subpacket[0]&KeyFlagSign != 0 {
-			sig.FlagSign = true
-		}
-		if subpacket[0]&KeyFlagEncryptCommunications != 0 {
-			sig.FlagEncryptCommunications = true
-		}
-		if subpacket[0]&KeyFlagEncryptStorage != 0 {
-			sig.FlagEncryptStorage = true
+		if subpacket[0] != 0 {
+			sig.FlagsValid = true
+			if subpacket[0]&KeyFlagCertify != 0 {
+				sig.FlagCertify = true
+			}
+			if subpacket[0]&KeyFlagSign != 0 {
+				sig.FlagSign = true
+			}
+			if subpacket[0]&KeyFlagEncryptCommunications != 0 {
+				sig.FlagEncryptCommunications = true
+			}
+			if subpacket[0]&KeyFlagEncryptStorage != 0 {
+				sig.FlagEncryptStorage = true
+			}
 		}
 	case reasonForRevocationSubpacket:
 		// Reason For Revocation, section 5.2.3.23

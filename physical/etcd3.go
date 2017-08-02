@@ -11,7 +11,6 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/coreos/etcd/client"
 	"github.com/coreos/etcd/clientv3"
 	"github.com/coreos/etcd/clientv3/concurrency"
 	"github.com/coreos/etcd/pkg/transport"
@@ -33,8 +32,13 @@ type EtcdBackend struct {
 	etcd *clientv3.Client
 }
 
-// etcd default lease duration is 60s. set to 15s for faster recovery.
-const etcd3LockTimeoutInSeconds = 15
+const (
+	// etcd3 default lease duration is 60s. set to 15s for faster recovery.
+	etcd3LockTimeoutInSeconds = 15
+	// etcd3 default request timeout is set to 5s. It should be long enough
+	// for most cases, even with internal retry.
+	etcd3RequestTimeout = 5 * time.Second
+)
 
 // newEtcd3Backend constructs a etcd3 backend.
 func newEtcd3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
@@ -118,7 +122,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (Backend, error)
 	}
 
 	if sync {
-		ctx, cancel := context.WithTimeout(context.Background(), client.DefaultRequestTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
 		err := etcd.Sync(ctx)
 		cancel()
 		if err != nil {
@@ -141,7 +145,9 @@ func (c *EtcdBackend) Put(entry *Entry) error {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	_, err := c.etcd.Put(context.Background(), path.Join(c.path, entry.Key), string(entry.Value))
+	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	defer cancel()
+	_, err := c.etcd.Put(ctx, path.Join(c.path, entry.Key), string(entry.Value))
 	return err
 }
 
@@ -151,7 +157,9 @@ func (c *EtcdBackend) Get(key string) (*Entry, error) {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	resp, err := c.etcd.Get(context.Background(), path.Join(c.path, key))
+	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	defer cancel()
+	resp, err := c.etcd.Get(ctx, path.Join(c.path, key))
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +182,9 @@ func (c *EtcdBackend) Delete(key string) error {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	_, err := c.etcd.Delete(context.Background(), path.Join(c.path, key))
+	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	defer cancel()
+	_, err := c.etcd.Delete(ctx, path.Join(c.path, key))
 	if err != nil {
 		return err
 	}
@@ -187,8 +197,10 @@ func (c *EtcdBackend) List(prefix string) ([]string, error) {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
+	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	defer cancel()
 	prefix = path.Join(c.path, prefix)
-	resp, err := c.etcd.Get(context.Background(), prefix, clientv3.WithPrefix())
+	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +277,10 @@ func (c *EtcdLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) {
 		}
 		return nil, err
 	}
-	if _, err := c.etcd.Put(ctx, c.etcdMu.Key(), c.value, clientv3.WithLease(c.etcdSession.Lease())); err != nil {
+
+	pctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	defer cancel()
+	if _, err := c.etcd.Put(pctx, c.etcdMu.Key(), c.value, clientv3.WithLease(c.etcdSession.Lease())); err != nil {
 		return nil, err
 	}
 
@@ -282,11 +297,16 @@ func (c *EtcdLock) Unlock() error {
 		return EtcdLockNotHeldError
 	}
 
-	return c.etcdMu.Unlock(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	defer cancel()
+	return c.etcdMu.Unlock(ctx)
 }
 
 func (c *EtcdLock) Value() (bool, string, error) {
-	resp, err := c.etcd.Get(context.Background(),
+	ctx, cancel := context.WithTimeout(context.Background(), etcd3RequestTimeout)
+	defer cancel()
+
+	resp, err := c.etcd.Get(ctx,
 		c.prefix, clientv3.WithPrefix(),
 		clientv3.WithSort(clientv3.SortByCreateRevision, clientv3.SortAscend))
 

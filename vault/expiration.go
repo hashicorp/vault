@@ -171,7 +171,11 @@ func (m *ExpirationManager) Tidy() error {
 
 		isValid, ok = tokenCache[le.ClientToken]
 		if !ok {
-			saltedID := m.tokenStore.SaltID(le.ClientToken)
+			saltedID, err := m.tokenStore.SaltID(le.ClientToken)
+			if err != nil {
+				tidyErrors = multierror.Append(tidyErrors, fmt.Errorf("failed to lookup salt id: %v", err))
+				return
+			}
 			lock := locksutil.LockForKey(m.tokenStore.tokenLocks, le.ClientToken)
 			lock.RLock()
 			te, err := m.tokenStore.lookupSalted(saltedID, true)
@@ -458,7 +462,11 @@ func (m *ExpirationManager) RevokeByToken(te *TokenEntry) error {
 	}
 
 	if te.Path != "" {
-		tokenLeaseID := path.Join(te.Path, m.tokenStore.SaltID(te.ID))
+		saltedID, err := m.tokenStore.SaltID(te.ID)
+		if err != nil {
+			return err
+		}
+		tokenLeaseID := path.Join(te.Path, saltedID)
 
 		// We want to skip the revokeEntry call as that will call back into
 		// revocation logic in the token store, which is what is running this
@@ -560,7 +568,11 @@ func (m *ExpirationManager) RenewToken(req *logical.Request, source string, toke
 	increment time.Duration) (*logical.Response, error) {
 	defer metrics.MeasureSince([]string{"expire", "renew-token"}, time.Now())
 	// Compute the Lease ID
-	leaseID := path.Join(source, m.tokenStore.SaltID(token))
+	saltedID, err := m.tokenStore.SaltID(token)
+	if err != nil {
+		return nil, err
+	}
+	leaseID := path.Join(source, saltedID)
 
 	// Load the entry
 	le, err := m.loadEntry(leaseID)
@@ -707,9 +719,14 @@ func (m *ExpirationManager) RegisterAuth(source string, auth *logical.Auth) erro
 		return fmt.Errorf("expiration: %s", consts.ErrPathContainsParentReferences)
 	}
 
+	saltedID, err := m.tokenStore.SaltID(auth.ClientToken)
+	if err != nil {
+		return err
+	}
+
 	// Create a lease entry
 	le := leaseEntry{
-		LeaseID:     path.Join(source, m.tokenStore.SaltID(auth.ClientToken)),
+		LeaseID:     path.Join(source, saltedID),
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        source,
@@ -733,7 +750,11 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(source, token string) (*lease
 	defer metrics.MeasureSince([]string{"expire", "fetch-lease-times-by-token"}, time.Now())
 
 	// Compute the Lease ID
-	leaseID := path.Join(source, m.tokenStore.SaltID(token))
+	saltedID, err := m.tokenStore.SaltID(token)
+	if err != nil {
+		return nil, err
+	}
+	leaseID := path.Join(source, saltedID)
 	return m.FetchLeaseTimes(leaseID)
 }
 
@@ -924,8 +945,18 @@ func (m *ExpirationManager) deleteEntry(leaseID string) error {
 
 // createIndexByToken creates a secondary index from the token to a lease entry
 func (m *ExpirationManager) createIndexByToken(token, leaseID string) error {
+	saltedID, err := m.tokenStore.SaltID(token)
+	if err != nil {
+		return err
+	}
+
+	leaseSaltedID, err := m.tokenStore.SaltID(leaseID)
+	if err != nil {
+		return err
+	}
+
 	ent := logical.StorageEntry{
-		Key:   m.tokenStore.SaltID(token) + "/" + m.tokenStore.SaltID(leaseID),
+		Key:   saltedID + "/" + leaseSaltedID,
 		Value: []byte(leaseID),
 	}
 	if err := m.tokenView.Put(&ent); err != nil {
@@ -936,7 +967,17 @@ func (m *ExpirationManager) createIndexByToken(token, leaseID string) error {
 
 // indexByToken looks up the secondary index from the token to a lease entry
 func (m *ExpirationManager) indexByToken(token, leaseID string) (*logical.StorageEntry, error) {
-	key := m.tokenStore.SaltID(token) + "/" + m.tokenStore.SaltID(leaseID)
+	saltedID, err := m.tokenStore.SaltID(token)
+	if err != nil {
+		return nil, err
+	}
+
+	leaseSaltedID, err := m.tokenStore.SaltID(leaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	key := saltedID + "/" + leaseSaltedID
 	entry, err := m.tokenView.Get(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to look up secondary index entry")
@@ -946,7 +987,17 @@ func (m *ExpirationManager) indexByToken(token, leaseID string) (*logical.Storag
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
 func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
-	key := m.tokenStore.SaltID(token) + "/" + m.tokenStore.SaltID(leaseID)
+	saltedID, err := m.tokenStore.SaltID(token)
+	if err != nil {
+		return err
+	}
+
+	leaseSaltedID, err := m.tokenStore.SaltID(leaseID)
+	if err != nil {
+		return err
+	}
+
+	key := saltedID + "/" + leaseSaltedID
 	if err := m.tokenView.Delete(key); err != nil {
 		return fmt.Errorf("failed to delete lease index entry: %v", err)
 	}
@@ -955,8 +1006,13 @@ func (m *ExpirationManager) removeIndexByToken(token, leaseID string) error {
 
 // lookupByToken is used to lookup all the leaseID's via the
 func (m *ExpirationManager) lookupByToken(token string) ([]string, error) {
+	saltedID, err := m.tokenStore.SaltID(token)
+	if err != nil {
+		return nil, err
+	}
+
 	// Scan via the index for sub-leases
-	prefix := m.tokenStore.SaltID(token) + "/"
+	prefix := saltedID + "/"
 	subKeys, err := m.tokenView.List(prefix)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list leases: %v", err)

@@ -20,7 +20,7 @@ func (qr *qrcode) Content() string {
 }
 
 func (qr *qrcode) Metadata() barcode.Metadata {
-	return barcode.Metadata{"QR Code", 2}
+	return barcode.Metadata{barcode.TypeQR, 2}
 }
 
 func (qr *qrcode) ColorModel() color.Model {

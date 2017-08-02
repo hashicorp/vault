@@ -634,3 +634,57 @@ func testEventuallyConsistentBackend_ListPrefix(t *testing.T, b Backend, d delay
 	}
 
 }
+
+func testTransactionalBackend(t *testing.T, b Backend) {
+	tb, ok := b.(Transactional)
+	if !ok {
+		t.Fatal("Not a transactional backend")
+	}
+
+	txns := setupTransactions(t, b)
+
+	if err := tb.Transaction(txns); err != nil {
+		t.Fatal(err)
+	}
+
+	keys, err := b.List("")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := []string{"foo", "zip"}
+
+	sort.Strings(keys)
+	sort.Strings(expected)
+	if !reflect.DeepEqual(keys, expected) {
+		t.Fatalf("mismatch: expected\n%#v\ngot\n%#v\n", expected, keys)
+	}
+
+	entry, err := b.Get("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil {
+		t.Fatal("got nil entry")
+	}
+	if entry.Value == nil {
+		t.Fatal("got nil value")
+	}
+	if string(entry.Value) != "bar3" {
+		t.Fatal("updates did not apply correctly")
+	}
+
+	entry, err = b.Get("zip")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil {
+		t.Fatal("got nil entry")
+	}
+	if entry.Value == nil {
+		t.Fatal("got nil value")
+	}
+	if string(entry.Value) != "zap3" {
+		t.Fatal("updates did not apply correctly")
+	}
+}

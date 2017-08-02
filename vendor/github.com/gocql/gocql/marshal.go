@@ -1595,12 +1595,11 @@ func marshalTuple(info TypeInfo, value interface{}) ([]byte, error) {
 	case unsetColumn:
 		return nil, unmarshalErrorf("Invalid request: UnsetValue is unsupported for tuples")
 	case []interface{}:
-		var buf []byte
-
 		if len(v) != len(tuple.Elems) {
 			return nil, unmarshalErrorf("cannont marshal tuple: wrong number of elements")
 		}
 
+		var buf []byte
 		for i, elem := range v {
 			data, err := Marshal(tuple.Elems[i], elem)
 			if err != nil {
@@ -1615,7 +1614,51 @@ func marshalTuple(info TypeInfo, value interface{}) ([]byte, error) {
 		return buf, nil
 	}
 
-	return nil, unmarshalErrorf("cannot marshal %T into %s", value, tuple)
+	rv := reflect.ValueOf(value)
+	t := rv.Type()
+	k := t.Kind()
+
+	switch k {
+	case reflect.Struct:
+		if v := t.NumField(); v != len(tuple.Elems) {
+			return nil, marshalErrorf("can not marshal tuple into struct %v, not enough fields have %d need %d", t, v, len(tuple.Elems))
+		}
+
+		var buf []byte
+		for i, elem := range tuple.Elems {
+			data, err := Marshal(elem, rv.Field(i).Interface())
+			if err != nil {
+				return nil, err
+			}
+
+			n := len(data)
+			buf = appendInt(buf, int32(n))
+			buf = append(buf, data...)
+		}
+
+		return buf, nil
+	case reflect.Slice, reflect.Array:
+		size := rv.Len()
+		if size != len(tuple.Elems) {
+			return nil, marshalErrorf("can not marshal tuple into %v of length %d need %d elements", k, size, len(tuple.Elems))
+		}
+
+		var buf []byte
+		for i, elem := range tuple.Elems {
+			data, err := Marshal(elem, rv.Index(i).Interface())
+			if err != nil {
+				return nil, err
+			}
+
+			n := len(data)
+			buf = appendInt(buf, int32(n))
+			buf = append(buf, data...)
+		}
+
+		return buf, nil
+	}
+
+	return nil, marshalErrorf("cannot marshal %T into %s", value, tuple)
 }
 
 // currently only support unmarshal into a list of values, this makes it possible
@@ -1639,6 +1682,61 @@ func unmarshalTuple(info TypeInfo, data []byte, value interface{}) error {
 				return err
 			}
 			data = data[size:]
+		}
+
+		return nil
+	}
+
+	rv := reflect.ValueOf(value)
+	if rv.Kind() != reflect.Ptr {
+		return unmarshalErrorf("can not unmarshal into non-pointer %T", value)
+	}
+
+	rv = rv.Elem()
+	t := rv.Type()
+	k := t.Kind()
+
+	switch k {
+	case reflect.Struct:
+		if v := t.NumField(); v != len(tuple.Elems) {
+			return unmarshalErrorf("can not unmarshal tuple into struct %v, not enough fields have %d need %d", t, v, len(tuple.Elems))
+		}
+
+		for i, elem := range tuple.Elems {
+			m := readInt(data)
+			data = data[4:]
+
+			v := elem.New()
+			if err := Unmarshal(elem, data[:m], v); err != nil {
+				return err
+			}
+			rv.Field(i).Set(reflect.ValueOf(v).Elem())
+
+			data = data[m:]
+		}
+
+		return nil
+	case reflect.Slice, reflect.Array:
+		if k == reflect.Array {
+			size := rv.Len()
+			if size != len(tuple.Elems) {
+				return unmarshalErrorf("can not unmarshal tuple into array of length %d need %d elements", size, len(tuple.Elems))
+			}
+		} else {
+			rv.Set(reflect.MakeSlice(t, len(tuple.Elems), len(tuple.Elems)))
+		}
+
+		for i, elem := range tuple.Elems {
+			m := readInt(data)
+			data = data[4:]
+
+			v := elem.New()
+			if err := Unmarshal(elem, data[:m], v); err != nil {
+				return err
+			}
+			rv.Index(i).Set(reflect.ValueOf(v).Elem())
+
+			data = data[m:]
 		}
 
 		return nil

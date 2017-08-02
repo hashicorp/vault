@@ -29,7 +29,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,7 +307,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +361,7 @@ func TestBackend_TidyIdentities(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +386,7 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +411,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -548,7 +548,7 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -616,6 +616,9 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 	certReq.Operation = logical.ReadOperation
 	// test read operation
 	resp, err = b.HandleRequest(certReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedCert := `-----BEGIN CERTIFICATE-----
 MIIC7TCCAq0CCQCWukjZ5V4aZzAJBgcqhkjOOAQDMFwxCzAJBgNVBAYTAlVTMRkw
 FwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYD
@@ -700,7 +703,7 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -732,6 +735,9 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 		Path:      "role/abcd-123",
 		Storage:   storage,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatalf("expected an role entry for abcd-123")
 	}
@@ -778,7 +784,7 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -843,7 +849,7 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -991,7 +997,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndWhitelistIdentity(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1171,7 +1177,7 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1218,6 +1224,9 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	stsReq.Operation = logical.ReadOperation
 	// test read operation
 	resp, err = b.HandleRequest(stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 	expectedStsRole := "arn:aws:iam:account1:role/myRole"
 	if resp.Data["sts_role"].(string) != expectedStsRole {
 		t.Fatalf("bad: expected:%s\n got:%s\n", expectedStsRole, resp.Data["sts_role"].(string))
@@ -1316,7 +1325,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1419,7 +1428,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
 	}
 
-	fakeArn := "arn:aws:iam::123456789012:role/FakeRole"
+	fakeArn := "arn:aws:iam::123456789012:role/somePath/FakeRole"
 	fakeArnResolver := func(s logical.Storage, arn string) (string, error) {
 		if arn == fakeArn {
 			return fmt.Sprintf("FakeUniqueIdFor%s", fakeArn), nil
@@ -1510,7 +1519,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp == nil || resp.Auth == nil || resp.IsError() {
-		t.Errorf("bad: expected valid login: resp:%#v", resp)
+		t.Fatalf("bad: expected valid login: resp:%#v", resp)
 	}
 
 	renewReq := &logical.Request{
@@ -1526,6 +1535,9 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	renewReq.Auth.LeaseOptions = resp.Auth.LeaseOptions
 	renewReq.Auth.Policies = resp.Auth.Policies
 	renewReq.Auth.IssueTime = time.Now()
+	// dump a fake ARN into the metadata to ensure that we ONLY look
+	// at the unique ID that has been generated
+	renewReq.Auth.Metadata["canonical_arn"] = "fake_arn"
 	// ensure we can renew
 	resp, err = b.pathLoginRenew(renewReq, empty_login_fd)
 	if err != nil {

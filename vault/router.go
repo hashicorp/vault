@@ -18,7 +18,7 @@ type Router struct {
 	root               *radix.Tree
 	mountUUIDCache     *radix.Tree
 	mountAccessorCache *radix.Tree
-	tokenStoreSalt     *salt.Salt
+	tokenStoreSaltFunc func() (*salt.Salt, error)
 
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
@@ -263,6 +263,12 @@ func (r *Router) MatchingStoragePrefix(path string) (string, string, bool) {
 	re := raw.(*routeEntry)
 	mountPath := re.mountEntry.Path
 	prefix := re.storageView.prefix
+
+	// Add back the prefix for credential backends
+	if strings.HasPrefix(path, credentialBarrierPrefix) {
+		mountPath = credentialRoutePrefix + mountPath
+	}
+
 	return mountPath, prefix, true
 }
 
@@ -326,7 +332,11 @@ func (r *Router) routeCommon(req *logical.Request, existenceCheck bool) (*logica
 	case strings.HasPrefix(originalPath, "cubbyhole/"):
 		// In order for the token store to revoke later, we need to have the same
 		// salted ID, so we double-salt what's going to the cubbyhole backend
-		req.ClientToken = re.SaltID(r.tokenStoreSalt.SaltID(req.ClientToken))
+		salt, err := r.tokenStoreSaltFunc()
+		if err != nil {
+			return nil, false, false, err
+		}
+		req.ClientToken = re.SaltID(salt.SaltID(req.ClientToken))
 	default:
 		req.ClientToken = re.SaltID(req.ClientToken)
 	}

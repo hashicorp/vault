@@ -54,7 +54,10 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b.Setup(conf)
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 func Backend(conf *logical.BackendConfig) (*backend, error) {
@@ -93,7 +96,8 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Invalidate: b.invalidate,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 	return b, nil
 }

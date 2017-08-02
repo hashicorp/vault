@@ -95,14 +95,24 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 	viewPath := credentialBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 	sysView := c.mountEntrySysView(entry)
+	conf := make(map[string]string)
+	if entry.Config.PluginName != "" {
+		conf["plugin_name"] = entry.Config.PluginName
+	}
 
 	// Create the new backend
-	backend, err := c.newCredentialBackend(entry.Type, sysView, view, nil)
+	backend, err := c.newCredentialBackend(entry.Type, sysView, view, conf)
 	if err != nil {
 		return err
 	}
 	if backend == nil {
 		return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+	}
+
+	// Check for the correct backend type
+	backendType := backend.Type()
+	if entry.Type == "plugin" && backendType != logical.TypeCredential {
+		return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 	}
 
 	if err := backend.Initialize(); err != nil {
@@ -131,7 +141,7 @@ func (c *Core) enableCredential(entry *MountEntry) error {
 
 // disableCredential is used to disable an existing credential backend; the
 // boolean indicates if it existed
-func (c *Core) disableCredential(path string) (bool, error) {
+func (c *Core) disableCredential(path string) error {
 	// Ensure we end the path in a slash
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -139,29 +149,29 @@ func (c *Core) disableCredential(path string) (bool, error) {
 
 	// Ensure the token backend is not affected
 	if path == "token/" {
-		return true, fmt.Errorf("token credential backend cannot be disabled")
+		return fmt.Errorf("token credential backend cannot be disabled")
 	}
 
 	// Store the view for this backend
 	fullPath := credentialRoutePrefix + path
 	view := c.router.MatchingStorageView(fullPath)
 	if view == nil {
-		return false, fmt.Errorf("no matching backend %s", fullPath)
+		return fmt.Errorf("no matching backend %s", fullPath)
 	}
 
 	// Mark the entry as tainted
 	if err := c.taintCredEntry(path); err != nil {
-		return true, err
+		return err
 	}
 
 	// Taint the router path to prevent routing
 	if err := c.router.Taint(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
 	// Revoke credentials from this path
 	if err := c.expiration.RevokePrefix(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
 	// Call cleanup function if it exists
@@ -172,24 +182,24 @@ func (c *Core) disableCredential(path string) (bool, error) {
 
 	// Unmount the backend
 	if err := c.router.Unmount(fullPath); err != nil {
-		return true, err
+		return err
 	}
 
 	// Clear the data in the view
 	if view != nil {
 		if err := logical.ClearView(view); err != nil {
-			return true, err
+			return err
 		}
 	}
 
 	// Remove the mount table entry
 	if err := c.removeCredEntry(path); err != nil {
-		return true, err
+		return err
 	}
 	if c.logger.IsInfo() {
 		c.logger.Info("core: disabled credential backend", "path", path)
 	}
-	return true, nil
+	return nil
 }
 
 // removeCredEntry is used to remove an entry in the auth table
@@ -406,15 +416,25 @@ func (c *Core) setupCredentials() error {
 		viewPath := credentialBarrierPrefix + entry.UUID + "/"
 		view = NewBarrierView(c.barrier, viewPath)
 		sysView := c.mountEntrySysView(entry)
+		conf := make(map[string]string)
+		if entry.Config.PluginName != "" {
+			conf["plugin_name"] = entry.Config.PluginName
+		}
 
 		// Initialize the backend
-		backend, err = c.newCredentialBackend(entry.Type, sysView, view, nil)
+		backend, err = c.newCredentialBackend(entry.Type, sysView, view, conf)
 		if err != nil {
 			c.logger.Error("core: failed to create credential entry", "path", entry.Path, "error", err)
 			return errLoadAuthFailed
 		}
 		if backend == nil {
 			return fmt.Errorf("nil backend returned from %q factory", entry.Type)
+		}
+
+		// Check for the correct backend type
+		backendType := backend.Type()
+		if entry.Type == "plugin" && backendType != logical.TypeCredential {
+			return fmt.Errorf("cannot mount '%s' of type '%s' as an auth backend", entry.Config.PluginName, backendType)
 		}
 
 		if err := backend.Initialize(); err != nil {
@@ -439,7 +459,7 @@ func (c *Core) setupCredentials() error {
 			c.tokenStore = backend.(*TokenStore)
 
 			// this is loaded *after* the normal mounts, including cubbyhole
-			c.router.tokenStoreSalt = c.tokenStore.salt
+			c.router.tokenStoreSaltFunc = c.tokenStore.Salt
 			c.tokenStore.cubbyholeBackend = c.router.MatchingBackend("cubbyhole/").(*CubbyholeBackend)
 		}
 	}

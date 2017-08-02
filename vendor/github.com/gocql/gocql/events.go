@@ -174,23 +174,15 @@ func (s *Session) handleNodeEvent(frames []frame) {
 }
 
 func (s *Session) handleNewNode(ip net.IP, port int, waitForBinary bool) {
-	var hostInfo *HostInfo
-	if s.control != nil && !s.cfg.IgnorePeerAddr {
-		var err error
-		hostInfo, err = s.control.fetchHostInfo(ip, port)
-		if err != nil {
-			Logger.Printf("gocql: events: unable to fetch host info for (%s:%d): %v\n", ip, port, err)
-			return
-		}
-	} else {
-		hostInfo = &HostInfo{peer: ip, port: port}
+	// Get host info and apply any filters to the host
+	hostInfo, err := s.hostSource.GetHostInfo(ip, port)
+	if err != nil {
+		Logger.Printf("gocql: events: unable to fetch host info for (%s:%d): %v\n", ip, port, err)
+		return
 	}
 
-	if s.cfg.IgnorePeerAddr && hostInfo.Peer().Equal(ip) {
-		hostInfo.setPeer(ip)
-	}
-
-	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(hostInfo) {
+	// If hostInfo is nil, this host was filtered out by cfg.HostFilter
+	if hostInfo == nil {
 		return
 	}
 
@@ -216,7 +208,7 @@ func (s *Session) handleRemovedNode(ip net.IP, port int) {
 	// we remove all nodes but only add ones which pass the filter
 	host := s.ring.getHost(ip)
 	if host == nil {
-		host = &HostInfo{peer: ip, port: port}
+		host = &HostInfo{connectAddress: ip, port: port}
 	}
 
 	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
@@ -240,9 +232,10 @@ func (s *Session) handleNodeUp(ip net.IP, port int, waitForBinary bool) {
 
 	host := s.ring.getHost(ip)
 	if host != nil {
-		if s.cfg.IgnorePeerAddr && host.Peer().Equal(ip) {
-			// TODO: how can this ever be true?
-			host.setPeer(ip)
+		// If we receive a node up event and user has asked us to ignore the peer address use
+		// the address provide by the event instead the address provide by peer the table.
+		if s.cfg.IgnorePeerAddr && !host.ConnectAddress().Equal(ip) {
+			host.SetConnectAddress(ip)
 		}
 
 		if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {
@@ -269,7 +262,7 @@ func (s *Session) handleNodeDown(ip net.IP, port int) {
 
 	host := s.ring.getHost(ip)
 	if host == nil {
-		host = &HostInfo{peer: ip, port: port}
+		host = &HostInfo{connectAddress: ip, port: port}
 	}
 
 	if s.cfg.HostFilter != nil && !s.cfg.HostFilter.Accept(host) {

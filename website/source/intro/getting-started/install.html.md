@@ -1,6 +1,6 @@
 ---
 layout: "intro"
-page_title: "Install Vault"
+page_title: "Install Vault - Getting Started"
 sidebar_current: "gettingstarted-install"
 description: |-
   The first step to using Vault is to get it installed.
@@ -94,4 +94,3 @@ Otherwise, Vault is installed and ready to go!
 
 Now Vault is installed we can start our first Vault server! [Let's do
 that now](/intro/getting-started/dev-server.html).
-

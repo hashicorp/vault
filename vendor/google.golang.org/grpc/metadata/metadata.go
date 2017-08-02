@@ -17,7 +17,7 @@
  */
 
 // Package metadata define the structure of the metadata supported by gRPC library.
-// Please refer to http://www.grpc.io/docs/guides/wire.html for more information about custom-metadata.
+// Please refer to https://grpc.io/docs/guides/wire.html for more information about custom-metadata.
 package metadata // import "google.golang.org/grpc/metadata"
 
 import (

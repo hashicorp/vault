@@ -1,6 +1,6 @@
 # Adapted from tcnksm/dockerfile-gox -- thanks!
 
-FROM debian:jessie
+FROM debian:stable
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          curl \

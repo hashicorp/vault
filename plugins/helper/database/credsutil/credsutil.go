@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"time"
 
+	"fmt"
+
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 )
 
@@ -16,24 +18,37 @@ type CredentialsProducer interface {
 	GenerateExpiration(ttl time.Time) (string, error)
 }
 
-// RandomAlphaNumericOfLen returns a random byte slice of characters [A-Za-z0-9]
-// of the provided length.
-func RandomAlphaNumericOfLen(len int) ([]byte, error) {
-	retBytes := make([]byte, len)
-	size := 0
+const (
+	reqStr    = `A1a`
+	minStrLen = 10
+)
 
-	for size < len {
+// RandomAlphaNumeric returns a random string of characters [A-Za-z0-9]
+// of the provided length. The string generated takes up to 3 characters
+// of space that are predefined and prepended to ensure password
+// character requirements. It also requires a min length of 10 characters.
+func RandomAlphaNumeric(length int) (string, error) {
+	if length < minStrLen {
+		return "", fmt.Errorf("minimum length of %d is required", minStrLen)
+	}
+	size := len(reqStr)
+
+	retBytes := make([]byte, length-size)
+	// Enforce alphanumeric requirements
+	retBytes = append([]byte(reqStr), retBytes...)
+
+	for size < length {
 		// Extend the len of the random byte slice to lower odds of having to
 		// re-roll.
-		c := len + 3
+		c := length + 3
 		bArr := make([]byte, c)
 		_, err := rand.Read(bArr)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
 		for _, b := range bArr {
-			if size == len {
+			if size == length {
 				break
 			}
 
@@ -50,6 +65,8 @@ func RandomAlphaNumericOfLen(len int) ([]byte, error) {
 			 */
 
 			b = b >> 1
+			// Bitwise OR to set min to 48, further reduces re-roll
+			b |= 0x30
 
 			// The byte is any of        0-9                  A-Z                      a-z
 			byteIsAllowable := (b >= 48 && b <= 57) || (b >= 65 && b <= 90) || (b >= 97 && b <= 122)
@@ -60,5 +77,5 @@ func RandomAlphaNumericOfLen(len int) ([]byte, error) {
 		}
 	}
 
-	return retBytes, nil
+	return string(retBytes), nil
 }

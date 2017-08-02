@@ -356,6 +356,9 @@ func (d *bincDecDriver) uncacheRead() {
 }
 
 func (d *bincDecDriver) ContainerType() (vt valueType) {
+	if !d.bdRead {
+		d.readNextBd()
+	}
 	if d.vd == bincVdSpecial && d.vs == bincSpNil {
 		return valueTypeNil
 	} else if d.vd == bincVdByteArray {
@@ -580,6 +583,9 @@ func (d *bincDecDriver) DecodeBool() (b bool) {
 }
 
 func (d *bincDecDriver) ReadMapStart() (length int) {
+	if !d.bdRead {
+		d.readNextBd()
+	}
 	if d.vd != bincVdMap {
 		d.d.errorf("Invalid d.vd for map. Expecting 0x%x. Got: 0x%x", bincVdMap, d.vd)
 		return
@@ -590,6 +596,9 @@ func (d *bincDecDriver) ReadMapStart() (length int) {
 }
 
 func (d *bincDecDriver) ReadArrayStart() (length int) {
+	if !d.bdRead {
+		d.readNextBd()
+	}
 	if d.vd != bincVdArray {
 		d.d.errorf("Invalid d.vd for array. Expecting 0x%x. Got: 0x%x", bincVdArray, d.vd)
 		return

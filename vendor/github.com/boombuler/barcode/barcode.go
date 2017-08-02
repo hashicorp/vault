@@ -2,6 +2,21 @@ package barcode
 
 import "image"
 
+const (
+	TypeAztec           = "Aztec"
+	TypeCodabar         = "Codabar"
+	TypeCode128         = "Code 128"
+	TypeCode39          = "Code 39"
+	TypeCode93          = "Code 93"
+	TypeDataMatrix      = "DataMatrix"
+	TypeEAN8            = "EAN 8"
+	TypeEAN13           = "EAN 13"
+	TypePDF             = "PDF417"
+	TypeQR              = "QR Code"
+	Type2of5            = "2 of 5"
+	Type2of5Interleaved = "2 of 5 (interleaved)"
+)
+
 // Contains some meta information about a barcode
 type Metadata struct {
 	// the name of the barcode kind

@@ -214,6 +214,9 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	root, err := exp.tokenStore.rootToken()
+	if err != nil {
+		t.Fatal(err)
+	}
 	le.ClientToken = root.ID
 
 	// Attach a valid token with the leases
@@ -1456,5 +1459,10 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 		},
 	}
 
-	return be.Setup(conf)
+	err := be.Setup(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return be, nil
 }

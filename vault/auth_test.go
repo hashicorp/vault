@@ -217,9 +217,9 @@ func TestCore_DisableCredential(t *testing.T) {
 		return &NoopBackend{}, nil
 	}
 
-	existed, err := c.disableCredential("foo")
-	if existed || (err != nil && !strings.HasPrefix(err.Error(), "no matching backend")) {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err := c.disableCredential("foo")
+	if err != nil && !strings.HasPrefix(err.Error(), "no matching backend") {
+		t.Fatalf("err: %v", err)
 	}
 
 	me := &MountEntry{
@@ -232,9 +232,9 @@ func TestCore_DisableCredential(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	existed, err = c.disableCredential("foo")
-	if !existed || err != nil {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err = c.disableCredential("foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	match := c.router.MatchingMount("auth/foo/bar")
@@ -268,9 +268,9 @@ func TestCore_DisableCredential(t *testing.T) {
 
 func TestCore_DisableCredential_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	existed, err := c.disableCredential("token")
-	if !existed || err.Error() != "token credential backend cannot be disabled" {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err := c.disableCredential("token")
+	if err.Error() != "token credential backend cannot be disabled" {
+		t.Fatalf("err: %v", err)
 	}
 }
 
@@ -324,9 +324,9 @@ func TestCore_DisableCredential_Cleanup(t *testing.T) {
 	}
 
 	// Disable should cleanup
-	existed, err := c.disableCredential("foo")
-	if !existed || err != nil {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err = c.disableCredential("foo")
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	// Token should be revoked

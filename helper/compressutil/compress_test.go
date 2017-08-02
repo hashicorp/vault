@@ -7,6 +7,47 @@ import (
 	"testing"
 )
 
+func TestCompressUtil_CompressSnappy(t *testing.T) {
+	input := map[string]interface{}{
+		"sample":       "data",
+		"verification": "process",
+	}
+
+	// Encode input into JSON
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	if err := enc.Encode(input); err != nil {
+		t.Fatal(err)
+	}
+	inputJSONBytes := buf.Bytes()
+
+	// Set Snappy compression in the configuration
+	compressionConfig := &CompressionConfig{
+		Type: CompressionTypeSnappy,
+	}
+
+	// Compress the input
+	compressedJSONBytes, err := Compress(inputJSONBytes, compressionConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decompressedJSONBytes, wasNotCompressed, err := Decompress(compressedJSONBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if the input for decompress was not compressed in the first place
+	if wasNotCompressed {
+		t.Fatalf("bad: expected compressed bytes")
+	}
+
+	// Compare the value after decompression
+	if string(inputJSONBytes) != string(decompressedJSONBytes) {
+		t.Fatalf("bad: decompressed value;\nexpected: %q\nactual: %q", string(inputJSONBytes), string(decompressedJSONBytes))
+	}
+}
+
 func TestCompressUtil_CompressDecompress(t *testing.T) {
 	input := map[string]interface{}{
 		"sample":       "data",
