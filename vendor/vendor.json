@@ -207,6 +207,12 @@
 			"revisionTime": "2017-06-01T21:44:32Z"
 		},
 		{
+			"checksumSHA1": "MzSim/5A5kPO2q0n3aKq8H5qJvU=",
+			"path": "github.com/armon/go-proxyproto",
+			"revision": "48572f11356f1843b694f21a290d4f1006bc5e47",
+			"revisionTime": "2017-06-20T22:09:30Z"
+		},
+		{
 			"checksumSHA1": "gNO0JNpLzYOdInGeq7HqMZUzx9M=",
 			"path": "github.com/armon/go-radix",
 			"revision": "4239b77079c7b5d1243b7b4736304ce8ddb6f0f2",
@@ -931,6 +937,12 @@
 			"path": "github.com/hashicorp/go-rootcerts",
 			"revision": "6bb64b370b90e7ef1fa532be9e591a81c3493e00",
 			"revisionTime": "2016-05-03T14:34:40Z"
+		},
+		{
+			"checksumSHA1": "NaOL+Voo17F9a2dd6/VU7NAI5EM=",
+			"path": "github.com/hashicorp/go-sockaddr",
+			"revision": "41949a141473f6340abc6ba0fcd0f89da6f6f837",
+			"revisionTime": "2017-06-27T02:34:41Z"
 		},
 		{
 			"checksumSHA1": "pUPzsy2MLooiC5+5Bsjl9j3/qcs=",
