@@ -175,6 +175,16 @@ func (d *FieldData) getPrimitive(
 			return nil, false, nil
 		case int:
 			result = inp
+		case int32:
+			result = int(inp)
+		case int64:
+			result = int(inp)
+		case uint:
+			result = int(inp)
+		case uint32:
+			result = int(inp)
+		case uint64:
+			result = int(inp)
 		case float32:
 			result = int(inp)
 		case float64:
