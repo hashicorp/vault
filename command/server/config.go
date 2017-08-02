@@ -62,7 +62,7 @@ func DevConfig(ha, transactional bool) *Config {
 				Config: map[string]interface{}{
 					"address":                      "127.0.0.1:8200",
 					"tls_disable":                  true,
-					"proxy_protocol":               "use_if_authorized",
+					"proxy_protocol_behavior":      "use_if_authorized",
 					"proxy_protocol_allowed_addrs": "127.0.0.1:8200",
 				},
 			},
@@ -668,7 +668,7 @@ func parseListeners(result *Config, list *ast.ObjectList) error {
 			"endpoint",
 			"infrastructure",
 			"node_id",
-			"proxy_protocol",
+			"proxy_protocol_behavior",
 			"proxy_protocol_allowed_addrs",
 			"tls_disable",
 			"tls_cert_file",

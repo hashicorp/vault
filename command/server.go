@@ -441,11 +441,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			return 1
 		}
 
-		if val, ok := lnConfig.Config["proxy_protocol"]; ok {
+		if val, ok := lnConfig.Config["proxy_protocol_behavior"]; ok {
 			behavior, ok := val.(string)
 			if !ok {
 				c.Ui.Output(fmt.Sprintf(
-					"Error parsing proxy_protocol value for listener of type %s: not a string",
+					"Error parsing proxy_protocol_behavior value for listener of type %s: not a string",
 					lnConfig.Type))
 				return 1
 			}
@@ -453,7 +453,7 @@ CLUSTER_SYNTHESIS_COMPLETE:
 			allowedAddrsRaw, ok := lnConfig.Config["proxy_protocol_allowed_addrs"]
 			if !ok {
 				c.Ui.Output(fmt.Sprintf(
-					"proxy_protocol set but no proxy_protocol_allowed_addrs value for listener of type %s",
+					"proxy_protocol_behavior set but no proxy_protocol_allowed_addrs value for listener of type %s",
 					lnConfig.Type))
 				return 1
 			}
