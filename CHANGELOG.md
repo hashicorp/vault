@@ -57,6 +57,8 @@ IMPROVEMENTS:
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
  * sys/wrapping: Make `sys/wrapping/lookup` unauthenticated [GH-3084]
+ * sys/wrapping: Wrapped tokens now store the original request path of the data
+   [GH-3100]
  * telemetry: Add support for DogStatsD [GH-2490]
 
 BUG FIXES:
