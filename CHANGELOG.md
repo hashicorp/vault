@@ -36,6 +36,8 @@ IMPROVEMENTS:
  * api: Add `RenewTokenAsSelf` [GH-2886]
  * api: Client timeout can now be adjusted with the `VAULT_CLIENT_TIMEOUT` env
    var or with a new API function [GH-2956]
+ * api/cli: Client will now attempt to look up SRV records for the given Vault
+   hostname [GH-3035]
  * audit/socket: Enhance reconnection logic and don't require the connection to
    be established at unseal time [GH-2934]
  * audit/file: Opportunistically try re-opening the file on error [GH-2999]
