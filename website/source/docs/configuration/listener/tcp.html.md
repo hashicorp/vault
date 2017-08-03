@@ -71,6 +71,9 @@ listener "tcp" {
   authentication for this listener; the listener will require a presented
   client cert that successfully validates against system CAs.
 
+- `tls_client_ca_file` `(string: "")` – PEM-encoded Certificate Authority file
+  used for checking the authenticity of client.
+
 ## `tcp` Listener Examples
 
 ### Configuring TLS
