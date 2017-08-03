@@ -19,11 +19,11 @@ type CredentialsProducer interface {
 }
 
 const (
-	reqStr    = `A1a_`
+	reqStr    = `A1a-`
 	minStrLen = 10
 )
 
-// RandomAlphaNumeric returns a random string of characters [A-Za-z0-9_]
+// RandomAlphaNumeric returns a random string of characters [A-Za-z0-9-]
 // of the provided length. The string generated takes up to 4 characters
 // of space that are predefined and prepended to ensure password
 // character requirements. It also requires a min length of 10 characters.
