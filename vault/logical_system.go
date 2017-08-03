@@ -821,6 +821,23 @@ func NewSystemBackend(core *Core) *SystemBackend {
 				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-catalog"][0]),
 				HelpDescription: strings.TrimSpace(sysHelp["plugin-catalog"][1]),
 			},
+			&framework.Path{
+				Pattern: "plugin/backend/reload$",
+
+				Fields: map[string]*framework.FieldSchema{
+					"plugin": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: strings.TrimSpace(sysHelp["plugin-backend-reload-plugin"][0]),
+					},
+				},
+
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.UpdateOperation: b.handlePluginReloadUpdate,
+				},
+
+				HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-reload"][0]),
+				HelpDescription: strings.TrimSpace(sysHelp["plugin-reload"][1]),
+			},
 		},
 	}
 
@@ -962,6 +979,19 @@ func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *frame
 		return logical.ErrorResponse("missing plugin name"), nil
 	}
 	err := b.Core.pluginCatalog.Delete(pluginName)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginReloadUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	pluginName := d.Get("plugin").(string)
+	if pluginName == "" {
+		return logical.ErrorResponse("missing plugin name"), nil
+	}
+	err := b.Core.reloadPlugin(pluginName)
 	if err != nil {
 		return nil, err
 	}
@@ -2847,6 +2877,14 @@ This path responds to the following HTTP methods.
 
 	"leases-list-prefix": {
 		`The path to list leases under. Example: "aws/creds/deploy"`,
+		"",
+	},
+	"plugin-reload": {
+		"Reload mounts that uses a particular backend plugin",
+		`Reload mounts that uses a particular backend plugin`,
+	},
+	"plugin-backend-reload-plugin": {
+		`The name of the plugin to reload, as registered in the plugin catalog.`,
 		"",
 	},
 }
