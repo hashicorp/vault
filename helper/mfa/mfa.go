@@ -38,16 +38,11 @@ func MFARootPaths() []string {
 }
 
 // HandlerFunc is the callback called to handle MFA for a login request.
-type HandlerFunc func(*framework.Backend, *logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
-
-// handlers maps each supported MFA type to its handler.
-var handlers = map[string]HandlerFunc{
-	"duo":  duo.DuoHandler,
-	"totp": totp.TotpHandler,
-}
+type HandlerFunc func(*logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
 
 type backend struct {
 	*framework.Backend
+	handlers map[string]HandlerFunc
 }
 
 func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
@@ -59,6 +54,11 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 		Type:        framework.TypeString,
 		Description: "Multi-factor auth method to use (optional)",
 	}
+
+	// handlers maps each supported MFA type to its handler.
+	b.handlers["duo"] = duo.DuoHandler
+	b.handlers["totp"] = totp.GetTotpHandler(b.Backend)
+
 	// wrap write callback to do MFA after auth
 	loginHandler := loginPath.Callbacks[logical.UpdateOperation]
 	loginPath.Callbacks[logical.UpdateOperation] = b.wrapLoginHandler(loginHandler)
@@ -80,9 +80,9 @@ func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framewo
 		}
 
 		// perform multi-factor authentication if type supported
-		handler, ok := handlers[mfa_config.Type]
+		handler, ok := b.handlers[mfa_config.Type]
 		if ok {
-			return handler(b.Backend, req, d, resp)
+			return handler(req, d, resp)
 		} else {
 			return resp, err
 		}

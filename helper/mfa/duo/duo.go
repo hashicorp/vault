@@ -31,7 +31,7 @@ func DuoRootPaths() []string {
 // DuoHandler interacts with the Duo Auth API to authenticate a user
 // login request. If successful, the original response from the login
 // backend is returned.
-func DuoHandler(b *framework.Backend, req *logical.Request, d *framework.FieldData, resp *logical.Response) (
+func DuoHandler(req *logical.Request, d *framework.FieldData, resp *logical.Response) (
 	*logical.Response, error) {
 	duoConfig, err := GetDuoConfig(req)
 	if err != nil || duoConfig == nil {

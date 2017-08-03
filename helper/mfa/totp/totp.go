@@ -1,11 +1,9 @@
-// Package duo provides a Duo MFA handler to authenticate users
-// with Duo. This handler is registered as the "duo" type in
+// Package duo provides a TOTP MFA handler to authenticate users
+// with TOTP. This handler is registered as the "totp" type in
 // mfa_config.
 package totp
 
 import (
-	//"fmt"
-	//"net/url"
 	"time"
 
 	totpbackend "github.com/hashicorp/vault/builtin/logical/totp"
@@ -14,11 +12,14 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-// DuoPaths returns path functions to configure Duo.
+type backend struct {
+	*totpbackend.Backend
+}
+
+// TotpPaths returns path functions to configure TOTP credentials.
 func TotpPaths(inb *framework.Backend) []*framework.Path {
 	var b totpbackend.Backend
 	b.Backend = inb
-	b.UsedCodes = cache.New(0, 30*time.Second)
 
 	return []*framework.Path{
 		totpbackend.PrefixedPathListKeys("totp/", &b),
@@ -27,15 +28,26 @@ func TotpPaths(inb *framework.Backend) []*framework.Path {
 	}
 }
 
-// DuoRootPaths returns the paths that are used to configure Duo.
+// FIXME?
+// TotpRootPaths returns the paths that are used to configure TOTP.
 func TotpRootPaths() []string {
 	return []string{}
 }
 
-// DuoHandler interacts with the Duo Auth API to authenticate a user
+func GetTotpHandler(inb *framework.Backend) func(req *logical.Request, d *framework.FieldData, resp *logical.Response) (*logical.Response, error) {
+	var b backend
+	var bb totpbackend.Backend
+	bb.Backend = inb
+	bb.UsedCodes = cache.New(0, 30*time.Second)
+	b.Backend = &bb
+
+	return b.TotpHandler
+}
+
+// TotpHandler interacts with the builtin totp backend to authenticate a user
 // login request. If successful, the original response from the login
 // backend is returned.
-func TotpHandler(inb *framework.Backend, req *logical.Request, d *framework.FieldData, resp *logical.Response) (
+func (b *backend) TotpHandler(req *logical.Request, d *framework.FieldData, resp *logical.Response) (
 	*logical.Response, error) {
 	username, ok := resp.Auth.Metadata["username"]
 	if !ok {
@@ -44,11 +56,7 @@ func TotpHandler(inb *framework.Backend, req *logical.Request, d *framework.Fiel
 
 	passcode := d.Get("passcode").(string)
 
-	var b totpbackend.Backend
-	b.Backend = inb
-	// FIXME used codes isnt actually used
-	b.UsedCodes = cache.New(0, 30*time.Second)
-	result, err := b.ValidateCode(req, username, passcode)
+	result, err := b.Backend.ValidateCode(req, username, passcode)
 
 	if err != nil {
 		return nil, err
