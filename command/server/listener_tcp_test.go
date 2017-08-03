@@ -53,7 +53,7 @@ func TestTCPListener_tls(t *testing.T) {
 		"tls_cert_file":                      wd + "reload_foo.pem",
 		"tls_key_file":                       wd + "reload_foo.key",
 		"tls_require_and_verify_client_cert": "true",
-		"tls_ca_file":                        wd + "reload_ca.pem",
+		"tls_client_ca_file":                 wd + "reload_ca.pem",
 	}, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)

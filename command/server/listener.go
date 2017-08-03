@@ -114,15 +114,15 @@ func listenerWrapTLS(
 		if requireClient {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 		}
-		if tlsCaFile, ok := config["tls_ca_file"]; ok {
+		if tlsCaFile, ok := config["tls_client_ca_file"]; ok {
 			caPool := x509.NewCertPool()
 			data, err := ioutil.ReadFile(tlsCaFile.(string))
 			if err != nil {
-				return nil, nil, nil, fmt.Errorf("failed to read tls_ca_file: %v", err)
+				return nil, nil, nil, fmt.Errorf("failed to read tls_client_ca_file: %v", err)
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {
-				return nil, nil, nil, fmt.Errorf("failed to parse CA certificate in tls_ca_file")
+				return nil, nil, nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
 			}
 			tlsConf.ClientCAs = caPool
 		}
