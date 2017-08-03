@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/reload"
 )
 
-func tcpListenerFactory(config map[string]interface{}, _ io.Writer) (net.Listener, map[string]string, vault.ReloadFunc, error) {
+func tcpListenerFactory(config map[string]interface{}, _ io.Writer) (net.Listener, map[string]string, reload.ReloadFunc, error) {
 	bind_proto := "tcp"
 	var addr string
 	addrRaw, ok := config["address"]

@@ -96,6 +96,7 @@ func (c *Cassandra) CreateUser(statements dbplugin.Statements, usernameConfig db
 	}
 
 	username, err = c.GenerateUsername(usernameConfig)
+	username = strings.Replace(username, "-", "_", -1)
 	if err != nil {
 		return "", "", err
 	}

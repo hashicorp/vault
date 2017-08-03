@@ -57,6 +57,8 @@ func PrintRawField(ui cli.Ui, secret *api.Secret, field string) int {
 			val = secret.WrapInfo.TTL
 		case "wrapping_token_creation_time":
 			val = secret.WrapInfo.CreationTime.Format(time.RFC3339Nano)
+		case "wrapping_token_creation_path":
+			val = secret.WrapInfo.CreationPath
 		case "wrapped_accessor":
 			val = secret.WrapInfo.WrappedAccessor
 		default:

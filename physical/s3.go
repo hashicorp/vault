@@ -62,11 +62,14 @@ func newS3Backend(conf map[string]string, logger log.Logger) (Backend, error) {
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 	}
-	region := os.Getenv("AWS_DEFAULT_REGION")
+	region := os.Getenv("AWS_REGION")
 	if region == "" {
-		region = conf["region"]
+		region = os.Getenv("AWS_DEFAULT_REGION")
 		if region == "" {
-			region = "us-east-1"
+			region = conf["region"]
+			if region == "" {
+				region = "us-east-1"
+			}
 		}
 	}
 

@@ -61,7 +61,7 @@ $ curl \
     "token": "fb79b9d3-d94e-9eb6-4919-c559311133d6",
     "ttl": 300,
     "creation_time": "2016-09-28T14:41:00.56961496-04:00",
-    "wrapped_accessor": ""
+    "creation_path": "sys/wrapping/wrap",
   }
 }
 ```

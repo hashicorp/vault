@@ -12,7 +12,7 @@ type ResponseWrapInfo struct {
 
 	// The creation time. This can be used with the TTL to figure out an
 	// expected expiration.
-	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"cration_time"`
+	CreationTime time.Time `json:"creation_time" structs:"creation_time" mapstructure:"creation_time"`
 
 	// If the contained response is the output of a token creation call, the
 	// created token's accessor will be accessible here
@@ -20,4 +20,8 @@ type ResponseWrapInfo struct {
 
 	// The format to use. This doesn't get returned, it's only internal.
 	Format string `json:"format" structs:"format" mapstructure:"format"`
+
+	// CreationPath is the original request path that was used to create
+	// the wrapped response.
+	CreationPath string `json:"creation_path" structs:"creation_path" mapstructure:"creation_path"`
 }

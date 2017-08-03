@@ -19,12 +19,12 @@ type CredentialsProducer interface {
 }
 
 const (
-	reqStr    = `A1a`
+	reqStr    = `A1a-`
 	minStrLen = 10
 )
 
-// RandomAlphaNumeric returns a random string of characters [A-Za-z0-9]
-// of the provided length. The string generated takes up to 3 characters
+// RandomAlphaNumeric returns a random string of characters [A-Za-z0-9-]
+// of the provided length. The string generated takes up to 4 characters
 // of space that are predefined and prepended to ensure password
 // character requirements. It also requires a min length of 10 characters.
 func RandomAlphaNumeric(length int) (string, error) {
@@ -40,7 +40,7 @@ func RandomAlphaNumeric(length int) (string, error) {
 	for size < length {
 		// Extend the len of the random byte slice to lower odds of having to
 		// re-roll.
-		c := length + 3
+		c := length + len(reqStr)
 		bArr := make([]byte, c)
 		_, err := rand.Read(bArr)
 		if err != nil {

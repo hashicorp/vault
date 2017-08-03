@@ -3,6 +3,7 @@ package physical
 import (
 	"fmt"
 	"math"
+	"net/http"
 	"os"
 	pkgPath "path"
 	"sort"
@@ -16,14 +17,14 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/hashicorp/errwrap"
+	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/awsutil"
+	"github.com/hashicorp/vault/helper/consts"
 )
 
 const (
@@ -166,29 +167,37 @@ func newDynamoDBBackend(conf map[string]string, logger log.Logger) (Backend, err
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 	}
-	region := os.Getenv("AWS_DEFAULT_REGION")
+	region := os.Getenv("AWS_REGION")
 	if region == "" {
-		region = conf["region"]
+		region = os.Getenv("AWS_DEFAULT_REGION")
 		if region == "" {
-			region = DefaultDynamoDBRegion
+			region = conf["region"]
+			if region == "" {
+				region = DefaultDynamoDBRegion
+			}
 		}
 	}
 
-	creds := credentials.NewChainCredentials([]credentials.Provider{
-		&credentials.StaticProvider{Value: credentials.Value{
-			AccessKeyID:     accessKey,
-			SecretAccessKey: secretKey,
-			SessionToken:    sessionToken,
-		}},
-		&credentials.EnvProvider{},
-		&credentials.SharedCredentialsProvider{Filename: "", Profile: ""},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-	})
+	credsConfig := &awsutil.CredentialsConfig{
+		AccessKey:    accessKey,
+		SecretKey:    secretKey,
+		SessionToken: sessionToken,
+	}
+	creds, err := credsConfig.GenerateCredentialChain()
+	if err != nil {
+		return nil, err
+	}
+
+	pooledTransport := cleanhttp.DefaultPooledTransport()
+	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
 	awsConf := aws.NewConfig().
 		WithCredentials(creds).
 		WithRegion(region).
-		WithEndpoint(endpoint)
+		WithEndpoint(endpoint).
+		WithHTTPClient(&http.Client{
+			Transport: pooledTransport,
+		})
 	client := dynamodb.New(session.New(awsConf))
 
 	if err := ensureTableExists(client, table, readCapacity, writeCapacity); err != nil {

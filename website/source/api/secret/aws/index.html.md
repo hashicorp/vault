@@ -23,13 +23,17 @@ are multiple ways to pass root IAM credentials to the Vault server, specified
 below with the highest precedence first. If credentials already exist, this will
 overwrite them.
 
+The official AWS SDK is used for sourcing credentials from env vars, shared
+files, or IAM/ECS instances.
+
 - Static credentials provided to the API as a payload
 
 - Credentials in the `AWS_ACCESS_KEY`, `AWS_SECRET_KEY`, and `AWS_REGION`
   environment variables **on the server**
 
-- Querying the EC2 metadata service if the **Vault server** is on EC2 and has
-  querying capabilities
+- Shared credentials files
+
+- Assigned IAM role or ECS task role credentials
 
 At present, this endpoint does not confirm that the provided AWS credentials are
 valid AWS credentials with proper permissions.
@@ -44,7 +48,9 @@ valid AWS credentials with proper permissions.
 
 - `secret_key` `(string: <required>)` – Specifies the AWS secret access key.
 
-- `region` `(string: <required>)` – Specifies the AWS region.
+- `region` `(string: <optional>)` – Specifies the AWS region. If not set it
+  will use the `AWS_REGION` env var, `AWS_DEFAULT_REGION` env var, or
+  `us-east-1` in that order.
 
 ### Sample Payload
 

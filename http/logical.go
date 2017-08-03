@@ -153,6 +153,7 @@ func respondLogical(w http.ResponseWriter, r *http.Request, req *logical.Request
 					Token:           resp.WrapInfo.Token,
 					TTL:             int(resp.WrapInfo.TTL.Seconds()),
 					CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
+					CreationPath:    resp.WrapInfo.CreationPath,
 					WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 				},
 			}
