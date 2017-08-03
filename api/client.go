@@ -362,9 +362,9 @@ func (c *Client) NewRequest(method, requestPath string) *Request {
 	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
 	// record and take the highest match; this is not designed for high-availability, just discovery
 	var host string = c.addr.Host
-	if c.addr.Port() == "" {
+	if c.Port() == "" {
 		// Internet Draft specifies that the SRV record is ignored if a port is given
-		_, addrs, err := net.LookupSRV("http", "tcp", c.addr.Hostname())
+		_, addrs, err := net.LookupSRV("http", "tcp", c.Hostname())
 		if err == nil && len(addrs) > 0 {
 			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 		}
@@ -471,4 +471,40 @@ START:
 	}
 
 	return result, nil
+}
+
+// Hostname returns u.Host, without any port number.
+//
+// If Host is an IPv6 literal with a port number, Hostname returns the
+// IPv6 literal without the square brackets. IPv6 literals may include
+// a zone identifier.
+func (c *Client) Hostname() string {
+	//taking host and port from *URL
+	hostport := c.addr.Host
+	colon := strings.IndexByte(hostport, ':')
+	if colon == -1 {
+		return hostport
+	}
+	if i := strings.IndexByte(hostport, ']'); i != -1 {
+		return strings.TrimPrefix(hostport[:i], "[")
+	}
+	return hostport[:colon]
+}
+
+// Port returns the port part of u.Host, without the leading colon.
+// If u.Host doesn't contain a port, Port returns an empty string.
+func (c *Client) Port() string {
+	//taking host and port from *URL
+	hostport := c.addr.Host
+	colon := strings.IndexByte(hostport, ':')
+	if colon == -1 {
+		return ""
+	}
+	if i := strings.Index(hostport, "]:"); i != -1 {
+		return hostport[i+len("]:"):]
+	}
+	if strings.Contains(hostport, "]") {
+		return ""
+	}
+	return hostport[colon+len(":"):]
 }
