@@ -114,9 +114,9 @@ func listenerWrapTLS(
 		if requireClient {
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 		}
-		if tlsCaFile, ok := config["tls_client_ca_file"]; ok {
+		if tlsClientCaFile, ok := config["tls_client_ca_file"]; ok {
 			caPool := x509.NewCertPool()
-			data, err := ioutil.ReadFile(tlsCaFile.(string))
+			data, err := ioutil.ReadFile(tlsClientCaFile.(string))
 			if err != nil {
 				return nil, nil, nil, fmt.Errorf("failed to read tls_client_ca_file: %v", err)
 			}
