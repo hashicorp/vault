@@ -4,9 +4,11 @@ DEPRECATIONS/CHANGES:
 
  * Database Plugin Backends: Passwords generated for these backends now
    enforce stricter password requirements, as opposed to the previous behavior 
-   of returning a randomized UUID. Passwords are of length 20, and have a `A1a` 
+   of returning a randomized UUID. Passwords are of length 20, and have a `A1a-` 
    characters prepended to ensure stricter requirements. No regressions are 
-   expected from this change.
+   expected from this change. (For database backends that were previously
+   substituting underscores for hyphens in passwords, this will remain the
+   case.)
  * Lease Endpoints: The endpoints `sys/renew`, `sys/revoke`, `sys/revoke-prefix`,
    `sys/revoke-force` have been deprecated and relocated under `sys/leases`.
    Additionally, the deprecated path `sys/revoke-force` now requires the `sudo`
