@@ -20,6 +20,7 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * **Cassandra Storage**: Cassandra can now be used for Vault storage
  * **CockroachDB Storage**: CockroachDB can now be used for Vault storage
  * **CouchDB Storage**: CouchDB can now be used for Vault storage
  * **SAP HANA Database Plugin**: The `databases` backend can now manage users
