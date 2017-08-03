@@ -32,6 +32,10 @@ FEATURES:
    PROXY protocol v1 information to allow passing real client IPs into Vault. A
    list of authorized addresses (IPs or subnets) can be defined and
    accept/reject behavior controlled.
+ * **Lease lookup and browsing in the Vault Enterprise UI**: Vault Enterprise UI
+   now supports lookup and listing of leases and the associated actions from the 
+   `sys/leases` endpoints in the API. These are located in the new top level 
+   navigation item "Leases".
 
 IMPROVEMENTS:
 
