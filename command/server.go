@@ -53,6 +53,7 @@ type ServerCommand struct {
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
+	PhysicalBackends   map[string]physical.Factory
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -204,8 +205,14 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the backend
-	backend, err := physical.NewBackend(
-		config.Storage.Type, c.logger, config.Storage.Config)
+	factory, exists := c.PhysicalBackends[config.Storage.Type]
+	if !exists {
+		c.Ui.Output(fmt.Sprintf(
+			"Unknown storage type %s",
+			config.Storage.Type))
+		return 1
+	}
+	backend, err := factory(config.Storage.Config, c.logger)
 	if err != nil {
 		c.Ui.Output(fmt.Sprintf(
 			"Error initializing storage of type %s: %s",
@@ -266,8 +273,14 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
-		habackend, err := physical.NewBackend(
-			config.HAStorage.Type, c.logger, config.HAStorage.Config)
+		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
+		if !exists {
+			c.Ui.Output(fmt.Sprintf(
+				"Unknown HA storage type %s",
+				config.HAStorage.Type))
+			return 1
+		}
+		habackend, err := factory(config.HAStorage.Config, c.logger)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
 				"Error initializing HA storage of type %s: %s",

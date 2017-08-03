@@ -41,6 +41,8 @@ import (
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
 	"github.com/mitchellh/go-testing-interface"
+
+	physInmem "github.com/hashicorp/vault/physical/inmem"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -96,7 +98,10 @@ func TestCoreNewSeal(t testing.T) *Core {
 // specified seal for testing.
 func TestCoreWithSeal(t testing.T, testSeal Seal) *Core {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	physicalBackend := physical.NewInmem(logger)
+	physicalBackend, err := physInmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	conf := testCoreConfig(t, physicalBackend, logger)
 
@@ -1083,10 +1088,17 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if coreConfig.Physical == nil {
-		coreConfig.Physical = physical.NewInmem(logger)
+		coreConfig.Physical, err = physInmem.NewInmem(nil, logger)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if coreConfig.HAPhysical == nil {
-		coreConfig.HAPhysical = physical.NewInmemHA(logger)
+		haPhys, err := physInmem.NewInmemHA(nil, logger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		coreConfig.HAPhysical = haPhys.(physical.HABackend)
 	}
 
 	c1, err := NewCore(coreConfig)

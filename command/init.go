@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/meta"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/consul"
 )
 
 // InitCommand is a Command that initializes a new Vault server.
@@ -36,7 +36,7 @@ func (c *InitCommand) Run(args []string) int {
 	flags.Var(&recoveryPgpKeys, "recovery-pgp-keys", "")
 	flags.BoolVar(&check, "check", false, "")
 	flags.BoolVar(&auto, "auto", false, "")
-	flags.StringVar(&consulServiceName, "consul-service", physical.DefaultServiceName, "")
+	flags.StringVar(&consulServiceName, "consul-service", consul.DefaultServiceName, "")
 	if err := flags.Parse(args); err != nil {
 		return 1
 	}
