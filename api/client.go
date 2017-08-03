@@ -479,6 +479,7 @@ START:
 // IPv6 literal without the square brackets. IPv6 literals may include
 // a zone identifier.
 func (c *Client) Hostname() string {
+	//taking host and port from *URL
 	hostport := c.addr.Host
 	colon := strings.IndexByte(hostport, ':')
 	if colon == -1 {
@@ -493,6 +494,7 @@ func (c *Client) Hostname() string {
 // Port returns the port part of u.Host, without the leading colon.
 // If u.Host doesn't contain a port, Port returns an empty string.
 func (c *Client) Port() string {
+	//taking host and port from *URL
 	hostport := c.addr.Host
 	colon := strings.IndexByte(hostport, ':')
 	if colon == -1 {
