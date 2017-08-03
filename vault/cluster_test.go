@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -43,9 +44,17 @@ func TestClusterHAFetching(t *testing.T) {
 
 	redirect := "http://127.0.0.1:8200"
 
+	inm, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inmha, err := inmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
 	c, err := NewCore(&CoreConfig{
-		Physical:     physical.NewInmemHA(logger),
-		HAPhysical:   physical.NewInmemHA(logger),
+		Physical:     inm,
+		HAPhysical:   inmha.(physical.HABackend),
 		RedirectAddr: redirect,
 		DisableMlock: true,
 	})
