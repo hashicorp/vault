@@ -234,15 +234,13 @@ func (r *Router) matchingPrefixInternal(path string) string {
 // MountConflict determines if there are potential path conflicts
 func (r *Router) MountConflict(path string) string {
 	r.l.RLock()
+	defer r.l.RUnlock()
 	if exact_match := r.matchingMountInternal(path); exact_match != "" {
-		r.l.RUnlock()
 		return exact_match
 	}
 	if prefix_match := r.matchingPrefixInternal(path); prefix_match != "" {
-		r.l.RUnlock()
 		return prefix_match
 	}
-	r.l.RUnlock()
 	return ""
 }
 
