@@ -40,10 +40,9 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		Secrets: []*framework.Secret{
 			secretCreds(&b),
 		},
-
-		Clean: b.closeAllDBs,
-
-		Invalidate: b.invalidate,
+		Clean:       b.closeAllDBs,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	b.logger = conf.Logger

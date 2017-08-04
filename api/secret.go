@@ -42,6 +42,7 @@ type SecretWrapInfo struct {
 	Token           string    `json:"token"`
 	TTL             int       `json:"ttl"`
 	CreationTime    time.Time `json:"creation_time"`
+	CreationPath    string    `json:"creation_path"`
 	WrappedAccessor string    `json:"wrapped_accessor"`
 }
 

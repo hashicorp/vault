@@ -546,10 +546,10 @@ $ vault auth -method=aws header_value=vault.example.com role=dev-role-iam
 
 This assumes you have AWS credentials configured in the standard locations AWS
 SDKs search for credentials (environment variables, ~/.aws/credentials, IAM
-instance profile in that order). If you do not have IAM credentials available at
-any of these locations, you can explicitly pass them in on the command line
-(though this is not recommended), omitting `aws_security_token` if not
-applicable .
+instance profile, or ECS task role, in that order). If you do not have IAM
+credentials available at any of these locations, you can explicitly pass them
+in on the command line (though this is not recommended), omitting
+`aws_security_token` if not applicable.
 
 ```
 $ vault auth -method=aws header_value=vault.example.com role=dev-role-iam \

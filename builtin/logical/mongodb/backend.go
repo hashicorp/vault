@@ -38,7 +38,8 @@ func Backend() *framework.Backend {
 
 		Clean: b.ResetSession,
 
-		Invalidate: b.invalidate,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	return b.Backend

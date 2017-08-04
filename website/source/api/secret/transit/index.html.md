@@ -776,8 +776,10 @@ supports signing.
   signing. If not set, uses the latest version. Must be greater than or equal
   to the key's `min_encryption_version`, if set.
 
-- `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use. This
-  can also be specified as part of the URL. Currently-supported algorithms are:
+- `algorithm` `(string: "sha2-256")` – Specifies the hash algorithm to use for
+  supporting key types (notably, not including `ed25519` which specifies its
+  own hash algorithm). This can also be specified as part of the URL.
+  Currently-supported algorithms are:
 
     - `sha2-224`
     - `sha2-256`

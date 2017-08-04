@@ -38,9 +38,9 @@ func Backend() *backend {
 			secretCreds(&b),
 		},
 
-		Clean: b.resetClient,
-
-		Invalidate: b.invalidate,
+		Clean:       b.resetClient,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b

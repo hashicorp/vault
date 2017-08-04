@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/jsonutil"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
+	"github.com/hashicorp/vault/helper/reload"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/physical"
 	"github.com/hashicorp/vault/shamir"
@@ -102,9 +103,6 @@ var (
 	stopReplication      = stopReplicationImpl
 	LastRemoteWAL        = lastRemoteWALImpl
 )
-
-// ReloadFunc are functions that are called when a reload is requested.
-type ReloadFunc func(map[string]interface{}) error
 
 // NonFatalError is an error that can be returned during NewCore that should be
 // displayed but not cause a program exit
@@ -273,7 +271,7 @@ type Core struct {
 	cachingDisabled bool
 
 	// reloadFuncs is a map containing reload functions
-	reloadFuncs map[string][]ReloadFunc
+	reloadFuncs map[string][]reload.ReloadFunc
 
 	// reloadFuncsLock controls access to the funcs
 	reloadFuncsLock sync.RWMutex
@@ -316,6 +314,8 @@ type Core struct {
 	clusterLeaderUUID string
 	// Most recent leader redirect addr
 	clusterLeaderRedirectAddr string
+	// Most recent leader cluster addr
+	clusterLeaderClusterAddr string
 	// Lock for the cluster leader values
 	clusterLeaderParamsLock sync.RWMutex
 	// Info on cluster members
@@ -394,7 +394,7 @@ type CoreConfig struct {
 
 	PluginDirectory string `json:"plugin_directory" structs:"plugin_directory" mapstructure:"plugin_directory"`
 
-	ReloadFuncs     *map[string][]ReloadFunc
+	ReloadFuncs     *map[string][]reload.ReloadFunc
 	ReloadFuncsLock *sync.RWMutex
 }
 
@@ -500,7 +500,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	// the caller can share state
 	conf.ReloadFuncsLock = &c.reloadFuncsLock
 	c.reloadFuncsLock.Lock()
-	c.reloadFuncs = make(map[string][]ReloadFunc)
+	c.reloadFuncs = make(map[string][]reload.ReloadFunc)
 	c.reloadFuncsLock.Unlock()
 	conf.ReloadFuncs = &c.reloadFuncs
 
@@ -717,49 +717,50 @@ func (c *Core) Standby() (bool, error) {
 }
 
 // Leader is used to get the current active leader
-func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
+func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 
 	// Check if sealed
 	if c.sealed {
-		return false, "", consts.ErrSealed
+		return false, "", "", consts.ErrSealed
 	}
 
 	// Check if HA enabled
 	if c.ha == nil {
-		return false, "", ErrHANotEnabled
+		return false, "", "", ErrHANotEnabled
 	}
 
 	// Check if we are the leader
 	if !c.standby {
-		return true, c.redirectAddr, nil
+		return true, c.redirectAddr, c.clusterAddr, nil
 	}
 
 	// Initialize a lock
 	lock, err := c.ha.LockWith(coreLockPath, "read")
 	if err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
 
 	// Read the value
 	held, leaderUUID, err := lock.Value()
 	if err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
 	if !held {
-		return false, "", nil
+		return false, "", "", nil
 	}
 
 	c.clusterLeaderParamsLock.RLock()
 	localLeaderUUID := c.clusterLeaderUUID
 	localRedirAddr := c.clusterLeaderRedirectAddr
+	localClusterAddr := c.clusterLeaderClusterAddr
 	c.clusterLeaderParamsLock.RUnlock()
 
 	// If the leader hasn't changed, return the cached value; nothing changes
 	// mid-leadership, and the barrier caches anyways
 	if leaderUUID == localLeaderUUID && localRedirAddr != "" {
-		return false, localRedirAddr, nil
+		return false, localRedirAddr, localClusterAddr, nil
 	}
 
 	c.logger.Trace("core: found new active node information, refreshing")
@@ -769,16 +770,16 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 
 	// Validate base conditions again
 	if leaderUUID == c.clusterLeaderUUID && c.clusterLeaderRedirectAddr != "" {
-		return false, localRedirAddr, nil
+		return false, localRedirAddr, localClusterAddr, nil
 	}
 
 	key := coreLeaderPrefix + leaderUUID
 	entry, err := c.barrier.Get(key)
 	if err != nil {
-		return false, "", err
+		return false, "", "", err
 	}
 	if entry == nil {
-		return false, "", nil
+		return false, "", "", nil
 	}
 
 	var oldAdv bool
@@ -798,23 +799,24 @@ func (c *Core) Leader() (isLeader bool, leaderAddr string, err error) {
 		// Ensure we are using current values
 		err = c.loadLocalClusterTLS(adv)
 		if err != nil {
-			return false, "", err
+			return false, "", "", err
 		}
 
 		// This will ensure that we both have a connection at the ready and that
 		// the address is the current known value
 		err = c.refreshRequestForwardingConnection(adv.ClusterAddr)
 		if err != nil {
-			return false, "", err
+			return false, "", "", err
 		}
 	}
 
 	// Don't set these until everything has been parsed successfully or we'll
 	// never try again
 	c.clusterLeaderRedirectAddr = adv.RedirectAddr
+	c.clusterLeaderClusterAddr = adv.ClusterAddr
 	c.clusterLeaderUUID = leaderUUID
 
-	return false, adv.RedirectAddr, nil
+	return false, adv.RedirectAddr, adv.ClusterAddr, nil
 }
 
 // SecretProgress returns the number of keys provided so far

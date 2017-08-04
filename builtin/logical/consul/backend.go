@@ -26,6 +26,7 @@ func Backend() *backend {
 		Secrets: []*framework.Secret{
 			secretToken(&b),
 		},
+		BackendType: logical.TypeLogical,
 	}
 
 	return &b

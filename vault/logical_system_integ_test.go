@@ -1,7 +1,6 @@
 package vault_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -9,7 +8,7 @@ import (
 	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/http"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	lplugin "github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"
@@ -24,14 +23,12 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 		},
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	cluster.StartListeners()
-	defer cluster.CloseListeners()
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	cores[0].Handler.Handle("/", http.Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", http.Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", http.Handler(cores[2].Core))
 
 	core := cores[0]
 
@@ -49,6 +46,8 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", "TestBackend_PluginMain")
 
@@ -70,31 +69,21 @@ func TestBackend_PluginMain(t *testing.T) {
 		return
 	}
 
-	content := []byte(vault.TestClusterCACert)
-	tmpfile, err := ioutil.TempFile("", "test-cacert")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.Remove(tmpfile.Name()) // clean up
-
-	if _, err := tmpfile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
 	}
 
 	factoryFunc := mock.FactoryType(logical.TypeCredential)
 
-	args := []string{"--ca-cert=" + tmpfile.Name()}
+	args := []string{"--ca-cert=" + caPEM}
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
-	err = lplugin.Serve(&lplugin.ServeOpts{
+	err := lplugin.Serve(&lplugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
 		TLSProviderFunc:    tlsProviderFunc,
 	})

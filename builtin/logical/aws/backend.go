@@ -42,6 +42,7 @@ func Backend() *backend {
 
 		WALRollback:       walRollback,
 		WALRollbackMinAge: 5 * time.Minute,
+		BackendType:       logical.TypeLogical,
 	}
 
 	return &b

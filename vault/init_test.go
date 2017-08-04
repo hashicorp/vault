@@ -8,7 +8,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/logical"
-	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 )
 
 func TestCore_Init(t *testing.T) {
@@ -25,7 +25,10 @@ func TestCore_Init(t *testing.T) {
 func testCore_NewTestCore(t *testing.T, seal Seal) (*Core, *CoreConfig) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 
-	inm := physical.NewInmem(logger)
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
 	conf := &CoreConfig{
 		Physical:     inm,
 		DisableMlock: true,

@@ -3,6 +3,7 @@ package api
 import (
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -358,12 +359,23 @@ func (c *Client) Clone() (*Client, error) {
 // configured for this client. This is an advanced method and generally
 // doesn't need to be called externally.
 func (c *Client) NewRequest(method, requestPath string) *Request {
+	// if SRV records exist (see https://tools.ietf.org/html/draft-andrews-http-srv-02), lookup the SRV
+	// record and take the highest match; this is not designed for high-availability, just discovery
+	var host string = c.addr.Host
+	if c.addr.Port() == "" {
+		// Internet Draft specifies that the SRV record is ignored if a port is given
+		_, addrs, err := net.LookupSRV("http", "tcp", c.addr.Hostname())
+		if err == nil && len(addrs) > 0 {
+			host = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
+		}
+	}
+
 	req := &Request{
 		Method: method,
 		URL: &url.URL{
 			User:   c.addr.User,
 			Scheme: c.addr.Scheme,
-			Host:   c.addr.Host,
+			Host:   host,
 			Path:   path.Join(c.addr.Path, requestPath),
 		},
 		ClientToken: c.token,

@@ -391,10 +391,10 @@ func (b *backend) calculateTTL(data *framework.FieldData, role *sshRole) (time.D
 func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err, ok := r.(error)
+			errMsg, ok := r.(string)
 			if ok {
 				retCert = nil
-				retErr = err
+				retErr = errors.New(errMsg)
 			}
 		}
 	}()

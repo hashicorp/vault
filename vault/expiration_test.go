@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -241,16 +241,19 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 }
 
+// To avoid pulling in deps for all users of the package, don't leave these
+// uncommented in the public tree
+/*
 func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
 	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	physicalBackend, err := physical.NewBackend("etcd", logger, map[string]string{
+	physicalBackend, err := physEtcd.NewEtcdBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
-	})
+	}, logger)
 	if err != nil {
 		b.Fatalf("err: %s", err)
 	}
@@ -263,21 +266,26 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	physicalBackend, err := physical.NewBackend("consul", logger, map[string]string{
+	physicalBackend, err := physConsul.NewConsulBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
-	})
+	}, logger)
 	if err != nil {
 		b.Fatalf("err: %s", err)
 	}
 
 	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
 }
+*/
 
 func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	benchmarkExpirationBackend(b, physical.NewInmem(logger), 100000) // 100,000 Leases
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		b.Fatal(err)
+	}
+	benchmarkExpirationBackend(b, inm, 100000) // 100,000 Leases
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {

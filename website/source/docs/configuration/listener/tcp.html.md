@@ -29,6 +29,19 @@ listener "tcp" {
   they need to hop through a TCP load balancer or some other scheme in order to
   talk.
 
+- `proxy_protocol_behavior` `(string: "") – When specified, turns on the PROXY
+  protocol for the listener.  
+  Accepted Values:
+  - *use_always* - The client's IP address will always be used.  
+  - *allow_authorized* - If the source IP address is in the 
+  `proxy_protocol_authorized_addrs` list, the client's IP address will be used.
+  If the source IP is not in the list, the source IP address will be used.  
+  - *deny_unauthorized* - The traffic will be rejected if the source IP
+  address is not in the `proxy_protocol_authorized_addrs` list.
+
+- `proxy_protocol_authorized_addrs` `(string: <required-if-enabled>)` – Specifies
+  the list of allowed source IP addresses to be used with the PROXY protocol.
+
 - `tls_disable` `(string: "false")` – Specifies if TLS will be disabled. Vault
   assumes TLS by default, so you must explicitly disable TLS to opt-in to
   insecure communication.
@@ -57,6 +70,9 @@ listener "tcp" {
 - `tls_require_and_verify_client_cert` `(string: "false")` – Turns on client
   authentication for this listener; the listener will require a presented
   client cert that successfully validates against system CAs.
+
+- `tls_client_ca_file` `(string: "")` – PEM-encoded Certificate Authority file
+  used for checking the authenticity of client.
 
 ## `tcp` Listener Examples
 

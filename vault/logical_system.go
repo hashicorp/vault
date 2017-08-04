@@ -74,6 +74,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 			},
 
 			Unauthenticated: []string{
+				"wrapping/lookup",
 				"wrapping/pubkey",
 				"replication/status",
 			},
@@ -725,6 +726,7 @@ func NewSystemBackend(core *Core) *SystemBackend {
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.handleWrappingLookup,
+					logical.ReadOperation:   b.handleWrappingLookup,
 				},
 
 				HelpSynopsis:    strings.TrimSpace(sysHelp["wraplookup"][0]),
@@ -2171,10 +2173,14 @@ func (b *SystemBackend) handleWrappingUnwrap(
 
 func (b *SystemBackend) handleWrappingLookup(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// This ordering of lookups has been validated already in the wrapping
+	// validation func, we're just doing this for a safety check
 	token := data.Get("token").(string)
-
 	if token == "" {
-		return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
+		token = req.ClientToken
+		if token == "" {
+			return logical.ErrorResponse("missing \"token\" value in input"), logical.ErrInvalidRequest
+		}
 	}
 
 	cubbyReq := &logical.Request{
@@ -2198,6 +2204,7 @@ func (b *SystemBackend) handleWrappingLookup(
 
 	creationTTLRaw := cubbyResp.Data["creation_ttl"]
 	creationTime := cubbyResp.Data["creation_time"]
+	creationPath := cubbyResp.Data["creation_path"]
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{},
@@ -2212,6 +2219,9 @@ func (b *SystemBackend) handleWrappingLookup(
 	if creationTime != nil {
 		// This was JSON marshaled so it's already a string in RFC3339 format
 		resp.Data["creation_time"] = cubbyResp.Data["creation_time"]
+	}
+	if creationPath != nil {
+		resp.Data["creation_path"] = cubbyResp.Data["creation_path"]
 	}
 
 	return resp, nil
@@ -2272,6 +2282,13 @@ func (b *SystemBackend) handleWrappingRewrap(
 		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
 	}
 
+	// Get creation_path to return as the response later
+	creationPathRaw := cubbyResp.Data["creation_path"]
+	if creationPathRaw == nil {
+		return nil, fmt.Errorf("creation_path value in wrapping information was nil")
+	}
+	creationPath := creationPathRaw.(string)
+
 	// Fetch the original response and return it as the data for the new response
 	cubbyReq = &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -2304,7 +2321,8 @@ func (b *SystemBackend) handleWrappingRewrap(
 			"response": response,
 		},
 		WrapInfo: &wrapping.ResponseWrapInfo{
-			TTL: time.Duration(creationTTL),
+			TTL:          time.Duration(creationTTL),
+			CreationPath: creationPath,
 		},
 	}, nil
 }

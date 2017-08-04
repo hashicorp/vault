@@ -17,7 +17,7 @@ daily Vault use.
 ## Background
 
 In order to prevent no one person from having complete access to the system,
-Vault implores [Shamir's Secret Sharing Algorithm][shamir]. Under this process,
+Vault employs [Shamir's Secret Sharing Algorithm][shamir]. Under this process,
 a secret is divided into a subset of parts such that a subset of those parts are
 needed to reconstruct the original secret. Vault makes heavy use of this
 algorithm as part of the [unsealing process](/docs/concepts/seal.html).
