@@ -1056,6 +1056,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 
 	if req == nil {
 		retErr = multierror.Append(retErr, errors.New("nil request to seal"))
+		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1070,9 +1071,11 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		if c.standby {
 			c.logger.Error("core: vault cannot seal when in standby mode; please restart instead")
 			retErr = multierror.Append(retErr, errors.New("vault cannot seal when in standby mode; please restart instead"))
+			c.stateLock.RUnlock()
 			return retErr
 		}
 		retErr = multierror.Append(retErr, err)
+		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1087,6 +1090,7 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	if err := c.auditBroker.LogRequest(auth, req, c.auditedHeaders, nil); err != nil {
 		c.logger.Error("core: failed to audit request", "request_path", req.Path, "error", err)
 		retErr = multierror.Append(retErr, errors.New("failed to audit request, cannot continue"))
+		c.stateLock.RUnlock()
 		return retErr
 	}
 
@@ -1097,11 +1101,13 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 		if err != nil {
 			c.logger.Error("core: failed to use token", "error", err)
 			retErr = multierror.Append(retErr, ErrInternalError)
+			c.stateLock.RUnlock()
 			return retErr
 		}
 		if te == nil {
 			// Token is no longer valid
 			retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+			c.stateLock.RUnlock()
 			return retErr
 		}
 		if te.NumUses == -1 {
@@ -1120,12 +1126,14 @@ func (c *Core) sealInitCommon(req *logical.Request) (retErr error) {
 	allowed, rootPrivs := acl.AllowOperation(req)
 	if !allowed {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		c.stateLock.RUnlock()
 		return retErr
 	}
 
 	// We always require root privileges for this operation
 	if !rootPrivs {
 		retErr = multierror.Append(retErr, logical.ErrPermissionDenied)
+		c.stateLock.RUnlock()
 		return retErr
 	}
 
