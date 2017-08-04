@@ -132,7 +132,6 @@ func testSystemBackendMock(t *testing.T, numMounts int) (b *vault.SystemBackend,
 
 	vault.TestAddTestPlugin(t, core, "mock-plugin", "TestBackend_PluginMainLogical")
 
-	// Mount plugin in two mount points
 	for i := 0; i < numMounts; i++ {
 		req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("mounts/mock-%d/", i))
 		req.Data["type"] = "plugin"
