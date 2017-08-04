@@ -1267,10 +1267,6 @@ func (c *Core) sealInternal() error {
 		// Signal the standby goroutine to shutdown, wait for completion
 		close(c.standbyStopCh)
 
-		// Tell any requests that know about this to close
-		if c.requestContextCancelFunc != nil {
-			c.requestContextCancelFunc()
-		}
 		c.requestContext = nil
 
 		// Release the lock while we wait to avoid deadlocking
@@ -1403,11 +1399,6 @@ func (c *Core) preSeal() error {
 		c.metricsCh = nil
 	}
 	var result error
-
-	// Tell any requests that know about this to close
-	if c.requestContextCancelFunc != nil {
-		c.requestContextCancelFunc()
-	}
 
 	c.stopClusterListener()
 
