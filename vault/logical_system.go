@@ -829,6 +829,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeString,
 						Description: strings.TrimSpace(sysHelp["plugin-backend-reload-plugin"][0]),
 					},
+					"mounts": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: strings.TrimSpace(sysHelp["plugin-backend-reload-mounts"][0]),
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -988,12 +992,25 @@ func (b *SystemBackend) handlePluginCatalogDelete(req *logical.Request, d *frame
 
 func (b *SystemBackend) handlePluginReloadUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	pluginName := d.Get("plugin").(string)
-	if pluginName == "" {
-		return logical.ErrorResponse("missing plugin name"), nil
+	pluginMounts := d.Get("mounts").([]string)
+
+	if pluginName != "" && len(pluginMounts) > 0 {
+		return logical.ErrorResponse("plugin and mounts cannot be set at the same time"), nil
 	}
-	err := b.Core.reloadPlugin(pluginName)
-	if err != nil {
-		return nil, err
+	if pluginName == "" && len(pluginMounts) == 0 {
+		return logical.ErrorResponse("plugin or mounts must be provided"), nil
+	}
+
+	if pluginName != "" {
+		err := b.Core.reloadMatchingPlugin(pluginName)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(pluginMounts) > 0 {
+		err := b.Core.reloadMatchingPluginMounts(pluginMounts)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -2880,11 +2897,18 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-reload": {
-		"Reload mounts that uses a particular backend plugin",
-		`Reload mounts that uses a particular backend plugin`,
+		"Reload mounts that uses a particular backend plugin.",
+		`Reload mounts that uses a particular backend plugin. Either the plugin name
+		or the desired plugin backend mounts can be provided, but not both. In the
+		case that the plugin name is provided, all mounted backends that matches
+		that plugin will be reloaded.`,
 	},
 	"plugin-backend-reload-plugin": {
 		`The name of the plugin to reload, as registered in the plugin catalog.`,
+		"",
+	},
+	"plugin-backend-reload-mounts": {
+		`The mount paths of the plugin backends to reload.`,
 		"",
 	},
 }
