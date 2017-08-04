@@ -39,7 +39,7 @@ func Backend() *backend {
 	b.Backend = &framework.Backend{
 		Help: "",
 		Paths: []*framework.Path{
-			pathTesting(&b),
+			pathKV(&b),
 			pathInternal(&b),
 		},
 		PathsSpecial: &logical.Paths{

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/helper/pluginutil"
+	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/plugin"
 	"github.com/hashicorp/vault/logical/plugin/mock"
 )
@@ -17,8 +18,10 @@ func main() {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
 
+	factoryFunc := mock.FactoryType(logical.TypeLogical)
+
 	err := plugin.Serve(&plugin.ServeOpts{
-		BackendFactoryFunc: mock.Factory,
+		BackendFactoryFunc: factoryFunc,
 		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
