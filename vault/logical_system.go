@@ -2897,11 +2897,11 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-reload": {
-		"Reload mounts that uses a particular backend plugin.",
-		`Reload mounts that uses a particular backend plugin. Either the plugin name
-		or the desired plugin backend mounts can be provided, but not both. In the
-		case that the plugin name is provided, all mounted backends that matches
-		that plugin will be reloaded.`,
+		"Reload mounts that use a particular backend plugin.",
+		`Reload mounts that use a particular backend plugin. Either the plugin name
+		or the desired plugin backend mounts must be provided, but not both. In the
+		case that the plugin name is provided, all mounted paths that use that plugin
+		backend will be reloaded.`,
 	},
 	"plugin-backend-reload-plugin": {
 		`The name of the plugin to reload, as registered in the plugin catalog.`,

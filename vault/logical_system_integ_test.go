@@ -93,7 +93,7 @@ func TestSystemBackend_PluginReload_mounts(t *testing.T) {
 	}
 }
 
-// testSystemBackendMock returns a systemBackend, with deired number
+// testSystemBackendMock returns a systemBackend with the desired number
 // of mounted mock plugin backends
 func testSystemBackendMock(t *testing.T, numMounts int) (b *vault.SystemBackend, cleanup func()) {
 	coreConfig := &vault.CoreConfig{
