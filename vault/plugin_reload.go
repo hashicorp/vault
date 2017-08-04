@@ -6,19 +6,27 @@ import (
 	"github.com/hashicorp/vault/logical"
 )
 
-// reloadPluginMounts reloads provided mount, regardless of
-// plugin type, as long as the backend is a plugin backend.
+// reloadPluginMounts reloads provided mounts, regardless of
+// plugin name, as long as the backend type is a plugin.
 func (c *Core) reloadPluginMounts(mounts []string) error {
+	c.mountsLock.Lock()
+	defer c.mountsLock.Unlock()
+
+	for _, mount := range mounts {
+		c.unloadMounts
+	}
+
 	return nil
 }
 
 // reloadPlugin reloads all mounted backends that are of
-// plugin type pluginName.
+// plugin pluginName (name of the plugin as registered in
+// the plugin catalog).
 func (c *Core) reloadPlugin(pluginName string) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
-	// Get all mounts for the plugin
+	// Filter mount entries that only matches the plugin name
 	for _, entry := range c.mounts.Entries {
 		if entry.Type == "plugin" && entry.Config.PluginName == pluginName {
 			path := entry.Path
@@ -37,20 +45,17 @@ func (c *Core) reloadPlugin(pluginName string) error {
 
 			// Initialize the backend, special casing for system
 			barrierPath := backendBarrierPrefix + entry.UUID + "/"
-			if entry.Type == "system" {
-				barrierPath = systemBarrierPrefix
-			}
+
 			// Create a barrier view using the UUID
 			view = NewBarrierView(c.barrier, barrierPath)
 
-			// Dispense a new backend
 			sysView := c.mountEntrySysView(entry)
 			conf := make(map[string]string)
 			if entry.Config.PluginName != "" {
 				conf["plugin_name"] = entry.Config.PluginName
 			}
 
-			// Consider having plugin name under entry.Options
+			// Dispense a new backend
 			backend, err := c.newLogicalBackend(entry.Type, sysView, view, conf)
 			if err != nil {
 				return err
@@ -62,7 +67,7 @@ func (c *Core) reloadPlugin(pluginName string) error {
 			// Check for the correct backend type
 			backendType := backend.Type()
 			if entry.Type == "plugin" && backendType != logical.TypeLogical {
-				return fmt.Errorf("cannot mount '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
+				return fmt.Errorf("cannot reload '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 			}
 
 			// Call initialize; this takes care of init tasks that must be run after
@@ -73,8 +78,9 @@ func (c *Core) reloadPlugin(pluginName string) error {
 
 			// Set the backend back
 			re.backend = backend
+
+			c.logger.Info("core: successfully reloaded '%s' plugin on %s", pluginName, entry.Path)
 		}
 	}
-
 	return nil
 }

@@ -230,7 +230,6 @@ func (c *Core) mount(entry *MountEntry) error {
 		conf["plugin_name"] = entry.Config.PluginName
 	}
 
-	// Consider having plugin name under entry.Options
 	backend, err := c.newLogicalBackend(entry.Type, sysView, view, conf)
 	if err != nil {
 		return err
