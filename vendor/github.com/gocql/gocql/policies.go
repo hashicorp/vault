@@ -105,7 +105,7 @@ func (c *cowHostList) remove(ip net.IP) bool {
 	found := false
 	newL := make([]*HostInfo, 0, size)
 	for i := 0; i < len(l); i++ {
-		if !l[i].Peer().Equal(ip) {
+		if !l[i].ConnectAddress().Equal(ip) {
 			newL = append(newL, l[i])
 		} else {
 			found = true
@@ -267,7 +267,7 @@ func (r *roundRobinHostPolicy) AddHost(host *HostInfo) {
 }
 
 func (r *roundRobinHostPolicy) RemoveHost(host *HostInfo) {
-	r.hosts.remove(host.Peer())
+	r.hosts.remove(host.ConnectAddress())
 }
 
 func (r *roundRobinHostPolicy) HostUp(host *HostInfo) {
@@ -310,7 +310,7 @@ func (t *tokenAwareHostPolicy) AddHost(host *HostInfo) {
 }
 
 func (t *tokenAwareHostPolicy) RemoveHost(host *HostInfo) {
-	t.hosts.remove(host.Peer())
+	t.hosts.remove(host.ConnectAddress())
 	t.fallback.RemoveHost(host)
 
 	t.resetTokenRing()
@@ -424,7 +424,7 @@ func (r *hostPoolHostPolicy) SetHosts(hosts []*HostInfo) {
 	hostMap := make(map[string]*HostInfo, len(hosts))
 
 	for i, host := range hosts {
-		ip := host.Peer().String()
+		ip := host.ConnectAddress().String()
 		peers[i] = ip
 		hostMap[ip] = host
 	}
@@ -436,7 +436,7 @@ func (r *hostPoolHostPolicy) SetHosts(hosts []*HostInfo) {
 }
 
 func (r *hostPoolHostPolicy) AddHost(host *HostInfo) {
-	ip := host.Peer().String()
+	ip := host.ConnectAddress().String()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -457,7 +457,7 @@ func (r *hostPoolHostPolicy) AddHost(host *HostInfo) {
 }
 
 func (r *hostPoolHostPolicy) RemoveHost(host *HostInfo) {
-	ip := host.Peer().String()
+	ip := host.ConnectAddress().String()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -469,7 +469,7 @@ func (r *hostPoolHostPolicy) RemoveHost(host *HostInfo) {
 	delete(r.hostMap, ip)
 	hosts := make([]string, 0, len(r.hostMap))
 	for _, host := range r.hostMap {
-		hosts = append(hosts, host.Peer().String())
+		hosts = append(hosts, host.ConnectAddress().String())
 	}
 
 	r.hp.SetHosts(hosts)
@@ -523,7 +523,7 @@ func (host selectedHostPoolHost) Info() *HostInfo {
 }
 
 func (host selectedHostPoolHost) Mark(err error) {
-	ip := host.info.Peer().String()
+	ip := host.info.ConnectAddress().String()
 
 	host.policy.mu.RLock()
 	defer host.policy.mu.RUnlock()

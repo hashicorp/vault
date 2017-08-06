@@ -300,6 +300,7 @@ func (f *AuditFormatter) FormatResponse(
 			TTL:             int(resp.WrapInfo.TTL / time.Second),
 			Token:           token,
 			CreationTime:    resp.WrapInfo.CreationTime.Format(time.RFC3339Nano),
+			CreationPath:    resp.WrapInfo.CreationPath,
 			WrappedAccessor: resp.WrapInfo.WrappedAccessor,
 		}
 	}
@@ -406,6 +407,7 @@ type AuditResponseWrapInfo struct {
 	TTL             int    `json:"ttl"`
 	Token           string `json:"token"`
 	CreationTime    string `json:"creation_time"`
+	CreationPath    string `json:"creation_path"`
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
 }
 

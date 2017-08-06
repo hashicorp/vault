@@ -21,7 +21,6 @@
 package transport // import "google.golang.org/grpc/transport"
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -48,28 +47,25 @@ type recvMsg struct {
 	err error
 }
 
-func (*recvMsg) item() {}
-
-// All items in an out of a recvBuffer should be the same type.
-type item interface {
-	item()
-}
-
-// recvBuffer is an unbounded channel of item.
+// recvBuffer is an unbounded channel of recvMsg structs.
+// Note recvBuffer differs from controlBuffer only in that recvBuffer
+// holds a channel of only recvMsg structs instead of objects implementing "item" interface.
+// recvBuffer is written to much more often than
+// controlBuffer and using strict recvMsg structs helps avoid allocation in "recvBuffer.put"
 type recvBuffer struct {
-	c       chan item
+	c       chan recvMsg
 	mu      sync.Mutex
-	backlog []item
+	backlog []recvMsg
 }
 
 func newRecvBuffer() *recvBuffer {
 	b := &recvBuffer{
-		c: make(chan item, 1),
+		c: make(chan recvMsg, 1),
 	}
 	return b
 }
 
-func (b *recvBuffer) put(r item) {
+func (b *recvBuffer) put(r recvMsg) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if len(b.backlog) == 0 {
@@ -88,18 +84,18 @@ func (b *recvBuffer) load() {
 	if len(b.backlog) > 0 {
 		select {
 		case b.c <- b.backlog[0]:
-			b.backlog[0] = nil
+			b.backlog[0] = recvMsg{}
 			b.backlog = b.backlog[1:]
 		default:
 		}
 	}
 }
 
-// get returns the channel that receives an item in the buffer.
+// get returns the channel that receives a recvMsg in the buffer.
 //
-// Upon receipt of an item, the caller should call load to send another
-// item onto the channel if there is any.
-func (b *recvBuffer) get() <-chan item {
+// Upon receipt of a recvMsg, the caller should call load to send another
+// recvMsg onto the channel if there is any.
+func (b *recvBuffer) get() <-chan recvMsg {
 	return b.c
 }
 
@@ -109,7 +105,7 @@ type recvBufferReader struct {
 	ctx    context.Context
 	goAway chan struct{}
 	recv   *recvBuffer
-	last   *bytes.Reader // Stores the remaining data in the previous calls.
+	last   []byte // Stores the remaining data in the previous calls.
 	err    error
 }
 
@@ -121,24 +117,79 @@ func (r *recvBufferReader) Read(p []byte) (n int, err error) {
 		return 0, r.err
 	}
 	defer func() { r.err = err }()
-	if r.last != nil && r.last.Len() > 0 {
+	if r.last != nil && len(r.last) > 0 {
 		// Read remaining data left in last call.
-		return r.last.Read(p)
+		copied := copy(p, r.last)
+		r.last = r.last[copied:]
+		return copied, nil
 	}
 	select {
 	case <-r.ctx.Done():
 		return 0, ContextErr(r.ctx.Err())
 	case <-r.goAway:
 		return 0, ErrStreamDrain
-	case i := <-r.recv.get():
+	case m := <-r.recv.get():
 		r.recv.load()
-		m := i.(*recvMsg)
 		if m.err != nil {
 			return 0, m.err
 		}
-		r.last = bytes.NewReader(m.data)
-		return r.last.Read(p)
+		copied := copy(p, m.data)
+		r.last = m.data[copied:]
+		return copied, nil
 	}
+}
+
+// All items in an out of a controlBuffer should be the same type.
+type item interface {
+	item()
+}
+
+// controlBuffer is an unbounded channel of item.
+type controlBuffer struct {
+	c       chan item
+	mu      sync.Mutex
+	backlog []item
+}
+
+func newControlBuffer() *controlBuffer {
+	b := &controlBuffer{
+		c: make(chan item, 1),
+	}
+	return b
+}
+
+func (b *controlBuffer) put(r item) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if len(b.backlog) == 0 {
+		select {
+		case b.c <- r:
+			return
+		default:
+		}
+	}
+	b.backlog = append(b.backlog, r)
+}
+
+func (b *controlBuffer) load() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if len(b.backlog) > 0 {
+		select {
+		case b.c <- b.backlog[0]:
+			b.backlog[0] = nil
+			b.backlog = b.backlog[1:]
+		default:
+		}
+	}
+}
+
+// get returns the channel that receives an item in the buffer.
+//
+// Upon receipt of an item, the caller should call load to send another
+// item onto the channel if there is any.
+func (b *controlBuffer) get() <-chan item {
+	return b.c
 }
 
 type streamState uint8
@@ -311,7 +362,7 @@ func (s *Stream) SetTrailer(md metadata.MD) error {
 }
 
 func (s *Stream) write(m recvMsg) {
-	s.buf.put(&m)
+	s.buf.put(m)
 }
 
 // Read reads all p bytes from the wire for this stream.
@@ -488,8 +539,10 @@ type CallHdr struct {
 
 	// Flush indicates whether a new stream command should be sent
 	// to the peer without waiting for the first data. This is
-	// only a hint. The transport may modify the flush decision
+	// only a hint.
+	// If it's true, the transport may modify the flush decision
 	// for performance purposes.
+	// If it's false, new stream will never be flushed.
 	Flush bool
 }
 

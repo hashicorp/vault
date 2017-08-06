@@ -1,29 +1,76 @@
-## Next (unreleased)
+## 0.8.0 (unreleased)
+
+DEPRECATIONS/CHANGES:
+
+ * Database Plugin Backends: Passwords generated for these backends now
+   enforce stricter password requirements, as opposed to the previous behavior 
+   of returning a randomized UUID. Passwords are of length 20, and have a `A1a-` 
+   characters prepended to ensure stricter requirements. No regressions are 
+   expected from this change. (For database backends that were previously
+   substituting underscores for hyphens in passwords, this will remain the
+   case.)
+ * Lease Endpoints: The endpoints `sys/renew`, `sys/revoke`, `sys/revoke-prefix`,
+   `sys/revoke-force` have been deprecated and relocated under `sys/leases`.
+   Additionally, the deprecated path `sys/revoke-force` now requires the `sudo`
+   capability.
+ * Response Wrapping Lookup Unauthenticated: The `sys/wrapping/lookup` endpoint
+   is now unauthenticated. This allows introspection of the wrapping info by
+   clients that only have the wrapping token without then invalidating the
+   token. Validation functions/checks are still performed on the token.
 
 FEATURES:
 
+ * **Cassandra Storage**: Cassandra can now be used for Vault storage
+ * **CockroachDB Storage**: CockroachDB can now be used for Vault storage
  * **CouchDB Storage**: CouchDB can now be used for Vault storage
  * **SAP HANA Database Plugin**: The `databases` backend can now manage users
    for SAP HANA databases
+ * **Plugin Backends**: Vault now supports running secret and auth backends as
+   plugins. Plugins can be mounted like normal backends and can be developed
+   independently from Vault.
+ * **PROXY Protocol Support** Vault listeners can now be configured to honor
+   PROXY protocol v1 information to allow passing real client IPs into Vault. A
+   list of authorized addresses (IPs or subnets) can be defined and
+   accept/reject behavior controlled.
+ * **Lease lookup and browsing in the Vault Enterprise UI**: Vault Enterprise UI
+   now supports lookup and listing of leases and the associated actions from the 
+   `sys/leases` endpoints in the API. These are located in the new top level 
+   navigation item "Leases".
 
 IMPROVEMENTS:
 
  * api: Add client method for a secret renewer background process [GH-2886]
  * api: Add `RenewTokenAsSelf` [GH-2886]
+ * api: Client timeout can now be adjusted with the `VAULT_CLIENT_TIMEOUT` env
+   var or with a new API function [GH-2956]
+ * api/cli: Client will now attempt to look up SRV records for the given Vault
+   hostname [GH-3035]
  * audit/socket: Enhance reconnection logic and don't require the connection to
    be established at unseal time [GH-2934]
  * audit/file: Opportunistically try re-opening the file on error [GH-2999]
  * auth/approle: Add role name to token metadata [GH-2985]
+ * auth/okta: Allow specifying `ttl`/`max_ttl` inside the mount [GH-2915]
+ * cli: Client timeout can now be adjusted with the `VAULT_CLIENT_TIMEOUT` env
+   var [GH-2956]
  * command/auth: Add `-token-only` flag to `vault auth` that returns only the
    token on stdout and does not store it via the token helper [GH-2855]
  * core: CORS allowed origins can now be configured [GH-2021]
  * core: Add metrics counters for audit log failures [GH-2863]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
- * auth/okta: Allow specifying `ttl`/`max_ttl` inside the mount [GH-2915]
+ * server: Add `tls_client_ca_file` option for specifying a CA file to use for
+   client certificate verification when `tls_require_and_verify_client_cert` is
+   enabled [GH-3034]
+ * storage/cockroachdb: Add CockroachDB storage backend [GH-2713]
+ * storage/couchdb: Add CouchhDB storage backend [GH-2880]
+ * storage/mssql: Add `max_parallel` [GH-3026]
+ * storage/postgresql: Add `max_parallel` [GH-3026]
  * storage/postgresql: Improve listing speed [GH-2945]
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
+ * sys/wrapping: Make `sys/wrapping/lookup` unauthenticated [GH-3084]
+ * sys/wrapping: Wrapped tokens now store the original request path of the data
+   [GH-3100]
  * telemetry: Add support for DogStatsD [GH-2490]
 
 BUG FIXES:
@@ -32,11 +79,18 @@ BUG FIXES:
  * api/leases: Fix lease lookup returning lease properties at the top level
  * audit: Fix panic when audit logging a read operation on an asymmetric
    `transit` key [GH-2958]
+ * auth/approle: Fix panic when secret and cidr list not provided in role
+   [GH-3075]
+ * auth/aws: Look up proper account ID on token renew [GH-3012]
+ * auth/aws: Store IAM header in all cases when it changes [GH-3004]
+ * auth/ldap: Verify given certificate is PEM encoded instead of failing
+   silently [GH-3016]
  * auth/token: Don't allow using the same token ID twice when manually
    specifying [GH-2916]
-* cli: Fix issue with parsing keys that start with special characters [GH-2998]
+ * cli: Fix issue with parsing keys that start with special characters [GH-2998]
  * core: Relocated `sys/leases/renew` returns same payload as original 
    `sys/leases` endpoint [GH-2891]
+ * secret/ssh: Fix panic when signing with incorrect key type [GH-3072]
  * secret/totp: Ensure codes can only be used once. This makes some automated
    workflows harder but complies with the RFC. [GH-2908]
  * secret/transit: Fix locking when creating a key with unsupported options
@@ -572,9 +626,9 @@ FEATURES:
    response wrapped token parameters; wrap arbitrary values; rotate wrapping
    tokens; and unwrap with enhanced validation. In addition, list operations
    can now be response-wrapped. [GH-1927]
- * Transit features: The `transit` backend now supports generating random bytes
-   and SHA sums; HMACs; and signing and verification functionality using EC
-   keys (P-256 curve)
+ * **Transit Features**: The `transit` backend now supports generating random
+   bytes and SHA sums; HMACs; and signing and verification functionality using
+   EC keys (P-256 curve)
 
 IMPROVEMENTS:
 

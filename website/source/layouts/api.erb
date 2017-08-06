@@ -54,6 +54,9 @@
           <li<%= sidebar_current("docs-http-secret-generic") %>>
             <a href="/api/secret/generic/index.html">Generic</a>
           </li>
+          <li<%= sidebar_current("docs-http-secret-identity") %>>
+            <a href="/api/secret/identity/index.html">Identity</a>
+          </li>
           <li<%= sidebar_current("docs-http-secret-mongodb") %>>
             <a href="/api/secret/mongodb/index.html">MongoDB (Deprecated)</a>
           </li>
@@ -129,6 +132,9 @@
           <li<%= sidebar_current("docs-http-system-leases") %>>
             <a href="/api/system/leases.html"><tt>/sys/leases</tt></a>
           </li>
+          <li<%= sidebar_current("docs-http-system-mfa") %>>
+            <a href="/api/system/mfa.html"><tt>/sys/mfa</tt></a>
+          </li>
           <li<%= sidebar_current("docs-http-system-mounts") %>>
             <a href="/api/system/mounts.html"><tt>/sys/mounts</tt></a>
           </li>
@@ -149,7 +155,15 @@
           </li>
           <li<%= sidebar_current("docs-http-system-replication") %>>
             <a href="/api/system/replication.html"><tt>/sys/replication</tt></a>
-          </li>
+            <ul class="nav">
+              <li<%= sidebar_current("docs-http-system-replication-performance") %>>
+                <a href="/api/system/replication-performance.html"><tt>/sys/replication/performance</tt></a>
+              </li>
+              <li<%= sidebar_current("docs-http-system-replication-dr") %>>
+                <a href="/api/system/replication-dr.html"><tt>/sys/replication/dr</tt></a>
+              </li>
+            </ul>
+          </li> 
           <li<%= sidebar_current("docs-http-system-rotate") %>>
             <a href="/api/system/rotate.html"><tt>/sys/rotate</tt></a>
           </li>

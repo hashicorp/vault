@@ -118,8 +118,7 @@ func NewSession(cfg ClusterConfig) (*Session, error) {
 	s.routingKeyInfoCache.lru = lru.New(cfg.MaxRoutingKeyInfo)
 
 	s.hostSource = &ringDescriber{
-		session:   s,
-		closeChan: make(chan bool),
+		session: s,
 	}
 
 	if cfg.PoolConfig.HostSelectionPolicy == nil {
@@ -181,26 +180,19 @@ func (s *Session) init() error {
 			return err
 		}
 
-		// need to setup host source to check for broadcast_address in system.local
-		localHasRPCAddr, _ := checkSystemLocal(s.control)
-		s.hostSource.localHasRpcAddr = localHasRPCAddr
-
 		if !s.cfg.DisableInitialHostLookup {
-			// TODO(zariel): we need to get the partitioner from here
-			var p string
-			hosts, p, err = s.hostSource.GetHosts()
+			var partitioner string
+			hosts, partitioner, err = s.hostSource.GetHosts()
 			if err != nil {
 				return err
 			}
-			s.policy.SetPartitioner(p)
+			s.policy.SetPartitioner(partitioner)
 		}
 	}
 
 	for _, host := range hosts {
-		if s.cfg.HostFilter == nil || s.cfg.HostFilter.Accept(host) {
-			host = s.ring.addOrUpdate(host)
-			s.handleNodeUp(host.Peer(), host.Port(), false)
-		}
+		host = s.ring.addOrUpdate(host)
+		s.handleNodeUp(host.ConnectAddress(), host.Port(), false)
 	}
 
 	// TODO(zariel): we probably dont need this any more as we verify that we
@@ -241,7 +233,7 @@ func (s *Session) reconnectDownedHosts(intv time.Duration) {
 			if gocqlDebug {
 				buf := bytes.NewBufferString("Session.ring:")
 				for _, h := range hosts {
-					buf.WriteString("[" + h.Peer().String() + ":" + h.State().String() + "]")
+					buf.WriteString("[" + h.ConnectAddress().String() + ":" + h.State().String() + "]")
 				}
 				Logger.Println(buf.String())
 			}
@@ -250,7 +242,7 @@ func (s *Session) reconnectDownedHosts(intv time.Duration) {
 				if h.IsUp() {
 					continue
 				}
-				s.handleNodeUp(h.Peer(), h.Port(), true)
+				s.handleNodeUp(h.ConnectAddress(), h.Port(), true)
 			}
 		case <-s.quit:
 			return
@@ -349,10 +341,6 @@ func (s *Session) Close() {
 
 	if s.pool != nil {
 		s.pool.Close()
-	}
-
-	if s.hostSource != nil {
-		close(s.hostSource.closeChan)
 	}
 
 	if s.control != nil {

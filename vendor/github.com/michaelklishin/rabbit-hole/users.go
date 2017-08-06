@@ -88,6 +88,25 @@ func (c *Client) PutUser(username string, info UserSettings) (res *http.Response
 	return res, nil
 }
 
+func (c *Client) PutUserWithoutPassword(username string, info UserSettings) (res *http.Response, err error) {
+	body, err := json.Marshal(UserInfo{Tags: info.Tags})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := newRequestWithBody(c, "PUT", "users/"+PathEscape(username), body)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err = executeRequest(c, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 //
 // DELETE /api/users/{name}
 //

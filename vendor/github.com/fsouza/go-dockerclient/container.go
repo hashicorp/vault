@@ -204,7 +204,7 @@ func (s *State) StateString() string {
 // PortBinding represents the host/container port mapping as returned in the
 // `docker inspect` json
 type PortBinding struct {
-	HostIP   string `json:"HostIP,omitempty" yaml:"HostIP,omitempty" toml:"HostIP,omitempty"`
+	HostIP   string `json:"HostIp,omitempty" yaml:"HostIp,omitempty" toml:"HostIp,omitempty"`
 	HostPort string `json:"HostPort,omitempty" yaml:"HostPort,omitempty" toml:"HostPort,omitempty"`
 }
 

@@ -16,20 +16,10 @@
  *
  */
 
-// Package grpclog defines logging for grpc.
-package grpclog // import "google.golang.org/grpc/grpclog"
-
-import (
-	"log"
-	"os"
-)
-
-// Use golang's standard logger by default.
-// Access is not mutex-protected: do not modify except in init()
-// functions.
-var logger Logger = log.New(os.Stderr, "", log.LstdFlags)
+package grpclog
 
 // Logger mimics golang's standard Logger as an interface.
+// Deprecated: use LoggerV2.
 type Logger interface {
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
@@ -41,36 +31,53 @@ type Logger interface {
 
 // SetLogger sets the logger that is used in grpc. Call only from
 // init() functions.
+// Deprecated: use SetLoggerV2.
 func SetLogger(l Logger) {
-	logger = l
+	logger = &loggerWrapper{Logger: l}
 }
 
-// Fatal is equivalent to Print() followed by a call to os.Exit() with a non-zero exit code.
-func Fatal(args ...interface{}) {
-	logger.Fatal(args...)
+// loggerWrapper wraps Logger into a LoggerV2.
+type loggerWrapper struct {
+	Logger
 }
 
-// Fatalf is equivalent to Printf() followed by a call to os.Exit() with a non-zero exit code.
-func Fatalf(format string, args ...interface{}) {
-	logger.Fatalf(format, args...)
+func (g *loggerWrapper) Info(args ...interface{}) {
+	g.Logger.Print(args...)
 }
 
-// Fatalln is equivalent to Println() followed by a call to os.Exit()) with a non-zero exit code.
-func Fatalln(args ...interface{}) {
-	logger.Fatalln(args...)
+func (g *loggerWrapper) Infoln(args ...interface{}) {
+	g.Logger.Println(args...)
 }
 
-// Print prints to the logger. Arguments are handled in the manner of fmt.Print.
-func Print(args ...interface{}) {
-	logger.Print(args...)
+func (g *loggerWrapper) Infof(format string, args ...interface{}) {
+	g.Logger.Printf(format, args...)
 }
 
-// Printf prints to the logger. Arguments are handled in the manner of fmt.Printf.
-func Printf(format string, args ...interface{}) {
-	logger.Printf(format, args...)
+func (g *loggerWrapper) Warning(args ...interface{}) {
+	g.Logger.Print(args...)
 }
 
-// Println prints to the logger. Arguments are handled in the manner of fmt.Println.
-func Println(args ...interface{}) {
-	logger.Println(args...)
+func (g *loggerWrapper) Warningln(args ...interface{}) {
+	g.Logger.Println(args...)
+}
+
+func (g *loggerWrapper) Warningf(format string, args ...interface{}) {
+	g.Logger.Printf(format, args...)
+}
+
+func (g *loggerWrapper) Error(args ...interface{}) {
+	g.Logger.Print(args...)
+}
+
+func (g *loggerWrapper) Errorln(args ...interface{}) {
+	g.Logger.Println(args...)
+}
+
+func (g *loggerWrapper) Errorf(format string, args ...interface{}) {
+	g.Logger.Printf(format, args...)
+}
+
+func (g *loggerWrapper) V(l int) bool {
+	// Returns true for all verbose level.
+	return true
 }

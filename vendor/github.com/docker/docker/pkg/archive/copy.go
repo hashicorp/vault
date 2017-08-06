@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/docker/docker/pkg/system"
 )
 
@@ -332,6 +332,9 @@ func RebaseArchiveEntries(srcContent io.Reader, oldBase, newBase string) io.Read
 			}
 
 			hdr.Name = strings.Replace(hdr.Name, oldBase, newBase, 1)
+			if hdr.Typeflag == tar.TypeLink {
+				hdr.Linkname = strings.Replace(hdr.Linkname, oldBase, newBase, 1)
+			}
 
 			if err = rebasedTar.WriteHeader(hdr); err != nil {
 				w.CloseWithError(err)

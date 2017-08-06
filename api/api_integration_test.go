@@ -33,31 +33,27 @@ func testVaultServerBackends(t testing.TB, backends map[string]logical.Factory) 
 		LogicalBackends: backends,
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, true)
-	cluster.StartListeners()
-	for _, core := range cluster.Cores {
-		core.Handler.Handle("/", vaulthttp.Handler(core.Core))
-	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
 
 	// make it easy to get access to the active
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
 
-	// Grab the root token
-	rootToken := cluster.Cores[0].Root
-
 	client := cluster.Cores[0].Client
-	client.SetToken(rootToken)
+	client.SetToken(cluster.RootToken)
 
 	// Sanity check
 	secret, err := client.Auth().Token().LookupSelf()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secret == nil || secret.Data["id"].(string) != rootToken {
-		t.Fatalf("token mismatch: %#v vs %q", secret, rootToken)
+	if secret == nil || secret.Data["id"].(string) != cluster.RootToken {
+		t.Fatalf("token mismatch: %#v vs %q", secret, cluster.RootToken)
 	}
-	return client, func() { defer cluster.CloseListeners() }
+	return client, func() { defer cluster.Cleanup() }
 }
 
 // testPostgresDB creates a testing postgres database in a Docker container,

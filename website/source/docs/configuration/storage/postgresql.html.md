@@ -26,7 +26,7 @@ storage "postgresql" {
 }
 ```
 
-The PostgresSQL storage backend does not automatically create the table. Here is
+The PostgreSQL storage backend does not automatically create the table. Here is
 some sample SQL to create the schema and indexes.
 
 ```sql
@@ -82,11 +82,14 @@ LANGUAGE plpgsql;
   which to write Vault data. This table must already exist (Vault will not
   attempt to create it).
 
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
+  requests to PostgreSQL.
+
 ## `postgresql` Examples
 
 ### Custom SSL Verification
 
-This example shows connecting to a PostgresSQL cluster using full SSL
+This example shows connecting to a PostgreSQL cluster using full SSL
 verification (recommended).
 
 ```hcl

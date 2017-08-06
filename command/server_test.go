@@ -15,7 +15,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/meta"
+	"github.com/hashicorp/vault/physical"
 	"github.com/mitchellh/cli"
+
+	physFile "github.com/hashicorp/vault/physical/file"
 )
 
 var (
@@ -58,8 +61,8 @@ disable_mlock = true
 
 listener "tcp" {
     address = "127.0.0.1:8203"
-    tls_cert_file = "TMPDIR/reload_FILE.pem"
-    tls_key_file = "TMPDIR/reload_FILE.key"
+    tls_cert_file = "TMPDIR/reload_cert.pem"
+    tls_key_file = "TMPDIR/reload_key.pem"
 }
 `
 )
@@ -79,15 +82,11 @@ func TestServer_ReloadListener(t *testing.T) {
 
 	// Setup initial certs
 	inBytes, _ := ioutil.ReadFile(wd + "reload_foo.pem")
-	ioutil.WriteFile(td+"/reload_foo.pem", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
 	inBytes, _ = ioutil.ReadFile(wd + "reload_foo.key")
-	ioutil.WriteFile(td+"/reload_foo.key", inBytes, 0777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
-	ioutil.WriteFile(td+"/reload_bar.pem", inBytes, 0777)
-	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
-	ioutil.WriteFile(td+"/reload_bar.key", inBytes, 0777)
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
 
-	relhcl := strings.Replace(strings.Replace(reloadhcl, "TMPDIR", td, -1), "FILE", "foo", -1)
+	relhcl := strings.Replace(reloadhcl, "TMPDIR", td, -1)
 	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
 
 	inBytes, _ = ioutil.ReadFile(wd + "reload_ca.pem")
@@ -104,6 +103,9 @@ func TestServer_ReloadListener(t *testing.T) {
 		},
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
+		PhysicalBackends: map[string]physical.Factory{
+			"file": physFile.NewFileBackend,
+		},
 	}
 
 	finished := false
@@ -155,7 +157,11 @@ func TestServer_ReloadListener(t *testing.T) {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
 
-	relhcl = strings.Replace(strings.Replace(reloadhcl, "TMPDIR", td, -1), "FILE", "bar", -1)
+	relhcl = strings.Replace(reloadhcl, "TMPDIR", td, -1)
+	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.pem")
+	ioutil.WriteFile(td+"/reload_cert.pem", inBytes, 0777)
+	inBytes, _ = ioutil.ReadFile(wd + "reload_bar.key")
+	ioutil.WriteFile(td+"/reload_key.pem", inBytes, 0777)
 	ioutil.WriteFile(td+"/reload.hcl", []byte(relhcl), 0777)
 
 	c.SighupCh <- struct{}{}

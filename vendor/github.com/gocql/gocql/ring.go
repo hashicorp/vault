@@ -1,6 +1,7 @@
 package gocql
 
 import (
+	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -53,7 +54,10 @@ func (r *ring) allHosts() []*HostInfo {
 }
 
 func (r *ring) addHost(host *HostInfo) bool {
-	ip := host.Peer().String()
+	if host.invalidConnectAddr() {
+		panic(fmt.Sprintf("invalid host: %v", host))
+	}
+	ip := host.ConnectAddress().String()
 
 	r.mu.Lock()
 	if r.hosts == nil {
@@ -79,7 +83,10 @@ func (r *ring) addOrUpdate(host *HostInfo) *HostInfo {
 }
 
 func (r *ring) addHostIfMissing(host *HostInfo) (*HostInfo, bool) {
-	ip := host.Peer().String()
+	if host.invalidConnectAddr() {
+		panic(fmt.Sprintf("invalid host: %v", host))
+	}
+	ip := host.ConnectAddress().String()
 
 	r.mu.Lock()
 	if r.hosts == nil {
@@ -106,7 +113,7 @@ func (r *ring) removeHost(ip net.IP) bool {
 	_, ok := r.hosts[k]
 	if ok {
 		for i, host := range r.hostList {
-			if host.Peer().Equal(ip) {
+			if host.ConnectAddress().Equal(ip) {
 				r.hostList = append(r.hostList[:i], r.hostList[i+1:]...)
 				break
 			}

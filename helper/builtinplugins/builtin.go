@@ -9,9 +9,11 @@ import (
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 )
 
+// BuiltinFactory is the func signature that should be returned by
+// the plugin's New() func.
 type BuiltinFactory func() (interface{}, error)
 
-var plugins map[string]BuiltinFactory = map[string]BuiltinFactory{
+var plugins = map[string]BuiltinFactory{
 	// These four plugins all use the same mysql implementation but with
 	// different username settings passed by the constructor.
 	"mysql-database-plugin":        mysql.New(mysql.MetadataLen, mysql.UsernameLen),
@@ -26,11 +28,14 @@ var plugins map[string]BuiltinFactory = map[string]BuiltinFactory{
 	"hana-database-plugin":       hana.New,
 }
 
+// Get returns the BuiltinFactory func for a particular backend plugin
+// from the plugins map.
 func Get(name string) (BuiltinFactory, bool) {
 	f, ok := plugins[name]
 	return f, ok
 }
 
+// Keys returns the list of plugin names that are considered builtin plugins.
 func Keys() []string {
 	keys := make([]string, len(plugins))
 

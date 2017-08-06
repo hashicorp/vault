@@ -14,7 +14,8 @@ func (c *Sys) Leader() (*LeaderResponse, error) {
 }
 
 type LeaderResponse struct {
-	HAEnabled     bool   `json:"ha_enabled"`
-	IsSelf        bool   `json:"is_self"`
-	LeaderAddress string `json:"leader_address"`
+	HAEnabled            bool   `json:"ha_enabled"`
+	IsSelf               bool   `json:"is_self"`
+	LeaderAddress        string `json:"leader_address"`
+	LeaderClusterAddress string `json:"leader_cluster_address"`
 }

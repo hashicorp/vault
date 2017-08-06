@@ -19,7 +19,7 @@ func TestBackend_pathRoleEc2(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func Test_enableIamIDResolution(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestBackend_pathIam(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -385,7 +385,7 @@ func TestBackend_pathRoleMixedTypes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,7 +491,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -617,7 +617,7 @@ func TestAwsEc2_RoleDurationSeconds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}

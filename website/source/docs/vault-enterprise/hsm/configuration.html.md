@@ -50,7 +50,11 @@ strings.
 ### Required Directives
 
  * `lib`: The path to the PKCS#11 library shared object file. May also be
-   specified by the `VAULT_HSM_LIB` environment variable.
+   specified by the `VAULT_HSM_LIB` environment variable. **Note:** Depending 
+   on your HSM, this may be either a binary or a dynamic library, and its use
+   may require other libraries depending on which system the Vault binary is 
+   currently running on (e.g.: a Linux system may require other libraries to
+   interpret Windows .dll files). 
  * `slot`: The slot number to use, specified as a string (e.g. `"0"`). May also
    be specified by the `VAULT_HSM_SLOT` environment variable.
  * `pin`: The PIN for login. May also be specified by the `VAULT_HSM_PIN`

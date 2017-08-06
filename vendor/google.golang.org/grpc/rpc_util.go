@@ -244,7 +244,7 @@ type parser struct {
 	r io.Reader
 
 	// The header of a gRPC message. Find more detail
-	// at http://www.grpc.io/docs/guides/wire.html.
+	// at https://grpc.io/docs/guides/wire.html.
 	header [5]byte
 }
 
@@ -503,6 +503,12 @@ func getMaxSize(mcMax, doptMax *int, defaultVal int) *int {
 	}
 	return doptMax
 }
+
+// SupportPackageIsVersion3 is referenced from generated protocol buffer files.
+// The latest support package version is 4.
+// SupportPackageIsVersion3 is kept for compability. It will be removed in the
+// next support package version update.
+const SupportPackageIsVersion3 = true
 
 // SupportPackageIsVersion4 is referenced from generated protocol buffer files
 // to assert that that code is compatible with this version of the grpc package.

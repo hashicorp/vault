@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -918,7 +919,7 @@ func (b *backend) pathLoginRenewIam(
 			if !ok {
 				return nil, fmt.Errorf("no inferred AWS region in auth metadata")
 			}
-			_, err := b.validateInstance(req.Storage, instanceID, instanceRegion, req.Auth.Metadata["accountID"])
+			_, err := b.validateInstance(req.Storage, instanceID, instanceRegion, req.Auth.Metadata["account_id"])
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify instance ID %q: %v", instanceID, err)
 			}
@@ -927,30 +928,22 @@ func (b *backend) pathLoginRenewIam(
 		}
 	}
 
-	// The role may have been specified with only bindings on the inferred entity. The
-	// creation/modification of roles ensures that there is always at least one valid binding, and
-	// those bindings are either with a bound_iam_principal_arn or bindings on the inferred enttity.
-	// If the bound_iam_principal_arn is set to "", then that means all the bindings were set on the
-	// inferred entity type and already checked, so we don't need to check bound_iam_principal_arn.
-	if roleEntry.BoundIamPrincipalARN != "" && roleEntry.BoundIamPrincipalARN != canonicalArn {
-		return nil, fmt.Errorf("role no longer bound to arn %q", canonicalArn)
-	}
-	// Need to hanndle the case where an auth token was generated before we put client_user_id in the metadata
-	// Basic goal here is:
-	//  1. If no client_user_id metadata exists, then skip the check (it might be nice to fill it in later, but
-	//     could be complicated)
-	//  2. If role is not bound to an ID, that means that checking the unique ID has been disabled, so skip the
-	//     check
-	//  3. Otherwise, ensure that the stored client_user_id matches the bound IAM principal ID. If an IAM user
-	//     or role is deleted and recreated, then existing clients will NOT be able to renew and they'll need
-	//     to reauthenticate to Vault with updated IAM credentials
-	originalUserId, ok := req.Auth.Metadata["client_user_id"]
-	if ok && roleEntry.BoundIamPrincipalID != "" && roleEntry.BoundIamPrincipalID != req.Auth.Metadata["client_user_id"] {
-		return nil, fmt.Errorf("role no longer bound to ID %q", originalUserId)
+	if roleEntry.BoundIamPrincipalARN != "" {
+		// We might not get here if all bindings were on the inferred entity, which we've already validated
+		// above
+		clientUserId, ok := req.Auth.Metadata["client_user_id"]
+		if ok && roleEntry.BoundIamPrincipalID != "" {
+			// Resolving unique IDs is enabled and the auth metadata contains the unique ID, so checking the
+			// unique ID is authoritative at this stage
+			if roleEntry.BoundIamPrincipalID != clientUserId {
+				return nil, fmt.Errorf("role no longer bound to ID %q", clientUserId)
+			}
+		} else if roleEntry.BoundIamPrincipalARN != canonicalArn {
+			return nil, fmt.Errorf("role no longer bound to arn %q", canonicalArn)
+		}
 	}
 
 	return framework.LeaseExtend(roleEntry.TTL, roleEntry.MaxTTL, b.System())(req, data)
-
 }
 
 func (b *backend) pathLoginRenewEc2(
@@ -1094,14 +1087,12 @@ func (b *backend) pathLoginUpdateIam(
 	if headersB64 == "" {
 		return logical.ErrorResponse("missing iam_request_headers"), nil
 	}
-	headersJson, err := base64.StdEncoding.DecodeString(headersB64)
+	headers, err := parseIamRequestHeaders(headersB64)
 	if err != nil {
-		return logical.ErrorResponse("failed to base64 decode iam_request_headers"), nil
+		return logical.ErrorResponse(fmt.Sprintf("Error parsing iam_request_headers: %v", err)), nil
 	}
-	var headers http.Header
-	err = jsonutil.DecodeJSON(headersJson, &headers)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("failed to JSON decode iam_request_headers %q: %v", headersJson, err)), nil
+	if headers == nil {
+		return logical.ErrorResponse("nil response when parsing iam_request_headers"), nil
 	}
 
 	config, err := b.lockedClientConfigEntry(req.Storage)
@@ -1405,6 +1396,37 @@ func parseGetCallerIdentityResponse(response string) (GetCallerIdentityResponse,
 	result := GetCallerIdentityResponse{}
 	err := decoder.Decode(&result)
 	return result, err
+}
+
+func parseIamRequestHeaders(headersB64 string) (http.Header, error) {
+	headersJson, err := base64.StdEncoding.DecodeString(headersB64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to base64 decode iam_request_headers")
+	}
+	var headersDecoded map[string]interface{}
+	err = jsonutil.DecodeJSON(headersJson, &headersDecoded)
+	if err != nil {
+		return nil, fmt.Errorf("failed to JSON decode iam_request_headers %q: %v", headersJson, err)
+	}
+	headers := make(http.Header)
+	for k, v := range headersDecoded {
+		switch typedValue := v.(type) {
+		case string:
+			headers.Add(k, typedValue)
+		case []interface{}:
+			for _, individualVal := range typedValue {
+				switch possibleStrVal := individualVal.(type) {
+				case string:
+					headers.Add(k, possibleStrVal)
+				default:
+					return nil, fmt.Errorf("header %q contains value %q that has type %s, not string", k, individualVal, reflect.TypeOf(individualVal))
+				}
+			}
+		default:
+			return nil, fmt.Errorf("header %q value %q has type %s, not string or []interface", k, typedValue, reflect.TypeOf(v))
+		}
+	}
+	return headers, nil
 }
 
 func submitCallerIdentityRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) (*GetCallerIdentityResult, error) {

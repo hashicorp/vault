@@ -37,9 +37,6 @@ func pathConfigRoot() *framework.Path {
 func pathConfigRootWrite(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	region := data.Get("region").(string)
-	if region == "" {
-		region = "us-east-1"
-	}
 
 	entry, err := logical.StorageEntryJSON("config/root", rootConfig{
 		AccessKey: data.Get("access_key").(string),

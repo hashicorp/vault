@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/hcl"
+	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/logformat"
 	log "github.com/mgutz/logxi/v1"
 )
@@ -241,6 +243,56 @@ func TestLoadConfigDir(t *testing.T) {
 	if !reflect.DeepEqual(config, expected) {
 		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, expected)
 	}
+}
+
+func TestParseListeners(t *testing.T) {
+	obj, _ := hcl.Parse(strings.TrimSpace(`
+listener "tcp" {
+	address = "127.0.0.1:443"
+	cluster_address = "127.0.0.1:8201"
+	tls_disable = false
+	tls_cert_file = "./certs/server.crt"
+	tls_key_file = "./certs/server.key"
+	tls_client_ca_file = "./certs/rootca.crt"
+	tls_min_version = "tls12"
+	tls_require_and_verify_client_cert =  true
+}`))
+
+	var config Config
+	list, _ := obj.Node.(*ast.ObjectList)
+	objList := list.Filter("listener")
+	parseListeners(&config, objList)
+	listeners := config.Listeners
+	if len(listeners) == 0 {
+		t.Fatalf("expected at least one listener in the config")
+	}
+	listener := listeners[0]
+	if listener.Type != "tcp" {
+		t.Fatalf("expected tcp listener in the config")
+	}
+
+	expected := &Config{
+		Listeners: []*Listener{
+			&Listener{
+				Type: "tcp",
+				Config: map[string]interface{}{
+					"address":                            "127.0.0.1:443",
+					"cluster_address":                    "127.0.0.1:8201",
+					"tls_disable":                        false,
+					"tls_cert_file":                      "./certs/server.crt",
+					"tls_key_file":                       "./certs/server.key",
+					"tls_client_ca_file":                 "./certs/rootca.crt",
+					"tls_min_version":                    "tls12",
+					"tls_require_and_verify_client_cert": true,
+				},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(config, *expected) {
+		t.Fatalf("expected \n\n%#v\n\n to be \n\n%#v\n\n", config, *expected)
+	}
+
 }
 
 func TestParseConfig_badTopLevel(t *testing.T) {

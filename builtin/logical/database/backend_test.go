@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"reflect"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/database/dbplugin"
 	"github.com/hashicorp/vault/helper/pluginutil"
-	"github.com/hashicorp/vault/http"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	"github.com/hashicorp/vault/vault"
@@ -84,12 +83,13 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 		},
 	}
 
-	cluster := vault.NewTestCluster(t, coreConfig, false)
-	cluster.StartListeners()
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
 	cores := cluster.Cores
-	cores[0].Handler.Handle("/", http.Handler(cores[0].Core))
-	cores[1].Handler.Handle("/", http.Handler(cores[1].Core))
-	cores[2].Handler.Handle("/", http.Handler(cores[2].Core))
+
+	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core)
 	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", "TestBackend_PluginMain")
@@ -102,22 +102,12 @@ func TestBackend_PluginMain(t *testing.T) {
 		return
 	}
 
-	content := []byte(vault.TestClusterCACert)
-	tmpfile, err := ioutil.TempFile("", "example")
-	if err != nil {
-		t.Fatal(err)
+	caPEM := os.Getenv(pluginutil.PluginCACertPEMEnv)
+	if caPEM == "" {
+		t.Fatal("CA cert not passed in")
 	}
 
-	defer os.Remove(tmpfile.Name()) // clean up
-
-	if _, err := tmpfile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	args := []string{"--ca-cert=" + tmpfile.Name()}
+	args := []string{"--ca-cert=" + caPEM}
 
 	apiClientMeta := &pluginutil.APIClientMeta{}
 	flags := apiClientMeta.FlagSet()
@@ -131,7 +121,7 @@ func TestBackend_config_connection(t *testing.T) {
 	var err error
 
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -194,7 +184,7 @@ func TestBackend_config_connection(t *testing.T) {
 
 func TestBackend_basic(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -285,7 +275,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_connectionCrud(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -430,7 +420,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 
 func TestBackend_roleCrud(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -540,7 +530,7 @@ func TestBackend_roleCrud(t *testing.T) {
 }
 func TestBackend_allowedRoles(t *testing.T) {
 	cluster, sys := getCluster(t)
-	defer cluster.CloseListeners()
+	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
