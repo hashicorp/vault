@@ -93,9 +93,7 @@ func (c *CORSConfig) Enable(urls []string, headers []string) error {
 
 	c.Lock()
 	c.AllowedOrigins = urls
-	c.Unlock()
 
-	c.Lock()
 	if len(c.AllowedHeaders) == 0 {
 		c.AllowedHeaders = append(c.AllowedHeaders, stdAllowedHeaders...)
 	}
@@ -121,11 +119,10 @@ func (c *CORSConfig) IsEnabled() bool {
 func (c *CORSConfig) Disable() error {
 	atomic.StoreUint32(&c.Enabled, CORSDisabled)
 	c.Lock()
-	c.AllowedOrigins = []string(nil)
-	c.Unlock()
 
-	c.Lock()
+	c.AllowedOrigins = []string(nil)
 	c.AllowedHeaders = []string(nil)
+
 	c.Unlock()
 
 	return c.core.saveCORSConfig()
