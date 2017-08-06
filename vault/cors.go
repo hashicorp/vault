@@ -85,6 +85,10 @@ func (c *Core) loadCORSConfig() error {
 // Enable takes either a '*' or a comma-seprated list of URLs that can make
 // cross-origin requests to Vault.
 func (c *CORSConfig) Enable(urls []string, headers []string) error {
+	if len(urls) == 0 {
+		return errors.New("at least one origin or the wildcard must be provided.")
+	}
+
 	if strutil.StrListContains(urls, "*") && len(urls) > 1 {
 		return errors.New("to allow all origins the '*' must be the only value for allowed_origins")
 	}
