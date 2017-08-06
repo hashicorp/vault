@@ -92,9 +92,8 @@ func (c *CORSConfig) Enable(urls []string, headers []string) error {
 	c.Lock()
 	c.AllowedOrigins = urls
 
-	if len(c.AllowedHeaders) == 0 {
-		c.AllowedHeaders = append(c.AllowedHeaders, stdAllowedHeaders...)
-	}
+	// Start with the standard headers to Vault accepts.
+	c.AllowedHeaders = append(c.AllowedHeaders, stdAllowedHeaders...)
 
 	// Allow the user to add additional headers to the list of
 	// headers allowed on cross-origin requests.
