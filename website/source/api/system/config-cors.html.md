@@ -58,7 +58,7 @@ cross-origin requests, as well as headers that are allowed on cross-origin reque
 
 ### Parameters
 
-- `allowed_origins` `(string or string array: "" or [])` – A wildcard (`*`), comma-delimited string, or array of strings specifying the origins that are permitted to make cross-origin requests.
+- `allowed_origins` `(string or string array: <required>)` – A wildcard (`*`), comma-delimited string, or array of strings specifying the origins that are permitted to make cross-origin requests.
 
 - `allowed_headers` `(string or string array: "" or [])` – A comma-delimited string or array of strings specifying headers that are permitted to be on cross-origin requests. Headers set via this parameter will be appended to the list of headers that Vault allows by default.
 
