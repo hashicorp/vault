@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -9,6 +10,8 @@ import (
 )
 
 func TestSysConfigCors(t *testing.T) {
+	var resp *http.Response
+
 	core, _, token := vault.TestCoreUnsealed(t)
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
@@ -16,8 +19,15 @@ func TestSysConfigCors(t *testing.T) {
 
 	corsConf := core.CORSConfig()
 
-	// Enable CORS
-	resp := testHttpPut(t, token, addr+"/v1/sys/config/cors", map[string]interface{}{
+	// Try to enable CORS without providing a value for allowed_origins
+	resp = testHttpPut(t, token, addr+"/v1/sys/config/cors", map[string]interface{}{
+		"allowed_headers": "X-Custom-Header",
+	})
+
+	testResponseStatus(t, resp, 500)
+
+	// Enable CORS, but provide an origin this time.
+	resp = testHttpPut(t, token, addr+"/v1/sys/config/cors", map[string]interface{}{
 		"allowed_origins": addr,
 		"allowed_headers": "X-Custom-Header",
 	})
