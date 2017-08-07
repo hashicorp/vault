@@ -115,6 +115,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: "A comma-separated string or array of strings indicating origins that may make cross-origin requests.",
 					},
+					"allowed_headers": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "A comma-separated string or array of strings indicating headers that are allowed on cross-origin requests.",
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -854,6 +858,7 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 	if enabled {
 		corsConf.RLock()
 		resp.Data["allowed_origins"] = corsConf.AllowedOrigins
+		resp.Data["allowed_headers"] = corsConf.AllowedHeaders
 		corsConf.RUnlock()
 	}
 
@@ -864,12 +869,13 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 // cross-origin requests and sets the CORS enabled flag to true
 func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	origins := d.Get("allowed_origins").([]string)
+	headers := d.Get("allowed_headers").([]string)
 
-	return nil, b.Core.corsConfig.Enable(origins)
+	return nil, b.Core.corsConfig.Enable(origins, headers)
 }
 
-// handleCORSDelete clears the allowed origins and sets the CORS enabled flag
-// to false
+// handleCORSDelete sets the CORS enabled flag to false and clears the list of
+// allowed origins & headers.
 func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	return nil, b.Core.corsConfig.Disable()
 }

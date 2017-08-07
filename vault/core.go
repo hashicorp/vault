@@ -459,8 +459,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		enableMlock:                      !conf.DisableMlock,
 	}
 
-	// Load CORS config and provide core
 	c.corsConfig = &CORSConfig{core: c}
+	// Load CORS config and provide a value for the core field.
 
 	// Wrap the physical backend in a cache layer if enabled and not already wrapped
 	if _, isCache := conf.Physical.(*physical.Cache); !conf.DisableCache && !isCache {
