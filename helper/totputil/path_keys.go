@@ -1,4 +1,4 @@
-package totp
+package totputil
 
 import (
 	"bytes"
@@ -16,9 +16,9 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-func PrefixedPathListKeys(prefix string, b *Backend) *framework.Path {
+func (b *Backend) PathListKeys(pathPrefix string) *framework.Path {
 	return &framework.Path{
-		Pattern: prefix + "keys/?$",
+		Pattern: pathPrefix + "keys/?$",
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathKeyList,
@@ -29,13 +29,9 @@ func PrefixedPathListKeys(prefix string, b *Backend) *framework.Path {
 	}
 }
 
-func pathListKeys(b *Backend) *framework.Path {
-	return PrefixedPathListKeys("", b)
-}
-
-func PrefixedPathKeys(prefix string, b *Backend) *framework.Path {
+func (b *Backend) PathKeys(pathPrefix string) *framework.Path {
 	return &framework.Path{
-		Pattern: prefix + "keys/" + framework.GenericNameRegex("name"),
+		Pattern: pathPrefix + "keys/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -120,10 +116,6 @@ func PrefixedPathKeys(prefix string, b *Backend) *framework.Path {
 		HelpSynopsis:    pathKeyHelpSyn,
 		HelpDescription: pathKeyHelpDesc,
 	}
-}
-
-func pathKeys(b *Backend) *framework.Path {
-	return PrefixedPathKeys("", b)
 }
 
 func (b *Backend) Key(s logical.Storage, n string) (*keyEntry, error) {

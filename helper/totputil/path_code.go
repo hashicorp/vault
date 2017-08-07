@@ -1,4 +1,4 @@
-package totp
+package totputil
 
 import (
 	"fmt"
@@ -11,9 +11,9 @@ import (
 	totplib "github.com/pquerna/otp/totp"
 )
 
-func PrefixedPathCode(prefix string, b *Backend) *framework.Path {
+func (b *Backend) PathCode(pathPrefix string) *framework.Path {
 	return &framework.Path{
-		Pattern: prefix + "code/" + framework.GenericNameRegex("name"),
+		Pattern: pathPrefix + "code/" + framework.GenericNameRegex("name"),
 		Fields: map[string]*framework.FieldSchema{
 			"name": &framework.FieldSchema{
 				Type:        framework.TypeString,
@@ -33,10 +33,6 @@ func PrefixedPathCode(prefix string, b *Backend) *framework.Path {
 		HelpSynopsis:    pathCodeHelpSyn,
 		HelpDescription: pathCodeHelpDesc,
 	}
-}
-
-func pathCode(b *Backend) *framework.Path {
-	return PrefixedPathCode("", b)
 }
 
 func (b *Backend) pathReadCode(

@@ -6,25 +6,25 @@ package totp
 import (
 	"time"
 
-	totpbackend "github.com/hashicorp/vault/builtin/logical/totp"
+	"github.com/hashicorp/vault/helper/totputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	cache "github.com/patrickmn/go-cache"
 )
 
 type backend struct {
-	*totpbackend.Backend
+	*totputil.Backend
 }
 
 // TotpPaths returns path functions to configure TOTP credentials.
-func TotpPaths(inb *framework.Backend) []*framework.Path {
-	var b totpbackend.Backend
-	b.Backend = inb
+func TotpPaths(fb *framework.Backend) []*framework.Path {
+	var b totputil.Backend
+	b.Backend = fb
 
 	return []*framework.Path{
-		totpbackend.PrefixedPathListKeys("totp/", &b),
-		totpbackend.PrefixedPathKeys("totp/", &b),
-		//totpbackend.PrefixedPathCode("totp/", &b),
+		b.PathListKeys("totp/"),
+		b.PathKeys("totp/"),
+		// We omit code generation / validation paths
 	}
 }
 
@@ -34,12 +34,12 @@ func TotpRootPaths() []string {
 	return []string{}
 }
 
-func GetTotpHandler(inb *framework.Backend) func(req *logical.Request, d *framework.FieldData, resp *logical.Response) (*logical.Response, error) {
+func GetTotpHandler(fb *framework.Backend) func(req *logical.Request, d *framework.FieldData, resp *logical.Response) (*logical.Response, error) {
 	var b backend
-	var bb totpbackend.Backend
-	bb.Backend = inb
-	bb.UsedCodes = cache.New(0, 30*time.Second)
-	b.Backend = &bb
+	var tb totputil.Backend
+	tb.Backend = fb
+	tb.UsedCodes = cache.New(0, 30*time.Second)
+	b.Backend = &tb
 
 	return b.TotpHandler
 }

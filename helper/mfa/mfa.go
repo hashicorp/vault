@@ -25,6 +25,7 @@ import (
 func MFAPaths(originalBackend *framework.Backend, loginPath *framework.Path) []*framework.Path {
 	var b backend
 	b.Backend = originalBackend
+	b.handlers = make(map[string]HandlerFunc)
 	paths := append(duo.DuoPaths(), pathMFAConfig(&b), wrapLoginPath(&b, loginPath))
 	return append(paths, totp.TotpPaths(originalBackend)...)
 }

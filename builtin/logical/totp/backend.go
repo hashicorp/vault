@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/helper/totputil"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	cache "github.com/patrickmn/go-cache"
@@ -17,8 +18,8 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	return b, nil
 }
 
-func NewBackend() *Backend {
-	var b Backend
+func NewBackend() *totputil.Backend {
+	var b totputil.Backend
 	b.Backend = &framework.Backend{
 		Help: strings.TrimSpace(backendHelp),
 
@@ -37,12 +38,18 @@ func NewBackend() *Backend {
 	return &b
 }
 
-type Backend struct {
-	*framework.Backend
-
-	UsedCodes *cache.Cache
-}
-
 const backendHelp = `
 The TOTP backend dynamically generates time-based one-time use passwords.
 `
+
+func pathCode(b *totputil.Backend) *framework.Path {
+	return b.PathCode("")
+}
+
+func pathListKeys(b *totputil.Backend) *framework.Path {
+	return b.PathListKeys("")
+}
+
+func pathKeys(b *totputil.Backend) *framework.Path {
+	return b.PathKeys("")
+}

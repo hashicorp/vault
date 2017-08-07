@@ -1,4 +1,4 @@
-package totp
+package totputil
 
 import (
 	"fmt"
