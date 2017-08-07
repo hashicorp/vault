@@ -19,6 +19,7 @@ var stdAllowedHeaders = []string{
 	"Content-Type",
 	"X-Requested-With",
 	"X-Vault-AWS-IAM-Server-ID",
+	"X-Vault-MFA",
 	"X-Vault-No-Request-Forwarding",
 	"X-Vault-Token",
 	"X-Vault-Wrap-Format",
@@ -121,8 +122,8 @@ func (c *CORSConfig) Disable() error {
 	atomic.StoreUint32(&c.Enabled, CORSDisabled)
 	c.Lock()
 
-	c.AllowedOrigins = []string(nil)
-	c.AllowedHeaders = []string(nil)
+	c.AllowedOrigins = nil
+	c.AllowedHeaders = nil
 
 	c.Unlock()
 
