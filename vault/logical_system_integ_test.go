@@ -65,11 +65,22 @@ func TestSystemBackend_enableAuth_plugin(t *testing.T) {
 }
 
 func TestSystemBackend_PluginReload_plugin(t *testing.T) {
-	core, b, cleanup := testSystemBackendMock(t, 2)
-	defer cleanup()
+	cluster, b := testSystemBackendMock(t, 2)
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0]
 
 	// Update internal value in the backend
+	/*
+		_, err := core.Client.Logical().Write("mock-1/internal", map[string]interface{}{
+			"value": "baz",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	*/
 	req := logical.TestRequest(t, logical.UpdateOperation, "mock-1/internal")
+	req.ClientToken = core.Client.Token()
 	req.Data["value"] = "baz"
 	resp, err := core.HandleRequest(req)
 	if err != nil {
@@ -81,6 +92,7 @@ func TestSystemBackend_PluginReload_plugin(t *testing.T) {
 
 	// Perform plugin reload
 	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/backend/reload")
+	req.ClientToken = core.Client.Token()
 	req.Data["plugin"] = "mock-plugin"
 	resp, err = b.HandleRequest(req)
 	if err != nil {
@@ -92,6 +104,7 @@ func TestSystemBackend_PluginReload_plugin(t *testing.T) {
 
 	// Ensure internal backed value is reset
 	req = logical.TestRequest(t, logical.ReadOperation, "mock-1/internal")
+	req.ClientToken = core.Client.Token()
 	resp, err = core.HandleRequest(req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -103,9 +116,10 @@ func TestSystemBackend_PluginReload_plugin(t *testing.T) {
 		t.Fatal("did not expect backend internal value to be 'baz'")
 	}
 }
+
 func TestSystemBackend_PluginReload_mounts(t *testing.T) {
-	_, b, cleanup := testSystemBackendMock(t, 2)
-	defer cleanup()
+	cluster, b := testSystemBackendMock(t, 2)
+	defer cluster.Cleanup()
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/backend/reload")
 	req.Data["mounts"] = "mock-0/,mock-1/"
@@ -120,7 +134,7 @@ func TestSystemBackend_PluginReload_mounts(t *testing.T) {
 
 // testSystemBackendMock returns a systemBackend with the desired number
 // of mounted mock plugin backends
-func testSystemBackendMock(t *testing.T, numMounts int) (core *vault.Core, b *vault.SystemBackend, cleanup func()) {
+func testSystemBackendMock(t *testing.T, numMounts int) (*vault.TestCluster, *vault.SystemBackend) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"plugin": plugin.Factory,
@@ -131,14 +145,11 @@ func testSystemBackendMock(t *testing.T, numMounts int) (core *vault.Core, b *va
 		HandlerFunc: vaulthttp.Handler,
 	})
 	cluster.Start()
-	cleanup = func() {
-		cluster.Cleanup()
-	}
 
-	core = cluster.Cores[0].Core
+	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
 
-	b = vault.NewSystemBackend(core)
+	b := vault.NewSystemBackend(core)
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	bc := &logical.BackendConfig{
 		Logger: logger,
@@ -173,7 +184,7 @@ func testSystemBackendMock(t *testing.T, numMounts int) (core *vault.Core, b *va
 		}
 	}
 
-	return core, b, cleanup
+	return cluster, b
 }
 
 func TestBackend_PluginMainLogical(t *testing.T) {

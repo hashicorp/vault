@@ -13,7 +13,6 @@ func pathInternal(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"value": &framework.FieldSchema{Type: framework.TypeString},
 		},
-		ExistenceCheck: b.pathExistenceCheck,
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathInternalUpdateOperation,
 			logical.ReadOperation:   b.pathInternalRead,
