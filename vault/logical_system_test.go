@@ -66,7 +66,7 @@ func TestSystemConfigCORS(t *testing.T) {
 		Data: map[string]interface{}{
 			"enabled":         true,
 			"allowed_origins": []string{"http://www.example.com"},
-			"allowed_headers": append(stdAllowedHeaders, "X-Custom-Header"),
+			"allowed_headers": append(StdAllowedHeaders, "X-Custom-Header"),
 		},
 	}
 

@@ -15,7 +15,7 @@ const (
 	CORSEnabled
 )
 
-var stdAllowedHeaders = []string{
+var StdAllowedHeaders = []string{
 	"Content-Type",
 	"X-Requested-With",
 	"X-Vault-AWS-IAM-Server-ID",
@@ -98,7 +98,7 @@ func (c *CORSConfig) Enable(urls []string, headers []string) error {
 	c.AllowedOrigins = urls
 
 	// Start with the standard headers to Vault accepts.
-	c.AllowedHeaders = append(c.AllowedHeaders, stdAllowedHeaders...)
+	c.AllowedHeaders = append(c.AllowedHeaders, StdAllowedHeaders...)
 
 	// Allow the user to add additional headers to the list of
 	// headers allowed on cross-origin requests.
