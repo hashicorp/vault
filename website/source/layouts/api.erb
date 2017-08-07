@@ -20,9 +20,6 @@
           <li<%= sidebar_current("docs-http-secret-aws") %>>
             <a href="/api/secret/aws/index.html">AWS</a>
           </li>
-          <li<%= sidebar_current("docs-http-secret-cassandra") %>>
-            <a href="/api/secret/cassandra/index.html">Cassandra (Deprecated)</a>
-          </li>
           <li<%= sidebar_current("docs-http-secret-consul") %>>
             <a href="/api/secret/consul/index.html">Consul</a>
           </li>
@@ -31,7 +28,7 @@
           </li>
 
           <li<%= sidebar_current("docs-http-secret-databases") %>>
-            <a href="/api/secret/databases/index.html">Databases (Beta)</a>
+            <a href="/api/secret/databases/index.html">Databases <sup>BETA</sup></a>
             <ul class="nav">
               <li<%= sidebar_current("docs-http-secret-databases-cassandra") %>>
                 <a href="/api/secret/databases/cassandra.html">Cassandra</a>
@@ -57,21 +54,10 @@
           <li<%= sidebar_current("docs-http-secret-identity") %>>
             <a href="/api/secret/identity/index.html">Identity</a>
           </li>
-          <li<%= sidebar_current("docs-http-secret-mongodb") %>>
-            <a href="/api/secret/mongodb/index.html">MongoDB (Deprecated)</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-mssql") %>>
-            <a href="/api/secret/mssql/index.html">MSSQL (Deprecated)</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-mysql") %>>
-            <a href="/api/secret/mysql/index.html">MySQL (Deprecated)</a>
-          </li>
           <li<%= sidebar_current("docs-http-secret-pki") %>>
             <a href="/api/secret/pki/index.html">PKI</a>
           </li>
-          <li<%= sidebar_current("docs-http-secret-postgresql") %>>
-            <a href="/api/secret/postgresql/index.html">PostgreSQL (Deprecated)</a>
-          </li>
+
           <li<%= sidebar_current("docs-http-secret-rabbitmq") %>>
             <a href="/api/secret/rabbitmq/index.html">RabbitMQ</a>
           </li>
@@ -83,6 +69,24 @@
           </li>
           <li<%= sidebar_current("docs-http-secret-transit") %>>
             <a href="/api/secret/transit/index.html">Transit</a>
+          </li>
+
+          <hr>
+
+          <li<%= sidebar_current("docs-http-secret-cassandra") %>>
+            <a href="/api/secret/cassandra/index.html">Cassandra <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mongodb") %>>
+            <a href="/api/secret/mongodb/index.html">MongoDB <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mssql") %>>
+            <a href="/api/secret/mssql/index.html">MSSQL <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mysql") %>>
+            <a href="/api/secret/mysql/index.html">MySQL <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-postgresql") %>>
+            <a href="/api/secret/postgresql/index.html">PostgreSQL <sup>DEPRECATED</sup></a>
           </li>
         </ul>
       </li>
@@ -163,7 +167,7 @@
                 <a href="/api/system/replication-dr.html"><tt>/sys/replication/dr</tt></a>
               </li>
             </ul>
-          </li> 
+          </li>
           <li<%= sidebar_current("docs-http-system-rotate") %>>
             <a href="/api/system/rotate.html"><tt>/sys/rotate</tt></a>
           </li>
