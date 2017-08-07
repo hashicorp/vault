@@ -14,6 +14,7 @@ package mfa
 
 import (
 	"github.com/hashicorp/vault/helper/mfa/duo"
+	"github.com/hashicorp/vault/helper/mfa/totp"
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 )
@@ -24,26 +25,30 @@ import (
 func MFAPaths(originalBackend *framework.Backend, loginPath *framework.Path) []*framework.Path {
 	var b backend
 	b.Backend = originalBackend
-	return append(duo.DuoPaths(), pathMFAConfig(&b), wrapLoginPath(&b, loginPath))
+	b.handlers = make(map[string]HandlerFunc)
+	paths := append(duo.DuoPaths(), pathMFAConfig(&b), wrapLoginPath(&b, loginPath))
+	return append(paths, totp.TotpPaths(originalBackend)...)
 }
 
 // MFARootPaths returns path strings used to configure MFA. When adding MFA
 // to a backend, these paths should be included in
 // Backend.PathsSpecial.Root.
 func MFARootPaths() []string {
-	return append(duo.DuoRootPaths(), "mfa_config")
+	paths := append(duo.DuoRootPaths(), "mfa_config")
+	return append(paths, totp.TotpRootPaths()...)
 }
 
 // HandlerFunc is the callback called to handle MFA for a login request.
 type HandlerFunc func(*logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
 
-// handlers maps each supported MFA type to its handler.
-var handlers = map[string]HandlerFunc{
+// globalHandlers maps supported MFA types which have static handlers to their handlers
+var globalHandlers = map[string]HandlerFunc{
 	"duo": duo.DuoHandler,
 }
 
 type backend struct {
 	*framework.Backend
+	handlers map[string]HandlerFunc
 }
 
 func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
@@ -55,6 +60,10 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 		Type:        framework.TypeString,
 		Description: "Multi-factor auth method to use (optional)",
 	}
+
+	// handlers maps supported MFA types which have backend instance specific handlers to their handlers
+	b.handlers["totp"] = totp.GetTotpHandler(b.Backend)
+
 	// wrap write callback to do MFA after auth
 	loginHandler := loginPath.Callbacks[logical.UpdateOperation]
 	loginPath.Callbacks[logical.UpdateOperation] = b.wrapLoginHandler(loginHandler)
@@ -76,11 +85,17 @@ func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framewo
 		}
 
 		// perform multi-factor authentication if type supported
-		handler, ok := handlers[mfa_config.Type]
+		handler, ok := globalHandlers[mfa_config.Type]
 		if ok {
 			return handler(req, d, resp)
 		} else {
-			return resp, err
+			// try backend instance handlers
+			handler, ok = b.handlers[mfa_config.Type]
+			if ok {
+				return handler(req, d, resp)
+			} else {
+				return resp, err
+			}
 		}
 	}
 }

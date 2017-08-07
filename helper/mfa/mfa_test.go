@@ -8,12 +8,22 @@ import (
 	logicaltest "github.com/hashicorp/vault/logical/testing"
 )
 
-// MakeTestBackend creates a simple MFA enabled backend.
+func setupTestBackend() (*framework.Backend, error) {
+	conf := logical.TestBackendConfig()
+	conf.StorageView = &logical.InmemStorage{}
+	b := makeTestBackend()
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// makeTestBackend creates a simple MFA enabled backend.
 // Login (before MFA) always succeeds with policy "foo".
 // An MFA "test" type is added to mfa.handlers that succeeds
 // if MFA method is "accept", otherwise it rejects.
-func MakeTestBackend() *framework.Backend {
-	handlers["test"] = testMFAHandler
+func makeTestBackend() *framework.Backend {
+	globalHandlers["test"] = testMFAHandler
 	b := &framework.Backend{
 		Help: "",
 
@@ -67,7 +77,10 @@ func testMFAHandler(req *logical.Request, d *framework.FieldData, resp *logical.
 }
 
 func TestMFALogin(t *testing.T) {
-	b := MakeTestBackend()
+	b, err := setupTestBackend()
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -80,7 +93,10 @@ func TestMFALogin(t *testing.T) {
 }
 
 func TestMFALoginDenied(t *testing.T) {
-	b := MakeTestBackend()
+	b, err := setupTestBackend()
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
 		AcceptanceTest: true,
@@ -111,7 +127,7 @@ func testAccStepLogin(t *testing.T, username string) logicaltest.TestStep {
 			"username": username,
 		},
 		Unauthenticated: true,
-		Check:           logicaltest.TestCheckAuth([]string{"foo"}),
+		Check:           logicaltest.TestCheckAuth([]string{"default", "foo"}),
 	}
 }
 
@@ -123,6 +139,7 @@ func testAccStepLoginDenied(t *testing.T, username string) logicaltest.TestStep 
 			"method":   "deny",
 			"username": username,
 		},
+		ErrorOk:         true,
 		Unauthenticated: true,
 		Check:           logicaltest.TestCheckError(),
 	}
