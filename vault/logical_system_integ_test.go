@@ -68,7 +68,7 @@ func TestSystemBackend_PluginReload_plugin(t *testing.T) {
 	b, cleanup := testSystemBackendMock(t, 2)
 	defer cleanup()
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "plugin/backend/reload")
+	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/backend/reload")
 	req.Data["plugin"] = "mock-plugin"
 	resp, err := b.HandleRequest(req)
 	if err != nil {
@@ -82,7 +82,7 @@ func TestSystemBackend_PluginReload_mounts(t *testing.T) {
 	b, cleanup := testSystemBackendMock(t, 2)
 	defer cleanup()
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "plugin/backend/reload")
+	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/backend/reload")
 	req.Data["mounts"] = "mock-0/,mock-1/"
 	resp, err := b.HandleRequest(req)
 	if err != nil {
