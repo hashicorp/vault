@@ -4,9 +4,11 @@ DEPRECATIONS/CHANGES:
 
  * Database Plugin Backends: Passwords generated for these backends now
    enforce stricter password requirements, as opposed to the previous behavior 
-   of returning a randomized UUID. Passwords are of length 20, and have a `A1a` 
+   of returning a randomized UUID. Passwords are of length 20, and have a `A1a-` 
    characters prepended to ensure stricter requirements. No regressions are 
-   expected from this change.
+   expected from this change. (For database backends that were previously
+   substituting underscores for hyphens in passwords, this will remain the
+   case.)
  * Lease Endpoints: The endpoints `sys/renew`, `sys/revoke`, `sys/revoke-prefix`,
    `sys/revoke-force` have been deprecated and relocated under `sys/leases`.
    Additionally, the deprecated path `sys/revoke-force` now requires the `sudo`
@@ -18,6 +20,7 @@ DEPRECATIONS/CHANGES:
 
 FEATURES:
 
+ * **Cassandra Storage**: Cassandra can now be used for Vault storage
  * **CockroachDB Storage**: CockroachDB can now be used for Vault storage
  * **CouchDB Storage**: CouchDB can now be used for Vault storage
  * **SAP HANA Database Plugin**: The `databases` backend can now manage users
@@ -25,6 +28,14 @@ FEATURES:
  * **Plugin Backends**: Vault now supports running secret and auth backends as
    plugins. Plugins can be mounted like normal backends and can be developed
    independently from Vault.
+ * **PROXY Protocol Support** Vault listeners can now be configured to honor
+   PROXY protocol v1 information to allow passing real client IPs into Vault. A
+   list of authorized addresses (IPs or subnets) can be defined and
+   accept/reject behavior controlled.
+ * **Lease lookup and browsing in the Vault Enterprise UI**: Vault Enterprise UI
+   now supports lookup and listing of leases and the associated actions from the 
+   `sys/leases` endpoints in the API. These are located in the new top level 
+   navigation item "Leases".
 
 IMPROVEMENTS:
 
@@ -32,6 +43,8 @@ IMPROVEMENTS:
  * api: Add `RenewTokenAsSelf` [GH-2886]
  * api: Client timeout can now be adjusted with the `VAULT_CLIENT_TIMEOUT` env
    var or with a new API function [GH-2956]
+ * api/cli: Client will now attempt to look up SRV records for the given Vault
+   hostname [GH-3035]
  * audit/socket: Enhance reconnection logic and don't require the connection to
    be established at unseal time [GH-2934]
  * audit/file: Opportunistically try re-opening the file on error [GH-2999]
@@ -43,8 +56,13 @@ IMPROVEMENTS:
    token on stdout and does not store it via the token helper [GH-2855]
  * core: CORS allowed origins can now be configured [GH-2021]
  * core: Add metrics counters for audit log failures [GH-2863]
+ * cors: Allow setting allowed headers via the API instead of always using
+   wildcard [GH-3023]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
+ * server: Add `tls_client_ca_file` option for specifying a CA file to use for
+   client certificate verification when `tls_require_and_verify_client_cert` is
+   enabled [GH-3034]
  * storage/cockroachdb: Add CockroachDB storage backend [GH-2713]
  * storage/couchdb: Add CouchhDB storage backend [GH-2880]
  * storage/mssql: Add `max_parallel` [GH-3026]
@@ -53,6 +71,8 @@ IMPROVEMENTS:
  * storage/s3: More efficient paging when an object has a lot of subobjects
    [GH-2780]
  * sys/wrapping: Make `sys/wrapping/lookup` unauthenticated [GH-3084]
+ * sys/wrapping: Wrapped tokens now store the original request path of the data
+   [GH-3100]
  * telemetry: Add support for DogStatsD [GH-2490]
 
 BUG FIXES:

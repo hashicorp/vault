@@ -42,7 +42,7 @@ Next, we must configure this backend to connect to a database. In this example
 we will connect to a MySQL database, but the configuration details needed for
 other plugin types can be found in their docs pages. This backend can configure
 multiple database connections, therefore a name for the connection must be
-provide; we'll call this one simply "mysql".
+provided; we'll call this one simply "mysql".
 
 ```
 $ vault write database/config/mysql \

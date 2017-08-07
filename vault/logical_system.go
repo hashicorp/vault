@@ -115,6 +115,10 @@ func NewSystemBackend(core *Core) *SystemBackend {
 						Type:        framework.TypeCommaStringSlice,
 						Description: "A comma-separated string or array of strings indicating origins that may make cross-origin requests.",
 					},
+					"allowed_headers": &framework.FieldSchema{
+						Type:        framework.TypeCommaStringSlice,
+						Description: "A comma-separated string or array of strings indicating headers that are allowed on cross-origin requests.",
+					},
 				},
 
 				Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -854,6 +858,7 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 	if enabled {
 		corsConf.RLock()
 		resp.Data["allowed_origins"] = corsConf.AllowedOrigins
+		resp.Data["allowed_headers"] = corsConf.AllowedHeaders
 		corsConf.RUnlock()
 	}
 
@@ -864,12 +869,13 @@ func (b *SystemBackend) handleCORSRead(req *logical.Request, d *framework.FieldD
 // cross-origin requests and sets the CORS enabled flag to true
 func (b *SystemBackend) handleCORSUpdate(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	origins := d.Get("allowed_origins").([]string)
+	headers := d.Get("allowed_headers").([]string)
 
-	return nil, b.Core.corsConfig.Enable(origins)
+	return nil, b.Core.corsConfig.Enable(origins, headers)
 }
 
-// handleCORSDelete clears the allowed origins and sets the CORS enabled flag
-// to false
+// handleCORSDelete sets the CORS enabled flag to false and clears the list of
+// allowed origins & headers.
 func (b *SystemBackend) handleCORSDelete(req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	return nil, b.Core.corsConfig.Disable()
 }
@@ -2204,6 +2210,7 @@ func (b *SystemBackend) handleWrappingLookup(
 
 	creationTTLRaw := cubbyResp.Data["creation_ttl"]
 	creationTime := cubbyResp.Data["creation_time"]
+	creationPath := cubbyResp.Data["creation_path"]
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{},
@@ -2218,6 +2225,9 @@ func (b *SystemBackend) handleWrappingLookup(
 	if creationTime != nil {
 		// This was JSON marshaled so it's already a string in RFC3339 format
 		resp.Data["creation_time"] = cubbyResp.Data["creation_time"]
+	}
+	if creationPath != nil {
+		resp.Data["creation_path"] = cubbyResp.Data["creation_path"]
 	}
 
 	return resp, nil
@@ -2278,6 +2288,13 @@ func (b *SystemBackend) handleWrappingRewrap(
 		return nil, fmt.Errorf("error reading creation_ttl value from wrapping information: %v", err)
 	}
 
+	// Get creation_path to return as the response later
+	creationPathRaw := cubbyResp.Data["creation_path"]
+	if creationPathRaw == nil {
+		return nil, fmt.Errorf("creation_path value in wrapping information was nil")
+	}
+	creationPath := creationPathRaw.(string)
+
 	// Fetch the original response and return it as the data for the new response
 	cubbyReq = &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -2310,7 +2327,8 @@ func (b *SystemBackend) handleWrappingRewrap(
 			"response": response,
 		},
 		WrapInfo: &wrapping.ResponseWrapInfo{
-			TTL: time.Duration(creationTTL),
+			TTL:          time.Duration(creationTTL),
+			CreationPath: creationPath,
 		},
 	}, nil
 }

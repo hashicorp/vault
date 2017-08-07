@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -21,7 +22,7 @@ func TestHandler_cors(t *testing.T) {
 
 	// Enable CORS and allow from any origin for testing.
 	corsConfig := core.CORSConfig()
-	err := corsConfig.Enable([]string{addr})
+	err := corsConfig.Enable([]string{addr}, nil)
 	if err != nil {
 		t.Fatalf("Error enabling CORS: %s", err)
 	}
@@ -78,7 +79,7 @@ func TestHandler_cors(t *testing.T) {
 	//
 	expHeaders := map[string]string{
 		"Access-Control-Allow-Origin":  addr,
-		"Access-Control-Allow-Headers": "*",
+		"Access-Control-Allow-Headers": strings.Join(stdAllowedHeaders, ","),
 		"Access-Control-Max-Age":       "300",
 		"Vary": "Origin",
 	}
@@ -281,6 +282,12 @@ func TestSysMounts_headerAuth_Wrapped(t *testing.T) {
 		t.Fatal("creation_time missing in wrap info")
 	}
 	expected["wrap_info"].(map[string]interface{})["creation_time"] = actualCreationTime
+
+	actualCreationPath, ok := actual["wrap_info"].(map[string]interface{})["creation_path"]
+	if !ok || actualCreationPath == "" {
+		t.Fatal("creation_path missing in wrap info")
+	}
+	expected["wrap_info"].(map[string]interface{})["creation_path"] = actualCreationPath
 
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual: %#v\n%T %T", expected, actual, actual["warnings"], actual["data"])

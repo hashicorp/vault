@@ -15,7 +15,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/meta"
+	"github.com/hashicorp/vault/physical"
 	"github.com/mitchellh/cli"
+
+	physFile "github.com/hashicorp/vault/physical/file"
 )
 
 var (
@@ -100,6 +103,9 @@ func TestServer_ReloadListener(t *testing.T) {
 		},
 		ShutdownCh: MakeShutdownCh(),
 		SighupCh:   MakeSighupCh(),
+		PhysicalBackends: map[string]physical.Factory{
+			"file": physFile.NewFileBackend,
+		},
 	}
 
 	finished := false

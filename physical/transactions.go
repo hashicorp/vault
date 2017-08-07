@@ -27,7 +27,7 @@ type PseudoTransactional interface {
 }
 
 // Implements the transaction interface
-func genericTransactionHandler(t PseudoTransactional, txns []TxnEntry) (retErr error) {
+func GenericTransactionHandler(t PseudoTransactional, txns []TxnEntry) (retErr error) {
 	rollbackStack := make([]TxnEntry, 0, len(txns))
 	var dirty bool
 

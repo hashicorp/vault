@@ -22,7 +22,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"testing"
 	"time"
 
 	log "github.com/mgutz/logxi/v1"
@@ -41,6 +40,9 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
+	"github.com/mitchellh/go-testing-interface"
+
+	physInmem "github.com/hashicorp/vault/physical/inmem"
 )
 
 // This file contains a number of methods that are useful for unit
@@ -82,21 +84,24 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
-func TestCore(t testing.TB) *Core {
+func TestCore(t testing.T) *Core {
 	return TestCoreWithSeal(t, nil)
 }
 
-// TestCoreNewSeal returns an in-memory, ininitialized core with the new seal
-// configuration.
-func TestCoreNewSeal(t testing.TB) *Core {
+// TestCoreNewSeal returns a pure in-memory, uninitialized core with
+// the new seal configuration.
+func TestCoreNewSeal(t testing.T) *Core {
 	return TestCoreWithSeal(t, &TestSeal{})
 }
 
 // TestCoreWithSeal returns a pure in-memory, uninitialized core with the
 // specified seal for testing.
-func TestCoreWithSeal(t testing.TB, testSeal Seal) *Core {
+func TestCoreWithSeal(t testing.T, testSeal Seal) *Core {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	physicalBackend := physical.NewInmem(logger)
+	physicalBackend, err := physInmem.NewInmem(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	conf := testCoreConfig(t, physicalBackend, logger)
 
@@ -112,7 +117,7 @@ func TestCoreWithSeal(t testing.TB, testSeal Seal) *Core {
 	return c
 }
 
-func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
+func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Logger) *CoreConfig {
 	noopAudits := map[string]audit.Factory{
 		"noop": func(config *audit.BackendConfig) (audit.Backend, error) {
 			view := &logical.InmemStorage{}
@@ -162,11 +167,11 @@ func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.L
 
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
-func TestCoreInit(t testing.TB, core *Core) ([][]byte, string) {
+func TestCoreInit(t testing.T, core *Core) ([][]byte, string) {
 	return TestCoreInitClusterWrapperSetup(t, core, nil, nil)
 }
 
-func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, clusterAddrs []*net.TCPAddr, handler http.Handler) ([][]byte, string) {
+func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, clusterAddrs []*net.TCPAddr, handler http.Handler) ([][]byte, string) {
 	core.SetClusterListenerAddrs(clusterAddrs)
 	core.SetClusterHandler(handler)
 	result, err := core.Initialize(&InitParams{
@@ -191,7 +196,7 @@ func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
-func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
+func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	core := TestCore(t)
 	keys, token := TestCoreInit(t, core)
 	for _, key := range keys {
@@ -211,7 +216,7 @@ func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
 	return core, keys, token
 }
 
-func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][]byte, string) {
+func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = &TestSeal{}
@@ -239,7 +244,7 @@ func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][
 	return core, keys, token
 }
 
-func testTokenStore(t testing.TB, c *Core) *TokenStore {
+func testTokenStore(t testing.T, c *Core) *TokenStore {
 	me := &MountEntry{
 		Table:       credentialTableType,
 		Path:        "token/",
@@ -279,7 +284,7 @@ func testTokenStore(t testing.TB, c *Core) *TokenStore {
 
 // TestCoreWithTokenStore returns an in-memory core that has a token store
 // mounted, so that logical token functions can be used
-func TestCoreWithTokenStore(t testing.TB) (*Core, *TokenStore, [][]byte, string) {
+func TestCoreWithTokenStore(t testing.T) (*Core, *TokenStore, [][]byte, string) {
 	c, keys, root := TestCoreUnsealed(t)
 	ts := testTokenStore(t, c)
 
@@ -289,7 +294,7 @@ func TestCoreWithTokenStore(t testing.TB) (*Core, *TokenStore, [][]byte, string)
 // TestCoreWithBackendTokenStore returns a core that has a token store
 // mounted and used the provided physical backend, so that logical token
 // functions can be used
-func TestCoreWithBackendTokenStore(t testing.TB, backend physical.Backend) (*Core, *TokenStore, [][]byte, string) {
+func TestCoreWithBackendTokenStore(t testing.T, backend physical.Backend) (*Core, *TokenStore, [][]byte, string) {
 	c, keys, root := TestCoreUnsealedBackend(t, backend)
 	ts := testTokenStore(t, c)
 
@@ -315,7 +320,7 @@ func TestDynamicSystemView(c *Core) *dynamicSystemView {
 	return &dynamicSystemView{c, me}
 }
 
-func TestAddTestPlugin(t testing.TB, c *Core, name, testFunc string) {
+func TestAddTestPlugin(t testing.T, c *Core, name, testFunc string) {
 	file, err := os.Open(os.Args[0])
 	if err != nil {
 		t.Fatal(err)
@@ -579,7 +584,7 @@ func GenerateRandBytes(length int) ([]byte, error) {
 	return buf, nil
 }
 
-func TestWaitActive(t testing.TB, core *Core) {
+func TestWaitActive(t testing.T, core *Core) {
 	start := time.Now()
 	var standby bool
 	var err error
@@ -666,7 +671,7 @@ type TestClusterOptions struct {
 	BaseListenAddress  string
 }
 
-func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
+func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *TestCluster {
 	certIPs := []net.IP{
 		net.IPv6loopback,
 		net.ParseIP("127.0.0.1"),
@@ -1083,10 +1088,17 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	if coreConfig.Physical == nil {
-		coreConfig.Physical = physical.NewInmem(logger)
+		coreConfig.Physical, err = physInmem.NewInmem(nil, logger)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	if coreConfig.HAPhysical == nil {
-		coreConfig.HAPhysical = physical.NewInmemHA(logger)
+		haPhys, err := physInmem.NewInmemHA(nil, logger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		coreConfig.HAPhysical = haPhys.(physical.HABackend)
 	}
 
 	c1, err := NewCore(coreConfig)

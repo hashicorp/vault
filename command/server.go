@@ -16,13 +16,13 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"testing"
 	"time"
 
 	"golang.org/x/net/http2"
 
 	colorable "github.com/mattn/go-colorable"
 	log "github.com/mgutz/logxi/v1"
+	testing "github.com/mitchellh/go-testing-interface"
 
 	"google.golang.org/grpc/grpclog"
 
@@ -38,6 +38,7 @@ import (
 	"github.com/hashicorp/vault/helper/logformat"
 	"github.com/hashicorp/vault/helper/mlock"
 	"github.com/hashicorp/vault/helper/parseutil"
+	"github.com/hashicorp/vault/helper/proxyutil"
 	"github.com/hashicorp/vault/helper/reload"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/logical"
@@ -52,6 +53,7 @@ type ServerCommand struct {
 	AuditBackends      map[string]audit.Factory
 	CredentialBackends map[string]logical.Factory
 	LogicalBackends    map[string]logical.Factory
+	PhysicalBackends   map[string]physical.Factory
 
 	ShutdownCh chan struct{}
 	SighupCh   chan struct{}
@@ -203,8 +205,14 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// Initialize the backend
-	backend, err := physical.NewBackend(
-		config.Storage.Type, c.logger, config.Storage.Config)
+	factory, exists := c.PhysicalBackends[config.Storage.Type]
+	if !exists {
+		c.Ui.Output(fmt.Sprintf(
+			"Unknown storage type %s",
+			config.Storage.Type))
+		return 1
+	}
+	backend, err := factory(config.Storage.Config, c.logger)
 	if err != nil {
 		c.Ui.Output(fmt.Sprintf(
 			"Error initializing storage of type %s: %s",
@@ -265,8 +273,14 @@ func (c *ServerCommand) Run(args []string) int {
 	// Initialize the separate HA storage backend, if it exists
 	var ok bool
 	if config.HAStorage != nil {
-		habackend, err := physical.NewBackend(
-			config.HAStorage.Type, c.logger, config.HAStorage.Config)
+		factory, exists := c.PhysicalBackends[config.HAStorage.Type]
+		if !exists {
+			c.Ui.Output(fmt.Sprintf(
+				"Unknown HA storage type %s",
+				config.HAStorage.Type))
+			return 1
+		}
+		habackend, err := factory(config.HAStorage.Config, c.logger)
 		if err != nil {
 			c.Ui.Output(fmt.Sprintf(
 				"Error initializing HA storage of type %s: %s",
@@ -438,6 +452,43 @@ CLUSTER_SYNTHESIS_COMPLETE:
 				"Error initializing listener of type %s: %s",
 				lnConfig.Type, err))
 			return 1
+		}
+
+		if val, ok := lnConfig.Config["proxy_protocol_behavior"]; ok {
+			behavior, ok := val.(string)
+			if !ok {
+				c.Ui.Output(fmt.Sprintf(
+					"Error parsing proxy_protocol_behavior value for listener of type %s: not a string",
+					lnConfig.Type))
+				return 1
+			}
+
+			authorizedAddrsRaw, ok := lnConfig.Config["proxy_protocol_authorized_addrs"]
+			if !ok {
+				c.Ui.Output(fmt.Sprintf(
+					"proxy_protocol_behavior set but no proxy_protocol_authorized_addrs value for listener of type %s",
+					lnConfig.Type))
+				return 1
+			}
+
+			proxyProtoConfig := &proxyutil.ProxyProtoConfig{
+				Behavior: behavior,
+			}
+			if err := proxyProtoConfig.SetAuthorizedAddrs(authorizedAddrsRaw); err != nil {
+				c.Ui.Output(fmt.Sprintf(
+					"Error parsing proxy_protocol_authorized_addrs for listener of type %s: %v",
+					lnConfig.Type, err))
+				return 1
+			}
+
+			newLn, err := proxyutil.WrapInProxyProto(ln, proxyProtoConfig)
+			if err != nil {
+				c.Ui.Output(fmt.Sprintf(
+					"Error configuring PROXY protocol wrapper: %s", err))
+				return 1
+			}
+
+			ln = newLn
 		}
 
 		lns = append(lns, ln)
@@ -758,7 +809,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress string) int {
-	testCluster := vault.NewTestCluster(&testing.T{}, base, &vault.TestClusterOptions{
+	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: devListenAddress,
 	})
@@ -870,12 +921,22 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 	for i, key := range testCluster.BarrierKeys {
 		c.Ui.Output(fmt.Sprintf(
 			"Unseal Key %d: %s",
-			i, base64.StdEncoding.EncodeToString(key),
+			i+1, base64.StdEncoding.EncodeToString(key),
 		))
 	}
 
 	c.Ui.Output(fmt.Sprintf(
 		"\nRoot Token: %s\n", testCluster.RootToken,
+	))
+
+	c.Ui.Output(fmt.Sprintf(
+		"\nUseful env vars:\n"+
+			"VAULT_TOKEN=%s\n"+
+			"VAULT_ADDR=%s\n"+
+			"VAULT_CACERT=%s/ca_cert.pem\n",
+		testCluster.RootToken,
+		testCluster.Cores[0].Client.Address(),
+		testCluster.TempDir,
 	))
 
 	// Output the header that the server has started

@@ -277,6 +277,15 @@ func (b *backend) pathIssueSignCert(
 		}
 	}
 
+	if useCSR {
+		if role.UseCSRCommonName && data.Get("common_name").(string) != "" {
+			resp.AddWarning("the common_name field was provided but the role is set with \"use_csr_common_name\" set to true")
+		}
+		if role.UseCSRSANs && data.Get("alt_names").(string) != "" {
+			resp.AddWarning("the alt_names field was provided but the role is set with \"use_csr_sans\" set to true")
+		}
+	}
+
 	return resp, nil
 }
 

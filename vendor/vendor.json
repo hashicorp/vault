@@ -121,40 +121,48 @@
 			"revisionTime": "2012-06-04T00:48:16Z"
 		},
 		{
-			"checksumSHA1": "bZSSR3ayh4F8gSqiZCN7KogiSdY=",
+			"checksumSHA1": "bEUmAb/9VJN8I55NCXaSwDkBBZQ=",
+			"path": "github.com/SAP/go-hdb",
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
+		},
+		{
+			"checksumSHA1": "g8C6yI8XhyDLnCFwvfYe8CT96ZU=",
 			"path": "github.com/SAP/go-hdb/driver",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z",
+			"version": "v0.9.1",
+			"versionExact": "v0.9.1"
 		},
 		{
 			"checksumSHA1": "NMOfkY6oRCxCXzM1LVgCyGCLp0Y=",
 			"path": "github.com/SAP/go-hdb/driver/sqltrace",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "977xfUN5PjvUvvJl5aTIyu+pILg=",
 			"path": "github.com/SAP/go-hdb/internal/bufio",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
-			"checksumSHA1": "5o0Xa0DIExeje/gUH3Pywog8gQ0=",
+			"checksumSHA1": "xL3ef789fS4+MSxb59Apj0D1BlA=",
 			"path": "github.com/SAP/go-hdb/internal/protocol",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "KK2U+DbcpWBexg9ZMEKGRIaqFtU=",
 			"path": "github.com/SAP/go-hdb/internal/unicode",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "fb432MWzL2ONS0e6HyGv3P2oG1I=",
 			"path": "github.com/SAP/go-hdb/internal/unicode/cesu8",
-			"revision": "a582e52ee0774b3554cefb389cba53b221924fd7",
-			"revisionTime": "2017-04-01T11:06:20Z"
+			"revision": "cbb0eccdfff1bdf6454418056a33b4407215e4a2",
+			"revisionTime": "2017-08-02T08:23:16Z"
 		},
 		{
 			"checksumSHA1": "t+uej2kiyqRyQYguygI8t9nJH2w=",
@@ -197,6 +205,12 @@
 			"path": "github.com/armon/go-metrics/datadog",
 			"revision": "f036747b9d0e8590f175a5d654a2194a7d9df4b5",
 			"revisionTime": "2017-06-01T21:44:32Z"
+		},
+		{
+			"checksumSHA1": "MzSim/5A5kPO2q0n3aKq8H5qJvU=",
+			"path": "github.com/armon/go-proxyproto",
+			"revision": "48572f11356f1843b694f21a290d4f1006bc5e47",
+			"revisionTime": "2017-06-20T22:09:30Z"
 		},
 		{
 			"checksumSHA1": "gNO0JNpLzYOdInGeq7HqMZUzx9M=",
@@ -901,16 +915,22 @@
 			"revisionTime": "2017-02-11T01:34:15Z"
 		},
 		{
+			"checksumSHA1": "miVF4/7JP0lRwZvFJGKwZWk7aAQ=",
+			"path": "github.com/hashicorp/go-hclog",
+			"revision": "b4e5765d1e5f00a0550911084f45f8214b5b83b9",
+			"revisionTime": "2017-07-16T17:45:23Z"
+		},
+		{
 			"checksumSHA1": "g7uHECbzuaWwdxvwoyxBwgeERPk=",
 			"path": "github.com/hashicorp/go-multierror",
 			"revision": "83588e72410abfbe4df460eeb6f30841ae47d4c4",
 			"revisionTime": "2017-06-22T06:09:55Z"
 		},
 		{
-			"checksumSHA1": "/Pu2EUYV124yGyyqDIIDxg5ZRf4=",
+			"checksumSHA1": "SXYSCgJlB1yjlH5jIdYU71L7WI0=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "5ee1a665d1862b865bd2203cdce4f08e39841815",
-			"revisionTime": "2017-06-21T05:55:18Z"
+			"revision": "c31bd45044f34895d44e66ae3724e5431a7252f4",
+			"revisionTime": "2017-08-05T18:55:13Z"
 		},
 		{
 			"checksumSHA1": "ErJHGU6AVPZM9yoY/xV11TwSjQs=",
@@ -923,6 +943,12 @@
 			"path": "github.com/hashicorp/go-rootcerts",
 			"revision": "6bb64b370b90e7ef1fa532be9e591a81c3493e00",
 			"revisionTime": "2016-05-03T14:34:40Z"
+		},
+		{
+			"checksumSHA1": "NaOL+Voo17F9a2dd6/VU7NAI5EM=",
+			"path": "github.com/hashicorp/go-sockaddr",
+			"revision": "41949a141473f6340abc6ba0fcd0f89da6f6f837",
+			"revisionTime": "2017-06-27T02:34:41Z"
 		},
 		{
 			"checksumSHA1": "pUPzsy2MLooiC5+5Bsjl9j3/qcs=",
@@ -1163,6 +1189,12 @@
 			"path": "github.com/mitchellh/go-homedir",
 			"revision": "b8bc1bf767474819792c23f32d8286a45736f1c6",
 			"revisionTime": "2016-12-03T19:45:07Z"
+		},
+		{
+			"checksumSHA1": "6TBW88DSxRHf4WvOC9K5ilBZx/8=",
+			"path": "github.com/mitchellh/go-testing-interface",
+			"revision": "9a441910b16872f7b8283682619b3761a9aa2222",
+			"revisionTime": "2017-07-30T05:09:07Z"
 		},
 		{
 			"checksumSHA1": "EHjhpHipgm+XGccrRAms9AW3Ewk=",
