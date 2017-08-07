@@ -2,8 +2,6 @@ package vault
 
 import (
 	"fmt"
-
-	"github.com/hashicorp/vault/logical"
 )
 
 // reloadPluginMounts reloads provided mounts, regardless of
@@ -60,13 +58,7 @@ func (c *Core) reloadPluginCommon(entry *MountEntry) error {
 		re := raw.(*routeEntry)
 		re.backend.Cleanup()
 
-		var view *BarrierView
-
-		// Initialize the backend, special casing for system
-		barrierPath := backendBarrierPrefix + entry.UUID + "/"
-
-		// Create a barrier view using the UUID
-		view = NewBarrierView(c.barrier, barrierPath)
+		view := re.storageView
 
 		sysView := c.mountEntrySysView(entry)
 		conf := make(map[string]string)
@@ -81,12 +73,6 @@ func (c *Core) reloadPluginCommon(entry *MountEntry) error {
 		}
 		if backend == nil {
 			return fmt.Errorf("nil backend of type %q returned from creation function", entry.Type)
-		}
-
-		// Check for the correct backend type
-		backendType := backend.Type()
-		if entry.Type == "plugin" && backendType != logical.TypeLogical {
-			return fmt.Errorf("cannot reload '%s' of type '%s' as a logical backend", entry.Config.PluginName, backendType)
 		}
 
 		// Call initialize; this takes care of init tasks that must be run after
