@@ -88,8 +88,8 @@ func TestCore(t testing.T) *Core {
 	return TestCoreWithSeal(t, nil)
 }
 
-// TestCoreNewSeal returns an in-memory, ininitialized core with the new seal
-// configuration.
+// TestCoreNewSeal returns a pure in-memory, uninitialized core with
+// the new seal configuration.
 func TestCoreNewSeal(t testing.T) *Core {
 	return TestCoreWithSeal(t, &TestSeal{})
 }

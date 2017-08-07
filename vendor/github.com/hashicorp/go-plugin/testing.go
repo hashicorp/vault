@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"net"
 	"net/rpc"
-	"testing"
 
+	"github.com/mitchellh/go-testing-interface"
 	"google.golang.org/grpc"
 )
 
@@ -14,7 +14,7 @@ import (
 
 // TestConn is a helper function for returning a client and server
 // net.Conn connected to each other.
-func TestConn(t *testing.T) (net.Conn, net.Conn) {
+func TestConn(t testing.T) (net.Conn, net.Conn) {
 	// Listen to any local port. This listener will be closed
 	// after a single connection is established.
 	l, err := net.Listen("tcp", "127.0.0.1:0")
@@ -48,7 +48,7 @@ func TestConn(t *testing.T) (net.Conn, net.Conn) {
 }
 
 // TestRPCConn returns a rpc client and server connected to each other.
-func TestRPCConn(t *testing.T) (*rpc.Client, *rpc.Server) {
+func TestRPCConn(t testing.T) (*rpc.Client, *rpc.Server) {
 	clientConn, serverConn := TestConn(t)
 
 	server := rpc.NewServer()
@@ -60,7 +60,7 @@ func TestRPCConn(t *testing.T) (*rpc.Client, *rpc.Server) {
 
 // TestPluginRPCConn returns a plugin RPC client and server that are connected
 // together and configured.
-func TestPluginRPCConn(t *testing.T, ps map[string]Plugin) (*RPCClient, *RPCServer) {
+func TestPluginRPCConn(t testing.T, ps map[string]Plugin) (*RPCClient, *RPCServer) {
 	// Create two net.Conns we can use to shuttle our control connection
 	clientConn, serverConn := TestConn(t)
 
@@ -79,7 +79,7 @@ func TestPluginRPCConn(t *testing.T, ps map[string]Plugin) (*RPCClient, *RPCServ
 
 // TestPluginGRPCConn returns a plugin gRPC client and server that are connected
 // together and configured. This is used to test gRPC connections.
-func TestPluginGRPCConn(t *testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCServer) {
+func TestPluginGRPCConn(t testing.T, ps map[string]Plugin) (*GRPCClient, *GRPCServer) {
 	// Create a listener
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {

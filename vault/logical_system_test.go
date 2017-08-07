@@ -56,6 +56,7 @@ func TestSystemConfigCORS(t *testing.T) {
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "config/cors")
 	req.Data["allowed_origins"] = "http://www.example.com"
+	req.Data["allowed_headers"] = "X-Custom-Header"
 	_, err := b.HandleRequest(req)
 	if err != nil {
 		t.Fatal(err)
@@ -65,6 +66,7 @@ func TestSystemConfigCORS(t *testing.T) {
 		Data: map[string]interface{}{
 			"enabled":         true,
 			"allowed_origins": []string{"http://www.example.com"},
+			"allowed_headers": append(StdAllowedHeaders, "X-Custom-Header"),
 		},
 	}
 

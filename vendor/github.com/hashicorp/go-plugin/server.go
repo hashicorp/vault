@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/hashicorp/go-hclog"
+
 	"google.golang.org/grpc"
 )
 
@@ -55,7 +57,7 @@ type ServeConfig struct {
 	// Plugins are the plugins that are served.
 	Plugins map[string]Plugin
 
-	// GRPCServer shoudl be non-nil to enable serving the plugins over
+	// GRPCServer should be non-nil to enable serving the plugins over
 	// gRPC. This is a function to create the server when needed with the
 	// given server options. The server options populated by go-plugin will
 	// be for TLS if set. You may modify the input slice.
@@ -79,7 +81,7 @@ func (c *ServeConfig) Protocol() Protocol {
 // Serve serves the plugins given by ServeConfig.
 //
 // Serve doesn't return until the plugin is done being executed. Any
-// errors will be outputted to the log.
+// errors will be outputted to os.Stderr.
 //
 // This is the method that plugins should call in their main() functions.
 func Serve(opts *ServeConfig) {
@@ -104,6 +106,13 @@ func Serve(opts *ServeConfig) {
 	// Logging goes to the original stderr
 	log.SetOutput(os.Stderr)
 
+	// internal logger to os.Stderr
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.Trace,
+		Output:     os.Stderr,
+		JSONFormat: true,
+	})
+
 	// Create our new stdout, stderr files. These will override our built-in
 	// stdout/stderr so that it works across the stream boundary.
 	stdout_r, stdout_w, err := os.Pipe()
@@ -120,7 +129,7 @@ func Serve(opts *ServeConfig) {
 	// Register a listener so we can accept a connection
 	listener, err := serverListener()
 	if err != nil {
-		log.Printf("[ERR] plugin: plugin init: %s", err)
+		logger.Error("plugin init error", "error", err)
 		return
 	}
 
@@ -134,7 +143,7 @@ func Serve(opts *ServeConfig) {
 	if opts.TLSProvider != nil {
 		tlsConfig, err = opts.TLSProvider()
 		if err != nil {
-			log.Printf("[ERR] plugin: plugin tls init: %s", err)
+			logger.Error("plugin tls init", "error", err)
 			return
 		}
 	}
@@ -177,7 +186,7 @@ func Serve(opts *ServeConfig) {
 
 	// Initialize the servers
 	if err := server.Init(); err != nil {
-		log.Printf("[ERR] plugin: protocol init: %s", err)
+		logger.Error("protocol init", "error", err)
 		return
 	}
 
@@ -190,9 +199,9 @@ func Serve(opts *ServeConfig) {
 		extra = "|" + extra
 	}
 
+	logger.Debug("plugin address", "network", listener.Addr().Network(), "address", listener.Addr().String())
+
 	// Output the address and service name to stdout so that core can bring it up.
-	log.Printf("[DEBUG] plugin: plugin address: %s %s\n",
-		listener.Addr().Network(), listener.Addr().String())
 	fmt.Printf("%d|%d|%s|%s|%s%s\n",
 		CoreProtocolVersion,
 		opts.ProtocolVersion,
@@ -210,9 +219,7 @@ func Serve(opts *ServeConfig) {
 		for {
 			<-ch
 			newCount := atomic.AddInt32(&count, 1)
-			log.Printf(
-				"[DEBUG] plugin: received interrupt signal (count: %d). Ignoring.",
-				newCount)
+			logger.Debug("plugin received interrupt signal, ignoring", "count", newCount)
 		}
 	}()
 

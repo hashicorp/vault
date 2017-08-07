@@ -915,16 +915,22 @@
 			"revisionTime": "2017-02-11T01:34:15Z"
 		},
 		{
+			"checksumSHA1": "miVF4/7JP0lRwZvFJGKwZWk7aAQ=",
+			"path": "github.com/hashicorp/go-hclog",
+			"revision": "b4e5765d1e5f00a0550911084f45f8214b5b83b9",
+			"revisionTime": "2017-07-16T17:45:23Z"
+		},
+		{
 			"checksumSHA1": "g7uHECbzuaWwdxvwoyxBwgeERPk=",
 			"path": "github.com/hashicorp/go-multierror",
 			"revision": "83588e72410abfbe4df460eeb6f30841ae47d4c4",
 			"revisionTime": "2017-06-22T06:09:55Z"
 		},
 		{
-			"checksumSHA1": "/Pu2EUYV124yGyyqDIIDxg5ZRf4=",
+			"checksumSHA1": "SXYSCgJlB1yjlH5jIdYU71L7WI0=",
 			"path": "github.com/hashicorp/go-plugin",
-			"revision": "5ee1a665d1862b865bd2203cdce4f08e39841815",
-			"revisionTime": "2017-06-21T05:55:18Z"
+			"revision": "c31bd45044f34895d44e66ae3724e5431a7252f4",
+			"revisionTime": "2017-08-05T18:55:13Z"
 		},
 		{
 			"checksumSHA1": "ErJHGU6AVPZM9yoY/xV11TwSjQs=",
