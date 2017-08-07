@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/logical"
 )
 
@@ -13,10 +14,13 @@ func (c *Core) reloadMatchingPluginMounts(mounts []string) error {
 	c.mountsLock.Lock()
 	defer c.mountsLock.Unlock()
 
+	var errors error
 	for _, mount := range mounts {
 		entry := c.router.MatchingMountEntry(mount)
 		if entry == nil {
-			return fmt.Errorf("cannot fetch mount entry on %s", mount)
+			errors = multierror.Append(errors, fmt.Errorf("cannot fetch mount entry on %s", mount))
+			continue
+			// return fmt.Errorf("cannot fetch mount entry on %s", mount)
 		}
 
 		var isAuth bool
@@ -28,12 +32,13 @@ func (c *Core) reloadMatchingPluginMounts(mounts []string) error {
 		if entry.Type == "plugin" {
 			err := c.reloadPluginCommon(entry, isAuth)
 			if err != nil {
-				return err
+				errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %s: %v", mount, err))
+				continue
 			}
 			c.logger.Info("core: successfully reloaded plugin", "plugin", entry.Config.PluginName, "path", entry.Path)
 		}
 	}
-	return nil
+	return errors
 }
 
 // reloadPlugin reloads all mounted backends that are of
