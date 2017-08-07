@@ -1,4 +1,4 @@
-// Package duo provides a TOTP MFA handler to authenticate users
+// Package totp provides a TOTP MFA handler to authenticate users
 // with TOTP. This handler is registered as the "totp" type in
 // mfa_config.
 package totp
@@ -41,13 +41,13 @@ func GetTotpHandler(fb *framework.Backend) func(req *logical.Request, d *framewo
 	tb.UsedCodes = cache.New(0, 30*time.Second)
 	b.Backend = &tb
 
-	return b.TotpHandler
+	return b.totpHandler
 }
 
-// TotpHandler interacts with the builtin totp backend to authenticate a user
+// totpHandler interacts with the builtin totp backend to authenticate a user
 // login request. If successful, the original response from the login
 // backend is returned.
-func (b *backend) TotpHandler(req *logical.Request, d *framework.FieldData, resp *logical.Response) (
+func (b *backend) totpHandler(req *logical.Request, d *framework.FieldData, resp *logical.Response) (
 	*logical.Response, error) {
 	username, ok := resp.Auth.Metadata["username"]
 	if !ok {

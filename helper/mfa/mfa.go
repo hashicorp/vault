@@ -41,6 +41,11 @@ func MFARootPaths() []string {
 // HandlerFunc is the callback called to handle MFA for a login request.
 type HandlerFunc func(*logical.Request, *framework.FieldData, *logical.Response) (*logical.Response, error)
 
+// globalHandlers maps supported MFA types which have static handlers to their handlers
+var globalHandlers = map[string]HandlerFunc{
+	"duo": duo.DuoHandler,
+}
+
 type backend struct {
 	*framework.Backend
 	handlers map[string]HandlerFunc
@@ -56,8 +61,7 @@ func wrapLoginPath(b *backend, loginPath *framework.Path) *framework.Path {
 		Description: "Multi-factor auth method to use (optional)",
 	}
 
-	// handlers maps each supported MFA type to its handler.
-	b.handlers["duo"] = duo.DuoHandler
+	// handlers maps supported MFA types which have backend instance specific handlers to their handlers
 	b.handlers["totp"] = totp.GetTotpHandler(b.Backend)
 
 	// wrap write callback to do MFA after auth
@@ -81,11 +85,17 @@ func (b *backend) wrapLoginHandler(loginHandler framework.OperationFunc) framewo
 		}
 
 		// perform multi-factor authentication if type supported
-		handler, ok := b.handlers[mfa_config.Type]
+		handler, ok := globalHandlers[mfa_config.Type]
 		if ok {
 			return handler(req, d, resp)
 		} else {
-			return resp, err
+			// try backend instance handlers
+			handler, ok = b.handlers[mfa_config.Type]
+			if ok {
+				return handler(req, d, resp)
+			} else {
+				return resp, err
+			}
 		}
 	}
 }
