@@ -56,6 +56,8 @@ IMPROVEMENTS:
    token on stdout and does not store it via the token helper [GH-2855]
  * core: CORS allowed origins can now be configured [GH-2021]
  * core: Add metrics counters for audit log failures [GH-2863]
+ * cors: Allow setting allowed headers via the API instead of always using
+   wildcard [GH-3023]
  * secret/ssh: Allow specifying the key ID format using template values for CA
    type [GH-2888]
  * server: Add `tls_client_ca_file` option for specifying a CA file to use for
