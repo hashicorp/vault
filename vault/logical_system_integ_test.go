@@ -71,14 +71,6 @@ func TestSystemBackend_PluginReload_plugin(t *testing.T) {
 	core := cluster.Cores[0]
 
 	// Update internal value in the backend
-	/*
-		_, err := core.Client.Logical().Write("mock-1/internal", map[string]interface{}{
-			"value": "baz",
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	*/
 	req := logical.TestRequest(t, logical.UpdateOperation, "mock-1/internal")
 	req.ClientToken = core.Client.Token()
 	req.Data["value"] = "baz"

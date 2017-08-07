@@ -14,13 +14,13 @@ func pathInternal(b *backend) *framework.Path {
 			"value": &framework.FieldSchema{Type: framework.TypeString},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathInternalUpdateOperation,
+			logical.UpdateOperation: b.pathInternalUpdate,
 			logical.ReadOperation:   b.pathInternalRead,
 		},
 	}
 }
 
-func (b *backend) pathInternalUpdateOperation(
+func (b *backend) pathInternalUpdate(
 	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	value := data.Get("value").(string)
 	b.internal = value
