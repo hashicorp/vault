@@ -39,10 +39,29 @@ FEATURES:
    PROXY protocol v1 information to allow passing real client IPs into Vault. A
    list of authorized addresses (IPs or subnets) can be defined and
    accept/reject behavior controlled.
- * **Lease lookup and browsing in the Vault Enterprise UI**: Vault Enterprise UI
+ * **Lease Lookup and Browsing in the Vault Enterprise UI**: Vault Enterprise UI
    now supports lookup and listing of leases and the associated actions from the 
    `sys/leases` endpoints in the API. These are located in the new top level 
    navigation item "Leases".
+ * **Filtered Mounts for Performance Mode Replication**: Whitelists or
+   blacklists of mounts can be defined per-secondary to control which mounts
+   are actually replicated to that secondary. This can allow targeted
+   replication of specific sets of data to specific geolocations/datacenters.
+ * **Disaster Recovery Mode Replication (Enterprise Only)**: There is a new
+   replication mode, Disaster Recovery (DR), that performs full real-time
+   replication (including tokens and leases) to DR secondaries. DR secondaries
+   cannot handle client requests, but can be promoted to primary as needed for
+   failover.
+ * **Vault Identity (Enterprise Only)**: Vault's new Identity system allows
+   correlation of users across tokens. At present this is only used for MFA,
+   but will be the foundation of many other features going forward.
+ * **Duo Push, Okta Push, and TOTP MFA For All Authenticated Paths (Enterprise
+   Only)**: A brand new MFA system built on top of Identity allows MFA
+   (currently Duo Push, Okta Push, and TOTP) for any authenticated path within
+   Vault. MFA methods can be configured centrally, and TOTP keys live within
+   the user's Identity information to allow using the same key across tokens.
+   Specific MFA method(s) required for any given path within Vault can be
+   specified in normal ACL path statements.
 
 IMPROVEMENTS:
 
