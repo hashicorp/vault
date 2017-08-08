@@ -42,9 +42,9 @@ has a number of parameters to further configure a connection.
 {
   "plugin_name": "oracle-database-plugin",
   "allowed_roles": "readonly",
-  "connection_url": "system/Oracle@localhost:1521/OraDoc.localhost"
+  "connection_url": "system/Oracle@localhost:1521/OraDoc.localhost",
   "max_open_connections": 5,
-  "max_connection_lifetime": "5s",
+  "max_connection_lifetime": "5s"
 }
 ```
 
