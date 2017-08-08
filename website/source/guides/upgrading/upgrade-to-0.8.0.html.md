@@ -23,20 +23,18 @@ there is a maintenance window.
 
 There are two reindex processes that need to happen during the upgrade, for two
 different indexes. One will happen automatically when the cluster is upgraded
-to 0.8.0. The other can be done in one of a few ways, as follows.
+to 0.8.0. _This happens even if you are not currently using replication._ The
+other can be done in one of a few ways, as follows.
 
 ### If Not Using Replication
 
-If not using replication, and if you ever plan on using replication, you should
-reindex the primary by issuing a write to `sys/replication/reindex`. This can
-be done either on 0.7.3 prior to upgrading or 0.8.0 after upgrading, but will
-be faster if performed prior to upgrading.
+If not using replication, no further action needs to be taken.
 
 ### If Using Replication
 
 #### Option 1: Reindex the Primary, then Upgrade Secondaries
 
-The first option is to issue a write to `sys/replication/reindex` on the
+The first option is to issue a write to [`sys/replication/reindex`][reindex] on the
 primary (it is not necessary on the secondaries). When the reindex on the
 primary is finished, upgrade the secondaries, then upgrade the primary.
 
@@ -51,3 +49,5 @@ is performing an explicit reindex.
 
 This path was meant to require `sudo` capability but was not implemented this
 way. It now requires `sudo` capability to run.
+
+[reindex]: https://www.vaultproject.io/api/system/replication.html#reindex-replication
