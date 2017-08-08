@@ -20,7 +20,7 @@ backends are generic backends that functions as either a secret or auth backend.
 This guide provides steps to build, register, and mount non-database external
 plugin backends.
 
-# Setting up Vault
+## Setting up Vault
 
 Set `plugin_directory` to the desired path in the Vault configuration file.
 The path should exist and have proper lockdown on access permissions.
@@ -32,7 +32,7 @@ plugin_directory="/etc/vault/vault_plugins"
 ...
 ```
 
-# Build the Plugin Backend
+## Build the Plugin Backend
 
 Build the custom backend binary, and move it to the `plugin_directory` path.
 In this guide, we will use `mock-plugin` that comes from Vault's 
@@ -50,7 +50,7 @@ $ go build -o mock-plugin main.go
 $ mv mock-plugin /etc/vault/vault_plugins
 ```
 
-# Register the Plugin Into the Plugin Catalog
+## Register the Plugin Into the Plugin Catalog
 
 Start the Vault server. Find out the sha256 sum of the compiled plugin binary,
 and use that to register the plugin into Vault's plugin catalog.
@@ -63,7 +63,7 @@ $ vault sys/plugins/catalog/mock-plugin sha_256=2c071aafa1b30897e60b79643e77592c
 Success! Data written to: sys/plugins/catalog/mock-plugin
 ```
 
-# Mount the Plugin
+## Mount the Plugin
 
 ```shell
 $ vault mount -path=mock -plugin-name=mock-plugin plugin
@@ -77,7 +77,7 @@ secret/     generic    generic_ef2a14ec    n/a          system       system   fa
 sys/        system     system_e3a4cccd     n/a          n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
 ```
 
-# Perform operations on the mount
+## Perform operations on the mount
 
 ```shell
 $ vault write mock/kv/foo value=bar
@@ -86,7 +86,7 @@ Key  	Value
 value	bar
 ```
 
-# Unmount the plugin
+## Unmount the plugin
 
 ```shell
 $ vault unmount mock
