@@ -52,6 +52,10 @@ FEATURES:
    replication (including tokens and leases) to DR secondaries. DR secondaries
    cannot handle client requests, but can be promoted to primary as needed for
    failover.
+ * **Manage New Replication Features in the Vault Enterprise UI**: Support for 
+   Replication features in Vault Enterprise UI has expanded to include new DR 
+   Replication mode and management of Filtered Mounts in Performance Replication
+   mode.
  * **Vault Identity (Enterprise Only)**: Vault's new Identity system allows
    correlation of users across tokens. At present this is only used for MFA,
    but will be the foundation of many other features going forward.
