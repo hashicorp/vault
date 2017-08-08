@@ -10,3 +10,10 @@ description: |-
 
 ~> **Enterprise Only** – These endpoints require Vault Enterprise.
 
+## Supported MFA types.
+
+- [TOTP](/api/system/mfa-totp.html)
+
+- [Okta](/api/system/mfa-okta.html)
+
+- [Duo](/api/system/mfa-duo.html)
