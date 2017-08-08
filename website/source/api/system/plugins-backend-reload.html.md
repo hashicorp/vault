@@ -15,7 +15,7 @@ provided, all mounted paths that use that plugin backend will be reloaded.
 
 ## Reload Plugins
 
-This endpoint lists the plugins in the catalog.
+This endpoint reloads mounted plugin backends.
 
 | Method   | Path                      -   | Produces               |
 | :------- | :---------------------------- | :--------------------- |
