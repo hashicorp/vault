@@ -92,6 +92,14 @@ func (b *backendPluginClient) HandleRequest(req *logical.Request) (*logical.Resp
 	}
 	var reply HandleRequestReply
 
+	if req.Connection != nil {
+		oldConnState := req.Connection.ConnState
+		req.Connection.ConnState = nil
+		defer func() {
+			req.Connection.ConnState = oldConnState
+		}()
+	}
+
 	err := b.client.Call("Plugin.HandleRequest", args, &reply)
 	if err != nil {
 		return nil, err
@@ -136,6 +144,14 @@ func (b *backendPluginClient) HandleExistenceCheck(req *logical.Request) (bool, 
 		Request: req,
 	}
 	var reply HandleExistenceCheckReply
+
+	if req.Connection != nil {
+		oldConnState := req.Connection.ConnState
+		req.Connection.ConnState = nil
+		defer func() {
+			req.Connection.ConnState = oldConnState
+		}()
+	}
 
 	err := b.client.Call("Plugin.HandleExistenceCheck", args, &reply)
 	if err != nil {

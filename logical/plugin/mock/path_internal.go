@@ -9,13 +9,24 @@ import (
 // it is used to test the invalidate func.
 func pathInternal(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern:        "internal",
-		Fields:         map[string]*framework.FieldSchema{},
-		ExistenceCheck: b.pathExistenceCheck,
+		Pattern: "internal",
+		Fields: map[string]*framework.FieldSchema{
+			"value": &framework.FieldSchema{Type: framework.TypeString},
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathInternalRead,
+			logical.UpdateOperation: b.pathInternalUpdate,
+			logical.ReadOperation:   b.pathInternalRead,
 		},
 	}
+}
+
+func (b *backend) pathInternalUpdate(
+	req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	value := data.Get("value").(string)
+	b.internal = value
+	// Return the secret
+	return nil, nil
+
 }
 
 func (b *backend) pathInternalRead(

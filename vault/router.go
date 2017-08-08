@@ -178,6 +178,7 @@ func (r *Router) MatchingMountByUUID(mountID string) *MountEntry {
 	return raw.(*MountEntry)
 }
 
+// MatchingMountByAccessor returns the MountEntry by accessor lookup
 func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 	if mountAccessor == "" {
 		return nil
@@ -205,7 +206,7 @@ func (r *Router) MatchingMount(path string) string {
 	return mount
 }
 
-// MatchingView returns the view used for a path
+// MatchingStorageView returns the storageView used for a path
 func (r *Router) MatchingStorageView(path string) *BarrierView {
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
@@ -227,7 +228,7 @@ func (r *Router) MatchingMountEntry(path string) *MountEntry {
 	return raw.(*routeEntry).mountEntry
 }
 
-// MatchingMountEntry returns the MountEntry used for a path
+// MatchingBackend returns the backend used for a path
 func (r *Router) MatchingBackend(path string) logical.Backend {
 	r.l.RLock()
 	_, raw, ok := r.root.LongestPrefix(path)
