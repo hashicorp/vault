@@ -14,6 +14,16 @@ The GitHub auth backend can be used to authenticate with Vault using a GitHub
 personal access token. This method of authentication is most useful for humans:
 operators or developers using Vault directly via the CLI.
 
+**N.B.**: Vault does not support an OAuth workflow to generate GitHub tokens;
+in addition, GitHub does not support registering applications at an
+organizational level. As a result, this backend uses personal access tokens. An
+important consequence is that any valid GitHub access token with the `read:org`
+scope can be used for authentication. If such a token is stolen from a third
+party service, and the attacker is able to make network calls to Vault, they
+will be able to log in as the user that generated the access token. When using
+this backend it is a good idea to ensure that access to Vault is restricted at
+a network level rather than public.
+
 ## Authentication
 
 #### Via the CLI

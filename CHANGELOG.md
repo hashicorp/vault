@@ -1,5 +1,12 @@
 ## 0.8.0 (unreleased)
 
+SECURITY:
+
+ * We've added a note to the docs about the way the GitHub auth backend works
+   as it may not be readily apparent that GitHub personal access tokens, which
+   are used by the backend, can be used for unauthorized access if they are
+   stolen from third party services and access to Vault is public.
+
 DEPRECATIONS/CHANGES:
 
  * Database Plugin Backends: Passwords generated for these backends now
