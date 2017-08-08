@@ -15,7 +15,7 @@ It is worth noting that even though [database backend][database-backend]
 operates under the same underlying plugin mechanism, it is slightly different
 in design than plugin backends demonstrated in this guide. The database backend 
 manages multiple plugins under the same backend mount point, whereas plugin
-backends are generic backends that functions as either a secret or auth backend. 
+backends are generic backends that function as either secret or auth backends. 
 
 This guide provides steps to build, register, and mount non-database external
 plugin backends.
@@ -25,7 +25,7 @@ plugin backends.
 Set `plugin_directory` to the desired path in the Vault configuration file.
 The path should exist and have proper lockdown on access permissions.
 
-```shell
+```
 $ cat vault-config.hcl
 ...
 plugin_directory="/etc/vault/vault_plugins"
@@ -38,7 +38,7 @@ Build the custom backend binary, and move it to the `plugin_directory` path.
 In this guide, we will use `mock-plugin` that comes from Vault's 
 `logical/plugin/mock` package.
 
-```shell
+```
 $ ls .
 main.go
 
@@ -55,7 +55,7 @@ $ mv mock-plugin /etc/vault/vault_plugins
 Start the Vault server. Find out the sha256 sum of the compiled plugin binary,
 and use that to register the plugin into Vault's plugin catalog.
 
-```shell
+```
 $ shasum -a 256 ~/code/tmp/vault_plugins/mock-plugin
 2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615  /etc/vault/vault_plugins/mock-plugin
 
@@ -65,7 +65,7 @@ Success! Data written to: sys/plugins/catalog/mock-plugin
 
 ## Mount the Plugin
 
-```shell
+```
 $ vault mount -path=mock -plugin-name=mock-plugin plugin
 Successfully mounted plugin 'mock-plugin' at 'mock'!
 
@@ -79,7 +79,7 @@ sys/        system     system_e3a4cccd     n/a          n/a          n/a      fa
 
 ## Perform operations on the mount
 
-```shell
+```
 $ vault write mock/kv/foo value=bar
 Key  	Value
 ---  	-----
@@ -88,7 +88,7 @@ value	bar
 
 ## Unmount the plugin
 
-```shell
+```
 $ vault unmount mock
 Successfully unmounted 'mock' if it was mounted
 
@@ -99,4 +99,5 @@ secret/     generic    generic_ef2a14ec    n/a     system       system   false  
 sys/        system     system_e3a4cccd     n/a     n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
 ```
 
-[plugin-backends]: docs/internals/plugins.html
+[plugin-system]: docs/internals/plugins.html
+[database-backend]: docs/secrets/databases/index.html
