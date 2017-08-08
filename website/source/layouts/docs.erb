@@ -184,7 +184,7 @@
           </li>
 
           <li<%= sidebar_current("docs-secrets-databases") %>>
-            <a href="/docs/secrets/databases/index.html">Databases <sup>BETA</sup></a>
+            <a href="/docs/secrets/databases/index.html">Databases</a>
             <ul class="nav">
               <li<%= sidebar_current("docs-secrets-databases-cassandra") %>>
                 <a href="/docs/secrets/databases/cassandra.html">Cassandra</a>
@@ -266,10 +266,6 @@
       <li<%= sidebar_current("docs-auth") %>>
         <a href="/docs/auth/index.html">Auth Backends</a>
         <ul class="nav">
-          <li<%= sidebar_current("docs-auth-appid") %>>
-            <a href="/docs/auth/app-id.html">App ID</a>
-          </li>
-
           <li<%= sidebar_current("docs-auth-approle") %>>
             <a href="/docs/auth/approle.html">AppRole</a>
           </li>
@@ -309,6 +305,13 @@
           <li<%= sidebar_current("docs-auth-userpass") %>>
             <a href="/docs/auth/userpass.html">Username &amp; Password</a>
           </li>
+
+          <hr>
+
+          <li<%= sidebar_current("docs-auth-appid") %>>
+            <a href="/docs/auth/app-id.html">App ID <sup>DEPRECATED</sup></a>
+          </li>
+
         </ul>
       </li>
 
