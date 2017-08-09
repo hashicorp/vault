@@ -67,4 +67,9 @@ The following table describes them:
     <td><tt>VAULT_TLS_SERVER_NAME</tt></td>
     <td>If set, use the given name as the SNI host when connecting via TLS.</td>
   </tr>
+  <tr>
+    <td><tt>VAULT_MFA</tt></td>
+    <td>(Enterprise Only) MFA credentials in the format **mfa_method_name[:key[=value]]** (items in `[]` are optional). Note that when using the environment variable, only one credential can be supplied. If a MFA method expects multiple credential values, or if there are multiple MFA methods specified on a path, then the CLI flag `-mfa` should be used.</td>
+  </tr>
+
 </table>
