@@ -175,6 +175,17 @@
           </li>
           <li<%= sidebar_current("docs-http-system-mfa") %>>
             <a href="/api/system/mfa.html"><tt>/sys/mfa</tt></a>
+              <ul class="nav">
+                <li<%= sidebar_current("docs-http-system-mfa-totp") %>>
+                  <a href="/api/system/mfa-totp.html"><tt>/sys/mfa/method/totp</tt></a>
+                </li>
+                <li<%= sidebar_current("docs-http-system-mfa-okta") %>>
+                  <a href="/api/system/mfa-okta.html"><tt>/sys/mfa/method/okta</tt></a>
+                </li>
+                <li<%= sidebar_current("docs-http-system-mfa-duo") %>>
+                  <a href="/api/system/mfa-duo.html"><tt>/sys/mfa/method/duo</tt></a>
+                </li>
+              </ul>
           </li>
           <li<%= sidebar_current("docs-http-system-mounts") %>>
             <a href="/api/system/mounts.html"><tt>/sys/mounts</tt></a>
