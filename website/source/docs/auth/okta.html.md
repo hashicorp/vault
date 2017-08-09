@@ -161,3 +161,9 @@ Groups can only be pulled from Okta if an API token is configured via `token`
 ## Note on policy mapping
 
 It should be noted that user -> policy mapping (via group membership) happens at token creation time. And changes in group membership in Okta will not affect tokens that have already been provisioned. To see these changes, old tokens should be revoked and the user should be asked to reauthenticate.
+
+## API
+
+The Okta authentication backend has a full HTTP API. Please see the
+[Okta Auth API](/api/auth/okta/index.html) for more
+details.

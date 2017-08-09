@@ -18,7 +18,7 @@ please update your API calls accordingly.
 
 ## Configure RADIUS
 
-Configures the connection parameters and shard secret used to communicate with 
+Configures the connection parameters and shared secret used to communicate with 
 RADIUS.
 
 | Method   | Path                         | Produces               |
@@ -114,7 +114,7 @@ $ curl \
 
 ### Sample Response
 
-```javascript
+```json
 {
   "request_id": "812229d7-a82e-0b20-c35b-81ce8c1b9fa6",
   "lease_id": "",

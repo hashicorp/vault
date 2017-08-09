@@ -159,3 +159,9 @@ token_policies: [default dev-policy]
 
 Clients can use this token to perform an allowed set of operations on all the
 paths contained by the policy set.
+
+## API
+
+The GitHub authentication backend has a full HTTP API. Please see the
+[GitHub Auth API](/api/auth/github/index.html) for more
+details.
