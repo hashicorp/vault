@@ -69,3 +69,7 @@ $ curl \
     --header "X-Vault-MFA:my_totp:695452" \
     https://vault.rocks/v1/secret/foo
 ```
+
+### API
+
+MFA can be managed entirely over the HTTP API. Please see [MFA API](/api/system/mfa.html) for more details.
