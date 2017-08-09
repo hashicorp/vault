@@ -99,5 +99,5 @@ secret/     generic    generic_ef2a14ec    n/a     system       system   false  
 sys/        system     system_e3a4cccd     n/a     n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
 ```
 
-[plugin-system]: docs/internals/plugins.html
-[database-backend]: docs/secrets/databases/index.html
+[plugin-system]: /docs/internals/plugins.html
+[database-backend]: /docs/secrets/databases/index.html
