@@ -10,8 +10,8 @@ description: |-
 # Upgrading Vault
 
 These are general upgrade instructions for Vault for both non-HA and HA setups.
-Please ensure that you also read the version-specific upgrade notes which can be
-found in the sidebar.
+_Please ensure that you also read any version-specific upgrade notes which can be
+found in the sidebar._
 
 **Always** back up your data before upgrading! Vault does not make
 backwards-compatibility guarantees for its data store. If you need to roll back

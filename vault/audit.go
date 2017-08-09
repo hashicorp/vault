@@ -79,6 +79,13 @@ func (c *Core) enableAudit(entry *MountEntry) error {
 		}
 		entry.UUID = entryUUID
 	}
+	if entry.Accessor == "" {
+		accessor, err := c.generateMountAccessor("audit_" + entry.Type)
+		if err != nil {
+			return err
+		}
+		entry.Accessor = accessor
+	}
 	viewPath := auditBarrierPrefix + entry.UUID + "/"
 	view := NewBarrierView(c.barrier, viewPath)
 
@@ -199,6 +206,14 @@ func (c *Core) loadAudits() error {
 		for _, entry := range c.audit.Entries {
 			if entry.Table == "" {
 				entry.Table = c.audit.Type
+				needPersist = true
+			}
+			if entry.Accessor == "" {
+				accessor, err := c.generateMountAccessor("audit_" + entry.Type)
+				if err != nil {
+					return err
+				}
+				entry.Accessor = accessor
 				needPersist = true
 			}
 		}
@@ -396,7 +411,7 @@ func (c *Core) newAuditBackend(entry *MountEntry, view logical.Storage, conf map
 			c.logger.Debug("audit: adding reload function", "path", entry.Path)
 		}
 
-		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]string) error {
+		c.reloadFuncs[key] = append(c.reloadFuncs[key], func(map[string]interface{}) error {
 			if c.logger.IsInfo() {
 				c.logger.Info("audit: reloading file audit backend", "path", entry.Path)
 			}
@@ -492,6 +507,10 @@ func (a *AuditBroker) LogRequest(auth *logical.Auth, req *logical.Request, heade
 		}
 
 		ret = retErr.ErrorOrNil()
+
+		if ret != nil {
+			metrics.IncrCounter([]string{"audit", "log_request_failure"}, 1.0)
+		}
 	}()
 
 	// All logged requests must have an identifier
@@ -550,6 +569,10 @@ func (a *AuditBroker) LogResponse(auth *logical.Auth, req *logical.Request,
 		}
 
 		ret = retErr.ErrorOrNil()
+
+		if ret != nil {
+			metrics.IncrCounter([]string{"audit", "log_response_failure"}, 1.0)
+		}
 	}()
 
 	headers := req.Headers

@@ -21,6 +21,13 @@ HSM key backup strategy requires the key to be exportable, you should generate
 the key yourself. The list of creation attributes that Vault uses to generate
 the key are listed at the end of this document.
 
+## Requirements
+
+The following software packages are required for Vault Enterprise HSM:
+
+* PKCS#11 compatible HSM intgration library
+* `libtldl` library
+
 ## HSM Block Directives
 
 Like the rest of Vault's configuration files, the `hsm` block is in

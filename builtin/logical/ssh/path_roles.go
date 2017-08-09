@@ -45,6 +45,7 @@ type sshRole struct {
 	AllowBareDomains       bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
 	AllowSubdomains        bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
 	AllowUserKeyIDs        bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
+	KeyIDFormat            string            `mapstructure:"key_id_format" json:"key_id_format"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -150,7 +151,7 @@ func pathRoles(b *backend) *framework.Path {
 				this list enforces it. If this field is set, then credentials
 				can only be created for default_user and usernames present in
 				this list. Setting this option will enable all the users with
-				access this role to fetch credentials for all other usernames
+				access to this role to fetch credentials for all other usernames
 				in this list. Use with caution. N.B.: with the CA type, an empty
 				list means that no users are allowed; explicitly specify '*' to
 				allow any user.
@@ -213,7 +214,7 @@ func pathRoles(b *backend) *framework.Path {
 				have if none are provided when signing. This field takes in key
 				value pairs in JSON format.  Note that these are not restricted
 				by "allowed_critical_options". Defaults to none.
-`,
+				`,
 			},
 			"default_extensions": &framework.FieldSchema{
 				Type: framework.TypeMap,
@@ -264,6 +265,16 @@ func pathRoles(b *backend) *framework.Path {
 				If true, users can override the key ID for a signed certificate with the "key_id" field.
 				When false, the key ID will always be the token display name.
 				The key ID is logged by the SSH server and can be useful for auditing.
+				`,
+			},
+			"key_id_format": &framework.FieldSchema{
+				Type: framework.TypeString,
+				Description: `
+				[Not applicable for Dynamic type] [Not applicable for OTP type] [Optional for CA type]
+				When supplied, this value specifies a custom format for the key id of a signed certificate.
+				The following variables are availble for use: '{{token_display_name}}' - The display name of
+				the token used to make the request. '{{role_name}}' - The name of the role signing the request.
+				'{{public_key_hash}}' - A SHA256 checksum of the public key that is being signed.
 				`,
 			},
 		},
@@ -435,6 +446,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser string, data *framework
 		AllowBareDomains:       data.Get("allow_bare_domains").(bool),
 		AllowSubdomains:        data.Get("allow_subdomains").(bool),
 		AllowUserKeyIDs:        data.Get("allow_user_key_ids").(bool),
+		KeyIDFormat:            data.Get("key_id_format").(string),
 		KeyType:                KeyTypeCA,
 	}
 
@@ -553,6 +565,7 @@ func (b *backend) pathRoleRead(req *logical.Request, d *framework.FieldData) (*l
 				"allow_bare_domains":       role.AllowBareDomains,
 				"allow_subdomains":         role.AllowSubdomains,
 				"allow_user_key_ids":       role.AllowUserKeyIDs,
+				"key_id_format":            role.KeyIDFormat,
 				"key_type":                 role.KeyType,
 				"default_critical_options": role.DefaultCriticalOptions,
 				"default_extensions":       role.DefaultExtensions,

@@ -13,10 +13,13 @@ func Factory(conf *logical.BackendConfig) (logical.Backend, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b.Backend.Setup(conf)
+	if err := b.Setup(conf); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
-func Backend(conf *logical.BackendConfig) (backend, error) {
+func Backend(conf *logical.BackendConfig) (*backend, error) {
 	var b backend
 	b.MapAppId = &framework.PolicyMap{
 		PathMap: framework.PathMap{
@@ -60,7 +63,6 @@ func Backend(conf *logical.BackendConfig) (backend, error) {
 				"login/*",
 			},
 		},
-
 		Paths: framework.PathAppend([]*framework.Path{
 			pathLogin(&b),
 			pathLoginWithAppIDPath(&b),
@@ -68,17 +70,16 @@ func Backend(conf *logical.BackendConfig) (backend, error) {
 			b.MapAppId.Paths(),
 			b.MapUserId.Paths(),
 		),
-
-		AuthRenew: b.pathLoginRenew,
-
-		Invalidate: b.invalidate,
+		AuthRenew:   b.pathLoginRenew,
+		Invalidate:  b.invalidate,
+		BackendType: logical.TypeCredential,
 	}
 
 	b.view = conf.StorageView
 	b.MapAppId.SaltFunc = b.Salt
 	b.MapUserId.SaltFunc = b.Salt
 
-	return b, nil
+	return &b, nil
 }
 
 type backend struct {

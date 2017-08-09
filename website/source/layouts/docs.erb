@@ -100,8 +100,14 @@
               <li<%= sidebar_current("docs-configuration-storage-azure")%>>
                 <a href="/docs/configuration/storage/azure.html">Azure</a>
               </li>
+              <li<%= sidebar_current("docs-configuration-storage-cockroachdb")%>>
+                <a href="/docs/configuration/storage/cockroachdb.html">CockroachDB</a>
+              </li>
               <li<%= sidebar_current("docs-configuration-storage-consul")%>>
                 <a href="/docs/configuration/storage/consul.html">Consul</a>
+              </li>
+              <li<%= sidebar_current("docs-configuration-storage-couchdb")%>>
+                <a href="/docs/configuration/storage/couchdb.html">CouchDB</a>
               </li>
               <li<%= sidebar_current("docs-configuration-storage-dynamodb")%>>
                 <a href="/docs/configuration/storage/dynamodb.html">DynamoDB</a>
@@ -123,6 +129,9 @@
               </li>
               <li<%= sidebar_current("docs-configuration-storage-postgresql")%>>
                 <a href="/docs/configuration/storage/postgresql.html">PostgreSQL</a>
+              </li>
+              <li<%= sidebar_current("docs-configuration-storage-cassandra")%>>
+                <a href="/docs/configuration/storage/cassandra.html">Cassandra</a>
               </li>
               <li<%= sidebar_current("docs-configuration-storage-s3")%>>
                 <a href="/docs/configuration/storage/s3.html">S3</a>
@@ -175,7 +184,7 @@
           </li>
 
           <li<%= sidebar_current("docs-secrets-databases") %>>
-            <a href="/docs/secrets/databases/index.html">Databases <sup>BETA</sup></a>
+            <a href="/docs/secrets/databases/index.html">Databases</a>
             <ul class="nav">
               <li<%= sidebar_current("docs-secrets-databases-cassandra") %>>
                 <a href="/docs/secrets/databases/cassandra.html">Cassandra</a>
@@ -257,10 +266,6 @@
       <li<%= sidebar_current("docs-auth") %>>
         <a href="/docs/auth/index.html">Auth Backends</a>
         <ul class="nav">
-          <li<%= sidebar_current("docs-auth-appid") %>>
-            <a href="/docs/auth/app-id.html">App ID</a>
-          </li>
-
           <li<%= sidebar_current("docs-auth-approle") %>>
             <a href="/docs/auth/approle.html">AppRole</a>
           </li>
@@ -300,6 +305,13 @@
           <li<%= sidebar_current("docs-auth-userpass") %>>
             <a href="/docs/auth/userpass.html">Username &amp; Password</a>
           </li>
+
+          <hr>
+
+          <li<%= sidebar_current("docs-auth-appid") %>>
+            <a href="/docs/auth/app-id.html">App ID <sup>DEPRECATED</sup></a>
+          </li>
+
         </ul>
       </li>
 
@@ -318,6 +330,10 @@
             <a href="/docs/audit/socket.html">Socket</a>
           </li>
         </ul>
+      </li>
+
+      <li<%= sidebar_current("docs-plugin") %>>
+        <a href="/docs/plugin/index.html">Plugin Backends</a>
       </li>
 
       <hr>

@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -215,6 +216,16 @@ func (c *Client) dialSetupOpts(endpoint string, dopts ...grpc.DialOption) (opts 
 	if c.cfg.DialTimeout > 0 {
 		opts = []grpc.DialOption{grpc.WithTimeout(c.cfg.DialTimeout)}
 	}
+	if c.cfg.DialKeepAliveTime > 0 {
+		params := keepalive.ClientParameters{
+			Time: c.cfg.DialKeepAliveTime,
+		}
+		// Only relevant when KeepAliveTime is non-zero
+		if c.cfg.DialKeepAliveTimeout > 0 {
+			params.Timeout = c.cfg.DialKeepAliveTimeout
+		}
+		opts = append(opts, grpc.WithKeepaliveParams(params))
+	}
 	opts = append(opts, dopts...)
 
 	f := func(host string, t time.Duration) (net.Conn, error) {
@@ -333,7 +344,7 @@ func (c *Client) dial(endpoint string, dopts ...grpc.DialOption) (*grpc.ClientCo
 // when the cluster has a leader.
 func WithRequireLeader(ctx context.Context) context.Context {
 	md := metadata.Pairs(rpctypes.MetadataRequireLeaderKey, rpctypes.MetadataHasLeader)
-	return metadata.NewContext(ctx, md)
+	return metadata.NewOutgoingContext(ctx, md)
 }
 
 func newClient(cfg *Config) (*Client, error) {

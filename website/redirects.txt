@@ -36,6 +36,7 @@
 # - Items are case-sensitive (please use all lowercase)
 #
 
+/api/system/renew.html                 /api/system/leases.html
 /api/system/revoke.html                /api/system/leases.html
 /api/system/revoke-force.html          /api/system/leases.html
 /api/system/revoke-prefix.html         /api/system/leases.html

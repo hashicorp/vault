@@ -31,7 +31,7 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	if b == nil {
 		t.Fatalf("failed to create backend")
 	}
-	_, err := b.Backend.Setup(config)
+	err := b.Backend.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,9 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
-			testAccStepAdjustPolicy(t, "test", 3),
+			testAccStepAdjustPolicyMinDecryption(t, "test", 3),
+			testAccStepAdjustPolicyMinEncryption(t, "test", 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecryptExpectFailure(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -140,7 +142,8 @@ func TestBackend_rotation(t *testing.T) {
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
-			testAccStepAdjustPolicy(t, "test", 1),
+			testAccStepAdjustPolicyMinDecryption(t, "test", 1),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -221,12 +224,21 @@ func testAccStepListPolicy(t *testing.T, name string, expectNone bool) logicalte
 	}
 }
 
-func testAccStepAdjustPolicy(t *testing.T, name string, minVer int) logicaltest.TestStep {
+func testAccStepAdjustPolicyMinDecryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name + "/config",
 		Data: map[string]interface{}{
 			"min_decryption_version": minVer,
+		},
+	}
+}
+func testAccStepAdjustPolicyMinEncryption(t *testing.T, name string, minVer int) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/" + name + "/config",
+		Data: map[string]interface{}{
+			"min_encryption_version": minVer,
 		},
 	}
 }
@@ -276,6 +288,10 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 }
 
 func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
+	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
+}
+
+func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -297,6 +313,8 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				KDF                  string           `mapstructure:"kdf"`
 				DeletionAllowed      bool             `mapstructure:"deletion_allowed"`
 				ConvergentEncryption bool             `mapstructure:"convergent_encryption"`
+				MinDecryptionVersion int              `mapstructure:"min_decryption_version"`
+				MinEncryptionVersion int              `mapstructure:"min_encryption_version"`
 			}
 			if err := mapstructure.Decode(resp.Data, &d); err != nil {
 				return err
@@ -313,6 +331,12 @@ func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) 
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.Keys == nil {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinDecryptionVersion != minDecryptionVersion {
+				return fmt.Errorf("bad: %#v", d)
+			}
+			if d.MinEncryptionVersion != minEncryptionVersion {
 				return fmt.Errorf("bad: %#v", d)
 			}
 			if d.DeletionAllowed == true {
@@ -730,6 +754,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 			"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 		}
 		resp, err = b.HandleRequest(req)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
 		if resp == nil {
 			t.Fatal("expected non-nil response")
 		}
@@ -755,6 +782,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -764,6 +794,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext1 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -789,6 +822,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	}
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -798,6 +834,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext3 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -820,6 +859,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "qV4h9iQyvn+raODOer4JNAsOhkXBwdT4HZ677Ql4KLqXSU+Jk4C/fXBWbv6xkSYT",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -829,6 +871,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext5 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -854,6 +899,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -868,6 +916,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}
@@ -877,6 +928,9 @@ func testConvergentEncryptionCommon(t *testing.T, ver int) {
 	ciphertext7 := resp.Data["ciphertext"].(string)
 
 	resp, err = b.HandleRequest(req)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if resp == nil {
 		t.Fatal("expected non-nil response")
 	}

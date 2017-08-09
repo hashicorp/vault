@@ -15,8 +15,15 @@ import (
 func TestAuditFile_fileModeNew(t *testing.T) {
 	modeStr := "0777"
 	mode, err := strconv.ParseUint(modeStr, 8, 32)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	path, err := ioutil.TempDir("", "vault-test_audit_file-file_mode_new")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	defer os.RemoveAll(path)
 
 	file := filepath.Join(path, "auditTest.txt")

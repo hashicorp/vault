@@ -85,16 +85,19 @@ type EnableAuthOptions struct {
 	Type        string `json:"type" structs:"type"`
 	Description string `json:"description" structs:"description"`
 	Local       bool   `json:"local" structs:"local"`
+	PluginName  string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
 
 type AuthMount struct {
 	Type        string           `json:"type" structs:"type" mapstructure:"type"`
 	Description string           `json:"description" structs:"description" mapstructure:"description"`
+	Accessor    string           `json:"accessor" structs:"accessor" mapstructure:"accessor"`
 	Config      AuthConfigOutput `json:"config" structs:"config" mapstructure:"config"`
 	Local       bool             `json:"local" structs:"local" mapstructure:"local"`
 }
 
 type AuthConfigOutput struct {
-	DefaultLeaseTTL int `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL     int `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	DefaultLeaseTTL int    `json:"default_lease_ttl" structs:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL     int    `json:"max_lease_ttl" structs:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	PluginName      string `json:"plugin_name,omitempty" structs:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }

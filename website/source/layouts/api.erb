@@ -10,18 +10,11 @@
 
       <hr>
 
-      <!-- <li<%= sidebar_current("docs-http-auth") %>>
-        <a href="#">Auth Backends</a>
-      </li> -->
-
       <li<%= sidebar_current("docs-http-secret") %>>
         <a href="/api/secret/index.html">Secret Backends</a>
         <ul class="nav">
           <li<%= sidebar_current("docs-http-secret-aws") %>>
             <a href="/api/secret/aws/index.html">AWS</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-cassandra") %>>
-            <a href="/api/secret/cassandra/index.html">Cassandra (Deprecated)</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-consul") %>>
             <a href="/api/secret/consul/index.html">Consul</a>
@@ -31,7 +24,7 @@
           </li>
 
           <li<%= sidebar_current("docs-http-secret-databases") %>>
-            <a href="/api/secret/databases/index.html">Databases (Beta)</a>
+            <a href="/api/secret/databases/index.html">Databases</a>
             <ul class="nav">
               <li<%= sidebar_current("docs-http-secret-databases-cassandra") %>>
                 <a href="/api/secret/databases/cassandra.html">Cassandra</a>
@@ -57,20 +50,8 @@
           <li<%= sidebar_current("docs-http-secret-identity") %>>
             <a href="/api/secret/identity/index.html">Identity</a>
           </li>
-          <li<%= sidebar_current("docs-http-secret-mongodb") %>>
-            <a href="/api/secret/mongodb/index.html">MongoDB (Deprecated)</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-mssql") %>>
-            <a href="/api/secret/mssql/index.html">MSSQL (Deprecated)</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-mysql") %>>
-            <a href="/api/secret/mysql/index.html">MySQL (Deprecated)</a>
-          </li>
           <li<%= sidebar_current("docs-http-secret-pki") %>>
             <a href="/api/secret/pki/index.html">PKI</a>
-          </li>
-          <li<%= sidebar_current("docs-http-secret-postgresql") %>>
-            <a href="/api/secret/postgresql/index.html">PostgreSQL (Deprecated)</a>
           </li>
           <li<%= sidebar_current("docs-http-secret-rabbitmq") %>>
             <a href="/api/secret/rabbitmq/index.html">RabbitMQ</a>
@@ -83,6 +64,66 @@
           </li>
           <li<%= sidebar_current("docs-http-secret-transit") %>>
             <a href="/api/secret/transit/index.html">Transit</a>
+          </li>
+
+          <hr>
+
+          <li<%= sidebar_current("docs-http-secret-cassandra") %>>
+            <a href="/api/secret/cassandra/index.html">Cassandra <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mongodb") %>>
+            <a href="/api/secret/mongodb/index.html">MongoDB <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mssql") %>>
+            <a href="/api/secret/mssql/index.html">MSSQL <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-mysql") %>>
+            <a href="/api/secret/mysql/index.html">MySQL <sup>DEPRECATED</sup></a>
+          </li>
+          <li<%= sidebar_current("docs-http-secret-postgresql") %>>
+            <a href="/api/secret/postgresql/index.html">PostgreSQL <sup>DEPRECATED</sup></a>
+          </li>
+        </ul>
+      </li>
+
+      <li<%= sidebar_current("docs-http-auth") %>>
+        <a href="/api/auth/index.html">Auth Backends</a>
+        <ul class="nav">
+          <li<%= sidebar_current("docs-http-auth-approle") %>>
+            <a href="/api/auth/approle/index.html">AppRole</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-aws") %>>
+            <a href="/api/auth/aws/index.html">AWS</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-github") %>>
+            <a href="/api/auth/github/index.html">Github</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-ldap") %>>
+            <a href="/api/auth/ldap/index.html">LDAP</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-mfa") %>>
+            <a href="/api/auth/mfa/index.html">MFA</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-okta") %>>
+            <a href="/api/auth/okta/index.html">Okta</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-radius") %>>
+            <a href="/api/auth/radius/index.html">RADIUS</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-cert") %>>
+            <a href="/api/auth/cert/index.html">TLS Certificates</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-token") %>>
+            <a href="/api/auth/token/index.html">Tokens</a>
+          </li>
+          <li<%= sidebar_current("docs-http-auth-userpass") %>>
+            <a href="/api/auth/userpass/index.html">Username & Password</a>
+          </li>
+
+          <hr>
+
+          <li<%= sidebar_current("docs-http-auth-appid") %>>
+            <a href="/api/auth/app-id/index.html">App ID <sup>DEPRECATED</sup></a>
           </li>
         </ul>
       </li>
@@ -110,6 +151,9 @@
           </li>
           <li<%= sidebar_current("docs-http-system-config-auditing") %>>
             <a href="/api/system/config-auditing.html"><tt>/sys/config/auditing</tt></a>
+          </li>
+          <li<%= sidebar_current("docs-http-system-config-cors") %>>
+            <a href="/api/system/config-cors.html"><tt>/sys/config/cors</tt></a>
           </li>
           <li<%= sidebar_current("docs-http-system-generate-root") %>>
             <a href="/api/system/generate-root.html"><tt>/sys/generate-root</tt></a>
@@ -146,6 +190,9 @@
           <li<%= sidebar_current("docs-http-system-mounts") %>>
             <a href="/api/system/mounts.html"><tt>/sys/mounts</tt></a>
           </li>
+          <li<%= sidebar_current("docs-http-system-plugins-backend-reload") %>>
+            <a href="/api/system/plugins-backend-reload.html"><tt>/sys/plugins/backend/reload</tt></a>
+          </li>
           <li<%= sidebar_current("docs-http-system-plugins-catalog") %>>
             <a href="/api/system/plugins-catalog.html"><tt>/sys/plugins/catalog</tt></a>
           </li>
@@ -160,9 +207,6 @@
           </li>
           <li<%= sidebar_current("docs-http-system-remount") %>>
             <a href="/api/system/remount.html"><tt>/sys/remount</tt></a>
-          </li>
-          <li<%= sidebar_current("docs-http-system-renew") %>>
-            <a href="/api/system/renew.html"><tt>/sys/renew</tt></a>
           </li>
           <li<%= sidebar_current("docs-http-system-replication") %>>
             <a href="/api/system/replication.html"><tt>/sys/replication</tt></a>

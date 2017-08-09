@@ -54,7 +54,10 @@ func TestTokenStore_TokenEntryUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	saltedId := ts.SaltID(entry.ID)
+	saltedId, err := ts.SaltID(entry.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	path := lookupPrefix + saltedId
 	le := &logical.StorageEntry{
 		Key:   path,
@@ -294,7 +297,11 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 	}
 
 	// Revoke root to make the number of accessors match
-	ts.revokeSalted(ts.SaltID(root))
+	salted, err := ts.SaltID(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts.revokeSalted(salted)
 
 	req := logical.TestRequest(t, logical.ListOperation, "accessors")
 
@@ -325,7 +332,11 @@ func TestTokenStore_HandleRequest_ListAccessors(t *testing.T) {
 		if aEntry.TokenID == "" || aEntry.AccessorID == "" {
 			t.Fatalf("error, accessor entry looked up is empty, but no error thrown")
 		}
-		path := accessorPrefix + ts.SaltID(accessor)
+		salted, err := ts.SaltID(accessor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		path := accessorPrefix + salted
 		le := &logical.StorageEntry{Key: path, Value: []byte(aEntry.TokenID)}
 		if err := ts.view.Put(le); err != nil {
 			t.Fatalf("failed to persist accessor index entry: %v", err)
@@ -464,6 +475,9 @@ func TestTokenStore_CreateLookup_ProvidedID(t *testing.T) {
 	}
 	if ent.ID != "foobarbaz" {
 		t.Fatalf("bad: ent.ID: expected:\"foobarbaz\"\n actual:%s", ent.ID)
+	}
+	if err := ts.create(ent); err == nil {
+		t.Fatal("expected error creating token with the same ID")
 	}
 
 	out, err := ts.Lookup(ent.ID)
@@ -605,7 +619,10 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 
 	// Mount a noop backend
 	noop := &NoopBackend{}
-	ts.expiration.router.Mount(noop, "", &MountEntry{UUID: ""}, view)
+	err := ts.expiration.router.Mount(noop, "noop/", &MountEntry{UUID: "noopuuid", Accessor: "noopaccessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ent := &TokenEntry{Path: "test", Policies: []string{"dev", "ops"}}
 	if err := ts.create(ent); err != nil {
@@ -615,7 +632,7 @@ func TestTokenStore_Revoke_Leases(t *testing.T) {
 	// Register a lease
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
-		Path:        "secret/foo",
+		Path:        "noop/foo",
 		ClientToken: ent.ID,
 	}
 	resp := &logical.Response{
@@ -3098,7 +3115,10 @@ func TestTokenStore_RevokeUseCountToken(t *testing.T) {
 	}
 
 	tut := resp.Auth.ClientToken
-	saltTut := ts.SaltID(tut)
+	saltTut, err := ts.SaltID(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
 	te, err := ts.lookupSalted(saltTut, false)
 	if err != nil {
 		t.Fatal(err)
@@ -3293,7 +3313,10 @@ func TestTokenStore_HandleTidyCase1(t *testing.T) {
 		// cubbyhole and by not deleting its secondary index, its accessor and
 		// associated leases.
 
-		saltedTut := ts.SaltID(tut)
+		saltedTut, err := ts.SaltID(tut)
+		if err != nil {
+			t.Fatal(err)
+		}
 		_, err = ts.lookupSalted(saltedTut, true)
 		if err != nil {
 			t.Fatalf("failed to lookup token: %v", err)
@@ -3363,7 +3386,10 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Create new token
 	root, err := ts.rootToken()
@@ -3429,7 +3455,10 @@ func TestTokenStore_TidyLeaseRevocation(t *testing.T) {
 	}
 
 	// Now, delete the token entry. The leases should still exist.
-	saltedTut := ts.SaltID(tut)
+	saltedTut, err := ts.SaltID(tut)
+	if err != nil {
+		t.Fatal(err)
+	}
 	te, err := ts.lookupSalted(saltedTut, true)
 	if err != nil {
 		t.Fatalf("failed to lookup token: %v", err)

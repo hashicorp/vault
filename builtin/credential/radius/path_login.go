@@ -142,6 +142,9 @@ func (b *backend) RadiusLogin(req *logical.Request, username string, password st
 	var policies []string
 	// Retrieve user entry from storage
 	user, err := b.user(req.Storage, username)
+	if err != nil {
+		return policies, logical.ErrorResponse("could not retrieve user entry from storage"), err
+	}
 	if user == nil {
 		// No user found, check if unregistered users are allowed (unregistered_user_policies not empty)
 		if len(policyutil.SanitizePolicies(cfg.UnregisteredUserPolicies, false)) == 0 {

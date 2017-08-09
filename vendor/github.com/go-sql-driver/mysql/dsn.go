@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -257,7 +258,12 @@ func (cfg *Config) FormatDSN() string {
 
 	// other params
 	if cfg.Params != nil {
-		for param, value := range cfg.Params {
+		var params []string
+		for param := range cfg.Params {
+			params = append(params, param)
+		}
+		sort.Strings(params)
+		for _, param := range params {
 			if hasParam {
 				buf.WriteByte('&')
 			} else {
@@ -267,7 +273,7 @@ func (cfg *Config) FormatDSN() string {
 
 			buf.WriteString(param)
 			buf.WriteByte('=')
-			buf.WriteString(url.QueryEscape(value))
+			buf.WriteString(url.QueryEscape(cfg.Params[param]))
 		}
 	}
 
@@ -528,9 +534,7 @@ func parseDSNParams(cfg *Config, params string) (err error) {
 					return fmt.Errorf("invalid value for TLS config name: %v", err)
 				}
 
-				if tlsConfig, ok := tlsConfigRegister[name]; ok {
-					tlsConfig = cloneTLSConfig(tlsConfig)
-
+				if tlsConfig := getTLSConfigClone(name); tlsConfig != nil {
 					if len(tlsConfig.ServerName) == 0 && !tlsConfig.InsecureSkipVerify {
 						host, _, err := net.SplitHostPort(cfg.Addr)
 						if err == nil {

@@ -44,6 +44,17 @@ func TestMSSQL_Initialize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+
+	// Test decoding a string value for max_open_connections
+	connectionDetails = map[string]interface{}{
+		"connection_url":       connURL,
+		"max_open_connections": "5",
+	}
+
+	err = db.Initialize(connectionDetails, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 }
 
 func TestMSSQL_CreateUser(t *testing.T) {

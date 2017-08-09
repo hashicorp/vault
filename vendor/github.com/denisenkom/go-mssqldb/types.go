@@ -923,6 +923,10 @@ func makeGoLangScanType(ti typeInfo) reflect.Type {
 		default:
 			panic("invalid size of MONEYN")
 		}
+	case typeDateTim4:
+		return reflect.TypeOf(time.Time{})
+	case typeDateTime:
+		return reflect.TypeOf(time.Time{})
 	case typeDateTimeN:
 		switch ti.Size {
 		case 4:

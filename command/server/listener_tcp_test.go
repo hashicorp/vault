@@ -13,7 +13,7 @@ import (
 )
 
 func TestTCPListener(t *testing.T) {
-	ln, _, _, err := tcpListenerFactory(map[string]string{
+	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
 		"address":     "127.0.0.1:0",
 		"tls_disable": "1",
 	}, nil)
@@ -48,19 +48,28 @@ func TestTCPListener_tls(t *testing.T) {
 		t.Fatal("not ok when appending CA cert")
 	}
 
-	ln, _, _, err := tcpListenerFactory(map[string]string{
-		"address":       "127.0.0.1:0",
-		"tls_cert_file": wd + "reload_foo.pem",
-		"tls_key_file":  wd + "reload_foo.key",
+	ln, _, _, err := tcpListenerFactory(map[string]interface{}{
+		"address":                            "127.0.0.1:0",
+		"tls_cert_file":                      wd + "reload_foo.pem",
+		"tls_key_file":                       wd + "reload_foo.key",
+		"tls_require_and_verify_client_cert": "true",
+		"tls_client_ca_file":                 wd + "reload_ca.pem",
 	}, nil)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	cwd, _ := os.Getwd()
+
+	clientCert, _ := tls.LoadX509KeyPair(
+		cwd+"/test-fixtures/reload/reload_foo.pem",
+		cwd+"/test-fixtures/reload/reload_foo.key")
 
 	connFn := func(lnReal net.Listener) (net.Conn, error) {
 		conn, err := tls.Dial("tcp", ln.Addr().String(), &tls.Config{
-			RootCAs: certPool,
+			RootCAs:      certPool,
+			Certificates: []tls.Certificate{clientCert},
 		})
+
 		if err != nil {
 			return nil, err
 		}

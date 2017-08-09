@@ -44,7 +44,9 @@ before_test:
       Start-Service "SQLBrowser"
   - sqlcmd -S "(local)\%SQLINSTANCE%" -Q "Use [master]; CREATE DATABASE test;"
   - sqlcmd -S "(local)\%SQLINSTANCE%" -h -1 -Q "set nocount on; Select @@version"
+  - pip install codecov
  
 
 test_script:
-  - go test
+  - go test -race -coverprofile=coverage.txt -covermode=atomic
+  - codecov -f coverage.txt

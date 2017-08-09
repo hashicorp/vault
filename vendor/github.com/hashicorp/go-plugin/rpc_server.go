@@ -34,10 +34,14 @@ type RPCServer struct {
 	lock sync.Mutex
 }
 
-// Accept accepts connections on a listener and serves requests for
-// each incoming connection. Accept blocks; the caller typically invokes
-// it in a go statement.
-func (s *RPCServer) Accept(lis net.Listener) {
+// ServerProtocol impl.
+func (s *RPCServer) Init() error { return nil }
+
+// ServerProtocol impl.
+func (s *RPCServer) Config() string { return "" }
+
+// ServerProtocol impl.
+func (s *RPCServer) Serve(lis net.Listener) {
 	for {
 		conn, err := lis.Accept()
 		if err != nil {

@@ -159,6 +159,18 @@ func (b *Backend) LogRequest(auth *logical.Auth, req *logical.Request, outerErr 
 		return err
 	}
 
+	if err := b.formatter.FormatRequest(b.f, b.formatConfig, auth, req, outerErr); err == nil {
+		return nil
+	}
+
+	// Opportunistically try to re-open the FD, once per call
+	b.f.Close()
+	b.f = nil
+
+	if err := b.open(); err != nil {
+		return err
+	}
+
 	return b.formatter.FormatRequest(b.f, b.formatConfig, auth, req, outerErr)
 }
 
@@ -170,6 +182,18 @@ func (b *Backend) LogResponse(
 
 	b.fileLock.Lock()
 	defer b.fileLock.Unlock()
+
+	if err := b.open(); err != nil {
+		return err
+	}
+
+	if err := b.formatter.FormatResponse(b.f, b.formatConfig, auth, req, resp, err); err == nil {
+		return nil
+	}
+
+	// Opportunistically try to re-open the FD, once per call
+	b.f.Close()
+	b.f = nil
 
 	if err := b.open(); err != nil {
 		return err

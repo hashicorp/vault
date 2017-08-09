@@ -1,0 +1,45 @@
+---
+layout: "docs"
+page_title: "CouchDB - Storage Backends - Configuration"
+sidebar_current: "docs-configuration-storage-couchdb"
+description: |-
+  The CouchDB storage backend is used to persist Vault's data in a CouchDB
+  database.
+---
+
+# CouchDB Storage Backend
+
+The CouchDB storage backend is used to persist Vault's data in
+[CouchDB][couchdb] table.
+
+- **No High Availability** – the CouchDB backend does not support high
+  availability.
+
+- **Community Supported** – the CouchDB storage backend is supported by the
+  community. While it has undergone review by HashiCorp employees, they may not
+  be as knowledgeable about the technology. If you encounter problems with them,
+  you may be referred to the original author.
+
+```hcl
+storage "couchdb" {
+  endpoint = "https://my-couchdb-dns.tld:5984/my-database"
+  username = "admin"
+  password = "admin"
+}
+```
+
+## `couchdb` Parameters
+
+- `endpoint` `(string: "")` – Specifies your CouchDB endpoint. This can also be
+  provided via the environment variable `COUCHDB_ENDPOINT`.
+
+- `username` `(string: "")` – Specifies the user to authenticate as. This can
+  also be provided via the environment variable `COUCHDB_USERNAME`.
+
+- `password` `(string: "")` – Specifies the user to authenticate as. This can
+  also be provided via the environment variable `COUCHDB_PASSWORD`.
+
+- `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
+  requests to CouchDB.
+
+[couchdb]: http://couchdb.apache.org/

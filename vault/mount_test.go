@@ -93,16 +93,18 @@ func TestCore_Mount_Local(t *testing.T) {
 		Type: mountTableType,
 		Entries: []*MountEntry{
 			&MountEntry{
-				Table: mountTableType,
-				Path:  "noop/",
-				Type:  "generic",
-				UUID:  "abcd",
+				Table:    mountTableType,
+				Path:     "noop/",
+				Type:     "generic",
+				UUID:     "abcd",
+				Accessor: "generic-abcd",
 			},
 			&MountEntry{
-				Table: mountTableType,
-				Path:  "noop2/",
-				Type:  "generic",
-				UUID:  "bcde",
+				Table:    mountTableType,
+				Path:     "noop2/",
+				Type:     "generic",
+				UUID:     "bcde",
+				Accessor: "generic-bcde",
 			},
 		},
 	}
@@ -179,9 +181,9 @@ func TestCore_Mount_Local(t *testing.T) {
 
 func TestCore_Unmount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	existed, err := c.unmount("secret")
-	if !existed || err != nil {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	err := c.unmount("secret")
+	if err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	match := c.router.MatchingMount("secret/foo")
@@ -270,8 +272,8 @@ func TestCore_Unmount_Cleanup(t *testing.T) {
 	}
 
 	// Unmount, this should cleanup
-	if existed, err := c.unmount("test/"); !existed || err != nil {
-		t.Fatalf("existed: %v; err: %v", existed, err)
+	if err := c.unmount("test/"); err != nil {
+		t.Fatalf("err: %v", err)
 	}
 
 	// Rollback should be invoked
@@ -426,7 +428,8 @@ func TestCore_Remount_Protected(t *testing.T) {
 }
 
 func TestDefaultMountTable(t *testing.T) {
-	table := defaultMountTable()
+	c, _, _ := TestCoreUnsealed(t)
+	table := c.defaultMountTable()
 	verifyDefaultTable(t, table)
 }
 

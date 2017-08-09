@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"regexp"
 )
 
 // Algorithm identifies and implementation of a digester by an identifier.
@@ -28,9 +29,9 @@ type Algorithm string
 
 // supported digest types
 const (
-	SHA256 Algorithm = "sha256" // sha256 with hex encoding
-	SHA384 Algorithm = "sha384" // sha384 with hex encoding
-	SHA512 Algorithm = "sha512" // sha512 with hex encoding
+	SHA256 Algorithm = "sha256" // sha256 with hex encoding (lower case only)
+	SHA384 Algorithm = "sha384" // sha384 with hex encoding (lower case only)
+	SHA512 Algorithm = "sha512" // sha512 with hex encoding (lower case only)
 
 	// Canonical is the primary digest algorithm used with the distribution
 	// project. Other digests may be used but this one is the primary storage
@@ -49,6 +50,14 @@ var (
 		SHA256: crypto.SHA256,
 		SHA384: crypto.SHA384,
 		SHA512: crypto.SHA512,
+	}
+
+	// anchoredEncodedRegexps contains anchored regular expressions for hex-encoded digests.
+	// Note that /A-F/ disallowed.
+	anchoredEncodedRegexps = map[Algorithm]*regexp.Regexp{
+		SHA256: regexp.MustCompile(`^[a-f0-9]{64}$`),
+		SHA384: regexp.MustCompile(`^[a-f0-9]{96}$`),
+		SHA512: regexp.MustCompile(`^[a-f0-9]{128}$`),
 	}
 )
 
@@ -163,4 +172,21 @@ func (a Algorithm) FromBytes(p []byte) Digest {
 // FromString digests the string input and returns a Digest.
 func (a Algorithm) FromString(s string) Digest {
 	return a.FromBytes([]byte(s))
+}
+
+// Validate validates the encoded portion string
+func (a Algorithm) Validate(encoded string) error {
+	r, ok := anchoredEncodedRegexps[a]
+	if !ok {
+		return ErrDigestUnsupported
+	}
+	// Digests much always be hex-encoded, ensuring that their hex portion will
+	// always be size*2
+	if a.Size()*2 != len(encoded) {
+		return ErrDigestInvalidLength
+	}
+	if r.MatchString(encoded) {
+		return nil
+	}
+	return ErrDigestInvalidFormat
 }

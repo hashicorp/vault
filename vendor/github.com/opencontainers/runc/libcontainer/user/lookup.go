@@ -2,7 +2,8 @@ package user
 
 import (
 	"errors"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -40,7 +41,7 @@ func lookupUser(filter func(u User) bool) (User, error) {
 // user cannot be found (or there is no /etc/passwd file on the filesystem),
 // then CurrentUser returns an error.
 func CurrentUser() (User, error) {
-	return LookupUid(syscall.Getuid())
+	return LookupUid(unix.Getuid())
 }
 
 // LookupUser looks up a user by their username in /etc/passwd. If the user
@@ -88,7 +89,7 @@ func lookupGroup(filter func(g Group) bool) (Group, error) {
 // entry in /etc/passwd. If the group cannot be found (or there is no
 // /etc/group file on the filesystem), then CurrentGroup returns an error.
 func CurrentGroup() (Group, error) {
-	return LookupGid(syscall.Getgid())
+	return LookupGid(unix.Getgid())
 }
 
 // LookupGroup looks up a group by its name in /etc/group. If the group cannot

@@ -14,6 +14,7 @@ type Request struct {
 	Method      string
 	URL         *url.URL
 	Params      url.Values
+	Headers     http.Header
 	ClientToken string
 	WrapTTL     string
 	Obj         interface{}
@@ -59,6 +60,14 @@ func (r *Request) ToHTTP() (*http.Request, error) {
 	req.URL.Scheme = r.URL.Scheme
 	req.URL.Host = r.URL.Host
 	req.Host = r.URL.Host
+
+	if r.Headers != nil {
+		for header, vals := range r.Headers {
+			for _, val := range vals {
+				req.Header.Add(header, val)
+			}
+		}
+	}
 
 	if len(r.ClientToken) != 0 {
 		req.Header.Set("X-Vault-Token", r.ClientToken)

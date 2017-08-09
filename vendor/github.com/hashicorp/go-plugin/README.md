@@ -23,6 +23,11 @@ interface as if it were going to run in the same process. For a plugin user:
 you just use and call functions on an interface as if it were in the same
 process. This plugin system handles the communication in between.
 
+**Cross-language support.** Plugins can be written (and consumed) by
+almost every major language. This library supports serving plugins via
+[gRPC](http://www.grpc.io). gRPC-based plugins enable plugins to be written
+in any language.
+
 **Complex arguments and return values are supported.** This library
 provides APIs for handling complex arguments and return values such
 as interfaces, `io.Reader/Writer`, etc. We do this by giving you a library
@@ -36,7 +41,10 @@ and the plugin can call back into the host process.
 **Built-in Logging.** Any plugins that use the `log` standard library
 will have log data automatically sent to the host process. The host
 process will mirror this output prefixed with the path to the plugin
-binary. This makes debugging with plugins simple.
+binary. This makes debugging with plugins simple. If the host system
+uses [hclog](https://github.com/hashicorp/go-hclog) then the log data
+will be structured. If the plugin also uses hclog, logs from the plugin
+will be sent to the host hclog and be structured.
 
 **Protocol Versioning.** A very basic "protocol version" is supported that
 can be incremented to invalidate any previous plugins. This is useful when
@@ -68,10 +76,11 @@ must be properly secured to protect this configuration.
 ## Architecture
 
 The HashiCorp plugin system works by launching subprocesses and communicating
-over RPC (using standard `net/rpc`). A single connection is made between
-any plugin and the host process, and we use a
-[connection multiplexing](https://github.com/hashicorp/yamux)
-library to multiplex any other connections on top.
+over RPC (using standard `net/rpc` or [gRPC](http://www.grpc.io). A single
+connection is made between any plugin and the host process. For net/rpc-based
+plugins, we use a [connection multiplexing](https://github.com/hashicorp/yamux)
+library to multiplex any other connections on top. For gRPC-based plugins,
+the HTTP2 protocol handles multiplexing.
 
 This architecture has a number of benefits:
 
@@ -79,8 +88,8 @@ This architecture has a number of benefits:
     panic the plugin user.
 
   * Plugins are very easy to write: just write a Go application and `go build`.
-    Theoretically you could also use another language as long as it can
-    communicate the Go `net/rpc` protocol but this hasn't yet been tried.
+    Or use any other language to write a gRPC server with a tiny amount of
+    boilerplate to support go-plugin.
 
   * Plugins are very easy to install: just put the binary in a location where
     the host will find it (depends on the host but this library also provides
@@ -88,8 +97,8 @@ This architecture has a number of benefits:
 
   * Plugins can be relatively secure: The plugin only has access to the
     interfaces and args given to it, not to the entire memory space of the
-    process. More security features are planned (see the coming soon section
-    below).
+    process. Additionally, go-plugin can communicate with the plugin over
+    TLS.
 
 ## Usage
 
@@ -100,10 +109,9 @@ high-level steps that must be done. Examples are available in the
   1. Choose the interface(s) you want to expose for plugins.
 
   2. For each interface, implement an implementation of that interface
-     that communicates over an `*rpc.Client` (from the standard `net/rpc`
-     package) for every function call. Likewise, implement the RPC server
-     struct this communicates to which is then communicating to a real,
-     concrete implementation.
+     that communicates over a `net/rpc` connection or other a
+     [gRPC](http://www.grpc.io) connection or both. You'll have to implement
+     both a client and server implementation.
 
   3. Create a `Plugin` implementation that knows how to create the RPC
      client/server for a given plugin type.

@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
 	"github.com/hashicorp/vault/physical"
+	"github.com/hashicorp/vault/physical/inmem"
 	log "github.com/mgutz/logxi/v1"
 )
 
@@ -214,6 +214,9 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 
 	root, err := exp.tokenStore.rootToken()
+	if err != nil {
+		t.Fatal(err)
+	}
 	le.ClientToken = root.ID
 
 	// Attach a valid token with the leases
@@ -238,16 +241,19 @@ func TestExpiration_Tidy(t *testing.T) {
 	}
 }
 
+// To avoid pulling in deps for all users of the package, don't leave these
+// uncommented in the public tree
+/*
 func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
 	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	physicalBackend, err := physical.NewBackend("etcd", logger, map[string]string{
+	physicalBackend, err := physEtcd.NewEtcdBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
-	})
+	}, logger)
 	if err != nil {
 		b.Fatalf("err: %s", err)
 	}
@@ -260,21 +266,26 @@ func BenchmarkExpiration_Restore_Consul(b *testing.B) {
 	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
 
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	physicalBackend, err := physical.NewBackend("consul", logger, map[string]string{
+	physicalBackend, err := physConsul.NewConsulBackend(map[string]string{
 		"address":      addr,
 		"path":         randPath,
 		"max_parallel": "256",
-	})
+	}, logger)
 	if err != nil {
 		b.Fatalf("err: %s", err)
 	}
 
 	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
 }
+*/
 
 func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 	logger := logformat.NewVaultLogger(log.LevelTrace)
-	benchmarkExpirationBackend(b, physical.NewInmem(logger), 100000) // 100,000 Leases
+	inm, err := inmem.NewInmem(nil, logger)
+	if err != nil {
+		b.Fatal(err)
+	}
+	benchmarkExpirationBackend(b, inm, 100000) // 100,000 Leases
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
@@ -285,7 +296,10 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 	if err != nil {
 		b.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		b.Fatal(err)
+	}
 
 	// Register fake leases
 	for i := 0; i < numLeases; i++ {
@@ -341,7 +355,10 @@ func TestExpiration_Restore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	paths := []string{
 		"prod/aws/foo",
@@ -508,7 +525,10 @@ func TestExpiration_Revoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -551,7 +571,10 @@ func TestExpiration_RevokeOnExpire(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -605,7 +628,10 @@ func TestExpiration_RevokePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	paths := []string{
 		"prod/aws/foo",
@@ -670,7 +696,10 @@ func TestExpiration_RevokeByToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	paths := []string{
 		"prod/aws/foo",
@@ -800,7 +829,10 @@ func TestExpiration_Renew(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -867,7 +899,10 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -914,7 +949,10 @@ func TestExpiration_Renew_RevokeOnExpire(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "prod/aws/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	req := &logical.Request{
 		Operation:   logical.ReadOperation,
@@ -987,7 +1025,10 @@ func TestExpiration_revokeEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -1014,13 +1055,10 @@ func TestExpiration_revokeEntry(t *testing.T) {
 
 	req := noop.Requests[0]
 	if req.Operation != logical.RevokeOperation {
-		t.Fatalf("Bad: %v", req)
-	}
-	if req.Path != le.Path {
-		t.Fatalf("Bad: %v", req)
+		t.Fatalf("bad: operation; req: %#v", req)
 	}
 	if !reflect.DeepEqual(req.Data, le.Data) {
-		t.Fatalf("Bad: %v", req)
+		t.Fatalf("bad: data; req: %#v\n le: %#v\n", req, le)
 	}
 }
 
@@ -1118,7 +1156,10 @@ func TestExpiration_renewEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "foo/bar/", &MountEntry{Path: "foo/bar/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	le := &leaseEntry{
 		LeaseID: "foo/bar/1234",
@@ -1151,9 +1192,6 @@ func TestExpiration_renewEntry(t *testing.T) {
 	if req.Operation != logical.RenewOperation {
 		t.Fatalf("Bad: %v", req)
 	}
-	if req.Path != le.Path {
-		t.Fatalf("Bad: %v", req)
-	}
 	if !reflect.DeepEqual(req.Data, le.Data) {
 		t.Fatalf("Bad: %v", req)
 	}
@@ -1184,7 +1222,10 @@ func TestExpiration_renewAuthEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	exp.router.Mount(noop, "auth/foo/", &MountEntry{UUID: meUUID}, view)
+	err = exp.router.Mount(noop, "auth/foo/", &MountEntry{Path: "auth/foo/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor"}, view)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	le := &leaseEntry{
 		LeaseID: "auth/foo/1234",
@@ -1352,9 +1393,10 @@ func TestExpiration_RevokeForce(t *testing.T) {
 
 	core.logicalBackends["badrenew"] = badRenewFactory
 	me := &MountEntry{
-		Table: mountTableType,
-		Path:  "badrenew/",
-		Type:  "badrenew",
+		Table:    mountTableType,
+		Path:     "badrenew/",
+		Type:     "badrenew",
+		Accessor: "badrenewaccessor",
 	}
 
 	err := core.mount(me)
@@ -1425,5 +1467,10 @@ func badRenewFactory(conf *logical.BackendConfig) (logical.Backend, error) {
 		},
 	}
 
-	return be.Setup(conf)
+	err := be.Setup(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return be, nil
 }

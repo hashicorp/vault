@@ -106,7 +106,7 @@ func TestBackend_allowed_users(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = b.Setup(config)
+	err = b.Setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -646,6 +646,94 @@ func TestBackend_OptionsOverrideDefaults(t *testing.T) {
 					"additional": "value",
 				},
 			}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestBackend_CustomKeyIDFormat(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(),
+
+			createRoleStep("customrole", map[string]interface{}{
+				"key_type":                 "ca",
+				"key_id_format":            "{{role_name}}-{{token_display_name}}-{{public_key_hash}}",
+				"allowed_users":            "tuber",
+				"default_user":             "tuber",
+				"allow_user_certificates":  true,
+				"allowed_critical_options": "option,secondary",
+				"allowed_extensions":       "extension,additional",
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+			}),
+
+			signCertificateStep("customrole", "customrole-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.UserCert, []string{"tuber"}, map[string]string{
+				"secondary": "value",
+			}, map[string]string{
+				"additional": "value",
+			}, 2*time.Hour, map[string]interface{}{
+				"public_key": publicKey2,
+				"ttl":        "2h",
+				"critical_options": map[string]interface{}{
+					"secondary": "value",
+				},
+				"extensions": map[string]interface{}{
+					"additional": "value",
+				},
+			}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		Backend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_key_ids":      false,
+				"allow_user_certificates": true,
+			}),
+			logicaltest.TestStep{
+				Operation: logical.UpdateOperation,
+				Path:      "sign/testing",
+				Data: map[string]interface{}{
+					"public_key": publicKey2,
+					"key_id":     "override",
+				},
+				ErrorOk: true,
+				Check: func(resp *logical.Response) error {
+					if resp.Data["error"] != "setting key_id is not allowed by role" {
+						return errors.New("Custom user key id was allowed even when 'allow_user_key_ids' is false.")
+					}
+					return nil
+				},
+			},
 		},
 	}
 
