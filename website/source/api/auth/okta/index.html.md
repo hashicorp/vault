@@ -382,7 +382,7 @@ $ curl \
     "policies": ["default"],
     "metadata": {
       "username": "fred",
-      "policies": "default",
+      "policies": "default"
     },
   },
   "lease_duration": 7200,
