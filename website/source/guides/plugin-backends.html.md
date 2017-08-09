@@ -11,8 +11,8 @@ description: |-
 Plugin backends utilize the [plugin system][plugin-system] to enable 
 third-party secret and auth backends to be mounted. 
 
-It is worth noting that even though [database backend][database-backend]
-operates under the same underlying plugin mechanism, it is slightly different
+It is worth noting that even though [database backends][database-backend]
+operate under the same underlying plugin mechanism, they are slightly different
 in design than plugin backends demonstrated in this guide. The database backend 
 manages multiple plugins under the same backend mount point, whereas plugin
 backends are generic backends that function as either secret or auth backends. 
@@ -56,7 +56,7 @@ Start the Vault server. Find out the sha256 sum of the compiled plugin binary,
 and use that to register the plugin into Vault's plugin catalog.
 
 ```
-$ shasum -a 256 ~/code/tmp/vault_plugins/mock-plugin
+$ shasum -a 256 /etc/vault/vault_plugins/mock-plugin
 2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615  /etc/vault/vault_plugins/mock-plugin
 
 $ vault sys/plugins/catalog/mock-plugin sha_256=2c071aafa1b30897e60b79643e77592cb9d1e8f803025d44a7f9bbfa4779d615 command=mock-plugin
@@ -99,5 +99,5 @@ secret/     generic    generic_ef2a14ec    n/a     system       system   false  
 sys/        system     system_e3a4cccd     n/a     n/a          n/a      false           replicated            system endpoints used for control, policy and debugging
 ```
 
-[plugin-system]: docs/internals/plugins.html
-[database-backend]: docs/secrets/databases/index.html
+[plugin-system]: /docs/internals/plugins.html
+[database-backend]: /docs/secrets/databases/index.html
